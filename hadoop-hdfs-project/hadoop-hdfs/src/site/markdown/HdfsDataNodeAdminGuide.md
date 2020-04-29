@@ -148,6 +148,35 @@ dfs.namenode.decommission.blocks.per.interval
 dfs.namenode.decommission.max.concurrent.tracked.nodes
 ```
 
+
+Backing-off Decommission Monitor (experimental)
+------------
+
+The original decommissioning algorithm has issues when DataNodes having lots of
+blocks are decommissioned such as
+
+* Write lock in the NameNode could be held for a long time for queueing re-replication.
+* Re-replication work progresses node by node if there are multiple decommissioning DataNodes.
+
+[HDFS-14854](https://issues.apache.org/jira/browse/HDFS-14854) introduced
+new decommission monitor in order to mitigate those issues.
+This feature is currently marked as experimental and disabled by default.
+You can enable this by setting the value of
+`dfs.namenode.decommission.monitor.class` to
+`org.apache.hadoop.hdfs.server.blockmanagement.DatanodeAdminBackoffMonitor`
+in hdfs-site.xml.
+
+The relevant configuration properties are listed in the table below.
+Please refer to [hdfs-default.xml](./hdfs-default.xml)
+for descriptions and default values.
+
+| Property |
+|:-------- |
+| `dfs.namenode.decommission.monitor.class` |
+| `dfs.namenode.decommission.backoff.monitor.pending.limit` |
+| `dfs.namenode.decommission.backoff.monitor.pending.blocks.per.lock` |
+
+
 Metrics
 -----------
 

@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.applicationhistoryservice;
 
 import java.io.IOException;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -70,5 +71,25 @@ public class TestApplicationHistoryManagerImpl extends
     Assert.assertEquals(appAttemptId.toString(), appReport.getHost());
     Assert.assertEquals("test type", appReport.getApplicationType().toString());
     Assert.assertEquals("test queue", appReport.getQueue().toString());
+  }
+
+  @Test
+  public void testApplications() throws IOException {
+    ApplicationId appId1 = ApplicationId.newInstance(0, 1);
+    ApplicationId appId2 = ApplicationId.newInstance(0, 2);
+    ApplicationId appId3 = ApplicationId.newInstance(0, 3);
+    writeApplicationStartData(appId1, 1000);
+    writeApplicationFinishData(appId1);
+    writeApplicationStartData(appId2, 3000);
+    writeApplicationFinishData(appId2);
+    writeApplicationStartData(appId3, 4000);
+    writeApplicationFinishData(appId3);
+    Map<ApplicationId, ApplicationReport> reports =
+        applicationHistoryManagerImpl.getApplications(2, 2000L, 5000L);
+    Assert.assertNotNull(reports);
+    Assert.assertEquals(2, reports.size());
+    Assert.assertNull(reports.get("1"));
+    Assert.assertNull(reports.get("2"));
+    Assert.assertNull(reports.get("3"));
   }
 }

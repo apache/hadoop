@@ -20,6 +20,7 @@ package org.apache.hadoop.crypto.key;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
@@ -33,31 +34,44 @@ import java.util.Map;
 
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
-import org.apache.commons.lang.builder.EqualsBuilder;
-import org.apache.commons.lang.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 
 import javax.crypto.KeyGenerator;
+
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_JCEKS_KEY_SERIALFILTER;
 
 /**
  * A provider of secret key material for Hadoop applications. Provides an
  * abstraction to separate key storage from users of encryption. It
  * is intended to support getting or storing keys in a variety of ways,
  * including third party bindings.
- * <P/>
+ * <p>
  * <code>KeyProvider</code> implementations must be thread safe.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-public abstract class KeyProvider {
+public abstract class KeyProvider implements Closeable {
   public static final String DEFAULT_CIPHER_NAME =
-      "hadoop.security.key.default.cipher";
-  public static final String DEFAULT_CIPHER = "AES/CTR/NoPadding";
+      CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_DEFAULT_CIPHER_KEY;
+  public static final String DEFAULT_CIPHER =
+      CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_DEFAULT_CIPHER_DEFAULT;
   public static final String DEFAULT_BITLENGTH_NAME =
-      "hadoop.security.key.default.bitlength";
-  public static final int DEFAULT_BITLENGTH = 128;
+      CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_DEFAULT_BITLENGTH_KEY;
+  public static final int DEFAULT_BITLENGTH = CommonConfigurationKeysPublic.
+      HADOOP_SECURITY_KEY_DEFAULT_BITLENGTH_DEFAULT;
+  public static final String JCEKS_KEY_SERIALFILTER_DEFAULT =
+      "java.lang.Enum;"
+          + "java.security.KeyRep;"
+          + "java.security.KeyRep$Type;"
+          + "javax.crypto.spec.SecretKeySpec;"
+          + "org.apache.hadoop.crypto.key.JavaKeyStoreProvider$KeyMetadata;"
+          + "!*";
+  public static final String JCEKS_KEY_SERIAL_FILTER = "jceks.key.serialFilter";
 
   private final Configuration conf;
 
@@ -391,6 +405,14 @@ public abstract class KeyProvider {
    */
   public KeyProvider(Configuration conf) {
     this.conf = new Configuration(conf);
+    // Added for HADOOP-15473. Configured serialFilter property fixes
+    // java.security.UnrecoverableKeyException in JDK 8u171.
+    if(System.getProperty(JCEKS_KEY_SERIAL_FILTER) == null) {
+      String serialFilter =
+          conf.get(HADOOP_SECURITY_CRYPTO_JCEKS_KEY_SERIALFILTER,
+              JCEKS_KEY_SERIALFILTER_DEFAULT);
+      System.setProperty(JCEKS_KEY_SERIAL_FILTER, serialFilter);
+    }
   }
 
   /**
@@ -528,7 +550,7 @@ public abstract class KeyProvider {
   /**
    * Create a new key generating the material for it.
    * The given key must not already exist.
-   * <p/>
+   * <p>
    * This implementation generates the key material and calls the
    * {@link #createKey(String, byte[], Options)} method.
    *
@@ -572,7 +594,7 @@ public abstract class KeyProvider {
 
   /**
    * Roll a new version of the given key generating the material for it.
-   * <p/>
+   * <p>
    * This implementation generates the key material and calls the
    * {@link #rollNewVersion(String, byte[])} method.
    *

@@ -30,19 +30,55 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
  * 
  */
 public class InvalidResourceRequestException extends YarnException {
+  public static final String LESS_THAN_ZERO_RESOURCE_MESSAGE_TEMPLATE =
+          "Invalid resource request! Cannot allocate containers as "
+                  + "requested resource is less than 0! "
+                  + "Requested resource type=[%s], " + "Requested resource=%s";
+
+  public static final String GREATER_THAN_MAX_RESOURCE_MESSAGE_TEMPLATE =
+          "Invalid resource request! Cannot allocate containers as "
+                  + "requested resource is greater than " +
+                  "maximum allowed allocation. "
+                  + "Requested resource type=[%s], "
+                  + "Requested resource=%s, maximum allowed allocation=%s, "
+                  + "please note that maximum allowed allocation is calculated "
+                  + "by scheduler based on maximum resource of registered "
+                  + "NodeManagers, which might be less than configured "
+                  + "maximum allocation=%s";
+
+  public static final String UNKNOWN_REASON_MESSAGE_TEMPLATE =
+          "Invalid resource request! "
+                  + "Cannot allocate containers for an unknown reason! "
+                  + "Requested resource type=[%s], Requested resource=%s";
+
+  public enum InvalidResourceType {
+    LESS_THAN_ZERO, GREATER_THEN_MAX_ALLOCATION, UNKNOWN;
+  }
 
   private static final long serialVersionUID = 13498237L;
+  private final InvalidResourceType invalidResourceType;
 
   public InvalidResourceRequestException(Throwable cause) {
     super(cause);
+    this.invalidResourceType = InvalidResourceType.UNKNOWN;
   }
 
   public InvalidResourceRequestException(String message) {
+    this(message, InvalidResourceType.UNKNOWN);
+  }
+
+  public InvalidResourceRequestException(String message,
+      InvalidResourceType invalidResourceType) {
     super(message);
+    this.invalidResourceType = invalidResourceType;
   }
 
   public InvalidResourceRequestException(String message, Throwable cause) {
     super(message, cause);
+    this.invalidResourceType = InvalidResourceType.UNKNOWN;
   }
 
+  public InvalidResourceType getInvalidResourceType() {
+    return invalidResourceType;
+  }
 }

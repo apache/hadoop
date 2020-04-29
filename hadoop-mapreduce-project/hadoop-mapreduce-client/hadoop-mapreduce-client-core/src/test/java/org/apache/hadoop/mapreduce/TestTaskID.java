@@ -17,8 +17,11 @@
  */
 package org.apache.hadoop.mapreduce;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.nio.ByteBuffer;
+
 import org.apache.hadoop.io.DataInputByteBuffer;
-import org.apache.hadoop.io.DataOutputByteBuffer;
 import org.apache.hadoop.io.WritableUtils;
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -73,7 +76,7 @@ public class TestTaskID {
    * Test of getTaskType method, of class TaskID.
    */
   @Test
-  public void testGetTaskType_0args() {
+  public void testGetTaskType0args() {
     JobID jobId = new JobID("1234", 0);
 
     for (TaskType type : TaskType.values()) {
@@ -253,17 +256,18 @@ public class TestTaskID {
    */
   @Test
   public void testReadFields() throws Exception {
-    DataOutputByteBuffer out = new DataOutputByteBuffer();
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    DataOutputStream out = new DataOutputStream(baos);
 
     out.writeInt(0);
     out.writeInt(1);
     WritableUtils.writeVInt(out, 4);
-    out.write(new byte[] { 0x31, 0x32, 0x33, 0x34});
+    out.write(new byte[] {0x31, 0x32, 0x33, 0x34});
     WritableUtils.writeEnum(out, TaskType.REDUCE);
 
     DataInputByteBuffer in = new DataInputByteBuffer();
 
-    in.reset(out.getData());
+    in.reset(ByteBuffer.wrap(baos.toByteArray()));
 
     TaskID instance = new TaskID();
 
@@ -280,14 +284,15 @@ public class TestTaskID {
   public void testWrite() throws Exception {
     JobID jobId = new JobID("1234", 1);
     TaskID taskId = new TaskID(jobId, TaskType.JOB_SETUP, 0);
-    DataOutputByteBuffer out = new DataOutputByteBuffer();
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    DataOutputStream out = new DataOutputStream(baos);
 
     taskId.write(out);
 
     DataInputByteBuffer in = new DataInputByteBuffer();
     byte[] buffer = new byte[4];
 
-    in.reset(out.getData());
+    in.reset(ByteBuffer.wrap(baos.toByteArray()));
 
     assertEquals("The write() method did not write the expected task ID",
         0, in.readInt());
@@ -430,7 +435,7 @@ public class TestTaskID {
    * Test of getTaskType method, of class TaskID.
    */
   @Test
-  public void testGetTaskType_char() {
+  public void testGetTaskTypeChar() {
     assertEquals("The getTaskType() method did not return the expected type",
         TaskType.MAP,
         TaskID.getTaskType('m'));

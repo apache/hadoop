@@ -27,7 +27,7 @@ import static org.jboss.netty.handler.codec.http.HttpResponseStatus.OK;
 import static org.jboss.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeTrue;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -172,6 +172,14 @@ public class TestShuffleHandler {
     public Path getLocalPathForWrite(String path, long size)
         throws IOException {
       return new Path(ABS_LOG_DIR.getAbsolutePath());
+    }
+
+    @Override
+    public Iterable<Path> getAllLocalPathsForRead(String path)
+        throws IOException {
+      ArrayList<Path> paths = new ArrayList<>();
+      paths.add(new Path(ABS_LOG_DIR.getAbsolutePath()));
+      return paths;
     }
   }
 

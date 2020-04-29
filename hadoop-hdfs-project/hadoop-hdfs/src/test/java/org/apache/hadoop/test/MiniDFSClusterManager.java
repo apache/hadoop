@@ -127,7 +127,7 @@ public class MiniDFSClusterManager {
           LOG.info("Cluster is no longer up, exiting");
           return;
         }
-      } catch (InterruptedException _) {
+      } catch (InterruptedException e) {
         // nothing
       }
     }

@@ -21,7 +21,7 @@ package org.apache.hadoop.yarn.api.protocolrecords;
 import java.util.EnumSet;
 import java.util.Set;
 
-import org.apache.commons.lang.math.LongRange;
+import org.apache.commons.lang3.Range;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
@@ -80,8 +80,8 @@ public abstract class GetApplicationsRequest {
       Set<String> applicationTypes,
       Set<String> applicationTags,
       EnumSet<YarnApplicationState> applicationStates,
-      LongRange startRange,
-      LongRange finishRange,
+      Range<Long> startRange,
+      Range<Long> finishRange,
       Long limit) {
     GetApplicationsRequest request =
         Records.newRecord(GetApplicationsRequest.class);
@@ -95,11 +95,11 @@ public abstract class GetApplicationsRequest {
     request.setApplicationStates(applicationStates);
     if (startRange != null) {
       request.setStartRange(
-          startRange.getMinimumLong(), startRange.getMaximumLong());
+          startRange.getMinimum(), startRange.getMaximum());
     }
     if (finishRange != null) {
       request.setFinishRange(
-          finishRange.getMinimumLong(), finishRange.getMaximumLong());
+          finishRange.getMinimum(), finishRange.getMaximum());
     }
     if (limit != null) {
       request.setLimit(limit);
@@ -302,11 +302,11 @@ public abstract class GetApplicationsRequest {
   /**
    * Get the range of start times to filter applications on
    *
-   * @return {@link LongRange} of start times to filter applications on
+   * @return {@link Range} of start times to filter applications on
    */
   @Private
   @Unstable
-  public abstract LongRange getStartRange();
+  public abstract Range<Long> getStartRange();
 
   /**
    * Set the range of start times to filter applications on
@@ -315,7 +315,7 @@ public abstract class GetApplicationsRequest {
    */
   @Private
   @Unstable
-  public abstract void setStartRange(LongRange range);
+  public abstract void setStartRange(Range<Long> range);
 
   /**
    * Set the range of start times to filter applications on
@@ -332,11 +332,11 @@ public abstract class GetApplicationsRequest {
   /**
    * Get the range of finish times to filter applications on
    *
-   * @return {@link LongRange} of finish times to filter applications on
+   * @return {@link Range} of finish times to filter applications on
    */
   @Private
   @Unstable
-  public abstract LongRange getFinishRange();
+  public abstract Range<Long> getFinishRange();
 
   /**
    * Set the range of finish times to filter applications on
@@ -345,7 +345,7 @@ public abstract class GetApplicationsRequest {
    */
   @Private
   @Unstable
-  public abstract void setFinishRange(LongRange range);
+  public abstract void setFinishRange(Range<Long> range);
 
   /**
    * Set the range of finish times to filter applications on
@@ -393,4 +393,22 @@ public abstract class GetApplicationsRequest {
   @Private
   @Unstable
   public abstract void setScope(ApplicationsRequestScope scope);
+
+  /**
+   * Set the name to filter applications.
+   *
+   * @return the name
+   */
+  @Private
+  @Unstable
+  public abstract String getName();
+
+  /**
+   * Get the name to filter applications.
+   *
+   * @param name of the application
+   */
+  @Private
+  @Unstable
+  public abstract void setName(String name);
 }

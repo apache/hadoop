@@ -109,7 +109,7 @@ abstract public class HAState {
    * that are going on. It can also be used to check any preconditions
    * for the state transition.
    * 
-   * This method should not make any destructuve changes to the state
+   * This method should not make any destructive changes to the state
    * (eg stopping threads) since {@link #prepareToEnterState(HAContext)}
    * may subsequently cancel the state transition.
    * @param context HA context
@@ -134,10 +134,10 @@ abstract public class HAState {
    * @throws ServiceFailedException on failure to transition to new state.
    */
   public void setState(HAContext context, HAState s) throws ServiceFailedException {
-    if (this == s) { // Aleady in the new state
+    if (this == s) { // Already in the new state
       return;
     }
-    throw new ServiceFailedException("Transtion from state " + this + " to "
+    throw new ServiceFailedException("Transition from state " + this + " to "
         + s + " is not allowed.");
   }
   

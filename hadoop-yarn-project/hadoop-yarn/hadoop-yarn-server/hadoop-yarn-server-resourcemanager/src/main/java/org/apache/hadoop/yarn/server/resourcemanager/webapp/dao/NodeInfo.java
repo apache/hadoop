@@ -27,6 +27,7 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
@@ -62,6 +63,8 @@ public class NodeInfo {
   protected ResourceUtilizationInfo resourceUtilization;
   protected ResourceInfo usedResource;
   protected ResourceInfo availableResource;
+  protected NodeAttributesInfo nodeAttributesInfo;
+  private ResourceInfo totalResource;
 
   public NodeInfo() {
   } // JAXB needs this
@@ -90,6 +93,7 @@ public class NodeInfo {
     this.lastHealthUpdate = ni.getLastHealthReportTime();
     this.healthReport = String.valueOf(ni.getHealthReport());
     this.version = ni.getNodeManagerVersion();
+    this.totalResource = new ResourceInfo(ni.getTotalCapability());
 
     // Status of opportunistic containers.
     this.numRunningOpportContainers = 0;
@@ -111,6 +115,14 @@ public class NodeInfo {
     if (labelSet != null) {
       nodeLabels.addAll(labelSet);
       Collections.sort(nodeLabels);
+    }
+
+    // add attributes
+    Set<NodeAttribute> attrs = ni.getAllNodeAttributes();
+    nodeAttributesInfo = new NodeAttributesInfo();
+    for (NodeAttribute attribute : attrs) {
+      NodeAttributeInfo info = new NodeAttributeInfo(attribute);
+      this.nodeAttributesInfo.addNodeAttributeInfo(info);
     }
 
     // add allocation tags
@@ -232,4 +244,11 @@ public class NodeInfo {
     this.lastHealthUpdate = lastHealthUpdate;
   }
 
+  public void setTotalResource(ResourceInfo total) {
+    this.totalResource = total;
+  }
+
+  public ResourceInfo getTotalResource() {
+    return this.totalResource;
+  }
 }

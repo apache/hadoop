@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineHealth;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineDataToRetrieve;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineEntityFilters;
@@ -47,6 +48,7 @@ public class HBaseTimelineReaderImpl
 
   private Configuration hbaseConf = null;
   private Connection conn;
+  private TimelineStorageMonitor storageMonitor;
 
   public HBaseTimelineReaderImpl() {
     super(HBaseTimelineReaderImpl.class.getName());
@@ -57,6 +59,13 @@ public class HBaseTimelineReaderImpl
     super.serviceInit(conf);
     hbaseConf = HBaseTimelineStorageUtils.getTimelineServiceHBaseConf(conf);
     conn = ConnectionFactory.createConnection(hbaseConf);
+    storageMonitor = new HBaseStorageMonitor(conf);
+  }
+
+  @Override
+  protected void serviceStart() throws Exception {
+    super.serviceStart();
+    storageMonitor.start();
   }
 
   @Override
@@ -65,12 +74,14 @@ public class HBaseTimelineReaderImpl
       LOG.info("closing the hbase Connection");
       conn.close();
     }
+    storageMonitor.stop();
     super.serviceStop();
   }
 
   @Override
   public TimelineEntity getEntity(TimelineReaderContext context,
       TimelineDataToRetrieve dataToRetrieve) throws IOException {
+    storageMonitor.checkStorageIsUp();
     TimelineEntityReader reader =
         TimelineEntityReaderFactory.createSingleEntityReader(context,
             dataToRetrieve);
@@ -81,6 +92,7 @@ public class HBaseTimelineReaderImpl
   public Set<TimelineEntity> getEntities(TimelineReaderContext context,
       TimelineEntityFilters filters, TimelineDataToRetrieve dataToRetrieve)
       throws IOException {
+    storageMonitor.checkStorageIsUp();
     TimelineEntityReader reader =
         TimelineEntityReaderFactory.createMultipleEntitiesReader(context,
             filters, dataToRetrieve);
@@ -90,7 +102,26 @@ public class HBaseTimelineReaderImpl
   @Override
   public Set<String> getEntityTypes(TimelineReaderContext context)
       throws IOException {
+    storageMonitor.checkStorageIsUp();
     EntityTypeReader reader = new EntityTypeReader(context);
     return reader.readEntityTypes(hbaseConf, conn);
   }
+
+  @Override
+  public TimelineHealth getHealthStatus() {
+    try {
+      storageMonitor.checkStorageIsUp();
+      return new TimelineHealth(TimelineHealth.TimelineHealthStatus.RUNNING,
+          "");
+    } catch (IOException e){
+      return new TimelineHealth(
+          TimelineHealth.TimelineHealthStatus.READER_CONNECTION_FAILURE,
+          "HBase connection is down");
+    }
+  }
+
+  protected TimelineStorageMonitor getTimelineStorageMonitor() {
+    return storageMonitor;
+  }
+
 }

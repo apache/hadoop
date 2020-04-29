@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.app;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -2075,7 +2076,7 @@ public class TestRecovery {
     expectedOutput.append(key1).append("\n");
     expectedOutput.append(key2).append('\t').append(val2).append("\n");
     String output = slurp(expectedFile);
-    Assert.assertEquals(output, expectedOutput.toString());
+    assertThat(output).isEqualTo(expectedOutput.toString());
   }
 
   public static String slurp(File f) throws IOException {

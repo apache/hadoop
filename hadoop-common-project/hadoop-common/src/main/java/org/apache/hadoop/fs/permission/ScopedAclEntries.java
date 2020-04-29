@@ -42,7 +42,7 @@ public final class ScopedAclEntries {
    * list is already sorted such that all access entries precede all default
    * entries.
    *
-   * @param aclEntries List<AclEntry> to separate
+   * @param aclEntries List&lt;AclEntry&gt; to separate
    */
   public ScopedAclEntries(List<AclEntry> aclEntries) {
     int pivot = calculatePivotOnDefaultEntries(aclEntries);
@@ -59,8 +59,8 @@ public final class ScopedAclEntries {
   /**
    * Returns access entries.
    *
-   * @return List<AclEntry> containing just access entries, or an empty list if
-   *   there are no access entries
+   * @return List&lt;AclEntry&gt; containing just access entries, or an empty
+   * list if there are no access entries
    */
   public List<AclEntry> getAccessEntries() {
     return accessEntries;
@@ -69,8 +69,8 @@ public final class ScopedAclEntries {
   /**
    * Returns default entries.
    *
-   * @return List<AclEntry> containing just default entries, or an empty list if
-   *   there are no default entries
+   * @return List&lt;AclEntry&gt; containing just default entries, or an empty
+   * list if there are no default entries
    */
   public List<AclEntry> getDefaultEntries() {
     return defaultEntries;
@@ -78,8 +78,8 @@ public final class ScopedAclEntries {
 
   /**
    * Returns the pivot point in the list between the access entries and the
-   * default entries.  This is the index of the first element in the list that is
-   * a default entry.
+   * default entries.  This is the index of the first element in the list that
+   * is a default entry.
    *
    * @param aclBuilder ArrayList<AclEntry> containing entries to build
    * @return int pivot point, or -1 if list contains no default entries

@@ -17,6 +17,8 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
+import static org.junit.Assert.fail;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -103,4 +105,33 @@ public class TestLoadBasedRouterPolicy extends BaseRouterPoliciesTest {
     Assert.assertEquals("sc05", chosen.getId());
   }
 
+  @Test
+  public void testIfNoSubclustersWithWeightOne() {
+    setPolicy(new LoadBasedRouterPolicy());
+    setPolicyInfo(new WeightedPolicyInfo());
+    Map<SubClusterIdInfo, Float> routerWeights = new HashMap<>();
+    Map<SubClusterIdInfo, Float> amrmWeights = new HashMap<>();
+    // update subcluster with weight 0
+    SubClusterIdInfo sc = new SubClusterIdInfo(String.format("sc%02d", 0));
+    SubClusterInfo federationSubClusterInfo = SubClusterInfo.newInstance(
+        sc.toId(), null, null, null, null, -1, SubClusterState.SC_RUNNING, -1,
+        generateClusterMetricsInfo(0));
+    getActiveSubclusters().clear();
+    getActiveSubclusters().put(sc.toId(), federationSubClusterInfo);
+    routerWeights.put(sc, 0.0f);
+    amrmWeights.put(sc, 0.0f);
+    getPolicyInfo().setRouterPolicyWeights(routerWeights);
+    getPolicyInfo().setAMRMPolicyWeights(amrmWeights);
+
+    try {
+      FederationPoliciesTestUtil.initializePolicyContext(getPolicy(),
+          getPolicyInfo(), getActiveSubclusters());
+      ((FederationRouterPolicy) getPolicy())
+          .getHomeSubcluster(getApplicationSubmissionContext(), null);
+      fail();
+    } catch (YarnException ex) {
+      Assert.assertTrue(
+          ex.getMessage().contains("Zero Active Subcluster with weight 1"));
+    }
+  }
 }

@@ -50,11 +50,38 @@ public class ThreadUtil {
   }
 
   /**
+   * Join a thread as uninterruptible.
+   * The call continues to block until the result is available even when the
+   * caller thread is interrupted.
+   * The method will log any {@link InterruptedException} then will re-interrupt
+   * the thread.
+   *
+   * @param toJoin the thread to Join on.
+   */
+  public static void joinUninterruptibly(Thread toJoin) {
+    boolean interrupted = false;
+    try {
+      while (true) {
+        try {
+          toJoin.join();
+          return;
+        } catch (InterruptedException e) {
+          interrupted = true;
+          LOG.warn("interrupted while sleeping", e);
+        }
+      }
+    } finally {
+      if (interrupted) {
+        Thread.currentThread().interrupt();
+      }
+    }
+  }
+
+  /**
    * Convenience method that returns a resource as inputstream from the
    * classpath.
    * <p>
-   * It first attempts to use the Thread's context classloader and if not
-   * set it uses the class' classloader.
+   * Uses the Thread's context classloader to load resource.
    *
    * @param resourceName resource to retrieve.
    *
@@ -68,6 +95,27 @@ public class ThreadUtil {
       throw new IOException("Can not read resource file '" + resourceName +
           "' because class loader of the current thread is null");
     }
+    return getResourceAsStream(cl, resourceName);
+  }
+
+  /**
+   * Convenience method that returns a resource as inputstream from the
+   * classpath using given classloader.
+   * <p>
+   *
+   * @param cl ClassLoader to be used to retrieve resource.
+   * @param resourceName resource to retrieve.
+   *
+   * @throws IOException thrown if resource cannot be loaded
+   * @return inputstream with the resource.
+   */
+  public static InputStream getResourceAsStream(ClassLoader cl,
+        String resourceName)
+        throws IOException {
+    if (cl == null) {
+      throw new IOException("Can not read resource file '" + resourceName +
+          "' because given class loader is null");
+    }
     InputStream is = cl.getResourceAsStream(resourceName);
     if (is == null) {
       throw new IOException("Can not read resource file '" +
@@ -75,4 +123,6 @@ public class ThreadUtil {
     }
     return is;
   }
+
+
 }

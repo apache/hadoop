@@ -18,15 +18,15 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-                      http://maven.apache.org/xsd/maven-4.0.0.xsd">
+                      https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <artifactId>hadoop-yarn-server</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.2.0-SNAPSHOT</version>
+    <version>3.4.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-yarn-server-applicationhistoryservice</artifactId>
-  <version>3.2.0-SNAPSHOT</version>
+  <version>3.4.0-SNAPSHOT</version>
   <name>Apache Hadoop YARN ApplicationHistoryService</name>
 
   <properties>
@@ -53,7 +53,7 @@
     </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
-      <artifactId>mockito-all</artifactId>
+      <artifactId>mockito-core</artifactId>
       <scope>test</scope>
     </dependency>
     <!-- 'mvn dependency:analyze' fails to detect use of this dependency -->
@@ -74,6 +74,11 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
       <scope>test</scope>
     </dependency>
     <!-- 'mvn dependency:analyze' fails to detect use of this dependency -->
@@ -151,7 +156,7 @@
     </dependency>
 
     <dependency>
-      <groupId>org.fusesource.leveldbjni</groupId>
+      <groupId>${leveldbjni.group}</groupId>
       <artifactId>leveldbjni-all</artifactId>
     </dependency>
 
@@ -172,7 +177,7 @@
     <!-- 'mvn dependency:analyze' fails to detect use of this dependency -->
     <dependency>
       <groupId>org.bouncycastle</groupId>
-      <artifactId>bcprov-jdk16</artifactId>
+      <artifactId>bcprov-jdk15on</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -184,10 +189,6 @@
           <groupId>org.javassist</groupId>
           <artifactId>javassist</artifactId>
         </exclusion>
-        <exclusion>
-          <groupId>org.objenesis</groupId>
-          <artifactId>objenesis</artifactId>
-        </exclusion>
       </exclusions>
     </dependency>
   </dependencies>
@@ -195,30 +196,51 @@
   <build>
     <plugins>
       <plugin>
-        <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-maven-plugins</artifactId>
+        <groupId>org.xolstice.maven.plugins</groupId>
+        <artifactId>protobuf-maven-plugin</artifactId>
         <executions>
           <execution>
-            <id>compile-protoc</id>
-            <goals>
-              <goal>protoc</goal>
-            </goals>
+            <id>src-compile-protoc</id>
             <configuration>
-              <protocVersion>${protobuf.version}</protocVersion>
-              <protocCommand>${protoc.path}</protocCommand>
-              <imports>
-                <param>${basedir}/../../../../hadoop-common-project/hadoop-common/src/main/proto</param>
-                <param>${basedir}/../../hadoop-yarn-api/src/main/proto</param>
-                <param>${basedir}/../../hadoop-yarn-common/src/main/proto</param>
-                <param>${basedir}/../hadoop-yarn-server-common/src/main/proto</param>
-                <param>${basedir}/src/main/proto</param>
-              </imports>
-              <source>
-                <directory>${basedir}/src/main/proto</directory>
-                <includes>
-                  <include>yarn_server_timelineserver_recovery.proto</include>
-                </includes>
-              </source>
+              <skip>false</skip>
+              <additionalProtoPathElements>
+                <additionalProtoPathElement>
+                  ${basedir}/../../../../hadoop-common-project/hadoop-common/src/main/proto
+                </additionalProtoPathElement>
+                <additionalProtoPathElement>
+                  ${basedir}/../../hadoop-yarn-api/src/main/proto
+                </additionalProtoPathElement>
+                <additionalProtoPathElement>
+                  ${basedir}/../../hadoop-yarn-common/src/main/proto
+                </additionalProtoPathElement>
+                <additionalProtoPathElement>
+                  ${basedir}/../hadoop-yarn-server-common/src/main/proto
+                </additionalProtoPathElement>
+              </additionalProtoPathElements>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>com.google.code.maven-replacer-plugin</groupId>
+        <artifactId>replacer</artifactId>
+        <executions>
+          <execution>
+            <id>replace-generated-sources</id>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
+          </execution>
+          <execution>
+            <id>replace-sources</id>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
+          </execution>
+          <execution>
+            <id>replace-test-sources</id>
+            <configuration>
+              <skip>false</skip>
             </configuration>
           </execution>
         </executions>

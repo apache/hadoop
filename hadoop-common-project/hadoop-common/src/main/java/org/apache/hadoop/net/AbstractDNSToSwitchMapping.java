@@ -29,11 +29,11 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * This is a base class for DNS to Switch mappings. <p/> It is not mandatory to
+ * This is a base class for DNS to Switch mappings. <p> It is not mandatory to
  * derive {@link DNSToSwitchMapping} implementations from it, but it is strongly
  * recommended, as it makes it easy for the Hadoop developers to add new methods
  * to this base class that are automatically picked up by all implementations.
- * <p/>
+ * <p>
  *
  * This class does not extend the <code>Configured</code>
  * base class, and should not be changed to do so, as it causes problems
@@ -81,7 +81,7 @@ public abstract class AbstractDNSToSwitchMapping
    * multi-rack. Subclasses may override this with methods that are more aware
    * of their topologies.
    *
-   * <p/>
+   * <p>
    *
    * This method is used when parts of Hadoop need know whether to apply
    * single rack vs multi-rack policies, such as during block placement.
@@ -124,8 +124,8 @@ public abstract class AbstractDNSToSwitchMapping
             .append("\n");
         switches.add(entry.getValue());
       }
-      builder.append("Nodes: ").append(rack.size()).append("\n");
-      builder.append("Switches: ").append(switches.size()).append("\n");
+      builder.append("Nodes: ").append(rack.size()).append("\n")
+          .append("Switches: ").append(switches.size()).append("\n");
     } else {
       builder.append("No topology information");
     }
@@ -140,7 +140,7 @@ public abstract class AbstractDNSToSwitchMapping
   /**
    * Query for a {@link DNSToSwitchMapping} instance being on a single
    * switch.
-   * <p/>
+   * <p>
    * This predicate simply assumes that all mappings not derived from
    * this class are multi-switch.
    * @param mapping the mapping to query

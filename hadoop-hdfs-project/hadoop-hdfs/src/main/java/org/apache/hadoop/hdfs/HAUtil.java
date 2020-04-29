@@ -43,6 +43,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.NameNodeProxiesClient.ProxyAndInfo;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -56,10 +57,14 @@ import org.apache.hadoop.security.UserGroupInformation;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class HAUtil {
-  
+
+  public static final org.slf4j.Logger LOG =
+      LoggerFactory.getLogger(HAUtil.class.getName());
+
   private static final String[] HA_SPECIAL_INDEPENDENT_KEYS = new String[]{
     DFS_NAMENODE_RPC_ADDRESS_KEY,
     DFS_NAMENODE_RPC_BIND_HOST_KEY,
@@ -147,10 +152,10 @@ public class HAUtil {
   }
   
   /**
-   * Get the NN ID of the other node in an HA setup.
+   * Get the NN ID of the other nodes in an HA setup.
    * 
    * @param conf the configuration of this node
-   * @return the NN ID of the other node in this nameservice
+   * @return a list of NN IDs of other nodes in this nameservice
    */
   public static List<String> getNameNodeIdOfOtherNodes(Configuration conf, String nsId) {
     Preconditions.checkArgument(nsId != null,
@@ -183,26 +188,26 @@ public class HAUtil {
   }
 
   /**
-   * Given the configuration for this node, return a Configuration object for
-   * the other node in an HA setup.
+   * Given the configuration for this node, return a list of configurations
+   * for the other nodes in an HA setup.
    * 
    * @param myConf the configuration of this node
-   * @return the configuration of the other node in an HA setup
+   * @return a list of configuration of other nodes in an HA setup
    */
   public static List<Configuration> getConfForOtherNodes(
       Configuration myConf) {
     
     String nsId = DFSUtil.getNamenodeNameServiceId(myConf);
-    List<String> otherNn = getNameNodeIdOfOtherNodes(myConf, nsId);
+    List<String> otherNodes = getNameNodeIdOfOtherNodes(myConf, nsId);
 
     // Look up the address of the other NNs
-    List<Configuration> confs = new ArrayList<Configuration>(otherNn.size());
+    List<Configuration> confs = new ArrayList<Configuration>(otherNodes.size());
     myConf = new Configuration(myConf);
     // unset independent properties
     for (String idpKey : HA_SPECIAL_INDEPENDENT_KEYS) {
       myConf.unset(idpKey);
     }
-    for (String nn : otherNn) {
+    for (String nn : otherNodes) {
       Configuration confForOtherNode = new Configuration(myConf);
       NameNode.initializeGenericKeys(confForOtherNode, nsId, nn);
       confs.add(confForOtherNode);
@@ -258,14 +263,34 @@ public class HAUtil {
    */
   public static InetSocketAddress getAddressOfActive(FileSystem fs)
       throws IOException {
+    InetSocketAddress inAddr = null;
     if (!(fs instanceof DistributedFileSystem)) {
       throw new IllegalArgumentException("FileSystem " + fs + " is not a DFS.");
     }
     // force client address resolution.
     fs.exists(new Path("/"));
     DistributedFileSystem dfs = (DistributedFileSystem) fs;
-    DFSClient dfsClient = dfs.getClient();
-    return RPC.getServerAddress(dfsClient.getNamenode());
+    Configuration dfsConf = dfs.getConf();
+    URI dfsUri = dfs.getUri();
+    String nsId = dfsUri.getHost();
+    if (isHAEnabled(dfsConf, nsId)) {
+      List<ClientProtocol> namenodes =
+          getProxiesForAllNameNodesInNameservice(dfsConf, nsId);
+      for (ClientProtocol proxy : namenodes) {
+        try {
+          if (proxy.getHAServiceState().equals(HAServiceState.ACTIVE)) {
+            inAddr = RPC.getServerAddress(proxy);
+          }
+        } catch (Exception e) {
+          //Ignore the exception while connecting to a namenode.
+          LOG.debug("Error while connecting to namenode", e);
+        }
+      }
+    } else {
+      DFSClient dfsClient = dfs.getClient();
+      inAddr = RPC.getServerAddress(dfsClient.getNamenode());
+    }
+    return inAddr;
   }
   
   /**

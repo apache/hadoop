@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * This class monitors the percentage of time the JVM is paused in GC within
@@ -45,6 +46,52 @@ public class GcTimeMonitor extends Thread {
   private long startTime;
   private final GcData curData = new GcData();
   private volatile boolean shouldRun = true;
+
+  public static class Builder {
+
+    private long observationWindowMs = TimeUnit.MINUTES.toMillis(1);
+    private long sleepIntervalMs = TimeUnit.SECONDS.toMillis(5);
+    private int maxGcTimePercentage = 100;
+    private GcTimeAlertHandler handler = null;
+
+    /**
+     * Set observation window size in milliseconds.
+     */
+    public Builder observationWindowMs(long value) {
+      this.observationWindowMs = value;
+      return this;
+    }
+
+    /**
+     * Set sleep interval in milliseconds.
+     */
+    public Builder sleepIntervalMs(long value) {
+      this.sleepIntervalMs = value;
+      return this;
+    }
+
+    /**
+     * Set the max GC time percentage that triggers the alert handler.
+     */
+    public Builder maxGcTimePercentage(int value) {
+      this.maxGcTimePercentage = value;
+      return this;
+    }
+
+    /**
+     * Set the GC alert handler.
+     */
+    public Builder gcTimeAlertHandler(GcTimeAlertHandler value) {
+      this.handler = value;
+      return this;
+    }
+
+    public GcTimeMonitor build() {
+      return new GcTimeMonitor(observationWindowMs, sleepIntervalMs,
+          maxGcTimePercentage, handler);
+    }
+  }
+
 
   /**
    * Create an instance of GCTimeMonitor. Once it's started, it will stay alive

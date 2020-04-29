@@ -50,6 +50,8 @@ import org.apache.hadoop.util.StringUtils;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
@@ -103,7 +105,8 @@ public class TestFileSystem {
     // This should go to TestFsShell.java when it is added.
     CommandFormat cf;
     cf= new CommandFormat("copyToLocal", 2,2,"crc","ignoreCrc");
-    assertEquals(cf.parse(new String[] {"-get","file", "-"}, 1).get(1), "-");
+    assertThat(cf.parse(new String[] {"-get", "file", "-"}, 1).get(1))
+        .isEqualTo("-");
     try {
       cf.parse(new String[] {"-get","file","-ignoreCrc","/foo"}, 1);
       fail("Expected parsing to fail as it should stop at first non-option");
@@ -112,12 +115,16 @@ public class TestFileSystem {
       // Expected
     }  
     cf = new CommandFormat("tail", 1, 1, "f");
-    assertEquals(cf.parse(new String[] {"-tail","fileName"}, 1).get(0),"fileName");
-    assertEquals(cf.parse(new String[] {"-tail","-f","fileName"}, 1).get(0),"fileName");
+    assertThat(cf.parse(new String[] {"-tail", "fileName"}, 1).get(0))
+        .isEqualTo("fileName");
+    assertThat(cf.parse(new String[] {"-tail", "-f", "fileName"}, 1).get(0))
+        .isEqualTo("fileName");
     cf = new CommandFormat("setrep", 2, 2, "R", "w");
-    assertEquals(cf.parse(new String[] {"-setrep","-R","2","/foo/bar"}, 1).get(1), "/foo/bar");
+    assertThat(cf.parse(new String[] {"-setrep", "-R", "2", "/foo/bar"}, 1)
+        .get(1)).isEqualTo("/foo/bar");
     cf = new CommandFormat("put", 2, 10000);
-    assertEquals(cf.parse(new String[] {"-put", "-", "dest"}, 1).get(1), "dest"); 
+    assertThat(cf.parse(new String[] {"-put", "-", "dest"}, 1).get(1))
+        .isEqualTo("dest");
   }
 
   public static void createControlFile(FileSystem fs,

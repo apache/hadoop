@@ -47,6 +47,8 @@ public interface YarnServiceConstants {
 
   String SERVICES_DIRECTORY = "services";
 
+  String SERVICES_PUBLIC_DIRECTORY = "/tmp/hadoop-yarn/staging/";
+
   /**
    * JVM property to define the service lib directory;
    * this is set by the yarn.sh script
@@ -84,6 +86,7 @@ public interface YarnServiceConstants {
   String HADOOP_USER_NAME = "HADOOP_USER_NAME";
 
   String APP_CONF_DIR = "conf";
+  String APP_RESOURCES_DIR = "resources";
 
   String APP_LIB_DIR = "lib";
 
@@ -92,4 +95,8 @@ public interface YarnServiceConstants {
 
   String CONTENT = "content";
   String PRINCIPAL = "yarn.service.am.principal";
+
+  String UPGRADE_DIR = "upgrade";
+  String CONTAINER_STATE_REPORT_AS_SERVICE_STATE =
+      "yarn.service.container-state-report-as-service-state";
 }

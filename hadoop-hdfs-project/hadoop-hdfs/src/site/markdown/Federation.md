@@ -174,7 +174,7 @@ Perform the following steps:
 * Refresh the Datanodes to pickup the newly added Namenode by running
   the following command against all the Datanodes in the cluster:
 
-        [hdfs]$ $HADOOP_HOME/bin/hdfs dfsadmin -refreshNamenodes <datanode_host_name>:<datanode_rpc_port>
+        [hdfs]$ $HADOOP_HOME/bin/hdfs dfsadmin -refreshNamenodes <datanode_host_name>:<datanode_ipc_port>
 
 Managing the cluster
 --------------------
@@ -210,7 +210,7 @@ For the complete command usage, see [balancer](./HDFSCommands.html#balancer).
 
 ### Decommissioning
 
-Decommissioning is similar to prior releases. The nodes that need to be decomissioned are added to the exclude file at all of the Namenodes. Each Namenode decommissions its Block Pool. When all the Namenodes finish decommissioning a Datanode, the Datanode is considered decommissioned.
+Decommissioning is similar to prior releases. The nodes that need to be decommissioned are added to the exclude file at all of the Namenodes. Each Namenode decommissions its Block Pool. When all the Namenodes finish decommissioning a Datanode, the Datanode is considered decommissioned.
 
 **Step 1**: To distribute an exclude file to all the Namenodes, use the following command:
 

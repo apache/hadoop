@@ -42,9 +42,10 @@ export default Ember.Controller.extend({
       getCellContent: function(row) {
         var component = row.get('component');
         var instance = row.get('instanceName');
+        var containerId = row.get('containerId');
         return {
           text: instance,
-          href: `#/yarn-component-instance/${component}/instances/${instance}/info?appid=${appId}&&service=${serviceName}`
+          href: `#/yarn-component-instance/${component}/instances/${instance}/info?appid=${appId}&service=${serviceName}&containerid=${containerId}`
         };
       }
     }, {
@@ -60,6 +61,19 @@ export default Ember.Controller.extend({
       id: 'startedDate',
       headerTitle: 'Started Time',
       contentPath: 'startedDate'
+    }, {
+      id: 'logsLink',
+      headerTitle: 'Logs',
+      contentPath: 'logsLink',
+      cellComponentName: 'em-table-html-cell',
+      getCellContent: function(row) {
+        var containerLogUrl = row.get('containerLogURL');
+        if (containerLogUrl) {
+          return `<a href="${containerLogUrl}&service=${serviceName}">Link</a>`;
+        } else {
+          return 'N/A';
+        }
+      }
     });
 
     return ColumnDef.make(cols);

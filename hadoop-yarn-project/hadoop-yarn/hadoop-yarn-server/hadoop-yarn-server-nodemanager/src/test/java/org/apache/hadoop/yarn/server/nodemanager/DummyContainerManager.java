@@ -24,6 +24,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -187,6 +189,11 @@ public class DummyContainerManager extends ContainerManagerImpl {
             // Ignore
           }
       }
+
+      @Override
+      public Set<ApplicationId> getInvalidTokenApps() {
+        return Collections.emptySet();
+      }
     };
   }
 
@@ -200,7 +207,8 @@ public class DummyContainerManager extends ContainerManagerImpl {
   
   @Override
   protected void authorizeGetAndStopContainerRequest(ContainerId containerId,
-      Container container, boolean stopRequest, NMTokenIdentifier identifier) throws YarnException {
+      Container container, boolean stopRequest, NMTokenIdentifier identifier,
+      String remoteUser) throws YarnException {
     // do nothing
   }
 

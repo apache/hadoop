@@ -19,20 +19,22 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.MappingType;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.QueueMappingBuilder;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule.QueueMapping;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule.QueueMapping.MappingType;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 public class TestQueueMappings {
 
-  private static final Log LOG = LogFactory.getLog(TestQueueMappings.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestQueueMappings.class);
 
   private static final String Q1 = "q1";
   private static final String Q2 = "q2";
@@ -90,7 +92,12 @@ public class TestQueueMappings {
     // space trimming
     conf.set(CapacitySchedulerConfiguration.QUEUE_MAPPING, "    u : a : " + Q1);
     cs.reinitialize(conf, null);
-    checkQMapping(new QueueMapping(MappingType.USER, "a", Q1));
+    checkQMapping(
+        QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("a")
+                .queue(Q1)
+                .build());
   }
 
   @Test (timeout = 60000)

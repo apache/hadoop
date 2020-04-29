@@ -25,8 +25,8 @@ import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -47,8 +47,8 @@ import java.security.PrivilegedExceptionAction;
  * tool via the Distributed Shell.  It's not meant to be run directly.
  */
 public class HadoopArchiveLogsRunner implements Tool {
-  private static final Log LOG =
-      LogFactory.getLog(HadoopArchiveLogsRunner.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(HadoopArchiveLogsRunner.class);
 
   private static final String APP_ID_OPTION = "appId";
   private static final String USER_OPTION = "user";

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.mapreduce.task.reduce;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -43,9 +44,9 @@ import org.apache.hadoop.mapred.MapOutputFile;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.task.reduce.MergeManagerImpl.CompressAwarePath;
+import org.apache.hadoop.test.Whitebox;
 import org.junit.Assert;
 import org.junit.Test;
-import org.mockito.internal.util.reflection.Whitebox;
 
 public class TestMergeManager {
 
@@ -78,7 +79,7 @@ public class TestMergeManager {
 
     // next reservation should be a WAIT
     MapOutput<Text, Text> out3 = mgr.reserve(null, OUTPUT_SIZE, 0);
-    Assert.assertEquals("Should be told to wait", null, out3);
+    assertThat(out3).withFailMessage("Should be told to wait").isNull();
 
     // trigger the first merge and wait for merge thread to start merging
     // and free enough output to reserve more
@@ -102,7 +103,7 @@ public class TestMergeManager {
 
     // next reservation should be null
     out3 = mgr.reserve(null, OUTPUT_SIZE, 0);
-    Assert.assertEquals("Should be told to wait", null, out3);
+    assertThat(out3).withFailMessage("Should be told to wait").isNull();
 
     // commit output *before* merge thread completes
     mout1.commit();

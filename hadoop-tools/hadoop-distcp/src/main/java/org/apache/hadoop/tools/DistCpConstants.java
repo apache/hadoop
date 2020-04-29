@@ -18,12 +18,19 @@
 
 package org.apache.hadoop.tools;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 
 /**
  * Utility class to hold commonly used constants.
  */
-public class DistCpConstants {
+@InterfaceAudience.LimitedPrivate("Distcp support tools")
+@InterfaceStability.Evolving
+public final class DistCpConstants {
+
+  private DistCpConstants() {
+  }
 
   /* Default number of threads to use for building file listing */
   public static final int DEFAULT_LISTSTATUS_THREADS = 1;
@@ -52,6 +59,8 @@ public class DistCpConstants {
       "distcp.preserve.rawxattrs";
   public static final String CONF_LABEL_SYNC_FOLDERS = "distcp.sync.folders";
   public static final String CONF_LABEL_DELETE_MISSING = "distcp.delete.missing.source";
+  public static final String CONF_LABEL_TRACK_MISSING =
+      "distcp.track.missing.source";
   public static final String CONF_LABEL_LISTSTATUS_THREADS = "distcp.liststatus.threads";
   public static final String CONF_LABEL_MAX_MAPS = "distcp.max.maps";
   public static final String CONF_LABEL_SOURCE_LISTING = "distcp.source.listing";
@@ -76,7 +85,8 @@ public class DistCpConstants {
       "distcp.dynamic.min.records_per_chunk";
   public static final String CONF_LABEL_SPLIT_RATIO =
       "distcp.dynamic.split.ratio";
-  
+  public static final String CONF_LABEL_DIRECT_WRITE = "distcp.direct.write";
+
   /* Total bytes to be copied. Updated by copylisting. Unfiltered count */
   public static final String CONF_LABEL_TOTAL_BYTES_TO_BE_COPIED = "mapred.total.bytes.expected";
 
@@ -110,9 +120,24 @@ public class DistCpConstants {
   /* DistCp CopyListing class override param */
   public static final String CONF_LABEL_COPY_LISTING_CLASS = "distcp.copy.listing.class";
 
+  /**
+   *  DistCp Filter class override param.
+   */
+  public static final String CONF_LABEL_FILTERS_CLASS = "distcp.filters.class";
+
+  /**
+   *  Distcp exclude file regex override param.
+   */
+  public static final String DISTCP_EXCLUDE_FILE_REGEX =
+          "distcp.exclude-file-regex";
+
   /* DistCp Copy Buffer Size */
   public static final String CONF_LABEL_COPY_BUFFER_SIZE =
       "distcp.copy.buffer.size";
+
+  /** DistCp Blocks Per Chunk: {@value}. */
+  public static final String CONF_LABEL_BLOCKS_PER_CHUNK =
+      "distcp.blocks.per.chunk";
 
   /**
    * Constants for DistCp return code to shell / consumer of ToolRunner's run
@@ -148,4 +173,22 @@ public class DistCpConstants {
   static final String HDFS_DISTCP_DIFF_DIRECTORY_NAME = ".distcp.diff.tmp";
 
   public static final int COPY_BUFFER_SIZE_DEFAULT = 8 * 1024;
+
+  /** Filename of sorted files in when tracking saves them. */
+  public static final String SOURCE_SORTED_FILE = "source_sorted.seq";
+
+  /** Filename of unsorted target listing. */
+  public static final String TARGET_LISTING_FILE = "target_listing.seq";
+
+  /** Filename of sorted target listing. */
+  public static final String TARGET_SORTED_FILE = "target_sorted.seq";
+
+  public static final String LENGTH_MISMATCH_ERROR_MSG =
+          "Mismatch in length of source:";
+
+  public static final String CHECKSUM_MISMATCH_ERROR_MSG =
+          "Checksum mismatch between ";
+
+  public static final String CLASS_INSTANTIATION_ERROR_MSG =
+          "Unable to instantiate ";
 }

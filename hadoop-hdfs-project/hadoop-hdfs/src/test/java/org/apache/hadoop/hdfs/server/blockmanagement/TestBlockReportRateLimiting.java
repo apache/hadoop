@@ -24,8 +24,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_FULL_BLOCK_REPOR
 import com.google.common.base.Joiner;
 import com.google.common.base.Supplier;
 import com.google.common.util.concurrent.Uninterruptibles;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -44,7 +44,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class TestBlockReportRateLimiting {
-  static final Log LOG = LogFactory.getLog(TestBlockReportRateLimiting.class);
+  static final Logger LOG =
+      LoggerFactory.getLogger(TestBlockReportRateLimiting.class);
 
   private static void setFailure(AtomicReference<String> failure,
                                  String what) {

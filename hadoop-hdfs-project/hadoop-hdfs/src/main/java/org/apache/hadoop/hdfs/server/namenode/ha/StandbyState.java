@@ -24,6 +24,7 @@ import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
+import org.apache.hadoop.ipc.ObserverRetryOnActiveException;
 import org.apache.hadoop.ipc.StandbyException;
 
 /**
@@ -39,13 +40,23 @@ import org.apache.hadoop.ipc.StandbyException;
  */
 @InterfaceAudience.Private
 public class StandbyState extends HAState {
+  // TODO: consider implementing a ObserverState instead of using the flag.
+  private final boolean isObserver;
+
   public StandbyState() {
-    super(HAServiceState.STANDBY);
+    this(false);
+  }
+
+  public StandbyState(boolean isObserver) {
+    super(isObserver ? HAServiceState.OBSERVER : HAServiceState.STANDBY);
+    this.isObserver = isObserver;
   }
 
   @Override
   public void setState(HAContext context, HAState s) throws ServiceFailedException {
-    if (s == NameNode.ACTIVE_STATE) {
+    if (s == NameNode.ACTIVE_STATE ||
+        (!isObserver && s == NameNode.OBSERVER_STATE) ||
+        (isObserver && s == NameNode.STANDBY_STATE)) {
       setStateInternal(context, s);
       return;
     }
@@ -85,12 +96,27 @@ public class StandbyState extends HAState {
     String faq = ". Visit https://s.apache.org/sbnn-error";
     String msg = "Operation category " + op + " is not supported in state "
         + context.getState() + faq;
-    throw new StandbyException(msg);
+    if (op == OperationCategory.WRITE && isObserver) {
+      // If observer receives a write call, return active retry
+      // exception to inform client to retry on active.
+      // A write should never happen on Observer. Except that,
+      // if access time is enabled. A open call can transition
+      // to a write operation. In this case, Observer
+      // should inform the client to retry this open on Active.
+      throw new ObserverRetryOnActiveException(msg);
+    } else {
+      throw new StandbyException(msg);
+    }
   }
 
   @Override
   public boolean shouldPopulateReplQueues() {
     return false;
+  }
+
+  @Override
+  public String toString() {
+    return isObserver ? "observer" : "standby";
   }
 }
 

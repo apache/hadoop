@@ -21,8 +21,8 @@ package org.apache.hadoop.hdfs;
 import java.io.IOException;
 import java.util.EnumSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -64,7 +64,8 @@ public class TestWriteRead {
   private boolean truncateOption = false;
   private final boolean abortTestOnFailure = true;
 
-  static private Log LOG = LogFactory.getLog(TestWriteRead.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestWriteRead.class);
 
   @Before
   public void initJunitModeTest() throws Exception {
@@ -95,7 +96,6 @@ public class TestWriteRead {
   // Equivalence of @Before for cluster mode testing.
   private void initClusterModeTest() throws IOException {
 
-    LOG = LogFactory.getLog(TestWriteRead.class);
     LOG.info("initClusterModeTest");
 
     conf = new Configuration();

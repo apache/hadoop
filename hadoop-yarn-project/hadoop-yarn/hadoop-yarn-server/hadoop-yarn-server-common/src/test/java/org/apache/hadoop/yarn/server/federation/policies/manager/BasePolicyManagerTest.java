@@ -17,6 +17,8 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.manager;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
 import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.FederationAMRMProxyPolicy;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
@@ -24,7 +26,6 @@ import org.apache.hadoop.yarn.server.federation.policies.router.FederationRouter
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
 import org.apache.hadoop.yarn.server.federation.utils.FederationPoliciesTestUtil;
-import org.junit.Assert;
 import org.junit.Test;
 
 /**
@@ -92,10 +93,10 @@ public abstract class BasePolicyManagerTest {
     FederationRouterPolicy federationRouterPolicy =
         wfp2.getRouterPolicy(context, null);
 
-    Assert.assertEquals(federationAMRMProxyPolicy.getClass(),
-        expAMRMProxyPolicy);
+    assertThat(federationAMRMProxyPolicy).
+        isExactlyInstanceOf(expAMRMProxyPolicy);
 
-    Assert.assertEquals(federationRouterPolicy.getClass(), expRouterPolicy);
+    assertThat(federationRouterPolicy).isExactlyInstanceOf(expRouterPolicy);
   }
 
 }

@@ -31,8 +31,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.Text;
@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMSecretManagerService;
 import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MockRMWithAMS;
@@ -77,7 +78,8 @@ import org.junit.runners.Parameterized.Parameters;
 @RunWith(Parameterized.class)
 public class TestAMRMTokens {
 
-  private static final Log LOG = LogFactory.getLog(TestAMRMTokens.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestAMRMTokens.class);
 
   private final Configuration conf;
   private static final int maxWaitAttempts = 50;
@@ -128,7 +130,7 @@ public class TestAMRMTokens {
     try {
       MockNM nm1 = rm.registerNode("localhost:1234", 5120);
 
-      RMApp app = rm.submitApp(1024);
+      RMApp app = MockRMAppSubmitter.submitWithMemory(1024, rm);
 
       nm1.nodeHeartbeat(true);
 
@@ -249,7 +251,7 @@ public class TestAMRMTokens {
     try {
       MockNM nm1 = rm.registerNode("localhost:1234", 5120);
 
-      RMApp app = rm.submitApp(1024);
+      RMApp app = MockRMAppSubmitter.submitWithMemory(1024, rm);
 
       nm1.nodeHeartbeat(true);
 
@@ -379,7 +381,7 @@ public class TestAMRMTokens {
     };
     rm.start();
     MockNM nm = rm.registerNode("127.0.0.1:1234", 8000);
-    RMApp app = rm.submitApp(200);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(200, rm);
     MockAM am = MockRM.launchAndRegisterAM(app, rm, nm);
     AMRMTokenSecretManager spySecretMgr = spySecretMgrRef.get();
     // Do allocate. Should not update AMRMToken

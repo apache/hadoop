@@ -80,7 +80,16 @@ export default Ember.Service.extend({
     return this.normalizeURL(this.get("env.app.hosts.rmWebAddress"));
   }),
 
+  jhsAddress: Ember.computed(function() {
+    return this.normalizeURL(this.get("env.app.hosts.jhsAddress"));
+  }),
+
   dashWebAddress: Ember.computed(function () {
     return this.normalizeURL(this.get("env.app.hosts.dashWebAddress"));
+  }),
+
+  isSecurityEnabled: Ember.computed(function () {
+    console.log(this.get("env.app.hosts.isSecurityEnabled"));
+    return this.get("env.app.hosts.isSecurityEnabled");
   })
 });

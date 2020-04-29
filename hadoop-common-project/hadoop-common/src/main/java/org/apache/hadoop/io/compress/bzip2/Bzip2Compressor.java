@@ -247,7 +247,7 @@ public class Bzip2Compressor implements Compressor {
   }
 
   /**
-   * Returns the total number of uncompressed bytes input so far.</p>
+   * Returns the total number of uncompressed bytes input so far.
    *
    * @return the total (non-negative) number of uncompressed bytes input so far
    */

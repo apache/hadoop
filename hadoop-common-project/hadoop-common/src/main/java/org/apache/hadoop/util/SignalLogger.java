@@ -84,8 +84,8 @@ public enum SignalLogger {
     for (String signalName : SIGNALS) {
       try {
         new Handler(signalName, LOG);
-        bld.append(separator);
-        bld.append(signalName);
+        bld.append(separator)
+            .append(signalName);
         separator = ", ";
       } catch (Exception e) {
         LOG.debug(e);

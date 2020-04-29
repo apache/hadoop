@@ -18,16 +18,20 @@
 package org.apache.hadoop.fs;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.StatUtils;
+import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.Shell;
 
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assume.assumeTrue;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +46,19 @@ public class TestRawLocalFileSystemContract extends FileSystemContractBaseTest {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestRawLocalFileSystemContract.class);
   private final static Path TEST_BASE_DIR =
-      new Path(GenericTestUtils.getTempPath(""));
+      new Path(GenericTestUtils.getRandomizedTestDir().getAbsolutePath());
+
+  // These are the string values that DF sees as "Filesystem" for a
+  // Docker container accessing a Mac or Windows host's filesystem.
+  private static final String FS_TYPE_MAC = "osxfs";
+  private static boolean looksLikeMac(String filesys) {
+    return filesys.toLowerCase().contains(FS_TYPE_MAC.toLowerCase());
+  }
+  private static final Pattern HAS_DRIVE_LETTER_SPECIFIER =
+      Pattern.compile("^/?[a-zA-Z]:");
+  private static boolean looksLikeWindows(String filesys) {
+    return HAS_DRIVE_LETTER_SPECIFIER.matcher(filesys).find();
+  }
 
   @Before
   public void setUp() throws Exception {
@@ -84,13 +100,37 @@ public class TestRawLocalFileSystemContract extends FileSystemContractBaseTest {
 
   @Override
   protected boolean filesystemIsCaseSensitive() {
-    return !(Shell.WINDOWS || Shell.MAC);
+    if (Shell.WINDOWS || Shell.MAC) {
+      return false;
+    }
+    // osType is linux or unix-like, but it might be in a container mounting a
+    // Mac or Windows volume. Use DF to try to determine if this is the case.
+    String rfsPathStr = "uninitialized";
+    String rfsType;
+    try {
+      RawLocalFileSystem rfs = new RawLocalFileSystem();
+      Configuration conf = new Configuration();
+      rfs.initialize(rfs.getUri(), conf);
+      rfsPathStr = Path.getPathWithoutSchemeAndAuthority(
+          rfs.getWorkingDirectory()).toString();
+      File rfsPath = new File(rfsPathStr);
+      // DF.getFilesystem() only provides indirect info about FS type, but it's
+      // the best we have.  `df -T` would be better, but isn't cross-platform.
+      rfsType = (new DF(rfsPath, conf)).getFilesystem();
+      LOG.info("DF.Filesystem is {} for path {}", rfsType, rfsPath);
+    } catch (IOException ex) {
+      LOG.error("DF failed on path {}", rfsPathStr);
+      rfsType = Shell.osType.toString();
+    }
+    return !(looksLikeMac(rfsType) || looksLikeWindows(rfsType));
   }
 
   // cross-check getPermission using both native/non-native
   @Test
   @SuppressWarnings("deprecation")
   public void testPermission() throws Exception {
+    assumeTrue("No native library",
+        NativeCodeLoader.isNativeCodeLoaded());
     Path testDir = getTestBaseDir();
     String testFilename = "teststat2File";
     Path path = new Path(testDir, testFilename);
@@ -107,8 +147,8 @@ public class TestRawLocalFileSystemContract extends FileSystemContractBaseTest {
     // test initial permission
     //
     RawLocalFileSystem.DeprecatedRawLocalFileStatus fsNIO =
-      new RawLocalFileSystem.DeprecatedRawLocalFileStatus(
-          file, defaultBlockSize, rfs);
+        new RawLocalFileSystem.DeprecatedRawLocalFileStatus(
+            file, defaultBlockSize, rfs);
     fsNIO.loadPermissionInfoByNativeIO();
     RawLocalFileSystem.DeprecatedRawLocalFileStatus fsnonNIO =
         new RawLocalFileSystem.DeprecatedRawLocalFileStatus(

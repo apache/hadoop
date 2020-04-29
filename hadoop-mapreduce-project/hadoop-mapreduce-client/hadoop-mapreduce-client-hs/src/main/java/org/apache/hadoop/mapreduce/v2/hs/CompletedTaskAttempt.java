@@ -39,7 +39,7 @@ public class CompletedTaskAttempt implements TaskAttempt {
   private final TaskAttemptInfo attemptInfo;
   private final TaskAttemptId attemptId;
   private final TaskAttemptState state;
-  private final List<String> diagnostics = new ArrayList<String>();
+  private final List<String> diagnostics = new ArrayList<String>(2);
   private TaskAttemptReport report;
 
   private String localDiagMessage;

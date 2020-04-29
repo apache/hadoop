@@ -24,8 +24,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -50,8 +50,8 @@ import com.google.common.annotations.VisibleForTesting;
 public class RMDelegationTokenSecretManager extends
     AbstractDelegationTokenSecretManager<RMDelegationTokenIdentifier> implements
     Recoverable {
-  private static final Log LOG = LogFactory
-      .getLog(RMDelegationTokenSecretManager.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(RMDelegationTokenSecretManager.class);
 
   private final ResourceManager rm;
 

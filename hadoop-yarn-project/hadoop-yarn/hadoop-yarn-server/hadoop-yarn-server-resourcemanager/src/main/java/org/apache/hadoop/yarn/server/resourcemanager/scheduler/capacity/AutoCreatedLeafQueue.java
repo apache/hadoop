@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
 
@@ -49,15 +50,14 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
   @Override
   public void reinitialize(CSQueue newlyParsedQueue, Resource clusterResource)
       throws IOException {
+    writeLock.lock();
     try {
-      writeLock.lock();
-
       validate(newlyParsedQueue);
 
       ManagedParentQueue managedParentQueue = (ManagedParentQueue) parent;
 
       super.reinitialize(newlyParsedQueue, clusterResource, managedParentQueue
-          .getLeafQueueConfigs(newlyParsedQueue.getQueueName()));
+          .getLeafQueueConfigs(newlyParsedQueue.getQueueShortName()));
 
       //Reset capacities to 0 since reinitialize above
       // queueCapacities to initialize to configured capacity which might
@@ -72,8 +72,11 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
   public void reinitializeFromTemplate(AutoCreatedLeafQueueConfig
       leafQueueTemplate) throws SchedulerDynamicEditException, IOException {
 
+    writeLock.lock();
     try {
-      writeLock.lock();
+
+      this.getParent().updateClusterResource(this.csContext.getClusterResource(),
+          new ResourceLimits(this.csContext.getClusterResource()));
 
       // TODO:
       // reinitialize only capacities for now since 0 capacity updates
@@ -101,7 +104,7 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
     }
   }
 
-  private void mergeCapacities(QueueCapacities capacities) {
+  public void mergeCapacities(QueueCapacities capacities) {
     for ( String nodeLabel : capacities.getExistingNodeLabels()) {
       queueCapacities.setCapacity(nodeLabel,
           capacities.getCapacity(nodeLabel));
@@ -148,11 +151,10 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
     try {
       for( String nodeLabel : parent.getQueueCapacities().getExistingNodeLabels
           ()) {
-        //TODO - update to use getMaximumCapacity(nodeLabel) in YARN-7574
         setEntitlement(nodeLabel, new QueueEntitlement(0.0f,
             parent.getLeafQueueTemplate()
                 .getQueueCapacities()
-                .getMaximumCapacity()));
+                .getMaximumCapacity(nodeLabel)));
       }
     } catch (SchedulerDynamicEditException e) {
       throw new IOException(e);

@@ -18,22 +18,38 @@
 
 import AbstractAdapter from './abstract';
 
+function createEmptyContainerLogInfo(location) {
+  return {
+    containerLogsInfo: {
+      containerLogInfo: [{
+        fileName: "",
+        fileSize: "",
+        lastModifiedTime: "",
+        redirectedUrl: location
+      }]
+    }
+  };
+}
+
 export default AbstractAdapter.extend({
-  address: "timelineV1WebAddress",
-  // restNameSpace: "timelineV2", // Use ATSv2 when it supports log APIs.
-  restNameSpace: "timeline", //Using ATSv1.5 now, would be supported by ATSv2 very soon.
+  address: "timelineWebAddress",
+  restNameSpace: "timelineV2Log",
   serverName: "ATS",
 
   urlForQuery(query/*, modelName*/) {
     var url = this._buildURL();
     var containerId = query['containerId'];
+    var clusterId = this.get("env.app.clusterId");
     delete query.containerId;
-    return url + '/containers/' + containerId + '/logs';
+    return url + '/containers/' + containerId + '/logs' + '?clusterid=' + clusterId + '?manual_redirection=true';
   },
 
-  fetchLogFileContent(containerId, logFile) {
-    var url = this._buildURL();
-    url = url + '/containers/' + containerId + '/logs/' + logFile;
-    return Ember.$.ajax({url: url, type: 'GET', dataType: 'text'});
+  handleResponse(status, headers, payload, requestData) {
+    if (headers['location'] !== undefined && headers['location'] !== null) {
+      return createEmptyContainerLogInfo(headers['location']);
+    } else {
+      return payload;
+    }
   }
+
 });

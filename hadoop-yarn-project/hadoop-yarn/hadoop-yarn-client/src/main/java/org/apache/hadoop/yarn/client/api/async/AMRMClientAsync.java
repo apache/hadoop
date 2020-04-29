@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.api.records.ContainerUpdateType;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeReport;
+import org.apache.hadoop.yarn.api.records.PreemptionMessage;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.RejectedSchedulingRequest;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -413,6 +414,17 @@ extends AbstractService {
                                        List<String> blacklistRemovals);
 
   /**
+   * Update application's tracking url on next heartbeat.
+   *
+   * @param trackingUrl new tracking url for this application
+   */
+  @Public
+  @Unstable
+  public void updateTrackingUrl(String trackingUrl) {
+    // Unimplemented.
+  }
+
+  /**
    * Wait for <code>check</code> to return true for each 1000 ms.
    * See also {@link #waitFor(java.util.function.Supplier, int)}
    * and {@link #waitFor(java.util.function.Supplier, int, int)}
@@ -453,10 +465,7 @@ extends AbstractService {
 
     int loggingCounter = logInterval;
     do {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Check the condition for main loop.");
-      }
-
+      LOG.debug("Check the condition for main loop.");
       boolean result = check.get();
       if (result) {
         LOG.info("Exits the main loop.");
@@ -541,6 +550,16 @@ extends AbstractService {
     @Unstable
     public void onRequestsRejected(
         List<RejectedSchedulingRequest> rejectedSchedulingRequests) {
+    }
+
+    /**
+     * Called when the RM responds to a heartbeat with preemption message
+     * @param preemptionMessage
+     */
+    @Public
+    @Unstable
+    public void onPreemptionMessageReceived(
+        PreemptionMessage preemptionMessage) {
     }
   }
 

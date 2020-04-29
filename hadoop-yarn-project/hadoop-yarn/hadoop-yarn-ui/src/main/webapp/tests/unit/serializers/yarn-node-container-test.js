@@ -56,7 +56,7 @@ test('normalizeArrayResponse test', function(assert) {
   };
   assert.expect(14);
   var response =
-      serializer.normalizeArrayResponse({}, modelClass, payload, null, null);
+      serializer.normalizeArrayResponse({}, modelClass, payload);
   assert.ok(response.data);
   assert.equal(response.data.length, 2);
   assert.equal(response.data[0].id,
@@ -82,14 +82,11 @@ test('normalizeArrayResponse no containers test', function(assert) {
     modelName: "yarn-node-container"
   },
   payload = { containers: null };
-  assert.expect(5);
+  assert.expect(2);
   var response =
-      serializer.normalizeArrayResponse({}, modelClass, payload, null, null);
+      serializer.normalizeArrayResponse({}, modelClass, payload);
   assert.ok(response.data);
-  assert.equal(response.data.length, 1);
-  assert.equal(response.data[0].type, modelClass.modelName);
-  assert.equal(response.data[0].id, "dummy");
-  assert.equal(response.data[0].attributes.containerId, undefined);
+  assert.equal(response.data.length, 0);
 });
 
 test('normalizeSingleResponse test', function(assert) {
@@ -109,7 +106,7 @@ test('normalizeSingleResponse test', function(assert) {
   };
   assert.expect(11);
   var response =
-      serializer.normalizeSingleResponse({}, modelClass, payload, null, null);
+      serializer.normalizeSingleResponse({}, modelClass, payload);
   assert.ok(response.data);
   assert.equal(response.data.id, payload.container.id);
   assert.equal(response.data.type, modelClass.modelName);

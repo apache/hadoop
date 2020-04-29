@@ -77,6 +77,8 @@ function parse_args()
 function calculate_classpath
 {
   hadoop_add_to_classpath_tools hadoop-sls
+
+  hadoop_add_classpath "${HADOOP_YARN_HOME}/${YARN_DIR}/timelineservice"'/*'
 }
 
 function run_simulation() {

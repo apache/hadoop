@@ -1308,11 +1308,11 @@ public class TFile {
        * @param reader
        *          The TFile reader object.
        * @param beginKey
-       *          Begin key of the scan. If null, scan from the first <K,V>
-       *          entry of the TFile.
+       *          Begin key of the scan. If null, scan from the first
+       *          &lt;K, V&gt; entry of the TFile.
        * @param endKey
-       *          End key of the scan. If null, scan up to the last <K, V> entry
-       *          of the TFile.
+       *          End key of the scan. If null, scan up to the last &lt;K, V&gt;
+       *          entry of the TFile.
        * @throws IOException
        */
       protected Scanner(Reader reader, RawComparable beginKey,

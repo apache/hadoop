@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.federation.policies.amrmproxy;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -39,15 +40,16 @@ public interface FederationAMRMProxyPolicy
    *
    * @param resourceRequests the list of {@link ResourceRequest}s from the AM to
    *          be split
-   *
+   * @param timedOutSubClusters the set of sub-clusters that haven't had a
+   *          successful heart-beat response for a while.
    * @return map of sub-cluster as identified by {@link SubClusterId} to the
    *         list of {@link ResourceRequest}s that should be forwarded to it
-   *
    * @throws YarnException in case the request is malformed or no viable
    *           sub-clusters can be found.
    */
   Map<SubClusterId, List<ResourceRequest>> splitResourceRequests(
-      List<ResourceRequest> resourceRequests) throws YarnException;
+      List<ResourceRequest> resourceRequests,
+      Set<SubClusterId> timedOutSubClusters) throws YarnException;
 
   /**
    * This method should be invoked to notify the policy about responses being

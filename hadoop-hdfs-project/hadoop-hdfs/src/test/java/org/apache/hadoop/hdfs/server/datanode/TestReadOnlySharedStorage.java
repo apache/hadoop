@@ -26,8 +26,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Collections;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSClient;
@@ -61,7 +61,8 @@ import com.google.common.collect.Iterables;
  */
 public class TestReadOnlySharedStorage {
 
-  public static final Log LOG = LogFactory.getLog(TestReadOnlySharedStorage.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestReadOnlySharedStorage.class);
 
   private static final short NUM_DATANODES = 3;
   private static final int RO_NODE_INDEX = 0;

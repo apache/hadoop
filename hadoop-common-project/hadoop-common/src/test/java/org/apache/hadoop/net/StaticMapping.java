@@ -44,9 +44,9 @@ public class StaticMapping extends AbstractDNSToSwitchMapping  {
   /**
    * Key to define the node mapping as a comma-delimited list of host=rack
    * mappings, e.g. <code>host1=r1,host2=r1,host3=r2</code>.
-   * <p/>
+   * <p>
    * Value: {@value}
-   * <p/>
+   * <p>
    * <b>Important: </b>spaces not trimmed and are considered significant.
    */
   public static final String KEY_HADOOP_CONFIGURED_NODE_MAPPING =

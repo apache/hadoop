@@ -187,7 +187,7 @@ public class MachineList {
   }
 
   /**
-   * returns the contents of the MachineList as a Collection<String>
+   * returns the contents of the MachineList as a Collection&lt;String&gt;
    * This can be used for testing 
    * @return contents of the MachineList
    */

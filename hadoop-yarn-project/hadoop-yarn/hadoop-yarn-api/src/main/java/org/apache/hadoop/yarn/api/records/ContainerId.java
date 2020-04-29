@@ -172,8 +172,8 @@ public abstract class ContainerId implements Comparable<ContainerId>{
       sb.append('_');
     }
     ApplicationId appId = getApplicationAttemptId().getApplicationId();
-    sb.append(appId.getClusterTimestamp());
-    sb.append('_');
+    sb.append(appId.getClusterTimestamp())
+        .append('_');
     FastNumberFormat.format(sb, appId.getId(), APP_ID_MIN_DIGITS);
     sb.append('_');
     FastNumberFormat.format(sb, getApplicationAttemptId().getAttemptId(),

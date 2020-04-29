@@ -36,8 +36,8 @@ import java.util.concurrent.TimeoutException;
 
 import com.google.common.collect.Iterators;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -53,8 +53,6 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.SecurityUtil;
 
 import static org.apache.hadoop.util.Time.monotonicNow;
@@ -62,6 +60,7 @@ import static org.apache.hadoop.util.ExitUtil.terminate;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Time;
 
 
 /**
@@ -72,8 +71,20 @@ import com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class EditLogTailer {
-  public static final Log LOG = LogFactory.getLog(EditLogTailer.class);
-  
+  public static final Logger LOG = LoggerFactory.getLogger(EditLogTailer.class);
+
+  /**
+   * StandbyNode will hold namesystem lock to apply at most this many journal
+   * transactions.
+   * It will then release the lock and re-acquire it to load more transactions.
+   * By default the write lock is held for the entire journal segment.
+   * Fine-grained locking allows read requests to get through.
+   */
+  public static final String  DFS_HA_TAILEDITS_MAX_TXNS_PER_LOCK_KEY =
+      "dfs.ha.tail-edits.max-txns-per-lock";
+  public static final long DFS_HA_TAILEDITS_MAX_TXNS_PER_LOCK_DEFAULT =
+      Long.MAX_VALUE;
+
   private final EditLogTailerThread tailerThread;
   
   private final Configuration conf;
@@ -100,6 +111,11 @@ public class EditLogTailer {
   private long lastLoadTimeMs;
 
   /**
+   * The last time we triggered a edit log roll on active namenode.
+   */
+  private long lastRollTimeMs;
+
+  /**
    * How often the Standby should roll edit logs. Since the Standby only reads
    * from finalized log segments, the Standby will only be as up-to-date as how
    * often the logs are rolled.
@@ -118,10 +134,17 @@ public class EditLogTailer {
   private final ExecutorService rollEditsRpcExecutor;
 
   /**
-   * How often the Standby should check if there are new finalized segment(s)
-   * available to be read from.
+   * How often the tailer should check if there are new edit log entries
+   * ready to be consumed. This is the initial delay before any backoff.
    */
   private final long sleepTimeMs;
+  /**
+   * The maximum time the tailer should wait between checking for new edit log
+   * entries. Exponential backoff will be applied when an edit log tail is
+   * performed but no edits are available to be read. If this is less than or
+   * equal to 0, backoff is disabled.
+   */
+  private final long maxSleepTimeMs;
 
   private final int nnCount;
   private NamenodeProtocol cachedActiveProxy = null;
@@ -129,14 +152,25 @@ public class EditLogTailer {
   private int nnLoopCount = 0;
 
   /**
-   * maximum number of retries we should give each of the remote namenodes before giving up
+   * Maximum number of retries we should give each of the remote namenodes
+   * before giving up.
    */
   private int maxRetries;
 
   /**
-   * Whether the tailer should tail the in-progress edit log segments.
+   * Whether the tailer should tail the in-progress edit log segments. If true,
+   * this will also attempt to optimize for latency when tailing the edit logs
+   * (if using the
+   * {@link org.apache.hadoop.hdfs.qjournal.client.QuorumJournalManager}, this
+   * implies using the RPC-based mechanism to tail edits).
    */
   private final boolean inProgressOk;
+
+  /**
+   * Release the namesystem lock after loading this many transactions.
+   * Then re-acquire the lock to load more edits.
+   */
+  private final long maxTxnsPerLock;
 
   public EditLogTailer(FSNamesystem namesystem, Configuration conf) {
     this.tailerThread = new EditLogTailerThread();
@@ -145,10 +179,12 @@ public class EditLogTailer {
     this.editLog = namesystem.getEditLog();
     
     lastLoadTimeMs = monotonicNow();
+    lastRollTimeMs = monotonicNow();
 
     logRollPeriodMs = conf.getTimeDuration(
         DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY,
-        DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_DEFAULT, TimeUnit.SECONDS) * 1000;
+        DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_DEFAULT,
+        TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
     List<RemoteNameNodeInfo> nns = Collections.emptyList();
     if (logRollPeriodMs >= 0) {
       try {
@@ -175,11 +211,26 @@ public class EditLogTailer {
     
     sleepTimeMs = conf.getTimeDuration(
         DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY,
-        DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_DEFAULT, TimeUnit.SECONDS) * 1000;
+        DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_DEFAULT,
+        TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
+    long maxSleepTimeMsTemp = conf.getTimeDuration(
+        DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_BACKOFF_MAX_KEY,
+        DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_BACKOFF_MAX_DEFAULT,
+        TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
+    if (maxSleepTimeMsTemp > 0 && maxSleepTimeMsTemp < sleepTimeMs) {
+      LOG.warn("{} was configured to be {} ms, but this is less than {}."
+              + "Disabling backoff when tailing edit logs.",
+          DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_BACKOFF_MAX_KEY,
+          maxSleepTimeMsTemp, DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY);
+      maxSleepTimeMs = 0;
+    } else {
+      maxSleepTimeMs = maxSleepTimeMsTemp;
+    }
 
-    rollEditsTimeoutMs = conf.getInt(
+    rollEditsTimeoutMs = conf.getTimeDuration(
         DFSConfigKeys.DFS_HA_TAILEDITS_ROLLEDITS_TIMEOUT_KEY,
-        DFSConfigKeys.DFS_HA_TAILEDITS_ROLLEDITS_TIMEOUT_DEFAULT) * 1000;
+        DFSConfigKeys.DFS_HA_TAILEDITS_ROLLEDITS_TIMEOUT_DEFAULT,
+        TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
 
     rollEditsRpcExecutor = Executors.newSingleThreadExecutor(
         new ThreadFactoryBuilder().setDaemon(true).build());
@@ -198,6 +249,10 @@ public class EditLogTailer {
         DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY,
         DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_DEFAULT);
 
+    this.maxTxnsPerLock = conf.getLong(
+        DFS_HA_TAILEDITS_MAX_TXNS_PER_LOCK_KEY,
+        DFS_HA_TAILEDITS_MAX_TXNS_PER_LOCK_DEFAULT);
+
     nnCount = nns.size();
     // setup the iterator to endlessly loop the nns
     this.nnLookup = Iterators.cycle(nns);
@@ -211,7 +266,6 @@ public class EditLogTailer {
   }
   
   public void stop() throws IOException {
-    rollEditsRpcExecutor.shutdown();
     tailerThread.setShouldRun(false);
     tailerThread.interrupt();
     try {
@@ -219,6 +273,8 @@ public class EditLogTailer {
     } catch (InterruptedException e) {
       LOG.warn("Edit log tailer thread exited with an exception");
       throw new IOException(e);
+    } finally {
+      rollEditsRpcExecutor.shutdown();
     }
   }
   
@@ -255,7 +311,7 @@ public class EditLogTailer {
   }
   
   @VisibleForTesting
-  void doTailEdits() throws IOException, InterruptedException {
+  public long doTailEdits() throws IOException, InterruptedException {
     // Write lock needs to be interruptible here because the 
     // transitionToActive RPC takes the write lock before calling
     // tailer.stop() -- so if we're not interruptible, it will
@@ -270,6 +326,7 @@ public class EditLogTailer {
         LOG.debug("lastTxnId: " + lastTxnId);
       }
       Collection<EditLogInputStream> streams;
+      long startTime = Time.monotonicNow();
       try {
         streams = editLog.selectInputStreams(lastTxnId + 1, 0,
             null, inProgressOk, true);
@@ -279,7 +336,10 @@ public class EditLogTailer {
         // edits file hasn't been started yet.
         LOG.warn("Edits tailer failed to find any streams. Will try again " +
             "later.", ioe);
-        return;
+        return 0;
+      } finally {
+        NameNode.getNameNodeMetrics().addEditLogFetchTime(
+            Time.monotonicNow() - startTime);
       }
       if (LOG.isDebugEnabled()) {
         LOG.debug("edit streams to load from: " + streams.size());
@@ -290,7 +350,8 @@ public class EditLogTailer {
       // disk are ignored.
       long editsLoaded = 0;
       try {
-        editsLoaded = image.loadEdits(streams, namesystem);
+        editsLoaded = image.loadEdits(
+            streams, namesystem, maxTxnsPerLock, null, null);
       } catch (EditLogInputException elie) {
         editsLoaded = elie.getNumEditsLoaded();
         throw elie;
@@ -299,12 +360,14 @@ public class EditLogTailer {
           LOG.debug(String.format("Loaded %d edits starting from txid %d ",
               editsLoaded, lastTxnId));
         }
+        NameNode.getNameNodeMetrics().addNumEditLogLoaded(editsLoaded);
       }
 
       if (editsLoaded > 0) {
         lastLoadTimeMs = monotonicNow();
       }
       lastLoadedTxnId = image.getLastAppliedTxId();
+      return editsLoaded;
     } finally {
       namesystem.writeUnlock();
     }
@@ -322,7 +385,7 @@ public class EditLogTailer {
    */
   private boolean tooLongSinceLastLoad() {
     return logRollPeriodMs >= 0 && 
-      (monotonicNow() - lastLoadTimeMs) > logRollPeriodMs ;
+      (monotonicNow() - lastRollTimeMs) > logRollPeriodMs;
   }
 
   /**
@@ -350,17 +413,9 @@ public class EditLogTailer {
     try {
       future = rollEditsRpcExecutor.submit(getNameNodeProxy());
       future.get(rollEditsTimeoutMs, TimeUnit.MILLISECONDS);
+      lastRollTimeMs = monotonicNow();
       lastRollTriggerTxId = lastLoadedTxnId;
     } catch (ExecutionException e) {
-      Throwable cause = e.getCause();
-      if (cause instanceof RemoteException) {
-        IOException ioe = ((RemoteException) cause).unwrapRemoteException();
-        if (ioe instanceof StandbyException) {
-          LOG.info("Skipping log roll. Remote node is not in Active state: " +
-              ioe.getMessage().split("\n")[0]);
-          return;
-        }
-      }
       LOG.warn("Unable to trigger a roll of the active NN", e);
     } catch (TimeoutException e) {
       if (future != null) {
@@ -371,6 +426,11 @@ public class EditLogTailer {
     } catch (InterruptedException e) {
       LOG.warn("Unable to trigger a roll of the active NN", e);
     }
+  }
+
+  @VisibleForTesting
+  void sleep(long sleepTimeMillis) throws InterruptedException {
+    Thread.sleep(sleepTimeMillis);
   }
 
   /**
@@ -401,14 +461,18 @@ public class EditLogTailer {
     }
     
     private void doWork() {
+      long currentSleepTimeMs = sleepTimeMs;
       while (shouldRun) {
+        long editsTailed  = 0;
         try {
           // There's no point in triggering a log roll if the Standby hasn't
           // read any more transactions since the last time a roll was
-          // triggered. 
+          // triggered.
+          boolean triggeredLogRoll = false;
           if (tooLongSinceLastLoad() &&
               lastRollTriggerTxId < lastLoadedTxnId) {
             triggerActiveLogRoll();
+            triggeredLogRoll = true;
           }
           /**
            * Check again in case someone calls {@link EditLogTailer#stop} while
@@ -423,28 +487,45 @@ public class EditLogTailer {
           // name system lock will be acquired to further block even the block
           // state updates.
           namesystem.cpLockInterruptibly();
+          long startTime = Time.monotonicNow();
           try {
-            doTailEdits();
+            NameNode.getNameNodeMetrics().addEditLogTailInterval(
+                startTime - lastLoadTimeMs);
+            editsTailed = doTailEdits();
           } finally {
             namesystem.cpUnlock();
+            NameNode.getNameNodeMetrics().addEditLogTailTime(
+                Time.monotonicNow() - startTime);
           }
           //Update NameDirSize Metric
-          namesystem.getFSImage().getStorage().updateNameDirSize();
+          if (triggeredLogRoll) {
+            namesystem.getFSImage().getStorage().updateNameDirSize();
+          }
         } catch (EditLogInputException elie) {
           LOG.warn("Error while reading edits from disk. Will try again.", elie);
         } catch (InterruptedException ie) {
           // interrupter should have already set shouldRun to false
           continue;
         } catch (Throwable t) {
-          LOG.fatal("Unknown error encountered while tailing edits. " +
+          LOG.error("Unknown error encountered while tailing edits. " +
               "Shutting down standby NN.", t);
           terminate(1, t);
         }
 
         try {
-          Thread.sleep(sleepTimeMs);
+          if (editsTailed == 0 && maxSleepTimeMs > 0) {
+            // If no edits were tailed, apply exponential backoff
+            // before tailing again. Double the current sleep time on each
+            // empty response, but don't exceed the max. If the sleep time
+            // was configured as 0, start the backoff at 1 ms.
+            currentSleepTimeMs = Math.min(maxSleepTimeMs,
+                (currentSleepTimeMs == 0 ? 1 : currentSleepTimeMs) * 2);
+          } else {
+            currentSleepTimeMs = sleepTimeMs; // reset to initial sleep time
+          }
+          EditLogTailer.this.sleep(currentSleepTimeMs);
         } catch (InterruptedException e) {
-          LOG.warn("Edit log tailer interrupted", e);
+          LOG.warn("Edit log tailer interrupted: {}", e.getMessage());
         }
       }
     }
@@ -462,7 +543,8 @@ public class EditLogTailer {
    * This mechanism is <b>very bad</b> for cases where we care about being <i>fast</i>; it just
    * blindly goes and tries namenodes.
    */
-  private abstract class MultipleNameNodeProxy<T> implements Callable<T> {
+  @VisibleForTesting
+  abstract class MultipleNameNodeProxy<T> implements Callable<T> {
 
     /**
      * Do the actual work to the remote namenode via the {@link #cachedActiveProxy}.
@@ -478,19 +560,13 @@ public class EditLogTailer {
         try {
           T ret = doWork();
           return ret;
-        } catch (RemoteException e) {
-          Throwable cause = e.unwrapRemoteException(StandbyException.class);
-          // if its not a standby exception, then we need to re-throw it, something bad has happened
-          if (cause == e) {
-            throw e;
-          } else {
-            // it is a standby exception, so we try the other NN
-            LOG.warn("Failed to reach remote node: " + currentNN
-                + ", retrying with remaining remote NNs");
-            cachedActiveProxy = null;
-            // this NN isn't responding to requests, try the next one
-            nnLoopCount++;
-          }
+        } catch (IOException e) {
+          LOG.warn("Exception from remote name node " + currentNN
+              + ", try next.", e);
+
+          // Try next name node if exception happens.
+          cachedActiveProxy = null;
+          nnLoopCount++;
         }
       }
       throw new IOException("Cannot find any valid remote NN to service request!");

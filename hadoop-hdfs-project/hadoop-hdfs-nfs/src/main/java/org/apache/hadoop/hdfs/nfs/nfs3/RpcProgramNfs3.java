@@ -1037,7 +1037,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
           dirWcc = Nfs3Utils.createWccData(Nfs3Utils.getWccAttr(preOpDirAttr),
               dfsClient, dirFileIdPath, iug);
         } catch (IOException e1) {
-          LOG.error("Can't get postOpDirAttr for dirFileId: {}",
+          LOG.info("Can't get postOpDirAttr for dirFileId: {}",
               dirHandle.getFileId(), e1);
         }
       }
@@ -1836,7 +1836,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         try {
           attr = writeManager.getFileAttr(dfsClient, childHandle, iug);
         } catch (IOException e) {
-          LOG.error("Can't get file attributes for fileId: {}", fileId, e);
+          LOG.info("Can't get file attributes for fileId: {}", fileId, e);
           continue;
         }
         entries[i] = new READDIRPLUS3Response.EntryPlus3(fileId,
@@ -1853,7 +1853,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         try {
           attr = writeManager.getFileAttr(dfsClient, childHandle, iug);
         } catch (IOException e) {
-          LOG.error("Can't get file attributes for fileId: {}", fileId, e);
+          LOG.info("Can't get file attributes for fileId: {}", fileId, e);
           continue;
         }
         entries[i] = new READDIRPLUS3Response.EntryPlus3(fileId,

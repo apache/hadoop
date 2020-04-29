@@ -169,11 +169,6 @@ function run()
   fi
 }
 
-function domd5()
-{
-  run "${MD5SUM}" "${1}" > "${1}.md5"
-}
-
 function header()
 {
   echo
@@ -209,6 +204,11 @@ function set_defaults
   DOCKERFILE="${BASEDIR}/dev-support/docker/Dockerfile"
   DOCKERRAN=false
 
+  CPU_ARCH=$(echo "$MACHTYPE" | cut -d- -f1)
+  if [ "$CPU_ARCH" = "aarch64" ]; then
+    DOCKERFILE="${BASEDIR}/dev-support/docker/Dockerfile_aarch64"
+  fi
+
   # Extract Java version from ${BASEDIR}/pom.xml
   # doing this outside of maven means we can do this before
   # the docker container comes up...
@@ -235,11 +235,6 @@ function set_defaults
     fi
   fi
 
-  MD5SUM=$(command -v md5sum)
-  if [[ -z "${MD5SUM}" ]]; then
-    MD5SUM=$(command -v md5)
-  fi
-
   NATIVE=false
   OSNAME=$(uname -s)
 
@@ -253,12 +248,15 @@ function startgpgagent
   if [[ "${SIGN}" = true ]]; then
     if [[ -n "${GPGAGENT}" && -z "${GPG_AGENT_INFO}" ]]; then
       echo "starting gpg agent"
-      echo "default-cache-ttl 14400" > "${LOGDIR}/gpgagent.conf"
+      echo "default-cache-ttl 36000" > "${LOGDIR}/gpgagent.conf"
+      echo "max-cache-ttl 36000" >> "${LOGDIR}/gpgagent.conf"
       # shellcheck disable=2046
       eval $("${GPGAGENT}" --daemon \
         --options "${LOGDIR}/gpgagent.conf" \
         --log-file="${LOGDIR}/create-release-gpgagent.log")
-      GPGAGENTPID=$(echo "${GPG_AGENT_INFO}" | cut -f 2 -d:)
+      GPGAGENTPID=$(pgrep "${GPGAGENT}")
+      GPG_AGENT_INFO="$HOME/.gnupg/S.gpg-agent:$GPGAGENTPID:1"
+      export GPG_AGENT_INFO
     fi
 
     if [[ -n "${GPG_AGENT_INFO}" ]]; then
@@ -389,7 +387,7 @@ function option_parse
     hadoop_error "ERROR: Cannot set --mvncache and --dockercache simultaneously."
     exit 1
   else
-    MVNCACHE=${MVNCACHE:-"${HOME}/.m2"}
+    MVNCACHE=${MVNCACHE:-"${HOME}/.m2/repository"}
   fi
 
   if [[ "${ASFRELEASE}" = true ]]; then
@@ -508,7 +506,12 @@ function dockermode
 
     # we always force build with the OpenJDK JDK
     # but with the correct version
-    echo "ENV JAVA_HOME /usr/lib/jvm/java-${JVM_VERSION}-openjdk-amd64"
+    if [ "$CPU_ARCH" = "aarch64" ]; then
+      echo "ENV JAVA_HOME /usr/lib/jvm/java-${JVM_VERSION}-openjdk-arm64"
+    else
+      echo "ENV JAVA_HOME /usr/lib/jvm/java-${JVM_VERSION}-openjdk-amd64"
+    fi
+
     echo "USER ${user_name}"
     printf "\n\n"
   ) | docker build -t "${imgname}" -
@@ -533,7 +536,7 @@ function makearelease
   big_console_header "Cleaning the Source Tree"
 
   # git clean to clear any remnants from previous build
-  run "${GIT}" clean -xdf
+  run "${GIT}" clean -xdf -e /patchprocess
 
   mkdir -p "${LOGDIR}"
 
@@ -617,8 +620,8 @@ function makearelease
   #shellcheck disable=SC2038
   find . -name rat.txt | xargs -I% cat % > "${ARTIFACTS_DIR}/hadoop-${HADOOP_VERSION}${RC_LABEL}-rat.txt"
 
-  # Stage CHANGES and RELEASENOTES files
-  for i in CHANGES RELEASENOTES; do
+  # Stage CHANGELOG and RELEASENOTES files
+  for i in CHANGELOG RELEASENOTES; do
     run cp -p \
         "${BASEDIR}/hadoop-common-project/hadoop-common/src/site/markdown/release/${HADOOP_VERSION}"/${i}*.md \
         "${ARTIFACTS_DIR}/${i}.md"
@@ -640,9 +643,6 @@ function signartifacts
   declare ret
 
   if [[ "${SIGN}" = false ]]; then
-    for i in ${ARTIFACTS_DIR}/*; do
-      domd5 "${i}"
-    done
     echo ""
     echo "Remember to sign the artifacts before staging them on the open"
     echo ""
@@ -651,11 +651,12 @@ function signartifacts
 
   big_console_header "Signing the release"
 
-  for i in ${ARTIFACTS_DIR}/*; do
+  run cd "${ARTIFACTS_DIR}"
+  for i in *; do
     ${GPG} --use-agent --armor --output "${i}.asc" --detach-sig "${i}"
-    ${GPG} --print-mds "${i}" > "${i}.mds"
-    domd5 "${i}"
+    sha512sum --tag "${i}" > "${i}.sha512"
   done
+  run cd "${BASEDIR}"
 
   if [[ "${ASFRELEASE}" = true ]]; then
     echo "Fetching the Apache Hadoop KEYS file..."

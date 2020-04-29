@@ -72,22 +72,4 @@ public class TestAllocationBasedResourceUtilizationTracker {
     }
     Assert.assertFalse(tracker.hasResourcesAvailable(testContainer));
   }
-
-  /**
-   * Test the case where the current allocation has been truncated to 0.8888891
-   * (8/9 cores used). Request 1 additional core - hasEnoughCpu should return
-   * true.
-   */
-  @Test
-  public void testHasEnoughCpu() {
-    AllocationBasedResourceUtilizationTracker tracker =
-        new AllocationBasedResourceUtilizationTracker(mockContainerScheduler);
-    float currentAllocation = 0.8888891f;
-    long totalCores = 9;
-    int alreadyUsedCores = 8;
-    Assert.assertTrue(tracker.hasEnoughCpu(currentAllocation, totalCores,
-        (int) totalCores - alreadyUsedCores));
-    Assert.assertFalse(tracker.hasEnoughCpu(currentAllocation, totalCores,
-        (int) totalCores - alreadyUsedCores + 1));
-  }
 }

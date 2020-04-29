@@ -22,6 +22,7 @@
  * for what changes are allowed for a *stable* .proto interface.
  */
 
+syntax = "proto2";
 option java_package = "org.apache.hadoop.yarn.proto";
 option java_outer_classname = "ApplicationClientProtocol";
 option java_generic_services = true;
@@ -64,4 +65,7 @@ service ApplicationClientProtocolService {
   rpc getResourceProfiles(GetAllResourceProfilesRequestProto) returns (GetAllResourceProfilesResponseProto);
   rpc getResourceProfile(GetResourceProfileRequestProto) returns (GetResourceProfileResponseProto);
   rpc getResourceTypeInfo(GetAllResourceTypeInfoRequestProto) returns (GetAllResourceTypeInfoResponseProto);
+  rpc getClusterNodeAttributes (GetClusterNodeAttributesRequestProto) returns (GetClusterNodeAttributesResponseProto);
+  rpc getAttributesToNodes (GetAttributesToNodesRequestProto) returns (GetAttributesToNodesResponseProto);
+  rpc getNodesToAttributes (GetNodesToAttributesRequestProto) returns (GetNodesToAttributesResponseProto);
 }

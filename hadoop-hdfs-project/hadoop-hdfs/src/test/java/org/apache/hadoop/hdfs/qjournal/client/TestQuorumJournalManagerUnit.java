@@ -17,45 +17,65 @@
  */
 package org.apache.hadoop.hdfs.qjournal.client;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.eq;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
 
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.qjournal.client.AsyncLogger;
-import org.apache.hadoop.hdfs.qjournal.client.QuorumException;
-import org.apache.hadoop.hdfs.qjournal.client.QuorumJournalManager;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournaledEditsResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournalStateResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.NewEpochResponseProto;
+import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
+import org.apache.hadoop.hdfs.server.namenode.EditLogInputStream;
 import org.apache.hadoop.hdfs.server.namenode.EditLogOutputStream;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLog;
+import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
+import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
+import org.slf4j.event.Level;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Stubber;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.writeOp;
+import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.createTxnData;
+import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.verifyEdits;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 
 /**
  * True unit tests for QuorumJournalManager
  */
 public class TestQuorumJournalManagerUnit {
   static {
-    GenericTestUtils.setLogLevel(QuorumJournalManager.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(QuorumJournalManager.LOG, Level.TRACE);
   }
   private static final NamespaceInfo FAKE_NSINFO = new NamespaceInfo(
       12345, "mycluster", "my-bp", 0L);
@@ -71,6 +91,7 @@ public class TestQuorumJournalManagerUnit {
         mockLogger(),
         mockLogger());
 
+    conf.setBoolean(DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY, true);
     qjm = new QuorumJournalManager(conf, new URI("qjournal://host/jid"), FAKE_NSINFO) {
       @Override
       protected List<AsyncLogger> createLoggers(AsyncLogger.Factory factory) {
@@ -89,14 +110,15 @@ public class TestQuorumJournalManagerUnit {
           NewEpochResponseProto.newBuilder().build()
           ).when(logger).newEpoch(Mockito.anyLong());
       
-      futureReturns(null).when(logger).format(Mockito.<NamespaceInfo>any());
+      futureReturns(null).when(logger).format(Mockito.<NamespaceInfo>any(),
+          anyBoolean());
     }
     
     qjm.recoverUnfinalizedSegments();
   }
   
   private AsyncLogger mockLogger() {
-    return Mockito.mock(AsyncLogger.class);
+    return mock(AsyncLogger.class);
   }
   
   static <V> Stubber futureReturns(V value) {
@@ -193,7 +215,53 @@ public class TestQuorumJournalManagerUnit {
         anyLong(), eq(3L), eq(1), Mockito.<byte[]>any());
     stm.flush();
   }
-  
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testSetOutputBufferCapacityTooLarge() throws Exception {
+    qjm.setOutputBufferCapacity(
+        CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH_DEFAULT + 1);
+  }
+
+  // Regression test for HDFS-13977
+  @Test
+  public void testFSEditLogAutoSyncToQuorumStream() throws Exception {
+    // Set the buffer capacity low to make it easy to fill it
+    qjm.setOutputBufferCapacity(512);
+
+    // Set up mocks
+    NNStorage mockStorage = mock(NNStorage.class);
+    createLogSegment(); // sets up to the mocks for startLogSegment
+    for (int logIdx = 0; logIdx < 3; logIdx++) {
+      futureReturns(null).when(spyLoggers.get(logIdx))
+          .sendEdits(anyLong(), anyLong(), anyInt(), any());
+    }
+    PermissionStatus permStat = PermissionStatus
+        .createImmutable("user", "group", FsPermission.getDefault());
+    INode fakeInode = FSImageTestUtil.createEmptyInodeFile(1, "foo",
+        permStat, 1, 1, (short) 1, 1);
+
+    // Create a fake FSEditLog using this QJM
+    String mockQjmEdits = "qjournal://mock/";
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, mockQjmEdits);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY, mockQjmEdits);
+    FSEditLog editLog = FSImageTestUtil.createEditLogWithJournalManager(
+        conf, mockStorage, URI.create(mockQjmEdits), qjm);
+
+    editLog.initJournalsForWrite();
+    editLog.startLogSegment(1, false,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
+    // Write enough edit ops that the output buffer capacity should fill and
+    // an auto-sync should be triggered
+    for (int i = 0; i < 12; i++) {
+      editLog.logMkDir("/fake/path", fakeInode);
+    }
+
+    for (int i = 0; i < 3; i++) {
+      Mockito.verify(spyLoggers.get(i), times(1))
+          .sendEdits(eq(1L), eq(1L), anyInt(), any());
+    }
+  }
+
   @Test
   public void testWriteEditsOneSlow() throws Exception {
     EditLogOutputStream stm = createLogSegment();
@@ -213,6 +281,94 @@ public class TestQuorumJournalManagerUnit {
     stm.flush();
     
     Mockito.verify(spyLoggers.get(0)).setCommittedTxId(1L);
+  }
+
+  @Test
+  public void testReadRpcInputStreams() throws Exception {
+    for (int jn = 0; jn < 3; jn++) {
+      futureReturns(getJournaledEditsReponse(1, 3))
+          .when(spyLoggers.get(jn)).getJournaledEdits(1,
+          QuorumJournalManager.QJM_RPC_MAX_TXNS_DEFAULT);
+    }
+
+    List<EditLogInputStream> streams = Lists.newArrayList();
+    qjm.selectInputStreams(streams, 1, true, true);
+    assertEquals(1, streams.size());
+    verifyEdits(streams, 1, 3);
+  }
+
+  @Test
+  public void testReadRpcMismatchedInputStreams() throws Exception {
+    for (int jn = 0; jn < 3; jn++) {
+      futureReturns(getJournaledEditsReponse(1, jn + 1))
+          .when(spyLoggers.get(jn)).getJournaledEdits(1,
+          QuorumJournalManager.QJM_RPC_MAX_TXNS_DEFAULT);
+    }
+
+    List<EditLogInputStream> streams = Lists.newArrayList();
+    qjm.selectInputStreams(streams, 1, true, true);
+    assertEquals(1, streams.size());
+    verifyEdits(streams, 1, 2);
+  }
+
+  @Test
+  public void testReadRpcInputStreamsOneSlow() throws Exception {
+    for (int jn = 0; jn < 2; jn++) {
+      futureReturns(getJournaledEditsReponse(1, jn + 1))
+          .when(spyLoggers.get(jn)).getJournaledEdits(1,
+          QuorumJournalManager.QJM_RPC_MAX_TXNS_DEFAULT);
+    }
+    Mockito.doReturn(SettableFuture.create())
+        .when(spyLoggers.get(2)).getJournaledEdits(1,
+        QuorumJournalManager.QJM_RPC_MAX_TXNS_DEFAULT);
+
+    List<EditLogInputStream> streams = Lists.newArrayList();
+    qjm.selectInputStreams(streams, 1, true, true);
+    assertEquals(1, streams.size());
+    verifyEdits(streams, 1, 1);
+  }
+
+  @Test
+  public void testReadRpcInputStreamsOneException() throws Exception {
+    for (int jn = 0; jn < 2; jn++) {
+      futureReturns(getJournaledEditsReponse(1, jn + 1))
+          .when(spyLoggers.get(jn)).getJournaledEdits(1,
+          QuorumJournalManager.QJM_RPC_MAX_TXNS_DEFAULT);
+    }
+    futureThrows(new IOException()).when(spyLoggers.get(2))
+        .getJournaledEdits(1, QuorumJournalManager.QJM_RPC_MAX_TXNS_DEFAULT);
+
+    List<EditLogInputStream> streams = Lists.newArrayList();
+    qjm.selectInputStreams(streams, 1, true, true);
+    assertEquals(1, streams.size());
+    verifyEdits(streams, 1, 1);
+  }
+
+  @Test
+  public void testReadRpcInputStreamsNoNewEdits() throws Exception {
+    for (int jn = 0; jn < 3; jn++) {
+      futureReturns(GetJournaledEditsResponseProto.newBuilder()
+          .setTxnCount(0).setEditLog(ByteString.EMPTY).build())
+          .when(spyLoggers.get(jn))
+          .getJournaledEdits(1, QuorumJournalManager.QJM_RPC_MAX_TXNS_DEFAULT);
+    }
+
+    List<EditLogInputStream> streams = Lists.newArrayList();
+    qjm.selectInputStreams(streams, 1, true, true);
+    assertEquals(0, streams.size());
+  }
+
+  private GetJournaledEditsResponseProto getJournaledEditsReponse(
+      int startTxn, int numTxns) throws Exception {
+    ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+    EditLogFileOutputStream.writeHeader(
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION,
+        new DataOutputStream(byteStream));
+    byteStream.write(createTxnData(startTxn, numTxns));
+    return GetJournaledEditsResponseProto.newBuilder()
+        .setTxnCount(numTxns)
+        .setEditLog(ByteString.copyFrom(byteStream.toByteArray()))
+        .build();
   }
 
   private EditLogOutputStream createLogSegment() throws IOException {

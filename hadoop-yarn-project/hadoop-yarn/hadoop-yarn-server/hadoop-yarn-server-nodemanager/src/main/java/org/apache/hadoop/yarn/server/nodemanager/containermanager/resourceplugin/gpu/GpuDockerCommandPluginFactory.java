@@ -34,6 +34,10 @@ public class GpuDockerCommandPluginFactory {
     if (impl.equals(YarnConfiguration.NVIDIA_DOCKER_V1)) {
       return new NvidiaDockerV1CommandPlugin(conf);
     }
+    // nvidia-docker2
+    if (impl.equals(YarnConfiguration.NVIDIA_DOCKER_V2)) {
+      return new NvidiaDockerV2CommandPlugin();
+    }
 
     throw new YarnException(
         "Unkown implementation name for Gpu docker plugin, impl=" + impl);

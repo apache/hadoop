@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.ApplicationsRequestScope;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -43,6 +44,7 @@ import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.LocalizationState;
 import org.apache.hadoop.yarn.api.records.LogAggregationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
@@ -62,6 +64,7 @@ import org.apache.hadoop.yarn.api.resource.PlacementConstraint.TimedPlacementCon
 import org.apache.hadoop.yarn.proto.YarnProtos;
 import org.apache.hadoop.yarn.proto.YarnProtos.AMCommandProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAccessTypeProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationResourceUsageReportProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationTimeoutTypeProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
@@ -78,6 +81,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.QueueACLProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueStateProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ReservationRequestInterpreterProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.StringStringMapProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.TimedPlacementConstraintProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationAttemptStateProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationStateProto;
@@ -89,39 +93,94 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ResourceTypesProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeUpdateTypeProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.ContainerUpdateTypeProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.LocalizationStateProto;
 import org.apache.hadoop.yarn.server.api.ContainerType;
 
-import com.google.protobuf.ByteString;
+import com.google.common.collect.Interner;
+import com.google.common.collect.Interners;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
+/**
+ * Utils to convert enum protos to corresponding java enums and vice versa.
+ */
 @Private
 @Unstable
 public class ProtoUtils {
 
+  public static final Interner<ByteString> BYTE_STRING_INTERNER =
+      Interners.newWeakInterner();
 
   /*
    * ContainerState
    */
-  private final static String CONTAINER_STATE_PREFIX = "C_";
-  public static ContainerStateProto convertToProtoFormat(ContainerState e) {
-    return ContainerStateProto.valueOf(CONTAINER_STATE_PREFIX + e.name());
+  public static ContainerStateProto convertToProtoFormat(ContainerState state) {
+    switch (state) {
+    case NEW:
+      return ContainerStateProto.C_NEW;
+    case RUNNING:
+      return ContainerStateProto.C_RUNNING;
+    case COMPLETE:
+      return ContainerStateProto.C_COMPLETE;
+    default:
+      throw new IllegalArgumentException(
+          "ContainerState conversion unsupported");
+    }
   }
-  public static ContainerState convertFromProtoFormat(ContainerStateProto e) {
-    return ContainerState.valueOf(e.name().replace(CONTAINER_STATE_PREFIX, ""));
+
+  public static ContainerState convertFromProtoFormat(
+      ContainerStateProto proto) {
+    switch (proto) {
+    case C_NEW:
+      return ContainerState.NEW;
+    case C_RUNNING:
+      return ContainerState.RUNNING;
+    case C_COMPLETE:
+      return ContainerState.COMPLETE;
+    default:
+      throw new IllegalArgumentException(
+          "ContainerStateProto conversion unsupported");
+    }
   }
 
   /*
    * Container SubState
    */
-  private final static String CONTAINER_SUB_STATE_PREFIX = "CSS_";
   public static ContainerSubStateProto convertToProtoFormat(
-      ContainerSubState e) {
-    return ContainerSubStateProto.valueOf(
-        CONTAINER_SUB_STATE_PREFIX + e.name());
+      ContainerSubState state) {
+    switch (state) {
+    case SCHEDULED:
+      return ContainerSubStateProto.CSS_SCHEDULED;
+    case RUNNING:
+      return ContainerSubStateProto.CSS_RUNNING;
+    case PAUSED:
+      return ContainerSubStateProto.CSS_PAUSED;
+    case COMPLETING:
+      return ContainerSubStateProto.CSS_COMPLETING;
+    case DONE:
+      return ContainerSubStateProto.CSS_DONE;
+    default:
+      throw new IllegalArgumentException(
+          "ContainerSubState conversion unsupported");
+    }
   }
+
   public static ContainerSubState convertFromProtoFormat(
-      ContainerSubStateProto e) {
-    return ContainerSubState.valueOf(
-        e.name().substring(CONTAINER_SUB_STATE_PREFIX.length()));
+      ContainerSubStateProto proto) {
+    switch (proto) {
+    case CSS_SCHEDULED:
+      return ContainerSubState.SCHEDULED;
+    case CSS_RUNNING:
+      return ContainerSubState.RUNNING;
+    case CSS_PAUSED:
+      return ContainerSubState.PAUSED;
+    case CSS_COMPLETING:
+      return ContainerSubState.COMPLETING;
+    case CSS_DONE:
+      return ContainerSubState.DONE;
+    default:
+      throw new IllegalArgumentException(
+          "ContainerSubStateProto conversion unsupported");
+    }
   }
   /*
    * NodeState
@@ -400,7 +459,7 @@ public class ProtoUtils {
   /*
    * Resource
    */
-  public static synchronized ResourceProto convertToProtoFormat(Resource r) {
+  public static ResourceProto convertToProtoFormat(Resource r) {
     return ResourcePBImpl.getProto(r);
   }
 
@@ -528,6 +587,33 @@ public class ProtoUtils {
     return ret;
   }
 
+  public static Map<String, String> convertStringStringMapProtoListToMap(
+      List<StringStringMapProto> pList) {
+    Map<String, String> ret = new HashMap<>();
+    if (pList != null) {
+      for (StringStringMapProto p : pList) {
+        if (p.hasKey()) {
+          ret.put(p.getKey(), p.getValue());
+        }
+      }
+    }
+    return ret;
+  }
+
+  public static List<YarnProtos.StringStringMapProto> convertToProtoFormat(
+      Map<String, String> stringMap) {
+    List<YarnProtos.StringStringMapProto> pList = new ArrayList<>();
+    if (stringMap != null && !stringMap.isEmpty()) {
+      StringStringMapProto.Builder pBuilder = StringStringMapProto.newBuilder();
+      for (Map.Entry<String, String> entry : stringMap.entrySet()) {
+        pBuilder.setKey(entry.getKey());
+        pBuilder.setValue(entry.getValue());
+        pList.add(pBuilder.build());
+      }
+    }
+    return pList;
+  }
+
   public static PlacementConstraintTargetProto.TargetType convertToProtoFormat(
           TargetExpression.TargetType t) {
     return PlacementConstraintTargetProto.TargetType.valueOf(t.name());
@@ -550,6 +636,33 @@ public class ProtoUtils {
           TimedPlacementConstraintProto.DelayUnit u) {
     return TimedPlacementConstraint.DelayUnit.valueOf(u.name());
   }
+
+  /*
+   * ApplicationId
+   */
+  public static ApplicationIdPBImpl convertFromProtoFormat(
+      ApplicationIdProto p) {
+    return new ApplicationIdPBImpl(p);
+  }
+
+  public static ApplicationIdProto convertToProtoFormat(ApplicationId t) {
+    return ((ApplicationIdPBImpl) t).getProto();
+  }
+
+  //Localization State
+  private final static String LOCALIZATION_STATE_PREFIX = "L_";
+  public static LocalizationStateProto convertToProtoFormat(
+      LocalizationState e) {
+    return LocalizationStateProto.valueOf(LOCALIZATION_STATE_PREFIX + e.name());
+  }
+
+  public static LocalizationState convertFromProtoFormat(
+      LocalizationStateProto e) {
+    return LocalizationState.valueOf(e.name()
+        .replace(LOCALIZATION_STATE_PREFIX, ""));
+  }
+
 }
+
 
 

@@ -17,14 +17,19 @@
  */
 
 import { moduleFor, test } from 'ember-qunit';
+import Ember from 'ember';
 
 moduleFor('controller:yarn-app', 'Unit | Controller | yarn app', {
-  // Specify the other units that are required for this test.
-  // needs: ['controller:foo']
+  unit: true
 });
 
-// Replace this with your real tests.
-test('it exists', function(assert) {
+test('Basic creation test', function(assert) {
   let controller = this.subject();
   assert.ok(controller);
+  assert.ok(controller.amHostHttpAddressFormatted);
+  var app = Ember.Object.create({
+	amHostHttpAddress: 'localhost:8042'
+  });
+  controller.set('model', Ember.Object.create({app: app}));
+  assert.equal(controller.get('amHostHttpAddressFormatted'), 'http://localhost:8042');
 });

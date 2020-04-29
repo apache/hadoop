@@ -23,8 +23,8 @@ import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
@@ -37,8 +37,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 
 public class DynamicResourceConfiguration extends Configuration {
 
-  private static final Log LOG =
-    LogFactory.getLog(DynamicResourceConfiguration.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DynamicResourceConfiguration.class);
 
   @Private
   public static final String PREFIX = "yarn.resource.dynamic.";
@@ -87,8 +87,9 @@ public class DynamicResourceConfiguration extends Configuration {
 
   public void setVcoresPerNode(String node, int vcores) {
     setInt(getNodePrefix(node) + VCORES, vcores);
-    LOG.debug("DRConf - setVcoresPerNode: nodePrefix=" + getNodePrefix(node) +
-      ", vcores=" + vcores);
+    LOG.debug("DRConf - setVcoresPerNode: nodePrefix={}, vcores={}",
+        getNodePrefix(node), vcores);
+
   }
 
   public int getMemoryPerNode(String node) {
@@ -100,8 +101,9 @@ public class DynamicResourceConfiguration extends Configuration {
 
   public void setMemoryPerNode(String node, int memory) {
     setInt(getNodePrefix(node) + MEMORY, memory);
-    LOG.debug("DRConf - setMemoryPerNode: nodePrefix=" + getNodePrefix(node) +
-      ", memory=" + memory);
+    LOG.debug("DRConf - setMemoryPerNode: nodePrefix={}, memory={}",
+        getNodePrefix(node), memory);
+
   }
 
   public int getOverCommitTimeoutPerNode(String node) {
@@ -113,9 +115,8 @@ public class DynamicResourceConfiguration extends Configuration {
 
   public void setOverCommitTimeoutPerNode(String node, int overCommitTimeout) {
     setInt(getNodePrefix(node) + OVERCOMMIT_TIMEOUT, overCommitTimeout);
-    LOG.debug("DRConf - setOverCommitTimeoutPerNode: nodePrefix=" +
-      getNodePrefix(node) +
-        ", overCommitTimeout=" + overCommitTimeout);
+    LOG.debug("DRConf - setOverCommitTimeoutPerNode: nodePrefix={},"
+        + " overCommitTimeout={}", getNodePrefix(node), overCommitTimeout);
   }
 
   public String[] getNodes() {

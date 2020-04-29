@@ -23,11 +23,11 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
+import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.FakeTimer;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
-import org.mockito.internal.util.reflection.Whitebox;
 
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;

@@ -29,23 +29,24 @@ import org.slf4j.LoggerFactory;
  * Events are reported based on occurrence time. The total number of events in
  * the last period covered by the rolling window can be retrieved by the
  * {@link #getSum(long)} method.
- * <p/>
+ * <p>
  *
  * Assumptions:
- * <p/>
+ * <p>
  *
  * (1) Concurrent invocation of {@link #incAt} method are possible
- * <p/>
+ * <p>
  *
  * (2) The time parameter of two consecutive invocation of {@link #incAt} could
  * be in any given order
- * <p/>
+ * <p>
  *
  * (3) The buffering delays are not more than the window length, i.e., after two
  * consecutive invocation {@link #incAt(long time1, long)} and
- * {@link #incAt(long time2, long)}, time1 < time2 || time1 - time2 < windowLenMs.
+ * {@link #incAt(long time2, long)}, time1 &lt; time2 || time1 - time2 &lt;
+ * windowLenMs.
  * This assumption helps avoiding unnecessary synchronizations.
- * <p/>
+ * <p>
  *
  * Thread-safety is built in the {@link RollingWindow.Bucket}
  */
@@ -85,7 +86,7 @@ public class RollingWindow {
   /**
    * When an event occurs at the specified time, this method reflects that in
    * the rolling window.
-   * <p/>
+   * <p>
    *
    * @param time the time at which the event occurred
    * @param delta the delta that will be added to the window
@@ -153,6 +154,7 @@ public class RollingWindow {
      * performed. We do not need to update the {@link #updateTime} because as
      * long as the {@link #updateTime} belongs to the current view of the
      * rolling window, the algorithm works fine.
+     * @param delta
      */
     void inc(long delta) {
       value.addAndGet(delta);
@@ -161,7 +163,7 @@ public class RollingWindow {
 
   /**
    * Get value represented by this window at the specified time
-   * <p/>
+   * <p>
    *
    * If time lags behind the latest update time, the new updates are still
    * included in the sum

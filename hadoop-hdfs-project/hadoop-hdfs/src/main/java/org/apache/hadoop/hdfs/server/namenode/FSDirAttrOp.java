@@ -47,7 +47,6 @@ import java.util.EnumSet;
 import java.util.List;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_QUOTA_BY_STORAGETYPE_ENABLED_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY;
 
 public class FSDirAttrOp {
   static FileStatus setPermission(
@@ -82,12 +81,12 @@ public class FSDirAttrOp {
       fsd.checkOwner(pc, iip);
       if (!pc.isSuperUser()) {
         if (username != null && !pc.getUser().equals(username)) {
-          throw new AccessControlException("User " + username
+          throw new AccessControlException("User " + pc.getUser()
               + " is not a super user (non-super user cannot change owner).");
         }
         if (group != null && !pc.isMemberOfGroup(group)) {
           throw new AccessControlException(
-              "User " + username + " does not belong to " + group);
+              "User " + pc.getUser() + " does not belong to " + group);
         }
       }
       unprotectedSetOwner(fsd, iip, username, group);
@@ -151,7 +150,7 @@ public class FSDirAttrOp {
   static FileStatus unsetStoragePolicy(FSDirectory fsd, FSPermissionChecker pc,
       BlockManager bm, String src) throws IOException {
     return setStoragePolicy(fsd, pc, bm, src,
-        HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED, "unset");
+        HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED);
   }
 
   static FileStatus setStoragePolicy(FSDirectory fsd, FSPermissionChecker pc,
@@ -162,17 +161,12 @@ public class FSDirAttrOp {
       throw new HadoopIllegalArgumentException(
           "Cannot find a block policy with the name " + policyName);
     }
-    return setStoragePolicy(fsd, pc, bm, src, policy.getId(), "set");
+    return setStoragePolicy(fsd, pc, bm, src, policy.getId());
   }
 
   static FileStatus setStoragePolicy(FSDirectory fsd, FSPermissionChecker pc,
-      BlockManager bm, String src, final byte policyId, final String operation)
+      BlockManager bm, String src, final byte policyId)
       throws IOException {
-    if (!fsd.isStoragePolicyEnabled()) {
-      throw new IOException(String.format(
-          "Failed to %s storage policy since %s is set to false.", operation,
-          DFS_STORAGE_POLICY_ENABLED_KEY));
-    }
     INodesInPath iip;
     fsd.writeLock();
     try {
@@ -232,14 +226,21 @@ public class FSDirAttrOp {
    * Note: This does not support ".inodes" relative path.
    */
   static void setQuota(FSDirectory fsd, FSPermissionChecker pc, String src,
-      long nsQuota, long ssQuota, StorageType type) throws IOException {
-    if (fsd.isPermissionEnabled()) {
-      pc.checkSuperuserPrivilege();
-    }
+      long nsQuota, long ssQuota, StorageType type, boolean allowOwner)
+      throws IOException {
 
     fsd.writeLock();
     try {
       INodesInPath iip = fsd.resolvePath(pc, src, DirOp.WRITE);
+      if (fsd.isPermissionEnabled() && !pc.isSuperUser() && allowOwner) {
+        INodeDirectory parentDir= iip.getLastINode().getParent();
+        if (parentDir == null ||
+            !parentDir.getUserName().equals(pc.getUser())) {
+          throw new AccessControlException(
+              "Access denied for user " + pc.getUser() +
+              ". Superuser or owner of parent folder privilege is required");
+        }
+      }
       INodeDirectory changed =
           unprotectedSetQuota(fsd, iip, nsQuota, ssQuota, type);
       if (changed != null) {
@@ -332,38 +333,35 @@ public class FSDirAttrOp {
 
     INodeDirectory dirNode =
         INodeDirectory.valueOf(iip.getLastINode(), iip.getPath());
+    final QuotaCounts oldQuota = dirNode.getQuotaCounts();
+    final long oldNsQuota = oldQuota.getNameSpace();
+    final long oldSsQuota = oldQuota.getStorageSpace();
     if (dirNode.isRoot() && nsQuota == HdfsConstants.QUOTA_RESET) {
-      throw new IllegalArgumentException("Cannot clear namespace quota on root.");
-    } else { // a directory inode
-      final QuotaCounts oldQuota = dirNode.getQuotaCounts();
-      final long oldNsQuota = oldQuota.getNameSpace();
-      final long oldSsQuota = oldQuota.getStorageSpace();
+      nsQuota = HdfsConstants.QUOTA_DONT_SET;
+    } else if (nsQuota == HdfsConstants.QUOTA_DONT_SET) {
+      nsQuota = oldNsQuota;
+    } // a directory inode
+    if (ssQuota == HdfsConstants.QUOTA_DONT_SET) {
+      ssQuota = oldSsQuota;
+    }
 
-      if (nsQuota == HdfsConstants.QUOTA_DONT_SET) {
-        nsQuota = oldNsQuota;
-      }
-      if (ssQuota == HdfsConstants.QUOTA_DONT_SET) {
-        ssQuota = oldSsQuota;
-      }
+    // unchanged space/namespace quota
+    if (type == null && oldNsQuota == nsQuota && oldSsQuota == ssQuota) {
+      return null;
+    }
 
-      // unchanged space/namespace quota
-      if (type == null && oldNsQuota == nsQuota && oldSsQuota == ssQuota) {
+    // unchanged type quota
+    if (type != null) {
+      EnumCounters<StorageType> oldTypeQuotas = oldQuota.getTypeSpaces();
+      if (oldTypeQuotas != null && oldTypeQuotas.get(type) == ssQuota) {
         return null;
       }
-
-      // unchanged type quota
-      if (type != null) {
-          EnumCounters<StorageType> oldTypeQuotas = oldQuota.getTypeSpaces();
-          if (oldTypeQuotas != null && oldTypeQuotas.get(type) == ssQuota) {
-              return null;
-          }
-      }
-
-      final int latest = iip.getLatestSnapshotId();
-      dirNode.recordModification(latest);
-      dirNode.setQuota(fsd.getBlockStoragePolicySuite(), nsQuota, ssQuota, type);
-      return dirNode;
     }
+
+    final int latest = iip.getLatestSnapshotId();
+    dirNode.recordModification(latest);
+    dirNode.setQuota(fsd.getBlockStoragePolicySuite(), nsQuota, ssQuota, type);
+    return dirNode;
   }
 
   static BlockInfo[] unprotectedSetReplication(
@@ -402,13 +400,13 @@ public class FSDirAttrOp {
 
     if (oldBR != -1) {
       if (oldBR > targetReplication) {
-        FSDirectory.LOG.info("Decreasing replication from {} to {} for {}",
+        FSDirectory.LOG.debug("Decreasing replication from {} to {} for {}",
                              oldBR, targetReplication, iip.getPath());
       } else if (oldBR < targetReplication) {
-        FSDirectory.LOG.info("Increasing replication from {} to {} for {}",
+        FSDirectory.LOG.debug("Increasing replication from {} to {} for {}",
                              oldBR, targetReplication, iip.getPath());
       } else {
-        FSDirectory.LOG.info("Replication remains unchanged at {} for {}",
+        FSDirectory.LOG.debug("Replication remains unchanged at {} for {}",
                              oldBR, iip.getPath());
       }
     }
@@ -478,14 +476,14 @@ public class FSDirAttrOp {
     boolean status = false;
     INode inode = iip.getLastINode();
     int latest = iip.getLatestSnapshotId();
-    if (mtime != -1) {
+    if (mtime >= 0) {
       inode = inode.setModificationTime(mtime, latest);
       status = true;
     }
 
     // if the last access time update was within the last precision interval,
     // then no need to store access time
-    if (atime != -1 && (status || force
+    if (atime >= 0 && (status || force
         || atime > inode.getAccessTime() + fsd.getAccessTimePrecision())) {
       inode.setAccessTime(atime, latest,
           fsd.getFSNamesystem().getSnapshotManager().

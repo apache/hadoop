@@ -72,12 +72,14 @@ import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.server.balancer.Dispatcher.DBlock;
 import org.apache.hadoop.hdfs.server.balancer.ExitStatus;
 import org.apache.hadoop.hdfs.server.balancer.NameNodeConnector;
 import org.apache.hadoop.hdfs.server.balancer.TestBalancer;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.mover.Mover.MLocation;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.http.HttpConfig;
@@ -113,6 +115,8 @@ public class TestMover {
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY,
         1L);
     conf.setLong(DFSConfigKeys.DFS_BALANCER_MOVEDWINWIDTH_KEY, 2000L);
+    conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE.toString());
   }
 
   static Mover newMover(Configuration conf) throws IOException {
@@ -123,15 +127,18 @@ public class TestMover {
       nnMap.put(nn, null);
     }
 
-    final List<NameNodeConnector> nncs = NameNodeConnector.newNameNodeConnectors(
-        nnMap, Mover.class.getSimpleName(), Mover.MOVER_ID_PATH, conf,
-        NameNodeConnector.DEFAULT_MAX_IDLE_ITERATIONS);
+    final List<NameNodeConnector> nncs = NameNodeConnector.
+        newNameNodeConnectors(nnMap, Mover.class.getSimpleName(),
+            HdfsServerConstants.MOVER_ID_PATH, conf,
+            NameNodeConnector.DEFAULT_MAX_IDLE_ITERATIONS);
     return new Mover(nncs.get(0), conf, new AtomicInteger(0), new HashMap<>());
   }
 
   @Test
   public void testScheduleSameBlock() throws IOException {
     final Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE.toString());
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(4).build();
     try {
@@ -454,8 +461,11 @@ public class TestMover {
    */
   @Test
   public void testMoverCli() throws Exception {
+    final Configuration clusterConf = new HdfsConfiguration();
+    clusterConf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE.toString());
     final MiniDFSCluster cluster = new MiniDFSCluster
-        .Builder(new HdfsConfiguration()).numDataNodes(0).build();
+        .Builder(clusterConf).numDataNodes(0).build();
     try {
       final Configuration conf = cluster.getConfiguration(0);
       try {
@@ -487,8 +497,10 @@ public class TestMover {
   @Test
   public void testMoverCliWithHAConf() throws Exception {
     final Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE.toString());
     final MiniDFSCluster cluster = new MiniDFSCluster
-        .Builder(new HdfsConfiguration())
+        .Builder(conf)
         .nnTopology(MiniDFSNNTopology.simpleHATopology())
         .numDataNodes(0).build();
     HATestUtil.setFailoverConfigurations(cluster, conf, "MyCluster");
@@ -509,11 +521,16 @@ public class TestMover {
 
   @Test
   public void testMoverCliWithFederation() throws Exception {
+    final Configuration clusterConf = new HdfsConfiguration();
+    clusterConf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE.toString());
     final MiniDFSCluster cluster = new MiniDFSCluster
-        .Builder(new HdfsConfiguration())
+        .Builder(clusterConf)
         .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(3))
         .numDataNodes(0).build();
     final Configuration conf = new HdfsConfiguration();
+    clusterConf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE.toString());
     DFSTestUtil.setFederatedConfiguration(cluster, conf);
     try {
       Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
@@ -557,11 +574,16 @@ public class TestMover {
 
   @Test
   public void testMoverCliWithFederationHA() throws Exception {
+    final Configuration clusterConf = new HdfsConfiguration();
+    clusterConf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE.toString());
     final MiniDFSCluster cluster = new MiniDFSCluster
-        .Builder(new HdfsConfiguration())
+        .Builder(clusterConf)
         .nnTopology(MiniDFSNNTopology.simpleHAFederatedTopology(3))
         .numDataNodes(0).build();
     final Configuration conf = new HdfsConfiguration();
+    clusterConf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE.toString());
     DFSTestUtil.setFederatedHAConfiguration(cluster, conf);
     try {
       Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
@@ -625,6 +647,8 @@ public class TestMover {
   public void testMoveWhenStoragePolicyNotSatisfying() throws Exception {
     // HDFS-8147
     final Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE.toString());
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(3)
         .storageTypes(
@@ -644,6 +668,39 @@ public class TestMover {
       int rc = ToolRunner.run(conf, new Mover.Cli(),
           new String[] { "-p", file.toString() });
       int exitcode = ExitStatus.NO_MOVE_BLOCK.getExitCode();
+      Assert.assertEquals("Exit code should be " + exitcode, exitcode, rc);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  @Test(timeout = 300000)
+  public void testMoveWhenStoragePolicySatisfierIsRunning() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.EXTERNAL.toString());
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(3)
+        .storageTypes(
+            new StorageType[][] {{StorageType.DISK}, {StorageType.DISK},
+                {StorageType.DISK}}).build();
+    try {
+      cluster.waitActive();
+      // Simulate External sps by creating #getNameNodeConnector instance.
+      DFSTestUtil.getNameNodeConnector(conf, HdfsServerConstants.MOVER_ID_PATH,
+          1, true);
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      final String file = "/testMoveWhenStoragePolicySatisfierIsRunning";
+      // write to DISK
+      final FSDataOutputStream out = dfs.create(new Path(file));
+      out.writeChars("testMoveWhenStoragePolicySatisfierIsRunning");
+      out.close();
+
+      // move to ARCHIVE
+      dfs.setStoragePolicy(new Path(file), "COLD");
+      int rc = ToolRunner.run(conf, new Mover.Cli(),
+          new String[] {"-p", file.toString()});
+      int exitcode = ExitStatus.IO_EXCEPTION.getExitCode();
       Assert.assertEquals("Exit code should be " + exitcode, exitcode, rc);
     } finally {
       cluster.shutdown();
@@ -685,6 +742,52 @@ public class TestMover {
     }
   }
 
+  @Test(timeout=100000)
+  public void testBalancerMaxIterationTimeNotAffectMover() throws Exception {
+    long blockSize = 10*1024*1024;
+    final Configuration conf = new HdfsConfiguration();
+    initConf(conf);
+    conf.setInt(DFSConfigKeys.DFS_MOVER_MOVERTHREADS_KEY, 1);
+    conf.setInt(
+        DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY, 1);
+    // set a fairly large block size to run into the limitation
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
+    conf.setLong(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, blockSize);
+    // set a somewhat grater than zero max iteration time to have the move time
+    // to surely exceed it
+    conf.setLong(DFSConfigKeys.DFS_BALANCER_MAX_ITERATION_TIME_KEY, 200L);
+    conf.setInt(DFSConfigKeys.DFS_MOVER_RETRY_MAX_ATTEMPTS_KEY, 1);
+    // set client socket timeout to have an IN_PROGRESS notification back from
+    // the DataNode about the copy in every second.
+    conf.setLong(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, 1000L);
+
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(2)
+        .storageTypes(
+            new StorageType[][] {{StorageType.DISK, StorageType.DISK},
+                {StorageType.ARCHIVE, StorageType.ARCHIVE}})
+        .build();
+    try {
+      cluster.waitActive();
+      final DistributedFileSystem fs = cluster.getFileSystem();
+      final String file = "/testMaxIterationTime.dat";
+      final Path path = new Path(file);
+      short rep_factor = 1;
+      int seed = 0xFAFAFA;
+      // write to DISK
+      DFSTestUtil.createFile(fs, path, 4L * blockSize, rep_factor, seed);
+
+      // move to ARCHIVE
+      fs.setStoragePolicy(new Path(file), "COLD");
+      int rc = ToolRunner.run(conf, new Mover.Cli(),
+          new String[] {"-p", file});
+      Assert.assertEquals("Retcode expected to be ExitStatus.SUCCESS (0).",
+          ExitStatus.SUCCESS.getExitCode(), rc);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
   private final ErasureCodingPolicy ecPolicy =
       StripedFileTestUtil.getDefaultECPolicy();
   private final int dataBlocks = ecPolicy.getNumDataUnits();
@@ -700,6 +803,8 @@ public class TestMover {
         1L);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
         false);
+    conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.NONE.toString());
   }
 
   @Test(timeout = 300000)

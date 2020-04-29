@@ -65,6 +65,7 @@ public class TestKerberosAuthenticator extends KerberosSecurityTestcase {
     props.setProperty(KerberosAuthenticationHandler.KEYTAB, KerberosTestUtils.getKeytabFile());
     props.setProperty(KerberosAuthenticationHandler.NAME_RULES,
                       "RULE:[1:$1@$0](.*@" + KerberosTestUtils.getRealm()+")s/@.*//\n");
+    props.setProperty(KerberosAuthenticationHandler.RULE_MECHANISM, "hadoop");
     return props;
   }
 

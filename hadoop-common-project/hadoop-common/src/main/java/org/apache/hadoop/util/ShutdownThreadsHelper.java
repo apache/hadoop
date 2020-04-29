@@ -39,7 +39,6 @@ public class ShutdownThreadsHelper {
    * @param thread {@link Thread to be shutdown}
    * @return <tt>true</tt> if the thread is successfully interrupted,
    * <tt>false</tt> otherwise
-   * @throws InterruptedException
    */
   public static boolean shutdownThread(Thread thread) {
     return shutdownThread(thread, SHUTDOWN_WAIT_MS);
@@ -51,7 +50,6 @@ public class ShutdownThreadsHelper {
    *                              interrupted
    * @return <tt>true</tt> if the thread is successfully interrupted,
    * <tt>false</tt> otherwise
-   * @throws InterruptedException
    */
   public static boolean shutdownThread(Thread thread,
                                     long timeoutInMilliSeconds) {

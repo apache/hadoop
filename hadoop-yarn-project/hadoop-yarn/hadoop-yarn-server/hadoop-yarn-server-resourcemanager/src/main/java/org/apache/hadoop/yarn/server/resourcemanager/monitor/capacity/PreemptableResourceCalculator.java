@@ -23,8 +23,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
@@ -38,10 +38,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 public class PreemptableResourceCalculator
     extends
       AbstractPreemptableResourceCalculator {
-  private static final Log LOG =
-      LogFactory.getLog(PreemptableResourceCalculator.class);
-
-  private boolean isReservedPreemptionCandidatesSelector;
+  private static final Logger LOG =
+      LoggerFactory.getLogger(PreemptableResourceCalculator.class);
 
   /**
    * PreemptableResourceCalculator constructor
@@ -50,11 +48,14 @@ public class PreemptableResourceCalculator
    * @param isReservedPreemptionCandidatesSelector this will be set by
    * different implementation of candidate selectors, please refer to
    * TempQueuePerPartition#offer for details.
+   * @param allowQueuesBalanceAfterAllQueuesSatisfied
    */
   public PreemptableResourceCalculator(
       CapacitySchedulerPreemptionContext preemptionContext,
-      boolean isReservedPreemptionCandidatesSelector) {
-    super(preemptionContext, isReservedPreemptionCandidatesSelector);
+      boolean isReservedPreemptionCandidatesSelector,
+      boolean allowQueuesBalanceAfterAllQueuesSatisfied) {
+    super(preemptionContext, isReservedPreemptionCandidatesSelector,
+        allowQueuesBalanceAfterAllQueuesSatisfied);
   }
 
   /**
@@ -95,8 +96,8 @@ public class PreemptableResourceCalculator
     }
 
     // first compute the allocation as a fixpoint based on guaranteed capacity
-    computeFixpointAllocation(tot_guarant, nonZeroGuarQueues, unassigned,
-        false);
+    computeFixpointAllocation(tot_guarant, new HashSet<>(nonZeroGuarQueues),
+        unassigned, false);
 
     // if any capacity is left unassigned, distributed among zero-guarantee
     // queues uniformly (i.e., not based on guaranteed capacity, as this is zero)
@@ -165,10 +166,8 @@ public class PreemptableResourceCalculator
       // check if preemption disabled for the queue
       if (context.getQueueByPartition(queueName,
           RMNodeLabelsManager.NO_LABEL).preemptionDisabled) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("skipping from queue=" + queueName
-              + " because it's a non-preemptable queue");
-        }
+        LOG.debug("skipping from queue={} because it's a non-preemptable"
+            + " queue", queueName);
         continue;
       }
 
@@ -197,26 +196,24 @@ public class PreemptableResourceCalculator
            */
           Resource resToObtain = qT.toBePreempted;
           if (!isReservedPreemptionCandidatesSelector) {
-            resToObtain = Resources.multiply(qT.toBePreempted,
-                context.getNaturalTerminationFactor());
+            if (Resources.greaterThan(rc, clusterResource, resToObtain,
+                Resource.newInstance(0, 0))) {
+              resToObtain = Resources.multiplyAndNormalizeUp(rc, qT.toBePreempted,
+                  context.getNaturalTerminationFactor(), Resource.newInstance(1, 1));
+            }
           }
 
           // Only add resToObtain when it >= 0
           if (Resources.greaterThan(rc, clusterResource, resToObtain,
               Resources.none())) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Queue=" + queueName + " partition=" + qT.partition
-                  + " resource-to-obtain=" + resToObtain);
-            }
+            LOG.debug("Queue={} partition={} resource-to-obtain={}",
+                queueName, qT.partition, resToObtain);
           }
           qT.setActuallyToBePreempted(Resources.clone(resToObtain));
         } else {
           qT.setActuallyToBePreempted(Resources.none());
         }
-
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(qT);
-        }
+        LOG.debug("{}", qT);
       }
     }
   }

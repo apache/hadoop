@@ -27,8 +27,8 @@ import java.net.URI;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.HAUtil;
@@ -52,8 +52,8 @@ import com.google.common.collect.Lists;
  * and startup of the standby node.
  */
 public class TestEditLogsDuringFailover {
-  private static final Log LOG =
-    LogFactory.getLog(TestEditLogsDuringFailover.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestEditLogsDuringFailover.class);
   private static final int NUM_DIRS_IN_LOG = 5;
 
   static {
@@ -159,7 +159,7 @@ public class TestEditLogsDuringFailover {
           outs.write(new byte[] { 0x18, 0x00, 0x00, 0x00 } );
           LOG.error("editLogFile = " + editLogFile);
         } finally {
-          IOUtils.cleanup(LOG, outs);
+          IOUtils.cleanupWithLogger(LOG, outs);
         }
      }
 

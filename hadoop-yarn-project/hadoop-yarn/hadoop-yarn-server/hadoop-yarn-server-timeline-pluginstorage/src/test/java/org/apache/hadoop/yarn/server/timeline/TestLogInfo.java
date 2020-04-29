@@ -39,6 +39,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.util.EnumSet;
 
@@ -232,7 +233,8 @@ public class TestLogInfo {
       throws IOException {
     if (outStream == null) {
       outStream = PluginStoreTestUtils.createLogFile(logPath, fs);
-      jsonGenerator = new JsonFactory().createGenerator(outStream);
+      jsonGenerator = new JsonFactory().createGenerator(
+          (OutputStream)outStream);
       jsonGenerator.setPrettyPrinter(new MinimalPrettyPrinter("\n"));
     }
     for (TimelineEntity entity : entities.getEntities()) {
@@ -248,7 +250,7 @@ public class TestLogInfo {
     }
     // Write domain uses its own json generator to isolate from entity writers
     JsonGenerator jsonGeneratorLocal
-        = new JsonFactory().createGenerator(outStreamDomain);
+        = new JsonFactory().createGenerator((OutputStream)outStreamDomain);
     jsonGeneratorLocal.setPrettyPrinter(new MinimalPrettyPrinter("\n"));
     objMapper.writeValue(jsonGeneratorLocal, domain);
     outStreamDomain.hflush();

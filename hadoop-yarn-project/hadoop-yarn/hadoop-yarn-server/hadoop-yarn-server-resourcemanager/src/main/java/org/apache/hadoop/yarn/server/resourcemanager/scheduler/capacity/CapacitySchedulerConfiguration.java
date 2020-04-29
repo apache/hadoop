@@ -19,9 +19,11 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.QueuePlacementRuleUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authorize.AccessControlList;
@@ -38,14 +40,21 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule.QueueMapping;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.QueueMappingBuilder;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMappingEntity;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AppPriorityACLConfigurationParser.AppPriorityACLKeyType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.WorkflowPriorityMappingsManager.WorkflowPriorityMapping;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.policy.PriorityUtilizationQueueOrderingPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.policy.QueueOrderingPolicy;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.MultiNodeLookupPolicy;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.MultiNodePolicySpec;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FairOrderingPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FifoOrderingPolicy;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FifoOrderingPolicyForPendingApps;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FifoOrderingPolicyWithExclusivePartitions;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.OrderingPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.SchedulableEntity;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
@@ -66,12 +75,11 @@ import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.Set;
-import java.util.StringTokenizer;
 
 public class CapacitySchedulerConfiguration extends ReservationSchedulerConfiguration {
 
-  private static final Log LOG = 
-    LogFactory.getLog(CapacitySchedulerConfiguration.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(CapacitySchedulerConfiguration.class);
 
   private static final String CS_CONFIGURATION_FILE = "capacity-scheduler.xml";
   
@@ -138,12 +146,14 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public static final boolean DEFAULT_RESERVE_CONT_LOOK_ALL_NODES = true;
 
   @Private
+  public static final String MAXIMUM_ALLOCATION = "maximum-allocation";
+
+  @Private
   public static final String MAXIMUM_ALLOCATION_MB = "maximum-allocation-mb";
 
   @Private
   public static final String MAXIMUM_ALLOCATION_VCORES =
-      "maximum-allocation-vcores";
-
+          "maximum-allocation-vcores";
   /**
    * Ordering policy of queues
    */
@@ -155,6 +165,12 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public static final String FIFO_APP_ORDERING_POLICY = "fifo";
 
   public static final String FAIR_APP_ORDERING_POLICY = "fair";
+
+  public static final String FIFO_WITH_PARTITIONS_APP_ORDERING_POLICY
+      = "fifo-with-partitions";
+
+  public static final String FIFO_FOR_PENDING_APPS
+      = "fifo-for-pending-apps";
 
   public static final String DEFAULT_APP_ORDERING_POLICY =
       FIFO_APP_ORDERING_POLICY;
@@ -245,6 +261,20 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       SCHEDULE_ASYNCHRONOUSLY_PREFIX + ".maximum-threads";
 
   @Private
+  public static final String SCHEDULE_ASYNCHRONOUSLY_MAXIMUM_PENDING_BACKLOGS =
+      SCHEDULE_ASYNCHRONOUSLY_PREFIX + ".maximum-pending-backlogs";
+
+  @Private
+  public static final String APP_FAIL_FAST = PREFIX + "application.fail-fast";
+
+  @Private
+  public static final boolean DEFAULT_APP_FAIL_FAST = false;
+
+  @Private
+  public static final Integer
+      DEFAULT_SCHEDULE_ASYNCHRONOUSLY_MAXIMUM_PENDING_BACKLOGS = 100;
+
+  @Private
   public static final boolean DEFAULT_SCHEDULE_ASYNCHRONOUSLY_ENABLE = false;
 
   @Private
@@ -255,6 +285,17 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   @Private
   public static final boolean DEFAULT_ENABLE_QUEUE_MAPPING_OVERRIDE = false;
+
+  @Private
+  public static final String WORKFLOW_PRIORITY_MAPPINGS =
+      PREFIX + "workflow-priority-mappings";
+
+  @Private
+  public static final String ENABLE_WORKFLOW_PRIORITY_MAPPINGS_OVERRIDE =
+      WORKFLOW_PRIORITY_MAPPINGS + "-override.enable";
+
+  @Private
+  public static final boolean DEFAULT_ENABLE_WORKFLOW_PRIORITY_MAPPINGS_OVERRIDE = false;
 
   @Private
   public static final String QUEUE_PREEMPTION_DISABLED = "disable_preemption";
@@ -319,8 +360,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public static final String MAX_ASSIGN_PER_HEARTBEAT = PREFIX
       + "per-node-heartbeat.maximum-container-assignments";
 
+  /**
+   * Avoid potential risk that greedy assign multiple may involve
+   * */
   @Private
-  public static final int DEFAULT_MAX_ASSIGN_PER_HEARTBEAT = -1;
+  public static final int DEFAULT_MAX_ASSIGN_PER_HEARTBEAT = 100;
 
   /** Configuring absolute min/max resources in a queue. **/
   @Private
@@ -333,7 +377,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   public static final String PATTERN_FOR_ABSOLUTE_RESOURCE = "^\\[[\\w\\.,\\-_=\\ /]+\\]$";
 
-  private static final Pattern RESOURCE_PATTERN = Pattern.compile(PATTERN_FOR_ABSOLUTE_RESOURCE);
+  public static final Pattern RESOURCE_PATTERN = Pattern.compile(PATTERN_FOR_ABSOLUTE_RESOURCE);
 
   /**
    * Different resource types supported.
@@ -360,7 +404,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     }
   }
 
-  static String getQueuePrefix(String queue) {
+  public static String getQueuePrefix(String queue) {
     String queueName = PREFIX + queue + DOT;
     return queueName;
   }
@@ -439,8 +483,9 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       throw new IllegalArgumentException(
           "Illegal " + "capacity of " + capacity + " for queue " + queue);
     }
-    LOG.debug("CSConf - getCapacity: queuePrefix=" + getQueuePrefix(queue)
-        + ", capacity=" + capacity);
+    LOG.debug("CSConf - getCapacity: queuePrefix={}, capacity={}",
+        getQueuePrefix(queue), capacity);
+
     return capacity;
   }
   
@@ -450,8 +495,21 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
           "Cannot set capacity, root queue has a fixed capacity of 100.0f");
     }
     setFloat(getQueuePrefix(queue) + CAPACITY, capacity);
-    LOG.debug("CSConf - setCapacity: queuePrefix=" + getQueuePrefix(queue) + 
-        ", capacity=" + capacity);
+    LOG.debug("CSConf - setCapacity: queuePrefix={}, capacity={}",
+        getQueuePrefix(queue), capacity);
+
+  }
+
+  @VisibleForTesting
+  public void setCapacity(String queue, String absoluteResourceCapacity) {
+    if (queue.equals("root")) {
+      throw new IllegalArgumentException(
+          "Cannot set capacity, root queue has a fixed capacity");
+    }
+    set(getQueuePrefix(queue) + CAPACITY, absoluteResourceCapacity);
+    LOG.debug("CSConf - setCapacity: queuePrefix={}, capacity={}",
+        getQueuePrefix(queue), absoluteResourceCapacity);
+
   }
 
   public float getNonLabeledQueueMaximumCapacity(String queue) {
@@ -481,17 +539,29 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
           "maximum-capacity of " + maxCapacity + " for queue " + queue);
     }
     setFloat(getQueuePrefix(queue) + MAXIMUM_CAPACITY, maxCapacity);
-    LOG.debug("CSConf - setMaxCapacity: queuePrefix=" + getQueuePrefix(queue) + 
-        ", maxCapacity=" + maxCapacity);
+    LOG.debug("CSConf - setMaxCapacity: queuePrefix={}, maxCapacity={}",
+        getQueuePrefix(queue), maxCapacity);
   }
   
   public void setCapacityByLabel(String queue, String label, float capacity) {
     setFloat(getNodeLabelPrefix(queue, label) + CAPACITY, capacity);
   }
-  
+
+  @VisibleForTesting
+  public void setCapacityByLabel(String queue, String label,
+                                 String absoluteResourceCapacity) {
+    set(getNodeLabelPrefix(queue, label) + CAPACITY, absoluteResourceCapacity);
+  }
+
   public void setMaximumCapacityByLabel(String queue, String label,
       float capacity) {
     setFloat(getNodeLabelPrefix(queue, label) + MAXIMUM_CAPACITY, capacity);
+  }
+
+  public void setMaximumCapacityByLabel(String queue, String label,
+      String absoluteResourceCapacity) {
+    set(getNodeLabelPrefix(queue, label) + MAXIMUM_CAPACITY,
+        absoluteResourceCapacity);
   }
   
   public int getUserLimit(String queue) {
@@ -518,6 +588,13 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     if (policyType.trim().equals(FAIR_APP_ORDERING_POLICY)) {
        policyType = FairOrderingPolicy.class.getName();
     }
+    if (policyType.trim().equals(FIFO_WITH_PARTITIONS_APP_ORDERING_POLICY)) {
+      policyType = FifoOrderingPolicyWithExclusivePartitions.class.getName();
+    }
+    if (policyType.trim().equals(FIFO_FOR_PENDING_APPS)) {
+      policyType = FifoOrderingPolicyForPendingApps.class.getName();
+    }
+
     try {
       orderingPolicy = (OrderingPolicy<S>)
         Class.forName(policyType).newInstance();
@@ -539,8 +616,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   public void setUserLimit(String queue, int userLimit) {
     setInt(getQueuePrefix(queue) + USER_LIMIT, userLimit);
-    LOG.debug("here setUserLimit: queuePrefix=" + getQueuePrefix(queue) + 
-        ", userLimit=" + getUserLimit(queue));
+    LOG.debug("here setUserLimit: queuePrefix={}, userLimit={}",
+        getQueuePrefix(queue), getUserLimit(queue));
   }
   
   public float getUserLimitFactor(String queue) {
@@ -625,8 +702,9 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   private float internalGetLabeledQueueCapacity(String queue, String label, String suffix,
       float defaultValue) {
     String capacityPropertyName = getNodeLabelPrefix(queue, label) + suffix;
-    boolean matcher = (capacityPropertyName != null)
-        && RESOURCE_PATTERN.matcher(capacityPropertyName).find();
+    String configuredCapacity = get(capacityPropertyName);
+    boolean matcher = (configuredCapacity != null)
+        && RESOURCE_PATTERN.matcher(configuredCapacity).find();
     if (matcher) {
       // Return capacity in percentage as 0 for non-root queues and 100 for
       // root.From AbstractCSQueue, absolute resource will be parsed and
@@ -805,7 +883,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   public String[] getQueues(String queue) {
-    LOG.debug("CSConf - getQueues called for: queuePrefix=" + getQueuePrefix(queue));
+    LOG.debug("CSConf - getQueues called for: queuePrefix={}",
+        getQueuePrefix(queue));
     String[] queues = getStrings(getQueuePrefix(queue) + QUEUES);
     List<String> trimmedQueueNames = new ArrayList<String>();
     if (null != queues) {
@@ -814,16 +893,18 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       }
       queues = trimmedQueueNames.toArray(new String[0]);
     }
- 
-    LOG.debug("CSConf - getQueues: queuePrefix=" + getQueuePrefix(queue) + 
-        ", queues=" + ((queues == null) ? "" : StringUtils.arrayToString(queues)));
+
+    LOG.debug("CSConf - getQueues: queuePrefix={}, queues={}",
+        getQueuePrefix(queue),
+        ((queues == null) ? "" : StringUtils.arrayToString(queues)));
+
     return queues;
   }
   
   public void setQueues(String queue, String[] subQueues) {
     set(getQueuePrefix(queue) + QUEUES, StringUtils.arrayToString(subQueues));
-    LOG.debug("CSConf - setQueues: qPrefix=" + getQueuePrefix(queue) + 
-        ", queues=" + StringUtils.arrayToString(subQueues));
+    LOG.debug("CSConf - setQueues: qPrefix={}, queues={}",
+        getQueuePrefix(queue), StringUtils.arrayToString(subQueues));
   }
   
   public Resource getMinimumAllocation() {
@@ -851,50 +932,32 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   /**
-   * Get the per queue setting for the maximum limit to allocate to
-   * each container request.
+   * Get maximum_allocation setting for the specified queue from the
+   * configuration.
    *
    * @param queue
    *          name of the queue
-   * @return setting specified per queue else falls back to the cluster setting
+   * @return Resource object or Resource.none if not set
    */
-  public Resource getMaximumAllocationPerQueue(String queue) {
-    // Only support to specify memory and vcores maximum allocation per queue
-    // for now.
+  public Resource getQueueMaximumAllocation(String queue) {
     String queuePrefix = getQueuePrefix(queue);
-    long maxAllocationMbPerQueue = getInt(queuePrefix + MAXIMUM_ALLOCATION_MB,
-        (int)UNDEFINED);
-    int maxAllocationVcoresPerQueue = getInt(
-        queuePrefix + MAXIMUM_ALLOCATION_VCORES, (int)UNDEFINED);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("max alloc mb per queue for " + queue + " is "
-          + maxAllocationMbPerQueue);
-      LOG.debug("max alloc vcores per queue for " + queue + " is "
-          + maxAllocationVcoresPerQueue);
+    String rawQueueMaxAllocation = get(queuePrefix + MAXIMUM_ALLOCATION, null);
+    if (Strings.isNullOrEmpty(rawQueueMaxAllocation)) {
+      return Resources.none();
+    } else {
+      return ResourceUtils.createResourceFromString(rawQueueMaxAllocation,
+              ResourceUtils.getResourcesTypeInfo());
     }
-    Resource clusterMax = ResourceUtils.fetchMaximumAllocationFromConfig(this);
-    if (maxAllocationMbPerQueue == (int)UNDEFINED) {
-      LOG.info("max alloc mb per queue for " + queue + " is undefined");
-      maxAllocationMbPerQueue = clusterMax.getMemorySize();
-    }
-    if (maxAllocationVcoresPerQueue == (int)UNDEFINED) {
-       LOG.info("max alloc vcore per queue for " + queue + " is undefined");
-      maxAllocationVcoresPerQueue = clusterMax.getVirtualCores();
-    }
-    // Copy from clusterMax and overwrite per-queue's maximum memory/vcore
-    // allocation.
-    Resource result = Resources.clone(clusterMax);
-    result.setMemorySize(maxAllocationMbPerQueue);
-    result.setVirtualCores(maxAllocationVcoresPerQueue);
-    if (maxAllocationMbPerQueue > clusterMax.getMemorySize()
-        || maxAllocationVcoresPerQueue > clusterMax.getVirtualCores()) {
-      throw new IllegalArgumentException(
-          "Queue maximum allocation cannot be larger than the cluster setting"
-          + " for queue " + queue
-          + " max allocation per queue: " + result
-          + " cluster setting: " + clusterMax);
-    }
-    return result;
+  }
+
+  public long getQueueMaximumAllocationMb(String queue) {
+    String queuePrefix = getQueuePrefix(queue);
+    return getInt(queuePrefix + MAXIMUM_ALLOCATION_MB, (int)UNDEFINED);
+  }
+
+  public int getQueueMaximumAllocationVcores(String queue) {
+    String queuePrefix = getQueuePrefix(queue);
+    return getInt(queuePrefix + MAXIMUM_ALLOCATION_VCORES, (int)UNDEFINED);
   }
 
   public boolean getEnableUserMetrics() {
@@ -976,30 +1039,65 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     setBoolean(ENABLE_QUEUE_MAPPING_OVERRIDE, overrideWithQueueMappings);
   }
 
-  /**
-   * Returns a collection of strings, trimming leading and trailing whitespeace
-   * on each value
-   *
-   * @param str
-   *          String to parse
-   * @param delim
-   *          delimiter to separate the values
-   * @return Collection of parsed elements.
-   */
-  private static Collection<String> getTrimmedStringCollection(String str,
-      String delim) {
-    List<String> values = new ArrayList<String>();
-    if (str == null)
-      return values;
-    StringTokenizer tokenizer = new StringTokenizer(str, delim);
-    while (tokenizer.hasMoreTokens()) {
-      String next = tokenizer.nextToken();
-      if (next == null || next.trim().isEmpty()) {
-        continue;
+  public List<QueueMappingEntity> getQueueMappingEntity(
+      String queueMappingSuffix) {
+    String queueMappingName = buildQueueMappingRuleProperty(queueMappingSuffix);
+
+    List<QueueMappingEntity> mappings =
+        new ArrayList<QueueMappingEntity>();
+    Collection<String> mappingsString =
+        getTrimmedStringCollection(queueMappingName);
+    for (String mappingValue : mappingsString) {
+      String[] mapping =
+          StringUtils.getTrimmedStringCollection(mappingValue, ":")
+              .toArray(new String[] {});
+      if (mapping.length != 2 || mapping[1].length() == 0) {
+        throw new IllegalArgumentException(
+            "Illegal queue mapping " + mappingValue);
       }
-      values.add(next.trim());
+
+      //Mappings should be consistent, and have the parent path parsed
+      // from the beginning
+      QueueMappingEntity m = new QueueMappingEntity(
+          mapping[0],
+          QueuePlacementRuleUtils.extractQueuePath(mapping[1]));
+
+      mappings.add(m);
     }
-    return values;
+
+    return mappings;
+  }
+
+  private String buildQueueMappingRuleProperty (String queueMappingSuffix) {
+    StringBuilder queueMapping = new StringBuilder();
+    queueMapping.append(YarnConfiguration.QUEUE_PLACEMENT_RULES)
+        .append(".").append(queueMappingSuffix);
+    return queueMapping.toString();
+  }
+
+  @VisibleForTesting
+  public void setQueueMappingEntities(List<QueueMappingEntity> queueMappings,
+      String queueMappingSuffix) {
+    if (queueMappings == null) {
+      return;
+    }
+
+    List<String> queueMappingStrs = new ArrayList<>();
+    for (QueueMappingEntity mapping : queueMappings) {
+      queueMappingStrs.add(mapping.toString());
+    }
+
+    String mappingRuleProp = buildQueueMappingRuleProperty(queueMappingSuffix);
+    setStrings(mappingRuleProp, StringUtils.join(",", queueMappingStrs));
+  }
+
+  public boolean getOverrideWithWorkflowPriorityMappings() {
+    return getBoolean(ENABLE_WORKFLOW_PRIORITY_MAPPINGS_OVERRIDE,
+        DEFAULT_ENABLE_WORKFLOW_PRIORITY_MAPPINGS_OVERRIDE);
+  }
+
+  public Collection<String> getWorkflowPriorityMappings() {
+    return getTrimmedStringCollection(WORKFLOW_PRIORITY_MAPPINGS);
   }
 
   /**
@@ -1014,7 +1112,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         getTrimmedStringCollection(QUEUE_MAPPING);
     for (String mappingValue : mappingsString) {
       String[] mapping =
-          getTrimmedStringCollection(mappingValue, ":")
+          StringUtils.getTrimmedStringCollection(mappingValue, ":")
               .toArray(new String[] {});
       if (mapping.length != 3 || mapping[1].length() == 0
           || mapping[2].length() == 0) {
@@ -1033,10 +1131,13 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
           throw new IllegalArgumentException(
               "unknown mapping prefix " + mapping[0]);
         }
-        m = new QueueMapping(
-                mappingType,
-                mapping[1],
-                mapping[2]);
+        //forcing the queue path to be split to parent and leafQueue, to make
+        //queue mapping parentPath and queueName consistent
+        m = QueueMappingBuilder.create()
+                .type(mappingType)
+                .source(mapping[1])
+                .queuePath(QueuePlacementRuleUtils.extractQueuePath(mapping[2]))
+                .build();
       } catch (Throwable t) {
         throw new IllegalArgumentException(
             "Illegal queue mapping " + mappingValue);
@@ -1075,6 +1176,14 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     setStrings(QUEUE_MAPPING, StringUtils.join(",", queueMappingStrs));
   }
 
+  @Private
+  @VisibleForTesting
+  void setWorkflowPriorityMappings(
+      List<WorkflowPriorityMapping> workflowPriorityMappings) {
+    setStrings(WORKFLOW_PRIORITY_MAPPINGS, WorkflowPriorityMappingsManager
+        .getWorkflowPriorityMappingStr(workflowPriorityMappings));
+  }
+
   public boolean isReservable(String queue) {
     boolean isReservable =
         getBoolean(getQueuePrefix(queue) + IS_RESERVABLE, false);
@@ -1083,8 +1192,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   public void setReservable(String queue, boolean isReservable) {
     setBoolean(getQueuePrefix(queue) + IS_RESERVABLE, isReservable);
-    LOG.debug("here setReservableQueue: queuePrefix=" + getQueuePrefix(queue)
-        + ", isReservableQueue=" + isReservable(queue));
+    LOG.debug("here setReservableQueue: queuePrefix={}, isReservableQueue={}",
+        getQueuePrefix(queue), isReservable(queue));
   }
 
   @Override
@@ -1279,6 +1388,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return getBoolean(LAZY_PREEMPTION_ENABLED, DEFAULT_LAZY_PREEMPTION_ENABLED);
   }
 
+  public boolean shouldAppFailFast(Configuration conf) {
+    return conf.getBoolean(APP_FAIL_FAST, DEFAULT_APP_FAIL_FAST);
+  }
+
   private static final String PREEMPTION_CONFIG_PREFIX =
       "yarn.resourcemanager.monitor.capacity.preemption.";
 
@@ -1403,6 +1516,23 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public static final String DEFAULT_INTRAQUEUE_PREEMPTION_ORDER_POLICY = "userlimit_first";
 
   /**
+   * Should we allow queues continue grow after all queue reaches their
+   * guaranteed capacity.
+   */
+  public static final String PREEMPTION_TO_BALANCE_QUEUES_BEYOND_GUARANTEED =
+      PREEMPTION_CONFIG_PREFIX + "preemption-to-balance-queue-after-satisfied.enabled";
+  public static final boolean DEFAULT_PREEMPTION_TO_BALANCE_QUEUES_BEYOND_GUARANTEED = false;
+
+  /**
+   * How long we will wait to balance queues, by default it is 5 mins.
+   */
+  public static final String MAX_WAIT_BEFORE_KILL_FOR_QUEUE_BALANCE_PREEMPTION =
+      PREEMPTION_CONFIG_PREFIX + "preemption-to-balance-queue-after-satisfied.max-wait-before-kill";
+  public static final long
+      DEFAULT_MAX_WAIT_BEFORE_KILL_FOR_QUEUE_BALANCE_PREEMPTION =
+      300 * 1000;
+
+  /**
    * Maximum application for a queue to be used when application per queue is
    * not defined.To be consistent with previous version the default value is set
    * as UNDEFINED.
@@ -1454,20 +1584,23 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     }
 
     String policyType = get(getQueuePrefix(queue) + ORDERING_POLICY,
-        defaultPolicy);
+        defaultPolicy).trim();
 
     QueueOrderingPolicy qop;
-    if (policyType.trim().equals(QUEUE_UTILIZATION_ORDERING_POLICY)) {
+    if (policyType.equals(QUEUE_UTILIZATION_ORDERING_POLICY)) {
       // Doesn't respect priority
       qop = new PriorityUtilizationQueueOrderingPolicy(false);
-    } else if (policyType.trim().equals(
+    } else if (policyType.equals(
         QUEUE_PRIORITY_UTILIZATION_ORDERING_POLICY)) {
       qop = new PriorityUtilizationQueueOrderingPolicy(true);
     } else {
-      String message =
-          "Unable to construct queue ordering policy=" + policyType + " queue="
-              + queue;
-      throw new YarnRuntimeException(message);
+      try {
+        qop = (QueueOrderingPolicy) Class.forName(policyType).newInstance();
+      } catch (Exception e) {
+        String message = "Unable to construct queue ordering policy="
+            + policyType + " queue=" + queue;
+        throw new YarnRuntimeException(message, e);
+      }
     }
 
     return qop;
@@ -1829,6 +1962,33 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     setCapacity(leafQueueConfPrefix, val);
   }
 
+  @VisibleForTesting
+  @Private
+  public void setAutoCreatedLeafQueueTemplateCapacityByLabel(String queuePath,
+      String label, float val) {
+    String leafQueueConfPrefix =
+        getAutoCreatedQueueTemplateConfPrefix(queuePath);
+    setCapacityByLabel(leafQueueConfPrefix, label, val);
+  }
+
+  @VisibleForTesting
+  @Private
+  public void setAutoCreatedLeafQueueTemplateCapacityByLabel(String queuePath,
+      String label, Resource resource) {
+
+    String leafQueueConfPrefix =
+        getAutoCreatedQueueTemplateConfPrefix(queuePath);
+
+    StringBuilder resourceString = new StringBuilder();
+    resourceString
+        .append("[" + AbsoluteResourceType.MEMORY.toString().toLowerCase() + "="
+            + resource.getMemorySize() + ","
+            + AbsoluteResourceType.VCORES.toString().toLowerCase() + "="
+            + resource.getVirtualCores() + "]");
+
+    setCapacityByLabel(leafQueueConfPrefix, label, resourceString.toString());
+  }
+
   @Private
   @VisibleForTesting
   public void setAutoCreatedLeafQueueConfigMaxCapacity(String queuePath,
@@ -1836,6 +1996,32 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     String leafQueueConfPrefix = getAutoCreatedQueueTemplateConfPrefix(
         queuePath);
     setMaximumCapacity(leafQueueConfPrefix, val);
+  }
+
+  @Private
+  @VisibleForTesting
+  public void setAutoCreatedLeafQueueTemplateMaxCapacity(String queuePath,
+      String label, float val) {
+    String leafQueueConfPrefix = getAutoCreatedQueueTemplateConfPrefix(
+        queuePath);
+    setMaximumCapacityByLabel(leafQueueConfPrefix, label, val);
+  }
+
+  @Private
+  @VisibleForTesting
+  public void setAutoCreatedLeafQueueTemplateMaxCapacity(String queuePath,
+      String label, Resource resource) {
+    String leafQueueConfPrefix = getAutoCreatedQueueTemplateConfPrefix(
+        queuePath);
+
+    StringBuilder resourceString = new StringBuilder();
+    resourceString
+        .append("[" + AbsoluteResourceType.MEMORY.toString().toLowerCase() + "="
+            + resource.getMemorySize() + ","
+            + AbsoluteResourceType.VCORES.toString().toLowerCase() + "="
+            + resource.getVirtualCores() + "]");
+
+    setMaximumCapacityByLabel(leafQueueConfPrefix, label, resourceString.toString());
   }
 
   @VisibleForTesting
@@ -1854,6 +2040,16 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     String leafQueueConfPrefix = getAutoCreatedQueueTemplateConfPrefix(
         queuePath);
     setUserLimitFactor(leafQueueConfPrefix, val);
+  }
+
+  @Private
+  @VisibleForTesting
+  public void setAutoCreatedLeafQueueConfigDefaultNodeLabelExpression(String
+      queuePath,
+      String expression) {
+    String leafQueueConfPrefix = getAutoCreatedQueueTemplateConfPrefix(
+        queuePath);
+    setDefaultNodeLabelExpression(leafQueueConfPrefix, expression);
   }
 
   public static String getUnits(String resourceValue) {
@@ -1960,7 +2156,6 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       if (subGroup.trim().isEmpty()) {
         return Resources.none();
       }
-
       subGroup = subGroup.substring(1, subGroup.length() - 1);
       for (String kvPair : subGroup.trim().split(",")) {
         String[] splits = kvPair.split("=");
@@ -2015,6 +2210,120 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       resource.setResourceInformation(splits[0].trim(), ResourceInformation
           .newInstance(splits[0].trim(), units, resourceValue));
       break;
+    }
+  }
+
+  @Private public static final String MULTI_NODE_SORTING_POLICIES =
+      PREFIX + "multi-node-sorting.policy.names";
+
+  @Private public static final String MULTI_NODE_SORTING_POLICY_NAME =
+      PREFIX + "multi-node-sorting.policy";
+
+  /**
+   * resource usage based node sorting algorithm.
+   */
+  public static final String DEFAULT_NODE_SORTING_POLICY = "default";
+  public static final String DEFAULT_NODE_SORTING_POLICY_CLASSNAME
+      = "org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.ResourceUsageMultiNodeLookupPolicy";
+  public static final long DEFAULT_MULTI_NODE_SORTING_INTERVAL = 1000L;
+
+  @Private
+  public static final String MULTI_NODE_PLACEMENT_ENABLED = PREFIX
+      + "multi-node-placement-enabled";
+
+  @Private
+  public static final boolean DEFAULT_MULTI_NODE_PLACEMENT_ENABLED = false;
+
+  public String getMultiNodesSortingAlgorithmPolicy(
+      String queue) {
+
+    String policyName = get(
+        getQueuePrefix(queue) + "multi-node-sorting.policy");
+
+    if (policyName == null) {
+      policyName = get(MULTI_NODE_SORTING_POLICY_NAME);
+    }
+
+    // If node sorting policy is not configured in queue and in cluster level,
+    // it is been assumed that this queue is not enabled with multi-node lookup.
+    if (policyName == null || policyName.isEmpty()) {
+      return null;
+    }
+
+    String policyClassName = get(MULTI_NODE_SORTING_POLICY_NAME + DOT
+        + policyName.trim() + DOT + "class");
+
+    if (policyClassName == null || policyClassName.isEmpty()) {
+      throw new YarnRuntimeException(
+          policyName.trim() + " Class is not configured or not an instance of "
+              + MultiNodeLookupPolicy.class.getCanonicalName());
+    }
+
+    return normalizePolicyName(policyClassName.trim());
+  }
+
+  public boolean getMultiNodePlacementEnabled() {
+    return getBoolean(MULTI_NODE_PLACEMENT_ENABLED,
+        DEFAULT_MULTI_NODE_PLACEMENT_ENABLED);
+  }
+
+  public Set<MultiNodePolicySpec> getMultiNodePlacementPolicies() {
+    String[] policies = getTrimmedStrings(MULTI_NODE_SORTING_POLICIES);
+
+    // In other cases, split the accessibleLabelStr by ","
+    Set<MultiNodePolicySpec> set = new HashSet<MultiNodePolicySpec>();
+    for (String str : policies) {
+      if (!str.trim().isEmpty()) {
+        String policyClassName = get(
+            MULTI_NODE_SORTING_POLICY_NAME + DOT + str.trim() + DOT + "class");
+        if (str.trim().equals(DEFAULT_NODE_SORTING_POLICY)) {
+          policyClassName = get(
+              MULTI_NODE_SORTING_POLICY_NAME + DOT + str.trim() + DOT + "class",
+              DEFAULT_NODE_SORTING_POLICY_CLASSNAME);
+        }
+
+        // This check is needed as default class name is loaded only for
+        // DEFAULT_NODE_SORTING_POLICY.
+        if (policyClassName == null) {
+          throw new YarnRuntimeException(
+              str.trim() + " Class is not configured or not an instance of "
+                  + MultiNodeLookupPolicy.class.getCanonicalName());
+        }
+        policyClassName = normalizePolicyName(policyClassName.trim());
+        long policySortingInterval = getLong(
+            MULTI_NODE_SORTING_POLICY_NAME + DOT + str.trim()
+                + DOT + "sorting-interval.ms",
+            DEFAULT_MULTI_NODE_SORTING_INTERVAL);
+        if (policySortingInterval < 0) {
+          throw new YarnRuntimeException(
+              str.trim()
+                  + " multi-node policy is configured with invalid"
+                  + " sorting-interval:" + policySortingInterval);
+        }
+        set.add(
+            new MultiNodePolicySpec(policyClassName, policySortingInterval));
+      }
+    }
+
+    return Collections.unmodifiableSet(set);
+  }
+
+  private String normalizePolicyName(String policyName) {
+
+    // Ensure that custom node sorting algorithm class is valid.
+    try {
+      Class<?> nodeSortingPolicyClazz = getClassByName(policyName);
+      if (MultiNodeLookupPolicy.class
+          .isAssignableFrom(nodeSortingPolicyClazz)) {
+        return policyName;
+      } else {
+        throw new YarnRuntimeException(
+            "Class: " + policyName + " not instance of "
+                + MultiNodeLookupPolicy.class.getCanonicalName());
+      }
+    } catch (ClassNotFoundException e) {
+      throw new YarnRuntimeException(
+          "Could not instantiate " + "NodesSortingPolicy: " + policyName, e);
     }
   }
 }

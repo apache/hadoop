@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -33,8 +34,8 @@ import java.util.Random;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
@@ -65,16 +66,16 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class TestReconstructStripedFile {
-  public static final Log LOG = LogFactory.getLog(TestReconstructStripedFile.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestReconstructStripedFile.class);
 
-  private final ErasureCodingPolicy ecPolicy =
-      StripedFileTestUtil.getDefaultECPolicy();
-  private final int dataBlkNum = ecPolicy.getNumDataUnits();
-  private final int parityBlkNum = ecPolicy.getNumParityUnits();
-  private final int cellSize = ecPolicy.getCellSize();
-  private final int blockSize = cellSize * 3;
-  private final int groupSize = dataBlkNum + parityBlkNum;
-  private final int dnNum = groupSize + parityBlkNum;
+  private ErasureCodingPolicy ecPolicy;
+  private int dataBlkNum;
+  private int parityBlkNum;
+  private int cellSize;
+  private int blockSize;
+  private int groupSize;
+  private int dnNum;
 
   static {
     GenericTestUtils.setLogLevel(DFSClient.LOG, Level.ALL);
@@ -95,8 +96,20 @@ public class TestReconstructStripedFile {
   private Map<DatanodeID, Integer> dnMap = new HashMap<>();
   private final Random random = new Random();
 
+  public ErasureCodingPolicy getEcPolicy() {
+    return StripedFileTestUtil.getDefaultECPolicy();
+  }
+
   @Before
   public void setup() throws IOException {
+    ecPolicy = getEcPolicy();
+    dataBlkNum = ecPolicy.getNumDataUnits();
+    parityBlkNum = ecPolicy.getNumParityUnits();
+    cellSize = ecPolicy.getCellSize();
+    blockSize = cellSize * 3;
+    groupSize = dataBlkNum + parityBlkNum;
+    dnNum = groupSize + parityBlkNum;
+
     conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     conf.setInt(
@@ -110,14 +123,14 @@ public class TestReconstructStripedFile {
           CodecUtil.IO_ERASURECODE_CODEC_RS_RAWCODERS_KEY,
           NativeRSRawErasureCoderFactory.CODER_NAME);
     }
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(dnNum).build();
+    File basedir = new File(GenericTestUtils.getRandomizedTempPath());
+    cluster = new MiniDFSCluster.Builder(conf, basedir).numDataNodes(dnNum)
+        .build();
     cluster.waitActive();
 
     fs = cluster.getFileSystem();
-    fs.enableErasureCodingPolicy(
-        StripedFileTestUtil.getDefaultECPolicy().getName());
-    fs.getClient().setErasureCodingPolicy("/",
-        StripedFileTestUtil.getDefaultECPolicy().getName());
+    fs.enableErasureCodingPolicy(ecPolicy.getName());
+    fs.getClient().setErasureCodingPolicy("/", ecPolicy.getName());
 
     List<DataNode> datanodes = cluster.getDataNodes();
     for (int i = 0; i < dnNum; i++) {
@@ -432,7 +445,7 @@ public class TestReconstructStripedFile {
 
     BlockECReconstructionInfo invalidECInfo = new BlockECReconstructionInfo(
         new ExtendedBlock("bp-id", 123456), dataDNs, dnStorageInfo, liveIndices,
-        StripedFileTestUtil.getDefaultECPolicy());
+        ecPolicy);
     List<BlockECReconstructionInfo> ecTasks = new ArrayList<>();
     ecTasks.add(invalidECInfo);
     dataNode.getErasureCodingWorker().processErasureCodingTasks(ecTasks);
@@ -461,7 +474,8 @@ public class TestReconstructStripedFile {
         .numDataNodes(numDataNodes).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
-    ErasureCodingPolicy policy = StripedFileTestUtil.getDefaultECPolicy();
+    ErasureCodingPolicy policy = ecPolicy;
+    fs.enableErasureCodingPolicy(policy.getName());
     fs.getClient().setErasureCodingPolicy("/", policy.getName());
 
     final int fileLen = cellSize * ecPolicy.getNumDataUnits();
@@ -470,7 +484,8 @@ public class TestReconstructStripedFile {
     }
 
     // Inject data-loss by tear down desired number of DataNodes.
-    assertTrue(policy.getNumParityUnits() >= deadDN);
+    assumeTrue("Ignore case where num dead DNs > num parity units",
+        policy.getNumParityUnits() >= deadDN);
     List<DataNode> dataNodes = new ArrayList<>(cluster.getDataNodes());
     Collections.shuffle(dataNodes);
     for (DataNode dn : dataNodes.subList(0, deadDN)) {
@@ -516,10 +531,8 @@ public class TestReconstructStripedFile {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(dnNum).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
-    fs.enableErasureCodingPolicy(
-        StripedFileTestUtil.getDefaultECPolicy().getName());
-    fs.getClient().setErasureCodingPolicy("/",
-        StripedFileTestUtil.getDefaultECPolicy().getName());
+    fs.enableErasureCodingPolicy(ecPolicy.getName());
+    fs.getClient().setErasureCodingPolicy("/", ecPolicy.getName());
 
     final int fileLen = cellSize * ecPolicy.getNumDataUnits() * 2;
     writeFile(fs, "/ec-xmits-weight", fileLen);

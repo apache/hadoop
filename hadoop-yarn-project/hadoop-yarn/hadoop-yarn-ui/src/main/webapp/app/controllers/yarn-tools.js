@@ -23,7 +23,7 @@ export default Ember.Controller.extend({
     text: "Home",
     routeName: 'application'
   }, {
-    text: "Yarn Tools",
+    text: "YARN Tools",
     routeName: 'yarn-tools',
   }],
 });

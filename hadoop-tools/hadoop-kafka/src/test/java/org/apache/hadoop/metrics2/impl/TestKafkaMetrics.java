@@ -42,11 +42,11 @@ import java.util.Date;
 import java.util.StringJoiner;
 import java.util.concurrent.Future;
 
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.anyObject;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * This tests that the KafkaSink properly formats the Kafka message.
@@ -133,7 +133,7 @@ public class TestKafkaMetrics {
 
     // Send the record and store the result in a mock Future.
     Future<RecordMetadata> f = mock(Future.class);
-    when(mockProducer.send((ProducerRecord) anyObject())).thenReturn(f);
+    when(mockProducer.send(any())).thenReturn(f);
     kafkaSink.putMetrics(record);
 
     // Get the argument and verity it.
@@ -147,7 +147,7 @@ public class TestKafkaMetrics {
     if (LOG.isDebugEnabled()) {
       LOG.debug("kafka result: " + jsonResult);
     }
-    assertEquals(jsonLines.toString(), jsonResult);
+    assertThat(jsonLines.toString()).isEqualTo(jsonResult);
   }
 
   StringBuilder recordToJson(MetricsRecord record) {

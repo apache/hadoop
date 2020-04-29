@@ -46,6 +46,11 @@ public class TestNullMetadataStore extends MetadataStoreTestBase {
     return true;
   }
 
+  @Override protected String getPathStringForPrune(String path)
+      throws Exception {
+    return path;
+  }
+
   @Override
   public AbstractMSContract createContract() {
     return new NullMSContract();

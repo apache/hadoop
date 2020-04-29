@@ -107,7 +107,7 @@ public class SemaphoredDelegatingExecutor extends
       queueingPermits.acquire();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      return Futures.immediateFailedCheckedFuture(e);
+      return Futures.immediateFailedFuture(e);
     }
     return super.submit(new CallableWithPermitRelease<>(task));
   }
@@ -118,7 +118,7 @@ public class SemaphoredDelegatingExecutor extends
       queueingPermits.acquire();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      return Futures.immediateFailedCheckedFuture(e);
+      return Futures.immediateFailedFuture(e);
     }
     return super.submit(new RunnableWithPermitRelease(task), result);
   }
@@ -129,7 +129,7 @@ public class SemaphoredDelegatingExecutor extends
       queueingPermits.acquire();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      return Futures.immediateFailedCheckedFuture(e);
+      return Futures.immediateFailedFuture(e);
     }
     return super.submit(new RunnableWithPermitRelease(task));
   }
@@ -173,10 +173,10 @@ public class SemaphoredDelegatingExecutor extends
   public String toString() {
     final StringBuilder sb = new StringBuilder(
         "SemaphoredDelegatingExecutor{");
-    sb.append("permitCount=").append(getPermitCount());
-    sb.append(", available=").append(getAvailablePermits());
-    sb.append(", waiting=").append(getWaitingCount());
-    sb.append('}');
+    sb.append("permitCount=").append(getPermitCount())
+        .append(", available=").append(getAvailablePermits())
+        .append(", waiting=").append(getWaitingCount())
+        .append('}');
     return sb.toString();
   }
 

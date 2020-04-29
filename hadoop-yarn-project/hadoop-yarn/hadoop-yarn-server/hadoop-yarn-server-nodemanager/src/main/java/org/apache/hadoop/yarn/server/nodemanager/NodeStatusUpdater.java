@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.server.nodemanager.nodelabels.NodeAttributesProvider;
+import org.apache.hadoop.yarn.server.nodemanager.nodelabels.NodeLabelsProvider;
 
 public interface NodeStatusUpdater extends Service {
 
@@ -59,4 +61,16 @@ public interface NodeStatusUpdater extends Service {
    * @param ex exception that makes the node unhealthy
    */
   void reportException(Exception ex);
+
+  /**
+   * Sets a node attributes provider to node manager.
+   * @param provider
+   */
+  void setNodeAttributesProvider(NodeAttributesProvider provider);
+
+  /**
+   * Sets a node labels provider to the node manager.
+   * @param provider
+   */
+  void setNodeLabelsProvider(NodeLabelsProvider provider);
 }

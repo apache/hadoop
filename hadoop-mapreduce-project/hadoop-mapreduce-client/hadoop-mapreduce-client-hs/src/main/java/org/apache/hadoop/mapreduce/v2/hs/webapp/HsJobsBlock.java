@@ -21,11 +21,16 @@ package org.apache.hadoop.mapreduce.v2.hs.webapp;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.text.StringEscapeUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapred.JobACLsManager;
+import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.JobInfo;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
@@ -42,9 +47,17 @@ public class HsJobsBlock extends HtmlBlock {
   final AppContext appContext;
   final SimpleDateFormat dateFormat =
     new SimpleDateFormat("yyyy.MM.dd HH:mm:ss z");
+  private UserGroupInformation ugi;
+  private boolean isFilterAppListByUserEnabled;
+  private JobACLsManager aclsManager;
 
-  @Inject HsJobsBlock(AppContext appCtx) {
+  @Inject
+  HsJobsBlock(Configuration conf, AppContext appCtx, ViewContext ctx) {
+    super(ctx);
     appContext = appCtx;
+    isFilterAppListByUserEnabled = conf
+        .getBoolean(YarnConfiguration.FILTER_ENTITY_LIST_BY_USER, false);
+    aclsManager = new JobACLsManager(conf);
   }
 
   /*
@@ -77,17 +90,23 @@ public class HsJobsBlock extends HtmlBlock {
     StringBuilder jobsTableData = new StringBuilder("[\n");
     for (Job j : appContext.getAllJobs().values()) {
       JobInfo job = new JobInfo(j);
+      ugi = getCallerUGI();
+      // Allow to list only per-user apps if incoming ugi has permission.
+      if (isFilterAppListByUserEnabled && ugi != null && !aclsManager
+          .checkAccess(ugi, JobACL.VIEW_JOB, job.getUserName(), null)) {
+        continue;
+      }
       jobsTableData.append("[\"")
       .append(dateFormat.format(new Date(job.getSubmitTime()))).append("\",\"")
       .append(job.getFormattedStartTimeStr(dateFormat)).append("\",\"")
       .append(dateFormat.format(new Date(job.getFinishTime()))).append("\",\"")
       .append("<a href='").append(url("job", job.getId())).append("'>")
       .append(job.getId()).append("</a>\",\"")
-      .append(StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(
+      .append(StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(
         job.getName()))).append("\",\"")
-      .append(StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(
+      .append(StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(
         job.getUserName()))).append("\",\"")
-      .append(StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(
+      .append(StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(
         job.getQueueName()))).append("\",\"")
       .append(job.getState()).append("\",\"")
       .append(String.valueOf(job.getMapsTotal())).append("\",\"")

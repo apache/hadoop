@@ -21,8 +21,8 @@ package org.apache.hadoop.tools.mapred.lib;
 import org.apache.hadoop.tools.DistCpConstants;
 import org.apache.hadoop.tools.DistCpContext;
 import org.junit.Assert;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -46,7 +46,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class TestDynamicInputFormat {
-  private static final Log LOG = LogFactory.getLog(TestDynamicInputFormat.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestDynamicInputFormat.class);
   private static MiniDFSCluster cluster;
   private static final int N_FILES = 1000;
   private static final int NUM_SPLITS = 7;

@@ -78,7 +78,7 @@ public class FederationRegistryClient {
    *
    * @return the list of known applications
    */
-  public List<String> getAllApplications() {
+  public synchronized List<String> getAllApplications() {
     // Suppress the exception here because it is valid that the entry does not
     // exist
     List<String> applications = null;
@@ -99,7 +99,7 @@ public class FederationRegistryClient {
    * For testing, delete all application records in registry.
    */
   @VisibleForTesting
-  public void cleanAllApplications() {
+  public synchronized void cleanAllApplications() {
     try {
       removeKeyRegistry(this.registry, this.user, getRegistryKey(null, null),
           true, false);
@@ -115,7 +115,7 @@ public class FederationRegistryClient {
    * @param token the UAM of the application
    * @return whether the amrmToken is added or updated to a new value
    */
-  public boolean writeAMRMTokenForUAM(ApplicationId appId,
+  public synchronized boolean writeAMRMTokenForUAM(ApplicationId appId,
       String subClusterId, Token<AMRMTokenIdentifier> token) {
     Map<String, Token<AMRMTokenIdentifier>> subClusterTokenMap =
         this.appSubClusterTokenMap.get(appId);
@@ -154,7 +154,7 @@ public class FederationRegistryClient {
    * @param appId application id
    * @return the sub-cluster to UAM token mapping
    */
-  public Map<String, Token<AMRMTokenIdentifier>>
+  public synchronized Map<String, Token<AMRMTokenIdentifier>>
       loadStateFromRegistry(ApplicationId appId) {
     Map<String, Token<AMRMTokenIdentifier>> retMap = new HashMap<>();
     // Suppress the exception here because it is valid that the entry does not
@@ -203,7 +203,7 @@ public class FederationRegistryClient {
    *
    * @param appId application id
    */
-  public void removeAppFromRegistry(ApplicationId appId) {
+  public synchronized void removeAppFromRegistry(ApplicationId appId) {
     Map<String, Token<AMRMTokenIdentifier>> subClusterTokenMap =
         this.appSubClusterTokenMap.get(appId);
     LOG.info("Removing all registry entries for {}", appId);

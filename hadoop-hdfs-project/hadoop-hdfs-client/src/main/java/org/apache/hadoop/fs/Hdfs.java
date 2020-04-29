@@ -130,9 +130,9 @@ public class Hdfs extends AbstractFileSystem {
   }
 
   @Override
-  public FileChecksum getFileChecksum(Path f) 
+  public FileChecksum getFileChecksum(Path f)
       throws IOException, UnresolvedLinkException {
-    return dfs.getFileChecksum(getUriPath(f), Long.MAX_VALUE);
+    return dfs.getFileChecksumWithCombineMode(getUriPath(f), Long.MAX_VALUE);
   }
 
   @Override
@@ -487,6 +487,11 @@ public class Hdfs extends AbstractFileSystem {
   @Override
   public void access(Path path, final FsAction mode) throws IOException {
     dfs.checkAccess(getUriPath(path), mode);
+  }
+
+  @Override
+  public void satisfyStoragePolicy(Path path) throws IOException {
+    dfs.satisfyStoragePolicy(getUriPath(path));
   }
 
   @Override

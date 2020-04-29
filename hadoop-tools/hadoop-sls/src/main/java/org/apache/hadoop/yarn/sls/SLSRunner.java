@@ -22,6 +22,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.security.Security;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -33,6 +34,9 @@ import java.util.Random;
 import java.util.Set;
 import java.util.Collections;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -42,12 +46,17 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.collections.SetUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
+import org.apache.hadoop.net.DNSToSwitchMapping;
+import org.apache.hadoop.net.TableMapping;
 import org.apache.hadoop.tools.rumen.JobTraceReader;
 import org.apache.hadoop.tools.rumen.LoggedJob;
 import org.apache.hadoop.tools.rumen.LoggedTask;
@@ -55,8 +64,10 @@ import org.apache.hadoop.tools.rumen.LoggedTaskAttempt;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -75,6 +86,7 @@ import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
 import org.apache.hadoop.yarn.sls.nodemanager.NMSimulator;
 import org.apache.hadoop.yarn.sls.resourcemanager.MockAMLauncher;
 import org.apache.hadoop.yarn.sls.scheduler.SLSCapacityScheduler;
+import org.apache.hadoop.yarn.sls.scheduler.SchedulerMetrics;
 import org.apache.hadoop.yarn.sls.scheduler.TaskRunner;
 import org.apache.hadoop.yarn.sls.scheduler.SLSFairScheduler;
 import org.apache.hadoop.yarn.sls.scheduler.ContainerSimulator;
@@ -96,15 +108,17 @@ public class SLSRunner extends Configured implements Tool {
   private static TaskRunner runner = new TaskRunner();
   private String[] inputTraces;
   private Map<String, Integer> queueAppNumMap;
+  private int poolSize;
 
   // NM simulator
-  private HashMap<NodeId, NMSimulator> nmMap;
+  private Map<NodeId, NMSimulator> nmMap;
   private Resource nodeManagerResource;
   private String nodeFile;
 
   // AM simulator
   private int AM_ID;
   private Map<String, AMSimulator> amMap;
+  private Map<ApplicationId, AMSimulator> appIdAMSim;
   private Set<String> trackedApps;
   private Map<String, Class> amClassMap;
   private static int remainingApps = 0;
@@ -116,6 +130,7 @@ public class SLSRunner extends Configured implements Tool {
   // other simulation information
   private int numNMs, numRacks, numAMs, numTasks;
   private long maxRuntime;
+  private String tableMapping;
 
   private final static Map<String, Object> simulateInfoMap =
           new HashMap<String, Object>();
@@ -134,6 +149,10 @@ public class SLSRunner extends Configured implements Tool {
   public enum TraceType {
     SLS, RUMEN, SYNTH
   }
+
+  public static final String NETWORK_CACHE_TTL = "networkaddress.cache.ttl";
+  public static final String NETWORK_NEGATIVE_CACHE_TTL =
+      "networkaddress.cache.negative.ttl";
 
   private TraceType inputType;
   private SynthTraceJobProducer stjp;
@@ -158,16 +177,16 @@ public class SLSRunner extends Configured implements Tool {
   }
 
   private void init(Configuration tempConf) throws ClassNotFoundException {
-    nmMap = new HashMap<>();
+    nmMap = new ConcurrentHashMap<>();
     queueAppNumMap = new HashMap<>();
     amMap = new ConcurrentHashMap<>();
     amClassMap = new HashMap<>();
-
+    appIdAMSim = new ConcurrentHashMap<>();
     // runner configuration
     setConf(tempConf);
 
     // runner
-    int poolSize = tempConf.getInt(SLSConfiguration.RUNNER_POOL_SIZE,
+    poolSize = tempConf.getInt(SLSConfiguration.RUNNER_POOL_SIZE,
         SLSConfiguration.RUNNER_POOL_SIZE_DEFAULT);
     SLSRunner.runner.setQueueSize(poolSize);
     // <AMType, Class> map
@@ -221,11 +240,14 @@ public class SLSRunner extends Configured implements Tool {
     this.trackedApps = trackApps;
     this.printSimulation = printsimulation;
     metricsOutputDir = outDir;
-
+    tableMapping = outDir + "/tableMapping.csv";
   }
 
   public void start() throws IOException, ClassNotFoundException, YarnException,
       InterruptedException {
+
+    enableDNSCaching(getConf());
+
     // start resource manager
     startRM();
     // start node managers
@@ -245,6 +267,23 @@ public class SLSRunner extends Configured implements Tool {
     runner.start();
   }
 
+  /**
+   * Enables DNS Caching based on config. If DNS caching is enabled, then set
+   * the DNS cache to infinite time. Since in SLS random nodes are added, DNS
+   * resolution can take significant time which can cause erroneous results.
+   * For more details, check <a href=
+   * "https://docs.oracle.com/javase/8/docs/technotes/guides/net/properties.html">
+   * Java Networking Properties</a>
+   * @param conf Configuration object.
+   */
+  static void enableDNSCaching(Configuration conf) {
+    if (conf.getBoolean(SLSConfiguration.DNS_CACHING_ENABLED,
+        SLSConfiguration.DNS_CACHING_ENABLED_DEFAULT)) {
+      Security.setProperty(NETWORK_CACHE_TTL, "-1");
+      Security.setProperty(NETWORK_NEGATIVE_CACHE_TTL, "-1");
+    }
+  }
+
   private void startRM() throws ClassNotFoundException, YarnException {
     Configuration rmConf = new YarnConfiguration(getConf());
     String schedulerClass = rmConf.get(YarnConfiguration.RM_SCHEDULER);
@@ -262,14 +301,19 @@ public class SLSRunner extends Configured implements Tool {
       // TODO add support for FifoScheduler
       throw new YarnException("Fifo Scheduler is not supported yet.");
     }
-
+    rmConf.setClass(
+        CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
+        TableMapping.class, DNSToSwitchMapping.class);
+    rmConf.set(
+        CommonConfigurationKeysPublic.NET_TOPOLOGY_TABLE_MAPPING_FILE_KEY,
+        tableMapping);
     rmConf.set(SLSConfiguration.METRICS_OUTPUT_DIR, metricsOutputDir);
 
     final SLSRunner se = this;
     rm = new ResourceManager() {
       @Override
       protected ApplicationMasterLauncher createAMLauncher() {
-        return new MockAMLauncher(se, this.rmContext, amMap);
+        return new MockAMLauncher(se, this.rmContext, appIdAMSim);
       }
     };
 
@@ -283,7 +327,8 @@ public class SLSRunner extends Configured implements Tool {
     rm.start();
   }
 
-  private void startNM() throws YarnException, IOException {
+  private void startNM() throws YarnException, IOException,
+      InterruptedException {
     // nm configuration
     int heartbeatInterval = getConf().getInt(
         SLSConfiguration.NM_HEARTBEAT_INTERVAL_MS,
@@ -292,21 +337,20 @@ public class SLSRunner extends Configured implements Tool {
         SLSConfiguration.NM_RESOURCE_UTILIZATION_RATIO,
         SLSConfiguration.NM_RESOURCE_UTILIZATION_RATIO_DEFAULT);
     // nm information (fetch from topology file, or from sls/rumen json file)
-    Set<String> nodeSet = new HashSet<String>();
+    Set<NodeDetails> nodeSet = null;
     if (nodeFile.isEmpty()) {
       for (String inputTrace : inputTraces) {
-
         switch (inputType) {
         case SLS:
-          nodeSet.addAll(SLSUtils.parseNodesFromSLSTrace(inputTrace));
+          nodeSet = SLSUtils.parseNodesFromSLSTrace(inputTrace);
           break;
         case RUMEN:
-          nodeSet.addAll(SLSUtils.parseNodesFromRumenTrace(inputTrace));
+          nodeSet = SLSUtils.parseNodesFromRumenTrace(inputTrace);
           break;
         case SYNTH:
           stjp = new SynthTraceJobProducer(getConf(), new Path(inputTraces[0]));
-          nodeSet.addAll(SLSUtils.generateNodes(stjp.getNumNodes(),
-              stjp.getNumNodes()/stjp.getNodesPerRack()));
+          nodeSet = SLSUtils.generateNodes(stjp.getNumNodes(),
+              stjp.getNumNodes()/stjp.getNodesPerRack());
           break;
         default:
           throw new YarnException("Input configuration not recognized, "
@@ -314,25 +358,49 @@ public class SLSRunner extends Configured implements Tool {
         }
       }
     } else {
-      nodeSet.addAll(SLSUtils.parseNodesFromNodeFile(nodeFile));
+      nodeSet = SLSUtils.parseNodesFromNodeFile(nodeFile,
+          nodeManagerResource);
     }
 
-    if (nodeSet.size() == 0) {
+    if (nodeSet == null || nodeSet.isEmpty()) {
       throw new YarnException("No node! Please configure nodes.");
     }
 
+    SLSUtils.generateNodeTableMapping(nodeSet, tableMapping);
+
     // create NM simulators
     Random random = new Random();
-    Set<String> rackSet = new HashSet<String>();
-    for (String hostName : nodeSet) {
-      // we randomize the heartbeat start time from zero to 1 interval
-      NMSimulator nm = new NMSimulator();
-      nm.init(hostName, nodeManagerResource, random.nextInt(heartbeatInterval),
-          heartbeatInterval, rm, resourceUtilizationRatio);
-      nmMap.put(nm.getNode().getNodeID(), nm);
-      runner.schedule(nm);
-      rackSet.add(nm.getNode().getRackName());
+    Set<String> rackSet = ConcurrentHashMap.newKeySet();
+    int threadPoolSize = Math.max(poolSize,
+        SLSConfiguration.RUNNER_POOL_SIZE_DEFAULT);
+    ExecutorService executorService = Executors.
+        newFixedThreadPool(threadPoolSize);
+    for (NodeDetails nodeDetails : nodeSet) {
+      executorService.submit(new Runnable() {
+        @Override public void run() {
+          try {
+            // we randomize the heartbeat start time from zero to 1 interval
+            NMSimulator nm = new NMSimulator();
+            Resource nmResource = nodeManagerResource;
+            String hostName = nodeDetails.getHostname();
+            if (nodeDetails.getNodeResource() != null) {
+              nmResource = nodeDetails.getNodeResource();
+            }
+            Set<NodeLabel> nodeLabels = nodeDetails.getLabels();
+            nm.init(hostName, nmResource,
+                random.nextInt(heartbeatInterval),
+                heartbeatInterval, rm, resourceUtilizationRatio, nodeLabels);
+            nmMap.put(nm.getNode().getNodeID(), nm);
+            runner.schedule(nm);
+            rackSet.add(nm.getNode().getRackName());
+          } catch (IOException | YarnException e) {
+            LOG.error("Got an error while adding node", e);
+          }
+        }
+      });
     }
+    executorService.shutdown();
+    executorService.awaitTermination(10, TimeUnit.MINUTES);
     numRacks = rackSet.size();
     numNMs = nmMap.size();
   }
@@ -416,6 +484,11 @@ public class SLSRunner extends Configured implements Tool {
           jsonJob.get(SLSConfiguration.JOB_END_MS).toString());
     }
 
+    String jobLabelExpr = null;
+    if (jsonJob.containsKey(SLSConfiguration.JOB_LABEL_EXPR)) {
+      jobLabelExpr = jsonJob.get(SLSConfiguration.JOB_LABEL_EXPR).toString();
+    }
+
     String user = (String) jsonJob.get(SLSConfiguration.JOB_USER);
     if (user == null) {
       user = "default";
@@ -445,7 +518,8 @@ public class SLSRunner extends Configured implements Tool {
 
     for (int i = 0; i < jobCount; i++) {
       runNewAM(amType, user, queue, oldAppId, jobStartTime, jobFinishTime,
-          getTaskContainers(jsonJob), getAMContainerResource(jsonJob));
+          getTaskContainers(jsonJob), getAMContainerResource(jsonJob),
+          jobLabelExpr);
     }
   }
 
@@ -508,10 +582,23 @@ public class SLSRunner extends Configured implements Tool {
         executionType = ExecutionType.valueOf(
             jsonTask.get(SLSConfiguration.TASK_EXECUTION_TYPE).toString());
       }
+      long allocationId = -1;
+      if (jsonTask.containsKey(SLSConfiguration.TASK_ALLOCATION_ID)) {
+        allocationId = Long.parseLong(
+            jsonTask.get(SLSConfiguration.TASK_ALLOCATION_ID).toString());
+      }
+
+      long requestDelay = 0;
+      if (jsonTask.containsKey(SLSConfiguration.TASK_REQUEST_DELAY)) {
+        requestDelay = Long.parseLong(
+            jsonTask.get(SLSConfiguration.TASK_REQUEST_DELAY).toString());
+      }
+      requestDelay = Math.max(requestDelay, 0);
+
       for (int i = 0; i < count; i++) {
         containers.add(
             new ContainerSimulator(res, duration, hostname, priority, type,
-                executionType));
+                executionType, allocationId, requestDelay));
       }
     }
 
@@ -551,7 +638,7 @@ public class SLSRunner extends Configured implements Tool {
         try {
           createAMForJob(job, baselineTimeMS);
         } catch (Exception e) {
-          LOG.error("Failed to create an AM: {}", e.getMessage());
+          LOG.error("Failed to create an AM", e);
         }
 
         job = reader.getNext();
@@ -694,7 +781,7 @@ public class SLSRunner extends Configured implements Tool {
 
       runNewAM(job.getType(), user, jobQueue, oldJobId,
           jobStartTimeMS, jobFinishTimeMS, containerList, reservationId,
-          job.getDeadline(), getAMContainerResource(null),
+          job.getDeadline(), getAMContainerResource(null), null,
           job.getParams());
     }
   }
@@ -730,7 +817,10 @@ public class SLSRunner extends Configured implements Tool {
     }
 
     queueAppNumMap.put(queueName, appNum);
-    wrapper.getSchedulerMetrics().trackQueue(queueName);
+    SchedulerMetrics metrics = wrapper.getSchedulerMetrics();
+    if (metrics != null) {
+      metrics.trackQueue(queueName);
+    }
   }
 
   private void runNewAM(String jobType, String user,
@@ -739,15 +829,24 @@ public class SLSRunner extends Configured implements Tool {
       Resource amContainerResource) {
     runNewAM(jobType, user, jobQueue, oldJobId, jobStartTimeMS,
         jobFinishTimeMS, containerList, null,  -1,
-        amContainerResource, null);
+        amContainerResource, null, null);
   }
 
   private void runNewAM(String jobType, String user,
       String jobQueue, String oldJobId, long jobStartTimeMS,
       long jobFinishTimeMS, List<ContainerSimulator> containerList,
-      ReservationId reservationId, long deadline, Resource amContainerResource,
-      Map<String, String> params) {
+      Resource amContainerResource, String labelExpr) {
+    runNewAM(jobType, user, jobQueue, oldJobId, jobStartTimeMS,
+        jobFinishTimeMS, containerList, null,  -1,
+        amContainerResource, labelExpr, null);
+  }
 
+  @SuppressWarnings("checkstyle:parameternumber")
+  private void runNewAM(String jobType, String user,
+      String jobQueue, String oldJobId, long jobStartTimeMS,
+      long jobFinishTimeMS, List<ContainerSimulator> containerList,
+      ReservationId reservationId, long deadline, Resource amContainerResource,
+      String labelExpr, Map<String, String> params) {
     AMSimulator amSim = (AMSimulator) ReflectionUtils.newInstance(
         amClassMap.get(jobType), new Configuration());
 
@@ -763,7 +862,8 @@ public class SLSRunner extends Configured implements Tool {
       AM_ID++;
       amSim.init(heartbeatInterval, containerList, rm, this, jobStartTimeMS,
           jobFinishTimeMS, user, jobQueue, isTracked, oldJobId,
-          runner.getStartTimeMS(), amContainerResource, params);
+          runner.getStartTimeMS(), amContainerResource, labelExpr, params,
+          appIdAMSim);
       if(reservationId != null) {
         // if we have a ReservationId, delegate reservation creation to
         // AMSim (reservation shape is impl specific)
@@ -824,7 +924,7 @@ public class SLSRunner extends Configured implements Tool {
             (long)(Math.ceil(maxRuntime / 1000.0)));
   }
 
-  public HashMap<NodeId, NMSimulator> getNmMap() {
+  public Map<NodeId, NMSimulator> getNmMap() {
     return nmMap;
   }
 
@@ -949,4 +1049,69 @@ public class SLSRunner extends Configured implements Tool {
     System.err.println();
   }
 
+  /**
+   * Class to encapsulate all details about the node.
+   */
+  @Private
+  @Unstable
+  public static class NodeDetails {
+    private String hostname;
+    private Resource nodeResource;
+    private Set<NodeLabel> labels;
+
+    public NodeDetails(String nodeHostname) {
+      this.hostname = nodeHostname;
+    }
+
+    public String getHostname() {
+      return hostname;
+    }
+
+    public void setHostname(String hostname) {
+      this.hostname = hostname;
+    }
+
+    public Resource getNodeResource() {
+      return nodeResource;
+    }
+
+    public void setNodeResource(Resource nodeResource) {
+      this.nodeResource = nodeResource;
+    }
+
+    public Set<NodeLabel> getLabels() {
+      return labels;
+    }
+
+    public void setLabels(Set<NodeLabel> labels) {
+      this.labels = labels;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (!(o instanceof NodeDetails)) {
+        return false;
+      }
+
+      NodeDetails that = (NodeDetails) o;
+
+      return StringUtils.equals(hostname, that.hostname) && (
+          nodeResource == null ?
+              that.nodeResource == null :
+              nodeResource.equals(that.nodeResource)) && SetUtils
+          .isEqualSet(labels, that.labels);
+    }
+
+    @Override
+    public int hashCode() {
+      int result = hostname == null ? 0 : hostname.hashCode();
+      result =
+          31 * result + (nodeResource == null ? 0 : nodeResource.hashCode());
+      result = 31 * result + (labels == null ? 0 : labels.hashCode());
+      return result;
+    }
+  }
 }

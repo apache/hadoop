@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.service.containerlaunch;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
@@ -46,6 +47,8 @@ public class AbstractLauncher {
   private static final Logger log =
     LoggerFactory.getLogger(AbstractLauncher.class);
   public static final String CLASSPATH = "CLASSPATH";
+  public static final String ENV_DOCKER_CONTAINER_MOUNTS =
+      "YARN_CONTAINER_RUNTIME_DOCKER_MOUNTS";
   /**
    * Env vars; set up at final launch stage
    */
@@ -153,26 +156,33 @@ public class AbstractLauncher {
         env.put("YARN_CONTAINER_RUNTIME_DOCKER_RUN_PRIVILEGED_CONTAINER",
             "true");
       }
-      StringBuilder sb = new StringBuilder();
-      for (Entry<String,String> mount : mountPaths.entrySet()) {
-        if (sb.length() > 0) {
-          sb.append(",");
+      if (!mountPaths.isEmpty()) {
+        StringBuilder sb = new StringBuilder();
+        if (env.get(ENV_DOCKER_CONTAINER_MOUNTS) != null) {
+          // user specified mounts in the spec
+          sb.append(env.get(ENV_DOCKER_CONTAINER_MOUNTS));
         }
-        sb.append(mount.getKey());
-        sb.append(":");
-        sb.append(mount.getValue());
+        for (Entry<String, String> mount : mountPaths.entrySet()) {
+          if (sb.length() > 0) {
+            sb.append(",");
+          }
+          sb.append(mount.getKey()).append(":")
+              .append(mount.getValue()).append(":ro");
+        }
+        env.put(ENV_DOCKER_CONTAINER_MOUNTS, sb.toString());
       }
-      env.put("YARN_CONTAINER_RUNTIME_DOCKER_LOCAL_RESOURCE_MOUNTS", sb.toString());
-      log.info("yarn docker env var has been set {}", containerLaunchContext.getEnvironment().toString());
+      log.info("yarn docker env var has been set {}",
+          containerLaunchContext.getEnvironment().toString());
     }
 
     return containerLaunchContext;
   }
 
-  public void setRetryContext(int maxRetries, int retryInterval) {
+  public void setRetryContext(int maxRetries, int retryInterval,
+      long failuresValidityInterval) {
     ContainerRetryContext retryContext = ContainerRetryContext
-        .newInstance(ContainerRetryPolicy.RETRY_ON_ALL_ERRORS, null, maxRetries,
-            retryInterval);
+        .newInstance(ContainerRetryPolicy.RETRY_ON_ALL_ERRORS, null,
+            maxRetries, retryInterval, failuresValidityInterval);
     containerLaunchContext.setContainerRetryContext(retryContext);
   }
 
@@ -186,7 +196,7 @@ public class AbstractLauncher {
 
         String key = entry.getKey();
         LocalResource val = entry.getValue();
-        log.debug(key + "=" + ServiceUtils.stringify(val.getResource()));
+        log.debug("{} = {}", key, ServiceUtils.stringify(val.getResource()));
       }
     }
   }
@@ -245,4 +255,8 @@ public class AbstractLauncher {
     this.runPrivilegedContainer = runPrivilegedContainer;
   }
 
+  @VisibleForTesting
+  public String getDockerImage() {
+    return dockerImage;
+  }
 }

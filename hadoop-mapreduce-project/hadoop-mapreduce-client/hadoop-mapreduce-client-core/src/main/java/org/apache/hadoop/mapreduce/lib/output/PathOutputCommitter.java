@@ -57,8 +57,8 @@ public abstract class PathOutputCommitter extends OutputCommitter {
   protected PathOutputCommitter(Path outputPath,
       TaskAttemptContext context) throws IOException {
     this.context = Preconditions.checkNotNull(context, "Null context");
-    LOG.debug("Creating committer with output path {} and task context"
-        + " {}", outputPath, context);
+    LOG.debug("Instantiating committer {} with output path {} and task context"
+        + " {}", this, outputPath, context);
   }
 
   /**
@@ -71,8 +71,8 @@ public abstract class PathOutputCommitter extends OutputCommitter {
   protected PathOutputCommitter(Path outputPath,
       JobContext context) throws IOException {
     this.context = Preconditions.checkNotNull(context, "Null context");
-    LOG.debug("Creating committer with output path {} and job context"
-        + " {}", outputPath, context);
+    LOG.debug("Instantiating committer {} with output path {} and job context"
+        + " {}", this, outputPath, context);
   }
 
   /**
@@ -103,6 +103,8 @@ public abstract class PathOutputCommitter extends OutputCommitter {
 
   @Override
   public String toString() {
-    return "PathOutputCommitter{context=" + context + '}';
+    return "PathOutputCommitter{context=" + context
+        + "; " + super.toString()
+        + '}';
   }
 }

@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs.qjournal;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import static org.junit.Assert.*;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SASL_KEY;
@@ -51,8 +49,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.http.HttpConfig;
+import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.minikdc.MiniKdc;
+import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
@@ -70,6 +70,7 @@ public class TestSecureNNWithQJM {
 
   private static final Path TEST_PATH = new Path("/test-dir");
   private static final Path TEST_PATH_2 = new Path("/test-dir-2");
+  private static final String PREFIX = "hadoop.http.authentication.";
 
   private static HdfsConfiguration baseConf;
   private static File baseDir;
@@ -114,6 +115,11 @@ public class TestSecureNNWithQJM {
     String hdfsPrincipal = userName + "/" + krbInstance + "@" + kdc.getRealm();
     String spnegoPrincipal = "HTTP/" + krbInstance + "@" + kdc.getRealm();
 
+    baseConf.set(HttpServer2.FILTER_INITIALIZER_PROPERTY,
+        AuthenticationFilterInitializer.class.getName());
+    baseConf.set(PREFIX + "type", "kerberos");
+    baseConf.set(PREFIX + "kerberos.keytab", keytab);
+    baseConf.set(PREFIX + "kerberos.principal", spnegoPrincipal);
     baseConf.set(DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY, hdfsPrincipal);
     baseConf.set(DFS_NAMENODE_KEYTAB_FILE_KEY, keytab);
     baseConf.set(DFS_DATANODE_KERBEROS_PRINCIPAL_KEY, hdfsPrincipal);

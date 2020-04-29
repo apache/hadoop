@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.yarn.server.timelineservice;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
+
 /**
  * Encapsulates timeline context information.
  */
@@ -28,6 +32,7 @@ public class TimelineContext {
   private String flowName;
   private Long flowRunId;
   private String appId;
+  private static final Configuration DEFAULT_CONF = new YarnConfiguration();
 
   public TimelineContext() {
     this(null, null, null, 0L, null);
@@ -99,7 +104,7 @@ public class TimelineContext {
       Long flowRunId, String appId) {
     this.clusterId = clusterId;
     this.userId = userId;
-    this.flowName = flowName;
+    this.flowName = TimelineUtils.shortenFlowName(flowName, DEFAULT_CONF);
     this.flowRunId = flowRunId;
     this.appId = appId;
   }
@@ -125,7 +130,7 @@ public class TimelineContext {
   }
 
   public void setFlowName(String flow) {
-    this.flowName = flow;
+    this.flowName = TimelineUtils.shortenFlowName(flow, DEFAULT_CONF);
   }
 
   public Long getFlowRunId() {

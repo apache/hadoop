@@ -24,11 +24,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.stream.Collectors;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -46,11 +50,19 @@ import com.google.common.annotations.VisibleForTesting;
 @Evolving
 public class AsyncDispatcher extends AbstractService implements Dispatcher {
 
-  private static final Log LOG = LogFactory.getLog(AsyncDispatcher.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AsyncDispatcher.class);
+  private static final Marker FATAL =
+      MarkerFactory.getMarker("FATAL");
 
   private final BlockingQueue<Event> eventQueue;
   private volatile int lastEventQueueSizeLogged = 0;
+  private volatile int lastEventDetailsQueueSizeLogged = 0;
   private volatile boolean stopped = false;
+
+  //Configuration for control the details queue event printing.
+  private int detailsInterval;
+  private boolean printTrigger = false;
 
   // Configuration flag for enabling/disabling draining dispatcher's events on
   // stop functionality.
@@ -124,6 +136,12 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
           }
           if (event != null) {
             dispatch(event);
+            if (printTrigger) {
+              //Log the latest dispatch event type
+              // may cause the too many events queued
+              LOG.info("Latest dispatch event type: " + event.getType());
+              printTrigger = false;
+            }
           }
         }
       }
@@ -133,6 +151,15 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
   @VisibleForTesting
   public void disableExitOnDispatchException() {
     exitOnDispatchException = false;
+  }
+
+  @Override
+  protected void serviceInit(Configuration conf) throws Exception{
+    super.serviceInit(conf);
+    this.detailsInterval = getConfig().getInt(YarnConfiguration.
+                    YARN_DISPATCHER_PRINT_EVENTS_INFO_THRESHOLD,
+            YarnConfiguration.
+                    DEFAULT_YARN_DISPATCHER_PRINT_EVENTS_INFO_THRESHOLD);
   }
 
   @Override
@@ -184,10 +211,8 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
   @SuppressWarnings("unchecked")
   protected void dispatch(Event event) {
     //all events go thru this loop
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Dispatching the event " + event.getClass().getName() + "."
-          + event.toString());
-    }
+    LOG.debug("Dispatching the event {}.{}", event.getClass().getName(),
+        event);
 
     Class<? extends Enum> type = event.getType().getDeclaringClass();
 
@@ -200,7 +225,7 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
       }
     } catch (Throwable t) {
       //TODO Maybe log the state of the queue
-      LOG.fatal("Error in dispatcher thread", t);
+      LOG.error(FATAL, "Error in dispatcher thread", t);
       // If serviceStop is called, we should exit this thread gracefully.
       if (exitOnDispatchException
           && (ShutdownHookManager.get().isShutdownInProgress()) == false
@@ -243,6 +268,17 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
   }
 
   class GenericEventHandler implements EventHandler<Event> {
+    private void printEventQueueDetails(BlockingQueue<Event> queue) {
+      Map<Enum, Long> counterMap = eventQueue.stream().
+              collect(Collectors.
+                      groupingBy(e -> e.getType(), Collectors.counting())
+              );
+      for (Map.Entry<Enum, Long> entry : counterMap.entrySet()) {
+        long num = entry.getValue();
+        LOG.info("Event type: " + entry.getKey()
+                + ", Event record counter: " + num);
+      }
+    }
     public void handle(Event event) {
       if (blockNewEvents) {
         return;
@@ -255,6 +291,12 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
           && lastEventQueueSizeLogged != qSize) {
         lastEventQueueSizeLogged = qSize;
         LOG.info("Size of event-queue is " + qSize);
+      }
+      if (qSize != 0 && qSize % detailsInterval == 0
+              && lastEventDetailsQueueSizeLogged != qSize) {
+        lastEventDetailsQueueSizeLogged = qSize;
+        printEventQueueDetails(eventQueue);
+        printTrigger = true;
       }
       int remCapacity = eventQueue.remainingCapacity();
       if (remCapacity < 1000) {

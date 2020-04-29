@@ -17,14 +17,15 @@
  */
 package org.apache.hadoop.yarn.service.provider;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.service.api.records.Service;
+import org.apache.hadoop.yarn.service.component.ComponentRestartPolicy;
 import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
-import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.conf.YarnServiceConstants;
+import org.apache.hadoop.yarn.service.containerlaunch.ContainerLaunchService;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 import org.apache.hadoop.yarn.service.utils.ServiceUtils;
 import org.apache.hadoop.yarn.service.exceptions.SliderException;
@@ -39,8 +40,12 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.CONTAINER_FAILURES_VALIDITY_INTERVAL;
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.CONTAINER_RETRY_INTERVAL;
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.CONTAINER_RETRY_MAX;
+import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.DEFAULT_CONTAINER_FAILURES_VALIDITY_INTERVAL;
+import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.DEFAULT_CONTAINER_RETRY_INTERVAL;
+import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.DEFAULT_CONTAINER_RETRY_MAX;
 import static org.apache.hadoop.yarn.service.utils.ServiceApiUtil.$;
 
 public abstract class AbstractProviderService implements ProviderService,
@@ -51,28 +56,33 @@ public abstract class AbstractProviderService implements ProviderService,
 
   public abstract void processArtifact(AbstractLauncher launcher,
       ComponentInstance compInstance, SliderFileSystem fileSystem,
-      Service service)
+      Service service,
+      ContainerLaunchService.ComponentLaunchContext compLaunchCtx)
       throws IOException;
 
-  public void buildContainerLaunchContext(AbstractLauncher launcher,
-      Service service, ComponentInstance instance,
-      SliderFileSystem fileSystem, Configuration yarnConf, Container container)
-      throws IOException, SliderException {
-    Component component = instance.getComponent().getComponentSpec();;
-    processArtifact(launcher, instance, fileSystem, service);
+  public Map<String, String> buildContainerTokens(ComponentInstance instance,
+      Container container,
+      ContainerLaunchService.ComponentLaunchContext compLaunchContext) {
+      // Generate tokens (key-value pair) for config substitution.
+      // Get pre-defined tokens
+      Map<String, String> globalTokens =
+          instance.getComponent().getScheduler().globalTokens;
+      Map<String, String> tokensForSubstitution = ProviderUtils
+          .initCompTokensForSubstitute(instance, container,
+              compLaunchContext);
+      tokensForSubstitution.putAll(globalTokens);
+      return tokensForSubstitution;
+  }
 
-    ServiceContext context =
-        instance.getComponent().getScheduler().getContext();
-    // Generate tokens (key-value pair) for config substitution.
-    // Get pre-defined tokens
-    Map<String, String> globalTokens =
-        instance.getComponent().getScheduler().globalTokens;
-    Map<String, String> tokensForSubstitution = ProviderUtils
-        .initCompTokensForSubstitute(instance, container);
-    tokensForSubstitution.putAll(globalTokens);
+  public void buildContainerEnvironment(AbstractLauncher launcher,
+      Service service, ComponentInstance instance,
+      SliderFileSystem fileSystem, Configuration yarnConf, Container container,
+      ContainerLaunchService.ComponentLaunchContext compLaunchContext,
+      Map<String, String> tokensForSubstitution)
+          throws IOException, SliderException {
     // Set the environment variables in launcher
-    launcher.putEnv(ServiceUtils
-        .buildEnvMap(component.getConfiguration(), tokensForSubstitution));
+    launcher.putEnv(ServiceUtils.buildEnvMap(
+        compLaunchContext.getConfiguration(), tokensForSubstitution));
     launcher.setEnv("WORK_DIR", ApplicationConstants.Environment.PWD.$());
     launcher.setEnv("LOG_DIR", ApplicationConstants.LOG_DIR_EXPANSION_VAR);
     if (System.getenv(HADOOP_USER_NAME) != null) {
@@ -85,15 +95,16 @@ public abstract class AbstractProviderService implements ProviderService,
     for (Entry<String, String> entry : launcher.getEnv().entrySet()) {
       tokensForSubstitution.put($(entry.getKey()), entry.getValue());
     }
-    //TODO add component host tokens?
-//    ProviderUtils.addComponentHostTokens(tokensForSubstitution, amState);
+  }
 
-    // create config file on hdfs and add local resource
-    ProviderUtils.createConfigFileAndAddLocalResource(launcher, fileSystem,
-        component, tokensForSubstitution, instance, context);
-
+  public void buildContainerLaunchCommand(AbstractLauncher launcher,
+      Service service, ComponentInstance instance,
+      SliderFileSystem fileSystem, Configuration yarnConf, Container container,
+      ContainerLaunchService.ComponentLaunchContext compLaunchContext,
+      Map<String, String> tokensForSubstitution)
+          throws IOException, SliderException {
     // substitute launch command
-    String launchCommand = component.getLaunchCommand();
+    String launchCommand = compLaunchContext.getLaunchCommand();
     // docker container may have empty commands
     if (!StringUtils.isEmpty(launchCommand)) {
       launchCommand = ProviderUtils
@@ -103,12 +114,63 @@ public abstract class AbstractProviderService implements ProviderService,
       operation.addOutAndErrFiles(OUT_FILE, ERR_FILE);
       launcher.addCommand(operation.build());
     }
+  }
 
+  public void buildContainerRetry(AbstractLauncher launcher,
+      Configuration yarnConf,
+      ContainerLaunchService.ComponentLaunchContext compLaunchContext,
+      ComponentInstance instance) {
     // By default retry forever every 30 seconds
-    launcher.setRetryContext(YarnServiceConf
-        .getInt(CONTAINER_RETRY_MAX, -1, service.getConfiguration(),
-            yarnConf), YarnServiceConf
-        .getInt(CONTAINER_RETRY_INTERVAL, 30000, service.getConfiguration(),
-            yarnConf));
+
+    ComponentRestartPolicy restartPolicy = instance.getComponent()
+        .getRestartPolicyHandler();
+    if (restartPolicy.allowContainerRetriesForInstance(instance)) {
+      launcher.setRetryContext(YarnServiceConf
+          .getInt(CONTAINER_RETRY_MAX, DEFAULT_CONTAINER_RETRY_MAX,
+              compLaunchContext.getConfiguration(), yarnConf), YarnServiceConf
+          .getInt(CONTAINER_RETRY_INTERVAL, DEFAULT_CONTAINER_RETRY_INTERVAL,
+              compLaunchContext.getConfiguration(), yarnConf), YarnServiceConf
+          .getLong(CONTAINER_FAILURES_VALIDITY_INTERVAL,
+              DEFAULT_CONTAINER_FAILURES_VALIDITY_INTERVAL,
+              compLaunchContext.getConfiguration(), yarnConf));
+    }
+  }
+
+  public ResolvedLaunchParams buildContainerLaunchContext(
+      AbstractLauncher launcher,
+      Service service, ComponentInstance instance,
+      SliderFileSystem fileSystem, Configuration yarnConf, Container container,
+      ContainerLaunchService.ComponentLaunchContext compLaunchContext)
+      throws IOException, SliderException {
+    ResolvedLaunchParams resolved = new ResolvedLaunchParams();
+    processArtifact(launcher, instance, fileSystem, service, compLaunchContext);
+
+    ServiceContext context =
+        instance.getComponent().getScheduler().getContext();
+    // Generate tokens (key-value pair) for config substitution.
+    Map<String, String> tokensForSubstitution =
+        buildContainerTokens(instance, container, compLaunchContext);
+
+    // Setup launch context environment
+    buildContainerEnvironment(launcher, service, instance,
+        fileSystem, yarnConf, container, compLaunchContext,
+        tokensForSubstitution);
+
+    // create config file on hdfs and addResolvedRsrcPath local resource
+    ProviderUtils.createConfigFileAndAddLocalResource(launcher, fileSystem,
+        compLaunchContext, tokensForSubstitution, instance, context, resolved);
+
+    // handles static files (like normal file / archive file) for localization.
+    ProviderUtils.handleStaticFilesForLocalization(launcher, fileSystem,
+        compLaunchContext, resolved);
+
+    // replace launch command with token specific information
+    buildContainerLaunchCommand(launcher, service, instance, fileSystem,
+        yarnConf, container, compLaunchContext, tokensForSubstitution);
+
+    // Setup container retry settings
+    buildContainerRetry(launcher, yarnConf, compLaunchContext, instance);
+
+    return resolved;
   }
 }

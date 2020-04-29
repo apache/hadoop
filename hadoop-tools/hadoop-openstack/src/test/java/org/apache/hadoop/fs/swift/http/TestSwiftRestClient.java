@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.fs.swift.http;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.swift.SwiftTestConstants;
@@ -39,8 +39,8 @@ import java.io.IOException;
 import java.net.URI;
 
 public class TestSwiftRestClient implements SwiftTestConstants {
-  private static final Log LOG =
-          LogFactory.getLog(TestSwiftRestClient.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestSwiftRestClient.class);
 
   private Configuration conf;
   private boolean runTests;
@@ -110,7 +110,7 @@ public class TestSwiftRestClient implements SwiftTestConstants {
       //expected
     }
     for (DurationStats stats: client.getOperationStatistics()) {
-      LOG.info(stats);
+      LOG.info(stats.toString());
     }
   }
 

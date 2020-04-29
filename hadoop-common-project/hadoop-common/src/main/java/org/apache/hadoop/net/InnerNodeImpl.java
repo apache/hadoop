@@ -41,26 +41,30 @@ public class InnerNodeImpl extends NodeBase implements InnerNode {
   protected final Map<String, Node> childrenMap = new HashMap<>();
   protected int numOfLeaves;
 
-  /** Construct an InnerNode from a path-like string */
+  /** Construct an InnerNode from a path-like string. */
   protected InnerNodeImpl(String path) {
     super(path);
   }
 
   /** Construct an InnerNode
-   * from its name, its network location, its parent, and its level */
-  protected InnerNodeImpl(String name, String location, InnerNode parent, int level) {
+   * from its name, its network location, its parent, and its level. */
+  protected InnerNodeImpl(String name, String location,
+      InnerNode parent, int level) {
     super(name, location, parent, level);
   }
 
   @Override
-  public List<Node> getChildren() {return children;}
+  public List<Node> getChildren() {
+    return children;
+  }
 
-  /** @return the number of children this node has */
-  int getNumOfChildren() {
+  /** @return the number of children this node has. */
+  @Override
+  public int getNumOfChildren() {
     return children.size();
   }
 
-  /** Judge if this node represents a rack
+  /** Judge if this node represents a rack.
    * @return true if it has no child or its children are not InnerNodes
    */
   public boolean isRack() {
@@ -76,7 +80,7 @@ public class InnerNodeImpl extends NodeBase implements InnerNode {
     return true;
   }
 
-  /** Judge if this node is an ancestor of node <i>n</i>
+  /** Judge if this node is an ancestor of node <i>n</i>.
    *
    * @param n a node
    * @return true if this node is an ancestor of <i>n</i>
@@ -87,7 +91,7 @@ public class InnerNodeImpl extends NodeBase implements InnerNode {
       startsWith(getPath(this)+NodeBase.PATH_SEPARATOR_STR);
   }
 
-  /** Judge if this node is the parent of node <i>n</i>
+  /** Judge if this node is the parent of node <i>n</i>.
    *
    * @param n a node
    * @return true if this node is the parent of <i>n</i>
@@ -107,8 +111,9 @@ public class InnerNodeImpl extends NodeBase implements InnerNode {
       name = name.substring(1);
     }
     int index=name.indexOf(PATH_SEPARATOR);
-    if (index !=-1)
+    if (index != -1) {
       name = name.substring(0, index);
+    }
     return name;
   }
 
@@ -168,7 +173,8 @@ public class InnerNodeImpl extends NodeBase implements InnerNode {
    * @see InnerNodeImpl(String, String, InnerNode, int)
    */
   private InnerNodeImpl createParentNode(String parentName) {
-    return new InnerNodeImpl(parentName, getPath(this), this, this.getLevel()+1);
+    return new InnerNodeImpl(parentName,
+        getPath(this), this, this.getLevel() + 1);
   }
 
   @Override
@@ -220,14 +226,16 @@ public class InnerNodeImpl extends NodeBase implements InnerNode {
 
   @Override
   public Node getLoc(String loc) {
-    if (loc == null || loc.length() == 0) return this;
+    if (loc == null || loc.length() == 0) {
+      return this;
+    }
 
     String[] path = loc.split(PATH_SEPARATOR_STR, 2);
-    Node childnode = childrenMap.get(path[0]);
-    if (childnode == null) return null; // non-existing node
-    if (path.length == 1) return childnode;
-    if (childnode instanceof InnerNode) {
-      return ((InnerNode)childnode).getLoc(path[1]);
+    Node childNode = childrenMap.get(path[0]);
+    if (childNode == null || path.length == 1) {
+      return childNode;
+    } else if (childNode instanceof InnerNode) {
+      return ((InnerNode)childNode).getLoc(path[1]);
     } else {
       return null;
     }
@@ -237,11 +245,10 @@ public class InnerNodeImpl extends NodeBase implements InnerNode {
   public Node getLeaf(int leafIndex, Node excludedNode) {
     int count=0;
     // check if the excluded node a leaf
-    boolean isLeaf =
-      excludedNode == null || !(excludedNode instanceof InnerNode);
+    boolean isLeaf = !(excludedNode instanceof InnerNode);
     // calculate the total number of excluded leaf nodes
     int numOfExcludedLeaves =
-      isLeaf ? 1 : ((InnerNode)excludedNode).getNumOfLeaves();
+        isLeaf ? 1 : ((InnerNode)excludedNode).getNumOfLeaves();
     if (isLeafParent()) { // children are leaves
       if (isLeaf) { // excluded node is a leaf node
         if (excludedNode != null &&

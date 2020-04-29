@@ -192,7 +192,7 @@ int fuseConnectInit(const char *nnUri, int port)
 }
 
 /**
- * Compare two libhdfs connections by username
+ * Compare two libhdfs connections by username and Kerberos ticket cache path
  *
  * @param a                The first libhdfs connection
  * @param b                The second libhdfs connection
@@ -201,22 +201,26 @@ int fuseConnectInit(const char *nnUri, int port)
  */
 static int hdfsConnCompare(const struct hdfsConn *a, const struct hdfsConn *b)
 {
-  return strcmp(a->usrname, b->usrname);
+  int rc = strcmp(a->usrname, b->usrname);
+  if (rc) return rc;
+  return gHdfsAuthConf == AUTH_CONF_KERBEROS && strcmp(a->kpath, b->kpath);
 }
 
 /**
  * Find a libhdfs connection by username
  *
  * @param usrname         The username to look up
+ * @param kpath           The Kerberos ticket cache file path
  *
  * @return                The connection, or NULL if none could be found
  */
-static struct hdfsConn* hdfsConnFind(const char *usrname)
+static struct hdfsConn* hdfsConnFind(const char *usrname, const char *kpath)
 {
   struct hdfsConn exemplar;
 
   memset(&exemplar, 0, sizeof(exemplar));
   exemplar.usrname = (char*)usrname;
+  exemplar.kpath = (char*)kpath;
   return RB_FIND(hdfsConnTree, &gConnTree, &exemplar);
 }
 
@@ -472,7 +476,6 @@ static int fuseNewConnect(const char *usrname, struct fuse_context *ctx,
   if (gPort) {
     hdfsBuilderSetNameNodePort(bld, gPort);
   }
-  hdfsBuilderSetUserName(bld, usrname);
   if (gHdfsAuthConf == AUTH_CONF_KERBEROS) {
     findKerbTicketCachePath(ctx, kpath, sizeof(kpath));
     if (stat(kpath, &st) < 0) {
@@ -491,6 +494,17 @@ static int fuseNewConnect(const char *usrname, struct fuse_context *ctx,
       ret = -ENOMEM;
       goto error;
     }
+  } else {
+    // earlier the username was set to the builder always, but due to
+    // HADOOP-9747 if we specify the username in case of kerberos authentication
+    // the username will be used as the principal name, and that will conflict
+    // with ticket cache based authentication as we have the OS user name here
+    // not the real kerberos principal name. So with SIMPLE auth we pass on the
+    // OS username still, and the UGI will use that as the username, but with
+    // kerberos authentication we do not pass in the OS username and let the
+    // authentication happen with the principal who's ticket is in the ticket
+    // cache. (HDFS-15034 is still a possible improvement for SIMPLE AUTH.)
+    hdfsBuilderSetUserName(bld, usrname);
   }
   conn->usrname = strdup(usrname);
   if (!conn->usrname) {
@@ -542,8 +556,13 @@ static int fuseConnect(const char *usrname, struct fuse_context *ctx,
   int ret;
   struct hdfsConn* conn;
 
+  char kpath[PATH_MAX] = { 0 };
+  if (gHdfsAuthConf == AUTH_CONF_KERBEROS) {
+    findKerbTicketCachePath(ctx, kpath, sizeof(kpath));
+  }
+
   pthread_mutex_lock(&gConnMutex);
-  conn = hdfsConnFind(usrname);
+  conn = hdfsConnFind(usrname, kpath);
   if (!conn) {
     ret = fuseNewConnect(usrname, ctx, &conn);
     if (ret) {

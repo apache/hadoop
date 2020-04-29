@@ -22,8 +22,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint;
 
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.service.AbstractService;
@@ -37,8 +37,8 @@ import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
 public abstract class PlacementConstraintManagerService extends AbstractService
     implements PlacementConstraintManager {
 
-  protected static final Log LOG =
-      LogFactory.getLog(PlacementConstraintManagerService.class);
+  protected static final Logger LOG =
+      LoggerFactory.getLogger(PlacementConstraintManagerService.class);
 
   private PlacementConstraintManager placementConstraintManager = null;
 

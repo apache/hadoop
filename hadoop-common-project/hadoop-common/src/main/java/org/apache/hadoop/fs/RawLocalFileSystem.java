@@ -40,6 +40,7 @@ import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.FileTime;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.Optional;
 import java.util.StringTokenizer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -51,6 +52,8 @@ import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
+
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
 /****************************************************************
  * Implement the FileSystem API for the raw local filesystem.
@@ -212,7 +215,19 @@ public class RawLocalFileSystem extends FileSystem {
     return new FSDataInputStream(new BufferedFSInputStream(
         new LocalFSFileInputStream(f), bufferSize));
   }
-  
+
+  @Override
+  public FSDataInputStream open(PathHandle fd, int bufferSize)
+      throws IOException {
+    if (!(fd instanceof LocalFileSystemPathHandle)) {
+      fd = new LocalFileSystemPathHandle(fd.bytes());
+    }
+    LocalFileSystemPathHandle id = (LocalFileSystemPathHandle) fd;
+    id.verify(getFileStatus(new Path(id.getPath())));
+    return new FSDataInputStream(new BufferedFSInputStream(
+        new LocalFSFileInputStream(new Path(id.getPath())), bufferSize));
+  }
+
   /*********************************************************
    * For create()'s FSOutputStream.
    *********************************************************/
@@ -246,7 +261,7 @@ public class RawLocalFileSystem extends FileSystem {
         }
       }
     }
-    
+
     /*
      * Just forward to the fos
      */
@@ -348,6 +363,18 @@ public class RawLocalFileSystem extends FileSystem {
     FSDataOutputStream out = create(f, overwrite, false, bufferSize, replication,
         blockSize, progress, permission);
     return out;
+  }
+
+  @Override
+  public void concat(final Path trg, final Path [] psrcs) throws IOException {
+    final int bufferSize = 4096;
+    try(FSDataOutputStream out = create(trg)) {
+      for (Path src : psrcs) {
+        try(FSDataInputStream in = open(src)) {
+          IOUtils.copyBytes(in, out, bufferSize, false);
+        }
+      }
+    }
   }
 
   @Override
@@ -863,6 +890,38 @@ public class RawLocalFileSystem extends FileSystem {
     }
   }
 
+  /**
+   * Hook to implement support for {@link PathHandle} operations.
+   * @param stat Referent in the target FileSystem
+   * @param opts Constraints that determine the validity of the
+   *            {@link PathHandle} reference.
+   */
+  protected PathHandle createPathHandle(FileStatus stat,
+      Options.HandleOpt... opts) {
+    if (stat.isDirectory() || stat.isSymlink()) {
+      throw new IllegalArgumentException("PathHandle only available for files");
+    }
+    String authority = stat.getPath().toUri().getAuthority();
+    if (authority != null && !authority.equals("file://")) {
+      throw new IllegalArgumentException("Wrong FileSystem: " + stat.getPath());
+    }
+    Options.HandleOpt.Data data =
+        Options.HandleOpt.getOpt(Options.HandleOpt.Data.class, opts)
+            .orElse(Options.HandleOpt.changed(false));
+    Options.HandleOpt.Location loc =
+        Options.HandleOpt.getOpt(Options.HandleOpt.Location.class, opts)
+            .orElse(Options.HandleOpt.moved(false));
+    if (loc.allowChange()) {
+      throw new UnsupportedOperationException("Tracking file movement in " +
+          "basic FileSystem is not supported");
+    }
+    final Path p = stat.getPath();
+    final Optional<Long> mtime = !data.allowChange()
+        ? Optional.of(stat.getModificationTime())
+        : Optional.empty();
+    return new LocalFileSystemPathHandle(p.toString(), mtime);
+  }
+
   @Override
   public boolean supportsSymlinks() {
     return true;
@@ -1002,5 +1061,22 @@ public class RawLocalFileSystem extends FileSystem {
     FileStatus fi = getFileLinkStatusInternal(f, false);
     // return an unqualified symlink target
     return fi.getSymlink();
+  }
+
+  @Override
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+    switch (validatePathCapabilityArgs(makeQualified(path), capability)) {
+    case CommonPathCapabilities.FS_APPEND:
+    case CommonPathCapabilities.FS_CONCAT:
+    case CommonPathCapabilities.FS_PATHHANDLES:
+    case CommonPathCapabilities.FS_PERMISSIONS:
+    case CommonPathCapabilities.FS_TRUNCATE:
+      return true;
+    case CommonPathCapabilities.FS_SYMLINKS:
+      return FileSystem.areSymlinksEnabled();
+    default:
+      return super.hasPathCapability(path, capability);
+    }
   }
 }

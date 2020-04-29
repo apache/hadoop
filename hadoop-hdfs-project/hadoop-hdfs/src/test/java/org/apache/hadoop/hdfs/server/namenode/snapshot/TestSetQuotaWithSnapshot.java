@@ -38,7 +38,6 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiff;
-import org.apache.hadoop.hdfs.util.Diff.ListType;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -153,8 +152,9 @@ public class TestSetQuotaWithSnapshot {
         subNode.asDirectory().getDiffs().asList();
     assertEquals(1, diffList.size());
     Snapshot s2 = dirNode.getSnapshot(DFSUtil.string2Bytes("s2"));
-    assertEquals(s2.getId(), diffList.get(0).getSnapshotId());
-    List<INode> createdList = diffList.get(0).getChildrenDiff().getList(ListType.CREATED);
+    final DirectoryDiff diff = diffList.get(0);
+    assertEquals(s2.getId(), diff.getSnapshotId());
+    List<INode> createdList = diff.getChildrenDiff().getCreatedUnmodifiable();
     assertEquals(1, createdList.size());
     assertSame(fsdir.getINode4Write(file.toString()), createdList.get(0));
   }

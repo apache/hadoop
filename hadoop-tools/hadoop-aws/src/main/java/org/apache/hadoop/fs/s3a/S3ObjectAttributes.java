@@ -18,42 +18,105 @@
 
 package org.apache.hadoop.fs.s3a;
 
-/**
- * This class is only a holder for bucket, key, SSE Algorithm and SSE key
- * attributes. It is only used in {@link S3AInputStream}
- * as a way to reduce parameters being passed
- * to the constructor of such class.
- */
-class S3ObjectAttributes {
-  private String bucket;
-  private String key;
-  private S3AEncryptionMethods serverSideEncryptionAlgorithm;
-  private String serverSideEncryptionKey;
+import com.amazonaws.services.s3.transfer.model.CopyResult;
 
-  S3ObjectAttributes(
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.Path;
+
+/**
+ * This class holds attributed of an object independent of the
+ * file status type.
+ * It is used in {@link S3AInputStream} and the select equivalent.
+ * as a way to reduce parameters being passed
+ * to the constructor of such class,
+ * and elsewhere to be a source-neutral representation of a file status.
+ */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
+public class S3ObjectAttributes {
+  private final String bucket;
+  private final Path path;
+  private final String key;
+  private final S3AEncryptionMethods serverSideEncryptionAlgorithm;
+  private final String serverSideEncryptionKey;
+  private final String eTag;
+  private final String versionId;
+  private final long len;
+
+  public S3ObjectAttributes(
       String bucket,
+      Path path,
       String key,
       S3AEncryptionMethods serverSideEncryptionAlgorithm,
-      String serverSideEncryptionKey) {
+      String serverSideEncryptionKey,
+      String eTag,
+      String versionId,
+      long len) {
     this.bucket = bucket;
+    this.path = path;
     this.key = key;
     this.serverSideEncryptionAlgorithm = serverSideEncryptionAlgorithm;
     this.serverSideEncryptionKey = serverSideEncryptionKey;
+    this.eTag = eTag;
+    this.versionId = versionId;
+    this.len = len;
   }
 
-  String getBucket() {
+  /**
+   * Construct from the result of a copy and those parameters
+   * which aren't included in an AWS SDK response.
+   * @param path
+   * @param copyResult copy result.
+   * @param serverSideEncryptionAlgorithm current encryption algorithm
+   * @param serverSideEncryptionKey any server side encryption key?
+   * @param len
+   */
+  public S3ObjectAttributes(
+      final Path path,
+      final CopyResult copyResult,
+      final S3AEncryptionMethods serverSideEncryptionAlgorithm,
+      final String serverSideEncryptionKey,
+      final long len) {
+    this.bucket = copyResult.getDestinationBucketName();
+    this.key = copyResult.getDestinationKey();
+    this.path = path;
+    this.serverSideEncryptionAlgorithm = serverSideEncryptionAlgorithm;
+    this.serverSideEncryptionKey = serverSideEncryptionKey;
+    this.eTag = copyResult.getETag();
+    this.versionId = copyResult.getVersionId();
+    this.len = len;
+  }
+
+  public String getBucket() {
     return bucket;
   }
 
-  String getKey() {
+  public String getKey() {
     return key;
   }
 
-  S3AEncryptionMethods getServerSideEncryptionAlgorithm() {
+  public S3AEncryptionMethods getServerSideEncryptionAlgorithm() {
     return serverSideEncryptionAlgorithm;
   }
 
-  String getServerSideEncryptionKey() {
+  public String getServerSideEncryptionKey() {
     return serverSideEncryptionKey;
+  }
+
+  public String getETag() {
+    return eTag;
+  }
+
+  public String getVersionId() {
+    return versionId;
+  }
+
+  public long getLen() {
+    return len;
+  }
+
+  public Path getPath() {
+    return path;
   }
 }

@@ -33,7 +33,6 @@ import javax.xml.bind.annotation.adapters.XmlAdapter;
 @InterfaceStability.Unstable
 @XmlRootElement(name = "gpu")
 public class PerGpuDeviceInformation {
-
   private String productName = "N/A";
   private String uuid = "N/A";
   private int minorNumber = -1;

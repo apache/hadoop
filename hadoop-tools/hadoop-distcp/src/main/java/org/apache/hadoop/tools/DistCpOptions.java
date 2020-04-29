@@ -20,10 +20,12 @@ package org.apache.hadoop.tools;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.tools.util.DistCpUtils;
@@ -43,6 +45,8 @@ import java.util.Set;
  *
  * This class is immutable.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public final class DistCpOptions {
   private static final Logger LOG = LoggerFactory.getLogger(Builder.class);
   public static final int MAX_NUM_LISTSTATUS_THREADS = 40;
@@ -67,6 +71,9 @@ public final class DistCpOptions {
 
   /** Whether source and target folder contents be sync'ed up. */
   private final boolean syncFolder;
+
+  /** Path to save source/dest sequence files to, if non-null. */
+  private final Path trackPath;
 
   /** Whether files only present in target should be deleted. */
   private boolean deleteMissing;
@@ -148,6 +155,9 @@ public final class DistCpOptions {
 
   private final int copyBufferSize;
 
+  /** Whether data should be written directly to the target paths. */
+  private final boolean directWrite;
+
   /**
    * File attributes for preserve.
    *
@@ -208,6 +218,9 @@ public final class DistCpOptions {
 
     this.copyBufferSize = builder.copyBufferSize;
     this.verboseLog = builder.verboseLog;
+    this.trackPath = builder.trackPath;
+
+    this.directWrite = builder.directWrite;
   }
 
   public Path getSourceFileListing() {
@@ -331,6 +344,14 @@ public final class DistCpOptions {
     return verboseLog;
   }
 
+  public Path getTrackPath() {
+    return trackPath;
+  }
+
+  public boolean shouldDirectWrite() {
+    return directWrite;
+  }
+
   /**
    * Add options to configuration. These will be used in the Mapper/committer
    *
@@ -371,6 +392,16 @@ public final class DistCpOptions {
         String.valueOf(copyBufferSize));
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.VERBOSE_LOG,
         String.valueOf(verboseLog));
+    if (trackPath != null) {
+      DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.TRACK_MISSING,
+          String.valueOf(trackPath));
+    }
+    if (numListstatusThreads > 0) {
+      DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.NUM_LISTSTATUS_THREADS,
+          Integer.toString(numListstatusThreads));
+    }
+    DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.DIRECT_WRITE,
+            String.valueOf(directWrite));
   }
 
   /**
@@ -407,6 +438,7 @@ public final class DistCpOptions {
         ", blocksPerChunk=" + blocksPerChunk +
         ", copyBufferSize=" + copyBufferSize +
         ", verboseLog=" + verboseLog +
+        ", directWrite=" + directWrite +
         '}';
   }
 
@@ -441,6 +473,7 @@ public final class DistCpOptions {
     private String filtersFile;
 
     private Path logPath;
+    private Path trackPath;
     private String copyStrategy = DistCpConstants.UNIFORMSIZE;
 
     private int numListstatusThreads = 0;  // 0 indicates that flag is not set.
@@ -454,6 +487,8 @@ public final class DistCpOptions {
 
     private int copyBufferSize =
             DistCpConstants.COPY_BUFFER_SIZE_DEFAULT;
+
+    private boolean directWrite = false;
 
     public Builder(List<Path> sourcePaths, Path targetPath) {
       Preconditions.checkArgument(sourcePaths != null && !sourcePaths.isEmpty(),
@@ -532,11 +567,6 @@ public final class DistCpOptions {
       if (overwrite && syncFolder) {
         throw new IllegalArgumentException("Overwrite and update options are "
             + "mutually exclusive");
-      }
-
-      if (!syncFolder && skipCRC) {
-        throw new IllegalArgumentException(
-            "Skip CRC is valid only with update options");
       }
 
       if (!syncFolder && append) {
@@ -646,6 +676,11 @@ public final class DistCpOptions {
       return this;
     }
 
+    public Builder withTrackMissing(Path path) {
+      this.trackPath = path;
+      return this;
+    }
+
     public Builder withCopyStrategy(String newCopyStrategy) {
       this.copyStrategy = newCopyStrategy;
       return this;
@@ -705,6 +740,11 @@ public final class DistCpOptions {
 
     public Builder withVerboseLog(boolean newVerboseLog) {
       this.verboseLog = newVerboseLog;
+      return this;
+    }
+
+    public Builder withDirectWrite(boolean newDirectWrite) {
+      this.directWrite = newDirectWrite;
       return this;
     }
   }

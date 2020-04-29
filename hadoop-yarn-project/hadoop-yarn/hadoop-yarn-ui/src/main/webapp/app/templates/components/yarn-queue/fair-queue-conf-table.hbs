@@ -38,7 +38,7 @@
     </tr>
     <tr>
       <td>Pending, Allocated, Reserved Containers</td>
-      <td>{{queue.pendingContainers}} , {{queue.allocatedContainers}} , {{queue.reservedContainers}}</td>
+      <td>{{#if queue.pendingContainers}}{{queue.pendingContainers}}{{else}}0{{/if}}, {{#if queue.allocatedContainers}}{{queue.allocatedContainers}}{{else}}0{{/if}}, {{#if queue.reservedContainers}}{{queue.reservedContainers}}{{else}}0{{/if}}</td>
     </tr>
     <tr>
       <td>Scheduling Policy</td>

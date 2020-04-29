@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.ams.ApplicationMasterServiceContext;
 import org.apache.hadoop.yarn.ams.ApplicationMasterServiceProcessor;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
@@ -31,6 +29,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRespo
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
@@ -39,7 +39,8 @@ import java.io.IOException;
  */
 class AMSProcessingChain implements ApplicationMasterServiceProcessor {
 
-  private static final Log LOG = LogFactory.getLog(AMSProcessingChain.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AMSProcessingChain.class);
 
   private ApplicationMasterServiceProcessor head;
   private RMContext rmContext;

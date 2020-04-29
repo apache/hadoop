@@ -29,8 +29,8 @@ import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 @InterfaceStability.Unstable
 @XmlRootElement(name = "fb_memory_usage")
 public class PerGpuMemoryUsage {
-  long usedMemoryMiB = -1L;
-  long availMemoryMiB = -1L;
+  private long usedMemoryMiB = -1L;
+  private long availMemoryMiB = -1L;
 
   @XmlJavaTypeAdapter(PerGpuDeviceInformation.StrToMemAdapter.class)
   @XmlElement(name = "used")
@@ -53,6 +53,9 @@ public class PerGpuMemoryUsage {
   }
 
   public long getTotalMemoryMiB() {
+    if (usedMemoryMiB == -1 && availMemoryMiB == -1) {
+      return -1;
+    }
     return usedMemoryMiB + availMemoryMiB;
   }
 }

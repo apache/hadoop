@@ -30,7 +30,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.lang.CharSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.resourceestimator.common.api.RecurrenceId;
 import org.apache.hadoop.resourceestimator.common.api.ResourceSkyline;

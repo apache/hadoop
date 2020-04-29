@@ -93,7 +93,8 @@ public class CompositeService extends AbstractService {
     }
   }
 
-  protected synchronized boolean removeService(Service service) {
+  protected boolean removeService(Service service) {
+    LOG.debug("Removing service {}", service.getName());
     synchronized (serviceList) {
       return serviceList.remove(service);
     }

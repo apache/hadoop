@@ -107,6 +107,17 @@ Add per-cache-pool default replication num configuration
 
 ---
 
+* [YARN-2928](https://issues.apache.org/jira/browse/YARN-2928) | *Critical* | **YARN Timeline Service v.2: alpha 1**
+
+We are introducing an early preview (alpha 1) of a major revision of YARN Timeline Service: v.2. YARN Timeline Service v.2 addresses two major challenges: improving scalability and reliability of Timeline Service, and enhancing usability by introducing flows and aggregation.
+
+YARN Timeline Service v.2 alpha 1 is provided so that users and developers can test it and provide feedback and suggestions for making it a ready replacement for Timeline Service v.1.x. It should be used only in a test capacity. Most importantly, security is not enabled. Do not set up or use Timeline Service v.2 until security is implemented if security is a critical requirement.
+
+More details are available in the [YARN Timeline Service v.2](./hadoop-yarn/hadoop-yarn-site/TimelineServiceV2.html) documentation.
+
+
+---
+
 * [HADOOP-13354](https://issues.apache.org/jira/browse/HADOOP-13354) | *Major* | **Update WASB driver to use the latest version (4.2.0) of SDK for Microsoft Azure Storage Clients**
 
 The WASB FileSystem now uses version 4.2.0 of the Azure Storage SDK.
@@ -210,6 +221,13 @@ The KMS can now be configured with the additional environment variables `KMS_PRO
 * [MAPREDUCE-6404](https://issues.apache.org/jira/browse/MAPREDUCE-6404) | *Major* | **Allow AM to specify a port range for starting its webapp**
 
 Add a new configuration - "yarn.app.mapreduce.am.webapp.port-range" to specify port-range for webapp launched by AM.
+
+
+---
+
+* [HADOOP-13119](https://issues.apache.org/jira/browse/HADOOP-13119) | *Major* | **Add ability to secure log servlet using proxy users**
+
+**WARNING: No release note provided for this change.**
 
 
 ---
@@ -365,15 +383,6 @@ Random access and seek improvements for the wasb:// (Azure) file system.
 
 ---
 
-* [YARN-5049](https://issues.apache.org/jira/browse/YARN-5049) | *Major* | **Extend NMStateStore to save queued container information**
-
-This breaks rolling upgrades because it changes the major version of the NM state store schema. Therefore when a new NM comes up on an old state store it crashes.
-
-The state store versions for this change have been updated in YARN-6798.
-
-
----
-
 * [YARN-6798](https://issues.apache.org/jira/browse/YARN-6798) | *Major* | **Fix NM startup failure with old state store due to version mismatch**
 
 <!-- markdown -->
@@ -420,6 +429,13 @@ Bug fix to Azure Filesystem related to HADOOP-14535
 
 ---
 
+* [HDFS-10326](https://issues.apache.org/jira/browse/HDFS-10326) | *Major* | **Disable setting tcp socket send/receive buffers for write pipelines**
+
+The size of the TCP socket buffers are no longer hardcoded by default. Instead the OS now will automatically tune the size for the buffer.
+
+
+---
+
 * [HADOOP-14260](https://issues.apache.org/jira/browse/HADOOP-14260) | *Major* | **Configuration.dumpConfiguration should redact sensitive information**
 
 <!-- markdown -->
@@ -438,3 +454,158 @@ Up to 34% throughput improvement for the wasb:// (Azure) file system when fs.azu
 * [HADOOP-14769](https://issues.apache.org/jira/browse/HADOOP-14769) | *Major* | **WASB: delete recursive should not fail if a file is deleted**
 
 Recursive directory delete improvement for the wasb filesystem.
+
+
+---
+
+* [YARN-5355](https://issues.apache.org/jira/browse/YARN-5355) | *Critical* | **YARN Timeline Service v.2: alpha 2**
+
+We are releasing the alpha2 version of a major revision of YARN Timeline Service: v.2. YARN Timeline Service v.2 addresses two major challenges: improving scalability and reliability of Timeline Service, and enhancing usability by introducing flows and aggregation.
+
+YARN Timeline Service v.2 alpha1 was introduced in 3.0.0-alpha1 via YARN-2928.
+
+YARN Timeline Service v.2 alpha2 is now being provided so that users and developers can test it and provide feedback and suggestions for making it a ready replacement for Timeline Service v.1.x. Security is provided via Kerberos Authentication and delegation tokens. There is also a simple read level authorization provided via whitelists.
+
+Some of the notable improvements since alpha-1 are:
+- Security via Kerberos Authentication and delegation tokens
+- Read side simple authorization via whitelist
+- Client configurable entity sort ordering
+- New REST APIs for apps, app attempts, containers, fetching metrics by timerange, pagination, sub-app entities
+- Support for storing sub-application entities (entities that exist outside the scope of an application)
+- Configurable TTLs (time-to-live) for tables, configurable table prefixes, configurable hbase cluster
+- Flow level aggregations done as dynamic (table level) coprocessors
+- Uses latest stable HBase release 1.2.6
+
+More details are available in the [YARN Timeline Service v.2](./hadoop-yarn/hadoop-yarn-site/TimelineServiceV2.html) documentation.
+
+
+---
+
+* [HADOOP-13345](https://issues.apache.org/jira/browse/HADOOP-13345) | *Major* | **S3Guard: Improved Consistency for S3A**
+
+S3Guard (pronounced see-guard) is a new feature for the S3A connector to Amazon S3, which uses DynamoDB for a high performance and consistent metadata repository. Essentially: S3Guard caches directory information, so your S3A clients get faster lookups and resilience to inconsistency between S3 list operations and the status of objects. When files are created, with S3Guard, they'll always be found.
+
+S3Guard does not address update consistency: if a file is updated, while the directory information will be updated, calling open() on the path may still return the old data. Similarly, deleted objects may also potentially be opened.
+
+Please consult the S3Guard documentation in the Amazon S3 section of our documentation.
+
+Note: part of this update includes moving to a new version of the AWS SDK 1.11, one which includes the Dynamo DB client and its a shaded version of Jackson 2. The large aws-sdk-bundle JAR is needed to use the S3A client with or without S3Guard enabled. The good news: because Jackson is shaded, there will be no conflict between any Jackson version used in your application and that which the AWS SDK needs.
+
+
+---
+
+* [HADOOP-14520](https://issues.apache.org/jira/browse/HADOOP-14520) | *Major* | **WASB: Block compaction for Azure Block Blobs**
+
+Block Compaction for Azure Block Blobs. When the number of blocks in a block blob is above 32000, the process of compaction replaces a sequence of small blocks with with one big block.
+
+
+---
+
+* [HDFS-11799](https://issues.apache.org/jira/browse/HDFS-11799) | *Major* | **Introduce a config to allow setting up write pipeline with fewer nodes than replication factor**
+
+Added new configuration "dfs.client.block.write.replace-datanode-on-failure.min-replication".
+
+    The minimum number of replications that are needed to not to fail
+      the write pipeline if new datanodes can not be found to replace
+      failed datanodes (could be due to network failure) in the write pipeline.
+      If the number of the remaining datanodes in the write pipeline is greater
+      than or equal to this property value, continue writing to the remaining nodes.
+      Otherwise throw exception.
+
+      If this is set to 0, an exception will be thrown, when a replacement
+      can not be found.
+
+
+---
+
+* [YARN-2915](https://issues.apache.org/jira/browse/YARN-2915) | *Major* | **Enable YARN RM scale out via federation using multiple RM's**
+
+A federation-based approach to transparently scale a single YARN cluster to tens of thousands of nodes, by federating multiple YARN standalone clusters (sub-clusters). The applications running in this federated environment will see a single massive YARN cluster and will be able to schedule tasks on any node of the federated cluster. Under the hood, the federation system will negotiate with sub-clusters ResourceManagers and provide resources to the application. The goal is to allow an individual job to “span” sub-clusters seamlessly.
+
+
+---
+
+* [YARN-1492](https://issues.apache.org/jira/browse/YARN-1492) | *Major* | **truly shared cache for jars (jobjar/libjar)**
+
+The YARN Shared Cache provides the facility to upload and manage shared application resources to HDFS in a safe and scalable manner. YARN applications can leverage resources uploaded by other applications or previous runs of the same application without having to re-­upload and localize identical files multiple times. This will save network resources and reduce YARN application startup time.
+
+
+---
+
+* [HDFS-10467](https://issues.apache.org/jira/browse/HDFS-10467) | *Major* | **Router-based HDFS federation**
+
+HDFS Router-based Federation adds a RPC routing layer that provides a federated view of multiple HDFS namespaces.
+This is similar to the existing ViewFS and HDFS federation functionality, except the mount table is managed on the server-side by the routing layer rather than on the client.
+This simplifies access to a federated cluster for existing HDFS clients.
+
+See HDFS-10467 and the HDFS Router-based Federation documentation for more details.
+
+
+---
+
+* [YARN-5734](https://issues.apache.org/jira/browse/YARN-5734) | *Major* | **OrgQueue for easy CapacityScheduler queue configuration management**
+
+<!-- markdown -->
+
+The OrgQueue extension to the capacity scheduler provides a programmatic way to change configurations by providing a REST API that users can call to modify queue configurations. This enables automation of queue configuration management by administrators in the queue's `administer_queue` ACL.
+
+
+---
+
+* [MAPREDUCE-5951](https://issues.apache.org/jira/browse/MAPREDUCE-5951) | *Major* | **Add support for the YARN Shared Cache**
+
+MapReduce support for the YARN shared cache allows MapReduce jobs to take advantage of additional resource caching. This saves network bandwidth between the job submission client as well as within the YARN cluster itself. This will reduce job submission time and overall job runtime.
+
+
+---
+
+* [YARN-6623](https://issues.apache.org/jira/browse/YARN-6623) | *Blocker* | **Add support to turn off launching privileged containers in the container-executor**
+
+A change in configuration for launching Docker containers under YARN. Docker container capabilities, mounts, networks and allowing privileged container have to specified in the container-executor.cfg. By default, all of the above are turned off. This change will break existing setups launching Docker containers under YARN. Please refer to the Docker containers under YARN documentation for more information.
+
+
+---
+
+* [HADOOP-14840](https://issues.apache.org/jira/browse/HADOOP-14840) | *Major* | **Tool to estimate resource requirements of an application pipeline based on prior executions**
+
+The first version of Resource Estimator service, a tool that captures the historical resource usage of an app and predicts its future resource requirement.
+
+
+---
+
+* [YARN-2877](https://issues.apache.org/jira/browse/YARN-2877) | *Major* | **Extend YARN to support distributed scheduling**
+
+With this JIRA we are introducing distributed scheduling in YARN.
+In particular, we make the following contributions:
+- Introduce the notion of container types. GUARANTEED containers follow the semantics of the existing YARN containers. OPPORTUNISTIC ones can be seen as lower priority containers, and can be preempted in order to make space for GUARANTEED containers to run.
+- Queuing of tasks at the NMs. This enables us to send more containers in an NM than its available resources. At the moment we are allowing queuing of OPPORTUNISTIC containers. Once resources become available at the NM, such containers can immediately start their execution.
+- Introduce the AMRMProxy. This is a service running at each node, intercepting the requests between the AM and the RM. It is instrumental for both distributed scheduling and YARN Federation (YARN-2915).
+- Enable distributed scheduling. To minimize their allocation latency, OPPORTUNISTIC containers are dispatched immediately to NMs in a distributed fashion by using the AMRMProxy of the node where the corresponding AM resides, without needing to go through the ResourceManager.
+
+All the functionality introduced in this JIRA is disabled by default, so it will not affect the behavior of existing applications.
+We have introduced parameters in YarnConfiguration to enable NM queuing (yarn.nodemanager.container-queuing-enabled), distributed scheduling (yarn.distributed-scheduling.enabled) and the AMRMProxy service (yarn.nodemanager.amrmproxy.enable).
+AMs currently need to specify the type of container to be requested for each task. We are in the process of adding in the MapReduce AM the ability to randomly request OPPORTUNISTIC containers for a specified percentage of a job's tasks, so that users can experiment with the new features.
+
+
+---
+
+* [YARN-5220](https://issues.apache.org/jira/browse/YARN-5220) | *Major* | **Scheduling of OPPORTUNISTIC containers through YARN RM**
+
+This extends the centralized YARN RM in to enable the scheduling of OPPORTUNISTIC containers in a centralized fashion.
+This way, users can use OPPORTUNISTIC containers to improve the cluster's utilization, without needing to enable distributed scheduling.
+
+
+---
+
+* [YARN-5085](https://issues.apache.org/jira/browse/YARN-5085) | *Major* | **Add support for change of container ExecutionType**
+
+This allows the Application Master to ask the Scheduler to change the ExecutionType of a running/allocated container.
+
+
+---
+
+* [YARN-5049](https://issues.apache.org/jira/browse/YARN-5049) | *Major* | **Extend NMStateStore to save queued container information**
+
+This breaks rolling upgrades because it changes the major version of the NM state store schema. Therefore when a new NM comes up on an old state store it crashes.
+
+The state store versions for this change have been updated in YARN-6798.

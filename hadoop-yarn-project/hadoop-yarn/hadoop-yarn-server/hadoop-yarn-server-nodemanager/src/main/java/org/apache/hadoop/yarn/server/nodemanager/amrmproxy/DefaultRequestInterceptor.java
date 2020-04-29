@@ -129,9 +129,7 @@ public final class DefaultRequestInterceptor extends
   @Override
   public AllocateResponse allocate(final AllocateRequest request)
       throws YarnException, IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Forwarding allocate request to the real YARN RM");
-    }
+    LOG.debug("Forwarding allocate request to the real YARN RM");
     AllocateResponse allocateResponse = rmClient.allocate(request);
     if (allocateResponse.getAMRMToken() != null) {
       YarnServerSecurityUtils.updateAMRMToken(allocateResponse.getAMRMToken(),
@@ -161,10 +159,8 @@ public final class DefaultRequestInterceptor extends
   public DistributedSchedulingAllocateResponse allocateForDistributedScheduling(
       DistributedSchedulingAllocateRequest request)
       throws YarnException, IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Forwarding allocateForDistributedScheduling request" +
-          "to the real YARN RM");
-    }
+    LOG.debug("Forwarding allocateForDistributedScheduling request" +
+        "to the real YARN RM");
     if (getApplicationContext().getNMCotext()
         .isDistributedSchedulingEnabled()) {
       DistributedSchedulingAllocateResponse allocateResponse =

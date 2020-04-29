@@ -92,11 +92,10 @@ public class TestFailoverWithBlockTokensEnabled {
 
     setAndCheckSerialNumber(0, btsm1, btsm2, btsm3);
     setAndCheckSerialNumber(Integer.MAX_VALUE, btsm1, btsm2, btsm3);
-    setAndCheckSerialNumber(Integer.MIN_VALUE, btsm1, btsm2, btsm3);
     setAndCheckSerialNumber(Integer.MAX_VALUE / 2, btsm1, btsm2, btsm3);
-    setAndCheckSerialNumber(Integer.MIN_VALUE / 2, btsm1, btsm2, btsm3);
     setAndCheckSerialNumber(Integer.MAX_VALUE / 3, btsm1, btsm2, btsm3);
-    setAndCheckSerialNumber(Integer.MIN_VALUE / 3, btsm1, btsm2, btsm3);
+    setAndCheckSerialNumber(Integer.MAX_VALUE / 171717,
+        btsm1, btsm2, btsm3);
   }
 
   private void setAndCheckSerialNumber(int serialNumber, BlockTokenSecretManager... btsms) {

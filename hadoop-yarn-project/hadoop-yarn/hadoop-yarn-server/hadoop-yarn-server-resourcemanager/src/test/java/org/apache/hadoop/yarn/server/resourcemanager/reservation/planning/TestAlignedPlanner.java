@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.reservation.planning;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -990,8 +991,9 @@ public class TestAlignedPlanner {
         StageAllocatorLowCostAligned.getDurationInterval(10*step, 30*step,
             planLoads, planModifications, clusterCapacity, netRLERes, res, step,
             requestedResources);
-    assertEquals(durationInterval.numCanFit(), 4);
-    assertEquals(durationInterval.getTotalCost(), 0.55, 0.00001);
+    assertThat(durationInterval.numCanFit()).isEqualTo(4);
+    assertThat(durationInterval.getTotalCost()).
+        isCloseTo(0.55, within(0.00001));
 
     // 2.
     // currLoad: should start at 20*step, end at 31*step with a null value
@@ -1003,8 +1005,9 @@ public class TestAlignedPlanner {
             planLoads, planModifications, clusterCapacity, netRLERes, res, step,
             requestedResources);
     System.out.println(durationInterval);
-    assertEquals(durationInterval.numCanFit(), 3);
-    assertEquals(durationInterval.getTotalCost(), 0.56, 0.00001);
+    assertThat(durationInterval.numCanFit()).isEqualTo(3);
+    assertThat(durationInterval.getTotalCost()).
+        isCloseTo(0.56, within(0.00001));
 
     // 3.
     // currLoad: should start at 20*step, end at 30*step with a null value
@@ -1015,8 +1018,9 @@ public class TestAlignedPlanner {
         StageAllocatorLowCostAligned.getDurationInterval(15*step, 30*step,
             planLoads, planModifications, clusterCapacity, netRLERes, res, step,
             requestedResources);
-    assertEquals(durationInterval.numCanFit(), 4);
-    assertEquals(durationInterval.getTotalCost(), 0.55, 0.00001);
+    assertThat(durationInterval.numCanFit()).isEqualTo(4);
+    assertThat(durationInterval.getTotalCost()).
+        isCloseTo(0.55, within(0.00001));
 
     // 4.
     // currLoad: should start at 20*step, end at 31*step with a null value
@@ -1028,8 +1032,9 @@ public class TestAlignedPlanner {
             planLoads, planModifications, clusterCapacity, netRLERes, res, step,
             requestedResources);
     System.out.println(durationInterval);
-    assertEquals(durationInterval.numCanFit(), 3);
-    assertEquals(durationInterval.getTotalCost(), 0.56, 0.00001);
+    assertThat(durationInterval.numCanFit()).isEqualTo(3);
+    assertThat(durationInterval.getTotalCost()).
+        isCloseTo(0.56, within(0.00001));
 
     // 5.
     // currLoad: should only contain one entry at startTime
@@ -1042,8 +1047,9 @@ public class TestAlignedPlanner {
             planLoads, planModifications, clusterCapacity, netRLERes, res, step,
             requestedResources);
     System.out.println(durationInterval);
-    assertEquals(durationInterval.numCanFit(), 8);
-    assertEquals(durationInterval.getTotalCost(), 0.05, 0.00001);
+    assertThat(durationInterval.numCanFit()).isEqualTo(8);
+    assertThat(durationInterval.getTotalCost()).
+        isCloseTo(0.05, within(0.00001));
 
     // 6.
     // currLoad: should start at 39*step, end at 41*step with a null value
@@ -1055,8 +1061,9 @@ public class TestAlignedPlanner {
             planLoads, planModifications, clusterCapacity, netRLERes, res, step,
             requestedResources);
     System.out.println(durationInterval);
-    assertEquals(durationInterval.numCanFit(), 0);
-    assertEquals(durationInterval.getTotalCost(), 0, 0.00001);
+    assertThat(durationInterval.numCanFit()).isEqualTo(0);
+    assertThat(durationInterval.getTotalCost()).
+        isCloseTo(0, within(0.00001));
 
   }
 

@@ -92,6 +92,10 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
   private final LongAdder corruptReplicationOneBlocks = new LongAdder();
   private final LongAdder lowRedundancyECBlockGroups = new LongAdder();
   private final LongAdder corruptECBlockGroups = new LongAdder();
+  private final LongAdder highestPriorityLowRedundancyReplicatedBlocks
+      = new LongAdder();
+  private final LongAdder highestPriorityLowRedundancyECBlocks
+      = new LongAdder();
 
   /** Create an object. */
   LowRedundancyBlocks() {
@@ -160,6 +164,18 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
 
   long getCorruptReplicationOneBlocks() {
     return corruptReplicationOneBlocks.longValue();
+  }
+
+  /** Return the number of under replicated blocks
+   * with the highest priority to recover */
+  long getHighestPriorityReplicatedBlockCount() {
+    return highestPriorityLowRedundancyReplicatedBlocks.longValue();
+  }
+
+  /** Return the number of under replicated EC blocks
+   * with the highest priority to recover */
+  long getHighestPriorityECBlockCount() {
+    return highestPriorityLowRedundancyECBlocks.longValue();
   }
 
   /**
@@ -300,6 +316,9 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
       if (priLevel == QUEUE_WITH_CORRUPT_BLOCKS) {
         corruptECBlockGroups.increment();
       }
+      if (priLevel == QUEUE_HIGHEST_PRIORITY) {
+        highestPriorityLowRedundancyECBlocks.increment();
+      }
     } else {
       lowRedundancyBlocks.increment();
       if (priLevel == QUEUE_WITH_CORRUPT_BLOCKS) {
@@ -307,6 +326,9 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
         if (expectedReplicas == 1) {
           corruptReplicationOneBlocks.increment();
         }
+      }
+      if (priLevel == QUEUE_HIGHEST_PRIORITY) {
+        highestPriorityLowRedundancyReplicatedBlocks.increment();
       }
     }
   }
@@ -380,6 +402,9 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
       if (priLevel == QUEUE_WITH_CORRUPT_BLOCKS) {
         corruptECBlockGroups.decrement();
       }
+      if (priLevel == QUEUE_HIGHEST_PRIORITY) {
+        highestPriorityLowRedundancyECBlocks.decrement();
+      }
     } else {
       lowRedundancyBlocks.decrement();
       if (priLevel == QUEUE_WITH_CORRUPT_BLOCKS) {
@@ -390,6 +415,9 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
               "Number of corrupt blocks with replication factor 1 " +
                   "should be non-negative";
         }
+      }
+      if (priLevel == QUEUE_HIGHEST_PRIORITY) {
+        highestPriorityLowRedundancyReplicatedBlocks.decrement();
       }
     }
   }
@@ -460,6 +488,28 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
    */
   synchronized List<List<BlockInfo>> chooseLowRedundancyBlocks(
       int blocksToProcess) {
+    return chooseLowRedundancyBlocks(blocksToProcess, false);
+  }
+
+  /**
+   * Get a list of block lists without sufficient redundancy. The index of
+   * block lists represents its replication priority. Iterates each block list
+   * in priority order beginning with the highest priority list. Iterators use
+   * a bookmark to resume where the previous iteration stopped. Returns when
+   * the block count is met or iteration reaches the end of the lowest priority
+   * list, in which case bookmarks for each block list are reset to the heads
+   * of their respective lists.
+   *
+   * @param blocksToProcess - number of blocks to fetch from low redundancy
+   *          blocks.
+   * @param resetIterators - After gathering the list of blocks reset the
+   *           position of all queue iterators to the head of the queue so
+   *           subsequent calls will begin at the head of the queue
+   * @return Return a list of block lists to be replicated. The block list
+   *         index represents its redundancy priority.
+   */
+  synchronized List<List<BlockInfo>> chooseLowRedundancyBlocks(
+      int blocksToProcess, boolean resetIterators) {
     final List<List<BlockInfo>> blocksToReconstruct = new ArrayList<>(LEVEL);
 
     int count = 0;
@@ -481,7 +531,7 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
       }
     }
 
-    if (priority == LEVEL) {
+    if (priority == LEVEL || resetIterators) {
       // Reset all bookmarks because there were no recently added blocks.
       for (LightWeightLinkedSet<BlockInfo> q : priorityQueues) {
         q.resetBookmark();

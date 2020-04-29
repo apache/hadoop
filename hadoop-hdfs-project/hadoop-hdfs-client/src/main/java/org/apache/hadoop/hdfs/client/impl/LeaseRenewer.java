@@ -70,7 +70,7 @@ import org.slf4j.LoggerFactory;
  * to renew the leases.
  * </li>
  * </ul>
- * </p>
+ * <p>
  */
 @InterfaceAudience.Private
 public class LeaseRenewer {
@@ -270,8 +270,9 @@ public class LeaseRenewer {
         half: LEASE_RENEWER_SLEEP_DEFAULT;
   }
 
+  @VisibleForTesting
   /** Is the daemon running? */
-  synchronized boolean isRunning() {
+  public synchronized boolean isRunning() {
     return daemon != null && daemon.isAlive();
   }
 

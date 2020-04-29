@@ -312,14 +312,14 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    *          Submitted Application priority.
    * @param user
    *          User who submitted the Application
-   * @param queueName
+   * @param queuePath
    *          Name of the Queue
    * @param applicationId
    *          Application ID
    * @return Updated Priority from scheduler
    */
   public Priority checkAndGetApplicationPriority(Priority priorityRequestedByApp,
-      UserGroupInformation user, String queueName, ApplicationId applicationId)
+      UserGroupInformation user, String queuePath, ApplicationId applicationId)
       throws YarnException;
 
   /**
@@ -364,6 +364,16 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
       ApplicationAttemptId attemptId);
 
   /**
+   * Get pending scheduling request for specified application attempt.
+   *
+   * @param attemptId the id of the application attempt
+   *
+   * @return pending scheduling requests
+   */
+  List<SchedulingRequest> getPendingSchedulingRequestsForAttempt(
+      ApplicationAttemptId attemptId);
+
+  /**
    * Get cluster max priority.
    * 
    * @return maximum priority of cluster
@@ -380,12 +390,17 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
   SchedulerNode getSchedulerNode(NodeId nodeId);
 
   /**
-   * Normalize a resource request.
+   * Normalize a resource request using scheduler level maximum resource or
+   * queue based maximum resource.
    *
    * @param requestedResource the resource to be normalized
+   * @param maxResourceCapability Maximum container allocation value, if null or
+   *          empty scheduler level maximum container allocation value will be
+   *          used
    * @return the normalized resource
    */
-  Resource getNormalizedResource(Resource requestedResource);
+  Resource getNormalizedResource(Resource requestedResource,
+      Resource maxResourceCapability);
 
   /**
    * Verify whether a submitted application lifetime is valid as per configured

@@ -18,7 +18,11 @@
 
 package org.apache.hadoop.fs.azure.integration;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.net.URI;
 import java.util.List;
 
@@ -28,15 +32,22 @@ import org.junit.internal.AssumptionViolatedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
 
+import static org.junit.Assume.assumeTrue;
+
+import static org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.WASB_ACCOUNT_NAME_DOMAIN_SUFFIX_REGEX;
+import static org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.WASB_TEST_ACCOUNT_NAME_WITH_DOMAIN;
 import static org.apache.hadoop.fs.azure.integration.AzureTestConstants.*;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT;
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getLongGauge;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
@@ -475,5 +486,72 @@ public final class AzureTestUtils extends Assert {
     assume("Scale test disabled: to enable set property "
             + KEY_SCALE_TESTS_ENABLED,
         enabled);
+  }
+
+  /**
+   * Check the account name for WASB tests is set correctly and return.
+   */
+  public static String verifyWasbAccountNameInConfig(Configuration conf) {
+    String accountName = conf.get(ACCOUNT_NAME_PROPERTY_NAME);
+    if (accountName == null) {
+      accountName = conf.get(WASB_TEST_ACCOUNT_NAME_WITH_DOMAIN);
+    }
+    assumeTrue("Account for WASB is missing or it is not in correct format",
+            accountName != null && !accountName.endsWith(WASB_ACCOUNT_NAME_DOMAIN_SUFFIX_REGEX));
+    return accountName;
+  }
+
+  /**
+   * Write string into a file.
+   */
+  public static void writeStringToFile(FileSystem fs, Path path, String value)
+          throws IOException {
+    FSDataOutputStream outputStream = fs.create(path, true);
+    writeStringToStream(outputStream, value);
+  }
+
+  /**
+   * Write string into a file.
+   */
+  public static void writeStringToStream(FSDataOutputStream outputStream, String value)
+          throws IOException {
+    BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
+            outputStream));
+    writer.write(value);
+    writer.close();
+  }
+
+  /**
+   * Read string from a file.
+   */
+  public static String readStringFromFile(FileSystem fs, Path testFile) throws IOException {
+    FSDataInputStream inputStream = fs.open(testFile);
+    String ret = readStringFromStream(inputStream);
+    inputStream.close();
+    return ret;
+  }
+
+  /**
+   * Read string from stream.
+   */
+  public static String readStringFromStream(FSDataInputStream inputStream) throws IOException {
+    BufferedReader reader = new BufferedReader(new InputStreamReader(
+            inputStream));
+    final int BUFFER_SIZE = 1024;
+    char[] buffer = new char[BUFFER_SIZE];
+    int count = reader.read(buffer, 0, BUFFER_SIZE);
+    if (count > BUFFER_SIZE) {
+      throw new IOException("Exceeded buffer size");
+    }
+    inputStream.close();
+    return new String(buffer, 0, count);
+  }
+
+  /**
+   * Assume hierarchical namespace is disabled for test account.
+   */
+  public static void assumeNamespaceDisabled(Configuration conf) {
+    Assume.assumeFalse("Hierarchical namespace is enabled for test account.",
+        conf.getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false));
   }
 }

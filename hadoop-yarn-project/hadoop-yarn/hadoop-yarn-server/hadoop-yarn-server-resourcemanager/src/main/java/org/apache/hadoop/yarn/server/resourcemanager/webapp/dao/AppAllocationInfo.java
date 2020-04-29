@@ -18,10 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.AppAllocation;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -29,6 +28,8 @@ import javax.xml.bind.annotation.XmlRootElement;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /*
  * DAO object to display application allocation detailed information.
@@ -36,37 +37,70 @@ import java.util.List;
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
 public class AppAllocationInfo {
-  protected String nodeId;
-  protected String queueName;
-  protected String appPriority;
-  protected String allocatedContainerId;
-  protected String allocationState;
-  protected String diagnostic;
-  protected String timeStamp;
-  protected List<ActivityNodeInfo> allocationAttempt;
-
-  private static final Log LOG = LogFactory.getLog(AppAllocationInfo.class);
+  private String nodeId;
+  private Long timestamp;
+  private String dateTime;
+  private String queueName;
+  private Integer appPriority;
+  private String allocationState;
+  private String diagnostic;
+  private List<AppRequestAllocationInfo> children;
 
   AppAllocationInfo() {
   }
 
-  AppAllocationInfo(AppAllocation allocation) {
-    this.allocationAttempt = new ArrayList<>();
-
+  AppAllocationInfo(AppAllocation allocation,
+      RMWSConsts.ActivitiesGroupBy groupBy) {
+    this.children = new ArrayList<>();
     this.nodeId = allocation.getNodeId();
     this.queueName = allocation.getQueueName();
-    this.appPriority = allocation.getPriority();
-    this.allocatedContainerId = allocation.getContainerId();
-    this.allocationState = allocation.getAppState().name();
+    this.appPriority = allocation.getPriority() == null ?
+        null : allocation.getPriority().getPriority();
+    this.timestamp = allocation.getTime();
+    this.dateTime = new Date(allocation.getTime()).toString();
+    this.allocationState = allocation.getActivityState().name();
     this.diagnostic = allocation.getDiagnostic();
-
-    Date date = new Date();
-    date.setTime(allocation.getTime());
-    this.timeStamp = date.toString();
-
-    for (ActivityNode attempt : allocation.getAllocationAttempts()) {
-      ActivityNodeInfo containerInfo = new ActivityNodeInfo(attempt);
-      this.allocationAttempt.add(containerInfo);
+    Map<String, List<ActivityNode>> requestToActivityNodes =
+        allocation.getAllocationAttempts().stream().collect(Collectors
+            .groupingBy((e) -> e.getRequestPriority() + "_" + e
+                .getAllocationRequestId(), Collectors.toList()));
+    for (List<ActivityNode> requestActivityNodes : requestToActivityNodes
+        .values()) {
+      AppRequestAllocationInfo requestAllocationInfo =
+          new AppRequestAllocationInfo(requestActivityNodes, groupBy);
+      this.children.add(requestAllocationInfo);
     }
+  }
+
+  public String getNodeId() {
+    return nodeId;
+  }
+
+  public String getQueueName() {
+    return queueName;
+  }
+
+  public Integer getAppPriority() {
+    return appPriority;
+  }
+
+  public Long getTimestamp() {
+    return timestamp;
+  }
+
+  public String getDateTime() {
+    return dateTime;
+  }
+
+  public String getAllocationState() {
+    return allocationState;
+  }
+
+  public List<AppRequestAllocationInfo> getChildren() {
+    return children;
+  }
+
+  public String getDiagnostic() {
+    return diagnostic;
   }
 }

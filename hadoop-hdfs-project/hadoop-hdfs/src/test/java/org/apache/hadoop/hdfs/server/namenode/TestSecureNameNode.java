@@ -22,8 +22,10 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
 import java.security.PrivilegedExceptionAction;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -33,10 +35,12 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferTestCase;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
 
 public class TestSecureNameNode extends SaslDataTransferTestCase {
   final static private int NUM_OF_DATANODES = 0;
@@ -115,6 +119,52 @@ public class TestSecureNameNode extends SaslDataTransferTestCase {
       }
     }
     return;
+  }
+
+  /**
+   * Test NameNodeStatusMXBean with security enabled and disabled.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testNameNodeStatusMXBeanSecurityEnabled() throws Exception {
+    Configuration simpleConf = new Configuration();
+    Configuration secureConf = createSecureConfig("authentication");
+
+    // disabling security
+    UserGroupInformation.setConfiguration(simpleConf);
+
+    // get attribute "SecurityEnabled" with simple configuration
+    try (MiniDFSCluster cluster =
+                 new MiniDFSCluster.Builder(simpleConf).build()) {
+      cluster.waitActive();
+      NameNode namenode = cluster.getNameNode();
+
+      MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+      ObjectName mxbeanName = new ObjectName(
+              "Hadoop:service=NameNode,name=NameNodeStatus");
+
+      boolean securityEnabled = (boolean) mbs.getAttribute(mxbeanName,
+              "SecurityEnabled");
+      Assert.assertFalse(securityEnabled);
+      Assert.assertEquals(namenode.isSecurityEnabled(), securityEnabled);
+    }
+
+    // get attribute "SecurityEnabled" with secure configuration
+    try (MiniDFSCluster cluster =
+                 new MiniDFSCluster.Builder(secureConf).build()) {
+      cluster.waitActive();
+      NameNode namenode = cluster.getNameNode();
+
+      MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+      ObjectName mxbeanName = new ObjectName(
+              "Hadoop:service=NameNode,name=NameNodeStatus");
+
+      boolean securityEnabled = (boolean) mbs.getAttribute(mxbeanName,
+              "SecurityEnabled");
+      Assert.assertTrue(securityEnabled);
+      Assert.assertEquals(namenode.isSecurityEnabled(), securityEnabled);
+    }
   }
 
 }

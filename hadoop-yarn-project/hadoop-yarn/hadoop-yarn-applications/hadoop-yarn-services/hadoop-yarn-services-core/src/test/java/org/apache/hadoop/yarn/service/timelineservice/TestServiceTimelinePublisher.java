@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.service.timelineservice;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity.Identifier;
 import org.apache.hadoop.yarn.client.api.TimelineV2Client;
@@ -34,7 +35,9 @@ import org.apache.hadoop.yarn.service.api.records.Artifact;
 import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.Container;
 import org.apache.hadoop.yarn.service.api.records.ContainerState;
+import org.apache.hadoop.yarn.service.api.records.PlacementConstraint;
 import org.apache.hadoop.yarn.service.api.records.PlacementPolicy;
+import org.apache.hadoop.yarn.service.api.records.PlacementType;
 import org.apache.hadoop.yarn.service.api.records.Resource;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceId;
@@ -45,6 +48,7 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -119,7 +123,8 @@ public class TestServiceTimelinePublisher {
     context.attemptId = ApplicationAttemptId
         .newInstance(ApplicationId.fromString(service.getId()), 1);
     String exitDiags = "service killed";
-    serviceTimelinePublisher.serviceAttemptUnregistered(context, exitDiags);
+    serviceTimelinePublisher.serviceAttemptUnregistered(context,
+        FinalApplicationStatus.ENDED, exitDiags);
     lastPublishedEntities =
         ((DummyTimelineClient) timelineClient).getLastPublishedEntities();
     for (TimelineEntity timelineEntity : lastPublishedEntities) {
@@ -208,8 +213,6 @@ public class TestServiceTimelinePublisher {
         info.get(ServiceTimelineMetricsConstants.LAUNCH_COMMAND));
     assertEquals("false",
         info.get(ServiceTimelineMetricsConstants.RUN_PRIVILEGED_CONTAINER));
-    assertEquals("label",
-        info.get(ServiceTimelineMetricsConstants.PLACEMENT_POLICY));
   }
 
   private static Service createMockApplication() {
@@ -234,7 +237,10 @@ public class TestServiceTimelinePublisher {
     when(component.getResource()).thenReturn(resource);
     when(component.getLaunchCommand()).thenReturn("sleep 1");
     PlacementPolicy placementPolicy = new PlacementPolicy();
-    placementPolicy.setLabel("label");
+    PlacementConstraint placementConstraint = new PlacementConstraint();
+    placementConstraint.setType(PlacementType.ANTI_AFFINITY);
+    placementPolicy
+        .setConstraints(Collections.singletonList(placementConstraint));
     when(component.getPlacementPolicy()).thenReturn(placementPolicy);
     when(component.getConfiguration()).thenReturn(
         new org.apache.hadoop.yarn.service.api.records.Configuration());

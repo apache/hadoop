@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.XAttr;
@@ -27,6 +28,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
+import org.apache.hadoop.hdfs.protocol.NoECPolicySetException;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.WritableUtils;
@@ -66,7 +68,7 @@ final class FSDirErasureCodingOp {
    * @return an erasure coding policy if ecPolicyName is valid and enabled
    * @throws IOException
    */
-  static ErasureCodingPolicy getErasureCodingPolicyByName(
+  static ErasureCodingPolicy getEnabledErasureCodingPolicyByName(
       final FSNamesystem fsn, final String ecPolicyName) throws IOException {
     assert fsn.hasReadLock();
     ErasureCodingPolicy ecPolicy = fsn.getErasureCodingPolicyManager()
@@ -86,6 +88,27 @@ final class FSDirErasureCodingOp {
           sysPolicies
       );
       throw new HadoopIllegalArgumentException(message);
+    }
+    return ecPolicy;
+  }
+
+  /**
+   * Check if the ecPolicyName is valid, return the corresponding
+   * EC policy if is, including the REPLICATION EC policy.
+   * @param fsn namespace
+   * @param ecPolicyName name of EC policy to be checked
+   * @return an erasure coding policy if ecPolicyName is valid
+   * @throws IOException
+   */
+  static ErasureCodingPolicy getErasureCodingPolicyByName(
+      final FSNamesystem fsn, final String ecPolicyName) throws IOException {
+    assert fsn.hasReadLock();
+    ErasureCodingPolicy ecPolicy = fsn.getErasureCodingPolicyManager()
+        .getErasureCodingPolicyByName(ecPolicyName);
+    if (ecPolicy == null) {
+      throw new HadoopIllegalArgumentException(
+          "The given erasure coding " + "policy " + ecPolicyName
+              + " does not exist.");
     }
     return ecPolicy;
   }
@@ -116,7 +139,7 @@ final class FSDirErasureCodingOp {
     List<XAttr> xAttrs;
     fsd.writeLock();
     try {
-      ErasureCodingPolicy ecPolicy = getErasureCodingPolicyByName(fsn,
+      ErasureCodingPolicy ecPolicy = getEnabledErasureCodingPolicyByName(fsn,
           ecPolicyName);
       iip = fsd.resolvePath(pc, src, DirOp.WRITE_LINK);
       // Write access is required to set erasure coding policy
@@ -205,6 +228,9 @@ final class FSDirErasureCodingOp {
     }
     if (xAttrs != null) {
       fsn.getEditLog().logRemoveXAttrs(src, xAttrs, logRetryCache);
+    } else {
+      throw new NoECPolicySetException(
+          "No erasure coding policy explicitly set on " + src);
     }
     return fsd.getAuditFileInfo(iip);
   }
@@ -252,11 +278,16 @@ final class FSDirErasureCodingOp {
    *                      rebuilding
    * @throws IOException
    */
-  static void enableErasureCodingPolicy(final FSNamesystem fsn,
+  static boolean enableErasureCodingPolicy(final FSNamesystem fsn,
       String ecPolicyName, final boolean logRetryCache) throws IOException {
     Preconditions.checkNotNull(ecPolicyName);
-    fsn.getErasureCodingPolicyManager().enablePolicy(ecPolicyName);
-    fsn.getEditLog().logEnableErasureCodingPolicy(ecPolicyName, logRetryCache);
+    boolean success =
+        fsn.getErasureCodingPolicyManager().enablePolicy(ecPolicyName);
+    if (success) {
+      fsn.getEditLog().logEnableErasureCodingPolicy(ecPolicyName,
+          logRetryCache);
+    }
+    return success;
   }
 
   /**
@@ -268,11 +299,16 @@ final class FSDirErasureCodingOp {
    *                      rebuilding
    * @throws IOException
    */
-  static void disableErasureCodingPolicy(final FSNamesystem fsn,
+  static boolean disableErasureCodingPolicy(final FSNamesystem fsn,
       String ecPolicyName, final boolean logRetryCache) throws IOException {
     Preconditions.checkNotNull(ecPolicyName);
-    fsn.getErasureCodingPolicyManager().disablePolicy(ecPolicyName);
-    fsn.getEditLog().logDisableErasureCodingPolicy(ecPolicyName, logRetryCache);
+    boolean success =
+        fsn.getErasureCodingPolicyManager().disablePolicy(ecPolicyName);
+    if (success) {
+      fsn.getEditLog().logDisableErasureCodingPolicy(ecPolicyName,
+          logRetryCache);
+    }
+    return success;
   }
 
   private static List<XAttr> removeErasureCodingPolicyXAttr(
@@ -344,16 +380,28 @@ final class FSDirErasureCodingOp {
   }
 
   /**
-   * Check if the file or directory has an erasure coding policy.
+   * Get the erasure coding policy information for specified path and policy
+   * name. If ec policy name is given, it will be parsed and the corresponding
+   * policy will be returned. Otherwise, get the policy from the parents of the
+   * iip.
    *
    * @param fsn namespace
+   * @param ecPolicyName the ec policy name
    * @param iip inodes in the path containing the file
-   * @return Whether the file or directory has an erasure coding policy.
+   * @return {@link ErasureCodingPolicy}, or null if no policy is found
    * @throws IOException
    */
-  static boolean hasErasureCodingPolicy(final FSNamesystem fsn,
-      final INodesInPath iip) throws IOException {
-    return unprotectedGetErasureCodingPolicy(fsn, iip) != null;
+  static ErasureCodingPolicy getErasureCodingPolicy(FSNamesystem fsn,
+      String ecPolicyName, INodesInPath iip) throws IOException {
+    ErasureCodingPolicy ecPolicy;
+    if (!StringUtils.isEmpty(ecPolicyName)) {
+      ecPolicy = FSDirErasureCodingOp.getEnabledErasureCodingPolicyByName(
+          fsn, ecPolicyName);
+    } else {
+      ecPolicy = FSDirErasureCodingOp.unprotectedGetErasureCodingPolicy(
+          fsn, iip);
+    }
+    return ecPolicy;
   }
 
   /**

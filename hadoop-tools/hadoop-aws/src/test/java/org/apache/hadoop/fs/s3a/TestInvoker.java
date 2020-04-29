@@ -283,18 +283,12 @@ public class TestInvoker extends Assert {
   /**
    * Repeatedly retry until eventually a bad request succeeds.
    */
-  @Test
-  public void testRetryBadRequestIdempotent() throws Throwable {
-    final AtomicInteger counter = new AtomicInteger(0);
-    final int attemptsBeforeSuccess = ACTIVE_RETRY_LIMIT;
-    invoker.retry("test", null, true,
+  @Test(expected = AWSBadRequestException.class)
+  public void testRetryBadRequestNotIdempotent() throws Throwable {
+    invoker.retry("test", null, false,
         () -> {
-          if (counter.incrementAndGet() < attemptsBeforeSuccess) {
-            throw BAD_REQUEST;
-          }
+          throw BAD_REQUEST;
         });
-    assertEquals(attemptsBeforeSuccess, counter.get());
-    assertEquals("retry count ", attemptsBeforeSuccess - 1, retryCount);
   }
 
   @Test

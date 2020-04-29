@@ -17,13 +17,17 @@
  */
 package org.apache.hadoop.hdfs.web;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
+import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
@@ -63,5 +67,54 @@ public final class TestURLConnectionFactory {
     Assert.assertTrue("Expected log for ssl init failure not found!",
         logs.getOutput().contains(
         "Cannot load customized ssl related configuration"));
+  }
+
+  @Test
+  public void testSSLFactoryCleanup() throws Exception {
+    String baseDir = GenericTestUtils.getTempPath(
+        TestURLConnectionFactory.class.getSimpleName());
+    File base = new File(baseDir);
+    FileUtil.fullyDelete(base);
+    base.mkdirs();
+    String keystoreDir = new File(baseDir).getAbsolutePath();
+    String sslConfDir = KeyStoreTestUtil.getClasspathDir(
+        TestURLConnectionFactory.class);
+    Configuration conf = new Configuration();
+    KeyStoreTestUtil.setupSSLConfig(keystoreDir, sslConfDir, conf, false,
+        true);
+    Configuration sslConf = KeyStoreTestUtil.getSslConfig();
+
+    sslConf.set("fs.defaultFS", "swebhdfs://localhost");
+    FileSystem fs = FileSystem.get(sslConf);
+
+    ThreadGroup threadGroup = Thread.currentThread().getThreadGroup();
+
+    while (threadGroup.getParent() != null) {
+      threadGroup = threadGroup.getParent();
+    }
+
+    Thread[] threads = new Thread[threadGroup.activeCount()];
+
+    threadGroup.enumerate(threads);
+    Thread reloaderThread = null;
+    for (Thread thread : threads) {
+      if ((thread.getName() != null)
+          && (thread.getName().contains("Truststore reloader thread"))) {
+        reloaderThread = thread;
+      }
+    }
+    Assert.assertTrue("Reloader is not alive", reloaderThread.isAlive());
+
+    fs.close();
+
+    boolean reloaderStillAlive = true;
+    for (int i = 0; i < 10; i++) {
+      reloaderStillAlive = reloaderThread.isAlive();
+      if (!reloaderStillAlive) {
+        break;
+      }
+      Thread.sleep(1000);
+    }
+    Assert.assertFalse("Reloader is still alive", reloaderStillAlive);
   }
 }

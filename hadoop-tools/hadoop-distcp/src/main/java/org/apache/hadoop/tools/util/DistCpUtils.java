@@ -20,8 +20,8 @@ package org.apache.hadoop.tools.util;
 
 import com.google.common.collect.Maps;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileChecksum;
@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.InputFormat;
+import org.apache.hadoop.tools.DistCpConstants;
 import org.apache.hadoop.tools.CopyListing.AclsNotSupportedException;
 import org.apache.hadoop.tools.CopyListing.XAttrsNotSupportedException;
 import org.apache.hadoop.tools.CopyListingFileStatus;
@@ -56,7 +57,7 @@ import java.util.Map.Entry;
  */
 public class DistCpUtils {
 
-  private static final Log LOG = LogFactory.getLog(DistCpUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DistCpUtils.class);
 
   /**
    * Retrieves size of the file at the specified path.
@@ -198,6 +199,9 @@ public class DistCpUtils {
                               EnumSet<FileAttribute> attributes,
                               boolean preserveRawXattrs) throws IOException {
 
+    // strip out those attributes we don't need any more
+    attributes.remove(FileAttribute.BLOCKSIZE);
+    attributes.remove(FileAttribute.CHECKSUMTYPE);
     // If not preserving anything from FileStatus, don't bother fetching it.
     FileStatus targetFileStatus = attributes.isEmpty() ? null :
         targetFS.getFileStatus(path);
@@ -211,6 +215,7 @@ public class DistCpUtils {
       List<AclEntry> srcAcl = srcFileStatus.getAclEntries();
       List<AclEntry> targetAcl = getAcl(targetFS, targetFileStatus);
       if (!srcAcl.equals(targetAcl)) {
+        targetFS.removeAcl(path);
         targetFS.setAcl(path, srcAcl);
       }
       // setAcl doesn't preserve sticky bit, so also call setPermission if needed.
@@ -433,24 +438,45 @@ public class DistCpUtils {
   }
 
   /**
-   * Sort sequence file containing FileStatus and Text as key and value respecitvely
+   * Sort sequence file containing FileStatus and Text as key and value
+   * respectively.
    *
-   * @param fs - File System
    * @param conf - Configuration
    * @param sourceListing - Source listing file
    * @return Path of the sorted file. Is source file with _sorted appended to the name
    * @throws IOException - Any exception during sort.
    */
-  public static Path sortListing(FileSystem fs, Configuration conf, Path sourceListing)
+  public static Path sortListing(Configuration conf,
+      Path sourceListing)
       throws IOException {
+    Path output = new Path(sourceListing.toString() +  "_sorted");
+    sortListing(conf, sourceListing, output);
+    return output;
+  }
+
+  /**
+   * Sort sequence file containing FileStatus and Text as key and value
+   * respectively, saving the result to the {@code output} path, which
+   * will be deleted first.
+   *
+   * @param conf - Configuration
+   * @param sourceListing - Source listing file
+   * @param output output path
+   * @throws IOException - Any exception during sort.
+   */
+
+  public static void sortListing(final Configuration conf,
+      final Path sourceListing,
+      final Path output) throws IOException {
+    FileSystem fs = sourceListing.getFileSystem(conf);
+    // force verify that the destination FS matches the input
+    fs.makeQualified(output);
     SequenceFile.Sorter sorter = new SequenceFile.Sorter(fs, Text.class,
       CopyListingFileStatus.class, conf);
-    Path output = new Path(sourceListing.toString() +  "_sorted");
 
     fs.delete(output, false);
 
     sorter.sort(sourceListing, output);
-    return output;
   }
 
   /**
@@ -527,7 +553,7 @@ public class DistCpUtils {
   /**
    * Utility to compare checksums for the paths specified.
    *
-   * If checksums's can't be retrieved, it doesn't fail the test
+   * If checksums can't be retrieved, it doesn't fail the test
    * Only time the comparison would fail is when checksums are
    * available and they don't match
    *
@@ -543,18 +569,83 @@ public class DistCpUtils {
    * @throws IOException if there's an exception while retrieving checksums.
    */
   public static boolean checksumsAreEqual(FileSystem sourceFS, Path source,
-      FileChecksum sourceChecksum, FileSystem targetFS, Path target)
+                                          FileChecksum sourceChecksum,
+                                          FileSystem targetFS,
+                                          Path target, long sourceLen)
       throws IOException {
     FileChecksum targetChecksum = null;
     try {
-      sourceChecksum = sourceChecksum != null ? sourceChecksum : sourceFS
-          .getFileChecksum(source);
-      targetChecksum = targetFS.getFileChecksum(target);
+      sourceChecksum = sourceChecksum != null
+          ? sourceChecksum
+          : sourceFS.getFileChecksum(source, sourceLen);
+      if (sourceChecksum != null) {
+        // iff there's a source checksum, look for one at the destination.
+        targetChecksum = targetFS.getFileChecksum(target);
+      }
     } catch (IOException e) {
       LOG.error("Unable to retrieve checksum for " + source + " or " + target, e);
     }
     return (sourceChecksum == null || targetChecksum == null ||
             sourceChecksum.equals(targetChecksum));
+  }
+
+  /**
+   * Utility to compare file lengths and checksums for source and target.
+   *
+   * @param sourceFS FileSystem for the source path.
+   * @param source The source path.
+   * @param sourceChecksum The checksum of the source file. If it is null we
+   * still need to retrieve it through sourceFS.
+   * @param targetFS FileSystem for the target path.
+   * @param target The target path.
+   * @param skipCrc The flag to indicate whether to skip checksums.
+   * @throws IOException if there's a mismatch in file lengths or checksums.
+   */
+  public static void compareFileLengthsAndChecksums(long srcLen,
+             FileSystem sourceFS, Path source, FileChecksum sourceChecksum,
+             FileSystem targetFS, Path target, boolean skipCrc,
+             long targetLen) throws IOException {
+    if (srcLen != targetLen) {
+      throw new IOException(
+          DistCpConstants.LENGTH_MISMATCH_ERROR_MSG + source + " (" + srcLen
+              + ") and target:" + target + " (" + targetLen + ")");
+    }
+
+    //At this point, src & dest lengths are same. if length==0, we skip checksum
+    if ((srcLen != 0) && (!skipCrc)) {
+      if (!checksumsAreEqual(sourceFS, source, sourceChecksum,
+          targetFS, target, srcLen)) {
+        StringBuilder errorMessage =
+            new StringBuilder(DistCpConstants.CHECKSUM_MISMATCH_ERROR_MSG)
+                .append(source).append(" and ").append(target).append(".");
+        boolean addSkipHint = false;
+        String srcScheme = sourceFS.getScheme();
+        String targetScheme = targetFS.getScheme();
+        if (!srcScheme.equals(targetScheme)) {
+          // the filesystems are different and they aren't both hdfs connectors
+          errorMessage.append("Source and destination filesystems are of"
+              + " different types\n")
+              .append("Their checksum algorithms may be incompatible");
+          addSkipHint = true;
+        } else if (sourceFS.getFileStatus(source).getBlockSize() !=
+            targetFS.getFileStatus(target).getBlockSize()) {
+          errorMessage.append(" Source and target differ in block-size.\n")
+              .append(" Use -pb to preserve block-sizes during copy.");
+          addSkipHint = true;
+        }
+        if (addSkipHint) {
+          errorMessage
+              .append(" You can choose file-level checksum validation via "
+                  + "-Ddfs.checksum.combine.mode=COMPOSITE_CRC when block-sizes"
+                  + " or filesystems are different.")
+              .append(" Or you can skip checksum-checks altogether "
+                  + " with -skipcrccheck.\n")
+              .append(" (NOTE: By skipping checksums, one runs the risk of " +
+                  "masking data-corruption during file-transfer.)\n");
+        }
+        throw new IOException(errorMessage.toString());
+      }
+    }
   }
 
   /*

@@ -20,7 +20,6 @@ package org.apache.hadoop.mapreduce.v2.hs;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -48,11 +47,11 @@ public class CompletedTask implements Task {
   private final TaskInfo taskInfo;
   private TaskReport report;
   private TaskAttemptId successfulAttempt;
-  private List<String> reportDiagnostics = new LinkedList<String>();
+  private List<String> reportDiagnostics = new ArrayList<String>(2);
   private Lock taskAttemptsLock = new ReentrantLock();
   private AtomicBoolean taskAttemptsLoaded = new AtomicBoolean(false);
   private final Map<TaskAttemptId, TaskAttempt> attempts =
-    new LinkedHashMap<TaskAttemptId, TaskAttempt>();
+      new LinkedHashMap<TaskAttemptId, TaskAttempt>(2);
 
   CompletedTask(TaskId taskId, TaskInfo taskInfo) {
     //TODO JobHistoryParser.handleTaskFailedAttempt should use state from the event.

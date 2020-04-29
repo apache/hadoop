@@ -22,11 +22,12 @@ import com.fasterxml.jackson.databind.type.CollectionType;
 import org.apache.http.Header;
 import org.apache.http.HttpStatus;
 import org.apache.http.message.BasicHeader;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.swift.exceptions.SwiftConfigurationException;
 import org.apache.hadoop.fs.swift.exceptions.SwiftException;
@@ -65,8 +66,8 @@ import java.util.regex.Pattern;
 public class SwiftNativeFileSystemStore {
   private static final Pattern URI_PATTERN = Pattern.compile("\"\\S+?\"");
   private static final String PATTERN = "EEE, d MMM yyyy hh:mm:ss zzz";
-  private static final Log LOG =
-          LogFactory.getLog(SwiftNativeFileSystemStore.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(SwiftNativeFileSystemStore.class);
   private URI uri;
   private SwiftRestClient swiftRestClient;
 
@@ -562,12 +563,16 @@ public class SwiftNativeFileSystemStore {
     //parent dir (in which case the dest dir exists), or the destination
     //directory is root, in which case it must also exist
     if (dstParent != null && !dstParent.equals(srcParent)) {
+      SwiftFileStatus fileStatus;
       try {
-        getObjectMetadata(dstParent);
+        fileStatus = getObjectMetadata(dstParent);
       } catch (FileNotFoundException e) {
         //destination parent doesn't exist; bail out
         LOG.debug("destination parent directory " + dstParent + " doesn't exist");
         throw e;
+      }
+      if (!fileStatus.isDir()) {
+        throw new ParentNotDirectoryException(dstParent.toString());
       }
     }
 
@@ -720,7 +725,7 @@ public class SwiftNativeFileSystemStore {
     if (LOG.isDebugEnabled()) {
       LOG.debug(message + ": listing of " + objectPath);
       for (FileStatus fileStatus : statuses) {
-        LOG.debug(fileStatus.getPath());
+        LOG.debug(fileStatus.getPath().toString());
       }
     }
   }

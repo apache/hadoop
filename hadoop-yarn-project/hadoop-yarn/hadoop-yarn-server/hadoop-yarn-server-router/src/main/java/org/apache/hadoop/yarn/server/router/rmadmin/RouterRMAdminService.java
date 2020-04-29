@@ -28,9 +28,11 @@ import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -43,6 +45,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsR
 import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshClusterMaxPriorityRequest;
@@ -65,6 +69,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequ
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
+import org.apache.hadoop.yarn.server.router.security.authorize.RouterPolicyProvider;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -128,6 +133,11 @@ public class RouterRMAdminService extends AbstractService
     this.server = rpc.getServer(ResourceManagerAdministrationProtocol.class,
         this, listenerEndpoint, serverConf, null, numWorkerThreads);
 
+    if (conf.getBoolean(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, false)) {
+      refreshServiceAcls(conf, RouterPolicyProvider.getInstance());
+    }
+
     this.server.start();
     LOG.info("Router RMAdminService listening on address: "
         + this.server.getListenerAddress());
@@ -142,6 +152,16 @@ public class RouterRMAdminService extends AbstractService
     }
     userPipelineMap.clear();
     super.serviceStop();
+  }
+
+  void refreshServiceAcls(Configuration configuration,
+      PolicyProvider policyProvider) {
+    this.server.refreshServiceAcl(configuration, policyProvider);
+  }
+
+  @VisibleForTesting
+  public Server getServer() {
+    return this.server;
   }
 
   /**
@@ -165,13 +185,15 @@ public class RouterRMAdminService extends AbstractService
     return interceptorClassNames;
   }
 
-  private RequestInterceptorChainWrapper getInterceptorChain()
+  @VisibleForTesting
+  protected RequestInterceptorChainWrapper getInterceptorChain()
       throws IOException {
     String user = UserGroupInformation.getCurrentUser().getUserName();
-    if (!userPipelineMap.containsKey(user)) {
-      initializePipeline(user);
+    RequestInterceptorChainWrapper chain = userPipelineMap.get(user);
+    if (chain != null && chain.getRootInterceptor() != null) {
+      return chain;
     }
-    return userPipelineMap.get(user);
+    return initializePipeline(user);
   }
 
   /**
@@ -239,35 +261,32 @@ public class RouterRMAdminService extends AbstractService
    *
    * @param user
    */
-  private void initializePipeline(String user) {
-    RequestInterceptorChainWrapper chainWrapper = null;
+  private RequestInterceptorChainWrapper initializePipeline(String user) {
     synchronized (this.userPipelineMap) {
       if (this.userPipelineMap.containsKey(user)) {
         LOG.info("Request to start an already existing user: {}"
             + " was received, so ignoring.", user);
-        return;
+        return userPipelineMap.get(user);
       }
 
-      chainWrapper = new RequestInterceptorChainWrapper();
+      RequestInterceptorChainWrapper chainWrapper =
+          new RequestInterceptorChainWrapper();
+      try {
+        // We should init the pipeline instance after it is created and then
+        // add to the map, to ensure thread safe.
+        LOG.info("Initializing request processing pipeline for user: {}", user);
+
+        RMAdminRequestInterceptor interceptorChain =
+            this.createRequestInterceptorChain();
+        interceptorChain.init(user);
+        chainWrapper.init(interceptorChain);
+      } catch (Exception e) {
+        LOG.error("Init RMAdminRequestInterceptor error for user: " + user, e);
+        throw e;
+      }
+
       this.userPipelineMap.put(user, chainWrapper);
-    }
-
-    // We register the pipeline instance in the map first and then initialize it
-    // later because chain initialization can be expensive and we would like to
-    // release the lock as soon as possible to prevent other applications from
-    // blocking when one application's chain is initializing
-    LOG.info("Initializing request processing pipeline for the user: {}", user);
-
-    try {
-      RMAdminRequestInterceptor interceptorChain =
-          this.createRequestInterceptorChain();
-      interceptorChain.init(user);
-      chainWrapper.init(interceptorChain);
-    } catch (Exception e) {
-      synchronized (this.userPipelineMap) {
-        this.userPipelineMap.remove(user);
-      }
-      throw e;
+      return chainWrapper;
     }
   }
 
@@ -419,5 +438,13 @@ public class RouterRMAdminService extends AbstractService
       throws YarnException, IOException {
     RequestInterceptorChainWrapper pipeline = getInterceptorChain();
     return pipeline.getRootInterceptor().refreshClusterMaxPriority(request);
+  }
+
+  @Override
+  public NodesToAttributesMappingResponse mapAttributesToNodes(
+      NodesToAttributesMappingRequest request)
+      throws YarnException, IOException {
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    return pipeline.getRootInterceptor().mapAttributesToNodes(request);
   }
 }

@@ -330,8 +330,8 @@ public class AclEntry {
   public static String aclSpecToString(List<AclEntry> aclSpec) {
     StringBuilder buf = new StringBuilder();
     for ( AclEntry e : aclSpec ) {
-      buf.append(e.toString());
-      buf.append(",");
+      buf.append(e.toString())
+          .append(",");
     }
     return buf.substring(0, buf.length()-1);  // remove last ,
   }

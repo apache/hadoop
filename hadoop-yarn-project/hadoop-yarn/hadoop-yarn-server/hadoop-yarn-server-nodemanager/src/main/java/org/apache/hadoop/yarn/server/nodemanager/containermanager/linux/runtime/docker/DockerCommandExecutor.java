@@ -16,7 +16,7 @@
  */
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker;
 
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
@@ -67,29 +67,24 @@ public final class DockerCommandExecutor {
    * @param dockerCommand               the docker command to run.
    * @param containerId                 the id of the container.
    * @param env                         environment for the container.
-   * @param conf                        the hadoop configuration.
    * @param privilegedOperationExecutor the privileged operations executor.
    * @param disableFailureLogging       disable logging for known rc failures.
    * @return the output of the operation.
    * @throws ContainerExecutionException if the operation fails.
    */
   public static String executeDockerCommand(DockerCommand dockerCommand,
-      String containerId, Map<String, String> env, Configuration conf,
+      String containerId, Map<String, String> env,
       PrivilegedOperationExecutor privilegedOperationExecutor,
-      boolean disableFailureLogging)
+      boolean disableFailureLogging, Context nmContext)
       throws ContainerExecutionException {
-    DockerClient dockerClient = new DockerClient(conf);
-    String commandFile =
-        dockerClient.writeCommandToTempFile(dockerCommand, containerId);
-    PrivilegedOperation dockerOp = new PrivilegedOperation(
-        PrivilegedOperation.OperationType.RUN_DOCKER_CMD);
-    dockerOp.appendArgs(commandFile);
+    PrivilegedOperation dockerOp = dockerCommand.preparePrivilegedOperation(
+        dockerCommand, containerId, env, nmContext);
+
     if (disableFailureLogging) {
       dockerOp.disableFailureLogging();
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Running docker command: " + dockerCommand);
-    }
+    LOG.debug("Running docker command: {}", dockerCommand);
+
     try {
       String result = privilegedOperationExecutor
           .executePrivilegedOperation(null, dockerOp, null,
@@ -110,59 +105,68 @@ public final class DockerCommandExecutor {
    * an exception and the nonexistent status is returned.
    *
    * @param containerId                 the id of the container.
-   * @param conf                        the hadoop configuration.
    * @param privilegedOperationExecutor the privileged operations executor.
    * @return a {@link DockerContainerStatus} representing the current status.
    */
   public static DockerContainerStatus getContainerStatus(String containerId,
-      Configuration conf,
-      PrivilegedOperationExecutor privilegedOperationExecutor) {
+      PrivilegedOperationExecutor privilegedOperationExecutor,
+      Context nmContext) {
     try {
-      DockerContainerStatus dockerContainerStatus;
       String currentContainerStatus =
-          executeStatusCommand(containerId, conf, privilegedOperationExecutor);
-      if (currentContainerStatus == null) {
-        dockerContainerStatus = DockerContainerStatus.UNKNOWN;
-      } else if (currentContainerStatus
-          .equals(DockerContainerStatus.CREATED.getName())) {
-        dockerContainerStatus = DockerContainerStatus.CREATED;
-      } else if (currentContainerStatus
-          .equals(DockerContainerStatus.RUNNING.getName())) {
-        dockerContainerStatus = DockerContainerStatus.RUNNING;
-      } else if (currentContainerStatus
-          .equals(DockerContainerStatus.STOPPED.getName())) {
-        dockerContainerStatus = DockerContainerStatus.STOPPED;
-      } else if (currentContainerStatus
-          .equals(DockerContainerStatus.RESTARTING.getName())) {
-        dockerContainerStatus = DockerContainerStatus.RESTARTING;
-      } else if (currentContainerStatus
-          .equals(DockerContainerStatus.REMOVING.getName())) {
-        dockerContainerStatus = DockerContainerStatus.REMOVING;
-      } else if (currentContainerStatus
-          .equals(DockerContainerStatus.DEAD.getName())) {
-        dockerContainerStatus = DockerContainerStatus.DEAD;
-      } else if (currentContainerStatus
-          .equals(DockerContainerStatus.EXITED.getName())) {
-        dockerContainerStatus = DockerContainerStatus.EXITED;
-      } else if (currentContainerStatus
-          .equals(DockerContainerStatus.NONEXISTENT.getName())) {
-        dockerContainerStatus = DockerContainerStatus.NONEXISTENT;
-      } else {
-        dockerContainerStatus = DockerContainerStatus.UNKNOWN;
-      }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Container Status: " + dockerContainerStatus.getName()
-            + " ContainerId: " + containerId);
-      }
+          executeStatusCommand(containerId,
+          privilegedOperationExecutor, nmContext);
+      DockerContainerStatus dockerContainerStatus = parseContainerStatus(
+          currentContainerStatus);
+      LOG.debug("Container Status: {} ContainerId: {}",
+          dockerContainerStatus.getName(), containerId);
+
       return dockerContainerStatus;
     } catch (ContainerExecutionException e) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Container Status: "
-            + DockerContainerStatus.NONEXISTENT.getName()
-            + " ContainerId: " + containerId);
-      }
+      LOG.debug("Container Status: {} ContainerId: {}",
+          DockerContainerStatus.NONEXISTENT.getName(), containerId);
       return DockerContainerStatus.NONEXISTENT;
     }
+  }
+
+  /**
+   * Parses the container status string.
+   *
+   * @param containerStatusStr container status.
+   * @return a {@link DockerContainerStatus} representing the status.
+   */
+  public static DockerContainerStatus parseContainerStatus(
+      String containerStatusStr) {
+    DockerContainerStatus dockerContainerStatus;
+    if (containerStatusStr == null) {
+      dockerContainerStatus = DockerContainerStatus.UNKNOWN;
+    } else if (containerStatusStr
+        .equals(DockerContainerStatus.CREATED.getName())) {
+      dockerContainerStatus = DockerContainerStatus.CREATED;
+    } else if (containerStatusStr
+        .equals(DockerContainerStatus.RUNNING.getName())) {
+      dockerContainerStatus = DockerContainerStatus.RUNNING;
+    } else if (containerStatusStr
+        .equals(DockerContainerStatus.STOPPED.getName())) {
+      dockerContainerStatus = DockerContainerStatus.STOPPED;
+    } else if (containerStatusStr
+        .equals(DockerContainerStatus.RESTARTING.getName())) {
+      dockerContainerStatus = DockerContainerStatus.RESTARTING;
+    } else if (containerStatusStr
+        .equals(DockerContainerStatus.REMOVING.getName())) {
+      dockerContainerStatus = DockerContainerStatus.REMOVING;
+    } else if (containerStatusStr
+        .equals(DockerContainerStatus.DEAD.getName())) {
+      dockerContainerStatus = DockerContainerStatus.DEAD;
+    } else if (containerStatusStr
+        .equals(DockerContainerStatus.EXITED.getName())) {
+      dockerContainerStatus = DockerContainerStatus.EXITED;
+    } else if (containerStatusStr
+        .equals(DockerContainerStatus.NONEXISTENT.getName())) {
+      dockerContainerStatus = DockerContainerStatus.NONEXISTENT;
+    } else {
+      dockerContainerStatus = DockerContainerStatus.UNKNOWN;
+    }
+    return dockerContainerStatus;
   }
 
   /**
@@ -170,20 +174,19 @@ public final class DockerCommandExecutor {
    * status.
    *
    * @param containerId                 the id of the container.
-   * @param conf                        the hadoop configuration.
    * @param privilegedOperationExecutor the privileged operations executor.
    * @return the current container status.
    * @throws ContainerExecutionException if the docker operation fails to run.
    */
   private static String executeStatusCommand(String containerId,
-      Configuration conf,
-      PrivilegedOperationExecutor privilegedOperationExecutor)
+      PrivilegedOperationExecutor privilegedOperationExecutor,
+      Context nmContext)
       throws ContainerExecutionException {
     DockerInspectCommand dockerInspectCommand =
         new DockerInspectCommand(containerId).getContainerStatus();
     try {
       return DockerCommandExecutor.executeDockerCommand(dockerInspectCommand,
-          containerId, null, conf, privilegedOperationExecutor, true);
+          containerId, null, privilegedOperationExecutor, true, nmContext);
     } catch (ContainerExecutionException e) {
       throw new ContainerExecutionException(e);
     }
@@ -224,5 +227,19 @@ public final class DockerCommandExecutor {
         && !containerStatus.equals(DockerContainerStatus.UNKNOWN)
         && !containerStatus.equals(DockerContainerStatus.REMOVING)
         && !containerStatus.equals(DockerContainerStatus.RUNNING);
+  }
+
+  /**
+   * Is the container in a startable state?
+   *
+   * @param containerStatus   the container's {@link DockerContainerStatus}.
+   * @return                  is the container in a startable state.
+   */
+  public static boolean isStartable(DockerContainerStatus containerStatus) {
+    if (containerStatus.equals(DockerContainerStatus.EXITED)
+        || containerStatus.equals(DockerContainerStatus.STOPPED)) {
+      return true;
+    }
+    return false;
   }
 }

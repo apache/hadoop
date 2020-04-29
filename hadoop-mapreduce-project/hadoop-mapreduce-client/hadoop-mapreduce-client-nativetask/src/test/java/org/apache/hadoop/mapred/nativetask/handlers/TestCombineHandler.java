@@ -24,11 +24,12 @@ import org.apache.hadoop.mapred.nativetask.Command;
 import org.apache.hadoop.mapred.nativetask.INativeHandler;
 import org.apache.hadoop.mapred.nativetask.buffer.BufferType;
 import org.apache.hadoop.mapred.nativetask.buffer.InputBuffer;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Matchers;
 import org.mockito.Mockito;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.eq;
 
 @SuppressWarnings({ "rawtypes", "unchecked", "deprecation" })
 public class TestCombineHandler {
@@ -53,19 +54,21 @@ public class TestCombineHandler {
   @Test
   public void testCommandDispatcherSetting() throws IOException {
     this.handler = new CombinerHandler(nativeHandler, combinerRunner, puller, pusher);
-    Mockito.verify(nativeHandler, Mockito.times(1)).setCommandDispatcher(Matchers.eq(handler));
-    Mockito.verify(nativeHandler, Mockito.times(1)).setDataReceiver(Matchers.eq(puller));
+    Mockito.verify(nativeHandler,
+        Mockito.times(1)).setCommandDispatcher(eq(handler));
+    Mockito.verify(nativeHandler,
+        Mockito.times(1)).setDataReceiver(eq(puller));
   }
 
   @Test
   public void testCombine() throws IOException, InterruptedException, ClassNotFoundException {
     this.handler = new CombinerHandler(nativeHandler, combinerRunner, puller, pusher);
-    Assert.assertEquals(null, handler.onCall(CombinerHandler.COMBINE, null));
+    assertThat(handler.onCall(CombinerHandler.COMBINE, null)).isNull();
     handler.close();
     handler.close();
 
     Mockito.verify(combinerRunner, Mockito.times(1))
-      .combine(Matchers.eq(puller), Matchers.eq(pusher));
+      .combine(eq(puller), eq(pusher));
 
     Mockito.verify(pusher, Mockito.times(1)).close();
     Mockito.verify(puller, Mockito.times(1)).close();
@@ -75,6 +78,6 @@ public class TestCombineHandler {
   @Test
   public void testOnCall() throws IOException {
     this.handler = new CombinerHandler(nativeHandler, combinerRunner, puller, pusher);
-    Assert.assertEquals(null, handler.onCall(new Command(-1), null));
+    assertThat(handler.onCall(new Command(-1), null)).isNull();
   }
 }

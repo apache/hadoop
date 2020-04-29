@@ -20,8 +20,8 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.*;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -38,7 +38,8 @@ import static org.junit.Assert.*;
  * FsDataSet initialization.
  */
 public class TestDataNodeInitStorage {
-  public static final Log LOG = LogFactory.getLog(TestDataNodeInitStorage.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestDataNodeInitStorage.class);
 
   static private class SimulatedFsDatasetVerifier extends SimulatedFSDataset {
     static class Factory extends FsDatasetSpi.Factory<SimulatedFSDataset> {

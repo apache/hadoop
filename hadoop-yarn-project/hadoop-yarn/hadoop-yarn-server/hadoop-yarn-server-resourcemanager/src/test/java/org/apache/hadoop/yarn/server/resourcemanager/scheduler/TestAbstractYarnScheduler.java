@@ -18,39 +18,43 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.Service;
-import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerState;
-import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.ResourceOption;
-import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Time;
+import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.NMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.NodesListManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ParameterizedSchedulerTestBase;
@@ -59,6 +63,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.MockRMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -67,6 +72,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
@@ -399,7 +406,7 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
           new SchedulerApplication<FiCaSchedulerApp>(null, mockAPp.getUser());
 
       // Second app with one app attempt
-      RMApp app = rm1.submitApp(200);
+      RMApp app = MockRMAppSubmitter.submitWithMemory(200, rm1);
       MockAM am1 = MockRM.launchAndRegisterAM(app, rm1, nm1);
       final ContainerId runningContainer =
           ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
@@ -423,6 +430,201 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
     }
   }
 
+  @Test(timeout = 30000l)
+  public void testContainerReleaseWithAllocationTags() throws Exception {
+    // Currently only can be tested against capacity scheduler.
+    if (getSchedulerType().equals(SchedulerType.CAPACITY)) {
+      final String testTag1 = "some-tag";
+      final String testTag2 = "some-other-tag";
+      YarnConfiguration conf = getConf();
+      conf.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER, "scheduler");
+      MockRM rm1 = new MockRM(conf);
+      rm1.start();
+      MockNM nm1 = new MockNM("127.0.0.1:1234",
+          10240, rm1.getResourceTrackerService());
+      nm1.registerNode();
+      MockRMAppSubmissionData data =
+          MockRMAppSubmissionData.Builder.createWithMemory(200, rm1)
+          .withAppName("name")
+          .withUser("user")
+          .withAcls(new HashMap<>())
+          .withUnmanagedAM(false)
+          .withQueue("default")
+          .withMaxAppAttempts(-1)
+          .withCredentials(null)
+          .withAppType("Test")
+          .withWaitForAppAcceptedState(false)
+          .withKeepContainers(true)
+          .build();
+      RMApp app1 =
+          MockRMAppSubmitter.submit(rm1, data);
+      MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+
+      // allocate 1 container with tag1
+      SchedulingRequest sr = SchedulingRequest
+          .newInstance(1l, Priority.newInstance(1),
+              ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED),
+              Sets.newHashSet(testTag1),
+              ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)),
+              null);
+
+      // allocate 3 containers with tag2
+      SchedulingRequest sr1 = SchedulingRequest
+          .newInstance(2l, Priority.newInstance(1),
+              ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED),
+              Sets.newHashSet(testTag2),
+              ResourceSizing.newInstance(3, Resource.newInstance(1024, 1)),
+              null);
+
+      AllocateRequest ar = AllocateRequest.newBuilder()
+          .schedulingRequests(Lists.newArrayList(sr, sr1)).build();
+      am1.allocate(ar);
+      nm1.nodeHeartbeat(true);
+
+      List<Container> allocated = new ArrayList<>();
+      while (allocated.size() < 4) {
+        AllocateResponse rsp = am1
+            .allocate(new ArrayList<>(), new ArrayList<>());
+        allocated.addAll(rsp.getAllocatedContainers());
+        nm1.nodeHeartbeat(true);
+        Thread.sleep(1000);
+      }
+
+      Assert.assertEquals(4, allocated.size());
+
+      Set<Container> containers = allocated.stream()
+          .filter(container -> container.getAllocationRequestId() == 1l)
+          .collect(Collectors.toSet());
+      Assert.assertNotNull(containers);
+      Assert.assertEquals(1, containers.size());
+      ContainerId cid = containers.iterator().next().getId();
+
+      // mock container start
+      rm1.getRMContext().getScheduler()
+          .getSchedulerNode(nm1.getNodeId()).containerStarted(cid);
+
+      // verifies the allocation is made with correct number of tags
+      Map<String, Long> nodeTags = rm1.getRMContext()
+          .getAllocationTagsManager()
+          .getAllocationTagsWithCount(nm1.getNodeId());
+      Assert.assertNotNull(nodeTags.get(testTag1));
+      Assert.assertEquals(1, nodeTags.get(testTag1).intValue());
+
+      // release a container
+      am1.allocate(new ArrayList<>(), Lists.newArrayList(cid));
+
+      // before NM confirms, the tag should still exist
+      nodeTags = rm1.getRMContext().getAllocationTagsManager()
+          .getAllocationTagsWithCount(nm1.getNodeId());
+      Assert.assertNotNull(nodeTags);
+      Assert.assertNotNull(nodeTags.get(testTag1));
+      Assert.assertEquals(1, nodeTags.get(testTag1).intValue());
+
+      // NM reports back that container is released
+      // RM should cleanup the tag
+      ContainerStatus cs = ContainerStatus.newInstance(cid,
+          ContainerState.COMPLETE, "", 0);
+      nm1.nodeHeartbeat(Lists.newArrayList(cs), true);
+
+      // Wait on condition
+      // 1) tag1 doesn't exist anymore
+      // 2) num of tag2 is still 3
+      GenericTestUtils.waitFor(() -> {
+        Map<String, Long> tags = rm1.getRMContext()
+            .getAllocationTagsManager()
+            .getAllocationTagsWithCount(nm1.getNodeId());
+        return tags.get(testTag1) == null &&
+            tags.get(testTag2).intValue() == 3;
+      }, 500, 3000);
+    }
+  }
+
+
+  @Test(timeout = 30000L)
+  public void testNodeRemovedWithAllocationTags() throws Exception {
+    // Currently only can be tested against capacity scheduler.
+    if (getSchedulerType().equals(SchedulerType.CAPACITY)) {
+      final String testTag1 = "some-tag";
+      YarnConfiguration conf = getConf();
+      conf.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER, "scheduler");
+      MockRM rm1 = new MockRM(conf);
+      rm1.start();
+      MockNM nm1 = new MockNM("127.0.0.1:1234",
+          10240, rm1.getResourceTrackerService());
+      nm1.registerNode();
+      MockRMAppSubmissionData data =
+          MockRMAppSubmissionData.Builder.createWithMemory(200, rm1)
+              .withAppName("name")
+              .withUser("user")
+              .withAcls(new HashMap<>())
+              .withUnmanagedAM(false)
+              .withQueue("default")
+              .withMaxAppAttempts(-1)
+              .withCredentials(null)
+              .withAppType("Test")
+              .withWaitForAppAcceptedState(false)
+              .withKeepContainers(true)
+              .build();
+      RMApp app1 =
+          MockRMAppSubmitter.submit(rm1, data);
+      MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+
+      // allocate 1 container with tag1
+      SchedulingRequest sr = SchedulingRequest
+          .newInstance(1L, Priority.newInstance(1),
+              ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED),
+              Sets.newHashSet(testTag1),
+              ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)),
+              null);
+
+      AllocateRequest ar = AllocateRequest.newBuilder()
+          .schedulingRequests(Lists.newArrayList(sr)).build();
+      am1.allocate(ar);
+      nm1.nodeHeartbeat(true);
+
+      List<Container> allocated = new ArrayList<>();
+      while (allocated.size() < 1) {
+        AllocateResponse rsp = am1
+            .allocate(new ArrayList<>(), new ArrayList<>());
+        allocated.addAll(rsp.getAllocatedContainers());
+        nm1.nodeHeartbeat(true);
+        Thread.sleep(1000);
+      }
+
+      Assert.assertEquals(1, allocated.size());
+
+      Set<Container> containers = allocated.stream()
+          .filter(container -> container.getAllocationRequestId() == 1L)
+          .collect(Collectors.toSet());
+      Assert.assertNotNull(containers);
+      Assert.assertEquals(1, containers.size());
+      ContainerId cid = containers.iterator().next().getId();
+
+      // mock container start
+      rm1.getRMContext().getScheduler()
+          .getSchedulerNode(nm1.getNodeId()).containerStarted(cid);
+
+      // verifies the allocation is made with correct number of tags
+      Map<String, Long> nodeTags = rm1.getRMContext()
+          .getAllocationTagsManager()
+          .getAllocationTagsWithCount(nm1.getNodeId());
+      Assert.assertNotNull(nodeTags.get(testTag1));
+      Assert.assertEquals(1, nodeTags.get(testTag1).intValue());
+
+      // remove the  node
+      RMNode node1 = MockNodes.newNodeInfo(
+          0, Resources.createResource(nm1.getMemory()), 1, "127.0.0.1", 1234);
+      rm1.getRMContext().getScheduler().handle(
+          new NodeRemovedSchedulerEvent(node1));
+
+      // Once the node is removed, the tag should be removed immediately
+      nodeTags = rm1.getRMContext().getAllocationTagsManager()
+          .getAllocationTagsWithCount(nm1.getNodeId());
+      Assert.assertNull(nodeTags);
+    }
+  }
+
+
   @Test(timeout=60000)
   public void testContainerReleasedByNode() throws Exception {
     System.out.println("Starting testContainerReleasedByNode");
@@ -430,10 +632,21 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
     MockRM rm1 = new MockRM(conf);
     try {
       rm1.start();
+      MockRMAppSubmissionData data =
+          MockRMAppSubmissionData.Builder.createWithMemory(200, rm1)
+          .withAppName("name")
+          .withUser("user")
+          .withAcls(new HashMap<ApplicationAccessType, String>())
+          .withUnmanagedAM(false)
+          .withQueue("default")
+          .withMaxAppAttempts(-1)
+          .withCredentials(null)
+          .withAppType("Test")
+          .withWaitForAppAcceptedState(false)
+          .withKeepContainers(true)
+          .build();
       RMApp app1 =
-          rm1.submitApp(200, "name", "user",
-              new HashMap<ApplicationAccessType, String>(), false, "default",
-              -1, null, "Test", false, true);
+          MockRMAppSubmitter.submit(rm1, data);
       MockNM nm1 =
           new MockNM("127.0.0.1:1234", 10240, rm1.getResourceTrackerService());
       nm1.registerNode();
@@ -542,10 +755,21 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
     MockRM rm1 = new MockRM(conf);
     try {
       rm1.start();
+      MockRMAppSubmissionData data =
+          MockRMAppSubmissionData.Builder.createWithMemory(200, rm1)
+          .withAppName("name")
+          .withUser("user")
+          .withAcls(new HashMap<ApplicationAccessType, String>())
+          .withUnmanagedAM(false)
+          .withQueue("default")
+          .withMaxAppAttempts(-1)
+          .withCredentials(null)
+          .withAppType("Test")
+          .withWaitForAppAcceptedState(false)
+          .withKeepContainers(true)
+          .build();
       RMApp app1 =
-          rm1.submitApp(200, "name", "user",
-              new HashMap<ApplicationAccessType, String>(), false, "default",
-              -1, null, "Test", false, true);
+          MockRMAppSubmitter.submit(rm1, data);
       MockNM nm1 =
           new MockNM("127.0.0.1:1234", 10240, rm1.getResourceTrackerService());
       nm1.registerNode();
@@ -630,10 +854,21 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
     MockRM rm = new MockRM(conf);
     try {
       rm.start();
+      MockRMAppSubmissionData data =
+          MockRMAppSubmissionData.Builder.createWithMemory(200, rm)
+          .withAppName("name")
+          .withUser("user")
+          .withAcls(new HashMap<ApplicationAccessType, String>())
+          .withUnmanagedAM(false)
+          .withQueue("default")
+          .withMaxAppAttempts(-1)
+          .withCredentials(null)
+          .withAppType("Test")
+          .withWaitForAppAcceptedState(false)
+          .withKeepContainers(true)
+          .build();
       RMApp rmApp =
-          rm.submitApp(200, "name", "user",
-            new HashMap<ApplicationAccessType, String>(), false, "default", -1,
-            null, "Test", false, true);
+          MockRMAppSubmitter.submit(rm, data);
       MockNM node =
           new MockNM("127.0.0.1:1234", 10240, rm.getResourceTrackerService());
       node.registerNode();
@@ -873,5 +1108,159 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
     } finally {
       rm.stop();
     }
+  }
+
+  @Test(timeout=60000)
+  public void testContainerRecoveredByNode() throws Exception {
+    System.out.println("Starting testContainerRecoveredByNode");
+    final int maxMemory = 10 * 1024;
+    YarnConfiguration conf = getConf();
+    conf.setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
+    conf.setBoolean(
+        YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_ENABLED, true);
+    conf.set(
+        YarnConfiguration.RM_STORE, MemoryRMStateStore.class.getName());
+    MockRM rm1 = new MockRM(conf);
+    try {
+      rm1.start();
+      MockRMAppSubmissionData data =
+          MockRMAppSubmissionData.Builder.createWithMemory(200, rm1)
+          .withAppName("name")
+          .withUser("user")
+          .withAcls(new HashMap<ApplicationAccessType, String>())
+          .withUnmanagedAM(false)
+          .withQueue("default")
+          .withMaxAppAttempts(-1)
+          .withCredentials(null)
+          .withAppType("Test")
+          .withWaitForAppAcceptedState(false)
+          .withKeepContainers(true)
+          .build();
+      RMApp app1 =
+          MockRMAppSubmitter.submit(rm1, data);
+      MockNM nm1 =
+          new MockNM("127.0.0.1:1234", 10240, rm1.getResourceTrackerService());
+      nm1.registerNode();
+      MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+      am1.allocate("127.0.0.1", 8192, 1, new ArrayList<ContainerId>());
+
+      YarnScheduler scheduler = rm1.getResourceScheduler();
+
+      RMNode node1 = MockNodes.newNodeInfo(
+          0, Resources.createResource(maxMemory), 1, "127.0.0.2");
+      ContainerId containerId = ContainerId.newContainerId(
+          app1.getCurrentAppAttempt().getAppAttemptId(), 2);
+      NMContainerStatus containerReport =
+          NMContainerStatus.newInstance(containerId, 0, ContainerState.RUNNING,
+              Resource.newInstance(1024, 1), "recover container", 0,
+              Priority.newInstance(0), 0);
+      List<NMContainerStatus> containerReports = new ArrayList<>();
+      containerReports.add(containerReport);
+      scheduler.handle(new NodeAddedSchedulerEvent(node1, containerReports));
+      RMContainer rmContainer = scheduler.getRMContainer(containerId);
+
+      //verify queue name when rmContainer is recovered
+      if (scheduler instanceof CapacityScheduler) {
+        Assert.assertEquals(
+            CapacitySchedulerConfiguration.ROOT + "." + app1.getQueue(),
+            rmContainer.getQueueName());
+      } else {
+        Assert.assertEquals(app1.getQueue(), rmContainer.getQueueName());
+      }
+
+    } finally {
+      rm1.stop();
+      System.out.println("Stopping testContainerRecoveredByNode");
+    }
+  }
+
+  /**
+   * Test the order we get the containers to kill. It should respect the order
+   * described in {@link SchedulerNode#getContainersToKill()}.
+   */
+  @Test
+  public void testGetRunningContainersToKill() {
+    final SchedulerNode node = new MockSchedulerNode();
+    assertEquals(Collections.emptyList(), node.getContainersToKill());
+
+    // AM0
+    RMContainer am0 = newMockRMContainer(
+        true, ExecutionType.GUARANTEED, "AM0");
+    node.allocateContainer(am0);
+    assertEquals(Arrays.asList(am0), node.getContainersToKill());
+
+    // OPPORTUNISTIC0, AM0
+    RMContainer opp0 = newMockRMContainer(
+        false, ExecutionType.OPPORTUNISTIC, "OPPORTUNISTIC0");
+    node.allocateContainer(opp0);
+    assertEquals(Arrays.asList(opp0, am0), node.getContainersToKill());
+
+    // OPPORTUNISTIC0, GUARANTEED0, AM0
+    RMContainer regular0 = newMockRMContainer(
+        false, ExecutionType.GUARANTEED, "GUARANTEED0");
+    node.allocateContainer(regular0);
+    assertEquals(Arrays.asList(opp0, regular0, am0),
+        node.getContainersToKill());
+
+    // OPPORTUNISTIC1, OPPORTUNISTIC0, GUARANTEED0, AM0
+    RMContainer opp1 = newMockRMContainer(
+        false, ExecutionType.OPPORTUNISTIC, "OPPORTUNISTIC1");
+    node.allocateContainer(opp1);
+    assertEquals(Arrays.asList(opp1, opp0, regular0, am0),
+        node.getContainersToKill());
+
+    // OPPORTUNISTIC1, OPPORTUNISTIC0, GUARANTEED0, AM1, AM0
+    RMContainer am1 = newMockRMContainer(
+        true, ExecutionType.GUARANTEED, "AM1");
+    node.allocateContainer(am1);
+    assertEquals(Arrays.asList(opp1, opp0, regular0, am1, am0),
+        node.getContainersToKill());
+
+    // OPPORTUNISTIC1, OPPORTUNISTIC0, GUARANTEED1, GUARANTEED0, AM1, AM0
+    RMContainer regular1 = newMockRMContainer(
+        false, ExecutionType.GUARANTEED, "GUARANTEED1");
+    node.allocateContainer(regular1);
+    assertEquals(Arrays.asList(opp1, opp0, regular1, regular0, am1, am0),
+        node.getContainersToKill());
+  }
+
+  private static RMContainer newMockRMContainer(boolean isAMContainer,
+      ExecutionType executionType, String name) {
+    RMContainer container = mock(RMContainer.class);
+    when(container.isAMContainer()).thenReturn(isAMContainer);
+    when(container.getExecutionType()).thenReturn(executionType);
+    when(container.getCreationTime()).thenReturn(Time.now());
+    when(container.toString()).thenReturn(name);
+    return container;
+  }
+
+  /**
+   * SchedulerNode mock to test launching containers.
+   */
+  class MockSchedulerNode extends SchedulerNode {
+    private final List<RMContainer> containers = new ArrayList<>();
+
+    MockSchedulerNode() {
+      super(MockNodes.newNodeInfo(0, Resource.newInstance(1, 1)), false);
+    }
+
+    @Override
+    protected List<RMContainer> getLaunchedContainers() {
+      return containers;
+    }
+
+    @Override
+    public void allocateContainer(RMContainer rmContainer) {
+      containers.add(rmContainer);
+      // Shuffle for testing
+      Collections.shuffle(containers);
+    }
+
+    @Override
+    public void reserveResource(SchedulerApplicationAttempt attempt,
+        SchedulerRequestKey schedulerKey, RMContainer container) {}
+
+    @Override
+    public void unreserveResource(SchedulerApplicationAttempt attempt) {}
   }
 }

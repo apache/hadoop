@@ -18,28 +18,21 @@
 
 {{breadcrumb-bar breadcrumbs=breadcrumbs}}
 
-<div class="col-md-12 container-fluid">
-  <div class="row">
-
-    <div class="col-md-2 container-fluid">
-      <div class="panel panel-default">
-        <div class="panel-heading">
-          Component
-        </div>
-        <div class="panel-body">
-          <ul class="nav nav-pills nav-stacked collapse in">
-            {{#link-to 'yarn-component-instances.info' tagName="li" class=(if (eq target.currentPath 'yarn-component-instances.info') "active")}}
-              {{#link-to 'yarn-component-instances.info' componentName (query-params service=serviceName appid=appId)}}Information{{/link-to}}
-            {{/link-to}}
-            {{#link-to 'yarn-component-instances.configs' tagName="li" class=(if (eq target.currentPath 'yarn-component-instances.configs') "active")}}
-              {{#link-to 'yarn-component-instances.configs' componentName (query-params service=serviceName appid=appId)}}Configurations{{/link-to}}
-            {{/link-to}}
-          </ul>
-        </div>
+<div class="container-fluid">
+  <div class="panel panel-default">
+    <div class="panel-heading no-border-bottom">
+      <div class="clearfix">
+        <ul class="nav nav-pills collapse in">
+          {{#link-to 'yarn-component-instances.info' tagName="li" class=(if (eq target.currentPath 'yarn-component-instances.info') "active")}}
+            {{#link-to 'yarn-component-instances.info' componentName (query-params service=serviceName appid=appId)}}Information{{/link-to}}
+          {{/link-to}}
+          {{#link-to 'yarn-component-instances.configs' tagName="li" class=(if (eq target.currentPath 'yarn-component-instances.configs') "active")}}
+            {{#link-to 'yarn-component-instances.configs' componentName (query-params service=serviceName appid=appId)}}Configurations{{/link-to}}
+          {{/link-to}}
+        </ul>
       </div>
     </div>
-
-    <div class="col-md-10 container-fluid">
+    <div class="panel-body">
       {{outlet}}
     </div>
   </div>

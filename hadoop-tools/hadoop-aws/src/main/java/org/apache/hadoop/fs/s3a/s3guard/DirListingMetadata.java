@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -34,6 +35,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.Tristate;
 
 /**
@@ -42,7 +44,7 @@ import org.apache.hadoop.fs.s3a.Tristate;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class DirListingMetadata {
+public class DirListingMetadata extends ExpirableMetadata {
 
   /**
    * Convenience parameter for passing into constructor.
@@ -61,15 +63,16 @@ public class DirListingMetadata {
    * Create a directory listing metadata container.
    *
    * @param path Path of the directory. If this path has a host component, then
-   *     all paths added later via {@link #put(FileStatus)} must also have
+   *     all paths added later via {@link #put(PathMetadata)} must also have
    *     the same host.
    * @param listing Entries in the directory.
    * @param isAuthoritative true iff listing is the full contents of the
    *     directory, and the calling client reports that this may be cached as
    *     the full and authoritative listing of all files in the directory.
+   * @param lastUpdated last updated time on which expiration is based.
    */
   public DirListingMetadata(Path path, Collection<PathMetadata> listing,
-      boolean isAuthoritative) {
+      boolean isAuthoritative, long lastUpdated) {
 
     checkPathAbsolute(path);
     this.path = path;
@@ -82,6 +85,12 @@ public class DirListingMetadata {
       }
     }
     this.isAuthoritative  = isAuthoritative;
+    this.setLastUpdated(lastUpdated);
+  }
+
+  public DirListingMetadata(Path path, Collection<PathMetadata> listing,
+      boolean isAuthoritative) {
+    this(path, listing, isAuthoritative, 0);
   }
 
   /**
@@ -91,6 +100,7 @@ public class DirListingMetadata {
   public DirListingMetadata(DirListingMetadata d) {
     path = d.path;
     isAuthoritative = d.isAuthoritative;
+    this.setLastUpdated(d.getLastUpdated());
     listMap = new ConcurrentHashMap<>(d.listMap);
   }
 
@@ -125,7 +135,8 @@ public class DirListingMetadata {
         filteredList.add(meta);
       }
     }
-    return new DirListingMetadata(path, filteredList, isAuthoritative);
+    return new DirListingMetadata(path, filteredList, isAuthoritative,
+        this.getLastUpdated());
   }
 
   /**
@@ -193,9 +204,9 @@ public class DirListingMetadata {
    * Replace an entry with a tombstone.
    * @param childPath path of entry to replace.
    */
-  public void markDeleted(Path childPath) {
+  public void markDeleted(Path childPath, long lastUpdated) {
     checkChildPath(childPath);
-    listMap.put(childPath, PathMetadata.tombstone(childPath));
+    listMap.put(childPath, PathMetadata.tombstone(childPath, lastUpdated));
   }
 
   /**
@@ -212,16 +223,17 @@ public class DirListingMetadata {
    * Add an entry to the directory listing.  If this listing already contains a
    * {@code FileStatus} with the same path, it will be replaced.
    *
-   * @param childFileStatus entry to add to this directory listing.
+   * @param childPathMetadata entry to add to this directory listing.
    * @return true if the status was added or replaced with a new value. False
    * if the same FileStatus value was already present.
    */
-  public boolean put(FileStatus childFileStatus) {
-    Preconditions.checkNotNull(childFileStatus,
-        "childFileStatus must be non-null");
-    Path childPath = childStatusToPathKey(childFileStatus);
-    PathMetadata newValue = new PathMetadata(childFileStatus);
-    PathMetadata oldValue = listMap.put(childPath, newValue);
+  public boolean put(PathMetadata childPathMetadata) {
+    Preconditions.checkNotNull(childPathMetadata,
+        "childPathMetadata must be non-null");
+    final S3AFileStatus fileStatus = childPathMetadata.getFileStatus();
+    Path childPath = childStatusToPathKey(fileStatus);
+    PathMetadata newValue = childPathMetadata;
+    PathMetadata oldValue = listMap.put(childPath, childPathMetadata);
     return oldValue == null || !oldValue.equals(newValue);
   }
 
@@ -231,7 +243,27 @@ public class DirListingMetadata {
         "path=" + path +
         ", listMap=" + listMap +
         ", isAuthoritative=" + isAuthoritative +
+        ", lastUpdated=" + this.getLastUpdated() +
         '}';
+  }
+
+  /**
+   * Remove expired entries from the listing based on TTL.
+   * @param ttl the ttl time
+   * @param now the current time
+   */
+  public synchronized void removeExpiredEntriesFromListing(long ttl,
+      long now) {
+    final Iterator<Map.Entry<Path, PathMetadata>> iterator =
+        listMap.entrySet().iterator();
+    while (iterator.hasNext()) {
+      final Map.Entry<Path, PathMetadata> entry = iterator.next();
+      // we filter iff the lastupdated is not 0 and the entry is expired
+      if (entry.getValue().getLastUpdated() != 0
+          && (entry.getValue().getLastUpdated() + ttl) <= now) {
+        iterator.remove();
+      }
+    }
   }
 
   /**
@@ -264,8 +296,8 @@ public class DirListingMetadata {
 
     // If this dir's path has host (and thus scheme), so must its children
     URI parentUri = path.toUri();
+    URI childUri = childPath.toUri();
     if (parentUri.getHost() != null) {
-      URI childUri = childPath.toUri();
       Preconditions.checkNotNull(childUri.getHost(), "Expected non-null URI " +
           "host: %s", childUri);
       Preconditions.checkArgument(
@@ -277,7 +309,8 @@ public class DirListingMetadata {
     }
     Preconditions.checkArgument(!childPath.isRoot(),
         "childPath cannot be the root path: %s", childPath);
-    Preconditions.checkArgument(childPath.getParent().equals(path),
+    Preconditions.checkArgument(parentUri.getPath().equals(
+        childPath.getParent().toUri().getPath()),
         "childPath %s must be a child of %s", childPath, path);
   }
 

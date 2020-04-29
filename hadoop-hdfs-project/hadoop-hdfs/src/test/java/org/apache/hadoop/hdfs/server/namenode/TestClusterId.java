@@ -35,8 +35,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -54,7 +54,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class TestClusterId {
-  private static final Log LOG = LogFactory.getLog(TestClusterId.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestClusterId.class);
   File hdfsDir;
   Configuration config;
 

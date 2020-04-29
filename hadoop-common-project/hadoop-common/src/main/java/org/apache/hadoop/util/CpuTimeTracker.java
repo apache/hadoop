@@ -106,12 +106,12 @@ public class CpuTimeTracker {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("SampleTime " + this.sampleTime);
-    sb.append(" CummulativeCpuTime " + this.cumulativeCpuTime);
-    sb.append(" LastSampleTime " + this.lastSampleTime);
-    sb.append(" LastCummulativeCpuTime " + this.lastCumulativeCpuTime);
-    sb.append(" CpuUsage " + this.cpuUsage);
-    sb.append(" JiffyLengthMillisec " + this.jiffyLengthInMillis);
+    sb.append("SampleTime " + this.sampleTime)
+        .append(" CummulativeCpuTime " + this.cumulativeCpuTime)
+        .append(" LastSampleTime " + this.lastSampleTime)
+        .append(" LastCummulativeCpuTime " + this.lastCumulativeCpuTime)
+        .append(" CpuUsage " + this.cpuUsage)
+        .append(" JiffyLengthMillisec " + this.jiffyLengthInMillis);
     return sb.toString();
   }
 }

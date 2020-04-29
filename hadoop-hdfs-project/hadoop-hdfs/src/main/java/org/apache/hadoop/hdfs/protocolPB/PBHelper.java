@@ -25,7 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.google.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
@@ -779,6 +779,8 @@ public class PBHelper {
       return HAServiceState.ACTIVE;
     case STANDBY:
       return HAServiceState.STANDBY;
+    case OBSERVER:
+      return HAServiceState.OBSERVER;
     default:
       throw new IllegalArgumentException("Unexpected HAServiceStateProto:"
           + s);
@@ -794,6 +796,8 @@ public class PBHelper {
       return NNHAStatusHeartbeatProto.State.ACTIVE;
     case STANDBY:
       return NNHAStatusHeartbeatProto.State.STANDBY;
+    case OBSERVER:
+      return NNHAStatusHeartbeatProto.State.OBSERVER;
     default:
       throw new IllegalArgumentException("Unexpected HAServiceState:"
           + s);

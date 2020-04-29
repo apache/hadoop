@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.security;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
@@ -33,9 +32,9 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -68,7 +67,7 @@ public class TestLdapGroupsMappingWithOneQuery
   }
 
   @Test
-  public void testGetGroups() throws IOException, NamingException {
+  public void testGetGroups() throws NamingException {
     // given a user whose ldap query returns a user object with three "memberOf"
     // properties, return an array of strings representing its groups.
     String[] testGroups = new String[] {"abc", "xyz", "sss"};
@@ -76,10 +75,9 @@ public class TestLdapGroupsMappingWithOneQuery
   }
 
   private void doTestGetGroups(List<String> expectedGroups)
-      throws IOException, NamingException {
-    Configuration conf = new Configuration();
-    // Set this, so we don't throw an exception
-    conf.set(LdapGroupsMapping.LDAP_URL_KEY, "ldap://test");
+      throws NamingException {
+    String ldapUrl = "ldap://test";
+    Configuration conf = getBaseConf(ldapUrl);
     // enable single-query lookup
     conf.set(LdapGroupsMapping.MEMBEROF_ATTR_KEY, "memberOf");
 
@@ -92,9 +90,7 @@ public class TestLdapGroupsMappingWithOneQuery
     Assert.assertEquals(expectedGroups, groups);
 
     // We should have only made one query because single-query lookup is enabled
-    verify(getContext(), times(1)).search(anyString(),
-        anyString(),
-        any(Object[].class),
-        any(SearchControls.class));
+    verify(getContext(), times(1)).search(anyString(), anyString(),
+        any(Object[].class), any(SearchControls.class));
   }
 }

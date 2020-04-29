@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.fs.permission.FsCreateModes;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
@@ -110,10 +111,7 @@ class FSDirMkdirOp {
    * Create all ancestor directories and return the parent inodes.
    *
    * @param fsd FSDirectory
-   * @param existing The INodesInPath instance containing all the existing
-   *                 ancestral INodes
-   * @param children The relative path from the parent towards children,
-   *                 starting with "/"
+   * @param iip inodes in path to the fs directory
    * @param perm the permission of the directory. Note that all ancestors
    *             created along the path has implicit {@code u+wx} permissions.
    * @param inheritPerms if the ancestor directories should inherit permissions
@@ -190,10 +188,19 @@ class FSDirMkdirOp {
   private static PermissionStatus addImplicitUwx(PermissionStatus parentPerm,
       PermissionStatus perm) {
     FsPermission p = parentPerm.getPermission();
-    FsPermission ancestorPerm = new FsPermission(
-        p.getUserAction().or(FsAction.WRITE_EXECUTE),
-        p.getGroupAction(),
-        p.getOtherAction());
+    FsPermission ancestorPerm;
+    if (p.getUnmasked() == null) {
+      ancestorPerm = new FsPermission(
+          p.getUserAction().or(FsAction.WRITE_EXECUTE),
+          p.getGroupAction(),
+          p.getOtherAction());
+    } else {
+      ancestorPerm = FsCreateModes.create(
+          new FsPermission(
+            p.getUserAction().or(FsAction.WRITE_EXECUTE),
+            p.getGroupAction(),
+            p.getOtherAction()), p.getUnmasked());
+    }
     return new PermissionStatus(perm.getUserName(), perm.getGroupName(),
         ancestorPerm);
   }

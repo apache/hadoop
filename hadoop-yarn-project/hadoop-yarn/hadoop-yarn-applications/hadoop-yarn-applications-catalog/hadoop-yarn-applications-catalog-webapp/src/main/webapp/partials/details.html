@@ -1,0 +1,65 @@
+<!---
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License. See accompanying LICENSE file.
+-->
+<div class="container content">
+  <div class="row">
+    <div class="col-xs-12 col-md-12 col-lg-12">
+      <a ng-click="restartApp(appName)" class="btn btn-secondary"><span class="glyphicon glyphicon-play"></span> Start</a>
+      <a ng-click="stopApp(appName)" class="btn btn-secondary"><span class="glyphicon glyphicon-stop"></span> Stop</a>
+      <a ng-click="upgradeApp(appName)" class="btn btn-secondary"><span class="glyphicon glyphicon-circle-arrow-up"></span> Upgrade</a>
+      <div style="display:inline-block;" ng-repeat="(key, value) in details.yarnfile.quicklinks">
+        <a href="{{value}}" class="btn btn-secondary" ng-hide="checkServiceLink()"><span class="glyphicon glyphicon-new-window"></span> {{key}}</a>
+      </div>
+      {{details.yarnfile.state}}
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-xs-12 col-md-12 col-lg-12" ng-repeat="docker in details.yarnfile.components">
+      <div class="panel">
+        <h3>{{docker.name}}</h3>
+        <p>Artifact: {{docker.artifact.id}}</p>
+        <p>Number of containers: {{docker.number_of_containers}}</p>
+        <p>CPU: {{docker.resource.cpus}}</p>
+        <p>Memory: {{docker.resource.memory}}</p>
+        <p>Environments
+          <table class="table">
+            <tbody class="table-striped">
+              <tr ng-repeat="(key, value) in docker.configuration.env">
+                <td>{{key}}</td><td>{{value}}</td>
+              </tr>
+            </tbody>
+          </table>
+        </p>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Hostname</th>
+              <th>Container ID</th>
+              <th>Launch Time</th>
+              <th>State</th>
+            </tr>
+          </thead>
+          <tbody class="table-striped">
+            <tr ng-repeat="container in docker.containers">
+              <td>{{container.bare_host}}</td>
+              <td><a href="http://{{container.bare_host}}:8042/terminal/terminal.template?container={{container.id}}" target="_blank">{{container.id}}</a></td>
+              <td>{{container.launch_time | date:'yyyy-MM-dd HH:mm:ss Z'}}</td>
+              <td>{{container.state}}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

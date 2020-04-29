@@ -18,12 +18,15 @@
 
 package org.apache.hadoop.fs.contract;
 
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertHasPathCapabilities;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
@@ -133,6 +136,12 @@ public abstract class AbstractContractAppendTest extends AbstractFSContractTestB
     assertPathExists("original file does not exist", target);
     byte[] dataset = dataset(256, 'a', 'z');
     FSDataOutputStream outputStream = getFileSystem().append(target);
+    if (isSupported(CREATE_VISIBILITY_DELAYED)) {
+      // Some filesystems like WebHDFS doesn't assure sequential consistency.
+      // In such a case, delay is needed. Given that we can not check the lease
+      // because here is closed in client side package, simply add a sleep.
+      Thread.sleep(100);
+    }
     outputStream.write(dataset);
     Path renamed = new Path(testPath, "renamed");
     rename(target, renamed);
@@ -149,4 +158,11 @@ public abstract class AbstractContractAppendTest extends AbstractFSContractTestB
                                                  dataset.length);
     ContractTestUtils.compareByteArrays(dataset, bytes, dataset.length);
   }
+
+  @Test
+  public void testFileSystemDeclaresCapability() throws Throwable {
+    assertHasPathCapabilities(getFileSystem(), target,
+        CommonPathCapabilities.FS_APPEND);
+  }
+
 }

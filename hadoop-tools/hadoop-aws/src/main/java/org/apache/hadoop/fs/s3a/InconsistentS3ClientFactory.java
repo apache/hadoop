@@ -21,16 +21,27 @@ package org.apache.hadoop.fs.s3a;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * S3 Client factory used for testing with eventual consistency fault injection.
+ * This client is for testing <i>only</i>; it is in the production
+ * {@code hadoop-aws} module to enable integration tests to use this
+ * just by editing the Hadoop configuration used to bring up the client.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class InconsistentS3ClientFactory extends DefaultS3ClientFactory {
 
+  /**
+   * Create the inconsistent client.
+   * Logs a warning that this is being done.
+   * @param credentials credentials to use
+   * @param awsConf  AWS configuration
+   * @return an inconsistent client.
+   */
   @Override
   protected AmazonS3 newAmazonS3Client(AWSCredentialsProvider credentials,
       ClientConfiguration awsConf) {

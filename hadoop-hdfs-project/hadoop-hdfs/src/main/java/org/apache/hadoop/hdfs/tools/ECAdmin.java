@@ -16,18 +16,23 @@
  */
 package org.apache.hadoop.hdfs.tools;
 
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
+import org.apache.hadoop.hdfs.protocol.NoECPolicySetException;
 import org.apache.hadoop.hdfs.util.ECPolicyLoader;
 import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.tools.TableListing;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
@@ -154,7 +159,7 @@ public class ECAdmin extends Configured implements Tool {
       listing.addRow("<file>",
           "The path of the xml file which defines the EC policies to add");
       return getShortUsage() + "\n" +
-          "Add a list of erasure coding policies.\n" +
+          "Add a list of user defined erasure coding policies.\n" +
           listing.toString();
     }
 
@@ -268,7 +273,7 @@ public class ECAdmin extends Configured implements Tool {
       TableListing listing = AdminHelper.getOptionDescriptionListing();
       listing.addRow("<policy>", "The name of the erasure coding policy");
       return getShortUsage() + "\n" +
-          "Remove an erasure coding policy.\n" +
+          "Remove an user defined erasure coding policy.\n" +
           listing.toString();
     }
 
@@ -323,7 +328,7 @@ public class ECAdmin extends Configured implements Tool {
           "Set the erasure coding policy for a file/directory.\n\n" +
           listing.toString() + "\n" +
           "-replicate and -policy are optional arguments. They cannot been " +
-          "used at the same time";
+          "used at the same time.\n";
     }
 
     @Override
@@ -358,17 +363,15 @@ public class ECAdmin extends Configured implements Tool {
       try {
         dfs.setErasureCodingPolicy(p, ecPolicyName);
         if (ecPolicyName == null){
-          System.out.println("Set default erasure coding policy" +
-              " on " + path);
-        } else {
-          System.out.println("Set erasure coding policy " + ecPolicyName +
-              " on " + path);
+          ecPolicyName = "default";
         }
+        System.out.println("Set " + ecPolicyName + " erasure coding policy on" +
+            " " + path);
         RemoteIterator<FileStatus> dirIt = dfs.listStatusIterator(p);
         if (dirIt.hasNext()) {
           System.out.println("Warning: setting erasure coding policy on a " +
-              "non-empty directory will not automatically convert existing" +
-              " files to " + ecPolicyName);
+              "non-empty directory will not automatically convert existing " +
+              "files to " + ecPolicyName + " erasure coding policy");
         }
       } catch (Exception e) {
         System.err.println(AdminHelper.prettifyException(e));
@@ -426,6 +429,12 @@ public class ECAdmin extends Configured implements Tool {
               "non-empty directory will not automatically convert existing" +
               " files to replicated data.");
         }
+      } catch (NoECPolicySetException e) {
+        System.err.println(AdminHelper.prettifyException(e));
+        System.err.println("Use '-setPolicy -path <PATH> -replicate' to enforce"
+            + " default replication policy irrespective of EC policy"
+            + " defined on parent.");
+        return 2;
       } catch (Exception e) {
         System.err.println(AdminHelper.prettifyException(e));
         return 2;
@@ -525,8 +534,15 @@ public class ECAdmin extends Configured implements Tool {
       final DistributedFileSystem dfs = AdminHelper.getDFS(conf);
       try {
         dfs.enableErasureCodingPolicy(ecPolicyName);
-        System.out.println("Erasure coding policy " + ecPolicyName +
-            " is enabled");
+        System.out
+            .println("Erasure coding policy " + ecPolicyName + " is enabled");
+        ECTopologyVerifierResult result =
+            dfs.getECTopologyResultForPolicies(ecPolicyName);
+        if (!result.isSupported()) {
+          System.err.println(
+              "Warning: The cluster setup does not support " + "EC policy "
+                  + ecPolicyName + ". Reason: " + result.getResultMessage());
+        }
       } catch (IOException e) {
         System.err.println(AdminHelper.prettifyException(e));
         return 2;
@@ -583,6 +599,59 @@ public class ECAdmin extends Configured implements Tool {
     }
   }
 
+  /**
+   * Command to verify the cluster setup can support all enabled EC policies.
+   */
+  private static class VerifyClusterSetupCommand
+      implements AdminHelper.Command {
+    @Override
+    public String getName() {
+      return "-verifyClusterSetup";
+    }
+
+    @Override
+    public String getShortUsage() {
+      return "[" + getName() + " [-policy <policy>...<policy>]]\n";
+    }
+
+    @Override
+    public String getLongUsage() {
+      TableListing listing = AdminHelper.getOptionDescriptionListing();
+      listing.addRow("<policy>", "The name of the erasure coding policy");
+      return getShortUsage() + "\n"
+          + "Verify if the cluster setup can support all enabled erasure " +
+          "coding policies. If optional parameter -policy is specified, " +
+          "verify if the cluster setup can support the given policy.\n";
+    }
+
+    @Override
+    public int run(Configuration conf, List<String> args) throws IOException {
+      boolean isPolicyOption = StringUtils.popOption("-policy", args);
+      final DistributedFileSystem dfs = AdminHelper.getDFS(conf);
+      ECTopologyVerifierResult result = null;
+      if (isPolicyOption) {
+        CommandFormat c = new CommandFormat(1, Integer.MAX_VALUE);
+        c.parse(args);
+        String[] parameters = args.toArray(new String[args.size()]);
+        try {
+          result = dfs.getECTopologyResultForPolicies(parameters);
+        } catch (RemoteException e) {
+          if (e.getClassName().contains("HadoopIllegalArgumentException")) {
+            throw new HadoopIllegalArgumentException(e.getMessage());
+          }
+          throw e;
+        }
+      } else {
+        result = dfs.getECTopologyResultForPolicies();
+      }
+      System.out.println(result.getResultMessage());
+      if (result.isSupported()) {
+        return 0;
+      }
+      return 2;
+    }
+  }
+
   private static final AdminHelper.Command[] COMMANDS = {
       new ListECPoliciesCommand(),
       new AddECPoliciesCommand(),
@@ -592,6 +661,7 @@ public class ECAdmin extends Configured implements Tool {
       new UnsetECPolicyCommand(),
       new ListECCodecsCommand(),
       new EnableECPolicyCommand(),
-      new DisableECPolicyCommand()
+      new DisableECPolicyCommand(),
+      new VerifyClusterSetupCommand()
   };
 }

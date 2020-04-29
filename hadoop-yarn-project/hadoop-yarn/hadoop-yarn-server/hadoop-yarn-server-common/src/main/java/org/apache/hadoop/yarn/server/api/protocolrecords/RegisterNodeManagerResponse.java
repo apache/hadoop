@@ -58,4 +58,9 @@ public abstract class RegisterNodeManagerResponse {
 
   public abstract void setAreNodeLabelsAcceptedByRM(
       boolean areNodeLabelsAcceptedByRM);
+
+  public abstract boolean getAreNodeAttributesAcceptedByRM();
+
+  public abstract void setAreNodeAttributesAcceptedByRM(
+      boolean areNodeAttributesAcceptedByRM);
 }

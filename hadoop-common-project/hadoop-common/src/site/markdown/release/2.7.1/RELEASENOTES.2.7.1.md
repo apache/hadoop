@@ -45,11 +45,4 @@ Public service notice:
 Proxy level retries will not be done on AlreadyBeingCreatedExeption for create() op.
 
 
----
-
-* [YARN-6959](https://issues.apache.org/jira/browse/YARN-6959) | *Major* | **RM may allocate wrong AM Container for new attempt**
-
-ResourceManager will now record ResourceRequests from different attempts into different objects.
-
-
 

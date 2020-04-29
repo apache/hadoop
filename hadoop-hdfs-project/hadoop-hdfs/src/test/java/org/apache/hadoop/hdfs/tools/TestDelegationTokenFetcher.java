@@ -22,7 +22,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -67,7 +68,7 @@ public class TestDelegationTokenFetcher {
   @Test(expected = IOException.class)
   public void testTokenFetchFail() throws Exception {
     WebHdfsFileSystem fs = mock(WebHdfsFileSystem.class);
-    doThrow(new IOException()).when(fs).getDelegationToken(anyString());
+    doThrow(new IOException()).when(fs).getDelegationToken(any());
     Path p = new Path(f.getRoot().getAbsolutePath(), tokenFile);
     DelegationTokenFetcher.saveDelegationToken(conf, fs, null, p);
   }
@@ -83,7 +84,7 @@ public class TestDelegationTokenFetcher {
 
     WebHdfsFileSystem fs = mock(WebHdfsFileSystem.class);
 
-    doReturn(testToken).when(fs).getDelegationToken(anyString());
+    doReturn(testToken).when(fs).getDelegationToken(any());
     Path p = new Path(f.getRoot().getAbsolutePath(), tokenFile);
     DelegationTokenFetcher.saveDelegationToken(conf, fs, null, p);
 

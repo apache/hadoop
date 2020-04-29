@@ -19,7 +19,7 @@
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 import org.apache.hadoop.yarn.api.records.ContainerRetryContext;
 import org.apache.hadoop.yarn.api.records.ContainerRetryPolicy;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerRetryPolicyProto;
@@ -163,6 +163,21 @@ public class ContainerRetryContextPBImpl extends ContainerRetryContext {
   public void setRetryInterval(int retryInterval) {
     maybeInitBuilder();
     builder.setRetryInterval(retryInterval);
+  }
+
+  @Override
+  public long getFailuresValidityInterval() {
+    ContainerRetryContextProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasFailuresValidityInterval()) {
+      return -1;
+    }
+    return p.getFailuresValidityInterval();
+  }
+
+  @Override
+  public void setFailuresValidityInterval(long failuresValidityInterval) {
+    maybeInitBuilder();
+    builder.setFailuresValidityInterval(failuresValidityInterval);
   }
 
   private ContainerRetryPolicyProto convertToProtoFormat(

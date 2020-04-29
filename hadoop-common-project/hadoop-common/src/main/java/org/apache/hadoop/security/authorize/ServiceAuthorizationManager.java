@@ -97,21 +97,23 @@ public class ServiceAuthorizationManager {
       throw new AuthorizationException("Protocol " + protocol + 
                                        " is not known.");
     }
-    
-    // get client principal key to verify (if available)
-    KerberosInfo krbInfo = SecurityUtil.getKerberosInfo(protocol, conf);
-    String clientPrincipal = null; 
-    if (krbInfo != null) {
-      String clientKey = krbInfo.clientPrincipal();
-      if (clientKey != null && !clientKey.isEmpty()) {
-        try {
-          clientPrincipal = SecurityUtil.getServerPrincipal(
-              conf.get(clientKey), addr);
-        } catch (IOException e) {
-          throw (AuthorizationException) new AuthorizationException(
-              "Can't figure out Kerberos principal name for connection from "
-                  + addr + " for user=" + user + " protocol=" + protocol)
-              .initCause(e);
+
+    String clientPrincipal = null;
+    if (UserGroupInformation.isSecurityEnabled()) {
+      // get client principal key to verify (if available)
+      KerberosInfo krbInfo = SecurityUtil.getKerberosInfo(protocol, conf);
+      if (krbInfo != null) {
+        String clientKey = krbInfo.clientPrincipal();
+        if (clientKey != null && !clientKey.isEmpty()) {
+          try {
+            clientPrincipal = SecurityUtil.getServerPrincipal(
+                conf.get(clientKey), addr);
+          } catch (IOException e) {
+            throw (AuthorizationException) new AuthorizationException(
+                "Can't figure out Kerberos principal name for connection from "
+                + addr + " for user=" + user + " protocol=" + protocol)
+                .initCause(e);
+          }
         }
       }
     }

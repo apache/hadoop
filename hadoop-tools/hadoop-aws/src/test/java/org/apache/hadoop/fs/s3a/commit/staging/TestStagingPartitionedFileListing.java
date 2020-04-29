@@ -51,13 +51,13 @@ public class TestStagingPartitionedFileListing
 
   @Override
   PartitionedStagingCommitter newJobCommitter() throws IOException {
-    return new PartitionedStagingCommitter(OUTPUT_PATH,
+    return new PartitionedStagingCommitter(outputPath,
         createTaskAttemptForJob());
   }
 
   @Override
   PartitionedStagingCommitter newTaskCommitter() throws IOException {
-    return new PartitionedStagingCommitter(OUTPUT_PATH, getTAC());
+    return new PartitionedStagingCommitter(outputPath, getTAC());
   }
 
   private FileSystem attemptFS;

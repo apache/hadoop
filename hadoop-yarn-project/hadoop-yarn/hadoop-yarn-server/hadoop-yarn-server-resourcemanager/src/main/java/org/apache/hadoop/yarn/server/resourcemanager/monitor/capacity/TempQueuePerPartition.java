@@ -98,7 +98,7 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
     }
 
     this.normalizedGuarantee = new double[ResourceUtils
-        .getNumberOfKnownResourceTypes()];
+        .getNumberOfCountableResourceTypes()];
     this.children = new ArrayList<>();
     this.apps = new ArrayList<>();
     this.untouchableExtra = Resource.newInstance(0, 0);
@@ -138,7 +138,8 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
   // This function "accepts" all the resources it can (pending) and return
   // the unused ones
   Resource offer(Resource avail, ResourceCalculator rc,
-      Resource clusterResource, boolean considersReservedResource) {
+      Resource clusterResource, boolean considersReservedResource,
+      boolean allowQueueBalanceAfterAllSafisfied) {
     Resource absMaxCapIdealAssignedDelta = Resources.componentwiseMax(
         Resources.subtract(getMax(), idealAssigned),
         Resource.newInstance(0, 0));
@@ -151,7 +152,7 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
     //               # This is for leaf queue only.
     //               max(guaranteed, used) - assigned}
     // remain = avail - accepted
-    Resource accepted = Resources.min(rc, clusterResource,
+    Resource accepted = Resources.componentwiseMin(
         absMaxCapIdealAssignedDelta,
         Resources.min(rc, clusterResource, avail, Resources
             /*
@@ -179,12 +180,21 @@ public class TempQueuePerPartition extends AbstractPreemptionEntity {
     // leaf queues. Such under-utilized leaf queue could preemption resources
     // from over-utilized leaf queue located at other hierarchies.
 
-    accepted = filterByMaxDeductAssigned(rc, clusterResource, accepted);
+    // Allow queues can continue grow and balance even if all queues are satisfied.
+    if (!allowQueueBalanceAfterAllSafisfied) {
+      accepted = filterByMaxDeductAssigned(rc, clusterResource, accepted);
+    }
 
     // accepted so far contains the "quota acceptable" amount, we now filter by
     // locality acceptable
 
     accepted = acceptedByLocality(rc, accepted);
+
+    // accept should never be < 0
+    accepted = Resources.componentwiseMax(accepted, Resources.none());
+
+    // or more than offered
+    accepted = Resources.componentwiseMin(accepted, avail);
 
     Resource remain = Resources.subtract(avail, accepted);
     Resources.addTo(idealAssigned, accepted);

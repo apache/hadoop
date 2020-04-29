@@ -79,13 +79,7 @@ public class AppToFlowTableRW extends BaseTableRW<AppToFlowTable> {
     mappCF.setBloomFilterType(BloomType.ROWCOL);
     appToFlowTableDescp.addFamily(mappCF);
 
-    appToFlowTableDescp
-        .setRegionSplitPolicyClassName(
-            "org.apache.hadoop.hbase.regionserver.KeyPrefixRegionSplitPolicy");
-    appToFlowTableDescp.setValue("KeyPrefixRegionSplitPolicy.prefix_length",
-        TimelineHBaseSchemaConstants.USERNAME_SPLIT_KEY_PREFIX_LENGTH);
-    admin.createTable(appToFlowTableDescp,
-        TimelineHBaseSchemaConstants.getUsernameSplits());
+    admin.createTable(appToFlowTableDescp);
     LOG.info("Status of table creation for " + table.getNameAsString() + "="
         + admin.tableExists(table));
   }

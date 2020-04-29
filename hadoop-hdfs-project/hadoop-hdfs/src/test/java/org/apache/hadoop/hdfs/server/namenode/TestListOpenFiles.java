@@ -31,8 +31,8 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -66,7 +66,8 @@ public class TestListOpenFiles {
   private static MiniDFSCluster cluster = null;
   private static DistributedFileSystem fs = null;
   private static NamenodeProtocols nnRpc = null;
-  private static final Log LOG = LogFactory.getLog(TestListOpenFiles.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestListOpenFiles.class);
 
   @Before
   public void setUp() throws IOException {
@@ -156,13 +157,22 @@ public class TestListOpenFiles {
         remainingFiles.size() == 0);
   }
 
+  /**
+   * Verify all open files.
+   */
   private void verifyOpenFiles(Map<Path, FSDataOutputStream> openFiles)
       throws IOException {
-    verifyOpenFiles(openFiles, EnumSet.of(OpenFilesType.ALL_OPEN_FILES),
-        OpenFilesIterator.FILTER_PATH_DEFAULT);
+    verifyOpenFiles(openFiles, OpenFilesIterator.FILTER_PATH_DEFAULT);
+  }
+
+  /**
+   * Verify open files with specified filter path.
+   */
+  private void verifyOpenFiles(Map<Path, FSDataOutputStream> openFiles,
+      String path) throws IOException {
+    verifyOpenFiles(openFiles, EnumSet.of(OpenFilesType.ALL_OPEN_FILES), path);
     verifyOpenFiles(new HashMap<>(),
-        EnumSet.of(OpenFilesType.BLOCKING_DECOMMISSION),
-        OpenFilesIterator.FILTER_PATH_DEFAULT);
+        EnumSet.of(OpenFilesType.BLOCKING_DECOMMISSION), path);
   }
 
   private Set<Path> createFiles(FileSystem fileSystem, String fileNamePrefix,
@@ -252,6 +262,37 @@ public class TestListOpenFiles {
       if (haCluster != null) {
         haCluster.shutdown();
       }
+    }
+  }
+
+  @Test(timeout = 120000)
+  public void testListOpenFilesWithFilterPath() throws IOException {
+    HashMap<Path, FSDataOutputStream> openFiles = new HashMap<>();
+    createFiles(fs, "closed", 10);
+    verifyOpenFiles(openFiles, OpenFilesIterator.FILTER_PATH_DEFAULT);
+
+    BatchedEntries<OpenFileEntry> openFileEntryBatchedEntries = nnRpc
+        .listOpenFiles(0, EnumSet.of(OpenFilesType.ALL_OPEN_FILES),
+            OpenFilesIterator.FILTER_PATH_DEFAULT);
+    assertTrue("Open files list should be empty!",
+        openFileEntryBatchedEntries.size() == 0);
+    BatchedEntries<OpenFileEntry> openFilesBlockingDecomEntries = nnRpc
+        .listOpenFiles(0, EnumSet.of(OpenFilesType.BLOCKING_DECOMMISSION),
+            OpenFilesIterator.FILTER_PATH_DEFAULT);
+    assertTrue("Open files list blocking decommission should be empty!",
+        openFilesBlockingDecomEntries.size() == 0);
+
+    openFiles.putAll(
+        DFSTestUtil.createOpenFiles(fs, new Path("/base"), "open-1", 1));
+    Map<Path, FSDataOutputStream> baseOpen =
+        DFSTestUtil.createOpenFiles(fs, new Path("/base-open"), "open-1", 1);
+    verifyOpenFiles(openFiles, "/base");
+    verifyOpenFiles(openFiles, "/base/");
+
+    openFiles.putAll(baseOpen);
+    while (openFiles.size() > 0) {
+      DFSTestUtil.closeOpenFiles(openFiles, 1);
+      verifyOpenFiles(openFiles, OpenFilesIterator.FILTER_PATH_DEFAULT);
     }
   }
 }

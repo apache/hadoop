@@ -29,8 +29,8 @@ import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -66,7 +66,7 @@ import com.google.common.collect.Lists;
  * Tests to verify safe mode correctness.
  */
 public class TestSafeMode {
-  public static final Log LOG = LogFactory.getLog(TestSafeMode.class);
+  public static final Logger LOG = LoggerFactory.getLogger(TestSafeMode.class);
   private static final Path TEST_PATH = new Path("/test");
   private static final int BLOCK_SIZE = 1024;
   private static final String NEWLINE = System.getProperty("line.separator");
@@ -201,11 +201,11 @@ public class TestSafeMode {
     final NameNode nn = cluster.getNameNode();
     
     String status = nn.getNamesystem().getSafemode();
-    assertEquals("Safe mode is ON. The reported blocks 0 needs additional " +
-        "14 blocks to reach the threshold 0.9990 of total blocks 15." + NEWLINE +
-        "The number of live datanodes 0 has reached the minimum number 0. " +
-        "Safe mode will be turned off automatically once the thresholds " +
-        "have been reached.", status);
+    assertEquals("Safe mode is ON. The reported blocks 0 needs additional "
+        + "14 blocks to reach the threshold 0.9990 of total blocks 15."
+        + NEWLINE + "The minimum number of live datanodes is not required. "
+        + "Safe mode will be turned off automatically once the thresholds have "
+        + "been reached.", status);
     assertFalse("Mis-replicated block queues should not be initialized " +
         "until threshold is crossed",
         NameNodeAdapter.safeModeInitializedReplQueues(nn));

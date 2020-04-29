@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.timelineservice.ApplicationEntity;
+import org.apache.hadoop.yarn.api.records.timelineservice.SubApplicationEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
@@ -195,7 +196,7 @@ public class TestHBaseTimelineStorageEntities {
     m1.setValues(metricValues);
     metrics.add(m1);
     entity.addMetrics(metrics);
-    te.addEntity(entity);
+    te.addEntity(new SubApplicationEntity(entity));
 
     HBaseTimelineWriterImpl hbi = null;
     try {
@@ -1878,7 +1879,9 @@ public class TestHBaseTimelineStorageEntities {
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    util.shutdownMiniCluster();
+    if (util != null) {
+      util.shutdownMiniCluster();
+    }
   }
 
   private boolean verifyRowKeyForSubApplication(byte[] rowKey, String suAppUser,

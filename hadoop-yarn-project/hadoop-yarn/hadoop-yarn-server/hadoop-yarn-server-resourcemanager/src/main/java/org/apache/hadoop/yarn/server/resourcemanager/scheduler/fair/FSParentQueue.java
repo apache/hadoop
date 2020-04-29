@@ -20,15 +20,15 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
+import java.util.TreeSet;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -44,7 +44,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicat
 @Private
 @Unstable
 public class FSParentQueue extends FSQueue {
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       FSParentQueue.class.getName());
 
   private final List<FSQueue> childQueues = new ArrayList<>();
@@ -59,7 +59,20 @@ public class FSParentQueue extends FSQueue {
       FSParentQueue parent) {
     super(name, scheduler, parent);
   }
-  
+
+  @Override
+  public Resource getMaximumContainerAllocation() {
+    if (getName().equals("root")) {
+      return maxContainerAllocation;
+    }
+    if (maxContainerAllocation.equals(Resources.unbounded())
+        && getParent() != null) {
+      return getParent().getMaximumContainerAllocation();
+    } else {
+      return maxContainerAllocation;
+    }
+  }
+
   void addChildQueue(FSQueue child) {
     writeLock.lock();
     try {
@@ -182,28 +195,30 @@ public class FSParentQueue extends FSQueue {
 
     // If this queue is over its limit, reject
     if (!assignContainerPreCheck(node)) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Assign container precheck for queue " + getName() +
+            " on node " + node.getNodeName() + " failed");
+      }
       return assigned;
     }
 
-    // Hold the write lock when sorting childQueues
-    writeLock.lock();
-    try {
-      Collections.sort(childQueues, policy.getComparator());
-    } finally {
-      writeLock.unlock();
-    }
-
-    /*
-     * We are releasing the lock between the sort and iteration of the
-     * "sorted" list. There could be changes to the list here:
-     * 1. Add a child queue to the end of the list, this doesn't affect
-     * container assignment.
-     * 2. Remove a child queue, this is probably good to take care of so we
-     * don't assign to a queue that is going to be removed shortly.
-     */
+    // Sort the queues while holding a read lock on this parent only.
+    // The individual entries are not locked and can change which means that
+    // the collection of childQueues can not be sorted by calling Sort().
+    // Locking each childqueue to prevent changes would have a large
+    // performance impact.
+    // We do not have to handle the queue removal case as a queue must be
+    // empty before removal. Assigning an application to a queue and removal of
+    // that queue both need the scheduler lock.
+    TreeSet<FSQueue> sortedChildQueues = new TreeSet<>(policy.getComparator());
     readLock.lock();
     try {
-      for (FSQueue child : childQueues) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Node " + node.getNodeName() + " offered to parent queue: " +
+            getName() + " visiting " + childQueues.size() + " children");
+      }
+      sortedChildQueues.addAll(childQueues);
+      for (FSQueue child : sortedChildQueues) {
         assigned = child.assignContainer(node);
         if (!Resources.equals(assigned, Resources.none())) {
           break;
@@ -251,6 +266,21 @@ public class FSParentQueue extends FSQueue {
     } finally {
       readLock.unlock();
     }
+  }
+
+  @Override
+  public boolean isEmpty() {
+    readLock.lock();
+    try {
+      for (FSQueue queue: childQueues) {
+        if (!queue.isEmpty()) {
+          return false;
+        }
+      }
+    } finally {
+      readLock.unlock();
+    }
+    return true;
   }
 
   @Override

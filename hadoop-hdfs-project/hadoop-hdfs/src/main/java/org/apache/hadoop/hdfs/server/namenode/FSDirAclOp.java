@@ -53,6 +53,8 @@ class FSDirAclOp {
           existingAcl, aclSpec);
       AclStorage.updateINodeAcl(inode, newAcl, snapshotId);
       fsd.getEditLog().logSetAcl(src, newAcl);
+    } catch (AclException e){
+      throw new AclException(e.getMessage() + " Path: " + src, e);
     } finally {
       fsd.writeUnlock();
     }
@@ -77,6 +79,8 @@ class FSDirAclOp {
         existingAcl, aclSpec);
       AclStorage.updateINodeAcl(inode, newAcl, snapshotId);
       fsd.getEditLog().logSetAcl(src, newAcl);
+    } catch (AclException e){
+      throw new AclException(e.getMessage() + " Path: " + src, e);
     } finally {
       fsd.writeUnlock();
     }
@@ -100,6 +104,8 @@ class FSDirAclOp {
         existingAcl);
       AclStorage.updateINodeAcl(inode, newAcl, snapshotId);
       fsd.getEditLog().logSetAcl(src, newAcl);
+    } catch (AclException e){
+      throw new AclException(e.getMessage() + " Path: " + src, e);
     } finally {
       fsd.writeUnlock();
     }
@@ -117,6 +123,8 @@ class FSDirAclOp {
       src = iip.getPath();
       fsd.checkOwner(pc, iip);
       unprotectedRemoveAcl(fsd, iip);
+    } catch (AclException e){
+      throw new AclException(e.getMessage() + " Path: " + src, e);
     } finally {
       fsd.writeUnlock();
     }
@@ -136,6 +144,8 @@ class FSDirAclOp {
       fsd.checkOwner(pc, iip);
       List<AclEntry> newAcl = unprotectedSetAcl(fsd, iip, aclSpec, false);
       fsd.getEditLog().logSetAcl(iip.getPath(), newAcl);
+    } catch (AclException e){
+      throw new AclException(e.getMessage() + " Path: " + src, e);
     } finally {
       fsd.writeUnlock();
     }
@@ -153,15 +163,16 @@ class FSDirAclOp {
       if (iip.isDotSnapshotDir() && fsd.getINode4DotSnapshot(iip) != null) {
         return new AclStatus.Builder().owner("").group("").build();
       }
-      INode inode = FSDirectory.resolveLastINode(iip);
-      int snapshotId = iip.getPathSnapshotId();
-      List<AclEntry> acl = AclStorage.readINodeAcl(fsd.getAttributes(iip));
-      FsPermission fsPermission = inode.getFsPermission(snapshotId);
+      INodeAttributes inodeAttrs = fsd.getAttributes(iip);
+      List<AclEntry> acl = AclStorage.readINodeAcl(inodeAttrs);
+      FsPermission fsPermission = inodeAttrs.getFsPermission();
       return new AclStatus.Builder()
-          .owner(inode.getUserName()).group(inode.getGroupName())
+          .owner(inodeAttrs.getUserName()).group(inodeAttrs.getGroupName())
           .stickyBit(fsPermission.getStickyBit())
           .setPermission(fsPermission)
           .addEntries(acl).build();
+    } catch (AclException e){
+      throw new AclException(e.getMessage() + " Path: " + src, e);
     } finally {
       fsd.readUnlock();
     }

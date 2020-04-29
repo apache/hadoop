@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.app.job.impl;
 
-import static org.apache.commons.lang.StringUtils.isEmpty;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -383,6 +383,10 @@ public abstract class TaskAttemptImpl implements
          TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
          TaskAttemptEventType.TA_DIAGNOSTICS_UPDATE,
          DIAGNOSTIC_INFORMATION_UPDATE_TRANSITION)
+     .addTransition(TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
+         TaskAttemptStateInternal.FAILED,
+         TaskAttemptEventType.TA_TOO_MANY_FETCH_FAILURE,
+         new TooManyFetchFailureTransition())
      // ignore-able events
      .addTransition(TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
          TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
@@ -472,12 +476,16 @@ public abstract class TaskAttemptImpl implements
          TaskAttemptStateInternal.COMMIT_PENDING,
          TaskAttemptEventType.TA_COMMIT_PENDING)
 
-     // Transitions from SUCCESS_CONTAINER_CLEANUP state
-     // kill and cleanup the container
-     .addTransition(TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
-         TaskAttemptStateInternal.SUCCEEDED,
-         TaskAttemptEventType.TA_CONTAINER_CLEANED)
-     .addTransition(
+      // Transitions from SUCCESS_CONTAINER_CLEANUP state
+      // kill and cleanup the container
+      .addTransition(TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
+          TaskAttemptStateInternal.SUCCEEDED,
+          TaskAttemptEventType.TA_CONTAINER_CLEANED)
+      .addTransition(TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
+          TaskAttemptStateInternal.FAILED,
+          TaskAttemptEventType.TA_TOO_MANY_FETCH_FAILURE,
+          new TooManyFetchFailureTransition())
+      .addTransition(
           TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
           TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
           TaskAttemptEventType.TA_DIAGNOSTICS_UPDATE,
@@ -954,10 +962,10 @@ public abstract class TaskAttemptImpl implements
         MRApps.crossPlatformifyMREnv(conf, Environment.PWD), conf);
 
     // Add the env variables passed by the admin
-    MRApps.setEnvFromInputString(environment,
-        conf.get(MRJobConfig.MAPRED_ADMIN_USER_ENV,
-            MRJobConfig.DEFAULT_MAPRED_ADMIN_USER_ENV),
-        conf);
+    MRApps.setEnvFromInputProperty(environment,
+        MRJobConfig.MAPRED_ADMIN_USER_ENV,
+        MRJobConfig.DEFAULT_MAPRED_ADMIN_USER_ENV, conf);
+
     return environment;
   }
 
@@ -2156,6 +2164,10 @@ public abstract class TaskAttemptImpl implements
     @SuppressWarnings("unchecked")
     @Override
     public void transition(TaskAttemptImpl taskAttempt, TaskAttemptEvent event) {
+      if (taskAttempt.getInternalState() ==
+          TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER) {
+        sendContainerCleanup(taskAttempt, event);
+      }
       TaskAttemptTooManyFetchFailureEvent fetchFailureEvent =
           (TaskAttemptTooManyFetchFailureEvent) event;
       // too many fetch failure can only happen for map tasks
@@ -2202,6 +2214,14 @@ public abstract class TaskAttemptImpl implements
         // ignore this for reduce tasks
         LOG.info("Ignoring killed event for successful reduce task attempt" +
                   taskAttempt.getID().toString());
+        return TaskAttemptStateInternal.SUCCEEDED;
+      }
+      if (taskAttempt.getID().getTaskId().getTaskType() == TaskType.MAP
+          && taskAttempt.conf.getNumReduceTasks() == 0) {
+        // same reason as above for map only job after map task has succeeded.
+        // ignore this for map only tasks
+        LOG.info("Ignoring killed event for successful map only task attempt" +
+            taskAttempt.getID().toString());
         return TaskAttemptStateInternal.SUCCEEDED;
       }
       if(event instanceof TaskAttemptKillEvent) {
@@ -2252,6 +2272,13 @@ public abstract class TaskAttemptImpl implements
         // result in this transition being exercised.
         // ignore this for reduce tasks
         LOG.info("Ignoring killed event for successful reduce task attempt" +
+            taskAttempt.getID().toString());
+        return TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP;
+      } else if (taskAttempt.getID().getTaskId().getTaskType() == TaskType.MAP
+          && taskAttempt.conf.getNumReduceTasks() == 0) {
+        // same reason as above for map only job after map task has succeeded.
+        // ignore this for map only tasks
+        LOG.info("Ignoring killed event for successful map only task attempt" +
             taskAttempt.getID().toString());
         return TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP;
       } else {

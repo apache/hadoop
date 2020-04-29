@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
+import org.apache.hadoop.hdfs.protocol.BlockType;
+
 /**
  * A utility class that maintains statistics for reading.
  */
@@ -25,6 +27,9 @@ public class ReadStatistics {
   private long totalLocalBytesRead;
   private long totalShortCircuitBytesRead;
   private long totalZeroCopyBytesRead;
+
+  private BlockType blockType = BlockType.CONTIGUOUS;
+  private long totalEcDecodingTimeMillis;
 
   public ReadStatistics() {
     clear();
@@ -75,6 +80,21 @@ public class ReadStatistics {
     return totalBytesRead - totalLocalBytesRead;
   }
 
+  /**
+   * @return block type of the input stream. If block type != CONTIGUOUS,
+   * it is reading erasure coded data.
+   */
+  public synchronized BlockType getBlockType() {
+    return blockType;
+  }
+
+  /**
+   * Return the total time in milliseconds used for erasure coding decoding.
+   */
+  public synchronized long getTotalEcDecodingTimeMillis() {
+    return totalEcDecodingTimeMillis;
+  }
+
   public synchronized void addRemoteBytes(long amt) {
     this.totalBytesRead += amt;
   }
@@ -97,10 +117,19 @@ public class ReadStatistics {
     this.totalZeroCopyBytesRead += amt;
   }
 
+  public synchronized void addErasureCodingDecodingTime(long millis) {
+    this.totalEcDecodingTimeMillis += millis;
+  }
+
+  synchronized void setBlockType(BlockType blockType) {
+    this.blockType = blockType;
+  }
+
   public synchronized void clear() {
     this.totalBytesRead = 0;
     this.totalLocalBytesRead = 0;
     this.totalShortCircuitBytesRead = 0;
     this.totalZeroCopyBytesRead = 0;
+    this.totalEcDecodingTimeMillis = 0;
   }
 }

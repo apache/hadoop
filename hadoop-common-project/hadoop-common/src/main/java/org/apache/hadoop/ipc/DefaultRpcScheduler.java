@@ -35,8 +35,8 @@ public class DefaultRpcScheduler implements RpcScheduler {
   }
 
   @Override
-  public void addResponseTime(String name, int priorityLevel, int queueTime,
-      int processingTime) {
+  public void addResponseTime(String callName, Schedulable schedulable,
+      ProcessingDetails details) {
   }
 
   public DefaultRpcScheduler(int priorityLevels, String namespace,

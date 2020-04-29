@@ -18,18 +18,23 @@
 
 package org.apache.hadoop.tools.util;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.tools.ECAdmin;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.tools.CopyListingFileStatus;
+import org.apache.hadoop.tools.DistCpConstants;
 import org.apache.hadoop.tools.DistCpOptionSwitch;
 import org.apache.hadoop.tools.DistCpOptions.FileAttribute;
 import org.apache.hadoop.util.ToolRunner;
@@ -38,18 +43,36 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.google.common.collect.Lists;
+
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Random;
 import java.util.Stack;
 
+import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
+import static org.apache.hadoop.fs.permission.AclEntryScope.DEFAULT;
+import static org.apache.hadoop.fs.permission.AclEntryType.GROUP;
+import static org.apache.hadoop.fs.permission.AclEntryType.OTHER;
+import static org.apache.hadoop.fs.permission.AclEntryType.USER;
+import static org.apache.hadoop.fs.permission.FsAction.ALL;
+import static org.apache.hadoop.fs.permission.FsAction.EXECUTE;
+import static org.apache.hadoop.fs.permission.FsAction.READ;
+import static org.apache.hadoop.fs.permission.FsAction.READ_EXECUTE;
+import static org.apache.hadoop.fs.permission.FsAction.READ_WRITE;
+import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.aclEntry;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestDistCpUtils {
-  private static final Log LOG = LogFactory.getLog(TestDistCpUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestDistCpUtils.class);
 
   private static final Configuration config = new Configuration();
   private static MiniDFSCluster cluster;
@@ -59,6 +82,7 @@ public class TestDistCpUtils {
   
   @BeforeClass
   public static void create() throws IOException {
+    config.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
     cluster = new MiniDFSCluster.Builder(config)
         .numDataNodes(2)
         .format(true)
@@ -77,39 +101,39 @@ public class TestDistCpUtils {
   public void testGetRelativePathRoot() {
     Path root = new Path("/");
     Path child = new Path("/a");
-    Assert.assertEquals(DistCpUtils.getRelativePath(root, child), "/a");
+    assertThat(DistCpUtils.getRelativePath(root, child)).isEqualTo("/a");
   }
 
   @Test
   public void testGetRelativePath() {
     Path root = new Path("/tmp/abc");
     Path child = new Path("/tmp/abc/xyz/file");
-    Assert.assertEquals(DistCpUtils.getRelativePath(root, child), "/xyz/file");
+    assertThat(DistCpUtils.getRelativePath(root, child)).isEqualTo("/xyz/file");
   }
 
   @Test
   public void testPackAttributes() {
     EnumSet<FileAttribute> attributes = EnumSet.noneOf(FileAttribute.class);
-    Assert.assertEquals(DistCpUtils.packAttributes(attributes), "");
+    assertThat(DistCpUtils.packAttributes(attributes)).isEqualTo("");
 
     attributes.add(FileAttribute.REPLICATION);
-    Assert.assertEquals(DistCpUtils.packAttributes(attributes), "R");
+    assertThat(DistCpUtils.packAttributes(attributes)).isEqualTo("R");
 
     attributes.add(FileAttribute.BLOCKSIZE);
-    Assert.assertEquals(DistCpUtils.packAttributes(attributes), "RB");
+    assertThat(DistCpUtils.packAttributes(attributes)).isEqualTo("RB");
 
     attributes.add(FileAttribute.USER);
     attributes.add(FileAttribute.CHECKSUMTYPE);
-    Assert.assertEquals(DistCpUtils.packAttributes(attributes), "RBUC");
+    assertThat(DistCpUtils.packAttributes(attributes)).isEqualTo("RBUC");
 
     attributes.add(FileAttribute.GROUP);
-    Assert.assertEquals(DistCpUtils.packAttributes(attributes), "RBUGC");
+    assertThat(DistCpUtils.packAttributes(attributes)).isEqualTo("RBUGC");
 
     attributes.add(FileAttribute.PERMISSION);
-    Assert.assertEquals(DistCpUtils.packAttributes(attributes), "RBUGPC");
+    assertThat(DistCpUtils.packAttributes(attributes)).isEqualTo("RBUGPC");
 
     attributes.add(FileAttribute.TIMES);
-    Assert.assertEquals(DistCpUtils.packAttributes(attributes), "RBUGPCT");
+    assertThat(DistCpUtils.packAttributes(attributes)).isEqualTo("RBUGPCT");
   }
 
   @Test
@@ -169,17 +193,158 @@ public class TestDistCpUtils {
 
     DistCpUtils.preserve(fs, dst, srcStatus, attributes, false);
 
-    CopyListingFileStatus dstStatus = new CopyListingFileStatus(fs.getFileStatus(dst));
+    assertStatusEqual(fs, dst, srcStatus);
+  }
+
+  private void assertStatusEqual(final FileSystem fs,
+      final Path dst,
+      final CopyListingFileStatus srcStatus) throws IOException {
+    FileStatus destStatus = fs.getFileStatus(dst);
+    CopyListingFileStatus dstStatus = new CopyListingFileStatus(
+        destStatus);
+
+    String text = String.format("Source %s; dest %s: wrong ", srcStatus,
+        destStatus);
 
     // FileStatus.equals only compares path field, must explicitly compare all fields
-    Assert.assertTrue(srcStatus.getPermission().equals(dstStatus.getPermission()));
-    Assert.assertTrue(srcStatus.getOwner().equals(dstStatus.getOwner()));
-    Assert.assertTrue(srcStatus.getGroup().equals(dstStatus.getGroup()));
-    Assert.assertTrue(srcStatus.getAccessTime() == dstStatus.getAccessTime());
-    Assert.assertTrue(srcStatus.getModificationTime() == dstStatus.getModificationTime());
-    Assert.assertTrue(srcStatus.getReplication() == dstStatus.getReplication());
+    assertEquals(text + "permission",
+        srcStatus.getPermission(), dstStatus.getPermission());
+    assertEquals(text + "owner",
+        srcStatus.getOwner(), dstStatus.getOwner());
+    assertEquals(text + "group",
+        srcStatus.getGroup(), dstStatus.getGroup());
+    assertEquals(text + "accessTime",
+        srcStatus.getAccessTime(), dstStatus.getAccessTime());
+    assertEquals(text + "modificationTime",
+        srcStatus.getModificationTime(), dstStatus.getModificationTime());
+    assertEquals(text + "replication",
+        srcStatus.getReplication(), dstStatus.getReplication());
   }
-  
+
+  private void assertStatusNotEqual(final FileSystem fs,
+      final Path dst,
+      final CopyListingFileStatus srcStatus) throws IOException {
+    FileStatus destStatus = fs.getFileStatus(dst);
+    CopyListingFileStatus dstStatus = new CopyListingFileStatus(
+        destStatus);
+
+    String text = String.format("Source %s; dest %s: wrong ",
+        srcStatus, destStatus);
+    // FileStatus.equals only compares path field,
+    // must explicitly compare all fields
+    assertNotEquals(text + "permission",
+        srcStatus.getPermission(), dstStatus.getPermission());
+    assertNotEquals(text + "owner",
+        srcStatus.getOwner(), dstStatus.getOwner());
+    assertNotEquals(text + "group",
+        srcStatus.getGroup(), dstStatus.getGroup());
+    assertNotEquals(text + "accessTime",
+        srcStatus.getAccessTime(), dstStatus.getAccessTime());
+    assertNotEquals(text + "modificationTime",
+        srcStatus.getModificationTime(), dstStatus.getModificationTime());
+    assertNotEquals(text + "replication",
+        srcStatus.getReplication(), dstStatus.getReplication());
+  }
+
+
+  @Test
+  public void testSkipsNeedlessAttributes() throws Exception {
+    FileSystem fs = FileSystem.get(config);
+
+    // preserve replication, block size, user, group, permission,
+    // checksum type and timestamps
+
+    Path src = new Path("/tmp/testSkipsNeedlessAttributes/source");
+    Path dst = new Path("/tmp/testSkipsNeedlessAttributes/dest");
+
+    // there is no need to actually create a source file, just a file
+    // status of one
+    CopyListingFileStatus srcStatus = new CopyListingFileStatus(
+        new FileStatus(0, false, 1, 32, 0, src));
+
+    // if an attribute is needed, preserve will fail to find the file
+    EnumSet<FileAttribute> attrs = EnumSet.of(FileAttribute.ACL,
+        FileAttribute.GROUP,
+        FileAttribute.PERMISSION,
+        FileAttribute.TIMES,
+        FileAttribute.XATTR);
+    for (FileAttribute attr : attrs) {
+      intercept(FileNotFoundException.class, () ->
+          DistCpUtils.preserve(fs, dst, srcStatus,
+              EnumSet.of(attr),
+              false));
+    }
+
+    // but with the preservation flags only used
+    // in file creation, this does not happen
+    DistCpUtils.preserve(fs, dst, srcStatus,
+        EnumSet.of(
+            FileAttribute.BLOCKSIZE,
+            FileAttribute.CHECKSUMTYPE),
+        false);
+  }
+
+  @Test
+  public void testPreserveAclsforDefaultACL() throws IOException {
+    FileSystem fs = FileSystem.get(config);
+
+    EnumSet<FileAttribute> attributes = EnumSet.of(FileAttribute.ACL,
+        FileAttribute.PERMISSION, FileAttribute.XATTR, FileAttribute.GROUP,
+        FileAttribute.USER, FileAttribute.REPLICATION, FileAttribute.XATTR,
+        FileAttribute.TIMES);
+
+    Path dest = new Path("/tmpdest");
+    Path src = new Path("/testsrc");
+
+    fs.mkdirs(src);
+    fs.mkdirs(dest);
+
+    List<AclEntry> acls = Lists.newArrayList(
+        aclEntry(DEFAULT, USER, "foo", READ_EXECUTE),
+        aclEntry(ACCESS, USER, READ_WRITE), aclEntry(ACCESS, GROUP, READ),
+        aclEntry(ACCESS, OTHER, READ), aclEntry(ACCESS, USER, "bar", ALL));
+    final List<AclEntry> acls1 = Lists.newArrayList(aclEntry(ACCESS, USER, ALL),
+        aclEntry(ACCESS, USER, "user1", ALL),
+        aclEntry(ACCESS, GROUP, READ_EXECUTE),
+        aclEntry(ACCESS, OTHER, EXECUTE));
+
+    fs.setPermission(src, fullPerm);
+    fs.setOwner(src, "somebody", "somebody-group");
+    fs.setTimes(src, 0, 0);
+    fs.setReplication(src, (short) 1);
+    fs.setAcl(src, acls);
+
+    fs.setPermission(dest, noPerm);
+    fs.setOwner(dest, "nobody", "nobody-group");
+    fs.setTimes(dest, 100, 100);
+    fs.setReplication(dest, (short) 2);
+    fs.setAcl(dest, acls1);
+
+    List<AclEntry> en1 = fs.getAclStatus(src).getEntries();
+    List<AclEntry> dd2 = fs.getAclStatus(dest).getEntries();
+
+    Assert.assertNotEquals(en1, dd2);
+
+    CopyListingFileStatus srcStatus = new CopyListingFileStatus(
+        fs.getFileStatus(src));
+
+    en1 = srcStatus.getAclEntries();
+
+    DistCpUtils.preserve(fs, dest, srcStatus, attributes, false);
+
+    CopyListingFileStatus dstStatus = new CopyListingFileStatus(
+        fs.getFileStatus(dest));
+
+    dd2 = dstStatus.getAclEntries();
+    en1 = srcStatus.getAclEntries();
+
+    // FileStatus.equals only compares path field, must explicitly compare all
+    // fields
+    assertStatusEqual(fs, dest, srcStatus);
+
+    Assert.assertArrayEquals(en1.toArray(), dd2.toArray());
+  }
+
   @Test
   public void testPreserveNothingOnDirectory() throws IOException {
     FileSystem fs = FileSystem.get(config);
@@ -395,12 +560,7 @@ public class TestDistCpUtils {
     CopyListingFileStatus dstStatus = new CopyListingFileStatus(fs.getFileStatus(dst));
 
     // FileStatus.equals only compares path field, must explicitly compare all fields
-    Assert.assertFalse(srcStatus.getPermission().equals(dstStatus.getPermission()));
-    Assert.assertFalse(srcStatus.getOwner().equals(dstStatus.getOwner()));
-    Assert.assertFalse(srcStatus.getGroup().equals(dstStatus.getGroup()));
-    Assert.assertFalse(srcStatus.getAccessTime() == dstStatus.getAccessTime());
-    Assert.assertFalse(srcStatus.getModificationTime() == dstStatus.getModificationTime());
-    Assert.assertFalse(srcStatus.getReplication() == dstStatus.getReplication());
+    assertStatusNotEqual(fs, dst, srcStatus);
   }
 
   @Test
@@ -751,13 +911,7 @@ public class TestDistCpUtils {
 
     // FileStatus.equals only compares path field, must explicitly compare all fields
     // attributes of src -> f2 ? should be yes
-    CopyListingFileStatus f2Status = new CopyListingFileStatus(fs.getFileStatus(f2));
-    Assert.assertTrue(srcStatus.getPermission().equals(f2Status.getPermission()));
-    Assert.assertTrue(srcStatus.getOwner().equals(f2Status.getOwner()));
-    Assert.assertTrue(srcStatus.getGroup().equals(f2Status.getGroup()));
-    Assert.assertTrue(srcStatus.getAccessTime() == f2Status.getAccessTime());
-    Assert.assertTrue(srcStatus.getModificationTime() == f2Status.getModificationTime());
-    Assert.assertTrue(srcStatus.getReplication() == f2Status.getReplication());
+    assertStatusEqual(fs, f2, srcStatus);
 
     // attributes of src -> f1 ? should be no
     CopyListingFileStatus f1Status = new CopyListingFileStatus(fs.getFileStatus(f1));
@@ -956,13 +1110,7 @@ public class TestDistCpUtils {
 
     // FileStatus.equals only compares path field, must explicitly compare all fields
     // attributes of src -> f0 ? should be yes
-    CopyListingFileStatus f0Status = new CopyListingFileStatus(fs.getFileStatus(f0));
-    Assert.assertTrue(srcStatus.getPermission().equals(f0Status.getPermission()));
-    Assert.assertTrue(srcStatus.getOwner().equals(f0Status.getOwner()));
-    Assert.assertTrue(srcStatus.getGroup().equals(f0Status.getGroup()));
-    Assert.assertTrue(srcStatus.getAccessTime() == f0Status.getAccessTime());
-    Assert.assertTrue(srcStatus.getModificationTime() == f0Status.getModificationTime());
-    Assert.assertTrue(srcStatus.getReplication() == f0Status.getReplication());
+    assertStatusEqual(fs, f0, srcStatus);
 
     // attributes of src -> f1 ? should be no
     CopyListingFileStatus f1Status = new CopyListingFileStatus(fs.getFileStatus(f1));
@@ -1118,6 +1266,63 @@ public class TestDistCpUtils {
     Assert.assertFalse(srcStatus.getReplication() == f2Status.getReplication());
   }
 
+  @Test
+  public void testCompareFileLengthsAndChecksums() throws Throwable {
+
+    String base = "/tmp/verify-checksum/";
+    long srcSeed = System.currentTimeMillis();
+    long dstSeed = srcSeed + rand.nextLong();
+    short replFactor = 2;
+
+    FileSystem fs = FileSystem.get(config);
+    Path basePath = new Path(base);
+    fs.mkdirs(basePath);
+
+    // empty lengths comparison
+    Path srcWithLen0 = new Path(base + "srcLen0");
+    Path dstWithLen0 = new Path(base + "dstLen0");
+    fs.create(srcWithLen0).close();
+    fs.create(dstWithLen0).close();
+    DistCpUtils.compareFileLengthsAndChecksums(0, fs, srcWithLen0,
+        null, fs, dstWithLen0, false, 0);
+
+    // different lengths comparison
+    Path srcWithLen1 = new Path(base + "srcLen1");
+    Path dstWithLen2 = new Path(base + "dstLen2");
+    DFSTestUtil.createFile(fs, srcWithLen1, 1, replFactor, srcSeed);
+    DFSTestUtil.createFile(fs, dstWithLen2, 2, replFactor, srcSeed);
+
+    intercept(IOException.class, DistCpConstants.LENGTH_MISMATCH_ERROR_MSG,
+        () -> DistCpUtils.compareFileLengthsAndChecksums(1, fs,
+                srcWithLen1, null, fs, dstWithLen2, false, 2));
+
+    // checksums matched
+    Path srcWithChecksum1 = new Path(base + "srcChecksum1");
+    Path dstWithChecksum1 = new Path(base + "dstChecksum1");
+    DFSTestUtil.createFile(fs, srcWithChecksum1, 1024,
+        replFactor, srcSeed);
+    DFSTestUtil.createFile(fs, dstWithChecksum1, 1024,
+        replFactor, srcSeed);
+    DistCpUtils.compareFileLengthsAndChecksums(1024, fs, srcWithChecksum1,
+        null, fs, dstWithChecksum1, false, 1024);
+    DistCpUtils.compareFileLengthsAndChecksums(1024, fs, srcWithChecksum1,
+        fs.getFileChecksum(srcWithChecksum1), fs, dstWithChecksum1,
+        false, 1024);
+
+    // checksums mismatched
+    Path dstWithChecksum2 = new Path(base + "dstChecksum2");
+    DFSTestUtil.createFile(fs, dstWithChecksum2, 1024,
+        replFactor, dstSeed);
+    intercept(IOException.class, DistCpConstants.CHECKSUM_MISMATCH_ERROR_MSG,
+        () -> DistCpUtils.compareFileLengthsAndChecksums(1024, fs,
+               srcWithChecksum1, null, fs, dstWithChecksum2,
+               false, 1024));
+
+    // checksums mismatched but skipped
+    DistCpUtils.compareFileLengthsAndChecksums(1024, fs, srcWithChecksum1,
+        null, fs, dstWithChecksum2, true, 1024);
+  }
+
   private static Random rand = new Random();
 
   public static String createTestSetup(FileSystem fs) throws IOException {
@@ -1187,26 +1392,33 @@ public class TestDistCpUtils {
     }
   }
 
-  public static boolean checkIfFoldersAreInSync(FileSystem fs, String targetBase, String sourceBase)
-      throws IOException {
+  public static void verifyFoldersAreInSync(FileSystem fs, String targetBase,
+      String sourceBase) throws IOException {
     Path base = new Path(targetBase);
 
-     Stack<Path> stack = new Stack<Path>();
-     stack.push(base);
-     while (!stack.isEmpty()) {
-       Path file = stack.pop();
-       if (!fs.exists(file)) continue;
-       FileStatus[] fStatus = fs.listStatus(file);
-       if (fStatus == null || fStatus.length == 0) continue;
+    Stack<Path> stack = new Stack<>();
+    stack.push(base);
+    while (!stack.isEmpty()) {
+      Path file = stack.pop();
+      if (!fs.exists(file)) {
+        continue;
+      }
+      FileStatus[] fStatus = fs.listStatus(file);
+      if (fStatus == null || fStatus.length == 0) {
+        continue;
+      }
 
-       for (FileStatus status : fStatus) {
-         if (status.isDirectory()) {
-           stack.push(status.getPath());
-         }
-         Assert.assertTrue(fs.exists(new Path(sourceBase + "/" +
-             DistCpUtils.getRelativePath(new Path(targetBase), status.getPath()))));
-       }
-     }
-     return true;
+      for (FileStatus status : fStatus) {
+        if (status.isDirectory()) {
+          stack.push(status.getPath());
+        }
+        Path p = new Path(sourceBase + "/" +
+            DistCpUtils.getRelativePath(new Path(targetBase),
+                status.getPath()));
+        ContractTestUtils.assertPathExists(fs,
+            "path in sync with " + status.getPath(), p);
+      }
+    }
   }
+
 }

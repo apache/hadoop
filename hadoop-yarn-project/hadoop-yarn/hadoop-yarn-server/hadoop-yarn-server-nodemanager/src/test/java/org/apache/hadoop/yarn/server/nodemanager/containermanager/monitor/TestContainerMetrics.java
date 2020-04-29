@@ -63,7 +63,7 @@ public class TestContainerMetrics {
     assertEquals(ERR, 1, collector.getRecords().size());
     collector.clear();
 
-    metrics.finished();
+    metrics.finished(false);
     metrics.getMetrics(collector, true);
     assertEquals(ERR, 1, collector.getRecords().size());
     collector.clear();
@@ -137,8 +137,8 @@ public class TestContainerMetrics {
     ContainerId containerId3 = ContainerId.newContainerId(appAttemptId, 3);
     ContainerMetrics metrics3 = ContainerMetrics.forContainer(system,
         containerId3, 1, 0);
-    metrics1.finished();
-    metrics2.finished();
+    metrics1.finished(false);
+    metrics2.finished(false);
     system.sampleMetrics();
     system.sampleMetrics();
     Thread.sleep(100);
@@ -205,5 +205,22 @@ public class TestContainerMetrics {
       }
     }
     Assert.assertEquals(expectedValues.keySet(), testResults);
+  }
+
+  @Test
+  public void testContainerMetricsUpdateContainerPid() {
+    ContainerId containerId = mock(ContainerId.class);
+    ContainerMetrics metrics = ContainerMetrics.forContainer(containerId,
+        100, 1);
+
+    String origPid = "1234";
+    metrics.recordProcessId(origPid);
+    assertEquals(origPid, metrics.registry.getTag(
+        ContainerMetrics.PROCESSID_INFO.name()).value());
+
+    String newPid = "4321";
+    metrics.recordProcessId(newPid);
+    assertEquals(newPid, metrics.registry.getTag(
+        ContainerMetrics.PROCESSID_INFO.name()).value());
   }
 }

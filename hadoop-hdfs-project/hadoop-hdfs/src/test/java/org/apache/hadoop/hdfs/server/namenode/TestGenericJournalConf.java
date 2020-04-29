@@ -155,7 +155,7 @@ public class TestGenericJournalConf {
     }
     
     @Override
-    public void format(NamespaceInfo nsInfo) throws IOException {
+    public void format(NamespaceInfo nsInfo, boolean force) throws IOException {
       formatCalled = true;
     }
     

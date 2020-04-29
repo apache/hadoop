@@ -31,7 +31,7 @@ import com.google.common.base.Preconditions;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.SECURITY_XATTR_UNREADABLE_BY_SUPERUSER;
 
 /**
- * There are four types of extended attributes <XAttr> defined by the
+ * There are four types of extended attributes &lt;XAttr&gt; defined by the
  * following namespaces:
  * <br>
  * USER - extended user attributes: these can be assigned to files and
@@ -56,7 +56,7 @@ import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.SECURITY_
  *   is called on a file or directory in the /.reserved/raw HDFS directory
  *   hierarchy. These attributes can only be accessed by the user who have
  *   read access.
- * </br>
+ * <br>
  */
 @InterfaceAudience.Private
 public class XAttrPermissionFilter {

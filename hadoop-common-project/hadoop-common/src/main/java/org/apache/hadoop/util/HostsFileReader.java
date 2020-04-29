@@ -20,6 +20,7 @@ package org.apache.hadoop.util;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.Collections;
 import java.util.Set;
 import java.util.HashMap;
@@ -51,6 +52,8 @@ public class HostsFileReader {
       .class);
 
   private final AtomicReference<HostDetails> current;
+  private final AtomicReference<HostDetails> lazyLoaded =
+      new AtomicReference<>();
 
   public HostsFileReader(String inFile,
                          String exFile) throws IOException {
@@ -74,7 +77,7 @@ public class HostsFileReader {
   public static void readFileToSet(String type,
       String filename, Set<String> set) throws IOException {
     File file = new File(filename);
-    FileInputStream fis = new FileInputStream(file);
+    InputStream fis = Files.newInputStream(file.toPath());
     readFileToSetWithFileInputStream(type, filename, fis, set);
   }
 
@@ -120,7 +123,7 @@ public class HostsFileReader {
   public static void readFileToMap(String type,
       String filename, Map<String, Integer> map) throws IOException {
     File file = new File(filename);
-    FileInputStream fis = new FileInputStream(file);
+    InputStream fis = Files.newInputStream(file.toPath());
     readFileToMapWithFileInputStream(type, filename, fis, map);
   }
 
@@ -186,7 +189,18 @@ public class HostsFileReader {
 
   public void refresh(String includesFile, String excludesFile)
       throws IOException {
-    LOG.info("Refreshing hosts (include/exclude) list");
+    refreshInternal(includesFile, excludesFile, false);
+  }
+
+  public void lazyRefresh(String includesFile, String excludesFile)
+      throws IOException {
+    refreshInternal(includesFile, excludesFile, true);
+  }
+
+  private void refreshInternal(String includesFile, String excludesFile,
+      boolean lazy) throws IOException {
+    LOG.info("Refreshing hosts (include/exclude) list (lazy refresh = {})",
+        lazy);
     HostDetails oldDetails = current.get();
     Set<String> newIncludes = oldDetails.includes;
     Map<String, Integer> newExcludes = oldDetails.excludes;
@@ -202,7 +216,21 @@ public class HostsFileReader {
     }
     HostDetails newDetails = new HostDetails(includesFile, newIncludes,
         excludesFile, newExcludes);
-    current.set(newDetails);
+
+    if (lazy) {
+      lazyLoaded.set(newDetails);
+    } else {
+      current.set(newDetails);
+    }
+  }
+
+  public void finishRefresh() {
+    if (lazyLoaded.get() == null) {
+      throw new IllegalStateException(
+          "Cannot finish refresh - call lazyRefresh() first");
+    }
+    current.set(lazyLoaded.get());
+    lazyLoaded.set(null);
   }
 
   @Private
@@ -276,6 +304,10 @@ public class HostsFileReader {
    */
   public HostDetails getHostDetails() {
     return current.get();
+  }
+
+  public HostDetails getLazyLoadedHostDetails() {
+    return lazyLoaded.get();
   }
 
   public void setIncludesFile(String includesFile) {

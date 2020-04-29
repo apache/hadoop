@@ -25,7 +25,7 @@ import java.net.URLDecoder;
 
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
@@ -393,11 +393,10 @@ public class AppController extends Controller implements AMParams {
    */
   boolean checkAccess(Job job) {
     String remoteUser = request().getRemoteUser();
-    if (remoteUser == null) {
-      return false;
+    UserGroupInformation callerUGI = null;
+    if (remoteUser != null) {
+      callerUGI = UserGroupInformation.createRemoteUser(remoteUser);
     }
-    UserGroupInformation callerUGI =
-        UserGroupInformation.createRemoteUser(remoteUser);
     if (callerUGI != null && !job.checkAccess(callerUGI, JobACL.VIEW_JOB)) {
       return false;
     }

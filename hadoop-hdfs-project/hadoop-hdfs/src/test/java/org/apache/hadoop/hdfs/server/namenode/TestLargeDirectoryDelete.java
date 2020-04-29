@@ -20,8 +20,8 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.IOException;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -39,7 +39,8 @@ import org.junit.Test;
  * deletion completes and handles new requests from other clients
  */
 public class TestLargeDirectoryDelete {
-  private static final Log LOG = LogFactory.getLog(TestLargeDirectoryDelete.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestLargeDirectoryDelete.class);
   private static final Configuration CONF = new HdfsConfiguration();
   private static final int TOTAL_BLOCKS = 10000;
   private MiniDFSCluster mc = null;
@@ -49,6 +50,7 @@ public class TestLargeDirectoryDelete {
   static {
     CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1);
     CONF.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 1);
+    CONF.setInt(DFSConfigKeys.DFS_NAMENODE_BLOCK_DELETION_INCREMENT_KEY, 1);
   }
   
   /** create a file with a length of <code>filelen</code> */
@@ -137,7 +139,6 @@ public class TestLargeDirectoryDelete {
     threads[1].start();
     
     final long start = Time.now();
-    FSNamesystem.BLOCK_DELETION_INCREMENT = 1;
     mc.getFileSystem().delete(new Path("/root"), true); // recursive delete
     final long end = Time.now();
     threads[0].endThread();
@@ -168,7 +169,7 @@ public class TestLargeDirectoryDelete {
       try {
         execute();
       } catch (Throwable throwable) {
-        LOG.warn(throwable);
+        LOG.warn("{}", throwable);
         setThrown(throwable);
       } finally {
         synchronized (this) {

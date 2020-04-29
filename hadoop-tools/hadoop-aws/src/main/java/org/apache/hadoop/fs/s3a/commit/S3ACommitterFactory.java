@@ -77,9 +77,20 @@ public class S3ACommitterFactory extends AbstractS3ACommitterFactory {
     AbstractS3ACommitterFactory factory = chooseCommitterFactory(fileSystem,
         outputPath,
         context.getConfiguration());
-    return factory != null ?
-      factory.createTaskCommitter(fileSystem, outputPath, context)
-      : createFileOutputCommitter(outputPath, context);
+    if (factory != null) {
+      PathOutputCommitter committer = factory.createTaskCommitter(
+          fileSystem, outputPath, context);
+      LOG.info("Using committer {} to output data to {}",
+          (committer instanceof AbstractS3ACommitter
+              ? ((AbstractS3ACommitter) committer).getName()
+              : committer.toString()),
+          outputPath);
+      return committer;
+    } else {
+      LOG.warn("Using standard FileOutputCommitter to commit work."
+          + " This is slow and potentially unsafe.");
+      return createFileOutputCommitter(outputPath, context);
+    }
   }
 
   /**
@@ -104,6 +115,7 @@ public class S3ACommitterFactory extends AbstractS3ACommitterFactory {
 
     String name = fsConf.getTrimmed(FS_S3A_COMMITTER_NAME, COMMITTER_NAME_FILE);
     name = taskConf.getTrimmed(FS_S3A_COMMITTER_NAME, name);
+    LOG.debug("Committer option is {}", name);
     switch (name) {
     case COMMITTER_NAME_FILE:
       factory = null;

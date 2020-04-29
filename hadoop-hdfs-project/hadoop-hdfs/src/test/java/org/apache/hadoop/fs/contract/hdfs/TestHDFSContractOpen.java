@@ -27,7 +27,7 @@ import org.junit.BeforeClass;
 import java.io.IOException;
 
 /**
- * Test dir operations on a the local FS.
+ * Test Open operations on HDFS.
  */
 public class TestHDFSContractOpen extends AbstractContractOpenTest {
 

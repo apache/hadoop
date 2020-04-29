@@ -14,11 +14,11 @@
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-main</artifactId>
-  <version>3.2.0-SNAPSHOT</version>
+  <version>3.4.0-SNAPSHOT</version>
   <description>Apache Hadoop Main</description>
   <name>Apache Hadoop Main</name>
   <packaging>pom</packaging>
@@ -59,7 +59,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
     </repository>
     <repository>
       <id>repository.jboss.org</id>
-      <url>http://repository.jboss.org/nexus/content/groups/public/</url>
+      <url>https://repository.jboss.org/nexus/content/groups/public/</url>
       <snapshots>
         <enabled>false</enabled>
       </snapshots>
@@ -69,16 +69,19 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
   <licenses>
     <license>
       <name>Apache License, Version 2.0</name>
-      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
     </license>
   </licenses>
 
   <organization>
     <name>Apache Software Foundation</name>
-    <url>http://www.apache.org</url>
+    <url>https://www.apache.org</url>
   </organization>
 
   <properties>
+    <!-- required as child projects with different version can't use ${project.version} -->
+    <hadoop.version>3.4.0-SNAPSHOT</hadoop.version>
+
     <distMgmtSnapshotsId>apache.snapshots.https</distMgmtSnapshotsId>
     <distMgmtSnapshotsName>Apache Development Snapshot Repository</distMgmtSnapshotsName>
     <distMgmtSnapshotsUrl>https://repository.apache.org/content/repositories/snapshots</distMgmtSnapshotsUrl>
@@ -98,20 +101,22 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
     <maven-assembly-plugin.version>2.4</maven-assembly-plugin.version>
     <maven-dependency-plugin.version>3.0.2</maven-dependency-plugin.version>
     <maven-enforcer-plugin.version>3.0.0-M1</maven-enforcer-plugin.version>
-    <maven-javadoc-plugin.version>3.0.0-M1</maven-javadoc-plugin.version>
+    <maven-javadoc-plugin.version>3.0.1</maven-javadoc-plugin.version>
     <maven-gpg-plugin.version>1.5</maven-gpg-plugin.version>
     <maven-remote-resources-plugin.version>1.5</maven-remote-resources-plugin.version>
     <maven-resources-plugin.version>3.0.1</maven-resources-plugin.version>
     <apache-rat-plugin.version>0.12</apache-rat-plugin.version>
-    <wagon-ssh.version>1.0</wagon-ssh.version>
+    <wagon-ssh.version>2.4</wagon-ssh.version>
     <maven-clover2-plugin.version>3.3.0</maven-clover2-plugin.version>
     <maven-bundle-plugin.version>2.5.0</maven-bundle-plugin.version>
     <lifecycle-mapping.version>1.0.0</lifecycle-mapping.version>
-    <maven-checkstyle-plugin.version>2.17</maven-checkstyle-plugin.version>
-    <checkstyle.version>7.5.1</checkstyle.version>
+    <maven-checkstyle-plugin.version>3.1.0</maven-checkstyle-plugin.version>
+    <checkstyle.version>8.29</checkstyle.version>
     <dependency-check-maven.version>1.4.3</dependency-check-maven.version>
 
     <shell-executable>bash</shell-executable>
+
+    <leveldbjni.group>org.fusesource.leveldbjni</leveldbjni.group>
   </properties>
 
   <modules>
@@ -316,7 +321,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
             <dependency>
               <groupId>org.apache.hadoop</groupId>
               <artifactId>hadoop-build-tools</artifactId>
-              <version>${project.version}</version>
+              <version>${hadoop.version}</version>
             </dependency>
             <dependency>
               <groupId>com.puppycrawl.tools</groupId>
@@ -329,8 +334,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
             <suppressionsLocation>checkstyle/suppressions.xml</suppressionsLocation>
             <includeTestSourceDirectory>true</includeTestSourceDirectory>
             <failOnViolation>false</failOnViolation>
-            <format>xml</format>
-            <format>html</format>
             <outputFile>${project.build.directory}/test/checkstyle-errors.xml</outputFile>
           </configuration>
         </plugin>
@@ -369,6 +372,23 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
             </goals>
             <phase>pre-site</phase>
           </execution>
+          <execution>
+            <id>enforce-property</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireProperty>
+                  <property>hadoop.version</property>
+                  <message>You must set a hadoop.version to be the same as ${project.version}</message>
+                  <regex>${project.version}</regex>
+                  <regexMessage>The hadoop.version property should be set and should be ${project.version}.</regexMessage>
+                </requireProperty>
+              </rules>
+              <fail>true</fail>
+              </configuration>
+          </execution>
         </executions>
       </plugin>
       <plugin>
@@ -379,10 +399,13 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
             <exclude>.gitattributes</exclude>
             <exclude>.gitignore</exclude>
             <exclude>.git/**</exclude>
+            <exclude>.github/pull_request_template.md</exclude>
             <exclude>.idea/**</exclude>
             <exclude>**/build/**</exclude>
             <exclude>**/patchprocess/**</exclude>
             <exclude>**/*.js</exclude>
+            <exclude>licenses/**</exclude>
+            <exclude>licenses-binary/**</exclude>
          </excludes>
        </configuration>
       </plugin>
@@ -561,6 +584,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
       </build>
     </profile>
 
+
     <profile>
       <id>sign</id>
       <build>
@@ -656,5 +680,18 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
         </plugins>
       </build>
     </profile>
+    <profile>
+      <id>aarch64</id>
+      <properties>
+        <leveldbjni.group>org.openlabtesting.leveldbjni</leveldbjni.group>
+      </properties>
+      <activation>
+        <os>
+          <family>linux</family>
+          <arch>aarch64</arch>
+        </os>
+      </activation>
+    </profile>
+
   </profiles>
 </project>

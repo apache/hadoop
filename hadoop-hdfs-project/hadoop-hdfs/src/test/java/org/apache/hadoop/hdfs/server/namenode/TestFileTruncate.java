@@ -33,8 +33,8 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.concurrent.ThreadLocalRandom;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
@@ -65,17 +65,17 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.log4j.Level;
+import org.slf4j.event.Level;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 public class TestFileTruncate {
   static {
-    GenericTestUtils.setLogLevel(NameNode.stateChangeLog, Level.ALL);
-    GenericTestUtils.setLogLevel(FSEditLogLoader.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(NameNode.stateChangeLog, Level.TRACE);
+    GenericTestUtils.setLogLevel(FSEditLogLoader.LOG, Level.TRACE);
   }
-  static final Log LOG = LogFactory.getLog(TestFileTruncate.class);
+  static final Logger LOG = LoggerFactory.getLogger(TestFileTruncate.class);
   static final int BLOCK_SIZE = 4;
   static final short REPLICATION = 3;
   static final int DATANODE_NUM = 3;
@@ -659,7 +659,8 @@ public class TestFileTruncate {
 
     NameNodeAdapter.getLeaseManager(cluster.getNamesystem())
         .setLeasePeriod(HdfsConstants.LEASE_SOFTLIMIT_PERIOD,
-            HdfsConstants.LEASE_HARDLIMIT_PERIOD);
+            conf.getLong(DFSConfigKeys.DFS_LEASE_HARDLIMIT_KEY,
+                DFSConfigKeys.DFS_LEASE_HARDLIMIT_DEFAULT) * 1000);
 
     checkFullFile(p, newLength, contents);
     fs.delete(p, false);
@@ -1281,5 +1282,75 @@ public class TestFileTruncate {
       cluster.restartDataNode(dn, false, true);
       cluster.waitActive();
     }
+  }
+
+  /**
+   * QuotaUsage in Truncate with Snapshot.
+   */
+  @Test
+  public void testQuotaOnTruncateWithSnapshot() throws Exception {
+    Path root = new Path("/");
+    Path dirPath = new Path(root, "dir");
+    assertTrue(fs.mkdirs(dirPath));
+    Path filePath = new Path(dirPath, "file");
+    DFSTestUtil.createFile(fs, filePath, 10, (short) 3, 0);
+
+    // verify quotausage and content summary after creating snapshot
+    fs.allowSnapshot(dirPath);
+    fs.createSnapshot(dirPath, "s1");
+    assertEquals(fs.getContentSummary(root).getSpaceConsumed(),
+        fs.getQuotaUsage(root).getSpaceConsumed());
+
+    // truncating the file size to 5bytes
+    boolean blockrecovery = fs.truncate(filePath, 5);
+    if (!blockrecovery) {
+      checkBlockRecovery(filePath, fs, 300, 100L);
+    }
+
+    // verify quotausage and content summary after truncating file which exists
+    // in snapshot
+    assertEquals(fs.getContentSummary(root).getSpaceConsumed(),
+        fs.getQuotaUsage(root).getSpaceConsumed());
+
+    // verify quotausage and content summary after deleting snapshot
+    // now the quota of the file shouldn't present in quotausage and content
+    // summary
+    fs.deleteSnapshot(dirPath, "s1");
+    assertEquals(fs.getContentSummary(root).getSpaceConsumed(),
+        fs.getQuotaUsage(root).getSpaceConsumed());
+  }
+
+  /**
+   * Test concat on file which is a reference.
+   */
+  @Test
+  public void testConcatOnInodeRefernce() throws IOException {
+    String dir = "/testConcat";
+    Path trgDir = new Path(dir);
+    fs.mkdirs(new Path(dir), FsPermission.getDirDefault());
+
+    // Create a target file
+    Path trg = new Path(dir, "file");
+    DFSTestUtil.createFile(fs, trg, 512, (short) 2, 0);
+
+    String dir2 = "/dir2";
+    Path srcDir = new Path(dir2);
+    // create a source file
+    fs.mkdirs(srcDir);
+    fs.allowSnapshot(srcDir);
+    Path src = new Path(srcDir, "file1");
+    DFSTestUtil.createFile(fs, src, 512, (short) 2, 0);
+
+    // make the file as an Inode reference and delete the reference
+    fs.createSnapshot(srcDir, "s1");
+    fs.rename(src, trgDir);
+    fs.deleteSnapshot(srcDir, "s1");
+    Path[] srcs = new Path[1];
+    srcs[0] = new Path(dir, "file1");
+    assertEquals(2, fs.getContentSummary(new Path(dir)).getFileCount());
+
+    // perform concat
+    fs.concat(trg, srcs);
+    assertEquals(1, fs.getContentSummary(new Path(dir)).getFileCount());
   }
 }

@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.sls.nodemanager;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -32,12 +33,14 @@ import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode
@@ -164,8 +167,10 @@ public class NodeInfo {
         list2.add(ContainerStatus.newInstance(cId, ContainerState.RUNNING, "", 
           ContainerExitStatus.SUCCESS));
       }
-      list.add(new UpdatedContainerInfo(new ArrayList<ContainerStatus>(), 
-        list2));
+      List<Map.Entry<ApplicationId, ContainerStatus>> needUpdateContainers =
+          new ArrayList<Map.Entry<ApplicationId, ContainerStatus>>();
+      list.add(new UpdatedContainerInfo(new ArrayList<ContainerStatus>(),
+          list2, needUpdateContainers));
       return list;
     }
 
@@ -219,8 +224,27 @@ public class NodeInfo {
     }
 
     @Override
+    public Set<NodeAttribute> getAllNodeAttributes() {
+      return Collections.emptySet();
+    }
+
+    @Override
+    public RMContext getRMContext() {
+      return null;
+    }
+
+    @Override
     public Resource getPhysicalResource() {
       return null;
+    }
+
+    @Override
+    public boolean isUpdatedCapability() {
+      return false;
+    }
+
+    @Override
+    public void resetUpdatedCapability() {
     }
   }
 

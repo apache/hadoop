@@ -41,9 +41,7 @@ public class LocalizerTokenSelector implements
     LOG.debug("Using localizerTokenSelector.");
 
     for (Token<? extends TokenIdentifier> token : tokens) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Token of kind " + token.getKind() + " is found");
-      }
+      LOG.debug("Token of kind {} is found", token.getKind());
       if (LocalizerTokenIdentifier.KIND.equals(token.getKind())) {
         return (Token<LocalizerTokenIdentifier>) token;
       }

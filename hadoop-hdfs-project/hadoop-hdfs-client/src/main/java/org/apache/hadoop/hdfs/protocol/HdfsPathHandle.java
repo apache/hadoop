@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.InvalidPathHandleException;
 import org.apache.hadoop.fs.PathHandle;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.HdfsPathHandleProto;
 
-import com.google.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 /**
  * Opaque handle to an entity in HDFS.
@@ -111,8 +111,8 @@ public final class HdfsPathHandle implements PathHandle {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("{ ");
-    sb.append("\"path\" : \"").append(path).append("\"");
+    sb.append("{ ")
+        .append("\"path\" : \"").append(path).append("\"");
     if (inodeId != null) {
       sb.append(",\"inodeId\" : ").append(inodeId);
     }

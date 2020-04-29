@@ -384,8 +384,21 @@ public class TestCallQueueManager {
     RpcScheduler scheduler = Mockito.mock(RpcScheduler.class);
     BlockingQueue<Schedulable> queue = Mockito.mock(BlockingQueue.class);
     CallQueueManager<Schedulable> cqm =
-        Mockito.spy(new CallQueueManager<>(queue, scheduler, false));
+        Mockito.spy(new CallQueueManager<>(queue, scheduler, false, false));
+    CallQueueManager<Schedulable> cqmTriggerFailover =
+            Mockito.spy(new CallQueueManager<>(queue, scheduler, false, true));
     Schedulable call = new FakeCall(0);
+
+    // call queue exceptions that trigger failover
+    cqmTriggerFailover.setClientBackoffEnabled(true);
+    doReturn(Boolean.TRUE).when(cqmTriggerFailover).shouldBackOff(call);
+    try {
+      cqmTriggerFailover.put(call);
+      fail("didn't fail");
+    } catch (Exception ex) {
+      assertEquals(CallQueueOverflowException.FAILOVER.getCause().getMessage(),
+          ex.getCause().getMessage());
+    }
 
     // call queue exceptions passed threw as-is
     doThrow(CallQueueOverflowException.KEEPALIVE).when(queue).add(call);
@@ -428,6 +441,19 @@ public class TestCallQueueManager {
     doReturn(Boolean.TRUE).when(cqm).shouldBackOff(call);
     try {
       cqm.put(call);
+      fail("didn't fail");
+    } catch (Exception ex) {
+      assertTrue(ex.toString(), ex instanceof CallQueueOverflowException);
+    }
+    verify(queue, times(0)).put(call);
+    verify(queue, times(0)).add(call);
+
+    // backoff is enabled, add + scheduler backoff = overflow exception.
+    reset(queue);
+    cqm.setClientBackoffEnabled(true);
+    doReturn(Boolean.TRUE).when(cqm).shouldBackOff(call);
+    try {
+      cqm.add(call);
       fail("didn't fail");
     } catch (Exception ex) {
       assertTrue(ex.toString(), ex instanceof CallQueueOverflowException);

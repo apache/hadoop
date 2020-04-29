@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -33,6 +34,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
@@ -45,6 +47,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.UnRegisterNodeManagerRe
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
+import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
@@ -65,6 +68,8 @@ public class MockNM {
       new HashMap<ContainerId, ContainerStatus>();
   private Map<ApplicationId, AppCollectorData> registeringCollectors
       = new ConcurrentHashMap<>();
+  private Set<NodeLabel> nodeLabels;
+  private long tokenSequenceNo;
 
   public MockNM(String nodeIdStr, int memory, ResourceTrackerService resourceTracker) {
     // scale vcores based on the requested memory
@@ -99,6 +104,13 @@ public class MockNM {
     this.version = version;
     String[] splits = nodeIdStr.split(":");
     nodeId = BuilderUtils.newNodeId(splits[0], Integer.parseInt(splits[1]));
+  }
+
+  public MockNM(String nodeIdStr, Resource capability,
+      ResourceTrackerService resourceTracker, String version, Set<NodeLabel>
+      nodeLabels) {
+    this(nodeIdStr, capability, resourceTracker, version);
+    this.nodeLabels = nodeLabels;
   }
 
   public NodeId getNodeId() {
@@ -164,12 +176,17 @@ public class MockNM {
       List<ApplicationId> runningApplications) throws Exception {
     RegisterNodeManagerRequest req = Records.newRecord(
         RegisterNodeManagerRequest.class);
+
     req.setNodeId(nodeId);
     req.setHttpPort(httpPort);
     req.setResource(capability);
     req.setContainerStatuses(containerReports);
     req.setNMVersion(version);
     req.setRunningApplications(runningApplications);
+    if ( nodeLabels != null && nodeLabels.size() > 0) {
+      req.setNodeLabels(nodeLabels);
+    }
+
     RegisterNodeManagerResponse registrationResponse =
         resourceTracker.registerNodeManager(req);
     this.currentContainerTokenMasterKey =
@@ -217,6 +234,13 @@ public class MockNM {
     return nodeHeartbeat(conts, isHealthy, responseId);
   }
 
+  /**
+   * Sends the heartbeat of the node.
+   * @param isHealthy whether node is healthy.
+   * @param resId response id.
+   * @return response of the heartbeat.
+   * @throws Exception
+   */
   public NodeHeartbeatResponse nodeHeartbeat(Map<ApplicationId,
       List<ContainerStatus>> conts, boolean isHealthy, int resId) throws Exception {
     ArrayList<ContainerStatus> updatedStats = new ArrayList<ContainerStatus>();
@@ -227,15 +251,62 @@ public class MockNM {
         isHealthy, resId);
   }
 
+  /**
+   * Sends the heartbeat of the node.
+   * @param updatedStats containers with updated status.
+   * @param isHealthy whether node is healthy.
+   * @return response of the heartbeat.
+   * @throws Exception
+   */
   public NodeHeartbeatResponse nodeHeartbeat(
       List<ContainerStatus> updatedStats, boolean isHealthy) throws Exception {
     return nodeHeartbeat(updatedStats, Collections.<Container>emptyList(),
         isHealthy, responseId);
   }
 
+  /**
+   * Sends the heartbeat of the node.
+   * @param oppContainersStatus opportunistic containers status.
+   * @param isHealthy whether node is healthy.
+   * @return response of the heartbeat.
+   * @throws Exception
+   */
+  public NodeHeartbeatResponse nodeHeartbeat(
+      OpportunisticContainersStatus oppContainersStatus, boolean isHealthy)
+      throws Exception {
+    return nodeHeartbeat(Collections.emptyList(),
+        Collections.emptyList(), isHealthy, responseId, oppContainersStatus);
+  }
+
+  /**
+   * Sends the heartbeat of the node.
+   * @param updatedStats containers with updated status.
+   * @param increasedConts containers whose resource has been increased.
+   * @param isHealthy whether node is healthy.
+   * @param resId response id.
+   * @return response of the heartbeat.
+   * @throws Exception
+   */
+  public NodeHeartbeatResponse nodeHeartbeat(
+      List<ContainerStatus> updatedStats, List<Container> increasedConts,
+      boolean isHealthy, int resId) throws Exception {
+    return nodeHeartbeat(updatedStats, increasedConts,
+        isHealthy, resId, null);
+  }
+
+  /**
+   * Sends the heartbeat of the node.
+   * @param updatedStats containers with updated status.
+   * @param increasedConts containers whose resource has been increased.
+   * @param isHealthy whether node is healthy.
+   * @param resId response id.
+   * @param oppContainersStatus opportunistic containers status.
+   * @return response of the heartbeat.
+   * @throws Exception
+   */
   public NodeHeartbeatResponse nodeHeartbeat(List<ContainerStatus> updatedStats,
-      List<Container> increasedConts, boolean isHealthy, int resId)
-          throws Exception {
+      List<Container> increasedConts, boolean isHealthy, int resId,
+      OpportunisticContainersStatus oppContainersStatus) throws Exception {
     NodeHeartbeatRequest req = Records.newRecord(NodeHeartbeatRequest.class);
     NodeStatus status = Records.newRecord(NodeStatus.class);
     status.setResponseId(resId);
@@ -253,6 +324,7 @@ public class MockNM {
       containerStats.remove(cid);
     }
     status.setIncreasedContainers(increasedConts);
+    status.setOpportunisticContainersStatus(oppContainersStatus);
     NodeHealthStatus healthStatus = Records.newRecord(NodeHealthStatus.class);
     healthStatus.setHealthReport("");
     healthStatus.setIsNodeHealthy(isHealthy);
@@ -263,6 +335,7 @@ public class MockNM {
     req.setLastKnownNMTokenMasterKey(this.currentNMTokenMasterKey);
 
     req.setRegisteringCollectors(this.registeringCollectors);
+    req.setTokenSequenceNo(this.tokenSequenceNo);
 
     NodeHeartbeatResponse heartbeatResponse =
         resourceTracker.nodeHeartbeat(req);
@@ -287,6 +360,7 @@ public class MockNM {
       capability = Resources.clone(newResource);
     }
 
+    this.tokenSequenceNo = heartbeatResponse.getTokenSequenceNo();
     return heartbeatResponse;
   }
 

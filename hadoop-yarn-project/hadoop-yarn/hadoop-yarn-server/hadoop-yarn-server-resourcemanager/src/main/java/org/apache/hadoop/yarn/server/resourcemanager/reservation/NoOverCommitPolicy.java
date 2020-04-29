@@ -55,8 +55,9 @@ public class NoOverCommitPolicy implements SharingPolicy {
               reservation.getStartTime(), reservation.getEndTime());
     } catch (PlanningException p) {
       throw new ResourceOverCommitException(
-          "Resources at time " + " would be overcommitted by "
-              + "accepting reservation: " + reservation.getReservationId());
+          "Resources at time " + reservation.getStartTime()
+          + " would be overcommitted by accepting reservation: "
+              + reservation.getReservationId(), p);
     }
   }
 

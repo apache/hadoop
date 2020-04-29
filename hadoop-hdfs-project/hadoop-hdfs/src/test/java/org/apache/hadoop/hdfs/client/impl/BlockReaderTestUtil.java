@@ -30,7 +30,6 @@ import java.util.Random;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FsTracer;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.ClientContext;
@@ -85,6 +84,11 @@ public class BlockReaderTestUtil {
    */
   public BlockReaderTestUtil(int replicationFactor) throws Exception {
     this(replicationFactor, new HdfsConfiguration());
+  }
+
+  public BlockReaderTestUtil(MiniDFSCluster cluster, HdfsConfiguration conf) {
+    this.conf = conf;
+    this.cluster = cluster;
   }
 
   public BlockReaderTestUtil(int replicationFactor, HdfsConfiguration config) throws Exception {
@@ -201,7 +205,6 @@ public class BlockReaderTestUtil {
       setCachingStrategy(CachingStrategy.newDefaultStrategy()).
       setConfiguration(fs.getConf()).
       setAllowShortCircuitLocalReads(true).
-      setTracer(FsTracer.get(fs.getConf())).
       setRemotePeerFactory(new RemotePeerFactory() {
         @Override
         public Peer newConnectedPeer(InetSocketAddress addr,

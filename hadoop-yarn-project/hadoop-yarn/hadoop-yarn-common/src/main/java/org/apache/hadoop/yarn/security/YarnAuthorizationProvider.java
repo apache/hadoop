@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.security;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -41,7 +41,8 @@ import java.util.List;
 @Unstable
 public abstract class YarnAuthorizationProvider {
 
-  private static final Log LOG = LogFactory.getLog(YarnAuthorizationProvider.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(YarnAuthorizationProvider.class);
 
   private static YarnAuthorizationProvider authorizer = null;
 
@@ -69,7 +70,7 @@ public abstract class YarnAuthorizationProvider {
   public static void destroy() {
     synchronized (YarnAuthorizationProvider.class) {
       if (authorizer != null) {
-        LOG.debug(authorizer.getClass().getName() + " is destroyed.");
+        LOG.debug("{} is destroyed.", authorizer.getClass().getName());
         authorizer = null;
       }
     }

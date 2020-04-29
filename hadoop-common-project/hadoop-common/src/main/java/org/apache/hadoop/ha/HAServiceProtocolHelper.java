@@ -60,4 +60,13 @@ public class HAServiceProtocolHelper {
       throw e.unwrapRemoteException(ServiceFailedException.class);
     }
   }
+
+  public static void transitionToObserver(HAServiceProtocol svc,
+      StateChangeRequestInfo reqInfo) throws IOException {
+    try {
+      svc.transitionToObserver(reqInfo);
+    } catch (RemoteException e) {
+      throw e.unwrapRemoteException(ServiceFailedException.class);
+    }
+  }
 }

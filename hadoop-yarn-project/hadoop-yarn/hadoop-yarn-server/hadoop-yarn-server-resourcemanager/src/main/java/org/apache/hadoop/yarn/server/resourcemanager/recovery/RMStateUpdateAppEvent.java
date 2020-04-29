@@ -30,9 +30,14 @@ public class RMStateUpdateAppEvent extends RMStateStoreEvent {
   private SettableFuture<Object> future;
 
   public RMStateUpdateAppEvent(ApplicationStateData appState) {
+    this (appState, true);
+  }
+
+  public RMStateUpdateAppEvent(ApplicationStateData appState,
+      boolean notifyApplication) {
     super(RMStateStoreEventType.UPDATE_APP);
     this.appState = appState;
-    this.notifyApplication = true;
+    this.notifyApplication = notifyApplication;
     this.future = null;
   }
 

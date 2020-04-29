@@ -24,8 +24,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
@@ -41,7 +41,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class TestPipelines {
-  public static final Log LOG = LogFactory.getLog(TestPipelines.class);
+  public static final Logger LOG = LoggerFactory.getLogger(TestPipelines.class);
 
   private static final short REPL_FACTOR = 3;
   private static final int RAND_LIMIT = 2000;

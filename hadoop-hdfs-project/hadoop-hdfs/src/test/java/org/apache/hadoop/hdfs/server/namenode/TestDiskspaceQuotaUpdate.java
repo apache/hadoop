@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -46,8 +48,6 @@ import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
-import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
-import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.junit.AfterClass;
@@ -380,14 +380,24 @@ public class TestDiskspaceQuotaUpdate {
     HashMap<String, Long> dsMap = new HashMap<String, Long>();
     scanDirsWithQuota(root, nsMap, dsMap, false);
 
-    getFSDirectory().updateCountForQuota(1);
+    updateCountForQuota(1);
     scanDirsWithQuota(root, nsMap, dsMap, true);
 
-    getFSDirectory().updateCountForQuota(2);
+    updateCountForQuota(2);
     scanDirsWithQuota(root, nsMap, dsMap, true);
 
-    getFSDirectory().updateCountForQuota(4);
+    updateCountForQuota(4);
     scanDirsWithQuota(root, nsMap, dsMap, true);
+  }
+
+  private void updateCountForQuota(int i) {
+    FSNamesystem fsn = cluster.getNamesystem();
+    fsn.writeLock();
+    try {
+      getFSDirectory().updateCountForQuota(1);
+    } finally {
+      fsn.writeUnlock();
+    }
   }
 
   private void scanDirsWithQuota(INodeDirectory dir,
@@ -470,11 +480,7 @@ public class TestDiskspaceQuotaUpdate {
         invocation.callRealMethod();
         return null;
       }
-      }).when(nnSpy).blockReceivedAndDeleted(
-        Mockito.<DatanodeRegistration>anyObject(),
-        Mockito.anyString(),
-        Mockito.<StorageReceivedDeletedBlocks[]>anyObject()
-      );
+      }).when(nnSpy).blockReceivedAndDeleted(any(), anyString(), any());
 
     getDFS().mkdirs(dir);
     getDFS().setQuota(dir, Long.MAX_VALUE - 1, Long.MAX_VALUE - 1);

@@ -23,6 +23,9 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.util.Records;
 
+import java.util.List;
+import java.util.Map;
+
 /**
  * {@code ContainerReport} is a report of an container.
  * <p>
@@ -77,6 +80,7 @@ public abstract class ContainerReport {
     report.setContainerState(containerState);
     report.setNodeHttpAddress(nodeHttpAddress);
     report.setExecutionType(executionType);
+
     return report;
   }
 
@@ -211,8 +215,22 @@ public abstract class ContainerReport {
   public abstract void setContainerExitStatus(int containerExitStatus);
 
   /**
-   * Get the Node Http address of the container
+   * Get exposed ports of the container.
    * 
+   * @return the node exposed ports of the container
+   */
+  @Public
+  @Unstable
+  public abstract String getExposedPorts();
+
+  @Private
+  @Unstable
+  public abstract void setExposedPorts(
+      Map<String, List<Map<String, String>>> ports);
+
+  /**
+   * Get the Node Http address of the container.
+   *
    * @return the node http address of the container
    */
   @Public

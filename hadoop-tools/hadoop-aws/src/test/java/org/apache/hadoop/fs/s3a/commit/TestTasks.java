@@ -73,7 +73,7 @@ public class TestTasks extends HadoopTestBase {
    * more checks on single thread than parallel ops.
    * @return a list of parameter tuples.
    */
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name = "threads={0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {0},

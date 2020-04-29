@@ -45,22 +45,9 @@ test('test fields', function(assert) {
   let model = this.subject();
 
   Ember.run(function () {
-    model.set("containerId", "container_e32_1456000363780_0002_01_000003");
+    model.set("id", "container_e32_1456000363780_0002_01_000003");
     model.set("state", "RUNNING");
     model.set("exitCode", "-1000");
-    model.set("user", "hadoop");
-    model.set("id", "container_e32_1456000363780_0002_01_000003");
-    model.set("totalMemoryNeeded", 1024);
-    model.set("totalVCoresNeeded", 1);
-    model.set("containerLogFiles", ["syslog", "stderr", "stdout"]);
-    assert.equal(model.get("containerId"), "container_e32_1456000363780_0002_01_000003");
-    assert.equal(model.get("id"), "container_e32_1456000363780_0002_01_000003");
-    assert.equal(model.get("totalMemoryNeeded"), 1024);
-    assert.equal(model.get("totalVCoresNeeded"), 1);
-    assert.equal(model.get("user"), "hadoop");
-    assert.equal(model.get("exitCode"), "-1000");
-    assert.equal(model.get("containerLogFiles").length, 3);
-    assert.deepEqual(model.get("containerLogFiles"), ["syslog", "stderr", "stdout"]);
     assert.equal(model.get("isDummyContainer"), false);
     assert.equal(model.get("containerStateStyle"), "label label-primary");
     model.set("id", "dummy");
@@ -76,4 +63,3 @@ test('test fields', function(assert) {
     assert.equal(model.get("containerStateStyle"), "label label-danger");
   });
 });
-

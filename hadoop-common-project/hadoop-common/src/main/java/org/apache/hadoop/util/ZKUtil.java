@@ -90,7 +90,7 @@ public class ZKUtil {
    * <code>sasl:hdfs/host1@MY.DOMAIN:cdrwa,sasl:hdfs/host2@MY.DOMAIN:cdrwa</code>
    *
    * @return ACL list
-   * @throws {@link BadAclFormatException} if an ACL is invalid
+   * @throws BadAclFormatException if an ACL is invalid
    */
   public static List<ACL> parseACLs(String aclString) throws
       BadAclFormatException {
@@ -128,7 +128,7 @@ public class ZKUtil {
    * 
    * @param authString the comma-separated auth mechanisms
    * @return a list of parsed authentications
-   * @throws {@link BadAuthFormatException} if the auth format is invalid
+   * @throws BadAuthFormatException if the auth format is invalid
    */
   public static List<ZKAuthInfo> parseAuth(String authString) throws
       BadAuthFormatException{
@@ -172,7 +172,7 @@ public class ZKUtil {
       return valInConf;
     }
     String path = valInConf.substring(1).trim();
-    return Files.toString(new File(path), Charsets.UTF_8).trim();
+    return Files.asCharSource(new File(path), Charsets.UTF_8).read().trim();
   }
 
   /**

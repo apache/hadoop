@@ -32,7 +32,7 @@ public interface VolumeChoosingPolicy<V extends FsVolumeSpi> {
    * Choose a volume to place a replica,
    * given a list of volumes and the replica size sought for storage.
    * 
-   * The implementations of this interface must be thread-safe.
+   * The caller should synchronize access to the list of volumes.
    * 
    * @param volumes - a list of available volumes.
    * @param replicaSize - the size of the replica for which a volume is sought.

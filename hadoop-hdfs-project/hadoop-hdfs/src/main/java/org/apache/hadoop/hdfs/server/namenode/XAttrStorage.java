@@ -31,40 +31,28 @@ import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 @InterfaceAudience.Private
 public class XAttrStorage {
 
-  private static final SerialNumberMap<String> NAME_MAP =
-      new SerialNumberMap<>();
-
-  public static int getNameSerialNumber(String name) {
-    return NAME_MAP.get(name);
-  }
-
-  public static String getName(int n) {
-    return NAME_MAP.get(n);
-  }
-
   /**
    * Reads the extended attribute of an inode by name with prefix.
-   * <p/>
+   * <p>
    *
    * @param inode INode to read
-   * @param snapshotId
+   * @param snapshotId the snapshotId of the requested path
    * @param prefixedName xAttr name with prefix
    * @return the xAttr
    */
-  public static XAttr readINodeXAttrByPrefixedName(INodesInPath iip,
-      String prefixedName) {
-    XAttrFeature f =
-        iip.getLastINode().getXAttrFeature(iip.getPathSnapshotId());
+  public static XAttr readINodeXAttrByPrefixedName(INode inode, int snapshotId,
+                                                   String prefixedName) {
+    XAttrFeature f = inode.getXAttrFeature(snapshotId);
     return f == null ? null : f.getXAttr(prefixedName);
   }
 
   /**
    * Reads the existing extended attributes of an inode.
-   * <p/>
+   * <p>
    * Must be called while holding the FSDirectory read lock.
    *
    * @param inodeAttr INodeAttributes to read.
-   * @return List<XAttr> <code>XAttr</code> list.
+   * @return {@code XAttr} list.
    */
   public static List<XAttr> readINodeXAttrs(INodeAttributes inodeAttr) {
     XAttrFeature f = inodeAttr.getXAttrFeature();
@@ -73,7 +61,7 @@ public class XAttrStorage {
   
   /**
    * Update xattrs of inode.
-   * <p/>
+   * <p>
    * Must be called while holding the FSDirectory write lock.
    * 
    * @param inode INode to update

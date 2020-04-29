@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.security;
 
 import java.util.Collection;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.io.Text;
@@ -34,8 +34,8 @@ import org.apache.hadoop.security.token.TokenSelector;
 public class AMRMTokenSelector implements
     TokenSelector<AMRMTokenIdentifier> {
 
-  private static final Log LOG = LogFactory
-      .getLog(AMRMTokenSelector.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(AMRMTokenSelector.class);
 
   @SuppressWarnings("unchecked")
   public Token<AMRMTokenIdentifier> selectToken(Text service,
@@ -43,10 +43,10 @@ public class AMRMTokenSelector implements
     if (service == null) {
       return null;
     }
-    LOG.debug("Looking for a token with service " + service.toString());
+    LOG.debug("Looking for a token with service {}", service);
     for (Token<? extends TokenIdentifier> token : tokens) {
-      LOG.debug("Token kind is " + token.getKind().toString()
-          + " and the token's service name is " + token.getService());
+      LOG.debug("Token kind is {} and the token's service name is {}",
+          token.getKind(), token.getService());
       if (AMRMTokenIdentifier.KIND_NAME.equals(token.getKind())
           && checkService(service, token)) {
         return (Token<AMRMTokenIdentifier>) token;

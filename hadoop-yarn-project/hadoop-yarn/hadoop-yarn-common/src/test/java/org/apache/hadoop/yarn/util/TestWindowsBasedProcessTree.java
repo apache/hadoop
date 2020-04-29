@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.util;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -27,8 +27,8 @@ import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
 import static org.junit.Assert.assertTrue;
 
 public class TestWindowsBasedProcessTree {
-  private static final Log LOG = LogFactory
-      .getLog(TestWindowsBasedProcessTree.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestWindowsBasedProcessTree.class);
 
   class WindowsBasedProcessTreeTester extends WindowsBasedProcessTree {
     String infoStr = null;

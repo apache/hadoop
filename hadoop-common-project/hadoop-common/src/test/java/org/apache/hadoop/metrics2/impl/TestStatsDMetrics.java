@@ -37,8 +37,8 @@ import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.sink.StatsDSink;
 import org.apache.hadoop.metrics2.sink.StatsDSink.StatsD;
+import org.apache.hadoop.test.Whitebox;
 import org.junit.Test;
-import org.mockito.internal.util.reflection.Whitebox;
 
 public class TestStatsDMetrics {
 

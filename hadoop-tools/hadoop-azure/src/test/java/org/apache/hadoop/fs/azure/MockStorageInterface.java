@@ -36,7 +36,7 @@ import java.util.TimeZone;
 import java.util.List;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.net.URLCodec;
-import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.http.client.utils.URIBuilder;
 
 import com.microsoft.azure.storage.AccessCondition;
@@ -339,7 +339,7 @@ public class MockStorageInterface extends StorageInterface {
 
     @Override
     public StorageUri getStorageUri() {
-      throw new NotImplementedException();
+      throw new NotImplementedException("Code is not implemented");
     }
   }
 
@@ -590,20 +590,20 @@ public class MockStorageInterface extends StorageInterface {
     @Override
     public void create(long length, BlobRequestOptions options,
         OperationContext opContext) throws StorageException {
-      throw new NotImplementedException();
+      throw new NotImplementedException("Code is not implemented");
     }
 
     @Override
     public void uploadPages(InputStream sourceStream, long offset, long length,
         BlobRequestOptions options, OperationContext opContext)
         throws StorageException, IOException {
-      throw new NotImplementedException();
+      throw new NotImplementedException("Code is not implemented");
     }
 
     @Override
     public ArrayList<PageRange> downloadPageRanges(BlobRequestOptions options,
         OperationContext opContext) throws StorageException {
-      throw new NotImplementedException();
+      throw new NotImplementedException("Code is not implemented");
     }
 
     @Override
@@ -622,7 +622,7 @@ public class MockStorageInterface extends StorageInterface {
 
     @Override
     public StorageUri getStorageUri() {
-        throw new NotImplementedException();
+        throw new NotImplementedException("Code is not implemented");
     }
 
     @Override

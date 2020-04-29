@@ -53,6 +53,7 @@ import org.apache.hadoop.util.Progressable;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
+import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**
  * Upload files/parts directly via different buffering mechanisms:
@@ -238,7 +239,12 @@ class S3ABlockOutputStream extends OutputStream implements
    */
   @Override
   public synchronized void flush() throws IOException {
-    checkOpen();
+    try {
+      checkOpen();
+    } catch (IOException e) {
+      LOG.warn("Stream closed: " + e.getMessage());
+      return;
+    }
     S3ADataBlocks.DataBlock dataBlock = getActiveBlock();
     if (dataBlock != null) {
       dataBlock.flush();
@@ -391,9 +397,9 @@ class S3ABlockOutputStream extends OutputStream implements
       writeOperationHelper.writeFailed(ioe);
       throw ioe;
     } finally {
-      closeAll(LOG, block, blockFactory);
+      cleanupWithLogger(LOG, block, blockFactory);
       LOG.debug("Statistics: {}", statistics);
-      closeAll(LOG, statistics);
+      cleanupWithLogger(LOG, statistics);
       clearActiveBlock();
     }
     // Note end of write. This does not change the state of the remote FS.
@@ -432,7 +438,7 @@ class S3ABlockOutputStream extends OutputStream implements
             // stream afterwards.
             return writeOperationHelper.putObject(putObjectRequest);
           } finally {
-            closeAll(LOG, uploadData, block);
+            cleanupWithLogger(LOG, uploadData, block);
           }
         });
     clearActiveBlock();
@@ -492,17 +498,19 @@ class S3ABlockOutputStream extends OutputStream implements
    * @param capability string to query the stream support for.
    * @return true if the capability is supported by this instance.
    */
+  @SuppressWarnings("deprecation")
   @Override
   public boolean hasCapability(String capability) {
     switch (capability.toLowerCase(Locale.ENGLISH)) {
 
       // does the output stream have delayed visibility
     case CommitConstants.STREAM_CAPABILITY_MAGIC_OUTPUT:
+    case CommitConstants.STREAM_CAPABILITY_MAGIC_OUTPUT_OLD:
       return !putTracker.outputImmediatelyVisible();
 
       // The flush/sync options are absolutely not supported
-    case "hflush":
-    case "hsync":
+    case StreamCapabilities.HFLUSH:
+    case StreamCapabilities.HSYNC:
       return false;
 
     default:
@@ -607,7 +615,7 @@ class S3ABlockOutputStream extends OutputStream implements
               return partETag;
             } finally {
               // close the stream and block
-              closeAll(LOG, uploadData, block);
+              cleanupWithLogger(LOG, uploadData, block);
             }
           });
       partETagsFutures.add(partETagFuture);

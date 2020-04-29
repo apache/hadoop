@@ -24,7 +24,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
@@ -34,6 +36,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebAppUtil;
 import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService;
 import org.apache.hadoop.yarn.server.router.rmadmin.RouterRMAdminService;
 import org.apache.hadoop.yarn.server.router.webapp.RouterWebApp;
+import org.apache.hadoop.yarn.server.webapp.WebServiceClient;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.WebApps.Builder;
@@ -64,8 +67,11 @@ public class Router extends CompositeService {
   private static CompositeServiceShutdownHook routerShutdownHook;
   private Configuration conf;
   private AtomicBoolean isStopping = new AtomicBoolean(false);
-  private RouterClientRMService clientRMProxyService;
-  private RouterRMAdminService rmAdminProxyService;
+  private JvmPauseMonitor pauseMonitor;
+  @VisibleForTesting
+  protected RouterClientRMService clientRMProxyService;
+  @VisibleForTesting
+  protected RouterRMAdminService rmAdminProxyService;
   private WebApp webApp;
   @VisibleForTesting
   protected String webAppAddress;
@@ -100,6 +106,12 @@ public class Router extends CompositeService {
         WebAppUtils.getRouterWebAppURLWithoutScheme(this.conf));
     // Metrics
     DefaultMetricsSystem.initialize(METRICS_NAME);
+    JvmMetrics jm = JvmMetrics.initSingleton("Router", null);
+    pauseMonitor = new JvmPauseMonitor();
+    addService(pauseMonitor);
+    jm.setPauseMonitor(pauseMonitor);
+
+    WebServiceClient.initialize(config);
     super.serviceInit(conf);
   }
 
@@ -124,6 +136,7 @@ public class Router extends CompositeService {
     }
     super.serviceStop();
     DefaultMetricsSystem.shutdown();
+    WebServiceClient.destroy();
   }
 
   protected void shutDown() {

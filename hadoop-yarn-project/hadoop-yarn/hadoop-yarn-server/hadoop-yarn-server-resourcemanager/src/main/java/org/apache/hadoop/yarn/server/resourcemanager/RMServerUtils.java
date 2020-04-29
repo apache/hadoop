@@ -31,8 +31,8 @@ import java.util.Map;
 import java.util.Set;
 
 import com.google.common.collect.Sets;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -89,7 +89,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
  */
 public class RMServerUtils {
 
-  private static final Log LOG_HANDLE = LogFactory.getLog(RMServerUtils.class);
+  private static final Logger LOG_HANDLE =
+      LoggerFactory.getLogger(RMServerUtils.class);
 
   public static final String UPDATE_OUTSTANDING_ERROR =
       "UPDATE_OUTSTANDING_ERROR";
@@ -97,7 +98,7 @@ public class RMServerUtils {
       "INCORRECT_CONTAINER_VERSION_ERROR";
   private static final String INVALID_CONTAINER_ID =
       "INVALID_CONTAINER_ID";
-  private static final String RESOURCE_OUTSIDE_ALLOWED_RANGE =
+  public static final String RESOURCE_OUTSIDE_ALLOWED_RANGE =
       "RESOURCE_OUTSIDE_ALLOWED_RANGE";
 
   protected static final RecordFactory RECORD_FACTORY =
@@ -109,10 +110,20 @@ public class RMServerUtils {
       EnumSet<NodeState> acceptedStates) {
     // nodes contains nodes that are NEW, RUNNING, UNHEALTHY or DECOMMISSIONING.
     ArrayList<RMNode> results = new ArrayList<RMNode>();
-    if (acceptedStates.contains(NodeState.NEW) ||
-        acceptedStates.contains(NodeState.RUNNING) ||
-        acceptedStates.contains(NodeState.DECOMMISSIONING) ||
-        acceptedStates.contains(NodeState.UNHEALTHY)) {
+    boolean hasActive = false;
+    boolean hasInactive = false;
+    for (NodeState nodeState : acceptedStates) {
+      if (!hasInactive && nodeState.isInactiveState()) {
+        hasInactive = true;
+      }
+      if (!hasActive && nodeState.isActiveState()) {
+        hasActive = true;
+      }
+      if (hasActive && hasInactive) {
+        break;
+      }
+    }
+    if (hasActive) {
       for (RMNode rmNode : context.getRMNodes().values()) {
         if (acceptedStates.contains(rmNode.getState())) {
           results.add(rmNode);
@@ -121,9 +132,7 @@ public class RMServerUtils {
     }
 
     // inactiveNodes contains nodes that are DECOMMISSIONED, LOST, OR REBOOTED
-    if (acceptedStates.contains(NodeState.DECOMMISSIONED) ||
-        acceptedStates.contains(NodeState.LOST) ||
-        acceptedStates.contains(NodeState.REBOOTED)) {
+    if (hasInactive) {
       for (RMNode rmNode : context.getInactiveRMNodes().values()) {
         if ((rmNode != null) && acceptedStates.contains(rmNode.getState())) {
           results.add(rmNode);
@@ -231,23 +240,25 @@ public class RMServerUtils {
   }
 
   /**
-   * Utility method to validate a list resource requests, by insuring that the
+   * Utility method to validate a list resource requests, by ensuring that the
    * requested memory/vcore is non-negative and not greater than max
    */
   public static void normalizeAndValidateRequests(List<ResourceRequest> ask,
-      Resource maximumResource, String queueName, YarnScheduler scheduler,
-      RMContext rmContext)
-      throws InvalidResourceRequestException {
+      Resource maximumAllocation, String queueName, YarnScheduler scheduler,
+      RMContext rmContext, boolean nodeLabelsEnabled)
+          throws InvalidResourceRequestException {
     // Get queue from scheduler
     QueueInfo queueInfo = null;
     try {
       queueInfo = scheduler.getQueueInfo(queueName, false, false);
     } catch (IOException e) {
+      //Queue may not exist since it could be auto-created in case of
+      // dynamic queues
     }
 
     for (ResourceRequest resReq : ask) {
-      SchedulerUtils.normalizeAndvalidateRequest(resReq, maximumResource,
-          queueName, scheduler, rmContext, queueInfo);
+      SchedulerUtils.normalizeAndValidateRequest(resReq, maximumAllocation,
+          queueName, rmContext, queueInfo, nodeLabelsEnabled);
     }
   }
 
@@ -337,7 +348,8 @@ public class RMServerUtils {
       return false;
     }
     ResourceScheduler scheduler = rmContext.getScheduler();
-    request.setCapability(scheduler.getNormalizedResource(request.getCapability()));
+    request.setCapability(scheduler
+        .getNormalizedResource(request.getCapability(), maximumAllocation));
     return true;
   }
 
@@ -367,7 +379,7 @@ public class RMServerUtils {
   }
 
   public static UserGroupInformation verifyAdminAccess(
-      YarnAuthorizationProvider authorizer, String method, final Log LOG)
+      YarnAuthorizationProvider authorizer, String method, final Logger LOG)
       throws IOException {
     // by default, this method will use AdminService as module name
     return verifyAdminAccess(authorizer, method, "AdminService", LOG);
@@ -386,7 +398,7 @@ public class RMServerUtils {
    */
   public static UserGroupInformation verifyAdminAccess(
       YarnAuthorizationProvider authorizer, String method, String module,
-      final Log LOG)
+      final Logger LOG)
       throws IOException {
     UserGroupInformation user;
     try {

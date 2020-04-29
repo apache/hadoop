@@ -22,6 +22,8 @@ import static org.apache.hadoop.metrics2.impl.MsInfo.SessionId;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.server.protocol.DataNodeUsageReport;
+import org.apache.hadoop.hdfs.server.protocol.DataNodeUsageReportUtil;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
@@ -32,6 +34,7 @@ import org.apache.hadoop.metrics2.lib.MutableQuantiles;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
+import org.apache.hadoop.metrics2.lib.MutableRatesWithAggregation;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 
 import java.util.concurrent.ThreadLocalRandom;
@@ -157,11 +160,32 @@ public class DataNodeMetrics {
   private MutableCounterLong ecReconstructionDecodingTimeMillis;
   @Metric("Milliseconds spent on write by erasure coding worker")
   private MutableCounterLong ecReconstructionWriteTimeMillis;
+  @Metric("Sum of all BPServiceActors command queue length")
+  private MutableCounterLong sumOfActorCommandQueueLength;
+  @Metric("Num of processed commands of all BPServiceActors")
+  private MutableCounterLong numProcessedCommands;
+  @Metric("Rate of processed commands of all BPServiceActors")
+  private MutableRate processedCommandsOp;
+
+  // FsDatasetImpl local file process metrics.
+  @Metric private MutableRate createRbwOp;
+  @Metric private MutableRate recoverRbwOp;
+  @Metric private MutableRate convertTemporaryToRbwOp;
+  @Metric private MutableRate createTemporaryOp;
+  @Metric private MutableRate finalizeBlockOp;
+  @Metric private MutableRate unfinalizeBlockOp;
+  @Metric private MutableRate checkAndUpdateOp;
+  @Metric private MutableRate updateReplicaUnderRecoveryOp;
 
   final MetricsRegistry registry = new MetricsRegistry("datanode");
+  @Metric("Milliseconds spent on calling NN rpc")
+  private MutableRatesWithAggregation
+      nnRpcLatency = registry.newRatesWithAggregation("nnRpcLatency");
+
   final String name;
   JvmMetrics jvmMetrics = null;
-  
+  private DataNodeUsageReportUtil dnUsageReportUtil;
+
   public DataNodeMetrics(String name, String sessionId, int[] intervals,
       final JvmMetrics jvmMetrics) {
     this.name = name;
@@ -169,6 +193,7 @@ public class DataNodeMetrics {
     registry.tag(SessionId, sessionId);
     
     final int len = intervals.length;
+    dnUsageReportUtil = new DataNodeUsageReportUtil();
     packetAckRoundTripTimeNanosQuantiles = new MutableQuantiles[len];
     flushNanosQuantiles = new MutableQuantiles[len];
     fsyncNanosQuantiles = new MutableQuantiles[len];
@@ -228,25 +253,41 @@ public class DataNodeMetrics {
   public JvmMetrics getJvmMetrics() {
     return jvmMetrics;
   }
-  
-  public void addHeartbeat(long latency) {
+
+  public void addHeartbeat(long latency, String rpcMetricSuffix) {
     heartbeats.add(latency);
+    if (rpcMetricSuffix != null) {
+      nnRpcLatency.add("HeartbeatsFor" + rpcMetricSuffix, latency);
+    }
   }
 
-  public void addHeartbeatTotal(long latency) {
+  public void addHeartbeatTotal(long latency, String rpcMetricSuffix) {
     heartbeatsTotal.add(latency);
+    if (rpcMetricSuffix != null) {
+      nnRpcLatency.add("HeartbeatsTotalFor" + rpcMetricSuffix, latency);
+    }
   }
 
-  public void addLifeline(long latency) {
+  public void addLifeline(long latency, String rpcMetricSuffix) {
     lifelines.add(latency);
+    if (rpcMetricSuffix != null) {
+      nnRpcLatency.add("LifelinesFor" + rpcMetricSuffix, latency);
+    }
   }
 
-  public void addBlockReport(long latency) {
+  public void addBlockReport(long latency, String rpcMetricSuffix) {
     blockReports.add(latency);
+    if (rpcMetricSuffix != null) {
+      nnRpcLatency.add("BlockReportsFor" + rpcMetricSuffix, latency);
+    }
   }
 
-  public void addIncrementalBlockReport(long latency) {
+  public void addIncrementalBlockReport(long latency,
+      String rpcMetricSuffix) {
     incrementalBlockReports.add(latency);
+    if (rpcMetricSuffix != null) {
+      nnRpcLatency.add("IncrementalBlockReportsFor" + rpcMetricSuffix, latency);
+    }
   }
 
   public void addCacheReport(long latency) {
@@ -370,9 +411,9 @@ public class DataNodeMetrics {
       remoteBytesRead.incr(size);
     }
   }
-  
-  public void incrVolumeFailures() {
-    volumeFailures.incr();
+
+  public void incrVolumeFailures(int size) {
+    volumeFailures.incr(size);
   }
 
   public void incrDatanodeNetworkErrors() {
@@ -520,5 +561,91 @@ public class DataNodeMetrics {
 
   public void incrECReconstructionDecodingTime(long millis) {
     ecReconstructionDecodingTimeMillis.incr(millis);
+  }
+
+  public DataNodeUsageReport getDNUsageReport(long timeSinceLastReport) {
+    return dnUsageReportUtil.getUsageReport(bytesWritten.value(), bytesRead
+            .value(), totalWriteTime.value(), totalReadTime.value(),
+        blocksWritten.value(), blocksRead.value(), timeSinceLastReport);
+  }
+
+  public void incrActorCmdQueueLength(int delta) {
+    sumOfActorCommandQueueLength.incr(delta);
+  }
+
+  public void incrNumProcessedCommands() {
+    numProcessedCommands.incr();
+  }
+
+  /**
+   * Add processedCommandsOp metrics.
+   * @param latency milliseconds of process commands
+   */
+  public void addNumProcessedCommands(long latency) {
+    processedCommandsOp.add(latency);
+  }
+
+  /**
+   * Add addCreateRbwOp metrics.
+   * @param latency milliseconds of create RBW file
+   */
+  public void addCreateRbwOp(long latency) {
+    createRbwOp.add(latency);
+  }
+
+  /**
+   * Add addRecoverRbwOp metrics.
+   * @param latency milliseconds of recovery RBW file
+   */
+  public void addRecoverRbwOp(long latency) {
+    recoverRbwOp.add(latency);
+  }
+
+  /**
+   * Add addConvertTemporaryToRbwOp metrics.
+   * @param latency milliseconds of convert temporary to RBW file
+   */
+  public void addConvertTemporaryToRbwOp(long latency) {
+    convertTemporaryToRbwOp.add(latency);
+  }
+
+  /**
+   * Add addCreateTemporaryOp metrics.
+   * @param latency milliseconds of create temporary block file
+   */
+  public void addCreateTemporaryOp(long latency) {
+    createTemporaryOp.add(latency);
+  }
+
+  /**
+   * Add addFinalizeBlockOp metrics.
+   * @param latency milliseconds of finalize block
+   */
+  public void addFinalizeBlockOp(long latency) {
+    finalizeBlockOp.add(latency);
+  }
+
+  /**
+   * Add addUnfinalizeBlockOp metrics.
+   * @param latency milliseconds of un-finalize block file
+   */
+  public void addUnfinalizeBlockOp(long latency) {
+    unfinalizeBlockOp.add(latency);
+  }
+
+  /**
+   * Add addCheckAndUpdateOp metrics.
+   * @param latency milliseconds of check and update block file
+   */
+  public void addCheckAndUpdateOp(long latency) {
+    checkAndUpdateOp.add(latency);
+  }
+
+  /**
+   * Add addUpdateReplicaUnderRecoveryOp metrics.
+   * @param latency milliseconds of update and replica under recovery block file
+   */
+  public void addUpdateReplicaUnderRecoveryOp(long latency) {
+    updateReplicaUnderRecoveryOp.add(latency);
   }
 }

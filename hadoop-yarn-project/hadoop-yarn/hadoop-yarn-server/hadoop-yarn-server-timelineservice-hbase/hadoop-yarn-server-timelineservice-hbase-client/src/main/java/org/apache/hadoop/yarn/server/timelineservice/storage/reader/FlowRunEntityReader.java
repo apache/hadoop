@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.timelineservice.storage.reader;
 
 import java.io.IOException;
 import java.util.EnumSet;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Connection;
@@ -34,6 +35,7 @@ import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.filter.PageFilter;
 import org.apache.hadoop.hbase.filter.QualifierFilter;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.yarn.api.records.timelineservice.FlowRunEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineDataToRetrieve;
@@ -152,7 +154,8 @@ class FlowRunEntityReader extends TimelineEntityReader {
   }
 
   @Override
-  protected FilterList constructFilterListBasedOnFields() throws IOException {
+  protected FilterList constructFilterListBasedOnFields(
+      Set<String> cfsInFields) throws IOException {
     FilterList list = new FilterList(Operator.MUST_PASS_ONE);
     // By default fetch everything in INFO column family.
     FamilyFilter infoColumnFamily =
@@ -166,6 +169,7 @@ class FlowRunEntityReader extends TimelineEntityReader {
         && !hasField(dataToRetrieve.getFieldsToRetrieve(), Field.METRICS)) {
       FilterList infoColFamilyList = new FilterList(Operator.MUST_PASS_ONE);
       infoColFamilyList.addFilter(infoColumnFamily);
+      cfsInFields.add(Bytes.toString(FlowRunColumnFamily.INFO.getBytes()));
       infoColFamilyList.addFilter(new QualifierFilter(CompareOp.NOT_EQUAL,
           new BinaryPrefixComparator(FlowRunColumnPrefix.METRIC
               .getColumnPrefixBytes(""))));
@@ -182,6 +186,7 @@ class FlowRunEntityReader extends TimelineEntityReader {
           && !metricsToRetrieve.getFilterList().isEmpty()) {
         FilterList infoColFamilyList = new FilterList();
         infoColFamilyList.addFilter(infoColumnFamily);
+        cfsInFields.add(Bytes.toString(FlowRunColumnFamily.INFO.getBytes()));
         FilterList columnsList = updateFixedColumns();
         columnsList.addFilter(TimelineFilterUtils.createHBaseFilterList(
             FlowRunColumnPrefix.METRIC, metricsToRetrieve));

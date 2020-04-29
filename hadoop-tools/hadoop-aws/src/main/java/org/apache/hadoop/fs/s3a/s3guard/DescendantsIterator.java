@@ -28,9 +28,9 @@ import com.google.common.base.Preconditions;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.s3a.S3AFileStatus;
 
 /**
  * {@code DescendantsIterator} is a {@link RemoteIterator} that implements
@@ -83,7 +83,7 @@ import org.apache.hadoop.fs.RemoteIterator;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class DescendantsIterator implements RemoteIterator<FileStatus> {
+public class DescendantsIterator implements RemoteIterator<S3AFileStatus> {
 
   private final MetadataStore metadataStore;
   private final Queue<PathMetadata> queue = new LinkedList<>();
@@ -121,7 +121,7 @@ public class DescendantsIterator implements RemoteIterator<FileStatus> {
   }
 
   @Override
-  public FileStatus next() throws IOException {
+  public S3AFileStatus next() throws IOException {
     if (!hasNext()) {
       throw new NoSuchElementException("No more descendants.");
     }

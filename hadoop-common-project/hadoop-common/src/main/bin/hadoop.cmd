@@ -189,6 +189,11 @@ call :updatepath %HADOOP_BIN_PATH%
   ) else if defined YARN_CLIENT_OPTS (
     @echo WARNING: Use "yarn jar" to launch YARN applications.
   )
+  @rem if --help option is used, no need to call command
+  if [!hadoop-command-arguments[%1%]!]==["--help"] (
+    @echo Usage: hadoop jar <jar> [mainClass] args...
+    goto :eof
+  )
   set CLASS=org.apache.hadoop.util.RunJar
   goto :eof
 

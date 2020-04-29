@@ -57,7 +57,7 @@ public final class DataGeneratorForTest {
     // the coprocessor class is loaded from classpath
     conf.set(YarnConfiguration.FLOW_RUN_COPROCESSOR_JAR_HDFS_LOCATION, " ");
     // now create all tables
-    TimelineSchemaCreator.createAllTables(conf, false);
+    HBaseTimelineSchemaCreator.createAllTables(conf, false);
   }
 
   public static void loadApps(HBaseTestingUtility util, long ts)

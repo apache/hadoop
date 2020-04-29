@@ -20,9 +20,10 @@ package org.apache.hadoop.yarn.api.resource;
 
 import java.util.concurrent.TimeUnit;
 
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.records.AllocationTagNamespaceType;
+import org.apache.hadoop.yarn.api.records.NodeAttributeOpCode;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.AbstractConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.And;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.DelayedOr;
@@ -49,13 +50,6 @@ public final class PlacementConstraints {
   public static final String NODE = PlacementConstraint.NODE_SCOPE;
   public static final String RACK = PlacementConstraint.RACK_SCOPE;
   public static final String NODE_PARTITION = "yarn_node_partition/";
-
-  private static final String APPLICATION_LABEL_PREFIX =
-      "yarn_application_label/";
-
-  @InterfaceAudience.Private
-  public static final String APPLICATION_LABEL_INTRA_APPLICATION =
-      APPLICATION_LABEL_PREFIX + "%intra_app%";
 
   /**
    * Creates a constraint that requires allocations to be placed on nodes that
@@ -93,6 +87,24 @@ public final class PlacementConstraints {
   }
 
   /**
+   * Creates a constraint that requires allocations to be placed on nodes that
+   * belong to a scope (e.g., node or rack) that satisfy any of the
+   * target expressions based on node attribute op code.
+   *
+   * @param scope the scope within which the target expressions should not be
+   *          true
+   * @param opCode Node Attribute code which could be equals, not equals.
+   * @param targetExpressions the expressions that need to not be true within
+   *          the scope
+   * @return the resulting placement constraint
+   */
+  public static AbstractConstraint targetNodeAttribute(String scope,
+      NodeAttributeOpCode opCode,
+      TargetExpression... targetExpressions) {
+    return new SingleConstraint(scope, -1, -1, opCode, targetExpressions);
+  }
+
+  /**
    * Creates a constraint that restricts the number of allocations within a
    * given scope (e.g., node or rack).
    *
@@ -115,6 +127,25 @@ public final class PlacementConstraints {
   }
 
   /**
+   * Similar to {@link #cardinality(String, int, int, String...)}, but let you
+   * attach a namespace to the given allocation tags.
+   *
+   * @param scope the scope of the constraint
+   * @param namespace the namespace of the allocation tags
+   * @param minCardinality determines the minimum number of allocations within
+   *                       the scope
+   * @param maxCardinality determines the maximum number of allocations within
+   *                       the scope
+   * @param allocationTags allocation tags
+   * @return the resulting placement constraint
+   */
+  public static AbstractConstraint cardinality(String scope, String namespace,
+      int minCardinality, int maxCardinality, String... allocationTags) {
+    return new SingleConstraint(scope, minCardinality, maxCardinality,
+        PlacementTargets.allocationTagWithNamespace(namespace, allocationTags));
+  }
+
+  /**
    * Similar to {@link #cardinality(String, int, int, String...)}, but
    * determines only the minimum cardinality (the maximum cardinality is
    * unbound).
@@ -132,6 +163,23 @@ public final class PlacementConstraints {
   }
 
   /**
+   * Similar to {@link #minCardinality(String, int, String...)}, but let you
+   * attach a namespace to the allocation tags.
+   *
+   * @param scope the scope of the constraint
+   * @param namespace the namespace of these tags
+   * @param minCardinality determines the minimum number of allocations within
+   *                       the scope
+   * @param allocationTags the constraint targets allocations with these tags
+   * @return the resulting placement constraint
+   */
+  public static AbstractConstraint minCardinality(String scope,
+      String namespace, int minCardinality, String... allocationTags) {
+    return cardinality(scope, namespace, minCardinality, Integer.MAX_VALUE,
+        allocationTags);
+  }
+
+  /**
    * Similar to {@link #cardinality(String, int, int, String...)}, but
    * determines only the maximum cardinality (the minimum cardinality is 0).
    *
@@ -144,6 +192,23 @@ public final class PlacementConstraints {
   public static AbstractConstraint maxCardinality(String scope,
       int maxCardinality, String... allocationTags) {
     return cardinality(scope, 0, maxCardinality, allocationTags);
+  }
+
+  /**
+   * Similar to {@link #maxCardinality(String, int, String...)}, but let you
+   * specify a namespace for the tags, see supported namespaces in
+   * {@link AllocationTagNamespaceType}.
+   *
+   * @param scope the scope of the constraint
+   * @param tagNamespace the namespace of these tags
+   * @param maxCardinality determines the maximum number of allocations within
+   *          the scope
+   * @param allocationTags allocation tags
+   * @return the resulting placement constraint
+   */
+  public static AbstractConstraint maxCardinality(String scope,
+      String tagNamespace, int maxCardinality, String... allocationTags) {
+    return cardinality(scope, tagNamespace, 0, maxCardinality, allocationTags);
   }
 
   /**
@@ -212,31 +277,31 @@ public final class PlacementConstraints {
 
     /**
      * Constructs a target expression on an allocation tag. It is satisfied if
-     * there are allocations with one of the given tags.
+     * there are allocations with one of the given tags. The default namespace
+     * for these tags is {@link AllocationTagNamespaceType#SELF}, this only
+     * checks tags within the application.
      *
      * @param allocationTags the set of tags that the attribute should take
      *          values from
      * @return the resulting expression on the allocation tags
      */
     public static TargetExpression allocationTag(String... allocationTags) {
-      return new TargetExpression(TargetType.ALLOCATION_TAG, null,
-          allocationTags);
+      return allocationTagWithNamespace(
+          AllocationTagNamespaceType.SELF.toString(), allocationTags);
     }
 
     /**
-     * Constructs a target expression on an allocation tag. It is satisfied if
-     * there are allocations with one of the given tags. Comparing to
-     * {@link PlacementTargets#allocationTag(String...)}, this only checks tags
-     * within the application.
+     * Constructs a target expression on a set of allocation tags under
+     * a certain namespace.
      *
-     * @param allocationTags the set of tags that the attribute should take
-     *          values from
-     * @return the resulting expression on the allocation tags
+     * @param namespace namespace of the allocation tags
+     * @param allocationTags allocation tags
+     * @return a target expression
      */
-    public static TargetExpression allocationTagToIntraApp(
+    public static TargetExpression allocationTagWithNamespace(String namespace,
         String... allocationTags) {
       return new TargetExpression(TargetType.ALLOCATION_TAG,
-          APPLICATION_LABEL_INTRA_APPLICATION, allocationTags);
+          namespace, allocationTags);
     }
   }
 

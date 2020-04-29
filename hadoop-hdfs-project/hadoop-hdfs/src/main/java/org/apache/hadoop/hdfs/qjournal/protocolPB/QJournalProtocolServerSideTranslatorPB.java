@@ -45,6 +45,8 @@ import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.FormatReq
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.FormatResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetEditLogManifestRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetEditLogManifestResponseProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournaledEditsRequestProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournaledEditsResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournalCTimeRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournalCTimeResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournalStateRequestProto;
@@ -71,8 +73,8 @@ import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
 
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.RpcController;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 /**
  * Implementation for protobuf service that forwards requests
@@ -147,7 +149,7 @@ public class QJournalProtocolServerSideTranslatorPB implements QJournalProtocolP
     try {
       impl.format(request.getJid().getIdentifier(),
           request.hasNameServiceId() ? request.getNameServiceId() : null,
-          PBHelper.convert(request.getNsInfo()));
+          PBHelper.convert(request.getNsInfo()), request.getForce());
       return FormatResponseProto.getDefaultInstance();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
@@ -168,7 +170,7 @@ public class QJournalProtocolServerSideTranslatorPB implements QJournalProtocolP
     return VOID_JOURNAL_RESPONSE;
   }
 
-  /** @see JournalProtocol#heartbeat */
+  /** @see QJournalProtocol#heartbeat */
   @Override
   public HeartbeatResponseProto heartbeat(RpcController controller,
       HeartbeatRequestProto req) throws ServiceException {
@@ -235,6 +237,18 @@ public class QJournalProtocolServerSideTranslatorPB implements QJournalProtocolP
     }
   }
 
+  @Override
+  public GetJournaledEditsResponseProto getJournaledEdits(
+      RpcController controller, GetJournaledEditsRequestProto request)
+      throws ServiceException {
+    try {
+      return impl.getJournaledEdits(request.getJid().getIdentifier(),
+          request.hasNameServiceId() ? request.getNameServiceId() : null,
+          request.getSinceTxId(), request.getMaxTxns());
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+  }
 
   @Override
   public PrepareRecoveryResponseProto prepareRecovery(RpcController controller,

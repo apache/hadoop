@@ -19,10 +19,14 @@
 import { moduleFor, test } from 'ember-qunit';
 
 moduleFor('adapter:yarn-node-app', 'Unit | Adapter | NodeApp', {
+  unit: true
 });
 
 test('Basic creation', function(assert) {
-  let adapter = this.subject();
+  let adapter = this.subject({
+    host: "localhost:4200",
+    namespace: "{nodeAddress}/ws/v1/node"
+  });
   assert.expect(11);
   assert.ok(adapter);
   assert.ok(adapter.urlForQueryRecord);
@@ -34,35 +38,44 @@ test('Basic creation', function(assert) {
   assert.ok(adapter.host);
   assert.ok(adapter.namespace);
   assert.equal("application/json", adapter.headers.Accept);
-  assert.equal("ws/v1/node", adapter.namespace);
+  assert.equal("{nodeAddress}/ws/v1/node", adapter.namespace);
 });
 
 test('urlForQueryRecord test', function(assert) {
-  let adapter = this.subject();
+  let adapter = this.subject({
+    host: "localhost:4200",
+    namespace: "{nodeAddress}/ws/v1/node"
+  });
   let host = adapter.host;
   assert.equal(
-      host + "localhost:8042/ws/v1/node/apps/application_1111111111_1111",
+      host + "/localhost:8042/ws/v1/node/apps/application_1111111111_1111",
       adapter.urlForQueryRecord(
       {nodeAddr: "localhost:8042", appId: "application_1111111111_1111"}));
 });
 
 test('urlForQuery test', function(assert) {
-  let adapter = this.subject();
+  let adapter = this.subject({
+    host: "localhost:4200",
+    namespace: "{nodeAddress}/ws/v1/node"
+  });
   let host = adapter.host;
-  assert.equal(host + "localhost:8042/ws/v1/node/apps",
+  assert.equal(host + "/localhost:8042/ws/v1/node/apps",
       adapter.urlForQuery({nodeAddr: "localhost:8042"}));
 });
 
 test('query test', function(assert) {
-  let adapter = this.subject(),
-      testModel = { modelName: "testModel" },
+  let adapter = this.subject({
+    host: "localhost:4200",
+    namespace: "{nodeAddress}/ws/v1/node"
+  });
+  let testModel = { modelName: "testModel" },
       testStore = {},
       testQuery = {nodeAddr: "localhost:8042"};
   let host = adapter.host;
   assert.expect(3);
 
   adapter.ajax = function (url, method, hash) {
-    assert.equal(host + "localhost:8042/ws/v1/node/apps", url);
+    assert.equal(host + "/localhost:8042/ws/v1/node/apps", url);
     assert.equal('GET', method);
     assert.equal(null, hash.data);
   };
@@ -71,8 +84,11 @@ test('query test', function(assert) {
 });
 
 test('queryRecord test', function(assert) {
-  let adapter = this.subject(),
-      testModel = { modelName: "testModel" },
+  let adapter = this.subject({
+    host: "localhost:4200",
+    namespace: "{nodeAddress}/ws/v1/node"
+  });
+  let testModel = { modelName: "testModel" },
       testStore = {},
       testQuery = {
         nodeAddr: "localhost:8042",
@@ -82,9 +98,7 @@ test('queryRecord test', function(assert) {
   assert.expect(3);
 
   adapter.ajax = function (url, method, hash) {
-    assert.equal(
-        host + "localhost:8042/ws/v1/node/apps/application_1111111111_1111",
-        url);
+    assert.equal(host + "/localhost:8042/ws/v1/node/apps/application_1111111111_1111", url);
     assert.equal('GET', method);
     assert.equal(null, hash.data);
   };

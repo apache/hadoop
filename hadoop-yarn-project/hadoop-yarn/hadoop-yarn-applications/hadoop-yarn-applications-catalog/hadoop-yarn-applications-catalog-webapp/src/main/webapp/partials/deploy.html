@@ -1,0 +1,80 @@
+<!---
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License. See accompanying LICENSE file.
+-->
+<div class="container content">
+    <div class="row">
+      <div class="col-xs-12 col-md-12 col-lg-12">
+        <div class="form-group">
+          <h1>Deploy Application</h1>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-xs-2 col-md-2 col-lg-2">
+        <img ng-src="{{details.icon}}" alt="" width="128" height="128" ng-if="details.icon != null" />
+      </div>
+      <div class="col-xs-10 col-md-10 col-lg-10">
+        <div class="form-group">
+          <h2>{{details.org}}/{{details.name}}</h2>
+          {{details.desc}}
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-xs-12 col-md-12 col-lg-12">
+        <div class="form-group">
+          <label>Application Name</label>
+          <input type=text name="name" class="form-control" ng-model="details.app.name" autofocus />
+        </div>
+        <div class="form-group">
+          <label>Queue</label>
+          <input type=text name="queue" class="form-control" ng-model="details.app.queue" />
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-xs-12 col-md-12 col-lg-12" ng-repeat="docker in details.app.components track by $index">
+        <div class="panel">
+          <div class="form-group">
+            <label>Component {{docker.name}}</label>
+          </div>
+          <div class="form-group">
+            <label>Number of containers</label>
+            <input type=text name="artifact_id" class="form-control" ng-model="docker.number_of_containers" />
+          </div>
+          <div class="form-group">
+            <label>Environments</label>
+            <textarea json-text name="env" class="form-control" ng-model="docker.configuration.env"/></textarea>
+          </div>
+          <div class="form-group">
+            <label>Properties</label>
+            <textarea json-text name="properties" class="form-control" ng-model="docker.configuration.properties"/></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <br>
+    <div class="row">
+      <div class="col-xs-12 col-md-12 col-lg-12">
+        <p>
+        <a class="btn btn-secondary" ng-click="launchApp(details.app)">LAUNCH</a>
+        <a class="btn btn-secondary" href="/">CANCEL</a>
+        <span class="infobox bg-info" ng-if="message">{{message}}</span>
+        <span class="infobox bg-danger" ng-if="error">{{error}}</span>
+      </div>
+    </div>
+</div>

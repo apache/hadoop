@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.HashMap;
 import java.util.List;
@@ -26,19 +27,22 @@ import java.util.Map;
 import java.util.Set;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang3.builder.CompareToBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
@@ -56,7 +60,8 @@ import com.google.common.collect.ImmutableSet;
 @Unstable
 public abstract class SchedulerNode {
 
-  private static final Log LOG = LogFactory.getLog(SchedulerNode.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(SchedulerNode.class);
 
   private Resource unallocatedResource = Resource.newInstance(0, 0);
   private Resource allocatedResource = Resource.newInstance(0, 0);
@@ -67,6 +72,8 @@ public abstract class SchedulerNode {
       ResourceUtilization.newInstance(0, 0, 0f);
   private volatile ResourceUtilization nodeUtilization =
       ResourceUtilization.newInstance(0, 0, 0f);
+  /** Time stamp for overcommitted resources to time out. */
+  private long overcommitTimeout = -1;
 
   /* set of containers that are allocated containers */
   private final Map<ContainerId, ContainerInfo> launchedContainers =
@@ -74,8 +81,11 @@ public abstract class SchedulerNode {
 
   private final RMNode rmNode;
   private final String nodeName;
+  private final RMContext rmContext;
 
   private volatile Set<String> labels = null;
+
+  private volatile Set<NodeAttribute> nodeAttributes = null;
 
   // Last updated time
   private volatile long lastHeartbeatMonotonicTime;
@@ -83,6 +93,7 @@ public abstract class SchedulerNode {
   public SchedulerNode(RMNode node, boolean usePortForNodeName,
       Set<String> labels) {
     this.rmNode = node;
+    this.rmContext = node.getRMContext();
     this.unallocatedResource = Resources.clone(node.getTotalCapability());
     this.totalResource = Resources.clone(node.getTotalCapability());
     if (usePortForNodeName) {
@@ -110,6 +121,38 @@ public abstract class SchedulerNode {
     this.totalResource = resource;
     this.unallocatedResource = Resources.subtract(totalResource,
         this.allocatedResource);
+  }
+
+  /**
+   * Set the timeout for the node to stop overcommitting the resources. After
+   * this time the scheduler will start killing containers until the resources
+   * are not overcommitted anymore. This may reset a previous timeout.
+   * @param timeOut Time out in milliseconds.
+   */
+  public synchronized void setOvercommitTimeOut(long timeOut) {
+    if (timeOut >= 0) {
+      if (this.overcommitTimeout != -1) {
+        LOG.debug("The overcommit timeout for {} was already set to {}",
+            getNodeID(), this.overcommitTimeout);
+      }
+      this.overcommitTimeout = Time.now() + timeOut;
+    }
+  }
+
+  /**
+   * Check if the time out has passed.
+   * @return If the node is overcommitted.
+   */
+  public synchronized boolean isOvercommitTimedOut() {
+    return this.overcommitTimeout >= 0 && Time.now() >= this.overcommitTimeout;
+  }
+
+  /**
+   * Check if the node has a time out for overcommit resources.
+   * @return If the node has a time out for overcommit resources.
+   */
+  public synchronized boolean isOvercommitTimeOutSet() {
+    return this.overcommitTimeout >= 0;
   }
 
   /**
@@ -242,6 +285,18 @@ public abstract class SchedulerNode {
 
     launchedContainers.remove(containerId);
     Container container = info.container.getContainer();
+
+    // We remove allocation tags when a container is actually
+    // released on NM. This is to avoid running into situation
+    // when AM releases a container and NM has some delay to
+    // actually release it, then the tag can still be visible
+    // at RM so that RM can respect it during scheduling new containers.
+    if (rmContext != null && rmContext.getAllocationTagsManager() != null) {
+      rmContext.getAllocationTagsManager()
+          .removeContainer(container.getNodeId(),
+              container.getId(), container.getAllocationTags());
+    }
+
     updateResourceForReleasedContainer(container);
 
     if (LOG.isDebugEnabled()) {
@@ -349,6 +404,36 @@ public abstract class SchedulerNode {
       } else {
         result.addFirst(info.container);
       }
+    }
+    return result;
+  }
+
+  /**
+   * Get the containers running on the node ordered by which to kill first. It
+   * tries to kill AMs last, then GUARANTEED containers, and it kills
+   * OPPORTUNISTIC first. If the same time, it uses the creation time.
+   * @return A copy of the running containers ordered by which to kill first.
+   */
+  public List<RMContainer> getContainersToKill() {
+    List<RMContainer> result = getLaunchedContainers();
+    Collections.sort(result, (c1, c2) -> {
+      return new CompareToBuilder()
+          .append(c1.isAMContainer(), c2.isAMContainer())
+          .append(c2.getExecutionType(), c1.getExecutionType()) // reversed
+          .append(c2.getCreationTime(), c1.getCreationTime()) // reversed
+          .toComparison();
+    });
+    return result;
+  }
+
+  /**
+   * Get the launched containers in the node.
+   * @return List of launched containers.
+   */
+  protected synchronized List<RMContainer> getLaunchedContainers() {
+    List<RMContainer> result = new ArrayList<>();
+    for (ContainerInfo info : launchedContainers.values()) {
+      result.add(info.container);
     }
     return result;
   }
@@ -486,6 +571,14 @@ public abstract class SchedulerNode {
   @Override
   public int hashCode() {
     return getNodeID().hashCode();
+  }
+
+  public Set<NodeAttribute> getNodeAttributes() {
+    return nodeAttributes;
+  }
+
+  public void updateNodeAttributes(Set<NodeAttribute> attributes) {
+    this.nodeAttributes = attributes;
   }
 
   private static class ContainerInfo {

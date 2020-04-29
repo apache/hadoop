@@ -21,8 +21,8 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.CachedBlocksList;
@@ -31,7 +31,8 @@ import org.junit.Assert;
 import org.junit.Test;
 
 public class TestCachedBlocksList {
-  public static final Log LOG = LogFactory.getLog(TestCachedBlocksList.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestCachedBlocksList.class);
 
   @Test(timeout=60000)
   public void testSingleList() {

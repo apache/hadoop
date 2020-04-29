@@ -23,8 +23,8 @@ import java.util.Random;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -32,7 +32,7 @@ import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
 
 public class TestGridmixRecord {
-  private static final Log LOG = LogFactory.getLog(TestGridmixRecord.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestGridmixRecord.class);
 
   static void lengthTest(GridmixRecord x, GridmixRecord y, int min,
       int max) throws Exception {

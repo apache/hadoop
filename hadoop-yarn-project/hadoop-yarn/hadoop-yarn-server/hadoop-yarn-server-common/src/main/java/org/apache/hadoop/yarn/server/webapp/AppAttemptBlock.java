@@ -25,7 +25,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
@@ -155,7 +155,8 @@ public class AppAttemptBlock extends HtmlBlock {
 
     // Container Table
     TBODY<TABLE<Hamlet>> tbody =
-        html.table("#containers").thead().tr().th(".id", "Container ID")
+        html.table("#containers").$style("width:100%")
+          .thead().tr().th(".id", "Container ID")
           .th(".node", "Node").th(".exitstatus", "Container Exit Status")
           .th(".logs", "Logs").__().__().tbody();
 
@@ -173,8 +174,8 @@ public class AppAttemptBlock extends HtmlBlock {
               + container.getNodeHttpAddress())
         .append("'>")
         .append(container.getNodeHttpAddress() == null ? "N/A" :
-            StringEscapeUtils.escapeJavaScript(StringEscapeUtils
-                .escapeHtml(container.getNodeHttpAddress())))
+            StringEscapeUtils.escapeEcmaScript(StringEscapeUtils
+                .escapeHtml4(container.getNodeHttpAddress())))
         .append("</a>\",\"")
         .append(container.getContainerExitStatus()).append("\",\"<a href='")
         .append(container.getLogUrl() == null ?

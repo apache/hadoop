@@ -29,14 +29,17 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI.tableInit;
 
 import java.util.Collection;
 
-import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.text.StringEscapeUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app.webapp.App;
+import org.apache.hadoop.mapreduce.v2.app.webapp.dao.MapTaskAttemptInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskAttemptInfo;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.mapreduce.v2.util.MRWebAppUtil;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
@@ -60,10 +63,12 @@ public class HsTaskPage extends HsView {
    */
   static class AttemptsBlock extends HtmlBlock {
     final App app;
+    final Configuration conf;
 
     @Inject
-    AttemptsBlock(App ctx) {
+    AttemptsBlock(App ctx, Configuration conf) {
       app = ctx;
+      this.conf = conf;
     }
 
     @Override
@@ -115,7 +120,7 @@ public class HsTaskPage extends HsView {
        StringBuilder attemptsTableData = new StringBuilder("[\n");
 
        for (TaskAttempt attempt : getTaskAttempts()) {
-        final TaskAttemptInfo ta = new TaskAttemptInfo(attempt, false);
+        final TaskAttemptInfo ta = new MapTaskAttemptInfo(attempt, false);
         String taid = ta.getId();
 
         String nodeHttpAddr = ta.getNode();
@@ -147,17 +152,25 @@ public class HsTaskPage extends HsView {
         attemptsTableData.append("[\"")
         .append(getAttemptId(taskId, ta)).append("\",\"")
         .append(ta.getState()).append("\",\"")
-        .append(StringEscapeUtils.escapeJavaScript(
-              StringEscapeUtils.escapeHtml(ta.getStatus()))).append("\",\"")
+        .append(StringEscapeUtils.escapeEcmaScript(
+              StringEscapeUtils.escapeHtml4(ta.getStatus()))).append("\",\"")
 
         .append("<a class='nodelink' href='" + MRWebAppUtil.getYARNWebappScheme() + nodeHttpAddr + "'>")
-        .append(nodeRackName + "/" + nodeHttpAddr + "</a>\",\"")
+        .append(nodeRackName + "/" + nodeHttpAddr + "</a>\",\"");
 
-        .append("<a class='logslink' href='").append(url("logs", nodeIdString
-          , containerIdString, taid, app.getJob().getUserName()))
-          .append("'>logs</a>\",\"")
+         String logsUrl = url("logs", nodeIdString, containerIdString, taid,
+             app.getJob().getUserName());
+         if (!conf.getBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED,
+             YarnConfiguration.DEFAULT_LOG_AGGREGATION_ENABLED)) {
+           logsUrl =
+               url(MRWebAppUtil.getYARNWebappScheme(), nodeHttpAddr, "node",
+                   "containerlogs", containerIdString,
+                   app.getJob().getUserName());
+         }
+         attemptsTableData.append("<a class='logslink' href='").append(logsUrl)
+             .append("'>logs</a>\",\"");
 
-          .append(attemptStartTime).append("\",\"");
+        attemptsTableData.append(attemptStartTime).append("\",\"");
 
         if(type == TaskType.REDUCE) {
           attemptsTableData.append(shuffleFinishTime).append("\",\"")
@@ -171,8 +184,8 @@ public class HsTaskPage extends HsView {
           .append(elapsedReduceTime).append("\",\"");
         }
           attemptsTableData.append(attemptElapsed).append("\",\"")
-          .append(StringEscapeUtils.escapeJavaScript(
-              StringEscapeUtils.escapeHtml(ta.getNote())))
+          .append(StringEscapeUtils.escapeEcmaScript(
+              StringEscapeUtils.escapeHtml4(ta.getNote())))
           .append("\"],\n");
       }
        //Remove the last comma and close off the array of arrays

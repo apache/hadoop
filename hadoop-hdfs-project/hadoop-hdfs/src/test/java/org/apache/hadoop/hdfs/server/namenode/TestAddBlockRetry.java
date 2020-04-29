@@ -24,8 +24,8 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.EnumSet;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -46,7 +46,8 @@ import org.mockito.Mockito;
  * FSNamesystem.getAdditionalBlock().
  */
 public class TestAddBlockRetry {
-  public static final Log LOG = LogFactory.getLog(TestAddBlockRetry.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestAddBlockRetry.class);
 
   private static final short REPLICATION = 3;
 
@@ -85,7 +86,7 @@ public class TestAddBlockRetry {
     nn.create(src, FsPermission.getFileDefault(),
         "clientName",
         new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE)),
-        true, (short)3, 1024, null, null);
+        true, (short) 3, 1024, null, null, null);
 
     // start first addBlock()
     LOG.info("Starting first addBlock for " + src);
@@ -157,7 +158,7 @@ public class TestAddBlockRetry {
     // create file
     nameNodeRpc.create(src, FsPermission.getFileDefault(), "clientName",
         new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE)), true,
-        (short) 3, 1024, null, null);
+        (short) 3, 1024, null, null, null);
     // start first addBlock()
     LOG.info("Starting first addBlock for " + src);
     LocatedBlock lb1 = nameNodeRpc.addBlock(src, "clientName", null, null,

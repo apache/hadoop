@@ -18,8 +18,8 @@
 package org.apache.hadoop.yarn.api.records.timelineservice;
 
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -36,8 +36,8 @@ import java.util.Map;
 
 
 public class TestTimelineServiceRecords {
-  private static final Log LOG =
-      LogFactory.getLog(TestTimelineServiceRecords.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestTimelineServiceRecords.class);
 
   @Test
   public void testTimelineEntities() throws Exception {

@@ -21,16 +21,16 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.commons.lang.RandomStringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang3.RandomStringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 
 /**
  * A random text generator. The words are simply sequences of alphabets.
  */
 class RandomTextDataGenerator {
-  static final Log LOG = LogFactory.getLog(RandomTextDataGenerator.class);
+  static final Logger LOG = LoggerFactory.getLogger(RandomTextDataGenerator.class);
   
   /**
    * Configuration key for random text data generator's list size.

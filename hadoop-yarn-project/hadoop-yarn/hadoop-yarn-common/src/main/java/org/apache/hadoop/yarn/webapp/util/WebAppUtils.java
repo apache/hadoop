@@ -90,8 +90,41 @@ public class WebAppUtils {
     }
   }
 
+  /**
+   * Runs a certain function against the active RM. The function's first
+   * argument is expected to be a string which contains the address of
+   * the RM being tried.
+   */
+  public static <T, R> R execOnActiveRM(Configuration conf,
+      ThrowingBiFunction<String, T, R> func, T arg) throws Exception {
+    String rm1Address = getRMWebAppURLWithScheme(conf, 0);
+    try {
+      return func.apply(rm1Address, arg);
+    } catch (Exception e) {
+      if (HAUtil.isHAEnabled(conf)) {
+        int rms = HAUtil.getRMHAIds(conf).size();
+        for (int i=1; i<rms; i++) {
+          try {
+            rm1Address = getRMWebAppURLWithScheme(conf, i);
+            return func.apply(rm1Address, arg);
+          } catch (Exception e1) {
+            // ignore and try next one when RM is down
+            e = e1;
+          }
+        }
+      }
+      throw e;
+    }
+  }
+
+  /** A BiFunction which throws on Exception. */
+  @FunctionalInterface
+  public interface ThrowingBiFunction<T, U, R> {
+    R apply(T t, U u) throws Exception;
+  }
+
   public static String getRMWebAppURLWithoutScheme(Configuration conf,
-      boolean isHAEnabled)  {
+      boolean isHAEnabled, int haIdIndex)  {
     YarnConfiguration yarnConfig = new YarnConfiguration(conf);
     // set RM_ID if we have not configure it.
     if (isHAEnabled) {
@@ -99,7 +132,7 @@ public class WebAppUtils {
       if (rmId == null || rmId.isEmpty()) {
         List<String> rmIds = new ArrayList<>(HAUtil.getRMHAIds(conf));
         if (rmIds != null && !rmIds.isEmpty()) {
-          yarnConfig.set(YarnConfiguration.RM_HA_ID, rmIds.get(0));
+          yarnConfig.set(YarnConfiguration.RM_HA_ID, rmIds.get(haIdIndex));
         }
       }
     }
@@ -120,13 +153,19 @@ public class WebAppUtils {
     }
   }
 
+  public static String getRMWebAppURLWithScheme(Configuration conf,
+      int haIdIndex) {
+    return getHttpSchemePrefix(conf) + getRMWebAppURLWithoutScheme(
+        conf, HAUtil.isHAEnabled(conf), haIdIndex);
+  }
+
   public static String getRMWebAppURLWithScheme(Configuration conf) {
     return getHttpSchemePrefix(conf) + getRMWebAppURLWithoutScheme(
-        conf, HAUtil.isHAEnabled(conf));
+        conf, HAUtil.isHAEnabled(conf), 0);
   }
 
   public static String getRMWebAppURLWithoutScheme(Configuration conf) {
-    return getRMWebAppURLWithoutScheme(conf, false);
+    return getRMWebAppURLWithoutScheme(conf, false, 0);
   }
 
   public static String getRouterWebAppURLWithScheme(Configuration conf) {

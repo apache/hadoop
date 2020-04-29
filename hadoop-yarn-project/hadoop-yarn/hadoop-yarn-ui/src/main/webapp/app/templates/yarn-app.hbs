@@ -18,7 +18,18 @@
 
 {{breadcrumb-bar breadcrumbs=breadcrumbs}}
 
-<div class="panel-group">
+{{#if actionResponse}}
+  <div class="alert-wrapper">
+    <div class="col-md-12">
+      <div class="alert alert-dismissible {{if (eq actionResponse.type 'error') 'alert-danger' 'alert-success'}}" role="alert">
+        <button class="close" data-dismiss="alert" aria-label="Close" {{action "resetActionResponse"}}><span aria-hidden="true">&times;</span></button>
+        <strong>{{actionResponse.msg}}</strong>
+      </div>
+    </div>
+  </div>
+{{/if}}
+
+<div class="panel-group col-md-12">
   <div class="panel panel-default">
     <div class="yarn-app-header">
       <div class="flex">
@@ -49,14 +60,14 @@
               <i class="glyphicon glyphicon-user glyphicon-gray" /> {{model.app.user}}
             </div>
             {{#if model.app.hasFinishedTime}}
-              <div title="Started at {{model.app.startTime}}. &#10; Ran for {{model.app.formattedElapsedTime}}" class="yarn-tooltip">
+              <div title="Started at {{model.app.formattedStartTime}}. &#10; Ran for {{model.app.formattedElapsedTime}}" class="yarn-tooltip">
                 <i class="glyphicon glyphicon-time glyphicon-gray" />
-                Finished at {{model.app.validatedFinishedTs}}
+                Finished at {{model.app.formattedFinishedTime}}
               </div>
             {{else}}
               <div title="Running for {{model.app.formattedElapsedTime}}" class="yarn-tooltip">
                 <i class="glyphicon glyphicon-time glyphicon-gray" />
-                Started at {{model.app.startTime}}
+                Started at {{model.app.formattedStartTime}}
               </div>
             {{/if}}
           </div>
@@ -64,29 +75,48 @@
 
         <div class="flex-right">
           <div class="links">
-            <a href="{{model.app.amContainerLogs}}" target="_blank">Master Container Log</a> &nbsp;|&nbsp;
-            <a href="{{model.app.masterNodeURL}}">Master Node</a> &nbsp;|&nbsp;
-            {{#if isRunningService}}
+              {{#if (or (or isServiceDeployedOrRunning isServiceStoppped) isAppKillable)}}
               <div class="btn-group">
-                <button type="button" class="btn btn-unstyled dropdown-toggle" title="Settings" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                  <i class="glyphicon glyphicon-cog" />
+                <button type="button" class="btn btn-unstyled dropdown-toggle" title="Settings"
+                  data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="margin-left: -5px;">
+                  <i class="glyphicon glyphicon-cog"/> Settings
                 </button>
                 <ul class="dropdown-menu dropdown-menu-right">
+                  {{#if isServiceDeployedOrRunning}}
+                    <li>
+                      <a href="#"  {{action "showStopServiceConfirm"}} target="_blank">
+                        <i class="glyphicon glyphicon-stop" /> &nbsp;Stop Service
+                      </a>
+                    </li>
+                    <li>
+                      <a href="#" target="_blank" {{action "showDeleteServiceConfirm"}}>
+                        <i class="glyphicon glyphicon-trash" /> &nbsp;Delete Service
+                      </a>
+                    </li>
+                  {{/if}}
+                  {{#if isServiceStoppped}}
                   <li>
-                    <a href="#"  {{action "showStopServiceConfirm"}} target="_blank"><i class="glyphicon glyphicon-stop" /> &nbsp;Stop Service</a>
+                    <a href="#" target="_blank" {{action "showDeleteServiceConfirm"}}>
+                      <i class="glyphicon glyphicon-trash" /> &nbsp;Delete Service
+                    </a>
                   </li>
-                  <li>
-                    <a href="#" target="_blank" {{action "showDeleteServiceConfirm"}}><i class="glyphicon glyphicon-trash" /> &nbsp;Delete Service </a>
-                  </li>
+                  {{/if}}
+                  {{#if isAppKillable}}
+                    <li>
+                      <a href="#"  {{action "showKillApplicationConfirm"}} target="_blank">
+                        <i class="glyphicon glyphicon-stop" />&nbsp;Kill Application
+                      </a>
+                    </li>
+                  {{/if}}
                 </ul>
               </div>
             {{/if}}
 
             {{#if model.serviceName}}
               {{#if model.quicklinks}}
-              <div class="btn-group">
+              <div class="btn-group quick-links">
                 <button type="button" class="btn btn-unstyled dropdown-toggle" title="Quick links" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                  <i class="glyphicon glyphicon-option-vertical" />
+                  <i class="glyphicon glyphicon-option-vertical" /> Quicklinks
                 </button>
                 <ul class="dropdown-menu dropdown-menu-right">
                   {{#each model.quicklinks as |link|}}
@@ -97,10 +127,15 @@
               {{/if}}
             {{/if}}
           </div>
-          <div>
-            <span title="Queue" class="yarn-tooltip"><i class="glyphicon glyphicon-tasks glyphicon-gray" />{{model.app.queue}}</span>
+          <div class="btn-group">
+            <span title="Queue" class="yarn-tooltip">
+              <i class="glyphicon glyphicon-tasks glyphicon-gray" /> {{model.app.queue}}
+            </span>
           </div>
-          <div>Priority {{model.app.priority}}</div>
+          <div>Priority: {{model.app.priority}}</div>
+          {{#if model.app.trackingUrl}}
+            <div><a href="{{model.app.trackingUrl}}" target="_blank">{{model.app.trackingUI}}</a></div>
+          {{/if}}
         </div>
       </div>
     </div>
@@ -148,4 +183,10 @@
   dialogId="deleteServiceConfirmDialog"
   message=(concat 'Are you sure you want to delete service "' model.serviceName '" for user "' model.app.user '" ?')
   action="deleteService"
+}}
+
+{{confirm-dialog
+  dialogId="killApplicationConfirmDialog"
+  message=(concat 'Are you sure you want to kill application "' model.app.id '"?')
+  action="killApplication"
 }}

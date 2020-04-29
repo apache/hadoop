@@ -95,16 +95,11 @@ public class FileDeletionTask extends DeletionTask implements Runnable {
    */
   @Override
   public void run() {
-    if (LOG.isDebugEnabled()) {
-      String msg = String.format("Running DeletionTask : %s", toString());
-      LOG.debug(msg);
-    }
+    LOG.debug("Running DeletionTask : {}", this);
     boolean error = false;
     if (null == getUser()) {
       if (baseDirs == null || baseDirs.size() == 0) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("NM deleting absolute path : " + subDir);
-        }
+        LOG.debug("NM deleting absolute path : {}", subDir);
         try {
           lfs.delete(subDir, true);
         } catch (IOException e) {
@@ -114,9 +109,7 @@ public class FileDeletionTask extends DeletionTask implements Runnable {
       } else {
         for (Path baseDir : baseDirs) {
           Path del = subDir == null? baseDir : new Path(baseDir, subDir);
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("NM deleting path : " + del);
-          }
+          LOG.debug("NM deleting path : {}", del);
           try {
             lfs.delete(del, true);
           } catch (IOException e) {
@@ -127,10 +120,7 @@ public class FileDeletionTask extends DeletionTask implements Runnable {
       }
     } else {
       try {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(
-              "Deleting path: [" + subDir + "] as user: [" + getUser() + "]");
-        }
+        LOG.debug("Deleting path: [{}] as user [{}]", subDir, getUser());
         if (baseDirs == null || baseDirs.size() == 0) {
           getDeletionService().getContainerExecutor().deleteAsUser(
               new DeletionAsUserContext.Builder()

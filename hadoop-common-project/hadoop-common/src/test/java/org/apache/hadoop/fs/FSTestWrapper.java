@@ -19,7 +19,7 @@ package org.apache.hadoop.fs;
 
 import java.io.IOException;
 
-import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.test.GenericTestUtils;
 

@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -36,16 +37,18 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -64,10 +67,12 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AbstractEvent;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.SystemCredentialsForAppsProto;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
+import org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -78,8 +83,8 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 @Unstable
 public class DelegationTokenRenewer extends AbstractService {
   
-  private static final Log LOG = 
-      LogFactory.getLog(DelegationTokenRenewer.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DelegationTokenRenewer.class);
   @VisibleForTesting
   public static final Text HDFS_DELEGATION_KIND =
       new Text("HDFS_DELEGATION_TOKEN");
@@ -113,6 +118,12 @@ public class DelegationTokenRenewer extends AbstractService {
   private boolean tokenKeepAliveEnabled;
   private boolean hasProxyUserPrivileges;
   private long credentialsValidTimeRemaining;
+  private long tokenRenewerThreadTimeout;
+  private long tokenRenewerThreadRetryInterval;
+  private int tokenRenewerThreadRetryMaxAttempts;
+  private final Map<DelegationTokenRenewerEvent, Future<?>> futures =
+      new HashMap<>();
+  private boolean delegationTokenRenewerPoolTrackerFlag = true;
 
   // this config is supposedly not used by end-users.
   public static final String RM_SYSTEM_CREDENTIALS_VALID_TIME_REMAINING =
@@ -138,6 +149,17 @@ public class DelegationTokenRenewer extends AbstractService {
     this.credentialsValidTimeRemaining =
         conf.getLong(RM_SYSTEM_CREDENTIALS_VALID_TIME_REMAINING,
           DEFAULT_RM_SYSTEM_CREDENTIALS_VALID_TIME_REMAINING);
+    tokenRenewerThreadTimeout =
+        conf.getTimeDuration(YarnConfiguration.RM_DT_RENEWER_THREAD_TIMEOUT,
+            YarnConfiguration.DEFAULT_RM_DT_RENEWER_THREAD_TIMEOUT,
+            TimeUnit.MILLISECONDS);
+    tokenRenewerThreadRetryInterval = conf.getTimeDuration(
+        YarnConfiguration.RM_DT_RENEWER_THREAD_RETRY_INTERVAL,
+        YarnConfiguration.DEFAULT_RM_DT_RENEWER_THREAD_RETRY_INTERVAL,
+        TimeUnit.MILLISECONDS);
+    tokenRenewerThreadRetryMaxAttempts =
+        conf.getInt(YarnConfiguration.RM_DT_RENEWER_THREAD_RETRY_MAX_ATTEMPTS,
+            YarnConfiguration.DEFAULT_RM_DT_RENEWER_THREAD_RETRY_MAX_ATTEMPTS);
     setLocalSecretManagerAndServiceAddr();
     renewerService = createNewThreadPoolService(conf);
     pendingEventQueue = new LinkedBlockingQueue<DelegationTokenRenewerEvent>();
@@ -182,6 +204,11 @@ public class DelegationTokenRenewer extends AbstractService {
     serviceStateLock.writeLock().lock();
     isServiceStarted = true;
     serviceStateLock.writeLock().unlock();
+
+    if (delegationTokenRenewerPoolTrackerFlag) {
+      renewerService.submit(new DelegationTokenRenewerPoolTracker());
+    }
+
     while(!pendingEventQueue.isEmpty()) {
       processDelegationTokenRenewerEvent(pendingEventQueue.take());
     }
@@ -193,7 +220,9 @@ public class DelegationTokenRenewer extends AbstractService {
     serviceStateLock.readLock().lock();
     try {
       if (isServiceStarted) {
-        renewerService.execute(new DelegationTokenRenewerRunnable(evt));
+        Future<?> future =
+            renewerService.submit(new DelegationTokenRenewerRunnable(evt));
+        futures.put(evt, future);
       } else {
         pendingEventQueue.add(evt);
       }
@@ -209,7 +238,15 @@ public class DelegationTokenRenewer extends AbstractService {
     }
     appTokens.clear();
     allTokens.clear();
-    this.renewerService.shutdown();
+
+    serviceStateLock.writeLock().lock();
+    try {
+      isServiceStarted = false;
+      this.renewerService.shutdown();
+    } finally {
+      serviceStateLock.writeLock().unlock();
+    }
+
     dtCancelThread.interrupt();
     try {
       dtCancelThread.join(1000);
@@ -428,10 +465,7 @@ public class DelegationTokenRenewer extends AbstractService {
       return; // nothing to add
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Registering tokens for renewal for:" +
-          " appId = " + applicationId);
-    }
+    LOG.debug("Registering tokens for renewal for: appId = {}", applicationId);
 
     Collection<Token<?>> tokens = ts.getAllTokens();
     long now = System.currentTimeMillis();
@@ -469,7 +503,8 @@ public class DelegationTokenRenewer extends AbstractService {
               for (Iterator<Map.Entry<String, String>> itor =
                    tokenConf.iterator(); itor.hasNext(); ) {
                 Map.Entry<String, String> entry = itor.next();
-                LOG.info(entry.getKey() + " ===> " + entry.getValue());
+                LOG.debug("Token conf key is {} and value is {}",
+                    entry.getKey(), entry.getValue());
               }
             }
           }  else {
@@ -592,6 +627,10 @@ public class DelegationTokenRenewer extends AbstractService {
       throws IOException {
     // calculate timer time
     long expiresIn = token.expirationDate - System.currentTimeMillis();
+    if (expiresIn <= 0) {
+      LOG.info("Will not renew token " + token);
+      return;
+    }
     long renewIn = token.expirationDate - expiresIn/10; // little bit before the expiration
     // need to create new task every time
     RenewalTimerTask tTask = new RenewalTimerTask(token);
@@ -625,7 +664,7 @@ public class DelegationTokenRenewer extends AbstractService {
 
   // Request new hdfs token if the token is about to expire, and remove the old
   // token from the tokenToRenew list
-  private void requestNewHdfsDelegationTokenIfNeeded(
+  void requestNewHdfsDelegationTokenIfNeeded(
       final DelegationTokenToRenew dttr) throws IOException,
       InterruptedException {
 
@@ -667,6 +706,7 @@ public class DelegationTokenRenewer extends AbstractService {
       Collection<ApplicationId> referringAppIds,
       String user, boolean shouldCancelAtEnd) throws IOException,
       InterruptedException {
+    boolean incrTokenSequenceNo = false;
     if (!hasProxyUserPrivileges) {
       LOG.info("RM proxy-user privilege is not enabled. Skip requesting hdfs tokens.");
       return;
@@ -691,14 +731,24 @@ public class DelegationTokenRenewer extends AbstractService {
             appTokens.get(applicationId).add(tokenToRenew);
           }
           LOG.info("Received new token " + token);
+          incrTokenSequenceNo = true;
         }
       }
     }
+
+    if(incrTokenSequenceNo) {
+      this.rmContext.incrTokenSequenceNo();
+    }
+
     DataOutputBuffer dob = new DataOutputBuffer();
     credentials.writeTokenStorageToStream(dob);
     ByteBuffer byteBuffer = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
     for (ApplicationId applicationId : referringAppIds) {
-      rmContext.getSystemCredentialsForApps().put(applicationId, byteBuffer);
+      SystemCredentialsForAppsProto systemCredentialsForAppsProto =
+          YarnServerBuilderUtils.newSystemCredentialsForAppsProto(applicationId,
+              byteBuffer);
+      rmContext.getSystemCredentialsForApps().put(applicationId,
+          systemCredentialsForAppsProto);
     }
   }
 
@@ -872,7 +922,100 @@ public class DelegationTokenRenewer extends AbstractService {
   public void setRMContext(RMContext rmContext) {
     this.rmContext = rmContext;
   }
-  
+
+  @VisibleForTesting
+  public void setDelegationTokenRenewerPoolTracker(boolean flag) {
+    delegationTokenRenewerPoolTrackerFlag = flag;
+  }
+
+  /**
+   * Create a timer task to retry the token renewer event which would be
+   * scheduled at defined intervals based on the configuration.
+   *
+   * @param evt
+   * @return Timer Task
+   */
+  private TimerTask getTimerTask(AbstractDelegationTokenRenewerAppEvent evt) {
+    return new TimerTask() {
+      @Override
+      public void run() {
+        LOG.info("Retrying token renewer thread for appid = {} and "
+            + "attempt is {}", evt.getApplicationId(),
+            evt.getAttempt());
+        evt.incrAttempt();
+
+        Collection<Token<?>> tokens =
+            evt.getCredentials().getAllTokens();
+        for (Token<?> token : tokens) {
+          DelegationTokenToRenew dttr = allTokens.get(token);
+          if (dttr != null) {
+            removeFailedDelegationToken(dttr);
+          }
+        }
+
+        DelegationTokenRenewerAppRecoverEvent event =
+            new DelegationTokenRenewerAppRecoverEvent(
+                evt.getApplicationId(), evt.getCredentials(),
+                evt.shouldCancelAtEnd(), evt.getUser(), evt.getTokenConf());
+        event.setAttempt(evt.getAttempt());
+        processDelegationTokenRenewerEvent(event);
+      }
+    };
+  }
+
+  /**
+   * Runnable class to set timeout for futures of all threads running in
+   * renewerService thread pool executor asynchronously.
+   *
+   * In case of timeout exception, retries would be attempted with defined
+   * intervals till no. of retry attempt reaches max attempt.
+   */
+  private final class DelegationTokenRenewerPoolTracker
+      implements Runnable {
+
+    DelegationTokenRenewerPoolTracker() {
+    }
+
+    /**
+     * Keep traversing <Future> of renewer pool threads and wait for specific
+     * timeout. In case of timeout exception, retry the event till no. of
+     * attempts reaches max attempts with specific interval.
+     */
+    @Override
+    public void run() {
+      while (true) {
+        for (Map.Entry<DelegationTokenRenewerEvent, Future<?>> entry : futures
+            .entrySet()) {
+          DelegationTokenRenewerEvent evt = entry.getKey();
+          Future<?> future = entry.getValue();
+          try {
+            future.get(tokenRenewerThreadTimeout, TimeUnit.MILLISECONDS);
+          } catch (TimeoutException e) {
+
+            // Cancel thread and retry the same event in case of timeout
+            if (future != null && !future.isDone() && !future.isCancelled()) {
+              future.cancel(true);
+              futures.remove(evt);
+              if (evt.getAttempt() < tokenRenewerThreadRetryMaxAttempts) {
+                renewalTimer.schedule(
+                    getTimerTask((AbstractDelegationTokenRenewerAppEvent) evt),
+                    tokenRenewerThreadRetryInterval);
+              } else {
+                LOG.info(
+                    "Exhausted max retry attempts {} in token renewer "
+                        + "thread for {}",
+                    tokenRenewerThreadRetryMaxAttempts, evt.getApplicationId());
+              }
+            }
+          } catch (Exception e) {
+            LOG.info("Problem in submitting renew tasks in token renewer "
+                + "thread.", e);
+          }
+        }
+      }
+    }
+  }
+
   /*
    * This will run as a separate thread and will process individual events. It
    * is done in this way to make sure that the token renewal as a part of
@@ -994,6 +1137,10 @@ public class DelegationTokenRenewer extends AbstractService {
     public String getUser() {
       return user;
     }
+
+    private Configuration getTokenConf() {
+      return tokenConf;
+    }
   }
   
   enum DelegationTokenRenewerEventType {
@@ -1006,6 +1153,7 @@ public class DelegationTokenRenewer extends AbstractService {
       AbstractEvent<DelegationTokenRenewerEventType> {
 
     private ApplicationId appId;
+    private int attempt = 1;
 
     public DelegationTokenRenewerEvent(ApplicationId appId,
         DelegationTokenRenewerEventType type) {
@@ -1015,6 +1163,18 @@ public class DelegationTokenRenewer extends AbstractService {
 
     public ApplicationId getApplicationId() {
       return appId;
+    }
+
+    public void incrAttempt() {
+      attempt++;
+    }
+
+    public int getAttempt() {
+      return attempt;
+    }
+
+    public void setAttempt(int attempt) {
+      this.attempt = attempt;
     }
   }
 

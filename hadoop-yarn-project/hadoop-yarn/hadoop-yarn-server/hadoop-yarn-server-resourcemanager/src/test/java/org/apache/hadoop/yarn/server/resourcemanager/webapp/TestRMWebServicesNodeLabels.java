@@ -28,8 +28,8 @@ import java.util.ArrayList;
 
 import javax.ws.rs.core.MediaType;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -66,8 +66,8 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
 
   private static final int BAD_REQUEST_CODE = 400;
 
-  private static final Log LOG = LogFactory
-      .getLog(TestRMWebServicesNodeLabels.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestRMWebServicesNodeLabels.class);
 
   private static MockRM rm;
   private static YarnConfiguration conf;
@@ -605,7 +605,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     String expectedmessage =
         "java.io.IOException: label name should only contains"
             + " {0-9, a-z, A-Z, -, _} and should not started with"
-            + " {-,_}, now it is=a&";
+            + " {-,_}, now it is= a&";
     validateJsonExceptionContent(response, expectedmessage);
   }
 

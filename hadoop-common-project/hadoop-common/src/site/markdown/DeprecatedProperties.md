@@ -65,7 +65,6 @@ The following table lists the configuration property names that are deprecated i
 | fs.s3a.server-side-encryption-key | fs.s3a.server-side-encryption.key |
 | hadoop.configured.node.mapping | net.topology.configured.node.mapping |
 | hadoop.native.lib | io.native.lib.available |
-| hadoop.net.static.resolutions | mapreduce.tasktracker.net.static.resolutions |
 | hadoop.pipes.command-file.keep | mapreduce.pipes.commandfile.preserve |
 | hadoop.pipes.executable.interpretor | mapreduce.pipes.executable.interpretor |
 | hadoop.pipes.executable | mapreduce.pipes.executable |
@@ -75,6 +74,10 @@ The following table lists the configuration property names that are deprecated i
 | hadoop.pipes.java.reducer | mapreduce.pipes.isjavareducer |
 | hadoop.pipes.partitioner | mapreduce.pipes.partitioner |
 | heartbeat.recheck.interval | dfs.namenode.heartbeat.recheck-interval |
+| httpfs.authentication.kerberos.keytab | hadoop.http.authentication.kerberos.keytab |
+| httpfs.authentication.kerberos.principal | hadoop.http.authentication.kerberos.principal |
+| httpfs.authentication.signature.secret.file | hadoop.http.authentication.signature.secret.file |
+| httpfs.authentication.type | hadoop.http.authentication.type |
 | io.bytes.per.checksum | dfs.bytes-per-checksum |
 | io.sort.factor | mapreduce.task.io.sort.factor |
 | io.sort.mb | mapreduce.task.io.sort.mb |
@@ -89,7 +92,6 @@ The following table lists the configuration property names that are deprecated i
 | keep.failed.task.files | mapreduce.task.files.preserve.failedtasks |
 | keep.task.files.pattern | mapreduce.task.files.preserve.filepattern |
 | key.value.separator.in.input.line | mapreduce.input.keyvaluelinerecordreader.key.value.separator |
-| local.cache.size | mapreduce.tasktracker.cache.local.size |
 | map.input.file | mapreduce.map.input.file |
 | map.input.length | mapreduce.map.input.length |
 | map.input.start | mapreduce.map.input.start |
@@ -113,10 +115,6 @@ The following table lists the configuration property names that are deprecated i
 | mapred.compress.map.output | mapreduce.map.output.compress |
 | mapred.data.field.separator | mapreduce.fieldsel.data.field.separator |
 | mapred.debug.out.lines | mapreduce.task.debugout.lines |
-| mapred.healthChecker.interval | mapreduce.tasktracker.healthchecker.interval |
-| mapred.healthChecker.script.args | mapreduce.tasktracker.healthchecker.script.args |
-| mapred.healthChecker.script.path | mapreduce.tasktracker.healthchecker.script.path |
-| mapred.healthChecker.script.timeout | mapreduce.tasktracker.healthchecker.script.timeout |
 | mapred.inmem.merge.threshold | mapreduce.reduce.merge.inmem.threshold |
 | mapred.input.dir.formats | mapreduce.input.multipleinputs.dir.formats |
 | mapred.input.dir.mappers | mapreduce.input.multipleinputs.dir.mappers |
@@ -146,8 +144,6 @@ The following table lists the configuration property names that are deprecated i
 | mapred.line.input.format.linespermap | mapreduce.input.lineinputformat.linespermap |
 | mapred.linerecordreader.maxlength | mapreduce.input.linerecordreader.line.maxlength |
 | mapred.local.dir | mapreduce.cluster.local.dir |
-| mapred.local.dir.minspacekill | mapreduce.tasktracker.local.dir.minspacekill |
-| mapred.local.dir.minspacestart | mapreduce.tasktracker.local.dir.minspacestart |
 | mapred.map.child.env | mapreduce.map.env |
 | mapred.map.child.java.opts | mapreduce.map.java.opts |
 | mapred.map.child.log.level | mapreduce.map.log.level |
@@ -212,19 +208,10 @@ The following table lists the configuration property names that are deprecated i
 | mapred.task.profile.params | mapreduce.task.profile.params |
 | mapred.task.profile.reduces | mapreduce.task.profile.reduces |
 | mapred.task.timeout | mapreduce.task.timeout |
-| mapred.tasktracker.dns.interface | mapreduce.tasktracker.dns.interface |
-| mapred.tasktracker.dns.nameserver | mapreduce.tasktracker.dns.nameserver |
-| mapred.tasktracker.events.batchsize | mapreduce.tasktracker.events.batchsize |
-| mapred.task.tracker.http.address | mapreduce.tasktracker.http.address |
 | mapred.tasktracker.indexcache.mb | mapreduce.tasktracker.indexcache.mb |
-| mapred.tasktracker.instrumentation | mapreduce.tasktracker.instrumentation |
 | mapred.tasktracker.map.tasks.maximum | mapreduce.tasktracker.map.tasks.maximum |
 | mapred.tasktracker.memory\_calculator\_plugin | mapreduce.tasktracker.resourcecalculatorplugin |
 | mapred.tasktracker.memorycalculatorplugin | mapreduce.tasktracker.resourcecalculatorplugin |
-| mapred.tasktracker.reduce.tasks.maximum | mapreduce.tasktracker.reduce.tasks.maximum |
-| mapred.task.tracker.report.address | mapreduce.tasktracker.report.address |
-| mapred.task.tracker.task-controller | mapreduce.tasktracker.taskcontroller |
-| mapred.tasktracker.tasks.sleeptime-before-sigkill | mapreduce.tasktracker.tasks.sleeptimebeforesigkill |
 | mapred.temp.dir | mapreduce.cluster.temp.dir |
 | mapred.text.key.comparator.options | mapreduce.partition.keycomparator.options |
 | mapred.text.key.partitioner.options | mapreduce.partition.keypartitioner.options |
@@ -239,7 +226,6 @@ The following table lists the configuration property names that are deprecated i
 | mapreduce.reduce.class | mapreduce.job.reduce.class |
 | mapred.used.genericoptionsparser | mapreduce.client.genericoptionsparser.used |
 | mapred.userlog.limit.kb | mapreduce.task.userlog.limit.kb |
-| mapred.userlog.retain.hours | mapreduce.job.userlog.retain.hours |
 | mapred.working.dir | mapreduce.job.working.dir |
 | mapred.work.output.dir | mapreduce.task.output.dir |
 | min.num.spills.for.combine | mapreduce.map.combine.minspills |
@@ -251,9 +237,6 @@ The following table lists the configuration property names that are deprecated i
 | sequencefile.filter.regex | mapreduce.input.sequencefileinputfilter.regex |
 | session.id | dfs.metrics.session-id |
 | slave.host.name | dfs.datanode.hostname |
-| slave.host.name | mapreduce.tasktracker.host.name |
-| tasktracker.contention.tracking | mapreduce.tasktracker.contention.tracking |
-| tasktracker.http.threads | mapreduce.tasktracker.http.threads |
 | topology.node.switch.mapping.impl | net.topology.node.switch.mapping.impl |
 | topology.script.file.name | net.topology.script.file.name |
 | topology.script.number.args | net.topology.script.number.args |

@@ -22,9 +22,9 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
-
-import java.util.Map;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerExecContext;
 
 /**
  * An abstraction for various container runtime implementations. Examples
@@ -57,6 +57,16 @@ public interface ContainerRuntime {
       throws ContainerExecutionException;
 
   /**
+   * Relaunch a container.
+   *
+   * @param ctx the {@link ContainerRuntimeContext}
+   * @throws ContainerExecutionException if an error occurs while relaunching
+   * the container
+   */
+  void relaunchContainer(ContainerRuntimeContext ctx)
+      throws ContainerExecutionException;
+
+  /**
    * Signal a container. Signals may be a request to terminate, a status check,
    * etc.
    *
@@ -78,7 +88,17 @@ public interface ContainerRuntime {
       throws ContainerExecutionException;
 
   /**
-   * Return the host and ip of the container
+   * Run a program in container.
+   *
+   * @param ctx the {@link ContainerExecContext}
+   * @return stdin and stdout of container exec
+   * @throws ContainerExecutionException
+   */
+  IOStreamPair execContainer(ContainerExecContext ctx)
+      throws ContainerExecutionException;
+
+  /**
+   * Return the host and ip of the container.
    *
    * @param container the {@link Container}
    * @throws ContainerExecutionException if an error occurs while getting the ip
@@ -87,11 +107,12 @@ public interface ContainerRuntime {
   String[] getIpAndHost(Container container) throws ContainerExecutionException;
 
   /**
-   * Whether to propagate the whitelist of environment variables from the
-   * nodemanager environment into the container environment.
-   * @param env the container's environment variables
-   * @return true if whitelist variables should be propagated, false otherwise
-   * @see org.apache.hadoop.yarn.conf.YarnConfiguration#NM_ENV_WHITELIST
+   * Return the exposed ports of the container.
+   * @param container the {@link Container}
+   * @return List of exposed ports
+   * @throws ContainerExecutionException if an error occurs while getting
+   * the exposed ports
    */
-  boolean useWhitelistEnv(Map<String, String> env);
+  String getExposedPorts(Container container)
+      throws ContainerExecutionException;
 }

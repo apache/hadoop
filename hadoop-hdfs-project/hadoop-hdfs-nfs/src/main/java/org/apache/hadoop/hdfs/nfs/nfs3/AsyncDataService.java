@@ -22,8 +22,8 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class is a thread pool to easily schedule async data operations. Current
@@ -31,7 +31,7 @@ import org.apache.commons.logging.LogFactory;
  * for readahead operations too.
  */
 public class AsyncDataService {
-  static final Log LOG = LogFactory.getLog(AsyncDataService.class);
+  static final Logger LOG = LoggerFactory.getLogger(AsyncDataService.class);
 
   // ThreadPool core pool size
   private static final int CORE_THREADS_PER_VOLUME = 1;

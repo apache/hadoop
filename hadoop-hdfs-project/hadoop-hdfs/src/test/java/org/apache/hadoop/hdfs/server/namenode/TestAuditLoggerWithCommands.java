@@ -54,7 +54,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import org.mockito.Mockito;
 
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
@@ -1264,8 +1264,9 @@ public class TestAuditLoggerWithCommands {
   }
 
   private int verifyAuditLogs(String pattern) {
-    int length = auditlog.getOutput().split("\n").length;
-    String lastAudit = auditlog.getOutput().split("\n")[length - 1];
+    int length = auditlog.getOutput().split(System.lineSeparator()).length;
+    String lastAudit = auditlog.getOutput()
+        .split(System.lineSeparator())[length - 1];
     assertTrue("Unexpected log!", lastAudit.matches(pattern));
     return length;
   }

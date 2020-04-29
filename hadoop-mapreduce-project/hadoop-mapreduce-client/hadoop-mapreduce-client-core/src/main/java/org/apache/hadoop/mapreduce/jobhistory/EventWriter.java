@@ -93,8 +93,8 @@ public class EventWriter {
     wrapper.setType(event.getEventType());
     wrapper.setEvent(event.getDatum());
     writer.write(wrapper, encoder);
-    encoder.flush();
     if (this.jsonOutput) {
+      encoder.flush();
       out.writeBytes("\n");
     }
   }

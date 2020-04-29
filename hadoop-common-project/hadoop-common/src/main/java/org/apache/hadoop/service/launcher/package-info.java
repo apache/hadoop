@@ -379,7 +379,7 @@
  a new configuration is created:
 
  <pre>
- public Configuration bindArgs(Configuration config, List<String> args)
+ public Configuration bindArgs(Configuration config, List&lt;String&gt; args)
     throws Exception {
    Configuration newConf = new YarnConfiguration(config);
    return newConf;

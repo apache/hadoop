@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce.lib.input;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -76,6 +77,8 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
     "mapreduce.input.fileinputformat.numinputfiles";
   public static final String INPUT_DIR_RECURSIVE =
     "mapreduce.input.fileinputformat.input.dir.recursive";
+  public static final String INPUT_DIR_NONRECURSIVE_IGNORE_SUBDIRS =
+    "mapreduce.input.fileinputformat.input.dir.nonrecursive.ignore.subdirs";
   public static final String LIST_STATUS_NUM_THREADS =
       "mapreduce.input.fileinputformat.list-status.num-threads";
   public static final int DEFAULT_LIST_STATUS_NUM_THREADS = 1;
@@ -231,11 +234,15 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
         (PathFilter) ReflectionUtils.newInstance(filterClass, conf) : null;
   }
 
-  /** List input directories.
+  /**
+   * List input directories.
    * Subclasses may override to, e.g., select only files matching a regular
    * expression. 
-   * 
-   * @param job the job to list input paths for
+   *
+   * If security is enabled, this method collects
+   * delegation tokens from the input paths and adds them to the job's
+   * credentials.
+   * @param job the job to list input paths for and attach tokens to.
    * @return array of FileStatus objects
    * @throws IOException if zero items.
    */
@@ -277,7 +284,10 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
             job.getConfiguration(), dirs, recursive, inputFilter, true);
         locatedFiles = locatedFileStatusFetcher.getFileStatuses();
       } catch (InterruptedException e) {
-        throw new IOException("Interrupted while getting file statuses");
+        throw (IOException)
+            new InterruptedIOException(
+                "Interrupted while getting file statuses")
+                .initCause(e);
       }
       result = Lists.newArrayList(locatedFiles);
     }
@@ -315,7 +325,7 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
                   addInputPathRecursively(result, fs, stat.getPath(),
                       inputFilter);
                 } else {
-                  result.add(stat);
+                  result.add(shrinkStatus(stat));
                 }
               }
             }
@@ -354,13 +364,42 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
         if (stat.isDirectory()) {
           addInputPathRecursively(result, fs, stat.getPath(), inputFilter);
         } else {
-          result.add(stat);
+          result.add(shrinkStatus(stat));
         }
       }
     }
   }
-  
-  
+
+  /**
+   * The HdfsBlockLocation includes a LocatedBlock which contains messages
+   * for issuing more detailed queries to datanodes about a block, but these
+   * messages are useless during job submission currently. This method tries
+   * to exclude the LocatedBlock from HdfsBlockLocation by creating a new
+   * BlockLocation from original, reshaping the LocatedFileStatus,
+   * allowing {@link #listStatus(JobContext)} to scan more files with less
+   * memory footprint.
+   * @see BlockLocation
+   * @see org.apache.hadoop.fs.HdfsBlockLocation
+   * @param origStat The fat FileStatus.
+   * @return The FileStatus that has been shrunk.
+   */
+  public static FileStatus shrinkStatus(FileStatus origStat) {
+    if (origStat.isDirectory() || origStat.getLen() == 0 ||
+        !(origStat instanceof LocatedFileStatus)) {
+      return origStat;
+    } else {
+      BlockLocation[] blockLocations =
+          ((LocatedFileStatus)origStat).getBlockLocations();
+      BlockLocation[] locs = new BlockLocation[blockLocations.length];
+      int i = 0;
+      for (BlockLocation location : blockLocations) {
+        locs[i++] = new BlockLocation(location);
+      }
+      LocatedFileStatus newStat = new LocatedFileStatus(origStat, locs);
+      return newStat;
+    }
+  }
+
   /**
    * A factory that makes the split for this class. It can be overridden
    * by sub-classes to make sub-types
@@ -392,7 +431,13 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
     // generate splits
     List<InputSplit> splits = new ArrayList<InputSplit>();
     List<FileStatus> files = listStatus(job);
+
+    boolean ignoreDirs = !getInputDirRecursive(job)
+      && job.getConfiguration().getBoolean(INPUT_DIR_NONRECURSIVE_IGNORE_SUBDIRS, false);
     for (FileStatus file: files) {
+      if (ignoreDirs && file.isDirectory()) {
+        continue;
+      }
       Path path = file.getPath();
       long length = file.getLen();
       if (length != 0) {

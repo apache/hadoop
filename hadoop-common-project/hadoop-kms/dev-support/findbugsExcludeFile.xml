@@ -15,6 +15,14 @@
    limitations under the License.
 -->
 <FindBugsFilter>
+
+  <!-- The called method signature is isNullOrEmpty(@Nullable String string) in guava 27, so this should be ignored. -->
+  <Match>
+    <Class name="org.apache.hadoop.crypto.key.kms.server.KMSAudit"/>
+    <Method name="op" />
+    <Bug pattern="NP_NULL_PARAM_DEREF"/>
+  </Match>
+
   <!--
     Findbug is complaining about System.out being NULL
   -->

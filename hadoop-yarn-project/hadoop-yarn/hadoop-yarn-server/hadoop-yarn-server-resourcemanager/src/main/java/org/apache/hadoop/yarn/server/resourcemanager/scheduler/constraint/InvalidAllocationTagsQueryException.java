@@ -32,4 +32,8 @@ public class InvalidAllocationTagsQueryException extends YarnException {
   public InvalidAllocationTagsQueryException(String msg) {
     super(msg);
   }
+
+  public InvalidAllocationTagsQueryException(YarnException e) {
+    super(e);
+  }
 }

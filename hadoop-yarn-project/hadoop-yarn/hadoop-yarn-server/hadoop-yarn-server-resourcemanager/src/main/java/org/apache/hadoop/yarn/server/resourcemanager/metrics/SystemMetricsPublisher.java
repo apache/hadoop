@@ -32,6 +32,8 @@ public interface SystemMetricsPublisher {
 
   void appCreated(RMApp app, long createdTime);
 
+  void appLaunched(RMApp app, long launchTime);
+
   void appACLsUpdated(RMApp app, String appViewACLs, long updatedTime);
 
   void appUpdated(RMApp app, long updatedTime);

@@ -32,10 +32,11 @@ import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.MissingArgumentException;
 import org.apache.commons.cli.Options;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.yarn.api.records.NodeAttributeInfo;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -52,6 +53,7 @@ public class ClusterCLI extends YarnCLI {
   public static final String LIST_LABELS_CMD = "list-node-labels";
   public static final String DIRECTLY_ACCESS_NODE_LABEL_STORE =
       "directly-access-node-label-store";
+  public static final String LIST_CLUSTER_ATTRIBUTES="list-node-attributes";
   public static final String CMD = "cluster";
   private boolean accessLocal = false;
   static CommonNodeLabelsManager localNodeLabelsManager = null;
@@ -71,6 +73,8 @@ public class ClusterCLI extends YarnCLI {
 
     opts.addOption("lnl", LIST_LABELS_CMD, false,
         "List cluster node-label collection");
+    opts.addOption("lna", LIST_CLUSTER_ATTRIBUTES, false,
+        "List cluster node-attribute collection");
     opts.addOption("h", HELP_CMD, false, "Displays help for all commands.");
     opts.addOption("dnl", DIRECTLY_ACCESS_NODE_LABEL_STORE, false,
         "This is DEPRECATED, will be removed in future releases. Directly access node label store, "
@@ -96,12 +100,16 @@ public class ClusterCLI extends YarnCLI {
       return exitCode;
     }
 
+    createAndStartYarnClient();
+
     if (parsedCli.hasOption(DIRECTLY_ACCESS_NODE_LABEL_STORE)) {
       accessLocal = true;
     }
 
     if (parsedCli.hasOption(LIST_LABELS_CMD)) {
       printClusterNodeLabels();
+    } else if(parsedCli.hasOption(LIST_CLUSTER_ATTRIBUTES)){
+      printClusterNodeAttributes();
     } else if (parsedCli.hasOption(HELP_CMD)) {
       printUsage(opts);
       return 0;
@@ -110,6 +118,17 @@ public class ClusterCLI extends YarnCLI {
       printUsage(opts);
     }
     return 0;
+  }
+
+  private void printClusterNodeAttributes() throws IOException, YarnException {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintWriter pw = new PrintWriter(
+        new OutputStreamWriter(baos, Charset.forName("UTF-8")));
+    for (NodeAttributeInfo attribute : client.getClusterAttributes()) {
+      pw.println(attribute.toString());
+    }
+    pw.close();
+    sysout.println(baos.toString("UTF-8"));
   }
 
   void printClusterNodeLabels() throws YarnException, IOException {

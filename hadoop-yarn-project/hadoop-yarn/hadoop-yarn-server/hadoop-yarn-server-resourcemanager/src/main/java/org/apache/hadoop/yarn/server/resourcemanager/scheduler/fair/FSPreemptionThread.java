@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -40,7 +40,8 @@ import java.util.concurrent.locks.Lock;
  * Thread that handles FairScheduler preemption.
  */
 class FSPreemptionThread extends Thread {
-  private static final Log LOG = LogFactory.getLog(FSPreemptionThread.class);
+  private static final Logger LOG = LoggerFactory.
+      getLogger(FSPreemptionThread.class);
   protected final FSContext context;
   private final FairScheduler scheduler;
   private final long warnTimeBeforeKill;
@@ -97,12 +98,7 @@ class FSPreemptionThread extends Thread {
    * Mechanics:
    * 1. Fetch all {@link ResourceRequest}s corresponding to the amount of
    * starvation.
-   * 2. For each {@link ResourceRequest}, iterate through matching
-   * nodes and identify containers to preempt all on one node, also
-   * optimizing for least number of AM container preemptions. Only nodes
-   * that match the locality level specified in the {@link ResourceRequest}
-   * are considered. However, if this would lead to AM preemption, and locality
-   * relaxation is allowed, then the search space is expanded to all nodes.
+   * 2. For each {@link ResourceRequest}, get the best preemptable containers.
    *
    * @param starvedApp starved application for which we are identifying
    *                   preemption targets
@@ -118,18 +114,7 @@ class FSPreemptionThread extends Thread {
               .getNodesByResourceName(rr.getResourceName());
       for (int i = 0; i < rr.getNumContainers(); i++) {
         PreemptableContainers bestContainers =
-                identifyContainersToPreemptForOneContainer(potentialNodes, rr);
-
-        // Don't preempt AM containers just to satisfy local requests if relax
-        // locality is enabled.
-        if (bestContainers != null
-                && bestContainers.numAMContainers > 0
-                && !ResourceRequest.isAnyLocation(rr.getResourceName())
-                && rr.getRelaxLocality()) {
-          bestContainers = identifyContainersToPreemptForOneContainer(
-                  scheduler.getNodeTracker().getAllNodes(), rr);
-        }
-
+            getBestPreemptableContainers(rr, potentialNodes);
         if (bestContainers != null) {
           List<RMContainer> containers = bestContainers.getAllContainers();
           if (containers.size() > 0) {
@@ -140,9 +125,13 @@ class FSPreemptionThread extends Thread {
             for (RMContainer container : containers) {
               FSAppAttempt app = scheduler.getSchedulerApp(
                       container.getApplicationAttemptId());
-              LOG.info("Preempting container " + container +
-                      " from queue " + app.getQueueName());
-              app.trackContainerForPreemption(container);
+              LOG.info("Preempting container " + container + " from queue: "
+                  + (app != null ? app.getQueueName() : "unknown"));
+              // If the app has unregistered while building the container list
+              // the app might be null, skip notifying the app
+              if (app != null) {
+                app.trackContainerForPreemption(container);
+              }
             }
           }
         }
@@ -204,6 +193,13 @@ class FSPreemptionThread extends Thread {
     for (RMContainer container : containersToCheck) {
       FSAppAttempt app =
           scheduler.getSchedulerApp(container.getApplicationAttemptId());
+      // If the app has unregistered while building the container list the app
+      // might be null, just skip this container: it should be cleaned up soon
+      if (app == null) {
+        LOG.info("Found container " + container + " on node "
+            + node.getNodeName() + "without app, skipping preemption");
+        continue;
+      }
       ApplicationId appId = app.getApplicationId();
 
       if (app.canContainerBePreempted(container,
@@ -229,7 +225,7 @@ class FSPreemptionThread extends Thread {
 
   private void trackPreemptionsAgainstNode(List<RMContainer> containers,
                                            FSAppAttempt app) {
-    FSSchedulerNode node = (FSSchedulerNode) scheduler.getNodeTracker()
+    FSSchedulerNode node = scheduler.getNodeTracker()
         .getNode(containers.get(0).getNodeId());
     node.addContainersForPreemption(containers, app);
   }
@@ -238,6 +234,41 @@ class FSPreemptionThread extends Thread {
     // Schedule timer task to kill containers
     preemptionTimer.schedule(
         new PreemptContainersTask(containers), warnTimeBeforeKill);
+  }
+
+  /**
+   * Iterate through matching nodes and identify containers to preempt all on
+   * one node, also optimizing for least number of AM container preemptions.
+   * Only nodes that match the locality level specified in the
+   * {@link ResourceRequest} are considered. However, if this would lead to
+   * AM preemption, and locality relaxation is allowed, then the search space
+   * is expanded to the remaining nodes.
+   *
+   * @param rr resource request
+   * @param potentialNodes list of {@link FSSchedulerNode}
+   * @return the list of best preemptable containers for the resource request
+   */
+  private PreemptableContainers getBestPreemptableContainers(ResourceRequest rr,
+      List<FSSchedulerNode> potentialNodes) {
+    PreemptableContainers bestContainers =
+        identifyContainersToPreemptForOneContainer(potentialNodes, rr);
+
+    if (rr.getRelaxLocality()
+        && !ResourceRequest.isAnyLocation(rr.getResourceName())
+        && bestContainers != null
+        && bestContainers.numAMContainers > 0) {
+      List<FSSchedulerNode> remainingNodes =
+          scheduler.getNodeTracker().getAllNodes();
+      remainingNodes.removeAll(potentialNodes);
+      PreemptableContainers spareContainers =
+          identifyContainersToPreemptForOneContainer(remainingNodes, rr);
+      if (spareContainers != null && spareContainers.numAMContainers
+          < bestContainers.numAMContainers) {
+        bestContainers = spareContainers;
+      }
+    }
+
+    return bestContainers;
   }
 
   private class PreemptContainersTask extends TimerTask {

@@ -28,19 +28,17 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileContext;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
 
 /**
  * Use {@code LogAggregationFileControllerFactory} to get the correct
@@ -51,7 +49,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 @Unstable
 public class LogAggregationFileControllerFactory {
 
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       LogAggregationFileControllerFactory.class);
   private final Pattern p = Pattern.compile(
       "^[A-Za-z_]+[A-Za-z0-9_]*$");
@@ -159,24 +157,39 @@ public class LogAggregationFileControllerFactory {
    */
   public LogAggregationFileController getFileControllerForRead(
       ApplicationId appId, String appOwner) throws IOException {
-    StringBuilder diagnosis = new StringBuilder();
-    for(LogAggregationFileController fileController : controllers) {
+    StringBuilder diagnosticsMsg = new StringBuilder();
+
+    if (LogAggregationUtils.isOlderPathEnabled(conf)) {
+      for (LogAggregationFileController fileController : controllers) {
+        try {
+          Path remoteAppLogDir = fileController.getOlderRemoteAppLogDir(appId,
+              appOwner);
+          if (LogAggregationUtils.getNodeFiles(conf, remoteAppLogDir, appId,
+              appOwner).hasNext()) {
+            return fileController;
+          }
+        } catch (Exception ex) {
+          diagnosticsMsg.append(ex.getMessage() + "\n");
+          continue;
+        }
+      }
+    }
+
+    for (LogAggregationFileController fileController : controllers) {
       try {
         Path remoteAppLogDir = fileController.getRemoteAppLogDir(
             appId, appOwner);
-        Path qualifiedLogDir = FileContext.getFileContext(conf).makeQualified(
-            remoteAppLogDir);
-        RemoteIterator<FileStatus> nodeFiles = FileContext.getFileContext(
-            qualifiedLogDir.toUri(), conf).listStatus(remoteAppLogDir);
-        if (nodeFiles.hasNext()) {
+        if (LogAggregationUtils.getNodeFiles(conf, remoteAppLogDir,
+            appId, appOwner).hasNext()) {
           return fileController;
         }
       } catch (Exception ex) {
-        diagnosis.append(ex.getMessage() + "\n");
+        diagnosticsMsg.append(ex.getMessage() + "\n");
         continue;
       }
     }
-    throw new IOException(diagnosis.toString());
+
+    throw new IOException(diagnosticsMsg.toString());
   }
 
   private boolean validateAggregatedFileControllerName(String name) {

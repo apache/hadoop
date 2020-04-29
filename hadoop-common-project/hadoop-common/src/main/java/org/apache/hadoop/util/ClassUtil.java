@@ -34,7 +34,6 @@ public class ClassUtil {
    * 
    * @param clazz the class to find.
    * @return a jar file that contains the class, or null.
-   * @throws IOException
    */
   public static String findContainingJar(Class<?> clazz) {
     ClassLoader loader = clazz.getClassLoader();

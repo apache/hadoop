@@ -44,7 +44,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.LogAggregationStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.PriorityProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationStateProto;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -220,6 +220,23 @@ public class ApplicationReportPBImpl extends ApplicationReport {
     return p.getStartTime();
   }
 
+  @Override
+  public long getSubmitTime() {
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getSubmitTime();
+  }
+
+  @Override
+  public long getLaunchTime() {
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getLaunchTime();
+  }
+
+  @Override
+  public void setLaunchTime(long launchTime) {
+    maybeInitBuilder();
+    builder.setLaunchTime(launchTime);
+  }
   @Override
   public long getFinishTime() {
     ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
@@ -417,6 +434,12 @@ public class ApplicationReportPBImpl extends ApplicationReport {
   public void setFinishTime(long finishTime) {
     maybeInitBuilder();
     builder.setFinishTime(finishTime);
+  }
+
+  @Override
+  public void setSubmitTime(long submitTime) {
+    maybeInitBuilder();
+    builder.setSubmitTime(submitTime);
   }
 
   @Override

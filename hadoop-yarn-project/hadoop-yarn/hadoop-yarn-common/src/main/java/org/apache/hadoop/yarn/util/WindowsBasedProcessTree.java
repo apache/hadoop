@@ -23,8 +23,8 @@ import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.util.CpuTimeTracker;
 import org.apache.hadoop.util.Shell;
@@ -34,8 +34,8 @@ import org.apache.hadoop.util.StringUtils;
 @Private
 public class WindowsBasedProcessTree extends ResourceCalculatorProcessTree {
 
-  static final Log LOG = LogFactory
-      .getLog(WindowsBasedProcessTree.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(WindowsBasedProcessTree.class);
 
   static class ProcessInfo {
     String pid; // process pid
@@ -133,11 +133,11 @@ public class WindowsBasedProcessTree extends ResourceCalculatorProcessTree {
             pInfo.cpuTimeMs = Long.parseLong(procInfo[3]);
             allProcs.put(pInfo.pid, pInfo);
           } catch (NumberFormatException nfe) {
-            LOG.debug("Error parsing procInfo." + nfe);
+            LOG.debug("Error parsing procInfo.", nfe);
           }
         } else {
-          LOG.debug("Expected split length of proc info to be "
-              + procInfoSplitCount + ". Got " + procInfo.length);
+          LOG.debug("Expected split length of proc info to be {}. Got {}",
+              procInfoSplitCount, procInfo.length);
         }
       }
     }

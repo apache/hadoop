@@ -27,6 +27,13 @@ import java.util.List;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+
+import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.DiskChecker.DiskErrorException;
+import org.apache.hadoop.util.DiskValidator;
+import org.apache.hadoop.util.DiskValidatorFactory;
+import org.apache.hadoop.yarn.server.nodemanager.health.HealthReporter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,7 +44,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -49,7 +55,8 @@ import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
  * directories of a node. This specifically manages nodemanager-local-dirs and
  * nodemanager-log-dirs by periodically checking their health.
  */
-public class LocalDirsHandlerService extends AbstractService {
+public class LocalDirsHandlerService extends AbstractService
+    implements HealthReporter {
 
   private static final Logger LOG =
        LoggerFactory.getLogger(LocalDirsHandlerService.class);
@@ -134,39 +141,69 @@ public class LocalDirsHandlerService extends AbstractService {
             " is not configured properly.");
         lowUsableSpacePercentagePerDisk = highUsableSpacePercentagePerDisk;
       }
-      long minFreeSpacePerDiskMB =
+      long lowMinFreeSpacePerDiskMB =
           conf.getLong(YarnConfiguration.NM_MIN_PER_DISK_FREE_SPACE_MB,
-            YarnConfiguration.DEFAULT_NM_MIN_PER_DISK_FREE_SPACE_MB);
+              YarnConfiguration.DEFAULT_NM_MIN_PER_DISK_FREE_SPACE_MB);
+      long highMinFreeSpacePerDiskMB =
+          conf.getLong(YarnConfiguration.NM_WM_HIGH_PER_DISK_FREE_SPACE_MB,
+              lowMinFreeSpacePerDiskMB);
+      if (highMinFreeSpacePerDiskMB < lowMinFreeSpacePerDiskMB) {
+        LOG.warn("Using " + YarnConfiguration.
+            NM_MIN_PER_DISK_FREE_SPACE_MB + " as " +
+            YarnConfiguration.NM_WM_HIGH_PER_DISK_FREE_SPACE_MB +
+            ", because " + YarnConfiguration.
+            NM_WM_HIGH_PER_DISK_FREE_SPACE_MB +
+            " is not configured properly.");
+        highMinFreeSpacePerDiskMB = lowMinFreeSpacePerDiskMB;
+      }
+
       localDirs =
           new DirectoryCollection(
               validatePaths(conf
                   .getTrimmedStrings(YarnConfiguration.NM_LOCAL_DIRS)),
               highUsableSpacePercentagePerDisk,
               lowUsableSpacePercentagePerDisk,
-              minFreeSpacePerDiskMB);
+              lowMinFreeSpacePerDiskMB,
+              highMinFreeSpacePerDiskMB);
       logDirs =
           new DirectoryCollection(
               validatePaths(conf
                   .getTrimmedStrings(YarnConfiguration.NM_LOG_DIRS)),
               highUsableSpacePercentagePerDisk,
               lowUsableSpacePercentagePerDisk,
-              minFreeSpacePerDiskMB);
+              lowMinFreeSpacePerDiskMB,
+              highMinFreeSpacePerDiskMB);
 
       String local = conf.get(YarnConfiguration.NM_LOCAL_DIRS);
       conf.set(NM_GOOD_LOCAL_DIRS,
           (local != null) ? local : "");
-      localDirsAllocator = new LocalDirAllocator(
-          NM_GOOD_LOCAL_DIRS);
-      String log = conf.get(YarnConfiguration.NM_LOG_DIRS);
-      conf.set(NM_GOOD_LOG_DIRS,
-          (log != null) ? log : "");
-      logDirsAllocator = new LocalDirAllocator(
-          NM_GOOD_LOG_DIRS);
+      String diskValidatorName = conf.get(YarnConfiguration.DISK_VALIDATOR,
+              YarnConfiguration.DEFAULT_DISK_VALIDATOR);
+      try {
+        DiskValidator diskValidator =
+            DiskValidatorFactory.getInstance(diskValidatorName);
+        localDirsAllocator = new LocalDirAllocator(
+                NM_GOOD_LOCAL_DIRS, diskValidator);
+        String log = conf.get(YarnConfiguration.NM_LOG_DIRS);
+        conf.set(NM_GOOD_LOG_DIRS,
+                (log != null) ? log : "");
+        logDirsAllocator = new LocalDirAllocator(
+                NM_GOOD_LOG_DIRS, diskValidator);
+      } catch (DiskErrorException e) {
+        throw new YarnRuntimeException(
+            "Failed to create DiskValidator of type " + diskValidatorName + "!",
+            e);
+      }
     }
 
     @Override
     public void run() {
-      checkDirs();
+      try {
+        checkDirs();
+      } catch (Throwable t) {
+        // Prevent uncaught exceptions from killing this thread
+        LOG.warn("Error while checking local directories: ", t);
+      }
     }
   }
 
@@ -391,6 +428,11 @@ public class LocalDirsHandlerService extends AbstractService {
 
   }
 
+  @Override
+  public String getHealthReport() {
+    return getDisksHealthReport(false);
+  }
+
   /**
    * The minimum fraction of number of disks needed to be healthy for a node to
    * be considered healthy in terms of disks is configured using
@@ -422,8 +464,18 @@ public class LocalDirsHandlerService extends AbstractService {
     return true;
   }
 
+  @Override
+  public boolean isHealthy() {
+    return areDisksHealthy();
+  }
+
   public long getLastDisksCheckTime() {
     return lastDisksCheckTime;
+  }
+
+  @Override
+  public long getLastHealthReportTime() {
+    return getLastDisksCheckTime();
   }
 
   public boolean isGoodLocalDir(String path) {
@@ -475,7 +527,8 @@ public class LocalDirsHandlerService extends AbstractService {
 
   }
 
-  private void checkDirs() {
+  @VisibleForTesting
+  public void checkDirs() {
     boolean disksStatusChange = false;
     Set<String> failedLocalDirsPreCheck =
         new HashSet<String>(localDirs.getFailedDirs());
@@ -589,6 +642,10 @@ public class LocalDirsHandlerService extends AbstractService {
 
   public Path getLocalPathForRead(String pathStr) throws IOException {
     return getPathToRead(pathStr, getLocalDirsForRead());
+  }
+
+  public Iterable<Path> getAllLocalPathsForRead(String pathStr) throws IOException {
+    return localDirsAllocator.getAllLocalPathsToRead(pathStr, getConfig());
   }
 
   public Path getLogPathForWrite(String pathStr, boolean checkWrite)

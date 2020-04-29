@@ -21,8 +21,8 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_RPC_SOCK
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.Path;
@@ -55,8 +55,8 @@ import java.util.List;
  * Checks that used sockets have TCP_NODELAY set when configured.
  */
 public class TestDataNodeTcpNoDelay {
-  private static final Log LOG =
-      LogFactory.getLog(TestDataNodeTcpNoDelay.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestDataNodeTcpNoDelay.class);
   private static Configuration baseConf;
 
   @BeforeClass

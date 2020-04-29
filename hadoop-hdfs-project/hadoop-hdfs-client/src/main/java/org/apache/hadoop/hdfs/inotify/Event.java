@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsPermission;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Events sent by the inotify system. Note that no events are necessarily sent
@@ -112,6 +113,7 @@ public abstract class Event {
     private String symlinkTarget;
     private boolean overwrite;
     private long defaultBlockSize;
+    private Optional<Boolean> erasureCoded;
 
     public static class Builder {
       private INodeType iNodeType;
@@ -124,6 +126,7 @@ public abstract class Event {
       private String symlinkTarget;
       private boolean overwrite;
       private long defaultBlockSize = 0;
+      private Optional<Boolean> erasureCoded = Optional.empty();
 
       public Builder iNodeType(INodeType type) {
         this.iNodeType = type;
@@ -175,6 +178,11 @@ public abstract class Event {
         return this;
       }
 
+      public Builder erasureCoded(boolean ecCoded) {
+        this.erasureCoded = Optional.of(ecCoded);
+        return this;
+      }
+
       public CreateEvent build() {
         return new CreateEvent(this);
       }
@@ -192,6 +200,7 @@ public abstract class Event {
       this.symlinkTarget = b.symlinkTarget;
       this.overwrite = b.overwrite;
       this.defaultBlockSize = b.defaultBlockSize;
+      this.erasureCoded = b.erasureCoded;
     }
 
     public INodeType getiNodeType() {
@@ -243,6 +252,10 @@ public abstract class Event {
       return defaultBlockSize;
     }
 
+    public Optional<Boolean> isErasureCoded() {
+      return erasureCoded;
+    }
+
     @Override
     @InterfaceStability.Unstable
     public String toString() {
@@ -261,6 +274,7 @@ public abstract class Event {
 
       content.append("overwrite=").append(overwrite)
           .append(", defaultBlockSize=").append(defaultBlockSize)
+          .append(", erasureCoded=").append(erasureCoded)
           .append("]");
       return content.toString();
     }

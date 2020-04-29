@@ -71,8 +71,8 @@ public class BlockDecompressorStream extends DecompressorStream {
     if (noUncompressedBytes == originalBlockSize) {
       // Get original data size
       try {
-        originalBlockSize =  rawReadInt();
-      } catch (IOException ioe) {
+        originalBlockSize = rawReadInt();
+      } catch (EOFException e) {
         return -1;
       }
       noUncompressedBytes = 0;

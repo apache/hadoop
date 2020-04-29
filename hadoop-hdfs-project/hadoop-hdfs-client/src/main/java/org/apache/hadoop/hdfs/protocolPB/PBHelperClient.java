@@ -29,10 +29,13 @@ import java.util.Map;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Shorts;
-import com.google.protobuf.ByteString;
-import com.google.protobuf.CodedInputStream;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.CodedInputStream;
 
 import org.apache.hadoop.crypto.CipherOption;
 import org.apache.hadoop.crypto.CipherSuite;
@@ -61,6 +64,8 @@ import org.apache.hadoop.hdfs.inotify.EventBatch;
 import org.apache.hadoop.hdfs.inotify.EventBatchList;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockChecksumOptions;
+import org.apache.hadoop.hdfs.protocol.BlockChecksumType;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
@@ -78,6 +83,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.DatanodeLocalInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
+import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
@@ -201,6 +207,7 @@ import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.SlotId;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ChunkedArrayList;
@@ -226,13 +233,31 @@ public class PBHelperClient {
   private static final FsAction[] FSACTION_VALUES =
       FsAction.values();
 
+  private static ByteString getFixedByteString(String key) {
+    return ProtobufHelper.getFixedByteString(key);
+  }
+
+  /**
+   * Guava cache for caching String to ByteString encoding. Use this when the
+   * set of Strings is large, mutable, or unknown.
+   */
+  private static LoadingCache<String, ByteString> bytestringCache =
+      CacheBuilder.newBuilder()
+          .maximumSize(10000)
+          .build(
+              new CacheLoader<String, ByteString>() {
+                public ByteString load(String key) {
+                  return ByteString.copyFromUtf8(key);
+                }
+              });
+
   private PBHelperClient() {
     /** Hidden constructor */
   }
 
   public static ByteString getByteString(byte[] bytes) {
     // return singleton to reduce object allocation
-    return (bytes.length == 0) ? ByteString.EMPTY : ByteString.copyFrom(bytes);
+    return ProtobufHelper.getByteString(bytes);
   }
 
   public static ShmId convert(ShortCircuitShmIdProto shmId) {
@@ -244,13 +269,55 @@ public class PBHelperClient {
   }
 
   public static HdfsProtos.ChecksumTypeProto convert(DataChecksum.Type type) {
-    return HdfsProtos.ChecksumTypeProto.valueOf(type.id);
+    return HdfsProtos.ChecksumTypeProto.forNumber(type.id);
+  }
+
+  public static HdfsProtos.BlockChecksumTypeProto convert(
+      BlockChecksumType type) {
+    switch(type) {
+    case MD5CRC:
+      return HdfsProtos.BlockChecksumTypeProto.MD5CRC;
+    case COMPOSITE_CRC:
+      return HdfsProtos.BlockChecksumTypeProto.COMPOSITE_CRC;
+    default:
+      throw new IllegalStateException(
+          "BUG: BlockChecksumType not found, type=" + type);
+    }
+  }
+
+  public static BlockChecksumType convert(
+      HdfsProtos.BlockChecksumTypeProto blockChecksumTypeProto) {
+    switch(blockChecksumTypeProto) {
+    case MD5CRC:
+      return BlockChecksumType.MD5CRC;
+    case COMPOSITE_CRC:
+      return BlockChecksumType.COMPOSITE_CRC;
+    default:
+      throw new IllegalStateException(
+          "BUG: BlockChecksumTypeProto not found, type="
+          + blockChecksumTypeProto);
+    }
+  }
+
+  public static HdfsProtos.BlockChecksumOptionsProto convert(
+      BlockChecksumOptions options) {
+    return HdfsProtos.BlockChecksumOptionsProto.newBuilder()
+        .setBlockChecksumType(convert(options.getBlockChecksumType()))
+        .setStripeLength(options.getStripeLength())
+        .build();
+  }
+
+  public static BlockChecksumOptions convert(
+      HdfsProtos.BlockChecksumOptionsProto options) {
+    return new BlockChecksumOptions(
+        convert(options.getBlockChecksumType()),
+        options.getStripeLength());
   }
 
   public static ExtendedBlockProto convert(final ExtendedBlock b) {
     if (b == null) return null;
     return ExtendedBlockProto.newBuilder().
-        setPoolId(b.getBlockPoolId()).
+        setPoolIdBytes(getFixedByteString(b.getBlockPoolId())).
         setBlockId(b.getBlockId()).
         setNumBytes(b.getNumBytes()).
         setGenerationStamp(b.getGenerationStamp()).
@@ -258,11 +325,7 @@ public class PBHelperClient {
   }
 
   public static TokenProto convert(Token<?> tok) {
-    return TokenProto.newBuilder().
-        setIdentifier(getByteString(tok.getIdentifier())).
-        setPassword(getByteString(tok.getPassword())).
-        setKind(tok.getKind().toString()).
-        setService(tok.getService().toString()).build();
+    return ProtobufHelper.protoFromToken(tok);
   }
 
   public static ShortCircuitShmIdProto convert(ShmId shmId) {
@@ -285,11 +348,10 @@ public class PBHelperClient {
     // which is the same as the DatanodeUuid. Since StorageID is a required
     // field we pass the empty string if the DatanodeUuid is not yet known.
     return DatanodeIDProto.newBuilder()
-        .setIpAddr(dn.getIpAddr())
-        .setHostName(dn.getHostName())
+        .setIpAddrBytes(dn.getIpAddrBytes())
+        .setHostNameBytes(dn.getHostNameBytes())
         .setXferPort(dn.getXferPort())
-        .setDatanodeUuid(dn.getDatanodeUuid() != null ?
-            dn.getDatanodeUuid() : "")
+        .setDatanodeUuidBytes(dn.getDatanodeUuidBytes())
         .setInfoPort(dn.getInfoPort())
         .setInfoSecurePort(dn.getInfoSecurePort())
         .setIpcPort(dn.getIpcPort()).build();
@@ -313,7 +375,8 @@ public class PBHelperClient {
   public static DatanodeInfoProto convert(DatanodeInfo info) {
     DatanodeInfoProto.Builder builder = DatanodeInfoProto.newBuilder();
     if (info.getNetworkLocation() != null) {
-      builder.setLocation(info.getNetworkLocation());
+      builder.setLocationBytes(
+          bytestringCache.getUnchecked(info.getNetworkLocation()));
     }
     if (info.getUpgradeDomain() != null) {
       builder.setUpgradeDomain(info.getUpgradeDomain());
@@ -333,6 +396,7 @@ public class PBHelperClient {
         .setAdminState(convert(info.getAdminState()))
         .setLastBlockReportTime(info.getLastBlockReportTime())
         .setLastBlockReportMonotonic(info.getLastBlockReportMonotonic())
+        .setNumBlocks(info.getNumBlocks())
         .build();
     return builder.build();
   }
@@ -682,6 +746,11 @@ public class PBHelperClient {
     for (String storageId : blockTokenSecret.getStorageIds()) {
       builder.addStorageIds(storageId);
     }
+
+    byte[] handshake = blockTokenSecret.getHandshakeMsg();
+    if (handshake != null && handshake.length > 0) {
+      builder.setHandshakeSecret(getByteString(handshake));
+    }
     return builder.build();
   }
 
@@ -704,7 +773,9 @@ public class PBHelperClient {
             .setLastBlockReportTime(di.hasLastBlockReportTime() ?
                 di.getLastBlockReportTime() : 0)
             .setLastBlockReportMonotonic(di.hasLastBlockReportMonotonic() ?
-                di.getLastBlockReportMonotonic() : 0);
+                di.getLastBlockReportMonotonic() : 0)
+            .setNumBlocks(di.getNumBlocks());
+
     if (di.hasNonDfsUsed()) {
       dinfo.setNonDfsUsed(di.getNonDfsUsed());
     } else {
@@ -732,9 +803,8 @@ public class PBHelperClient {
 
   public static Token<BlockTokenIdentifier> convert(
       TokenProto blockToken) {
-    return new Token<>(blockToken.getIdentifier()
-        .toByteArray(), blockToken.getPassword().toByteArray(), new Text(
-        blockToken.getKind()), new Text(blockToken.getService()));
+    return (Token<BlockTokenIdentifier>) ProtobufHelper
+        .tokenFromProto(blockToken);
   }
 
   // DatanodeId
@@ -814,18 +884,22 @@ public class PBHelperClient {
         case EVENT_CREATE:
           InotifyProtos.CreateEventProto create =
               InotifyProtos.CreateEventProto.parseFrom(p.getContents());
-          events.add(new Event.CreateEvent.Builder()
-              .iNodeType(createTypeConvert(create.getType()))
-              .path(create.getPath())
-              .ctime(create.getCtime())
-              .ownerName(create.getOwnerName())
-              .groupName(create.getGroupName())
-              .perms(convert(create.getPerms()))
-              .replication(create.getReplication())
-              .symlinkTarget(create.getSymlinkTarget().isEmpty() ? null :
-                  create.getSymlinkTarget())
-              .defaultBlockSize(create.getDefaultBlockSize())
-              .overwrite(create.getOverwrite()).build());
+          Event.CreateEvent.Builder builder = new Event.CreateEvent.Builder()
+                  .iNodeType(createTypeConvert(create.getType()))
+                  .path(create.getPath())
+                  .ctime(create.getCtime())
+                  .ownerName(create.getOwnerName())
+                  .groupName(create.getGroupName())
+                  .perms(convert(create.getPerms()))
+                  .replication(create.getReplication())
+                  .symlinkTarget(create.getSymlinkTarget().isEmpty() ? null :
+                          create.getSymlinkTarget())
+                  .defaultBlockSize(create.getDefaultBlockSize())
+                  .overwrite(create.getOverwrite());
+          if (create.hasErasureCoded()) {
+            builder.erasureCoded(create.getErasureCoded());
+          }
+          events.add(builder.build());
           break;
         case EVENT_METADATA:
           InotifyProtos.MetadataUpdateEventProto meta =
@@ -1009,7 +1083,7 @@ public class PBHelperClient {
   }
 
   public static FsActionProto convert(FsAction v) {
-    return FsActionProto.valueOf(v != null ? v.ordinal() : 0);
+    return FsActionProto.forNumber(v != null ? v.ordinal() : 0);
   }
 
   public static XAttrProto convertXAttrProto(XAttr a) {
@@ -1051,7 +1125,7 @@ public class PBHelperClient {
   }
 
   static XAttrNamespaceProto convert(XAttr.NameSpace v) {
-    return XAttrNamespaceProto.valueOf(v.ordinal());
+    return XAttrNamespaceProto.forNumber(v.ordinal());
   }
 
   static XAttr.NameSpace convert(XAttrNamespaceProto v) {
@@ -1143,7 +1217,7 @@ public class PBHelperClient {
   }
 
   static AclEntryScopeProto convert(AclEntryScope v) {
-    return AclEntryScopeProto.valueOf(v.ordinal());
+    return AclEntryScopeProto.forNumber(v.ordinal());
   }
 
   private static AclEntryScope convert(AclEntryScopeProto v) {
@@ -1151,7 +1225,7 @@ public class PBHelperClient {
   }
 
   static AclEntryTypeProto convert(AclEntryType e) {
-    return AclEntryTypeProto.valueOf(e.ordinal());
+    return AclEntryTypeProto.forNumber(e.ordinal());
   }
 
   private static AclEntryType convert(AclEntryTypeProto v) {
@@ -1896,6 +1970,13 @@ public class PBHelperClient {
 
   public static ReplicatedBlockStats convert(
       GetFsReplicatedBlockStatsResponseProto res) {
+    if (res.hasHighestPrioLowRedundancyBlocks()) {
+      return new ReplicatedBlockStats(res.getLowRedundancy(),
+          res.getCorruptBlocks(), res.getMissingBlocks(),
+          res.getMissingReplOneBlocks(), res.getBlocksInFuture(),
+          res.getPendingDeletionBlocks(),
+          res.getHighestPrioLowRedundancyBlocks());
+    }
     return new ReplicatedBlockStats(res.getLowRedundancy(),
         res.getCorruptBlocks(), res.getMissingBlocks(),
         res.getMissingReplOneBlocks(), res.getBlocksInFuture(),
@@ -1904,6 +1985,12 @@ public class PBHelperClient {
 
   public static ECBlockGroupStats convert(
       GetFsECBlockGroupStatsResponseProto res) {
+    if (res.hasHighestPrioLowRedundancyBlocks()) {
+      return new ECBlockGroupStats(res.getLowRedundancy(),
+          res.getCorruptBlocks(), res.getMissingBlocks(),
+          res.getBlocksInFuture(), res.getPendingDeletionBlocks(),
+          res.getHighestPrioLowRedundancyBlocks());
+    }
     return new ECBlockGroupStats(res.getLowRedundancy(),
         res.getCorruptBlocks(), res.getMissingBlocks(),
         res.getBlocksInFuture(), res.getPendingDeletionBlocks());
@@ -1940,6 +2027,18 @@ public class PBHelperClient {
     HdfsFileStatus[] result = new HdfsFileStatus[len];
     for (int i = 0; i < len; ++i) {
       result[i] = convert(fs[i]);
+    }
+    return result;
+  }
+
+  public static List<HdfsFileStatus> convertHdfsFileStatus(
+      List<HdfsFileStatusProto> fs) {
+    if (fs == null) {
+      return null;
+    }
+    List<HdfsFileStatus> result = Lists.newArrayListWithCapacity(fs.size());
+    for (HdfsFileStatusProto proto : fs) {
+      result.add(convert(proto));
     }
     return result;
   }
@@ -2144,7 +2243,7 @@ public class PBHelperClient {
 
   public static FsServerDefaultsProto convert(FsServerDefaults fs) {
     if (fs == null) return null;
-    return FsServerDefaultsProto.newBuilder().
+    FsServerDefaultsProto.Builder builder = FsServerDefaultsProto.newBuilder().
         setBlockSize(fs.getBlockSize()).
         setBytesPerChecksum(fs.getBytesPerChecksum()).
         setWritePacketSize(fs.getWritePacketSize())
@@ -2153,9 +2252,11 @@ public class PBHelperClient {
         .setEncryptDataTransfer(fs.getEncryptDataTransfer())
         .setTrashInterval(fs.getTrashInterval())
         .setChecksumType(convert(fs.getChecksumType()))
-        .setKeyProviderUri(fs.getKeyProviderUri())
-        .setPolicyId(fs.getDefaultStoragePolicyId())
-        .build();
+        .setPolicyId(fs.getDefaultStoragePolicyId());
+    if (fs.getKeyProviderUri() != null) {
+      builder.setKeyProviderUri(fs.getKeyProviderUri());
+    }
+    return builder.build();
   }
 
   public static EnumSetWritable<CreateFlag> convertCreateFlag(int flag) {
@@ -2213,8 +2314,8 @@ public class PBHelperClient {
             setModificationTime(fs.getModificationTime()).
             setAccessTime(fs.getAccessTime()).
             setPermission(convert(fs.getPermission())).
-            setOwner(fs.getOwner()).
-            setGroup(fs.getGroup()).
+            setOwnerBytes(getFixedByteString(fs.getOwner())).
+            setGroupBytes(getFixedByteString(fs.getGroup())).
             setFileId(fs.getFileId()).
             setChildrenNum(fs.getChildrenNum()).
             setPath(getByteString(fs.getLocalNameInBytes())).
@@ -2338,6 +2439,10 @@ public class PBHelperClient {
         replicatedBlockStats.getBytesInFutureBlocks());
     result.setPendingDeletionBlocks(
         replicatedBlockStats.getPendingDeletionBlocks());
+    if (replicatedBlockStats.hasHighestPriorityLowRedundancyBlocks()) {
+      result.setHighestPrioLowRedundancyBlocks(
+          replicatedBlockStats.getHighestPriorityLowRedundancyBlocks());
+    }
     return result.build();
   }
 
@@ -2353,6 +2458,10 @@ public class PBHelperClient {
         ecBlockGroupStats.getBytesInFutureBlockGroups());
     result.setPendingDeletionBlocks(
         ecBlockGroupStats.getPendingDeletionBlocks());
+    if (ecBlockGroupStats.hasHighestPriorityLowRedundancyBlocks()) {
+      result.setHighestPrioLowRedundancyBlocks(
+          ecBlockGroupStats.getHighestPriorityLowRedundancyBlocks());
+    }
     return result.build();
   }
 
@@ -2794,22 +2903,26 @@ public class PBHelperClient {
           break;
         case CREATE:
           Event.CreateEvent ce2 = (Event.CreateEvent) e;
+          InotifyProtos.CreateEventProto.Builder pB =
+                  (InotifyProtos.CreateEventProto.newBuilder());
+          pB.setType(createTypeConvert(ce2.getiNodeType()))
+             .setPath(ce2.getPath())
+             .setCtime(ce2.getCtime())
+             .setOwnerName(ce2.getOwnerName())
+             .setGroupName(ce2.getGroupName())
+             .setPerms(convert(ce2.getPerms()))
+             .setReplication(ce2.getReplication())
+             .setSymlinkTarget(ce2.getSymlinkTarget() == null ?
+                        "" : ce2.getSymlinkTarget())
+             .setDefaultBlockSize(ce2.getDefaultBlockSize())
+             .setOverwrite(ce2.getOverwrite());
+          if (ce2.isErasureCoded().isPresent()) {
+            pB.setErasureCoded(ce2.isErasureCoded().get());
+          }
           events.add(InotifyProtos.EventProto.newBuilder()
               .setType(InotifyProtos.EventType.EVENT_CREATE)
-              .setContents(
-                  InotifyProtos.CreateEventProto.newBuilder()
-                      .setType(createTypeConvert(ce2.getiNodeType()))
-                      .setPath(ce2.getPath())
-                      .setCtime(ce2.getCtime())
-                      .setOwnerName(ce2.getOwnerName())
-                      .setGroupName(ce2.getGroupName())
-                      .setPerms(convert(ce2.getPerms()))
-                      .setReplication(ce2.getReplication())
-                      .setSymlinkTarget(ce2.getSymlinkTarget() == null ?
-                          "" : ce2.getSymlinkTarget())
-                      .setDefaultBlockSize(ce2.getDefaultBlockSize())
-                      .setOverwrite(ce2.getOverwrite()).build().toByteString()
-              ).build());
+              .setContents(pB.build().toByteString())
+              .build());
           break;
         case METADATA:
           Event.MetadataUpdateEvent me = (Event.MetadataUpdateEvent) e;
@@ -3087,7 +3200,7 @@ public class PBHelperClient {
 
   public static HdfsProtos.ErasureCodingPolicyState convertECState(
       ErasureCodingPolicyState state) {
-    return HdfsProtos.ErasureCodingPolicyState.valueOf(state.getValue());
+    return HdfsProtos.ErasureCodingPolicyState.forNumber(state.getValue());
   }
 
   /**
@@ -3206,6 +3319,21 @@ public class PBHelperClient {
     return builder.build();
   }
 
+  public static ECTopologyVerifierResult convertECTopologyVerifierResultProto(
+      HdfsProtos.ECTopologyVerifierResultProto resp) {
+    return new ECTopologyVerifierResult(resp.getIsSupported(),
+        resp.getResultMessage());
+  }
+
+  public static HdfsProtos.ECTopologyVerifierResultProto convertECTopologyVerifierResult(
+      ECTopologyVerifierResult resp) {
+    final HdfsProtos.ECTopologyVerifierResultProto.Builder builder =
+        HdfsProtos.ECTopologyVerifierResultProto.newBuilder()
+            .setIsSupported(resp.isSupported())
+            .setResultMessage(resp.getResultMessage());
+    return builder.build();
+  }
+
   public static EnumSet<AddBlockFlag> convertAddBlockFlags(
       List<AddBlockFlagProto> addBlockFlags) {
     EnumSet<AddBlockFlag> flags =
@@ -3223,7 +3351,7 @@ public class PBHelperClient {
       EnumSet<AddBlockFlag> flags) {
     List<AddBlockFlagProto> ret = new ArrayList<>();
     for (AddBlockFlag flag : flags) {
-      AddBlockFlagProto abfp = AddBlockFlagProto.valueOf(flag.getMode());
+      AddBlockFlagProto abfp = AddBlockFlagProto.forNumber(flag.getMode());
       if (abfp != null) {
         ret.add(abfp);
       }
@@ -3276,7 +3404,8 @@ public class PBHelperClient {
       EnumSet<OpenFilesType> types) {
     List<OpenFilesTypeProto> typeProtos = new ArrayList<>();
     for (OpenFilesType type : types) {
-      OpenFilesTypeProto typeProto = OpenFilesTypeProto.valueOf(type.getMode());
+      OpenFilesTypeProto typeProto = OpenFilesTypeProto
+          .forNumber(type.getMode());
       if (typeProto != null) {
         typeProtos.add(typeProto);
       }

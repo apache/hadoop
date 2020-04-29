@@ -296,9 +296,7 @@ public final class ColumnRWHelper {
             .entrySet()) {
           K converterColumnKey = null;
           if (columnPrefixBytes == null) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("null prefix was specified; returning all columns");
-            }
+            LOG.debug("null prefix was specified; returning all columns");
             try {
               converterColumnKey = keyConverter.decode(entry.getKey());
             } catch (IllegalArgumentException iae) {

@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.mapred.gridmix;
 
-import org.apache.commons.lang.time.FastDateFormat;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang3.time.FastDateFormat;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
@@ -40,7 +40,7 @@ import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
  * addresses are also recorded in the summary.
  */
 class ClusterSummarizer implements StatListener<ClusterStats> {
-  static final Log LOG = LogFactory.getLog(ClusterSummarizer.class);
+  static final Logger LOG = LoggerFactory.getLogger(ClusterSummarizer.class);
   
   private int numBlacklistedTrackers;
   private int numActiveTrackers;

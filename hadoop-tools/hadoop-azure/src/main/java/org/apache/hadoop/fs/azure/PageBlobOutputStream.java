@@ -29,14 +29,16 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.fs.azure.StorageInterface.CloudPageBlobWrapper;
-import org.apache.commons.lang.exception.ExceptionUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -52,7 +54,7 @@ import com.microsoft.azure.storage.blob.CloudPageBlob;
  * An output stream that write file data to a page blob stored using ASV's
  * custom format.
  */
-final class PageBlobOutputStream extends OutputStream implements Syncable {
+final class PageBlobOutputStream extends OutputStream implements Syncable, StreamCapabilities {
   /**
    * The maximum number of raw bytes Azure Storage allows us to upload in a
    * single request (4 MB).
@@ -192,6 +194,23 @@ final class PageBlobOutputStream extends OutputStream implements Syncable {
   private void checkStreamState() throws IOException {
     if (lastError != null) {
       throw lastError;
+    }
+  }
+
+  /**
+   * Query the stream for a specific capability.
+   *
+   * @param capability string to query the stream support for.
+   * @return true for hsync and hflush.
+   */
+  @Override
+  public boolean hasCapability(String capability) {
+    switch (capability.toLowerCase(Locale.ENGLISH)) {
+      case StreamCapabilities.HSYNC:
+      case StreamCapabilities.HFLUSH:
+        return true;
+      default:
+        return false;
     }
   }
 
@@ -376,6 +395,18 @@ final class PageBlobOutputStream extends OutputStream implements Syncable {
     outBuffer = new ByteArrayOutputStream();
   }
 
+  @VisibleForTesting
+  synchronized void waitForLastFlushCompletion() throws IOException {
+    try {
+      if (lastQueuedTask != null) {
+        lastQueuedTask.waitTillDone();
+      }
+    } catch (InterruptedException e1) {
+      // Restore the interrupted status
+      Thread.currentThread().interrupt();
+    }
+  }
+
   /**
    * Extend the page blob file if we are close to the end.
    */
@@ -554,7 +585,6 @@ final class PageBlobOutputStream extends OutputStream implements Syncable {
   }
 
   @Override
-
   public void hflush() throws IOException {
 
     // hflush is required to force data to storage, so call hsync,

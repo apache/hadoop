@@ -57,8 +57,8 @@ public class ConfiguredYarnAuthorizer extends YarnAuthorizationProvider {
   @Override
   public void setPermission(List<Permission> permissions,
       UserGroupInformation user) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       for (Permission perm : permissions) {
         allAcls.put(perm.getTarget(), perm.getAcls());
       }
@@ -94,8 +94,8 @@ public class ConfiguredYarnAuthorizer extends YarnAuthorizationProvider {
 
   @Override
   public boolean checkPermission(AccessRequest accessRequest) {
+    readLock.lock();
     try {
-      readLock.lock();
       return checkPermissionInternal(accessRequest.getAccessType(),
           accessRequest.getEntity(), accessRequest.getUser());
     } finally {

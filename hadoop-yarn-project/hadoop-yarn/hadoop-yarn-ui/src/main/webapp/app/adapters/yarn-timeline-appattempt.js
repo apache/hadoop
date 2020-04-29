@@ -26,6 +26,10 @@ export default AbstractAdapter.extend({
 
   urlForQuery(query/*, modelName*/) {
     var url = this._buildURL();
+    var clusterId = this.get("env.app.clusterId")
+    if (clusterId) {
+      url += `/clusters/${clusterId}`;
+    }
     var appId = query.appId;
     query.fields = 'ALL';
     delete query.appId;
@@ -34,6 +38,10 @@ export default AbstractAdapter.extend({
 
   urlForFindRecord(id/*, modelName, snapshot*/) {
     var url = this._buildURL();
+    var clusterId = this.get("env.app.clusterId")
+    if (clusterId) {
+      url += `/clusters/${clusterId}`;
+    }
     return url + '/apps/' + Converter.attemptIdToAppId(id) +
       "/entities/YARN_APPLICATION_ATTEMPT/" + id + "?fields=ALL";
   }

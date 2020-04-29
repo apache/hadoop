@@ -48,6 +48,8 @@ public class ExecuteCommand extends Command {
     super(conf);
     addValidCommandParameters(DiskBalancerCLI.EXECUTE,
         "Executes a given plan.");
+    addValidCommandParameters(DiskBalancerCLI.SKIPDATECHECK,
+        "skips the date check and force execute the plan");
   }
 
   /**
@@ -69,7 +71,16 @@ public class ExecuteCommand extends Command {
     try (FSDataInputStream plan = open(planFile)) {
       planData = IOUtils.toString(plan);
     }
-    submitPlan(planFile, planData);
+
+    boolean skipDateCheck = false;
+    if(cmd.hasOption(DiskBalancerCLI.SKIPDATECHECK)) {
+      skipDateCheck = true;
+      LOG.warn("Skipping date check on this plan. This could mean we are " +
+          "executing an old plan and may not be the right plan for this " +
+          "data node.");
+    }
+
+    submitPlan(planFile, planData, skipDateCheck);
   }
 
   /**
@@ -77,9 +88,11 @@ public class ExecuteCommand extends Command {
    *
    * @param planFile - Plan file name
    * @param planData - Plan data in json format
+   * @param skipDateCheck - skips date check
    * @throws IOException
    */
-  private void submitPlan(final String planFile, final String planData)
+  private void submitPlan(final String planFile, final String planData,
+                          boolean skipDateCheck)
           throws IOException {
     Preconditions.checkNotNull(planData);
     NodePlan plan = NodePlan.parseJson(planData);
@@ -88,9 +101,8 @@ public class ExecuteCommand extends Command {
     ClientDatanodeProtocol dataNode = getDataNodeProxy(dataNodeAddress);
     String planHash = DigestUtils.shaHex(planData);
     try {
-      // TODO : Support skipping date check.
       dataNode.submitDiskBalancerPlan(planHash, DiskBalancerCLI.PLAN_VERSION,
-                                      planFile, planData, false);
+                                      planFile, planData, skipDateCheck);
     } catch (DiskBalancerException ex) {
       LOG.error("Submitting plan on  {} failed. Result: {}, Message: {}",
           plan.getNodeName(), ex.getResult().toString(), ex.getMessage());

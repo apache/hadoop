@@ -32,12 +32,13 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CancellationException;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
@@ -57,6 +58,8 @@ import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.ClientHandlerException;
+import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.core.util.MultivaluedMapImpl;
 
 /**
@@ -64,11 +67,13 @@ import com.sun.jersey.core.util.MultivaluedMapImpl;
  *
  */
 public class TimelineV2ClientImpl extends TimelineV2Client {
-  private static final Log LOG = LogFactory.getLog(TimelineV2ClientImpl.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TimelineV2ClientImpl.class);
 
   private static final String RESOURCE_URI_STR_V2 = "/ws/v2/timeline/";
 
   private TimelineEntityDispatcher entityDispatcher;
+  private TimelineEntityDispatcher subAppEntityDispatcher;
   private volatile String timelineServiceAddress;
   @VisibleForTesting
   volatile Token currentTimelineToken = null;
@@ -124,6 +129,7 @@ public class TimelineV2ClientImpl extends TimelineV2Client {
         YarnConfiguration.TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS,
         YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS);
     entityDispatcher = new TimelineEntityDispatcher(conf);
+    subAppEntityDispatcher = new TimelineEntityDispatcher(conf);
     super.serviceInit(conf);
   }
 
@@ -131,24 +137,38 @@ public class TimelineV2ClientImpl extends TimelineV2Client {
   protected void serviceStart() throws Exception {
     super.serviceStart();
     entityDispatcher.start();
+    subAppEntityDispatcher.start();
   }
 
   @Override
   protected void serviceStop() throws Exception {
     entityDispatcher.stop();
+    subAppEntityDispatcher.stop();
     super.serviceStop();
   }
 
   @Override
   public void putEntities(TimelineEntity... entities)
       throws IOException, YarnException {
-    entityDispatcher.dispatchEntities(true, entities);
+    entityDispatcher.dispatchEntities(true, entities, false);
   }
 
   @Override
   public void putEntitiesAsync(TimelineEntity... entities)
       throws IOException, YarnException {
-    entityDispatcher.dispatchEntities(false, entities);
+    entityDispatcher.dispatchEntities(false, entities, false);
+  }
+
+  @Override
+  public void putSubAppEntities(TimelineEntity... entities)
+      throws IOException, YarnException {
+    subAppEntityDispatcher.dispatchEntities(true, entities, true);
+  }
+
+  @Override
+  public void putSubAppEntitiesAsync(TimelineEntity... entities)
+      throws IOException, YarnException {
+    subAppEntityDispatcher.dispatchEntities(false, entities, true);
   }
 
   @Override
@@ -260,9 +280,9 @@ public class TimelineV2ClientImpl extends TimelineV2Client {
     } else {
       StringBuilder msg =
           new StringBuilder("TimelineClient has reached to max retry times : ");
-      msg.append(this.maxServiceRetries);
-      msg.append(" for service address: ");
-      msg.append(timelineServiceAddress);
+      msg.append(this.maxServiceRetries)
+          .append(" for service address: ")
+          .append(timelineServiceAddress);
       LOG.error(msg.toString());
       throw new IOException(msg.toString(), e);
     }
@@ -296,14 +316,40 @@ public class TimelineV2ClientImpl extends TimelineV2Client {
     } catch (InterruptedException ie) {
       throw (IOException) new InterruptedIOException().initCause(ie);
     }
-    if (resp == null || resp.getStatusInfo()
-        .getStatusCode() != ClientResponse.Status.OK.getStatusCode()) {
-      String msg =
-          "Response from the timeline server is " + ((resp == null) ? "null"
-              : "not successful," + " HTTP error code: " + resp.getStatus()
-                  + ", Server response:\n" + resp.getEntity(String.class));
+
+    //Close ClientResponse's input stream as we are done posting objects.
+    //ClientResponse#getEntity closes the input stream upon failure in
+    //processing HTTP response.
+    if (resp == null) {
+      String msg = "Error getting HTTP response from the timeline server.";
       LOG.error(msg);
       throw new YarnException(msg);
+    } else if (resp.getStatusInfo().getStatusCode()
+            == ClientResponse.Status.OK.getStatusCode()) {
+      try {
+        resp.close();
+      } catch(ClientHandlerException che) {
+        LOG.warn("Error closing the HTTP response's inputstream. ", che);
+      }
+    } else {
+      String msg = "";
+      try {
+        String stringType = resp.getEntity(String.class);
+        msg = "Server response:\n" + stringType;
+      } catch (ClientHandlerException | UniformInterfaceException chuie) {
+        msg = "Error getting entity from the HTTP response."
+                + chuie.getLocalizedMessage();
+      } catch (Throwable t) {
+        msg = "Error getting entity from the HTTP response."
+                + t.getLocalizedMessage();
+      } finally {
+        msg = "Response from the timeline server is not successful"
+                  + ", HTTP error code: " + resp.getStatus()
+                  + ", "
+                  + msg;
+        LOG.error(msg);
+        throw new YarnException(msg);
+      }
     }
   }
 
@@ -346,13 +392,15 @@ public class TimelineV2ClientImpl extends TimelineV2Client {
     private final TimelineEntities entities;
     private final boolean isSync;
 
-    EntitiesHolder(final TimelineEntities entities, final boolean isSync) {
+    EntitiesHolder(final TimelineEntities entities, final boolean isSync,
+        final boolean subappwrite) {
       super(new Callable<Void>() {
         // publishEntities()
         public Void call() throws Exception {
           MultivaluedMap<String, String> params = new MultivaluedMapImpl();
           params.add("appid", getContextAppId().toString());
           params.add("async", Boolean.toString(!isSync));
+          params.add("subappwrite", Boolean.toString(subappwrite));
           putObjects("entities", params, entities);
           return null;
         }
@@ -496,7 +544,8 @@ public class TimelineV2ClientImpl extends TimelineV2Client {
     }
 
     public void dispatchEntities(boolean sync,
-        TimelineEntity[] entitiesTobePublished) throws YarnException {
+        TimelineEntity[] entitiesTobePublished, boolean subappwrite)
+        throws YarnException {
       if (executor.isShutdown()) {
         throw new YarnException("Timeline client is in the process of stopping,"
             + " not accepting any more TimelineEntities");
@@ -509,7 +558,8 @@ public class TimelineV2ClientImpl extends TimelineV2Client {
       }
 
       // created a holder and place it in queue
-      EntitiesHolder entitiesHolder = new EntitiesHolder(entities, sync);
+      EntitiesHolder entitiesHolder =
+          new EntitiesHolder(entities, sync, subappwrite);
       try {
         timelineEntityQueue.put(entitiesHolder);
       } catch (InterruptedException e) {
@@ -526,9 +576,11 @@ public class TimelineV2ClientImpl extends TimelineV2Client {
         } catch (ExecutionException e) {
           throw new YarnException("Failed while publishing entity",
               e.getCause());
-        } catch (InterruptedException e) {
+        } catch (InterruptedException | CancellationException e) {
           Thread.currentThread().interrupt();
           throw new YarnException("Interrupted while publishing entity", e);
+        } catch (Exception e) {
+          throw new YarnException("Encountered error while publishing entity", e);
         }
       }
     }

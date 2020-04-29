@@ -18,9 +18,11 @@
 # Dockerfile for installing the necessary dependencies for building Hadoop.
 # See BUILDING.txt.
 
-FROM ubuntu:xenial
+FROM ubuntu:bionic
 
 WORKDIR /root
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 #####
 # Disable suggests/recommends
@@ -38,143 +40,148 @@ ENV DEBCONF_TERSE true
 # WARNING: DO NOT PUT JAVA APPS HERE! Otherwise they will install default
 # Ubuntu Java.  See Java section below!
 ######
-RUN apt-get -q update && apt-get -q install -y \
-    apt-utils \
-    build-essential \
-    bzip2 \
-    curl \
-    doxygen \
-    fuse \
-    g++ \
-    gcc \
-    git \
-    gnupg-agent \
-    libbz2-dev \
-    libcurl4-openssl-dev \
-    libfuse-dev \
-    libprotobuf-dev \
-    libprotoc-dev \
-    libsnappy-dev \
-    libssl-dev \
-    libtool \
-    locales \
-    make \
-    pinentry-curses \
-    pkg-config \
-    python \
-    python2.7 \
-    python-pip \
-    python-pkg-resources \
-    python-setuptools \
-    python-wheel \
-    rsync \
-    software-properties-common \
-    snappy \
-    sudo \
-    zlib1g-dev
+# hadolint ignore=DL3008
+RUN apt-get -q update \
+    && apt-get -q install -y --no-install-recommends \
+        apt-utils \
+        bats \
+        build-essential \
+        bzip2 \
+        clang \
+        cmake \
+        curl \
+        doxygen \
+        fuse \
+        g++ \
+        gcc \
+        git \
+        gnupg-agent \
+        libbz2-dev \
+        libcurl4-openssl-dev \
+        libfuse-dev \
+        libprotobuf-dev \
+        libprotoc-dev \
+        libsasl2-dev \
+        libsnappy-dev \
+        libssl-dev \
+        libsnappy-dev \
+        libtool \
+        libzstd1-dev \
+        locales \
+        make \
+        pinentry-curses \
+        pkg-config \
+        python \
+        python2.7 \
+        python-pip \
+        python-pkg-resources \
+        python-setuptools \
+        python-wheel \
+        rsync \
+        shellcheck \
+        software-properties-common \
+        sudo \
+        valgrind \
+        zlib1g-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 
 #######
 # OpenJDK 8
 #######
-RUN apt-get -q install -y openjdk-8-jdk
-
-#######
-# OpenJDK 9
-# w/workaround for
-# https://bugs.launchpad.net/ubuntu/+source/openjdk-9/+bug/1593191
-#######
-RUN apt-get -o Dpkg::Options::="--force-overwrite" \
-    -q install -y \
-    openjdk-9-jdk-headless
-
-#######
-# Set default Java
-#######
-#
-# By default, OpenJDK sets the default Java to the highest version.
-# We want the opposite, soooooo....
-#
-RUN update-java-alternatives --set java-1.8.0-openjdk-amd64
-RUN update-alternatives --get-selections | grep -i jdk | \
-    while read line; do \
-      alternative=$(echo $line | awk '{print $1}'); \
-      path=$(echo $line | awk '{print $3}'); \
-      newpath=$(echo $path | sed -e 's/java-9/java-8/'); \
-      update-alternatives --set $alternative $newpath; \
-    done
+# hadolint ignore=DL3008
+RUN apt-get -q update \
+    && apt-get -q install -y --no-install-recommends openjdk-8-jdk libbcprov-java \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 ######
-# Install cmake 3.1.0 (3.5.1 ships with Xenial)
+# Install Google Protobuf 3.7.1 (3.0.0 ships with Bionic)
 ######
-RUN mkdir -p /opt/cmake && \
-    curl -L -s -S \
-      https://cmake.org/files/v3.1/cmake-3.1.0-Linux-x86_64.tar.gz \
-      -o /opt/cmake.tar.gz && \
-    tar xzf /opt/cmake.tar.gz --strip-components 1 -C /opt/cmake
-ENV CMAKE_HOME /opt/cmake
-ENV PATH "${PATH}:/opt/cmake/bin"
-
-######
-# Install Google Protobuf 2.5.0 (2.6.0 ships with Xenial)
-######
-RUN mkdir -p /opt/protobuf-src && \
-    curl -L -s -S \
-      https://github.com/google/protobuf/releases/download/v2.5.0/protobuf-2.5.0.tar.gz \
-      -o /opt/protobuf.tar.gz && \
-    tar xzf /opt/protobuf.tar.gz --strip-components 1 -C /opt/protobuf-src
-RUN cd /opt/protobuf-src && ./configure --prefix=/opt/protobuf && make install
+# hadolint ignore=DL3003
+RUN mkdir -p /opt/protobuf-src \
+    && curl -L -s -S \
+      https://github.com/protocolbuffers/protobuf/releases/download/v3.7.1/protobuf-java-3.7.1.tar.gz \
+      -o /opt/protobuf.tar.gz \
+    && tar xzf /opt/protobuf.tar.gz --strip-components 1 -C /opt/protobuf-src \
+    && cd /opt/protobuf-src \
+    && ./configure --prefix=/opt/protobuf \
+    && make install \
+    && cd /root \
+    && rm -rf /opt/protobuf-src
 ENV PROTOBUF_HOME /opt/protobuf
 ENV PATH "${PATH}:/opt/protobuf/bin"
 
 ######
-# Install Apache Maven 3.3.9 (3.3.9 ships with Xenial)
+# Install Apache Maven 3.6.0 (3.6.0 ships with Bionic)
 ######
-RUN apt-get -q update && apt-get -q install -y maven
+# hadolint ignore=DL3008
+RUN apt-get -q update \
+    && apt-get -q install -y --no-install-recommends maven \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 ENV MAVEN_HOME /usr
+# JAVA_HOME must be set in Maven >= 3.5.0 (MNG-6003)
+ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
 
 ######
-# Install findbugs 3.0.1 (3.0.1 ships with Xenial)
+# Install findbugs 3.1.0 (3.1.0 ships with Bionic)
 # Ant is needed for findbugs
 ######
-RUN apt-get -q update && apt-get -q install -y findbugs ant
+# hadolint ignore=DL3008
+RUN apt-get -q update \
+    && apt-get -q install -y --no-install-recommends findbugs ant \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 ENV FINDBUGS_HOME /usr
 
 ####
-# Install shellcheck (0.4.6, the latest as of 2017-09-26)
+# Install pylint at fixed version (2.0.0 removed python2 support)
+# https://github.com/PyCQA/pylint/issues/2294
 ####
-RUN add-apt-repository -y ppa:jonathonf/ghc-8.0.2
-RUN apt-get -q update && apt-get -q install -y shellcheck
-
-####
-# Install bats (0.4.0, the latest as of 2017-09-26, ships with Xenial)
-####
-RUN apt-get -q update && apt-get -q install -y bats
-
-####
-# Install pylint (always want latest)
-####
-RUN pip2 install pylint
+RUN pip2 install \
+    configparser==4.0.2 \
+    pylint==1.9.2
 
 ####
 # Install dateutil.parser
 ####
-RUN pip2 install python-dateutil
+RUN pip2 install python-dateutil==2.7.3
 
 ###
-# Install node.js for web UI framework (4.2.6 ships with Xenial)
+# Install node.js 8.17.0 for web UI framework (4.2.6 ships with Xenial)
 ###
-RUN apt-get -y install nodejs && \
-    ln -s /usr/bin/nodejs /usr/bin/node && \
-    apt-get -y install npm && \
-    npm install npm@latest -g && \
-    npm install -g bower && \
-    npm install -g ember-cli
+RUN curl -L -s -S https://deb.nodesource.com/setup_8.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs=8.17.0-1nodesource1 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && npm install -g bower@1.8.8
+
+###
+## Install Yarn 1.12.1 for web UI framework
+####
+RUN curl -s -S https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - \
+    && echo 'deb https://dl.yarnpkg.com/debian/ stable main' > /etc/apt/sources.list.d/yarn.list \
+    && apt-get -q update \
+    && apt-get install -y --no-install-recommends yarn=1.21.1-1 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+###
+# Install hadolint
+####
+RUN curl -L -s -S \
+        https://github.com/hadolint/hadolint/releases/download/v1.11.1/hadolint-Linux-x86_64 \
+        -o /bin/hadolint \
+   && chmod a+rx /bin/hadolint \
+   && shasum -a 512 /bin/hadolint | \
+        awk '$1!="734e37c1f6619cbbd86b9b249e69c9af8ee1ea87a2b1ff71dccda412e9dac35e63425225a95d71572091a3f0a11e9a04c2fc25d9e91b840530c26af32b9891ca" {exit(1)}'
 
 ###
 # Avoid out of memory errors in builds
 ###
-ENV MAVEN_OPTS -Xms256m -Xmx1g
-
+ENV MAVEN_OPTS -Xms256m -Xmx1536m
 
 ###
 # Everything past this point is either not needed for testing or breaks Yetus.
@@ -182,21 +189,14 @@ ENV MAVEN_OPTS -Xms256m -Xmx1g
 # YETUS CUT HERE
 ###
 
-####
-# Install svn & Forrest (for Apache Hadoop website)
-###
-RUN apt-get -q update && apt-get -q install -y subversion
+# Hugo static website generator (for new hadoop site and Ozone docs)
+RUN curl -L -o hugo.deb https://github.com/gohugoio/hugo/releases/download/v0.58.3/hugo_0.58.3_Linux-64bit.deb \
+    && dpkg --install hugo.deb \
+    && rm hugo.deb
 
-RUN mkdir -p /opt/apache-forrest && \
-    curl -L -s -S \
-      https://archive.apache.org/dist/forrest/0.8/apache-forrest-0.8.tar.gz \
-      -o /opt/forrest.tar.gz && \
-    tar xzf /opt/forrest.tar.gz --strip-components 1 -C /opt/apache-forrest
-RUN echo 'forrest.home=/opt/apache-forrest' > build.properties
-ENV FORREST_HOME=/opt/apache-forrest
 
 # Add a welcome message and environment checks.
-ADD hadoop_env_checks.sh /root/hadoop_env_checks.sh
+COPY hadoop_env_checks.sh /root/hadoop_env_checks.sh
 RUN chmod 755 /root/hadoop_env_checks.sh
-RUN echo '~/hadoop_env_checks.sh' >> /root/.bashrc
-
+# hadolint ignore=SC2016
+RUN echo '${HOME}/hadoop_env_checks.sh' >> /root/.bashrc

@@ -26,7 +26,7 @@ import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProtoOrBuilder;
 import org.apache.hadoop.yarn.api.records.Token;
 
-import com.google.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 @Private
 @Unstable
@@ -184,9 +184,9 @@ public class TokenPBImpl extends Token {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("Token { ");
-    sb.append("kind: ").append(getKind()).append(", ");
-    sb.append("service: ").append(getService()).append(" }");
+    sb.append("Token { ")
+        .append("kind: ").append(getKind()).append(", ")
+        .append("service: ").append(getService()).append(" }");
     return sb.toString();
   }
 }  

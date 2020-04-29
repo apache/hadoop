@@ -69,7 +69,7 @@ public class QueueCLI extends YarnCLI {
       printUsage(opts);
       return -1;
     }
-
+    createAndStartYarnClient();
     if (cliParser.hasOption(STATUS_CMD)) {
       if (args.length != 2) {
         printUsage(opts);
@@ -128,7 +128,7 @@ public class QueueCLI extends YarnCLI {
 
     writer.print("\tState : ");
     writer.println(queueInfo.getQueueState());
-    DecimalFormat df = new DecimalFormat("#.0");
+    DecimalFormat df = new DecimalFormat("#.00");
     writer.print("\tCapacity : ");
     writer.println(df.format(queueInfo.getCapacity() * 100) + "%");
     writer.print("\tCurrent Capacity : ");

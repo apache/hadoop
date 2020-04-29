@@ -35,8 +35,8 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.MissingArgumentException;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.time.DateFormatUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.time.DateFormatUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.util.ToolRunner;
@@ -44,7 +44,6 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 
 @Private
 @Unstable
@@ -107,6 +106,8 @@ public class NodeCLI extends YarnCLI {
       printUsage(opts);
       return exitCode;
     }
+
+    createAndStartYarnClient();
 
     if (cliParser.hasOption("status")) {
       if (args.length != 2) {
@@ -306,6 +307,18 @@ public class NodeCLI extends YarnCLI {
           new ArrayList<String>(report.getNodeLabels());
       Collections.sort(nodeLabelsList);
       nodeReportStr.println(StringUtils.join(nodeLabelsList.iterator(), ','));
+
+      if (nodeReport.getNodeAttributes().size() > 0) {
+        ArrayList nodeAtrs = new ArrayList<>(nodeReport.getNodeAttributes());
+        nodeReportStr.print("\tNode Attributes : ");
+        nodeReportStr.println(nodeAtrs.get(0).toString());
+        for (int index = 1; index < nodeAtrs.size(); index++) {
+          nodeReportStr.println(
+              String.format("\t%18s%s", "", nodeAtrs.get(index).toString()));
+        }
+      } else {
+        nodeReportStr.println("\tNode Attributes : ");
+      }
 
       nodeReportStr.print("\tResource Utilization by Node : ");
       if (nodeReport.getNodeUtilization() != null) {

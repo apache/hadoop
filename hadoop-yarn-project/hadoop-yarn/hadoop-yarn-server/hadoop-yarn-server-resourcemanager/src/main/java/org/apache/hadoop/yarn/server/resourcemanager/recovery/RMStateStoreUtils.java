@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
@@ -37,7 +37,8 @@ import java.io.IOException;
 @Unstable
 public class RMStateStoreUtils {
 
-  public static final Log LOG = LogFactory.getLog(RMStateStoreUtils.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(RMStateStoreUtils.class);
 
   /**
    * Returns the RM Delegation Token data from the {@link DataInputStream} as a

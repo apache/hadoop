@@ -50,6 +50,24 @@ extern  "C" {
     void hdfsFileDisableDirectRead(struct hdfsFile_internal *file);
 
     /**
+    * Determine if a file is using the "direct pread" optimization.
+    *
+    * @param file     The HDFS file
+    * @return         1 if the file is using the direct pread optimization,
+    *                 0 otherwise.
+    */
+    int hdfsFileUsesDirectPread(struct hdfsFile_internal *file);
+
+    /**
+     * Disable the direct pread optimization for a file.
+     *
+     * This is mainly provided for unit testing purposes.
+     *
+     * @param file     The HDFS file
+     */
+    void hdfsFileDisableDirectPread(struct hdfsFile_internal *file);
+
+    /**
      * Disable domain socket security checks.
      *
      * @param          0 if domain socket security was disabled;

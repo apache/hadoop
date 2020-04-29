@@ -20,8 +20,8 @@ package org.apache.hadoop.hdfs.nfs.nfs3;
 import java.io.IOException;
 import java.util.EnumSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.hdfs.DFSClient;
@@ -51,7 +51,7 @@ import com.google.common.annotations.VisibleForTesting;
  * Manage the writes and responds asynchronously.
  */
 public class WriteManager {
-  public static final Log LOG = LogFactory.getLog(WriteManager.class);
+  public static final Logger LOG = LoggerFactory.getLogger(WriteManager.class);
 
   private final NfsConfiguration config;
   private final IdMappingServiceProvider iug;

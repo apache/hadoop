@@ -25,10 +25,12 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -332,6 +334,10 @@ public class FilterFileSystem extends FileSystem {
     return fs.mkdirs(f, permission);
   }
 
+  @Override
+  public boolean mkdirs(Path f) throws IOException {
+    return fs.mkdirs(f);
+  }
 
   /**
    * The src file is on the local disk.  Add it to FS at
@@ -646,6 +652,11 @@ public class FilterFileSystem extends FileSystem {
   }
 
   @Override
+  public void satisfyStoragePolicy(Path src) throws IOException {
+    fs.satisfyStoragePolicy(src);
+  }
+
+  @Override
   public void setStoragePolicy(Path src, String policyName)
       throws IOException {
     fs.setStoragePolicy(src, policyName);
@@ -687,4 +698,37 @@ public class FilterFileSystem extends FileSystem {
   public FSDataOutputStreamBuilder appendFile(Path path) {
     return fs.appendFile(path);
   }
+
+  @Override
+  public FutureDataInputStreamBuilder openFile(final Path path)
+      throws IOException, UnsupportedOperationException {
+    return fs.openFile(path);
+  }
+
+  @Override
+  public FutureDataInputStreamBuilder openFile(final PathHandle pathHandle)
+      throws IOException, UnsupportedOperationException {
+    return fs.openFile(pathHandle);
+  }
+
+  @Override
+  protected CompletableFuture<FSDataInputStream> openFileWithOptions(
+      final Path path,
+      final OpenFileParameters parameters) throws IOException {
+    return fs.openFileWithOptions(path, parameters);
+  }
+
+  @Override
+  protected CompletableFuture<FSDataInputStream> openFileWithOptions(
+      final PathHandle pathHandle,
+      final OpenFileParameters parameters) throws IOException {
+    return fs.openFileWithOptions(pathHandle, parameters);
+  }
+
+  @Override
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+    return fs.hasPathCapability(path, capability);
+  }
+
 }

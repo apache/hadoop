@@ -1,0 +1,4 @@
+*.so
+*.a
+*.o
+test-uriparser2

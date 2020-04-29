@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.yarn.util;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -59,7 +61,7 @@ public class TestTimelineServiceHelper {
     HashMap<String, String> alternateHashMap =
         TimelineServiceHelper.mapCastToHashMap(firstTreeMap);
     Assert.assertEquals(firstTreeMap.size(), alternateHashMap.size());
-    Assert.assertEquals(alternateHashMap.get(key), value);
+    assertThat(alternateHashMap.get(key)).isEqualTo(value);
 
     // Test complicated hashmap be casted correctly
     Map<String, Set<String>> complicatedHashMap =

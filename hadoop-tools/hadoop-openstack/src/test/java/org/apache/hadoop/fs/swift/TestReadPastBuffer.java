@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.fs.swift;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
@@ -44,8 +44,8 @@ import org.junit.Test;
  * to get confused.
  */
 public class TestReadPastBuffer extends SwiftFileSystemBaseTest {
-  protected static final Log LOG =
-    LogFactory.getLog(TestReadPastBuffer.class);
+  protected static final Logger LOG =
+      LoggerFactory.getLogger(TestReadPastBuffer.class);
   public static final int SWIFT_READ_BLOCKSIZE = 4096;
   public static final int SEEK_FILE_LEN = SWIFT_READ_BLOCKSIZE * 2;
 

@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -98,6 +99,26 @@ public class TestDefaultBlockPlacementPolicy {
     testPlacement(clientMachine, "/RACK3", true);
   }
 
+  @Test
+  public void testNonLocalRackPlacement() throws Exception {
+    String clientMachine = "/host0";
+    EnumSet<CreateFlag> flags = EnumSet.of(CreateFlag.CREATE);
+    flags.add(CreateFlag.NO_LOCAL_RACK);
+    HdfsFileStatus fileStatus = namesystem.startFile("/file", perm,
+        clientMachine, clientMachine, flags, true, REPLICATION_FACTOR,
+        DEFAULT_BLOCK_SIZE, null, null, null, false);
+    LocatedBlock locatedBlock = nameNodeRpc.addBlock("/file", clientMachine,
+        null, null, fileStatus.getFileId(), null,
+        EnumSet.of(AddBlockFlag.NO_LOCAL_RACK));
+    assertTrue(locatedBlock.getLocations()[0].getNetworkLocation() != "/RACK0");
+    assertNotEquals("/RACK0",
+        locatedBlock.getLocations()[0].getNetworkLocation());
+    assertNotEquals("/RACK0",
+        locatedBlock.getLocations()[1].getNetworkLocation());
+    assertNotEquals("/RACK0",
+        locatedBlock.getLocations()[2].getNetworkLocation());
+  }
+
   /**
    * Verify local node selection with using DFSNetworkTopology.
    */
@@ -131,7 +152,7 @@ public class TestDefaultBlockPlacementPolicy {
     // Create the file with client machine
     HdfsFileStatus fileStatus = namesystem.startFile(src, perm, clientMachine,
         clientMachine, EnumSet.of(CreateFlag.CREATE), true, REPLICATION_FACTOR,
-        DEFAULT_BLOCK_SIZE, null, null, false);
+        DEFAULT_BLOCK_SIZE, null, null, null, false);
     LocatedBlock locatedBlock = nameNodeRpc.addBlock(src, clientMachine, null,
         null, fileStatus.getFileId(), null, null);
 
@@ -184,7 +205,7 @@ public class TestDefaultBlockPlacementPolicy {
       // Create the file with client machine
       HdfsFileStatus fileStatus = namesystem.startFile(src, perm,
           clientMachine, clientMachine, EnumSet.of(CreateFlag.CREATE), true,
-          REPLICATION_FACTOR, DEFAULT_BLOCK_SIZE, null, null, false);
+          REPLICATION_FACTOR, DEFAULT_BLOCK_SIZE, null, null, null, false);
       LocatedBlock locatedBlock = nameNodeRpc.addBlock(src, clientMachine,
           null, null, fileStatus.getFileId(), null, null);
 

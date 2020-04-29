@@ -32,8 +32,9 @@ import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 
 import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.log4j.Appender;
 import org.apache.log4j.AsyncAppender;
@@ -43,7 +44,8 @@ import org.apache.log4j.AsyncAppender;
  */
 public class MetricsLoggerTask implements Runnable {
 
-  public static final Log LOG = LogFactory.getLog(MetricsLoggerTask.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(MetricsLoggerTask.class);
 
   private static ObjectName objectName = null;
 

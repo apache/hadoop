@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.BaseTableRW;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityTableRW;
 import org.apache.hadoop.yarn.server.timelineservice.storage.flow.FlowRunTableRW;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -136,5 +137,12 @@ public class TestHBaseTimelineStorageSchema {
     assertNotNull(flowRunTable);
     hbaseConf
     .unset(YarnConfiguration.TIMELINE_SERVICE_HBASE_SCHEMA_PREFIX_NAME);
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    if (util != null) {
+      util.shutdownMiniCluster();
+    }
   }
 }

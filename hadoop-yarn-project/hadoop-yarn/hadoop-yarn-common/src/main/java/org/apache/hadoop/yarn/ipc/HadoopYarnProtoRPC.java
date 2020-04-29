@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.ipc;
 
 import java.net.InetSocketAddress;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.Server;
@@ -39,12 +39,13 @@ import org.apache.hadoop.yarn.factory.providers.RpcFactoryProvider;
 @InterfaceAudience.LimitedPrivate({ "MapReduce", "YARN" })
 public class HadoopYarnProtoRPC extends YarnRPC {
 
-  private static final Log LOG = LogFactory.getLog(HadoopYarnProtoRPC.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(HadoopYarnProtoRPC.class);
 
   @Override
   public Object getProxy(Class protocol, InetSocketAddress addr,
       Configuration conf) {
-    LOG.debug("Creating a HadoopYarnProtoRpc proxy for protocol " + protocol);
+    LOG.debug("Creating a HadoopYarnProtoRpc proxy for protocol {}", protocol);
     return RpcFactoryProvider.getClientFactory(conf).getClient(protocol, 1,
         addr, conf);
   }
@@ -59,8 +60,8 @@ public class HadoopYarnProtoRPC extends YarnRPC {
       InetSocketAddress addr, Configuration conf,
       SecretManager<? extends TokenIdentifier> secretManager,
       int numHandlers, String portRangeConfig) {
-    LOG.debug("Creating a HadoopYarnProtoRpc server for protocol " + protocol + 
-        " with " + numHandlers + " handlers");
+    LOG.debug("Creating a HadoopYarnProtoRpc server for protocol {} with {}"
+        + " handlers", protocol, numHandlers);
     
     return RpcFactoryProvider.getServerFactory(conf).getServer(protocol, 
         instance, addr, conf, secretManager, numHandlers, portRangeConfig);

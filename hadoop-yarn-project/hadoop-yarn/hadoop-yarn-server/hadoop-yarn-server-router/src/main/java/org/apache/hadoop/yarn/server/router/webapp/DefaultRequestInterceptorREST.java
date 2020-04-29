@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmi
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
@@ -53,9 +54,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntryList;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.RMQueueAclInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmissionRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateRequestInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
@@ -75,6 +79,10 @@ public class DefaultRequestInterceptorREST
 
   public void setWebAppAddress(String webAppAddress) {
     this.webAppAddress = webAppAddress;
+  }
+
+  protected String getWebAppAddress() {
+    return this.webAppAddress;
   }
 
   protected void setSubClusterId(SubClusterId scId) {
@@ -99,21 +107,32 @@ public class DefaultRequestInterceptorREST
   public ClusterInfo getClusterInfo() {
     return RouterWebServiceUtil.genericForward(webAppAddress, null,
         ClusterInfo.class, HTTPMethods.GET,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.INFO, null, null);
+        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.INFO, null, null,
+        getConf());
+  }
+
+  @Override
+  public ClusterUserInfo getClusterUserInfo(HttpServletRequest hsr) {
+    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
+        ClusterUserInfo.class, HTTPMethods.GET,
+        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.CLUSTER_USER_INFO, null,
+        null, getConf());
   }
 
   @Override
   public ClusterMetricsInfo getClusterMetricsInfo() {
     return RouterWebServiceUtil.genericForward(webAppAddress, null,
         ClusterMetricsInfo.class, HTTPMethods.GET,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.METRICS, null, null);
+        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.METRICS, null, null,
+        getConf());
   }
 
   @Override
   public SchedulerTypeInfo getSchedulerInfo() {
     return RouterWebServiceUtil.genericForward(webAppAddress, null,
         SchedulerTypeInfo.class, HTTPMethods.GET,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.SCHEDULER, null, null);
+        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.SCHEDULER, null, null,
+        getConf());
   }
 
   @Override
@@ -122,7 +141,8 @@ public class DefaultRequestInterceptorREST
     // time is specified inside hsr
     return RouterWebServiceUtil.genericForward(webAppAddress, null,
         String.class, HTTPMethods.GET,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.SCHEDULER_LOGS, null, null);
+        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.SCHEDULER_LOGS, null, null,
+        getConf());
   }
 
   @Override
@@ -135,7 +155,7 @@ public class DefaultRequestInterceptorREST
     return RouterWebServiceUtil.genericForward(webAppAddress, null,
         NodesInfo.class, HTTPMethods.GET,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.NODES, null,
-        additionalParam);
+        additionalParam, getConf());
   }
 
   @Override
@@ -143,7 +163,17 @@ public class DefaultRequestInterceptorREST
     return RouterWebServiceUtil.genericForward(webAppAddress, null,
         NodeInfo.class, HTTPMethods.GET,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.NODES + "/" + nodeId, null,
-        null);
+        null, getConf());
+  }
+
+  @Override
+  public ResourceInfo updateNodeResource(HttpServletRequest hsr,
+      String nodeId, ResourceOptionInfo resourceOption) {
+    final String nodePath =
+        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.NODES + "/" + nodeId;
+    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
+        ResourceInfo.class, HTTPMethods.POST,
+        nodePath + "/resource", resourceOption, null, getConf());
   }
 
   @Override
@@ -151,30 +181,34 @@ public class DefaultRequestInterceptorREST
       Set<String> statesQuery, String finalStatusQuery, String userQuery,
       String queueQuery, String count, String startedBegin, String startedEnd,
       String finishBegin, String finishEnd, Set<String> applicationTypes,
-      Set<String> applicationTags, Set<String> unselectedFields) {
+      Set<String> applicationTags, String name, Set<String> unselectedFields) {
     // all the params are specified inside hsr
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         AppsInfo.class, HTTPMethods.GET,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.APPS, null, null);
+        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.APPS, null, null,
+        getConf());
   }
 
   @Override
-  public ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId) {
+  public ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId,
+      String groupBy) {
     // nodeId is specified inside hsr
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         ActivitiesInfo.class, HTTPMethods.GET,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.SCHEDULER_ACTIVITIES, null,
-        null);
+        null, getConf());
   }
 
   @Override
   public AppActivitiesInfo getAppActivities(HttpServletRequest hsr,
-      String appId, String time) {
+      String appId, String time, Set<String> requestPriorities,
+      Set<String> allocationRequestIds, String groupBy, String limit,
+      Set<String> actions, boolean summarize) {
     // time and appId are specified inside hsr
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         AppActivitiesInfo.class, HTTPMethods.GET,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.SCHEDULER_APP_ACTIVITIES,
-        null, null);
+        null, null, getConf());
   }
 
   @Override
@@ -183,7 +217,8 @@ public class DefaultRequestInterceptorREST
     // stateQueries and typeQueries are specified inside hsr
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         ApplicationStatisticsInfo.class, HTTPMethods.GET,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.APP_STATISTICS, null, null);
+        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.APP_STATISTICS, null, null,
+        getConf());
   }
 
   @Override
@@ -193,7 +228,7 @@ public class DefaultRequestInterceptorREST
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         AppInfo.class, HTTPMethods.GET,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.APPS + "/" + appId, null,
-        null);
+        null, getConf());
   }
 
   @Override
@@ -202,7 +237,7 @@ public class DefaultRequestInterceptorREST
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         AppState.class, HTTPMethods.GET, RMWSConsts.RM_WEB_SERVICE_PATH
             + RMWSConsts.APPS + "/" + appId + "/" + RMWSConsts.STATE,
-        null, null);
+        null, null, getConf());
   }
 
   @Override
@@ -212,7 +247,7 @@ public class DefaultRequestInterceptorREST
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         Response.class, HTTPMethods.PUT, RMWSConsts.RM_WEB_SERVICE_PATH
             + RMWSConsts.APPS + "/" + appId + "/" + RMWSConsts.STATE,
-        targetState, null);
+        targetState, null, getConf());
   }
 
   @Override
@@ -221,7 +256,7 @@ public class DefaultRequestInterceptorREST
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         NodeToLabelsInfo.class, HTTPMethods.GET,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.GET_NODE_TO_LABELS, null,
-        null);
+        null, getConf());
   }
 
   @Override
@@ -236,7 +271,7 @@ public class DefaultRequestInterceptorREST
     return RouterWebServiceUtil.genericForward(webAppAddress, null,
         LabelsToNodesInfo.class, HTTPMethods.GET,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.LABEL_MAPPINGS, null,
-        additionalParam);
+        additionalParam, getConf());
   }
 
   @Override
@@ -245,7 +280,7 @@ public class DefaultRequestInterceptorREST
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         Response.class, HTTPMethods.POST,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.REPLACE_NODE_TO_LABELS,
-        newNodeToLabels, null);
+        newNodeToLabels, null, getConf());
   }
 
   @Override
@@ -256,7 +291,7 @@ public class DefaultRequestInterceptorREST
         .genericForward(webAppAddress, hsr,
             Response.class, HTTPMethods.POST, RMWSConsts.RM_WEB_SERVICE_PATH
                 + RMWSConsts.NODES + "/" + nodeId + "/replace-labels",
-            null, null);
+            null, null, getConf());
   }
 
   @Override
@@ -265,7 +300,7 @@ public class DefaultRequestInterceptorREST
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         NodeLabelsInfo.class, HTTPMethods.GET,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.GET_NODE_LABELS, null,
-        null);
+        null, getConf());
   }
 
   @Override
@@ -274,7 +309,7 @@ public class DefaultRequestInterceptorREST
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         Response.class, HTTPMethods.POST,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.ADD_NODE_LABELS,
-        newNodeLabels, null);
+        newNodeLabels, null, getConf());
   }
 
   @Override
@@ -284,7 +319,7 @@ public class DefaultRequestInterceptorREST
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         Response.class, HTTPMethods.POST,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.REMOVE_NODE_LABELS, null,
-        null);
+        null, getConf());
   }
 
   @Override
@@ -293,7 +328,7 @@ public class DefaultRequestInterceptorREST
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         NodeLabelsInfo.class, HTTPMethods.GET, RMWSConsts.RM_WEB_SERVICE_PATH
             + RMWSConsts.NODES + "/" + nodeId + "/get-labels",
-        null, null);
+        null, null, getConf());
   }
 
   @Override
@@ -302,7 +337,7 @@ public class DefaultRequestInterceptorREST
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         AppPriority.class, HTTPMethods.GET, RMWSConsts.RM_WEB_SERVICE_PATH
             + RMWSConsts.APPS + "/" + appId + "/" + RMWSConsts.PRIORITY,
-        null, null);
+        null, null, getConf());
   }
 
   @Override
@@ -312,7 +347,7 @@ public class DefaultRequestInterceptorREST
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         Response.class, HTTPMethods.PUT, RMWSConsts.RM_WEB_SERVICE_PATH
             + RMWSConsts.APPS + "/" + appId + "/" + RMWSConsts.PRIORITY,
-        targetPriority, null);
+        targetPriority, null, getConf());
   }
 
   @Override
@@ -321,7 +356,7 @@ public class DefaultRequestInterceptorREST
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         AppQueue.class, HTTPMethods.GET, RMWSConsts.RM_WEB_SERVICE_PATH
             + RMWSConsts.APPS + "/" + appId + "/" + RMWSConsts.QUEUE,
-        null, null);
+        null, null, getConf());
   }
 
   @Override
@@ -331,7 +366,7 @@ public class DefaultRequestInterceptorREST
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         Response.class, HTTPMethods.PUT, RMWSConsts.RM_WEB_SERVICE_PATH
             + RMWSConsts.APPS + "/" + appId + "/" + RMWSConsts.QUEUE,
-        targetQueue, null);
+        targetQueue, null, getConf());
   }
 
   @Override
@@ -340,7 +375,7 @@ public class DefaultRequestInterceptorREST
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         Response.class, HTTPMethods.POST,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.APPS_NEW_APPLICATION, null,
-        null);
+        null, getConf());
   }
 
   @Override
@@ -349,7 +384,8 @@ public class DefaultRequestInterceptorREST
       throws AuthorizationException, IOException, InterruptedException {
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         Response.class, HTTPMethods.POST,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.APPS, newApp, null);
+        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.APPS, newApp, null,
+        getConf());
   }
 
   @Override
@@ -359,7 +395,7 @@ public class DefaultRequestInterceptorREST
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         Response.class, HTTPMethods.POST,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.DELEGATION_TOKEN, tokenData,
-        null);
+        null, getConf());
   }
 
   @Override
@@ -369,7 +405,7 @@ public class DefaultRequestInterceptorREST
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         Response.class, HTTPMethods.POST,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.DELEGATION_TOKEN_EXPIRATION,
-        null, null);
+        null, null, getConf());
   }
 
   @Override
@@ -379,7 +415,7 @@ public class DefaultRequestInterceptorREST
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         Response.class, HTTPMethods.DELETE,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.DELEGATION_TOKEN, null,
-        null);
+        null, getConf());
   }
 
   @Override
@@ -388,7 +424,7 @@ public class DefaultRequestInterceptorREST
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         Response.class, HTTPMethods.POST,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.RESERVATION_NEW, null,
-        null);
+        null, getConf());
   }
 
   @Override
@@ -398,7 +434,7 @@ public class DefaultRequestInterceptorREST
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         Response.class, HTTPMethods.POST,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.RESERVATION_SUBMIT,
-        resContext, null);
+        resContext, null, getConf());
   }
 
   @Override
@@ -408,7 +444,7 @@ public class DefaultRequestInterceptorREST
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         Response.class, HTTPMethods.POST,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.RESERVATION_UPDATE,
-        resContext, null);
+        resContext, null, getConf());
   }
 
   @Override
@@ -418,7 +454,7 @@ public class DefaultRequestInterceptorREST
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         Response.class, HTTPMethods.POST,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.RESERVATION_DELETE,
-        resContext, null);
+        resContext, null, getConf());
   }
 
   @Override
@@ -430,7 +466,7 @@ public class DefaultRequestInterceptorREST
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         Response.class, HTTPMethods.GET,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.RESERVATION_LIST, null,
-        null);
+        null, getConf());
   }
 
   @Override
@@ -440,7 +476,7 @@ public class DefaultRequestInterceptorREST
         .genericForward(webAppAddress, hsr, AppTimeoutInfo.class,
             HTTPMethods.GET, RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.APPS
                 + "/" + appId + "/" + RMWSConsts.TIMEOUTS + "/" + type,
-            null, null);
+            null, null, getConf());
   }
 
   @Override
@@ -449,7 +485,7 @@ public class DefaultRequestInterceptorREST
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         AppTimeoutsInfo.class, HTTPMethods.GET, RMWSConsts.RM_WEB_SERVICE_PATH
             + RMWSConsts.APPS + "/" + appId + "/" + RMWSConsts.TIMEOUTS,
-        null, null);
+        null, null, getConf());
   }
 
   @Override
@@ -459,7 +495,7 @@ public class DefaultRequestInterceptorREST
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         Response.class, HTTPMethods.PUT, RMWSConsts.RM_WEB_SERVICE_PATH
             + RMWSConsts.APPS + "/" + appId + "/" + RMWSConsts.TIMEOUT,
-        appTimeout, null);
+        appTimeout, null, getConf());
   }
 
   @Override
@@ -467,7 +503,16 @@ public class DefaultRequestInterceptorREST
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         AppAttemptsInfo.class, HTTPMethods.GET, RMWSConsts.RM_WEB_SERVICE_PATH
             + RMWSConsts.APPS + "/" + appId + "/" + RMWSConsts.APPATTEMPTS,
-        null, null);
+        null, null, getConf());
+  }
+
+  @Override
+  public RMQueueAclInfo checkUserAccessToQueue(String queue, String username,
+      String queueAclType, HttpServletRequest hsr) {
+    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
+        RMQueueAclInfo.class, HTTPMethods.GET,
+        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.QUEUES + "/" + queue
+            + "/access", null, null, getConf());
   }
 
   @Override
@@ -477,7 +522,7 @@ public class DefaultRequestInterceptorREST
         AppAttemptInfo.class,
         HTTPMethods.GET, RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.APPS + "/"
             + appId + "/" + RMWSConsts.APPATTEMPTS + "/" + appAttemptId,
-        null, null);
+        null, null, getConf());
   }
 
   @Override
@@ -488,7 +533,7 @@ public class DefaultRequestInterceptorREST
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.APPS + "/" + appId + "/"
             + RMWSConsts.APPATTEMPTS + "/" + appAttemptId + "/"
             + RMWSConsts.CONTAINERS,
-        null, null);
+        null, null, getConf());
   }
 
   @Override
@@ -500,7 +545,7 @@ public class DefaultRequestInterceptorREST
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.APPS + "/" + appId + "/"
             + RMWSConsts.APPATTEMPTS + "/" + appAttemptId + "/"
             + RMWSConsts.CONTAINERS + "/" + containerId,
-        null, null);
+        null, null, getConf());
   }
 
   @Override
@@ -511,4 +556,13 @@ public class DefaultRequestInterceptorREST
         + "is correct");
   }
 
+  @Override
+  public Response signalToContainer(String containerId, String command,
+      HttpServletRequest req) throws AuthorizationException {
+    return RouterWebServiceUtil
+        .genericForward(webAppAddress, req, Response.class, HTTPMethods.POST,
+            RMWSConsts.RM_WEB_SERVICE_PATH + "/" + RMWSConsts.CONTAINERS + "/"
+                + containerId + "/" + RMWSConsts.SIGNAL + "/" + command, null,
+            null, getConf());
+  }
 }

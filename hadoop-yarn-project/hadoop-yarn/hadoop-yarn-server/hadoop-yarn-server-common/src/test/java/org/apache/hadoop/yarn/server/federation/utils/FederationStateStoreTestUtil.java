@@ -172,7 +172,7 @@ public class FederationStateStoreTestUtil {
     }
   }
 
-  private void deRegisterSubCluster(SubClusterId subClusterId)
+  public void deRegisterSubCluster(SubClusterId subClusterId)
       throws YarnException {
     stateStore.deregisterSubCluster(SubClusterDeregisterRequest
         .newInstance(subClusterId, SubClusterState.SC_UNREGISTERED));

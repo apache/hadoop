@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.api.pb;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.yarn.api.records.NodeAttributeOpCode;
 import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.AbstractConstraint;
@@ -34,12 +35,13 @@ import org.apache.hadoop.yarn.api.resource.PlacementConstraint.TimedPlacementCon
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnProtos.CompositePlacementConstraintProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.CompositePlacementConstraintProto.CompositeType;
+import org.apache.hadoop.yarn.proto.YarnProtos.NodeAttributeOpCodeProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.PlacementConstraintProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.PlacementConstraintTargetProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.SimplePlacementConstraintProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.TimedPlacementConstraintProto;
 
-import com.google.protobuf.GeneratedMessage;
+import org.apache.hadoop.thirdparty.protobuf.GeneratedMessageV3;
 
 /**
  * {@code PlacementConstraintToProtoConverter} generates a
@@ -48,7 +50,7 @@ import com.google.protobuf.GeneratedMessage;
  */
 @Private
 public class PlacementConstraintToProtoConverter
-    implements PlacementConstraint.Visitor<GeneratedMessage> {
+    implements PlacementConstraint.Visitor<GeneratedMessageV3> {
 
   private PlacementConstraint placementConstraint;
 
@@ -63,7 +65,7 @@ public class PlacementConstraintToProtoConverter
   }
 
   @Override
-  public GeneratedMessage visit(SingleConstraint constraint) {
+  public GeneratedMessageV3 visit(SingleConstraint constraint) {
     SimplePlacementConstraintProto.Builder sb =
         SimplePlacementConstraintProto.newBuilder();
 
@@ -72,6 +74,10 @@ public class PlacementConstraintToProtoConverter
     }
     sb.setMinCardinality(constraint.getMinCardinality());
     sb.setMaxCardinality(constraint.getMaxCardinality());
+    if (constraint.getNodeAttributeOpCode() != null) {
+      sb.setAttributeOpCode(
+          convertToProtoFormat(constraint.getNodeAttributeOpCode()));
+    }
     if (constraint.getTargetExpressions() != null) {
       for (TargetExpression target : constraint.getTargetExpressions()) {
         sb.addTargetExpressions(
@@ -88,7 +94,7 @@ public class PlacementConstraintToProtoConverter
   }
 
   @Override
-  public GeneratedMessage visit(TargetExpression target) {
+  public GeneratedMessageV3 visit(TargetExpression target) {
     PlacementConstraintTargetProto.Builder tb =
         PlacementConstraintTargetProto.newBuilder();
 
@@ -103,16 +109,16 @@ public class PlacementConstraintToProtoConverter
   }
 
   @Override
-  public GeneratedMessage visit(TargetConstraint constraint) {
+  public GeneratedMessageV3 visit(TargetConstraint constraint) {
     throw new YarnRuntimeException("Unexpected TargetConstraint found.");
   }
 
   @Override
-  public GeneratedMessage visit(CardinalityConstraint constraint) {
+  public GeneratedMessageV3 visit(CardinalityConstraint constraint) {
     throw new YarnRuntimeException("Unexpected CardinalityConstraint found.");
   }
 
-  private GeneratedMessage visitAndOr(
+  private GeneratedMessageV3 visitAndOr(
       CompositeConstraint<AbstractConstraint> composite, CompositeType type) {
     CompositePlacementConstraintProto.Builder cb =
         CompositePlacementConstraintProto.newBuilder();
@@ -131,17 +137,17 @@ public class PlacementConstraintToProtoConverter
   }
 
   @Override
-  public GeneratedMessage visit(And constraint) {
+  public GeneratedMessageV3 visit(And constraint) {
     return visitAndOr(constraint, CompositeType.AND);
   }
 
   @Override
-  public GeneratedMessage visit(Or constraint) {
+  public GeneratedMessageV3 visit(Or constraint) {
     return visitAndOr(constraint, CompositeType.OR);
   }
 
   @Override
-  public GeneratedMessage visit(DelayedOr constraint) {
+  public GeneratedMessageV3 visit(DelayedOr constraint) {
     CompositePlacementConstraintProto.Builder cb =
         CompositePlacementConstraintProto.newBuilder();
 
@@ -160,7 +166,7 @@ public class PlacementConstraintToProtoConverter
   }
 
   @Override
-  public GeneratedMessage visit(TimedPlacementConstraint constraint) {
+  public GeneratedMessageV3 visit(TimedPlacementConstraint constraint) {
     TimedPlacementConstraintProto.Builder tb =
         TimedPlacementConstraintProto.newBuilder();
 
@@ -170,5 +176,10 @@ public class PlacementConstraintToProtoConverter
         (PlacementConstraintProto) constraint.getConstraint().accept(this));
 
     return tb.build();
+  }
+
+  private static NodeAttributeOpCodeProto convertToProtoFormat(
+      NodeAttributeOpCode p) {
+    return NodeAttributeOpCodeProto.valueOf(p.name());
   }
 }

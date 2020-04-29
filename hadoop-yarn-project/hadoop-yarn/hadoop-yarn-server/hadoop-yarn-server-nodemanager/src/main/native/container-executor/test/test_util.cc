@@ -51,6 +51,7 @@ namespace ContainerExecutor {
       ASSERT_STREQ(oss.str().c_str(), splits[i-1]);
     }
     ASSERT_EQ(NULL, splits[count]);
+    free(split_string);
     free_values(splits);
 
     split_string = (char *) calloc(str.length() + 1, sizeof(char));
@@ -59,6 +60,7 @@ namespace ContainerExecutor {
     ASSERT_TRUE(splits != NULL);
     ASSERT_TRUE(splits[1] == NULL);
     ASSERT_STREQ(str.c_str(), splits[0]);
+    free(split_string);
     free_values(splits);
 
     splits = split_delimiter(NULL, ",");
@@ -82,6 +84,7 @@ namespace ContainerExecutor {
       ASSERT_STREQ(oss.str().c_str(), splits[i-1]);
     }
     ASSERT_EQ(NULL, splits[count]);
+    free(split_string);
     free_values(splits);
 
     str = "1,2,3,4,5,6,7,8,9,10,11";
@@ -91,6 +94,8 @@ namespace ContainerExecutor {
     ASSERT_TRUE(splits != NULL);
     ASSERT_TRUE(splits[1] == NULL);
     ASSERT_STREQ(str.c_str(), splits[0]);
+    free(split_string);
+    free_values(splits);
     return;
   }
 

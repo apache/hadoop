@@ -30,8 +30,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -56,13 +56,13 @@ import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
 
 @InterfaceAudience.Private
 public class DFSZKFailoverController extends ZKFailoverController {
 
-  private static final Log LOG =
-    LogFactory.getLog(DFSZKFailoverController.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DFSZKFailoverController.class);
   private final AccessControlList adminAcl;
   /* the same as superclass's localTarget, but with the more specfic NN type */
   private final NNHAServiceTarget localNNTarget;
@@ -111,21 +111,39 @@ public class DFSZKFailoverController extends ZKFailoverController {
   @Override
   protected InetSocketAddress getRpcAddressToBindTo() {
     int zkfcPort = getZkfcPort(conf);
-    return new InetSocketAddress(localTarget.getAddress().getAddress(),
-          zkfcPort);
+    String zkfcBindAddr = getZkfcServerBindHost(conf);
+    if (zkfcBindAddr == null || zkfcBindAddr.isEmpty()) {
+      zkfcBindAddr = localTarget.getAddress().getAddress().getHostAddress();
+    }
+    return new InetSocketAddress(zkfcBindAddr, zkfcPort);
   }
-  
 
   @Override
   protected PolicyProvider getPolicyProvider() {
     return new HDFSPolicyProvider();
   }
-  
+
   static int getZkfcPort(Configuration conf) {
     return conf.getInt(DFSConfigKeys.DFS_HA_ZKFC_PORT_KEY,
         DFSConfigKeys.DFS_HA_ZKFC_PORT_DEFAULT);
   }
-  
+
+  /**
+   * Given a configuration get the bind host that could be used by ZKFC.
+   * We derive it from NN service rpc bind host or NN rpc bind host.
+   *
+   * @param conf input configuration
+   * @return the bind host address found in conf
+   */
+  private static String getZkfcServerBindHost(Configuration conf) {
+    String addr = conf.getTrimmed(
+        DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_BIND_HOST_KEY);
+    if (addr == null || addr.isEmpty()) {
+      addr = conf.getTrimmed(DFSConfigKeys.DFS_NAMENODE_RPC_BIND_HOST_KEY);
+    }
+    return addr;
+  }
+
   public static DFSZKFailoverController create(Configuration conf) {
     Configuration localNNConf = DFSHAAdmin.addSecurityConfiguration(conf);
     String nsId = DFSUtil.getNamenodeNameServiceId(conf);
@@ -189,12 +207,12 @@ public class DFSZKFailoverController extends ZKFailoverController {
     
     GenericOptionsParser parser = new GenericOptionsParser(
         new HdfsConfiguration(), args);
-    DFSZKFailoverController zkfc = DFSZKFailoverController.create(
-        parser.getConfiguration());
     try {
+      DFSZKFailoverController zkfc = DFSZKFailoverController.create(
+          parser.getConfiguration());
       System.exit(zkfc.run(parser.getRemainingArgs()));
     } catch (Throwable t) {
-      LOG.fatal("DFSZKFailOverController exiting due to earlier exception "
+      LOG.error("DFSZKFailOverController exiting due to earlier exception "
           + t);
       terminate(1, t);
     }
@@ -241,9 +259,9 @@ public class DFSZKFailoverController extends ZKFailoverController {
       IOUtils.copyBytes(conn.getInputStream(), out, 4096, true);
       StringBuilder localNNThreadDumpContent =
           new StringBuilder("-- Local NN thread dump -- \n");
-      localNNThreadDumpContent.append(out);
-      localNNThreadDumpContent.append("\n -- Local NN thread dump -- ");
-      LOG.info(localNNThreadDumpContent);
+      localNNThreadDumpContent.append(out)
+          .append("\n -- Local NN thread dump -- ");
+      LOG.info("{}", localNNThreadDumpContent.toString());
       isThreadDumpCaptured = true;
     } catch (IOException e) {
       LOG.warn("Can't get local NN thread dump due to " + e.getMessage());

@@ -17,12 +17,13 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -58,6 +59,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo.UpdatedReplicationInfo;
+import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfyManager;
 import org.apache.hadoop.hdfs.util.ByteArray;
 import org.apache.hadoop.hdfs.util.EnumCounters;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
@@ -67,6 +69,7 @@ import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -80,17 +83,15 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RecursiveAction;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.FS_PROTECTED_DIRECTORIES;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_QUOTA_BY_STORAGETYPE_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_QUOTA_BY_STORAGETYPE_ENABLED_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_ENCRYPTION_ZONE;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.SECURITY_XATTR_UNREADABLE_BY_SUPERUSER;
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY;
 import static org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.CURRENT_STATE_ID;
 
 /**
@@ -169,10 +170,8 @@ public class FSDirectory implements Closeable {
   // Each entry in this set must be a normalized path.
   private volatile SortedSet<String> protectedDirectories;
 
-  // lock to protect the directory and BlockMap
-  private final ReentrantReadWriteLock dirLock;
-
   private final boolean isPermissionEnabled;
+  private final boolean isPermissionContentSummarySubAccess;
   /**
    * Support for ACLs is controlled by a configuration flag. If the
    * configuration flag is false, then the NameNode will reject all
@@ -188,8 +187,6 @@ public class FSDirectory implements Closeable {
 
   // precision of access times.
   private final long accessTimePrecision;
-  // whether setStoragePolicy is allowed.
-  private final boolean storagePolicyEnabled;
   // whether quota by storage type is allowed
   private final boolean quotaByStorageTypeEnabled;
 
@@ -207,41 +204,81 @@ public class FSDirectory implements Closeable {
   // will be bypassed
   private HashSet<String> usersToBypassExtAttrProvider = null;
 
-  public void setINodeAttributeProvider(INodeAttributeProvider provider) {
+  // If external inode attribute provider is configured, use the new
+  // authorizeWithContext() API or not.
+  private boolean useAuthorizationWithContextAPI = false;
+
+  public void setINodeAttributeProvider(
+      @Nullable INodeAttributeProvider provider) {
     attributeProvider = provider;
+
+    if (attributeProvider == null) {
+      // attributeProvider is set to null during NN shutdown.
+      return;
+    }
+
+    // if the runtime external authorization provider doesn't support
+    // checkPermissionWithContext(), fall back to the old API
+    // checkPermission().
+    // This check is done only once during NameNode initialization to reduce
+    // runtime overhead.
+    Class[] cArg = new Class[1];
+    cArg[0] = INodeAttributeProvider.AuthorizationContext.class;
+
+    try {
+      Class<?> clazz = attributeProvider.getClass();
+      clazz.getDeclaredMethod("checkPermissionWithContext", cArg);
+      useAuthorizationWithContextAPI = true;
+      LOG.info("Use the new authorization provider API");
+    } catch (NoSuchMethodException e) {
+      useAuthorizationWithContextAPI = false;
+      LOG.info("Fallback to the old authorization provider API because " +
+          "the expected method is not found.");
+    }
   }
 
-  // utility methods to acquire and release read lock and write lock
+  /**
+   * The directory lock dirLock provided redundant locking.
+   * It has been used whenever namesystem.fsLock was used.
+   * dirLock is now removed and utility methods to acquire and release dirLock
+   * remain as placeholders only
+   */
   void readLock() {
-    this.dirLock.readLock().lock();
+    assert namesystem.hasReadLock() : "Should hold namesystem read lock";
   }
 
   void readUnlock() {
-    this.dirLock.readLock().unlock();
+    assert namesystem.hasReadLock() : "Should hold namesystem read lock";
   }
 
   void writeLock() {
-    this.dirLock.writeLock().lock();
+    assert namesystem.hasWriteLock() : "Should hold namesystem write lock";
   }
 
   void writeUnlock() {
-    this.dirLock.writeLock().unlock();
+    assert namesystem.hasWriteLock() : "Should hold namesystem write lock";
   }
 
   boolean hasWriteLock() {
-    return this.dirLock.isWriteLockedByCurrentThread();
+    return namesystem.hasWriteLock();
   }
 
   boolean hasReadLock() {
-    return this.dirLock.getReadHoldCount() > 0 || hasWriteLock();
+    return namesystem.hasReadLock();
   }
 
+  @Deprecated // dirLock is obsolete, use namesystem.fsLock instead
   public int getReadHoldCount() {
-    return this.dirLock.getReadHoldCount();
+    return namesystem.getReadHoldCount();
   }
 
+  @Deprecated // dirLock is obsolete, use namesystem.fsLock instead
   public int getWriteHoldCount() {
-    return this.dirLock.getWriteHoldCount();
+    return namesystem.getWriteHoldCount();
+  }
+
+  public int getListLimit() {
+    return lsLimit;
   }
 
   @VisibleForTesting
@@ -265,13 +302,15 @@ public class FSDirectory implements Closeable {
   };
 
   FSDirectory(FSNamesystem ns, Configuration conf) throws IOException {
-    this.dirLock = new ReentrantReadWriteLock(true); // fair
     this.inodeId = new INodeId();
     rootDir = createRoot(ns);
     inodeMap = INodeMap.newInstance(rootDir);
     this.isPermissionEnabled = conf.getBoolean(
       DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY,
       DFSConfigKeys.DFS_PERMISSIONS_ENABLED_DEFAULT);
+    this.isPermissionContentSummarySubAccess = conf.getBoolean(
+        DFSConfigKeys.DFS_PERMISSIONS_CONTENT_SUMMARY_SUBACCESS_KEY,
+        DFSConfigKeys.DFS_PERMISSIONS_CONTENT_SUMMARY_SUBACCESS_DEFAULT);
     this.fsOwnerShortUserName =
       UserGroupInformation.getCurrentUser().getShortUserName();
     this.supergroup = conf.get(
@@ -289,7 +328,7 @@ public class FSDirectory implements Closeable {
         DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY,
         DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_DEFAULT);
     LOG.info("XAttrs enabled? " + xattrsEnabled);
-    this.xattrMaxSize = conf.getInt(
+    this.xattrMaxSize = (int) conf.getLongBytes(
         DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_KEY,
         DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_DEFAULT);
     Preconditions.checkArgument(xattrMaxSize > 0,
@@ -304,10 +343,6 @@ public class FSDirectory implements Closeable {
     this.accessTimePrecision = conf.getLong(
         DFS_NAMENODE_ACCESSTIME_PRECISION_KEY,
         DFS_NAMENODE_ACCESSTIME_PRECISION_DEFAULT);
-
-    this.storagePolicyEnabled =
-        conf.getBoolean(DFS_STORAGE_POLICY_ENABLED_KEY,
-                        DFS_STORAGE_POLICY_ENABLED_DEFAULT);
 
     this.quotaByStorageTypeEnabled =
         conf.getBoolean(DFS_QUOTA_BY_STORAGETYPE_ENABLED_KEY,
@@ -325,7 +360,7 @@ public class FSDirectory implements Closeable {
         DFSConfigKeys.DFS_CONTENT_SUMMARY_SLEEP_MICROSEC_DEFAULT);
     
     // filesystem limits
-    this.maxComponentLength = conf.getInt(
+    this.maxComponentLength = (int) conf.getLongBytes(
         DFSConfigKeys.DFS_NAMENODE_MAX_COMPONENT_LENGTH_KEY,
         DFSConfigKeys.DFS_NAMENODE_MAX_COMPONENT_LENGTH_DEFAULT);
     this.maxDirItems = conf.getInt(
@@ -425,7 +460,7 @@ public class FSDirectory implements Closeable {
    * These statuses are solely for listing purpose. All other operations
    * on the reserved dirs are disallowed.
    * Operations on sub directories are resolved by
-   * {@link FSDirectory#resolvePath(String, byte[][], FSDirectory)}
+   * {@link FSDirectory#resolvePath(String, FSDirectory)}
    * and conducted directly, without the need to check the reserved dirs.
    *
    * This method should only be invoked once during namenode initialization.
@@ -492,7 +527,7 @@ public class FSDirectory implements Closeable {
         normalizePaths(protectedDirs, FS_PROTECTED_DIRECTORIES));
   }
 
-  SortedSet<String> getProtectedDirectories() {
+  public SortedSet<String> getProtectedDirectories() {
     return protectedDirectories;
   }
 
@@ -536,6 +571,9 @@ public class FSDirectory implements Closeable {
   boolean isAclsEnabled() {
     return aclsEnabled;
   }
+  boolean isPermissionContentSummarySubAccess() {
+    return isPermissionContentSummarySubAccess;
+  }
 
   @VisibleForTesting
   public boolean isPosixAclInheritanceEnabled() {
@@ -552,9 +590,6 @@ public class FSDirectory implements Closeable {
     return xattrsEnabled;
   }
   int getXattrMaxSize() { return xattrMaxSize; }
-  boolean isStoragePolicyEnabled() {
-    return storagePolicyEnabled;
-  }
   boolean isAccessTimeSupported() {
     return accessTimePrecision > 0;
   }
@@ -632,12 +667,10 @@ public class FSDirectory implements Closeable {
    *            no permission checks.
    * @param src The path to resolve.
    * @param dirOp The {@link DirOp} that controls additional checks.
-   * @param resolveLink If false, only ancestor symlinks will be checked.  If
-   *         true, the last inode will also be checked.
    * @return if the path indicates an inode, return path after replacing up to
-   *         <inodeid> with the corresponding path of the inode, else the path
-   *         in {@code src} as is. If the path refers to a path in the "raw"
-   *         directory, return the non-raw pathname.
+   *        {@code <inodeid>} with the corresponding path of the inode, else
+   *        the path in {@code src} as is. If the path refers to a path in
+   *        the "raw" directory, return the non-raw pathname.
    * @throws FileNotFoundException
    * @throws AccessControlException
    * @throws ParentNotDirectoryException
@@ -712,7 +745,7 @@ public class FSDirectory implements Closeable {
   /**
    * @return true if the path is a non-empty directory; otherwise, return false.
    */
-  boolean isNonEmptyDirectory(INodesInPath inodesInPath) {
+  public boolean isNonEmptyDirectory(INodesInPath inodesInPath) {
     readLock();
     try {
       final INode inode = inodesInPath.getLastINode();
@@ -1289,17 +1322,14 @@ public class FSDirectory implements Closeable {
     // always verify inode name
     verifyINodeName(inode.getLocalNameBytes());
 
-    final QuotaCounts counts = inode.computeQuotaUsage(getBlockStoragePolicySuite());
+    final QuotaCounts counts = inode
+        .computeQuotaUsage(getBlockStoragePolicySuite(),
+            parent.getStoragePolicyID(), false, Snapshot.CURRENT_STATE_ID);
     updateCount(existing, pos, counts, checkQuota);
 
     boolean isRename = (inode.getParent() != null);
-    boolean added;
-    try {
-      added = parent.addChild(inode, true, existing.getLatestSnapshotId());
-    } catch (QuotaExceededException e) {
-      updateCountNoQuotaCheck(existing, pos, counts.negation());
-      throw e;
-    }
+    final boolean added = parent.addChild(inode, true,
+        existing.getLatestSnapshotId());
     if (!added) {
       updateCountNoQuotaCheck(existing, pos, counts.negation());
       return null;
@@ -1405,8 +1435,25 @@ public class FSDirectory implements Closeable {
       if (!inode.isSymlink()) {
         final XAttrFeature xaf = inode.getXAttrFeature();
         addEncryptionZone((INodeWithAdditionalFields) inode, xaf);
+        StoragePolicySatisfyManager spsManager =
+            namesystem.getBlockManager().getSPSManager();
+        if (spsManager != null && spsManager.isEnabled()) {
+          addStoragePolicySatisfier((INodeWithAdditionalFields) inode, xaf);
+        }
       }
     }
+  }
+
+  private void addStoragePolicySatisfier(INodeWithAdditionalFields inode,
+      XAttrFeature xaf) {
+    if (xaf == null) {
+      return;
+    }
+    XAttr xattr = xaf.getXAttr(XATTR_SATISFY_STORAGE_POLICY);
+    if (xattr == null) {
+      return;
+    }
+    FSDirSatisfyStoragePolicyOp.unprotectedSatisfyStoragePolicy(inode, this);
   }
 
   private void addEncryptionZone(INodeWithAdditionalFields inode,
@@ -1466,12 +1513,7 @@ public class FSDirectory implements Closeable {
    * @return The inode associated with the given id
    */
   public INode getInode(long id) {
-    readLock();
-    try {
-      return inodeMap.get(id);
-    } finally {
-      readUnlock();
-    }
+    return inodeMap.get(id);
   }
   
   @VisibleForTesting
@@ -1772,7 +1814,8 @@ public class FSDirectory implements Closeable {
   FSPermissionChecker getPermissionChecker(String fsOwner, String superGroup,
       UserGroupInformation ugi) throws AccessControlException {
     return new FSPermissionChecker(
-        fsOwner, superGroup, ugi, getUserFilteredAttributeProvider(ugi));
+        fsOwner, superGroup, ugi, getUserFilteredAttributeProvider(ugi),
+        useAuthorizationWithContextAPI);
   }
 
   void checkOwner(FSPermissionChecker pc, INodesInPath iip)

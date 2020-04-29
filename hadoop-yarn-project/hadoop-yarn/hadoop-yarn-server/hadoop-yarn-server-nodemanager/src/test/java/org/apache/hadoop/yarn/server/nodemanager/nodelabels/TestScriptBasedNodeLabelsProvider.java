@@ -151,19 +151,21 @@ public class TestScriptBasedNodeLabelsProvider extends NodeLabelTestBase {
   @Test
   public void testConfigForNoTimer() throws Exception {
     Configuration conf = getConfForNodeLabelScript();
-    conf.setLong(YarnConfiguration.NM_NODE_LABELS_PROVIDER_FETCH_INTERVAL_MS,
-        AbstractNodeLabelsProvider.DISABLE_NODE_LABELS_PROVIDER_FETCH_TIMER);
+    conf.setLong(YarnConfiguration
+            .NM_NODE_LABELS_PROVIDER_FETCH_INTERVAL_MS,
+        AbstractNodeDescriptorsProvider
+            .DISABLE_NODE_DESCRIPTORS_PROVIDER_FETCH_TIMER);
     String normalScript = "echo NODE_PARTITION:X86";
     writeNodeLabelsScriptFile(normalScript, true);
     nodeLabelsProvider.init(conf);
     nodeLabelsProvider.start();
     Assert.assertNull(
         "Timer is not expected to be created when interval is configured as -1",
-        nodeLabelsProvider.nodeLabelsScheduler);
+        nodeLabelsProvider.getScheduler());
     // Ensure that even though timer is not run script is run at least once so
     // that NM registers/updates Labels with RM
     assertNLCollectionEquals(toNodeLabelSet("X86"),
-        nodeLabelsProvider.getNodeLabels());
+        nodeLabelsProvider.getDescriptors());
   }
 
   @Test
@@ -185,25 +187,25 @@ public class TestScriptBasedNodeLabelsProvider extends NodeLabelTestBase {
     Assert.assertNull(
         "Node Label Script runner should return null when script doesnt "
             + "give any Labels output",
-        nodeLabelsProvider.getNodeLabels());
+        nodeLabelsProvider.getDescriptors());
 
     writeNodeLabelsScriptFile(normalScript, true);
     timerTask.run();
     assertNLCollectionEquals(toNodeLabelSet("Windows"),
-        nodeLabelsProvider.getNodeLabels());
+        nodeLabelsProvider.getDescriptors());
 
     // multiple lines with partition tag then the last line's partition info
     // needs to be taken.
     writeNodeLabelsScriptFile(scrptWithMultipleLinesHavingNodeLabels, true);
     timerTask.run();
     assertNLCollectionEquals(toNodeLabelSet("JDK1_6"),
-        nodeLabelsProvider.getNodeLabels());
+        nodeLabelsProvider.getDescriptors());
 
     // timeout script.
     writeNodeLabelsScriptFile(timeOutScript, true);
     timerTask.run();
 
     Assert.assertNotEquals("Node Labels should not be set after timeout ",
-        toNodeLabelSet("ALL"), nodeLabelsProvider.getNodeLabels());
+        toNodeLabelSet("ALL"), nodeLabelsProvider.getDescriptors());
   }
 }

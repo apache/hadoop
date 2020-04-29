@@ -19,13 +19,11 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privile
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
-import java.io.File;
 import java.util.List;
 import java.util.Map;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyList;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -56,8 +54,8 @@ public final class MockPrivilegedOperationCaptor {
     //due to type erasure + mocking, this verification requires a suppress
     // warning annotation on the entire method
     verify(mockExecutor, times(invocationCount))
-        .executePrivilegedOperation(anyList(), opCaptor.capture(),
-            any(File.class), any(Map.class), eq(grabOutput), eq(false));
+        .executePrivilegedOperation(any(), opCaptor.capture(),
+            any(), any(Map.class), eq(grabOutput), eq(false));
 
     //verification completed. we need to isolate specific invications.
     // hence, reset mock here

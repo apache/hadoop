@@ -374,4 +374,17 @@ This allows users to:
 \* define their own erasure coding policies thru an xml file and CLI command. The added policies will be persisted into fsimage.
 
 
+---
+
+* [YARN-2915](https://issues.apache.org/jira/browse/YARN-2915) | *Major* | **Enable YARN RM scale out via federation using multiple RM's**
+
+A federation-based approach to transparently scale a single YARN cluster to tens of thousands of nodes, by federating multiple YARN standalone clusters (sub-clusters). The applications running in this federated environment will see a single massive YARN cluster and will be able to schedule tasks on any node of the federated cluster. Under the hood, the federation system will negotiate with sub-clusters ResourceManagers and provide resources to the application. The goal is to allow an individual job to “span” sub-clusters seamlessly.
+
+
+---
+
+* [YARN-5220](https://issues.apache.org/jira/browse/YARN-5220) | *Major* | **Scheduling of OPPORTUNISTIC containers through YARN RM**
+
+This extends the centralized YARN RM in to enable the scheduling of OPPORTUNISTIC containers in a centralized fashion.
+This way, users can use OPPORTUNISTIC containers to improve the cluster's utilization, without needing to enable distributed scheduling.
 

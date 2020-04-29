@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 import com.google.common.base.Charsets;
 
@@ -59,7 +60,8 @@ abstract class TextWriterImageVisitor extends ImageVisitor {
          throws IOException {
     super();
     this.printToScreen = printToScreen;
-    fw = new OutputStreamWriter(new FileOutputStream(filename), Charsets.UTF_8);
+    fw = new OutputStreamWriter(Files.newOutputStream(Paths.get(filename)),
+        Charsets.UTF_8);
     okToWrite = true;
   }
   

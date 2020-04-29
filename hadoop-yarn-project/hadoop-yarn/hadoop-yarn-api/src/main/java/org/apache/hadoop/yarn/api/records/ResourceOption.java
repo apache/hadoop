@@ -55,12 +55,16 @@ public abstract class ResourceOption {
    * Get timeout for tolerant of resource over-commitment
    * Note: negative value means no timeout so that allocated containers will
    * keep running until the end even under resource over-commitment cases.
-   * @return <em>overCommitTimeout</em> of the ResourceOption
+   * @return <em>overCommitTimeout</em> of the ResourceOption in milliseconds.
    */
   @Private
   @Evolving
   public abstract int getOverCommitTimeout();
-  
+
+  /**
+   * Set the overcommit timeout.
+   * @param overCommitTimeout Timeout in ms. Negative means no timeout.
+   */
   @Private
   @Evolving
   protected abstract void setOverCommitTimeout(int overCommitTimeout);

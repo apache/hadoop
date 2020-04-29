@@ -25,6 +25,8 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
@@ -781,5 +783,157 @@ public class TestNativeIO {
       POSIX_FADV_DONTNEED >= 0);
     assertTrue("Native POSIX_FADV_NOREUSE const not set",
       POSIX_FADV_NOREUSE >= 0);
+  }
+
+
+  @Test (timeout=10000)
+  public void testPmemCheckParameters() {
+    assumeNotWindows("Native PMDK not supported on Windows");
+    // Skip testing while the build or environment does not support PMDK
+    assumeTrue(NativeIO.POSIX.isPmdkAvailable());
+
+    // Please make sure /mnt/pmem0 is a persistent memory device with total
+    // volume size 'volumeSize'
+    String filePath = "/$:";
+    long length = 0;
+    long volumnSize = 16 * 1024 * 1024 * 1024L;
+
+    // Incorrect file length
+    try {
+      NativeIO.POSIX.Pmem.mapBlock(filePath, length, false);
+      fail("Illegal length parameter should be detected");
+    } catch (Exception e) {
+      LOG.info(e.getMessage());
+    }
+
+    // Incorrect file length
+    filePath = "/mnt/pmem0/test_native_io";
+    length = -1L;
+    try {
+      NativeIO.POSIX.Pmem.mapBlock(filePath, length, false);
+      fail("Illegal length parameter should be detected");
+    }catch (Exception e) {
+      LOG.info(e.getMessage());
+    }
+  }
+
+  @Test (timeout=10000)
+  public void testPmemMapMultipleFiles() {
+    assumeNotWindows("Native PMDK not supported on Windows");
+    // Skip testing while the build or environment does not support PMDK
+    assumeTrue(NativeIO.POSIX.isPmdkAvailable());
+
+    // Please make sure /mnt/pmem0 is a persistent memory device with total
+    // volume size 'volumeSize'
+    String filePath = "/mnt/pmem0/test_native_io";
+    long length = 0;
+    long volumnSize = 16 * 1024 * 1024 * 1024L;
+
+    // Multiple files, each with 128MB size, aggregated size exceeds volume
+    // limit 16GB
+    length = 128 * 1024 * 1024L;
+    long fileNumber = volumnSize / length;
+    LOG.info("File number = " + fileNumber);
+    for (int i = 0; i < fileNumber; i++) {
+      String path = filePath + i;
+      LOG.info("File path = " + path);
+      NativeIO.POSIX.Pmem.mapBlock(path, length, false);
+    }
+    try {
+      NativeIO.POSIX.Pmem.mapBlock(filePath, length, false);
+      fail("Request map extra file when persistent memory is all occupied");
+    } catch (Exception e) {
+      LOG.info(e.getMessage());
+    }
+  }
+
+  @Test (timeout=10000)
+  public void testPmemMapBigFile() {
+    assumeNotWindows("Native PMDK not supported on Windows");
+    // Skip testing while the build or environment does not support PMDK
+    assumeTrue(NativeIO.POSIX.isPmdkAvailable());
+
+    // Please make sure /mnt/pmem0 is a persistent memory device with total
+    // volume size 'volumeSize'
+    String filePath = "/mnt/pmem0/test_native_io_big";
+    long length = 0;
+    long volumeSize = 16 * 1024 * 1024 * 1024L;
+
+    // One file length exceeds persistent memory volume 16GB.
+    length = volumeSize + 1024L;
+    try {
+      LOG.info("File length = " + length);
+      NativeIO.POSIX.Pmem.mapBlock(filePath, length, false);
+      fail("File length exceeds persistent memory total volume size");
+    }catch (Exception e) {
+      LOG.info(e.getMessage());
+      deletePmemMappedFile(filePath);
+    }
+  }
+
+  @Test (timeout=10000)
+  public void testPmemCopy() throws IOException {
+    assumeNotWindows("Native PMDK not supported on Windows");
+    // Skip testing while the build or environment does not support PMDK
+    assumeTrue(NativeIO.POSIX.isPmdkAvailable());
+
+    // Create and map a block file. Please make sure /mnt/pmem0 is a persistent
+    // memory device.
+    String filePath = "/mnt/pmem0/copy";
+    long length = 4096;
+    PmemMappedRegion region = NativeIO.POSIX.Pmem.mapBlock(
+        filePath, length, false);
+    assertTrue(NativeIO.POSIX.Pmem.isPmem(region.getAddress(), length));
+    assertFalse(NativeIO.POSIX.Pmem.isPmem(region.getAddress(), length + 100));
+    assertFalse(NativeIO.POSIX.Pmem.isPmem(region.getAddress() + 100, length));
+    assertFalse(NativeIO.POSIX.Pmem.isPmem(region.getAddress() - 100, length));
+
+    // Copy content to mapped file
+    byte[] data = generateSequentialBytes(0, (int) length);
+    NativeIO.POSIX.Pmem.memCopy(data, region.getAddress(), region.isPmem(),
+        length);
+
+    // Read content before pmemSync
+    byte[] readBuf1 = new byte[(int)length];
+    IOUtils.readFully(new FileInputStream(filePath), readBuf1, 0, (int)length);
+    assertArrayEquals(data, readBuf1);
+
+    byte[] readBuf2 = new byte[(int)length];
+    // Sync content to persistent memory twice
+    NativeIO.POSIX.Pmem.memSync(region);
+    NativeIO.POSIX.Pmem.memSync(region);
+    // Read content after pmemSync twice
+    IOUtils.readFully(new FileInputStream(filePath), readBuf2, 0, (int)length);
+    assertArrayEquals(data, readBuf2);
+
+    //Read content after unmap twice
+    NativeIO.POSIX.Pmem.unmapBlock(region.getAddress(), length);
+    NativeIO.POSIX.Pmem.unmapBlock(region.getAddress(), length);
+    byte[] readBuf3 = new byte[(int)length];
+    IOUtils.readFully(new FileInputStream(filePath), readBuf3, 0, (int)length);
+    assertArrayEquals(data, readBuf3);
+  }
+
+  private static byte[] generateSequentialBytes(int start, int length) {
+    byte[] result = new byte[length];
+
+    for (int i = 0; i < length; i++) {
+      result[i] = (byte) ((start + i) % 127);
+    }
+    return result;
+  }
+
+  private static void deletePmemMappedFile(String filePath) {
+    try {
+      if (filePath != null) {
+        boolean result = Files.deleteIfExists(Paths.get(filePath));
+        if (!result) {
+          throw new IOException();
+        }
+      }
+    } catch (Throwable e) {
+      LOG.error("Failed to delete the mapped file " + filePath +
+          " from persistent memory", e);
+    }
   }
 }

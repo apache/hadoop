@@ -19,11 +19,15 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
 
 import org.apache.curator.shaded.com.google.common.base.Joiner;
 import org.apache.hadoop.conf.Configuration;
@@ -442,5 +446,64 @@ public class TestDominantResourceFairnessPolicy {
     // Add a third resource to the allowed set
     conf.set(YarnConfiguration.RESOURCE_TYPES, Joiner.on(',').join(resources));
     ResourceUtils.resetResourceTypes(conf);
+  }
+
+  @Test
+  public void testModWhileSorting(){
+    final List<FakeSchedulable> schedulableList = new ArrayList<>();
+    for (int i=0; i<10000; i++) {
+      schedulableList.add(
+          (FakeSchedulable)createSchedulable((i%10)*100, (i%3)*2));
+    }
+    Comparator DRFComparator = createComparator(100000, 50000);
+
+    /*
+     * The old sort should fail, but timing it makes testing to flaky.
+     * TimSort which is used does not handle the concurrent modification of
+     * objects it is sorting. This is the test that should fail:
+     *  modThread.start();
+     *  try {
+     *    Collections.sort(schedulableList, DRFComparator);
+     *  } catch (IllegalArgumentException iae) {
+     *    // failed sort
+     *  }
+     */
+
+    TreeSet<Schedulable> sortedSchedulable = new TreeSet<>(DRFComparator);
+    Thread modThread = modificationThread(schedulableList);
+    modThread.start();
+    sortedSchedulable.addAll(schedulableList);
+    try {
+      modThread.join();
+    } catch (InterruptedException ie) {
+      fail("ModThread join failed: " + ie.getMessage());
+    }
+  }
+
+  /**
+   * Thread to simulate concurrent schedulable changes while sorting
+   */
+  private Thread modificationThread(final List<FakeSchedulable> schedulableList) {
+    Thread modThread  = new Thread() {
+      @Override
+      public void run() {
+        try {
+          // This sleep is needed to make sure the sort has started before the
+          // modifications start and finish
+          Thread.sleep(500);
+        } catch (InterruptedException ie) {
+          fail("Modification thread interrupted while asleep " +
+              ie.getMessage());
+        }
+        Resource newUsage = Resources.createResource(0, 0);
+        for (int j = 0; j < 1000; j++) {
+          FakeSchedulable sched = schedulableList.get(j * 10);
+          newUsage.setMemorySize(20000);
+          newUsage.setVirtualCores(j % 10);
+          sched.setResourceUsage(newUsage);
+        }
+      }
+    };
+    return modThread;
   }
 }

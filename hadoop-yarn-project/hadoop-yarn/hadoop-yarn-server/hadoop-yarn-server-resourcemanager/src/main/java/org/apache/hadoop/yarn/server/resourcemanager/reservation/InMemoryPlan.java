@@ -866,9 +866,9 @@ public class InMemoryPlan implements Plan {
   public String toString() {
     readLock.lock();
     try {
-      StringBuffer planStr = new StringBuffer("In-memory Plan: ");
+      StringBuilder planStr = new StringBuilder("In-memory Plan: ");
       planStr.append("Parent Queue: ").append(queueName)
-          .append("Total Capacity: ").append(totalCapacity).append("Step: ")
+          .append(" Total Capacity: ").append(totalCapacity).append(" Step: ")
           .append(step);
       for (ReservationAllocation reservation : getAllReservations()) {
         planStr.append(reservation);

@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azure.integration.AzureTestConstants;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemMetricsSystem;
+import org.apache.hadoop.fs.azure.integration.AzureTestUtils;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.MetricsSink;
@@ -48,6 +49,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import static org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.DEFAULT_STORAGE_EMULATOR_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.KEY_USE_LOCAL_SAS_KEY_MODE;
 import static org.apache.hadoop.fs.azure.AzureNativeFileSystemStore.KEY_USE_SECURE_MODE;
+import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.verifyWasbAccountNameInConfig;
 
 /**
  * Helper class to create WASB file systems backed by either a mock in-memory
@@ -58,11 +60,14 @@ public final class AzureBlobStorageTestAccount implements AutoCloseable,
   private static final Logger LOG = LoggerFactory.getLogger(
       AzureBlobStorageTestAccount.class);
 
-  private static final String ACCOUNT_KEY_PROPERTY_NAME = "fs.azure.account.key.";
   private static final String SAS_PROPERTY_NAME = "fs.azure.sas.";
   private static final String TEST_CONFIGURATION_FILE_NAME = "azure-test.xml";
-  private static final String TEST_ACCOUNT_NAME_PROPERTY_NAME = "fs.azure.test.account.name";
+  public static final String ACCOUNT_KEY_PROPERTY_NAME = "fs.azure.account.key.";
+  public static final String TEST_ACCOUNT_NAME_PROPERTY_NAME = "fs.azure.account.name";
+  public static final String WASB_TEST_ACCOUNT_NAME_WITH_DOMAIN = "fs.azure.wasb.account.name";
   public static final String MOCK_ACCOUNT_NAME = "mockAccount.blob.core.windows.net";
+  public static final String WASB_ACCOUNT_NAME_DOMAIN_SUFFIX = ".blob.core.windows.net";
+  public static final String WASB_ACCOUNT_NAME_DOMAIN_SUFFIX_REGEX = "\\.blob(\\.preprod)?\\.core\\.windows\\.net";
   public static final String MOCK_CONTAINER_NAME = "mockContainer";
   public static final String WASB_AUTHORITY_DELIMITER = "@";
   public static final String WASB_SCHEME = "wasb";
@@ -379,7 +384,7 @@ public final class AzureBlobStorageTestAccount implements AutoCloseable,
         containerName);
     container.create();
 
-    String accountName = conf.get(TEST_ACCOUNT_NAME_PROPERTY_NAME);
+    String accountName = verifyWasbAccountNameInConfig(conf);
 
     // Ensure that custom throttling is disabled and tolerate concurrent
     // out-of-band appends.
@@ -525,7 +530,9 @@ public final class AzureBlobStorageTestAccount implements AutoCloseable,
 
   static CloudStorageAccount createTestAccount(Configuration conf)
       throws URISyntaxException, KeyProviderException {
-    String testAccountName = conf.get(TEST_ACCOUNT_NAME_PROPERTY_NAME);
+    AzureTestUtils.assumeNamespaceDisabled(conf);
+
+    String testAccountName = verifyWasbAccountNameInConfig(conf);
     if (testAccountName == null) {
       LOG.warn("Skipping live Azure test because of missing test account");
       return null;
@@ -570,16 +577,16 @@ public final class AzureBlobStorageTestAccount implements AutoCloseable,
     String containerName = useContainerSuffixAsContainerName
         ? containerNameSuffix
         : String.format(
-            "wasbtests-%s-%tQ%s",
+            "wasbtests-%s-%s%s",
             System.getProperty("user.name"),
-            new Date(),
+            UUID.randomUUID().toString(),
             containerNameSuffix);
     container = account.createCloudBlobClient().getContainerReference(
         containerName);
     if (createOptions.contains(CreateOptions.CreateContainer)) {
       container.createIfNotExists();
     }
-    String accountName = conf.get(TEST_ACCOUNT_NAME_PROPERTY_NAME);
+    String accountName = verifyWasbAccountNameInConfig(conf);
     if (createOptions.contains(CreateOptions.UseSas)) {
       String sas = generateSAS(container,
           createOptions.contains(CreateOptions.Readonly));
@@ -590,7 +597,10 @@ public final class AzureBlobStorageTestAccount implements AutoCloseable,
       }
       // Remove the account key from the configuration to make sure we don't
       // cheat and use that.
-      conf.set(ACCOUNT_KEY_PROPERTY_NAME + accountName, "");
+      // but only if not in secure mode, which requires that login
+      if (!conf.getBoolean(AzureNativeFileSystemStore.KEY_USE_SECURE_MODE, false)) {
+        conf.set(ACCOUNT_KEY_PROPERTY_NAME + accountName, "");
+      }
       // Set the SAS key.
       conf.set(SAS_PROPERTY_NAME + containerName + "." + accountName, sas);
     }
@@ -741,7 +751,7 @@ public final class AzureBlobStorageTestAccount implements AutoCloseable,
     CloudBlobClient blobClient = account.createCloudBlobClient();
 
     // Capture the account URL and the account name.
-    String accountName = conf.get(TEST_ACCOUNT_NAME_PROPERTY_NAME);
+    String accountName = verifyWasbAccountNameInConfig(conf);
 
     configureSecureModeTestSettings(conf);
 
@@ -814,7 +824,7 @@ public final class AzureBlobStorageTestAccount implements AutoCloseable,
     CloudBlobClient blobClient = account.createCloudBlobClient();
 
     // Capture the account URL and the account name.
-    String accountName = conf.get(TEST_ACCOUNT_NAME_PROPERTY_NAME);
+    String accountName = verifyWasbAccountNameInConfig(conf);
 
     configureSecureModeTestSettings(conf);
 

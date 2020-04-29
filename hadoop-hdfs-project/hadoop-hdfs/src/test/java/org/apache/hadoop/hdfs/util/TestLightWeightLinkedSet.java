@@ -27,16 +27,16 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.util.Time;
 import org.junit.Before;
 import org.junit.Test;
 
 public class TestLightWeightLinkedSet {
 
-  private static final Log LOG = LogFactory
-	  .getLog("org.apache.hadoop.hdfs.TestLightWeightLinkedSet");
+  private static final Logger LOG = LoggerFactory
+      .getLogger("org.apache.hadoop.hdfs.TestLightWeightLinkedSet");
   private final ArrayList<Integer> list = new ArrayList<Integer>();
   private final int NUM = 100;
   private LightWeightLinkedSet<Integer> set;

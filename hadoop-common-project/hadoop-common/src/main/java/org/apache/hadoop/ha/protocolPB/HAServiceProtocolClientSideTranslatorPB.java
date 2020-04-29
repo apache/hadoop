@@ -36,14 +36,15 @@ import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.HAServiceStateProto;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.MonitorHealthRequestProto;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.TransitionToActiveRequestProto;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.TransitionToStandbyRequestProto;
+import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.TransitionToObserverRequestProto;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.UserGroupInformation;
 
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.RpcController;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 /**
  * This class is the client side translator to translate the requests made on
@@ -116,6 +117,19 @@ public class HAServiceProtocolClientSideTranslatorPB implements
   }
 
   @Override
+  public void transitionToObserver(StateChangeRequestInfo reqInfo)
+      throws IOException {
+    try {
+      TransitionToObserverRequestProto req =
+          TransitionToObserverRequestProto.newBuilder()
+              .setReqInfo(convert(reqInfo)).build();
+      rpcProxy.transitionToObserver(NULL_CONTROLLER, req);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
   public HAServiceStatus getServiceStatus() throws IOException {
     GetServiceStatusResponseProto status;
     try {
@@ -141,6 +155,8 @@ public class HAServiceProtocolClientSideTranslatorPB implements
       return HAServiceState.ACTIVE;
     case STANDBY:
       return HAServiceState.STANDBY;
+    case OBSERVER:
+      return HAServiceState.OBSERVER;
     case INITIALIZING:
     default:
       return HAServiceState.INITIALIZING;

@@ -18,17 +18,16 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.curator.test.TestingServer;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStoreTestBase.TestDispatcher;
 import org.apache.hadoop.util.ZKUtil;
 
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.server.auth.DigestAuthenticationProvider;
 import org.junit.After;
 import org.junit.Assert;
@@ -38,13 +37,12 @@ import org.junit.Test;
 import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class TestZKRMStateStoreZKClientConnections {
-  private Log LOG =
-      LogFactory.getLog(TestZKRMStateStoreZKClientConnections.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestZKRMStateStoreZKClientConnections.class);
 
   private static final int ZK_TIMEOUT_MS = 1000;
   private static final String DIGEST_USER_PASS="test-user:test-password";
@@ -90,7 +88,7 @@ public class TestZKRMStateStoreZKClientConnections {
 
     public RMStateStore getRMStateStore(Configuration conf) throws Exception {
       String workingZnode = "/Test";
-      conf.set(YarnConfiguration.RM_ZK_ADDRESS,
+      conf.set(CommonConfigurationKeys.ZK_ADDRESS,
           testingServer.getConnectString());
       conf.set(YarnConfiguration.ZK_RM_STATE_STORE_PARENT_PATH, workingZnode);
       this.store = new TestZKRMStateStore(conf, workingZnode);
@@ -103,8 +101,8 @@ public class TestZKRMStateStoreZKClientConnections {
     TestZKClient zkClientTester = new TestZKClient();
     final String path = "/test";
     YarnConfiguration conf = new YarnConfiguration();
-    conf.setInt(YarnConfiguration.RM_ZK_TIMEOUT_MS, ZK_TIMEOUT_MS);
-    conf.setLong(YarnConfiguration.RM_ZK_RETRY_INTERVAL_MS, 100);
+    conf.setInt(CommonConfigurationKeys.ZK_TIMEOUT_MS, ZK_TIMEOUT_MS);
+    conf.setLong(CommonConfigurationKeys.ZK_RETRY_INTERVAL_MS, 100);
     final ZKRMStateStore store =
         (ZKRMStateStore) zkClientTester.getRMStateStore(conf);
     TestDispatcher dispatcher = new TestDispatcher();
@@ -133,7 +131,7 @@ public class TestZKRMStateStoreZKClientConnections {
   public void testSetZKAcl() {
     TestZKClient zkClientTester = new TestZKClient();
     YarnConfiguration conf = new YarnConfiguration();
-    conf.set(YarnConfiguration.RM_ZK_ACL, "world:anyone:rwca");
+    conf.set(CommonConfigurationKeys.ZK_ACL, "world:anyone:rwca");
     try {
       zkClientTester.store.delete(zkClientTester.store
           .znodeWorkingPath);
@@ -146,7 +144,7 @@ public class TestZKRMStateStoreZKClientConnections {
   public void testInvalidZKAclConfiguration() {
     TestZKClient zkClientTester = new TestZKClient();
     YarnConfiguration conf = new YarnConfiguration();
-    conf.set(YarnConfiguration.RM_ZK_ACL, "randomstring&*");
+    conf.set(CommonConfigurationKeys.ZK_ACL, "randomstring&*");
     try {
       zkClientTester.getRMStateStore(conf);
       fail("ZKRMStateStore created with bad ACL");
@@ -163,10 +161,10 @@ public class TestZKRMStateStoreZKClientConnections {
   public void testZKAuths() throws Exception {
     TestZKClient zkClientTester = new TestZKClient();
     YarnConfiguration conf = new YarnConfiguration();
-    conf.setInt(YarnConfiguration.RM_ZK_NUM_RETRIES, 1);
-    conf.setInt(YarnConfiguration.RM_ZK_TIMEOUT_MS, ZK_TIMEOUT_MS);
-    conf.set(YarnConfiguration.RM_ZK_ACL, TEST_ACL);
-    conf.set(YarnConfiguration.RM_ZK_AUTH, TEST_AUTH_GOOD);
+    conf.setInt(CommonConfigurationKeys.ZK_NUM_RETRIES, 1);
+    conf.setInt(CommonConfigurationKeys.ZK_TIMEOUT_MS, ZK_TIMEOUT_MS);
+    conf.set(CommonConfigurationKeys.ZK_ACL, TEST_ACL);
+    conf.set(CommonConfigurationKeys.ZK_AUTH, TEST_AUTH_GOOD);
 
     zkClientTester.getRMStateStore(conf);
   }

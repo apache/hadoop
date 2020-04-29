@@ -23,8 +23,8 @@ import java.io.FileOutputStream;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.io.nativeio.NativeIOException;
@@ -46,7 +46,7 @@ public class AtomicFileOutputStream extends FilterOutputStream {
 
   private static final String TMP_EXTENSION = ".tmp";
   
-  private final static Log LOG = LogFactory.getLog(
+  private final static Logger LOG = LoggerFactory.getLogger(
       AtomicFileOutputStream.class);
   
   private final File origFile;

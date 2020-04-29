@@ -35,9 +35,9 @@ import java.util.Map;
 
 /**
  * The HostSet allows efficient queries on matching wildcard addresses.
- * <p/>
+ * <p>
  * For InetSocketAddress A and B with the same host address,
- * we define a partial order between A and B, A <= B iff A.getPort() == B
+ * we define a partial order between A and B, A &lt;= B iff A.getPort() == B
  * .getPort() || B.getPort() == 0.
  */
 public class HostSet implements Iterable<InetSocketAddress> {
@@ -46,7 +46,7 @@ public class HostSet implements Iterable<InetSocketAddress> {
 
   /**
    * The function that checks whether there exists an entry foo in the set
-   * so that foo <= addr.
+   * so that foo &lt;= addr.
    */
   boolean matchedBy(InetSocketAddress addr) {
     Collection<Integer> ports = addrs.get(addr.getAddress());
@@ -56,7 +56,7 @@ public class HostSet implements Iterable<InetSocketAddress> {
 
   /**
    * The function that checks whether there exists an entry foo in the set
-   * so that addr <= foo.
+   * so that addr &lt;= foo.
    */
   boolean match(InetSocketAddress addr) {
     int port = addr.getPort();

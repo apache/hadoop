@@ -30,8 +30,8 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.QueryStringDecoder;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.util.StringUtils;
 
@@ -58,7 +58,8 @@ import static org.apache.hadoop.hdfs.server.datanode.web.webhdfs.WebHdfsHandler.
  * Implement the read-only WebHDFS API for fsimage.
  */
 class FSImageHandler extends SimpleChannelInboundHandler<HttpRequest> {
-  public static final Log LOG = LogFactory.getLog(FSImageHandler.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(FSImageHandler.class);
   private final FSImageLoader image;
   private final ChannelGroup activeChannels;
 
@@ -84,10 +85,15 @@ class FSImageHandler extends SimpleChannelInboundHandler<HttpRequest> {
     }
 
     QueryStringDecoder decoder = new QueryStringDecoder(request.getUri());
+    // check path. throw exception if path doesn't start with WEBHDFS_PREFIX
+    String path = getPath(decoder);
     final String op = getOp(decoder);
+    // check null op
+    if (op == null) {
+      throw new IllegalArgumentException("Param op must be specified.");
+    }
 
     final String content;
-    String path = getPath(decoder);
     switch (op) {
     case "GETFILESTATUS":
       content = image.getFileStatus(path);

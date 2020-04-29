@@ -32,8 +32,8 @@ import javax.management.ObjectName;
 import javax.management.ReflectionException;
 import javax.management.openmbean.CompositeDataSupport;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -58,6 +58,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
+import static org.apache.hadoop.hdfs.server.namenode.ImageServlet.RECENT_IMAGE_CHECK_ENABLED;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
@@ -66,7 +67,8 @@ import static org.junit.Assert.assertNull;
  * This class tests rolling upgrade.
  */
 public class TestRollingUpgrade {
-  private static final Log LOG = LogFactory.getLog(TestRollingUpgrade.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestRollingUpgrade.class);
 
   public static void runCmd(DFSAdmin dfsadmin, boolean success,
       String... args) throws  Exception {
@@ -431,7 +433,22 @@ public class TestRollingUpgrade {
     testFinalize(3);
   }
 
+  @Test(timeout = 300000)
+  public void testFinalizeWithDeltaCheck() throws Exception {
+    testFinalize(2, true);
+  }
+
+  @Test(timeout = 300000)
+  public void testFinalizeWithMultipleNNDeltaCheck() throws Exception {
+    testFinalize(3, true);
+  }
+
   private void testFinalize(int nnCount) throws Exception {
+    testFinalize(nnCount, false);
+  }
+
+  private void testFinalize(int nnCount, boolean skipImageDeltaCheck)
+      throws Exception {
     final Configuration conf = new HdfsConfiguration();
     MiniQJMHACluster cluster = null;
     final Path foo = new Path("/foo");
@@ -450,6 +467,10 @@ public class TestRollingUpgrade {
       dfsCluster.restartNameNodes();
 
       dfsCluster.transitionToActive(0);
+
+      dfsCluster.getNameNode(0).getHttpServer()
+          .setAttribute(RECENT_IMAGE_CHECK_ENABLED, skipImageDeltaCheck);
+
       DistributedFileSystem dfs = dfsCluster.getFileSystem(0);
       dfs.mkdirs(foo);
 

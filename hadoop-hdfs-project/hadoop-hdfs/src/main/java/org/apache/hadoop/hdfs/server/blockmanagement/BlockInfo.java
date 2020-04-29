@@ -52,7 +52,7 @@ public abstract class BlockInfo extends Block
   /**
    * Block collection ID.
    */
-  private long bcId;
+  private volatile long bcId;
 
   /** For implementing {@link LightWeightGSet.LinkedElement} interface. */
   private LightWeightGSet.LinkedElement nextLinkedElement;
@@ -182,6 +182,12 @@ public abstract class BlockInfo extends Block
   abstract boolean hasNoStorage();
 
   /**
+   * Checks whether this block has a Provided replica.
+   * @return true if this block has a replica on Provided storage.
+   */
+  abstract boolean isProvided();
+
+  /**
    * Find specified DatanodeStorageInfo.
    * @return DatanodeStorageInfo or null if not found.
    */
@@ -260,6 +266,10 @@ public abstract class BlockInfo extends Block
    */
   public boolean isComplete() {
     return getBlockUCState().equals(BlockUCState.COMPLETE);
+  }
+
+  public boolean isUnderRecovery() {
+    return getBlockUCState().equals(BlockUCState.UNDER_RECOVERY);
   }
 
   public final boolean isCompleteOrCommitted() {

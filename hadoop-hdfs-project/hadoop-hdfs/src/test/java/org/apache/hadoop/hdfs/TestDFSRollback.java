@@ -26,8 +26,8 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
@@ -50,7 +50,7 @@ import com.google.common.collect.Lists;
 */
 public class TestDFSRollback {
  
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
                                                    "org.apache.hadoop.hdfs.TestDFSRollback");
   private Configuration conf;
   private int testCounter = 0;

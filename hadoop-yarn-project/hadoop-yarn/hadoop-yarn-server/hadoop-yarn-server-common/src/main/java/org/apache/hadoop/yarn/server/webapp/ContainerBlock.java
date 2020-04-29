@@ -17,27 +17,29 @@
  */
 package org.apache.hadoop.yarn.server.webapp;
 
-import static org.apache.hadoop.yarn.util.StringHelper.join;
-import static org.apache.hadoop.yarn.webapp.YarnWebParams.CONTAINER_ID;
-
-import java.io.IOException;
-import java.security.PrivilegedExceptionAction;
-
+import com.google.common.annotations.VisibleForTesting;
+import com.google.inject.Inject;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportRequest;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
-
-import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
+import java.util.Map;
+
+import static org.apache.hadoop.yarn.util.StringHelper.join;
+import static org.apache.hadoop.yarn.webapp.YarnWebParams.CONTAINER_ID;
 
 public class ContainerBlock extends HtmlBlock {
 
@@ -117,15 +119,57 @@ public class ContainerBlock extends HtmlBlock {
         StringUtils.formatTime(Times.elapsed(container.getStartedTime(),
           container.getFinishedTime())))
       .__(
-        "Resource:",
-        container.getAllocatedMB() + " Memory, "
-            + container.getAllocatedVCores() + " VCores")
+        "Resource:", getResources(container))
       .__("Logs:", container.getLogUrl() == null ? "#" : container.getLogUrl(),
           container.getLogUrl() == null ? "N/A" : "Logs")
       .__("Diagnostics:", container.getDiagnosticsInfo() == null ?
           "" : container.getDiagnosticsInfo());
 
     html.__(InfoBlock.class);
+  }
+
+  /**
+   * Creates a string representation of allocated resources to a container.
+   * Memory, followed with VCores are always the first two resources of
+   * the resulted string, followed with any custom resources, if any is present.
+   */
+  @VisibleForTesting
+  String getResources(ContainerInfo container) {
+    Map<String, Long> allocatedResources = container.getAllocatedResources();
+
+    StringBuilder sb = new StringBuilder();
+    sb.append(getResourceAsString(ResourceInformation.MEMORY_URI,
+        allocatedResources.get(ResourceInformation.MEMORY_URI))).append(", ");
+    sb.append(getResourceAsString(ResourceInformation.VCORES_URI,
+        allocatedResources.get(ResourceInformation.VCORES_URI)));
+
+    if (container.hasCustomResources()) {
+      container.getAllocatedResources().forEach((key, value) -> {
+        if (!key.equals(ResourceInformation.MEMORY_URI) &&
+            !key.equals(ResourceInformation.VCORES_URI)) {
+          sb.append(", ");
+          sb.append(getResourceAsString(key, value));
+        }
+      });
+    }
+
+    return sb.toString();
+  }
+
+  private String getResourceAsString(String resourceName, long value) {
+    final String translatedResourceName;
+    switch (resourceName) {
+    case ResourceInformation.MEMORY_URI:
+      translatedResourceName = "Memory";
+      break;
+    case ResourceInformation.VCORES_URI:
+      translatedResourceName = "VCores";
+      break;
+    default:
+      translatedResourceName = resourceName;
+      break;
+    }
+    return String.valueOf(value) + " " + translatedResourceName;
   }
 
   protected ContainerReport getContainerReport(

@@ -25,6 +25,17 @@ export default Ember.Component.extend({
   tableDefinition: TableDefinition.create({
     searchType: 'manual',
   }),
+  graphDrawn: false,
+  userInfo: null,
+
+  actions: {
+    changeViewType(param) {
+      this.sendAction("changeViewType", param);
+      if (this.get('attemptModel')) {
+        this.setAttemptsGridColumnsAndRows();
+      }
+    }
+  },
 
   canvas: {
     svg: undefined,
@@ -235,12 +246,10 @@ export default Ember.Component.extend({
   },
 
   didInsertElement: function() {
-    // init tooltip
-    this.initTooltip();
+    // init model
     this.modelArr = [];
     this.containerIdArr = [];
 
-    // init model
     if (this.get("rmModel")) {
       this.get("rmModel").forEach(function(o) {
         if(!this.modelArr.contains(o)) {
@@ -258,16 +267,30 @@ export default Ember.Component.extend({
       }.bind(this));
     }
 
-    if(this.modelArr.length === 0) {
+    if (this.modelArr.length === 0) {
       return;
     }
 
     this.modelArr.sort(function(a, b) {
       var tsA = a.get("startTs");
       var tsB = b.get("startTs");
-
       return tsA - tsB;
     });
+
+    if (this.get('attemptModel')) {
+      this.setAttemptsGridColumnsAndRows();
+    } else {
+      this.setContainersGridColumnsAndRows();
+    }
+  },
+
+  didUpdate: function() {
+    if (this.get("viewType") === "grid" || this.graphDrawn) {
+      return;
+    }
+
+    this.initTooltip();
+
     var begin = 0;
     if (this.modelArr.length > 0) {
       begin = this.modelArr[0].get("startTs");
@@ -289,11 +312,7 @@ export default Ember.Component.extend({
       this.setSelected(this.modelArr[0]);
     }
 
-    if (this.get('attemptModel')) {
-      this.setAttemptsGridColumnsAndRows();
-    } else {
-      this.setContainersGridColumnsAndRows();
-    }
+    this.graphDrawn = true;
   },
 
   setAttemptsGridColumnsAndRows: function() {
@@ -309,10 +328,13 @@ export default Ember.Component.extend({
       minWidth: '300px',
       getCellContent: function(row) {
         var attemptId = row.get('id');
-        var query = serviceName? '?service='+serviceName : '';
+        var query = 'viewType=' + self.get("viewType");
+        if (serviceName) {
+          query += '&service=' + serviceName;
+        }
         return {
           displayText: attemptId,
-          href: `#/yarn-app-attempt/${attemptId}${query}`
+          href: `#/yarn-app-attempt/${attemptId}?${query}`
         };
       }
     }, {
@@ -355,14 +377,27 @@ export default Ember.Component.extend({
         }
       }
     }, {
+      id: 'exposedPorts',
+      headerTitle: 'Exposed Ports',
+      contentPath: 'exposedPorts',
+      getCellContent: function(row) {
+        var ports = row.get('exposedPorts');
+        if (ports) {
+          return ports;
+        } else {
+          return 'N/A';
+        }
+      }
+    }, {
       id: 'nodeHttpAddress',
       headerTitle: 'NodeManager Web UI',
       contentPath: 'nodeHttpAddress',
       cellComponentName: 'em-table-html-cell',
       getCellContent: function(row) {
         var address = self.checkHttpProtocol(row.get('nodeHttpAddress'));
+        var link = row.get('masterNodeURL');
         if (address) {
-          return `<a href="${address}" target="_blank">${address}</a>`;
+          return `<a href="${link}">${address}</a>`;
         } else {
           return 'N/A';
         }
@@ -373,9 +408,9 @@ export default Ember.Component.extend({
       contentPath: 'logsLink',
       cellComponentName: 'em-table-html-cell',
       getCellContent: function(row) {
-        var logUrl = self.checkHttpProtocol(row.get('logsLink'));
-        if (logUrl) {
-          return `<a href="${logUrl}" target="_blank">Link</a>`;
+        var containerLogUrl = row.get('appAttemptContainerLogsURL');
+        if (containerLogUrl) {
+          return `<a href="${containerLogUrl}">Link</a>`;
         } else {
           return 'N/A';
         }
@@ -395,7 +430,14 @@ export default Ember.Component.extend({
       id: 'id',
       headerTitle: 'Container ID',
       contentPath: 'id',
-      minWidth: '350px'
+      cellComponentName: 'em-table-html-cell',
+      minWidth: '350px',
+      getCellContent: function(row) {
+        var termLink = self.checkHttpProtocol(row.get('nodeHttpAddress'));
+        var containerId = row.get('id');
+        var requestedUser = self.get('requestedUser');
+        return `<a href="${termLink}/terminal/terminal.template?container=${containerId}&user.name=${requestedUser}" target="_blank">${containerId}</a>`;
+      }
     }, {
       id: 'startedTime',
       headerTitle: 'Started Time',
@@ -448,9 +490,21 @@ export default Ember.Component.extend({
       contentPath: 'logUrl',
       cellComponentName: 'em-table-html-cell',
       getCellContent: function(row) {
-        var url = self.checkHttpProtocol(row.get('logUrl'));
-        if (url) {
-          return `<a href="${url}" target="_blank">${url}</a>`;
+        var containerLogUrl = row.get('appAttemptContainerLogsURL');
+        if (containerLogUrl) {
+          return `<a href="${containerLogUrl}">Link</a>`;
+        } else {
+          return 'N/A';
+        }
+      }
+    }, {
+      id: 'exposedPorts',
+      headerTitle: 'Exposed Ports',
+      contentPath: 'exposedPorts',
+      getCellContent: function(row) {
+        var ports = row.get('exposedPorts');
+        if (ports) {
+          return ports;
         } else {
           return 'N/A';
         }
@@ -462,8 +516,9 @@ export default Ember.Component.extend({
       cellComponentName: 'em-table-html-cell',
       getCellContent: function(row) {
         var address = self.checkHttpProtocol(row.get('nodeHttpAddress'));
+        var link = row.get('masterNodeURL');
         if (address) {
-          return `<a href="${address}" target="_blank">${address}</a>`;
+          return `<a href="${link}">${address}</a>`;
         } else {
           return 'N/A';
         }
@@ -480,5 +535,12 @@ export default Ember.Component.extend({
       prop = 'http://' + prop;
     }
     return prop;
-  }
+  },
+
+  requestedUser: function() {
+    if (this.get('userInfo')) {
+      return this.get('userInfo.requestedUser');
+    }
+    return '';
+  }.property('userInfo'),
 });

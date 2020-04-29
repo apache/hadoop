@@ -99,11 +99,11 @@ public class LightWeightCache<K, E extends K> extends LightWeightGSet<K, E> {
   /**
    * @param recommendedLength Recommended size of the internal array.
    * @param sizeLimit the limit of the size of the cache.
-   *            The limit is disabled if it is <= 0.
-   * @param creationExpirationPeriod the time period C > 0 in nanoseconds that
-   *            the creation of an entry is expired if it is added to the cache
-   *            longer than C.
-   * @param accessExpirationPeriod the time period A >= 0 in nanoseconds that
+   *            The limit is disabled if it is &lt;= 0.
+   * @param creationExpirationPeriod the time period C &gt; 0 in nanoseconds
+   *            that the creation of an entry is expired if it is added to the
+   *            cache longer than C.
+   * @param accessExpirationPeriod the time period A &gt;= 0 in nanoseconds that
    *            the access of an entry is expired if it is not accessed
    *            longer than A. 
    */

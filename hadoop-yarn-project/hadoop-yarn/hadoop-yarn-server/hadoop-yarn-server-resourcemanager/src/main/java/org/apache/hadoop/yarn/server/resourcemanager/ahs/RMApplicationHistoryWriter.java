@@ -22,8 +22,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -69,8 +69,8 @@ import com.google.common.annotations.VisibleForTesting;
 @Unstable
 public class RMApplicationHistoryWriter extends CompositeService {
 
-  public static final Log LOG = LogFactory
-    .getLog(RMApplicationHistoryWriter.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(RMApplicationHistoryWriter.class);
 
   private Dispatcher dispatcher;
   @VisibleForTesting

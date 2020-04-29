@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.ftp;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.ConnectException;
 import java.net.URI;
 
@@ -41,6 +42,7 @@ import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Progressable;
 import org.slf4j.Logger;
@@ -62,6 +64,7 @@ public class FTPFileSystem extends FileSystem {
   public static final int DEFAULT_BUFFER_SIZE = 1024 * 1024;
 
   public static final int DEFAULT_BLOCK_SIZE = 4 * 1024;
+  public static final long DEFAULT_TIMEOUT = 0;
   public static final String FS_FTP_USER_PREFIX = "fs.ftp.user.";
   public static final String FS_FTP_HOST = "fs.ftp.host";
   public static final String FS_FTP_HOST_PORT = "fs.ftp.host.port";
@@ -71,12 +74,13 @@ public class FTPFileSystem extends FileSystem {
   public static final String FS_FTP_TRANSFER_MODE = "fs.ftp.transfer.mode";
   public static final String E_SAME_DIRECTORY_ONLY =
       "only same directory renames are supported";
+  public static final String FS_FTP_TIMEOUT = "fs.ftp.timeout";
 
   private URI uri;
 
   /**
    * Return the protocol scheme for the FileSystem.
-   * <p/>
+   * <p>
    *
    * @return <code>ftp</code>
    */
@@ -108,7 +112,9 @@ public class FTPFileSystem extends FileSystem {
 
     // get port information from uri, (overrides info in conf)
     int port = uri.getPort();
-    port = (port == -1) ? FTP.DEFAULT_PORT : port;
+    if(port == -1){
+      port = conf.getInt(FS_FTP_HOST_PORT, FTP.DEFAULT_PORT);
+    }
     conf.setInt(FS_FTP_HOST_PORT, port);
 
     // get user/password information from URI (overrides info in conf)
@@ -150,6 +156,7 @@ public class FTPFileSystem extends FileSystem {
       client.setFileTransferMode(getTransferMode(conf));
       client.setFileType(FTP.BINARY_FILE_TYPE);
       client.setBufferSize(DEFAULT_BUFFER_SIZE);
+      setTimeout(client, conf);
       setDataConnectionMode(client, conf);
     } else {
       throw new IOException("Login failed on server - " + host + ", port - "
@@ -160,9 +167,19 @@ public class FTPFileSystem extends FileSystem {
   }
 
   /**
+   * Set the FTPClient's timeout based on configuration.
+   * FS_FTP_TIMEOUT is set as timeout (defaults to DEFAULT_TIMEOUT).
+   */
+  @VisibleForTesting
+  void setTimeout(FTPClient client, Configuration conf) {
+    long timeout = conf.getLong(FS_FTP_TIMEOUT, DEFAULT_TIMEOUT);
+    client.setControlKeepAliveTimeout(timeout);
+  }
+
+  /**
    * Set FTP's transfer mode based on configuration. Valid values are
    * STREAM_TRANSFER_MODE, BLOCK_TRANSFER_MODE and COMPRESSED_TRANSFER_MODE.
-   * <p/>
+   * <p>
    * Defaults to BLOCK_TRANSFER_MODE.
    *
    * @param conf
@@ -195,7 +212,7 @@ public class FTPFileSystem extends FileSystem {
    * Set the FTPClient's data connection mode based on configuration. Valid
    * values are ACTIVE_LOCAL_DATA_CONNECTION_MODE,
    * PASSIVE_LOCAL_DATA_CONNECTION_MODE and PASSIVE_REMOTE_DATA_CONNECTION_MODE.
-   * <p/>
+   * <p>
    * Defaults to ACTIVE_LOCAL_DATA_CONNECTION_MODE.
    *
    * @param client
@@ -327,8 +344,19 @@ public class FTPFileSystem extends FileSystem {
     // file. The FTP client connection is closed when close() is called on the
     // FSDataOutputStream.
     client.changeWorkingDirectory(parent.toUri().getPath());
-    FSDataOutputStream fos = new FSDataOutputStream(client.storeFileStream(file
-        .getName()), statistics) {
+    OutputStream outputStream = client.storeFileStream(file.getName());
+
+    if (!FTPReply.isPositivePreliminary(client.getReplyCode())) {
+      // The ftpClient is an inconsistent state. Must close the stream
+      // which in turn will logout and disconnect from FTP server
+      if (outputStream != null) {
+        IOUtils.closeStream(outputStream);
+      }
+      disconnect(client);
+      throw new IOException("Unable to create file: " + file + ", Aborting");
+    }
+
+    FSDataOutputStream fos = new FSDataOutputStream(outputStream, statistics) {
       @Override
       public void close() throws IOException {
         super.close();
@@ -343,12 +371,6 @@ public class FTPFileSystem extends FileSystem {
         }
       }
     };
-    if (!FTPReply.isPositivePreliminary(client.getReplyCode())) {
-      // The ftpClient is an inconsistent state. Must close the stream
-      // which in turn will logout and disconnect from FTP server
-      fos.close();
-      throw new IOException("Unable to create file: " + file + ", Aborting");
-    }
     return fos;
   }
 

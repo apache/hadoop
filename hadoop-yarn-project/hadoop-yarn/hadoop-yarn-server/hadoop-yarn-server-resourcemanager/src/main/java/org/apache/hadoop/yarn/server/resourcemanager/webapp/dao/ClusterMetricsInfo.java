@@ -41,10 +41,12 @@ public class ClusterMetricsInfo {
   private long reservedMB;
   private long availableMB;
   private long allocatedMB;
+  private long pendingMB;
 
   private long reservedVirtualCores;
   private long availableVirtualCores;
   private long allocatedVirtualCores;
+  private long pendingVirtualCores;
 
   private int containersAllocated;
   private int containersReserved;
@@ -88,10 +90,12 @@ public class ClusterMetricsInfo {
     this.reservedMB = metrics.getReservedMB();
     this.availableMB = metrics.getAvailableMB();
     this.allocatedMB = metrics.getAllocatedMB();
+    this.pendingMB = metrics.getPendingMB();
 
     this.reservedVirtualCores = metrics.getReservedVirtualCores();
     this.availableVirtualCores = metrics.getAvailableVirtualCores();
     this.allocatedVirtualCores = metrics.getAllocatedVirtualCores();
+    this.pendingVirtualCores = metrics.getPendingVirtualCores();
 
     this.containersAllocated = metrics.getAllocatedContainers();
     this.containersPending = metrics.getPendingContainers();
@@ -101,7 +105,7 @@ public class ClusterMetricsInfo {
       CapacityScheduler cs = (CapacityScheduler) rs;
       this.totalMB = availableMB + allocatedMB + reservedMB;
       this.totalVirtualCores =
-          availableVirtualCores + allocatedVirtualCores + containersReserved;
+          availableVirtualCores + allocatedVirtualCores + reservedVirtualCores;
       // TODO, add support of other schedulers to get total used resources
       // across partition.
       if (cs.getRootQueue() != null
@@ -163,6 +167,10 @@ public class ClusterMetricsInfo {
     return this.allocatedMB;
   }
 
+  public long getPendingMB() {
+    return this.pendingMB;
+  }
+
   public long getReservedVirtualCores() {
     return this.reservedVirtualCores;
   }
@@ -173,6 +181,10 @@ public class ClusterMetricsInfo {
 
   public long getAllocatedVirtualCores() {
     return this.allocatedVirtualCores;
+  }
+
+  public long getPendingVirtualCores() {
+    return this.pendingVirtualCores;
   }
 
   public int getContainersAllocated() {

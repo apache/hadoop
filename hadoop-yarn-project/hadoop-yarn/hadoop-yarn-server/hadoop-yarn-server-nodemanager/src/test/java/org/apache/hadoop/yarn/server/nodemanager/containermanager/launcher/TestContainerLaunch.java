@@ -18,13 +18,16 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
-import static org.junit.Assert.*;
-import static org.mockito.Matchers.any;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import java.io.BufferedReader;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
@@ -43,6 +46,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -54,9 +58,12 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -95,6 +102,7 @@ import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
 import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor;
+import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerManagerTest;
@@ -106,20 +114,25 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.Conta
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.DockerLinuxContainerRuntime;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerStartContext;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
+import org.apache.hadoop.yarn.server.security.AMSecretKeys;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.AuxiliaryServiceHelper;
 import org.apache.hadoop.yarn.util.LinuxResourceCalculatorPlugin;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
-import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 public class TestContainerLaunch extends BaseContainerManagerTest {
 
@@ -155,7 +168,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     File shellFile = null;
     File tempFile = null;
     String badSymlink = Shell.WINDOWS ? "foo@zz_#!-+bar.cmd" :
-      "foo@zz%_#*&!-+= bar()";
+      "-foo@zz%_#*&!-+= bar()";
     File symLinkFile = null;
 
     try {
@@ -188,8 +201,10 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       DefaultContainerExecutor defaultContainerExecutor =
           new DefaultContainerExecutor();
       defaultContainerExecutor.setConf(new YarnConfiguration());
+      LinkedHashSet<String> nmVars = new LinkedHashSet<>();
       defaultContainerExecutor.writeLaunchEnv(fos, env, resources, commands,
-          new Path(localLogDir.getAbsolutePath()), "user", tempFile.getName());
+          new Path(localLogDir.getAbsolutePath()), "user", tempFile.getName(),
+          nmVars);
       fos.flush();
       fos.close();
       FileUtil.setExecutable(tempFile, true);
@@ -198,7 +213,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       = new Shell.ShellCommandExecutor(new String[]{tempFile.getAbsolutePath()}, tmpDir);
 
       shexc.execute();
-      assertEquals(shexc.getExitCode(), 0);
+      assertThat(shexc.getExitCode()).isEqualTo(0);
       //Capture output from prelaunch.out
 
       List<String> output = Files.readAllLines(Paths.get(localLogDir.getAbsolutePath(), ContainerLaunch.CONTAINER_PRE_LAUNCH_STDOUT),
@@ -263,8 +278,9 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       DefaultContainerExecutor defaultContainerExecutor =
           new DefaultContainerExecutor();
       defaultContainerExecutor.setConf(new YarnConfiguration());
+      LinkedHashSet<String> nmVars = new LinkedHashSet<>();
       defaultContainerExecutor.writeLaunchEnv(fos, env, resources, commands,
-          new Path(localLogDir.getAbsolutePath()), "user");
+          new Path(localLogDir.getAbsolutePath()), "user", nmVars);
       fos.flush();
       fos.close();
       FileUtil.setExecutable(tempFile, true);
@@ -326,8 +342,9 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     conf.set(YarnConfiguration.NM_ENV_WHITELIST,
         "HADOOP_MAPRED_HOME,HADOOP_YARN_HOME");
     defaultContainerExecutor.setConf(conf);
+    LinkedHashSet<String> nmVars = new LinkedHashSet<>();
     defaultContainerExecutor.writeLaunchEnv(fos, env, resources, commands,
-        new Path(localLogDir.getAbsolutePath()), "user");
+        new Path(localLogDir.getAbsolutePath()), "user", nmVars);
     String shellContent =
         new String(Files.readAllBytes(Paths.get(shellFile.getAbsolutePath())),
             StandardCharsets.UTF_8);
@@ -340,7 +357,8 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     Assert.assertFalse(shellContent.contains("HADOOP_HDFS_HOME"));
     // Available in env and in whitelist
     Assert.assertTrue(shellContent.contains(
-        "export HADOOP_YARN_HOME=\"nodemanager_yarn_home\""));
+        "export HADOOP_YARN_HOME=${HADOOP_YARN_HOME:-\"nodemanager_yarn_home\"}"
+      ));
     fos.flush();
     fos.close();
   }
@@ -375,8 +393,9 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     conf.set(YarnConfiguration.NM_ENV_WHITELIST,
         "HADOOP_MAPRED_HOME,HADOOP_YARN_HOME");
     lce.setConf(conf);
+    LinkedHashSet<String> nmVars = new LinkedHashSet<>();
     lce.writeLaunchEnv(fos, env, resources, commands,
-        new Path(localLogDir.getAbsolutePath()), "user");
+        new Path(localLogDir.getAbsolutePath()), "user", nmVars);
     String shellContent =
         new String(Files.readAllBytes(Paths.get(shellFile.getAbsolutePath())),
             StandardCharsets.UTF_8);
@@ -385,11 +404,108 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     // Whitelisted variable overridden by container
     Assert.assertTrue(shellContent.contains(
         "export HADOOP_MAPRED_HOME=\"/opt/hadoopbuild\""));
-    // Verify no whitelisted variables inherited from NM env
+    // Available in env but not in whitelist
     Assert.assertFalse(shellContent.contains("HADOOP_HDFS_HOME"));
-    Assert.assertFalse(shellContent.contains("HADOOP_YARN_HOME"));
+    // Available in env and in whitelist
+    Assert.assertTrue(shellContent.contains(
+        "export HADOOP_YARN_HOME=${HADOOP_YARN_HOME:-\"nodemanager_yarn_home\"}"
+    ));
     fos.flush();
     fos.close();
+  }
+
+  @Test(timeout = 20000)
+  public void testWriteEnvOrder() throws Exception {
+    // Valid only for unix
+    assumeNotWindows();
+    List<String> commands = new ArrayList<String>();
+
+    // Setup user-defined environment
+    Map<String, String> env = new HashMap<String, String>();
+    env.put("USER_VAR_1", "1");
+    env.put("USER_VAR_2", "2");
+    env.put("NM_MODIFIED_VAR_1", "nm 1");
+    env.put("NM_MODIFIED_VAR_2", "nm 2");
+
+    // These represent vars explicitly set by NM
+    LinkedHashSet<String> trackedNmVars = new LinkedHashSet<>();
+    trackedNmVars.add("NM_MODIFIED_VAR_1");
+    trackedNmVars.add("NM_MODIFIED_VAR_2");
+
+    // Setup Nodemanager environment
+    final Map<String, String> nmEnv = new HashMap<>();
+    nmEnv.put("WHITELIST_VAR_1", "wl 1");
+    nmEnv.put("WHITELIST_VAR_2", "wl 2");
+    nmEnv.put("NON_WHITELIST_VAR_1", "nwl 1");
+    nmEnv.put("NON_WHITELIST_VAR_2", "nwl 2");
+    DefaultContainerExecutor defaultContainerExecutor =
+        new DefaultContainerExecutor() {
+          @Override
+          protected String getNMEnvVar(String varname) {
+            return nmEnv.get(varname);
+          }
+        };
+
+    // Setup conf with whitelisted variables
+    ArrayList<String> whitelistVars = new ArrayList<>();
+    whitelistVars.add("WHITELIST_VAR_1");
+    whitelistVars.add("WHITELIST_VAR_2");
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.NM_ENV_WHITELIST,
+        whitelistVars.get(0) + "," + whitelistVars.get(1));
+
+    // These are in the NM env, but not in the whitelist.
+    ArrayList<String> nonWhiteListEnv = new ArrayList<>();
+    nonWhiteListEnv.add("NON_WHITELIST_VAR_1");
+    nonWhiteListEnv.add("NON_WHITELIST_VAR_2");
+
+    // Write the launch script
+    File shellFile = Shell.appendScriptExtension(tmpDir, "hello");
+    Map<Path, List<String>> resources = new HashMap<Path, List<String>>();
+    FileOutputStream fos = new FileOutputStream(shellFile);
+    defaultContainerExecutor.setConf(conf);
+    defaultContainerExecutor.writeLaunchEnv(fos, env, resources, commands,
+        new Path(localLogDir.getAbsolutePath()), "user", trackedNmVars);
+    fos.flush();
+    fos.close();
+
+    // Examine the script
+    String shellContent =
+        new String(Files.readAllBytes(Paths.get(shellFile.getAbsolutePath())),
+            StandardCharsets.UTF_8);
+    // First make sure everything is there that's supposed to be
+    for (String envVar : env.keySet()) {
+      Assert.assertTrue(shellContent.contains(envVar + "="));
+    }
+    // The whitelist vars should not have been added to env
+    // They should only be in the launch script
+    for (String wlVar : whitelistVars) {
+      Assert.assertFalse(env.containsKey(wlVar));
+      Assert.assertTrue(shellContent.contains(wlVar + "="));
+    }
+    // Non-whitelist nm vars should be in neither env nor in launch script
+    for (String nwlVar : nonWhiteListEnv) {
+      Assert.assertFalse(env.containsKey(nwlVar));
+      Assert.assertFalse(shellContent.contains(nwlVar + "="));
+    }
+    // Explicitly Set NM vars should be before user vars
+    for (String nmVar : trackedNmVars) {
+      for (String userVar : env.keySet()) {
+        // Need to skip nm vars and whitelist vars
+        if (!trackedNmVars.contains(userVar) &&
+            !whitelistVars.contains(userVar)) {
+          Assert.assertTrue(shellContent.indexOf(nmVar + "=") <
+              shellContent.indexOf(userVar + "="));
+        }
+      }
+    }
+    // Whitelisted vars should be before explicitly set NM vars
+    for (String wlVar : whitelistVars) {
+      for (String nmVar : trackedNmVars) {
+        Assert.assertTrue(shellContent.indexOf(wlVar + "=") <
+            shellContent.indexOf(nmVar + "="));
+      }
+    }
   }
 
   @Test (timeout = 20000)
@@ -413,8 +529,9 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       DefaultContainerExecutor defaultContainerExecutor =
           new DefaultContainerExecutor();
       defaultContainerExecutor.setConf(new YarnConfiguration());
+      LinkedHashSet<String> nmVars = new LinkedHashSet<>();
       defaultContainerExecutor.writeLaunchEnv(fos, env, resources, commands,
-          new Path(localLogDir.getAbsolutePath()), "user");
+          new Path(localLogDir.getAbsolutePath()), "user", nmVars);
       fos.flush();
       fos.close();
 
@@ -496,8 +613,9 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       commands.add(command);
       ContainerExecutor exec = new DefaultContainerExecutor();
       exec.setConf(new YarnConfiguration());
+      LinkedHashSet<String> nmVars = new LinkedHashSet<>();
       exec.writeLaunchEnv(fos, env, resources, commands,
-          new Path(localLogDir.getAbsolutePath()), "user");
+          new Path(localLogDir.getAbsolutePath()), "user", nmVars);
       fos.flush();
       fos.close();
 
@@ -586,9 +704,10 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     resources.put(userjar, lpaths);
 
     Path nmp = new Path(testDir);
+    Set<String> nmEnvTrack = new LinkedHashSet<>();
 
     launch.sanitizeEnv(userSetEnv, pwd, appDirs, userLocalDirs, containerLogs,
-        resources, nmp);
+        resources, nmp, nmEnvTrack);
 
     List<String> result =
       getJarManifestClasspath(userSetEnv.get(Environment.CLASSPATH.name()));
@@ -607,7 +726,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
         dispatcher, exec, null, container, dirsHandler, containerManager);
 
     launch.sanitizeEnv(userSetEnv, pwd, appDirs, userLocalDirs, containerLogs,
-        resources, nmp);
+        resources, nmp, nmEnvTrack);
 
     result =
       getJarManifestClasspath(userSetEnv.get(Environment.CLASSPATH.name()));
@@ -616,6 +735,92 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     Assert.assertTrue(
       result.get(0).endsWith("userjarlink.jar"));
 
+  }
+
+  @Test
+  public void testSanitizeNMEnvVars() throws Exception {
+    // Valid only for unix
+    assumeNotWindows();
+    ContainerLaunchContext containerLaunchContext =
+        recordFactory.newRecordInstance(ContainerLaunchContext.class);
+    ApplicationId appId = ApplicationId.newInstance(0, 0);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 1);
+    ContainerId cId = ContainerId.newContainerId(appAttemptId, 0);
+    Map<String, String> userSetEnv = new HashMap<String, String>();
+    Set<String> nmEnvTrack = new LinkedHashSet<>();
+    userSetEnv.put(Environment.CONTAINER_ID.name(), "user_set_container_id");
+    userSetEnv.put(Environment.NM_HOST.name(), "user_set_NM_HOST");
+    userSetEnv.put(Environment.NM_PORT.name(), "user_set_NM_PORT");
+    userSetEnv.put(Environment.NM_HTTP_PORT.name(), "user_set_NM_HTTP_PORT");
+    userSetEnv.put(Environment.LOCAL_DIRS.name(), "user_set_LOCAL_DIR");
+    userSetEnv.put(Environment.USER.key(), "user_set_" +
+        Environment.USER.key());
+    userSetEnv.put(Environment.LOGNAME.name(), "user_set_LOGNAME");
+    userSetEnv.put(Environment.PWD.name(), "user_set_PWD");
+    userSetEnv.put(Environment.HOME.name(), "user_set_HOME");
+    userSetEnv.put(Environment.CLASSPATH.name(), "APATH");
+    // This one should be appended to.
+    String userMallocArenaMaxVal = "test_user_max_val";
+    userSetEnv.put("MALLOC_ARENA_MAX", userMallocArenaMaxVal);
+    containerLaunchContext.setEnvironment(userSetEnv);
+    Container container = mock(Container.class);
+    when(container.getContainerId()).thenReturn(cId);
+    when(container.getLaunchContext()).thenReturn(containerLaunchContext);
+    when(container.getLocalizedResources()).thenReturn(null);
+    Dispatcher dispatcher = mock(Dispatcher.class);
+    EventHandler<Event> eventHandler = new EventHandler<Event>() {
+      public void handle(Event event) {
+        Assert.assertTrue(event instanceof ContainerExitEvent);
+        ContainerExitEvent exitEvent = (ContainerExitEvent) event;
+        Assert.assertEquals(ContainerEventType.CONTAINER_EXITED_WITH_FAILURE,
+            exitEvent.getType());
+      }
+    };
+    when(dispatcher.getEventHandler()).thenReturn(eventHandler);
+
+    // these should eclipse anything in the user environment
+    YarnConfiguration conf = new YarnConfiguration();
+    String mallocArenaMaxVal = "test_nm_max_val";
+    conf.set("yarn.nodemanager.admin-env",
+        "MALLOC_ARENA_MAX=" + mallocArenaMaxVal);
+    String testKey1 = "TEST_KEY1";
+    String testVal1 = "testVal1";
+    conf.set("yarn.nodemanager.admin-env." + testKey1, testVal1);
+    String testKey2 = "TEST_KEY2";
+    String testVal2 = "testVal2";
+    conf.set("yarn.nodemanager.admin-env." + testKey2, testVal2);
+    String testKey3 = "MOUNT_LIST";
+    String testVal3 = "/home/a/b/c,/home/d/e/f,/home/g/e/h";
+    conf.set("yarn.nodemanager.admin-env." + testKey3, testVal3);
+    ContainerLaunch launch = new ContainerLaunch(distContext, conf,
+        dispatcher, exec, null, container, dirsHandler, containerManager);
+    String testDir = System.getProperty("test.build.data",
+        "target/test-dir");
+    Path pwd = new Path(testDir);
+    List<Path> appDirs = new ArrayList<Path>();
+    List<String> userLocalDirs = new ArrayList<>();
+    List<String> containerLogs = new ArrayList<String>();
+    Map<Path, List<String>> resources = new HashMap<Path, List<String>>();
+    Path userjar = new Path("user.jar");
+    List<String> lpaths = new ArrayList<String>();
+    lpaths.add("userjarlink.jar");
+    resources.put(userjar, lpaths);
+    Path nmp = new Path(testDir);
+
+    launch.sanitizeEnv(userSetEnv, pwd, appDirs, userLocalDirs, containerLogs,
+        resources, nmp, nmEnvTrack);
+    Assert.assertTrue(userSetEnv.containsKey("MALLOC_ARENA_MAX"));
+    Assert.assertTrue(userSetEnv.containsKey(testKey1));
+    Assert.assertTrue(userSetEnv.containsKey(testKey2));
+    Assert.assertTrue(userSetEnv.containsKey(testKey3));
+    Assert.assertTrue(nmEnvTrack.contains("MALLOC_ARENA_MAX"));
+    Assert.assertTrue(nmEnvTrack.contains("MOUNT_LIST"));
+    Assert.assertEquals(userMallocArenaMaxVal + File.pathSeparator
+        + mallocArenaMaxVal, userSetEnv.get("MALLOC_ARENA_MAX"));
+    Assert.assertEquals(testVal1, userSetEnv.get(testKey1));
+    Assert.assertEquals(testVal2, userSetEnv.get(testKey2));
+    Assert.assertEquals(testVal3, userSetEnv.get(testKey3));
   }
 
   @Test
@@ -1271,39 +1476,39 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
 
     // Basic tests: less length, exact length, max+1 length 
     builder.command(Arrays.asList(
-        org.apache.commons.lang.StringUtils.repeat("A", 1024)));
+        org.apache.commons.lang3.StringUtils.repeat("A", 1024)));
     builder.command(Arrays.asList(
-        org.apache.commons.lang.StringUtils.repeat(
+        org.apache.commons.lang3.StringUtils.repeat(
             "E", Shell.WINDOWS_MAX_SHELL_LENGTH - callCmd.length())));
     try {
       builder.command(Arrays.asList(
-          org.apache.commons.lang.StringUtils.repeat(
+          org.apache.commons.lang3.StringUtils.repeat(
               "X", Shell.WINDOWS_MAX_SHELL_LENGTH -callCmd.length() + 1)));
       fail("longCommand was expected to throw");
     } catch(IOException e) {
-      assertThat(e.getMessage(), CoreMatchers.containsString(expectedMessage));
+      assertThat(e).hasMessageContaining(expectedMessage);
     }
 
     // Composite tests, from parts: less, exact and +
     builder.command(Arrays.asList(
-        org.apache.commons.lang.StringUtils.repeat("A", 1024),
-        org.apache.commons.lang.StringUtils.repeat("A", 1024),
-        org.apache.commons.lang.StringUtils.repeat("A", 1024)));
+        org.apache.commons.lang3.StringUtils.repeat("A", 1024),
+        org.apache.commons.lang3.StringUtils.repeat("A", 1024),
+        org.apache.commons.lang3.StringUtils.repeat("A", 1024)));
 
     // buildr.command joins the command parts with an extra space
     builder.command(Arrays.asList(
-        org.apache.commons.lang.StringUtils.repeat("E", 4095),
-        org.apache.commons.lang.StringUtils.repeat("E", 2047),
-        org.apache.commons.lang.StringUtils.repeat("E", 2047 - callCmd.length())));
+        org.apache.commons.lang3.StringUtils.repeat("E", 4095),
+        org.apache.commons.lang3.StringUtils.repeat("E", 2047),
+        org.apache.commons.lang3.StringUtils.repeat("E", 2047 - callCmd.length())));
 
     try {
       builder.command(Arrays.asList(
-          org.apache.commons.lang.StringUtils.repeat("X", 4095), 
-          org.apache.commons.lang.StringUtils.repeat("X", 2047),
-          org.apache.commons.lang.StringUtils.repeat("X", 2048 - callCmd.length())));
+          org.apache.commons.lang3.StringUtils.repeat("X", 4095),
+          org.apache.commons.lang3.StringUtils.repeat("X", 2047),
+          org.apache.commons.lang3.StringUtils.repeat("X", 2048 - callCmd.length())));
       fail("long commands was expected to throw");
     } catch(IOException e) {
-      assertThat(e.getMessage(), CoreMatchers.containsString(expectedMessage));
+      assertThat(e).hasMessageContaining(expectedMessage);
     }
   }
   
@@ -1318,15 +1523,15 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     ShellScriptBuilder builder = ShellScriptBuilder.create();
 
     // test env
-    builder.env("somekey", org.apache.commons.lang.StringUtils.repeat("A", 1024));
-    builder.env("somekey", org.apache.commons.lang.StringUtils.repeat(
+    builder.env("somekey", org.apache.commons.lang3.StringUtils.repeat("A", 1024));
+    builder.env("somekey", org.apache.commons.lang3.StringUtils.repeat(
         "A", Shell.WINDOWS_MAX_SHELL_LENGTH - ("@set somekey=").length()));
     try {
-      builder.env("somekey", org.apache.commons.lang.StringUtils.repeat(
+      builder.env("somekey", org.apache.commons.lang3.StringUtils.repeat(
           "A", Shell.WINDOWS_MAX_SHELL_LENGTH - ("@set somekey=").length()) + 1);
       fail("long env was expected to throw");
     } catch(IOException e) {
-      assertThat(e.getMessage(), CoreMatchers.containsString(expectedMessage));
+      assertThat(e).hasMessageContaining(expectedMessage);
     }
   }
     
@@ -1343,16 +1548,16 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     ShellScriptBuilder builder = ShellScriptBuilder.create();
 
     // test mkdir
-    builder.mkdir(new Path(org.apache.commons.lang.StringUtils.repeat("A", 1024)));
-    builder.mkdir(new Path(org.apache.commons.lang.StringUtils.repeat("E",
+    builder.mkdir(new Path(org.apache.commons.lang3.StringUtils.repeat("A", 1024)));
+    builder.mkdir(new Path(org.apache.commons.lang3.StringUtils.repeat("E",
         (Shell.WINDOWS_MAX_SHELL_LENGTH - mkDirCmd.length()) / 2)));
     try {
-      builder.mkdir(new Path(org.apache.commons.lang.StringUtils.repeat(
+      builder.mkdir(new Path(org.apache.commons.lang3.StringUtils.repeat(
           "X", (Shell.WINDOWS_MAX_SHELL_LENGTH - mkDirCmd.length())/2 +1)));
       fail("long mkdir was expected to throw");
     } catch(IOException e) {
-      assertThat(e.getMessage(), CoreMatchers.containsString(expectedMessage));
-    }    
+      assertThat(e).hasMessageContaining(expectedMessage);
+    }
   }
 
   @Test (timeout = 10000)
@@ -1367,22 +1572,22 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     ShellScriptBuilder builder = ShellScriptBuilder.create();
 
     // test link
-    builder.link(new Path(org.apache.commons.lang.StringUtils.repeat("A", 1024)),
-        new Path(org.apache.commons.lang.StringUtils.repeat("B", 1024)));
+    builder.link(new Path(org.apache.commons.lang3.StringUtils.repeat("A", 1024)),
+        new Path(org.apache.commons.lang3.StringUtils.repeat("B", 1024)));
     builder.link(
-        new Path(org.apache.commons.lang.StringUtils.repeat(
+        new Path(org.apache.commons.lang3.StringUtils.repeat(
             "E", (Shell.WINDOWS_MAX_SHELL_LENGTH - linkCmd.length())/2)),
-        new Path(org.apache.commons.lang.StringUtils.repeat(
+        new Path(org.apache.commons.lang3.StringUtils.repeat(
             "F", (Shell.WINDOWS_MAX_SHELL_LENGTH - linkCmd.length())/2)));
     try {
       builder.link(
-          new Path(org.apache.commons.lang.StringUtils.repeat(
+          new Path(org.apache.commons.lang3.StringUtils.repeat(
               "X", (Shell.WINDOWS_MAX_SHELL_LENGTH - linkCmd.length())/2 + 1)),
-          new Path(org.apache.commons.lang.StringUtils.repeat(
+          new Path(org.apache.commons.lang3.StringUtils.repeat(
               "Y", (Shell.WINDOWS_MAX_SHELL_LENGTH - linkCmd.length())/2) + 1));
       fail("long link was expected to throw");
     } catch(IOException e) {
-      assertThat(e.getMessage(), CoreMatchers.containsString(expectedMessage));
+      assertThat(e).hasMessageContaining(expectedMessage);
     }
   }
 
@@ -1531,9 +1736,10 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
         FileOutputStream fos = new FileOutputStream(tempFile);
         ContainerExecutor exec = new DefaultContainerExecutor();
         exec.setConf(conf);
+        LinkedHashSet<String> nmVars = new LinkedHashSet<>();
         exec.writeLaunchEnv(fos, env, resources, commands,
             new Path(localLogDir.getAbsolutePath()), "user",
-            tempFile.getName());
+            tempFile.getName(), nmVars);
         fos.flush();
         fos.close();
         FileUtil.setExecutable(tempFile, true);
@@ -1542,7 +1748,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
           new String[] { tempFile.getAbsolutePath() }, tmpDir);
 
         shexc.execute();
-        assertEquals(shexc.getExitCode(), 0);
+        assertThat(shexc.getExitCode()).isEqualTo(0);
         File directorInfo =
           new File(localLogDir, ContainerExecutor.DIRECTORY_CONTENTS);
         File scriptCopy = new File(localLogDir, tempFile.getName());
@@ -1729,7 +1935,11 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
   public void testInvalidEnvVariableSubstitutionType1() throws IOException {
     Map<String, String> env = new HashMap<String, String>();
     // invalid env
-    env.put("testVar", "version${foo.version}");
+    String invalidEnv = "version${foo.version}";
+    if (Shell.WINDOWS) {
+      invalidEnv = "version%foo%<>^&|=:version%";
+    }
+    env.put("testVar", invalidEnv);
     validateShellExecutorForDifferentEnvs(env);
   }
 
@@ -1740,7 +1950,11 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
   public void testInvalidEnvVariableSubstitutionType2() throws IOException {
     Map<String, String> env = new HashMap<String, String>();
     // invalid env
-    env.put("testPath", "/abc:/${foo.path}:/$bar");
+    String invalidEnv = "/abc:/${foo.path}:/$bar";
+    if (Shell.WINDOWS) {
+      invalidEnv = "/abc:/%foo%<>^&|=:path%:/%bar%";
+    }
+    env.put("testPath", invalidEnv);
     validateShellExecutorForDifferentEnvs(env);
   }
 
@@ -1756,8 +1970,9 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       List<String> commands = new ArrayList<String>();
       DefaultContainerExecutor executor = new DefaultContainerExecutor();
       executor.setConf(new Configuration());
+      LinkedHashSet<String> nmVars = new LinkedHashSet<>();
       executor.writeLaunchEnv(fos, env, resources, commands,
-          new Path(localLogDir.getAbsolutePath()), user);
+          new Path(localLogDir.getAbsolutePath()), user, nmVars);
       fos.flush();
       fos.close();
 
@@ -1801,8 +2016,9 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       Configuration execConf = new Configuration();
       execConf.setBoolean(YarnConfiguration.NM_LOG_CONTAINER_DEBUG_INFO, false);
       executor.setConf(execConf);
+      LinkedHashSet<String> nmVars = new LinkedHashSet<>();
       executor.writeLaunchEnv(fos, env, resources, commands,
-          new Path(localLogDir.getAbsolutePath()), user);
+          new Path(localLogDir.getAbsolutePath()), user, nmVars);
       fos.flush();
       fos.close();
 
@@ -2090,6 +2306,8 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
               throws IOException {}
           @Override public void env(String key, String value)
               throws IOException {}
+          @Override public void whitelistedEnv(String key, String value)
+              throws IOException {}
           @Override public void copyDebugInformation(Path src, Path dst)
               throws IOException {}
           @Override public void command(List<String> command)
@@ -2159,6 +2377,225 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       for (TestEnv env : keys) {
         env.generateCombinationAndTest(count, keys);
       }
+    }
+  }
+
+  @Test
+  public void testDistributedCacheDirs() throws Exception {
+    Container container = mock(Container.class);
+    ApplicationId appId =
+        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+    ContainerId containerId = ContainerId
+        .newContainerId(ApplicationAttemptId.newInstance(appId, 1), 1);
+    when(container.getContainerId()).thenReturn(containerId);
+    when(container.getUser()).thenReturn("test");
+
+    when(container.getLocalizedResources())
+        .thenReturn(Collections.<Path, List<String>> emptyMap());
+    Dispatcher dispatcher = mock(Dispatcher.class);
+
+    ContainerLaunchContext clc = mock(ContainerLaunchContext.class);
+    when(clc.getCommands()).thenReturn(Collections.<String>emptyList());
+    when(container.getLaunchContext()).thenReturn(clc);
+
+    @SuppressWarnings("rawtypes")
+    ContainerExitHandler eventHandler =
+        mock(ContainerExitHandler.class);
+    when(dispatcher.getEventHandler()).thenReturn(eventHandler);
+
+    Application app = mock(Application.class);
+    when(app.getAppId()).thenReturn(appId);
+    when(app.getUser()).thenReturn("test");
+
+    Credentials creds = mock(Credentials.class);
+    when(container.getCredentials()).thenReturn(creds);
+
+    ((NMContext) context).setNodeId(NodeId.newInstance("127.0.0.1", HTTP_PORT));
+    ContainerExecutor mockExecutor = mock(ContainerExecutor.class);
+
+    LocalDirsHandlerService mockDirsHandler =
+        mock(LocalDirsHandlerService.class);
+
+    List <String> localDirsForRead = new ArrayList<String>();
+    String localDir1 =
+      new File("target", this.getClass().getSimpleName() + "-localDir1")
+        .getAbsoluteFile().toString();
+    String localDir2 =
+      new File("target", this.getClass().getSimpleName() + "-localDir2")
+        .getAbsoluteFile().toString();
+    localDirsForRead.add(localDir1);
+    localDirsForRead.add(localDir2);
+
+    List <String> localDirs = new ArrayList();
+    localDirs.add(localDir1);
+    Path logPathForWrite = new Path(localDirs.get(0));
+
+    when(mockDirsHandler.areDisksHealthy()).thenReturn(true);
+    when(mockDirsHandler.getLocalDirsForRead()).thenReturn(localDirsForRead);
+    when(mockDirsHandler.getLocalDirs()).thenReturn(localDirs);
+    when(mockDirsHandler.getLogDirs()).thenReturn(localDirs);
+    when(mockDirsHandler.getLogPathForWrite(anyString(),
+        anyBoolean())).thenReturn(logPathForWrite);
+    when(mockDirsHandler.getLocalPathForWrite(anyString()))
+        .thenReturn(logPathForWrite);
+    when(mockDirsHandler.getLocalPathForWrite(anyString(), anyLong(),
+      anyBoolean())).thenReturn(logPathForWrite);
+
+    ContainerLaunch launch = new ContainerLaunch(context, conf, dispatcher,
+        mockExecutor, app, container, mockDirsHandler, containerManager);
+    launch.call();
+
+    ArgumentCaptor <ContainerStartContext> ctxCaptor =
+        ArgumentCaptor.forClass(ContainerStartContext.class);
+    verify(mockExecutor, times(1)).launchContainer(ctxCaptor.capture());
+    ContainerStartContext ctx = ctxCaptor.getValue();
+
+    Assert.assertEquals(StringUtils.join(",",
+        launch.getNMFilecacheDirs(localDirsForRead)),
+        StringUtils.join(",", ctx.getFilecacheDirs()));
+    Assert.assertEquals(StringUtils.join(",",
+        launch.getUserFilecacheDirs(localDirsForRead)),
+        StringUtils.join(",", ctx.getUserFilecacheDirs()));
+  }
+
+  @Test(timeout = 20000)
+  public void testFilesAndEnvWithoutHTTPS() throws Exception {
+    testFilesAndEnv(false);
+  }
+
+  @Test(timeout = 20000)
+  public void testFilesAndEnvWithHTTPS() throws Exception {
+    testFilesAndEnv(true);
+  }
+
+  private void testFilesAndEnv(boolean https) throws Exception {
+    // setup mocks
+    Dispatcher dispatcher = mock(Dispatcher.class);
+    EventHandler handler = mock(EventHandler.class);
+    when(dispatcher.getEventHandler()).thenReturn(handler);
+    ContainerExecutor containerExecutor = mock(ContainerExecutor.class);
+    doAnswer(new Answer<Void>() {
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
+        Object[] args = invocation.getArguments();
+        DataOutputStream dos = (DataOutputStream) args[0];
+        dos.writeBytes("script");
+        return null;
+      }
+    }).when(containerExecutor).writeLaunchEnv(
+        any(), any(), any(), any(), any(), any(), any());
+    Application app = mock(Application.class);
+    ApplicationId appId = mock(ApplicationId.class);
+    when(appId.toString()).thenReturn("1");
+    when(app.getAppId()).thenReturn(appId);
+    Container container = mock(Container.class);
+    ContainerId id = mock(ContainerId.class);
+    when(id.toString()).thenReturn("1");
+    when(container.getContainerId()).thenReturn(id);
+    when(container.getUser()).thenReturn("user");
+    ContainerLaunchContext clc = mock(ContainerLaunchContext.class);
+    when(clc.getCommands()).thenReturn(Lists.newArrayList());
+    when(container.getLaunchContext()).thenReturn(clc);
+    Credentials credentials = mock(Credentials.class);
+    when(container.getCredentials()).thenReturn(credentials);
+    doAnswer(new Answer<Void>() {
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
+        Object[] args = invocation.getArguments();
+        DataOutputStream dos = (DataOutputStream) args[0];
+        dos.writeBytes("credentials");
+        return null;
+      }
+    }).when(credentials).writeTokenStorageToStream(any(DataOutputStream.class));
+    if (https) {
+      when(credentials.getSecretKey(
+          AMSecretKeys.YARN_APPLICATION_AM_KEYSTORE))
+          .thenReturn("keystore".getBytes());
+      when(credentials.getSecretKey(
+          AMSecretKeys.YARN_APPLICATION_AM_KEYSTORE_PASSWORD))
+          .thenReturn("keystore_password".getBytes());
+      when(credentials.getSecretKey(
+          AMSecretKeys.YARN_APPLICATION_AM_TRUSTSTORE))
+          .thenReturn("truststore".getBytes());
+      when(credentials.getSecretKey(
+          AMSecretKeys.YARN_APPLICATION_AM_TRUSTSTORE_PASSWORD))
+          .thenReturn("truststore_password".getBytes());
+    }
+
+    // call containerLaunch
+    ContainerLaunch containerLaunch = new ContainerLaunch(
+        distContext, conf, dispatcher,
+        containerExecutor, app, container, dirsHandler, containerManager);
+    containerLaunch.call();
+
+    // verify the nmPrivate paths and files
+    ArgumentCaptor<ContainerStartContext> cscArgument =
+        ArgumentCaptor.forClass(ContainerStartContext.class);
+    verify(containerExecutor, times(1)).launchContainer(cscArgument.capture());
+    ContainerStartContext csc = cscArgument.getValue();
+    Path nmPrivate = dirsHandler.getLocalPathForWrite(
+        ResourceLocalizationService.NM_PRIVATE_DIR + Path.SEPARATOR +
+            appId.toString() + Path.SEPARATOR + id.toString());
+    Assert.assertEquals(new Path(nmPrivate, ContainerLaunch.CONTAINER_SCRIPT),
+        csc.getNmPrivateContainerScriptPath());
+    Assert.assertEquals(new Path(nmPrivate,
+        String.format(ContainerExecutor.TOKEN_FILE_NAME_FMT,
+            id.toString())), csc.getNmPrivateTokensPath());
+    Assert.assertEquals("script",
+        readStringFromPath(csc.getNmPrivateContainerScriptPath()));
+    Assert.assertEquals("credentials",
+        readStringFromPath(csc.getNmPrivateTokensPath()));
+    if (https) {
+      Assert.assertEquals(new Path(nmPrivate, ContainerLaunch.KEYSTORE_FILE),
+          csc.getNmPrivateKeystorePath());
+      Assert.assertEquals(new Path(nmPrivate, ContainerLaunch.TRUSTSTORE_FILE),
+          csc.getNmPrivateTruststorePath());
+      Assert.assertEquals("keystore",
+          readStringFromPath(csc.getNmPrivateKeystorePath()));
+      Assert.assertEquals("truststore",
+          readStringFromPath(csc.getNmPrivateTruststorePath()));
+    } else {
+      Assert.assertNull(csc.getNmPrivateKeystorePath());
+      Assert.assertNull(csc.getNmPrivateTruststorePath());
+    }
+
+    // verify env
+    ArgumentCaptor<Map> envArgument = ArgumentCaptor.forClass(Map.class);
+    verify(containerExecutor, times(1)).writeLaunchEnv(any(),
+        envArgument.capture(), any(), any(), any(), any(), any());
+    Map env = envArgument.getValue();
+    Path workDir = dirsHandler.getLocalPathForWrite(
+        ContainerLocalizer.USERCACHE + Path.SEPARATOR + container.getUser() +
+            Path.SEPARATOR + ContainerLocalizer.APPCACHE + Path.SEPARATOR +
+            app.getAppId().toString() + Path.SEPARATOR +
+            container.getContainerId().toString());
+    Assert.assertEquals(new Path(workDir,
+            ContainerLaunch.FINAL_CONTAINER_TOKENS_FILE).toUri().getPath(),
+        env.get(ApplicationConstants.CONTAINER_TOKEN_FILE_ENV_NAME));
+    if (https) {
+      Assert.assertEquals(new Path(workDir,
+              ContainerLaunch.KEYSTORE_FILE).toUri().getPath(),
+          env.get(ApplicationConstants.KEYSTORE_FILE_LOCATION_ENV_NAME));
+      Assert.assertEquals("keystore_password",
+          env.get(ApplicationConstants.KEYSTORE_PASSWORD_ENV_NAME));
+      Assert.assertEquals(new Path(workDir,
+              ContainerLaunch.TRUSTSTORE_FILE).toUri().getPath(),
+          env.get(ApplicationConstants.TRUSTSTORE_FILE_LOCATION_ENV_NAME));
+      Assert.assertEquals("truststore_password",
+          env.get(ApplicationConstants.TRUSTSTORE_PASSWORD_ENV_NAME));
+    } else {
+      Assert.assertNull(env.get("KEYSTORE_FILE_LOCATION"));
+      Assert.assertNull(env.get("KEYSTORE_PASSWORD"));
+      Assert.assertNull(env.get("TRUSTSTORE_FILE_LOCATION"));
+      Assert.assertNull(env.get("TRUSTSTORE_PASSWORD"));
+    }
+  }
+
+  private String readStringFromPath(Path p) throws IOException {
+    FileSystem fs = FileSystem.get(conf);
+    try (FSDataInputStream is = fs.open(p)) {
+      byte[] bytes = IOUtils.readFullyToByteArray(is);
+      return new String(bytes);
     }
   }
 }

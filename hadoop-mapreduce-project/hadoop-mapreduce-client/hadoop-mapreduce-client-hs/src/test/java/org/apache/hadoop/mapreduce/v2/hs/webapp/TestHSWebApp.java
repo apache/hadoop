@@ -233,8 +233,8 @@ public class TestHSWebApp {
     PrintWriter spyPw = WebAppTests.getPrintWriter(injector);
     verify(spyPw).write(
         "Logs not available for container_10_0001_01_000001."
-            + " Aggregation may not be complete, "
-            + "Check back later or try the nodemanager at "
+            + " Aggregation may not be complete, Check back later or try to"
+            + " find the container logs in the local directory of nodemanager "
             + MockJobs.NM_HOST + ":" + MockJobs.NM_PORT);
   }
 

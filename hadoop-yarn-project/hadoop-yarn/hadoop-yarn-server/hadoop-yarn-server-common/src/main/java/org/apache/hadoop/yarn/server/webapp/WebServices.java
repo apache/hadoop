@@ -31,7 +31,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.WebApplicationException;
 
-import org.apache.commons.lang.math.LongRange;
+import org.apache.commons.lang3.Range;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.util.StringUtils;
@@ -64,7 +64,7 @@ import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 
-public class WebServices {
+public class WebServices implements AppInfoProvider {
 
   protected ApplicationBaseProtocol appBaseProt;
 
@@ -75,7 +75,7 @@ public class WebServices {
   public AppsInfo getApps(HttpServletRequest req, HttpServletResponse res,
       String stateQuery, Set<String> statesQuery, String finalStatusQuery,
       String userQuery, String queueQuery, String count, String startedBegin,
-      String startedEnd, String finishBegin, String finishEnd,
+      String startedEnd, String finishBegin, String finishEnd, String nameQuery,
       Set<String> applicationTypes) {
     UserGroupInformation callerUGI = getUser(req);
     boolean checkEnd = false;
@@ -151,7 +151,7 @@ public class WebServices {
     final GetApplicationsRequest request =
         GetApplicationsRequest.newInstance();
     request.setLimit(countNum);
-    request.setStartRange(new LongRange(sBegin, sEnd));
+    request.setStartRange(Range.between(sBegin, sEnd));
     try {
       if (callerUGI == null) {
         // TODO: the request should take the params like what RMWebServices does
@@ -207,6 +207,11 @@ public class WebServices {
           && (appReport.getFinishTime() < fBegin || appReport.getFinishTime() > fEnd)) {
         continue;
       }
+
+      if (nameQuery != null && !nameQuery.equals(appReport.getName())) {
+        continue;
+      }
+
       AppInfo app = new AppInfo(appReport);
 
       allApps.add(app);
@@ -214,8 +219,18 @@ public class WebServices {
     return allApps;
   }
 
-  public AppInfo getApp(HttpServletRequest req, HttpServletResponse res,
-      String appId) {
+  public AppInfo getApp(HttpServletRequest req,
+      HttpServletResponse res, String appId) {
+    return getApp(req, appId);
+  }
+
+  @Override
+  public BasicAppInfo getApp(HttpServletRequest req, String appId,
+      String clusterId) {
+    return BasicAppInfo.fromAppInfo(getApp(req, appId));
+  }
+
+  public AppInfo getApp(HttpServletRequest req, String appId) {
     UserGroupInformation callerUGI = getUser(req);
     final ApplicationId id = parseApplicationId(appId);
     ApplicationReport app = null;
@@ -351,8 +366,17 @@ public class WebServices {
     return containersInfo;
   }
 
+  @Override
+  public String getNodeHttpAddress(HttpServletRequest req,
+      String appId, String appAttemptId,
+      String containerId, String clusterId) {
+    ContainerInfo containerInfo = getContainer(req, appId,
+        appAttemptId, containerId);
+    return containerInfo.getNodeHttpAddress();
+  }
+
   public ContainerInfo getContainer(HttpServletRequest req,
-      HttpServletResponse res, String appId, String appAttemptId,
+      String appId, String appAttemptId,
       String containerId) {
     UserGroupInformation callerUGI = getUser(req);
     ApplicationId aid = parseApplicationId(appId);
@@ -387,12 +411,18 @@ public class WebServices {
     return new ContainerInfo(container);
   }
 
-  protected void init(HttpServletResponse response) {
+  public ContainerInfo getContainer(HttpServletRequest req,
+      HttpServletResponse res, String appId, String appAttemptId,
+      String containerId) {
+    return getContainer(req, appId, appAttemptId, containerId);
+  }
+
+  protected void initForReadableEndpoints(HttpServletResponse response) {
     // clear content type
     response.setContentType(null);
   }
 
-  protected static Set<String>
+  public static Set<String>
       parseQueries(Set<String> queries, boolean isState) {
     Set<String> params = new HashSet<String>();
     if (!queries.isEmpty()) {

@@ -21,7 +21,7 @@
  * Please see http://wiki.apache.org/hadoop/Compatibility
  * for what changes are allowed for a *stable* .proto interface.
  */
-
+syntax = "proto2";
 option java_package = "org.apache.hadoop.fs";
 option java_outer_classname = "FSProtos";
 option java_generic_services = true;
@@ -67,4 +67,12 @@ message FileStatusProto {
   // storagePolicy                      = 16
   optional bytes ec_data                = 17;
   optional uint32 flags                 = 18 [default = 0];
+}
+
+/**
+ * Placeholder type for consistent basic FileSystem operations.
+ */
+message LocalFileSystemPathHandleProto {
+    optional uint64 mtime = 1;
+    optional string path = 2;
 }

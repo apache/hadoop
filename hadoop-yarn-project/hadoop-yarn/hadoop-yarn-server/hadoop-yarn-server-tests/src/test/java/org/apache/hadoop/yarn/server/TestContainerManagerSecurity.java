@@ -375,8 +375,8 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
     // authentication... It should complain saying container was recently
     // stopped.
     sb = new StringBuilder("Container ");
-    sb.append(validContainerId);
-    sb.append(" was recently stopped on node manager");
+    sb.append(validContainerId)
+        .append(" was recently stopped on node manager");
     Assert.assertTrue(testGetContainer(rpc, validAppAttemptId, validNode,
         validContainerId, validNMToken, true).contains(sb.toString()));
 
@@ -385,9 +385,9 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
     
     // This should fail as container is removed from recently tracked finished
     // containers.
-    sb = new StringBuilder("Container ");
-    sb.append(validContainerId.toString());
-    sb.append(" is not handled by this NodeManager");
+    sb = new StringBuilder("Container ")
+        .append(validContainerId.toString())
+        .append(" is not handled by this NodeManager");
     Assert.assertTrue(testGetContainer(rpc, validAppAttemptId, validNode,
         validContainerId, validNMToken, false).contains(sb.toString()));
 
@@ -708,8 +708,8 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
             nodeId, user, r, Priority.newInstance(0), 0);
     
     StringBuilder sb = new StringBuilder("Given Container ");
-    sb.append(cId2);
-    sb.append(" seems to have an illegally generated token.");
+    sb.append(cId2)
+        .append(" seems to have an illegally generated token.");
     Assert.assertTrue(testStartContainer(rpc, appAttemptId, nodeId,
         containerToken2, nmToken, true).contains(sb.toString()));
   }

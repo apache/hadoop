@@ -25,7 +25,9 @@ export default AppTableController.extend({
   tableDefinition: TableDefinition.create({
     searchType: 'manual',
     enableFaceting: true,
-    rowCount: 25
+    rowCount: 25,
+    sortColumnId: 'stTime',
+    sortOrder: 'desc'
   }),
   searchText: Ember.computed.alias('tableDefinition.searchText'),
   sortColumnId: Ember.computed.alias('tableDefinition.sortColumnId'),

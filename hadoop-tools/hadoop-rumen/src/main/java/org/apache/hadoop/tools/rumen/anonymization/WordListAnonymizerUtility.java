@@ -18,7 +18,7 @@
 package org.apache.hadoop.tools.rumen.anonymization;
 
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * Utility class to handle commonly performed tasks in a 

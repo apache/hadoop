@@ -23,6 +23,18 @@ package org.apache.hadoop.yarn.service.monitor.probe;
 public interface MonitorKeys {
 
   /**
+   * Default probing key : DNS check enabled {@value}.
+   */
+  String DEFAULT_PROBE_DNS_CHECK_ENABLED = "dns.check.enabled";
+  /**
+   * Default probing default : DNS check enabled {@value}.
+   */
+  boolean DEFAULT_PROBE_DNS_CHECK_ENABLED_DEFAULT = false;
+  /**
+   * Default probing key : DNS checking address IP:port {@value}.
+   */
+  String DEFAULT_PROBE_DNS_ADDRESS = "dns.address";
+  /**
    * Port probing key : port to attempt to create a TCP connection to {@value}.
    */
   String PORT_PROBE_PORT = "port";

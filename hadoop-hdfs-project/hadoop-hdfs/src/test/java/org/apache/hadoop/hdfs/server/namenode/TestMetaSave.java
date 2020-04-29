@@ -27,6 +27,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.concurrent.TimeoutException;
 
 import com.google.common.base.Supplier;
@@ -194,6 +195,65 @@ public class TestMetaSave {
     BufferedReader rdr = null;
     try {
       fis = new FileInputStream(getLogFile("metaSaveOverwrite.out.txt"));
+      isr = new InputStreamReader(fis);
+      rdr = new BufferedReader(isr);
+
+      // Validate that file was overwritten (not appended) by checking for
+      // presence of only one "Live Datanodes" line.
+      boolean foundLiveDatanodesLine = false;
+      String line = rdr.readLine();
+      while (line != null) {
+        if (line.startsWith("Live Datanodes")) {
+          if (foundLiveDatanodesLine) {
+            fail("multiple Live Datanodes lines, output file not overwritten");
+          }
+          foundLiveDatanodesLine = true;
+        }
+        line = rdr.readLine();
+      }
+    } finally {
+      IOUtils.cleanup(null, rdr, isr, fis);
+    }
+  }
+
+  class MetaSaveThread extends Thread {
+    NamenodeProtocols nnRpc;
+    String filename;
+    public MetaSaveThread(NamenodeProtocols nnRpc, String filename) {
+      this.nnRpc = nnRpc;
+      this.filename = filename;
+    }
+
+    @Override
+    public void run() {
+      try {
+        nnRpc.metaSave(filename);
+      } catch (IOException e) {
+      }
+    }
+  }
+
+  /**
+   * Tests that metasave concurrent output file (not append).
+   */
+  @Test
+  public void testConcurrentMetaSave() throws Exception {
+    ArrayList<MetaSaveThread> threads = new ArrayList<>();
+    for (int i = 0; i < 10; i++) {
+      threads.add(new MetaSaveThread(nnRpc, "metaSaveConcurrent.out.txt"));
+    }
+    for (int i = 0; i < 10; i++) {
+      threads.get(i).start();
+    }
+    for (int i = 0; i < 10; i++) {
+      threads.get(i).join();
+    }
+    // Read output file.
+    FileInputStream fis = null;
+    InputStreamReader isr = null;
+    BufferedReader rdr = null;
+    try {
+      fis = new FileInputStream(getLogFile("metaSaveConcurrent.out.txt"));
       isr = new InputStreamReader(fis);
       rdr = new BufferedReader(isr);
 

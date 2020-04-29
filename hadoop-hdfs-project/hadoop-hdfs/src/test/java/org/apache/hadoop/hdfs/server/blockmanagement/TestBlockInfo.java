@@ -19,9 +19,12 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import static org.apache.hadoop.hdfs.server.namenode.INodeId.INVALID_INODE_ID;
 import static org.hamcrest.core.Is.is;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.StorageType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo.AddBlockResult;
@@ -38,8 +41,8 @@ import org.mockito.Mockito;
 
 public class TestBlockInfo {
 
-  private static final Log LOG = LogFactory
-      .getLog("org.apache.hadoop.hdfs.TestBlockInfo");
+  private static final Logger LOG = LoggerFactory
+      .getLogger("org.apache.hadoop.hdfs.TestBlockInfo");
 
   @Test
   public void testIsDeleted() {
@@ -62,6 +65,39 @@ public class TestBlockInfo {
 
     Assert.assertTrue(added);
     Assert.assertEquals(storage, blockInfo.getStorageInfo(0));
+  }
+
+  @Test
+  public void testAddProvidedStorage() throws Exception {
+    // block with only provided storage
+    BlockInfo blockInfo = new BlockInfoContiguous((short) 3);
+    DatanodeStorageInfo providedStorage = mock(DatanodeStorageInfo.class);
+    when(providedStorage.getStorageType()).thenReturn(StorageType.PROVIDED);
+    boolean added = blockInfo.addStorage(providedStorage, blockInfo);
+    Assert.assertTrue(added);
+    Assert.assertEquals(providedStorage, blockInfo.getStorageInfo(0));
+    Assert.assertTrue(blockInfo.isProvided());
+  }
+
+  @Test
+  public void testAddTwoStorageTypes() throws Exception {
+    // block with only disk storage
+    BlockInfo blockInfo = new BlockInfoContiguous((short) 3);
+    DatanodeStorageInfo diskStorage = mock(DatanodeStorageInfo.class);
+    DatanodeDescriptor mockDN = mock(DatanodeDescriptor.class);
+    when(diskStorage.getDatanodeDescriptor()).thenReturn(mockDN);
+    when(diskStorage.getStorageType()).thenReturn(StorageType.DISK);
+    boolean added = blockInfo.addStorage(diskStorage, blockInfo);
+    Assert.assertTrue(added);
+    Assert.assertEquals(diskStorage, blockInfo.getStorageInfo(0));
+    Assert.assertFalse(blockInfo.isProvided());
+
+    // now add provided storage
+    DatanodeStorageInfo providedStorage = mock(DatanodeStorageInfo.class);
+    when(providedStorage.getStorageType()).thenReturn(StorageType.PROVIDED);
+    added = blockInfo.addStorage(providedStorage, blockInfo);
+    Assert.assertTrue(added);
+    Assert.assertTrue(blockInfo.isProvided());
   }
 
   @Test

@@ -13,8 +13,8 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 <!DOCTYPE suppressions PUBLIC
-"-//Puppy Crawl//DTD Suppressions 1.1//EN"
-"http://www.puppycrawl.com/dtds/suppressions_1_1.dtd">
+    "-//Checkstyle//DTD SuppressionFilter Configuration 1.1//EN"
+    "https://checkstyle.org/dtds/suppressions_1_1.dtd">
 
 <suppressions>
   <suppress checks="JavadocPackage" files="[\\/]src[\\/]test[\\/].*"/>

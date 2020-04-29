@@ -19,6 +19,8 @@
 package org.apache.hadoop.fs.azure;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 
 /**
@@ -27,12 +29,9 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
  * </p>
  */
 @InterfaceAudience.Private
-class FileMetadata {
-  private final String key;
-  private final long length;
-  private final long lastModified;
-  private final boolean isDir;
-  private final PermissionStatus permissionStatus;
+class FileMetadata extends FileStatus {
+  // this is not final so that it can be cleared to save memory when not needed.
+  private String key;
   private final BlobMaterialization blobMaterialization;
 
   /**
@@ -46,16 +45,19 @@ class FileMetadata {
    *          The last modified date (milliseconds since January 1, 1970 UTC.)
    * @param permissionStatus
    *          The permission for the file.
+   * @param blockSize
+   *          The Hadoop file block size.
    */
   public FileMetadata(String key, long length, long lastModified,
-      PermissionStatus permissionStatus) {
+      PermissionStatus permissionStatus, final long blockSize) {
+    super(length, false, 1, blockSize, lastModified, 0,
+        permissionStatus.getPermission(),
+        permissionStatus.getUserName(),
+        permissionStatus.getGroupName(),
+        null);
     this.key = key;
-    this.length = length;
-    this.lastModified = lastModified;
-    this.isDir = false;
-    this.permissionStatus = permissionStatus;
-    this.blobMaterialization = BlobMaterialization.Explicit; // File are never
-                                                             // implicit.
+    // Files are never implicit.
+    this.blobMaterialization = BlobMaterialization.Explicit;
   }
 
   /**
@@ -70,35 +72,40 @@ class FileMetadata {
    * @param blobMaterialization
    *          Whether this is an implicit (no real blob backing it) or explicit
    *          directory.
+   * @param blockSize
+   *          The Hadoop file block size.
    */
   public FileMetadata(String key, long lastModified,
-      PermissionStatus permissionStatus, BlobMaterialization blobMaterialization) {
+      PermissionStatus permissionStatus, BlobMaterialization blobMaterialization,
+      final long blockSize) {
+    super(0, true, 1, blockSize, lastModified, 0,
+        permissionStatus.getPermission(),
+        permissionStatus.getUserName(),
+        permissionStatus.getGroupName(),
+        null);
     this.key = key;
-    this.isDir = true;
-    this.length = 0;
-    this.lastModified = lastModified;
-    this.permissionStatus = permissionStatus;
     this.blobMaterialization = blobMaterialization;
   }
 
-  public boolean isDir() {
-    return isDir;
+  @Override
+  public Path getPath() {
+    Path p = super.getPath();
+    if (p == null) {
+      // Don't store this yet to reduce memory usage, as it will
+      // stay in the Eden Space and later we will update it
+      // with the full canonicalized path.
+      p = NativeAzureFileSystem.keyToPath(key);
+    }
+    return p;
   }
 
+  /**
+   * Returns the Azure storage key for the file.  Used internally by the framework.
+   *
+   * @return The key for the file.
+   */
   public String getKey() {
     return key;
-  }
-
-  public long getLength() {
-    return length;
-  }
-
-  public long getLastModified() {
-    return lastModified;
-  }
-
-  public PermissionStatus getPermissionStatus() {
-    return permissionStatus;
   }
 
   /**
@@ -112,9 +119,7 @@ class FileMetadata {
     return blobMaterialization;
   }
 
-  @Override
-  public String toString() {
-    return "FileMetadata[" + key + ", " + length + ", " + lastModified + ", "
-        + permissionStatus + "]";
+  void removeKey() {
+    key = null;
   }
 }

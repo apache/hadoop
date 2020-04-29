@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.mapreduce.jobhistory;
 
-import org.apache.commons.lang.time.FastDateFormat;
+import org.apache.commons.lang3.time.FastDateFormat;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.mapred.JobStatus;
@@ -148,7 +148,8 @@ class HumanReadableHistoryViewerPrinter implements HistoryViewerPrinter {
           "Total Value"));
       buff.append("\n------------------------------------------" +
           "---------------------------------------------");
-      for (String groupName : totalCounters.getGroupNames()) {
+      for (CounterGroup counterGroup : totalCounters) {
+        String groupName = counterGroup.getName();
         CounterGroup totalGroup = totalCounters.getGroup(groupName);
         CounterGroup mapGroup = mapCounters.getGroup(groupName);
         CounterGroup reduceGroup = reduceCounters.getGroup(groupName);

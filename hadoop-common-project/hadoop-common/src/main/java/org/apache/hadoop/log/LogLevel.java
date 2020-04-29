@@ -27,7 +27,6 @@ import java.util.regex.Pattern;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
-import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -324,13 +323,9 @@ public class LogLevel {
     public void doGet(HttpServletRequest request, HttpServletResponse response
         ) throws ServletException, IOException {
 
-      // If user is a static user and auth Type is null, that means
-      // there is a non-security environment and no need authorization,
-      // otherwise, do the authorization.
-      final ServletContext servletContext = getServletContext();
-      if (!HttpServer2.isStaticUserAndNoneAuthType(servletContext, request) &&
-          !HttpServer2.hasAdministratorAccess(servletContext,
-              request, response)) {
+      // Do the authorization
+      if (!HttpServer2.hasAdministratorAccess(getServletContext(), request,
+          response)) {
         return;
       }
 

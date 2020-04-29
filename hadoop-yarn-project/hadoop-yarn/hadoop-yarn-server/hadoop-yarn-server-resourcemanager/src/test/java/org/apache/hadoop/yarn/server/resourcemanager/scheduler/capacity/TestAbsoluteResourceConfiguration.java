@@ -26,6 +26,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.junit.Assert;
 import org.junit.Test;
@@ -33,10 +34,12 @@ import org.junit.Test;
 public class TestAbsoluteResourceConfiguration {
 
   private static final int GB = 1024;
+  private static final float DELTA = 0.001f;
 
   private static final String QUEUEA = "queueA";
   private static final String QUEUEB = "queueB";
   private static final String QUEUEC = "queueC";
+  private static final String QUEUED = "queueD";
   private static final String QUEUEA1 = "queueA1";
   private static final String QUEUEA2 = "queueA2";
   private static final String QUEUEB1 = "queueB1";
@@ -47,6 +50,9 @@ public class TestAbsoluteResourceConfiguration {
       + "." + QUEUEB;
   private static final String QUEUEC_FULL = CapacitySchedulerConfiguration.ROOT
       + "." + QUEUEC;
+  private static final String QUEUED_FULL = CapacitySchedulerConfiguration.ROOT
+      + "." + QUEUED;
+
   private static final String QUEUEA1_FULL = QUEUEA_FULL + "." + QUEUEA1;
   private static final String QUEUEA2_FULL = QUEUEA_FULL + "." + QUEUEA2;
   private static final String QUEUEB1_FULL = QUEUEB_FULL + "." + QUEUEB1;
@@ -65,15 +71,23 @@ public class TestAbsoluteResourceConfiguration {
       10);
   private static final Resource QUEUE_B_MAXRES = Resource.newInstance(150 * GB,
       30);
-  private static final Resource QUEUE_C_MINRES = Resource.newInstance(50 * GB,
-      10);
+  private static final Resource QUEUE_C_MINRES = Resource.newInstance(25 * GB,
+      5);
   private static final Resource QUEUE_C_MAXRES = Resource.newInstance(150 * GB,
+      20);
+  private static final Resource QUEUE_D_MINRES = Resource.newInstance(25 * GB,
+      5);
+  private static final Resource QUEUE_D_MAXRES = Resource.newInstance(150 * GB,
       20);
   private static final Resource QUEUEA_REDUCED = Resource.newInstance(64000, 6);
   private static final Resource QUEUEB_REDUCED = Resource.newInstance(32000, 6);
-  private static final Resource QUEUEC_REDUCED = Resource.newInstance(32000, 6);
+  private static final Resource QUEUEC_REDUCED = Resource.newInstance(16000, 3);
   private static final Resource QUEUEMAX_REDUCED = Resource.newInstance(128000,
       20);
+  private static final Resource QUEUE_D_TEMPL_MINRES =
+      Resource.newInstance(25 * GB, 5);
+  private static final Resource QUEUE_D_TEMPL_MAXRES =
+      Resource.newInstance(150 * GB, 20);
 
   private static Set<String> resourceTypes = new HashSet<>(
       Arrays.asList("memory", "vcores"));
@@ -82,14 +96,23 @@ public class TestAbsoluteResourceConfiguration {
       boolean isCapacityNeeded) {
     CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration();
     csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
-        new String[]{QUEUEA, QUEUEB, QUEUEC});
+        new String[]{QUEUEA, QUEUEB, QUEUEC, QUEUED});
 
     // Set default capacities like normal configuration.
     if (isCapacityNeeded) {
       csConf.setCapacity(QUEUEA_FULL, 50f);
       csConf.setCapacity(QUEUEB_FULL, 25f);
       csConf.setCapacity(QUEUEC_FULL, 25f);
+      csConf.setCapacity(QUEUED_FULL, 25f);
     }
+
+    csConf.setAutoCreateChildQueueEnabled(QUEUED_FULL, true);
+
+    // Setup leaf queue template configs
+    csConf.setAutoCreatedLeafQueueTemplateCapacityByLabel(QUEUED_FULL, "",
+        QUEUE_D_TEMPL_MINRES);
+    csConf.setAutoCreatedLeafQueueTemplateMaxCapacity(QUEUED_FULL, "",
+        QUEUE_D_TEMPL_MAXRES);
 
     return csConf;
   }
@@ -121,10 +144,12 @@ public class TestAbsoluteResourceConfiguration {
     csConf.setMinimumResourceRequirement("", QUEUEA_FULL, QUEUE_A_MINRES);
     csConf.setMinimumResourceRequirement("", QUEUEB_FULL, QUEUE_B_MINRES);
     csConf.setMinimumResourceRequirement("", QUEUEC_FULL, QUEUE_C_MINRES);
+    csConf.setMinimumResourceRequirement("", QUEUED_FULL, QUEUE_D_MINRES);
 
     csConf.setMaximumResourceRequirement("", QUEUEA_FULL, QUEUE_A_MAXRES);
     csConf.setMaximumResourceRequirement("", QUEUEB_FULL, QUEUE_B_MAXRES);
     csConf.setMaximumResourceRequirement("", QUEUEC_FULL, QUEUE_C_MAXRES);
+    csConf.setMaximumResourceRequirement("", QUEUED_FULL, QUEUE_D_MAXRES);
 
     return csConf;
   }
@@ -147,9 +172,10 @@ public class TestAbsoluteResourceConfiguration {
   }
 
   @Test
-  public void testSimpleMinMaxResourceConfigurartionPerQueue() {
+  public void testSimpleMinMaxResourceConfigurartionPerQueue()
+      throws Exception {
 
-    CapacitySchedulerConfiguration csConf = setupSimpleQueueConfiguration(true);
+    CapacitySchedulerConfiguration csConf = setupSimpleQueueConfiguration(false);
     setupMinMaxResourceConfiguration(csConf);
 
     Assert.assertEquals("Min resource configured for QUEUEA is not correct",
@@ -170,6 +196,69 @@ public class TestAbsoluteResourceConfiguration {
     Assert.assertEquals("Max resource configured for QUEUEC is not correct",
         QUEUE_C_MAXRES,
         csConf.getMaximumResourceRequirement("", QUEUEC_FULL, resourceTypes));
+
+    csConf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+
+    @SuppressWarnings("resource")
+    MockRM rm = new MockRM(csConf);
+    rm.start();
+
+    // Add few nodes
+    rm.registerNode("127.0.0.1:1234", 250 * GB, 40);
+
+    // Get queue object to verify min/max resource configuration.
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+
+    ManagedParentQueue parentQueue = (ManagedParentQueue) cs.getQueue(QUEUED);
+    AutoCreatedLeafQueue d1 = new AutoCreatedLeafQueue(cs, "d1", parentQueue);
+    cs.addQueue(d1);
+
+    /**
+     * After adding child queue d1, it occupies all entire resource
+     * of Managed Parent queue
+     */
+    cs.getRootQueue().updateClusterResource(cs.getClusterResource(),
+        new ResourceLimits(cs.getClusterResource()));
+
+    Assert.assertEquals(QUEUE_D_TEMPL_MINRES,
+        d1.queueResourceQuotas.getConfiguredMinResource());
+    Assert.assertEquals(QUEUE_D_TEMPL_MINRES,
+        d1.queueResourceQuotas.getEffectiveMinResource());
+    Assert.assertEquals(QUEUE_D_TEMPL_MAXRES,
+        d1.queueResourceQuotas.getConfiguredMaxResource());
+    Assert.assertEquals(QUEUE_D_TEMPL_MAXRES,
+        d1.queueResourceQuotas.getEffectiveMaxResource());
+
+    /**
+     * After adding child queue d2, adjustment happens and both d1 and d2 shares
+     * resource of Managed Parent Queue
+     */
+    AutoCreatedLeafQueue d2 = new AutoCreatedLeafQueue(cs, "d2", parentQueue);
+    cs.addQueue(d2);
+
+    cs.getRootQueue().updateClusterResource(cs.getClusterResource(),
+        new ResourceLimits(cs.getClusterResource()));
+
+    Assert.assertEquals(QUEUE_D_TEMPL_MINRES,
+        d2.queueResourceQuotas.getConfiguredMinResource());
+    Assert.assertEquals(Resource.newInstance(12800, 2),
+        d2.queueResourceQuotas.getEffectiveMinResource());
+    Assert.assertEquals(QUEUE_D_TEMPL_MAXRES,
+        d2.queueResourceQuotas.getConfiguredMaxResource());
+    Assert.assertEquals(QUEUE_D_TEMPL_MAXRES,
+        d2.queueResourceQuotas.getEffectiveMaxResource());
+
+    Assert.assertEquals(QUEUE_D_TEMPL_MINRES,
+        d1.queueResourceQuotas.getConfiguredMinResource());
+    Assert.assertEquals(Resource.newInstance(12800, 2),
+        d1.queueResourceQuotas.getEffectiveMinResource());
+    Assert.assertEquals(QUEUE_D_TEMPL_MAXRES,
+        d1.queueResourceQuotas.getConfiguredMaxResource());
+    Assert.assertEquals(QUEUE_D_TEMPL_MAXRES,
+        d1.queueResourceQuotas.getEffectiveMaxResource());
+
+    rm.close();
   }
 
   @Test
@@ -336,7 +425,8 @@ public class TestAbsoluteResourceConfiguration {
       Assert.assertEquals(
           "Failed to re-init queues : Min resource configuration "
               + "<memory:153600, vCores:30> is greater than its "
-              + "max value:<memory:40960, vCores:10> in queue:queueB1",
+              + "max value:<memory:40960, vCores:10> "
+              + "in queue:root.queueB.queueB1",
           e.getMessage());
     }
 
@@ -357,7 +447,7 @@ public class TestAbsoluteResourceConfiguration {
           .assertEquals(
               "Failed to re-init queues : Max resource configuration "
                   + "<memory:204800, vCores:30> is greater than parents max value:"
-                  + "<memory:153600, vCores:30> in queue:queueB1",
+                  + "<memory:153600, vCores:30> in queue:root.queueB.queueB1",
               e.getMessage());
     }
     rm.stop();
@@ -407,8 +497,9 @@ public class TestAbsoluteResourceConfiguration {
     } catch (IOException e) {
       Assert.assertTrue(e instanceof IOException);
       Assert.assertEquals(
-          "Failed to re-init queues : Parent queue 'queueA' "
-              + "and child queue 'queueA1' should use either percentage based"
+          "Failed to re-init queues : Parent queue 'root.queueA' "
+              + "and child queue 'root.queueA.queueA1'"
+              + " should use either percentage based"
               + " capacity configuration or absolute resource together.",
           e.getMessage());
     }
@@ -544,6 +635,10 @@ public class TestAbsoluteResourceConfiguration {
         QUEUE_A_MINRES, qA.queueResourceQuotas.getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEA is not correct",
         QUEUE_A_MAXRES, qA.queueResourceQuotas.getEffectiveMaxResource());
+    Assert.assertEquals("Absolute capacity for QUEUEA is not correct",
+        0.4, qA.getAbsoluteCapacity(), DELTA);
+    Assert.assertEquals("Absolute Max capacity for QUEUEA is not correct",
+        0.8, qA.getAbsoluteMaximumCapacity(), DELTA);
 
     ParentQueue qB = (ParentQueue) cs.getQueue(QUEUEB);
     Assert.assertNotNull(qB);
@@ -555,6 +650,10 @@ public class TestAbsoluteResourceConfiguration {
         QUEUE_B_MINRES, qB.queueResourceQuotas.getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEB is not correct",
         QUEUE_B_MAXRES, qB.queueResourceQuotas.getEffectiveMaxResource());
+    Assert.assertEquals("Absolute capacity for QUEUEB is not correct",
+        0.2, qB.getAbsoluteCapacity(), DELTA);
+    Assert.assertEquals("Absolute Max capacity for QUEUEB is not correct",
+        0.6, qB.getAbsoluteMaximumCapacity(), DELTA);
 
     LeafQueue qC = (LeafQueue) cs.getQueue(QUEUEC);
     Assert.assertNotNull(qC);
@@ -566,18 +665,30 @@ public class TestAbsoluteResourceConfiguration {
         QUEUE_C_MINRES, qC.queueResourceQuotas.getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEC is not correct",
         QUEUE_C_MAXRES, qC.queueResourceQuotas.getEffectiveMaxResource());
+    Assert.assertEquals("Absolute capacity for QUEUEC is not correct",
+        0.1, qC.getAbsoluteCapacity(), DELTA);
+    Assert.assertEquals("Absolute Max capacity for QUEUEC is not correct",
+        0.6, qC.getAbsoluteMaximumCapacity(), DELTA);
 
     LeafQueue qA1 = (LeafQueue) cs.getQueue(QUEUEA1);
     Assert.assertEquals("Effective Min resource for QUEUEA1 is not correct",
         QUEUE_A1_MINRES, qA1.queueResourceQuotas.getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEA1 is not correct",
         QUEUE_A_MAXRES, qA1.queueResourceQuotas.getEffectiveMaxResource());
+    Assert.assertEquals("Absolute capacity for QUEUEA1 is not correct",
+        0.2, qA1.getAbsoluteCapacity(), DELTA);
+    Assert.assertEquals("Absolute Max capacity for QUEUEA1 is not correct",
+        0.8, qA1.getAbsoluteMaximumCapacity(), DELTA);
 
     LeafQueue qA2 = (LeafQueue) cs.getQueue(QUEUEA2);
     Assert.assertEquals("Effective Min resource for QUEUEA2 is not correct",
         QUEUE_A2_MINRES, qA2.queueResourceQuotas.getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEA2 is not correct",
         QUEUE_A_MAXRES, qA2.queueResourceQuotas.getEffectiveMaxResource());
+    Assert.assertEquals("Absolute capacity for QUEUEA2 is not correct",
+        0.2, qA2.getAbsoluteCapacity(), DELTA);
+    Assert.assertEquals("Absolute Max capacity for QUEUEA2 is not correct",
+        0.8, qA2.getAbsoluteMaximumCapacity(), DELTA);
 
     LeafQueue qB1 = (LeafQueue) cs.getQueue(QUEUEB1);
     Assert.assertEquals("Min resource configured for QUEUEB1 is not correct",
@@ -588,6 +699,10 @@ public class TestAbsoluteResourceConfiguration {
         QUEUE_B1_MINRES, qB1.queueResourceQuotas.getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEB1 is not correct",
         QUEUE_B_MAXRES, qB1.queueResourceQuotas.getEffectiveMaxResource());
+    Assert.assertEquals("Absolute capacity for QUEUEB1 is not correct",
+        0.16, qB1.getAbsoluteCapacity(), DELTA);
+    Assert.assertEquals("Absolute Max capacity for QUEUEB1 is not correct",
+        0.6, qB1.getAbsoluteMaximumCapacity(), DELTA);
 
     // add new NM.
     rm.registerNode("127.0.0.3:1234", 125 * GB, 20);
@@ -599,31 +714,55 @@ public class TestAbsoluteResourceConfiguration {
         QUEUE_A_MINRES, qA.queueResourceQuotas.getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEA is not correct",
         QUEUE_A_MAXRES, qA.queueResourceQuotas.getEffectiveMaxResource());
+    Assert.assertEquals("Absolute capacity for QUEUEA is not correct",
+        0.266, qA.getAbsoluteCapacity(), DELTA);
+    Assert.assertEquals("Absolute Max capacity for QUEUEA is not correct",
+        0.533, qA.getAbsoluteMaximumCapacity(), DELTA);
 
     Assert.assertEquals("Effective Min resource for QUEUEB is not correct",
         QUEUE_B_MINRES, qB.queueResourceQuotas.getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEB is not correct",
         QUEUE_B_MAXRES, qB.queueResourceQuotas.getEffectiveMaxResource());
+    Assert.assertEquals("Absolute capacity for QUEUEB is not correct",
+        0.133, qB.getAbsoluteCapacity(), DELTA);
+    Assert.assertEquals("Absolute Max capacity for QUEUEB is not correct",
+        0.4, qB.getAbsoluteMaximumCapacity(), DELTA);
 
     Assert.assertEquals("Effective Min resource for QUEUEC is not correct",
         QUEUE_C_MINRES, qC.queueResourceQuotas.getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEC is not correct",
         QUEUE_C_MAXRES, qC.queueResourceQuotas.getEffectiveMaxResource());
+    Assert.assertEquals("Absolute capacity for QUEUEC is not correct",
+        0.066, qC.getAbsoluteCapacity(), DELTA);
+    Assert.assertEquals("Absolute Max capacity for QUEUEC is not correct",
+        0.4, qC.getAbsoluteMaximumCapacity(), DELTA);
 
     Assert.assertEquals("Effective Min resource for QUEUEB1 is not correct",
         QUEUE_B1_MINRES, qB1.queueResourceQuotas.getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEB1 is not correct",
         QUEUE_B_MAXRES, qB1.queueResourceQuotas.getEffectiveMaxResource());
+    Assert.assertEquals("Absolute capacity for QUEUEB1 is not correct",
+        0.106, qB1.getAbsoluteCapacity(), DELTA);
+    Assert.assertEquals("Absolute Max capacity for QUEUEB1 is not correct",
+        0.4, qB1.getAbsoluteMaximumCapacity(), DELTA);
 
     Assert.assertEquals("Effective Min resource for QUEUEA1 is not correct",
         QUEUE_A1_MINRES, qA1.queueResourceQuotas.getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEA1 is not correct",
         QUEUE_A_MAXRES, qA1.queueResourceQuotas.getEffectiveMaxResource());
+    Assert.assertEquals("Absolute capacity for QUEUEA1 is not correct",
+        0.133, qA1.getAbsoluteCapacity(), DELTA);
+    Assert.assertEquals("Absolute Max capacity for QUEUEA1 is not correct",
+        0.533, qA1.getAbsoluteMaximumCapacity(), DELTA);
 
     Assert.assertEquals("Effective Min resource for QUEUEA2 is not correct",
         QUEUE_A2_MINRES, qA2.queueResourceQuotas.getEffectiveMinResource());
     Assert.assertEquals("Effective Max resource for QUEUEA2 is not correct",
         QUEUE_A_MAXRES, qA2.queueResourceQuotas.getEffectiveMaxResource());
+    Assert.assertEquals("Absolute capacity for QUEUEA2 is not correct",
+        0.133, qA2.getAbsoluteCapacity(), DELTA);
+    Assert.assertEquals("Absolute Max capacity for QUEUEA2 is not correct",
+            0.533, qA2.getAbsoluteMaximumCapacity(), DELTA);
 
     rm.stop();
   }

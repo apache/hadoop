@@ -28,8 +28,8 @@ import java.util.List;
 import java.util.Random;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
@@ -58,7 +58,8 @@ import static org.junit.Assert.fail;
  * Test {@link FSDirectory}, the in-memory namespace tree.
  */
 public class TestFSDirectory {
-  public static final Log LOG = LogFactory.getLog(TestFSDirectory.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestFSDirectory.class);
 
   private static final long seed = 0;
   private static final short REPLICATION = 3;

@@ -22,28 +22,38 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.Options.ChecksumCombineMode;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.ReplicaAccessorBuilder;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.util.ByteArrayManager;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.util.DataChecksum;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.BlockWrite;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_BLOCK_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CHECKSUM_COMBINE_MODE_DEFAULT;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CHECKSUM_COMBINE_MODE_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CHECKSUM_TYPE_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CHECKSUM_TYPE_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_CACHED_CONN_RETRY_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_CACHED_CONN_RETRY_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DATANODE_RESTART_TIMEOUT_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DATANODE_RESTART_TIMEOUT_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DEAD_NODE_DETECTION_ENABLED_DEFAULT;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DEAD_NODE_DETECTION_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_DEFAULT;
@@ -58,8 +68,6 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SOCK
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SOCKET_SEND_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SOCKET_SEND_BUFFER_SIZE_KEY;
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_CLIENT_TCPNODELAY_DEFAULT;
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_CLIENT_TCPNODELAY_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME_DEFAULT;
@@ -68,6 +76,8 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_USE_
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_CLIENT_TCPNODELAY_DEFAULT;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_CLIENT_TCPNODELAY_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DOMAIN_SOCKET_DISABLE_INTERVAL_SECOND_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DOMAIN_SOCKET_DISABLE_INTERVAL_SECOND_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DOMAIN_SOCKET_PATH_DEFAULT;
@@ -83,11 +93,6 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Read;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Retry;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.ShortCircuit;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 /**
  * DFSClient configuration.
@@ -106,6 +111,7 @@ public class DfsClientConf {
   private final int datanodeSocketWriteTimeout;
   private final int ioBufferSize;
   private final ChecksumOpt defaultChecksumOpt;
+  private final ChecksumCombineMode checksumCombineMode;
   private final int writePacketSize;
   private final int writeMaxPackets;
   private final ByteArrayManager.Conf writeByteArrayManagerConf;
@@ -118,6 +124,7 @@ public class DfsClientConf {
   private final int numBlockWriteRetry;
   private final int numBlockWriteLocateFollowingRetry;
   private final int blockWriteLocateFollowingInitialDelayMs;
+  private final int blockWriteLocateFollowingMaxDelayMs;
   private final long defaultBlockSize;
   private final long prefetchSize;
   private final short defaultReplication;
@@ -129,6 +136,9 @@ public class DfsClientConf {
   private final long datanodeRestartTimeout;
   private final long slowIoWarningThresholdMs;
 
+  /** wait time window before refreshing blocklocation for inputstream. */
+  private final long refreshReadBlockLocationsMS;
+
   private final ShortCircuitConf shortCircuitConf;
 
   private final long hedgedReadThresholdMillis;
@@ -139,6 +149,9 @@ public class DfsClientConf {
   private final int stripedReadThreadpoolSize;
 
   private final boolean dataTransferTcpNoDelay;
+
+  private final boolean deadNodeDetectionEnabled;
+  private final long leaseHardLimitPeriod;
 
   public DfsClientConf(Configuration conf) {
     // The hdfsTimeout is currently the same as the ipc timeout
@@ -177,6 +190,7 @@ public class DfsClientConf {
         CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY,
         CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT);
     defaultChecksumOpt = getChecksumOptFromConf(conf);
+    checksumCombineMode = getChecksumCombineModeFromConf(conf);
     dataTransferTcpNoDelay = conf.getBoolean(
         DFS_DATA_TRANSFER_CLIENT_TCPNODELAY_KEY,
         DFS_DATA_TRANSFER_CLIENT_TCPNODELAY_DEFAULT);
@@ -232,6 +246,9 @@ public class DfsClientConf {
     blockWriteLocateFollowingInitialDelayMs = conf.getInt(
         BlockWrite.LOCATEFOLLOWINGBLOCK_INITIAL_DELAY_MS_KEY,
         BlockWrite.LOCATEFOLLOWINGBLOCK_INITIAL_DELAY_MS_DEFAULT);
+    blockWriteLocateFollowingMaxDelayMs = conf.getInt(
+        BlockWrite.LOCATEFOLLOWINGBLOCK_MAX_DELAY_MS_KEY,
+        BlockWrite.LOCATEFOLLOWINGBLOCK_MAX_DELAY_MS_DEFAULT);
     uMask = FsPermission.getUMask(conf);
     connectToDnViaHostname = conf.getBoolean(DFS_CLIENT_USE_DN_HOSTNAME,
         DFS_CLIENT_USE_DN_HOSTNAME_DEFAULT);
@@ -239,10 +256,15 @@ public class DfsClientConf {
     datanodeRestartTimeout = conf.getTimeDuration(
         DFS_CLIENT_DATANODE_RESTART_TIMEOUT_KEY,
         DFS_CLIENT_DATANODE_RESTART_TIMEOUT_DEFAULT,
-        TimeUnit.SECONDS) * 1000;
+        TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
     slowIoWarningThresholdMs = conf.getLong(
         DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_KEY,
         DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_DEFAULT);
+
+    refreshReadBlockLocationsMS = conf.getLong(
+        HdfsClientConfigKeys.DFS_CLIENT_REFRESH_READ_BLOCK_LOCATIONS_MS_KEY,
+        HdfsClientConfigKeys.
+            DFS_CLIENT_REFRESH_READ_BLOCK_LOCATIONS_MS_DEFAULT);
 
     shortCircuitConf = new ShortCircuitConf(conf);
 
@@ -253,6 +275,10 @@ public class DfsClientConf {
         HdfsClientConfigKeys.HedgedRead.THREADPOOL_SIZE_KEY,
         HdfsClientConfigKeys.HedgedRead.THREADPOOL_SIZE_DEFAULT);
 
+    deadNodeDetectionEnabled =
+        conf.getBoolean(DFS_CLIENT_DEAD_NODE_DETECTION_ENABLED_KEY,
+            DFS_CLIENT_DEAD_NODE_DETECTION_ENABLED_DEFAULT);
+
     stripedReadThreadpoolSize = conf.getInt(
         HdfsClientConfigKeys.StripedRead.THREADPOOL_SIZE_KEY,
         HdfsClientConfigKeys.StripedRead.THREADPOOL_SIZE_DEFAULT);
@@ -260,6 +286,10 @@ public class DfsClientConf {
         HdfsClientConfigKeys.StripedRead.THREADPOOL_SIZE_KEY +
         " must be greater than 0.");
     replicaAccessorBuilderClasses = loadReplicaAccessorBuilderClasses(conf);
+
+    leaseHardLimitPeriod =
+        conf.getLong(HdfsClientConfigKeys.DFS_LEASE_HARDLIMIT_KEY,
+            HdfsClientConfigKeys.DFS_LEASE_HARDLIMIT_DEFAULT) * 1000;
   }
 
   @SuppressWarnings("unchecked")
@@ -300,6 +330,21 @@ public class DfsClientConf {
     }
   }
 
+  private static ChecksumCombineMode getChecksumCombineModeFromConf(
+      Configuration conf) {
+    final String mode = conf.get(
+        DFS_CHECKSUM_COMBINE_MODE_KEY,
+        DFS_CHECKSUM_COMBINE_MODE_DEFAULT);
+    try {
+      return ChecksumCombineMode.valueOf(mode);
+    } catch(IllegalArgumentException iae) {
+      LOG.warn("Bad checksum combine mode: {}. Using default {}", mode,
+               DFS_CHECKSUM_COMBINE_MODE_DEFAULT);
+      return ChecksumCombineMode.valueOf(
+          DFS_CHECKSUM_COMBINE_MODE_DEFAULT);
+    }
+  }
+
   // Construct a checksum option from conf
   public static ChecksumOpt getChecksumOptFromConf(Configuration conf) {
     DataChecksum.Type type = getChecksumType(conf);
@@ -327,6 +372,10 @@ public class DfsClientConf {
   @VisibleForTesting
   public int getBlockWriteLocateFollowingInitialDelayMs() {
     return blockWriteLocateFollowingInitialDelayMs;
+  }
+
+  public int getBlockWriteLocateFollowingMaxDelayMs() {
+    return blockWriteLocateFollowingMaxDelayMs;
   }
 
   /**
@@ -390,6 +439,13 @@ public class DfsClientConf {
    */
   public ChecksumOpt getDefaultChecksumOpt() {
     return defaultChecksumOpt;
+  }
+
+  /**
+   * @return the checksumCombineMode
+   */
+  public ChecksumCombineMode getChecksumCombineMode() {
+    return checksumCombineMode;
   }
 
   /**
@@ -561,11 +617,32 @@ public class DfsClientConf {
   }
 
   /**
+   * @return the deadNodeDetectionEnabled
+   */
+  public boolean isDeadNodeDetectionEnabled() {
+    return deadNodeDetectionEnabled;
+  }
+
+  /**
+   * @return the leaseHardLimitPeriod
+   */
+  public long getleaseHardLimitPeriod() {
+    return leaseHardLimitPeriod;
+  }
+
+  /**
    * @return the replicaAccessorBuilderClasses
    */
   public List<Class<? extends ReplicaAccessorBuilder>>
         getReplicaAccessorBuilderClasses() {
     return replicaAccessorBuilderClasses;
+  }
+
+  /**
+   * @return the replicaAccessorBuilderClasses
+   */
+  public long getRefreshReadBlockLocationsMS() {
+    return refreshReadBlockLocationsMS;
   }
 
   /**

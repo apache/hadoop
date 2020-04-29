@@ -96,7 +96,7 @@ Quotas are managed by a set of commands available only to the administrator.
     integer, the directory does not exist or it is a file, or the
     directory would immediately exceed the new quota. The storage type
     specific quota is set when -storageType option is specified. Available
-    storageTypes are RAM_DISK,DISK,SSD,ARCHIVE.
+    storageTypes are DISK,SSD,ARCHIVE,PROVIDED.
 
 *   `hdfs dfsadmin -clrSpaceQuota -storageType <storagetype> <directory>...<directory>`
 
@@ -104,7 +104,7 @@ Quotas are managed by a set of commands available only to the administrator.
     for each directory, with faults reported if the directory does not exist or
     it is a file. It is not a fault if the directory has no storage type quota on
     for storage type specified. The storage type specific quota is cleared when -storageType
-    option is specified. Available storageTypes are RAM_DISK,DISK,SSD,ARCHIVE.
+    option is specified. Available storageTypes are DISK,SSD,ARCHIVE,PROVIDED.
 
 Reporting Command
 -----------------

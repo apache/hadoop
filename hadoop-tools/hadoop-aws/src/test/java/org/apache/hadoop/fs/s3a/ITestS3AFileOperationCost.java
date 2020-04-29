@@ -18,21 +18,32 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
+
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.net.URI;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.EnumSet;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
+import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.test.GenericTestUtils.getTestDir;
@@ -41,7 +52,9 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 /**
  * Use metrics to assert about the cost of file status queries.
  * {@link S3AFileSystem#getFileStatus(Path)}.
+ * Parameterized on guarded vs raw.
  */
+@RunWith(Parameterized.class)
 public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
 
   private MetricDiff metadataRequests;
@@ -50,13 +63,109 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3AFileOperationCost.class);
 
+  /**
+   * Parameterization.
+   */
+  @Parameterized.Parameters(name = "{0}")
+  public static Collection<Object[]> params() {
+    return Arrays.asList(new Object[][]{
+        {"raw", false},
+        {"guarded", true}
+    });
+  }
+
+  private final String name;
+
+  private final boolean s3guard;
+
+  public ITestS3AFileOperationCost(final String name, final boolean s3guard) {
+    this.name = name;
+    this.s3guard = s3guard;
+  }
+
+  @Override
+  public Configuration createConfiguration() {
+    Configuration conf = super.createConfiguration();
+    String bucketName = getTestBucketName(conf);
+    removeBucketOverrides(bucketName, conf,
+        S3_METADATA_STORE_IMPL);
+    if (!s3guard) {
+      // in a raw run remove all s3guard settings
+      removeBaseAndBucketOverrides(bucketName, conf,
+          S3_METADATA_STORE_IMPL);
+    }
+    disableFilesystemCaching(conf);
+    return conf;
+  }
   @Override
   public void setup() throws Exception {
     super.setup();
+    if (s3guard) {
+      // s3guard is required for those test runs where any of the
+      // guard options are set
+      assumeS3GuardState(true, getConfiguration());
+    }
     S3AFileSystem fs = getFileSystem();
     metadataRequests = new MetricDiff(fs, OBJECT_METADATA_REQUESTS);
     listRequests = new MetricDiff(fs, OBJECT_LIST_REQUESTS);
     skipDuringFaultInjection(fs);
+  }
+
+  @Test
+  public void testCostOfLocatedFileStatusOnFile() throws Throwable {
+    describe("performing listLocatedStatus on a file");
+    Path file = path(getMethodName() + ".txt");
+    S3AFileSystem fs = getFileSystem();
+    touch(fs, file);
+    resetMetricDiffs();
+    fs.listLocatedStatus(file);
+    if (!fs.hasMetadataStore()) {
+      // Unguarded FS.
+      metadataRequests.assertDiffEquals(1);
+    }
+    listRequests.assertDiffEquals(1);
+  }
+
+  @Test
+  public void testCostOfListLocatedStatusOnEmptyDir() throws Throwable {
+    describe("performing listLocatedStatus on an empty dir");
+    Path dir = path(getMethodName());
+    S3AFileSystem fs = getFileSystem();
+    fs.mkdirs(dir);
+    resetMetricDiffs();
+    fs.listLocatedStatus(dir);
+    if (!fs.hasMetadataStore()) {
+      // Unguarded FS.
+      verifyOperationCount(2, 1);
+    } else {
+      if (fs.allowAuthoritative(dir)) {
+        verifyOperationCount(0, 0);
+      } else {
+        verifyOperationCount(0, 1);
+      }
+    }
+  }
+
+  @Test
+  public void testCostOfListLocatedStatusOnNonEmptyDir() throws Throwable {
+    describe("performing listLocatedStatus on a non empty dir");
+    Path dir = path(getMethodName() + "dir");
+    S3AFileSystem fs = getFileSystem();
+    fs.mkdirs(dir);
+    Path file = new Path(dir, "file.txt");
+    touch(fs, file);
+    resetMetricDiffs();
+    fs.listLocatedStatus(dir);
+    if (!fs.hasMetadataStore()) {
+      // Unguarded FS.
+      verifyOperationCount(0, 1);
+    } else {
+      if(fs.allowAuthoritative(dir)) {
+        verifyOperationCount(0, 0);
+      } else {
+        verifyOperationCount(0, 1);
+      }
+    }
   }
 
   @Test
@@ -78,6 +187,19 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     reset(metadataRequests, listRequests);
   }
 
+  /**
+   * Verify that the head and list calls match expectations,
+   * then reset the counters ready for the next operation.
+   * @param head expected HEAD count
+   * @param list expected LIST count
+   */
+  private void verifyOperationCount(int head, int list) {
+    metadataRequests.assertDiffEquals(head);
+    listRequests.assertDiffEquals(list);
+    metadataRequests.reset();
+    listRequests.reset();
+  }
+
   @Test
   public void testCostOfGetFileStatusOnEmptyDir() throws Throwable {
     describe("performing getFileStatus on an empty directory");
@@ -85,14 +207,23 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     Path dir = path("empty");
     fs.mkdirs(dir);
     resetMetricDiffs();
-    S3AFileStatus status = fs.innerGetFileStatus(dir, true);
-    assertSame("not empty: " + status, status.isEmptyDirectory(),
-        Tristate.TRUE);
+    S3AFileStatus status = fs.innerGetFileStatus(dir, true,
+        StatusProbeEnum.ALL);
+    assertSame("not empty: " + status, Tristate.TRUE,
+        status.isEmptyDirectory());
 
     if (!fs.hasMetadataStore()) {
       metadataRequests.assertDiffEquals(2);
     }
     listRequests.assertDiffEquals(0);
+
+    // but now only ask for the directories and the file check is skipped.
+    resetMetricDiffs();
+    fs.innerGetFileStatus(dir, false,
+        StatusProbeEnum.DIRECTORIES);
+    if (!fs.hasMetadataStore()) {
+      metadataRequests.assertDiffEquals(1);
+    }
   }
 
   @Test
@@ -128,7 +259,8 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     Path simpleFile = new Path(dir, "simple.txt");
     touch(fs, simpleFile);
     resetMetricDiffs();
-    S3AFileStatus status = fs.innerGetFileStatus(dir, true);
+    S3AFileStatus status = fs.innerGetFileStatus(dir, true,
+        StatusProbeEnum.ALL);
     if (status.isEmptyDirectory() == Tristate.TRUE) {
       // erroneous state
       String fsState = fs.toString();
@@ -192,12 +324,6 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
         + "In S3, rename deletes any fake directories as a part of "
         + "clean up activity");
     S3AFileSystem fs = getFileSystem();
-
-    // As this test uses the s3 metrics to count the number of fake directory
-    // operations, it depends on side effects happening internally. With
-    // metadata store enabled, it is brittle to change. We disable this test
-    // before the internal behavior w/ or w/o metadata store.
-//    assumeFalse(fs.hasMetadataStore());
 
     Path srcBaseDir = path("src");
     mkdirs(srcBaseDir);
@@ -376,5 +502,76 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
       fs.delete(src, false);
       fs.delete(dest, false);
     }
+  }
+
+  @Test
+  public void testDirProbes() throws Throwable {
+    describe("Test directory probe cost -raw only");
+    S3AFileSystem fs = getFileSystem();
+    assume("Unguarded FS only", !fs.hasMetadataStore());
+    String dir = "testEmptyDirHeadProbe";
+    Path emptydir = path(dir);
+    // Create the empty directory.
+    fs.mkdirs(emptydir);
+
+    // metrics and assertions.
+    resetMetricDiffs();
+
+    intercept(FileNotFoundException.class, () ->
+        fs.innerGetFileStatus(emptydir, false,
+            StatusProbeEnum.HEAD_ONLY));
+    verifyOperationCount(1, 0);
+
+    // a LIST will find it -but it doesn't consider it an empty dir.
+    S3AFileStatus status = fs.innerGetFileStatus(emptydir, true,
+        StatusProbeEnum.LIST_ONLY);
+    verifyOperationCount(0, 1);
+    Assertions.assertThat(status)
+        .describedAs("LIST output is not considered empty")
+        .matches(s -> !s.isEmptyDirectory().equals(Tristate.TRUE),  "is empty");
+
+    // finally, skip all probes and expect no operations toThere are
+    // take place
+    intercept(FileNotFoundException.class, () ->
+        fs.innerGetFileStatus(emptydir, false,
+            EnumSet.noneOf(StatusProbeEnum.class)));
+    verifyOperationCount(0, 0);
+
+    // now add a trailing slash to the key and use the
+    // deep internal s3GetFileStatus method call.
+    String emptyDirTrailingSlash = fs.pathToKey(emptydir.getParent())
+        + "/" + dir +  "/";
+    // A HEAD request does not probe for keys with a trailing /
+    intercept(FileNotFoundException.class, () ->
+        fs.s3GetFileStatus(emptydir, emptyDirTrailingSlash,
+            StatusProbeEnum.HEAD_ONLY, null));
+    verifyOperationCount(0, 0);
+
+    // but ask for a directory marker and you get the entry
+    status = fs.s3GetFileStatus(emptydir,
+        emptyDirTrailingSlash,
+        StatusProbeEnum.DIR_MARKER_ONLY, null);
+    verifyOperationCount(1, 0);
+    assertEquals(emptydir, status.getPath());
+  }
+
+  @Test
+  public void testCreateCost() throws Throwable {
+    describe("Test file creation cost -raw only");
+    S3AFileSystem fs = getFileSystem();
+    assume("Unguarded FS only", !fs.hasMetadataStore());
+    resetMetricDiffs();
+    Path testFile = path("testCreateCost");
+
+    // when overwrite is false, the path is checked for existence.
+    try (FSDataOutputStream out = fs.create(testFile, false)) {
+      verifyOperationCount(2, 1);
+    }
+
+    // but when true: only the directory checks take place.
+    try (FSDataOutputStream out = fs.create(testFile, true)) {
+      verifyOperationCount(1, 1);
+    }
+
   }
 }

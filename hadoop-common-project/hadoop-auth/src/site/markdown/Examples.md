@@ -36,14 +36,14 @@ Login to the KDC using **kinit** and then use `curl` to fetch protected URL:
 
     $ kinit
     Please enter the password for tucu@LOCALHOST:
-    $ curl --negotiate -u foo -b ~/cookiejar.txt -c ~/cookiejar.txt http://localhost:8080/hadoop-auth-examples/kerberos/who
+    $ curl --negotiate -u : -b ~/cookiejar.txt -c ~/cookiejar.txt http://$(hostname -f):8080/hadoop-auth-examples/kerberos/who
     Enter host password for user 'tucu':
 
     Hello Hadoop Auth Examples!
 
 *   The `--negotiate` option enables SPNEGO in `curl`.
 
-*   The `-u foo` option is required but the user ignored (the principal
+*   The `-u :` option is required but the user ignored (the principal
     that has been kinit-ed is used).
 
 *   The `-b` and `-c` are use to store and send HTTP Cookies.
@@ -88,7 +88,7 @@ Try accessing protected resources using `curl`. The protected resources are:
 
     $ curl http://localhost:8080/hadoop-auth-examples/simple/who?user.name=foo
 
-    $ curl --negotiate -u foo -b ~/cookiejar.txt -c ~/cookiejar.txt http://localhost:8080/hadoop-auth-examples/kerberos/who
+    $ curl --negotiate -u : -b ~/cookiejar.txt -c ~/cookiejar.txt http://$(hostname -f):8080/hadoop-auth-examples/kerberos/who
 
 ### Accessing the server using the Java client example
 

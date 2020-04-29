@@ -41,7 +41,7 @@ The RMs have an option to embed the Zookeeper-based ActiveStandbyElector to deci
 
 #### Client, ApplicationMaster and NodeManager on RM failover
 
-When there are multiple RMs, the configuration (yarn-site.xml) used by clients and nodes is expected to list all the RMs. Clients, ApplicationMasters (AMs) and NodeManagers (NMs) try connecting to the RMs in a round-robin fashion until they hit the Active RM. If the Active goes down, they resume the round-robin polling until they hit the "new" Active. This default retry logic is implemented as `org.apache.hadoop.yarn.client.ConfiguredRMFailoverProxyProvider`. You can override the logic by implementing `org.apache.hadoop.yarn.client.RMFailoverProxyProvider` and setting the value of `yarn.client.failover-proxy-provider` to the class name.
+When there are multiple RMs, the configuration (yarn-site.xml) used by clients and nodes is expected to list all the RMs. Clients, ApplicationMasters (AMs) and NodeManagers (NMs) try connecting to the RMs in a round-robin fashion until they hit the Active RM. If the Active goes down, they resume the round-robin polling until they hit the "new" Active. This default retry logic is implemented as `org.apache.hadoop.yarn.client.ConfiguredRMFailoverProxyProvider`. You can override the logic by implementing `org.apache.hadoop.yarn.client.RMFailoverProxyProvider` and setting the value of `yarn.client.failover-proxy-provider` to the class name. When running in non-ha mode, set the value of `yarn.client.failover-no-ha-proxy-provider` instead
 
 ### Recovering previous active-RM's state
 
@@ -71,6 +71,7 @@ Most of the failover functionality is tunable using various configuration proper
 | `yarn.resourcemanager.ha.automatic-failover.embedded` | Use embedded leader-elector to pick the Active RM, when automatic failover is enabled. By default, it is enabled only when HA is enabled. |
 | `yarn.resourcemanager.cluster-id` | Identifies the cluster. Used by the elector to ensure an RM doesn't take over as Active for another cluster. |
 | `yarn.client.failover-proxy-provider` | The class to be used by Clients, AMs and NMs to failover to the Active RM. |
+| `yarn.client.failover-no-ha-proxy-provider` | The class to be used by Clients, AMs and NMs to failover to the Active RM, when not running in HA mode |
 | `yarn.client.failover-max-attempts` | The max number of times FailoverProxyProvider should attempt failover. |
 | `yarn.client.failover-sleep-base-ms` | The sleep base (in milliseconds) to be used for calculating the exponential delay between failovers. |
 | `yarn.client.failover-sleep-max-ms` | The maximum sleep time (in milliseconds) between failovers. |
@@ -111,7 +112,7 @@ Here is the sample of minimal setup for RM failover.
   <value>master2:8088</value>
 </property>
 <property>
-  <name>yarn.resourcemanager.zk-address</name>
+  <name>hadoop.zk.address</name>
   <value>zk1:2181,zk2:2181,zk3:2181</value>
 </property>
 ```
@@ -144,3 +145,8 @@ Assuming a standby RM is up and running, the Standby automatically redirects all
 ### Web Services
 
 Assuming a standby RM is up and running, RM web-services described at [ResourceManager REST APIs](./ResourceManagerRest.html) when invoked on a standby RM are automatically redirected to the Active RM.
+
+### Load Balancer Setup
+
+If you are running a set of ResourceManagers behind a Load Balancer (e.g. [Azure](https://docs.microsoft.com/en-us/azure/load-balancer/load-balancer-custom-probe-overview) or [AWS](https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/elb-healthchecks.html) ) and would like the Load Balancer to point to the active RM, you can use the /isActive HTTP endpoint as a health probe.
+http://RM_HOSTNAME/isActive will return a 200 status code response if the RM is in Active HA State, 405 otherwise.

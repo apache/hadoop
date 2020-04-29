@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.web.resources;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
@@ -25,8 +26,9 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.StorageType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.Options;
@@ -42,7 +44,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 public class TestParam {
-  public static final Log LOG = LogFactory.getLog(TestParam.class);
+  public static final Logger LOG = LoggerFactory.getLogger(TestParam.class);
 
   final Configuration conf = new Configuration();
  
@@ -503,6 +505,41 @@ public class TestParam {
     Assert.assertEquals(null, p.getValue());
     p = new StoragePolicyParam("COLD");
     Assert.assertEquals("COLD", p.getValue());
+  }
+
+  @Test
+  public void testNamespaceQuotaParam() {
+    NameSpaceQuotaParam p =
+        new NameSpaceQuotaParam(NameSpaceQuotaParam.DEFAULT);
+    assertEquals(Long.valueOf(NameSpaceQuotaParam.DEFAULT), p.getValue());
+    p = new NameSpaceQuotaParam(100L);
+    assertEquals(100L, p.getValue().longValue());
+  }
+
+  @Test
+  public void testStorageSpaceQuotaParam() {
+    StorageSpaceQuotaParam sp = new StorageSpaceQuotaParam(
+        StorageSpaceQuotaParam.DEFAULT);
+    assertEquals(Long.valueOf(StorageSpaceQuotaParam.DEFAULT),
+        sp.getValue());
+    sp = new StorageSpaceQuotaParam(100L);
+    assertEquals(100L, sp.getValue().longValue());
+  }
+
+  @Test
+  public void testStorageTypeParam() {
+    StorageTypeParam p = new StorageTypeParam(StorageTypeParam.DEFAULT);
+    assertNull(p.getValue());
+    p = new StorageTypeParam(StorageType.DISK.name());
+    assertEquals(StorageType.DISK.name(), p.getValue());
+  }
+
+  @Test
+  public void testECPolicyParam() {
+    ECPolicyParam p = new ECPolicyParam(ECPolicyParam.DEFAULT);
+    Assert.assertEquals(null, p.getValue());
+    p = new ECPolicyParam("RS-6-3-1024k");
+    Assert.assertEquals("RS-6-3-1024k", p.getValue());
   }
 
   @Test

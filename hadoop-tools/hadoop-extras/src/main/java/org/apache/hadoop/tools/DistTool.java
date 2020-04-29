@@ -27,8 +27,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -40,7 +40,7 @@ import org.apache.hadoop.mapred.JobConf;
  * An abstract class for distributed tool for file related operations.
  */
 abstract class DistTool implements org.apache.hadoop.util.Tool {
-  protected static final Log LOG = LogFactory.getLog(DistTool.class);
+  protected static final Logger LOG = LoggerFactory.getLogger(DistTool.class);
 
   protected JobConf jobconf;
 

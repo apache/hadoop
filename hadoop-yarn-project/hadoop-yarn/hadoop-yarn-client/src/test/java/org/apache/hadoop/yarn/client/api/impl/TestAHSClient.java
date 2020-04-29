@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.yarn.client.api.impl;
 
-import static org.mockito.Matchers.any;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -84,7 +85,7 @@ public class TestAHSClient {
     Assert.assertEquals(reports, expectedReports);
 
     reports = client.getApplications();
-    Assert.assertEquals(reports.size(), 4);
+    assertThat(reports).hasSize(4);
     client.stop();
   }
 
@@ -102,6 +103,8 @@ public class TestAHSClient {
     Assert.assertEquals(report, expectedReports.get(0));
     Assert.assertEquals(report.getApplicationId().toString(), expectedReports
       .get(0).getApplicationId().toString());
+    Assert.assertEquals(report.getSubmitTime(), expectedReports.get(0)
+      .getSubmitTime());
     client.stop();
   }
 
@@ -332,7 +335,7 @@ public class TestAHSClient {
           ApplicationReport.newInstance(applicationId,
             ApplicationAttemptId.newInstance(applicationId, 1), "user",
             "queue", "appname", "host", 124, null,
-            YarnApplicationState.RUNNING, "diagnostics", "url", 0, 0,
+            YarnApplicationState.RUNNING, "diagnostics", "url", 1, 2, 3, 4,
             FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN",
             null);
       List<ApplicationReport> applicationReports =
@@ -389,7 +392,7 @@ public class TestAHSClient {
           ApplicationReport.newInstance(applicationId2,
             ApplicationAttemptId.newInstance(applicationId2, 2), "user2",
             "queue2", "appname2", "host2", 125, null,
-            YarnApplicationState.FINISHED, "diagnostics2", "url2", 2, 2,
+            YarnApplicationState.FINISHED, "diagnostics2", "url2", 2, 2, 2,
             FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.63789f,
             "NON-YARN", null);
       applicationReports.add(newApplicationReport2);
@@ -399,7 +402,7 @@ public class TestAHSClient {
           ApplicationReport.newInstance(applicationId3,
             ApplicationAttemptId.newInstance(applicationId3, 3), "user3",
             "queue3", "appname3", "host3", 126, null,
-            YarnApplicationState.RUNNING, "diagnostics3", "url3", 3, 3,
+            YarnApplicationState.RUNNING, "diagnostics3", "url3", 3, 3, 3,
             FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.73789f,
             "MAPREDUCE", null);
       applicationReports.add(newApplicationReport3);
@@ -409,7 +412,7 @@ public class TestAHSClient {
           ApplicationReport.newInstance(applicationId4,
             ApplicationAttemptId.newInstance(applicationId4, 4), "user4",
             "queue4", "appname4", "host4", 127, null,
-            YarnApplicationState.FAILED, "diagnostics4", "url4", 4, 4,
+            YarnApplicationState.FAILED, "diagnostics4", "url4", 4, 4, 4,
             FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.83789f,
             "NON-MAPREDUCE", null);
       applicationReports.add(newApplicationReport4);

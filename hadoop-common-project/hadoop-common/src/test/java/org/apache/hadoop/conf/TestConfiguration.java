@@ -17,16 +17,17 @@
  */
 package org.apache.hadoop.conf;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
-import java.io.PrintStream;
 import java.io.StringWriter;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -61,9 +62,8 @@ import static org.apache.hadoop.conf.StorageUnit.MB;
 import static org.apache.hadoop.conf.StorageUnit.TB;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertArrayEquals;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -93,8 +93,8 @@ public class TestConfiguration {
   final static String CONFIG_CORE = new File("./core-site.xml")
       .getAbsolutePath();
   final static String CONFIG_FOR_ENUM = new File("./test-config-enum-TestConfiguration.xml").getAbsolutePath();
-  final static String CONFIG_FOR_URI = "file://"
-      + new File("./test-config-uri-TestConfiguration.xml").getAbsolutePath();
+  final static String CONFIG_FOR_URI = new File(
+      "./test-config-uri-TestConfiguration.xml").toURI().toString();
 
   private static final String CONFIG_MULTI_BYTE = new File(
     "./test-config-multi-byte-TestConfiguration.xml").getAbsolutePath();
@@ -877,7 +877,8 @@ public class TestConfiguration {
     out.close();
     out=new BufferedWriter(new FileWriter(CONFIG));
     writeHeader();
-    declareSystemEntity("configuration", "d", CONFIG2);
+    declareSystemEntity("configuration", "d",
+        new Path(CONFIG2).toUri().toString());
     writeConfiguration();
     appendProperty("a", "b");
     appendProperty("c", "&d;");
@@ -927,6 +928,105 @@ public class TestConfiguration {
     assertEquals("h", conf.get("g"));
     assertEquals("j.fallback", conf.get("i"));
     assertEquals("l.fallback", conf.get("k"));
+    tearDown();
+  }
+
+  // When a resource is parsed as an input stream the first time, included
+  // properties are saved within the config. However, the included properties
+  // are not cached in the resource object. So, if an additional resource is
+  // added after the config is parsed the first time, the config loses the
+  // prperties that were included from the first resource.
+  @Test
+  public void testIncludesFromInputStreamWhenResourceAdded() throws Exception {
+    tearDown();
+
+    // CONFIG includes CONFIG2. CONFIG2 includes CONFIG_FOR_ENUM
+    out=new BufferedWriter(new FileWriter(CONFIG_FOR_ENUM));
+    startConfig();
+    appendProperty("e", "SecondLevelInclude");
+    appendProperty("f", "SecondLevelInclude");
+    endConfig();
+
+    out=new BufferedWriter(new FileWriter(CONFIG2));
+    startConfig();
+    startInclude(CONFIG_FOR_ENUM);
+    endInclude();
+    appendProperty("c","FirstLevelInclude");
+    appendProperty("d","FirstLevelInclude");
+    endConfig();
+
+    out=new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    startInclude(CONFIG2);
+    endInclude();
+    appendProperty("a", "1");
+    appendProperty("b", "2");
+    endConfig();
+
+    // Add CONFIG as an InputStream resource.
+    File file = new File(CONFIG);
+    BufferedInputStream bis =
+        new BufferedInputStream(new FileInputStream(file));
+    conf.addResource(bis);
+
+    // The first time the conf is parsed, verify that all properties were read
+    // from all levels of includes.
+    assertEquals("1", conf.get("a"));
+    assertEquals("2", conf.get("b"));
+    assertEquals("FirstLevelInclude", conf.get("c"));
+    assertEquals("FirstLevelInclude", conf.get("d"));
+    assertEquals("SecondLevelInclude", conf.get("e"));
+    assertEquals("SecondLevelInclude", conf.get("f"));
+
+    // Add another resource to the conf.
+    out=new BufferedWriter(new FileWriter(CONFIG_MULTI_BYTE));
+    startConfig();
+    appendProperty("g", "3");
+    appendProperty("h", "4");
+    endConfig();
+
+    Path fileResource = new Path(CONFIG_MULTI_BYTE);
+    conf.addResource(fileResource);
+
+    // Verify that all properties were read from all levels of includes the
+    // second time the conf is parsed.
+    assertEquals("1", conf.get("a"));
+    assertEquals("2", conf.get("b"));
+    assertEquals("FirstLevelInclude", conf.get("c"));
+    assertEquals("FirstLevelInclude", conf.get("d"));
+    assertEquals("SecondLevelInclude", conf.get("e"));
+    assertEquals("SecondLevelInclude", conf.get("f"));
+    assertEquals("3", conf.get("g"));
+    assertEquals("4", conf.get("h"));
+
+    tearDown();
+  }
+
+  @Test
+  public void testOrderOfDuplicatePropertiesWithInclude() throws Exception {
+    tearDown();
+
+    // Property "a" is set to different values inside and outside of includes.
+    out=new BufferedWriter(new FileWriter(CONFIG2));
+    startConfig();
+    appendProperty("a", "a-InsideInclude");
+    appendProperty("b", "b-InsideInclude");
+    endConfig();
+
+    out=new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    appendProperty("a","a-OutsideInclude");
+    startInclude(CONFIG2);
+    endInclude();
+    appendProperty("b","b-OutsideInclude");
+    endConfig();
+
+    Path fileResource = new Path(CONFIG);
+    conf.addResource(fileResource);
+
+    assertEquals("a-InsideInclude", conf.get("a"));
+    assertEquals("b-OutsideInclude", conf.get("b"));
+
     tearDown();
   }
 
@@ -1301,10 +1401,17 @@ public class TestConfiguration {
   @Test
   public void testTimeDuration() {
     Configuration conf = new Configuration(false);
+
+    assertEquals(7000L,
+        conf.getTimeDuration("test.time.a", 7L, SECONDS, MILLISECONDS));
+
     conf.setTimeDuration("test.time.a", 7L, SECONDS);
     assertEquals("7s", conf.get("test.time.a"));
     assertEquals(0L, conf.getTimeDuration("test.time.a", 30, MINUTES));
+    assertEquals(0L, conf.getTimeDuration("test.time.a", 30, SECONDS, MINUTES));
     assertEquals(7L, conf.getTimeDuration("test.time.a", 30, SECONDS));
+    assertEquals(7L,
+        conf.getTimeDuration("test.time.a", 30, MILLISECONDS, SECONDS));
     assertEquals(7000L, conf.getTimeDuration("test.time.a", 30, MILLISECONDS));
     assertEquals(7000000L,
         conf.getTimeDuration("test.time.a", 30, MICROSECONDS));
@@ -1321,6 +1428,8 @@ public class TestConfiguration {
     assertEquals(30L, conf.getTimeDuration("test.time.X", 30, SECONDS));
     conf.set("test.time.X", "30");
     assertEquals(30L, conf.getTimeDuration("test.time.X", 40, SECONDS));
+    assertEquals(30000L,
+        conf.getTimeDuration("test.time.X", 40, SECONDS, MILLISECONDS));
     assertEquals(10L, conf.getTimeDuration("test.time.c", "10", SECONDS));
     assertEquals(30L, conf.getTimeDuration("test.time.c", "30s", SECONDS));
     assertEquals(120L, conf.getTimeDuration("test.time.c", "2m", SECONDS));
@@ -1749,7 +1858,7 @@ public class TestConfiguration {
       assertEquals("test.key2", jp1.getKey());
       assertEquals("value2", jp1.getValue());
       assertEquals(true, jp1.isFinal);
-      assertEquals(fileResource.toUri().getPath(), jp1.getResource());
+      assertEquals(fileResource.toString(), jp1.getResource());
 
       // test xml format
       outWriter = new StringWriter();
@@ -1760,7 +1869,7 @@ public class TestConfiguration {
       assertEquals(1, actualConf1.size());
       assertEquals("value2", actualConf1.get("test.key2"));
       assertTrue(actualConf1.getFinalParameters().contains("test.key2"));
-      assertEquals(fileResource.toUri().getPath(),
+      assertEquals(fileResource.toString(),
           actualConf1.getPropertySources("test.key2")[0]);
 
       // case 2: dump an non existing property
@@ -2271,7 +2380,8 @@ public class TestConfiguration {
     final File tmpDir = GenericTestUtils.getRandomizedTestDir();
     tmpDir.mkdirs();
     final String ourUrl = new URI(LocalJavaKeyStoreProvider.SCHEME_NAME,
-        "file",  new File(tmpDir, "test.jks").toString(), null).toString();
+        "file",  new File(tmpDir, "test.jks").toURI().getPath(),
+        null).toString();
 
     conf = new Configuration(false);
     conf.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, ourUrl);
@@ -2299,7 +2409,8 @@ public class TestConfiguration {
     final File tmpDir = GenericTestUtils.getRandomizedTestDir();
     tmpDir.mkdirs();
     final String ourUrl = new URI(LocalJavaKeyStoreProvider.SCHEME_NAME,
-        "file",  new File(tmpDir, "test.jks").toString(), null).toString();
+        "file",  new File(tmpDir, "test.jks").toURI().getPath(),
+        null).toString();
 
     conf = new Configuration(false);
     conf.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, ourUrl);
@@ -2318,19 +2429,33 @@ public class TestConfiguration {
     FileUtil.fullyDelete(tmpDir);
   }
 
+  @Test
   public void testGettingPropertiesWithPrefix() throws Exception {
     Configuration conf = new Configuration();
     for (int i = 0; i < 10; i++) {
-      conf.set("prefix" + ".name" + i, "value");
+      conf.set("prefix." + "name" + i, "value" + i);
     }
     conf.set("different.prefix" + ".name", "value");
-    Map<String, String> props = conf.getPropsWithPrefix("prefix");
-    assertEquals(props.size(), 10);
+    Map<String, String> prefixedProps = conf.getPropsWithPrefix("prefix.");
+    assertThat(prefixedProps.size(), is(10));
+    for (int i = 0; i < 10; i++) {
+      assertEquals("value" + i, prefixedProps.get("name" + i));
+    }
 
+    // Repeat test with variable substitution
+    conf.set("foo", "bar");
+    for (int i = 0; i < 10; i++) {
+      conf.set("subprefix." + "subname" + i, "value_${foo}" + i);
+    }
+    prefixedProps = conf.getPropsWithPrefix("subprefix.");
+    assertThat(prefixedProps.size(), is(10));
+    for (int i = 0; i < 10; i++) {
+      assertEquals("value_bar" + i, prefixedProps.get("subname" + i));
+    }
     // test call with no properties for a given prefix
-    props = conf.getPropsWithPrefix("none");
-    assertNotNull(props.isEmpty());
-    assertTrue(props.isEmpty());
+    prefixedProps = conf.getPropsWithPrefix("none");
+    assertNotNull(prefixedProps.isEmpty());
+    assertTrue(prefixedProps.isEmpty());
   }
 
   public static void main(String[] argv) throws Exception {
@@ -2345,8 +2470,8 @@ public class TestConfiguration {
     try{
       out = new BufferedWriter(new FileWriter(CONFIG_CORE));
       startConfig();
-      appendProperty("hadoop.system.tags", "YARN,HDFS,NAMENODE");
-      appendProperty("hadoop.custom.tags", "MYCUSTOMTAG");
+      appendProperty("hadoop.tags.system", "YARN,HDFS,NAMENODE");
+      appendProperty("hadoop.tags.custom", "MYCUSTOMTAG");
       appendPropertyByTag("dfs.cblock.trace.io", "false", "YARN");
       appendPropertyByTag("dfs.replication", "1", "HDFS");
       appendPropertyByTag("dfs.namenode.logging.level", "INFO", "NAMENODE");
@@ -2389,32 +2514,80 @@ public class TestConfiguration {
 
   @Test
   public void testInvalidTags() throws Exception {
-    PrintStream output = System.out;
-    try {
-      ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-      System.setOut(new PrintStream(bytes));
+    Path fileResource = new Path(CONFIG);
+    conf.addResource(fileResource);
+    conf.getProps();
 
-      out = new BufferedWriter(new FileWriter(CONFIG));
-      startConfig();
-      appendPropertyByTag("dfs.cblock.trace.io", "false", "MYOWNTAG,TAG2");
-      endConfig();
+    assertFalse(conf.isPropertyTag("BADTAG"));
+    assertFalse(conf.isPropertyTag("CUSTOM_TAG"));
+    assertTrue(conf.isPropertyTag("DEBUG"));
+    assertTrue(conf.isPropertyTag("HDFS"));
+  }
 
-      Path fileResource = new Path(CONFIG);
-      conf.addResource(fileResource);
-      conf.getProps();
+  /**
+   * Test race conditions between clone() and getProps().
+   * Test for race conditions in the way Hadoop handles the Configuration
+   * class. The scenario is the following. Let's assume that there are two
+   * threads sharing the same Configuration class. One adds some resources
+   * to the configuration, while the other one clones it. Resources are
+   * loaded lazily in a deferred call to loadResources(). If the cloning
+   * happens after adding the resources but before parsing them, some temporary
+   * resources like input stream pointers are cloned. Eventually both copies
+   * will load the same input stream resources.
+   * One parses the input stream XML and closes it updating it's own copy of
+   * the resource. The other one has another pointer to the same input stream.
+   * When it tries to load it, it will crash with a stream closed exception.
+   */
+  @Test
+  public void testResourceRace() {
+    InputStream is =
+        new BufferedInputStream(new ByteArrayInputStream(
+            "<configuration></configuration>".getBytes()));
+    Configuration config = new Configuration();
+    // Thread 1
+    config.addResource(is);
+    // Thread 2
+    Configuration confClone = new Configuration(conf);
+    // Thread 2
+    confClone.get("firstParse");
+    // Thread 1
+    config.get("secondParse");
+  }
 
-      List<String> tagList = new ArrayList<>();
-      tagList.add("REQUIRED");
-      tagList.add("MYOWNTAG");
-      tagList.add("TAG2");
+  @Test
+  public void testCDATA() throws IOException {
+    String xml = new String(
+        "<configuration>" +
+          "<property>" +
+            "<name>cdata</name>" +
+            "<value><![CDATA[>cdata]]></value>" +
+          "</property>\n" +
+          "<property>" +
+            "<name>cdata-multiple</name>" +
+            "<value><![CDATA[>cdata1]]> and <![CDATA[>cdata2]]></value>" +
+          "</property>\n" +
+          "<property>" +
+            "<name>cdata-multiline</name>" +
+            "<value><![CDATA[>cdata\nmultiline<>]]></value>" +
+          "</property>\n" +
+          "<property>" +
+            "<name>cdata-whitespace</name>" +
+            "<value>  prefix <![CDATA[>cdata]]>\nsuffix  </value>" +
+          "</property>\n" +
+        "</configuration>");
+    Configuration conf = checkCDATA(xml.getBytes());
+    ByteArrayOutputStream os = new ByteArrayOutputStream();
+    conf.writeXml(os);
+    checkCDATA(os.toByteArray());
+  }
 
-      Properties properties = conf.getAllPropertiesByTags(tagList);
-      assertEq(0, properties.size());
-      assertFalse(properties.containsKey("dfs.cblock.trace.io"));
-      assertFalse(bytes.toString().contains("Invalid tag "));
-      assertFalse(bytes.toString().contains("Tag"));
-    } finally {
-      System.setOut(output);
-    }
+  private static Configuration checkCDATA(byte[] bytes) {
+    Configuration conf = new Configuration(false);
+    conf.addResource(new ByteArrayInputStream(bytes));
+    assertEquals(">cdata", conf.get("cdata"));
+    assertEquals(">cdata1 and >cdata2", conf.get("cdata-multiple"));
+    assertEquals(">cdata\nmultiline<>", conf.get("cdata-multiline"));
+    assertEquals("  prefix >cdata\nsuffix  ", conf.get("cdata-whitespace"));
+    return conf;
   }
 }

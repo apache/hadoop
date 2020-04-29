@@ -30,6 +30,9 @@ export default DS.Model.extend({
   containerExitStatus: DS.attr('number'),
   containerState: DS.attr('string'),
   nodeHttpAddress: DS.attr('string'),
+  nodeId: DS.attr('string'),
+  diagnosticsInfo: DS.attr('string'),
+  exposedPorts: DS.attr('string'),
 
   startTs: function() {
     return Converter.dateToTimeStamp(this.get("startedTime"));
@@ -60,4 +63,16 @@ export default DS.Model.extend({
            "</p><p>ElapsedTime:" +
            String(this.get("elapsedTime")) + "</p>";
   }.property(),
+
+  masterNodeURL: function() {
+    var addr = encodeURIComponent(this.get("nodeHttpAddress"));
+    return `#/yarn-node/${this.get("nodeId")}/${addr}/info/`;
+  }.property("nodeId", "nodeHttpAddress"),
+
+  appAttemptContainerLogsURL: function() {
+    const containerId = this.get("id");
+    const attemptId = Converter.containerIdToAttemptId(containerId);
+    const appId = Converter.attemptIdToAppId(attemptId);
+    return `#/yarn-app/${appId}/logs?attempt=${attemptId}&containerid=${containerId}`;
+  }.property("id")
 });

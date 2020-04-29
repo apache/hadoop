@@ -26,13 +26,13 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoContiguous;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.test.Whitebox;
 import org.junit.Test;
-import org.mockito.internal.util.reflection.Whitebox;
 
 import java.io.IOException;
 
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 /**
@@ -57,12 +57,8 @@ public class TestCommitBlockSynchronization {
     // set file's parent as root and put the file to inodeMap, so
     // FSNamesystem's isFileDeleted() method will return false on this file
     if (file.getParent() == null) {
-      INodeDirectory mparent = mock(INodeDirectory.class);
-      INodeDirectory parent = new INodeDirectory(mparent.getId(), new byte[0],
-          mparent.getPermissionStatus(), mparent.getAccessTime());
-      parent.setLocalName(new byte[0]);
+      INodeDirectory parent = namesystem.getFSDirectory().getRoot();
       parent.addChild(file);
-      file.setParent(parent);
     }
     namesystem.dir.getINodeMap().put(file);
 
@@ -81,7 +77,7 @@ public class TestCommitBlockSynchronization {
     doReturn(blockInfo).when(namesystemSpy).getStoredBlock(any(Block.class));
     doReturn(blockInfo).when(file).getLastBlock();
     doNothing().when(namesystemSpy).closeFileCommitBlocks(
-        any(String.class), any(INodeFile.class), any(BlockInfo.class));
+        any(), any(INodeFile.class), any(BlockInfo.class));
     doReturn(mock(FSEditLog.class)).when(namesystemSpy).getEditLog();
 
     return namesystemSpy;

@@ -114,7 +114,7 @@ supplied this way.
 
 This means you have a relative similar workflow across secure and insecure clusters.
 
-1. Suring AM startup, log in to Kerberos.
+1. During AM startup, log in to Kerberos.
 A call to `UserGroupInformation.isSecurityEnabled()` will trigger this operation.
 
 1. Enumerate the current user's credentials, through a call of
@@ -144,7 +144,7 @@ than the AMRM and timeline tokens.
 
 Here are the different strategies
 
-1. Don't. Rely on the lifespan of the application being so short that token
+1. Don't rely on the lifespan of the application being so short that token
 renewal is not needed. For applications whose life can always be measured
 in minutes or tens of minutes, this is a viable strategy.
 
@@ -156,7 +156,7 @@ This what most YARN applications do.
 
 ### AM/RM Token Refresh
 
-The AM/RM token is renewed automatically; the AM pushes out a new token
+The AM/RM token is renewed automatically; the RM sends out a new token
 to the AM within an `allocate` message. Consult the `AMRMClientImpl` class
 to see the process. *Your AM code does not need to worry about this process*
 
@@ -191,7 +191,7 @@ token. Consult `UnmanagedAMLauncher` for the specifics.
 ### Identity on an insecure cluster: `HADOOP_USER_NAME`
 
 In an insecure cluster, the application will run as the identity of
-the account of the node manager, typically something such as `yarn`
+the account of the node manager, such as `yarn`
 or `mapred`. By default, the application will access HDFS
 as that user, with a different home directory, and with
 a different user identified in audit logs and on file system owner attributes.
@@ -402,27 +402,69 @@ connection with the AM and pass up the current user's credentials).
 
 ## Securing YARN Application Web UIs and REST APIs
 
-YARN provides a straightforward way of giving every YARN application SPNEGO authenticated
-web pages: it implements SPNEGO authentication in the Resource Manager Proxy.
+YARN provides a straightforward way of giving every YARN Application SPNEGO
+authenticated web pages: the RM implements SPNEGO authentication in the Resource
+Manager Proxy and restricts access to the Yarn Application's Web UI to only the
+RM Proxy.  There are two ways to do this:
 
-YARN web UI are expected to load the AM proxy filter when setting up its web UI; this filter
-will redirect all HTTP Requests coming from any host other than the RM Proxy hosts to an
-RM proxy, to which the client app/browser must re-issue the request. The client will authenticate
-against the principal of the RM Proxy (usually `yarn`), and, once authenticated, have its
-request forwared.
+#### Option 1: AM IP Proxy Filter
 
-As a result, all client interactions are SPNEGO-authenticated, without the YARN application
-itself needing any kerberos principal for the clients to authenticate against.
+A YARN Application's Web Server should load the AM proxy filter (see the
+`AmFilterInitializer` class) when setting up its web UI; this filter will
+redirect all HTTP Requests coming from any host other than the RM Proxy hosts to
+an RM proxy, to which the client app/browser must re-issue the request. The
+client will authenticate against the principal of the RM Proxy (usually `yarn`),
+and, once authenticated, have its request forwarded.
 
-Known weaknesses in this approach are:
+Known weaknesses in this option are:
 
-1. As calls coming from the proxy hosts are not redirected, any application running
-on those hosts has unrestricted access to the YARN applications. This is why in a secure cluster
-the proxy hosts *must* run on cluster nodes which do not run end user code (i.e. not run YARN
-NodeManagers and hence schedule YARN containers, nor support logins by end users).
+1. The AM proxy filter only checks for the IP/hosts of the RM Proxy so any
+Application running on those hosts has unrestricted access to the YARN
+Application's Web UI. This is why in a secure cluster the proxy hosts *must* run
+on cluster nodes which do not run end user code (i.e. not running YARN
+NodeManagers, and hence not schedule YARN containers; nor support logins by end
+users).
 
-1. The HTTP requests between proxy and YARN RM Server are not currently encrypted.
-That is: HTTPS is not supported.
+1. The HTTP requests between RM proxy and the Yarn Application are not currently
+encrypted. That is: HTTPS is not supported.
+
+#### Option 2: HTTPS Mutual Authentication
+
+By default, YARN Application Web UIs are not encrypted (i.e. HTTPS). It is up to
+the Application to provide support for HTTPS. This can either be done entirely
+independently with a valid HTTPS Certificate from a public CA or source that the
+RM or JVM is configured to trust.  Or, alternatively, the RM can act as a
+limited CA and provide the Application with a Certificate it can use, which is
+only accepted by the RM proxy, and no other clients (e.g. web browsers). This is
+important because the Application cannot necessarily be trusted to not steal any
+issued Certificates or perform other malicious behavior. The Certificates the RM
+issues will be (a) expired, (b) have a Subject containing `CN=<application-id>`
+instead of the typical `CN=<hostname|domain>`, and (c) be issued by a
+self-signed CA Certificate generated by the RM.
+
+For an Application to take advantage of this ability, it simply needs to load
+the provided Keystore into its Web Server of choice.  The location of the
+Keystore can be found in the `KEYSTORE_FILE_LOCATION` environment variable, and
+its password in the `KEYSTORE_PASSWORD` environment variable.  This will be
+available as long as `yarn.resourcemanager.application-https.policy` is *not*
+set to `NONE` (see table below), and it's provided an HTTPS Tracking URL.
+
+Additionally, the Application can verify that the RM proxy is in fact the RM via
+HTTPS Mutual Authentication.  Besides the provided Keystore, there is also a
+provided Truststore with the RM proxy's client Certificate.  By loading this
+Truststore and enabling `needsClientAuth` (or equivalent) in its Web Server of
+choice, the AM's Web Server should automatically require that the client (i.e.
+the RM proxy) provide a trusted Certificate, or it will fail the connection.
+This ensures that only the RM Proxy, which the client authenticated against, can
+access it.
+
+| `yarn.resourcemanager.application-https.policy` | Behavior |
+|:---- |:---- |
+| `NONE` | The RM will do nothing special.|
+| `LENIENT` | The RM will generate and provide a keystore and truststore to the AM, which it is free to use for HTTPS in its tracking URL web server.  The RM proxy will still allow HTTP connections to AMs that opt not to use HTTPS.|
+| `STRICT` | this is the same as LENIENT, except that the RM proxy will  only allow HTTPS connections to AMs; HTTP connections will be blocked and result in a warning page to the user.|
+
+The default value is `OFF`.
 
 ## Securing YARN Application REST APIs
 

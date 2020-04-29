@@ -31,7 +31,6 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
@@ -39,7 +38,6 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectorySnapshottableFea
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiffList;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
-import org.apache.hadoop.hdfs.util.Diff.ListType;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -172,13 +170,12 @@ public class INodeDirectory extends INodeWithAdditionalFields
   }
 
   @Override
-  public void addSpaceConsumed(QuotaCounts counts, boolean verify)
-    throws QuotaExceededException {
+  public void addSpaceConsumed(QuotaCounts counts) {
+    super.addSpaceConsumed(counts);
+
     final DirectoryWithQuotaFeature q = getDirectoryWithQuotaFeature();
-    if (q != null) {
-      q.addSpaceConsumed(this, counts, verify);
-    } else {
-      addSpaceConsumed2Parent(counts, verify);
+    if (q != null && isQuotaSet()) {
+      q.addSpaceConsumed2Cache(counts);
     }
   }
 
@@ -279,24 +276,42 @@ public class INodeDirectory extends INodeWithAdditionalFields
     getDirectorySnapshottableFeature().setSnapshotQuota(snapshotQuota);
   }
 
+  /**
+   * Add a snapshot.
+   * @param name Name of the snapshot.
+   * @param mtime The snapshot creation time set by Time.now().
+   */
   public Snapshot addSnapshot(int id, String name,
       final LeaseManager leaseManager, final boolean captureOpenFiles,
-      int maxSnapshotLimit)
-      throws SnapshotException, QuotaExceededException {
+      int maxSnapshotLimit, long mtime)
+      throws SnapshotException {
     return getDirectorySnapshottableFeature().addSnapshot(this, id, name,
-        leaseManager, captureOpenFiles, maxSnapshotLimit);
+        leaseManager, captureOpenFiles, maxSnapshotLimit, mtime);
   }
 
+  /**
+   * Delete a snapshot.
+   * @param snapshotName Name of the snapshot.
+   * @param mtime The snapshot deletion time set by Time.now().
+   */
   public Snapshot removeSnapshot(
-      ReclaimContext reclaimContext, String snapshotName)
+      ReclaimContext reclaimContext, String snapshotName, long mtime)
       throws SnapshotException {
     return getDirectorySnapshottableFeature().removeSnapshot(
-        reclaimContext, this, snapshotName);
+        reclaimContext, this, snapshotName, mtime);
   }
 
-  public void renameSnapshot(String path, String oldName, String newName)
-      throws SnapshotException {
-    getDirectorySnapshottableFeature().renameSnapshot(path, oldName, newName);
+  /**
+   * Rename a snapshot.
+   * @param path The directory path where the snapshot was taken.
+   * @param oldName Old name of the snapshot
+   * @param newName New name the snapshot will be renamed to
+   * @param mtime The snapshot modification time set by Time.now().
+   */
+  public void renameSnapshot(String path, String oldName, String newName,
+      long mtime) throws SnapshotException {
+    getDirectorySnapshottableFeature().renameSnapshot(path, oldName, newName,
+        mtime);
   }
 
   /** add DirectorySnapshottableFeature */
@@ -353,7 +368,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
     // replace the instance in the created list of the diff list
     DirectoryWithSnapshotFeature sf = this.getDirectoryWithSnapshotFeature();
     if (sf != null) {
-      sf.getDiffs().replaceChild(ListType.CREATED, oldChild, newChild);
+      sf.getDiffs().replaceCreatedChild(oldChild, newChild);
     }
     
     // update the inodeMap
@@ -529,7 +544,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
     }
 
     final INode removed = children.remove(i);
-    Preconditions.checkState(removed == child);
+    Preconditions.checkState(removed.equals(child));
     return true;
   }
 
@@ -544,7 +559,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
    *         otherwise, return true;
    */
   public boolean addChild(INode node, final boolean setModTime,
-      final int latestSnapshotId) throws QuotaExceededException {
+      final int latestSnapshotId) {
     final int low = searchChildren(node.getLocalNameBytes());
     if (low >= 0) {
       return false;
@@ -573,6 +588,22 @@ public class INodeDirectory extends INodeWithAdditionalFields
     }
     addChild(node, low);
     return true;
+  }
+
+  /**
+   * During image loading, the search is unnecessary since the insert position
+   * should always be at the end of the map given the sequence they are
+   * serialized on disk.
+   */
+  public boolean addChildAtLoading(INode node) {
+    int pos;
+    if (!node.isReference()) {
+      pos = (children == null) ? (-1) : (-children.size() - 1);
+      addChild(node, pos);
+      return true;
+    } else {
+      return addChild(node);
+    }
   }
 
   /**
@@ -740,14 +771,13 @@ public class INodeDirectory extends INodeWithAdditionalFields
    *          The reference node to be removed/replaced
    * @param newChild
    *          The node to be added back
-   * @throws QuotaExceededException should not throw this exception
    */
   public void undoRename4ScrParent(final INodeReference oldChild,
-      final INode newChild) throws QuotaExceededException {
+      final INode newChild) {
     DirectoryWithSnapshotFeature sf = getDirectoryWithSnapshotFeature();
     assert sf != null : "Directory does not have snapshot feature";
-    sf.getDiffs().removeChild(ListType.DELETED, oldChild);
-    sf.getDiffs().replaceChild(ListType.CREATED, oldChild, newChild);
+    sf.getDiffs().removeDeletedChild(oldChild);
+    sf.getDiffs().replaceCreatedChild(oldChild, newChild);
     addChild(newChild, true, Snapshot.CURRENT_STATE_ID);
   }
   
@@ -757,20 +787,17 @@ public class INodeDirectory extends INodeWithAdditionalFields
    * and delete possible record in the deleted list.  
    */
   public void undoRename4DstParent(final BlockStoragePolicySuite bsps,
-      final INode deletedChild,
-      int latestSnapshotId) throws QuotaExceededException {
+      final INode deletedChild, int latestSnapshotId) {
     DirectoryWithSnapshotFeature sf = getDirectoryWithSnapshotFeature();
     assert sf != null : "Directory does not have snapshot feature";
-    boolean removeDeletedChild = sf.getDiffs().removeChild(ListType.DELETED,
-        deletedChild);
+    boolean removeDeletedChild = sf.getDiffs().removeDeletedChild(deletedChild);
     int sid = removeDeletedChild ? Snapshot.CURRENT_STATE_ID : latestSnapshotId;
     final boolean added = addChild(deletedChild, true, sid);
     // update quota usage if adding is successfully and the old child has not
     // been stored in deleted list before
     if (added && !removeDeletedChild) {
       final QuotaCounts counts = deletedChild.computeQuotaUsage(bsps);
-      addSpaceConsumed(counts, false);
-
+      addSpaceConsumed(counts);
     }
   }
 
@@ -829,6 +856,13 @@ public class INodeDirectory extends INodeWithAdditionalFields
     // there is snapshot data
     if (sf != null) {
       sf.cleanDirectory(reclaimContext, this, snapshotId, priorSnapshotId);
+      // If the inode has empty diff list and sf is not a
+      // DirectorySnapshottableFeature, remove the feature to save heap.
+      if (sf.getDiffs().isEmpty() &&
+          !(sf instanceof DirectorySnapshottableFeature) &&
+          getDirectoryWithSnapshotFeature() != null) {
+        this.removeFeature(sf);
+      }
     } else {
       // there is no snapshot data
       if (priorSnapshotId == Snapshot.NO_SNAPSHOT_ID &&
@@ -894,6 +928,14 @@ public class INodeDirectory extends INodeWithAdditionalFields
       prefix.setLength(prefix.length() - 2);
       prefix.append("  ");
     }
+
+    final DirectoryWithSnapshotFeature snapshotFeature =
+        getDirectoryWithSnapshotFeature();
+    if (snapshotFeature != null) {
+      out.print(prefix);
+      out.print(snapshotFeature);
+    }
+    out.println();
     dumpTreeRecursively(out, prefix, new Iterable<SnapshotAndINode>() {
       final Iterator<INode> i = getChildrenList(snapshot).iterator();
       

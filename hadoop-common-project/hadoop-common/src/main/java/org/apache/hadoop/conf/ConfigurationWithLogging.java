@@ -41,7 +41,7 @@ public class ConfigurationWithLogging extends Configuration {
   }
 
   /**
-   * @see Configuration#get(String).
+   * See {@link Configuration#get(String)}.
    */
   @Override
   public String get(String name) {
@@ -51,7 +51,7 @@ public class ConfigurationWithLogging extends Configuration {
   }
 
   /**
-   * @see Configuration#get(String, String).
+   * See {@link Configuration#get(String, String)}.
    */
   @Override
   public String get(String name, String defaultValue) {
@@ -62,7 +62,7 @@ public class ConfigurationWithLogging extends Configuration {
   }
 
   /**
-   * @see Configuration#getBoolean(String, boolean).
+   * See {@link Configuration#getBoolean(String, boolean)}.
    */
   @Override
   public boolean getBoolean(String name, boolean defaultValue) {
@@ -72,7 +72,7 @@ public class ConfigurationWithLogging extends Configuration {
   }
 
   /**
-   * @see Configuration#getFloat(String, float).
+   * See {@link Configuration#getFloat(String, float)}.
    */
   @Override
   public float getFloat(String name, float defaultValue) {
@@ -82,7 +82,7 @@ public class ConfigurationWithLogging extends Configuration {
   }
 
   /**
-   * @see Configuration#getInt(String, int).
+   * See {@link Configuration#getInt(String, int)}.
    */
   @Override
   public int getInt(String name, int defaultValue) {
@@ -92,7 +92,7 @@ public class ConfigurationWithLogging extends Configuration {
   }
 
   /**
-   * @see Configuration#getLong(String, long).
+   * See {@link Configuration#getLong(String, long)}.
    */
   @Override
   public long getLong(String name, long defaultValue) {
@@ -102,7 +102,7 @@ public class ConfigurationWithLogging extends Configuration {
   }
 
   /**
-   * @see Configuration#set(String, String, String).
+   * See {@link Configuration#set(String, String, String)}.
    */
   @Override
   public void set(String name, String value, String source) {

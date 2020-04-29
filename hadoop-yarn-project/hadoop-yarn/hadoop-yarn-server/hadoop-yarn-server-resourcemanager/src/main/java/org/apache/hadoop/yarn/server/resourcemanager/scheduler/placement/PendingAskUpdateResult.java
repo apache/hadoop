@@ -62,4 +62,12 @@ public class PendingAskUpdateResult {
   public String getNewNodePartition() {
     return newNodePartition;
   }
+
+  @Override
+  public String toString() {
+    return "PendingAskUpdateResult{" + "lastPendingAsk=" + lastPendingAsk
+        + ", lastNodePartition='" + lastNodePartition + '\''
+        + ", newPendingAsk=" + newPendingAsk + ", newNodePartition='"
+        + newNodePartition + '\'' + '}';
+  }
 }

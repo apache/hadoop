@@ -41,12 +41,12 @@ import javax.crypto.Cipher;
 
 import java.io.Closeable;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
+import java.nio.file.Files;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -390,7 +390,6 @@ public class KDiag extends Configured implements Tool, Closeable {
       validateKinitExecutable();
       validateJAAS(jaas);
       validateNTPConf();
-
       if (checkShortName) {
         validateShortName();
       }
@@ -462,8 +461,8 @@ public class KDiag extends Configured implements Tool, Closeable {
       KerberosName kn = new KerberosName(principal);
       String result = kn.getShortName();
       if (nonSimplePattern.matcher(result).find()) {
-        warn(CAT_KERBEROS, principal + " short name: " + result
-                + " still contains @ or /");
+        warn(CAT_KERBEROS, principal + " short name: " + result +
+                " still contains @ or /");
       }
     } catch (IOException e) {
       throw new KerberosDiagsFailure(CAT_KERBEROS, e,
@@ -923,7 +922,7 @@ public class KDiag extends Configured implements Tool, Closeable {
    * @throws IOException IO problems
    */
   private void dump(File file) throws IOException {
-    try (FileInputStream in = new FileInputStream(file)) {
+    try (InputStream in = Files.newInputStream(file.toPath())) {
       for (String line : IOUtils.readLines(in)) {
         println("%s", line);
       }

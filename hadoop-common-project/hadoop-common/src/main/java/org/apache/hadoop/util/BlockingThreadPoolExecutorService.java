@@ -161,9 +161,9 @@ public final class BlockingThreadPoolExecutorService
   public String toString() {
     final StringBuilder sb = new StringBuilder(
         "BlockingThreadPoolExecutorService{");
-    sb.append(super.toString());
-    sb.append(", activeCount=").append(getActiveCount());
-    sb.append('}');
+    sb.append(super.toString())
+        .append(", activeCount=").append(getActiveCount())
+        .append('}');
     return sb.toString();
   }
 }

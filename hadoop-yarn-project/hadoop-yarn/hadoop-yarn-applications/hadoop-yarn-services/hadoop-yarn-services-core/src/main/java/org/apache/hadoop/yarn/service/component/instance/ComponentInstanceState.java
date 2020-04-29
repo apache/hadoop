@@ -22,5 +22,7 @@ public enum ComponentInstanceState {
   INIT,
   STARTED,
   READY,
-  UPGRADING
+  UPGRADING,
+  CANCEL_UPGRADING,
+  REINITIALIZED
 }

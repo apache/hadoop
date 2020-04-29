@@ -24,12 +24,19 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
-import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 
@@ -44,13 +51,16 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMap;
+import org.apache.hadoop.hdfs.server.aliasmap.InMemoryAliasMapProtocol;
 import org.apache.hadoop.hdfs.server.aliasmap.InMemoryLevelDBAliasMapServer;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
@@ -60,8 +70,11 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStatistics;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.ProvidedStorageMap;
+import org.apache.hadoop.hdfs.server.common.FileRegion;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.blockaliasmap.BlockAliasMap;
 import org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.InMemoryLevelDBAliasMapClient;
+import org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.LevelDBFileRegionAliasMap;
 import org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.TextFileRegionAliasMap;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 
@@ -70,7 +83,10 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY;
 
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
+import org.apache.hadoop.hdfs.server.namenode.ha.BootstrapStandby;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NodeBase;
 import org.junit.After;
 import org.junit.Before;
@@ -80,6 +96,13 @@ import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_ENABLED;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_LEVELDB_DIR;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_BIND_HOST;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROVIDED_ALIASMAP_LEVELDB_PATH;
+import static org.apache.hadoop.hdfs.MiniDFSCluster.HDFS_MINIDFS_BASEDIR;
+import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
 import static org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.TextFileRegionAliasMap.fileNameFromBlockPoolID;
 import static org.apache.hadoop.net.NodeBase.PATH_SEPARATOR_STR;
 import static org.junit.Assert.*;
@@ -106,6 +129,7 @@ public class ITestProvidedImplementation {
   private final int baseFileLen = 1024;
   private long providedDataSize = 0;
   private final String bpid = "BP-1234-10.1.1.1-1224";
+  private static final String clusterID = "CID-PROVIDED";
 
   private Configuration conf;
   private MiniDFSCluster cluster;
@@ -132,7 +156,7 @@ public class ITestProvidedImplementation {
         nnDirPath.toString());
     conf.set(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_READ_FILE,
         new Path(nnDirPath, fileNameFromBlockPoolID(bpid)).toString());
-    conf.set(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_DELIMITER, ",");
+    conf.set(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_TEXT_DELIMITER, "\t");
 
     conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR_PROVIDED,
         new File(providedPath.toUri()).toString());
@@ -214,34 +238,76 @@ public class ITestProvidedImplementation {
       StorageType[] storageTypes,
       StorageType[][] storageTypesPerDatanode,
       boolean doFormat, String[] racks) throws IOException {
+    startCluster(nspath, numDatanodes,
+        storageTypes, storageTypesPerDatanode,
+        doFormat, racks, null,
+        new MiniDFSCluster.Builder(conf));
+  }
+
+  void startCluster(Path nspath, int numDatanodes,
+      StorageType[] storageTypes,
+      StorageType[][] storageTypesPerDatanode,
+      boolean doFormat, String[] racks,
+      MiniDFSNNTopology topo,
+      MiniDFSCluster.Builder builder) throws IOException {
     conf.set(DFS_NAMENODE_NAME_DIR_KEY, nspath.toString());
 
+    builder.format(doFormat)
+        .manageNameDfsDirs(doFormat)
+        .numDataNodes(numDatanodes)
+        .racks(racks);
     if (storageTypesPerDatanode != null) {
-      cluster = new MiniDFSCluster.Builder(conf)
-          .format(doFormat)
-          .manageNameDfsDirs(doFormat)
-          .numDataNodes(numDatanodes)
-          .storageTypes(storageTypesPerDatanode)
-          .racks(racks)
-          .build();
+      builder.storageTypes(storageTypesPerDatanode);
     } else if (storageTypes != null) {
-      cluster = new MiniDFSCluster.Builder(conf)
-          .format(doFormat)
-          .manageNameDfsDirs(doFormat)
-          .numDataNodes(numDatanodes)
-          .storagesPerDatanode(storageTypes.length)
-          .storageTypes(storageTypes)
-          .racks(racks)
-          .build();
-    } else {
-      cluster = new MiniDFSCluster.Builder(conf)
-          .format(doFormat)
-          .manageNameDfsDirs(doFormat)
-          .numDataNodes(numDatanodes)
-          .racks(racks)
-          .build();
+      builder.storagesPerDatanode(storageTypes.length)
+          .storageTypes(storageTypes);
     }
+    if (topo != null) {
+      builder.nnTopology(topo);
+      // If HA or Federation is enabled and formatting is set to false,
+      // copy the FSImage to all Namenode directories.
+      if ((topo.isHA() || topo.isFederated()) && !doFormat) {
+        builder.manageNameDfsDirs(true);
+        builder.enableManagedDfsDirsRedundancy(false);
+        builder.manageNameDfsSharedDirs(true);
+        List<File> nnDirs =
+            getProvidedNamenodeDirs(conf.get(HDFS_MINIDFS_BASEDIR), topo);
+        for (File nnDir : nnDirs) {
+          MiniDFSCluster.copyNameDirs(
+              Collections.singletonList(nspath.toUri()),
+              Collections.singletonList(fileAsURI(nnDir)),
+              conf);
+        }
+      }
+    }
+    cluster = builder.build();
     cluster.waitActive();
+  }
+
+  private static List<File> getProvidedNamenodeDirs(String baseDir,
+      MiniDFSNNTopology topo) {
+    List<File> nnDirs = new ArrayList<>();
+    int nsCounter = 0;
+    for (MiniDFSNNTopology.NSConf nsConf : topo.getNameservices()) {
+      int nnCounter = nsCounter;
+      for (MiniDFSNNTopology.NNConf nnConf : nsConf.getNNs()) {
+        if (providedNameservice.equals(nsConf.getId())) {
+          // only add the first one
+          File[] nnFiles =
+              MiniDFSCluster.getNameNodeDirectory(
+                  baseDir, nsCounter, nnCounter);
+          if (nnFiles == null || nnFiles.length == 0) {
+            throw new RuntimeException("Failed to get a location for the"
+                + "Namenode directory for namespace: " + nsConf.getId()
+                + " and namenodeId: " + nnConf.getNnId());
+          }
+          nnDirs.add(nnFiles[0]);
+        }
+        nnCounter++;
+      }
+      nsCounter = nnCounter;
+    }
+    return nnDirs;
   }
 
   @Test(timeout=20000)
@@ -405,8 +471,8 @@ public class ITestProvidedImplementation {
     return ret;
   }
 
-  private void verifyFileSystemContents() throws Exception {
-    FileSystem fs = cluster.getFileSystem();
+  private void verifyFileSystemContents(int nnIndex) throws Exception {
+    FileSystem fs = cluster.getFileSystem(nnIndex);
     int count = 0;
     // read NN metadata, verify contents match
     for (TreePath e : new FSTreeWalk(providedPath, conf)) {
@@ -766,41 +832,258 @@ public class ITestProvidedImplementation {
     }
   }
 
-
-  @Test
-  public void testInMemoryAliasMap() throws Exception {
-    conf.setClass(ImageWriter.Options.UGI_CLASS,
-        FsUGIResolver.class, UGIResolver.class);
+  private File createInMemoryAliasMapImage() throws Exception {
+    conf.setClass(ImageWriter.Options.UGI_CLASS, FsUGIResolver.class,
+        UGIResolver.class);
     conf.setClass(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_CLASS,
         InMemoryLevelDBAliasMapClient.class, BlockAliasMap.class);
-    conf.set(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS,
-        "localhost:32445");
+    conf.set(DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS, "localhost:32445");
     File tempDirectory =
-        Files.createTempDirectory("in-memory-alias-map").toFile();
-    File leveDBPath = new File(tempDirectory, bpid);
-    leveDBPath.mkdirs();
-    conf.set(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_LEVELDB_DIR,
+        new File(new Path(nnDirPath, "in-memory-alias-map").toUri());
+    File levelDBDir = new File(tempDirectory, bpid);
+    levelDBDir.mkdirs();
+    conf.set(DFS_PROVIDED_ALIASMAP_INMEMORY_LEVELDB_DIR,
         tempDirectory.getAbsolutePath());
-    conf.setBoolean(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_ENABLED, true);
     conf.setInt(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_LOAD_RETRIES, 10);
-    InMemoryLevelDBAliasMapServer levelDBAliasMapServer =
-        new InMemoryLevelDBAliasMapServer(InMemoryAliasMap::init, bpid);
-    levelDBAliasMapServer.setConf(conf);
-    levelDBAliasMapServer.start();
+    conf.set(DFS_PROVIDED_ALIASMAP_LEVELDB_PATH,
+        tempDirectory.getAbsolutePath());
 
     createImage(new FSTreeWalk(providedPath, conf),
         nnDirPath,
-        FixedBlockResolver.class, "",
-        InMemoryLevelDBAliasMapClient.class);
-    levelDBAliasMapServer.close();
+        FixedBlockResolver.class, clusterID,
+        LevelDBFileRegionAliasMap.class);
 
+    return tempDirectory;
+  }
+
+  @Test
+  public void testInMemoryAliasMap() throws Exception {
+    File aliasMapImage = createInMemoryAliasMapImage();
     // start cluster with two datanodes,
     // each with 1 PROVIDED volume and other DISK volume
+    conf.setBoolean(DFS_PROVIDED_ALIASMAP_INMEMORY_ENABLED, true);
+    conf.setInt(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_LOAD_RETRIES, 10);
     startCluster(nnDirPath, 2,
         new StorageType[] {StorageType.PROVIDED, StorageType.DISK},
         null, false);
-    verifyFileSystemContents();
-    FileUtils.deleteDirectory(tempDirectory);
+    verifyFileSystemContents(0);
+    FileUtils.deleteDirectory(aliasMapImage);
+  }
+
+  /**
+   * Find a free port that hasn't been assigned yet.
+   *
+   * @param usedPorts set of ports that have already been assigned.
+   * @param maxTrials maximum number of random ports to try before failure.
+   * @return an unassigned port.
+   */
+  private int getUnAssignedPort(Set<Integer> usedPorts, int maxTrials) {
+    int count = 0;
+    while (count < maxTrials) {
+      int port = NetUtils.getFreeSocketPort();
+      if (usedPorts.contains(port)) {
+        count++;
+      } else {
+        return port;
+      }
+    }
+    return -1;
+  }
+
+  private static String providedNameservice;
+
+  /**
+   * Extends the {@link MiniDFSCluster.Builder} to create instances of
+   * {@link MiniDFSClusterBuilderAliasMap}.
+   */
+  private static class MiniDFSClusterBuilderAliasMap
+      extends MiniDFSCluster.Builder {
+
+    MiniDFSClusterBuilderAliasMap(Configuration conf) {
+      super(conf);
+    }
+
+    @Override
+    public MiniDFSCluster build() throws IOException {
+      return new MiniDFSClusterAliasMap(this);
+    }
+  }
+
+  /**
+   * Extends {@link MiniDFSCluster} to correctly configure the InMemoryAliasMap.
+   */
+  private static class MiniDFSClusterAliasMap extends MiniDFSCluster {
+
+    private Map<String, Collection<URI>> formattedDirsByNamespaceId;
+    private Set<Integer> completedNNs;
+
+    MiniDFSClusterAliasMap(MiniDFSCluster.Builder builder) throws IOException {
+      super(builder);
+    }
+
+    @Override
+    protected void initNameNodeConf(Configuration conf, String nameserviceId,
+        int nsIndex, String nnId, boolean manageNameDfsDirs,
+        boolean enableManagedDfsDirsRedundancy, int nnIndex)
+        throws IOException {
+
+      if (formattedDirsByNamespaceId == null) {
+        formattedDirsByNamespaceId = new HashMap<>();
+        completedNNs = new HashSet<>();
+      }
+
+      super.initNameNodeConf(conf, nameserviceId, nsIndex, nnId,
+          manageNameDfsDirs, enableManagedDfsDirsRedundancy, nnIndex);
+
+      if (providedNameservice.equals(nameserviceId)) {
+        // configure the InMemoryAliasMp.
+        conf.setBoolean(DFS_PROVIDED_ALIASMAP_INMEMORY_ENABLED, true);
+        String directory = conf.get(DFS_PROVIDED_ALIASMAP_INMEMORY_LEVELDB_DIR);
+        if (directory == null || !new File(directory).exists()) {
+          throw new IllegalArgumentException("In-memory alias map configured"
+              + "with the proper location; Set "
+              + DFS_PROVIDED_ALIASMAP_INMEMORY_LEVELDB_DIR);
+        }
+        // get the name of the directory (final component in path) used for map.
+        // Assume that the aliasmap configured with the same final component
+        // name in all Namenodes but is located in the path specified by
+        // DFS_NAMENODE_NAME_DIR_KEY
+        String dirName = new Path(directory).getName();
+        String nnDir =
+            conf.getTrimmedStringCollection(DFS_NAMENODE_NAME_DIR_KEY)
+                .iterator().next();
+        conf.set(DFS_PROVIDED_ALIASMAP_INMEMORY_LEVELDB_DIR,
+            new File(new Path(nnDir, dirName).toUri()).getAbsolutePath());
+        conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_PROVIDED_ENABLED, true);
+
+        // format the shared edits dir with the proper VERSION file.
+        NameNode.initializeSharedEdits(conf);
+      } else {
+        if (!completedNNs.contains(nnIndex)) {
+          // format the NN directories for non-provided namespaces
+          // if the directory for a namespace has been formatted, copy it over.
+          Collection<URI> namespaceDirs = FSNamesystem.getNamespaceDirs(conf);
+          if (formattedDirsByNamespaceId.containsKey(nameserviceId)) {
+            copyNameDirs(formattedDirsByNamespaceId.get(nameserviceId),
+                namespaceDirs, conf);
+          } else {
+            for (URI nameDirUri : namespaceDirs) {
+              File nameDir = new File(nameDirUri);
+              if (nameDir.exists() && !FileUtil.fullyDelete(nameDir)) {
+                throw new IOException("Could not fully delete " + nameDir);
+              }
+            }
+            HdfsServerConstants.StartupOption.FORMAT.setClusterId(clusterID);
+            DFSTestUtil.formatNameNode(conf);
+            formattedDirsByNamespaceId.put(nameserviceId, namespaceDirs);
+          }
+          conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_PROVIDED_ENABLED, false);
+          completedNNs.add(nnIndex);
+        }
+      }
+    }
+  }
+
+  /**
+   * Configures the addresseses of the InMemoryAliasMap.
+   *
+   * @param topology the MiniDFS topology to use.
+   * @param providedNameservice the nameservice id that supports provided.
+   */
+  private void configureAliasMapAddresses(MiniDFSNNTopology topology,
+      String providedNameservice) {
+    conf.unset(DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS);
+    Set<Integer> assignedPorts = new HashSet<>();
+    for (MiniDFSNNTopology.NSConf nsConf : topology.getNameservices()) {
+      for (MiniDFSNNTopology.NNConf nnConf : nsConf.getNNs()) {
+        if (providedNameservice.equals(nsConf.getId())) {
+          String key =
+              DFSUtil.addKeySuffixes(DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS,
+                  nsConf.getId(), nnConf.getNnId());
+          int port = getUnAssignedPort(assignedPorts, 10);
+          if (port == -1) {
+            throw new RuntimeException("No free ports available");
+          }
+          assignedPorts.add(port);
+          conf.set(key, "127.0.0.1:" + port);
+
+          String binHostKey =
+              DFSUtil.addKeySuffixes(
+                  DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_BIND_HOST,
+                  nsConf.getId(), nnConf.getNnId());
+          conf.set(binHostKey, "0.0.0.0");
+        }
+      }
+    }
+  }
+
+  /**
+   * Verify the mounted contents of the Filesystem.
+   *
+   * @param topology the topology of the cluster.
+   * @param providedNameservice the namespace id of the provided namenodes.
+   * @throws Exception
+   */
+  private void verifyPathsWithHAFailoverIfNecessary(MiniDFSNNTopology topology,
+      String providedNameservice) throws Exception {
+    List<Integer> nnIndexes = cluster.getNNIndexes(providedNameservice);
+    if (topology.isHA()) {
+      int nn1 = nnIndexes.get(0);
+      int nn2 = nnIndexes.get(1);
+      try {
+        verifyFileSystemContents(nn1);
+        fail("Read operation should fail as no Namenode is active");
+      } catch (RemoteException e) {
+        LOG.info("verifyPaths failed!. Expected exception: {}" + e);
+      }
+      cluster.transitionToActive(nn1);
+      LOG.info("Verifying data from NN with index = {}", nn1);
+      verifyFileSystemContents(nn1);
+      // transition to the second namenode.
+      cluster.transitionToStandby(nn1);
+      cluster.transitionToActive(nn2);
+      LOG.info("Verifying data from NN with index = {}", nn2);
+      verifyFileSystemContents(nn2);
+
+      cluster.shutdownNameNodes();
+      try {
+        verifyFileSystemContents(nn2);
+        fail("Read operation should fail as no Namenode is active");
+      } catch (NullPointerException e) {
+        LOG.info("verifyPaths failed!. Expected exception: {}" + e);
+      }
+    } else {
+      verifyFileSystemContents(nnIndexes.get(0));
+    }
+  }
+
+  @Test
+  public void testInMemoryAliasMapMultiTopologies() throws Exception {
+    MiniDFSNNTopology[] topologies =
+        new MiniDFSNNTopology[] {
+            MiniDFSNNTopology.simpleHATopology(),
+            MiniDFSNNTopology.simpleFederatedTopology(3),
+            MiniDFSNNTopology.simpleHAFederatedTopology(3)
+        };
+
+    for (MiniDFSNNTopology topology : topologies) {
+      LOG.info("Starting test with topology with HA = {}, federation = {}",
+          topology.isHA(), topology.isFederated());
+      setSeed();
+      createInMemoryAliasMapImage();
+      conf.setBoolean(DFS_PROVIDED_ALIASMAP_INMEMORY_ENABLED, true);
+      conf.setInt(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_LOAD_RETRIES, 10);
+      providedNameservice = topology.getNameservices().get(0).getId();
+      // configure the AliasMap addresses
+      configureAliasMapAddresses(topology, providedNameservice);
+      startCluster(nnDirPath, 2,
+          new StorageType[] {StorageType.PROVIDED, StorageType.DISK},
+          null, false, null, topology,
+          new MiniDFSClusterBuilderAliasMap(conf));
+
+      verifyPathsWithHAFailoverIfNecessary(topology, providedNameservice);
+      shutdown();
+    }
   }
 
   private DatanodeDescriptor getDatanodeDescriptor(DatanodeManager dnm,
@@ -863,7 +1146,7 @@ public class ITestProvidedImplementation {
     DataNode dn1 = cluster.getDataNodes().get(0);
     DataNode dn2 = cluster.getDataNodes().get(1);
 
-    // stop the 1st DN while being decomissioned.
+    // stop the 1st DN while being decommissioned.
     MiniDFSCluster.DataNodeProperties dn1Properties = cluster.stopDataNode(0);
     BlockManagerTestUtil.noticeDeadDatanode(cluster.getNameNode(),
         dn1.getDatanodeId().getXferAddr());
@@ -919,9 +1202,132 @@ public class ITestProvidedImplementation {
       startCluster(nnDirPath, racks.length,
           new StorageType[]{StorageType.PROVIDED, StorageType.DISK},
           null, false, racks);
-      verifyFileSystemContents();
+      verifyFileSystemContents(0);
       setAndUnsetReplication("/" + filePrefix + (numFiles - 1) + fileSuffix);
       cluster.shutdown();
     }
+  }
+
+  @Test
+  public void testBootstrapAliasMap() throws Exception {
+    int numNamenodes = 3;
+    MiniDFSNNTopology topology =
+        MiniDFSNNTopology.simpleHATopology(numNamenodes);
+
+    createInMemoryAliasMapImage();
+    conf.setBoolean(DFS_PROVIDED_ALIASMAP_INMEMORY_ENABLED, true);
+    conf.setInt(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_LOAD_RETRIES, 10);
+    providedNameservice = topology.getNameservices().get(0).getId();
+    // configure the AliasMap addresses
+    configureAliasMapAddresses(topology, providedNameservice);
+    startCluster(nnDirPath, 2,
+        new StorageType[] {StorageType.PROVIDED, StorageType.DISK}, null,
+        false, null, topology, new MiniDFSClusterBuilderAliasMap(conf));
+
+    // make NN with index 0 the active, shutdown and delete the directories
+    // of others. This will delete the aliasmap on these namenodes as well.
+    cluster.transitionToActive(0);
+    verifyFileSystemContents(0);
+    for (int nnIndex = 1; nnIndex < numNamenodes; nnIndex++) {
+      cluster.shutdownNameNode(nnIndex);
+      // delete the namenode directories including alias map.
+      for (URI u : cluster.getNameDirs(nnIndex)) {
+        File dir = new File(u.getPath());
+        assertTrue(FileUtil.fullyDelete(dir));
+      }
+    }
+
+    // start the other namenodes and bootstrap them
+    for (int index = 1; index < numNamenodes; index++) {
+      // add some content to aliasmap dir
+      File aliasMapDir = new File(fBASE, "aliasmap-" + index);
+      // create a directory inside aliasMapDir
+      if (!new File(aliasMapDir, "tempDir").mkdirs()) {
+        throw new IOException("Unable to create directory " + aliasMapDir);
+      }
+      Configuration currNNConf = cluster.getConfiguration(index);
+      currNNConf.set(DFS_PROVIDED_ALIASMAP_INMEMORY_LEVELDB_DIR,
+          aliasMapDir.getAbsolutePath());
+      // without force this should fail as aliasmap is not empty.
+      int rc =
+          BootstrapStandby.run(new String[] {"-nonInteractive"}, currNNConf);
+      assertNotEquals(0, rc);
+      // force deletes the contents of the aliasmap.
+      rc = BootstrapStandby.run(new String[] {"-nonInteractive", "-force"},
+          currNNConf);
+      assertEquals(0, rc);
+    }
+
+    // check if aliasmap files are the same on all NNs
+    checkInMemoryAliasMapContents(0, numNamenodes);
+    // restart the killed namenodes.
+    for (int i = 1; i < numNamenodes; i++) {
+      cluster.restartNameNode(i, false);
+    }
+
+    cluster.waitClusterUp();
+    cluster.waitActive();
+
+    // transition to namenode 1 as the active
+    int nextNN = 1;
+    cluster.shutdownNameNode(0);
+    cluster.transitionToActive(nextNN);
+    // all files must be accessible from nextNN.
+    verifyFileSystemContents(nextNN);
+  }
+
+  /**
+   * Check if the alias map contents of the namenodes are the same as the base.
+   *
+   * @param baseNN index of the namenode to compare against.
+   * @param numNamenodes total number of namenodes in the cluster.
+   */
+  private void checkInMemoryAliasMapContents(int baseNN, int numNamenodes)
+      throws Exception {
+    InMemoryLevelDBAliasMapServer baseAliasMap =
+        cluster.getNameNode(baseNN).getAliasMapServer();
+    for (int i = 0; i < numNamenodes; i++) {
+      if (baseNN == i) {
+        continue;
+      }
+      InMemoryLevelDBAliasMapServer otherAliasMap =
+          cluster.getNameNode(baseNN).getAliasMapServer();
+      verifyAliasMapEquals(baseAliasMap, otherAliasMap);
+    }
+  }
+
+  /**
+   * Verify that the contents of the aliasmaps are the same.
+   *
+   * @param aliasMap1
+   * @param aliasMap2
+   */
+  private void verifyAliasMapEquals(InMemoryLevelDBAliasMapServer aliasMap1,
+      InMemoryLevelDBAliasMapServer aliasMap2) throws Exception {
+    Set<FileRegion> fileRegions1 = getFileRegions(aliasMap1);
+    Set<FileRegion> fileRegions2 = getFileRegions(aliasMap2);
+    assertTrue(fileRegions1.equals(fileRegions2));
+  }
+
+  /**
+   * Get all the aliases the aliasmap contains.
+   *
+   * @param aliasMap aliasmap to explore.
+   * @return set of all aliases.
+   * @throws IOException
+   */
+  private Set<FileRegion> getFileRegions(InMemoryLevelDBAliasMapServer aliasMap)
+      throws IOException {
+    Set<FileRegion> fileRegions = new HashSet<>();
+    Optional<Block> marker = Optional.empty();
+    while (true) {
+      InMemoryAliasMapProtocol.IterationResult result = aliasMap.list(marker);
+      fileRegions.addAll(result.getFileRegions());
+      marker = result.getNextBlock();
+      if (!marker.isPresent()) {
+        break;
+      }
+    }
+    return fileRegions;
   }
 }

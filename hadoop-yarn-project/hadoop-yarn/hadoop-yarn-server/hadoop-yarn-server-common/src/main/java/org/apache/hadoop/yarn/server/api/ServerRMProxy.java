@@ -34,6 +34,11 @@ public class ServerRMProxy<T> extends RMProxy<T> {
   private static final Logger LOG =
       LoggerFactory.getLogger(ServerRMProxy.class);
 
+  private interface ServerRMProtocols
+      extends DistributedSchedulingAMProtocol, ResourceTracker {
+    //Add nothing
+  }
+
   private ServerRMProxy() {
     super();
   }
@@ -95,8 +100,8 @@ public class ServerRMProxy<T> extends RMProxy<T> {
   @InterfaceAudience.Private
   @Override
   public void checkAllowedProtocols(Class<?> protocol) {
-    Preconditions.checkArgument(
-        protocol.isAssignableFrom(ResourceTracker.class),
-        "ResourceManager does not support this protocol");
+    Preconditions
+        .checkArgument(protocol.isAssignableFrom(ServerRMProtocols.class),
+            "ResourceManager does not support this protocol");
   }
 }

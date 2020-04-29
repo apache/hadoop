@@ -92,7 +92,7 @@ public class TestFsShell {
   public void testExceptionNullMessage() throws Exception {
     final String cmdName = "-cmdExNullMsg";
     final Command cmd = Mockito.mock(Command.class);
-    Mockito.when(cmd.run(Mockito.anyVararg())).thenThrow(
+    Mockito.when(cmd.run(Mockito.any())).thenThrow(
         new IllegalArgumentException());
     Mockito.when(cmd.getUsage()).thenReturn(cmdName);
 

@@ -48,25 +48,23 @@ export default StackedBarchart.extend({
       var value = res.usedByTheApp ? res.usedByTheApp : 0;
       subArr.push({
         value: value,
-        bindText: "This app uses " + Converter.memoryToSimpliedUnit(value) + ". On node=" + nodeId,
+        bindText: "This app uses " + Converter.memoryToSimpliedUnit(value) + " on node=" + nodeId,
       });
 
       value = res.used - value;
       value = Math.max(value, 0);
       subArr.push({
         value: value,
-        bindText: "Other applications uses " + Converter.memoryToSimpliedUnit(value) + ". On node=" + nodeId,
+        bindText: "Other applications use " + Converter.memoryToSimpliedUnit(value) + " on node=" + nodeId,
       });
 
       subArr.push({
         value: res.avail,
-        bindText: "Free resource " + Converter.memoryToSimpliedUnit(res.avail) + " . On node=" + nodeId
+        bindText: Converter.memoryToSimpliedUnit(res.avail) + " memory is available on node=" + nodeId
       });
 
       arr.push(subArr);
     }
-
-    console.log(arr);
 
     return arr;
   },
@@ -82,7 +80,7 @@ export default StackedBarchart.extend({
     var data = this.getDataForRender(containers, nodes);
 
     this.show(
-      data, this.get("title"), ["Used by this app", "Used by other apps",
-        "Available"]);
+      data, this.get("title"), ["Used by this app", "Used by other apps", "Available"]
+    );
   },
 });

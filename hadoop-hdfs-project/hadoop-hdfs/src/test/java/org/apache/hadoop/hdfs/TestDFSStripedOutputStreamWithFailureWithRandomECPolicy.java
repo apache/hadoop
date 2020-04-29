@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 
 /**
@@ -30,12 +30,12 @@ public class TestDFSStripedOutputStreamWithFailureWithRandomECPolicy extends
 
   private final ECSchema schema;
 
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       TestDFSStripedOutputStreamWithRandomECPolicy.class.getName());
 
   public TestDFSStripedOutputStreamWithFailureWithRandomECPolicy() {
     schema = StripedFileTestUtil.getRandomNonDefaultECPolicy().getSchema();
-    LOG.info(schema);
+    LOG.info("{}", schema.toString());
   }
 
   @Override

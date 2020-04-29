@@ -27,8 +27,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SecretManagerSection;
@@ -51,7 +51,7 @@ import org.apache.hadoop.security.token.delegation.DelegationKey;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.google.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 /**
  * A HDFS specific delegation token secret manager.
@@ -62,8 +62,8 @@ import com.google.protobuf.ByteString;
 public class DelegationTokenSecretManager
     extends AbstractDelegationTokenSecretManager<DelegationTokenIdentifier> {
 
-  private static final Log LOG = LogFactory
-      .getLog(DelegationTokenSecretManager.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(DelegationTokenSecretManager.class);
   
   private final FSNamesystem namesystem;
   private final SerializerCompat serializerCompat = new SerializerCompat();

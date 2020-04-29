@@ -31,8 +31,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
@@ -62,7 +62,8 @@ public class TestDFSUpgrade {
   // TODO: Avoid hard-coding expected_txid. The test should be more robust.
   private static final int EXPECTED_TXID = 61;
 
-  private static final Log LOG = LogFactory.getLog(TestDFSUpgrade.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestDFSUpgrade.class.getName());
   private Configuration conf;
   private int testCounter = 0;
   private MiniDFSCluster cluster = null;

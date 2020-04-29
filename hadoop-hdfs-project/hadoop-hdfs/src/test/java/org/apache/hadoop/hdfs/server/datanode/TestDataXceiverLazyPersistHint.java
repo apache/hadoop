@@ -34,14 +34,20 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.mockito.ArgumentCaptor;
 
-import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 
 /**
@@ -146,12 +152,10 @@ public class TestDataXceiverLazyPersistHint {
             getMockDn(nonLocalLazyPersist),
             mock(DataXceiverServer.class)));
     doReturn(mockBlockReceiver).when(xceiverSpy).getBlockReceiver(
-        any(ExtendedBlock.class), any(StorageType.class),
-        any(DataInputStream.class), anyString(), anyString(),
-        any(BlockConstructionStage.class), anyLong(), anyLong(), anyLong(),
-        anyString(), any(DatanodeInfo.class), any(DataNode.class),
-        any(DataChecksum.class), any(CachingStrategy.class),
-        captor.capture(), anyBoolean(), any(String.class));
+        any(), any(), any(), anyString(), anyString(),
+        any(), anyLong(), anyLong(), anyLong(),
+        anyString(), any(), any(), any(), any(),
+        captor.capture(), anyBoolean(), any());
     doReturn(mock(DataOutputStream.class)).when(xceiverSpy)
         .getBufferedOutputStream();
     return xceiverSpy;

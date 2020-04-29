@@ -96,28 +96,36 @@ public abstract class View implements Params {
     return vc;
   }
 
-  public Throwable error() { return context().rc.error; }
+  public Throwable error() {
+    return context().requestContext().error;
+  }
 
-  public int status() { return context().rc.status; }
+  public int status() {
+    return context().requestContext().status;
+  }
 
-  public boolean inDevMode() { return context().rc.devMode; }
+  public boolean inDevMode() {
+    return context().requestContext().devMode;
+  }
 
-  public Injector injector() { return context().rc.injector; }
+  public Injector injector() {
+    return context().requestContext().injector;
+  }
 
   public <T> T getInstance(Class<T> cls) {
     return injector().getInstance(cls);
   }
 
   public HttpServletRequest request() {
-    return context().rc.request;
+    return context().requestContext().getRequest();
   }
 
   public HttpServletResponse response() {
-    return context().rc.response;
+    return context().requestContext().response;
   }
 
   public Map<String, String> moreParams() {
-    return context().rc.moreParams();
+    return context().requestContext().moreParams();
   }
 
   /**
@@ -125,7 +133,7 @@ public abstract class View implements Params {
    * @return the cookies map
    */
   public Map<String, Cookie> cookies() {
-    return context().rc.cookies();
+    return context().requestContext().cookies();
   }
 
   public ServletOutputStream outputStream() {

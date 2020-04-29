@@ -281,7 +281,7 @@ killer.
 `fs.s3a.threads.max` and `fs.s3a.connection.maximum`.
 
 1. Make sure that the bucket is using `sequential` or `normal` fadvise seek policies,
-that is, `fs.s3a.experimental.fadvise` is not set to `random`
+that is, `fs.s3a.experimental.input.fadvise` is not set to `random`
 
 1. Perform listings in parallel by setting `-numListstatusThreads`
 to a higher number. Make sure that `fs.s3a.connection.maximum`
@@ -314,7 +314,7 @@ the S3 bucket/shard.
 </property>
 
 <property>
-  <name>fs.s3a.experimental.fadvise</name>
+  <name>fs.s3a.experimental.input.fadvise</name>
   <value>normal</value>
 </property>
 
@@ -516,3 +516,129 @@ With an object store this is slow, and may cause problems if the caller
 expects an immediate response. For example, a thread may block so long
 that other liveness checks start to fail.
 Consider spawning off an executor thread to do these background cleanup operations.
+
+## <a name="coding"></a> Tuning SSL Performance
+
+By default, S3A uses HTTPS to communicate with AWS Services. This means that all
+communication with S3 is encrypted using SSL. The overhead of this encryption
+can significantly slow down applications. The configuration option
+`fs.s3a.ssl.channel.mode` allows applications to trigger certain SSL
+optimizations.
+
+By default, `fs.s3a.ssl.channel.mode` is set to `default_jsse`, which uses
+the Java Secure Socket Extension implementation of SSL (this is the default
+implementation when running Java). However, there is one difference, the GCM
+cipher is removed from the list of enabled cipher suites when running on Java 8.
+The GCM cipher has known performance issues when running on Java 8, see
+HADOOP-15669 and HADOOP-16050 for details. It is important to note that the
+GCM cipher is only disabled on Java 8. GCM performance has been improved
+in Java 9, so if `default_jsse` is specified and applications run on Java
+9, they should see no difference compared to running with the vanilla JSSE.
+
+`fs.s3a.ssl.channel.mode` can be set to `default_jsse_with_gcm`. This option
+includes GCM in the list of cipher suites on Java 8, so it is equivalent to
+running with the vanilla JSSE.
+
+### <a name="openssl"></a> OpenSSL Acceleration
+
+**Experimental Feature**
+
+As of HADOOP-16050 and HADOOP-16346, `fs.s3a.ssl.channel.mode` can be set to
+either `default` or `openssl` to enable native OpenSSL acceleration of HTTPS
+requests. OpenSSL implements the SSL and TLS protocols using native code. For
+users reading a large amount of data over HTTPS, OpenSSL can provide a
+significant performance benefit over the JSSE.
+
+S3A uses the
+[WildFly OpenSSL](https://github.com/wildfly-security/wildfly-openssl) library
+to bind OpenSSL to the Java JSSE APIs. This library allows S3A to
+transparently read data using OpenSSL. The `wildfly-openssl` library is an
+optional runtime dependency of S3A and contains native libraries for binding the Java
+JSSE to OpenSSL.
+
+WildFly OpenSSL must load OpenSSL itself. This can be done using the system
+property `org.wildfly.openssl.path`. For example,
+`HADOOP_OPTS="-Dorg.wildfly.openssl.path=<path to OpenSSL libraries>
+${HADOOP_OPTS}"`. See WildFly OpenSSL documentation for more details.
+
+When `fs.s3a.ssl.channel.mode` is set to `default`, S3A will attempt to load
+the OpenSSL libraries using the WildFly library. If it is unsuccessful, it
+will fall back to the `default_jsse` behavior.
+
+When `fs.s3a.ssl.channel.mode` is set to `openssl`, S3A will attempt to load
+the OpenSSL libraries using WildFly. If it is unsuccessful, it will throw an
+exception and S3A initialization will fail.
+
+### `fs.s3a.ssl.channel.mode` Configuration
+
+`fs.s3a.ssl.channel.mode` can be configured as follows:
+
+```xml
+<property>
+  <name>fs.s3a.ssl.channel.mode</name>
+  <value>default_jsse</value>
+  <description>
+    If secure connections to S3 are enabled, configures the SSL
+    implementation used to encrypt connections to S3. Supported values are:
+    "default_jsse", "default_jsse_with_gcm", "default", and "openssl".
+    "default_jsse" uses the Java Secure Socket Extension package (JSSE).
+    However, when running on Java 8, the GCM cipher is removed from the list
+    of enabled ciphers. This is due to performance issues with GCM in Java 8.
+    "default_jsse_with_gcm" uses the JSSE with the default list of cipher
+    suites. "default_jsse_with_gcm" is equivalent to the behavior prior to
+    this feature being introduced. "default" attempts to use OpenSSL rather
+    than the JSSE for SSL encryption, if OpenSSL libraries cannot be loaded,
+    it falls back to the "default_jsse" behavior. "openssl" attempts to use
+    OpenSSL as well, but fails if OpenSSL libraries cannot be loaded.
+  </description>
+</property>
+```
+
+Supported values for `fs.s3a.ssl.channel.mode`:
+
+| `fs.s3a.ssl.channel.mode` Value | Description |
+|-------------------------------|-------------|
+| `default_jsse` | Uses Java JSSE without GCM on Java 8 |
+| `default_jsse_with_gcm` | Uses Java JSSE |
+| `default` | Uses OpenSSL, falls back to `default_jsse` if OpenSSL cannot be loaded |
+| `openssl` | Uses OpenSSL, fails if OpenSSL cannot be loaded |
+
+The naming convention is setup in order to preserve backwards compatibility
+with the ABFS support of [HADOOP-15669](https://issues.apache.org/jira/browse/HADOOP-15669).
+
+Other options may be added to `fs.s3a.ssl.channel.mode` in the future as
+further SSL optimizations are made.
+
+### WildFly classpath requirements
+
+For OpenSSL acceleration to work, a compatible version of the
+wildfly JAR must be on the classpath. This is not explicitly declared
+in the dependencies of the published `hadoop-aws` module, as it is
+optional.
+
+If the wildfly JAR is not found, the network acceleration will fall back
+to the JVM, always.
+
+Note: there have been compatibility problems with wildfly JARs and openSSL
+releases in the past: version 1.0.4.Final is not compatible with openssl 1.1.1.
+An extra complication was older versions of the `azure-data-lake-store-sdk`
+JAR used in `hadoop-azure-datalake` contained an unshaded copy of the 1.0.4.Final
+classes, causing binding problems even when a later version was explicitly
+being placed on the classpath.
+
+
+## Tuning FileSystem Initialization.
+
+When an S3A Filesystem instance is created and initialized, the client
+checks if the bucket provided is valid. This can be slow.
+You can ignore bucket validation by configuring `fs.s3a.bucket.probe` as follows:
+
+```xml
+<property>
+  <name>fs.s3a.bucket.probe</name>
+  <value>0</value>
+</property>
+```
+
+Note: if the bucket does not exist, this issue will surface when operations are performed
+on the filesystem; you will see `UnknownStoreException` stack traces.

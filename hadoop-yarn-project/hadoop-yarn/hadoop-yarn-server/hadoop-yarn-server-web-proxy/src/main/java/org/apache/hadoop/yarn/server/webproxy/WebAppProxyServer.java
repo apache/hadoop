@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * ProxyServer will sit in between the end user and AppMaster
- * web interfaces. 
+ * web interfaces.
  */
 public class WebAppProxyServer extends CompositeService {
 
@@ -103,9 +103,11 @@ public class WebAppProxyServer extends CompositeService {
    * @return InetSocketAddress
    */
   public static InetSocketAddress getBindAddress(Configuration conf) {
-    return conf.getSocketAddr(YarnConfiguration.PROXY_ADDRESS,
-      YarnConfiguration.DEFAULT_PROXY_ADDRESS,
-      YarnConfiguration.DEFAULT_PROXY_PORT);
+    return conf.getSocketAddr(
+        YarnConfiguration.PROXY_BIND_HOST,
+        YarnConfiguration.PROXY_ADDRESS,
+        YarnConfiguration.DEFAULT_PROXY_ADDRESS,
+        YarnConfiguration.DEFAULT_PROXY_PORT);
   }
 
   public static void main(String[] args) {

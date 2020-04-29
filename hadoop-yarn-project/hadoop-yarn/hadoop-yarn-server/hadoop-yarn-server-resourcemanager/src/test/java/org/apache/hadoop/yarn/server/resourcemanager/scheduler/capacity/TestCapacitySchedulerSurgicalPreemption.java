@@ -18,14 +18,20 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingMonitorManager;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.ProportionalCapacityPreemptionPolicy;
@@ -38,18 +44,24 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
+import static org.hamcrest.MatcherAssert.assertThat;
+
 public class TestCapacitySchedulerSurgicalPreemption
     extends CapacitySchedulerPreemptionTestBase {
 
+  private static final int NUM_NM = 5;
   @Override
   @Before
   public void setUp() throws Exception {
@@ -111,7 +123,15 @@ public class TestCapacitySchedulerSurgicalPreemption
     RMNode rmNode2 = rm1.getRMContext().getRMNodes().get(nm2.getNodeId());
 
     // launch an app to queue, AM container should be launched in nm1
-    RMApp app1 = rm1.submitApp(1 * GB, "app", user1, null, queue1);
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser(user1)
+            .withAcls(null)
+            .withQueue(queue1)
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
     am1.allocate("*", 1 * GB, 32, new ArrayList<ContainerId>());
@@ -134,7 +154,15 @@ public class TestCapacitySchedulerSurgicalPreemption
 
 
     // Submit app2 to queue-c and asks for a 1G container for AM
-    RMApp app2 = rm1.submitApp(1 * GB, "app", user2, null, queue2);
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser(user2)
+            .withAcls(null)
+            .withQueue(queue2)
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm1);
 
     // NM1/NM2 has available resource = 2G/4G
@@ -175,6 +203,13 @@ public class TestCapacitySchedulerSurgicalPreemption
     Assert.assertEquals("Number of preempted containers incorrectly recorded:",
         4, cs.getQueue("root").getMetrics().getAggregatePreemptedContainers());
 
+    Assert.assertEquals("Amount of preempted memory incorrectly recorded:",
+        4 * GB,
+        cs.getQueue("root").getMetrics().getAggregateMemoryMBPreempted());
+
+    Assert.assertEquals("Number of preempted vcores incorrectly recorded:", 4,
+        cs.getQueue("root").getMetrics().getAggregateVcoresPreempted());
+
     rm1.close();
   }
 
@@ -212,7 +247,15 @@ public class TestCapacitySchedulerSurgicalPreemption
     RMNode rmNode2 = rm1.getRMContext().getRMNodes().get(nm2.getNodeId());
 
     // launch an app to queue, AM container should be launched in nm1
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "a");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
     am1.allocate("*", 1 * GB, 38, new ArrayList<ContainerId>());
@@ -235,7 +278,15 @@ public class TestCapacitySchedulerSurgicalPreemption
 
 
     // Submit app2 to queue-c and asks for a 4G container for AM
-    RMApp app2 = rm1.submitApp(4 * GB, "app", "user", null, "c");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(4 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("c")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, data);
     FiCaSchedulerApp schedulerApp2 = cs.getApplicationAttempt(
         ApplicationAttemptId.newInstance(app2.getApplicationId(), 1));
 
@@ -316,7 +367,15 @@ public class TestCapacitySchedulerSurgicalPreemption
     RMNode rmNode2 = rm1.getRMContext().getRMNodes().get(nm2.getNodeId());
 
     // launch an app to queue, AM container should be launched in nm1
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "b");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("b")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
     am1.allocate("*", 1 * GB, 6, new ArrayList<>());
@@ -339,7 +398,15 @@ public class TestCapacitySchedulerSurgicalPreemption
         am1.getApplicationAttemptId(), 3);
 
     // Submit app2 to queue-c and asks for a 1G container for AM
-    RMApp app2 = rm1.submitApp(18 * GB, "app", "user", null, "c");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(18 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("c")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, data);
     FiCaSchedulerApp schedulerApp2 = cs.getApplicationAttempt(
         ApplicationAttemptId.newInstance(app2.getApplicationId(), 1));
 
@@ -425,7 +492,15 @@ public class TestCapacitySchedulerSurgicalPreemption
     RMNode rmNode3 = rm1.getRMContext().getRMNodes().get(nm3.getNodeId());
 
     // launch an app to queue, AM container should be launched in nm1
-    RMApp app1 = rm1.submitApp(2 * GB, "app", "user", null, "b");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(2 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("b")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
     am1.allocate("*", 2 * GB, 2, new ArrayList<>());
@@ -447,7 +522,15 @@ public class TestCapacitySchedulerSurgicalPreemption
         am1.getApplicationAttemptId(), 2);
 
     // Submit app2 to queue-c and asks for a 2G container for AM, on n3
-    RMApp app2 = rm1.submitApp(2 * GB, "app", "user", null, "c");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(2 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("c")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm3);
     FiCaSchedulerApp schedulerApp2 = cs.getApplicationAttempt(
         ApplicationAttemptId.newInstance(app2.getApplicationId(), 1));
@@ -550,7 +633,15 @@ public class TestCapacitySchedulerSurgicalPreemption
     }
 
     // launch an app to queue, AM container should be launched in nm1
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "b");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("b")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, mockNMs[0]);
 
     am1.allocate("*", 1 * GB, 8, new ArrayList<>());
@@ -571,7 +662,15 @@ public class TestCapacitySchedulerSurgicalPreemption
 
     // Submit app2 to queue-c and asks for a 10G container for AM
     // Launch AM in NM9
-    RMApp app2 = rm1.submitApp(10 * GB, "app", "user", null, "c");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(10 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("c")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, mockNMs[9]);
     FiCaSchedulerApp schedulerApp2 = cs.getApplicationAttempt(
         ApplicationAttemptId.newInstance(app2.getApplicationId(), 1));
@@ -694,7 +793,15 @@ public class TestCapacitySchedulerSurgicalPreemption
     }
 
     // launch an app to queue, AM container should be launched in nm1
-    RMApp app1 = rm1.submitApp(1 * GB, "app", users[2], null, queues[2]);
+    MockRMAppSubmissionData data2 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser(users[2])
+            .withAcls(null)
+            .withQueue(queues[2])
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data2);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, mockNMs[4]);
 
     am1.allocate("*", 1 * GB, 4, new ArrayList<>());
@@ -714,7 +821,15 @@ public class TestCapacitySchedulerSurgicalPreemption
     }
 
     // Submit app2 to queue-a and asks for a 0.5G container for AM (on n0)
-    RMApp app2 = rm1.submitApp(512, "app", users[0], null, queues[0]);
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(512, rm1)
+            .withAppName("app")
+            .withUser(users[0])
+            .withAcls(null)
+            .withQueue(queues[0])
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, data1);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, mockNMs[0]);
     FiCaSchedulerApp schedulerApp2 = cs.getApplicationAttempt(
         ApplicationAttemptId.newInstance(app2.getApplicationId(), 1));
@@ -732,11 +847,20 @@ public class TestCapacitySchedulerSurgicalPreemption
       Assert.assertNotNull("Should reserve on nm-" + i,
           cs.getNode(rmNodes[i].getNodeID()).getReservedContainer());
       Assert.assertEquals(cs.getNode(rmNodes[i].getNodeID())
-          .getReservedContainer().getQueueName(), queues[0]);
+          .getReservedContainer()
+          .getQueueName(), cs.normalizeQueueName(queues[0]));
     }
 
     // Submit app3 to queue-b and asks for a 0.5G container for AM (on n2)
-    RMApp app3 = rm1.submitApp(512, "app", users[1], null, queues[1]);
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(512, rm1)
+            .withAppName("app")
+            .withUser(users[1])
+            .withAcls(null)
+            .withQueue(queues[1])
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app3 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am3 = MockRM.launchAndRegisterAM(app3, rm1, mockNMs[2]);
     FiCaSchedulerApp schedulerApp3 = cs.getApplicationAttempt(
         ApplicationAttemptId.newInstance(app3.getApplicationId(), 1));
@@ -754,7 +878,8 @@ public class TestCapacitySchedulerSurgicalPreemption
       Assert.assertNotNull("Should reserve on nm-" + i,
           cs.getNode(rmNodes[i].getNodeID()).getReservedContainer());
       Assert.assertEquals(cs.getNode(rmNodes[i].getNodeID())
-          .getReservedContainer().getQueueName(), queues[1]);
+          .getReservedContainer()
+          .getQueueName(), cs.normalizeQueueName(queues[1]));
     }
 
     // Sleep the timeout interval, we should be able to see 1 container selected
@@ -860,6 +985,170 @@ public class TestCapacitySchedulerSurgicalPreemption
     rm1.close();
   }
 
+  private void initializeConfProperties(CapacitySchedulerConfiguration conf)
+      throws IOException {
+
+    conf.setQueues("root", new String[] {"A", "B"});
+    conf.setCapacity("root.A", 50);
+    conf.setCapacity("root.B", 50);
+    conf.setQueuePriority("root.A", 1);
+    conf.setQueuePriority("root.B", 2);
+
+    conf.set(PREFIX + "root.ordering-policy", "priority-utilization");
+    conf.set(PREFIX + "ordering-policy.priority-utilization.underutilized-preemption.enabled", "true");
+    conf.set(PREFIX + "ordering-policy.priority-utilization.underutilized-preemption.allow-move-reservation", "false");
+    conf.set(PREFIX + "ordering-policy.priority-utilization.underutilized-preemption.reserved-container-delay-ms", "0");
+    conf.set(PREFIX + "root.accessible-node-labels.x.capacity", "100");
+
+    // Setup queue access to node labels
+    conf.set(PREFIX + "root.A.accessible-node-labels", "x");
+    conf.set(PREFIX + "root.B.accessible-node-labels", "x");
+    conf.set(PREFIX + "root.A.default-node-label-expression", "x");
+    conf.set(PREFIX + "root.B.default-node-label-expression", "x");
+    conf.set(PREFIX + "root.A.accessible-node-labels.x.capacity", "50");
+    conf.set(PREFIX + "root.B.accessible-node-labels.x.capacity", "50");
+    conf.set(PREFIX + "root.A.user-limit-factor", "100");
+    conf.set(PREFIX + "root.B.user-limit-factor", "100");
+    conf.set(PREFIX + "maximum-am-resource-percent", "1");
+
+    conf.setBoolean(YarnConfiguration.RM_SCHEDULER_ENABLE_MONITORS, true);
+    conf.set(YarnConfiguration.RM_AM_MAX_ATTEMPTS, "1");
+    conf.set(CapacitySchedulerConfiguration.PREEMPTION_WAIT_TIME_BEFORE_KILL, "1000");
+    conf.set(CapacitySchedulerConfiguration.PREEMPTION_MONITORING_INTERVAL, "1000");
+    conf.set(CapacitySchedulerConfiguration.TOTAL_PREEMPTION_PER_ROUND, "0.5");
+    conf.set(CapacitySchedulerConfiguration.PREEMPTION_NATURAL_TERMINATION_FACTOR, "1");
+
+  }
+
+  @Test
+  public void testPriorityPreemptionWithNodeLabels() throws Exception {
+    // set up queue priority and capacity
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+
+    initializeConfProperties(conf);
+
+    MockRM rm1 = new MockRM(conf) {
+      protected RMNodeLabelsManager createNodeLabelManager() {
+        return mgr;
+      }
+    };
+    rm1.start();
+
+    MockNM[] mockNMs = new MockNM[NUM_NM];
+    for (int i = 0; i < NUM_NM; i++) {
+      mockNMs[i] = rm1.registerNode("h" + i + ":1234", 6144);
+    }
+
+    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
+
+    mgr.addToCluserNodeLabels(Arrays.asList(NodeLabel.newInstance("x")));
+
+    RMNode[] rmNodes = new RMNode[5];
+    for (int i = 0; i < NUM_NM; i++) {
+      rmNodes[i] = rm1.getRMContext().getRMNodes().get(mockNMs[i].getNodeId());
+      mgr.replaceLabelsOnNode(
+          ImmutableMap.of(rmNodes[i].getNodeID(), ImmutableSet.of("x")));
+    }
+
+    // launch an app to queue B, AM container launched in nm4
+    MockRMAppSubmissionData data2 =
+        MockRMAppSubmissionData.Builder.createWithMemory(4096, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("B")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data2);
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, mockNMs[4]);
+
+    am1.allocate("*", 4096, NUM_NM-1, new ArrayList<>());
+
+    // Do allocation for nm0-nm3
+    for (int i = 0; i < NUM_NM-1; i++) {
+      cs.handle(new NodeUpdateSchedulerEvent(rmNodes[i]));
+    }
+
+    // App1 should have 5 containers now, one for each node
+    FiCaSchedulerApp schedulerApp1 = cs.getApplicationAttempt(
+        am1.getApplicationAttemptId());
+    Assert.assertEquals(NUM_NM, schedulerApp1.getLiveContainers().size());
+    for (int i = 0; i < NUM_NM; i++) {
+      waitNumberOfLiveContainersOnNodeFromApp(cs.getNode(
+          rmNodes[i].getNodeID()), am1.getApplicationAttemptId(), 1);
+    }
+
+    // Submit app2 to queue A and asks for a 750MB container for AM (on n0)
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1024, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("A")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, data1);
+    MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, mockNMs[0]);
+    FiCaSchedulerApp schedulerApp2 = cs.getApplicationAttempt(
+        ApplicationAttemptId.newInstance(app2.getApplicationId(), 1));
+
+    // Ask NUM_NM-1 * 1500MB containers
+    am2.allocate("*", 2048, NUM_NM-1, new ArrayList<>());
+
+    // Do allocation for n1-n4
+    for (int i = 1; i < NUM_NM; i++) {
+      cs.handle(new NodeUpdateSchedulerEvent(rmNodes[i]));
+    }
+
+    // kill app1
+    rm1.killApp(app1.getApplicationId());
+
+    // Submit app3 to queue B and asks for a 5000MB container for AM (on n2)
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1024, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("B")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app3 = MockRMAppSubmitter.submit(rm1, data);
+    MockAM am3 = MockRM.launchAndRegisterAM(app3, rm1, mockNMs[2]);
+    FiCaSchedulerApp schedulerApp3 = cs.getApplicationAttempt(
+        ApplicationAttemptId.newInstance(app3.getApplicationId(), 1));
+
+    // Ask NUM_NM * 5000MB containers
+    am3.allocate("*", 5120, NUM_NM, new ArrayList<>());
+
+    // Do allocation for n0-n4
+    for (int i = 0; i < NUM_NM; i++) {
+      cs.handle(new NodeUpdateSchedulerEvent(rmNodes[i]));
+    }
+
+    // Sleep the timeout interval, we should see 2 containers selected
+    Thread.sleep(1000);
+
+    SchedulingMonitorManager smm = ((CapacityScheduler) rm1.
+        getResourceScheduler()).getSchedulingMonitorManager();
+    SchedulingMonitor smon = smm.getAvailableSchedulingMonitor();
+    ProportionalCapacityPreemptionPolicy editPolicy =
+        (ProportionalCapacityPreemptionPolicy) smon.getSchedulingEditPolicy();
+    editPolicy.editSchedule();
+
+    // We should only allow to preempt 2 containers, on node1 and node2
+    Set<RMContainer> selectedToPreempt =
+        editPolicy.getToPreemptContainers().keySet();
+    Assert.assertEquals(2, selectedToPreempt.size());
+    List<NodeId> selectedToPreemptNodeIds = new ArrayList<>();
+    for (RMContainer rmc : selectedToPreempt) {
+      selectedToPreemptNodeIds.add(rmc.getAllocatedNode());
+    }
+    assertThat(selectedToPreemptNodeIds, CoreMatchers.hasItems(
+        mockNMs[1].getNodeId(), mockNMs[2].getNodeId()));
+
+    rm1.close();
+
+  }
 
   @Test(timeout = 60000)
   public void testPreemptionForFragmentatedCluster() throws Exception {
@@ -899,7 +1188,15 @@ public class TestCapacitySchedulerSurgicalPreemption
     CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
 
     // launch an app to queue, AM container should be launched in nm1
-    RMApp app1 = rm1.submitApp(3 * GB, "app", "user", null, "a");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(3 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nms.get(0));
 
     am1.allocate("*", 21 * GB, 4, new ArrayList<ContainerId>());
@@ -917,7 +1214,15 @@ public class TestCapacitySchedulerSurgicalPreemption
     Assert.assertEquals(5, schedulerApp1.getLiveContainers().size());
 
     // launch an app to queue, AM container should be launched in nm1
-    RMApp app2 = rm1.submitApp(3 * GB, "app", "user", null, "b");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(3 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("b")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nms.get(2));
 
     am2.allocate("*", 21 * GB, 4, new ArrayList<ContainerId>());
@@ -959,6 +1264,133 @@ public class TestCapacitySchedulerSurgicalPreemption
     Assert.assertEquals(3, schedulerApp2.getLiveContainers().size());
 
     rm1.close();
+  }
+
+  @Test(timeout = 600000)
+  public void testPreemptionToBalanceWithCustomTimeout() throws Exception {
+    /**
+     * Test case: Submit two application (app1/app2) to different queues, queue
+     * structure:
+     *
+     * <pre>
+     *             Root
+     *            /  |  \
+     *           a   b   c
+     *          10   20  70
+     * </pre>
+     *
+     * 1) Two nodes (n1/n2) in the cluster, each of them has 20G.
+     *
+     * 2) app1 submit to queue-b, asks for 1G * 5
+     *
+     * 3) app2 submit to queue-c, ask for one 4G container (for AM)
+     *
+     * After preemption, we should expect:
+     * 1. Preempt 4 containers from app1
+     * 2. the selected containers will be killed after configured timeout.
+     * 3. AM of app2 successfully allocated.
+     */
+    conf.setBoolean(
+        CapacitySchedulerConfiguration.PREEMPTION_TO_BALANCE_QUEUES_BEYOND_GUARANTEED,
+        true);
+    conf.setLong(
+        CapacitySchedulerConfiguration.MAX_WAIT_BEFORE_KILL_FOR_QUEUE_BALANCE_PREEMPTION,
+        20*1000);
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration(
+        this.conf);
+
+    MockRM rm1 = new MockRM(conf);
+    rm1.getRMContext().setNodeLabelManager(mgr);
+    rm1.start();
+
+    MockNM nm1 = rm1.registerNode("h1:1234", 20 * GB);
+    MockNM nm2 = rm1.registerNode("h2:1234", 20 * GB);
+    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
+    RMNode rmNode1 = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
+    RMNode rmNode2 = rm1.getRMContext().getRMNodes().get(nm2.getNodeId());
+
+    // launch an app to queue, AM container should be launched in nm1
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data1);
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+
+    am1.allocate("*", 1 * GB, 38, new ArrayList<ContainerId>());
+
+    // Do allocation for node1/node2
+    for (int i = 0; i < 38; i++) {
+      cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+      cs.handle(new NodeUpdateSchedulerEvent(rmNode2));
+    }
+
+    // App1 should have 39 containers now
+    FiCaSchedulerApp schedulerApp1 = cs.getApplicationAttempt(
+        am1.getApplicationAttemptId());
+    Assert.assertEquals(39, schedulerApp1.getLiveContainers().size());
+    // 20 from n1 and 19 from n2
+    waitNumberOfLiveContainersOnNodeFromApp(cs.getNode(rmNode1.getNodeID()),
+        am1.getApplicationAttemptId(), 20);
+    waitNumberOfLiveContainersOnNodeFromApp(cs.getNode(rmNode2.getNodeID()),
+        am1.getApplicationAttemptId(), 19);
+
+
+    // Submit app2 to queue-c and asks for a 4G container for AM
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(4 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("c")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, data);
+    FiCaSchedulerApp schedulerApp2 = cs.getApplicationAttempt(
+        ApplicationAttemptId.newInstance(app2.getApplicationId(), 1));
+
+    // Call editSchedule: containers are selected to be preemption candidate
+    SchedulingMonitorManager smm = ((CapacityScheduler) rm1.
+        getResourceScheduler()).getSchedulingMonitorManager();
+    SchedulingMonitor smon = smm.getAvailableSchedulingMonitor();
+    ProportionalCapacityPreemptionPolicy editPolicy =
+        (ProportionalCapacityPreemptionPolicy) smon.getSchedulingEditPolicy();
+    editPolicy.editSchedule();
+    Assert.assertEquals(4, editPolicy.getToPreemptContainers().size());
+
+    // check live containers immediately, nothing happen
+    Assert.assertEquals(39, schedulerApp1.getLiveContainers().size());
+
+    Thread.sleep(20*1000);
+    // Call editSchedule again: selected containers are killed
+    editPolicy.editSchedule();
+    waitNumberOfLiveContainersFromApp(schedulerApp1, 35);
+
+    // Call allocation, containers are reserved
+    cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+    cs.handle(new NodeUpdateSchedulerEvent(rmNode2));
+    waitNumberOfReservedContainersFromApp(schedulerApp2, 1);
+
+    // Call editSchedule twice and allocation once, container should get allocated
+    editPolicy.editSchedule();
+    editPolicy.editSchedule();
+
+    int tick = 0;
+    while (schedulerApp2.getLiveContainers().size() != 1 && tick < 10) {
+      cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+      cs.handle(new NodeUpdateSchedulerEvent(rmNode2));
+      tick++;
+      Thread.sleep(100);
+    }
+    waitNumberOfReservedContainersFromApp(schedulerApp2, 0);
+
+    rm1.close();
+
+
   }
 
 

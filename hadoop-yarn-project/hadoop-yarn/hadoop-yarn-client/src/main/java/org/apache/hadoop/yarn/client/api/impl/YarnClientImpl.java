@@ -19,15 +19,16 @@
 package org.apache.hadoop.yarn.client.api.impl;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Future;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -52,8 +53,10 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAttributesToNodesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeAttributesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
@@ -68,6 +71,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToAttributesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest;
@@ -96,25 +100,31 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
+import org.apache.hadoop.yarn.api.records.NodeAttributeKey;
+import org.apache.hadoop.yarn.api.records.NodeAttributeInfo;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.NodeToAttributeValue;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
+import org.apache.hadoop.yarn.api.records.ShellContainerCommand;
 import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.client.api.AHSClient;
+import org.apache.hadoop.yarn.client.api.ContainerShellWebSocket;
 import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
+import org.apache.hadoop.yarn.client.util.YarnClientUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationIdNotProvidedException;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
@@ -127,6 +137,10 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
+import org.eclipse.jetty.websocket.api.Session;
+import org.eclipse.jetty.websocket.api.WebSocketException;
+import org.eclipse.jetty.websocket.client.ClientUpgradeRequest;
+import org.eclipse.jetty.websocket.client.WebSocketClient;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
@@ -144,6 +158,7 @@ public class YarnClientImpl extends YarnClient {
   private long asyncApiPollIntervalMillis;
   private long asyncApiPollTimeoutMillis;
   protected AHSClient historyClient;
+  private AHSClient ahsV2Client;
   private boolean historyServiceEnabled;
   protected volatile TimelineClient timelineClient;
   @VisibleForTesting
@@ -153,6 +168,8 @@ public class YarnClientImpl extends YarnClient {
   private boolean timelineV1ServiceEnabled;
   protected boolean timelineServiceBestEffort;
   private boolean loadResourceTypesFromServer;
+
+  private boolean timelineV2ServiceEnabled;
 
   private static final String ROOT = "root";
 
@@ -183,6 +200,10 @@ public class YarnClientImpl extends YarnClient {
       timelineService = TimelineUtils.buildTimelineTokenService(conf);
     }
 
+    if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
+      timelineV2ServiceEnabled = true;
+    }
+
     // The AHSClientService is enabled by default when we start the
     // TimelineServer which means we are able to get history information
     // for applications/applicationAttempts/containers by using ahsClient
@@ -193,6 +214,11 @@ public class YarnClientImpl extends YarnClient {
       historyServiceEnabled = true;
       historyClient = AHSClient.createAHSClient();
       historyClient.init(conf);
+    }
+
+    if (timelineV2ServiceEnabled) {
+      ahsV2Client = AHSClient.createAHSv2Client();
+      ahsV2Client.init(conf);
     }
 
     timelineServiceBestEffort = conf.getBoolean(
@@ -218,6 +244,9 @@ public class YarnClientImpl extends YarnClient {
       if (historyServiceEnabled) {
         historyClient.start();
       }
+      if (timelineV2ServiceEnabled) {
+        ahsV2Client.start();
+      }
     } catch (IOException e) {
       throw new YarnRuntimeException(e);
     }
@@ -238,6 +267,9 @@ public class YarnClientImpl extends YarnClient {
     }
     if (historyServiceEnabled) {
       historyClient.stop();
+    }
+    if (timelineV2ServiceEnabled) {
+      ahsV2Client.stop();
     }
     if (timelineClient != null) {
       timelineClient.stop();
@@ -365,10 +397,8 @@ public class YarnClientImpl extends YarnClient {
       return;
     }
     credentials.addToken(timelineService, timelineDelegationToken);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Add timeline delegation token into credentials: "
-          + timelineDelegationToken);
-    }
+    LOG.debug("Add timeline delegation token into credentials: {}",
+        timelineDelegationToken);
     DataOutputBuffer dob = new DataOutputBuffer();
     credentials.writeTokenStorageToStream(dob);
     tokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
@@ -400,7 +430,7 @@ public class YarnClientImpl extends YarnClient {
             + e.getMessage());
         return null;
       }
-      throw e;
+      throw new IOException(e);
     } catch (NoClassDefFoundError e) {
       NoClassDefFoundError wrappedError = new NoClassDefFoundError(
           e.getMessage() + ". It appears that the timeline client "
@@ -511,6 +541,14 @@ public class YarnClientImpl extends YarnClient {
       request.setApplicationId(appId);
       response = rmClient.getApplicationReport(request);
     } catch (ApplicationNotFoundException e) {
+      if (timelineV2ServiceEnabled) {
+        try {
+          return ahsV2Client.getApplicationReport(appId);
+        } catch (Exception ex) {
+          LOG.warn("Failed to fetch application report from "
+              + "ATS v2", ex);
+        }
+      }
       if (!historyServiceEnabled) {
         // Just throw it as usual if historyService is not enabled.
         throw e;
@@ -721,13 +759,22 @@ public class YarnClientImpl extends YarnClient {
           .getApplicationAttemptReport(request);
       return response.getApplicationAttemptReport();
     } catch (YarnException e) {
-      if (!historyServiceEnabled) {
-        // Just throw it as usual if historyService is not enabled.
-        throw e;
-      }
+
       // Even if history-service is enabled, treat all exceptions still the same
       // except the following
       if (e.getClass() != ApplicationNotFoundException.class) {
+        throw e;
+      }
+      if (timelineV2ServiceEnabled) {
+        try {
+          return ahsV2Client.getApplicationAttemptReport(appAttemptId);
+        } catch (Exception ex) {
+          LOG.warn("Failed to fetch application attempt report from "
+              + "ATS v2", ex);
+        }
+      }
+      if (!historyServiceEnabled) {
+        // Just throw it as usual if historyService is not enabled.
         throw e;
       }
       return historyClient.getApplicationAttemptReport(appAttemptId);
@@ -745,13 +792,21 @@ public class YarnClientImpl extends YarnClient {
           .getApplicationAttempts(request);
       return response.getApplicationAttemptList();
     } catch (YarnException e) {
-      if (!historyServiceEnabled) {
-        // Just throw it as usual if historyService is not enabled.
-        throw e;
-      }
       // Even if history-service is enabled, treat all exceptions still the same
       // except the following
       if (e.getClass() != ApplicationNotFoundException.class) {
+        throw e;
+      }
+      if (timelineV2ServiceEnabled) {
+        try {
+          return ahsV2Client.getApplicationAttempts(appId);
+        } catch (Exception ex) {
+          LOG.warn("Failed to fetch application attempts from "
+              + "ATS v2", ex);
+        }
+      }
+      if (!historyServiceEnabled) {
+        // Just throw it as usual if historyService is not enabled.
         throw e;
       }
       return historyClient.getApplicationAttempts(appId);
@@ -769,14 +824,22 @@ public class YarnClientImpl extends YarnClient {
           .getContainerReport(request);
       return response.getContainerReport();
     } catch (YarnException e) {
-      if (!historyServiceEnabled) {
-        // Just throw it as usual if historyService is not enabled.
-        throw e;
-      }
       // Even if history-service is enabled, treat all exceptions still the same
       // except the following
       if (e.getClass() != ApplicationNotFoundException.class
           && e.getClass() != ContainerNotFoundException.class) {
+        throw e;
+      }
+      if (timelineV2ServiceEnabled) {
+        try {
+          return ahsV2Client.getContainerReport(containerId);
+        } catch (Exception ex) {
+          LOG.warn("Failed to fetch container report from "
+              + "ATS v2", ex);
+        }
+      }
+      if (!historyServiceEnabled) {
+        // Just throw it as usual if historyService is not enabled.
         throw e;
       }
       return historyClient.getContainerReport(containerId);
@@ -797,69 +860,86 @@ public class YarnClientImpl extends YarnClient {
       GetContainersResponse response = rmClient.getContainers(request);
       containersForAttempt.addAll(response.getContainerList());
     } catch (YarnException e) {
-      if (e.getClass() != ApplicationNotFoundException.class
-          || !historyServiceEnabled) {
-        // If Application is not in RM and history service is enabled then we
-        // need to check with history service else throw exception.
+      // Even if history-service is enabled, treat all exceptions still the same
+      // except the following
+      if (e.getClass() != ApplicationNotFoundException.class) {
+        throw e;
+      }
+      if (!historyServiceEnabled && !timelineV2ServiceEnabled) {
+        // if both history server and ATSv2 are not enabled throw exception.
         throw e;
       }
       appNotFoundInRM = true;
     }
-
-    if (historyServiceEnabled) {
-      // Check with AHS even if found in RM because to capture info of finished
-      // containers also
-      List<ContainerReport> containersListFromAHS = null;
-      try {
-        containersListFromAHS =
-            historyClient.getContainers(applicationAttemptId);
-      } catch (IOException e) {
-        // History service access might be enabled but system metrics publisher
-        // is disabled hence app not found exception is possible
-        if (appNotFoundInRM) {
-          // app not found in bothM and RM then propagate the exception.
-          throw e;
-        }
+    // Check with AHS even if found in RM because to capture info of finished
+    // containers also
+    List<ContainerReport> containersListFromAHS = null;
+    try {
+      containersListFromAHS =
+          getContainerReportFromHistory(applicationAttemptId);
+    } catch (IOException | YarnException e) {
+      if (appNotFoundInRM) {
+        throw e;
+      }
+    }
+    if (null != containersListFromAHS && containersListFromAHS.size() > 0) {
+      // remove duplicates
+      Set<ContainerId> containerIdsToBeKeptFromAHS =
+          new HashSet<ContainerId>();
+      Iterator<ContainerReport> tmpItr = containersListFromAHS.iterator();
+      while (tmpItr.hasNext()) {
+        containerIdsToBeKeptFromAHS.add(tmpItr.next().getContainerId());
       }
 
-      if (null != containersListFromAHS && containersListFromAHS.size() > 0) {
-        // remove duplicates
+      Iterator<ContainerReport> rmContainers =
+          containersForAttempt.iterator();
+      while (rmContainers.hasNext()) {
+        ContainerReport tmp = rmContainers.next();
+        containerIdsToBeKeptFromAHS.remove(tmp.getContainerId());
+        // Remove containers from AHS as container from RM will have latest
+        // information
+      }
 
-        Set<ContainerId> containerIdsToBeKeptFromAHS =
-            new HashSet<ContainerId>();
-        Iterator<ContainerReport> tmpItr = containersListFromAHS.iterator();
-        while (tmpItr.hasNext()) {
-          containerIdsToBeKeptFromAHS.add(tmpItr.next().getContainerId());
-        }
-
-        Iterator<ContainerReport> rmContainers =
-            containersForAttempt.iterator();
-        while (rmContainers.hasNext()) {
-          ContainerReport tmp = rmContainers.next();
-          containerIdsToBeKeptFromAHS.remove(tmp.getContainerId());
-          // Remove containers from AHS as container from RM will have latest
-          // information
-        }
-
-        if (containerIdsToBeKeptFromAHS.size() > 0
-            && containersListFromAHS.size() != containerIdsToBeKeptFromAHS
-                .size()) {
-          Iterator<ContainerReport> containersFromHS =
-              containersListFromAHS.iterator();
-          while (containersFromHS.hasNext()) {
-            ContainerReport containerReport = containersFromHS.next();
-            if (containerIdsToBeKeptFromAHS.contains(containerReport
-                .getContainerId())) {
-              containersForAttempt.add(containerReport);
-            }
+      if (containerIdsToBeKeptFromAHS.size() > 0
+          && containersListFromAHS.size() != containerIdsToBeKeptFromAHS
+              .size()) {
+        Iterator<ContainerReport> containersFromHS =
+            containersListFromAHS.iterator();
+        while (containersFromHS.hasNext()) {
+          ContainerReport containerReport = containersFromHS.next();
+          if (containerIdsToBeKeptFromAHS.contains(containerReport
+              .getContainerId())) {
+            containersForAttempt.add(containerReport);
           }
-        } else if (containersListFromAHS.size() == containerIdsToBeKeptFromAHS
-            .size()) {
-          containersForAttempt.addAll(containersListFromAHS);
         }
+      } else if (containersListFromAHS.size() == containerIdsToBeKeptFromAHS
+          .size()) {
+        containersForAttempt.addAll(containersListFromAHS);
       }
     }
     return containersForAttempt;
+  }
+
+  private List<ContainerReport> getContainerReportFromHistory(
+      ApplicationAttemptId applicationAttemptId)
+      throws IOException, YarnException {
+    List<ContainerReport> containersListFromAHS = null;
+    if (timelineV2ServiceEnabled) {
+      try {
+        containersListFromAHS = ahsV2Client.getContainers(applicationAttemptId);
+      } catch (Exception e) {
+        LOG.warn("Got an error while fetching container report from ATSv2", e);
+        if (historyServiceEnabled) {
+          containersListFromAHS = historyClient.getContainers(
+              applicationAttemptId);
+        } else {
+          throw e;
+        }
+      }
+    } else if (historyServiceEnabled) {
+      containersListFromAHS = historyClient.getContainers(applicationAttemptId);
+    }
+    return containersListFromAHS;
   }
 
   @Override
@@ -976,5 +1056,80 @@ public class YarnClientImpl extends YarnClient {
     GetAllResourceTypeInfoRequest request =
         GetAllResourceTypeInfoRequest.newInstance();
     return rmClient.getResourceTypeInfo(request).getResourceTypeInfo();
+  }
+
+  @Override
+  public Set<NodeAttributeInfo> getClusterAttributes()
+      throws YarnException, IOException {
+    GetClusterNodeAttributesRequest request =
+        GetClusterNodeAttributesRequest.newInstance();
+    return rmClient.getClusterNodeAttributes(request).getNodeAttributes();
+  }
+
+  @Override
+  public Map<NodeAttributeKey, List<NodeToAttributeValue>> getAttributesToNodes(
+      Set<NodeAttributeKey> attributes) throws YarnException, IOException {
+    GetAttributesToNodesRequest request =
+        GetAttributesToNodesRequest.newInstance(attributes);
+    return rmClient.getAttributesToNodes(request).getAttributesToNodes();
+  }
+
+  @Override
+  public Map<String, Set<NodeAttribute>> getNodeToAttributes(
+      Set<String> hostNames) throws YarnException, IOException {
+    GetNodesToAttributesRequest request =
+        GetNodesToAttributesRequest.newInstance(hostNames);
+    return rmClient.getNodesToAttributes(request).getNodeToAttributes();
+  }
+
+  @Override
+  public void shellToContainer(ContainerId containerId,
+      ShellContainerCommand command) throws IOException {
+    try {
+      GetContainerReportRequest request = Records
+          .newRecord(GetContainerReportRequest.class);
+      request.setContainerId(containerId);
+      GetContainerReportResponse response = rmClient
+          .getContainerReport(request);
+      URI nodeHttpAddress = new URI(response.getContainerReport()
+          .getNodeHttpAddress());
+      String host = nodeHttpAddress.getHost();
+      int port = nodeHttpAddress.getPort();
+      String scheme = nodeHttpAddress.getScheme();
+      String protocol = "ws://";
+      if (scheme.equals("https")) {
+        protocol = "wss://";
+      }
+      WebSocketClient client = new WebSocketClient();
+      URI uri = URI.create(protocol + host + ":" + port + "/container/" +
+          containerId + "/" + command);
+      if (!UserGroupInformation.isSecurityEnabled()) {
+        uri = URI.create(protocol + host + ":" + port + "/container/" +
+            containerId + "/" + command + "?user.name=" +
+            System.getProperty("user.name"));
+      }
+      try {
+        client.start();
+        // The socket that receives events
+        ContainerShellWebSocket socket = new ContainerShellWebSocket();
+        ClientUpgradeRequest upgradeRequest = new ClientUpgradeRequest();
+        if (UserGroupInformation.isSecurityEnabled()) {
+          String challenge = YarnClientUtils.generateToken(host);
+          upgradeRequest.setHeader("Authorization", "Negotiate " + challenge);
+        }
+        // Attempt Connect
+        Future<Session> fut = client.connect(socket, uri, upgradeRequest);
+        Session session = fut.get();
+        if (session.isOpen()) {
+          socket.run();
+        }
+      } finally {
+        client.stop();
+      }
+    } catch (WebSocketException e) {
+      LOG.debug("Websocket exception: " + e.getMessage());
+    } catch (Throwable t) {
+      LOG.error("Fail to shell to container: " + t.getMessage());
+    }
   }
 }

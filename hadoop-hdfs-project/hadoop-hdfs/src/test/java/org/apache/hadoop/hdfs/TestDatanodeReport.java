@@ -26,8 +26,8 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
@@ -49,7 +49,7 @@ import org.junit.Test;
  * This test ensures the all types of data node report work correctly.
  */
 public class TestDatanodeReport {
-  static final Log LOG = LogFactory.getLog(TestDatanodeReport.class);
+  static final Logger LOG = LoggerFactory.getLogger(TestDatanodeReport.class);
   final static private Configuration conf = new HdfsConfiguration();
   final static private int NUM_OF_DATANODES = 4;
 

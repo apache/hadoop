@@ -28,6 +28,7 @@ import org.apache.hadoop.io.compress.bzip2.Bzip2Factory;
 import org.apache.hadoop.io.compress.zlib.ZlibFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.io.nativeio.NativeIO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,6 +70,7 @@ public class NativeLibraryChecker {
     boolean snappyLoaded = false;
     boolean isalLoaded = false;
     boolean zStdLoaded = false;
+    boolean pmdkLoaded = false;
     // lz4 is linked within libhadoop
     boolean lz4Loaded = nativeHadoopLoaded;
     boolean bzip2Loaded = Bzip2Factory.isNativeBzip2Loaded(conf);
@@ -80,6 +82,7 @@ public class NativeLibraryChecker {
     String zlibLibraryName = "";
     String snappyLibraryName = "";
     String isalDetail = "";
+    String pmdkDetail = "";
     String zstdLibraryName = "";
     String lz4LibraryName = "";
     String bzip2LibraryName = "";
@@ -108,6 +111,12 @@ public class NativeLibraryChecker {
       } else {
         isalDetail = ErasureCodeNative.getLibraryName();
         isalLoaded = true;
+      }
+
+      pmdkDetail = NativeIO.POSIX.getPmdkSupportStateMessage();
+      pmdkLoaded = NativeIO.POSIX.isPmdkAvailable();
+      if (pmdkLoaded) {
+        pmdkDetail = NativeIO.POSIX.Pmem.getPmdkLibPath();
       }
 
       openSslDetail = OpensslCipher.getLoadingFailureReason();
@@ -148,6 +157,7 @@ public class NativeLibraryChecker {
     System.out.printf("bzip2:   %b %s%n", bzip2Loaded, bzip2LibraryName);
     System.out.printf("openssl: %b %s%n", openSslLoaded, openSslDetail);
     System.out.printf("ISA-L:   %b %s%n", isalLoaded, isalDetail);
+    System.out.printf("PMDK:    %b %s%n", pmdkLoaded, pmdkDetail);
 
     if (Shell.WINDOWS) {
       System.out.printf("winutils: %b %s%n", winutilsExists, winutilsPath);

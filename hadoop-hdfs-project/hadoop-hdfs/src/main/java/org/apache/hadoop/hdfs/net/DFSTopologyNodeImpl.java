@@ -109,10 +109,6 @@ public class DFSTopologyNodeImpl extends InnerNodeImpl {
     }
   }
 
-  int getNumOfChildren() {
-    return children.size();
-  }
-
   private void incStorageTypeCount(StorageType type) {
     // no locking because the caller is synchronized already
     if (storageTypeCounts.containsKey(type)) {

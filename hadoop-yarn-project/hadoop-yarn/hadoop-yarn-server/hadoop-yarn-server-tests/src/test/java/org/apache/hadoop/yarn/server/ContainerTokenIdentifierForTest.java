@@ -38,7 +38,7 @@ import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.proto.YarnProtos.LogAggregationContextProto;
 import org.apache.hadoop.yarn.proto.YarnSecurityTestTokenProtos.ContainerTokenIdentifierForTestProto;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -172,7 +172,7 @@ public class ContainerTokenIdentifierForTest extends ContainerTokenIdentifier {
 
   @Override
   public void write(DataOutput out) throws IOException {
-    LOG.debug("Writing ContainerTokenIdentifierForTest to RPC layer: " + this);
+    LOG.debug("Writing ContainerTokenIdentifierForTest to RPC layer: {}", this);
     out.write(proto.toByteArray());
   }
   

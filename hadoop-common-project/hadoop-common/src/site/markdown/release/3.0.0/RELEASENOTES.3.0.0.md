@@ -96,13 +96,6 @@ The first version of Resource Estimator service, a tool that captures the histor
 
 ---
 
-* [YARN-5326](https://issues.apache.org/jira/browse/YARN-5326) | *Major* | **Support for recurring reservations in the YARN ReservationSystem**
-
-Add native support for recurring reservations (good till cancelled) to enable  periodic allocations of the same resources.
-
-
----
-
 * [MAPREDUCE-6983](https://issues.apache.org/jira/browse/MAPREDUCE-6983) | *Major* | **Moving logging APIs over to slf4j in hadoop-mapreduce-client-core**
 
 In hadoop-mapreduce-client-core module, the type of some public LOG variables were changed from org.apache.commons.logging.Log to org.slf4j.Logger. In the public methods that accepts logger, the logger was changed from org.apache.commons.logging.Log to org.slf4j.Logger.

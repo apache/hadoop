@@ -16,17 +16,26 @@
 
 <!-- MACRO{toc|fromDepth=1|toDepth=3} -->
 
+See also:
+
+* [ABFS](./abfs.html)
+* [Testing](./testing_azure.html)
+
 ## Introduction
 
-The hadoop-azure module provides support for integration with
+The `hadoop-azure` module provides support for integration with
 [Azure Blob Storage](http://azure.microsoft.com/en-us/documentation/services/storage/).
-The built jar file, named hadoop-azure.jar, also declares transitive dependencies
+The built jar file, named `hadoop-azure.jar`, also declares transitive dependencies
 on the additional artifacts it requires, notably the
 [Azure Storage SDK for Java](https://github.com/Azure/azure-storage-java).
 
 To make it part of Apache Hadoop's default classpath, simply make sure that
-HADOOP_OPTIONAL_TOOLS in hadoop-env.sh has 'hadoop-azure' in the list.
+`HADOOP_OPTIONAL_TOOLS`in `hadoop-env.sh` has `'hadoop-azure` in the list.
+Example:
 
+```bash
+export HADOOP_OPTIONAL_TOOLS="hadoop-azure,hadoop-azure-datalake"
+```
 ## Features
 
 * Read and write data stored in an Azure Blob Storage account.

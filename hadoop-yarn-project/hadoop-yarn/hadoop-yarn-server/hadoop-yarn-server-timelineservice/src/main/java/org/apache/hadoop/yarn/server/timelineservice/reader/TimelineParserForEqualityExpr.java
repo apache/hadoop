@@ -325,7 +325,12 @@ abstract class TimelineParserForEqualityExpr implements TimelineParser {
       }
     }
     if (filterList == null || filterList.getFilterList().isEmpty()) {
-      filterList = new TimelineFilterList(currentFilter);
+      if (currentFilter == null) {
+        throw new TimelineParseException(
+            "Invalid expression provided for " + exprName);
+      } else {
+        filterList = new TimelineFilterList(currentFilter);
+      }
     } else if (currentFilter != null) {
       filterList.addFilter(currentFilter);
     }

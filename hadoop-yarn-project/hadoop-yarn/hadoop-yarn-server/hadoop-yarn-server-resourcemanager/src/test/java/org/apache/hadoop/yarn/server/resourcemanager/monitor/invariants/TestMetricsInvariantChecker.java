@@ -21,6 +21,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
@@ -49,8 +50,13 @@ public class TestMetricsInvariantChecker {
     JvmMetrics.initSingleton("ResourceManager", null);
     this.ic = new MetricsInvariantChecker();
     this.conf = new Configuration();
-    conf.set(MetricsInvariantChecker.INVARIANTS_FILE,
-        "src/test/resources/invariants.txt");
+    if (Shell.isJavaVersionAtLeast(9)) {
+      conf.set(MetricsInvariantChecker.INVARIANTS_FILE,
+          "src/test/resources/invariants_jdk9.txt");
+    } else {
+      conf.set(MetricsInvariantChecker.INVARIANTS_FILE,
+          "src/test/resources/invariants.txt");
+    }
     conf.setBoolean(MetricsInvariantChecker.THROW_ON_VIOLATION, true);
     ic.init(conf, null, null);
   }

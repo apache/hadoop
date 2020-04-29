@@ -89,12 +89,12 @@ public class RetryProxy {
    * 
    * @param iface the interface that the retry will implement
    * @param proxyProvider provides implementation instances whose methods should be retried
-   * @param methodNameToPolicyMapa map of method names to retry policies
+   * @param methodNameToPolicyMap map of method names to retry policies
    * @return the retry proxy
    */
   public static <T> Object create(Class<T> iface,
       FailoverProxyProvider<T> proxyProvider,
-      Map<String,RetryPolicy> methodNameToPolicyMap,
+      Map<String, RetryPolicy> methodNameToPolicyMap,
       RetryPolicy defaultPolicy) {
     return Proxy.newProxyInstance(
         proxyProvider.getInterface().getClassLoader(),

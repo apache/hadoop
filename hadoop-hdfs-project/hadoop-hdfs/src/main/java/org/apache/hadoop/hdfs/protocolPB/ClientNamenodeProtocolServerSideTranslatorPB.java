@@ -25,11 +25,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.ProtocolStringList;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
 import org.apache.hadoop.fs.permission.FsCreateModes;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.ha.HAServiceProtocol;
+import org.apache.hadoop.ha.proto.HAServiceProtocolProtos;
+import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.HAServiceStateProto;
 import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
@@ -37,6 +42,7 @@ import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.BatchedDirectoryListing;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -44,6 +50,8 @@ import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.HdfsPartialListing;
+import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
@@ -108,6 +116,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.FsyncR
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.FsyncResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetAdditionalDatanodeRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetAdditionalDatanodeResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetBatchedListingRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetBatchedListingResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetBlockLocationsRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetBlockLocationsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetBlockLocationsResponseProto.Builder;
@@ -155,8 +165,12 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSto
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetStoragePoliciesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetStoragePolicyRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetStoragePolicyResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.HAServiceStateRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.HAServiceStateResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.IsFileClosedRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.IsFileClosedResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpgradeStatusRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpgradeStatusResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCacheDirectivesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCacheDirectivesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCachePoolsRequestProto;
@@ -173,6 +187,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Modify
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ModifyCacheDirectiveResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ModifyCachePoolRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ModifyCachePoolResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.MsyncRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.MsyncResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RecoverLeaseRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RecoverLeaseResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RefreshNodesRequestProto;
@@ -223,6 +239,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Update
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpdateBlockForPipelineResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpdatePipelineRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpdatePipelineResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SatisfyStoragePolicyRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SatisfyStoragePolicyResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.CreateEncryptionZoneResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.CreateEncryptionZoneRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.GetEZForPathResponseProto;
@@ -251,11 +269,15 @@ import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.UnsetErasureCod
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.UnsetErasureCodingPolicyResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingCodecsRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingCodecsResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetECTopologyResultForPoliciesRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetECTopologyResultForPoliciesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BatchedDirectoryListingProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockStoragePolicyProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RemoteExceptionProto;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.GetXAttrsRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.GetXAttrsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.ListXAttrsRequestProto;
@@ -268,6 +290,7 @@ import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenResponseProto;
 import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequestProto;
@@ -276,8 +299,8 @@ import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenReque
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenResponseProto;
 import org.apache.hadoop.security.token.Token;
 
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.RpcController;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 /**
  * This class is used on the server side. Calls come across the wire for the
@@ -331,6 +354,13 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
 
   private static final GetListingResponseProto VOID_GETLISTING_RESPONSE = 
   GetListingResponseProto.newBuilder().build();
+
+  private static final GetBatchedListingResponseProto
+      VOID_GETBATCHEDLISTING_RESPONSE =
+      GetBatchedListingResponseProto.newBuilder()
+          .setStartAfter(ByteString.copyFromUtf8(""))
+          .setHasMore(false)
+          .build();
 
   private static final RenewLeaseResponseProto VOID_RENEWLEASE_RESPONSE = 
   RenewLeaseResponseProto.newBuilder().build();
@@ -405,6 +435,10 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   private static final CheckAccessResponseProto
     VOID_CHECKACCESS_RESPONSE = CheckAccessResponseProto.getDefaultInstance();
 
+  private static final SatisfyStoragePolicyResponseProto
+      VOID_SATISFYSTORAGEPOLICY_RESPONSE = SatisfyStoragePolicyResponseProto
+      .getDefaultInstance();
+
   /**
    * Constructor
    * 
@@ -463,7 +497,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
           (short) req.getReplication(), req.getBlockSize(),
           PBHelperClient.convertCryptoProtocolVersions(
               req.getCryptoProtocolVersionList()),
-          req.getEcPolicyName());
+          req.getEcPolicyName(), req.getStoragePolicy());
 
       if (result != null) {
         return CreateResponseProto.newBuilder().setFs(PBHelperClient.convert(result))
@@ -654,7 +688,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     ArrayList<Rename> optionList = new ArrayList<Rename>();
     if(req.getOverwriteDest()) {
       optionList.add(Rename.OVERWRITE);
-    } else if(req.hasMoveToTrash()) {
+    } else if(req.hasMoveToTrash() && req.getMoveToTrash()) {
       optionList.add(Rename.TO_TRASH);
     }
 
@@ -727,7 +761,50 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       throw new ServiceException(e);
     }
   }
-  
+
+  @Override
+  public GetBatchedListingResponseProto getBatchedListing(
+      RpcController controller,
+      GetBatchedListingRequestProto request) throws ServiceException {
+    try {
+      BatchedDirectoryListing result = server.getBatchedListing(
+          request.getPathsList().toArray(new String[] {}),
+          request.getStartAfter().toByteArray(),
+          request.getNeedLocation());
+      if (result != null) {
+        GetBatchedListingResponseProto.Builder builder =
+            GetBatchedListingResponseProto.newBuilder();
+        for (HdfsPartialListing partialListing : result.getListings()) {
+          BatchedDirectoryListingProto.Builder listingBuilder =
+              BatchedDirectoryListingProto.newBuilder();
+          if (partialListing.getException() != null) {
+            RemoteException ex = partialListing.getException();
+            RemoteExceptionProto.Builder rexBuilder =
+                RemoteExceptionProto.newBuilder();
+            rexBuilder.setClassName(ex.getClassName());
+            if (ex.getMessage() != null) {
+              rexBuilder.setMessage(ex.getMessage());
+            }
+            listingBuilder.setException(rexBuilder.build());
+          } else {
+            for (HdfsFileStatus f : partialListing.getPartialListing()) {
+              listingBuilder.addPartialListing(PBHelperClient.convert(f));
+            }
+          }
+          listingBuilder.setParentIdx(partialListing.getParentIdx());
+          builder.addListings(listingBuilder);
+        }
+        builder.setHasMore(result.hasMore());
+        builder.setStartAfter(ByteString.copyFrom(result.getStartAfter()));
+        return builder.build();
+      } else {
+        return VOID_GETBATCHEDLISTING_RESPONSE;
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
   @Override
   public RenewLeaseResponseProto renewLease(RpcController controller,
       RenewLeaseRequestProto req) throws ServiceException {
@@ -894,6 +971,21 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     try {
       server.finalizeUpgrade();
       return VOID_FINALIZEUPGRADE_RESPONSE;
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public UpgradeStatusResponseProto upgradeStatus(
+      RpcController controller, UpgradeStatusRequestProto req)
+      throws ServiceException {
+    try {
+      final boolean isUpgradeFinalized = server.upgradeStatus();
+      UpgradeStatusResponseProto.Builder b =
+          UpgradeStatusResponseProto.newBuilder();
+      b.setUpgradeFinalized(isUpgradeFinalized);
+      return b.build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -1592,6 +1684,24 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   }
 
   @Override
+  public GetECTopologyResultForPoliciesResponseProto getECTopologyResultForPolicies(
+      RpcController controller, GetECTopologyResultForPoliciesRequestProto req)
+      throws ServiceException {
+    try {
+      ProtocolStringList policies = req.getPoliciesList();
+      ECTopologyVerifierResult result = server.getECTopologyResultForPolicies(
+          policies.toArray(policies.toArray(new String[policies.size()])));
+      GetECTopologyResultForPoliciesResponseProto.Builder builder =
+          GetECTopologyResultForPoliciesResponseProto.newBuilder();
+      builder
+          .setResponse(PBHelperClient.convertECTopologyVerifierResult(result));
+      return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
   public SetXAttrResponseProto setXAttr(RpcController controller,
       SetXAttrRequestProto req) throws ServiceException {
     try {
@@ -1864,6 +1974,60 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
         builder.addEntries(PBHelperClient.convert(entries.get(i)));
       }
       builder.addAllTypes(req.getTypesList());
+      return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public MsyncResponseProto msync(RpcController controller,
+      MsyncRequestProto req) throws ServiceException {
+    try {
+      server.msync();
+      return MsyncResponseProto.newBuilder().build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public SatisfyStoragePolicyResponseProto satisfyStoragePolicy(
+      RpcController controller,
+      SatisfyStoragePolicyRequestProto request) throws ServiceException {
+    try {
+      server.satisfyStoragePolicy(request.getSrc());
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return VOID_SATISFYSTORAGEPOLICY_RESPONSE;
+  }
+
+  @Override
+  public HAServiceStateResponseProto getHAServiceState(
+      RpcController controller,
+      HAServiceStateRequestProto request) throws ServiceException {
+    try {
+      HAServiceProtocol.HAServiceState state = server.getHAServiceState();
+      HAServiceStateProto retState;
+      switch (state) {
+      case ACTIVE:
+        retState = HAServiceProtocolProtos.HAServiceStateProto.ACTIVE;
+        break;
+      case STANDBY:
+        retState = HAServiceProtocolProtos.HAServiceStateProto.STANDBY;
+        break;
+      case OBSERVER:
+        retState = HAServiceProtocolProtos.HAServiceStateProto.OBSERVER;
+        break;
+      case INITIALIZING:
+      default:
+        retState = HAServiceProtocolProtos.HAServiceStateProto.INITIALIZING;
+        break;
+      }
+      HAServiceStateResponseProto.Builder builder =
+          HAServiceStateResponseProto.newBuilder();
+      builder.setState(retState);
       return builder.build();
     } catch (IOException e) {
       throw new ServiceException(e);

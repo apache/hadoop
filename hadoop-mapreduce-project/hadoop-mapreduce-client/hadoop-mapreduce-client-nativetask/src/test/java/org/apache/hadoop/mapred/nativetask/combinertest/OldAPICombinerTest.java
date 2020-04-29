@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.mapred.nativetask.combinertest;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -30,7 +30,6 @@ import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.SequenceFileInputFormat;
-import org.apache.hadoop.mapred.Task;
 import org.apache.hadoop.mapred.TextOutputFormat;
 import org.apache.hadoop.mapred.nativetask.NativeRuntime;
 import org.apache.hadoop.mapred.nativetask.kvtest.TestInputFile;
@@ -74,10 +73,14 @@ public class OldAPICombinerTest {
       TaskCounter.REDUCE_INPUT_RECORDS);
 
     final boolean compareRet = ResultVerifier.verify(nativeoutput, normaloutput);
-    assertEquals("file compare result: if they are the same ,then return true", true, compareRet);
+    assertThat(compareRet)
+        .withFailMessage(
+            "file compare result: if they are the same ,then return true")
+        .isTrue();
 
-    assertEquals("The input reduce record count must be same",
-                 nativeReduceGroups.getValue(), normalReduceGroups.getValue());
+    assertThat(nativeReduceGroups.getValue())
+        .withFailMessage("The input reduce record count must be same")
+        .isEqualTo(normalReduceGroups.getValue());
   }
 
   @Before

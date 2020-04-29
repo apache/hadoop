@@ -30,4 +30,12 @@ public class ContainerRuntimeConstants {
   @Private
   public static final String ENV_CONTAINER_TYPE =
       "YARN_CONTAINER_RUNTIME_TYPE";
+
+  @Private
+  public static final String CONTAINER_RUNTIME_DOCKER =
+      "docker";
+
+  @Private
+  public static final String CONTAINER_RUNTIME_RUNC =
+      "runc";
 }

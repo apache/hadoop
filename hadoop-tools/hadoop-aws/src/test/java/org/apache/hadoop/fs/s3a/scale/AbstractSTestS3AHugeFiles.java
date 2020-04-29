@@ -64,7 +64,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(
       AbstractSTestS3AHugeFiles.class);
   public static final int DEFAULT_UPLOAD_BLOCKSIZE = 64 * _1KB;
-  public static final String DEFAULT_PARTITION_SIZE = "8M";
+
   private Path scaleTestDir;
   private Path hugefile;
   private Path hugefileRenamed;
@@ -101,7 +101,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     Configuration conf = super.createScaleConfiguration();
     partitionSize = (int) getTestPropertyBytes(conf,
         KEY_HUGE_PARTITION_SIZE,
-        DEFAULT_PARTITION_SIZE);
+        DEFAULT_HUGE_PARTITION_SIZE);
     assertTrue("Partition size too small: " + partitionSize,
         partitionSize > MULTIPART_MIN_SIZE);
     conf.setLong(SOCKET_SEND_BUFFER, _1MB);
@@ -457,6 +457,30 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     logFSState();
   }
 
+  /**
+   * Test to verify source file encryption key.
+   * @throws IOException
+   */
+  @Test
+  public void test_090_verifyRenameSourceEncryption() throws IOException {
+    if(isEncrypted(getFileSystem())) {
+      assertEncrypted(getHugefile());
+    }
+  }
+
+  protected void assertEncrypted(Path hugeFile) throws IOException {
+    //Concrete classes will have implementation.
+  }
+
+  /**
+   * Checks if the encryption is enabled for the file system.
+   * @param fileSystem
+   * @return
+   */
+  protected boolean isEncrypted(S3AFileSystem fileSystem) {
+    return false;
+  }
+
   @Test
   public void test_100_renameHugeFile() throws Throwable {
     assumeHugeFileExists();
@@ -485,6 +509,20 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     bandwidth(timer2, size);
   }
 
+  /**
+   * Test to verify target file encryption key.
+   * @throws IOException
+   */
+  @Test
+  public void test_110_verifyRenameDestEncryption() throws IOException {
+    if(isEncrypted(getFileSystem())) {
+      /**
+       * Using hugeFile again as hugeFileRenamed is renamed back
+       * to hugeFile.
+       */
+      assertEncrypted(hugefile);
+    }
+  }
   /**
    * Cleanup: delete the files.
    */

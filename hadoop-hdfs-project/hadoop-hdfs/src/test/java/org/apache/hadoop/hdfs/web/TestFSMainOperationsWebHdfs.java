@@ -44,7 +44,7 @@ import org.apache.hadoop.hdfs.web.resources.HttpOpParam;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
+import org.slf4j.event.Level;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -52,7 +52,7 @@ import org.junit.Test;
 
 public class TestFSMainOperationsWebHdfs extends FSMainOperationsBaseTest {
   {
-    GenericTestUtils.setLogLevel(ExceptionHandler.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(ExceptionHandler.LOG, Level.TRACE);
   }
 
   private static MiniDFSCluster cluster = null;

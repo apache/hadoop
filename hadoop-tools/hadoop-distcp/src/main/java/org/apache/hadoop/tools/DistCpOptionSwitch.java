@@ -19,6 +19,7 @@
 package org.apache.hadoop.tools;
 
 import org.apache.commons.cli.Option;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -63,10 +64,10 @@ public enum DistCpOptionSwitch {
    */
   SYNC_FOLDERS(DistCpConstants.CONF_LABEL_SYNC_FOLDERS,
       new Option("update", false, "Update target, copying only missing" +
-          "files or directories")),
+          " files or directories")),
 
   /**
-   * Deletes missing files in target that are missing from source
+   * Deletes missing files in target that are missing from source.
    * This allows the target to be in sync with the source contents
    * Typically used in conjunction with SYNC_FOLDERS
    * Incompatible with ATOMIC_COMMIT
@@ -74,6 +75,21 @@ public enum DistCpOptionSwitch {
   DELETE_MISSING(DistCpConstants.CONF_LABEL_DELETE_MISSING,
       new Option("delete", false, "Delete from target, " +
           "files missing in source. Delete is applicable only with update or overwrite options")),
+
+  /**
+   * Track missing files in target that are missing from source
+   * This allows for other applications to complete the synchronization,
+   * possibly with object-store-specific delete algorithms.
+   * Typically used in conjunction with SYNC_FOLDERS
+   * Incompatible with ATOMIC_COMMIT
+   */
+  @InterfaceStability.Unstable
+  TRACK_MISSING(DistCpConstants.CONF_LABEL_TRACK_MISSING,
+      new Option("xtrack", true,
+          "Save information about missing source files to the"
+              + " specified directory")),
+
+
   /**
    * Number of threads for building source file listing (before map-reduce
    * phase, max one listStatus per thread at a time).
@@ -176,7 +192,7 @@ public enum DistCpOptionSwitch {
       new Option("sizelimit", true, "(Deprecated!) Limit number of files " +
               "copied to <= n bytes")),
 
-  BLOCKS_PER_CHUNK("",
+  BLOCKS_PER_CHUNK(DistCpConstants.CONF_LABEL_BLOCKS_PER_CHUNK,
       new Option("blocksperchunk", true, "If set to a positive value, files"
           + "with more blocks than this value will be split into chunks of "
           + "<blocksperchunk> blocks to be transferred in parallel, and "
@@ -207,7 +223,19 @@ public enum DistCpOptionSwitch {
    */
   FILTERS(DistCpConstants.CONF_LABEL_FILTERS_FILE,
       new Option("filters", true, "The path to a file containing a list of"
-          + " strings for paths to be excluded from the copy."));
+          + " strings for paths to be excluded from the copy.")),
+
+  /**
+   * Write directly to the final location, avoiding the creation and rename
+   * of temporary files.
+   * This is typically useful in cases where the target filesystem
+   * implementation does not support atomic rename operations, such as with
+   * the S3AFileSystem which translates file renames to potentially very
+   * expensive copy-then-delete operations.
+   */
+  DIRECT_WRITE(DistCpConstants.CONF_LABEL_DIRECT_WRITE,
+      new Option("direct", false, "Write files directly to the"
+          + " target location, avoiding temporary file rename."));
 
 
   public static final String PRESERVE_STATUS_DEFAULT = "-prbugpct";

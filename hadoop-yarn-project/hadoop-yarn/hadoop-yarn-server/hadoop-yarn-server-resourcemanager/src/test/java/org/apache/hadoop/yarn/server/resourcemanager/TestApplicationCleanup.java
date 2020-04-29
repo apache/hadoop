@@ -25,9 +25,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -49,24 +51,20 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 public class TestApplicationCleanup {
 
-  private static final Log LOG = LogFactory
-    .getLog(TestApplicationCleanup.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestApplicationCleanup.class);
   
   private YarnConfiguration conf;
   
   @Before
   public void setup() throws UnknownHostException {
-    Logger rootLogger = LogManager.getRootLogger();
-    rootLogger.setLevel(Level.DEBUG);
+    GenericTestUtils.setRootLogLevel(Level.DEBUG);
     conf = new YarnConfiguration();
     UserGroupInformation.setConfiguration(conf);
     conf.set(YarnConfiguration.RECOVERY_ENABLED, "true");
@@ -77,14 +75,13 @@ public class TestApplicationCleanup {
   @SuppressWarnings("resource")
   @Test
   public void testAppCleanup() throws Exception {
-    Logger rootLogger = LogManager.getRootLogger();
-    rootLogger.setLevel(Level.DEBUG);
+    GenericTestUtils.setRootLogLevel(Level.DEBUG);
     MockRM rm = new MockRM();
     rm.start();
 
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 5000);
 
-    RMApp app = rm.submitApp(2000);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(2000, rm);
 
     //kick the scheduling
     nm1.nodeHeartbeat(true);
@@ -156,14 +153,13 @@ public class TestApplicationCleanup {
   @Test
   public void testContainerCleanup() throws Exception {
 
-    Logger rootLogger = LogManager.getRootLogger();
-    rootLogger.setLevel(Level.DEBUG);
+    GenericTestUtils.setRootLogLevel(Level.DEBUG);
     MockRM rm = new MockRM();
     rm.start();
 
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 5000);
 
-    RMApp app = rm.submitApp(2000);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(2000, rm);
 
     //kick the scheduling
     nm1.nodeHeartbeat(true);
@@ -300,7 +296,7 @@ public class TestApplicationCleanup {
     nm1.registerNode();
 
     // create app and launch the AM
-    RMApp app0 = rm1.submitApp(200);
+    RMApp app0 = MockRMAppSubmitter.submitWithMemory(200, rm1);
     MockAM am0 = launchAM(app0, rm1, nm1);
     nm1.nodeHeartbeat(am0.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
     rm1.waitForState(app0.getApplicationId(), RMAppState.FAILED);
@@ -337,7 +333,7 @@ public class TestApplicationCleanup {
     nm2.registerNode();
 
     // create app and launch the AM
-    RMApp app0 = rm1.submitApp(200);
+    RMApp app0 = MockRMAppSubmitter.submitWithMemory(200, rm1);
     MockAM am0 = launchAM(app0, rm1, nm1);
 
     // alloc another container on nm2
@@ -391,7 +387,7 @@ public class TestApplicationCleanup {
     nm1.registerNode();
 
     // create app and launch the AM
-    RMApp app0 = rm1.submitApp(200);
+    RMApp app0 = MockRMAppSubmitter.submitWithMemory(200, rm1);
     MockAM am0 = launchAM(app0, rm1, nm1);
     nm1.nodeHeartbeat(am0.getApplicationAttemptId(), 1, ContainerState.RUNNING);
     rm1.waitForState(app0.getApplicationId(), RMAppState.RUNNING);
@@ -427,7 +423,7 @@ public class TestApplicationCleanup {
     nm1.registerNode();
 
     // create app and launch the AM
-    RMApp app0 = rm1.submitApp(200);
+    RMApp app0 = MockRMAppSubmitter.submitWithMemory(200, rm1);
     MockAM am0 = launchAM(app0, rm1, nm1);
     nm1.nodeHeartbeat(am0.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
     rm1.waitForState(app0.getApplicationId(), RMAppState.FAILED);
@@ -467,7 +463,7 @@ public class TestApplicationCleanup {
         new MockNM("127.0.0.1:1234", nmMemory, rm1.getResourceTrackerService());
     nm1.registerNode();
 
-    RMApp app0 = rm1.submitApp(amMemory);
+    RMApp app0 = MockRMAppSubmitter.submitWithMemory(amMemory, rm1);
     MockAM am0 = MockRM.launchAndRegisterAM(app0, rm1, nm1);
 
     // 2. AM sends ResourceRequest for 1 container with memory 2048MB.

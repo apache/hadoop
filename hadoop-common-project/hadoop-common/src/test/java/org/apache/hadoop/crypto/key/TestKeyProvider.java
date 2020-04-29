@@ -27,6 +27,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.security.NoSuchAlgorithmException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -146,14 +147,29 @@ public class TestKeyProvider {
 
   @Test
   public void testUnnestUri() throws Exception {
-    assertEquals(new Path("hdfs://nn.example.com/my/path"),
-        ProviderUtils.unnestUri(new URI("myscheme://hdfs@nn.example.com/my/path")));
-    assertEquals(new Path("hdfs://nn/my/path?foo=bar&baz=bat#yyy"),
-        ProviderUtils.unnestUri(new URI("myscheme://hdfs@nn/my/path?foo=bar&baz=bat#yyy")));
-    assertEquals(new Path("inner://hdfs@nn1.example.com/my/path"),
-        ProviderUtils.unnestUri(new URI("outer://inner@hdfs@nn1.example.com/my/path")));
-    assertEquals(new Path("user:///"),
-        ProviderUtils.unnestUri(new URI("outer://user/")));
+    assertUnwraps("hdfs://nn.example.com/my/path",
+        "myscheme://hdfs@nn.example.com/my/path");
+    assertUnwraps("hdfs://nn/my/path?foo=bar&baz=bat#yyy",
+        "myscheme://hdfs@nn/my/path?foo=bar&baz=bat#yyy");
+    assertUnwraps("inner://hdfs@nn1.example.com/my/path",
+        "outer://inner@hdfs@nn1.example.com/my/path");
+    assertUnwraps("user:///", "outer://user/");
+    assertUnwraps("wasb://account@container/secret.jceks",
+        "jceks://wasb@account@container/secret.jceks");
+    assertUnwraps("abfs://account@container/secret.jceks",
+        "jceks://abfs@account@container/secret.jceks");
+    assertUnwraps("s3a://container/secret.jceks",
+        "jceks://s3a@container/secret.jceks");
+    assertUnwraps("file:///tmp/secret.jceks",
+        "jceks://file/tmp/secret.jceks");
+    assertUnwraps("https://user:pass@service/secret.jceks?token=aia",
+        "jceks://https@user:pass@service/secret.jceks?token=aia");
+  }
+
+  protected void assertUnwraps(final String unwrapped, final String outer)
+      throws URISyntaxException {
+    assertEquals(new Path(unwrapped),
+        ProviderUtils.unnestUri(new URI(outer)));
   }
 
   private static class MyKeyProvider extends KeyProvider {

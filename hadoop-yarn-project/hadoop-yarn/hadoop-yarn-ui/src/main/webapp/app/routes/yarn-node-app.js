@@ -22,11 +22,13 @@ import AbstractRoute from './abstract';
 
 export default AbstractRoute.extend({
   model(param) {
+    var address = decodeURIComponent(param.node_addr);
+    address = address.replace(/(^\w+:|^)\/\//, '');
     return Ember.RSVP.hash({
       nodeApp: this.store.queryRecord('yarn-node-app',
-          { nodeAddr : param.node_addr, appId: param.app_id }),
-      nmGpuInfo: this.store.findRecord('yarn-nm-gpu', param.node_addr, {reload:true}),
-      nodeInfo: { id: param.node_id, addr: param.node_addr, appId: param.app_id }
+          { nodeAddr : address, appId: param.app_id }),
+      nmGpuInfo: this.store.findRecord('yarn-nm-gpu', address, {reload:true}),
+      nodeInfo: { id: param.node_id, addr: address, appId: param.app_id }
     });
   },
 

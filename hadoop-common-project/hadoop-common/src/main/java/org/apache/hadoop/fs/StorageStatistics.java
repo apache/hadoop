@@ -18,6 +18,7 @@
 package org.apache.hadoop.fs;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 import java.util.Iterator;
 
@@ -37,9 +38,13 @@ public abstract class StorageStatistics {
    *
    * When adding new common statistic name constants, please make them unique.
    * By convention, they are implicitly unique:
-   *  - the name of the constants are uppercase, words separated by underscores.
-   *  - the value of the constants are lowercase of the constant names.
+   * <ul>
+   *   <li>the name of the constants are uppercase, words separated by
+   *   underscores.</li>
+   *   <li>the value of the constants are lowercase of the constant names.</li>
+   * </ul>
    */
+  @InterfaceStability.Evolving
   public interface CommonStatisticNames {
     // The following names are for file system operation invocations
     String OP_APPEND = "op_append";
@@ -49,6 +54,7 @@ public abstract class StorageStatistics {
     String OP_DELETE = "op_delete";
     String OP_EXISTS = "op_exists";
     String OP_GET_CONTENT_SUMMARY = "op_get_content_summary";
+    String OP_GET_DELEGATION_TOKEN = "op_get_delegation_token";
     String OP_GET_FILE_CHECKSUM = "op_get_file_checksum";
     String OP_GET_FILE_STATUS = "op_get_file_status";
     String OP_GET_STATUS = "op_get_status";

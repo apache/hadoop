@@ -18,10 +18,11 @@
 
 package org.apache.hadoop.fs.shell;
 
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.Files;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -141,6 +142,12 @@ class CopyCommands {
       } else {
         srcs.add(src);
       }
+    }
+
+    @Override
+    protected boolean isSorted() {
+      //Sort the children for merge
+      return true;
     }
   }
 
@@ -268,12 +275,7 @@ class CopyCommands {
       try {
         items.add(new PathData(new URI(arg), getConf()));
       } catch (URISyntaxException e) {
-        if (Path.WINDOWS) {
-          // Unlike URI, PathData knows how to parse Windows drive-letter paths.
-          items.add(new PathData(arg, getConf()));
-        } else {
-          throw new IOException("unexpected URISyntaxException", e);
-        }
+        items.add(new PathData(arg, getConf()));
       }
       return items;
     }
@@ -463,7 +465,7 @@ class CopyCommands {
         dst.fs.create(dst.path, false).close();
       }
 
-      FileInputStream is = null;
+      InputStream is = null;
       try (FSDataOutputStream fos = dst.fs.append(dst.path)) {
         if (readStdin) {
           if (args.size() == 0) {
@@ -476,7 +478,7 @@ class CopyCommands {
 
         // Read in each input file and write to the target.
         for (PathData source : args) {
-          is = new FileInputStream(source.toFile());
+          is = Files.newInputStream(source.toFile().toPath());
           IOUtils.copyBytes(is, fos, DEFAULT_IO_LENGTH);
           IOUtils.closeStream(is);
           is = null;

@@ -20,10 +20,14 @@ import { moduleFor, test } from 'ember-qunit';
 import Constants from 'yarn-ui/constants';
 
 moduleFor('adapter:yarn-container-log', 'Unit | Adapter | ContainerLog', {
+  unit: true
 });
 
 test('Basic creation', function(assert) {
-  let adapter = this.subject();
+  let adapter = this.subject({
+    host: "localhost:4200",
+    namespace: "ws/v1/node"
+  });
 
   assert.ok(adapter);
   assert.ok(adapter.urlForFindRecord);
@@ -36,7 +40,10 @@ test('Basic creation', function(assert) {
 });
 
 test('urlForFindRecord test', function(assert) {
-  let adapter = this.subject();
+  let adapter = this.subject({
+    host: "localhost:4200/",
+    namespace: "ws/v1/node"
+  });
   let host = adapter.host;
   assert.equal(adapter.urlForFindRecord("localhost:8042" +
       Constants.PARAM_SEPARATOR + "container_e27_11111111111_0001_01_000001" +
@@ -52,8 +59,11 @@ test('ajaxOptions test', function(assert) {
 });
 
 test('findRecord test', function(assert) {
-  let adapter = this.subject(),
-      testModel = { modelName: "testModel" },
+  let adapter = this.subject({
+    host: "localhost:4200/",
+    namespace: "ws/v1/node"
+  });
+  let testModel = { modelName: "testModel" },
       testStore = {},
       testSnapshot = {};
   let host = adapter.host;

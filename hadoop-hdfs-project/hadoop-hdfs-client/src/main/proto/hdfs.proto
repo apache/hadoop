@@ -21,7 +21,7 @@
  * Please see http://wiki.apache.org/hadoop/Compatibility
  * for what changes are allowed for a *stable* .proto interface.
  */
-
+syntax="proto2";
 // This file contains protocol buffers that are used throughout HDFS -- i.e.
 // by the client, server, and data transfer protocols.
 
@@ -38,7 +38,7 @@ import "acl.proto";
  * Extended block idenfies a block
  */
 message ExtendedBlockProto {
-  required string poolId = 1;   // Block pool id - gloablly unique across clusters
+  required string poolId = 1;   // Block pool id - globally unique across clusters
   required uint64 blockId = 2;  // the local id within a pool
   required uint64 generationStamp = 3;
   optional uint64 numBytes = 4 [default = 0];  // len does not belong in ebid 
@@ -132,6 +132,7 @@ message DatanodeInfoProto {
   optional string upgradeDomain = 14;
   optional uint64 lastBlockReportTime = 15 [default = 0];
   optional uint64 lastBlockReportMonotonic = 16 [default = 0];
+  optional uint32 numBlocks = 17 [default = 0];
 }
 
 /**
@@ -273,6 +274,12 @@ message LocatedBlockProto {
   repeated hadoop.common.TokenProto blockTokens = 10; // each internal block has a block token
 }
 
+message BatchedListingKeyProto {
+  required bytes checksum = 1;
+  required uint32 pathIndex = 2;
+  required bytes startAfter = 3;
+}
+
 message DataEncryptionKeyProto {
   required uint32 keyId = 1;
   required string blockPoolId = 2;
@@ -411,6 +418,11 @@ message AddErasureCodingPolicyResponseProto {
   optional string errorMsg = 3;
 }
 
+message ECTopologyVerifierResultProto {
+  required string resultMessage = 1;
+  required bool isSupported = 2;
+}
+
 /**
  * Placeholder type for consistent HDFS operations.
  */
@@ -479,6 +491,27 @@ enum ChecksumTypeProto {
   CHECKSUM_CRC32C = 2;
 }
 
+enum BlockChecksumTypeProto {
+  MD5CRC = 1;  // BlockChecksum obtained by taking the MD5 digest of chunk CRCs
+  COMPOSITE_CRC = 2;  // Chunk-independent CRC, optionally striped
+}
+
+/**
+ * Algorithms/types denoting how block-level checksums are computed using
+ * lower-level chunk checksums/CRCs.
+ * These options should be kept in sync with
+ * org.apache.hadoop.hdfs.protocol.BlockChecksumOptions.
+ */
+message BlockChecksumOptionsProto {
+  optional BlockChecksumTypeProto blockChecksumType = 1 [default = MD5CRC];
+
+  // Only used if blockChecksumType specifies a striped format, such as
+  // COMPOSITE_CRC. If so, then the blockChecksum in the response is expected
+  // to be the concatenation of N crcs, where
+  // N == ((requestedLength - 1) / stripedLength) + 1
+  optional uint64 stripeLength = 2;
+}
+
 /**
  * HDFS Server Defaults
  */
@@ -502,6 +535,18 @@ message FsServerDefaultsProto {
 message DirectoryListingProto {
   repeated HdfsFileStatusProto partialListing = 1;
   required uint32 remainingEntries  = 2;
+}
+
+message RemoteExceptionProto {
+  required string className = 1;
+  optional string message = 2;
+}
+
+// Directory listing result for a batched listing call.
+message BatchedDirectoryListingProto {
+  repeated HdfsFileStatusProto partialListing = 1;
+  required uint32 parentIdx = 2;
+  optional RemoteExceptionProto exception = 3;
 }
 
 /**
@@ -649,4 +694,5 @@ message BlockTokenSecretProto {
   repeated AccessModeProto modes = 6;
   repeated StorageTypeProto storageTypes = 7;
   repeated string storageIds = 8;
+  optional bytes handshakeSecret = 9;
 }

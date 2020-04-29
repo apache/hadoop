@@ -373,6 +373,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
     testExpectedReplication(2);
     testExpectedReplication(3);
     testExpectedReplication(4);
+    testExpectedReplication(10);
   }
 
   private void testExpectedReplication(int replicationFactor)
@@ -665,6 +666,8 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
 
     int repl = 3;
     writeFile(fileSys, file, repl, 1);
+    DFSTestUtil.waitForReplication((DistributedFileSystem) fileSys, file,
+        (short) repl, 10000);
     final DatanodeInfo[] nodes = getFirstBlockReplicasDatanodeInfos(fileSys,
         file);
 

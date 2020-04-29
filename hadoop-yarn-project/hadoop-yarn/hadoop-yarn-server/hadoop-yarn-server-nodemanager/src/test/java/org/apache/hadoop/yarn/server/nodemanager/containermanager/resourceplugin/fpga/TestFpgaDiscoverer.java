@@ -19,29 +19,39 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga;
 
+import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.fpga.FpgaResourceAllocator;
-import org.junit.Assert;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerException;
+import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
-
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import org.junit.rules.ExpectedException;
 
 public class TestFpgaDiscoverer {
+  @Rule
+  public ExpectedException expected = ExpectedException.none();
+
+  private File fakeBinary;
+  private IntelFpgaOpenclPlugin openclPlugin;
+  private Configuration conf;
+  private FpgaDiscoverer fpgaDiscoverer;
 
   private String getTestParentFolder() {
     File f = new File("target/temp/" + TestFpgaDiscoverer.class.getName());
@@ -58,122 +68,256 @@ public class TestFpgaDiscoverer {
     File f = new File(folder);
     FileUtils.deleteDirectory(f);
     f.mkdirs();
+
+    conf = new Configuration();
+
+    openclPlugin = new IntelFpgaOpenclPlugin();
+    openclPlugin.initPlugin(conf);
+    openclPlugin.setInnerShellExecutor(mockPuginShell());
+
+    fpgaDiscoverer = new FpgaDiscoverer();
+    fpgaDiscoverer.setResourceHanderPlugin(openclPlugin);
+  }
+
+  @After
+  public void afterTest() {
+    if (fakeBinary != null) {
+      fakeBinary.delete();
+    }
   }
 
   @Test
-  public void testLinuxFpgaResourceDiscoverPluginConfig() throws YarnException, IOException {
-    Configuration conf = new Configuration(false);
-    FpgaDiscoverer discoverer = FpgaDiscoverer.getInstance();
+  public void testExecutablePathWithoutExplicitConfig()
+      throws YarnException {
+    fpgaDiscoverer.initialize(conf);
 
-    IntelFpgaOpenclPlugin openclPlugin = new IntelFpgaOpenclPlugin();
-    // because FPGA discoverer is a singleton, we use setPlugin to make
-    // FpgaDiscoverer.getInstance().diagnose() work in openclPlugin.initPlugin()
-    discoverer.setResourceHanderPlugin(openclPlugin);
-    openclPlugin.initPlugin(conf);
-    openclPlugin.setShell(mockPuginShell());
-
-    discoverer.initialize(conf);
-    // Case 1. No configuration set for binary
-    Assert.assertEquals("No configuration should return just a single binary name",
+    assertEquals("No configuration(no environment ALTERAOCLSDKROOT set)" +
+            " should return just a single binary name",
         "aocl", openclPlugin.getPathToExecutable());
+  }
 
-    // Case 2. With correct configuration and file exists
-    File fakeBinary = new File(getTestParentFolder() + "/aocl");
-    conf.set(YarnConfiguration.NM_FPGA_PATH_TO_EXEC, getTestParentFolder() + "/aocl");
+  @Test
+  public void testExecutablePathWithCorrectConfig()
+      throws IOException, YarnException {
+    fakeBinary = new File(getTestParentFolder() + "/aocl");
+    conf.set(YarnConfiguration.NM_FPGA_PATH_TO_EXEC,
+        getTestParentFolder() + "/aocl");
     touchFile(fakeBinary);
-    discoverer.initialize(conf);
-    Assert.assertEquals("Correct configuration should return user setting",
+
+    fpgaDiscoverer.initialize(conf);
+
+    assertEquals("Correct configuration should return user setting",
         getTestParentFolder() + "/aocl", openclPlugin.getPathToExecutable());
-
-    // Case 3. With correct configuration but file doesn't exists. Use default
-    fakeBinary.delete();
-    discoverer.initialize(conf);
-    Assert.assertEquals("Correct configuration but file doesn't exists should return just a single binary name",
-        "aocl", openclPlugin.getPathToExecutable());
-
   }
 
   @Test
-  public void testDiscoverPluginParser() throws YarnException {
-    String output = "------------------------- acl0 -------------------------\n" +
-        "Vendor: Nallatech ltd\n" +
-        "Phys Dev Name  Status   Information\n" +
-        "aclnalla_pcie0Passed   nalla_pcie (aclnalla_pcie0)\n" +
-        "                       PCIe dev_id = 2494, bus:slot.func = 02:00.00, Gen3 x8\n" +
-        "                       FPGA temperature = 53.1 degrees C.\n" +
-        "                       Total Card Power Usage = 31.7 Watts.\n" +
-        "                       Device Power Usage = 0.0 Watts.\n" +
-        "DIAGNOSTIC_PASSED" +
-        "---------------------------------------------------------\n";
-    output = output +
-        "------------------------- acl1 -------------------------\n" +
-        "Vendor: Nallatech ltd\n" +
-        "Phys Dev Name  Status   Information\n" +
-        "aclnalla_pcie1Passed   nalla_pcie (aclnalla_pcie1)\n" +
-        "                       PCIe dev_id = 2495, bus:slot.func = 03:00.00, Gen3 x8\n" +
-        "                       FPGA temperature = 43.1 degrees C.\n" +
-        "                       Total Card Power Usage = 11.7 Watts.\n" +
-        "                       Device Power Usage = 0.0 Watts.\n" +
-        "DIAGNOSTIC_PASSED" +
-        "---------------------------------------------------------\n";
-    output = output +
-        "------------------------- acl2 -------------------------\n" +
-        "Vendor: Intel(R) Corporation\n" +
-        "\n" +
-        "Phys Dev Name  Status   Information\n" +
-        "\n" +
-        "acla10_ref0   Passed   Arria 10 Reference Platform (acla10_ref0)\n" +
-        "                       PCIe dev_id = 2494, bus:slot.func = 09:00.00, Gen2 x8\n" +
-        "                       FPGA temperature = 50.5781 degrees C.\n" +
-        "\n" +
-        "DIAGNOSTIC_PASSED\n" +
-        "---------------------------------------------------------\n";
-    Configuration conf = new Configuration(false);
-    IntelFpgaOpenclPlugin openclPlugin = new IntelFpgaOpenclPlugin();
-    FpgaDiscoverer.getInstance().setResourceHanderPlugin(openclPlugin);
+  public void testExecutablePathWhenFileDoesNotExist()
+      throws YarnException {
+    conf.set(YarnConfiguration.NM_FPGA_PATH_TO_EXEC,
+        getTestParentFolder() + "/aocl");
 
-    openclPlugin.initPlugin(conf);
-    openclPlugin.setShell(mockPuginShell());
+    fpgaDiscoverer.initialize(conf);
 
-    FpgaDiscoverer.getInstance().initialize(conf);
+    assertEquals("File doesn't exists - expected a single binary name",
+        "aocl", openclPlugin.getPathToExecutable());
+  }
 
-    List<FpgaResourceAllocator.FpgaDevice> list = new LinkedList<>();
+  @Test
+  public void testExecutablePathWhenFileIsEmpty()
+      throws YarnException {
+    conf.set(YarnConfiguration.NM_FPGA_PATH_TO_EXEC, "");
 
-    // Case 1. core parsing
-    openclPlugin.parseDiagnoseInfo(output, list);
-    Assert.assertEquals(3, list.size());
-    Assert.assertEquals("IntelOpenCL", list.get(0).getType());
-    Assert.assertEquals("247", list.get(0).getMajor().toString());
-    Assert.assertEquals("0", list.get(0).getMinor().toString());
-    Assert.assertEquals("acl0", list.get(0).getAliasDevName());
-    Assert.assertEquals("aclnalla_pcie0", list.get(0).getDevName());
-    Assert.assertEquals("02:00.00", list.get(0).getBusNum());
-    Assert.assertEquals("53.1 degrees C", list.get(0).getTemperature());
-    Assert.assertEquals("31.7 Watts", list.get(0).getCardPowerUsage());
+    fpgaDiscoverer.initialize(conf);
 
-    Assert.assertEquals("IntelOpenCL", list.get(1).getType());
-    Assert.assertEquals("247", list.get(1).getMajor().toString());
-    Assert.assertEquals("1", list.get(1).getMinor().toString());
-    Assert.assertEquals("acl1", list.get(1).getAliasDevName());
-    Assert.assertEquals("aclnalla_pcie1", list.get(1).getDevName());
-    Assert.assertEquals("03:00.00", list.get(1).getBusNum());
-    Assert.assertEquals("43.1 degrees C", list.get(1).getTemperature());
-    Assert.assertEquals("11.7 Watts", list.get(1).getCardPowerUsage());
+    assertEquals("configuration with empty string value, should use aocl",
+        "aocl", openclPlugin.getPathToExecutable());
+  }
 
-    Assert.assertEquals("IntelOpenCL", list.get(2).getType());
-    Assert.assertEquals("246", list.get(2).getMajor().toString());
-    Assert.assertEquals("0", list.get(2).getMinor().toString());
-    Assert.assertEquals("acl2", list.get(2).getAliasDevName());
-    Assert.assertEquals("acla10_ref0", list.get(2).getDevName());
-    Assert.assertEquals("09:00.00", list.get(2).getBusNum());
-    Assert.assertEquals("50.5781 degrees C", list.get(2).getTemperature());
-    Assert.assertEquals("", list.get(2).getCardPowerUsage());
+  @Test
+  public void testExecutablePathWithSdkRootSet()
+      throws IOException, YarnException {
+    fakeBinary = new File(getTestParentFolder() + "/bin/aocl");
+    fakeBinary.getParentFile().mkdirs();
+    touchFile(fakeBinary);
+    Map<String, String> newEnv = new HashMap<String, String>();
+    newEnv.put("ALTERAOCLSDKROOT", getTestParentFolder());
+    openclPlugin.setEnvProvider(s -> {
+      return newEnv.get(s); });
 
-    // Case 2. check alias map
-    Map<String, String> aliasMap = openclPlugin.getAliasMap();
-    Assert.assertEquals("acl0", aliasMap.get("247:0"));
-    Assert.assertEquals("acl1", aliasMap.get("247:1"));
-    Assert.assertEquals("acl2", aliasMap.get("246:0"));
+    fpgaDiscoverer.initialize(conf);
+
+    assertEquals("No configuration but with environment ALTERAOCLSDKROOT set",
+        getTestParentFolder() + "/bin/aocl", openclPlugin.getPathToExecutable());
+  }
+
+  @Test
+  public void testDiscoveryWhenAvailableDevicesDefined()
+      throws YarnException {
+    conf.set(YarnConfiguration.NM_FPGA_AVAILABLE_DEVICES,
+        "acl0/243:0,acl1/244:1");
+
+    fpgaDiscoverer.initialize(conf);
+    List<FpgaDevice> devices = fpgaDiscoverer.discover();
+
+    assertEquals("Number of devices", 2, devices.size());
+    FpgaDevice device0 = devices.get(0);
+    FpgaDevice device1 = devices.get(1);
+
+    assertEquals("Device id", "acl0", device0.getAliasDevName());
+    assertEquals("Minor number", 0, device0.getMinor());
+    assertEquals("Major", 243, device0.getMajor());
+
+    assertEquals("Device id", "acl1", device1.getAliasDevName());
+    assertEquals("Minor number", 1, device1.getMinor());
+    assertEquals("Major", 244, device1.getMajor());
+  }
+
+  @Test
+  public void testDiscoveryWhenAvailableDevicesEmpty()
+      throws YarnException {
+    expected.expect(ResourceHandlerException.class);
+    expected.expectMessage("No FPGA devices were specified");
+
+    conf.set(YarnConfiguration.NM_FPGA_AVAILABLE_DEVICES,
+        "");
+
+    fpgaDiscoverer.initialize(conf);
+    fpgaDiscoverer.discover();
+  }
+
+  @Test
+  public void testDiscoveryWhenAvailableDevicesAreIllegalString()
+      throws YarnException {
+    expected.expect(ResourceHandlerException.class);
+    expected.expectMessage("Illegal device specification string");
+
+    conf.set(YarnConfiguration.NM_FPGA_AVAILABLE_DEVICES,
+        "illegal/243:0,acl1/244=1");
+
+    fpgaDiscoverer.initialize(conf);
+    fpgaDiscoverer.discover();
+  }
+
+  @Test
+  public void testDiscoveryWhenExternalScriptDefined()
+      throws YarnException {
+    conf.set(YarnConfiguration.NM_FPGA_DEVICE_DISCOVERY_SCRIPT,
+        "/dummy/script");
+
+    fpgaDiscoverer.setScriptRunner(s -> {
+      return Optional.of("acl0/243:0,acl1/244:1"); });
+    fpgaDiscoverer.initialize(conf);
+    List<FpgaDevice> devices = fpgaDiscoverer.discover();
+
+    assertEquals("Number of devices", 2, devices.size());
+    FpgaDevice device0 = devices.get(0);
+    FpgaDevice device1 = devices.get(1);
+
+    assertEquals("Device id", "acl0", device0.getAliasDevName());
+    assertEquals("Minor number", 0, device0.getMinor());
+    assertEquals("Major", 243, device0.getMajor());
+
+    assertEquals("Device id", "acl1", device1.getAliasDevName());
+    assertEquals("Minor number", 1, device1.getMinor());
+    assertEquals("Major", 244, device1.getMajor());
+  }
+
+  @Test
+  public void testDiscoveryWhenExternalScriptReturnsEmptyString()
+      throws YarnException {
+    expected.expect(ResourceHandlerException.class);
+    expected.expectMessage("No FPGA devices were specified");
+
+    conf.set(YarnConfiguration.NM_FPGA_DEVICE_DISCOVERY_SCRIPT,
+        "/dummy/script");
+
+    fpgaDiscoverer.setScriptRunner(s -> {
+      return Optional.of(""); });
+
+    fpgaDiscoverer.initialize(conf);
+    fpgaDiscoverer.discover();
+  }
+
+  @Test
+  public void testDiscoveryWhenExternalScriptFails()
+      throws YarnException {
+    expected.expect(ResourceHandlerException.class);
+    expected.expectMessage("Unable to run external script");
+
+    conf.set(YarnConfiguration.NM_FPGA_DEVICE_DISCOVERY_SCRIPT,
+        "/dummy/script");
+
+    fpgaDiscoverer.setScriptRunner(s -> {
+      return Optional.empty(); });
+
+    fpgaDiscoverer.initialize(conf);
+    fpgaDiscoverer.discover();
+  }
+
+  @Test
+  public void testDiscoveryWhenExternalScriptUndefined()
+      throws YarnException {
+    expected.expect(ResourceHandlerException.class);
+    expected.expectMessage("Unable to run external script");
+
+    conf.set(YarnConfiguration.NM_FPGA_DEVICE_DISCOVERY_SCRIPT, "");
+
+    fpgaDiscoverer.initialize(conf);
+    fpgaDiscoverer.discover();
+  }
+
+  @Test
+  public void testDiscoveryWhenExternalScriptCannotBeExecuted()
+      throws YarnException, IOException {
+    File fakeScript = new File(getTestParentFolder() + "/fakeScript");
+    try {
+      expected.expect(ResourceHandlerException.class);
+      expected.expectMessage("Unable to run external script");
+
+      fakeScript = new File(getTestParentFolder() + "/fakeScript");
+      touchFile(fakeScript);
+      fakeScript.setExecutable(false);
+      conf.set(YarnConfiguration.NM_FPGA_DEVICE_DISCOVERY_SCRIPT,
+          fakeScript.getAbsolutePath());
+
+      fpgaDiscoverer.initialize(conf);
+      fpgaDiscoverer.discover();
+    } finally {
+      fakeScript.delete();
+    }
+  }
+
+  @Test
+  public void testCurrentFpgaInfoWhenAllDevicesAreAllowed()
+      throws YarnException {
+    conf.set(YarnConfiguration.NM_FPGA_AVAILABLE_DEVICES,
+        "acl0/243:0,acl1/244:1");
+
+    fpgaDiscoverer.initialize(conf);
+    List<FpgaDevice> devices = fpgaDiscoverer.discover();
+    List<FpgaDevice> currentFpgaInfo = fpgaDiscoverer.getCurrentFpgaInfo();
+
+    assertEquals("Devices", devices, currentFpgaInfo);
+  }
+
+  @Test
+  public void testCurrentFpgaInfoWhenAllowedDevicesDefined()
+      throws YarnException {
+    conf.set(YarnConfiguration.NM_FPGA_AVAILABLE_DEVICES,
+        "acl0/243:0,acl1/244:1");
+    conf.set(YarnConfiguration.NM_FPGA_ALLOWED_DEVICES, "0");
+
+    fpgaDiscoverer.initialize(conf);
+    List<FpgaDevice> devices = fpgaDiscoverer.discover();
+    List<FpgaDevice> currentFpgaInfo = fpgaDiscoverer.getCurrentFpgaInfo();
+
+    assertEquals("Devices", devices, currentFpgaInfo);
+    assertEquals("List of devices", 1, currentFpgaInfo.size());
+
+    FpgaDevice device = currentFpgaInfo.get(0);
+    assertEquals("Device id", "acl0", device.getAliasDevName());
+    assertEquals("Minor number", 0, device.getMinor());
+    assertEquals("Major", 243, device.getMajor());
   }
 
   private IntelFpgaOpenclPlugin.InnerShellExecutor mockPuginShell() {

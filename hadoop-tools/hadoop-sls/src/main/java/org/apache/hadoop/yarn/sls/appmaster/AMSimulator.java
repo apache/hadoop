@@ -88,6 +88,8 @@ public abstract class AMSimulator extends TaskRunner.Task {
   private int responseId = 0;
   // user name
   private String user;
+  // nodelabel expression
+  private String nodeLabelExpression;
   // queue name
   protected String queue;
   // am type
@@ -114,6 +116,8 @@ public abstract class AMSimulator extends TaskRunner.Task {
 
   private ReservationSubmissionRequest reservationRequest;
 
+  private Map<ApplicationId, AMSimulator> appIdToAMSim;
+
   public AMSimulator() {
     this.responseQueue = new LinkedBlockingQueue<>();
   }
@@ -123,7 +127,8 @@ public abstract class AMSimulator extends TaskRunner.Task {
       List<ContainerSimulator> containerList, ResourceManager resourceManager,
       SLSRunner slsRunnner, long startTime, long finishTime, String simUser,
       String simQueue, boolean tracked, String oldApp, long baseTimeMS,
-      Resource amResource, Map<String, String> params) {
+      Resource amResource, String nodeLabelExpr, Map<String, String> params,
+      Map<ApplicationId, AMSimulator> appIdAMSim) {
     super.init(startTime, startTime + 1000000L * heartbeatInterval,
         heartbeatInterval);
     this.user = simUser;
@@ -136,6 +141,8 @@ public abstract class AMSimulator extends TaskRunner.Task {
     this.traceStartTimeMS = startTime;
     this.traceFinishTimeMS = finishTime;
     this.amContainerResource = amResource;
+    this.nodeLabelExpression = nodeLabelExpr;
+    this.appIdToAMSim = appIdAMSim;
   }
 
   /**
@@ -158,6 +165,9 @@ public abstract class AMSimulator extends TaskRunner.Task {
 
     // submit application, waiting until ACCEPTED
     submitApp(reservationId);
+
+    // add submitted app to mapping
+    appIdToAMSim.put(appId, this);
 
     // track app metrics
     trackApp();
@@ -262,8 +272,8 @@ public abstract class AMSimulator extends TaskRunner.Task {
   }
 
   protected ResourceRequest createResourceRequest(Resource resource,
-      ExecutionType executionType, String host, int priority, int
-      numContainers) {
+      ExecutionType executionType, String host, int priority, long
+      allocationId, int numContainers) {
     ResourceRequest request = recordFactory
         .newRecordInstance(ResourceRequest.class);
     request.setCapability(resource);
@@ -274,6 +284,7 @@ public abstract class AMSimulator extends TaskRunner.Task {
     Priority prio = recordFactory.newRecordInstance(Priority.class);
     prio.setPriority(priority);
     request.setPriority(prio);
+    request.setAllocationRequestId(allocationId);
     return request;
   }
 
@@ -327,6 +338,9 @@ public abstract class AMSimulator extends TaskRunner.Task {
     conLauContext.setServiceData(new HashMap<>());
     appSubContext.setAMContainerSpec(conLauContext);
     appSubContext.setResource(amContainerResource);
+    if (nodeLabelExpression != null) {
+      appSubContext.setNodeLabelExpression(nodeLabelExpression);
+    }
 
     if(reservationId != null) {
       appSubContext.setReservationID(reservationId);
@@ -393,11 +407,22 @@ public abstract class AMSimulator extends TaskRunner.Task {
   protected List<ResourceRequest> packageRequests(
           List<ContainerSimulator> csList, int priority) {
     // create requests
-    Map<String, ResourceRequest> rackLocalRequestMap = new HashMap<String, ResourceRequest>();
-    Map<String, ResourceRequest> nodeLocalRequestMap = new HashMap<String, ResourceRequest>();
-    ResourceRequest anyRequest = null;
+    Map<Long, Map<String, ResourceRequest>> rackLocalRequests =
+        new HashMap<>();
+    Map<Long, Map<String, ResourceRequest>> nodeLocalRequests =
+        new HashMap<>();
+    Map<Long, ResourceRequest> anyRequests = new HashMap<>();
     for (ContainerSimulator cs : csList) {
+      long allocationId = cs.getAllocationId();
+      ResourceRequest anyRequest = anyRequests.get(allocationId);
       if (cs.getHostname() != null) {
+        Map<String, ResourceRequest> rackLocalRequestMap;
+        if (rackLocalRequests.containsKey(allocationId)) {
+          rackLocalRequestMap = rackLocalRequests.get(allocationId);
+        } else {
+          rackLocalRequestMap = new HashMap<>();
+          rackLocalRequests.put(allocationId, rackLocalRequestMap);
+        }
         String[] rackHostNames = SLSUtils.getRackHostName(cs.getHostname());
         // check rack local
         String rackname = "/" + rackHostNames[0];
@@ -406,34 +431,49 @@ public abstract class AMSimulator extends TaskRunner.Task {
               rackLocalRequestMap.get(rackname).getNumContainers() + 1);
         } else {
           ResourceRequest request = createResourceRequest(cs.getResource(),
-              cs.getExecutionType(), rackname, priority, 1);
+              cs.getExecutionType(), rackname, priority,
+              cs.getAllocationId(), 1);
           rackLocalRequestMap.put(rackname, request);
         }
         // check node local
+        Map<String, ResourceRequest> nodeLocalRequestMap;
+        if (nodeLocalRequests.containsKey(allocationId)) {
+          nodeLocalRequestMap = nodeLocalRequests.get(allocationId);
+        } else {
+          nodeLocalRequestMap = new HashMap<>();
+          nodeLocalRequests.put(allocationId, nodeLocalRequestMap);
+        }
         String hostname = rackHostNames[1];
         if (nodeLocalRequestMap.containsKey(hostname)) {
           nodeLocalRequestMap.get(hostname).setNumContainers(
               nodeLocalRequestMap.get(hostname).getNumContainers() + 1);
         } else {
           ResourceRequest request = createResourceRequest(cs.getResource(),
-              cs.getExecutionType(), hostname, priority, 1);
+              cs.getExecutionType(), hostname, priority,
+              cs.getAllocationId(), 1);
           nodeLocalRequestMap.put(hostname, request);
         }
       }
       // any
       if (anyRequest == null) {
         anyRequest = createResourceRequest(cs.getResource(),
-            cs.getExecutionType(), ResourceRequest.ANY, priority, 1);
+            cs.getExecutionType(), ResourceRequest.ANY, priority,
+            cs.getAllocationId(), 1);
+        anyRequests.put(allocationId, anyRequest);
       } else {
         anyRequest.setNumContainers(anyRequest.getNumContainers() + 1);
       }
     }
     List<ResourceRequest> ask = new ArrayList<ResourceRequest>();
-    ask.addAll(nodeLocalRequestMap.values());
-    ask.addAll(rackLocalRequestMap.values());
-    if (anyRequest != null) {
-      ask.add(anyRequest);
+    for (Map<String, ResourceRequest> nodeLocalRequestMap :
+        nodeLocalRequests.values()) {
+      ask.addAll(nodeLocalRequestMap.values());
     }
+    for (Map<String, ResourceRequest> rackLocalRequestMap :
+        rackLocalRequests.values()) {
+      ask.addAll(rackLocalRequestMap.values());
+    }
+    ask.addAll(anyRequests.values());
     return ask;
   }
 

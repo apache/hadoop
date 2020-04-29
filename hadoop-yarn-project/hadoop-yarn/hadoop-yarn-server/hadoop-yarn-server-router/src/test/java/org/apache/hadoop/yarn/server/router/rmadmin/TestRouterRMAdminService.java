@@ -19,8 +19,10 @@
 package org.apache.hadoop.yarn.server.router.rmadmin;
 
 import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.Map;
 
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesResponse;
@@ -214,6 +216,64 @@ public class TestRouterRMAdminService extends BaseRouterRMAdminTest {
 
     chain = pipelines.get("test2");
     Assert.assertNull("test2 should have been evicted", chain);
+  }
+
+  /**
+   * This test validates if the RMAdminRequestInterceptor chain for the user
+   * can build and init correctly when a multi-client process begins to
+   * request RouterRMAdminService for the same user simultaneously.
+   */
+  @Test
+  public void testRMAdminPipelineConcurrent() throws InterruptedException {
+    final String user = "test1";
+
+    /*
+     * ClientTestThread is a thread to simulate a client request to get a
+     * RMAdminRequestInterceptor for the user.
+     */
+    class ClientTestThread extends Thread {
+      private RMAdminRequestInterceptor interceptor;
+      @Override public void run() {
+        try {
+          interceptor = pipeline();
+        } catch (IOException | InterruptedException e) {
+          e.printStackTrace();
+        }
+      }
+      private RMAdminRequestInterceptor pipeline()
+          throws IOException, InterruptedException {
+        return UserGroupInformation.createRemoteUser(user).doAs(
+            new PrivilegedExceptionAction<RMAdminRequestInterceptor>() {
+              @Override
+              public RMAdminRequestInterceptor run() throws Exception {
+                RequestInterceptorChainWrapper wrapper =
+                    getRouterRMAdminService().getInterceptorChain();
+                RMAdminRequestInterceptor interceptor =
+                    wrapper.getRootInterceptor();
+                Assert.assertNotNull(interceptor);
+                LOG.info("init rm admin interceptor success for user" + user);
+                return interceptor;
+              }
+            });
+      }
+    }
+
+    /*
+     * We start the first thread. It should not finish initing a chainWrapper
+     * before the other thread starts. In this way, the second thread can
+     * init at the same time of the first one. In the end, we validate that
+     * the 2 threads get the same chainWrapper without going into error.
+     */
+    ClientTestThread client1 = new ClientTestThread();
+    ClientTestThread client2 = new ClientTestThread();
+    client1.start();
+    client2.start();
+    client1.join();
+    client2.join();
+
+    Assert.assertNotNull(client1.interceptor);
+    Assert.assertNotNull(client2.interceptor);
+    Assert.assertTrue(client1.interceptor == client2.interceptor);
   }
 
 }

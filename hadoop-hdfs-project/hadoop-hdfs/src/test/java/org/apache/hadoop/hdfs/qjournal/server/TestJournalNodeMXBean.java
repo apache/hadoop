@@ -82,7 +82,7 @@ public class TestJournalNodeMXBean {
     // format the journal ns1
     final NamespaceInfo FAKE_NSINFO = new NamespaceInfo(12345, "mycluster",
         "my-bp", 0L);
-    jn.getOrCreateJournal(NAMESERVICE).format(FAKE_NSINFO);
+    jn.getOrCreateJournal(NAMESERVICE).format(FAKE_NSINFO, false);
 
     // check again after format
     // getJournalsStatus
@@ -96,7 +96,17 @@ public class TestJournalNodeMXBean {
     infoMap1.put("Formatted", "false");
     jMap.put(MiniJournalCluster.CLUSTER_WAITACTIVE_URI, infoMap1);
     assertEquals(JSON.toString(jMap), journalStatus);
-    
+
+    // check attributes
+    String hostAndPort = (String) mbs.getAttribute(mxbeanName, "HostAndPort");
+    assertEquals(jn.getHostAndPort(), hostAndPort);
+    assertTrue(hostAndPort.matches("localhost:\\d+"));
+    String[] clusterId = (String[]) mbs.getAttribute(mxbeanName, "ClusterIds");
+    assertEquals(jn.getClusterIds().size(), clusterId.length);
+    assertEquals("mycluster", clusterId[0]);
+    String version = (String) mbs.getAttribute(mxbeanName, "Version");
+    assertEquals(jn.getVersion(), version);
+
     // restart journal node without formatting
     jCluster = new MiniJournalCluster.Builder(new Configuration()).format(false)
         .numJournalNodes(NUM_JN).build();

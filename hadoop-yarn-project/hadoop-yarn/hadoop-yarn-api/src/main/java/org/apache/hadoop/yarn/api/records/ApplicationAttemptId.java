@@ -127,8 +127,8 @@ public abstract class ApplicationAttemptId implements
     StringBuilder sb = new StringBuilder(64);
     sb.append(APP_ATTEMPT_ID_PREFIX);
     ApplicationId appId = getApplicationId();
-    sb.append(appId.getClusterTimestamp());
-    sb.append('_');
+    sb.append(appId.getClusterTimestamp())
+        .append('_');
     FastNumberFormat.format(sb, appId.getId(), APP_ID_MIN_DIGITS);
     sb.append('_');
     FastNumberFormat.format(sb, getAttemptId(), ATTEMPT_ID_MIN_DIGITS);

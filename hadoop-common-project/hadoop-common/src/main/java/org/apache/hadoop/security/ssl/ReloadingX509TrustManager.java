@@ -29,8 +29,9 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.cert.CertificateException;
@@ -166,7 +167,7 @@ public final class ReloadingX509TrustManager
   throws IOException, GeneralSecurityException {
     X509TrustManager trustManager = null;
     KeyStore ks = KeyStore.getInstance(type);
-    FileInputStream in = new FileInputStream(file);
+    InputStream in = Files.newInputStream(file.toPath());
     try {
       ks.load(in, (password == null) ? null : password.toCharArray());
       lastLoaded = file.lastModified();

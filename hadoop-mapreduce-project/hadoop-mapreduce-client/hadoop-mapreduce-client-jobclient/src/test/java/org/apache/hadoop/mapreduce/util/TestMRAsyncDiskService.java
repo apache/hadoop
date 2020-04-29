@@ -29,6 +29,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -330,8 +331,8 @@ public class TestMRAsyncDiskService {
       File toBeDeletedDir = new File(vols[0], MRAsyncDiskService.TOBEDELETED);
       String[] content = toBeDeletedDir.list();
       assertNotNull("Cannot find " + toBeDeletedDir, content);
-      assertEquals("" + toBeDeletedDir + " should be empty now.", 0,
-          content.length);
+      assertThat(content).withFailMessage(
+          toBeDeletedDir.toString() + " should be empty now.").isEmpty();
     }
   }
   

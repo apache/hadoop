@@ -311,6 +311,7 @@ The capacity scheduler supports hierarchical queues. This one request will print
 | maxCapacity | float | Configured maximum queue capacity in percentage relative to its parent queue |
 | queueName | string | Name of the queue |
 | queues | array of queues(JSON)/zero or more queue objects(XML) | A collection of queue resources |
+| health | A single health object | The health metrics of capacity scheduler. This metrics existed since 2.8.0, but the output was not well formatted. Hence users can not make use of this field cleanly, this is optimized from 3.2.0 onwards. |
 
 ### Elements of the queues object for a Parent queue
 
@@ -360,6 +361,31 @@ The capacity scheduler supports hierarchical queues. This one request will print
 |:---- |:---- |:---- |
 | memory | int | The amount of memory used (in MB) |
 | vCores | int | The number of virtual cores |
+
+### Elements of the health object in schedulerInfo:
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| lastrun | long | The time in which application started (in ms since epoch) |
+| operationsInfo | array of operations(JSON)/operation objects(XML) | A collection of operation objects |
+| lastRunDetails | array of lastRunDetails(JSON)/lastRunDetail objects(XML) | A collection of lastRunDetail objects |
+
+### Elements of the operation object in health:
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| operation | string | The type of operation |
+| nodeId | string | The id of the node to which the operation relates |
+| containerId | string | The id of the container to which the operation relates |
+| queue | string | The name of the queue to which the operation relates |
+
+### Elements of the lastRunDetail object in health:
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| operation | string | The type of operation  |
+| count | long | The id of the node to which the operation relates |
+| resources | A single resource object | The resources to which the operation relates |
 
 #### Response Examples
 
@@ -632,6 +658,61 @@ Response Body:
                     }
                 ]
             },
+            "health": {
+                "lastrun": 1326381444693,
+                "operationsInfo": [
+                    {
+                        "operation": "last-allocation",
+                        "nodeId": "N/A",
+                        "containerId": "N/A",
+                        "queue": "N/A"
+                    },
+                    {
+                        "operation": "last-release",
+                        "nodeId": "host.domain.com:8041",
+                        "containerId": "container_1326821518301_0005_01_000001",
+                        "queue": "root.default"
+                    },
+                    {
+                        "operation": "last-preemption",
+                        "nodeId": "N/A",
+                        "containerId": "N/A",
+                        "queue": "N/A"
+                    },
+                    {
+                        "operation": "last-reservation",
+                        "nodeId": "N/A",
+                        "containerId": "N/A",
+                        "queue": "N/A"
+                    }
+                ],
+                "lastRunDetails": [
+                    {
+                        "operation": "releases",
+                        "count": 0,
+                        "resources": {
+                            "memory": 0,
+                            "vCores": 0
+                        }
+                    },
+                    {
+                        "operation": "allocations",
+                        "count": 0,
+                        "resources": {
+                            "memory": 0,
+                            "vCores": 0
+                        }
+                    },
+                    {
+                        "operation": "reservations",
+                        "count": 0,
+                        "resources": {
+                            "memory": 0,
+                            "vCores": 0
+                        }
+                    }
+                ]
+            },
             "type": "capacityScheduler",
             "usedCapacity": 0.0
         }
@@ -894,6 +975,57 @@ Response Body:
         </resourcesUsed>
       </queue>
     </queues>
+    <health>
+      <lastrun>1326381444693</lastrun>
+      <operationsInfo>
+        <operation>last-allocation</operation>
+        <nodeId>N/A</nodeId>
+        <containerId>N/A</containerId>
+        <queue>N/A</queue>
+      </operationsInfo>
+      <operationsInfo>
+        <operation>last-release</operation>
+        <nodeId>host.domain.com:8041</nodeId>
+        <containerId>container_1326821518301_0005_01_000001</containerId>
+        <queue>root.default</queue>
+      </operationsInfo>
+      <operationsInfo>
+        <operation>last-preemption</operation>
+        <nodeId>N/A</nodeId>
+        <containerId>N/A</containerId>
+        <queue>N/A</queue>
+      </operationsInfo>
+      <operationsInfo>
+        <operation>last-reservation</operation>
+        <nodeId>N/A</nodeId>
+        <containerId>N/A</containerId>
+        <queue>N/A</queue>
+      </operationsInfo>
+      <lastRunDetails>
+        <operation>releases</operation>
+        <count>0</count>
+        <resources>
+          <memory>0</memory>
+          <vCores>0</vCores>
+        </resources>
+      </lastRunDetails>
+      <lastRunDetails>
+        <operation>allocations</operation>
+        <count>0</count>
+        <resources>
+          <memory>0</memory>
+          <vCores>0</vCores>
+        </resources>
+      </lastRunDetails>
+      <lastRunDetails>
+        <operation>reservations</operation>
+        <count>0</count>
+        <resources>
+          <memory>0</memory>
+          <vCores>0</vCores>
+        </resources>
+      </lastRunDetails>
+    </health>
   </schedulerInfo>
 </scheduler>
 ```
@@ -998,7 +1130,7 @@ Response Body:
 | type | string | Scheduler type - fairScheduler |
 | rootQueue | The root queue object | A collection of root queue resources |
 
-### Elements of the root queue object
+### Elements of all queue objects
 
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
@@ -1010,17 +1142,23 @@ Response Body:
 | clusterResources | A single resource object | The capacity of the cluster |
 | queueName | string | The name of the queue |
 | schedulingPolicy | string | The name of the scheduling policy used by the queue |
-| childQueues | array of queues(JSON)/queue objects(XML) | A collection of sub-queue information. Omitted if the queue has no childQueues. |
+| childQueues | array of queues(JSON)/queue objects(XML) | A collection of sub-queue information. Omitted if the queue has no childQueues or is a leaf queue. |
+| allocatedContainers | int | The number of allocated containers |
+| demandResources | A single resource object | The resources that have been requested by containers in this queue which have not been fulfilled by the scheduler |
+| pendingContainers | int | The number of pending containers |
+| preemptable | boolean | true if containers in this queue can be preempted |
+| reservedContainers | int | The number of reserved containers |
+| steadyFairResources | A single resource object | The steady fair share for the queue |
 
-### Elements of the queues object for a Leaf queue - contains all the elements in parent except 'childQueues' plus the following
+### Additional elements of leaf queue objects (with the exception of the 'childQueues' property)
 
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
-| type | string | type of the queue - fairSchedulerLeafQueueInfo |
+| type | string | The type of the queue - fairSchedulerLeafQueueInfo |
 | numActiveApps | int | The number of active applications in this queue |
 | numPendingApps | int | The number of pending applications in this queue |
 
-### Elements of the resource object for resourcesUsed in queues
+### Elements of the (cluster/demand/fair/max/min/used/*)Resources object in queues
 
 | Item | Data Type | Description |
 |:---- |:---- |:---- |
@@ -1049,12 +1187,18 @@ Response Body:
     "scheduler": {
         "schedulerInfo": {
             "rootQueue": {
+                "allocatedContainers": 0,
                 "childQueues": {
                     "queue": [
                         {
+                            "allocatedContainers": 0,
                             "clusterResources": {
                                 "memory": 8192,
                                 "vCores": 8
+                            },
+                            "demandResources": {
+                                "memory": 0,
+                                "vCores": 0
                             },
                             "fairResources": {
                                 "memory": 0,
@@ -1071,8 +1215,15 @@ Response Body:
                             },
                             "numActiveApps": 0,
                             "numPendingApps": 0,
+                            "pendingContainers": 0,
+                            "preemptable": true,
                             "queueName": "root.default",
+                            "reservedContainers": 0,
                             "schedulingPolicy": "fair",
+                            "steadyFairResources": {
+                                "memory": 4096,
+                                "vCores": 0
+                            },
                             "type": "fairSchedulerLeafQueueInfo",
                             "usedResources": {
                                 "memory": 0,
@@ -1080,12 +1231,18 @@ Response Body:
                             }
                         },
                         {
+                            "allocatedContainers": 0,
                             "childQueues": {
                                 "queue": [
                                     {
+                                        "allocatedContainers": 0,
                                         "clusterResources": {
                                             "memory": 8192,
-                                           "vCores": 8
+                                            "vCores": 8
+                                        },
+                                        "demandResources": {
+                                            "memory": 0,
+                                            "vCores": 0
                                         },
                                         "fairResources": {
                                             "memory": 10000,
@@ -1102,8 +1259,15 @@ Response Body:
                                         },
                                         "numActiveApps": 0,
                                         "numPendingApps": 0,
+                                        "pendingContainers": 0,
+                                        "preemptable": true,
                                         "queueName": "root.sample_queue.sample_sub_queue",
+                                        "reservedContainers": 0,
                                         "schedulingPolicy": "fair",
+                                        "steadyFairResources": {
+                                            "memory": 4096,
+                                            "vCores": 0
+                                        },
                                         "type": "fairSchedulerLeafQueueInfo",
                                         "usedResources": {
                                             "memory": 0,
@@ -1115,6 +1279,10 @@ Response Body:
                             "clusterResources": {
                                 "memory": 8192,
                                 "vCores": 8
+                            },
+                            "demandResources": {
+                                "memory": 0,
+                                "vCores": 0
                             },
                             "fairResources": {
                                 "memory": 10000,
@@ -1129,18 +1297,29 @@ Response Body:
                                 "memory": 10000,
                                 "vCores": 0
                             },
+                            "pendingContainers": 0,
+                            "preemptable": true,
                             "queueName": "root.sample_queue",
+                            "reservedContainers": 0,
                             "schedulingPolicy": "fair",
+                            "steadyFairResources": {
+                                "memory": 4096,
+                                "vCores": 0
+                            },
                             "usedResources": {
                                 "memory": 0,
                                 "vCores": 0
                             }
                         }
-                    ],
+                    ]
                 },
                 "clusterResources": {
                     "memory": 8192,
                     "vCores": 8
+                },
+                "demandResources": {
+                    "memory": 0,
+                    "vCores": 0
                 },
                 "fairResources": {
                     "memory": 8192,
@@ -1155,8 +1334,15 @@ Response Body:
                     "memory": 0,
                     "vCores": 0
                 },
+                "pendingContainers": 0,
+                "preemptable": true,
                 "queueName": "root",
+                "reservedContainers": 0,
                 "schedulingPolicy": "fair",
+                "steadyFairResources": {
+                    "memory": 8192,
+                    "vCores": 8
+                },
                 "usedResources": {
                     "memory": 0,
                     "vCores": 0
@@ -1202,6 +1388,14 @@ Response Body:
         <memory>0</memory>
         <vCores>0</vCores>
       </usedResources>
+      <demandResources>
+        <memory>0</memory>
+        <vCores>0</vCores>
+      </demandResources>
+      <steadyFairResources>
+        <memory>8192</memory>
+        <vCores>8</vCores>
+      </steadyFairResources>
       <fairResources>
         <memory>8192</memory>
         <vCores>8</vCores>
@@ -1210,8 +1404,12 @@ Response Body:
         <memory>8192</memory>
         <vCores>8</vCores>
       </clusterResources>
+      <pendingContainers>0</pendingContainers>
+      <allocatedContainers>0</allocatedContainers>
+      <reservedContainers>0</reservedContainers>
       <queueName>root</queueName>
       <schedulingPolicy>fair</schedulingPolicy>
+      <preemptable>true</preemptable>
       <childQueues>
         <queue xsi:type="fairSchedulerLeafQueueInfo">
           <maxApps>2147483647</maxApps>
@@ -1227,6 +1425,14 @@ Response Body:
             <memory>0</memory>
             <vCores>0</vCores>
           </usedResources>
+          <demandResources>
+            <memory>0</memory>
+            <vCores>0</vCores>
+          </demandResources>
+          <steadyFairResources>
+            <memory>4096</memory>
+            <vCores>0</vCores>
+          </steadyFairResources>
           <fairResources>
             <memory>0</memory>
             <vCores>0</vCores>
@@ -1235,15 +1441,19 @@ Response Body:
             <memory>8192</memory>
             <vCores>8</vCores>
           </clusterResources>
+          <pendingContainers>0</pendingContainers>
+          <allocatedContainers>0</allocatedContainers>
+          <reservedContainers>0</reservedContainers>
           <queueName>root.default</queueName>
           <schedulingPolicy>fair</schedulingPolicy>
+          <preemptable>true</preemptable>
           <numPendingApps>0</numPendingApps>
           <numActiveApps>0</numActiveApps>
         </queue>
         <queue>
           <maxApps>50</maxApps>
           <minResources>
-            <memory>10000</memory>
+            <memory>0</memory>
             <vCores>0</vCores>
           </minResources>
           <maxResources>
@@ -1254,6 +1464,14 @@ Response Body:
             <memory>0</memory>
             <vCores>0</vCores>
           </usedResources>
+          <demandResources>
+            <memory>0</memory>
+            <vCores>0</vCores>
+          </demandResources>
+          <steadyFairResources>
+            <memory>4096</memory>
+            <vCores>0</vCores>
+          </steadyFairResources>
           <fairResources>
             <memory>10000</memory>
             <vCores>0</vCores>
@@ -1262,8 +1480,12 @@ Response Body:
             <memory>8192</memory>
             <vCores>8</vCores>
           </clusterResources>
+          <pendingContainers>0</pendingContainers>
+          <allocatedContainers>0</allocatedContainers>
+          <reservedContainers>0</reservedContainers>
           <queueName>root.sample_queue</queueName>
           <schedulingPolicy>fair</schedulingPolicy>
+          <preemptable>true</preemptable>
           <childQueues>
             <queue xsi:type="fairSchedulerLeafQueueInfo">
               <maxApps>2147483647</maxApps>
@@ -1279,6 +1501,14 @@ Response Body:
                 <memory>0</memory>
                 <vCores>0</vCores>
               </usedResources>
+              <demandResources>
+                <memory>0</memory>
+                <vCores>0</vCores>
+              </demandResources>
+              <steadyFairResources>
+                <memory>4096</memory>
+                <vCores>0</vCores>
+              </steadyFairResources>
               <fairResources>
                 <memory>10000</memory>
                 <vCores>0</vCores>
@@ -1287,8 +1517,12 @@ Response Body:
                 <memory>8192</memory>
                 <vCores>8</vCores>
               </clusterResources>
+              <pendingContainers>0</pendingContainers>
+              <allocatedContainers>0</allocatedContainers>
+              <reservedContainers>0</reservedContainers>
               <queueName>root.sample_queue.sample_sub_queue</queueName>
               <schedulingPolicy>fair</schedulingPolicy>
+              <preemptable>true</preemptable>
               <numPendingApps>0</numPendingApps>
               <numActiveApps>0</numActiveApps>
             </queue>
@@ -1330,6 +1564,7 @@ Multiple parameters can be specified for GET operations. The started and finishe
       * finishedTimeEnd - applications with finish time ending with this time, specified in ms since epoch
       * applicationTypes - applications matching the given application types, specified as a comma-separated list.
       * applicationTags - applications matching any of the given application tags, specified as a comma-separated list.
+      * name - name of the application
       * deSelects - a generic fields which will be skipped in the result.
 
 ### Elements of the *apps* (Applications) object
@@ -2092,6 +2327,291 @@ Response Body:
 </appAttempts>
 ```
 
+Containers for an Application Attempt API
+-----------------------------------------
+
+With Containers for an Application Attempt API you can obtain the list of containers, which belongs to an Application Attempt.
+
+### URI
+
+      * http://rm-http-address:port/ws/v1/cluster/apps/{appid}/appattempts/{appAttemptId}/containers
+
+### HTTP Operations Supported
+
+      * GET
+
+### Query Parameters Supported
+
+      None
+
+### Elements of the *containers* object
+
+When you make a request for the list of containers, the information will be returned as an array of container objects.
+
+containers:
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| containers | array of app container objects(JSON)/zero or more container objects(XML) | The collection of app container objects |
+
+### Elements of the *container* object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| containerId | string | The container id |
+| allocatedMB | long | The amount of memory allocated for the container in MB |
+| allocatedVCores | int | The amount of virtual cores allocated for the container |
+| assignedNodeId | string | The node id of the node the attempt ran on |
+| priority | int | Allocated priority of the container |
+| startedTime | long | The start time of the attempt (in ms since epoch) |
+| finishedTime | long | The finish time of the attempt (in ms since epoch) 0 if not finished |
+| elapsedTime | long | The elapsed time in ms since the startedTime |
+| logUrl | string | The web URL that can be used to check the log for the container |
+| containerExitStatus | int | Final exit status of the container |
+| containerState | string | State of the container, can be NEW, RUNNING, or COMPLETE |
+| nodeHttpAddress | string | The node http address of the node the attempt ran on ||
+| nodeId | string | The node id of the node the attempt ran on |
+| allocatedResources |array of resource(JSON)/zero or more resource objects(XML) | Allocated resources for the container |
+
+### Elements of the *resource* object
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| memory | int | The maximum memory for the container |
+| vCores | int | The maximum number of vcores for the container |
+
+**JSON response**
+
+HTTP Request:
+
+      GET http://rm-http-address:port/ws/v1/cluster/apps/{appid}/appattempts/{appAttemptId}/containers
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+      Transfer-Encoding: chunked
+      Server: Jetty(6.1.26)
+
+Response Body:
+
+```json
+{
+  "containers" : {
+    "container": [
+      {
+      "containerId": "container_1531404209605_0008_01_000001",
+      "allocatedMB": "1536",
+      "allocatedVCores": "1",
+      "assignedNodeId": "host.domain.com:37814",
+      "priority": "0",
+      "startedTime": "1531405909444",
+      "finishedTime": "0",
+      "elapsedTime": "4112",
+      "logUrl": "http://host.domain.com:8042/node/containerlogs/container_1531404209605_0008_01_000001/systest",
+      "containerExitStatus": "0",
+      "containerState": "RUNNING",
+      "nodeHttpAddress": "http://host.domain.com:8042",
+      "nodeId": "host.domain.com:37814",
+      "allocatedResources": [
+         {
+            "key": "memory-mb",
+            "value": "1536"
+         },
+         {
+            "key": "vcores",
+            "value": "1"
+         }
+       ]
+      }
+    ]
+  }
+}
+```
+
+**XML response**
+
+HTTP Request:
+
+      GET http://rm-http-address:port/ws/v1/cluster/apps/{appid}/appattempts/{appAttemptId}/containers
+      Accept: application/xml
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/xml
+      Content-Length: 1104
+      Server: Jetty(6.1.26)
+
+Response Body:
+
+```xml
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<containers>
+  <container>
+    <containerId>container_1531404209605_0008_01_000001</containerId>
+    <allocatedMB>1536</allocatedMB>
+    <allocatedVCores>1</allocatedVCores>
+    <assignedNodeId>host.domain.com:37814</assignedNodeId>
+    <priority>0</priority>
+    <startedTime>1531405909444</startedTime>
+    <finishedTime>0</finishedTime>
+    <elapsedTime>4112</elapsedTime>
+    <logUrl>
+    http://host.domain.com:8042/node/containerlogs/container_1531404209605_0008_01_000001/systest
+    </logUrl>
+    <containerExitStatus>0</containerExitStatus>
+    <containerState>RUNNING</containerState>
+    <nodeHttpAddress>http://host.domain.com:8042</nodeHttpAddress>
+    <nodeId>host.domain.com:37814</nodeId>
+    <allocatedResources>
+      <entry>
+        <key>memory-mb</key>
+        <value>1536</value>
+      </entry>
+      <entry>
+        <key>vcores</key>
+        <value>1</value>
+      </entry>
+    </allocatedResources>
+  </container>
+</containers>
+```
+
+Specific Container for an Application Attempt API
+-------------------------------------------------
+
+With Specific Container for an Application Attempt API you can obtain information about a specific container, which belongs to an Application Attempt and selected by the container id.
+
+### URI
+
+      * http://rm-http-address:port/ws/v1/cluster/apps/{appid}/appattempts/{appAttemptId}/containers/{containerId}
+
+### HTTP Operations Supported
+
+      * GET
+
+### Query Parameters Supported
+
+      None
+
+### Elements of the *container* object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| containerId | string | The container id |
+| allocatedMB | long | The amount of memory allocated for the container in MB |
+| allocatedVCores | int | The amount of virtual cores allocated for the container |
+| assignedNodeId | string | The node id of the node the attempt ran on |
+| priority | int | Allocated priority of the container |
+| startedTime | long | The start time of the attempt (in ms since epoch) |
+| finishedTime | long | The finish time of the attempt (in ms since epoch) 0 if not finished |
+| elapsedTime | long | The elapsed time in ms since the startedTime |
+| logUrl | string | The web URL that can be used to check the log for the container |
+| containerExitStatus | int | Final exit status of the container |
+| containerState | string | State of the container, can be NEW, RUNNING, or COMPLETE |
+| nodeHttpAddress | string | The node http address of the node the attempt ran on ||
+| nodeId | string | The node id of the node the attempt ran on |
+| allocatedResources |array of resource(JSON)/zero or more resource objects(XML) | Allocated resources for the container |
+
+### Elements of the *resource* object
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| memory | int | The maximum memory for the container |
+| vCores | int | The maximum number of vcores for the container |
+
+**JSON response**
+
+HTTP Request:
+
+      GET http://rm-http-address:port/ws/v1/cluster/apps/{appid}/appattempts/{appAttemptId}/containers/{containerId}
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+      Transfer-Encoding: chunked
+      Server: Jetty(6.1.26)
+
+Response Body:
+
+```json
+{
+  "container": {
+    "containerId": "container_1531404209605_0008_01_000001",
+    "allocatedMB": "1536",
+    "allocatedVCores": "1",
+    "assignedNodeId": "host.domain.com:37814",
+    "priority": "0",
+    "startedTime": "1531405909444",
+    "finishedTime": "0",
+    "elapsedTime": "4112",
+    "logUrl": "http://host.domain.com:8042/node/containerlogs/container_1531404209605_0008_01_000001/systest",
+    "containerExitStatus": "0",
+    "containerState": "RUNNING",
+    "nodeHttpAddress": "http://host.domain.com:8042",
+    "nodeId": "host.domain.com:37814",
+    "allocatedResources": [
+       {
+          "key": "memory-mb",
+          "value": "1536"
+       },
+       {
+          "key": "vcores",
+          "value": "1"
+       }
+    ]
+  }
+}
+```
+
+**XML response**
+
+HTTP Request:
+
+      GET http://rm-http-address:port/ws/v1/cluster/apps/{appid}/appattempts/{appAttemptId}/containers/{containerId}
+      Accept: application/xml
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/xml
+      Content-Length: 1104
+      Server: Jetty(6.1.26)
+
+Response Body:
+
+```xml
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+
+<container>
+  <containerId>container_1531404209605_0008_01_000001</containerId>
+  <allocatedMB>1536</allocatedMB>
+  <allocatedVCores>1</allocatedVCores>
+  <assignedNodeId>host.domain.com:37814</assignedNodeId>
+  <priority>0</priority>
+  <startedTime>1531405909444</startedTime>
+  <finishedTime>0</finishedTime>
+  <elapsedTime>4112</elapsedTime>
+  <logUrl>
+  http://host.domain.com:8042/node/containerlogs/container_1531404209605_0008_01_000001/systest
+  </logUrl>
+  <containerExitStatus>0</containerExitStatus>
+  <containerState>RUNNING</containerState>
+  <nodeHttpAddress>http://host.domain.com:8042</nodeHttpAddress>
+  <nodeId>host.domain.com:37814</nodeId>
+  <allocatedResources>
+    <entry>
+      <key>memory-mb</key>
+      <value>1536</value>
+    </entry>
+    <entry>
+      <key>vcores</key>
+      <value>1</value>
+    </entry>
+  </allocatedResources>
+</container>
+```
+
 Cluster Nodes API
 -----------------
 
@@ -2298,6 +2818,7 @@ Use the following URI to obtain a Node Object, from a node identified by the nod
 | usedVirtualCores | long | The total number of vCores currently used on the node |
 | availableVirtualCores | long | The total number of vCores available on the node |
 | resourceUtilization | object | Resource utilization on the node |
+| totalResource | object | Resources on the node |
 
 The *resourceUtilization* object contains the following elements:
 
@@ -2352,6 +2873,11 @@ Response Body:
       "aggregatedContainersPhysicalMemoryMB": 0,
       "aggregatedContainersVirtualMemoryMB": 0,
       "containersCPUUsage": 0
+    },
+    "totalResource":
+    {
+      "memory": 2048,
+      "vCores": 5
     }
   }
 }
@@ -2397,7 +2923,115 @@ Response Body:
     <aggregatedContainersVirtualMemoryMB>0</aggregatedContainersVirtualMemoryMB>
     <containersCPUUsage>0.0</containersCPUUsage>
   </resourceUtilization>
+  <totalResource>
+    <memory>2048</memory>
+    <vCores>5</vCores>
+  </totalResource>
 </node>
+```
+
+Cluster Node Update Resource API
+--------------------------------
+
+Update the total resources in a node.
+
+### URI
+
+Use the following URI to update the resources of a Node Object identified by the nodeid value.
+
+      http://rm-http-address:port/ws/v1/cluster/nodes/{nodeid}/resource
+
+### HTTP Operations Supported
+
+      POST
+
+### Query Parameters Supported
+
+      None
+
+### Elements of the *resourceOption* object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| memory | long | The total amount of memory to set on the node (in MB) |
+| vcores | long | The total number of vCores to set on the node |
+| overCommitTimeout | long | The timeout to preempt containers |
+
+### Response Examples
+
+**JSON response**
+
+HTTP Request:
+
+      POST http://rm-http-address:port/ws/v1/cluster/nodes/h2:1235/resource
+
+Request body:
+
+```json
+{
+  "resource":
+  {
+    "memory": 1024,
+    "vCores": 3
+  },
+  "overCommitTimeout": -1
+}
+```
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+      Transfer-Encoding: chunked
+      Server: Jetty(6.1.26)
+
+Response Body:
+
+```json
+{
+  "resourceInfo":
+  {
+    "memory": 8192,
+    "vCores": 5
+  }
+}
+```
+
+**XML response**
+
+HTTP Request:
+
+      GET http://rm-http-address:port/ws/v1/cluster/node/h2:1235/resource
+      Accept: application/xml
+
+Request body:
+
+```xml
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<resourceOption>
+  <resource>
+    <memory>8192</memory>
+    <vCores>5</vCores>
+  </resource>
+  <overCommitTimeout>1000</overCommitTimeout>
+</resourceOption>
+```
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/xml
+      Content-Length: 552
+      Server: Jetty(6.1.26)
+
+Response Body:
+
+```xml
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<resourceInfo>
+  <memory>8192</memory>
+  <vCores>5</vCores>
+</resourceInfo>
 ```
 
 Cluster Writeable APIs
@@ -4445,6 +5079,7 @@ Please note that this feature is currently in the alpha stage and is subject to 
 
 ### HTTP Operations Supported
 
+      * GET
       * PUT
 
 ### Elements of the *sched-conf* object
@@ -4455,6 +5090,45 @@ Please note that this feature is currently in the alpha stage and is subject to 
 | add-queue | object | A queue to add to the scheduler along with this queue's configurations |
 | remove-queue | string | Full path name of a queue to remove |
 | global-updates | map | Map of key value pairs to update scheduler's global configuration |
+
+### GET Request Examples
+
+Get requests are used to retrieve the scheduler's configuration that is currently loaded into scheduler's context.
+
+**XML response**
+
+HTTP Request:
+
+      Accept: application/xml
+      Content-Type: application/xml
+      GET http://rm-http-address:port/ws/v1/cluster/scheduler-conf
+
+Response Header:
+
+      TTP/1.1 200 OK
+      Content-Type: application/xml; charset=utf-8
+      Transfer-Encoding: chunked
+
+Response Body:
+
+
+```xml
+      <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+      <configuration>
+        <property>
+          <name>yarn.scheduler.capacity.root.queues</name>
+          <value>default</value>
+        </property>
+        <property>
+          <name>yarn.scheduler.capacity.maximum-applications</name>
+          <value>10000</value>
+        </property>
+        <property>
+          <name>yarn.scheduler.capacity.root.default.capacity</name>
+          <value>100</value>
+        </property>
+      </configuration>
+```
 
 ### PUT Request Examples
 
@@ -4618,3 +5292,759 @@ Response Header:
       HTTP/1.1 200 OK
       Content-Type: application/xml
       Transfer-Encoding: chunked
+
+**Adding Node Labels to a queue**
+
+Assuming we are using the capacity scheduler and the current queue configuration is two queues root.default, and root.a, this example adds a Node Label x to the queue root.a. Create a Node Label x and assign the nodes with below commands.
+
+```yarn rmadmin -addToClusterNodeLabels "x(exclusive=true)"```
+
+```yarn rmadmin -replaceLabelsOnNode "<nodeId>=x"```
+
+HTTP Request:
+
+```xml
+      Accept: application/xml
+      PUT http://rm-http-address:port/ws/v1/cluster/scheduler-conf
+      Content-Type: application/xml
+      <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+      <sched-conf>
+        <update-queue>
+          <queue-name>root.a</queue-name>
+          <params>
+            <entry>
+              <key>accessible-node-labels</key>
+              <value>x</value>
+            </entry>
+            <entry>
+              <key>accessible-node-labels.x.capacity</key>
+              <value>100</value>
+            </entry>
+          </params>
+        </update-queue>
+        <update-queue>
+          <queue-name>root</queue-name>
+          <params>
+            <entry>
+              <key>accessible-node-labels.x.capacity</key>
+              <value>100</value>
+            </entry>
+          </params>
+        </update-queue>
+      </sched-conf>
+```
+
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/xml
+      Transfer-Encoding: chunked
+
+**Removing Node Labels from a queue**
+
+Assuming we are using the capacity scheduler and the current queue configuration is two queues root.default, and root.a and Node Label x is assigned to queue root.a. This example unsets the Node Label x from the queue root.a and removes it.
+
+HTTP Request:
+
+```xml
+      Accept: application/xml
+      PUT http://rm-http-address:port/ws/v1/cluster/scheduler-conf
+      Content-Type: application/xml
+      <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+      <sched-conf>
+        <update-queue>
+          <queue-name>root.a</queue-name>
+          <params>
+            <entry>
+              <key>accessible-node-labels</key>
+              <value></value>
+            </entry>
+          </params>
+        </update-queue>
+      </sched-conf>
+```
+
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/xml
+      Transfer-Encoding: chunked
+
+```yarn rmadmin -removeFromClusterNodeLabels x```
+
+
+Cluster Container Signal API
+--------------------------------
+
+With the Container Signal API, you can send a signal to a specified container with one of the following commands: OUTPUT_THREAD_DUMP, GRACEFUL_SHUTDOWN and FORCEFUL_SHUTDOWN.
+
+### URI
+
+      http://rm-http-address:port/ws/v1/cluster/containers/{containerId}/signal/{command}
+
+### HTTP Operations Supported
+
+      POST
+
+### Query Parameters Supported
+
+      None
+
+### Response Examples
+
+**JSON response**
+
+HTTP Request:
+
+      POST http://rm-http-address:port/ws/v1/cluster/containers/container_1531404209605_0008_01_000001/signal/OUTPUT_THREAD_DUMP
+      Accept: application/json
+      Content-Type: application/json
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+      Transfer-Encoding: chunked
+      Server: Jetty(6.1.26)
+
+No response body.
+
+**XML response**
+
+HTTP Request:
+
+      POST http://rm-http-address:port/ws/v1/cluster/containers/container_1531404209605_0008_01_000001/signal/OUTPUT_THREAD_DUMP
+      Accept: application/xml
+      Content-Type: application/xml
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/xml
+      Content-Length: 552
+      Server: Jetty(6.1.26)
+
+No response body.
+
+
+Scheduler Activities API
+--------------------------------
+
+  The scheduler activities RESTful API is available if you are using capacity scheduler and can fetch scheduler activities info recorded in a scheduling cycle. The API returns a message that includes important scheduling activities info which has a hierarchical layout with following fields:
+
+  * **Activities** - Activities is the root object of scheduler activities.
+  * **Allocations** - Allocations are allocation attempts based on partition or reservation.
+  * **Hierarchical Queues** - Hierarchical Queues where the scheduler have been tried to allocate containers to, each of them contains queue name, allocation state, optional diagnostic and optional children.
+  * **Applications** - Applications are shown as children of leaf queue, each of them contains the basic info about the application.
+  * **Requests** - Requests are shown as children of application, each of them contains the basic info about the request.
+  * **Nodes** - Nodes are shown as children of request, each of them contains node id, allocation state, optional name which should appear after allocating or reserving a container on the node, and optional diagnostic which should present if failed to allocate or reserve a container on this node. For aggregated nodes grouped by allocation state and diagnostic, each of them contains allocation state, aggregated node IDs and optional diagnostic.
+
+### URI
+
+      * http://rm-http-address:port/ws/v1/cluster/scheduler/activities
+
+### HTTP Operations Supported
+
+      * GET
+
+### Query Parameters Supported
+
+Multiple parameters can be specified for GET operations.
+
+      * nodeId - specified node ID, if not specified, the scheduler will record the scheduling activities info for the next scheduling cycle on all nodes.
+      * groupBy - aggregation type of application activities, currently only support "diagnostic" with which user can query aggregated activities grouped by allocation state and diagnostic.
+
+### Elements of the *Activities* object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| nodeId | string | The node ID on which scheduler tries to allocate containers. |
+| timestamp | long | Timestamp of the activities. |
+| dateTime | string | Date time of the activities. |
+| diagnostic | string | Top diagnostic of the activities about empty results, unavailable environments, or illegal input parameters, such as "waiting for display", "waiting for the next allocation", "No node manager running in the cluster", "Got invalid groupBy: xx, valid groupBy types: DIAGNOSTICS" |
+| allocations | array of allocations | A collection of allocation objects. |
+
+### Elements of the *Allocation* object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| partition | string | Partition of the allocation. |
+| updatedContainerId | string | Updated(allocated or reserved) container id in the allocation. |
+| finalAllocationState | string | Final allocation state of the allocation, including ALLOCATED, ALLOCATED_FROM_RESERVED, RESERVED, and SKIPPED. |
+| root | Queue | Queue object |
+
+### Elements of the *Queue* object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| name | string | Name of the queue. |
+| allocationState | string | Final allocation state of the queue, including ACCEPTED, REJECTED, and SKIPPED. |
+| diagnostic | string | Diagnostic of the queue. |
+| children | array of queues or applications | A collection of queue objects (for parent queues) or app objects (for leaf queues) |
+
+### Elements of the *Application* object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| name | string | Name of the application. |
+| appPriority | string | Priority of the application. |
+| allocationState | string | Final allocation state of the application, including ALLOCATED, RESERVED, RE_RESERVED, and SKIPPED. |
+| diagnostic | string | Diagnostic of the application. |
+| children | array of requests | A collection of request objects |
+
+### Elements of the *Request* object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| name | string | Name of the request, the value format is "request_&lt;requestPriority&gt;_&lt;allocationRequestId&gt;" which can be used to identify different requests. |
+| requestPriority | string | Priority of the request. |
+| allocationRequestId | string | Allocation request id of the request. |
+| allocationState | string | Final allocation state of the application, including ALLOCATED, RESERVED, RE_RESERVED, and SKIPPED. |
+| diagnostic | string | Diagnostic of the request. |
+| children | array of nodes | A collection of node objects. |
+
+### Elements of the *Node* object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| name | string | Container information which is optional and can be shown when allocation state is ALLOCATED, RESERVED or ALLOCATED_FROM_RESERVED. |
+| allocationState | string | Final allocation state of the application, including ALLOCATED, RESERVED, RE_RESERVED, and SKIPPED. |
+| diagnostic | string | Diagnostic about node in normal mode or nodes in aggregation mode |
+| nodeId | string | The node id on which the scheduling process is based, won’t show for aggregation query with groupBy parameter. |
+| nodeIds | array of strings | A collection of node IDs for aggregated activities, only show for aggregation query with groupBy parameter. |
+| count | int | The number of node IDs, only show for aggregation query with groupBy parameter. |
+
+
+### Response Examples
+
+**JSON response**
+
+HTTP Request:
+
+      Accept: application/json
+      GET http://rm-http-address:port/ws/v1/cluster/scheduler/activities
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+      Transfer-Encoding: chunked
+      Server: Jetty(6.1.26)
+
+Response Body:
+
+Following is an output example when global scheduling is enabled, there are multiple activities at the node level for a single request. For single node placement, differences are that nodeId will be shown as a field of activities and there should be only one activity at the node level for every request.
+
+```json
+{
+  "activities": {
+    "timestamp": 1562296830912,
+    "dateTime": "Fri Jul 05 11:20:30 CST 2019",
+    "allocations": [
+      {
+        "partition": "",
+        "finalAllocationState": "ALLOCATED",
+        "root": {
+          "name": "root",
+          "allocationState": "ACCEPTED",
+          "children": [
+            {
+              "name": "a",
+              "allocationState": "SKIPPED",
+              "diagnostic": "Queue does not need more resources"
+            },
+            {
+              "name": "b",
+              "allocationState": "ACCEPTED",
+              "children": [
+                {
+                  "name": "application_1562296828063_0001",
+                  "appPriority": 0,
+                  "allocationState": "ALLOCATED",
+                  "children": [
+                    {
+                      "name": "request_1_-1",
+                      "requestPriority": 1,
+                      "allocationRequestId": -1,
+                      "allocationState": "ALLOCATED",
+                      "children": [
+                        {
+                          "allocationState": "SKIPPED",
+                          "diagnostic": "Node's total resource is insufficient for request, insufficient resources=[memory-mb]\nrequired=<memory:3072, vCores:1>, available=<memory:2048, vCores:2>",
+                          "nodeId": "127.0.0.2:1234"
+                        },
+                        {
+                          "allocationState": "SKIPPED",
+                          "diagnostic": "Node's total resource is insufficient for request, insufficient resources=[memory-mb]\nrequired=<memory:3072, vCores:1>, available=<memory:2048, vCores:2>",
+                          "nodeId": "127.0.0.3:1234"
+                        },
+                        {
+                          "allocationState": "SKIPPED",
+                          "diagnostic": "Node's total resource is insufficient for request, insufficient resources=[memory-mb]\nrequired=<memory:3072, vCores:1>, available=<memory:2048, vCores:2>",
+                          "nodeId": "127.0.0.4:1234"
+                        },
+                        {
+                          "name": "Container: [ContainerId: null, AllocationRequestId: -1, Version: 0, NodeId: 127.0.0.1:1234, NodeHttpAddress: 127.0.0.1:2, Resource: <memory:3072, vCores:1>, Priority: 1, Token: null, ExecutionType: GUARANTEED, ]",
+                          "allocationState": "ALLOCATED",
+                          "nodeId": "127.0.0.1:1234"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
+```
+
+When we query scheduler activities REST API with query parameters("groupBy=diagnostic"), 4 node activities info will be grouped into 2 groups: SKIPPED group with the same diagnostic "Node's total resource is insufficient for request, insufficient resources=[memory-mb]" and ALLOCATED group, the output should be as follows:
+
+```json
+{
+  "activities": {
+    "timestamp": 1562297536893,
+    "dateTime": "Fri Jul 05 11:32:16 CST 2019",
+    "allocations": [
+      {
+        "partition": "",
+        "finalAllocationState": "ALLOCATED",
+        "root": {
+          "name": "root",
+          "allocationState": "ACCEPTED",
+          "children": [
+            {
+              "name": "a",
+              "allocationState": "SKIPPED",
+              "diagnostic": "Queue does not need more resources"
+            },
+            {
+              "name": "b",
+              "allocationState": "ACCEPTED",
+              "children": [
+                {
+                  "name": "application_1562297533892_0001",
+                  "appPriority": 0,
+                  "allocationState": "ALLOCATED",
+                  "children": [
+                    {
+                      "name": "request_1_-1",
+                      "requestPriority": 1,
+                      "allocationRequestId": -1,
+                      "allocationState": "ALLOCATED",
+                      "children": [
+                        {
+                          "allocationState": "ALLOCATED",
+                          "count": 1,
+                          "nodeIds": [
+                            "127.0.0.1:1234"
+                          ]
+                        },
+                        {
+                          "allocationState": "SKIPPED",
+                          "diagnostic": "Node's total resource is insufficient for request, insufficient resources=[memory-mb]",
+                          "count": 3,
+                          "nodeIds": [
+                            "127.0.0.2:1234",
+                            "127.0.0.3:1234",
+                            "127.0.0.4:1234"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
+```
+
+**XML response**
+
+HTTP Request:
+
+      Accept: application/xml
+      GET http://rm-http-address:port/ws/v1/cluster/scheduler/activities
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/xml; charset=utf-8
+      Transfer-Encoding: chunked
+
+Response Body:
+
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<activities>
+  <timestamp>1562296830912</timestamp>
+  <dateTime>Fri Jul 05 11:20:30 CST 2019</dateTime>
+  <allocations>
+    <partition></partition>
+    <finalAllocationState>ALLOCATED</finalAllocationState>
+    <root>
+      <name>root</name>
+      <allocationState>ACCEPTED</allocationState>
+      <children>
+        <name>a</name>
+        <allocationState>SKIPPED</allocationState>
+        <diagnostic>Queue does not need more resource</diagnostic>
+      </children>
+      <children>
+        <name>b</name>
+        <allocationState>ACCEPTED</allocationState>
+        <children>
+          <name>application_1562296828063_0001</name>
+          <appPriority>0</appPriority>
+          <allocationState>ACCEPTED</allocationState>
+          <children>
+            <name>request_1_-1</name>
+            <requestPriority>1</requestPriority>
+            <allocationRequestId>-1</allocationRequestId>
+            <allocationState>ALLOCATED</allocationState>
+            <children>
+              <allocationState>SKIPPED</allocationState>
+              <diagnostic>Node's total resource is insufficient for request, insufficient resources=[memory-mb]\nrequired=&lt;memory:3072, vCores:1&gt;, available=&lt;memory:2048, vCores:2&gt;</diagnostic>
+              <nodeId>127.0.0.2:1234</nodeId>
+            </children>
+            <children>
+              <allocationState>SKIPPED</allocationState>
+              <diagnostic>Node's total resource is insufficient for request, insufficient resources=[memory-mb]\nrequired=&lt;memory:3072, vCores:1&gt;, available=&lt;memory:2048, vCores:2&gt;</diagnostic>
+              <nodeId>127.0.0.3:1234</nodeId>
+            </children>
+            <children>
+              <allocationState>SKIPPED</allocationState>
+              <diagnostic>Node's total resource is insufficient for request, insufficient resources=[memory-mb]\nrequired=&lt;memory:3072, vCores:1&gt;, available=&lt;memory:2048, vCores:2&gt;</diagnostic>
+              <nodeId>127.0.0.4:1234</nodeId>
+            </children>
+            <children>
+              <name>Container: [ContainerId: null, AllocationRequestId: -1, Version: 0, NodeId: 127.0.0.1:1234, NodeHttpAddress: 127.0.0.1:2, Resource: &lt;memory:3072, vCores:1&gt;, Priority: 1, Token: null, ExecutionType: GUARANTEED, ]</name>
+              <allocationState>ALLOCATED</allocationState>
+              <nodeId>127.0.0.1:1234</nodeId>
+            </children>
+          </children>
+        </children>
+      </children>
+    </root>
+  </allocations>
+</activities>
+```
+
+
+Application Activities API
+--------------------------------
+
+Application activities RESTful API is available if you are using capacity scheduler and can fetch useful scheduling info for a specified application, the response has a hierarchical layout with following fields:
+
+* **AppActivities** - AppActivities are root element of application activities within basic information.
+* **Allocations** - Allocations are allocation attempts at app level queried from the cache.
+* **Requests** - Requests are shown as children of allocation, each of them contains request name, request priority, allocation request id, allocation state and optional children.
+* **Nodes** - Nodes are shown as children of request, each of them contains node id, allocation state, optional name which should appear after allocating or reserving a container on the node, and optional diagnostic which should appear if failed to allocate or reserve a container on the node. For aggregated nodes grouped by allocation state and diagnostic, each of them contains allocation state, aggregated node IDs and optional diagnostic.
+
+### URI
+
+      * http://rm-http-address:port/ws/v1/cluster/scheduler/app-activities/{appid}
+
+### HTTP Operations Supported
+
+      * GET
+
+### Query Parameters Supported
+
+Multiple parameters can be specified for GET operations.
+
+      * maxTime - the max duration in seconds from now on for recording application activities. If not specified, this will default to 3 (seconds).
+      * requestPriorities - the priorities of request, used to filter application activities, specified as a comma-separated list.
+      * allocationRequestIds - the allocation request IDs of request, used to filter application activities, specified as a comma-separated list.
+      * groupBy - the aggregation type of application activities, currently only support “diagnostic” with which user can query aggregated activities grouped by allocation state and diagnostic.
+      * limit - the limit of application activities which can reduce the cost for both server and client side.
+      * actions - the required actions of app activities including "refresh" and "get", specified as a comma-separated list.
+      * summarize - whether app activities in multiple scheduling processes need to be summarized, specified as boolean, it's useful when multi-node placement disabled, because only one node can be considered in a single scheduling process, enabling this can give us a summary with diagnostics on all nodes.
+
+### Elements of the *AppActivities* object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| applicationId | string | The specified application id. |
+| allocations | array of allocations | A collection of allocation objects in descending order by time. |
+
+### Elements of the *Allocation* object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| nodeId | string | ID of the node. |
+| timestamp | long | Timestamp of the allocation. |
+| dateTime | string | Date time of the allocation. |
+| queueName | string | Queue name of the application. |
+| appPriority | int | Priority of the application |
+| allocationState | string | Final allocation state of the application, including ALLOCATED, RESERVED, RE_RESERVED, and SKIPPED. |
+| diagnostic | string | Diagnostic of the application. |
+| children | array of requests | A collection of request objects |
+
+### Elements of the *Request* object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| requestPriority | string | Priority of the request. |
+| allocationRequestId | string | Allocation request id of the request. |
+| allocationState | string | Final allocation state of the application, including ALLOCATED, RESERVED, RE_RESERVED, and SKIPPED. |
+| diagnostic | string | Diagnostic of the request. |
+| children | array of nodes | A collection of node objects. |
+
+### Elements of the *Node* object
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| name | string | ID of the updated container, will show "Container-Id-Not-Assigned" if not assigned. |
+| allocationState | string | Final allocation state of the application, including ALLOCATED, RESERVED, RE_RESERVED, and SKIPPED. |
+| diagnostic | string | Diagnostic about node in normal mode or nodes in aggregation mode |
+| nodeId | string | The node id on which the scheduling process is based, won’t show for aggregation query with groupBy parameter. |
+| nodeIds | array of strings | A collection of node IDs for aggregated app activities, only show for aggregation query with groupBy parameter. |
+| count | int | The number of node IDs, only show for aggregation query with groupBy parameter. |
+
+
+### Response Examples
+
+**JSON response**
+
+HTTP Request:
+
+      Accept: application/json
+      GET http://rm-http-address:port/ws/v1/cluster/scheduler/app-activities/{appid}
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+      Transfer-Encoding: chunked
+      Server: Jetty(6.1.26)
+
+Response Body:
+
+```json
+{
+  "appActivities": {
+    "applicationId": "application_1562312049195_0001",
+    "allocations": [
+      {
+        "timestamp": 1562312052039,
+        "dateTime": "Fri Jul 05 15:34:12 CST 2019",
+        "queueName": "b",
+        "appPriority": 0,
+        "allocationState": "RESERVED",
+        "children": [
+          {
+            "requestPriority": 1,
+            "allocationRequestId": -1,
+            "allocationState": "RESERVED",
+            "children": [
+              {
+                "name": "Container-Id-Not-Assigned",
+                "allocationState": "SKIPPED",
+                "diagnostic": "Node's total resource is insufficient for request, insufficient resources=[memory-mb]\nrequired=<memory:4096, vCores:1>, available=<memory:2048, vCores:2>",
+                "nodeId": "127.0.0.3:1234"
+              },
+              {
+                "name": "Container-Id-Not-Assigned",
+                "allocationState": "SKIPPED",
+                "diagnostic": "Node's total resource is insufficient for request, insufficient resources=[memory-mb]\nrequired=<memory:4096, vCores:1>, available=<memory:2048, vCores:2>",
+                "nodeId": "127.0.0.4:1234"
+              },
+              {
+                "name": "Container-Id-Not-Assigned",
+                "allocationState": "SKIPPED",
+                "diagnostic": "Node's total resource is insufficient for request, insufficient resources=[memory-mb]\nrequired=<memory:4096, vCores:1>, available=<memory:2048, vCores:2>",
+                "nodeId": "127.0.0.2:1234"
+              },
+              {
+                "name": "Container-Id-Not-Assigned",
+                "allocationState": "RESERVED",
+                "diagnostic": "Node does not have sufficient resource for request, insufficient resources=[memory-mb]\nrequired=<memory:4096, vCores:1>, available=<memory:1024, vCores:3>",
+                "nodeId": "127.0.0.1:1234"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "timestamp": 1562312052031,
+        "dateTime": "Fri Jul 05 15:34:12 CST 2019",
+        "queueName": "b",
+        "appPriority": 0,
+        "allocationState": "ALLOCATED",
+        "children": [
+          {
+            "requestPriority": 0,
+            "allocationRequestId": -1,
+            "allocationState": "ALLOCATED",
+            "children": [
+              {
+                "name": "Container-Id-Not-Assigned",
+                "allocationState": "ALLOCATED",
+                "nodeId": "127.0.0.2:1234"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+When we query scheduler activities REST API with a query parameter ("groupBy=diagnostic"), 4 node activities will be separated into two groups: SKIPPED group with the same diagnostic “Node's total resource is insufficient for request, insufficient resources=[memory-mb]” and ALLOCATED group, the output should be as follows:
+
+```json
+{
+  "appActivities": {
+    "applicationId": "application_1562312658870_0001",
+    "allocations": [
+      {
+        "timestamp": 1562312661536,
+        "dateTime": "Fri Jul 05 15:44:21 CST 2019",
+        "queueName": "b",
+        "appPriority": 0,
+        "allocationState": "RESERVED",
+        "children": [
+          {
+            "requestPriority": 1,
+            "allocationRequestId": -1,
+            "allocationState": "RESERVED",
+            "children": [
+              {
+                "allocationState": "SKIPPED",
+                "diagnostic": "Node's total resource is insufficient for request, insufficient resources=[memory-mb]",
+                "count": 3,
+                "nodeIds": [
+                  "127.0.0.3:1234",
+                  "127.0.0.4:1234",
+                  "127.0.0.2:1234"
+                ]
+              },
+              {
+                "allocationState": "RESERVED",
+                "diagnostic": "Node does not have sufficient resource for request, insufficient resources=[memory-mb]",
+                "count": 1,
+                "nodeIds": [
+                  "127.0.0.1:1234"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "timestamp": 1562312661522,
+        "dateTime": "Fri Jul 05 15:44:21 CST 2019",
+        "queueName": "b",
+        "appPriority": 0,
+        "allocationState": "ALLOCATED",
+        "children": [
+          {
+            "requestPriority": 0,
+            "allocationRequestId": -1,
+            "allocationState": "ALLOCATED",
+            "children": [
+              {
+                "allocationState": "ALLOCATED",
+                "count": 1,
+                "nodeIds": [
+                  "127.0.0.2:1234"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**XML response**
+
+HTTP Request:
+
+      Accept: application/xml
+      GET http://rm-http-address:port/ws/v1/cluster/scheduler/app-activities/{appid}
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/xml; charset=utf-8
+      Transfer-Encoding: chunked
+
+Response Body:
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+
+<appActivities>
+  <applicationId>application_1562312049195_0001</applicationId>
+  <allocations>
+    <timestamp>1562312052039</timestamp>
+    <dateTime>Fri Jul 05 15:34:12 CST 2019</dateTime>
+    <queueName>b</queueName>
+    <appPriority>0</appPriority>
+    <allocationState>RESERVED</allocationState>
+    <children>
+      <requestPriority>1</requestPriority>
+      <allocationRequestId>-1</allocationRequestId>
+      <allocationState>RESERVED</allocationState>
+      <children>
+        <name>Container-Id-Not-Assigned</name>
+        <allocationState>SKIPPED</allocationState>
+        <diagnostic>Node's total resource is insufficient for request, insufficient resources=[memory-mb]\nrequired=&lt;memory:4096, vCores:1&gt;, available=&lt;memory:2048, vCores:2&gt;</diagnostic>
+        <nodeId>127.0.0.3:1234</nodeId>
+      </children>
+      <children>
+        <name>Container-Id-Not-Assigned</name>
+        <allocationState>SKIPPED</allocationState>
+        <diagnostic>Node does not have sufficient resource for request, insufficient resources=[memory-mb]\nrequired=&lt;memory:4096, vCores:1&gt;, available=&lt;memory:2048, vCores:2&gt;</diagnostic>
+        <nodeId>127.0.0.4:1234</nodeId>
+      </children>
+      <children>
+        <name>Container-Id-Not-Assigned</name>
+        <allocationState>SKIPPED</allocationState>
+        <diagnostic>Node does not have sufficient resource for request, insufficient resources=[memory-mb]\nrequired=&lt;memory:4096, vCores:1&gt;, available=&lt;memory:2048, vCores:2&gt;</diagnostic>
+        <nodeId>127.0.0.2:1234</nodeId>
+      </children>
+      <children>
+        <name>Container-Id-Not-Assigned</name>
+        <allocationState>RESERVED</allocationState>
+        <diagnostic>Node does not have sufficient resource for request, insufficient resources=[memory-mb]\nrequired=&lt;memory:4096, vCores:1&gt;, available=&lt;memory:1024, vCores:3&gt;</diagnostic>
+        <nodeId>127.0.0.1:1234</nodeId>
+      </children>
+    </children>
+  </allocations>
+  <allocations>
+    <timestamp>1562312052031</timestamp>
+    <dateTime>Fri Jul 05 15:34:12 CST 2019</dateTime>
+    <queueName>b</queueName>
+    <appPriority>0</appPriority>
+    <allocationState>ALLOCATED</allocationState>
+    <children>
+      <requestPriority>0</requestPriority>
+      <allocationRequestId>-1</allocationRequestId>
+      <allocationState>ALLOCATED</allocationState>
+      <children>
+        <name>Container-Id-Not-Assigned</name>
+        <allocationState>ALLOCATED</allocationState>
+        <nodeId>127.0.0.2:1234</nodeId>
+      </children>
+    </children>
+  </allocations>
+</appActivitiesInfo>
+```

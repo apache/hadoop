@@ -22,11 +22,6 @@ import Converter from 'yarn-ui/utils/converter';
 
 export default DS.JSONAPISerializer.extend({
   internalNormalizeSingleResponse(store, primaryModelClass, payload) {
-    var payloadEvents = payload.events,
-        createdEvent = payloadEvents.filterBy('id', 'YARN_CONTAINER_CREATED')[0],
-        startedTime = createdEvent? createdEvent.timestamp : Date.now(),
-        finishedEvent = payloadEvents.filterBy('id', 'YARN_CONTAINER_FINISHED')[0],
-        finishedTime = finishedEvent? finishedEvent.timestamp : Date.now()
 
     var fixedPayload = {
       id: payload.id,
@@ -39,8 +34,11 @@ export default DS.JSONAPISerializer.extend({
         startedTime:  Converter.timeStampToDate(payload.createdtime),
         finishedTime: Converter.timeStampToDate(payload.info.YARN_CONTAINER_FINISHED_TIME),
         nodeHttpAddress: payload.info.YARN_CONTAINER_ALLOCATED_HOST_HTTP_ADDRESS,
-        containerExitStatus: payload.info.YARN_CONTAINER_EXIT_STATUS,
-        containerState: payload.info.YARN_CONTAINER_STATE
+        exposedPorts: payload.info.YARN_CONTAINER_ALLOCATED_EXPOSED_PORTS,
+        containerExitStatus: payload.info.YARN_CONTAINER_EXIT_STATUS + '',
+        containerState: payload.info.YARN_CONTAINER_STATE,
+        nodeId: payload.info.YARN_CONTAINER_ALLOCATED_HOST + ':' + payload.info.YARN_CONTAINER_ALLOCATED_PORT,
+        diagnosticsInfo: payload.info.YARN_CONTAINER_DIAGNOSTICS_INFO
       }
     };
     return fixedPayload;

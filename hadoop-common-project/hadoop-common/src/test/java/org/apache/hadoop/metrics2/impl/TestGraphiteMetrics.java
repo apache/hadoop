@@ -22,9 +22,9 @@ import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.sink.GraphiteSink;
+import org.apache.hadoop.test.Whitebox;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.internal.util.reflection.Whitebox;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -34,8 +34,8 @@ import java.util.Set;
 import java.util.Collections;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;

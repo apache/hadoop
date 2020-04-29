@@ -37,8 +37,8 @@ import java.util.SortedSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hdfs.qjournal.MiniJournalCluster;
@@ -67,7 +67,7 @@ import com.google.common.collect.Sets;
 
 
 public class TestQJMWithFaults {
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       TestQJMWithFaults.class);
 
   private static final String RAND_SEED_PROPERTY =
@@ -105,7 +105,7 @@ public class TestQJMWithFaults {
     long ret;
     try {
       qjm = createInjectableQJM(cluster);
-      qjm.format(FAKE_NSINFO);
+      qjm.format(FAKE_NSINFO, false);
       doWorkload(cluster, qjm);
       
       SortedSet<Integer> ipcCounts = Sets.newTreeSet();
@@ -156,7 +156,7 @@ public class TestQJMWithFaults {
         QuorumJournalManager qjm = null;
         try {
           qjm = createInjectableQJM(cluster);
-          qjm.format(FAKE_NSINFO);
+          qjm.format(FAKE_NSINFO, false);
           List<AsyncLogger> loggers = qjm.getLoggerSetForTests().getLoggersForTests();
           failIpcNumber(loggers.get(0), failA);
           failIpcNumber(loggers.get(1), failB);
@@ -240,7 +240,7 @@ public class TestQJMWithFaults {
     // Format the cluster using a non-faulty QJM.
     QuorumJournalManager qjmForInitialFormat =
         createInjectableQJM(cluster);
-    qjmForInitialFormat.format(FAKE_NSINFO);
+    qjmForInitialFormat.format(FAKE_NSINFO, false);
     qjmForInitialFormat.close();
     
     try {

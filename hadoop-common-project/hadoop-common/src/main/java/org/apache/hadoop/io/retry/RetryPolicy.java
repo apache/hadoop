@@ -89,9 +89,10 @@ public interface RetryPolicy {
    *          {@link Idempotent} or {@link AtMostOnce} and so can reasonably be
    *          retried on failover when we don't know if the previous attempt
    *          reached the server or not
-   * @return <code>true</code> if the method should be retried,
-   *         <code>false</code> if the method should not be retried but
-   *         shouldn't fail with an exception (only for void methods)
+   * @return {@link RetryAction} with {@code RetryDecision.FAIL} if the method
+   *          should not be retried, {@code RetryDecision.RETRY} if the method
+   *          should be retried or {@code RetryDecision.FAILOVER_AND_RETRY}
+   *          if failover has to be performed before retry.
    * @throws Exception The re-thrown exception <code>e</code> indicating that
    *           the method failed and should not be retried further
    */

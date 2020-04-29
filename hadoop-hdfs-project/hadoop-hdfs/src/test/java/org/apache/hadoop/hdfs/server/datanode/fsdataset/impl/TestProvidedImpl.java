@@ -34,6 +34,7 @@ import java.io.Writer;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -43,6 +44,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -66,6 +68,7 @@ import org.apache.hadoop.hdfs.server.datanode.DNConf;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner;
+import org.apache.hadoop.hdfs.server.datanode.DirectoryScanner.ScanInfoVolumeReport;
 import org.apache.hadoop.hdfs.server.datanode.FinalizedProvidedReplica;
 import org.apache.hadoop.hdfs.server.datanode.ProvidedReplica;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
@@ -73,11 +76,10 @@ import org.apache.hadoop.hdfs.server.datanode.ShortCircuitRegistry;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.TestProvidedReplicaImpl;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi.FsVolumeReferences;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi.BlockIterator;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi.FsVolumeReferences;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Before;
 import org.junit.Test;
@@ -183,7 +185,6 @@ public class TestProvidedImpl {
   public static class TestFileRegionBlockAliasMap
       extends BlockAliasMap<FileRegion> {
 
-    private Configuration conf;
     private int minId;
     private int numBlocks;
     private Iterator<FileRegion> suppliedIterator;
@@ -353,6 +354,14 @@ public class TestProvidedImpl {
   }
 
   @Test
+  public void testReserved() throws Exception {
+    for (FsVolumeSpi vol : providedVolumes) {
+      // the reserved space for provided volumes should be 0.
+      assertEquals(0, ((FsVolumeImpl) vol).getReserved());
+    }
+  }
+
+  @Test
   public void testProvidedVolumeImpl() throws IOException {
 
     assertEquals(NUM_LOCAL_INIT_VOLUMES + NUM_PROVIDED_INIT_VOLUMES,
@@ -391,7 +400,7 @@ public class TestProvidedImpl {
   public void testBlockLoad() throws IOException {
     for (int i = 0; i < providedVolumes.size(); i++) {
       FsVolumeImpl vol = providedVolumes.get(i);
-      ReplicaMap volumeMap = new ReplicaMap(new AutoCloseableLock());
+      ReplicaMap volumeMap = new ReplicaMap(new ReentrantReadWriteLock());
       vol.getVolumeMap(volumeMap, null);
 
       assertEquals(vol.getBlockPoolList().length, BLOCK_POOL_IDS.length);
@@ -467,7 +476,7 @@ public class TestProvidedImpl {
       vol.setFileRegionProvider(BLOCK_POOL_IDS[CHOSEN_BP_ID],
           new TestFileRegionBlockAliasMap(fileRegionIterator, minBlockId,
               numBlocks));
-      ReplicaMap volumeMap = new ReplicaMap(new AutoCloseableLock());
+      ReplicaMap volumeMap = new ReplicaMap(new ReentrantReadWriteLock());
       vol.getVolumeMap(BLOCK_POOL_IDS[CHOSEN_BP_ID], volumeMap, null);
       totalBlocks += volumeMap.size(BLOCK_POOL_IDS[CHOSEN_BP_ID]);
     }
@@ -577,7 +586,7 @@ public class TestProvidedImpl {
   public void testProvidedReplicaPrefix() throws Exception {
     for (int i = 0; i < providedVolumes.size(); i++) {
       FsVolumeImpl vol = providedVolumes.get(i);
-      ReplicaMap volumeMap = new ReplicaMap(new AutoCloseableLock());
+      ReplicaMap volumeMap = new ReplicaMap(new ReentrantReadWriteLock());
       vol.getVolumeMap(volumeMap, null);
 
       Path expectedPrefix = new Path(
@@ -592,11 +601,13 @@ public class TestProvidedImpl {
 
   @Test
   public void testScannerWithProvidedVolumes() throws Exception {
-    DirectoryScanner scanner = new DirectoryScanner(datanode, dataset, conf);
-    Map<String, FsVolumeSpi.ScanInfo[]> report = scanner.getDiskReport();
+    DirectoryScanner scanner = new DirectoryScanner(dataset, conf);
+    Collection<ScanInfoVolumeReport> reports = scanner.getVolumeReports();
     // no blocks should be reported for the Provided volume as long as
     // the directoryScanner is disabled.
-    assertEquals(0, report.get(BLOCK_POOL_IDS[CHOSEN_BP_ID]).length);
+    for (ScanInfoVolumeReport report : reports) {
+      assertEquals(0, report.getScanInfo(BLOCK_POOL_IDS[CHOSEN_BP_ID]).size());
+    }
   }
 
   /**

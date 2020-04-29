@@ -41,7 +41,7 @@ export default Ember.Controller.extend({
       getCellContent: function(row) {
         return {
           displayText: row.get('name'),
-          href: `#/yarn-component-instances/${row.get('name')}/info?service=${service}&&appid=${appId}`
+          href: `#/yarn-component-instances/${row.get('name')}/info?service=${service}&appid=${appId}`
         };
       }
     }, {

@@ -38,10 +38,16 @@ import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerCluster;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerDataNode;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolume;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerVolumeSet;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Random;
 import java.util.UUID;
@@ -51,6 +57,7 @@ import java.util.concurrent.TimeoutException;
  * Helper class to create various cluster configurations at run time.
  */
 public class DiskBalancerTestUtil {
+  static final Logger LOG = LoggerFactory.getLogger(TestDiskBalancer.class);
   public static final long MB = 1024 * 1024L;
   public static final long GB = MB * 1024L;
   public static final long TB = GB * 1024L;
@@ -241,17 +248,25 @@ public class DiskBalancerTestUtil {
    * @return Number of Blocks.
    * @throws IOException
    */
-  public static int getBlockCount(FsVolumeSpi source) throws IOException {
+  public static int getBlockCount(FsVolumeSpi source,
+                                  boolean checkblockPoolCount)
+      throws IOException {
     int count = 0;
     for (String blockPoolID : source.getBlockPoolList()) {
       FsVolumeSpi.BlockIterator sourceIter =
           source.newBlockIterator(blockPoolID, "TestDiskBalancerSource");
+      int blockCount = 0;
       while (!sourceIter.atEnd()) {
         ExtendedBlock block = sourceIter.nextBlock();
         if (block != null) {
-          count++;
+          blockCount++;
         }
       }
+      if (checkblockPoolCount) {
+        LOG.info("Block Pool Id:  {}, blockCount: {}", blockPoolID, blockCount);
+        assertTrue(blockCount > 0);
+      }
+      count += blockCount;
     }
     return count;
   }
@@ -294,7 +309,8 @@ public class DiskBalancerTestUtil {
         "need to specify capacities for two storages.");
 
     // Write a file and restart the cluster
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+    File basedir = new File(GenericTestUtils.getRandomizedTempPath());
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, basedir)
         .numDataNodes(numDatanodes)
         .storageCapacities(storageCapacities)
         .storageTypes(new StorageType[]{StorageType.DISK, StorageType.DISK})
@@ -320,10 +336,10 @@ public class DiskBalancerTestUtil {
                dnNode.getFSDataset().getFsVolumeReferences()) {
         source = (FsVolumeImpl) refs.get(0);
         dest = (FsVolumeImpl) refs.get(1);
-        assertTrue(DiskBalancerTestUtil.getBlockCount(source) > 0);
+        assertTrue(DiskBalancerTestUtil.getBlockCount(source, true) > 0);
         DiskBalancerTestUtil.moveAllDataToDestVolume(dnNode.getFSDataset(),
             source, dest);
-        assertTrue(DiskBalancerTestUtil.getBlockCount(source) == 0);
+        assertEquals(0, DiskBalancerTestUtil.getBlockCount(source, false));
       }
     }
 

@@ -19,18 +19,19 @@ package org.apache.hadoop.fs.shell.find;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
-import static org.mockito.Matchers.*;
 
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
+import java.util.NoSuchElementException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.shell.PathData;
 import org.apache.hadoop.fs.shell.find.BaseExpression;
 import org.apache.hadoop.fs.shell.find.Expression;
@@ -42,6 +43,9 @@ import org.junit.Rule;
 import org.junit.rules.Timeout;
 import org.junit.Test;
 import org.mockito.InOrder;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 public class TestFind {
 
@@ -860,6 +864,34 @@ public class TestFind {
             item5e.stat });
     when(mockFs.listStatus(eq(item5c.path))).thenReturn(
         new FileStatus[] { item5ca.stat });
+
+    when(mockFs.listStatusIterator(Mockito.any(Path.class)))
+        .thenAnswer(new Answer<RemoteIterator<FileStatus>>() {
+
+          @Override
+          public RemoteIterator<FileStatus> answer(InvocationOnMock invocation)
+              throws Throwable {
+            final Path p = (Path) invocation.getArguments()[0];
+            final FileStatus[] stats = mockFs.listStatus(p);
+
+            return new RemoteIterator<FileStatus>() {
+              private int i = 0;
+
+              @Override
+              public boolean hasNext() throws IOException {
+                return i < stats.length;
+              }
+
+              @Override
+              public FileStatus next() throws IOException {
+                if (!hasNext()) {
+                  throw new NoSuchElementException("No more entry in " + p);
+                }
+                return stats[i++];
+              }
+            };
+          }
+        });
 
     when(item1.stat.isSymlink()).thenReturn(false);
     when(item1a.stat.isSymlink()).thenReturn(false);

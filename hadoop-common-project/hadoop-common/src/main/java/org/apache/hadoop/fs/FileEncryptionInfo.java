@@ -115,14 +115,14 @@ public class FileEncryptionInfo implements Serializable {
 
   @Override
   public String toString() {
-    StringBuilder builder = new StringBuilder("{");
-    builder.append("cipherSuite: " + cipherSuite);
-    builder.append(", cryptoProtocolVersion: " + version);
-    builder.append(", edek: " + Hex.encodeHexString(edek));
-    builder.append(", iv: " + Hex.encodeHexString(iv));
-    builder.append(", keyName: " + keyName);
-    builder.append(", ezKeyVersionName: " + ezKeyVersionName);
-    builder.append("}");
+    StringBuilder builder = new StringBuilder("{")
+        .append("cipherSuite: " + cipherSuite)
+        .append(", cryptoProtocolVersion: " + version)
+        .append(", edek: " + Hex.encodeHexString(edek))
+        .append(", iv: " + Hex.encodeHexString(iv))
+        .append(", keyName: " + keyName)
+        .append(", ezKeyVersionName: " + ezKeyVersionName)
+        .append("}");
     return builder.toString();
   }
 
@@ -136,14 +136,14 @@ public class FileEncryptionInfo implements Serializable {
    * Currently this method is used by CLI for backward compatibility.
    */
   public String toStringStable() {
-    StringBuilder builder = new StringBuilder("{");
-    builder.append("cipherSuite: " + cipherSuite);
-    builder.append(", cryptoProtocolVersion: " + version);
-    builder.append(", edek: " + Hex.encodeHexString(edek));
-    builder.append(", iv: " + Hex.encodeHexString(iv));
-    builder.append(", keyName: " + keyName);
-    builder.append(", ezKeyVersionName: " + ezKeyVersionName);
-    builder.append("}");
+    StringBuilder builder = new StringBuilder("{")
+        .append("cipherSuite: " + cipherSuite)
+        .append(", cryptoProtocolVersion: " + version)
+        .append(", edek: " + Hex.encodeHexString(edek))
+        .append(", iv: " + Hex.encodeHexString(iv))
+        .append(", keyName: " + keyName)
+        .append(", ezKeyVersionName: " + ezKeyVersionName)
+        .append("}");
     return builder.toString();
   }
 }

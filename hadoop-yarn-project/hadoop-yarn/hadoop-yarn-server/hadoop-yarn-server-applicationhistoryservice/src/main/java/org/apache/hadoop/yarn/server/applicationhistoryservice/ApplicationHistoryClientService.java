@@ -186,10 +186,10 @@ public class ApplicationHistoryClientService extends AbstractService implements
           IOException {
     long startedBegin =
         request.getStartRange() == null ? 0L : request.getStartRange()
-          .getMinimumLong();
+          .getMinimum();
     long startedEnd =
         request.getStartRange() == null ? Long.MAX_VALUE : request
-          .getStartRange().getMaximumLong();
+          .getStartRange().getMaximum();
     GetApplicationsResponse response =
         GetApplicationsResponse.newInstance(new ArrayList<ApplicationReport>(
           history.getApplications(request.getLimit(), startedBegin, startedEnd)

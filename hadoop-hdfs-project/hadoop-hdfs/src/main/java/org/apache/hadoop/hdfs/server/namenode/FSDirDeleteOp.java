@@ -18,22 +18,17 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.fs.InvalidPathException;
-import org.apache.hadoop.fs.ParentNotDirectoryException;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
-import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INode.ReclaimContext;
-import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.ChunkedArrayList;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.SortedSet;
 
 import static org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.CURRENT_STATE_ID;
 import static org.apache.hadoop.util.Time.now;
@@ -115,7 +110,7 @@ class FSDirDeleteOp {
         throw new PathIsNotEmptyDirectoryException(
             iip.getPath() + " is non empty");
       }
-      checkProtectedDescendants(fsd, iip);
+      DFSUtil.checkProtectedDescendants(fsd, iip);
     }
 
     return deleteInternal(fsn, iip, logRetryCache);
@@ -270,46 +265,5 @@ class FSDirDeleteOp {
           + iip.getPath() + " is removed");
     }
     return true;
-  }
-
-  /**
-   * Throw if the given directory has any non-empty protected descendants
-   * (including itself).
-   *
-   * @param iip directory whose descendants are to be checked.
-   * @throws AccessControlException if a non-empty protected descendant
-   *                                was found.
-   * @throws ParentNotDirectoryException
-   * @throws UnresolvedLinkException
-   * @throws FileNotFoundException
-   */
-  private static void checkProtectedDescendants(
-      FSDirectory fsd, INodesInPath iip)
-          throws AccessControlException, UnresolvedLinkException,
-          ParentNotDirectoryException {
-    final SortedSet<String> protectedDirs = fsd.getProtectedDirectories();
-    if (protectedDirs.isEmpty()) {
-      return;
-    }
-
-    String src = iip.getPath();
-    // Is src protected? Caller has already checked it is non-empty.
-    if (protectedDirs.contains(src)) {
-      throw new AccessControlException(
-          "Cannot delete non-empty protected directory " + src);
-    }
-
-    // Are any descendants of src protected?
-    // The subSet call returns only the descendants of src since
-    // {@link Path#SEPARATOR} is "/" and '0' is the next ASCII
-    // character after '/'.
-    for (String descendant :
-            protectedDirs.subSet(src + Path.SEPARATOR, src + "0")) {
-      INodesInPath subdirIIP = fsd.getINodesInPath(descendant, DirOp.WRITE);
-      if (fsd.isNonEmptyDirectory(subdirIIP)) {
-        throw new AccessControlException(
-            "Cannot delete non-empty protected subdirectory " + descendant);
-      }
-    }
   }
 }

@@ -26,6 +26,10 @@ export default AbstractAdapter.extend({
 
   urlForQuery(query/*, modelName*/){
     var url = this._buildURL();
+    var clusterId = this.get("env.app.clusterId")
+    if (clusterId) {
+      url += `/clusters/${clusterId}`;
+    }
     var app_attempt_id = query.app_attempt_id;
     query.fields = 'ALL';
     delete query.app_attempt_id;

@@ -140,31 +140,12 @@ public final class DirectoryWithQuotaFeature implements INode.Feature {
 
   private void checkStoragespace(final INodeDirectory dir, final long computed) {
     if (-1 != quota.getStorageSpace() && usage.getStorageSpace() != computed) {
-      NameNode.LOG.error("BUG: Inconsistent storagespace for directory "
+      NameNode.LOG.warn("BUG: Inconsistent storagespace for directory "
           + dir.getFullPathName() + ". Cached = " + usage.getStorageSpace()
           + " != Computed = " + computed);
     }
   }
 
-  void addSpaceConsumed(final INodeDirectory dir, final QuotaCounts counts,
-      boolean verify) throws QuotaExceededException {
-    if (dir.isQuotaSet()) {
-      // The following steps are important:
-      // check quotas in this inode and all ancestors before changing counts
-      // so that no change is made if there is any quota violation.
-      // (1) verify quota in this inode
-      if (verify) {
-        verifyQuota(counts);
-      }
-      // (2) verify quota and then add count in ancestors
-      dir.addSpaceConsumed2Parent(counts, verify);
-      // (3) add count in this inode
-      addSpaceConsumed2Cache(counts);
-    } else {
-      dir.addSpaceConsumed2Parent(counts, verify);
-    }
-  }
-  
   /** Update the space/namespace/type usage of the tree
    * 
    * @param delta the change of the namespace/space/type usage

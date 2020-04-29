@@ -27,7 +27,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 
 
 /**
- * A class that optimizes reading from FSInputStream by buffering
+ * A class that optimizes reading from FSInputStream by buffering.
  */
 
 @InterfaceAudience.Private
@@ -44,7 +44,7 @@ implements Seekable, PositionedReadable, HasFileDescriptor {
    *
    * @param   in     the underlying input stream.
    * @param   size   the buffer size.
-   * @exception IllegalArgumentException if size <= 0.
+   * @exception IllegalArgumentException if size {@literal <=} 0.
    */
   public BufferedFSInputStream(FSInputStream in, int size) {
     super(in, size);

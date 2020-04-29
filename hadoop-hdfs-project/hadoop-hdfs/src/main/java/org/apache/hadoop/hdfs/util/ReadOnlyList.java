@@ -106,6 +106,11 @@ public interface ReadOnlyList<E> extends Iterable<E> {
         public E get(int i) {
           return list.get(i);
         }
+
+        @Override
+        public String toString() {
+          return list.toString();
+        }
       };
     }
 
@@ -233,6 +238,19 @@ public interface ReadOnlyList<E> extends Iterable<E> {
         @Override
         public <T> T[] toArray(T[] a) {
           throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public String toString() {
+          if (list.isEmpty()) {
+            return "[]";
+          }
+          final Iterator<E> i = list.iterator();
+          final StringBuilder b = new StringBuilder("[").append(i.next());
+          for(; i.hasNext();) {
+            b.append(", ").append(i.next());
+          }
+          return b + "]";
         }
       };
     }

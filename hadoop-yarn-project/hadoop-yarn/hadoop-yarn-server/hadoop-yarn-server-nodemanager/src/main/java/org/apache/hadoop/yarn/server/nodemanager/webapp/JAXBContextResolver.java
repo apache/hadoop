@@ -32,6 +32,8 @@ import javax.xml.bind.JAXBContext;
 
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.AppsInfo;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.AuxiliaryServiceInfo;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.AuxiliaryServicesInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NodeInfo;
@@ -46,6 +48,7 @@ public class JAXBContextResolver implements ContextResolver<JAXBContext> {
 
   // you have to specify all the dao classes here
   private final Class[] cTypes = {AppInfo.class, AppsInfo.class,
+      AuxiliaryServicesInfo.class, AuxiliaryServiceInfo.class,
       ContainerInfo.class, ContainersInfo.class, NodeInfo.class,
       RemoteExceptionData.class};
 

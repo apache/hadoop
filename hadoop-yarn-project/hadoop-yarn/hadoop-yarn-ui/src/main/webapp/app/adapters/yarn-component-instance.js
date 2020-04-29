@@ -20,12 +20,16 @@ import AbstractAdapter from './abstract';
 
 export default AbstractAdapter.extend({
   address: "timelineWebAddress",
-  restNameSpace: "timelineService",
+  restNameSpace: "timelineV2",
   serverName: "ATS",
 
   urlForQuery(query/*, modelName*/) {
     var url = this.buildURL();
-    url += '/' + query.appId + '/entities/COMPONENT_INSTANCE?fields=ALL';
+    var clusterId = this.get("env.app.clusterId");
+    if (clusterId) {
+      url += `/clusters/${clusterId}`;
+    }
+    url += '/apps/' + query.appId + '/entities/COMPONENT_INSTANCE?fields=ALL';
     delete query.appId;
     return url;
   }

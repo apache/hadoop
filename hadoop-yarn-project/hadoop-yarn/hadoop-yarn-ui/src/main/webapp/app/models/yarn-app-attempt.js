@@ -27,11 +27,13 @@ export default DS.Model.extend({
   containerId: DS.attr('string'),
   amContainerId: DS.attr('string'),
   nodeHttpAddress: DS.attr('string'),
+  exposedPorts: DS.attr('string'),
   nodeId: DS.attr('string'),
   hosts: DS.attr('string'),
   logsLink: DS.attr('string'),
   state: DS.attr('string'),
   appAttemptId: DS.attr('string'),
+  diagnosticsInfo: DS.attr('string'),
 
   appId: Ember.computed("id",function () {
     var id = this.get("id");
@@ -140,4 +142,15 @@ export default DS.Model.extend({
     return this.get("state");
   }.property(),
 
+  masterNodeURL: function() {
+    var addr = encodeURIComponent(this.get("nodeHttpAddress"));
+    return `#/yarn-node/${this.get("nodeId")}/${addr}/info/`;
+  }.property("nodeId", "nodeHttpAddress"),
+
+  appAttemptContainerLogsURL: function() {
+    const attemptId = this.get("id");
+    const containerId = this.get("appMasterContainerId");
+    const appId = Converter.attemptIdToAppId(attemptId);
+    return `#/yarn-app/${appId}/logs?attempt=${attemptId}&containerid=${containerId}`;
+  }.property("id", "appMasterContainerId")
 });

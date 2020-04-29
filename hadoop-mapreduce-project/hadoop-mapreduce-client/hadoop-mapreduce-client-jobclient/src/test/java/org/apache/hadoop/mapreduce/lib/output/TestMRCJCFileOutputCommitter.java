@@ -24,7 +24,11 @@ import java.net.URI;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import static org.junit.Assert.*;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
@@ -123,7 +127,7 @@ public class TestMRCJCFileOutputCommitter {
     expectedOutput.append(key1).append("\n");
     expectedOutput.append(key2).append('\t').append(val2).append("\n");
     String output = UtilsForTests.slurp(expectedFile);
-    assertEquals(output, expectedOutput.toString());
+    assertThat(output).isEqualTo(expectedOutput.toString());
     FileUtil.fullyDelete(new File(outDir.toString()));
   }
 
@@ -180,8 +184,8 @@ public class TestMRCJCFileOutputCommitter {
     expectedFile = new File(new Path(outDir, FileOutputCommitter.PENDING_DIR_NAME)
         .toString());
     assertFalse("job temp dir still exists", expectedFile.exists());
-    assertEquals("Output directory not empty", 0, new File(outDir.toString())
-        .listFiles().length);
+    assertThat(new File(outDir.toString())
+        .listFiles()).withFailMessage("Output directory not empty").isEmpty();
     FileUtil.fullyDelete(new File(outDir.toString()));
   }
 

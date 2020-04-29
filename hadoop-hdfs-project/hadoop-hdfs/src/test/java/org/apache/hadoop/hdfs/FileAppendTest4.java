@@ -19,8 +19,8 @@ package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -41,7 +41,8 @@ import org.junit.Test;
  *
  */
 public class FileAppendTest4 {
-  public static final Log LOG = LogFactory.getLog(FileAppendTest4.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(FileAppendTest4.class);
   
   private static final int BYTES_PER_CHECKSUM = 4;
   private static final int PACKET_SIZE = BYTES_PER_CHECKSUM;

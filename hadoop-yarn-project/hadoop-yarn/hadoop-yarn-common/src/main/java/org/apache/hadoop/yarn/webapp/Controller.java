@@ -108,6 +108,10 @@ public abstract class Controller implements Params {
     }
 
     public String prefix() { return prefix; }
+
+    public HttpServletRequest getRequest() {
+      return request;
+    }
   }
 
   private RequestContext context;

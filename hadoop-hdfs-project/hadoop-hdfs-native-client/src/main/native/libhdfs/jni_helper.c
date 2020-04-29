@@ -18,16 +18,16 @@
 
 #include "config.h"
 #include "exception.h"
+#include "jclasses.h"
 #include "jni_helper.h"
 #include "platform.h"
-#include "common/htable.h"
 #include "os/mutexes.h"
 #include "os/thread_local_storage.h"
 
+#include <errno.h>
+#include <dirent.h>
 #include <stdio.h> 
 #include <string.h> 
-
-static struct htable *gClassRefHTable = NULL;
 
 /** The Native return types that methods could return */
 #define JVOID         'V'
@@ -41,13 +41,6 @@ static struct htable *gClassRefHTable = NULL;
 #define JLONG         'J'
 #define JFLOAT        'F'
 #define JDOUBLE       'D'
-
-
-/**
- * MAX_HASH_TABLE_ELEM: The maximum no. of entries in the hashtable.
- * It's set to 4096 to account for (classNames + No. of threads)
- */
-#define MAX_HASH_TABLE_ELEM 4096
 
 /**
  * Length of buffer for retrieving created JVMs.  (We only ever create one.)
@@ -106,32 +99,27 @@ jthrowable newCStr(JNIEnv *env, jstring jstr, char **out)
     return NULL;
 }
 
-jthrowable invokeMethod(JNIEnv *env, jvalue *retval, MethType methType,
-                 jobject instObj, const char *className,
-                 const char *methName, const char *methSignature, ...)
+/**
+ * Does the work to actually execute a Java method. Takes in an existing jclass
+ * object and a va_list of arguments for the Java method to be invoked.
+ */
+static jthrowable invokeMethodOnJclass(JNIEnv *env, jvalue *retval,
+        MethType methType, jobject instObj, jclass cls, const char *className,
+        const char *methName, const char *methSignature, va_list args)
 {
-    va_list args;
-    jclass cls;
     jmethodID mid;
     jthrowable jthr;
-    const char *str; 
+    const char *str;
     char returnType;
-    
-    jthr = validateMethodType(env, methType);
-    if (jthr)
-        return jthr;
-    jthr = globalClassReference(className, env, &cls);
-    if (jthr)
-        return jthr;
-    jthr = methodIdFromClass(className, methName, methSignature, 
-                            methType, env, &mid);
+
+    jthr = methodIdFromClass(cls, className, methName, methSignature, methType,
+                             env, &mid);
     if (jthr)
         return jthr;
     str = methSignature;
     while (*str != ')') str++;
     str++;
     returnType = *str;
-    va_start(args, methSignature);
     if (returnType == JOBJECT || returnType == JARRAYOBJECT) {
         jobject jobj = NULL;
         if (methType == STATIC) {
@@ -190,7 +178,6 @@ jthrowable invokeMethod(JNIEnv *env, jvalue *retval, MethType methType,
         }
         retval->i = ji;
     }
-    va_end(args);
 
     jthr = (*env)->ExceptionOccurred(env);
     if (jthr) {
@@ -200,43 +187,115 @@ jthrowable invokeMethod(JNIEnv *env, jvalue *retval, MethType methType,
     return NULL;
 }
 
-jthrowable constructNewObjectOfClass(JNIEnv *env, jobject *out, const char *className, 
-                                  const char *ctorSignature, ...)
+jthrowable findClassAndInvokeMethod(JNIEnv *env, jvalue *retval,
+        MethType methType, jobject instObj, const char *className,
+        const char *methName, const char *methSignature, ...)
 {
+    jclass cls = NULL;
+    jthrowable jthr = NULL;
+
     va_list args;
-    jclass cls;
-    jmethodID mid; 
+    va_start(args, methSignature);
+
+    jthr = validateMethodType(env, methType);
+    if (jthr) {
+        goto done;
+    }
+
+    cls = (*env)->FindClass(env, className);
+    if (!cls) {
+        jthr = getPendingExceptionAndClear(env);
+        goto done;
+    }
+
+    jthr = invokeMethodOnJclass(env, retval, methType, instObj, cls,
+            className, methName, methSignature, args);
+
+done:
+    va_end(args);
+    destroyLocalReference(env, cls);
+    return jthr;
+}
+
+jthrowable invokeMethod(JNIEnv *env, jvalue *retval, MethType methType,
+        jobject instObj, CachedJavaClass class,
+        const char *methName, const char *methSignature, ...)
+{
+    jthrowable jthr;
+
+    va_list args;
+    va_start(args, methSignature);
+
+    jthr = invokeMethodOnJclass(env, retval, methType, instObj,
+            getJclass(class), getClassName(class), methName, methSignature,
+            args);
+
+    va_end(args);
+    return jthr;
+}
+
+static jthrowable constructNewObjectOfJclass(JNIEnv *env,
+        jobject *out, jclass cls, const char *className,
+                const char *ctorSignature, va_list args) {
+    jmethodID mid;
     jobject jobj;
     jthrowable jthr;
 
-    jthr = globalClassReference(className, env, &cls);
+    jthr = methodIdFromClass(cls, className, "<init>", ctorSignature, INSTANCE,
+            env, &mid);
     if (jthr)
         return jthr;
-    jthr = methodIdFromClass(className, "<init>", ctorSignature, 
-                            INSTANCE, env, &mid);
-    if (jthr)
-        return jthr;
-    va_start(args, ctorSignature);
     jobj = (*env)->NewObjectV(env, cls, mid, args);
-    va_end(args);
     if (!jobj)
         return getPendingExceptionAndClear(env);
     *out = jobj;
     return NULL;
 }
 
-
-jthrowable methodIdFromClass(const char *className, const char *methName, 
-                            const char *methSignature, MethType methType, 
-                            JNIEnv *env, jmethodID *out)
+jthrowable constructNewObjectOfClass(JNIEnv *env, jobject *out,
+        const char *className, const char *ctorSignature, ...)
 {
+    va_list args;
     jclass cls;
+    jthrowable jthr = NULL;
+
+    cls = (*env)->FindClass(env, className);
+    if (!cls) {
+        jthr = getPendingExceptionAndClear(env);
+        goto done;
+    }
+
+    va_start(args, ctorSignature);
+    jthr = constructNewObjectOfJclass(env, out, cls, className,
+            ctorSignature, args);
+    va_end(args);
+done:
+    destroyLocalReference(env, cls);
+    return jthr;
+}
+
+jthrowable constructNewObjectOfCachedClass(JNIEnv *env, jobject *out,
+        CachedJavaClass cachedJavaClass, const char *ctorSignature, ...)
+{
+    jthrowable jthr = NULL;
+    va_list args;
+    va_start(args, ctorSignature);
+
+    jthr = constructNewObjectOfJclass(env, out,
+            getJclass(cachedJavaClass), getClassName(cachedJavaClass),
+            ctorSignature, args);
+
+    va_end(args);
+    return jthr;
+}
+
+jthrowable methodIdFromClass(jclass cls, const char *className,
+        const char *methName, const char *methSignature, MethType methType,
+        JNIEnv *env, jmethodID *out)
+{
     jthrowable jthr;
     jmethodID mid = 0;
 
-    jthr = globalClassReference(className, env, &cls);
-    if (jthr)
-        return jthr;
     jthr = validateMethodType(env, methType);
     if (jthr)
         return jthr;
@@ -253,54 +312,6 @@ jthrowable methodIdFromClass(const char *className, const char *methName,
     }
     *out = mid;
     return NULL;
-}
-
-jthrowable globalClassReference(const char *className, JNIEnv *env, jclass *out)
-{
-    jthrowable jthr = NULL;
-    jclass local_clazz = NULL;
-    jclass clazz = NULL;
-    int ret;
-
-    mutexLock(&hdfsHashMutex);
-    if (!gClassRefHTable) {
-        gClassRefHTable = htable_alloc(MAX_HASH_TABLE_ELEM, ht_hash_string,
-            ht_compare_string);
-        if (!gClassRefHTable) {
-            jthr = newRuntimeError(env, "htable_alloc failed\n");
-            goto done;
-        }
-    }
-    clazz = htable_get(gClassRefHTable, className);
-    if (clazz) {
-        *out = clazz;
-        goto done;
-    }
-    local_clazz = (*env)->FindClass(env,className);
-    if (!local_clazz) {
-        jthr = getPendingExceptionAndClear(env);
-        goto done;
-    }
-    clazz = (*env)->NewGlobalRef(env, local_clazz);
-    if (!clazz) {
-        jthr = getPendingExceptionAndClear(env);
-        goto done;
-    }
-    ret = htable_put(gClassRefHTable, (void*)className, clazz);
-    if (ret) {
-        jthr = newRuntimeError(env, "htable_put failed with error "
-                               "code %d\n", ret);
-        goto done;
-    }
-    *out = clazz;
-    jthr = NULL;
-done:
-    mutexUnlock(&hdfsHashMutex);
-    (*env)->DeleteLocalRef(env, local_clazz);
-    if (jthr && clazz) {
-        (*env)->DeleteGlobalRef(env, clazz);
-    }
-    return jthr;
 }
 
 jthrowable classNameOfObject(jobject jobj, JNIEnv *env, char **name)
@@ -328,6 +339,11 @@ jthrowable classNameOfObject(jobject jobj, JNIEnv *env, char **name)
         goto done;
     }
     str = (*env)->CallObjectMethod(env, cls, mid);
+    jthr = (*env)->ExceptionOccurred(env);
+    if (jthr) {
+        (*env)->ExceptionClear(env);
+        goto done;
+    }
     if (str == NULL) {
         jthr = getPendingExceptionAndClear(env);
         goto done;
@@ -354,6 +370,276 @@ done:
         (*env)->DeleteLocalRef(env, str);
     }
     return jthr;
+}
+
+/**
+ * For the given path, expand it by filling in with all *.jar or *.JAR files,
+ * separated by PATH_SEPARATOR. Assumes that expanded is big enough to hold the
+ * string, eg allocated after using this function with expanded=NULL to get the
+ * right size. Also assumes that the path ends with a "/.". The length of the
+ * expanded path is returned, which includes space at the end for either a
+ * PATH_SEPARATOR or null terminator.
+ */
+static ssize_t wildcard_expandPath(const char* path, char* expanded)
+{
+    struct dirent* file;
+    char* dest = expanded;
+    ssize_t length = 0;
+    size_t pathLength = strlen(path);
+    DIR* dir;
+
+    dir = opendir(path);
+    if (dir != NULL) {
+        // can open dir so try to match with all *.jar and *.JAR entries
+
+#ifdef _LIBHDFS_JNI_HELPER_DEBUGGING_ON_
+        printf("wildcard_expandPath: %s\n", path);
+#endif
+
+        errno = 0;
+        while ((file = readdir(dir)) != NULL) {
+            const char* filename = file->d_name;
+            const size_t filenameLength = strlen(filename);
+            const char* jarExtension;
+
+            // If filename is smaller than 4 characters then it can not possibly
+            // have extension ".jar" or ".JAR"
+            if (filenameLength < 4) {
+                continue;
+            }
+
+            jarExtension = &filename[filenameLength-4];
+            if ((strcmp(jarExtension, ".jar") == 0) ||
+                (strcmp(jarExtension, ".JAR") == 0)) {
+
+                // pathLength includes an extra '.' which we'll use for either
+                // separator or null termination
+                length += pathLength + filenameLength;
+
+#ifdef _LIBHDFS_JNI_HELPER_DEBUGGING_ON_
+                printf("wildcard_scanPath:\t%s\t:\t%zd\n", filename, length);
+#endif
+
+                if (expanded != NULL) {
+                    // pathLength includes an extra '.'
+                    strncpy(dest, path, pathLength-1);
+                    dest += pathLength - 1;
+                    strncpy(dest, filename, filenameLength);
+                    dest += filenameLength;
+                    *dest = PATH_SEPARATOR;
+                    dest++;
+
+#ifdef _LIBHDFS_JNI_HELPER_DEBUGGING_ON_
+                    printf("wildcard_expandPath:\t%s\t:\t%s\n",
+                      filename, expanded);
+#endif
+                }
+            }
+        }
+
+        if (errno != 0) {
+            fprintf(stderr, "wildcard_expandPath: on readdir %s: %s\n",
+              path, strerror(errno));
+            length = -1;
+        }
+
+        if (closedir(dir) != 0) {
+            fprintf(stderr, "wildcard_expandPath: on closedir %s: %s\n",
+                    path, strerror(errno));
+        }
+    } else if ((errno != EACCES) && (errno != ENOENT) && (errno != ENOTDIR)) {
+        // can not opendir due to an error we can not handle
+        fprintf(stderr, "wildcard_expandPath: on opendir %s: %s\n", path,
+                strerror(errno));
+        length = -1;
+    }
+
+    if (length == 0) {
+        // either we failed to open dir due to EACCESS, ENOENT, or ENOTDIR, or
+        // we did not find any file that matches *.jar or *.JAR
+
+#ifdef _LIBHDFS_JNI_HELPER_DEBUGGING_ON_
+        fprintf(stderr, "wildcard_expandPath: can not expand %.*s*: %s\n",
+                (int)(pathLength-1), path, strerror(errno));
+#endif
+
+        // in this case, the wildcard expansion is the same as the original
+        // +1 for PATH_SEPARTOR or null termination
+        length = pathLength + 1;
+        if (expanded != NULL) {
+            // pathLength includes an extra '.'
+            strncpy(dest, path, pathLength-1);
+            dest += pathLength-1;
+            *dest = '*'; // restore wildcard
+            dest++;
+            *dest = PATH_SEPARATOR;
+            dest++;
+        }
+    }
+
+    return length;
+}
+
+/**
+ * Helper to expand classpaths. Returns the total length of the expanded
+ * classpath. If expandedClasspath is not NULL, then fills that with the
+ * expanded classpath. It assumes that expandedClasspath is of correct size, eg
+ * allocated after using this function with expandedClasspath=NULL to get the
+ * right size.
+ */
+static ssize_t getClassPath_helper(const char *classpath, char* expandedClasspath)
+{
+    ssize_t length;
+    ssize_t retval;
+    char* expandedCP_curr;
+    char* cp_token;
+    char* classpath_dup;
+
+    classpath_dup = strdup(classpath);
+    if (classpath_dup == NULL) {
+        fprintf(stderr, "getClassPath_helper: failed strdup: %s\n",
+          strerror(errno));
+        return -1;
+    }
+
+    length = 0;
+
+    // expandedCP_curr is the current pointer
+    expandedCP_curr = expandedClasspath;
+
+    cp_token = strtok(classpath_dup, PATH_SEPARATOR_STR);
+    while (cp_token != NULL) {
+        size_t tokenlen;
+
+#ifdef _LIBHDFS_JNI_HELPER_DEBUGGING_ON_
+        printf("%s\n", cp_token);
+#endif
+
+        tokenlen = strlen(cp_token);
+        // We only expand if token ends with "/*"
+        if ((tokenlen > 1) &&
+          (cp_token[tokenlen-1] == '*') && (cp_token[tokenlen-2] == '/')) {
+            // replace the '*' with '.' so that we don't have to allocate another
+            // string for passing to opendir() in wildcard_expandPath()
+            cp_token[tokenlen-1] = '.';
+            retval = wildcard_expandPath(cp_token, expandedCP_curr);
+            if (retval < 0) {
+                free(classpath_dup);
+                return -1;
+            }
+
+            length += retval;
+            if (expandedCP_curr != NULL) {
+                expandedCP_curr += retval;
+            }
+        } else {
+            // +1 for path separator or null terminator
+            length += tokenlen + 1;
+            if (expandedCP_curr != NULL) {
+                strncpy(expandedCP_curr, cp_token, tokenlen);
+                expandedCP_curr += tokenlen;
+                *expandedCP_curr = PATH_SEPARATOR;
+                expandedCP_curr++;
+            }
+        }
+
+        cp_token = strtok(NULL, PATH_SEPARATOR_STR);
+    }
+
+    // Fix the last ':' and use it to null terminate
+    if (expandedCP_curr != NULL) {
+        expandedCP_curr--;
+        *expandedCP_curr = '\0';
+    }
+
+    free(classpath_dup);
+    return length;
+}
+
+/**
+ * Gets the classpath. Wild card entries are resolved only if the entry ends
+ * with "/\*" (backslash to escape commenting) to match against .jar and .JAR.
+ * All other wild card entries (eg /path/to/dir/\*foo*) are not resolved,
+ * following JAVA default behavior, see:
+ * https://docs.oracle.com/javase/8/docs/technotes/tools/unix/classpath.html
+ */
+static char* getClassPath()
+{
+    char* classpath;
+    char* expandedClasspath;
+    ssize_t length;
+    ssize_t retval;
+
+    classpath = getenv("CLASSPATH");
+    if (classpath == NULL) {
+      return NULL;
+    }
+
+    // First, get the total size of the string we will need for the expanded
+    // classpath
+    length = getClassPath_helper(classpath, NULL);
+    if (length < 0) {
+      return NULL;
+    }
+
+#ifdef _LIBHDFS_JNI_HELPER_DEBUGGING_ON_
+    printf("+++++++++++++++++\n");
+#endif
+
+    // we don't have to do anything if classpath has no valid wildcards
+    // we get length = 0 when CLASSPATH is set but empty
+    // if CLASSPATH is not empty, then length includes null terminator
+    // if length of expansion is same as original, then return a duplicate of
+    // original since expansion can only be longer
+    if ((length == 0) || ((length - 1) == strlen(classpath))) {
+
+#ifdef _LIBHDFS_JNI_HELPER_DEBUGGING_ON_
+        if ((length == 0) && (strlen(classpath) != 0)) {
+            fprintf(stderr, "Something went wrong with getting the wildcard \
+              expansion length\n" );
+        }
+#endif
+
+        expandedClasspath = strdup(classpath);
+
+#ifdef _LIBHDFS_JNI_HELPER_DEBUGGING_ON_
+        printf("Expanded classpath=%s\n", expandedClasspath);
+#endif
+
+        return expandedClasspath;
+    }
+
+    // Allocte memory for expanded classpath string
+    expandedClasspath = calloc(length, sizeof(char));
+    if (expandedClasspath == NULL) {
+        fprintf(stderr, "getClassPath: failed calloc: %s\n", strerror(errno));
+        return NULL;
+    }
+
+    // Actual expansion
+    retval = getClassPath_helper(classpath, expandedClasspath);
+    if (retval < 0) {
+        free(expandedClasspath);
+        return NULL;
+    }
+
+    // This should not happen, but dotting i's and crossing t's
+    if (retval != length) {
+        fprintf(stderr,
+          "Expected classpath expansion length to be %zu but instead got %zu\n",
+          length, retval);
+        free(expandedClasspath);
+        return NULL;
+    }
+
+#ifdef _LIBHDFS_JNI_HELPER_DEBUGGING_ON_
+    printf("===============\n");
+    printf("Allocated %zd for expanding classpath\n", length);
+    printf("Used %zu for expanding classpath\n", strlen(expandedClasspath) + 1);
+    printf("Expanded classpath=%s\n", expandedClasspath);
+#endif
+
+    return expandedClasspath;
 }
 
 
@@ -393,7 +679,7 @@ static JNIEnv* getGlobalJNIEnv(void)
 
     if (noVMs == 0) {
         //Get the environment variables for initializing the JVM
-        hadoopClassPath = getenv("CLASSPATH");
+        hadoopClassPath = getClassPath();
         if (hadoopClassPath == NULL) {
             fprintf(stderr, "Environment variable CLASSPATH not set!\n");
             return NULL;
@@ -403,6 +689,8 @@ static JNIEnv* getGlobalJNIEnv(void)
         optHadoopClassPath = malloc(sizeof(char)*optHadoopClassPathLen);
         snprintf(optHadoopClassPath, optHadoopClassPathLen,
                 "%s%s", hadoopClassPathVMArg, hadoopClassPath);
+
+        free(hadoopClassPath);
 
         // Determine the # of LIBHDFS_OPTS args
         hadoopJvmArgs = getenv("LIBHDFS_OPTS");
@@ -456,14 +744,17 @@ static JNIEnv* getGlobalJNIEnv(void)
                     "with error: %d\n", rv);
             return NULL;
         }
-        jthr = invokeMethod(env, NULL, STATIC, NULL,
-                         "org/apache/hadoop/fs/FileSystem",
-                         "loadFileSystems", "()V");
+
+        // We use findClassAndInvokeMethod here because the jclasses in
+        // jclasses.h have not loaded yet
+        jthr = findClassAndInvokeMethod(env, NULL, STATIC, NULL, HADOOP_FS,
+                "loadFileSystems", "()V");
         if (jthr) {
-            printExceptionAndFree(env, jthr, PRINT_EXC_ALL, "loadFileSystems");
+            printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+                    "FileSystem: loadFileSystems failed");
+            return NULL;
         }
-    }
-    else {
+    } else {
         //Attach this thread to the VM
         vm = vmBuf[0];
         rv = (*vm)->AttachCurrentThread(vm, (void*)&env, 0);
@@ -534,7 +825,16 @@ JNIEnv* getJNIEnv(void)
 
     state->env = getGlobalJNIEnv();
     mutexUnlock(&jvmMutex);
+
     if (!state->env) {
+        goto fail;
+    }
+
+    jthrowable jthr = NULL;
+    jthr = initCachedClasses(state->env);
+    if (jthr) {
+      printExceptionAndFree(state->env, jthr, PRINT_EXC_ALL,
+                            "initCachedClasses failed");
       goto fail;
     }
     return state->env;
@@ -623,8 +923,7 @@ jthrowable hadoopConfSetStr(JNIEnv *env, jobject jConfiguration,
     if (jthr)
         goto done;
     jthr = invokeMethod(env, NULL, INSTANCE, jConfiguration,
-            "org/apache/hadoop/conf/Configuration", "set", 
-            "(Ljava/lang/String;Ljava/lang/String;)V",
+            JC_CONFIGURATION, "set", "(Ljava/lang/String;Ljava/lang/String;)V",
             jkey, jvalue);
     if (jthr)
         goto done;
@@ -644,8 +943,7 @@ jthrowable fetchEnumInstance(JNIEnv *env, const char *className,
 
     clazz = (*env)->FindClass(env, className);
     if (!clazz) {
-        return newRuntimeError(env, "fetchEnum(%s, %s): failed to find class.",
-                className, valueName);
+        return getPendingExceptionAndClear(env);
     }
     if (snprintf(prettyClass, sizeof(prettyClass), "L%s;", className)
           >= sizeof(prettyClass)) {

@@ -20,7 +20,9 @@ package org.apache.hadoop.yarn.service.conf;
 
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.service.ServiceTestUtils;
+import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.Resource;
+import org.apache.hadoop.yarn.service.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.ConfigFile;
 import org.apache.hadoop.yarn.service.api.records.Configuration;
@@ -213,5 +215,22 @@ public class TestAppJsonResolve extends Assert {
 
     other = orig.getComponent("other").getConfiguration();
     assertEquals(0, other.getProperties().size());
+  }
+
+  @Test
+  public void testSetResourceAttributes() throws IOException {
+    Service orig = ExampleAppJson.loadResource(EXTERNAL_JSON_3);
+    Component component = orig.getComponent("volume-service");
+    Assert.assertNotNull(component);
+    Map<String, ResourceInformation> adResource = component
+        .getResource().getAdditional();
+    Assert.assertNotNull(adResource);
+    Assert.assertEquals(1, adResource.size());
+    Map.Entry<String, ResourceInformation> volume = adResource
+        .entrySet().iterator().next();
+    Assert.assertEquals("yarn.io/csi-volume", volume.getKey());
+    Assert.assertEquals(100L, volume.getValue().getValue().longValue());
+    Assert.assertEquals(2, volume.getValue().getAttributes().size());
+    Assert.assertEquals(1, volume.getValue().getTags().size());
   }
 }

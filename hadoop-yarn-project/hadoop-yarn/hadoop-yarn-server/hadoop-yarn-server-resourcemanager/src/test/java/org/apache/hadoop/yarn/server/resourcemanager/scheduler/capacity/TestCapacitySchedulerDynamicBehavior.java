@@ -24,11 +24,13 @@ import static org.junit.Assert.fail;
 
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -40,8 +42,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class TestCapacitySchedulerDynamicBehavior {
-  private static final Log LOG = LogFactory
-      .getLog(TestCapacitySchedulerDynamicBehavior.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestCapacitySchedulerDynamicBehavior.class);
   private static final String A = CapacitySchedulerConfiguration.ROOT + ".a";
   private static final String B = CapacitySchedulerConfiguration.ROOT + ".b";
   private static final String B1 = B + ".b1";
@@ -168,7 +170,15 @@ public class TestCapacitySchedulerDynamicBehavior {
     a1.setEntitlement(new QueueEntitlement(A1_CAPACITY / 100, 1f));
 
     // submit an app
-    RMApp app = rm.submitApp(GB, "test-move-1", "user_0", null, "a1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("test-move-1")
+            .withUser("user_0")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app = MockRMAppSubmitter.submit(rm, data);
     // check preconditions
     List<ApplicationAttemptId> appsInA1 = cs.getAppsInQueue("a1");
     assertEquals(1, appsInA1.size());
@@ -203,7 +213,15 @@ public class TestCapacitySchedulerDynamicBehavior {
     CapacityScheduler scheduler = (CapacityScheduler) rm.getResourceScheduler();
 
     // submit an app
-    RMApp app = rm.submitApp(GB, "test-move-1", "user_0", null, "b1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("test-move-1")
+            .withUser("user_0")
+            .withAcls(null)
+            .withQueue("b1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app = MockRMAppSubmitter.submit(rm, data);
     ApplicationAttemptId appAttemptId =
         rm.getApplicationReport(app.getApplicationId())
             .getCurrentApplicationAttemptId();

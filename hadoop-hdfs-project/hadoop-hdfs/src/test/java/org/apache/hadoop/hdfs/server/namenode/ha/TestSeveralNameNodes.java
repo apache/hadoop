@@ -25,8 +25,8 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -42,7 +42,8 @@ import org.junit.Test;
  */
 public class TestSeveralNameNodes {
 
-  private static final Log LOG = LogFactory.getLog(TestSeveralNameNodes.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestSeveralNameNodes.class);
 
   /** ms between failovers between NNs */
   private static final int TIME_BETWEEN_FAILOVERS = 1000;

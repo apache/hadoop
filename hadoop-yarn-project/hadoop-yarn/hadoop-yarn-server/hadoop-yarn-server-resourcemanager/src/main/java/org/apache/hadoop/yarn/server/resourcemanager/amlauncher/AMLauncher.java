@@ -21,12 +21,13 @@ package org.apache.hadoop.yarn.server.resourcemanager.amlauncher;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataInputByteBuffer;
@@ -62,6 +63,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
+import org.apache.hadoop.yarn.server.security.AMSecretKeys;
+import org.apache.hadoop.yarn.server.webproxy.ProxyCA;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
@@ -72,7 +75,8 @@ import com.google.common.annotations.VisibleForTesting;
  */
 public class AMLauncher implements Runnable {
 
-  private static final Log LOG = LogFactory.getLog(AMLauncher.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AMLauncher.class);
 
   private ContainerManagementProtocol containerMgrProxy;
 
@@ -81,6 +85,7 @@ public class AMLauncher implements Runnable {
   private final AMLauncherEventType eventType;
   private final RMContext rmContext;
   private final Container masterContainer;
+  private boolean timelineServiceV2Enabled;
 
   @SuppressWarnings("rawtypes")
   private final EventHandler handler;
@@ -93,6 +98,8 @@ public class AMLauncher implements Runnable {
     this.rmContext = rmContext;
     this.handler = rmContext.getDispatcher().getEventHandler();
     this.masterContainer = application.getMasterContainer();
+    this.timelineServiceV2Enabled = YarnConfiguration.
+        timelineServiceV2Enabled(conf);
   }
 
   private void connect() throws IOException {
@@ -105,7 +112,7 @@ public class AMLauncher implements Runnable {
     connect();
     ContainerId masterContainerID = masterContainer.getId();
     ApplicationSubmissionContext applicationContext =
-      application.getSubmissionContext();
+        application.getSubmissionContext();
     LOG.info("Setting up container " + masterContainer
         + " for AM " + application.getAppAttemptId());
     ContainerLaunchContext launchContext =
@@ -189,6 +196,10 @@ public class AMLauncher implements Runnable {
     ContainerLaunchContext container =
         applicationMasterContext.getAMContainerSpec();
 
+    if (container == null){
+      throw new IOException(containerID +
+            " has been cleaned before launched");
+    }
     // Finalize the container
     setupTokens(container, containerID);
     // set the flow context optionally for timeline service v.2
@@ -229,13 +240,39 @@ public class AMLauncher implements Runnable {
     if (amrmToken != null) {
       credentials.addToken(amrmToken.getService(), amrmToken);
     }
+
+    // Setup Keystore and Truststore
+    String httpsPolicy = conf.get(YarnConfiguration.RM_APPLICATION_HTTPS_POLICY,
+        YarnConfiguration.DEFAULT_RM_APPLICATION_HTTPS_POLICY);
+    if (httpsPolicy.equals("LENIENT") || httpsPolicy.equals("STRICT")) {
+      ProxyCA proxyCA = rmContext.getProxyCAManager().getProxyCA();
+      try {
+        String kPass = proxyCA.generateKeyStorePassword();
+        byte[] keyStore = proxyCA.createChildKeyStore(applicationId, kPass);
+        credentials.addSecretKey(
+            AMSecretKeys.YARN_APPLICATION_AM_KEYSTORE, keyStore);
+        credentials.addSecretKey(
+            AMSecretKeys.YARN_APPLICATION_AM_KEYSTORE_PASSWORD,
+            kPass.getBytes(StandardCharsets.UTF_8));
+        String tPass = proxyCA.generateKeyStorePassword();
+        byte[] trustStore = proxyCA.getChildTrustStore(tPass);
+        credentials.addSecretKey(
+            AMSecretKeys.YARN_APPLICATION_AM_TRUSTSTORE, trustStore);
+        credentials.addSecretKey(
+            AMSecretKeys.YARN_APPLICATION_AM_TRUSTSTORE_PASSWORD,
+            tPass.getBytes(StandardCharsets.UTF_8));
+      } catch (Exception e) {
+        throw new IOException(e);
+      }
+    }
+
     DataOutputBuffer dob = new DataOutputBuffer();
     credentials.writeTokenStorageToStream(dob);
     container.setTokens(ByteBuffer.wrap(dob.getData(), 0, dob.getLength()));
   }
 
   private void setFlowContext(ContainerLaunchContext container) {
-    if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
+    if (timelineServiceV2Enabled) {
       Map<String, String> environment = container.getEnvironment();
       ApplicationId applicationId =
           application.getAppAttemptId().getApplicationId();
@@ -303,13 +340,9 @@ public class AMLauncher implements Runnable {
         LOG.info("Launching master" + application.getAppAttemptId());
         launch();
         handler.handle(new RMAppAttemptEvent(application.getAppAttemptId(),
-            RMAppAttemptEventType.LAUNCHED));
+            RMAppAttemptEventType.LAUNCHED, System.currentTimeMillis()));
       } catch(Exception ie) {
-        String message = "Error launching " + application.getAppAttemptId()
-            + ". Got exception: " + StringUtils.stringifyException(ie);
-        LOG.info(message);
-        handler.handle(new RMAppAttemptEvent(application
-            .getAppAttemptId(), RMAppAttemptEventType.LAUNCH_FAILED, message));
+        onAMLaunchFailed(masterContainer.getId(), ie);
       }
       break;
     case CLEANUP:
@@ -320,8 +353,8 @@ public class AMLauncher implements Runnable {
         LOG.info("Error cleaning master ", ie);
       } catch (YarnException e) {
         StringBuilder sb = new StringBuilder("Container ");
-        sb.append(masterContainer.getId().toString());
-        sb.append(" is not handled by this NodeManager");
+        sb.append(masterContainer.getId().toString())
+            .append(" is not handled by this NodeManager");
         if (!e.getMessage().contains(sb.toString())) {
           // Ignoring if container is already killed by Node Manager.
           LOG.info("Error cleaning master ", e);
@@ -343,5 +376,14 @@ public class AMLauncher implements Runnable {
     } else {
       throw (IOException) t;
     }
+  }
+
+  @SuppressWarnings("unchecked")
+  protected void onAMLaunchFailed(ContainerId containerId, Exception ie) {
+    String message = "Error launching " + application.getAppAttemptId()
+            + ". Got exception: " + StringUtils.stringifyException(ie);
+    LOG.info(message);
+    handler.handle(new RMAppAttemptEvent(application
+           .getAppAttemptId(), RMAppAttemptEventType.LAUNCH_FAILED, message));
   }
 }

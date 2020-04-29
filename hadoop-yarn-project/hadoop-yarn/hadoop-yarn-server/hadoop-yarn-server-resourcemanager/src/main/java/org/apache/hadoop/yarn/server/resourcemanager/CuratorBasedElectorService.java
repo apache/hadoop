@@ -19,8 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.leader.LeaderLatch;
 import org.apache.curator.framework.recipes.leader.LeaderLatchListener;
@@ -41,8 +41,8 @@ import java.io.IOException;
 @InterfaceStability.Unstable
 public class CuratorBasedElectorService extends AbstractService
     implements EmbeddedElector, LeaderLatchListener {
-  public static final Log LOG =
-      LogFactory.getLog(CuratorBasedElectorService.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(CuratorBasedElectorService.class);
   private LeaderLatch leaderLatch;
   private CuratorFramework curator;
   private String latchPath;

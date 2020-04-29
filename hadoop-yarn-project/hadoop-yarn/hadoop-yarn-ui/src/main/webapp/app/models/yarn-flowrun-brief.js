@@ -46,7 +46,8 @@ export default DS.Model.extend({
       label: this.get('runid'),
       value: this.get('runDurationTs'),
       tooltip: this.get("shownid") + "<br>" + Converter.msToElapsedTimeUnit(this.get('runDurationTs')),
-      flowrunUid: this.get('uid')
+      flowrunUid: this.get('uid'),
+      createdTs: this.get('createTimeRaw')
     };
   },
 
@@ -55,7 +56,8 @@ export default DS.Model.extend({
       label: this.get('runid'),
       value: this.get('cpuVCores'),
       tooltip: this.get("shownid") + "<br>" + 'CPU VCores: ' + this.get('cpuVCores'),
-      flowrunUid: this.get('uid')
+      flowrunUid: this.get('uid'),
+      createdTs: this.get('createTimeRaw')
     };
   },
 
@@ -64,7 +66,8 @@ export default DS.Model.extend({
       label: this.get('runid'),
       value: this.get('memoryUsed'),
       tooltip: this.get("shownid") + "<br>" + 'Memory Used: ' + Converter.memoryBytesToMB(this.get('memoryUsed')),
-      flowrunUid: this.get('uid')
+      flowrunUid: this.get('uid'),
+      createdTs: this.get('createTimeRaw')
     };
   }
 });

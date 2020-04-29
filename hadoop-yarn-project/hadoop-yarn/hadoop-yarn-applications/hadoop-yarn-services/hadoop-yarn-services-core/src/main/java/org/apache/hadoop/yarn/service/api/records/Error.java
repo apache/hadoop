@@ -27,7 +27,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-@javax.annotation.Generated(value = "class io.swagger.codegen.languages.JavaClientCodegen", date = "2016-06-02T08:15:05.615-07:00")
 public class Error {
 
   private Integer code = null;
@@ -107,12 +106,12 @@ public class Error {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("class Error {\n");
+    sb.append("class Error {\n")
 
-    sb.append("    code: ").append(toIndentedString(code)).append("\n");
-    sb.append("    message: ").append(toIndentedString(message)).append("\n");
-    sb.append("    fields: ").append(toIndentedString(fields)).append("\n");
-    sb.append("}");
+        .append("    code: ").append(toIndentedString(code)).append("\n")
+        .append("    message: ").append(toIndentedString(message)).append("\n")
+        .append("    fields: ").append(toIndentedString(fields)).append("\n")
+        .append("}");
     return sb.toString();
   }
 

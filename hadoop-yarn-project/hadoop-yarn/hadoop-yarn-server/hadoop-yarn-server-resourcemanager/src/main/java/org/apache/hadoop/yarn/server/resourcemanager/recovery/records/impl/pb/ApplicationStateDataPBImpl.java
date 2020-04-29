@@ -36,8 +36,8 @@ import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.RMAp
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 public class ApplicationStateDataPBImpl extends ApplicationStateData {
   ApplicationStateDataProto proto = 
@@ -118,6 +118,19 @@ public class ApplicationStateDataPBImpl extends ApplicationStateData {
   public void setStartTime(long startTime) {
     maybeInitBuilder();
     builder.setStartTime(startTime);
+  }
+
+
+  @Override
+  public long getLaunchTime() {
+    ApplicationStateDataProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getLaunchTime();
+  }
+
+  @Override
+  public void setLaunchTime(long launchTime) {
+    maybeInitBuilder();
+    builder.setLaunchTime(launchTime);
   }
 
   @Override

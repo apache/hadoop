@@ -98,9 +98,9 @@ public abstract class ApplicationId implements Comparable<ApplicationId> {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder(64);
-    sb.append(APPLICATION_ID_PREFIX);
-    sb.append(getClusterTimestamp());
-    sb.append('_');
+    sb.append(APPLICATION_ID_PREFIX)
+        .append(getClusterTimestamp())
+        .append('_');
     FastNumberFormat.format(sb, getId(), APP_ID_MIN_DIGITS);
     return sb.toString();
   }

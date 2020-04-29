@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.app.launcher;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
@@ -33,6 +34,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.yarn.api.protocolrecords.CommitResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetLocalizationStatusesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetLocalizationStatusesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReInitializeContainerRequest;
@@ -122,7 +125,7 @@ public class TestContainerLauncher {
     ThreadPoolExecutor threadPool = containerLauncher.getThreadPool();
 
     // No events yet
-    Assert.assertEquals(containerLauncher.initialPoolSize,
+    assertThat(containerLauncher.initialPoolSize).isEqualTo(
         MRJobConfig.DEFAULT_MR_AM_CONTAINERLAUNCHER_THREADPOOL_INITIAL_SIZE);
     Assert.assertEquals(0, threadPool.getPoolSize());
     Assert.assertEquals(containerLauncher.initialPoolSize,
@@ -188,7 +191,7 @@ public class TestContainerLauncher {
         20);
     containerLauncher = new CustomContainerLauncher(context);
     containerLauncher.init(conf);
-    Assert.assertEquals(containerLauncher.initialPoolSize, 20);
+    assertThat(containerLauncher.initialPoolSize).isEqualTo(20);
   }
 
   @Test(timeout = 5000)
@@ -514,6 +517,13 @@ public class TestContainerLauncher {
     @Override
     public ContainerUpdateResponse updateContainer(ContainerUpdateRequest
         request) throws YarnException, IOException {
+      return null;
+    }
+
+    @Override
+    public GetLocalizationStatusesResponse getLocalizationStatuses(
+        GetLocalizationStatusesRequest request) throws YarnException,
+        IOException {
       return null;
     }
   }

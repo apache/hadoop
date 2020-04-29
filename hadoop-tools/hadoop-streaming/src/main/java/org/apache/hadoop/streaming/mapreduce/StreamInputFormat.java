@@ -24,8 +24,12 @@ import java.lang.reflect.Constructor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.impl.FutureIOSupport;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
@@ -58,8 +62,14 @@ public class StreamInputFormat extends KeyValueTextInputFormat {
     context.progress();
 
     // Open the file and seek to the start of the split
-    FileSystem fs = split.getPath().getFileSystem(conf);
-    FSDataInputStream in = fs.open(split.getPath());
+    Path path = split.getPath();
+    FileSystem fs = path.getFileSystem(conf);
+    // open the file
+    final FutureDataInputStreamBuilder builder = fs.openFile(path);
+    FutureIOSupport.propagateOptions(builder, conf,
+        MRJobConfig.INPUT_FILE_OPTION_PREFIX,
+        MRJobConfig.INPUT_FILE_MANDATORY_PREFIX);
+    FSDataInputStream in = FutureIOSupport.awaitFuture(builder.build());
 
     // Factory dispatch based on available params..
     Class readerClass;

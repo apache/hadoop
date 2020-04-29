@@ -37,7 +37,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -117,7 +117,7 @@ public final class FederationPoliciesTestUtil {
   public static void initializePolicyContext(
       FederationPolicyInitializationContext fpc, ConfigurableFederationPolicy
       policy, WeightedPolicyInfo policyInfo,
-      Map<SubClusterId, SubClusterInfo> activeSubclusters)
+      Map<SubClusterId, SubClusterInfo> activeSubclusters, Configuration conf)
       throws YarnException {
     ByteBuffer buf = policyInfo.toByteBuffer();
     fpc.setSubClusterPolicyConfiguration(SubClusterPolicyConfiguration
@@ -133,19 +133,30 @@ public final class FederationPoliciesTestUtil {
         .newInstance(new ArrayList<SubClusterInfo>(activeSubclusters.values()));
 
     when(fss.getSubClusters(any())).thenReturn(response);
-    facade.reinitialize(fss, new Configuration());
+    facade.reinitialize(fss, conf);
     fpc.setFederationStateStoreFacade(facade);
     policy.reinitialize(fpc);
   }
 
   public static void initializePolicyContext(
       ConfigurableFederationPolicy policy,
-      WeightedPolicyInfo policyInfo, Map<SubClusterId,
-      SubClusterInfo> activeSubclusters) throws YarnException {
+      WeightedPolicyInfo policyInfo,
+      Map<SubClusterId, SubClusterInfo> activeSubclusters)
+          throws YarnException {
+    initializePolicyContext(
+        policy, policyInfo, activeSubclusters, "homesubcluster");
+  }
+
+  public static void initializePolicyContext(
+      ConfigurableFederationPolicy policy,
+      WeightedPolicyInfo policyInfo,
+      Map<SubClusterId, SubClusterInfo> activeSubclusters,
+      String subclusterId) throws YarnException {
     FederationPolicyInitializationContext context =
         new FederationPolicyInitializationContext(null, initResolver(),
-            initFacade(), SubClusterId.newInstance("homesubcluster"));
-    initializePolicyContext(context, policy, policyInfo, activeSubclusters);
+            initFacade(), SubClusterId.newInstance(subclusterId));
+    initializePolicyContext(context, policy, policyInfo, activeSubclusters,
+        new Configuration());
   }
 
   /**

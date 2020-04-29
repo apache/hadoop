@@ -49,8 +49,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.tools.rumen.JobStory;
 import static org.apache.hadoop.tools.rumen.datatypes.util.MapReduceJobPropertiesParser.extractMaxHeapOpts;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Synthetic job generated from a trace description.
@@ -59,7 +59,7 @@ abstract class GridmixJob implements Callable<Job>, Delayed {
 
   // Gridmix job name format is GRIDMIX<6 digit sequence number>
   public static final String JOB_NAME_PREFIX = "GRIDMIX";
-  public static final Log LOG = LogFactory.getLog(GridmixJob.class);
+  public static final Logger LOG = LoggerFactory.getLogger(GridmixJob.class);
 
   private static final ThreadLocal<Formatter> nameFormat =
     new ThreadLocal<Formatter>() {

@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.allocator;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
@@ -43,7 +43,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
  * extensible.
  */
 public abstract class AbstractContainerAllocator {
-  private static final Log LOG = LogFactory.getLog(AbstractContainerAllocator.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AbstractContainerAllocator.class);
 
   FiCaSchedulerApp application;
   AppSchedulingInfo appInfo;
@@ -93,10 +94,14 @@ public abstract class AbstractContainerAllocator {
       assignment.setType(result.getContainerNodeType());
 
       if (result.getAllocationState() == AllocationState.RESERVED) {
-        // This is a reserved container
-        LOG.info("Reserved container " + " application="
-            + application.getApplicationId() + " resource=" + allocatedResource
-            + " queue=" + this.toString() + " cluster=" + clusterResource);
+        if (LOG.isDebugEnabled()) {
+          // This is a reserved container
+          // Since re-reservation could happen again and again for already
+          // reserved containers. only do this in debug log.
+          LOG.debug("Reserved container " + " application=" + application
+              .getApplicationId() + " resource=" + allocatedResource + " queue="
+              + appInfo.getQueueName() + " cluster=" + clusterResource);
+        }
         assignment.getAssignmentInformation().addReservationDetails(
             updatedContainer, application.getCSLeafQueue().getQueuePath());
         assignment.getAssignmentInformation().incrReservations();
@@ -104,16 +109,10 @@ public abstract class AbstractContainerAllocator {
             allocatedResource);
 
         if (rmContainer != null) {
-          ActivitiesLogger.APP.recordAppActivityWithAllocation(
-              activitiesManager, node, application, updatedContainer,
-              ActivityState.RE_RESERVED);
           ActivitiesLogger.APP.finishSkippedAppAllocationRecording(
               activitiesManager, application.getApplicationId(),
               ActivityState.SKIPPED, ActivityDiagnosticConstant.EMPTY);
         } else {
-          ActivitiesLogger.APP.recordAppActivityWithAllocation(
-              activitiesManager, node, application, updatedContainer,
-              ActivityState.RESERVED);
           ActivitiesLogger.APP.finishAllocatedAppAllocationRecording(
               activitiesManager, application.getApplicationId(),
               updatedContainer.getContainerId(), ActivityState.RESERVED,
@@ -124,9 +123,9 @@ public abstract class AbstractContainerAllocator {
         // Inform the ordering policy
         LOG.info("assignedContainer" + " application attempt=" + application
             .getApplicationAttemptId() + " container=" + updatedContainer
-            .getContainerId() + " queue=" + this + " clusterResource="
-            + clusterResource + " type=" + assignment.getType()
-            + " requestedPartition="
+            .getContainerId() + " queue=" + appInfo.getQueueName()
+            + " clusterResource=" + clusterResource
+            + " type=" + assignment.getType() + " requestedPartition="
             + updatedContainer.getNodeLabelExpression());
 
         assignment.getAssignmentInformation().addAllocationDetails(
@@ -144,7 +143,7 @@ public abstract class AbstractContainerAllocator {
             node, application, updatedContainer, ActivityState.ALLOCATED);
         ActivitiesLogger.APP.finishAllocatedAppAllocationRecording(
             activitiesManager, application.getApplicationId(),
-            updatedContainer.getContainerId(), ActivityState.ACCEPTED,
+            updatedContainer.getContainerId(), ActivityState.ALLOCATED,
             ActivityDiagnosticConstant.EMPTY);
 
         // Update unformed resource
@@ -157,6 +156,9 @@ public abstract class AbstractContainerAllocator {
         assignment.setSkippedType(
             CSAssignment.SkippedType.QUEUE_LIMIT);
       }
+      ActivitiesLogger.APP.finishSkippedAppAllocationRecording(
+          activitiesManager, application.getApplicationId(),
+          ActivityState.SKIPPED, ActivityDiagnosticConstant.EMPTY);
     }
 
     return assignment;

@@ -78,6 +78,10 @@ IF NOT EXISTS ( SELECT * FROM [FederationStateStore].sys.tables
             (
                 [subClusterId]
             )
+            CONSTRAINT [uc_lastStartTime] UNIQUE
+            (
+                [lastStartTime]
+            )
         )
 
         SET ANSI_PADDING OFF

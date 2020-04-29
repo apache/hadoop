@@ -236,7 +236,7 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
   */
   @Override
   public String getDefaultExtension() {
-    return ".bz2";
+    return CodecConstants.BZIP2_CODEC_EXTENSION;
   }
 
   private static class BZip2CompressionOutputStream extends

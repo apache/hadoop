@@ -34,8 +34,6 @@ import java.util.Objects;
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 @ApiModel(description = "The kerberos principal of the service.")
-@javax.annotation.Generated(value = "io.swagger.codegen.languages" +
-    ".JavaClientCodegen", date = "2017-11-20T11:29:11.785-08:00")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class KerberosPrincipal implements Serializable {
   private static final long serialVersionUID = -6431667195287650037L;
@@ -122,12 +120,12 @@ public class KerberosPrincipal implements Serializable {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("class KerberosPrincipal {\n");
+    sb.append("class KerberosPrincipal {\n")
 
-    sb.append("    principalName: ").append(toIndentedString(principalName))
-        .append("\n");
-    sb.append("    keytab: ").append(toIndentedString(keytab)).append("\n");
-    sb.append("}");
+        .append("    principalName: ").append(toIndentedString(principalName))
+        .append("\n")
+        .append("    keytab: ").append(toIndentedString(keytab)).append("\n")
+        .append("}");
     return sb.toString();
   }
 

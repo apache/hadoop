@@ -125,5 +125,35 @@ public class ITestInMemoryAliasMap {
     // no more results expected
     assertFalse(list.getNextBlock().isPresent());
   }
+
+  @Test
+  public void testSnapshot() throws Exception {
+    Block block1 = new Block(100);
+    Block block2 = new Block(200);
+    Path path = new Path("users", "alice");
+    ProvidedStorageLocation remoteLocation =
+        new ProvidedStorageLocation(path, 0, 1000, new byte[0]);
+    // write the first block
+    aliasMap.write(block1, remoteLocation);
+    // create snapshot
+    File snapshotFile = InMemoryAliasMap.createSnapshot(aliasMap);
+    // write the 2nd block after the snapshot
+    aliasMap.write(block2, remoteLocation);
+    // creata a new aliasmap object from the snapshot
+    InMemoryAliasMap snapshotAliasMap = null;
+    Configuration newConf = new Configuration();
+    newConf.set(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_LEVELDB_DIR,
+        snapshotFile.getAbsolutePath());
+    try {
+      snapshotAliasMap = InMemoryAliasMap.init(newConf, bpid);
+      // now the snapshot should have the first block but not the second one.
+      assertTrue(snapshotAliasMap.read(block1).isPresent());
+      assertFalse(snapshotAliasMap.read(block2).isPresent());
+    } finally {
+      if (snapshotAliasMap != null) {
+        snapshotAliasMap.close();
+      }
+    }
+  }
 }
 

@@ -27,8 +27,8 @@ import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
@@ -44,7 +44,7 @@ import org.junit.Test;
 */
 public class TestDFSStorageStateRecovery {
  
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
                                                    "org.apache.hadoop.hdfs.TestDFSStorageStateRecovery");
   private Configuration conf = null;
   private int testCounter = 0;

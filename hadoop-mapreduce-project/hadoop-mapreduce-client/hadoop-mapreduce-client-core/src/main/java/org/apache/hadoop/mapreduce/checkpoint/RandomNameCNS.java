@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.mapreduce.checkpoint;
 
-import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang3.RandomStringUtils;
 
 /**
  * Simple naming service that generates a random checkpoint name.

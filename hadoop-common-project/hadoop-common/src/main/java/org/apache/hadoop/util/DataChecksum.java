@@ -104,6 +104,24 @@ public class DataChecksum implements Checksum {
     }
   }
 
+  /**
+   * @return the int representation of the polynomial associated with the
+   *     CRC {@code type}, suitable for use with further CRC arithmetic.
+   * @throws IOException if there is no CRC polynomial applicable
+   *     to the given {@code type}.
+   */
+  public static int getCrcPolynomialForType(Type type) throws IOException {
+    switch (type) {
+    case CRC32:
+      return CrcUtil.GZIP_POLYNOMIAL;
+    case CRC32C:
+      return CrcUtil.CASTAGNOLI_POLYNOMIAL;
+    default:
+      throw new IOException(
+          "No CRC polynomial could be associated with type: " + type);
+    }
+  }
+
   public static DataChecksum newDataChecksum(Type type, int bytesPerChecksum ) {
     if ( bytesPerChecksum <= 0 ) {
       return null;
@@ -125,9 +143,12 @@ public class DataChecksum implements Checksum {
    * Creates a DataChecksum from HEADER_LEN bytes from arr[offset].
    * @return DataChecksum of the type in the array or null in case of an error.
    */
-  public static DataChecksum newDataChecksum( byte bytes[], int offset ) {
+  public static DataChecksum newDataChecksum(byte[] bytes, int offset)
+      throws IOException {
     if (offset < 0 || bytes.length < offset + getChecksumHeaderSize()) {
-      return null;
+      throw new InvalidChecksumSizeException("Could not create DataChecksum "
+          + " from the byte array of length " + bytes.length
+          + " and offset "+ offset);
     }
     
     // like readInt():
@@ -135,7 +156,14 @@ public class DataChecksum implements Checksum {
                            ( (bytes[offset+2] & 0xff) << 16 ) |
                            ( (bytes[offset+3] & 0xff) << 8 )  |
                            ( (bytes[offset+4] & 0xff) );
-    return newDataChecksum( Type.valueOf(bytes[offset]), bytesPerChecksum );
+    DataChecksum csum = newDataChecksum(mapByteToChecksumType(bytes[offset]),
+        bytesPerChecksum);
+    if (csum == null) {
+      throw new InvalidChecksumSizeException(("Could not create DataChecksum "
+          + " from the byte array of length " + bytes.length
+          + " and bytesPerCheckSum of "+ bytesPerChecksum));
+    }
+    return csum;
   }
   
   /**
@@ -146,12 +174,22 @@ public class DataChecksum implements Checksum {
                                  throws IOException {
     int type = in.readByte();
     int bpc = in.readInt();
-    DataChecksum summer = newDataChecksum(Type.valueOf(type), bpc );
+    DataChecksum summer = newDataChecksum(mapByteToChecksumType(type), bpc);
     if ( summer == null ) {
       throw new InvalidChecksumSizeException("Could not create DataChecksum "
           + "of type " + type + " with bytesPerChecksum " + bpc);
     }
     return summer;
+  }
+
+  private static Type mapByteToChecksumType(int type)
+      throws InvalidChecksumSizeException{
+    try {
+      return Type.valueOf(type);
+    } catch (IllegalArgumentException e) {
+      throw new InvalidChecksumSizeException("The value "+type+" does not map"+
+        " to a valid checksum Type");
+    }
   }
   
   /**

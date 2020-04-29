@@ -27,9 +27,9 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.DiffListByArrayList;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiffList;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshotFeature;
+import org.apache.hadoop.test.Whitebox;
 import org.junit.Assert;
 import org.junit.Test;
-import org.mockito.internal.util.reflection.Whitebox;
 
 import java.util.ArrayList;
 

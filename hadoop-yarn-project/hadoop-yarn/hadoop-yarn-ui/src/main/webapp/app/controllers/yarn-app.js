@@ -50,7 +50,10 @@ export default Ember.Controller.extend({
           this.send("refresh");
         }, 5000);
       }, function (errr) {
-        let messg = errr.diagnostics || 'Error: Stop service failed!';
+        let messg = 'Error: Stop service failed!';
+        if (errr.errors && errr.errors[0] && errr.errors[0].diagnostics) {
+          messg = 'Error: ' + errr.errors[0].diagnostics;
+        }
         self.set('actionResponse', { msg: messg, type: 'error' });
       }).finally(function () {
         self.set('isLoading', false);
@@ -74,8 +77,38 @@ export default Ember.Controller.extend({
           this.transitionToRoute("yarn-services");
         }, 5000);
       }, function (errr) {
-        let messg = errr.diagnostics || 'Error: Delete service failed!';
+        let messg = 'Error: Delete service failed!';
+        if (errr.errors && errr.errors[0] && errr.errors[0].diagnostics) {
+          messg = 'Error: ' + errr.errors[0].diagnostics;
+        }
         self.set('actionResponse', { msg: messg, type: 'error' });
+      }).finally(function () {
+        self.set('isLoading', false);
+      });
+    },
+
+    showKillApplicationConfirm() {
+      this.set('actionResponse', null);
+      Ember.$("#killApplicationConfirmDialog").modal('show');
+    },
+
+    killApplication() {
+      var self = this;
+      Ember.$("#killApplicationConfirmDialog").modal('hide');
+      const adapter = this.store.adapterFor('yarn-app');
+      self.set('isLoading', true);
+      adapter.sendKillApplication(this.model.app.id).then(function () {
+        self.set('actionResponse', {
+          msg: 'Application killed successfully. Auto refreshing in 5 seconds.',
+          type: 'success'
+        });
+        Ember.run.later(self, function () {
+          this.set('actionResponse', null);
+          this.send("refresh");
+        }, 5000);
+      }, function (err) {
+        let message = err.diagnostics || 'Error: Kill application failed!';
+        self.set('actionResponse', { msg: message, type: 'error' });
       }).finally(function () {
         self.set('isLoading', false);
       });
@@ -110,7 +143,7 @@ export default Ember.Controller.extend({
         routeName: 'yarn-apps.apps'
       }, {
         text: `App [${appId}]`,
-        href: `#/yarn-app/${appId}/info`
+        href: `#/yarn-app/${appId}/attempts`
       });
     }
     if (tailCrumbs) {
@@ -125,5 +158,31 @@ export default Ember.Controller.extend({
       amHostAddress = 'http://' + amHostAddress;
     }
     return amHostAddress;
+  }),
+
+  isAppKillable: Ember.computed("model.app.state", function () {
+    if (this.get("model.app.applicationType") === 'yarn-service') {
+      return false;
+    }
+    const killableStates = ['NEW', 'NEW_SAVING', 'SUBMITTED', 'ACCEPTED', 'RUNNING'];
+    return killableStates.indexOf(this.get("model.app.state")) > -1;
+  }),
+
+  isServiceDeployedOrRunning: Ember.computed('model.serviceInfo', function() {
+    const serviceInfo = this.get('model.serviceInfo');
+    const stoppedStates = ['STOPPED', 'SUCCEEDED', 'FAILED'];
+    if (serviceInfo) {
+      return stoppedStates.indexOf(serviceInfo.get('state')) === -1;
+    }
+    return false;
+  }),
+
+  isServiceStoppped: Ember.computed('model.serviceInfo', function() {
+    const serviceInfo = this.get('model.serviceInfo');
+    const stoppedStates = ['STOPPED', 'SUCCEEDED'];
+    if (serviceInfo) {
+      return stoppedStates.indexOf(serviceInfo.get('state')) > -1;
+    }
+    return false;
   })
 });

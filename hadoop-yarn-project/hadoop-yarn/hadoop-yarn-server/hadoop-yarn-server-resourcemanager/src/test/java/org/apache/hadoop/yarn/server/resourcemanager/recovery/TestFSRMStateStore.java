@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -26,8 +27,8 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -54,7 +55,8 @@ import org.junit.Test;
 
 public class TestFSRMStateStore extends RMStateStoreTestBase {
 
-  public static final Log LOG = LogFactory.getLog(TestFSRMStateStore.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestFSRMStateStore.class);
 
   private TestFSRMStateStoreTester fsTester;
 
@@ -118,13 +120,14 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
       conf.setLong(YarnConfiguration.FS_RM_STATE_STORE_RETRY_INTERVAL_MS,
               900L);
       conf.setLong(YarnConfiguration.RM_EPOCH, epoch);
+      conf.setLong(YarnConfiguration.RM_EPOCH_RANGE, getEpochRange());
       if (adminCheckEnable) {
         conf.setBoolean(
           YarnConfiguration.YARN_INTERMEDIATE_DATA_ENCRYPTION, true);
       }
       this.store = new TestFileSystemRMStore(conf);
-      Assert.assertEquals(store.getNumRetries(), 8);
-      Assert.assertEquals(store.getRetryInterval(), 900L);
+      assertThat(store.getNumRetries()).isEqualTo(8);
+      assertThat(store.getRetryInterval()).isEqualTo(900L);
       Assert.assertTrue(store.fs.getConf() == store.fsConf);
       FileSystem previousFs = store.fs;
       store.startInternal();
@@ -204,6 +207,7 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
       testRemoveAttempt(fsTester);
       testAMRMTokenSecretManagerStateStore(fsTester);
       testReservationStateStore(fsTester);
+      testProxyCA(fsTester);
     } finally {
       cluster.shutdown();
     }
@@ -407,7 +411,7 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
             store.storeApplicationStateInternal(
                 ApplicationId.newInstance(100L, 1),
                 ApplicationStateData.newInstance(111, 111, "user", null,
-                    RMAppState.ACCEPTED, "diagnostics", 333, null));
+                    RMAppState.ACCEPTED, "diagnostics", 222, 333, null));
           } catch (Exception e) {
             assertionFailedInThread.set(true);
             e.printStackTrace();

@@ -38,7 +38,7 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.KerberosAuthException;
@@ -279,11 +279,9 @@ public class TestNetUtils {
   @Test
   public void testWrapIOEWithNoStringConstructor() throws Throwable {
     IOException e = new CharacterCodingException();
-    IOException wrapped = verifyExceptionClass(e, IOException.class);
-    assertInException(wrapped, "Failed on local exception");
-    assertNotInException(wrapped, NetUtils.HADOOP_WIKI);
-    assertInException(wrapped, "Host Details ");
-    assertRemoteDetailsIncluded(wrapped);
+    IOException wrapped =
+        verifyExceptionClass(e, CharacterCodingException.class);
+    assertEquals(null, wrapped.getMessage());
   }
 
   @Test
@@ -295,11 +293,8 @@ public class TestNetUtils {
       }
     }
     IOException e = new TestIOException();
-    IOException wrapped = verifyExceptionClass(e, IOException.class);
-    assertInException(wrapped, "Failed on local exception");
-    assertNotInException(wrapped, NetUtils.HADOOP_WIKI);
-    assertInException(wrapped, "Host Details ");
-    assertRemoteDetailsIncluded(wrapped);
+    IOException wrapped = verifyExceptionClass(e, TestIOException.class);
+    assertEquals(null, wrapped.getMessage());
   }
 
   @Test
@@ -705,6 +700,14 @@ public class TestNetUtils {
     InetSocketAddress addr = NetUtils.createSocketAddr(defaultAddr);
     conf.setSocketAddr("myAddress", addr);
     assertEquals(defaultAddr.trim(), NetUtils.getHostPortString(addr));
+  }
+
+  @Test
+  public void testBindToLocalAddress() throws Exception {
+    assertNotNull(NetUtils
+        .bindToLocalAddress(NetUtils.getLocalInetAddress("127.0.0.1"), false));
+    assertNull(NetUtils
+        .bindToLocalAddress(NetUtils.getLocalInetAddress("127.0.0.1"), true));
   }
 
   private <T> void assertBetterArrayEquals(T[] expect, T[]got) {

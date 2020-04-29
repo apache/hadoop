@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.service.provider;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -26,13 +27,14 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
+import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.service.ServiceContext;
-import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.ConfigFile;
 import org.apache.hadoop.yarn.service.api.records.ConfigFormat;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
 import org.apache.hadoop.yarn.service.conf.YarnServiceConstants;
 import org.apache.hadoop.yarn.service.containerlaunch.AbstractLauncher;
+import org.apache.hadoop.yarn.service.containerlaunch.ContainerLaunchService;
 import org.apache.hadoop.yarn.service.exceptions.BadCommandArgumentsException;
 import org.apache.hadoop.yarn.service.exceptions.SliderException;
 import org.apache.hadoop.yarn.service.utils.PublishedConfiguration;
@@ -46,12 +48,19 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static org.apache.hadoop.yarn.service.api.ServiceApiConstants.*;
+import static org.apache.hadoop.yarn.service.api.ServiceApiConstants.COMPONENT_ID;
+import static org.apache.hadoop.yarn.service.api.ServiceApiConstants.COMPONENT_INSTANCE_NAME;
+import static org.apache.hadoop.yarn.service.api.ServiceApiConstants.COMPONENT_NAME;
+import static org.apache.hadoop.yarn.service.api.ServiceApiConstants.COMPONENT_NAME_LC;
+import static org.apache.hadoop.yarn.service.api.ServiceApiConstants.CONTAINER_ID;
 
 /**
  * This is a factoring out of methods handy for providers. It's bonded to a log
@@ -144,6 +153,20 @@ public class ProviderUtils implements YarnServiceConstants {
     return content;
   }
 
+  public static String replaceSpacesWithDelimiter(String content,
+      String delimiter) {
+    List<String> parts = new ArrayList<String>();
+    Matcher m = Pattern.compile("([^\"]\\S*|\".+?\")\\s*").matcher(content);
+    while (m.find()) {
+      String part = m.group(1);
+      if(part.startsWith("\"") && part.endsWith("\"")) {
+        part = part.replaceAll("^\"|\"$", "");
+      }
+      parts.add(part);
+    }
+    return String.join(delimiter, parts);
+  }
+
   // configs will be substituted by corresponding env in tokenMap
   public static void substituteMapWithTokens(Map<String, String> configs,
       Map<String, String> tokenMap) {
@@ -160,36 +183,70 @@ public class ProviderUtils implements YarnServiceConstants {
   }
 
   public static Path initCompInstanceDir(SliderFileSystem fs,
+      ContainerLaunchService.ComponentLaunchContext compLaunchContext,
       ComponentInstance instance) {
-    Path compDir = new Path(new Path(fs.getAppDir(), "components"),
-        instance.getCompName());
+    Path compDir = fs.getComponentDir(compLaunchContext.getServiceVersion(),
+        compLaunchContext.getName());
     Path compInstanceDir = new Path(compDir, instance.getCompInstanceName());
     instance.setCompInstanceDir(compInstanceDir);
     return compInstanceDir;
   }
 
+  public static Path initCompPublicResourceDir(SliderFileSystem fs,
+      ContainerLaunchService.ComponentLaunchContext compLaunchContext,
+      ComponentInstance instance) {
+    Path compDir = fs.getComponentPublicResourceDir(
+        compLaunchContext.getServiceVersion(), compLaunchContext.getName());
+    Path compPublicResourceDir = new Path(compDir,
+        instance.getCompInstanceName());
+    return compPublicResourceDir;
+  }
+
+
   // 1. Create all config files for a component on hdfs for localization
   // 2. Add the config file to localResource
   public static synchronized void createConfigFileAndAddLocalResource(
-      AbstractLauncher launcher, SliderFileSystem fs, Component component,
+      AbstractLauncher launcher, SliderFileSystem fs,
+      ContainerLaunchService.ComponentLaunchContext compLaunchContext,
       Map<String, String> tokensForSubstitution, ComponentInstance instance,
-      ServiceContext context) throws IOException {
-    Path compInstanceDir = initCompInstanceDir(fs, instance);
+      ServiceContext context, ProviderService.ResolvedLaunchParams
+      resolvedParams)
+      throws IOException {
+
+    Path compInstanceDir = initCompInstanceDir(fs, compLaunchContext, instance);
     if (!fs.getFileSystem().exists(compInstanceDir)) {
-      log.info(instance.getCompInstanceId() + ": Creating dir on hdfs: " + compInstanceDir);
+      log.info("{} version {} : Creating dir on hdfs: {}",
+          instance.getCompInstanceId(), compLaunchContext.getServiceVersion(),
+          compInstanceDir);
       fs.getFileSystem().mkdirs(compInstanceDir,
           new FsPermission(FsAction.ALL, FsAction.NONE, FsAction.NONE));
     } else {
       log.info("Component instance conf dir already exists: " + compInstanceDir);
     }
 
-    if (log.isDebugEnabled()) {
-      log.debug("Tokens substitution for component instance: " + instance
-          .getCompInstanceName() + System.lineSeparator()
-          + tokensForSubstitution);
+    Path compPublicResourceDir = initCompPublicResourceDir(fs,
+        compLaunchContext, instance);
+    if (!fs.getFileSystem().exists(compPublicResourceDir)) {
+      log.info("{} version {} : Creating Public Resource dir on hdfs: {}",
+          instance.getCompInstanceId(), compLaunchContext.getServiceVersion(),
+          compPublicResourceDir);
+      fs.getFileSystem().mkdirs(compPublicResourceDir,
+          new FsPermission(FsAction.ALL, FsAction.READ_EXECUTE,
+          FsAction.EXECUTE));
+    } else {
+      log.info("Component instance public resource dir already exists: "
+          + compPublicResourceDir);
     }
 
-    for (ConfigFile originalFile : component.getConfiguration().getFiles()) {
+    log.debug("Tokens substitution for component instance: {}{}{}" + instance
+        .getCompInstanceName(), System.lineSeparator(), tokensForSubstitution);
+
+    for (ConfigFile originalFile : compLaunchContext.getConfiguration()
+        .getFiles()) {
+
+      if (isStaticFile(originalFile)) {
+        continue;
+      }
       ConfigFile configFile = originalFile.copy();
       String fileName = new Path(configFile.getDestFile()).getName();
 
@@ -199,7 +256,21 @@ public class ProviderUtils implements YarnServiceConstants {
             .replaceAll(Pattern.quote(token.getKey()), token.getValue()));
       }
 
-      Path remoteFile = new Path(compInstanceDir, fileName);
+      /* When source file is not specified, write new configs
+       * to compInstanceDir/fileName
+       * When source file is specified, it reads and performs variable
+       * substitution and merges in new configs, and writes a new file to
+       * compInstanceDir/fileName.
+       */
+      Path remoteFile = null;
+      LocalResourceVisibility visibility = configFile.getVisibility();
+      if (visibility != null &&
+          visibility.equals(LocalResourceVisibility.PUBLIC)) {
+        remoteFile = new Path(compPublicResourceDir, fileName);
+      } else {
+        remoteFile = new Path(compInstanceDir, fileName);
+      }
+
       if (!fs.getFileSystem().exists(remoteFile)) {
         log.info("Saving config file on hdfs for component " + instance
             .getCompInstanceName() + ": " + configFile);
@@ -230,21 +301,83 @@ public class ProviderUtils implements YarnServiceConstants {
 
       // Add resource for localization
       LocalResource configResource =
-          fs.createAmResource(remoteFile, LocalResourceType.FILE);
-      File destFile = new File(configFile.getDestFile());
+          fs.createAmResource(remoteFile, LocalResourceType.FILE,
+          configFile.getVisibility());
+      Path destFile = new Path(configFile.getDestFile());
       String symlink = APP_CONF_DIR + "/" + fileName;
-      if (destFile.isAbsolute()) {
-        launcher.addLocalResource(symlink, configResource,
-            configFile.getDestFile());
-        log.info("Add config file for localization: " + symlink + " -> "
-            + configResource.getResource().getFile() + ", dest mount path: "
-            + configFile.getDestFile());
-      } else {
-        launcher.addLocalResource(symlink, configResource);
-        log.info("Add config file for localization: " + symlink + " -> "
-            + configResource.getResource().getFile());
-      }
+      addLocalResource(launcher, symlink, configResource, destFile,
+          resolvedParams);
     }
+  }
+
+  public static synchronized void handleStaticFilesForLocalization(
+      AbstractLauncher launcher, SliderFileSystem fs, ContainerLaunchService
+      .ComponentLaunchContext componentLaunchCtx,
+      ProviderService.ResolvedLaunchParams resolvedParams)
+      throws IOException {
+    for (ConfigFile staticFile :
+        componentLaunchCtx.getConfiguration().getFiles()) {
+      // Only handle static file here.
+      if (!isStaticFile(staticFile)) {
+        continue;
+      }
+
+      if (staticFile.getSrcFile() == null) {
+        // This should not happen, AbstractClientProvider should have checked
+        // this.
+        throw new IOException("srcFile is null, please double check.");
+      }
+      Path sourceFile = new Path(staticFile.getSrcFile());
+
+      // Output properties to sourceFile if not existed
+      if (!fs.getFileSystem().exists(sourceFile)) {
+        throw new IOException(
+            "srcFile=" + sourceFile + " doesn't exist, please double check.");
+      }
+
+      FileStatus fileStatus = fs.getFileSystem().getFileStatus(sourceFile);
+      if (fileStatus.isDirectory()) {
+        throw new IOException("srcFile=" + sourceFile +
+            " is a directory, which is not supported.");
+      }
+
+      // Add resource for localization
+      LocalResource localResource = fs.createAmResource(sourceFile,
+          (staticFile.getType() == ConfigFile.TypeEnum.ARCHIVE ?
+              LocalResourceType.ARCHIVE :
+              LocalResourceType.FILE), staticFile.getVisibility());
+
+      Path destFile = new Path(sourceFile.getName());
+      if (staticFile.getDestFile() != null && !staticFile.getDestFile()
+          .isEmpty()) {
+        destFile = new Path(staticFile.getDestFile());
+      }
+      addLocalResource(launcher, destFile.getName(), localResource, destFile,
+          resolvedParams);
+    }
+  }
+
+  private static void addLocalResource(AbstractLauncher launcher,
+      String symlink, LocalResource localResource, Path destFile,
+      ProviderService.ResolvedLaunchParams resolvedParams) {
+    if (destFile.isAbsolute()) {
+      launcher.addLocalResource(symlink, localResource, destFile.toString());
+      log.info("Added file for localization: "+ symlink +" -> " +
+          localResource.getResource().getFile() + ", dest mount path: " +
+          destFile);
+    } else{
+      launcher.addLocalResource(symlink, localResource);
+      log.info("Added file for localization: " + symlink+ " -> " +
+          localResource.getResource().getFile());
+    }
+    resolvedParams.addResolvedRsrcPath(symlink, destFile.toString());
+  }
+
+  // Static file is files uploaded by users before launch the service. Which
+  // should be localized to container local disk without any changes.
+  private static boolean isStaticFile(ConfigFile file) {
+    return file.getType().equals(ConfigFile.TypeEnum.ARCHIVE) || file.getType()
+        .equals(ConfigFile.TypeEnum.STATIC);
   }
 
   private static void resolvePropsInConfigFileAndSaveOnHdfs(SliderFileSystem fs,
@@ -343,11 +476,12 @@ public class ProviderUtils implements YarnServiceConstants {
    * @return tokens to replace
    */
   public static Map<String, String> initCompTokensForSubstitute(
-      ComponentInstance instance, Container container) {
+      ComponentInstance instance, Container container,
+      ContainerLaunchService.ComponentLaunchContext componentLaunchContext) {
     Map<String, String> tokens = new HashMap<>();
-    tokens.put(COMPONENT_NAME, instance.getCompSpec().getName());
+    tokens.put(COMPONENT_NAME, componentLaunchContext.getName());
     tokens
-        .put(COMPONENT_NAME_LC, instance.getCompSpec().getName().toLowerCase());
+        .put(COMPONENT_NAME_LC, componentLaunchContext.getName().toLowerCase());
     tokens.put(COMPONENT_INSTANCE_NAME, instance.getCompInstanceName());
     tokens.put(CONTAINER_ID, container.getId().toString());
     tokens.put(COMPONENT_ID,

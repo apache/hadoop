@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import org.apache.hadoop.hdfs.util.EnumCounters;
-
 /**
  * The content types such as file, directory and symlink to be computed.
  */
@@ -39,34 +37,4 @@ public enum Content {
   SNAPSHOT,
   /** The number of snapshottable directories. */
   SNAPSHOTTABLE_DIRECTORY;
-
-  /** Content counts. */
-  public static class Counts extends EnumCounters<Content> {
-    public static Counts newInstance() {
-      return new Counts();
-    }
-
-    private Counts() {
-      super(Content.class);
-    }
-  }
-
-  private static final EnumCounters.Factory<Content, Counts> FACTORY
-      = new EnumCounters.Factory<Content, Counts>() {
-    @Override
-    public Counts newInstance() {
-      return Counts.newInstance();
-    }
-  };
-
-  /** A map of counters for the current state and the snapshots. */
-  public static class CountsMap
-      extends EnumCounters.Map<CountsMap.Key, Content, Counts> {
-    /** The key type of the map. */
-    public enum Key { CURRENT, SNAPSHOT }
-
-    CountsMap() {
-      super(FACTORY);
-    }
-  }
 }

@@ -27,8 +27,8 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collections;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
@@ -38,7 +38,8 @@ import com.google.common.base.Preconditions;
 
 public abstract class NNUpgradeUtil {
   
-  private static final Log LOG = LogFactory.getLog(NNUpgradeUtil.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(NNUpgradeUtil.class);
   
   /**
    * Return true if this storage dir can roll back to the previous storage

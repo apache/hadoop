@@ -37,6 +37,8 @@ import org.apache.hadoop.util.ExitUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 public class TestTaskProgressReporter {
   private static int statusUpdateTimes = 0;
 
@@ -262,7 +264,7 @@ public class TestTaskProgressReporter {
     task.setTaskDone();
     reporter.resetDoneFlag();
     t.join();
-    Assert.assertEquals(statusUpdateTimes, 2);
+    assertThat(statusUpdateTimes).isEqualTo(2);
   }
 
   @Test(timeout=10000)

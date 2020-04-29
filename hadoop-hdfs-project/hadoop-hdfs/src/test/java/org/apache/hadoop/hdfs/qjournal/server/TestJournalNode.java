@@ -159,11 +159,11 @@ public class TestJournalNode {
             HdfsServerConstants.StartupOption.REGULAR);
         NamespaceInfo fakeNameSpaceInfo = new NamespaceInfo(
             12345, "mycluster", "my-bp"+nsId, 0L);
-        journal.format(fakeNameSpaceInfo);
+        journal.format(fakeNameSpaceInfo, false);
       }
     } else {
       journal = jn.getOrCreateJournal(journalId);
-      journal.format(FAKE_NSINFO);
+      journal.format(FAKE_NSINFO, false);
     }
 
     

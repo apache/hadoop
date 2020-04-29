@@ -18,8 +18,8 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -33,24 +33,24 @@ import java.util.HashSet;
 
 /**
  * This class manages the include and exclude files for HDFS.
- * <p/>
+ * <p>
  * These files control which DataNodes the NameNode expects to see in the
  * cluster.  Loosely speaking, the include file, if it exists and is not
  * empty, is a list of everything we expect to see.  The exclude file is
  * a list of everything we want to ignore if we do see it.
- * <p/>
+ * <p>
  * Entries may or may not specify a port.  If they don't, we consider
  * them to apply to every DataNode on that host. The code canonicalizes the
  * entries into IP addresses.
- * <p/>
- * <p/>
+ * <p>
  * The code ignores all entries that the DNS fails to resolve their IP
  * addresses. This is okay because by default the NN rejects the registrations
  * of DNs when it fails to do a forward and reverse lookup. Note that DNS
  * resolutions are only done during the loading time to minimize the latency.
  */
 public class HostFileManager extends HostConfigManager {
-  private static final Log LOG = LogFactory.getLog(HostFileManager.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(HostFileManager.class);
   private Configuration conf;
   private HostSet includes = new HostSet();
   private HostSet excludes = new HostSet();

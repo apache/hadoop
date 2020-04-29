@@ -54,6 +54,7 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
@@ -183,7 +184,7 @@ public class BuilderUtils {
   public static NodeId newNodeId(String host, int port) {
     return NodeId.newInstance(host, port);
   }
-  
+
   public static NodeReport newNodeReport(NodeId nodeId, NodeState nodeState,
       String httpAddress, String rackName, Resource used, Resource capability,
       int numContainers, String healthReport, long lastHealthReportTime) {
@@ -199,7 +200,7 @@ public class BuilderUtils {
       NodeUpdateType nodeUpdateType) {
     return newNodeReport(nodeId, nodeState, httpAddress, rackName, used,
         capability, numContainers, healthReport, lastHealthReportTime,
-        nodeLabels, null, null, decommissioningTimeout, nodeUpdateType);
+        nodeLabels, null, null, decommissioningTimeout, nodeUpdateType, null);
   }
 
   public static NodeReport newNodeReport(NodeId nodeId, NodeState nodeState,
@@ -207,7 +208,7 @@ public class BuilderUtils {
       int numContainers, String healthReport, long lastHealthReportTime,
       Set<String> nodeLabels, ResourceUtilization containersUtilization,
       ResourceUtilization nodeUtilization, Integer decommissioningTimeout,
-      NodeUpdateType nodeUpdateType) {
+      NodeUpdateType nodeUpdateType, Set<NodeAttribute> attrs) {
     NodeReport nodeReport = recordFactory.newRecordInstance(NodeReport.class);
     nodeReport.setNodeId(nodeId);
     nodeReport.setNodeState(nodeState);
@@ -223,6 +224,7 @@ public class BuilderUtils {
     nodeReport.setNodeUtilization(nodeUtilization);
     nodeReport.setDecommissioningTimeout(decommissioningTimeout);
     nodeReport.setNodeUpdateType(nodeUpdateType);
+    nodeReport.setNodeAttributes(attrs);
     return nodeReport;
   }
 
@@ -375,23 +377,11 @@ public class BuilderUtils {
     return request;
   }
 
-  public static ResourceRequest newResourceRequest(ResourceRequest r) {
-    ResourceRequest request = recordFactory
-        .newRecordInstance(ResourceRequest.class);
-    request.setPriority(r.getPriority());
-    request.setResourceName(r.getResourceName());
-    request.setCapability(r.getCapability());
-    request.setNumContainers(r.getNumContainers());
-    request.setNodeLabelExpression(r.getNodeLabelExpression());
-    request.setExecutionTypeRequest(r.getExecutionTypeRequest());
-    return request;
-  }
-
   public static ApplicationReport newApplicationReport(
       ApplicationId applicationId, ApplicationAttemptId applicationAttemptId,
       String user, String queue, String name, String host, int rpcPort,
       Token clientToAMToken, YarnApplicationState state, String diagnostics,
-      String url, long startTime, long finishTime,
+      String url, long startTime, long launchTime, long finishTime,
       FinalApplicationStatus finalStatus,
       ApplicationResourceUsageReport appResources, String origTrackingUrl,
       float progress, String appType, Token amRmToken, Set<String> tags,
@@ -410,6 +400,7 @@ public class BuilderUtils {
     report.setDiagnostics(diagnostics);
     report.setTrackingUrl(url);
     report.setStartTime(startTime);
+    report.setLaunchTime(launchTime);
     report.setFinishTime(finishTime);
     report.setFinalApplicationStatus(finalStatus);
     report.setApplicationResourceUsageReport(appResources);
@@ -421,7 +412,7 @@ public class BuilderUtils {
     report.setPriority(priority);
     return report;
   }
-  
+
   public static ApplicationSubmissionContext newApplicationSubmissionContext(
       ApplicationId applicationId, String applicationName, String queue,
       Priority priority, ContainerLaunchContext amContainer,
@@ -474,6 +465,10 @@ public class BuilderUtils {
     resource.setMemorySize(memory);
     resource.setVirtualCores(vCores);
     return resource;
+  }
+
+  public static Resource newEmptyResource() {
+    return recordFactory.newRecordInstance(Resource.class);
   }
 
   public static URL newURL(String scheme, String host, int port, String file) {

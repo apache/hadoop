@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.mapred;
 
-import static org.apache.commons.lang.StringUtils.isEmpty;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.hadoop.mapreduce.MRJobConfig.MR_AM_RESOURCE_PREFIX;
 
 import java.io.IOException;
@@ -94,6 +94,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenSelector;
+import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
@@ -533,12 +534,13 @@ public class YARNRunner implements ClientProtocol {
         MRApps.crossPlatformifyMREnv(conf, Environment.PWD), conf);
 
     // Setup the environment variables for Admin first
-    MRApps.setEnvFromInputString(environment,
-        conf.get(MRJobConfig.MR_AM_ADMIN_USER_ENV,
-            MRJobConfig.DEFAULT_MR_AM_ADMIN_USER_ENV), conf);
+    MRApps.setEnvFromInputProperty(environment,
+        MRJobConfig.MR_AM_ADMIN_USER_ENV,
+        MRJobConfig.DEFAULT_MR_AM_ADMIN_USER_ENV,
+        conf);
     // Setup the environment variables (LD_LIBRARY_PATH, etc)
-    MRApps.setEnvFromInputString(environment,
-        conf.get(MRJobConfig.MR_AM_ENV), conf);
+    MRApps.setEnvFromInputProperty(environment, MRJobConfig.MR_AM_ENV, null,
+        conf);
 
     // Parse distributed cache
     MRApps.setupDistributedCache(jobConf, localResources);
@@ -898,9 +900,7 @@ public class YARNRunner implements ClientProtocol {
     } catch (YarnException e) {
       throw new IOException(e);
     }
-    if (application.getYarnApplicationState() == YarnApplicationState.FINISHED
-        || application.getYarnApplicationState() == YarnApplicationState.FAILED
-        || application.getYarnApplicationState() == YarnApplicationState.KILLED) {
+    if (Apps.isApplicationFinalState(application.getYarnApplicationState())) {
       return;
     }
     killApplication(appId);

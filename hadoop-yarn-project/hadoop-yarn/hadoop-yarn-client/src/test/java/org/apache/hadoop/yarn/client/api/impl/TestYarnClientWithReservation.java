@@ -45,6 +45,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
+    .allocationfile.AllocationFileQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
+    .allocationfile.AllocationFileWriter;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.UTCClock;
 import org.junit.Assert;
@@ -54,13 +59,13 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.stream.Collectors;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 
 /**
@@ -134,25 +139,16 @@ public class TestYarnClientWithReservation {
 
   private Configuration configureReservationForFairScheduler() {
     Configuration conf = new Configuration();
-    try {
-      PrintWriter out = new PrintWriter(new FileWriter(FS_ALLOC_FILE));
-      out.println("<?xml version=\"1.0\"?>");
-      out.println("<allocations>");
-      out.println("<queue name=\"root\">");
-      out.println("  <queue name=\"default\"></queue>");
-      out.println("  <queue name=\"dedicated\">");
-      out.println("    <reservation></reservation>");
-      // set weight to 10 to make sure this queue get enough steady fair share
-      out.println("    <weight>10</weight>");
-      out.println("  </queue>");
-      out.println("</queue>");
-      out.println("<defaultQueueSchedulingPolicy>drf" +
-          "</defaultQueueSchedulingPolicy>");
-      out.println("</allocations>");
-      out.close();
-    } catch (IOException e) {
-      Assert.fail(e.getMessage());
-    }
+    AllocationFileWriter.create()
+        .drfDefaultQueueSchedulingPolicy()
+        .addQueue(new AllocationFileQueue.Builder("root")
+            .subQueue(new AllocationFileQueue.Builder("default").build())
+            .subQueue(new AllocationFileQueue.Builder("dedicated")
+                .reservation()
+                .weight(10)
+                .build())
+            .build())
+        .writeToFile(FS_ALLOC_FILE);
 
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, FS_ALLOC_FILE);
     return conf;
@@ -432,7 +428,7 @@ public class TestYarnClientWithReservation {
 
       // Ensure all reservations are filtered out.
       Assert.assertNotNull(response);
-      Assert.assertEquals(response.getReservationAllocationState().size(), 0);
+      assertThat(response.getReservationAllocationState()).isEmpty();
 
       duration = 30000;
       deadline = sRequest.getReservationDefinition().getDeadline();
@@ -447,7 +443,7 @@ public class TestYarnClientWithReservation {
 
       // Ensure all reservations are filtered out.
       Assert.assertNotNull(response);
-      Assert.assertEquals(response.getReservationAllocationState().size(), 0);
+      assertThat(response.getReservationAllocationState()).isEmpty();
 
       arrival = clock.getTime();
       // List reservations, search by end time before the reservation start
@@ -460,7 +456,7 @@ public class TestYarnClientWithReservation {
 
       // Ensure all reservations are filtered out.
       Assert.assertNotNull(response);
-      Assert.assertEquals(response.getReservationAllocationState().size(), 0);
+      assertThat(response.getReservationAllocationState()).isEmpty();
 
       // List reservations, search by very small end time.
       request = ReservationListRequest
@@ -470,7 +466,7 @@ public class TestYarnClientWithReservation {
 
       // Ensure all reservations are filtered out.
       Assert.assertNotNull(response);
-      Assert.assertEquals(response.getReservationAllocationState().size(), 0);
+      assertThat(response.getReservationAllocationState()).isEmpty();
 
     } finally {
       // clean-up

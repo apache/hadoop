@@ -24,11 +24,18 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 
 import static org.apache.hadoop.test.MetricsAsserts.*;
 
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.junit.After;
 import org.junit.Test;
 
 import static org.mockito.Mockito.*;
 
 public class TestMRAppMetrics {
+
+  @After
+  public void tearDown() {
+    DefaultMetricsSystem.shutdown();
+  }
 
   @Test public void testNames() {
     Job job = mock(Job.class);

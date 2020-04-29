@@ -242,6 +242,28 @@ HDFS data might not always be be placed uniformly across the DataNode. One commo
 
 Due to multiple competing considerations, data might not be uniformly placed across the DataNodes. HDFS provides a tool for administrators that analyzes block placement and rebalanaces data across the DataNode. A brief administrator's guide for balancer is available at [HADOOP-1652](https://issues.apache.org/jira/browse/HADOOP-1652).
 
+Balancer supports two modes: run as a tool or as a long-running service:
+
+* In tool mode, it'll try to balance the clusters in best effort, and exit for the following conditions:
+
+    * All clusters are balanced.
+
+    * No bytes are moved for too many iterations (default is 5).
+
+    * No blocks can be moved.
+
+    * Cluster is upgrade in progress.
+
+    * Other errors.
+
+* In service mode, balancer will run as a long running daemon service. It works like this:
+
+    * For each round, it'll try to balance the cluster until success or return on error.
+
+    * You can config the interval between each round, the interval is set by `dfs.balancer.service.interval`.
+
+    * When encounter unexpected exceptions, it will try several times before stoping the service, which is set by `dfs.balancer.service.retries.on.exception`.
+
 For command usage, see [balancer](./HDFSCommands.html#balancer).
 
 Rack Awareness

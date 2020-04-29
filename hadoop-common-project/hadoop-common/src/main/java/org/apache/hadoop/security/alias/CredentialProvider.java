@@ -63,9 +63,9 @@ public abstract class CredentialProvider {
 
     public String toString() {
       StringBuilder buf = new StringBuilder();
-      buf.append("alias(");
-      buf.append(alias);
-      buf.append(")=");
+      buf.append("alias(")
+          .append(alias)
+          .append(")=");
       if (credential == null) {
         buf.append("null");
       } else {

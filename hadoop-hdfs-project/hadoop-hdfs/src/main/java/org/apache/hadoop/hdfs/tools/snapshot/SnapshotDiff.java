@@ -106,6 +106,7 @@ public class SnapshotDiff extends Configured implements Tool {
     } catch (IOException e) {
       String[] content = e.getLocalizedMessage().split("\n");
       System.err.println("snapshotDiff: " + content[0]);
+      e.printStackTrace(System.err);
       return 1;
     }
     return 0;

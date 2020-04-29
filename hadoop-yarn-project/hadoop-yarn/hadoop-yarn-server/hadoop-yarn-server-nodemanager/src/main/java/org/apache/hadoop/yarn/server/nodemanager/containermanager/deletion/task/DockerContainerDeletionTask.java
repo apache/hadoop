@@ -52,10 +52,7 @@ public class DockerContainerDeletionTask extends DeletionTask
    */
   @Override
   public void run() {
-    if (LOG.isDebugEnabled()) {
-      String msg = String.format("Running DeletionTask : %s", toString());
-      LOG.debug(msg);
-    }
+    LOG.debug("Running DeletionTask : {}", this);
     LinuxContainerExecutor exec = ((LinuxContainerExecutor)
         getDeletionService().getContainerExecutor());
     exec.removeDockerContainer(containerId);

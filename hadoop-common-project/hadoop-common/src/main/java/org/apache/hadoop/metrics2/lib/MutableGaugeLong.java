@@ -88,4 +88,10 @@ public class MutableGaugeLong extends MutableGauge {
     }
   }
 
+  /**
+   * @return  the value of the metric
+   */
+  public String toString() {
+    return value.toString();
+  }
 }

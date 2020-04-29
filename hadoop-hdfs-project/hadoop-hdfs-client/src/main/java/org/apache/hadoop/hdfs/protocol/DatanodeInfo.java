@@ -56,6 +56,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
   private List<String> dependentHostNames = new LinkedList<>();
   private String upgradeDomain;
   public static final DatanodeInfo[] EMPTY_ARRAY = {};
+  private int numBlocks;
 
   // Datanode administrative states
   public enum AdminStates {
@@ -106,6 +107,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     this.upgradeDomain = from.getUpgradeDomain();
     this.lastBlockReportTime = from.getLastBlockReportTime();
     this.lastBlockReportMonotonic = from.getLastBlockReportMonotonic();
+    this.numBlocks = from.getNumBlocks();
   }
 
   protected DatanodeInfo(DatanodeID nodeID) {
@@ -123,6 +125,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     this.adminState = null;
     this.lastBlockReportTime = 0L;
     this.lastBlockReportMonotonic = 0L;
+    this.numBlocks = 0;
   }
 
   protected DatanodeInfo(DatanodeID nodeID, String location) {
@@ -139,7 +142,8 @@ public class DatanodeInfo extends DatanodeID implements Node {
       final long lastUpdate, final long lastUpdateMonotonic,
       final int xceiverCount, final String networkLocation,
       final AdminStates adminState, final String upgradeDomain,
-      final long lastBlockReportTime, final long lastBlockReportMonotonic) {
+      final long lastBlockReportTime, final long lastBlockReportMonotonic,
+                       final int blockCount) {
     super(ipAddr, hostName, datanodeUuid, xferPort, infoPort, infoSecurePort,
         ipcPort);
     this.capacity = capacity;
@@ -157,6 +161,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     this.upgradeDomain = upgradeDomain;
     this.lastBlockReportTime = lastBlockReportTime;
     this.lastBlockReportMonotonic = lastBlockReportMonotonic;
+    this.numBlocks = blockCount;
   }
 
   /** Network location name. */
@@ -247,6 +252,13 @@ public class DatanodeInfo extends DatanodeID implements Node {
   public long getLastUpdateMonotonic() { return lastUpdateMonotonic;}
 
   /**
+   * @return Num of Blocks
+   */
+  public int getNumBlocks() {
+    return numBlocks;
+  }
+
+  /**
    * Set lastUpdate monotonic time
    */
   public void setLastUpdateMonotonic(long lastUpdateMonotonic) {
@@ -301,6 +313,11 @@ public class DatanodeInfo extends DatanodeID implements Node {
     this.xceiverCount = xceiverCount;
   }
 
+  /** Sets number of blocks. */
+  public void setNumBlocks(int blockCount) {
+    this.numBlocks = blockCount;
+  }
+
   /** network location */
   @Override
   public String getNetworkLocation() {return location;}
@@ -351,13 +368,14 @@ public class DatanodeInfo extends DatanodeID implements Node {
     float cacheUsedPercent = getCacheUsedPercent();
     float cacheRemainingPercent = getCacheRemainingPercent();
     String lookupName = NetUtils.getHostNameOfIP(getName());
+    int blockCount = getNumBlocks();
 
     buffer.append("Name: ").append(getName());
     if (lookupName != null) {
       buffer.append(" (").append(lookupName).append(")");
     }
-    buffer.append("\n");
-    buffer.append("Hostname: ").append(getHostName()).append("\n");
+    buffer.append("\n")
+        .append("Hostname: ").append(getHostName()).append("\n");
 
     if (!NetworkTopology.DEFAULT_RACK.equals(location)) {
       buffer.append("Rack: ").append(location).append("\n");
@@ -378,34 +396,34 @@ public class DatanodeInfo extends DatanodeID implements Node {
       buffer.append("Normal\n");
     }
     buffer.append("Configured Capacity: ").append(c).append(" (")
-        .append(StringUtils.byteDesc(c)).append(")").append("\n");
-    buffer.append("DFS Used: ").append(u).append(" (")
-        .append(StringUtils.byteDesc(u)).append(")").append("\n");
-    buffer.append("Non DFS Used: ").append(nonDFSUsed).append(" (")
-        .append(StringUtils.byteDesc(nonDFSUsed)).append(")").append("\n");
-    buffer.append("DFS Remaining: ").append(r).append(" (")
-        .append(StringUtils.byteDesc(r)).append(")").append("\n");
-    buffer.append("DFS Used%: ").append(percent2String(usedPercent))
-        .append("\n");
-    buffer.append("DFS Remaining%: ").append(percent2String(remainingPercent))
-        .append("\n");
-    buffer.append("Configured Cache Capacity: ").append(cc).append(" (")
-        .append(StringUtils.byteDesc(cc)).append(")").append("\n");
-    buffer.append("Cache Used: ").append(cu).append(" (")
-        .append(StringUtils.byteDesc(cu)).append(")").append("\n");
-    buffer.append("Cache Remaining: ").append(cr).append(" (")
-        .append(StringUtils.byteDesc(cr)).append(")").append("\n");
-    buffer.append("Cache Used%: ").append(percent2String(cacheUsedPercent))
-        .append("\n");
-    buffer.append("Cache Remaining%: ")
-        .append(percent2String(cacheRemainingPercent)).append("\n");
-    buffer.append("Xceivers: ").append(getXceiverCount()).append("\n");
-    buffer.append("Last contact: ").append(new Date(lastUpdate)).append("\n");
-    buffer
+        .append(StringUtils.byteDesc(c)).append(")").append("\n")
+        .append("DFS Used: ").append(u).append(" (")
+        .append(StringUtils.byteDesc(u)).append(")").append("\n")
+        .append("Non DFS Used: ").append(nonDFSUsed).append(" (")
+        .append(StringUtils.byteDesc(nonDFSUsed)).append(")").append("\n")
+        .append("DFS Remaining: ").append(r).append(" (")
+        .append(StringUtils.byteDesc(r)).append(")").append("\n")
+        .append("DFS Used%: ").append(percent2String(usedPercent))
+        .append("\n")
+        .append("DFS Remaining%: ").append(percent2String(remainingPercent))
+        .append("\n")
+        .append("Configured Cache Capacity: ").append(cc).append(" (")
+        .append(StringUtils.byteDesc(cc)).append(")").append("\n")
+        .append("Cache Used: ").append(cu).append(" (")
+        .append(StringUtils.byteDesc(cu)).append(")").append("\n")
+        .append("Cache Remaining: ").append(cr).append(" (")
+        .append(StringUtils.byteDesc(cr)).append(")").append("\n")
+        .append("Cache Used%: ").append(percent2String(cacheUsedPercent))
+        .append("\n")
+        .append("Cache Remaining%: ")
+        .append(percent2String(cacheRemainingPercent)).append("\n")
+        .append("Xceivers: ").append(getXceiverCount()).append("\n")
+        .append("Last contact: ").append(new Date(lastUpdate)).append("\n")
         .append("Last Block Report: ")
         .append(
             lastBlockReportTime != 0 ? new Date(lastBlockReportTime) : "Never")
-        .append("\n");
+        .append("\n")
+        .append("Num of Blocks: ").append(blockCount).append("\n");
     return buffer.toString();
   }
 
@@ -439,20 +457,20 @@ public class DatanodeInfo extends DatanodeID implements Node {
       buffer.append(" IN");
     }
     buffer.append(" ").append(c).append("(").append(StringUtils.byteDesc(c))
-        .append(")");
-    buffer.append(" ").append(u).append("(").append(StringUtils.byteDesc(u))
-        .append(")");
-    buffer.append(" ").append(percent2String(usedPercent));
-    buffer.append(" ").append(r).append("(").append(StringUtils.byteDesc(r))
-        .append(")");
-    buffer.append(" ").append(cc).append("(").append(StringUtils.byteDesc(cc))
-        .append(")");
-    buffer.append(" ").append(cu).append("(").append(StringUtils.byteDesc(cu))
-        .append(")");
-    buffer.append(" ").append(percent2String(cacheUsedPercent));
-    buffer.append(" ").append(cr).append("(").append(StringUtils.byteDesc(cr))
-        .append(")");
-    buffer.append(" ").append(new Date(lastUpdate));
+        .append(")")
+        .append(" ").append(u).append("(").append(StringUtils.byteDesc(u))
+        .append(")")
+        .append(" ").append(percent2String(usedPercent))
+        .append(" ").append(r).append("(").append(StringUtils.byteDesc(r))
+        .append(")")
+        .append(" ").append(cc).append("(").append(StringUtils.byteDesc(cc))
+        .append(")")
+        .append(" ").append(cu).append("(").append(StringUtils.byteDesc(cu))
+        .append(")")
+        .append(" ").append(percent2String(cacheUsedPercent))
+        .append(" ").append(cr).append("(").append(StringUtils.byteDesc(cr))
+        .append(")")
+        .append(" ").append(new Date(lastUpdate));
     return buffer.toString();
   }
 
@@ -680,6 +698,8 @@ public class DatanodeInfo extends DatanodeID implements Node {
     private long nonDfsUsed = 0L;
     private long lastBlockReportTime = 0L;
     private long lastBlockReportMonotonic = 0L;
+    private int numBlocks;
+
 
     public DatanodeInfoBuilder setFrom(DatanodeInfo from) {
       this.capacity = from.getCapacity();
@@ -697,6 +717,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
       this.upgradeDomain = from.getUpgradeDomain();
       this.lastBlockReportTime = from.getLastBlockReportTime();
       this.lastBlockReportMonotonic = from.getLastBlockReportMonotonic();
+      this.numBlocks = from.getNumBlocks();
       setNodeID(from);
       return this;
     }
@@ -823,13 +844,18 @@ public class DatanodeInfo extends DatanodeID implements Node {
       this.lastBlockReportMonotonic = time;
       return this;
     }
+    public DatanodeInfoBuilder setNumBlocks(int blockCount) {
+      this.numBlocks = blockCount;
+      return this;
+    }
 
     public DatanodeInfo build() {
       return new DatanodeInfo(ipAddr, hostName, datanodeUuid, xferPort,
           infoPort, infoSecurePort, ipcPort, capacity, dfsUsed, nonDfsUsed,
           remaining, blockPoolUsed, cacheCapacity, cacheUsed, lastUpdate,
           lastUpdateMonotonic, xceiverCount, location, adminState,
-          upgradeDomain, lastBlockReportTime, lastBlockReportMonotonic);
+          upgradeDomain, lastBlockReportTime, lastBlockReportMonotonic,
+          numBlocks);
     }
   }
 }

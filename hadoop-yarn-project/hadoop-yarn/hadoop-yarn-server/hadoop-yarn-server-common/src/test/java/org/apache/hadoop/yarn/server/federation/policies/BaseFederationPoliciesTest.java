@@ -23,6 +23,7 @@ import static org.mockito.Mockito.when;
 
 import java.nio.ByteBuffer;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -109,8 +110,8 @@ public abstract class BaseFederationPoliciesTest {
       String[] hosts = new String[] {"host1", "host2"};
       List<ResourceRequest> resourceRequests = FederationPoliciesTestUtil
           .createResourceRequests(hosts, 2 * 1024, 2, 1, 3, null, false);
-      ((FederationAMRMProxyPolicy) localPolicy)
-          .splitResourceRequests(resourceRequests);
+      ((FederationAMRMProxyPolicy) localPolicy).splitResourceRequests(
+          resourceRequests, new HashSet<SubClusterId>());
     }
   }
 
@@ -161,8 +162,8 @@ public abstract class BaseFederationPoliciesTest {
     return rand;
   }
 
-  public void setRand(Random rand) {
-    this.rand = rand;
+  public void setRand(long seed) {
+    this.rand.setSeed(seed);
   }
 
   public SubClusterId getHomeSubCluster() {

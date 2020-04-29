@@ -18,15 +18,23 @@
 package org.apache.hadoop.yarn.sls.appmaster;
 
 import com.codahale.metrics.MetricRegistry;
+import java.util.HashMap;
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.ReservationId;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.client.cli.RMAdminCLI;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
 import org.apache.hadoop.yarn.sls.scheduler.*;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -42,6 +50,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.ConcurrentMap;
 
 @RunWith(Parameterized.class)
 public class TestAMSimulator {
@@ -49,8 +58,8 @@ public class TestAMSimulator {
   private YarnConfiguration conf;
   private Path metricOutputDir;
 
-  private Class slsScheduler;
-  private Class scheduler;
+  private Class<?> slsScheduler;
+  private Class<?> scheduler;
 
   @Parameterized.Parameters
   public static Collection<Object[]> params() {
@@ -60,7 +69,7 @@ public class TestAMSimulator {
     });
   }
 
-  public TestAMSimulator(Class slsScheduler, Class scheduler) {
+  public TestAMSimulator(Class<?> slsScheduler, Class<?> scheduler) {
     this.slsScheduler = slsScheduler;
     this.scheduler = scheduler;
   }
@@ -73,6 +82,7 @@ public class TestAMSimulator {
     conf.set(SLSConfiguration.METRICS_OUTPUT_DIR, metricOutputDir.toString());
     conf.set(YarnConfiguration.RM_SCHEDULER, slsScheduler.getName());
     conf.set(SLSConfiguration.RM_SCHEDULER, scheduler.getName());
+    conf.set(YarnConfiguration.NODE_LABELS_ENABLED, "true");
     conf.setBoolean(SLSConfiguration.METRICS_SWITCH, true);
     rm = new ResourceManager();
     rm.init(conf);
@@ -115,7 +125,8 @@ public class TestAMSimulator {
   }
 
   private void createMetricOutputDir() {
-    Path testDir = Paths.get(System.getProperty("test.build.data"));
+    Path testDir =
+        Paths.get(System.getProperty("test.build.data", "target/test-dir"));
     try {
       metricOutputDir = Files.createTempDirectory(testDir, "output");
     } catch (IOException e) {
@@ -138,8 +149,10 @@ public class TestAMSimulator {
     String appId = "app1";
     String queue = "default";
     List<ContainerSimulator> containers = new ArrayList<>();
+    HashMap<ApplicationId, AMSimulator> map = new HashMap<>();
     app.init(1000, containers, rm, null, 0, 1000000L, "user1", queue, true,
-        appId, 0, SLSConfiguration.getAMContainerResource(conf), null);
+        appId, 0, SLSConfiguration.getAMContainerResource(conf), null, null,
+        map);
     app.firstStep();
 
     verifySchedulerMetrics(appId);
@@ -151,9 +164,136 @@ public class TestAMSimulator {
     app.lastStep();
   }
 
+  @Test
+  public void testAMSimulatorWithNodeLabels() throws Exception {
+    if (scheduler.equals(CapacityScheduler.class)) {
+      // add label to the cluster
+      RMAdminCLI rmAdminCLI = new RMAdminCLI(conf);
+      String[] args = {"-addToClusterNodeLabels", "label1"};
+      rmAdminCLI.run(args);
+
+      MockAMSimulator app = new MockAMSimulator();
+      String appId = "app1";
+      String queue = "default";
+      List<ContainerSimulator> containers = new ArrayList<>();
+      HashMap<ApplicationId, AMSimulator> map = new HashMap<>();
+      app.init(1000, containers, rm, null, 0, 1000000L, "user1", queue, true,
+          appId, 0, SLSConfiguration.getAMContainerResource(conf), "label1",
+          null, map);
+      app.firstStep();
+
+      verifySchedulerMetrics(appId);
+
+      ConcurrentMap<ApplicationId, RMApp> rmApps =
+          rm.getRMContext().getRMApps();
+      Assert.assertEquals(1, rmApps.size());
+      RMApp rmApp = rmApps.get(app.appId);
+      Assert.assertNotNull(rmApp);
+      Assert.assertEquals("label1", rmApp.getAmNodeLabelExpression());
+    }
+  }
+
+  @Test
+  public void testPackageRequests() {
+    MockAMSimulator app = new MockAMSimulator();
+    List<ContainerSimulator> containerSimulators = new ArrayList<>();
+    Resource resource = Resources.createResource(1024);
+    int priority = 1;
+    ExecutionType execType = ExecutionType.GUARANTEED;
+    String type = "map";
+
+    ContainerSimulator s1 = new ContainerSimulator(resource, 100,
+        "/default-rack/h1", priority, type, execType);
+    ContainerSimulator s2 = new ContainerSimulator(resource, 100,
+        "/default-rack/h1", priority, type, execType);
+    ContainerSimulator s3 = new ContainerSimulator(resource, 100,
+        "/default-rack/h2", priority, type, execType);
+
+    containerSimulators.add(s1);
+    containerSimulators.add(s2);
+    containerSimulators.add(s3);
+
+    List<ResourceRequest> res = app.packageRequests(containerSimulators,
+        priority);
+
+    // total 4 resource requests: any -> 1, rack -> 1, node -> 2
+    // All resource requests for any would be packaged into 1.
+    // All resource requests for racks would be packaged into 1 as all of them
+    // are for same rack.
+    // All resource requests for nodes would be packaged into 2 as there are
+    // two different nodes.
+    Assert.assertEquals(4, res.size());
+    int anyRequestCount = 0;
+    int rackRequestCount = 0;
+    int nodeRequestCount = 0;
+
+    for (ResourceRequest request : res) {
+      String resourceName = request.getResourceName();
+      if (resourceName.equals("*")) {
+        anyRequestCount++;
+      } else if (resourceName.equals("/default-rack")) {
+        rackRequestCount++;
+      } else {
+        nodeRequestCount++;
+      }
+    }
+
+    Assert.assertEquals(1, anyRequestCount);
+    Assert.assertEquals(1, rackRequestCount);
+    Assert.assertEquals(2, nodeRequestCount);
+
+    containerSimulators.clear();
+    s1 = new ContainerSimulator(resource, 100,
+        "/default-rack/h1", priority, type, execType, 1, 0);
+    s2 = new ContainerSimulator(resource, 100,
+        "/default-rack/h1", priority, type, execType, 2, 0);
+    s3 = new ContainerSimulator(resource, 100,
+        "/default-rack/h2", priority, type, execType, 1, 0);
+
+    containerSimulators.add(s1);
+    containerSimulators.add(s2);
+    containerSimulators.add(s3);
+
+    res = app.packageRequests(containerSimulators, priority);
+
+    // total 7 resource requests: any -> 2, rack -> 2, node -> 3
+    // All resource requests for any would be packaged into 2 as there are
+    // two different allocation id.
+    // All resource requests for racks would be packaged into 2 as all of them
+    // are for same rack but for two different allocation id.
+    // All resource requests for nodes would be packaged into 3 as either node
+    // or allocation id is different for each request.
+    Assert.assertEquals(7, res.size());
+
+    anyRequestCount = 0;
+    rackRequestCount = 0;
+    nodeRequestCount = 0;
+
+    for (ResourceRequest request : res) {
+      String resourceName = request.getResourceName();
+      long allocationId = request.getAllocationRequestId();
+      // allocation id should be either 1 or 2
+      Assert.assertTrue(allocationId == 1 || allocationId == 2);
+      if (resourceName.equals("*")) {
+        anyRequestCount++;
+      } else if (resourceName.equals("/default-rack")) {
+        rackRequestCount++;
+      } else {
+        nodeRequestCount++;
+      }
+    }
+
+    Assert.assertEquals(2, anyRequestCount);
+    Assert.assertEquals(2, rackRequestCount);
+    Assert.assertEquals(3, nodeRequestCount);
+  }
+
+
   @After
   public void tearDown() {
-    rm.stop();
+    if (rm != null) {
+      rm.stop();
+    }
 
     deleteMetricOutputDir();
   }

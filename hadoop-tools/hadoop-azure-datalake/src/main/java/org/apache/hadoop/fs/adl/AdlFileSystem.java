@@ -42,11 +42,11 @@ import com.microsoft.azure.datalake.store.oauth2.RefreshTokenBasedTokenProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.ContentSummary.Builder;
 import org.apache.hadoop.fs.CreateFlag;
@@ -71,6 +71,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.VersionInfo;
 
 import static org.apache.hadoop.fs.adl.AdlConfKeys.*;
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
 /**
  * A FileSystem to access Azure Data Lake Store.
@@ -196,6 +197,18 @@ public class AdlFileSystem extends FileSystem {
         VersionInfo.getVersion().trim() + "/" + clusterName + "/"
         + clusterType);
 
+    int timeout = conf.getInt(ADL_HTTP_TIMEOUT, -1);
+    if (timeout > 0) {
+      // only set timeout if specified in config. Otherwise use SDK default
+      options.setDefaultTimeout(timeout);
+    } else {
+      LOG.info("No valid ADL SDK timeout configured: using SDK default.");
+    }
+
+    String sslChannelMode = conf.get(ADL_SSL_CHANNEL_MODE,
+        "Default");
+    options.setSSLChannelMode(sslChannelMode);
+
     adlClient.setOptions(options);
 
     boolean trackLatency = conf
@@ -319,6 +332,11 @@ public class AdlFileSystem extends FileSystem {
   @VisibleForTesting
   AzureADTokenProvider getAzureTokenProvider() {
     return azureTokenProvider;
+  }
+
+  @VisibleForTesting
+  public ADLStoreClient getAdlClient() {
+    return adlClient;
   }
 
   /**
@@ -910,45 +928,6 @@ public class AdlFileSystem extends FileSystem {
     return ADL_BLOCK_SIZE;
   }
 
-  @Override
-  public BlockLocation[] getFileBlockLocations(final FileStatus status,
-      final long offset, final long length) throws IOException {
-    if (status == null) {
-      return null;
-    }
-
-    if ((offset < 0) || (length < 0)) {
-      throw new IllegalArgumentException("Invalid start or len parameter");
-    }
-
-    if (status.getLen() < offset) {
-      return new BlockLocation[0];
-    }
-
-    final String[] name = {"localhost"};
-    final String[] host = {"localhost"};
-    long blockSize = ADL_BLOCK_SIZE;
-    int numberOfLocations =
-        (int) (length / blockSize) + ((length % blockSize == 0) ? 0 : 1);
-    BlockLocation[] locations = new BlockLocation[numberOfLocations];
-    for (int i = 0; i < locations.length; i++) {
-      long currentOffset = offset + (i * blockSize);
-      long currentLength = Math.min(blockSize, offset + length - currentOffset);
-      locations[i] = new BlockLocation(name, host, currentOffset,
-          currentLength);
-    }
-
-    return locations;
-  }
-
-  @Override
-  public BlockLocation[] getFileBlockLocations(final Path p, final long offset,
-      final long length) throws IOException {
-    // read ops incremented in getFileStatus
-    FileStatus fileStatus = getFileStatus(p);
-    return getFileBlockLocations(fileStatus, offset, length);
-  }
-
   /**
    * Get replication.
    *
@@ -1055,5 +1034,21 @@ public class AdlFileSystem extends FileSystem {
       dest.set(generic, value, key + " via " + origin);
     }
     return dest;
+  }
+
+  @Override
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+
+    switch (validatePathCapabilityArgs(makeQualified(path), capability)) {
+
+    case CommonPathCapabilities.FS_ACLS:
+    case CommonPathCapabilities.FS_APPEND:
+    case CommonPathCapabilities.FS_CONCAT:
+    case CommonPathCapabilities.FS_PERMISSIONS:
+      return true;
+    default:
+      return super.hasPathCapability(path, capability);
+    }
   }
 }

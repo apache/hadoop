@@ -33,7 +33,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.junit.Test;
-import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
 
 public class TestGetImageServlet {
@@ -73,12 +72,8 @@ public class TestGetImageServlet {
         "hdfs/host2@TEST-REALM.COM", conf));
     
     // Mark atm as an admin.
-    Mockito.when(acls.isUserAllowed(Mockito.argThat(new ArgumentMatcher<UserGroupInformation>() {
-      @Override
-      public boolean matches(Object argument) {
-        return ((UserGroupInformation) argument).getShortUserName().equals("atm");
-      }
-    }))).thenReturn(true);
+    Mockito.when(acls.isUserAllowed(Mockito.argThat(
+        ugi -> ugi.getShortUserName().equals("atm")))).thenReturn(true);
     
     // Make sure that NN2 is still considered a valid requestor.
     assertTrue(ImageServlet.isValidRequestor(context,

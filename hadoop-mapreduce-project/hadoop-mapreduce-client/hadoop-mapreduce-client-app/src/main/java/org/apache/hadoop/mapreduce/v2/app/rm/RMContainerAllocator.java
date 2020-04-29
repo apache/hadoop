@@ -968,16 +968,20 @@ public class RMContainerAllocator extends RMContainerRequestor
 
   @VisibleForTesting
   public TaskAttemptEvent createContainerFinishedEvent(ContainerStatus cont,
-      TaskAttemptId attemptID) {
-    if (cont.getExitStatus() == ContainerExitStatus.ABORTED
-        || cont.getExitStatus() == ContainerExitStatus.PREEMPTED) {
-      // killed by framework
-      return new TaskAttemptEvent(attemptID,
-          TaskAttemptEventType.TA_KILL);
-    } else {
-      return new TaskAttemptEvent(attemptID,
+      TaskAttemptId attemptId) {
+    TaskAttemptEvent event;
+    switch (cont.getExitStatus()) {
+    case ContainerExitStatus.ABORTED:
+    case ContainerExitStatus.PREEMPTED:
+    case ContainerExitStatus.KILLED_BY_CONTAINER_SCHEDULER:
+      // killed by YARN
+      event = new TaskAttemptEvent(attemptId, TaskAttemptEventType.TA_KILL);
+      break;
+    default:
+      event = new TaskAttemptEvent(attemptId,
           TaskAttemptEventType.TA_CONTAINER_COMPLETED);
     }
+    return event;
   }
   
   @SuppressWarnings("unchecked")
@@ -1020,12 +1024,14 @@ public class RMContainerAllocator extends RMContainerRequestor
     }
   }
 
-  private void handleJobPriorityChange(AllocateResponse response) {
-    Priority priorityFromResponse = Priority.newInstance(response
-        .getApplicationPriority().getPriority());
-
-    // Update the job priority to Job directly.
-    getJob().setJobPriority(priorityFromResponse);
+  void handleJobPriorityChange(AllocateResponse response) {
+    Priority applicationPriority = response.getApplicationPriority();
+    if (null != applicationPriority) {
+      Priority priorityFromResponse = Priority
+          .newInstance(applicationPriority.getPriority());
+      // Update the job priority to Job directly.
+      getJob().setJobPriority(priorityFromResponse);
+    }
   }
 
   @Private

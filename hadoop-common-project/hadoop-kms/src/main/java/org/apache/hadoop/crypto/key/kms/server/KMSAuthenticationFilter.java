@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.crypto.key.kms.server;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.kms.KMSDelegationToken;
@@ -54,16 +55,22 @@ public class KMSAuthenticationFilter
   @Override
   protected Properties getConfiguration(String configPrefix,
       FilterConfig filterConfig) {
-    Properties props = new Properties();
+
     Configuration conf = KMSWebApp.getConfiguration();
-    for (Map.Entry<String, String> entry : conf) {
-      String name = entry.getKey();
-      if (name.startsWith(CONFIG_PREFIX)) {
-        String value = conf.get(name);
-        name = name.substring(CONFIG_PREFIX.length());
-        props.setProperty(name, value);
-      }
+    return getKMSConfiguration(conf);
+  }
+
+  @VisibleForTesting
+  Properties getKMSConfiguration(Configuration conf) {
+    Properties props = new Properties();
+
+    Map<String, String> propsWithPrefixMap = conf.getPropsWithPrefix(
+        CONFIG_PREFIX);
+
+    for (Map.Entry<String, String> entry : propsWithPrefixMap.entrySet()) {
+      props.setProperty(entry.getKey(), entry.getValue());
     }
+
     String authType = props.getProperty(AUTH_TYPE);
     if (authType.equals(PseudoAuthenticationHandler.TYPE)) {
       props.setProperty(AUTH_TYPE,

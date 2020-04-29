@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -191,15 +192,15 @@ public class TestNNWithQJM {
     // Start the NN - should fail because the JNs are still formatted
     // with the old namespace ID.
     try {
-      cluster = new MiniDFSCluster.Builder(conf)
-        .numDataNodes(0)
-        .manageNameDfsDirs(false)
-        .format(false)
-        .build();
+      ExitUtil.disableSystemExit();
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
+          .manageNameDfsDirs(false).format(false).checkExitOnShutdown(false)
+          .build();
       fail("New NN with different namespace should have been rejected");
-    } catch (IOException ioe) {
+    } catch (ExitException ee) {
       GenericTestUtils.assertExceptionContains(
-          "Unable to start log segment 1: too few journals", ioe);
+          "Unable to start log segment 1: too few journals", ee);
+      assertTrue("Didn't terminate properly ", ExitUtil.terminateCalled());
     }
   }
 }

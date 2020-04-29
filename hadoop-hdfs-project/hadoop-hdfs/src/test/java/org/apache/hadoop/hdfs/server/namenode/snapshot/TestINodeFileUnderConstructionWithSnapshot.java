@@ -48,7 +48,7 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiff;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
+import org.slf4j.event.Level;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -58,7 +58,7 @@ import org.junit.Test;
  */
 public class TestINodeFileUnderConstructionWithSnapshot {
   {
-    GenericTestUtils.setLogLevel(INode.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(INode.LOG, Level.TRACE);
     SnapshotTestHelper.disableLogs();
   }
 
@@ -304,7 +304,8 @@ public class TestINodeFileUnderConstructionWithSnapshot {
       }
     } finally {
       NameNodeAdapter.setLeasePeriod(fsn, HdfsConstants.LEASE_SOFTLIMIT_PERIOD,
-          HdfsConstants.LEASE_HARDLIMIT_PERIOD);
+          conf.getLong(DFSConfigKeys.DFS_LEASE_HARDLIMIT_KEY,
+              DFSConfigKeys.DFS_LEASE_HARDLIMIT_DEFAULT) * 1000);
     }
   }
 }

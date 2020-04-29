@@ -153,7 +153,7 @@ public final class YarnServerSecurityUtils {
       credentials.readTokenStorageStream(buf);
       if (LOG.isDebugEnabled()) {
         for (Token<? extends TokenIdentifier> tk : credentials.getAllTokens()) {
-          LOG.debug(tk.getService() + " = " + tk.toString());
+          LOG.debug("{}={}", tk.getService(), tk);
         }
       }
     }

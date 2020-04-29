@@ -28,11 +28,12 @@ import org.apache.hadoop.yarn.util.resource.Resources;
  */
 public class FakeSchedulable implements Schedulable {
   private Resource usage;
-  private Resource minShare;
-  private Resource maxShare;
-  private Resource fairShare;
+  private final Resource demand;
+  private final Resource minShare;
+  private final Resource maxShare;
   private float weights;
-  private Priority priority;
+  private final Priority priority;
+  private Resource fairShare;
   private long startTime;
   
   public FakeSchedulable() {
@@ -69,16 +70,28 @@ public class FakeSchedulable implements Schedulable {
         weights, Resources.createResource(0, 0),
         Resources.createResource(0, 0), 0);
   }
-  
+
+  public FakeSchedulable(long minShare, long maxShare) {
+    this(minShare, maxShare, 1L);
+  }
+
+  public FakeSchedulable(long minShare, long maxShare, float weights) {
+    this(Resources.createResource(minShare, 0),
+        Resources.createResource(maxShare, 0),
+        weights, Resources.createResource(0, 0),
+        Resources.createResource(0, 0), 0);
+  }
+
   public FakeSchedulable(Resource minShare, Resource maxShare,
       float weight, Resource fairShare, Resource usage, long startTime) {
     this.minShare = minShare;
     this.maxShare = maxShare;
     this.weights = weight;
-    setFairShare(fairShare);
     this.usage = usage;
+    this.demand = Resources.multiply(usage, 2.0);
     this.priority = Records.newRecord(Priority.class);
-    this.startTime = startTime;
+    setFairShare(fairShare);
+    start(startTime);
   }
   
   @Override
@@ -92,13 +105,13 @@ public class FakeSchedulable implements Schedulable {
   }
 
   @Override
-  public void setFairShare(Resource fairShare) {
+  public final void setFairShare(Resource fairShare) {
     this.fairShare = fairShare;
   }
 
   @Override
   public Resource getDemand() {
-    return null;
+    return demand;
   }
 
   @Override
@@ -142,5 +155,13 @@ public class FakeSchedulable implements Schedulable {
   @Override
   public boolean isPreemptable() {
     return true;
+  }
+
+  public void setResourceUsage(Resource resourceUsage) {
+    this.usage = resourceUsage;
+  }
+
+  public final void start(long time) {
+    startTime = time;
   }
 }

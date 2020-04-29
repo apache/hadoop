@@ -173,7 +173,11 @@ class AclCommands extends FsCommand {
         + "  -x :Remove specified ACL entries. Other ACL entries are retained.\n"
         + "  --set :Fully replace the ACL, discarding all existing entries."
         + " The <acl_spec> must include entries for user, group, and others"
-        + " for compatibility with permission bits.\n"
+        + " for compatibility with permission bits. If the ACL spec contains"
+        + " only access entries, then the existing default entries are retained"
+        + ". If the ACL spec contains only default entries, then the existing"
+        + " access entries are retained. If the ACL spec contains both access"
+        + " and default entries, then both are replaced.\n"
         + "  <acl_spec>: Comma separated list of ACL entries.\n"
         + "  <path>: File or directory to modify.\n";
 

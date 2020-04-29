@@ -1,5 +1,6 @@
 {
   "name": "httpd-service-no-dns",
+  "version": "1.0.0",
   "lifetime": "3600",
   "components": [
     {

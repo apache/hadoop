@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -29,7 +29,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
  */
 public final class YarnConfigurationStoreFactory {
 
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       YarnConfigurationStoreFactory.class);
 
   private YarnConfigurationStoreFactory() {
@@ -37,10 +37,24 @@ public final class YarnConfigurationStoreFactory {
   }
 
   public static YarnConfigurationStore getStore(Configuration conf) {
-    Class<? extends YarnConfigurationStore> storeClass =
-        conf.getClass(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
+    String store = conf.get(
+        YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
+        YarnConfiguration.MEMORY_CONFIGURATION_STORE);
+    switch (store) {
+      case YarnConfiguration.MEMORY_CONFIGURATION_STORE:
+        return new InMemoryConfigurationStore();
+      case YarnConfiguration.LEVELDB_CONFIGURATION_STORE:
+        return new LeveldbConfigurationStore();
+      case YarnConfiguration.ZK_CONFIGURATION_STORE:
+        return new ZKConfigurationStore();
+      case YarnConfiguration.FS_CONFIGURATION_STORE:
+        return new FSSchedulerConfigurationStore();
+      default:
+        Class<? extends YarnConfigurationStore> storeClass =
+            conf.getClass(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
             InMemoryConfigurationStore.class, YarnConfigurationStore.class);
-    LOG.info("Using YarnConfigurationStore implementation - " + storeClass);
-    return ReflectionUtils.newInstance(storeClass, conf);
+        LOG.info("Using YarnConfigurationStore implementation - " + storeClass);
+        return ReflectionUtils.newInstance(storeClass, conf);
+    }
   }
 }

@@ -21,13 +21,14 @@ package org.apache.hadoop.yarn.service.utils;
 import com.google.common.base.Preconditions;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
-import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.net.DNS;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.service.conf.YarnServiceConstants;
@@ -212,8 +213,8 @@ public final class ServiceUtils {
       return trailing ? separator : "";
     }
     for (Object o : collection) {
-      b.append(o);
-      b.append(separator);
+      b.append(o)
+          .append(separator);
     }
     int length = separator.length();
     String s = b.toString();
@@ -450,6 +451,7 @@ public final class ServiceUtils {
    * @param sliderConfDir relative path to the dir containing slider config
    *                      options to put on the classpath -or null
    * @param libdir directory containing the JAR files
+   * @param configClassPath extra class path configured in yarn-site.xml
    * @param usingMiniMRCluster flag to indicate the MiniMR cluster is in use
    * (and hence the current classpath should be used, not anything built up)
    * @return a classpath
@@ -457,6 +459,7 @@ public final class ServiceUtils {
   public static ClasspathConstructor buildClasspath(String sliderConfDir,
       String libdir,
       SliderFileSystem sliderFileSystem,
+      String configClassPath,
       boolean usingMiniMRCluster) {
 
     ClasspathConstructor classpath = new ClasspathConstructor();
@@ -478,6 +481,11 @@ public final class ServiceUtils {
       classpath.addRemoteClasspathEnvVar();
       classpath.append(ApplicationConstants.Environment.HADOOP_CONF_DIR.$$());
     }
+
+    if (!configClassPath.isEmpty()) {
+      classpath.appendAll(Arrays.asList(configClassPath.split(",")));
+    }
+
     return classpath;
   }
 
@@ -570,5 +578,22 @@ public final class ServiceUtils {
 
     // Fallback to querying the default hostname as we did before.
     return InetAddress.getLocalHost().getCanonicalHostName();
+  }
+
+  /**
+   * Process termination handler - exist with specified exit code after
+   * waiting a while for ATS state to be in sync.
+   */
+  public static class ProcessTerminationHandler {
+    public void terminate(int exitCode) {
+      // Sleep for 5 seconds in hope that the state can be recorded in ATS.
+      // in case there's a client polling the comp state, it can be notified.
+      try {
+        Thread.sleep(5000);
+      } catch (InterruptedException e) {
+        log.info("Interrupted on sleep while exiting.", e);
+      }
+      ExitUtil.terminate(exitCode);
+    }
   }
 }

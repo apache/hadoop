@@ -27,8 +27,8 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -45,13 +45,15 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 public class TestHDFSConcat {
-  public static final Log LOG = LogFactory.getLog(TestHDFSConcat.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestHDFSConcat.class);
 
   private static final short REPL_FACTOR = 2;
   
@@ -523,5 +525,43 @@ public class TestHDFSConcat {
           + FSDirectory.DOT_RESERVED_STRING + " relative path : " + trg;
       GenericTestUtils.assertExceptionContains(errMsg, e);
     }
+  }
+
+  /**
+   * Test concat on same source and target file which is a inode reference.
+   */
+  @Test
+  public void testConcatOnSameFile() throws Exception {
+    String dir = "/dir1";
+    Path trgDir = new Path(dir);
+    dfs.mkdirs(new Path(dir));
+
+    // create a source file
+    String dir2 = "/dir2";
+    Path srcDir = new Path(dir2);
+    dfs.mkdirs(srcDir);
+    dfs.allowSnapshot(srcDir);
+    Path src = new Path(srcDir, "file1");
+    DFSTestUtil.createFile(dfs, src, 512, (short) 2, 0);
+
+    // make the file as an Inode reference and delete the reference
+    dfs.createSnapshot(srcDir, "s1");
+    dfs.rename(src, trgDir);
+    dfs.deleteSnapshot(srcDir, "s1");
+    Path[] srcs = new Path[1];
+    srcs[0] = new Path(dir, "file1");
+
+    // perform concat
+    LambdaTestUtils.intercept(RemoteException.class,
+        "concat: the src file /dir1/file1 is the same with the target"
+            + " file /dir1/file1",
+        () -> dfs.concat(srcs[0], srcs));
+
+    // the file should exists and read the file
+    byte[] buff = new byte[1080];
+    FSDataInputStream stream = dfs.open(srcs[0]);
+    stream.readFully(0, buff, 0, 512);
+
+    assertEquals(1, dfs.getContentSummary(new Path(dir)).getFileCount());
   }
 }

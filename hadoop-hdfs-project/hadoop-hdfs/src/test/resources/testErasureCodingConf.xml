@@ -154,11 +154,31 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Add a list of erasure coding policies</expected-output>
+          <expected-output>Add a list of user defined erasure coding policies</expected-output>
         </comparator>
         <comparator>
           <type>SubstringComparator</type>
           <expected-output>[-addPolicies -policyFile &lt;file&gt;]</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>help: removePolicy command</description>
+      <test-commands>
+        <ec-admin-command>-fs NAMENODE -help removePolicy
+        </ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Remove an user defined erasure coding policy</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>[-removePolicy -policy &lt;policy&gt;]</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -214,7 +234,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Set erasure coding policy RS-6-3-1024k on /ecdir</expected-output>
+          <expected-output>Set RS-6-3-1024k erasure coding policy on /ecdir</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -232,7 +252,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Set erasure coding policy RS-6-3-1024k on /ecdir</expected-output>
+          <expected-output>Set RS-6-3-1024k erasure coding policy on /ecdir</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -311,7 +331,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>Warning: setting erasure coding policy on a non-empty directory will not automatically convert existing files to RS-6-3-1024</expected-output>
+          <expected-output>Warning: setting erasure coding policy on a non-empty directory will not automatically convert existing files to RS-6-3-1024k erasure coding policy</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -335,6 +355,30 @@
         <comparator>
           <type>SubstringComparator</type>
           <expected-output>RS-6-3-1024k</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>unsetPolicy : unset on non EC directory</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <command>-fs NAMENODE -mkdir /ecdir/child</command>
+        <ec-admin-command>-fs NAMENODE -unsetPolicy -path /ecdir/child</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm /ecdir/child/ecfile</command>
+        <command>-fs NAMENODE -rmdir /ecdir/child</command>
+        <command>-fs NAMENODE -rmdir /ecdir</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>NoECPolicySetException: No erasure coding policy explicitly set on /ecdir/child</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Use '-setPolicy -path &lt;PATH&gt; -replicate' to enforce default replication policy irrespective of EC policy defined on parent.</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -696,6 +740,28 @@
     </test>
 
     <test>
+      <description>setPolicy : set erasure coding policy without given a specific policy name on a non empty directory</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /ecdir</command>
+        <command>-fs NAMENODE -mkdir /ecdir/ecsubdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -path /ecdir</ec-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -R /ecdir</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Set default erasure coding policy on /ecdir</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Warning: setting erasure coding policy on a non-empty directory will not automatically convert existing files to default erasure coding policy</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
       <description>getPolicy: get the default policy after setPolicy without given a specific policy name</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /ecdir</command>
@@ -964,6 +1030,46 @@
         <comparator>
           <type>RegexpComparator</type>
           <expected-output>^-rw-r--r--( )*1( )*USERNAME( )*supergroup( )*[A-Za-z0-9-]{1,}( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/ecdir/file3</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>ls: file with disabled EC Policy</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir -p /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -path /ecdir -policy XOR-2-1-1024k</ec-admin-command>
+        <command>-fs NAMENODE -touchz /ecdir/file1</command>
+        <ec-admin-command>-fs NAMENODE -disablePolicy -policy XOR-2-1-1024k</ec-admin-command>
+        <command>-fs NAMENODE -ls -e /ecdir</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -enablePolicy -policy XOR-2-1-1024k</ec-admin-command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-rw-r--r--( )*1( )*USERNAME( )*supergroup( )*[A-Za-z0-9-]{1,}( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/ecdir/file1</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test>
+      <description>ls: file with replication Policy</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir -p /ecdir</command>
+        <ec-admin-command>-fs NAMENODE -setPolicy -path /ecdir -replicate</ec-admin-command>
+        <command>-fs NAMENODE -touchz /ecdir/file1</command>
+        <command>-fs NAMENODE -ls -e /</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rmdir /ecdir</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^drwxr-xr-x( )*-( )*USERNAME( )*supergroup( )*[A-Za-z0-9-]{1,}( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/ecdir</expected-output>
         </comparator>
       </comparators>
     </test>

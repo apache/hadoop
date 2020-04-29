@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.server.webproxy.amfilter;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.server.webproxy.ProxyUtils;
 import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServlet;
 import org.slf4j.Logger;
@@ -44,6 +46,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 @Public
 public class AmIpFilter implements Filter {
@@ -59,7 +62,7 @@ public class AmIpFilter implements Filter {
   public static final String PROXY_URI_BASES_DELIMITER = ",";
   private static final String PROXY_PATH = "/proxy";
   //update the proxy IP list about every 5 min
-  private static final long UPDATE_INTERVAL = 5 * 60 * 1000;
+  private static long updateInterval = TimeUnit.MINUTES.toMillis(5);
 
   private String[] proxyHosts;
   private Set<String> proxyAddresses = null;
@@ -99,23 +102,21 @@ public class AmIpFilter implements Filter {
   }
 
   protected Set<String> getProxyAddresses() throws ServletException {
-    long now = System.currentTimeMillis();
+    long now = Time.monotonicNow();
     synchronized(this) {
-      if (proxyAddresses == null || (lastUpdate + UPDATE_INTERVAL) >= now) {
+      if (proxyAddresses == null || (lastUpdate + updateInterval) <= now) {
         proxyAddresses = new HashSet<>();
         for (String proxyHost : proxyHosts) {
           try {
-              for(InetAddress add : InetAddress.getAllByName(proxyHost)) {
-                if (LOG.isDebugEnabled()) {
-                  LOG.debug("proxy address is: {}", add.getHostAddress());
-                }
-                proxyAddresses.add(add.getHostAddress());
-              }
-              lastUpdate = now;
-            } catch (UnknownHostException e) {
-              LOG.warn("Could not locate {} - skipping", proxyHost, e);
+            for (InetAddress add : InetAddress.getAllByName(proxyHost)) {
+              LOG.debug("proxy address is: {}", add.getHostAddress());
+              proxyAddresses.add(add.getHostAddress());
             }
+            lastUpdate = now;
+          } catch (UnknownHostException e) {
+            LOG.warn("Could not locate {} - skipping", proxyHost, e);
           }
+        }
         if (proxyAddresses.isEmpty()) {
           throw new ServletException("Could not locate any of the proxy hosts");
         }
@@ -137,9 +138,7 @@ public class AmIpFilter implements Filter {
     HttpServletRequest httpReq = (HttpServletRequest)req;
     HttpServletResponse httpResp = (HttpServletResponse)resp;
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Remote address for request is: {}", httpReq.getRemoteAddr());
-    }
+    LOG.debug("Remote address for request is: {}", httpReq.getRemoteAddr());
 
     if (!getProxyAddresses().contains(httpReq.getRemoteAddr())) {
       StringBuilder redirect = new StringBuilder(findRedirectUrl());
@@ -174,11 +173,8 @@ public class AmIpFilter implements Filter {
         }
       }
       if (user == null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Could not find "
-              + WebAppProxyServlet.PROXY_USER_COOKIE_NAME
-              + " cookie, so user will not be set");
-        }
+        LOG.debug("Could not find {} cookie, so user will not be set",
+            WebAppProxyServlet.PROXY_USER_COOKIE_NAME);
 
         chain.doFilter(req, resp);
       } else {
@@ -214,16 +210,31 @@ public class AmIpFilter implements Filter {
     return addr;
   }
 
-  private boolean isValidUrl(String url) {
+  @VisibleForTesting
+  public boolean isValidUrl(String url) {
     boolean isValid = false;
     try {
-      HttpURLConnection conn =
-          (HttpURLConnection) new URL(url).openConnection();
+      HttpURLConnection conn = (HttpURLConnection) new URL(url)
+          .openConnection();
       conn.connect();
       isValid = conn.getResponseCode() == HttpURLConnection.HTTP_OK;
+      // If security is enabled, any valid RM which can give 401 Unauthorized is
+      // good enough to access. Since AM doesn't have enough credential, auth
+      // cannot be completed and hence 401 is fine in such case.
+      if (!isValid && UserGroupInformation.isSecurityEnabled()) {
+        isValid = (conn
+            .getResponseCode() == HttpURLConnection.HTTP_UNAUTHORIZED)
+            || (conn.getResponseCode() == HttpURLConnection.HTTP_FORBIDDEN);
+        return isValid;
+      }
     } catch (Exception e) {
-      LOG.debug("Failed to connect to " + url + ": " + e.toString());
+      LOG.warn("Failed to connect to " + url + ": " + e.toString());
     }
     return isValid;
+  }
+
+  @VisibleForTesting
+  protected static void setUpdateInterval(long updateInterval) {
+    AmIpFilter.updateInterval = updateInterval;
   }
 }

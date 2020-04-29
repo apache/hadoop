@@ -94,9 +94,9 @@ public class InterruptEscalator implements IrqHandler.Interrupted {
     if (owner != null) {
       sb.append(", owner= ").append(owner.toString());
     }
-    sb.append(", shutdownTimeMillis=").append(shutdownTimeMillis);
-    sb.append(", forcedShutdownTimedOut=").append(forcedShutdownTimedOut);
-    sb.append('}');
+    sb.append(", shutdownTimeMillis=").append(shutdownTimeMillis)
+        .append(", forcedShutdownTimedOut=").append(forcedShutdownTimedOut)
+        .append('}');
     return sb.toString();
   }
 

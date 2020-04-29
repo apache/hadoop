@@ -22,13 +22,14 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 
 @Private
 public class Times {
-  private static final Log LOG = LogFactory.getLog(Times.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(Times.class);
 
   static final String ISO8601DATEFORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSZ";
 

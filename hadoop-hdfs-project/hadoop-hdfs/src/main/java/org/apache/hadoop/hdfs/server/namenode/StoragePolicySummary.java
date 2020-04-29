@@ -83,8 +83,10 @@ public class StoragePolicySummary {
 
   public String toString() {
     StringBuilder compliantBlocksSB = new StringBuilder();
-    compliantBlocksSB.append("\nBlocks satisfying the specified storage policy:");
-    compliantBlocksSB.append("\nStorage Policy                  # of blocks       % of blocks\n");
+    compliantBlocksSB
+        .append("\nBlocks satisfying the specified storage policy:")
+        .append("\nStorage Policy"
+            + "                  # of blocks       % of blocks\n");
     StringBuilder nonCompliantBlocksSB = new StringBuilder();
     Formatter compliantFormatter = new Formatter(compliantBlocksSB);
     Formatter nonCompliantFormatter = new Formatter(nonCompliantBlocksSB);
@@ -103,9 +105,10 @@ public class StoragePolicySummary {
             percentFormat.format(percent));
       } else {
         if (nonCompliantBlocksSB.length() == 0) {
-          nonCompliantBlocksSB.append("\nBlocks NOT satisfying the specified storage policy:");
-          nonCompliantBlocksSB.append("\nStorage Policy                  ");
-          nonCompliantBlocksSB.append(
+          nonCompliantBlocksSB
+              .append("\nBlocks NOT satisfying the specified storage policy:")
+              .append("\nStorage Policy                  ")
+              .append(
               "Specified Storage Policy      # of blocks       % of blocks\n");
         }
         nonCompliantFormatter.format("%-35s %-20s %10d  %20s%n",

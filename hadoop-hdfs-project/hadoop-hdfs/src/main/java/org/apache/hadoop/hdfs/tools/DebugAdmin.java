@@ -21,7 +21,6 @@ import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -29,6 +28,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.file.Files;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -51,6 +51,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 
 /**
  * This class implements debug operations on the HDFS command-line.
@@ -97,15 +98,17 @@ public class DebugAdmin extends Configured implements Tool {
     VerifyMetaCommand() {
       super("verifyMeta",
 "verifyMeta -meta <metadata-file> [-block <block-file>]",
-"  Verify HDFS metadata and block files.  If a block file is specified, we\n" +
-"  will verify that the checksums in the metadata file match the block\n" +
+"  Verify HDFS metadata and block files.  If a block file is specified, we" +
+    System.lineSeparator() +
+"  will verify that the checksums in the metadata file match the block" +
+    System.lineSeparator() +
 "  file.");
     }
 
     int run(List<String> args) throws IOException {
       if (args.size() == 0) {
         System.out.println(usageText);
-        System.out.println(helpText + "\n");
+        System.out.println(helpText + System.lineSeparator());
         return 1;
       }
       String blockFile = StringUtils.popOptionWithArgument("-block", args);
@@ -212,10 +215,15 @@ public class DebugAdmin extends Configured implements Tool {
       super("computeMeta",
           "computeMeta -block <block-file> -out <output-metadata-file>",
           "  Compute HDFS metadata from the specified block file, and save it"
-              + " to\n  the specified output metadata file.\n\n"
-              + "**NOTE: Use at your own risk!\n If the block file is corrupt"
-              + " and you overwrite it's meta file, \n it will show up"
-              + " as good in HDFS, but you can't read the data.\n"
+              + " to" + System.lineSeparator()
+              + "  the specified output metadata file."
+              + System.lineSeparator() + System.lineSeparator()
+              + "**NOTE: Use at your own risk!" + System.lineSeparator()
+              + " If the block file is corrupt"
+              + " and you overwrite it's meta file, " + System.lineSeparator()
+              + " it will show up"
+              + " as good in HDFS, but you can't read the data."
+              + System.lineSeparator()
               + " Only use as a last measure, and when you are 100% certain"
               + " the block file is good.");
     }
@@ -234,7 +242,7 @@ public class DebugAdmin extends Configured implements Tool {
     int run(List<String> args) throws IOException {
       if (args.size() == 0) {
         System.out.println(usageText);
-        System.out.println(helpText + "\n");
+        System.out.println(helpText + System.lineSeparator());
         return 1;
       }
       final String name = StringUtils.popOptionWithArgument("-block", args);
@@ -268,7 +276,7 @@ public class DebugAdmin extends Configured implements Tool {
 
         final int smallBufferSize = DFSUtilClient.getSmallBufferSize(conf);
         metaOut = new DataOutputStream(
-            new BufferedOutputStream(new FileOutputStream(srcMeta),
+            new BufferedOutputStream(Files.newOutputStream(srcMeta.toPath()),
                 smallBufferSize));
         BlockMetadataHeader.writeHeader(metaOut, checksum);
         metaOut.close();
@@ -291,7 +299,8 @@ public class DebugAdmin extends Configured implements Tool {
     RecoverLeaseCommand() {
       super("recoverLease",
 "recoverLease -path <path> [-retries <num-retries>]",
-"  Recover the lease on the specified path.  The path must reside on an\n" +
+"  Recover the lease on the specified path.  The path must reside on an" +
+    System.lineSeparator() +
 "  HDFS filesystem.  The default number of retries is 1.");
     }
 
@@ -300,7 +309,7 @@ public class DebugAdmin extends Configured implements Tool {
     int run(List<String> args) throws IOException {
       if (args.size() == 0) {
         System.out.println(usageText);
-        System.out.println(helpText + "\n");
+        System.out.println(helpText + System.lineSeparator());
         return 1;
       }
       String pathStr = StringUtils.popOptionWithArgument("-path", args);
@@ -395,7 +404,7 @@ public class DebugAdmin extends Configured implements Tool {
         return 0;
       }
       System.out.println(command.usageText);
-      System.out.println(command.helpText + "\n");
+      System.out.println(command.helpText + System.lineSeparator());
       return 0;
     }
   }
@@ -450,11 +459,14 @@ public class DebugAdmin extends Configured implements Tool {
       if (!command.name.equals("help")) {
         System.out.println(command.usageText);
       }
+      System.out.println();
+      ToolRunner.printGenericCommandUsage(System.out);
     }
   }
 
-  public static void main(String[] argsArray) throws IOException {
+  public static void main(String[] argsArray) throws Exception {
     DebugAdmin debugAdmin = new DebugAdmin(new Configuration());
-    System.exit(debugAdmin.run(argsArray));
+    int res = ToolRunner.run(debugAdmin, argsArray);
+    System.exit(res);
   }
 }

@@ -28,8 +28,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
@@ -40,7 +40,7 @@ import org.apache.hadoop.mapreduce.lib.input.CombineFileSplit;
 
 public class TestFilePool {
 
-  static final Log LOG = LogFactory.getLog(TestFileQueue.class);
+  static final Logger LOG = LoggerFactory.getLogger(TestFileQueue.class);
   static final int NFILES = 26;
   static final Path base = getBaseDir();
 

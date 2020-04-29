@@ -1008,6 +1008,13 @@ The preferred block size XML element has been corrected from "\\\<perferredBlock
 
 ---
 
+* [HADOOP-12436](https://issues.apache.org/jira/browse/HADOOP-12436) | *Major* | **GlobPattern regex library has performance issues with wildcard characters**
+
+GlobFilter and RegexFilter.compile() now returns com.google.re2j.pattern.Pattern instead of java.util.regex.Pattern
+
+
+---
+
 * [HDFS-9184](https://issues.apache.org/jira/browse/HDFS-9184) | *Major* | **Logging HDFS operation's caller context into audit logs**
 
 The feature needs to enabled by setting "hadoop.caller.context.enabled" to true. When the feature is used, additional fields are written into namenode audit log records.
@@ -1461,6 +1468,13 @@ Add new flag to allow supporting path style addressing for s3a
 * [HADOOP-12811](https://issues.apache.org/jira/browse/HADOOP-12811) | *Critical* | **Change kms server port number which conflicts with HMaster port number**
 
 The default port for KMS service is now 9600. This is to avoid conflicts on the previous port 16000, which is also used by HMaster as the default port.
+
+
+---
+
+* [HDFS-9412](https://issues.apache.org/jira/browse/HDFS-9412) | *Major* | **getBlocks occupies FSLock and takes too long to complete**
+
+Skip blocks with size below dfs.balancer.getBlocks.min-block-size (default 10MB) when a balancer asks for a list of blocks.
 
 
 ---

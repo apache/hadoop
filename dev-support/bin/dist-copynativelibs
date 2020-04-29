@@ -72,7 +72,7 @@ function bundle_native_bin
   fi
 
   cd "${libdir}" || exit 1
-  ${TAR} ./*"${libpattern}"* | (cd "${TARGET_BIN_DIR}"/  || exit 1 ; ${UNTAR})
+  ${TAR} ./*"${binpattern}"* | (cd "${TARGET_BIN_DIR}"/  || exit 1 ; ${UNTAR})
   if [[ $? -ne 0 ]]; then
     echo "Bundling bin files for ${binoption} failed"
     exit 1
@@ -95,6 +95,12 @@ for i in "$@"; do
     ;;
     --isalbundle=*)
       ISALBUNDLE=${i#*=}
+    ;;
+    --pmdklib=*)
+      PMDKLIB=${i#*=}
+    ;;
+    --pmdkbundle=*)
+      PMDKBUNDLE=${i#*=}
     ;;
     --opensslbinbundle=*)
       OPENSSLBINBUNDLE=${i#*=}
@@ -146,13 +152,15 @@ if [[ -d "${LIB_DIR}" ]]; then
     exit 1
   fi
 
-  bundle_native_lib "${SNAPPYLIBBUNDLE}" "snappy.lib" "snappy" "${SNAPPYLIB}"
+  bundle_native_lib "${SNAPPYLIBBUNDLE}" "snappy.lib" "libsnappy." "${SNAPPYLIB}"
 
-  bundle_native_lib "${ZSTDLIBBUNDLE}" "zstd.lib" "zstd" "${ZSTDLIB}"
+  bundle_native_lib "${ZSTDLIBBUNDLE}" "zstd.lib" "libzstd." "${ZSTDLIB}"
 
-  bundle_native_lib "${OPENSSLLIBBUNDLE}" "openssl.lib" "crypto" "${OPENSSLLIB}"
+  bundle_native_lib "${OPENSSLLIBBUNDLE}" "openssl.lib" "libcrypto." "${OPENSSLLIB}"
 
-  bundle_native_lib "${ISALBUNDLE}" "isal.lib" "isa" "${ISALLIB}"
+  bundle_native_lib "${ISALBUNDLE}" "isal.lib" "libisal." "${ISALLIB}"
+
+  bundle_native_lib "${PMDKBUNDLE}" "pmdk.lib" "pmdk" "${PMDKLIB}"
 fi
 
 # Windows

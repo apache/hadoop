@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import java.util.*;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Consumer;
 
 /** The class represents a cluster of computer with a tree hierarchical
  * network topology.
@@ -105,7 +106,7 @@ public class NetworkTopology {
   private boolean clusterEverBeenMultiRack = false;
 
   /** the lock used to manage access */
-  protected ReadWriteLock netlock = new ReentrantReadWriteLock();
+  protected ReadWriteLock netlock = new ReentrantReadWriteLock(true);
 
   // keeping the constructor because other components like MR still uses this.
   public NetworkTopology() {
@@ -114,7 +115,7 @@ public class NetworkTopology {
   }
 
   /** Add a leaf node
-   * Update node counter & rack counter if necessary
+   * Update node counter &amp; rack counter if necessary
    * @param node node to be added; can be null
    * @exception IllegalArgumentException if add a node to a leave 
                                          or node to be added is not a leaf
@@ -146,10 +147,8 @@ public class NetworkTopology {
         if (rack == null) {
           incrementRacks();
         }
-        if (!(node instanceof InnerNode)) {
-          if (depthOfAllLeaves == -1) {
-            depthOfAllLeaves = node.getLevel();
-          }
+        if (depthOfAllLeaves == -1) {
+          depthOfAllLeaves = node.getLevel();
         }
       }
       LOG.debug("NetworkTopology became:\n{}", this);
@@ -295,22 +294,12 @@ public class NetworkTopology {
   
   /** @return the total number of racks */
   public int getNumOfRacks() {
-    netlock.readLock().lock();
-    try {
-      return numOfRacks;
-    } finally {
-      netlock.readLock().unlock();
-    }
+    return numOfRacks;
   }
 
   /** @return the total number of leaf nodes */
   public int getNumOfLeaves() {
-    netlock.readLock().lock();
-    try {
-      return clusterMap.getNumOfLeaves();
-    } finally {
-      netlock.readLock().unlock();
-    }
+    return clusterMap.getNumOfLeaves();
   }
 
   /** Return the distance between two nodes
@@ -498,10 +487,10 @@ public class NetworkTopology {
   protected Node chooseRandom(final String scope, String excludedScope,
       final Collection<Node> excludedNodes) {
     if (excludedScope != null) {
-      if (scope.startsWith(excludedScope)) {
+      if (isChildScope(scope, excludedScope)) {
         return null;
       }
-      if (!excludedScope.startsWith(scope)) {
+      if (!isChildScope(excludedScope, scope)) {
         excludedScope = null;
       }
     }
@@ -522,36 +511,116 @@ public class NetworkTopology {
         numOfDatanodes -= ((InnerNode)node).getNumOfLeaves();
       }
     }
-    if (numOfDatanodes == 0) {
-      LOG.debug("Failed to find datanode (scope=\"{}\" excludedScope=\"{}\").",
-          scope, excludedScope);
+    if (numOfDatanodes <= 0) {
+      LOG.debug("Failed to find datanode (scope=\"{}\" excludedScope=\"{}\")."
+              + " numOfDatanodes={}",
+          scope, excludedScope, numOfDatanodes);
       return null;
     }
-    Node ret = null;
     final int availableNodes;
     if (excludedScope == null) {
       availableNodes = countNumOfAvailableNodes(scope, excludedNodes);
     } else {
-      availableNodes =
-          countNumOfAvailableNodes("~" + excludedScope, excludedNodes);
+      netlock.readLock().lock();
+      try {
+        availableNodes = countNumOfAvailableNodes(scope, excludedNodes) -
+            countNumOfAvailableNodes(excludedScope, excludedNodes);
+      } finally {
+        netlock.readLock().unlock();
+      }
     }
     LOG.debug("Choosing random from {} available nodes on node {},"
-        + " scope={}, excludedScope={}, excludeNodes={}", availableNodes,
-        innerNode, scope, excludedScope, excludedNodes);
+        + " scope={}, excludedScope={}, excludeNodes={}. numOfDatanodes={}.",
+        availableNodes, innerNode, scope, excludedScope, excludedNodes,
+        numOfDatanodes);
+    Node ret = null;
     if (availableNodes > 0) {
-      do {
-        int leaveIndex = r.nextInt(numOfDatanodes);
-        ret = innerNode.getLeaf(leaveIndex, node);
-        if (excludedNodes == null || !excludedNodes.contains(ret)) {
-          break;
-        } else {
-          LOG.debug("Node {} is excluded, continuing.", ret);
-        }
-        // We've counted numOfAvailableNodes inside the lock, so there must be
-        // at least 1 satisfying node. Keep trying until we found it.
-      } while (true);
+      ret = chooseRandom(innerNode, node, excludedNodes, numOfDatanodes,
+          availableNodes);
     }
     LOG.debug("chooseRandom returning {}", ret);
+    return ret;
+  }
+
+  /**
+   * Randomly choose one node under <i>parentNode</i>, considering the exclude
+   * nodes and scope. Should be called with {@link #netlock}'s readlock held.
+   *
+   * @param parentNode        the parent node
+   * @param excludedScopeNode the node corresponding to the exclude scope.
+   * @param excludedNodes     a collection of nodes to be excluded from
+   * @param totalInScopeNodes total number of nodes under parentNode, excluding
+   *                          the excludedScopeNode
+   * @param availableNodes    number of available nodes under parentNode that
+   *                          could be chosen, excluding excludedNodes
+   * @return the chosen node, or null if none can be chosen
+   */
+  private Node chooseRandom(final InnerNode parentNode,
+      final Node excludedScopeNode, final Collection<Node> excludedNodes,
+      final int totalInScopeNodes, final int availableNodes) {
+    if (totalInScopeNodes < availableNodes) {
+      LOG.warn("Total Nodes in scope : {} are less than Available Nodes : {}",
+          totalInScopeNodes, availableNodes);
+      return null;
+    }
+    if (excludedNodes == null || excludedNodes.isEmpty()) {
+      // if there are no excludedNodes, randomly choose a node
+      final int index = r.nextInt(totalInScopeNodes);
+      return parentNode.getLeaf(index, excludedScopeNode);
+    }
+
+    // excludedNodes non empty.
+    // Choose the nth VALID node, where n is random. VALID meaning it can be
+    // returned, after considering exclude scope and exclude nodes.
+    // The probability of being chosen should be equal for all VALID nodes.
+    // Notably, we do NOT choose nth node, and find the next valid node
+    // if n is excluded - this will make the probability of the node immediately
+    // after an excluded node higher.
+    //
+    // Start point is always 0 and that's fine, because the nth valid node
+    // logic provides equal randomness.
+    //
+    // Consider this example, where 1,3,5 out of the 10 nodes are excluded:
+    // 1 2 3 4 5 6 7 8 9 10
+    // x   x   x
+    // We will randomly choose the nth valid node where n is [0,6].
+    // We do NOT choose a random number n and just use the closest valid node,
+    // for example both n=3 and n=4 will choose 4, making it a 2/10 probability,
+    // higher than the expected 1/7
+    // totalInScopeNodes=10 and availableNodes=7 in this example.
+    int nthValidToReturn = r.nextInt(availableNodes);
+    LOG.debug("nthValidToReturn is {}", nthValidToReturn);
+    Node ret =
+        parentNode.getLeaf(r.nextInt(totalInScopeNodes), excludedScopeNode);
+    if (!excludedNodes.contains(ret)) {
+      // return if we're lucky enough to get a valid node at a random first pick
+      LOG.debug("Chosen node {} from first random", ret);
+      return ret;
+    } else {
+      ret = null;
+    }
+    Node lastValidNode = null;
+    for (int i = 0; i < totalInScopeNodes; ++i) {
+      ret = parentNode.getLeaf(i, excludedScopeNode);
+      if (!excludedNodes.contains(ret)) {
+        if (nthValidToReturn == 0) {
+          break;
+        }
+        --nthValidToReturn;
+        lastValidNode = ret;
+      } else {
+        LOG.debug("Node {} is excluded, continuing.", ret);
+        ret = null;
+      }
+    }
+    if (ret == null && lastValidNode != null) {
+      LOG.error("BUG: Found lastValidNode {} but not nth valid node. "
+              + "parentNode={}, excludedScopeNode={}, excludedNodes={}, "
+              + "totalInScopeNodes={}, availableNodes={}, nthValidToReturn={}.",
+          lastValidNode, parentNode, excludedScopeNode, excludedNodes,
+          totalInScopeNodes, availableNodes, nthValidToReturn);
+      ret = lastValidNode;
+    }
     return ret;
   }
 
@@ -599,9 +668,12 @@ public class NetworkTopology {
           if (node == null) {
             continue;
           }
-          if ((NodeBase.getPath(node) + NodeBase.PATH_SEPARATOR_STR)
-              .startsWith(scope + NodeBase.PATH_SEPARATOR_STR)) {
-            excludedCountInScope++;
+          if (isNodeInScope(node, scope)) {
+            if (node instanceof InnerNode) {
+              excludedCountInScope += ((InnerNode) node).getNumOfLeaves();
+            } else {
+              excludedCountInScope++;
+            }
           } else {
             excludedCountOffScope++;
           }
@@ -631,18 +703,18 @@ public class NetworkTopology {
   public String toString() {
     // print the number of racks
     StringBuilder tree = new StringBuilder();
-    tree.append("Number of racks: ");
-    tree.append(numOfRacks);
-    tree.append("\n");
+    tree.append("Number of racks: ")
+        .append(numOfRacks)
+        .append("\n");
     // print the number of leaves
     int numOfLeaves = getNumOfLeaves();
-    tree.append("Expected number of leaves:");
-    tree.append(numOfLeaves);
-    tree.append("\n");
+    tree.append("Expected number of leaves:")
+        .append(numOfLeaves)
+        .append("\n");
     // print nodes
     for(int i=0; i<numOfLeaves; i++) {
-      tree.append(NodeBase.getPath(clusterMap.getLeaf(i, null)));
-      tree.append("\n");
+      tree.append(NodeBase.getPath(clusterMap.getLeaf(i, null)))
+          .append("\n");
     }
     return tree.toString();
   }
@@ -679,6 +751,7 @@ public class NetworkTopology {
    * @param node Replica of data
    * @return weight
    */
+  @VisibleForTesting
   protected int getWeight(Node reader, Node node) {
     // 0 is local, 2 is same rack, and each level on each node increases the
     //weight by 1
@@ -721,7 +794,8 @@ public class NetworkTopology {
    * @param node Replica of data
    * @return weight
    */
-  private static int getWeightUsingNetworkLocation(Node reader, Node node) {
+  @VisibleForTesting
+  protected static int getWeightUsingNetworkLocation(Node reader, Node node) {
     //Start off by initializing to Integer.MAX_VALUE
     int weight = Integer.MAX_VALUE;
     if(reader != null && node != null) {
@@ -751,8 +825,10 @@ public class NetworkTopology {
           }
           currentLevel++;
         }
+        // +2 to correct the weight between reader and node rather than
+        // between parent of reader and parent of node.
         weight = (readerPathToken.length - currentLevel) +
-            (nodePathToken.length - currentLevel);
+            (nodePathToken.length - currentLevel) + 2;
       }
     }
     return weight;
@@ -784,12 +860,12 @@ public class NetworkTopology {
 
   /**
    * Sort nodes array by network distance to <i>reader</i>.
-   * <p/>
+   * <p>
    * In a three-level topology, a node can be either local, on the same rack,
    * or on a different rack from the reader. Sorting the nodes based on network
    * distance from the reader reduces network traffic and improves
    * performance.
-   * <p/>
+   * <p>
    * As an additional twist, we also randomize the nodes at each network
    * distance. This helps with load balancing when there is data skew.
    *
@@ -802,16 +878,38 @@ public class NetworkTopology {
      * This method is called if the reader is a datanode,
      * so nonDataNodeReader flag is set to false.
      */
-    sortByDistance(reader, nodes, activeLen, false);
+    sortByDistance(reader, nodes, activeLen, list -> Collections.shuffle(list));
   }
 
   /**
-   * Sort nodes array by network distance to <i>reader</i>.
-   * <p/> using network location. This is used when the reader
+   * Sort nodes array by network distance to <i>reader</i> with secondary sort.
+   * <p>
+   * In a three-level topology, a node can be either local, on the same rack,
+   * or on a different rack from the reader. Sorting the nodes based on network
+   * distance from the reader reduces network traffic and improves
+   * performance.
+   * <p>
+   * As an additional twist, we also randomize the nodes at each network
+   * distance. This helps with load balancing when there is data skew.
+   *
+   * @param reader    Node where data will be read
+   * @param nodes     Available replicas with the requested data
+   * @param activeLen Number of active nodes at the front of the array
+   * @param secondarySort a secondary sorting strategy which can inject into
+   *     that point from outside to help sort the same distance.
+   */
+  public <T extends Node> void sortByDistance(Node reader, T[] nodes,
+      int activeLen, Consumer<List<T>> secondarySort){
+    sortByDistance(reader, nodes, activeLen, secondarySort, false);
+  }
+
+  /**
+   * Sort nodes array by network distance to <i>reader</i> with secondary sort.
+   * <p> using network location. This is used when the reader
    * is not a datanode. Sorting the nodes based on network distance
    * from the reader reduces network traffic and improves
    * performance.
-   * <p/>
+   * <p>
    *
    * @param reader    Node where data will be read
    * @param nodes     Available replicas with the requested data
@@ -823,12 +921,32 @@ public class NetworkTopology {
      * This method is called if the reader is not a datanode,
      * so nonDataNodeReader flag is set to true.
      */
-    sortByDistance(reader, nodes, activeLen, true);
+    sortByDistanceUsingNetworkLocation(reader, nodes, activeLen,
+        list -> Collections.shuffle(list));
   }
 
   /**
    * Sort nodes array by network distance to <i>reader</i>.
-   * <p/>
+   * <p> using network location. This is used when the reader
+   * is not a datanode. Sorting the nodes based on network distance
+   * from the reader reduces network traffic and improves
+   * performance.
+   * <p>
+   *
+   * @param reader    Node where data will be read
+   * @param nodes     Available replicas with the requested data
+   * @param activeLen Number of active nodes at the front of the array
+   * @param secondarySort a secondary sorting strategy which can inject into
+   *     that point from outside to help sort the same distance.
+   */
+  public <T extends Node> void sortByDistanceUsingNetworkLocation(Node reader,
+      T[] nodes, int activeLen, Consumer<List<T>> secondarySort) {
+    sortByDistance(reader, nodes, activeLen, secondarySort, true);
+  }
+
+  /**
+   * Sort nodes array by network distance to <i>reader</i>.
+   * <p>
    * As an additional twist, we also randomize the nodes at each network
    * distance. This helps with load balancing when there is data skew.
    *
@@ -837,7 +955,8 @@ public class NetworkTopology {
    * @param activeLen Number of active nodes at the front of the array
    * @param nonDataNodeReader True if the reader is not a datanode
    */
-  private void sortByDistance(Node reader, Node[] nodes, int activeLen,
+  private <T extends Node> void sortByDistance(Node reader, T[] nodes,
+      int activeLen, Consumer<List<T>> secondarySort,
       boolean nonDataNodeReader) {
     /** Sort weights for the nodes array */
     int[] weights = new int[activeLen];
@@ -849,23 +968,23 @@ public class NetworkTopology {
       }
     }
     // Add weight/node pairs to a TreeMap to sort
-    TreeMap<Integer, List<Node>> tree = new TreeMap<Integer, List<Node>>();
+    TreeMap<Integer, List<T>> tree = new TreeMap<>();
     for (int i=0; i<activeLen; i++) {
       int weight = weights[i];
-      Node node = nodes[i];
-      List<Node> list = tree.get(weight);
+      T node = nodes[i];
+      List<T> list = tree.get(weight);
       if (list == null) {
         list = Lists.newArrayListWithExpectedSize(1);
         tree.put(weight, list);
       }
       list.add(node);
     }
-
+    // Sort nodes which have the same weight using secondarySort.
     int idx = 0;
-    for (List<Node> list: tree.values()) {
+    for (List<T> list: tree.values()) {
       if (list != null) {
-        Collections.shuffle(list, r);
-        for (Node n: list) {
+        secondarySort.accept(list);
+        for (T n: list) {
           nodes[idx] = n;
           idx++;
         }
@@ -873,5 +992,34 @@ public class NetworkTopology {
     }
     Preconditions.checkState(idx == activeLen,
         "Sorted the wrong number of nodes!");
+  }
+
+  /**
+   * Checks whether one scope is contained in the other scope.
+   * @param parentScope the parent scope to check
+   * @param childScope  the child scope which needs to be checked.
+   * @return true if childScope is contained within the parentScope
+   */
+  protected static boolean isChildScope(final String parentScope,
+      final String childScope) {
+    String pScope = parentScope.endsWith(NodeBase.PATH_SEPARATOR_STR) ?
+        parentScope :  parentScope + NodeBase.PATH_SEPARATOR_STR;
+    String cScope = childScope.endsWith(NodeBase.PATH_SEPARATOR_STR) ?
+        childScope :  childScope + NodeBase.PATH_SEPARATOR_STR;
+    return pScope.startsWith(cScope);
+  }
+
+  /**
+   * Checks whether a node belongs to the scope.
+   * @param node  the node to check.
+   * @param scope scope to check.
+   * @return true if node lies within the scope
+   */
+  protected static boolean isNodeInScope(Node node, String scope) {
+    if (!scope.endsWith(NodeBase.PATH_SEPARATOR_STR)) {
+      scope += NodeBase.PATH_SEPARATOR_STR;
+    }
+    String nodeLocation = NodeBase.getPath(node) + NodeBase.PATH_SEPARATOR_STR;
+    return nodeLocation.startsWith(scope);
   }
 }

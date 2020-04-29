@@ -33,15 +33,15 @@ import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.apache.hadoop.mapreduce.lib.input.CombineFileSplit;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Given a {@link #FilePool}, obtain a set of files capable of satisfying
  * a full set of splits, then iterate over each source to fill the request.
  */
 class InputStriper {
-  public static final Log LOG = LogFactory.getLog(InputStriper.class);
+  public static final Logger LOG = LoggerFactory.getLogger(InputStriper.class);
   int idx;
   long currentStart;
   FileStatus current;

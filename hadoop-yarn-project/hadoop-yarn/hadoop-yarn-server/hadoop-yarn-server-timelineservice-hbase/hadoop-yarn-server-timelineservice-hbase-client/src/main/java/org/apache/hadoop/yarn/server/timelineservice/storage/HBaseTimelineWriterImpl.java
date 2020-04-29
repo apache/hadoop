@@ -29,6 +29,8 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
 import  org.apache.hadoop.yarn.api.records.timelineservice.ApplicationEntity;
+import org.apache.hadoop.yarn.api.records.timelineservice.SubApplicationEntity;
+import org.apache.hadoop.yarn.api.records.timelineservice.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
@@ -55,6 +57,10 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.common.LongKeyConve
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.Separator;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.StringKeyConverter;
 import org.apache.hadoop.yarn.server.timelineservice.storage.common.TypedBufferedMutator;
+import org.apache.hadoop.yarn.server.timelineservice.storage.domain.DomainColumn;
+import org.apache.hadoop.yarn.server.timelineservice.storage.domain.DomainRowKey;
+import org.apache.hadoop.yarn.server.timelineservice.storage.domain.DomainTable;
+import org.apache.hadoop.yarn.server.timelineservice.storage.domain.DomainTableRW;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumn;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityColumnPrefix;
 import org.apache.hadoop.yarn.server.timelineservice.storage.entity.EntityRowKey;
@@ -94,12 +100,14 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
       .getLogger(HBaseTimelineWriterImpl.class);
 
   private Connection conn;
+  private TimelineStorageMonitor storageMonitor;
   private TypedBufferedMutator<EntityTable> entityTable;
   private TypedBufferedMutator<AppToFlowTable> appToFlowTable;
   private TypedBufferedMutator<ApplicationTable> applicationTable;
   private TypedBufferedMutator<FlowActivityTable> flowActivityTable;
   private TypedBufferedMutator<FlowRunTable> flowRunTable;
   private TypedBufferedMutator<SubApplicationTable> subApplicationTable;
+  private TypedBufferedMutator<DomainTable> domainTable;
 
   /**
    * Used to convert strings key components to and from storage format.
@@ -138,11 +146,19 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
         new FlowActivityTableRW().getTableMutator(hbaseConf, conn);
     subApplicationTable =
         new SubApplicationTableRW().getTableMutator(hbaseConf, conn);
+    domainTable = new DomainTableRW().getTableMutator(hbaseConf, conn);
 
     UserGroupInformation ugi = UserGroupInformation.isSecurityEnabled() ?
         UserGroupInformation.getLoginUser() :
         UserGroupInformation.getCurrentUser();
+    storageMonitor = new HBaseStorageMonitor(conf);
     LOG.info("Initialized HBaseTimelineWriterImpl UGI to " + ugi);
+  }
+
+  @Override
+  protected void serviceStart() throws Exception {
+    super.serviceStart();
+    storageMonitor.start();
   }
 
   /**
@@ -152,7 +168,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
   public TimelineWriteResponse write(TimelineCollectorContext context,
       TimelineEntities data, UserGroupInformation callerUgi)
       throws IOException {
-
+    storageMonitor.checkStorageIsUp();
     TimelineWriteResponse putStatus = new TimelineWriteResponse();
 
     String clusterId = context.getClusterId();
@@ -197,7 +213,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
         store(rowKey, te, flowVersion, Tables.ENTITY_TABLE);
       }
 
-      if (!isApplication && !userId.equals(subApplicationUser)) {
+      if (!isApplication && SubApplicationEntity.isSubApplicationEntity(te)) {
         SubApplicationRowKey subApplicationRowKey =
             new SubApplicationRowKey(subApplicationUser, clusterId,
                 te.getType(), te.getIdPrefix(), te.getId(), userId);
@@ -227,6 +243,42 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
         }
       }
     }
+    return putStatus;
+  }
+
+  @Override
+  public TimelineWriteResponse write(TimelineCollectorContext context,
+      TimelineDomain domain)
+      throws IOException {
+    storageMonitor.checkStorageIsUp();
+    TimelineWriteResponse putStatus = new TimelineWriteResponse();
+
+    String clusterId = context.getClusterId();
+    String domainId = domain.getId();
+
+    // defensive coding to avoid NPE during row key construction
+    if (clusterId == null) {
+      LOG.warn(
+          "Found null for clusterId. Not proceeding with writing to hbase");
+      return putStatus;
+    }
+
+    DomainRowKey domainRowKey = new DomainRowKey(clusterId, domainId);
+    byte[] rowKey = domainRowKey.getRowKey();
+
+    ColumnRWHelper.store(rowKey, domainTable, DomainColumn.CREATED_TIME, null,
+        domain.getCreatedTime());
+    ColumnRWHelper.store(rowKey, domainTable, DomainColumn.DESCRIPTION, null,
+        domain.getDescription());
+    ColumnRWHelper
+        .store(rowKey, domainTable, DomainColumn.MODIFICATION_TIME, null,
+            domain.getModifiedTime());
+    ColumnRWHelper.store(rowKey, domainTable, DomainColumn.OWNER, null,
+        domain.getOwner());
+    ColumnRWHelper.store(rowKey, domainTable, DomainColumn.READERS, null,
+        domain.getReaders());
+    ColumnRWHelper.store(rowKey, domainTable, DomainColumn.WRITERS, null,
+        domain.getWriters());
     return putStatus;
   }
 
@@ -548,6 +600,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
   @Override
   public TimelineWriteResponse aggregate(TimelineEntity data,
       TimelineAggregationTrack track) throws IOException {
+    storageMonitor.checkStorageIsUp();
     return null;
   }
 
@@ -560,6 +613,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
    */
   @Override
   public void flush() throws IOException {
+    storageMonitor.checkStorageIsUp();
     // flush all buffered mutators
     entityTable.flush();
     appToFlowTable.flush();
@@ -567,6 +621,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
     flowRunTable.flush();
     flowActivityTable.flush();
     subApplicationTable.flush();
+    domainTable.flush();
   }
 
   /**
@@ -575,37 +630,56 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
    */
   @Override
   protected void serviceStop() throws Exception {
-    if (entityTable != null) {
-      LOG.info("closing the entity table");
-      // The close API performs flushing and releases any resources held
-      entityTable.close();
+    boolean isStorageUp = true;
+    try {
+      storageMonitor.checkStorageIsUp();
+    } catch (IOException e) {
+      LOG.warn("Failed to close the timeline tables as Hbase is down", e);
+      isStorageUp = false;
     }
-    if (appToFlowTable != null) {
-      LOG.info("closing the app_flow table");
-      // The close API performs flushing and releases any resources held
-      appToFlowTable.close();
+
+    if (isStorageUp) {
+      if (entityTable != null) {
+        LOG.info("closing the entity table");
+        // The close API performs flushing and releases any resources held
+        entityTable.close();
+      }
+      if (appToFlowTable != null) {
+        LOG.info("closing the app_flow table");
+        // The close API performs flushing and releases any resources held
+        appToFlowTable.close();
+      }
+      if (applicationTable != null) {
+        LOG.info("closing the application table");
+        applicationTable.close();
+      }
+      if (flowRunTable != null) {
+        LOG.info("closing the flow run table");
+        // The close API performs flushing and releases any resources held
+        flowRunTable.close();
+      }
+      if (flowActivityTable != null) {
+        LOG.info("closing the flowActivityTable table");
+        // The close API performs flushing and releases any resources held
+        flowActivityTable.close();
+      }
+      if (subApplicationTable != null) {
+        subApplicationTable.close();
+      }
+      if (domainTable != null) {
+        domainTable.close();
+      }
+      if (conn != null) {
+        LOG.info("closing the hbase Connection");
+        conn.close();
+      }
     }
-    if (applicationTable != null) {
-      LOG.info("closing the application table");
-      applicationTable.close();
-    }
-    if (flowRunTable != null) {
-      LOG.info("closing the flow run table");
-      // The close API performs flushing and releases any resources held
-      flowRunTable.close();
-    }
-    if (flowActivityTable != null) {
-      LOG.info("closing the flowActivityTable table");
-      // The close API performs flushing and releases any resources held
-      flowActivityTable.close();
-    }
-    if (subApplicationTable != null) {
-      subApplicationTable.close();
-    }
-    if (conn != null) {
-      LOG.info("closing the hbase Connection");
-      conn.close();
-    }
+    storageMonitor.stop();
     super.serviceStop();
   }
+
+  protected TimelineStorageMonitor getTimelineStorageMonitor() {
+    return storageMonitor;
+  }
+
 }

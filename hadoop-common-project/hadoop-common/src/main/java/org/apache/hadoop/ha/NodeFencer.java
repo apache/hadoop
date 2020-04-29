@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory;
  * <code>com.example.foo.MyMethod</code>
  * The class provided must implement the {@link FenceMethod} interface.
  * The fencing methods that ship with Hadoop may also be referred to
- * by shortened names:<p>
+ * by shortened names:<br>
  * <ul>
  * <li><code>shell(/path/to/some/script.sh args...)</code></li>
  * <li><code>sshfence(...)</code> (see {@link SshFenceByTcpPort})

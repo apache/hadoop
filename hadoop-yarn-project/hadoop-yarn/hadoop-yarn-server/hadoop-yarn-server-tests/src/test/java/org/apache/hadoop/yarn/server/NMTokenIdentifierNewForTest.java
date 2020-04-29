@@ -33,7 +33,7 @@ import org.apache.hadoop.yarn.api.records.impl.pb.NodeIdPBImpl;
 import org.apache.hadoop.yarn.proto.YarnSecurityTestTokenProtos.NMTokenIdentifierNewProto;
 import org.apache.hadoop.yarn.security.NMTokenIdentifier;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,7 +68,7 @@ public class NMTokenIdentifierNewForTest extends NMTokenIdentifier {
   
   @Override
   public void write(DataOutput out) throws IOException {
-    LOG.debug("Writing NMTokenIdentifierNewForTest to RPC layer: " + this);
+    LOG.debug("Writing NMTokenIdentifierNewForTest to RPC layer: {}", this);
     out.write(proto.toByteArray());
   }
 

@@ -186,4 +186,9 @@ public class NNHAServiceTarget extends HAServiceTarget {
   public boolean isAutoFailoverEnabled() {
     return autoFailoverEnabled;
   }
+
+  @Override
+  public boolean supportObserver() {
+    return true;
+  }
 }

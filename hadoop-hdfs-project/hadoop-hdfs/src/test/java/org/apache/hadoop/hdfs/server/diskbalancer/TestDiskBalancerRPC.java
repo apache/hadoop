@@ -51,7 +51,7 @@ import java.util.Random;
 import static org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkStatus.Result.NO_PLAN;
 import static org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkStatus.Result.PLAN_DONE;
 import static org.apache.hadoop.hdfs.server.datanode.DiskBalancerWorkStatus.Result.PLAN_UNDER_PROGRESS;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 /**
  * Test DiskBalancer RPC.
@@ -265,7 +265,7 @@ public class TestDiskBalancerRPC {
         dest = (FsVolumeImpl) refs.get(1);
         DiskBalancerTestUtil.moveAllDataToDestVolume(dnNode.getFSDataset(),
             source, dest);
-        assertTrue(DiskBalancerTestUtil.getBlockCount(source) == 0);
+        assertEquals(0, DiskBalancerTestUtil.getBlockCount(source, false));
       } finally {
         refs.close();
       }

@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement;
 
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.DiagnosticsCollector;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppSchedulingInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
@@ -32,6 +33,8 @@ import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * <p>
@@ -55,6 +58,7 @@ public abstract class AppPlacementAllocator<N extends SchedulerNode> {
   protected AppSchedulingInfo appSchedulingInfo;
   protected SchedulerRequestKey schedulerRequestKey;
   protected RMContext rmContext;
+  private AtomicInteger placementAttempt = new AtomicInteger(0);
 
   /**
    * Get iterator of preferred node depends on requirement and/or availability.
@@ -150,8 +154,13 @@ public abstract class AppPlacementAllocator<N extends SchedulerNode> {
    *
    * @param schedulerNode schedulerNode
    * @param schedulingMode schedulingMode
+   * @param dcOpt optional diagnostics collector
    * @return accepted/not
    */
+  public abstract boolean precheckNode(SchedulerNode schedulerNode,
+      SchedulingMode schedulingMode,
+      Optional<DiagnosticsCollector> dcOpt);
+
   public abstract boolean precheckNode(SchedulerNode schedulerNode,
       SchedulingMode schedulingMode);
 
@@ -191,5 +200,19 @@ public abstract class AppPlacementAllocator<N extends SchedulerNode> {
     this.appSchedulingInfo = appSchedulingInfo;
     this.rmContext = rmContext;
     this.schedulerRequestKey = schedulerRequestKey;
+  }
+
+  /**
+   * Get pending SchedulingRequest.
+   * @return SchedulingRequest
+   */
+  public abstract SchedulingRequest getSchedulingRequest();
+
+  public int getPlacementAttempt() {
+    return placementAttempt.get();
+  }
+
+  public void incrementPlacementAttempt() {
+    placementAttempt.getAndIncrement();
   }
 }

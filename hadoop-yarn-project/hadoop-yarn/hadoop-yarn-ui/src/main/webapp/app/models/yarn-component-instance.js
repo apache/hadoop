@@ -31,6 +31,7 @@ export default DS.Model.extend({
   node: DS.attr('string'),
   hostUrl: DS.attr('string'),
   ipAddr: DS.attr('string'),
+  exposedPorts: DS.attr('string'),
   exitStatusCode: DS.attr('string'),
 
   createdDate: Ember.computed('createdTimestamp', function() {
@@ -47,5 +48,22 @@ export default DS.Model.extend({
       return Converter.timeStampToDate(timestamp);
     }
     return 'N/A';
+  }),
+
+  termLink: Ember.computed('node', 'containerId', function() {
+    var protocol = window.location.protocol;
+    var node = this.get('node');
+    var port = this.get('env.app.nodeManagerPort');
+    var containerId = this.get('containerId');
+    var url = protocol + "//" + node + ":" + port +
+       "/terminal/terminal.template?container=" + containerId;
+    return url;
+  }),
+
+  containerLogURL: Ember.computed('containerId', function() {
+    const containerId = this.get('containerId');
+    const attemptId = Converter.containerIdToAttemptId(containerId);
+    const appId = Converter.attemptIdToAppId(attemptId);
+    return `#/yarn-app/${appId}/logs?attempt=${attemptId}&containerid=${containerId}`;
   })
 });

@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.algorithm;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.AllocationTags;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -108,9 +109,7 @@ class LocalAllocationTagsManager extends AllocationTagsManager {
         });
       });
       appTempMappings.remove(applicationId);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Removed TEMP containers of app=" + applicationId);
-      }
+      LOG.debug("Removed TEMP containers of app={}", applicationId);
     }
   }
 
@@ -139,9 +138,21 @@ class LocalAllocationTagsManager extends AllocationTagsManager {
   }
 
   @Override
+  public long getNodeCardinalityByOp(NodeId nodeId, AllocationTags tags,
+      LongBinaryOperator op) throws InvalidAllocationTagsQueryException {
+    return tagsManager.getNodeCardinalityByOp(nodeId, tags, op);
+  }
+
+  @Override
   public long getRackCardinality(String rack, ApplicationId applicationId,
       String tag) throws InvalidAllocationTagsQueryException {
     return tagsManager.getRackCardinality(rack, applicationId, tag);
+  }
+
+  @Override
+  public long getRackCardinalityByOp(String rack, AllocationTags tags,
+      LongBinaryOperator op) throws InvalidAllocationTagsQueryException {
+    return tagsManager.getRackCardinalityByOp(rack, tags, op);
   }
 
   @Override
@@ -149,19 +160,5 @@ class LocalAllocationTagsManager extends AllocationTagsManager {
       ApplicationId applicationId, String tag)
       throws InvalidAllocationTagsQueryException {
     return tagsManager.allocationTagExistsOnNode(nodeId, applicationId, tag);
-  }
-
-  @Override
-  public long getNodeCardinalityByOp(NodeId nodeId,
-      ApplicationId applicationId, Set<String> tags, LongBinaryOperator op)
-      throws InvalidAllocationTagsQueryException {
-    return tagsManager.getNodeCardinalityByOp(nodeId, applicationId, tags, op);
-  }
-
-  @Override
-  public long getRackCardinalityByOp(String rack, ApplicationId applicationId,
-      Set<String> tags, LongBinaryOperator op)
-      throws InvalidAllocationTagsQueryException {
-    return tagsManager.getRackCardinalityByOp(rack, applicationId, tags, op);
   }
 }

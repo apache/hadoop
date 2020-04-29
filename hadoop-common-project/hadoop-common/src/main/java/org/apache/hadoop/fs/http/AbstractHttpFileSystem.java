@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.http;
 
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -35,6 +36,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URLConnection;
+
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
 abstract class AbstractHttpFileSystem extends FileSystem {
   private static final long DEFAULT_BLOCK_SIZE = 4096;
@@ -109,6 +112,21 @@ abstract class AbstractHttpFileSystem extends FileSystem {
   @Override
   public FileStatus getFileStatus(Path path) throws IOException {
     return new FileStatus(-1, false, 1, DEFAULT_BLOCK_SIZE, 0, path);
+  }
+
+  /**
+   * Declare that this filesystem connector is always read only.
+   * {@inheritDoc}
+   */
+  @Override
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+    switch (validatePathCapabilityArgs(path, capability)) {
+    case CommonPathCapabilities.FS_READ_ONLY_CONNECTOR:
+      return true;
+    default:
+      return super.hasPathCapability(path, capability);
+    }
   }
 
   private static class HttpDataInputStream extends FilterInputStream

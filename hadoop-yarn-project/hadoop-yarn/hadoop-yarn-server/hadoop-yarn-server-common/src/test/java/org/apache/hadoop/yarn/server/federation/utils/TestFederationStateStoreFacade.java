@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.server.federation.utils;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
@@ -133,6 +134,22 @@ public class TestFederationStateStoreFacade {
       Assert.assertEquals(stateStoreTestUtil.queryPolicyConfiguration(queue),
           facade.getPolicyConfiguration(queue));
     }
+  }
+
+  @Test
+  public void testSubClustersCache() throws YarnException {
+    Map<SubClusterId, SubClusterInfo> allClusters =
+        facade.getSubClusters(false);
+    Assert.assertEquals(numSubClusters, allClusters.size());
+    SubClusterId clusterId = new ArrayList<>(allClusters.keySet()).get(0);
+    // make  one subcluster down unregister
+    stateStoreTestUtil.deRegisterSubCluster(clusterId);
+    Map<SubClusterId, SubClusterInfo> activeClusters =
+        facade.getSubClusters(true);
+    Assert.assertEquals(numSubClusters - 1, activeClusters.size());
+    // Recheck false case.
+    allClusters = facade.getSubClusters(false);
+    Assert.assertEquals(numSubClusters, allClusters.size());
   }
 
   @Test

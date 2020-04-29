@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.security.token.block;
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
+import java.io.EOFException;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -32,6 +33,7 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.AccessModeProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockTokenSecretProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -55,6 +57,7 @@ public class BlockTokenIdentifier extends TokenIdentifier {
   private StorageType[] storageTypes;
   private String[] storageIds;
   private boolean useProto;
+  private byte[] handshakeMsg;
 
   private byte [] cache;
 
@@ -76,6 +79,7 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     this.storageIds = Optional.ofNullable(storageIds)
                               .orElse(new String[0]);
     this.useProto = useProto;
+    this.handshakeMsg = new byte[0];
   }
 
   @Override
@@ -134,6 +138,15 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     return storageIds;
   }
 
+  public byte[] getHandshakeMsg() {
+    return handshakeMsg;
+  }
+
+  public void setHandshakeMsg(byte[] bytes) {
+    cache = null; // invalidate the cache
+    handshakeMsg = bytes;
+  }
+
   @Override
   public String toString() {
     return "block_token_identifier (expiryDate=" + this.getExpiryDate()
@@ -182,13 +195,13 @@ public class BlockTokenIdentifier extends TokenIdentifier {
    * because we know the first field is the Expiry date.
    *
    * In the case of the legacy buffer, the expiry date is a VInt, so the size
-   * (which should always be >1) is encoded in the first byte - which is
+   * (which should always be &gt;1) is encoded in the first byte - which is
    * always negative due to this encoding. However, there are sometimes null
    * BlockTokenIdentifier written so we also need to handle the case there
    * the first byte is also 0.
    *
    * In the case of protobuf, the first byte is a type tag for the expiry date
-   * which is written as <code>(field_number << 3 |  wire_type</code>.
+   * which is written as <code>field_number &lt;&lt; 3 | wire_type</code>.
    * So as long as the field_number  is less than 16, but also positive, then
    * we know we have a Protobuf.
    *
@@ -203,6 +216,15 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     if (!dis.markSupported()) {
       throw new IOException("Could not peek first byte.");
     }
+
+    // this.cache should be assigned the raw bytes from the input data for
+    // upgrading compatibility. If we won't mutate fields and call getBytes()
+    // for something (e.g retrieve password), we should return the raw bytes
+    // instead of serializing the instance self fields to bytes, because we may
+    // lose newly added fields which we can't recognize
+    this.cache = IOUtils.readFullyToByteArray(dis);
+    dis.reset();
+
     dis.mark(1);
     final byte firstByte = dis.readByte();
     dis.reset();
@@ -226,19 +248,32 @@ public class BlockTokenIdentifier extends TokenIdentifier {
       modes.add(WritableUtils.readEnum(in, AccessMode.class));
     }
 
-    length = WritableUtils.readVInt(in);
-    StorageType[] readStorageTypes = new StorageType[length];
-    for (int i = 0; i < length; i++) {
-      readStorageTypes[i] = WritableUtils.readEnum(in, StorageType.class);
-    }
-    storageTypes = readStorageTypes;
+    try {
+      length = WritableUtils.readVInt(in);
+      StorageType[] readStorageTypes = new StorageType[length];
+      for (int i = 0; i < length; i++) {
+        readStorageTypes[i] = WritableUtils.readEnum(in, StorageType.class);
+      }
+      storageTypes = readStorageTypes;
 
-    length = WritableUtils.readVInt(in);
-    String[] readStorageIds = new String[length];
-    for (int i = 0; i < length; i++) {
-      readStorageIds[i] = WritableUtils.readString(in);
+      length = WritableUtils.readVInt(in);
+      String[] readStorageIds = new String[length];
+      for (int i = 0; i < length; i++) {
+        readStorageIds[i] = WritableUtils.readString(in);
+      }
+      storageIds = readStorageIds;
+
+      int handshakeMsgLen = WritableUtils.readVInt(in);
+      if (handshakeMsgLen != 0) {
+        handshakeMsg = new byte[handshakeMsgLen];
+        in.readFully(handshakeMsg);
+      }
+    } catch (EOFException eof) {
+      // If the NameNode is on a version before HDFS-6708 and HDFS-9807, then
+      // the block token won't have storage types or storage IDs. For backward
+      // compatibility, swallow the EOF that we get when we try to read those
+      // fields. Same for the handshake secret field from HDFS-14611.
     }
-    storageIds = readStorageIds;
 
     useProto = false;
   }
@@ -271,6 +306,13 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     storageIds = blockTokenSecretProto.getStorageIdsList().stream()
         .toArray(String[]::new);
     useProto = true;
+
+    if(blockTokenSecretProto.hasHandshakeSecret()) {
+      handshakeMsg = blockTokenSecretProto
+          .getHandshakeSecret().toByteArray();
+    } else {
+      handshakeMsg = new byte[0];
+    }
   }
 
   @Override
@@ -293,13 +335,21 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     for (AccessMode aMode : modes) {
       WritableUtils.writeEnum(out, aMode);
     }
-    WritableUtils.writeVInt(out, storageTypes.length);
-    for (StorageType type: storageTypes){
-      WritableUtils.writeEnum(out, type);
+    if (storageTypes != null) {
+      WritableUtils.writeVInt(out, storageTypes.length);
+      for (StorageType type : storageTypes) {
+        WritableUtils.writeEnum(out, type);
+      }
     }
-    WritableUtils.writeVInt(out, storageIds.length);
-    for (String id: storageIds) {
-      WritableUtils.writeString(out, id);
+    if (storageIds != null) {
+      WritableUtils.writeVInt(out, storageIds.length);
+      for (String id : storageIds) {
+        WritableUtils.writeString(out, id);
+      }
+    }
+    if (handshakeMsg != null && handshakeMsg.length > 0) {
+      WritableUtils.writeVInt(out, handshakeMsg.length);
+      out.write(handshakeMsg);
     }
   }
 

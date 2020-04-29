@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.metrics2.util;
 
-import static org.junit.Assert.*;
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -28,6 +26,8 @@ import java.util.Random;
 
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestSampleQuantiles {
 
@@ -49,24 +49,24 @@ public class TestSampleQuantiles {
   @Test
   public void testCount() throws IOException {
     // Counts start off zero
-    assertEquals(estimator.getCount(), 0);
-    assertEquals(estimator.getSampleCount(), 0);
+    assertThat(estimator.getCount()).isZero();
+    assertThat(estimator.getSampleCount()).isZero();
     
     // Snapshot should be null if there are no entries.
-    assertNull(estimator.snapshot());
+    assertThat(estimator.snapshot()).isNull();
 
     // Count increment correctly by 1
     estimator.insert(1337);
-    assertEquals(estimator.getCount(), 1);
+    assertThat(estimator.getCount()).isOne();
     estimator.snapshot();
-    assertEquals(estimator.getSampleCount(), 1);
+    assertThat(estimator.getSampleCount()).isOne();
     
-    assertEquals(
+    assertThat(estimator.toString()).isEqualTo(
         "50.00 %ile +/- 5.00%: 1337\n" +
         "75.00 %ile +/- 2.50%: 1337\n" +
         "90.00 %ile +/- 1.00%: 1337\n" +
         "95.00 %ile +/- 0.50%: 1337\n" +
-        "99.00 %ile +/- 0.10%: 1337", estimator.toString());
+        "99.00 %ile +/- 0.10%: 1337");
   }
 
   /**
@@ -79,9 +79,9 @@ public class TestSampleQuantiles {
       estimator.insert(i);
     }
     estimator.clear();
-    assertEquals(estimator.getCount(), 0);
-    assertEquals(estimator.getSampleCount(), 0);
-    assertNull(estimator.snapshot());
+    assertThat(estimator.getCount()).isZero();
+    assertThat(estimator.getSampleCount()).isZero();
+    assertThat(estimator.snapshot()).isNull();
   }
 
   /**
@@ -113,8 +113,8 @@ public class TestSampleQuantiles {
         System.out
             .println(String.format("Expected %d with error %d, estimated %d",
                 actual, error, estimate));
-        assertTrue(estimate <= actual + error);
-        assertTrue(estimate >= actual - error);
+        assertThat(estimate <= actual + error).isTrue();
+        assertThat(estimate >= actual - error).isTrue();
       }
     }
   }

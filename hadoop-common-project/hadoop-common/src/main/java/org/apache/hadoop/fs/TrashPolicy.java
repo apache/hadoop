@@ -80,6 +80,11 @@ public abstract class TrashPolicy extends Configured {
   public abstract void deleteCheckpoint() throws IOException;
 
   /**
+   * Delete all checkpoints immediately, ie empty trash.
+   */
+  public abstract void deleteCheckpointsImmediately() throws IOException;
+
+  /**
    * Get the current working directory of the Trash Policy
    * This API does not work with files deleted from encryption zone when HDFS
    * data encryption at rest feature is enabled as rename file between

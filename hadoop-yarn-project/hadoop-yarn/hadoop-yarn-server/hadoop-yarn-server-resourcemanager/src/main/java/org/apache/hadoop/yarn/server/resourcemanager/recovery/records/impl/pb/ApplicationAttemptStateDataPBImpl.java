@@ -22,8 +22,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
@@ -41,12 +41,12 @@ import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.RMAp
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 public class ApplicationAttemptStateDataPBImpl extends
     ApplicationAttemptStateData {
-  private static Log LOG =
-      LogFactory.getLog(ApplicationAttemptStateDataPBImpl.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ApplicationAttemptStateDataPBImpl.class);
   ApplicationAttemptStateDataProto proto = 
       ApplicationAttemptStateDataProto.getDefaultInstance();
   ApplicationAttemptStateDataProto.Builder builder = null;
@@ -453,5 +453,17 @@ public class ApplicationAttemptStateDataPBImpl extends
       builder.addAllPreemptedResourceUsageMap(ProtoUtils
           .convertMapToStringLongMapProtoList(preemptedResourceSecondsMap));
     }
+  }
+
+  @Override
+  public int getTotalAllocatedContainers() {
+    ApplicationAttemptStateDataProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getTotalAllocatedContainers();
+  }
+
+  @Override
+  public void setTotalAllocatedContainers(int totalAllocatedContainers) {
+    maybeInitBuilder();
+    builder.setTotalAllocatedContainers(totalAllocatedContainers);
   }
 }

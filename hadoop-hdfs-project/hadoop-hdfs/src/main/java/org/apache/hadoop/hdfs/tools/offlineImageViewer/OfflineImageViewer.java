@@ -20,9 +20,9 @@ package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.EOFException;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -30,8 +30,8 @@ import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.IOUtils;
@@ -44,7 +44,8 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogLoader.PositionTrackingIn
  */
 @InterfaceAudience.Private
 public class OfflineImageViewer {
-  public static final Log LOG = LogFactory.getLog(OfflineImageViewer.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(OfflineImageViewer.class);
   
   private final static String usage =
       "Usage: bin/hdfs oiv_legacy [OPTIONS] -i INPUTFILE -o OUTPUTFILE\n"
@@ -125,7 +126,7 @@ public class OfflineImageViewer {
     boolean done = false;
     try {
       tracker = new PositionTrackingInputStream(new BufferedInputStream(
-               new FileInputStream(new File(inputFile))));
+          Files.newInputStream(Paths.get(inputFile))));
       in = new DataInputStream(tracker);
 
       int imageVersionFile = findImageVersion(in);
@@ -145,7 +146,7 @@ public class OfflineImageViewer {
           LOG.error("Failed to load image file.");
         }
       }
-      IOUtils.cleanup(LOG, in, tracker);
+      IOUtils.cleanupWithLogger(LOG, in, tracker);
     }
   }
 

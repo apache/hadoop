@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.distributed;
 
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.server.api.records.ContainerQueuingLimit;
 import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
@@ -26,7 +27,9 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Unit tests for NodeQueueLoadMonitor.
@@ -99,6 +102,23 @@ public class TestNodeQueueLoadMonitor {
     Assert.assertEquals("h3:3", nodeIds.get(0).toString());
     Assert.assertEquals("h2:2", nodeIds.get(1).toString());
     Assert.assertEquals("h1:1", nodeIds.get(2).toString());
+
+    // Now update node 2 to DECOMMISSIONING state
+    selector
+        .updateNode(createRMNode("h2", 2, 1, 10, NodeState.DECOMMISSIONING));
+    selector.computeTask.run();
+    nodeIds = selector.selectNodes();
+    Assert.assertEquals(2, nodeIds.size());
+    Assert.assertEquals("h3:3", nodeIds.get(0).toString());
+    Assert.assertEquals("h1:1", nodeIds.get(1).toString());
+
+    // Now update node 2 back to RUNNING state
+    selector.updateNode(createRMNode("h2", 2, 1, 10, NodeState.RUNNING));
+    selector.computeTask.run();
+    nodeIds = selector.selectNodes();
+    Assert.assertEquals("h2:2", nodeIds.get(0).toString());
+    Assert.assertEquals("h3:3", nodeIds.get(1).toString());
+    Assert.assertEquals("h1:1", nodeIds.get(2).toString());
   }
 
   @Test
@@ -141,6 +161,25 @@ public class TestNodeQueueLoadMonitor {
     selector.computeTask.run();
     nodeIds = selector.selectNodes();
     System.out.println("4-> "+ nodeIds);
+    Assert.assertEquals(3, nodeIds.size());
+    Assert.assertEquals("h2:2", nodeIds.get(0).toString());
+    Assert.assertEquals("h1:1", nodeIds.get(1).toString());
+    Assert.assertEquals("h4:4", nodeIds.get(2).toString());
+
+    // Now update h2 to Decommissioning state
+    selector.updateNode(createRMNode("h2", 2, -1,
+        5, NodeState.DECOMMISSIONING));
+    selector.computeTask.run();
+    nodeIds = selector.selectNodes();
+    Assert.assertEquals(2, nodeIds.size());
+    Assert.assertEquals("h1:1", nodeIds.get(0).toString());
+    Assert.assertEquals("h4:4", nodeIds.get(1).toString());
+
+    // Now update h2 back to Running state
+    selector.updateNode(createRMNode("h2", 2, -1,
+        5, NodeState.RUNNING));
+    selector.computeTask.run();
+    nodeIds = selector.selectNodes();
     Assert.assertEquals(3, nodeIds.size());
     Assert.assertEquals("h2:2", nodeIds.get(0).toString());
     Assert.assertEquals("h1:1", nodeIds.get(1).toString());
@@ -191,6 +230,127 @@ public class TestNodeQueueLoadMonitor {
 
   }
 
+  /**
+   * Tests selection of local node from NodeQueueLoadMonitor. This test covers
+   * selection of node based on queue limit and blacklisted nodes.
+   */
+  @Test
+  public void testSelectLocalNode() {
+    NodeQueueLoadMonitor selector = new NodeQueueLoadMonitor(
+        NodeQueueLoadMonitor.LoadComparator.QUEUE_LENGTH);
+
+    RMNode h1 = createRMNode("h1", 1, -1, 2, 5);
+    RMNode h2 = createRMNode("h2", 2, -1, 5, 5);
+    RMNode h3 = createRMNode("h3", 3, -1, 4, 5);
+
+    selector.addNode(null, h1);
+    selector.addNode(null, h2);
+    selector.addNode(null, h3);
+
+    selector.updateNode(h1);
+    selector.updateNode(h2);
+    selector.updateNode(h3);
+
+    // basic test for selecting node which has queue length less
+    // than queue capacity.
+    Set<String> blacklist = new HashSet<>();
+    RMNode node = selector.selectLocalNode("h1", blacklist);
+    Assert.assertEquals("h1", node.getHostName());
+
+    // if node has been added to blacklist
+    blacklist.add("h1");
+    node = selector.selectLocalNode("h1", blacklist);
+    Assert.assertNull(node);
+
+    node = selector.selectLocalNode("h2", blacklist);
+    Assert.assertNull(node);
+
+    node = selector.selectLocalNode("h3", blacklist);
+    Assert.assertEquals("h3", node.getHostName());
+  }
+
+  /**
+   * Tests selection of rack local node from NodeQueueLoadMonitor. This test
+   * covers selection of node based on queue limit and blacklisted nodes.
+   */
+  @Test
+  public void testSelectRackLocalNode() {
+    NodeQueueLoadMonitor selector = new NodeQueueLoadMonitor(
+        NodeQueueLoadMonitor.LoadComparator.QUEUE_LENGTH);
+
+    RMNode h1 = createRMNode("h1", 1, "rack1", -1, 2, 5);
+    RMNode h2 = createRMNode("h2", 2, "rack2", -1, 5, 5);
+    RMNode h3 = createRMNode("h3", 3, "rack2", -1, 4, 5);
+
+    selector.addNode(null, h1);
+    selector.addNode(null, h2);
+    selector.addNode(null, h3);
+
+    selector.updateNode(h1);
+    selector.updateNode(h2);
+    selector.updateNode(h3);
+
+    // basic test for selecting node which has queue length less
+    // than queue capacity.
+    Set<String> blacklist = new HashSet<>();
+    RMNode node = selector.selectRackLocalNode("rack1", blacklist);
+    Assert.assertEquals("h1", node.getHostName());
+
+    // if node has been added to blacklist
+    blacklist.add("h1");
+    node = selector.selectRackLocalNode("rack1", blacklist);
+    Assert.assertNull(node);
+
+    node = selector.selectRackLocalNode("rack2", blacklist);
+    Assert.assertEquals("h3", node.getHostName());
+
+    blacklist.add("h3");
+    node = selector.selectRackLocalNode("rack2", blacklist);
+    Assert.assertNull(node);
+  }
+
+  /**
+   * Tests selection of any node from NodeQueueLoadMonitor. This test
+   * covers selection of node based on queue limit and blacklisted nodes.
+   */
+  @Test
+  public void testSelectAnyNode() {
+    NodeQueueLoadMonitor selector = new NodeQueueLoadMonitor(
+        NodeQueueLoadMonitor.LoadComparator.QUEUE_LENGTH);
+
+    RMNode h1 = createRMNode("h1", 1, "rack1", -1, 2, 5);
+    RMNode h2 = createRMNode("h2", 2, "rack2", -1, 5, 5);
+    RMNode h3 = createRMNode("h3", 3, "rack2", -1, 4, 10);
+
+    selector.addNode(null, h1);
+    selector.addNode(null, h2);
+    selector.addNode(null, h3);
+
+    selector.updateNode(h1);
+    selector.updateNode(h2);
+    selector.updateNode(h3);
+
+    selector.computeTask.run();
+
+    Assert.assertEquals(2, selector.getSortedNodes().size());
+
+    // basic test for selecting node which has queue length
+    // less than queue capacity.
+    Set<String> blacklist = new HashSet<>();
+    RMNode node = selector.selectAnyNode(blacklist);
+    Assert.assertTrue(node.getHostName().equals("h1") ||
+        node.getHostName().equals("h3"));
+
+    // if node has been added to blacklist
+    blacklist.add("h1");
+    node = selector.selectAnyNode(blacklist);
+    Assert.assertEquals("h3", node.getHostName());
+
+    blacklist.add("h3");
+    node = selector.selectAnyNode(blacklist);
+    Assert.assertNull(node);
+  }
+
   private RMNode createRMNode(String host, int port,
       int waitTime, int queueLength) {
     return createRMNode(host, port, waitTime, queueLength,
@@ -198,10 +358,31 @@ public class TestNodeQueueLoadMonitor {
   }
 
   private RMNode createRMNode(String host, int port,
+      int waitTime, int queueLength, NodeState state) {
+    return createRMNode(host, port, "default", waitTime, queueLength,
+        DEFAULT_MAX_QUEUE_LENGTH, state);
+  }
+
+  private RMNode createRMNode(String host, int port,
       int waitTime, int queueLength, int queueCapacity) {
+    return createRMNode(host, port, "default", waitTime, queueLength,
+        queueCapacity, NodeState.RUNNING);
+  }
+
+  private RMNode createRMNode(String host, int port, String rack,
+      int waitTime, int queueLength, int queueCapacity) {
+    return createRMNode(host, port, rack, waitTime, queueLength, queueCapacity,
+        NodeState.RUNNING);
+  }
+
+  private RMNode createRMNode(String host, int port, String rack,
+      int waitTime, int queueLength, int queueCapacity, NodeState state) {
     RMNode node1 = Mockito.mock(RMNode.class);
     NodeId nID1 = new FakeNodeId(host, port);
+    Mockito.when(node1.getHostName()).thenReturn(host);
+    Mockito.when(node1.getRackName()).thenReturn(rack);
     Mockito.when(node1.getNodeID()).thenReturn(nID1);
+    Mockito.when(node1.getState()).thenReturn(state);
     OpportunisticContainersStatus status1 =
         Mockito.mock(OpportunisticContainersStatus.class);
     Mockito.when(status1.getEstimatedQueueWaitTime())

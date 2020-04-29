@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.tools.mapred.lib;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.mapreduce.*;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.apache.hadoop.tools.DistCpConstants;
@@ -49,7 +49,7 @@ import java.io.IOException;
  * performance characteristics. 
  */
 public class DynamicInputFormat<K, V> extends InputFormat<K, V> {
-  private static final Log LOG = LogFactory.getLog(DynamicInputFormat.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DynamicInputFormat.class);
 
   private static final String CONF_LABEL_LISTING_SPLIT_RATIO
           = "mapred.listing.split.ratio";

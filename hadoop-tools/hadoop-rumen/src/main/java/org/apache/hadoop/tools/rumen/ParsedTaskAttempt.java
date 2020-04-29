@@ -21,8 +21,8 @@ package org.apache.hadoop.tools.rumen;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.mapreduce.jobhistory.JhCounters;
 
 /**
@@ -32,7 +32,7 @@ import org.apache.hadoop.mapreduce.jobhistory.JhCounters;
  */
 public class ParsedTaskAttempt extends LoggedTaskAttempt {
 
-  private static final Log LOG = LogFactory.getLog(ParsedTaskAttempt.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ParsedTaskAttempt.class);
 
   private String diagnosticInfo;
   private String trackerName;

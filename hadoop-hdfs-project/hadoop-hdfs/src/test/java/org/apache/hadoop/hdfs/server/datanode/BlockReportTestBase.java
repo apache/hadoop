@@ -21,6 +21,8 @@ import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 
 import java.io.File;
 import java.io.FilenameFilter;
@@ -35,11 +37,10 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
@@ -61,7 +62,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
@@ -87,7 +87,7 @@ import org.mockito.invocation.InvocationOnMock;
  * and messages.
  */
 public abstract class BlockReportTestBase {
-  public static final Log LOG = LogFactory.getLog(BlockReportTestBase.class);
+  public static final Logger LOG = LoggerFactory.getLogger(BlockReportTestBase.class);
 
   private static short REPL_FACTOR = 1;
   private static final int RAND_LIMIT = 2000;
@@ -319,7 +319,7 @@ public abstract class BlockReportTestBase {
       }
     }
 
-    waitTil(TimeUnit.SECONDS.toMillis(DN_RESCAN_EXTRA_WAIT));
+    DataNodeTestUtils.runDirectoryScanner(dn0);
 
     // all blocks belong to the same file, hence same BP
     String poolId = cluster.getNamesystem().getBlockPoolId();
@@ -626,10 +626,10 @@ public abstract class BlockReportTestBase {
 
       Mockito.doAnswer(delayer)
         .when(spy).blockReport(
-          Mockito.<DatanodeRegistration>anyObject(),
-          Mockito.anyString(),
-          Mockito.<StorageBlockReport[]>anyObject(),
-          Mockito.<BlockReportContext>anyObject());
+            any(),
+            anyString(),
+            any(),
+            any());
 
       // Force a block report to be generated. The block report will have
       // an RBW replica in it. Wait for the RPC to be sent, but block
@@ -879,7 +879,7 @@ public abstract class BlockReportTestBase {
   private static void initLoggers() {
     DFSTestUtil.setNameNodeLogLevel(Level.ALL);
     GenericTestUtils.setLogLevel(DataNode.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(BlockReportTestBase.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(BlockReportTestBase.LOG, org.slf4j.event.Level.DEBUG);
   }
 
   private Block findBlock(Path path, long size) throws IOException {

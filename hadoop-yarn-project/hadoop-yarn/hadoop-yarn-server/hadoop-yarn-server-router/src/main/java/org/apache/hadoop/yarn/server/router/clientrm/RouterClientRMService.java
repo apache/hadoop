@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.router.clientrm;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -28,8 +29,10 @@ import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -50,8 +53,12 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAttributesToNodesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAttributesToNodesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeAttributesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeAttributesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
@@ -68,6 +75,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToAttributesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToAttributesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
@@ -102,6 +111,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.server.router.security.authorize.RouterPolicyProvider;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -165,6 +175,12 @@ public class RouterClientRMService extends AbstractService
     this.server = rpc.getServer(ApplicationClientProtocol.class, this,
         listenerEndpoint, serverConf, null, numWorkerThreads);
 
+    // Enable service authorization?
+    if (conf.getBoolean(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, false)) {
+      refreshServiceAcls(conf, RouterPolicyProvider.getInstance());
+    }
+
     this.server.start();
     LOG.info("Router ClientRMService listening on address: "
         + this.server.getListenerAddress());
@@ -179,6 +195,11 @@ public class RouterClientRMService extends AbstractService
     }
     userPipelineMap.clear();
     super.serviceStop();
+  }
+
+  @VisibleForTesting
+  public Server getServer() {
+    return this.server;
   }
 
   /**
@@ -430,13 +451,42 @@ public class RouterClientRMService extends AbstractService
     return pipeline.getRootInterceptor().getResourceTypeInfo(request);
   }
 
-  private RequestInterceptorChainWrapper getInterceptorChain()
+  @Override
+  public GetAttributesToNodesResponse getAttributesToNodes(
+      GetAttributesToNodesRequest request) throws YarnException, IOException {
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    return pipeline.getRootInterceptor().getAttributesToNodes(request);
+  }
+
+  @Override
+  public GetClusterNodeAttributesResponse getClusterNodeAttributes(
+      GetClusterNodeAttributesRequest request)
+      throws YarnException, IOException {
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    return pipeline.getRootInterceptor().getClusterNodeAttributes(request);
+  }
+
+  @Override
+  public GetNodesToAttributesResponse getNodesToAttributes(
+      GetNodesToAttributesRequest request) throws YarnException, IOException {
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain();
+    return pipeline.getRootInterceptor().getNodesToAttributes(request);
+  }
+
+  @VisibleForTesting
+  protected RequestInterceptorChainWrapper getInterceptorChain()
       throws IOException {
     String user = UserGroupInformation.getCurrentUser().getUserName();
-    if (!userPipelineMap.containsKey(user)) {
-      initializePipeline(user);
+    RequestInterceptorChainWrapper chain = userPipelineMap.get(user);
+    if (chain != null && chain.getRootInterceptor() != null) {
+      return chain;
     }
-    return userPipelineMap.get(user);
+    return initializePipeline(user);
+  }
+
+  void refreshServiceAcls(Configuration configuration,
+      PolicyProvider policyProvider) {
+    this.server.refreshServiceAcl(configuration, policyProvider);
   }
 
   /**
@@ -503,36 +553,33 @@ public class RouterClientRMService extends AbstractService
    *
    * @param user
    */
-  private void initializePipeline(String user) {
-    RequestInterceptorChainWrapper chainWrapper = null;
+  private RequestInterceptorChainWrapper initializePipeline(String user) {
     synchronized (this.userPipelineMap) {
       if (this.userPipelineMap.containsKey(user)) {
         LOG.info("Request to start an already existing user: {}"
             + " was received, so ignoring.", user);
-        return;
+        return userPipelineMap.get(user);
       }
 
-      chainWrapper = new RequestInterceptorChainWrapper();
+      RequestInterceptorChainWrapper chainWrapper =
+          new RequestInterceptorChainWrapper();
+      try {
+        // We should init the pipeline instance after it is created and then
+        // add to the map, to ensure thread safe.
+        LOG.info("Initializing request processing pipeline for application "
+            + "for the user: {}", user);
+
+        ClientRequestInterceptor interceptorChain =
+            this.createRequestInterceptorChain();
+        interceptorChain.init(user);
+        chainWrapper.init(interceptorChain);
+      } catch (Exception e) {
+        LOG.error("Init ClientRequestInterceptor error for user: " + user, e);
+        throw e;
+      }
+
       this.userPipelineMap.put(user, chainWrapper);
-    }
-
-    // We register the pipeline instance in the map first and then initialize it
-    // later because chain initialization can be expensive and we would like to
-    // release the lock as soon as possible to prevent other applications from
-    // blocking when one application's chain is initializing
-    LOG.info("Initializing request processing pipeline for application "
-        + "for the user: {}", user);
-
-    try {
-      ClientRequestInterceptor interceptorChain =
-          this.createRequestInterceptorChain();
-      interceptorChain.init(user);
-      chainWrapper.init(interceptorChain);
-    } catch (Exception e) {
-      synchronized (this.userPipelineMap) {
-        this.userPipelineMap.remove(user);
-      }
-      throw e;
+      return chainWrapper;
     }
   }
 

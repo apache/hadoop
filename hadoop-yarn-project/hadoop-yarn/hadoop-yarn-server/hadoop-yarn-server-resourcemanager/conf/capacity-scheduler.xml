@@ -149,6 +149,8 @@
       attempts to schedule rack-local containers.
       When setting this parameter, the size of the cluster should be taken into account.
       We use 40 as the default value, which is approximately the number of nodes in one rack.
+      Note, if this value is -1, the locality constraint in the container request
+      will be ignored, which disables the delay scheduling.
     </description>
   </property>
 
@@ -202,6 +204,40 @@
       scheduling rate for OFF_SWITCH containers. Lower values reduce
       "clumping" of applications on particular nodes. The default is 1.
       Legal values are 1-MAX_INT. This config is refreshable.
+    </description>
+  </property>
+
+
+  <property>
+    <name>yarn.scheduler.capacity.application.fail-fast</name>
+    <value>false</value>
+    <description>
+      Whether RM should fail during recovery if previous applications'
+      queue is no longer valid.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.scheduler.capacity.workflow-priority-mappings</name>
+    <value></value>
+    <description>
+      A list of mappings that will be used to override application priority.
+      The syntax for this list is
+      [workflowId]:[full_queue_name]:[priority][,next mapping]*
+      where an application submitted (or mapped to) queue "full_queue_name"
+      and workflowId "workflowId" (as specified in application submission
+      context) will be given priority "priority".
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.scheduler.capacity.workflow-priority-mappings-override.enable</name>
+    <value>false</value>
+    <description>
+      If a priority mapping is present, will it override the value specified
+      by the user? This can be used by administrators to give applications a
+      priority that is different than the one specified by the user.
+      The default is false.
     </description>
   </property>
 

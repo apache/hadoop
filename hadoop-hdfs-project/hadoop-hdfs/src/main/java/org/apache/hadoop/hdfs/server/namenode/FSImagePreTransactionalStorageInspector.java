@@ -20,8 +20,8 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.DataInputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -29,8 +29,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileUtil;
@@ -51,8 +51,8 @@ import org.apache.hadoop.io.IOUtils;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 class FSImagePreTransactionalStorageInspector extends FSImageStorageInspector {
-  private static final Log LOG =
-    LogFactory.getLog(FSImagePreTransactionalStorageInspector.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FSImagePreTransactionalStorageInspector.class);
   
   /* Flag if there is at least one storage dir that doesn't contain the newest
    * fstime */
@@ -130,13 +130,14 @@ class FSImagePreTransactionalStorageInspector extends FSImageStorageInspector {
     File timeFile = NNStorage.getStorageFile(sd, NameNodeFile.TIME);
     long timeStamp = 0L;
     if (timeFile.exists() && FileUtil.canRead(timeFile)) {
-      DataInputStream in = new DataInputStream(new FileInputStream(timeFile));
+      DataInputStream in = new DataInputStream(
+          Files.newInputStream(timeFile.toPath()));
       try {
         timeStamp = in.readLong();
         in.close();
         in = null;
       } finally {
-        IOUtils.cleanup(LOG, in);
+        IOUtils.cleanupWithLogger(LOG, in);
       }
     }
     return timeStamp;

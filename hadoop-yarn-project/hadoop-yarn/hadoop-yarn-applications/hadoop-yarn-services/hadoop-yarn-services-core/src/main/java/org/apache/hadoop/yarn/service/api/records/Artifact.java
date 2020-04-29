@@ -38,7 +38,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 @ApiModel(description = "Artifact of an service component")
-@javax.annotation.Generated(value = "class io.swagger.codegen.languages.JavaClientCodegen", date = "2016-06-02T08:15:05.615-07:00")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class Artifact implements Serializable {
   private static final long serialVersionUID = 3608929500111099035L;
@@ -146,12 +145,11 @@ public class Artifact implements Serializable {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("class Artifact {\n");
-
-    sb.append("    id: ").append(toIndentedString(id)).append("\n");
-    sb.append("    type: ").append(toIndentedString(type)).append("\n");
-    sb.append("    uri: ").append(toIndentedString(uri)).append("\n");
-    sb.append("}");
+    sb.append("class Artifact {\n")
+        .append("    id: ").append(toIndentedString(id)).append("\n")
+        .append("    type: ").append(toIndentedString(type)).append("\n")
+        .append("    uri: ").append(toIndentedString(uri)).append("\n")
+        .append("}");
     return sb.toString();
   }
 

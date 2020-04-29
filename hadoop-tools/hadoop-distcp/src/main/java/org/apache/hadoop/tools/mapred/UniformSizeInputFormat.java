@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.tools.mapred;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.IOUtils;
@@ -50,8 +50,8 @@ import java.util.ArrayList;
  */
 public class UniformSizeInputFormat
     extends InputFormat<Text, CopyListingFileStatus> {
-  private static final Log LOG
-                = LogFactory.getLog(UniformSizeInputFormat.class);
+  private static final Logger LOG
+                = LoggerFactory.getLogger(UniformSizeInputFormat.class);
 
   /**
    * Implementation of InputFormat::getSplits(). Returns a list of InputSplits,

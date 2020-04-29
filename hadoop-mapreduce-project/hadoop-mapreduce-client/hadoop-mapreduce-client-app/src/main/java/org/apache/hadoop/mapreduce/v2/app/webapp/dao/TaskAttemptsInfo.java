@@ -18,26 +18,28 @@
 package org.apache.hadoop.mapreduce.v2.app.webapp.dao;
 
 import java.util.ArrayList;
+import java.util.List;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElementRef;
 import javax.xml.bind.annotation.XmlRootElement;
 
 @XmlRootElement(name = "taskAttempts")
-@XmlAccessorType(XmlAccessType.FIELD)
 public class TaskAttemptsInfo {
 
-  protected ArrayList<TaskAttemptInfo> taskAttempt = new ArrayList<TaskAttemptInfo>();
+  protected List<TaskAttemptInfo> taskAttempts = new ArrayList<>();
 
   public TaskAttemptsInfo() {
   } // JAXB needs this
 
   public void add(TaskAttemptInfo taskattemptInfo) {
-    taskAttempt.add(taskattemptInfo);
+    taskAttempts.add(taskattemptInfo);
   }
 
-  public ArrayList<TaskAttemptInfo> getTaskAttempts() {
-    return taskAttempt;
+  // XmlElementRef annotation should be used to identify the exact type of a list element
+  // otherwise metadata will be added to XML attributes,
+  // it can lead to incorrect JSON marshaling
+  @XmlElementRef
+  public List<TaskAttemptInfo> getTaskAttempts() {
+    return taskAttempts;
   }
-
 }

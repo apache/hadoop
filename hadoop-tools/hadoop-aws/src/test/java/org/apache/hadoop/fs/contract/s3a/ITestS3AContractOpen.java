@@ -45,4 +45,13 @@ public class ITestS3AContractOpen extends AbstractContractOpenTest {
   protected AbstractFSContract createContract(Configuration conf) {
     return new S3AContract(conf);
   }
+
+  /**
+   * S3A always declares zero byte files as encrypted.
+   * @return true, always.
+   */
+  @Override
+  protected boolean areZeroByteFilesEncrypted() {
+    return true;
+  }
 }

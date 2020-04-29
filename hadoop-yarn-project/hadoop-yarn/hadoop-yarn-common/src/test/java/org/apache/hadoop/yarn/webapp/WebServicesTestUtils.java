@@ -31,7 +31,6 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 public class WebServicesTestUtils {
-
   public static long getXmlLong(Element element, String name) {
     String val = getXmlString(element, name);
     return Long.parseLong(val);

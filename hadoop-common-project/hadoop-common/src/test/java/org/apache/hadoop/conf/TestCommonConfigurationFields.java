@@ -93,6 +93,7 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add("fs.ftp.user.localhost");
     xmlPropsToSkipCompare.add("fs.ftp.data.connection.mode");
     xmlPropsToSkipCompare.add("fs.ftp.transfer.mode");
+    xmlPropsToSkipCompare.add("fs.ftp.timeout");
     xmlPropsToSkipCompare.add("hadoop.tmp.dir");
     xmlPropsToSkipCompare.add("nfs3.mountd.port");
     xmlPropsToSkipCompare.add("nfs3.server.port");
@@ -100,6 +101,9 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
 
     // S3A properties are in a different subtree.
     xmlPrefixToSkipCompare.add("fs.s3a.");
+
+    // O3 properties are in a different subtree.
+    xmlPrefixToSkipCompare.add("fs.o3fs.");
 
     //ftp properties are in a different subtree.
     // - org.apache.hadoop.fs.ftp.FTPFileSystem.
@@ -110,6 +114,9 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPrefixToSkipCompare.add("fs.wasb.impl");
     xmlPrefixToSkipCompare.add("fs.wasbs.impl");
     xmlPrefixToSkipCompare.add("fs.azure.");
+    xmlPrefixToSkipCompare.add("fs.abfs.impl");
+    xmlPrefixToSkipCompare.add("fs.abfss.impl");
+
 
     // ADL properties are in a different subtree
     // - org.apache.hadoop.hdfs.web.ADLConfKeys
@@ -127,6 +134,30 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add("fs.azure.authorization.caching.enable");
     xmlPropsToSkipCompare.add("fs.azure.saskey.usecontainersaskeyforallaccess");
     xmlPropsToSkipCompare.add("fs.azure.user.agent.prefix");
+
+    // FairCallQueue configs that includes dynamic ports in its keys
+    xmlPropsToSkipCompare.add("ipc.[port_number].backoff.enable");
+    xmlPropsToSkipCompare.add("ipc.[port_number].callqueue.impl");
+    xmlPropsToSkipCompare.add("ipc.[port_number].scheduler.impl");
+    xmlPropsToSkipCompare.add("ipc.[port_number].scheduler.priority.levels");
+    xmlPropsToSkipCompare.add(
+        "ipc.[port_number].faircallqueue.multiplexer.weights");
+    xmlPropsToSkipCompare.add("ipc.[port_number].identity-provider.impl");
+    xmlPropsToSkipCompare.add("ipc.[port_number].cost-provider.impl");
+    xmlPropsToSkipCompare.add("ipc.[port_number].decay-scheduler.period-ms");
+    xmlPropsToSkipCompare.add("ipc.[port_number].decay-scheduler.decay-factor");
+    xmlPropsToSkipCompare.add("ipc.[port_number].decay-scheduler.thresholds");
+    xmlPropsToSkipCompare.add(
+        "ipc.[port_number].decay-scheduler.backoff.responsetime.enable");
+    xmlPropsToSkipCompare.add(
+        "ipc.[port_number].decay-scheduler.backoff.responsetime.thresholds");
+    xmlPropsToSkipCompare.add(
+        "ipc.[port_number].decay-scheduler.metrics.top.user.count");
+    xmlPropsToSkipCompare.add("ipc.[port_number].weighted-cost.lockshared");
+    xmlPropsToSkipCompare.add("ipc.[port_number].weighted-cost.lockexclusive");
+    xmlPropsToSkipCompare.add("ipc.[port_number].weighted-cost.handler");
+    xmlPropsToSkipCompare.add("ipc.[port_number].weighted-cost.lockfree");
+    xmlPropsToSkipCompare.add("ipc.[port_number].weighted-cost.response");
 
     // Deprecated properties.  These should eventually be removed from the
     // class.
@@ -195,6 +226,6 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     // - org.apache.hadoop.io.SequenceFile
     xmlPropsToSkipCompare.add("io.seqfile.local.dir");
 
-
+    xmlPropsToSkipCompare.add("hadoop.http.sni.host.check.enabled");
   }
 }

@@ -18,8 +18,10 @@
 
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
@@ -32,13 +34,15 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ResourceInformationProto;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 
+import java.util.HashSet;
 import java.util.Map;
 
 @Private
 @Unstable
 public class ResourcePBImpl extends Resource {
 
-  private static final Log LOG = LogFactory.getLog(ResourcePBImpl.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ResourcePBImpl.class);
 
   ResourceProto proto = ResourceProto.getDefaultInstance();
   ResourceProto.Builder builder = null;
@@ -71,14 +75,14 @@ public class ResourcePBImpl extends Resource {
     initResources();
   }
 
-  public ResourceProto getProto() {
+  synchronized public ResourceProto getProto() {
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
   }
 
-  private void maybeInitBuilder() {
+  synchronized private void maybeInitBuilder() {
     if (viaProto || builder == null) {
       builder = ResourceProto.newBuilder(proto);
     }
@@ -127,7 +131,7 @@ public class ResourcePBImpl extends Resource {
     resources[VCORES_INDEX].setValue(vCores);
   }
 
-  private void initResources() {
+  synchronized private void initResources() {
     if (this.resources != null) {
       return;
     }
@@ -173,9 +177,28 @@ public class ResourcePBImpl extends Resource {
     ri.setResourceType(entry.hasType()
         ? ProtoUtils.convertFromProtoFormat(entry.getType())
         : ResourceTypes.COUNTABLE);
-    ri.setUnits(
-        entry.hasUnits() ? entry.getUnits() : resourceInformation.getUnits());
-    ri.setValue(entry.hasValue() ? entry.getValue() : 0L);
+    String units = entry.hasUnits() ? entry.getUnits() :
+        ResourceUtils.getDefaultUnit(entry.getKey());
+    long value = entry.hasValue() ? entry.getValue() : 0L;
+    String destUnit = ResourceUtils.getDefaultUnit(entry.getKey());
+    if(!units.equals(destUnit)) {
+      ri.setValue(UnitsConversionUtil.convert(units, destUnit, value));
+      ri.setUnits(destUnit);
+    } else {
+      ri.setUnits(units);
+      ri.setValue(value);
+    }
+    if (entry.getTagsCount() > 0) {
+      ri.setTags(new HashSet<>(entry.getTagsList()));
+    } else {
+      ri.setTags(ImmutableSet.of());
+    }
+    if (entry.getAttributesCount() > 0) {
+      ri.setAttributes(ProtoUtils
+          .convertStringStringMapProtoListToMap(entry.getAttributesList()));
+    } else {
+      ri.setAttributes(ImmutableMap.of());
+    }
     return ri;
   }
 
@@ -193,8 +216,7 @@ public class ResourcePBImpl extends Resource {
   }
 
   @Override
-  public void setResourceValue(String resource, long value)
-      throws ResourceNotFoundException {
+  public void setResourceValue(String resource, long value) {
     maybeInitBuilder();
     if (resource == null) {
       throw new IllegalArgumentException("resource type object cannot be null");
@@ -203,14 +225,13 @@ public class ResourcePBImpl extends Resource {
   }
 
   @Override
-  public ResourceInformation getResourceInformation(String resource)
-      throws ResourceNotFoundException {
+  public ResourceInformation getResourceInformation(String resource) {
+    initResources();
     return super.getResourceInformation(resource);
   }
 
   @Override
-  public long getResourceValue(String resource)
-      throws ResourceNotFoundException {
+  public long getResourceValue(String resource) {
     return super.getResourceValue(resource);
   }
 
@@ -224,6 +245,15 @@ public class ResourcePBImpl extends Resource {
         e.setUnits(resInfo.getUnits());
         e.setType(ProtoUtils.converToProtoFormat(resInfo.getResourceType()));
         e.setValue(resInfo.getValue());
+        if (resInfo.getAttributes() != null
+            && !resInfo.getAttributes().isEmpty()) {
+          e.addAllAttributes(ProtoUtils.convertToProtoFormat(
+              resInfo.getAttributes()));
+        }
+        if (resInfo.getTags() != null
+            && !resInfo.getTags().isEmpty()) {
+          e.addAllTags(resInfo.getTags());
+        }
         builder.addResourceValueMap(e);
       }
     }

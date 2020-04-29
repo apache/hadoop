@@ -19,8 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.security;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.QueueACL;
@@ -39,7 +39,8 @@ import java.util.List;
 
 public class QueueACLsManager {
 
-  private static final Log LOG = LogFactory.getLog(QueueACLsManager.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(QueueACLsManager.class);
 
   private ResourceScheduler scheduler;
   private boolean isACLsEnable;
@@ -66,6 +67,13 @@ public class QueueACLsManager {
     if (scheduler instanceof CapacityScheduler) {
       CSQueue queue = ((CapacityScheduler) scheduler).getQueue(app.getQueue());
       if (queue == null) {
+        if (((CapacityScheduler) scheduler).isAmbiguous(app.getQueue())) {
+          LOG.error("Queue " + app.getQueue() + " is ambiguous for "
+              + app.getApplicationId());
+          //if we cannot decide which queue to submit we should deny access
+          return false;
+        }
+
         // The application exists but the associated queue does not exist.
         // This may be due to a queue that is not defined when the RM restarts.
         // At this point we choose to log the fact and allow users to access
@@ -114,12 +122,14 @@ public class QueueACLsManager {
     // version is added for the moving the application case. The check has
     // extra logging to distinguish between the queue not existing in the
     // application move request case and the real access denied case.
-
     if (scheduler instanceof CapacityScheduler) {
-      CSQueue queue = ((CapacityScheduler) scheduler).getQueue(targetQueue);
+      CapacityScheduler cs = ((CapacityScheduler) scheduler);
+      CSQueue queue = cs.getQueue(targetQueue);
       if (queue == null) {
         LOG.warn("Target queue " + targetQueue
-            + " does not exist while trying to move "
+            + (cs.isAmbiguous(targetQueue) ?
+                " is ambiguous while trying to move " :
+                " does not exist while trying to move ")
             + app.getApplicationId());
         return false;
       }

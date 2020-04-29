@@ -15,8 +15,6 @@
  * the License.
  */
 
-package org.apache.hadoop.hdfs.server.diskbalancer.connectors;
-
 /**
  * Connectors package is a set of logical connectors that connect
  * to various data sources to read the hadoop cluster information.
@@ -35,3 +33,4 @@ package org.apache.hadoop.hdfs.server.diskbalancer.connectors;
  * we can crate dataNodes on the fly and attach to this connector and
  * ask the diskBalancer Cluster to read data from this source.
  */
+package org.apache.hadoop.hdfs.server.diskbalancer.connectors;

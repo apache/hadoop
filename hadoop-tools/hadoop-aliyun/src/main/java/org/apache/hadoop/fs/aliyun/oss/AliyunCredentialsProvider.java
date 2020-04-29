@@ -22,7 +22,7 @@ import com.aliyun.oss.common.auth.Credentials;
 import com.aliyun.oss.common.auth.CredentialsProvider;
 import com.aliyun.oss.common.auth.DefaultCredentials;
 import com.aliyun.oss.common.auth.InvalidCredentialsException;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 
 import java.io.IOException;
@@ -35,8 +35,7 @@ import static org.apache.hadoop.fs.aliyun.oss.Constants.*;
 public class AliyunCredentialsProvider implements CredentialsProvider {
   private Credentials credentials = null;
 
-  public AliyunCredentialsProvider(Configuration conf)
-      throws IOException {
+  public AliyunCredentialsProvider(Configuration conf) throws IOException {
     String accessKeyId;
     String accessKeySecret;
     String securityToken;

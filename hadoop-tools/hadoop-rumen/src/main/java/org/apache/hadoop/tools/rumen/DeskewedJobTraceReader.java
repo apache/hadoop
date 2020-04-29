@@ -27,8 +27,8 @@ import java.util.PriorityQueue;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class DeskewedJobTraceReader implements Closeable {
   // underlying engine
@@ -57,8 +57,8 @@ public class DeskewedJobTraceReader implements Closeable {
 
   private final PriorityQueue<LoggedJob> skewBuffer;
 
-  static final private Log LOG =
-      LogFactory.getLog(DeskewedJobTraceReader.class);
+  static final private Logger LOG =
+      LoggerFactory.getLogger(DeskewedJobTraceReader.class);
 
   static private class JobComparator implements Comparator<LoggedJob>, 
   Serializable {

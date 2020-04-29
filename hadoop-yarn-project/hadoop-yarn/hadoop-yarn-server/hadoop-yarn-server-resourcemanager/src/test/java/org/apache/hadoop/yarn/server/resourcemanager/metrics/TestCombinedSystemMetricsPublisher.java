@@ -31,6 +31,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.*;
@@ -266,6 +267,31 @@ public class TestCombinedSystemMetricsPublisher {
     runTest(false, false);
   }
 
+  @Test(timeout = 10000)
+  public void testTimelineServiceConfiguration()
+      throws Exception {
+    Configuration config = new Configuration(false);
+    config.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    config.set(YarnConfiguration.TIMELINE_SERVICE_VERSIONS, "2.0,1.5");
+    config.set(YarnConfiguration.TIMELINE_SERVICE_VERSION, "2.0");
+
+    Assert.assertTrue(YarnConfiguration.timelineServiceV2Enabled(config));
+    Assert.assertTrue(YarnConfiguration.timelineServiceV15Enabled(config));
+    Assert.assertTrue(YarnConfiguration.timelineServiceV1Enabled(config));
+
+    config.set(YarnConfiguration.TIMELINE_SERVICE_VERSIONS, "2.0,1");
+    config.set(YarnConfiguration.TIMELINE_SERVICE_VERSION, "1.5");
+    Assert.assertTrue(YarnConfiguration.timelineServiceV2Enabled(config));
+    Assert.assertFalse(YarnConfiguration.timelineServiceV15Enabled(config));
+    Assert.assertTrue(YarnConfiguration.timelineServiceV1Enabled(config));
+
+    config.set(YarnConfiguration.TIMELINE_SERVICE_VERSIONS, "2.0");
+    config.set(YarnConfiguration.TIMELINE_SERVICE_VERSION, "1.5");
+    Assert.assertTrue(YarnConfiguration.timelineServiceV2Enabled(config));
+    Assert.assertFalse(YarnConfiguration.timelineServiceV15Enabled(config));
+    Assert.assertFalse(YarnConfiguration.timelineServiceV1Enabled(config));
+  }
+
   private void publishEvents(boolean v1Enabled, boolean v2Enabled) {
     long timestamp = (v1Enabled) ? 1 : 2;
     int id = (v2Enabled) ? 3 : 4;
@@ -453,7 +479,7 @@ public class TestCombinedSystemMetricsPublisher {
     preemptedMap.put(ResourceInformation.VCORES.getName(), Long.MAX_VALUE);
     when(rmApp.getRMAppMetrics()).thenReturn(
         new RMAppMetrics(Resource.newInstance(0, 0), 0, 0, resourceMap,
-            preemptedMap));
+            preemptedMap, 0));
     when(rmApp.getApplicationTags()).thenReturn(
         Collections.<String> emptySet());
     ApplicationSubmissionContext appSubmissionContext =

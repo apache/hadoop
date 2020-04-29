@@ -47,7 +47,7 @@ export default Ember.Helper.helper(function(params,hash) {
         nodeAddr + '/' + containerId + '/' + logFileName + '">' + logFileName +
         '</a>';
     if (i !== logFilesLen - 1) {
-      html = html + ",";
+      html = html + ", ";
     }
   }
   html = html + '</td>';
