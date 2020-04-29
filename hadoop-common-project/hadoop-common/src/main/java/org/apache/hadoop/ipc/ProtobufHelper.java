@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
@@ -32,7 +33,8 @@ import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 /**
  * Helper methods for protobuf related RPC implementation
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class ProtobufHelper {
   private ProtobufHelper() {
     // Hidden constructor for class with only static helper methods
@@ -98,6 +100,11 @@ public class ProtobufHelper {
     return (bytes.length == 0) ? ByteString.EMPTY : ByteString.copyFrom(bytes);
   }
 
+  /**
+   * Get a Token object from the corresponding TokenPro object.
+   * @param tokenProto token protobuf object
+   * @return
+   */
   public static Token<? extends TokenIdentifier> tokenFromProto(
       TokenProto tokenProto) {
     Token<? extends TokenIdentifier> token = new Token<>(
@@ -107,6 +114,11 @@ public class ProtobufHelper {
     return token;
   }
 
+  /**
+   * Get a TokenProto object from the corresponding Token object.
+   * @param tok token
+   * @return
+   */
   public static TokenProto protoFromToken(Token<?> tok) {
     TokenProto.Builder builder = TokenProto.newBuilder().
         setIdentifier(getByteString(tok.getIdentifier())).
