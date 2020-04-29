@@ -59,6 +59,7 @@ import org.apache.hadoop.util.DurationInfo;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.Invoker.*;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DEFAULT_UPLOAD_PART_COUNT_LIMIT;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.UPLOAD_PART_COUNT_LIMIT;
 
 /**
@@ -414,13 +415,21 @@ public class WriteOperationHelper {
     checkArgument(size >= 0, "Invalid partition size %s", size);
     checkArgument(partNumber > 0,
         "partNumber must be between 1 and %s inclusive, but is %s",
-        UPLOAD_PART_COUNT_LIMIT, partNumber);
+            DEFAULT_UPLOAD_PART_COUNT_LIMIT, partNumber);
 
     LOG.debug("Creating part upload request for {} #{} size {}",
         uploadId, partNumber, size);
-    if (partNumber >= InternalConstants.UPLOAD_PART_COUNT_LIMIT) {
+    long partCountLimit = conf.getLong(UPLOAD_PART_COUNT_LIMIT,
+            DEFAULT_UPLOAD_PART_COUNT_LIMIT);
+    if (partCountLimit != DEFAULT_UPLOAD_PART_COUNT_LIMIT) {
+      LOG.warn("Configuration property {} shouldn't be overridden by client",
+              UPLOAD_PART_COUNT_LIMIT);
+    }
+    final String pathErrorMsg = "Number of parts in multipart upload exceeded." +
+            " Current part count = %s, Part count limit = %s ";
+    if (partNumber > partCountLimit) {
       throw new PathIOException(destKey,
-          "Number of parts in multipart upload exceeded.");
+          String.format(pathErrorMsg, partNumber, partCountLimit));
     }
     UploadPartRequest request = new UploadPartRequest()
         .withBucketName(bucket)
