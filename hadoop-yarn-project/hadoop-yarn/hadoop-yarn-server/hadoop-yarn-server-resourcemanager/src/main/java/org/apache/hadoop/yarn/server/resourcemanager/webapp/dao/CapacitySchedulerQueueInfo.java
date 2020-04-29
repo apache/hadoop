@@ -42,6 +42,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQu
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.PlanQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.
+    CapacitySchedulerConfiguration.RESOURCE_PATTERN;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.
+    CapacitySchedulerConfiguration.CAPACITY;
+
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlSeeAlso({CapacitySchedulerLeafQueueInfo.class})
@@ -61,6 +66,7 @@ public class CapacitySchedulerQueueInfo {
   protected float absoluteUsedCapacity;
   protected int numApplications;
   protected String queueName;
+  protected boolean isAbsoluteResource;
   protected QueueState state;
   protected CapacitySchedulerQueueInfoList queues;
   protected ResourceInfo resourcesUsed;
@@ -151,6 +157,11 @@ public class CapacitySchedulerQueueInfo {
       orderingPolicyInfo = ((ParentQueue) q).getQueueOrderingPolicy()
           .getConfigName();
     }
+
+    String configuredCapacity = conf.get(
+        CapacitySchedulerConfiguration.getQueuePrefix(queuePath) + CAPACITY);
+    isAbsoluteResource = (configuredCapacity != null)
+        && RESOURCE_PATTERN.matcher(configuredCapacity).find();
   }
 
   protected void populateQueueResourceUsage(ResourceUsage queueResourceUsage) {
@@ -201,6 +212,10 @@ public class CapacitySchedulerQueueInfo {
 
   public long getPendingContainers() {
     return pendingContainers;
+  }
+
+  public boolean isAbsoluteResource() {
+    return isAbsoluteResource;
   }
 
   public String getQueueName() {
