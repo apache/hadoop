@@ -74,18 +74,18 @@ public enum AbfsStatistic {
   }
 
   /**
-   * Getter for Statistic Name.
+   * Getter for statistic name.
    *
-   * @return Name of Statistic.
+   * @return Name of statistic.
    */
   public String getStatName() {
     return statName;
   }
 
   /**
-   * Getter for Statistic Description.
+   * Getter for statistic description.
    *
-   * @return Description of Statistic.
+   * @return Description of statistic.
    */
   public String getStatDescription() {
     return statDescription;

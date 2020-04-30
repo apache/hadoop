@@ -95,7 +95,7 @@ public class AbfsInstrumentation {
   }
 
   /**
-   * Look up a Metric from Registered set.
+   * Look up a Metric from registered set.
    *
    * @param name name of metric.
    * @return the metric or null.
@@ -135,7 +135,7 @@ public class AbfsInstrumentation {
   }
 
   /**
-   * Increment a Statistic with some value.
+   * Increment a statistic with some value.
    *
    * @param statistic AbfsStatistic need to be incremented.
    * @param value     long value to be incremented by.

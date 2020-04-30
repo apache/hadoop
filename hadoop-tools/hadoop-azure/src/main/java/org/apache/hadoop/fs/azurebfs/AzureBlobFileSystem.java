@@ -963,9 +963,10 @@ public class AzureBlobFileSystem extends FileSystem {
   }
 
   /**
-   * Incrementing exists() calls from superclass for Statistic collection.
-   * @param f source path
-   * @return true if the path exists
+   * Incrementing exists() calls from superclass for statistic collection.
+   *
+   * @param f source path.
+   * @return true if the path exists.
    * @throws IOException
    */
   @Override public boolean exists(Path f) throws IOException {
