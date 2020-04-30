@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler;
 
+import com.google.common.base.Supplier;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +31,7 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
@@ -1216,7 +1219,7 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
 
   @Test
   public void testContainerUpdateExecTypeGuaranteedToOpportunistic()
-      throws IOException, YarnException, InterruptedException {
+          throws Exception {
     delayContainers = true;
     containerManager.start();
     // Construct the Container-id
@@ -1253,20 +1256,27 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
         1, updateResponse.getSuccessfullyUpdatedContainers().size());
     Assert.assertTrue(updateResponse.getFailedRequests().isEmpty());
 
-    //Make sure the container is running
-    List<ContainerId> statList = new ArrayList<ContainerId>();
-    statList.add(cId);
-    GetContainerStatusesRequest statRequest =
-        GetContainerStatusesRequest.newInstance(statList);
-    List<ContainerStatus> containerStatuses = containerManager
-        .getContainerStatuses(statRequest).getContainerStatuses();
-    Assert.assertEquals(1, containerStatuses.size());
-    for (ContainerStatus status : containerStatuses) {
-      Assert.assertEquals(
-          org.apache.hadoop.yarn.api.records.ContainerState.RUNNING,
-          status.getState());
-      Assert
-          .assertEquals(ExecutionType.OPPORTUNISTIC, status.getExecutionType());
-    }
+    final GetContainerStatusesRequest statRequest =
+                    GetContainerStatusesRequest.newInstance(
+                                    Collections.singletonList(cId));
+    final org.apache.hadoop.yarn.api.records.ContainerState expectedState =
+                    org.apache.hadoop.yarn.api.records.ContainerState.RUNNING;
+
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        List<ContainerStatus> containerStatuses;
+        try {
+          containerStatuses = containerManager
+                  .getContainerStatuses(statRequest).getContainerStatuses();
+        } catch (YarnException | IOException e) {
+          return false;
+        }
+        Assert.assertEquals(1, containerStatuses.size());
+        ContainerStatus status = containerStatuses.get(0);
+        return (status.getState() == expectedState
+                && status.getExecutionType() == ExecutionType.OPPORTUNISTIC);
+      }
+    }, 20, 10000);
   }
 }
