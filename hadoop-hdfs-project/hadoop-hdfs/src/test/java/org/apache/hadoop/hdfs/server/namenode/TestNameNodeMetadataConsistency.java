@@ -17,6 +17,7 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
+import com.google.common.base.Supplier;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -29,26 +30,31 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class TestNameNodeMetadataConsistency {
+
   private static final Path filePath1 = new Path("/testdata1.txt");
   private static final Path filePath2 = new Path("/testdata2.txt");
-  private static final String TEST_DATA_IN_FUTURE = "This is test data";
+  private static final byte[] TEST_DATA_IN_FUTURE =
+      "This is test data".getBytes();
+  private static final int TEST_DATA_IN_FUTURE_LENGTH =
+      TEST_DATA_IN_FUTURE.length;
 
   private static final int SCAN_INTERVAL = 1;
-  private static final int SCAN_WAIT = 3;
-  MiniDFSCluster cluster;
-  HdfsConfiguration conf;
+  private static final int WAIT_TIME_MS = 500;
+  private static final int MAX_WAIT_TIME_MS = 60000;
+  private MiniDFSCluster cluster;
+  private HdfsConfiguration conf;
 
   @Before
   public void InitTest() throws IOException {
@@ -74,13 +80,11 @@ public class TestNameNodeMetadataConsistency {
    * safe mode while it is in startup mode.
    */
   @Test
-  public void testGenerationStampInFuture() throws
-      IOException, InterruptedException {
+  public void testGenerationStampInFuture() throws Exception {
     cluster.waitActive();
-
     FileSystem fs = cluster.getFileSystem();
     OutputStream ostream = fs.create(filePath1);
-    ostream.write(TEST_DATA_IN_FUTURE.getBytes());
+    ostream.write(TEST_DATA_IN_FUTURE);
     ostream.close();
 
     // Re-write the Generation Stamp to a Generation Stamp in future.
@@ -107,12 +111,10 @@ public class TestNameNodeMetadataConsistency {
         cluster.getNameNode().getNamesystem().getBlockManager());
 
     cluster.restartDataNode(dnProps);
-    waitTil(TimeUnit.SECONDS.toMillis(SCAN_WAIT));
-    cluster.triggerBlockReports();
-    waitTil(TimeUnit.SECONDS.toMillis(SCAN_WAIT));
+    waitForNumBytes(TEST_DATA_IN_FUTURE_LENGTH);
 
     // Make sure that we find all written bytes in future block
-    assertEquals(TEST_DATA_IN_FUTURE.length(),
+    assertEquals(TEST_DATA_IN_FUTURE_LENGTH,
         cluster.getNameNode().getBytesWithFutureGenerationStamps());
     // Assert safemode reason
     assertTrue(cluster.getNameNode().getNamesystem().getSafeModeTip().contains(
@@ -124,16 +126,13 @@ public class TestNameNodeMetadataConsistency {
    * hence we should not have positive count of Blocks in future.
    */
   @Test
-  public void testEnsureGenStampsIsStartupOnly() throws
-      IOException, InterruptedException {
-
-    String testData = " This is test data";
+  public void testEnsureGenStampsIsStartupOnly() throws Exception {
     cluster.restartDataNodes();
     cluster.restartNameNodes();
     cluster.waitActive();
     FileSystem fs = cluster.getFileSystem();
     OutputStream ostream = fs.create(filePath2);
-    ostream.write(testData.getBytes());
+    ostream.write(TEST_DATA_IN_FUTURE);
     ostream.close();
 
     ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, filePath2);
@@ -142,7 +141,6 @@ public class TestNameNodeMetadataConsistency {
     // Re-write the Generation Stamp to a Generation Stamp in future.
     cluster.changeGenStampOfBlock(0, block, genStamp + 1);
     MiniDFSCluster.DataNodeProperties dnProps = cluster.stopDataNode(0);
-
 
     // Simulate  Namenode forgetting a Block
     cluster.restartNameNode(true);
@@ -155,21 +153,27 @@ public class TestNameNodeMetadataConsistency {
     cluster.getNameNode().getNamesystem().writeUnlock();
 
     cluster.restartDataNode(dnProps);
-    waitTil(TimeUnit.SECONDS.toMillis(SCAN_WAIT));
-    cluster.triggerBlockReports();
-    waitTil(TimeUnit.SECONDS.toMillis(SCAN_WAIT));
 
-
+    waitForNumBytes(0);
     // Make sure that there are no bytes in future since isInStartupSafe
     // mode is not true.
     assertEquals(0, cluster.getNameNode().getBytesWithFutureGenerationStamps());
   }
 
-  private void waitTil(long waitPeriod) {
-    try {
-      Thread.sleep(waitPeriod);
-    } catch (InterruptedException e) {
-      e.printStackTrace();
-    }
+  private void waitForNumBytes(final int numBytes) throws Exception {
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        try {
+          cluster.triggerBlockReports();
+          // Compare the number of bytes
+          return (cluster.getNameNode().getBytesWithFutureGenerationStamps()
+              == numBytes);
+        } catch (Exception e) {
+          // Ignore the exception
+        }
+        return false;
+      }
+    }, WAIT_TIME_MS, MAX_WAIT_TIME_MS);
   }
 }
