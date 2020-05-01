@@ -17,27 +17,21 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.io.PrintStream;
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.util.List;
-import java.util.Map;
-
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockUnderConstructionFeature;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.DstReference;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithName;
@@ -46,9 +40,14 @@ import org.apache.hadoop.hdfs.util.Diff;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import java.io.PrintStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.util.List;
+import java.util.Map;
 
 /**
  * We keep an in-memory representation of the file/block hierarchy.
@@ -225,6 +224,27 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     return this;
   }
 
+  /** Is this inode in the current state? */
+  public boolean isInCurrentState() {
+    if (isRoot()) {
+      return true;
+    }
+    final INodeDirectory parentDir = getParent();
+    if (parentDir == null) {
+      return false; // this inode is only referenced in snapshots
+    }
+    if (!parentDir.isInCurrentState()) {
+      return false;
+    }
+    final INode child = parentDir.getChild(getLocalNameBytes(),
+            Snapshot.CURRENT_STATE_ID);
+    if (this == child) {
+      return true;
+    }
+    return child != null && child.isReference() &&
+        this.equals(child.asReference().getReferredINode());
+  }
+
   /** Is this inode in the latest snapshot? */
   public final boolean isInLatestSnapshot(final int latestSnapshotId) {
     if (latestSnapshotId == Snapshot.CURRENT_STATE_ID ||
@@ -234,6 +254,8 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     // if parent is a reference node, parent must be a renamed node. We can 
     // stop the check at the reference node.
     if (parent != null && parent.isReference()) {
+      // TODO: Is it a bug to return true?
+      //       Some ancestor nodes may not be in the latest snapshot.
       return true;
     }
     final INodeDirectory parentDir = getParent();
