@@ -266,7 +266,8 @@ public class TestHostRestrictingAuthorizationFilter {
     filter.doFilter(request, response,
         (servletRequest, servletResponse) -> {});
     Mockito.verify(response, Mockito.times(1))
-        .sendError(Mockito.eq(404), Mockito.anyString());
+        .sendError(Mockito.eq(HttpServletResponse.SC_NOT_FOUND),
+                   Mockito.anyString());
     filter.destroy();
   }
 
