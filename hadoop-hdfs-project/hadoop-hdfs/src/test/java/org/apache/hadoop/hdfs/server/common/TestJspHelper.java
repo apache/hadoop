@@ -22,12 +22,14 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationUtilsClient;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeHttpServer;
 import org.apache.hadoop.hdfs.web.resources.DoAsParam;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authorize.AuthorizationException;
@@ -366,6 +368,39 @@ public class TestJspHelper {
       Assert.assertEquals(
           "User: " + user + " is not allowed to impersonate " + realUser,
            ae.getMessage());
+    }
+  }
+
+  @Test
+  public void testGetUgiDuringStartup() throws IOException {
+    conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "hdfs://localhost:4321/");
+    ServletContext context = mock(ServletContext.class);
+    String realUser = "TheDoctor";
+    String user = "TheNurse";
+    conf.set(DFSConfigKeys.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
+    UserGroupInformation.setConfiguration(conf);
+    HttpServletRequest request;
+
+    Text ownerText = new Text(user);
+    DelegationTokenIdentifier dtId = new DelegationTokenIdentifier(
+        ownerText, ownerText, new Text(realUser));
+    Token<DelegationTokenIdentifier> token = new Token<DelegationTokenIdentifier>(
+        dtId, new DummySecretManager(0, 0, 0, 0));
+    String tokenString = token.encodeToUrlString();
+
+    // token with auth-ed user
+    request = getMockRequest(realUser, null, null);
+    when(request.getParameter(DelegationUtilsClient.DELEGATION_PARAMETER_NAME)).thenReturn(
+        tokenString);
+
+    NameNode mockNN = mock(NameNode.class);
+    when(mockNN.getNamesystem()).thenReturn(null);
+    when(context.getAttribute("name.node")).thenReturn(mockNN);
+
+    try {
+      JspHelper.getUGI(context, request, conf);
+    } catch (RetriableException e) {
+      Assert.assertEquals("Namenode is in startup mode", e.getMessage());
     }
   }
 

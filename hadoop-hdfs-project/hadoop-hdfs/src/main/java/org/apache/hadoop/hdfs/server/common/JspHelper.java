@@ -43,10 +43,12 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationUtilsClient;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeHttpServer;
 import org.apache.hadoop.hdfs.web.resources.DoAsParam;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
+import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
@@ -270,7 +272,6 @@ public class JspHelper {
       SecurityUtil.setTokenService(token, serviceAddress);
       token.setKind(DelegationTokenIdentifier.HDFS_DELEGATION_KIND);
     }
-
     ByteArrayInputStream buf =
         new ByteArrayInputStream(token.getIdentifier());
     DataInputStream in = new DataInputStream(buf);
@@ -279,8 +280,14 @@ public class JspHelper {
     if (context != null) {
       final NameNode nn = NameNodeHttpServer.getNameNodeFromContext(context);
       if (nn != null) {
+        FSNamesystem namesystem = nn.getNamesystem();
+        // namesystem can be null during startup period at this moment.
+        // so bypass this verification step
+        if (namesystem == null) {
+          throw new RetriableException("Namenode is in startup mode");
+        }
         // Verify the token.
-        nn.getNamesystem().verifyToken(id, token.getPassword());
+        namesystem.verifyToken(id, token.getPassword());
       }
     }
     UserGroupInformation ugi = id.getUser();
