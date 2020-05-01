@@ -257,15 +257,14 @@ public class TestHostRestrictingAuthorizationFilter {
 
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
 
-    FilterChain chain = (servletRequest, servletResponse) -> {};
     Filter filter = new HostRestrictingAuthorizationFilter();
-
     HashMap<String, String> configs = new HashMap<String, String>() {};
     configs.put(AuthenticationFilter.AUTH_TYPE, "simple");
     FilterConfig fc = new DummyFilterConfig(configs);
 
     filter.init(fc);
-    filter.doFilter(request, response, chain);
+    filter.doFilter(request, response,
+        (servletRequest, servletResponse) -> {});
     Mockito.verify(response, Mockito.times(1))
         .sendError(Mockito.eq(404), Mockito.anyString());
     filter.destroy();
