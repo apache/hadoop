@@ -40,10 +40,13 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.fs.s3a.UnknownStoreException;
 
+import static org.apache.hadoop.fs.s3a.Constants.S3A_BUCKET_PROBE;
+import static org.apache.hadoop.fs.s3a.Constants.S3A_BUCKET_PROBE_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_METASTORE_LOCAL;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getLandsatCSVFile;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.*;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardToolTestHelper.exec;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -62,7 +65,10 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
+    removeBaseAndBucketOverrides(conf, S3_METADATA_STORE_IMPL);
     conf.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_LOCAL);
+    removeBaseAndBucketOverrides(conf, S3A_BUCKET_PROBE);
+    conf.setInt(S3A_BUCKET_PROBE, S3A_BUCKET_PROBE_DEFAULT);
     return conf;
   }
 
