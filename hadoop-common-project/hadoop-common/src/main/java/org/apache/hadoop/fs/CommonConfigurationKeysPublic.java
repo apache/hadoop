@@ -940,5 +940,13 @@ public class CommonConfigurationKeysPublic {
   /** Default shutdown hook timeout: {@value} seconds. */
   public static final long SERVICE_SHUTDOWN_TIMEOUT_DEFAULT = 30;
 
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String HADOOP_HTTP_IDLE_TIMEOUT_MS_KEY =
+      "hadoop.http.idle_timeout.ms";
+  public static final int HADOOP_HTTP_IDLE_TIMEOUT_MS_DEFAULT = 1000;
 }
 
