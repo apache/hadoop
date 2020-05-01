@@ -50,7 +50,7 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.AclUtil;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.fs.viewfs.ViewFileSystem.FsCreator;
+import org.apache.hadoop.fs.viewfs.ViewFileSystem.FsGetter;
 import org.apache.hadoop.fs.viewfs.ViewFileSystem.MountPoint;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Credentials;
@@ -1281,7 +1281,7 @@ abstract public class ViewFileSystemBaseTest {
   @Test
   public void testViewFileSystemInnerCache() throws Exception {
     ViewFileSystem.InnerCache cache =
-        new ViewFileSystem.InnerCache(new FsCreator());
+        new ViewFileSystem.InnerCache(new FsGetter());
     FileSystem fs = cache.get(fsTarget.getUri(), conf);
 
     // InnerCache caches filesystem.

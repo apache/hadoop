@@ -97,16 +97,31 @@ public class ViewFileSystem extends FileSystem {
   }
 
   /**
-   * File system instance creator.
+   * File system instance getter.
    */
-  public static class FsCreator {
-    
+  static class FsGetter {
+
     /**
-     * Creates file system instance of given uri.
+     * Gets new file system instance of given uri.
      */
-    public FileSystem createFs(URI uri, Configuration conf) throws IOException {
+    public FileSystem getNewInstance(URI uri, Configuration conf)
+        throws IOException {
       return FileSystem.newInstance(uri, conf);
     }
+
+    /**
+     * Gets file system instance of given uri.
+     */
+    public FileSystem get(URI uri, Configuration conf) throws IOException {
+      return FileSystem.get(uri, conf);
+    }
+  }
+
+  /**
+   * Gets file system creator instance.
+   */
+  protected FsGetter fsGetter() {
+    return new FsGetter();
   }
 
   /**
@@ -114,16 +129,16 @@ public class ViewFileSystem extends FileSystem {
    */
   static class InnerCache {
     private Map<Key, FileSystem> map = new HashMap<>();
-    private FsCreator fsCreator;
+    private FsGetter fsCreator;
 
-    public InnerCache(FsCreator fsCreator) {
+    InnerCache(FsGetter fsCreator) {
       this.fsCreator = fsCreator;
     }
 
     FileSystem get(URI uri, Configuration config) throws IOException {
       Key key = new Key(uri);
       if (map.get(key) == null) {
-        FileSystem fs = fsCreator.createFs(uri, config);
+        FileSystem fs = fsCreator.getNewInstance(uri, config);
         map.put(key, fs);
         return fs;
       } else {
@@ -211,15 +226,15 @@ public class ViewFileSystem extends FileSystem {
 
   final long creationTime; // of the the mount table
   final UserGroupInformation ugi; // the user/group of user who created mtable
-  protected URI myUri;
-  protected Path workingDir;
+  private URI myUri;
+  private Path workingDir;
   Configuration config;
   InodeTree<FileSystem> fsState;  // the fs state; ie the mount table
   Path homeDir = null;
-  protected boolean enableInnerCache = false;
-  protected InnerCache cache;
+  private boolean enableInnerCache = false;
+  private InnerCache cache;
   // Default to rename within same mountpoint
-  protected RenameStrategy renameStrategy = RenameStrategy.SAME_MOUNTPOINT;
+  private RenameStrategy renameStrategy = RenameStrategy.SAME_MOUNTPOINT;
   /**
    * Make the path Absolute and get the path-part of a pathname.
    * Checks that URI matches this file system 
@@ -268,18 +283,18 @@ public class ViewFileSystem extends FileSystem {
   @Override
   public void initialize(final URI theUri, final Configuration conf)
       throws IOException {
-    superFSInit(theUri, conf);
+    super.initialize(theUri, conf);
     setConf(conf);
     config = conf;
     enableInnerCache = config.getBoolean(CONFIG_VIEWFS_ENABLE_INNER_CACHE,
         CONFIG_VIEWFS_ENABLE_INNER_CACHE_DEFAULT);
-    final InnerCache innerCache = new InnerCache(new FsCreator());
+    FsGetter fsGetter = fsGetter();
+    final InnerCache innerCache = new InnerCache(fsGetter);
     // Now build  client side view (i.e. client side mount table) from config.
     final String authority = theUri.getAuthority();
     try {
-      myUri = new URI(FsConstants.VIEWFS_SCHEME, authority, "/", null, null);
+      myUri = new URI(getScheme(), authority, "/", null, null);
       fsState = new InodeTree<FileSystem>(conf, authority) {
-
         @Override
         protected FileSystem getTargetFileSystem(final URI uri)
           throws URISyntaxException, IOException {
@@ -287,7 +302,7 @@ public class ViewFileSystem extends FileSystem {
             if (enableInnerCache) {
               fs = innerCache.get(uri, config);
             } else {
-              fs = FileSystem.get(uri, config);
+              fs = fsGetter.get(theUri, conf);
             }
             return new ChRootedFileSystem(fs, uri);
         }
@@ -318,11 +333,6 @@ public class ViewFileSystem extends FileSystem {
       // is safe.
       cache = innerCache.unmodifiableCache();
     }
-  }
-
-  protected void superFSInit(final URI theUri, final Configuration conf)
-      throws IOException {
-    super.initialize(theUri, conf);
   }
 
   /**

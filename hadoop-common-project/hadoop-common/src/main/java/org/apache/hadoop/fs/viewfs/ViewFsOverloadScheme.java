@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
-import java.net.URISyntaxException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -31,66 +30,110 @@ import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 
 /******************************************************************************
- * This class is extended from the ViewFileSystem for the overloaded scheme 
- * file system. This object is the way end-user code interacts with a multiple
- * mounted file systems transparently. Overloaded scheme based uri can be
- * continued to use as end user interactive uri and mount links can be
- * configured to any Hadoop compatible file system. This class maintains all 
- * the target file system instances and delegates the calls to respective 
- * target file system based on mount link mapping. Mount link configuration
- * format and behavior is same as ViewFileSystem.
+ * This class is extended from the ViewFileSystem for the overloaded scheme file
+ * system. The objective here is to handle multiple mounted file systems
+ * transparently. Mount link configurations and in-memory mount table
+ * building behaviors are inherited from ViewFileSystem. Unlike ViewFileSystem
+ * scheme (viewfs://), the users would be able to use any scheme.
+ *
+ * Example 1:
+ * If users want some of their existing cluster (hdfs://Cluster)
+ * data to mount with other hdfs and object store clusters(hdfs://NN1,
+ * o3fs://bucket1.volume1/, s3a://bucket1/)
+ *
+ * fs.viewfs.mounttable.Cluster./user = hdfs://NN1/user
+ * fs.viewfs.mounttable.Cluster./data = o3fs://bucket1.volume1/data
+ * fs.viewfs.mounttable.Cluster./backup = s3a://bucket1/backup/
+ *
+ * Op1: Create file hdfs://Cluster/user/fileA will go to hdfs://NN1/user/fileA
+ * Op2: Create file hdfs://Cluster/data/datafile will go to
+ *      o3fs://bucket1.volume1/data/datafile
+ * Op3: Create file hdfs://Cluster/backup/data.zip will go to
+ *      s3a://bucket1/backup/data.zip
+ *
+ * Example 2:
+ * If users want some of their existing cluster (s3a://bucketA/)
+ * data to mount with other hdfs and object store clusters
+ * (hdfs://NN1, o3fs://bucket1.volume1/)
+ *
+ * fs.viewfs.mounttable.bucketA./user = hdfs://NN1/user
+ * fs.viewfs.mounttable.bucketA./data = o3fs://bucket1.volume1/data
+ * fs.viewfs.mounttable.bucketA./salesDB = s3a://bucketA/salesDB/
+ *
+ * Op1: Create file s3a://bucketA/user/fileA will go to hdfs://NN1/user/fileA
+ * Op2: Create file s3a://bucketA/data/datafile will go to
+ *      o3fs://bucket1.volume1/data/datafile
+ * Op3: Create file s3a://bucketA/salesDB/dbfile will go to
+ *      s3a://bucketA/salesDB/dbfile
  *****************************************************************************/
 @InterfaceAudience.LimitedPrivate({ "MapReduce", "HBase", "Hive" })
 @InterfaceStability.Evolving
 public class ViewFsOverloadScheme extends ViewFileSystem {
-
+  private URI myUri;
   public ViewFsOverloadScheme() throws IOException {
     super();
   }
 
-  private FsCreator fsCreator;
-  private String myScheme;
-
   @Override
   public String getScheme() {
-    return myScheme;
+    return myUri.getScheme();
   }
 
   @Override
-  public void initialize(final URI theUri, final Configuration conf)
-      throws IOException {
-    superFSInit(theUri, conf);
-    setConf(conf);
-    config = conf;
-    myScheme = config.get(FsConstants.VIEWFS_OVERLOAD_SCHEME_KEY);
-    fsCreator = new FsCreator() {
+  public void initialize(URI theUri, Configuration conf) throws IOException {
+    this.myUri = theUri;
+    super.initialize(theUri, conf);
+  }
 
-      /**
-       * This method is overridden because in ViewFsOverloadScheme if
-       * overloaded scheme matches with mounted target fs scheme, file system
-       * should be created without going into fs.<scheme>.impl based 
-       * resolution. Otherwise it will end up into loop as target will be 
-       * resolved again to ViewFsOverloadScheme as fs.<scheme>.impl points to
-       * ViewFsOverloadScheme. So, below method will initialize the
-       * fs.viewfs.overload.scheme.target.<scheme>.impl. Other schemes can
-       * follow fs.newInstance
-       */
+  /**
+   * This method is overridden because in ViewFsOverloadScheme if overloaded
+   * scheme matches with mounted target fs scheme, file system should be
+   * created without going into fs.<scheme>.impl based resolution. Otherwise
+   * it will end up in an infinite loop as the target will be resolved again
+   * to ViewFsOverloadScheme as fs.<scheme>.impl points to
+   * ViewFsOverloadScheme. So, below method will initialize the
+   * fs.viewfs.overload.scheme.target.<scheme>.impl. Other schemes can
+   * follow fs.newInstance
+   */
+  @Override
+  protected FsGetter fsGetter() {
+
+    return new FsGetter() {
       @Override
-      public FileSystem createFs(URI uri, Configuration conf)
+      public FileSystem getNewInstance(URI uri, Configuration conf)
           throws IOException {
-        if (uri.getScheme().equals(myScheme)) {
-          // Avoid looping when target fs scheme is matching to overloaded
-          // scheme.
+        if (uri.getScheme().equals(getScheme())) {
+          /*
+           * Avoid looping when target fs scheme is matching to overloaded
+           * scheme.
+           */
           return createFileSystem(uri, conf);
         } else {
           return FileSystem.newInstance(uri, conf);
         }
       }
 
+      /**
+       * When ViewFSOverloadScheme scheme and target uri scheme are matching,
+       * it will not take advantage of FileSystem cache as it will create
+       * instance directly. For caching needs please set
+       * "fs.viewfs.enable.inner.cache" to true.
+       */
+      @Override
+      public FileSystem get(URI uri, Configuration conf) throws IOException {
+        if (uri.getScheme().equals(getScheme())) {
+          // Avoid looping when target fs scheme is matching to overloaded
+          // scheme.
+          return createFileSystem(uri, conf);
+        } else {
+          return FileSystem.get(uri, conf);
+        }
+      }
+
       private FileSystem createFileSystem(URI uri, Configuration conf)
           throws IOException {
         final String fsImplConf = String.format(
-            FsConstants.FS_VIEWFS_OVERLOAD_SCHEME_TARGET_FS_IMPL_PATTERN_KEY,
+            FsConstants.FS_VIEWFS_OVERLOAD_SCHEME_TARGET_FS_IMPL_PATTERN,
             uri.getScheme());
         Class<?> clazz = conf.getClass(fsImplConf, null);
         if (clazz == null) {
@@ -123,53 +166,5 @@ public class ViewFsOverloadScheme extends ViewFileSystem {
         return result;
       }
     };
-
-    final InnerCache innerCache = new InnerCache(fsCreator);
-
-    // Now build client side view (i.e. client side mount table) from config.
-    final String myAuthority = theUri.getAuthority();
-    try {
-      myUri = new URI(myScheme, myAuthority, "/", null,
-          null);
-      fsState = new InodeTree<FileSystem>(conf, myAuthority) {
-
-        @Override
-        protected FileSystem getTargetFileSystem(final URI uri)
-            throws URISyntaxException, IOException {
-          FileSystem fs = innerCache.get(uri, config);
-          return new ChRootedFileSystem(fs, uri);
-        }
-
-        @Override
-        protected FileSystem getTargetFileSystem(
-            final INodeDir<FileSystem> dir)
-            throws URISyntaxException {
-          return new InternalDirOfViewFs(dir, creationTime, ugi, myUri,
-              config);
-        }
-
-        @Override
-        protected FileSystem getTargetFileSystem(final String settings,
-            final URI[] uris) throws URISyntaxException, IOException {
-          return NflyFSystem.createFileSystem(uris, config, settings);
-        }
-      };
-      workingDir = this.getHomeDirectory();
-      renameStrategy = RenameStrategy
-          .valueOf(conf.get(Constants.CONFIG_VIEWFS_RENAME_STRATEGY,
-              RenameStrategy.SAME_MOUNTPOINT.toString()));
-    } catch (URISyntaxException e) {
-      throw new IOException("URISyntax exception: " + theUri);
-    }
-
-    cache = innerCache.unmodifiableCache();
-  }
-
-  @Override
-  public void close() throws IOException {
-    super.close();
-    if (cache != null) {
-      cache.closeAll();
-    }
   }
 }

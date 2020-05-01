@@ -43,38 +43,33 @@ import org.junit.Test;
  * Tests ViewFsOverloadScheme with configured mount links.
  */
 public class TestViewFsOverloadSchemeWithHdfsScheme {
+  private static final String FS_IMPL_PATTERN_KEY = "fs.%s.impl";
+  private static final String HDFS_SCHEME = "hdfs";
   private Configuration conf = null;
   private MiniDFSCluster cluster = null;
   private URI defaultFSURI;
   private File localTargetDir;
   private static final String TEST_ROOT_DIR =
       PathUtils.getTestDirName(TestViewFsOverloadSchemeWithHdfsScheme.class);
-  private static String HDFS_USER_FOLDER = "/HDFSUser";
-  private static String LOCAL_FOLDER = "/local";
+  private static final String HDFS_USER_FOLDER = "/HDFSUser";
+  private static final String LOCAL_FOLDER = "/local";
 
   @Before
   public void startCluster() throws IOException {
     conf = new Configuration();
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY,
         true);
-    conf.set(
-        String.format(FsConstants.FS_IMPL_PATTERN_KEY,
-            FsConstants.VIEWFS_OVERLOAD_SCHEME_DEFAULT),
+    conf.set(String.format(FS_IMPL_PATTERN_KEY, HDFS_SCHEME),
         ViewFsOverloadScheme.class.getName());
-    conf.set(
-        String.format(
-            FsConstants.FS_VIEWFS_OVERLOAD_SCHEME_TARGET_FS_IMPL_PATTERN_KEY,
-            FsConstants.VIEWFS_OVERLOAD_SCHEME_DEFAULT),
-        DistributedFileSystem.class.getName());
-    conf.set(FsConstants.VIEWFS_OVERLOAD_SCHEME_KEY,
-        FsConstants.VIEWFS_OVERLOAD_SCHEME_DEFAULT);
+    conf.set(String.format(
+        FsConstants.FS_VIEWFS_OVERLOAD_SCHEME_TARGET_FS_IMPL_PATTERN,
+        HDFS_SCHEME), DistributedFileSystem.class.getName());
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     cluster.waitClusterUp();
     defaultFSURI =
         URI.create(conf.get(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY));
     localTargetDir = new File(TEST_ROOT_DIR, "/root/");
-    Assert.assertEquals(FsConstants.VIEWFS_OVERLOAD_SCHEME_DEFAULT,
-        defaultFSURI.getScheme()); // hdfs scheme.
+    Assert.assertEquals(HDFS_SCHEME, defaultFSURI.getScheme()); // hdfs scheme.
   }
 
   @After
@@ -101,7 +96,7 @@ public class TestViewFsOverloadSchemeWithHdfsScheme {
    * Create mount links as follows.
    * hdfs://localhost:xxx/HDFSUser --> hdfs://localhost:xxx/HDFSUser/
    * hdfs://localhost:xxx/local --> file://TEST_ROOT_DIR/root/
-   * 
+   *
    * create file /HDFSUser/testfile should create in hdfs
    * create file /local/test should create directory in local fs
    */
@@ -318,17 +313,37 @@ public class TestViewFsOverloadSchemeWithHdfsScheme {
     createLinks(true, hdfsTargetPath, localTragetPath);
     conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY,
         defaultFSURI.toString());
-    conf.set(
-        String.format(FsConstants.FS_IMPL_PATTERN_KEY,
-            FsConstants.VIEWFS_OVERLOAD_SCHEME_DEFAULT),
+    conf.set(String.format(FS_IMPL_PATTERN_KEY, HDFS_SCHEME),
         ViewFsOverloadScheme.class.getName());
-    conf.set(FsConstants.VIEWFS_OVERLOAD_SCHEME_KEY,
-        FsConstants.VIEWFS_OVERLOAD_SCHEME_DEFAULT);
 
     ViewFsOverloadScheme fs = (ViewFsOverloadScheme) FileSystem.get(conf);
     try {
       fs.create(new Path("/onRootWhenFallBack"));
       Assert.fail("OverloadScheme target fs should be valid.");
+    } finally {
+      fs.close();
+    }
+  }
+
+  /**
+   * Create mount links as follows
+   * hdfs://localhost:xxx/HDFSUser --> hdfs://localhost:xxx/HDFSUser/
+   * hdfs://localhost:xxx/local --> file://TEST_ROOT_DIR/root/
+   *
+   * It should be able to create file using ViewFsOverloadScheme.
+   */
+  @Test(timeout = 30000)
+  public void testViewFsOverloadSchemeWhenInnerCacheDisabled()
+      throws Exception {
+    final Path hdfsTargetPath = new Path(defaultFSURI + HDFS_USER_FOLDER);
+    final Path localTragetPath = new Path(localTargetDir.toURI());
+    createLinks(false, hdfsTargetPath, localTragetPath);
+    conf.setBoolean(Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE, false);
+    ViewFsOverloadScheme fs = (ViewFsOverloadScheme) FileSystem.get(conf);
+    Path testFile = new Path(HDFS_USER_FOLDER + "/testFile");
+    fs.create(testFile);
+    try {
+      Assert.assertTrue(fs.exists(testFile));
     } finally {
       fs.close();
     }

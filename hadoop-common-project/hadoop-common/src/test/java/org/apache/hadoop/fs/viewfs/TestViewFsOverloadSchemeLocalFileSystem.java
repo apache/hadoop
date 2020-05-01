@@ -52,13 +52,13 @@ public class TestViewFsOverloadSchemeLocalFileSystem {
   @Before
   public void setUp() throws Exception {
     conf = new Configuration();
-    conf.set(String.format(FsConstants.FS_IMPL_PATTERN_KEY, FILE),
+    conf.set(String.format("fs.%s.impl",
+        FILE),
         ViewFsOverloadScheme.class.getName());
     conf.set(String.format(
-        FsConstants.FS_VIEWFS_OVERLOAD_SCHEME_TARGET_FS_IMPL_PATTERN_KEY,
+        FsConstants.FS_VIEWFS_OVERLOAD_SCHEME_TARGET_FS_IMPL_PATTERN,
         FILE),
         LocalFileSystem.class.getName());
-    conf.set(FsConstants.VIEWFS_OVERLOAD_SCHEME_KEY, FILE);
     fsTarget = new LocalFileSystem();
     fsTarget.initialize(new URI("file:///"), conf);
     fileSystemTestHelper = new FileSystemTestHelper();
@@ -95,7 +95,7 @@ public class TestViewFsOverloadSchemeLocalFileSystem {
       lViewIs.close();
     }
   }
-  
+
   /**
    * Tests create file and delete file with ViewFSOverloadScheme.
    */
@@ -116,7 +116,7 @@ public class TestViewFsOverloadSchemeLocalFileSystem {
       lViewFS.close();
     }
   }
-  
+
   /**
    * Tests root level file with linkMergeSlash with ViewFSOverloadScheme.
    */
@@ -135,7 +135,7 @@ public class TestViewFsOverloadSchemeLocalFileSystem {
       lViewFS.close();
     }
   }
-  
+
   /**
    * Tests with linkMergeSlash and other mounts in ViewFSOverloadScheme.
    */

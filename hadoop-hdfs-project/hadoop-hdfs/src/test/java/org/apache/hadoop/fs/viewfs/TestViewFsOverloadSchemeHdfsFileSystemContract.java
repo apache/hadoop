@@ -62,16 +62,12 @@ public class TestViewFsOverloadSchemeHdfsFileSystemContract
         .build();
     defaultWorkingDirectory =
         "/user/" + UserGroupInformation.getCurrentUser().getShortUserName();
-    conf.set(
-        String.format(FsConstants.FS_IMPL_PATTERN_KEY,
-            FsConstants.VIEWFS_OVERLOAD_SCHEME_DEFAULT),
+    conf.set(String.format("fs.%s.impl", "hdfs"),
         ViewFsOverloadScheme.class.getName());
     conf.set(String.format(
-        FsConstants.FS_VIEWFS_OVERLOAD_SCHEME_TARGET_FS_IMPL_PATTERN_KEY,
-        FsConstants.VIEWFS_OVERLOAD_SCHEME_DEFAULT),
+        FsConstants.FS_VIEWFS_OVERLOAD_SCHEME_TARGET_FS_IMPL_PATTERN,
+        "hdfs"),
         DistributedFileSystem.class.getName());
-    conf.set(FsConstants.VIEWFS_OVERLOAD_SCHEME_KEY,
-        FsConstants.VIEWFS_OVERLOAD_SCHEME_DEFAULT);
     URI defaultFSURI =
         URI.create(conf.get(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY));
     ConfigUtil.addLink(conf, defaultFSURI.getAuthority(), "/user",
