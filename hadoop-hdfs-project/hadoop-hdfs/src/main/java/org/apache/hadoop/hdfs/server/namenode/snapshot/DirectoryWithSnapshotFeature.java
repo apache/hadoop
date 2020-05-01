@@ -739,19 +739,22 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
           // were created before "prior" will be covered by the later 
           // cleanSubtreeRecursively call.
           if (priorCreated != null) {
-            if (currentINode.isLastReference() &&
-                    currentINode.getDiffs().getLastSnapshotId() == prior) {
-              // If this is the last reference of the directory inode and it
-              // can not be accessed in any of the subsequent snapshots i.e,
-              // this is the latest snapshot diff and if this is the last
-              // reference, the created list can be
-              // destroyed.
-              priorDiff.getChildrenDiff().destroyCreatedList(
-                  reclaimContext, currentINode);
-            } else {
-              // we only check the node originally in prior's created list
-              for (INode cNode : priorDiff.diff.getCreatedUnmodifiable()) {
-                if (priorCreated.containsKey(cNode)) {
+            // The nodes in priorCreated must be destroyed if
+            //   (1) this is the last reference, and
+            //   (2) prior is the last snapshot, and
+            //   (3) currentINode is not in the current state.
+            final boolean destroy = currentINode.isLastReference()
+                && currentINode.getDiffs().getLastSnapshotId() == prior
+                && !currentINode.isInCurrentState();
+            // we only check the node originally in prior's created list
+            for (INode cNode : new ArrayList<>(priorDiff.
+                    diff.getCreatedUnmodifiable())) {
+              if (priorCreated.containsKey(cNode)) {
+                if (destroy) {
+                  cNode.destroyAndCollectBlocks(reclaimContext);
+                  currentINode.removeChild(cNode);
+                  priorDiff.diff.removeCreated(cNode);
+                } else {
                   cNode.cleanSubtree(reclaimContext, snapshot, NO_SNAPSHOT_ID);
                 }
               }
