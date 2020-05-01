@@ -305,7 +305,46 @@ public class TestRenameWithSnapshots {
     assertTrue(existsInDiffReport(entries, DiffType.RENAME, sub2.getName(),
         sub3.getName()));
   }
-  
+
+  @Test (timeout=60000)
+  public void testRenameDirectoryAndFileInSnapshot() throws Exception {
+    final Path sub2 = new Path(sub1, "sub2");
+    final Path sub3 = new Path(sub1, "sub3");
+    final Path sub2file1 = new Path(sub2, "file1");
+    final Path sub2file2 = new Path(sub2, "file2");
+    final Path sub3file2 = new Path(sub3, "file2");
+    final Path sub3file3 = new Path(sub3, "file3");
+    final String sub1snap1 = "sub1snap1";
+    final String sub1snap2 = "sub1snap2";
+    final String sub1snap3 = "sub1snap3";
+    final String sub1snap4 = "sub1snap4";
+    hdfs.mkdirs(sub1);
+    hdfs.mkdirs(sub2);
+    DFSTestUtil.createFile(hdfs, sub2file1, BLOCKSIZE, REPL, SEED);
+    SnapshotTestHelper.createSnapshot(hdfs, sub1, sub1snap1);
+    hdfs.rename(sub2file1, sub2file2);
+    SnapshotTestHelper.createSnapshot(hdfs, sub1, sub1snap2);
+
+    // First rename the sub-directory.
+    hdfs.rename(sub2, sub3);
+    SnapshotTestHelper.createSnapshot(hdfs, sub1, sub1snap3);
+    hdfs.rename(sub3file2, sub3file3);
+    SnapshotTestHelper.createSnapshot(hdfs, sub1, sub1snap4);
+    hdfs.deleteSnapshot(sub1, sub1snap1);
+    hdfs.deleteSnapshot(sub1, sub1snap2);
+    hdfs.deleteSnapshot(sub1, sub1snap3);
+    // check the internal details
+    INode sub3file3Inode = fsdir.getINode4Write(sub3file3.toString());
+    INodeReference ref = sub3file3Inode
+            .asReference();
+    INodeReference.WithCount withCount = (WithCount) ref
+            .getReferredINode();
+    Assert.assertEquals(withCount.getReferenceCount(), 1);
+    // Ensure name list is empty for the reference sub3file3Inode
+    Assert.assertNull(withCount.getLastWithName());
+    Assert.assertTrue(sub3file3Inode.isInCurrentState());
+  }
+
   /**
    * After the following steps:
    * <pre>
