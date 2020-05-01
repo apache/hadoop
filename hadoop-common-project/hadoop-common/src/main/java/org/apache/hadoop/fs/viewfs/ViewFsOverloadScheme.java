@@ -81,6 +81,10 @@ public class ViewFsOverloadScheme extends ViewFileSystem {
 
   @Override
   public void initialize(URI theUri, Configuration conf) throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(
+          "Initializing the ViewFsOverloadScheme with the uri: " + theUri);
+    }
     this.myUri = theUri;
     super.initialize(theUri, conf);
   }
@@ -103,6 +107,11 @@ public class ViewFsOverloadScheme extends ViewFileSystem {
       public FileSystem getNewInstance(URI uri, Configuration conf)
           throws IOException {
         if (uri.getScheme().equals(getScheme())) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(
+                "The file system initialized uri scheme is matching with the "
+                    + "given target uri scheme. The target uri is: " + uri);
+          }
           /*
            * Avoid looping when target fs scheme is matching to overloaded
            * scheme.
@@ -124,6 +133,14 @@ public class ViewFsOverloadScheme extends ViewFileSystem {
         if (uri.getScheme().equals(getScheme())) {
           // Avoid looping when target fs scheme is matching to overloaded
           // scheme.
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(
+                "The file system initialized uri scheme is matching with the "
+                    + "given target uri scheme. So, the target file system "
+                    + "instances will not be cached. To cache fs instances, "
+                    + "please set fs.viewfs.enable.inner.cache to true. "
+                    + "The target uri is: " + uri);
+          }
           return createFileSystem(uri, conf);
         } else {
           return FileSystem.get(uri, conf);

@@ -122,7 +122,7 @@ public class TestViewFsOverloadSchemeLocalFileSystem {
    */
   @Test
   public void testLocalFsLinkSlashMerge() throws Exception {
-    LOG.info("Starting testLocalFSCreateAndDelete");
+    LOG.info("Starting testLocalFsLinkSlashMerge");
     ConfigUtil.addLinkMergeSlash(conf, "mt",
         URI.create(targetTestRoot + "/wd2"));
     final URI mountURI = URI.create("file://mt/");
@@ -141,7 +141,7 @@ public class TestViewFsOverloadSchemeLocalFileSystem {
    */
   @Test(expected = IOException.class)
   public void testLocalFsLinkSlashMergeWithOtherMountLinks() throws Exception {
-    LOG.info("Starting testLocalFsCreateAndDelete");
+    LOG.info("Starting testLocalFsLinkSlashMergeWithOtherMountLinks");
     ConfigUtil.addLink(conf, "mt", "/lfsroot",
         URI.create(targetTestRoot + "/wd2"));
     ConfigUtil.addLinkMergeSlash(conf, "mt",
