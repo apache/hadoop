@@ -243,18 +243,15 @@ public class TestHostRestrictingAuthorizationFilter {
     filter.destroy();
   }
 
-  /*
+  /**
    * Test acceptable behavior to malformed requests
    * Case: the request URI does not start with "/webhdfs/v1"
    */
   @Test
   public void testInvalidURI() throws Exception {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
-    Mockito.when(request.getRemoteAddr()).thenReturn(null);
     Mockito.when(request.getMethod()).thenReturn("GET");
     Mockito.when(request.getRequestURI()).thenReturn("/InvalidURI");
-    Mockito.when(request.getQueryString()).thenReturn(null);
-
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
 
     Filter filter = new HostRestrictingAuthorizationFilter();
