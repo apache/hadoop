@@ -513,6 +513,8 @@ public class TestReconstructStripedFile {
 
   @Test(timeout = 180000)
   public void testErasureCodingWorkerXmitsWeight() throws Exception {
+    testErasureCodingWorkerXmitsWeight(0.5f,
+        (int) (ecPolicy.getNumDataUnits() * 0.5f));
     testErasureCodingWorkerXmitsWeight(1f, ecPolicy.getNumDataUnits());
     testErasureCodingWorkerXmitsWeight(0f, 1);
     testErasureCodingWorkerXmitsWeight(10f, 10 * ecPolicy.getNumDataUnits());
@@ -566,6 +568,10 @@ public class TestReconstructStripedFile {
     } finally {
       barrier.await();
       DataNodeFaultInjector.set(oldInjector);
+      for (final DataNode curDn : cluster.getDataNodes()) {
+        GenericTestUtils.waitFor(() -> curDn.getXceiverCount() <= 1, 10, 60000);
+        assertEquals(0, curDn.getXmitsInProgress());
+      }
     }
   }
 }
