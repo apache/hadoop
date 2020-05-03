@@ -112,15 +112,15 @@ public class TestViewFsOverloadSchemeWithHdfsScheme {
     // /local/test
     Path localDir = new Path(LOCAL_FOLDER + "/test");
 
-    try (final ViewFsOverloadScheme fs =
-        (ViewFsOverloadScheme) FileSystem.get(conf)) {
+    try (ViewFsOverloadScheme fs
+        = (ViewFsOverloadScheme) FileSystem.get(conf)) {
       Assert.assertEquals(2, fs.getMountPoints().length);
       fs.createNewFile(hdfsFile); // /HDFSUser/testfile
       fs.mkdirs(localDir); // /local/test
     }
 
     // Initialize HDFS and test files exist in ls or not
-    try (final DistributedFileSystem dfs = new DistributedFileSystem()) {
+    try (DistributedFileSystem dfs = new DistributedFileSystem()) {
       dfs.initialize(defaultFSURI, conf);
       Assert.assertTrue(dfs.exists(
           new Path(Path.getPathWithoutSchemeAndAuthority(hdfsTargetPath),
@@ -130,7 +130,7 @@ public class TestViewFsOverloadSchemeWithHdfsScheme {
               localDir.getName()))); // should not be in local fs.
     }
 
-    try (final RawLocalFileSystem lfs = new RawLocalFileSystem()) {
+    try (RawLocalFileSystem lfs = new RawLocalFileSystem()) {
       lfs.initialize(localTragetPath.toUri(), conf);
       Assert.assertFalse(lfs.exists(
           new Path(Path.getPathWithoutSchemeAndAuthority(hdfsTargetPath),
@@ -175,8 +175,7 @@ public class TestViewFsOverloadSchemeWithHdfsScheme {
 
     createLinks(false, hdfsTargetPath, localTragetPath);
 
-    try (final ViewFsOverloadScheme fs =
-        (ViewFsOverloadScheme) FileSystem.get(conf)) {
+    try (FileSystem fs = FileSystem.get(conf)) {
       FileStatus[] ls = fs.listStatus(new Path("/"));
       Assert.assertEquals(2, ls.length);
       String lsPath1 =
@@ -203,8 +202,7 @@ public class TestViewFsOverloadSchemeWithHdfsScheme {
 
     createLinks(false, hdfsTargetPath, localTragetPath);
 
-    try (final ViewFsOverloadScheme fs =
-        (ViewFsOverloadScheme) FileSystem.get(conf)) {
+    try (FileSystem fs = FileSystem.get(conf)) {
       fs.listStatus(new Path("/nonMount"));
       Assert.fail("It should fail as no mount link with /nonMount");
     }
@@ -224,8 +222,7 @@ public class TestViewFsOverloadSchemeWithHdfsScheme {
 
     createLinks(true, hdfsTargetPath, localTragetPath);
 
-    try (final ViewFsOverloadScheme fs =
-        (ViewFsOverloadScheme) FileSystem.get(conf)) {
+    try (FileSystem fs = FileSystem.get(conf)) {
       fs.createNewFile(new Path("/nonMount/myfile"));
       FileStatus[] ls = fs.listStatus(new Path("/nonMount"));
       Assert.assertEquals(1, ls.length);
@@ -250,8 +247,7 @@ public class TestViewFsOverloadSchemeWithHdfsScheme {
 
     createLinks(false, hdfsTargetPath, localTragetPath);
 
-    try (final ViewFsOverloadScheme fs =
-        (ViewFsOverloadScheme) FileSystem.get(conf)) {
+    try (FileSystem fs = FileSystem.get(conf)) {
       fs.createNewFile(new Path("/newFileOnRoot"));
       Assert.fail("It should fail as root is read only in viewFS.");
     }
@@ -271,8 +267,7 @@ public class TestViewFsOverloadSchemeWithHdfsScheme {
     final Path hdfsTargetPath = new Path(defaultFSURI + HDFS_USER_FOLDER);
     final Path localTragetPath = new Path(localTargetDir.toURI());
     createLinks(true, hdfsTargetPath, localTragetPath);
-    try (final ViewFsOverloadScheme fs =
-        (ViewFsOverloadScheme) FileSystem.get(conf)) {
+    try (FileSystem fs = FileSystem.get(conf)) {
       fs.createNewFile(new Path("/onRootWhenFallBack"));
       Assert.fail(
           "It should fail as root is read only in viewFS, even when configured"
@@ -303,8 +298,7 @@ public class TestViewFsOverloadSchemeWithHdfsScheme {
     conf.set(String.format(FS_IMPL_PATTERN_KEY, HDFS_SCHEME),
         ViewFsOverloadScheme.class.getName());
 
-    try (final ViewFsOverloadScheme fs =
-        (ViewFsOverloadScheme) FileSystem.get(conf)) {
+    try (FileSystem fs = FileSystem.get(conf)) {
       fs.createNewFile(new Path("/onRootWhenFallBack"));
       Assert.fail("OverloadScheme target fs should be valid.");
     }
@@ -324,8 +318,7 @@ public class TestViewFsOverloadSchemeWithHdfsScheme {
     final Path localTragetPath = new Path(localTargetDir.toURI());
     createLinks(false, hdfsTargetPath, localTragetPath);
     conf.setBoolean(Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE, false);
-    try (final ViewFsOverloadScheme fs =
-        (ViewFsOverloadScheme) FileSystem.get(conf)) {
+    try (FileSystem fs = FileSystem.get(conf)) {
       Path testFile = new Path(HDFS_USER_FOLDER + "/testFile");
       fs.createNewFile(testFile);
       Assert.assertTrue(fs.exists(testFile));
@@ -350,14 +343,14 @@ public class TestViewFsOverloadSchemeWithHdfsScheme {
         hdfsTargetPath.toUri());
 
     // 1. Only 1 hdfs child file system should be there with cache.
-    try (final ViewFsOverloadScheme vfs =
+    try (ViewFsOverloadScheme vfs =
         (ViewFsOverloadScheme) FileSystem.get(conf)) {
       Assert.assertEquals(1, vfs.getChildFileSystems().length);
     }
 
     // 2. Two hdfs file systems should be there if no cache.
     conf.setBoolean(Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE, false);
-    try (final ViewFsOverloadScheme vfs =
+    try (ViewFsOverloadScheme vfs =
         (ViewFsOverloadScheme) FileSystem.get(conf)) {
       Assert.assertEquals(2, vfs.getChildFileSystems().length);
     }
@@ -382,7 +375,7 @@ public class TestViewFsOverloadSchemeWithHdfsScheme {
 
     conf.setBoolean(Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE, false);
     // Two hdfs file systems should be there if no cache.
-    try (final ViewFsOverloadScheme vfs =
+    try (ViewFsOverloadScheme vfs =
         (ViewFsOverloadScheme) FileSystem.get(conf)) {
       Assert.assertEquals(2, vfs.getChildFileSystems().length);
     }
@@ -409,7 +402,7 @@ public class TestViewFsOverloadSchemeWithHdfsScheme {
     // Only one local file system should be there if no InnerCache, but fs
     // cache should work.
     conf.setBoolean(Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE, false);
-    try (final ViewFsOverloadScheme vfs =
+    try (ViewFsOverloadScheme vfs =
         (ViewFsOverloadScheme) FileSystem.get(conf)) {
       Assert.assertEquals(1, vfs.getChildFileSystems().length);
     }

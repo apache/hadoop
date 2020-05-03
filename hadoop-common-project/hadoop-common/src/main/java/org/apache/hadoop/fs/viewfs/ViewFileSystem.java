@@ -302,7 +302,7 @@ public class ViewFileSystem extends FileSystem {
             if (enableInnerCache) {
               fs = innerCache.get(uri, config);
             } else {
-              fs = fsGetter.get(uri, conf);
+              fs = fsGetter.get(uri, config);
             }
             return new ChRootedFileSystem(fs, uri);
         }

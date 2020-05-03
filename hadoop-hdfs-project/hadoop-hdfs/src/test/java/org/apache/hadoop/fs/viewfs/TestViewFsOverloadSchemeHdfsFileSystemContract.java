@@ -82,7 +82,7 @@ public class TestViewFsOverloadSchemeHdfsFileSystemContract
     ConfigUtil.addLink(conf, defaultFSURI.getAuthority(),
         "/FileSystemContractBaseTest/",
         new URI(defaultFSURI.toString() + "/FileSystemContractBaseTest/"));
-    fs = (ViewFsOverloadScheme) FileSystem.get(conf);
+    fs = FileSystem.get(conf);
   }
 
   @AfterClass

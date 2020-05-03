@@ -76,15 +76,15 @@ public class TestViewFsOverloadSchemeLocalFileSystem {
     final Path lfsRoot = new Path("/lfsRoot");
     ConfigUtil.addLink(conf, lfsRoot.toString(),
         URI.create(targetTestRoot + "/local"));
-    final FileSystem lViewFs = FileSystem.get(URI.create("file:///"), conf);
+    try (FileSystem lViewFs = FileSystem.get(URI.create("file:///"), conf)) {
+      final Path testPath = new Path(lfsRoot, "test.txt");
+      try (FSDataOutputStream fsDos = lViewFs.create(testPath)) {
+        fsDos.writeUTF(testString);
+      }
 
-    final Path testPath = new Path(lfsRoot, "test.txt");
-    try (FSDataOutputStream fsDos = lViewFs.create(testPath)) {
-      fsDos.writeUTF(testString);
-    }
-
-    try (FSDataInputStream lViewIs = lViewFs.open(testPath)) {
-      Assert.assertEquals(testString, lViewIs.readUTF());
+      try (FSDataInputStream lViewIs = lViewFs.open(testPath)) {
+        Assert.assertEquals(testString, lViewIs.readUTF());
+      }
     }
   }
 
@@ -97,7 +97,7 @@ public class TestViewFsOverloadSchemeLocalFileSystem {
     ConfigUtil.addLink(conf, "mt", "/lfsroot",
         URI.create(targetTestRoot + "/wd2"));
     final URI mountURI = URI.create("file://mt/");
-    try (final FileSystem lViewFS = FileSystem.get(mountURI, conf)) {
+    try (FileSystem lViewFS = FileSystem.get(mountURI, conf)) {
       Path testPath = new Path(mountURI.toString() + "/lfsroot/test");
       lViewFS.createNewFile(testPath);
       Assert.assertTrue(lViewFS.exists(testPath));
@@ -115,7 +115,7 @@ public class TestViewFsOverloadSchemeLocalFileSystem {
     ConfigUtil.addLinkMergeSlash(conf, "mt",
         URI.create(targetTestRoot + "/wd2"));
     final URI mountURI = URI.create("file://mt/");
-    try (final FileSystem lViewFS = FileSystem.get(mountURI, conf)) {
+    try (FileSystem lViewFS = FileSystem.get(mountURI, conf)) {
       Path fileOnRoot = new Path(mountURI.toString() + "/NewFile");
       lViewFS.createNewFile(fileOnRoot);
       Assert.assertTrue(lViewFS.exists(fileOnRoot));
