@@ -37,8 +37,9 @@ import org.apache.hadoop.hdfs.TestHDFSFileSystemContract;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -48,20 +49,24 @@ import org.junit.Test;
 public class TestViewFsOverloadSchemeHdfsFileSystemContract
     extends TestHDFSFileSystemContract {
 
-  private MiniDFSCluster cluster;
-  private String defaultWorkingDirectory;
+  private static MiniDFSCluster cluster;
+  private static String defaultWorkingDirectory;
+  private static Configuration conf = new HdfsConfiguration();
 
-  @Before
-  public void setUp() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+  @BeforeClass
+  public static void init() throws IOException {
+    final File basedir = GenericTestUtils.getRandomizedTestDir();
     conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY,
         FileSystemContractBaseTest.TEST_UMASK);
-    final File basedir = GenericTestUtils.getRandomizedTestDir();
     cluster = new MiniDFSCluster.Builder(conf, basedir)
         .numDataNodes(2)
         .build();
     defaultWorkingDirectory =
         "/user/" + UserGroupInformation.getCurrentUser().getShortUserName();
+  }
+
+  @Before
+  public void setUp() throws Exception {
     conf.set(String.format("fs.%s.impl", "hdfs"),
         ViewFsOverloadScheme.class.getName());
     conf.set(String.format(
@@ -80,9 +85,8 @@ public class TestViewFsOverloadSchemeHdfsFileSystemContract
     fs = (ViewFsOverloadScheme) FileSystem.get(conf);
   }
 
-  @After
-  public void tearDown() throws Exception {
-    super.tearDown();
+  @AfterClass
+  public static void tearDownAfter() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
       cluster = null;

@@ -47,21 +47,19 @@ public class TestViewFsOverloadSchemeLocalFileSystem {
   private FileSystem fsTarget;
   private Configuration conf;
   private Path targetTestRoot;
-  private FileSystemTestHelper fileSystemTestHelper;
+  private FileSystemTestHelper fileSystemTestHelper =
+      new FileSystemTestHelper();
 
   @Before
   public void setUp() throws Exception {
     conf = new Configuration();
-    conf.set(String.format("fs.%s.impl",
-        FILE),
+    conf.set(String.format("fs.%s.impl", FILE),
         ViewFsOverloadScheme.class.getName());
     conf.set(String.format(
-        FsConstants.FS_VIEWFS_OVERLOAD_SCHEME_TARGET_FS_IMPL_PATTERN,
-        FILE),
+        FsConstants.FS_VIEWFS_OVERLOAD_SCHEME_TARGET_FS_IMPL_PATTERN, FILE),
         LocalFileSystem.class.getName());
     fsTarget = new LocalFileSystem();
     fsTarget.initialize(new URI("file:///"), conf);
-    fileSystemTestHelper = new FileSystemTestHelper();
     // create the test root on local_fs
     targetTestRoot = fileSystemTestHelper.getAbsoluteTestRootPath(fsTarget);
     fsTarget.delete(targetTestRoot, true);
@@ -81,18 +79,12 @@ public class TestViewFsOverloadSchemeLocalFileSystem {
     final FileSystem lViewFs = FileSystem.get(URI.create("file:///"), conf);
 
     final Path testPath = new Path(lfsRoot, "test.txt");
-    final FSDataOutputStream fsDos = lViewFs.create(testPath);
-    try {
+    try (FSDataOutputStream fsDos = lViewFs.create(testPath)) {
       fsDos.writeUTF(testString);
-    } finally {
-      fsDos.close();
     }
 
-    FSDataInputStream lViewIs = lViewFs.open(testPath);
-    try {
+    try (FSDataInputStream lViewIs = lViewFs.open(testPath)) {
       Assert.assertEquals(testString, lViewIs.readUTF());
-    } finally {
-      lViewIs.close();
     }
   }
 
@@ -105,15 +97,12 @@ public class TestViewFsOverloadSchemeLocalFileSystem {
     ConfigUtil.addLink(conf, "mt", "/lfsroot",
         URI.create(targetTestRoot + "/wd2"));
     final URI mountURI = URI.create("file://mt/");
-    final FileSystem lViewFS = FileSystem.get(mountURI, conf);
-    try {
+    try (final FileSystem lViewFS = FileSystem.get(mountURI, conf)) {
       Path testPath = new Path(mountURI.toString() + "/lfsroot/test");
-      lViewFS.create(testPath);
+      lViewFS.createNewFile(testPath);
       Assert.assertTrue(lViewFS.exists(testPath));
       lViewFS.delete(testPath, true);
       Assert.assertFalse(lViewFS.exists(testPath));
-    } finally {
-      lViewFS.close();
     }
   }
 
@@ -126,13 +115,10 @@ public class TestViewFsOverloadSchemeLocalFileSystem {
     ConfigUtil.addLinkMergeSlash(conf, "mt",
         URI.create(targetTestRoot + "/wd2"));
     final URI mountURI = URI.create("file://mt/");
-    final FileSystem lViewFS = FileSystem.get(mountURI, conf);
-    try {
+    try (final FileSystem lViewFS = FileSystem.get(mountURI, conf)) {
       Path fileOnRoot = new Path(mountURI.toString() + "/NewFile");
-      lViewFS.create(fileOnRoot);
+      lViewFS.createNewFile(fileOnRoot);
       Assert.assertTrue(lViewFS.exists(fileOnRoot));
-    } finally {
-      lViewFS.close();
     }
   }
 
@@ -153,6 +139,9 @@ public class TestViewFsOverloadSchemeLocalFileSystem {
 
   @After
   public void tearDown() throws Exception {
-    fsTarget.delete(fileSystemTestHelper.getTestRootPath(fsTarget), true);
+    if (null != fsTarget) {
+      fsTarget.delete(fileSystemTestHelper.getTestRootPath(fsTarget), true);
+      fsTarget.close();
+    }
   }
 }

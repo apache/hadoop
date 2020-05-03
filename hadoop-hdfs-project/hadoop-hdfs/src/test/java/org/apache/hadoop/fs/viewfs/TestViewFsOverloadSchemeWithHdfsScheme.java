@@ -107,42 +107,37 @@ public class TestViewFsOverloadSchemeWithHdfsScheme {
 
     createLinks(false, hdfsTargetPath, localTragetPath);
 
-    ViewFsOverloadScheme fs = (ViewFsOverloadScheme) FileSystem.get(conf);
-    Assert.assertEquals(2, fs.getMountPoints().length);
-
     // /HDFSUser/testfile
     Path hdfsFile = new Path(HDFS_USER_FOLDER + "/testfile");
     // /local/test
     Path localDir = new Path(LOCAL_FOLDER + "/test");
 
-    fs.create(hdfsFile); // /HDFSUser/testfile
-    fs.mkdirs(localDir); // /local/test
+    try (final ViewFsOverloadScheme fs =
+        (ViewFsOverloadScheme) FileSystem.get(conf)) {
+      Assert.assertEquals(2, fs.getMountPoints().length);
+      fs.createNewFile(hdfsFile); // /HDFSUser/testfile
+      fs.mkdirs(localDir); // /local/test
+    }
 
     // Initialize HDFS and test files exist in ls or not
-    DistributedFileSystem dfs = new DistributedFileSystem();
-    dfs.initialize(defaultFSURI, conf);
-    try {
+    try (final DistributedFileSystem dfs = new DistributedFileSystem()) {
+      dfs.initialize(defaultFSURI, conf);
       Assert.assertTrue(dfs.exists(
           new Path(Path.getPathWithoutSchemeAndAuthority(hdfsTargetPath),
               hdfsFile.getName()))); // should be in hdfs.
       Assert.assertFalse(dfs.exists(
           new Path(Path.getPathWithoutSchemeAndAuthority(localTragetPath),
               localDir.getName()))); // should not be in local fs.
-    } finally {
-      dfs.close();
     }
 
-    RawLocalFileSystem lfs = new RawLocalFileSystem();
-    lfs.initialize(localTragetPath.toUri(), conf);
-    try {
+    try (final RawLocalFileSystem lfs = new RawLocalFileSystem()) {
+      lfs.initialize(localTragetPath.toUri(), conf);
       Assert.assertFalse(lfs.exists(
           new Path(Path.getPathWithoutSchemeAndAuthority(hdfsTargetPath),
               hdfsFile.getName()))); // should not be in hdfs.
       Assert.assertTrue(lfs.exists(
           new Path(Path.getPathWithoutSchemeAndAuthority(localTragetPath),
               localDir.getName()))); // should be in local fs.
-    } finally {
-      lfs.close();
     }
   }
 
@@ -180,8 +175,8 @@ public class TestViewFsOverloadSchemeWithHdfsScheme {
 
     createLinks(false, hdfsTargetPath, localTragetPath);
 
-    ViewFsOverloadScheme fs = (ViewFsOverloadScheme) FileSystem.get(conf);
-    try {
+    try (final ViewFsOverloadScheme fs =
+        (ViewFsOverloadScheme) FileSystem.get(conf)) {
       FileStatus[] ls = fs.listStatus(new Path("/"));
       Assert.assertEquals(2, ls.length);
       String lsPath1 =
@@ -192,8 +187,6 @@ public class TestViewFsOverloadSchemeWithHdfsScheme {
           HDFS_USER_FOLDER.equals(lsPath1) || LOCAL_FOLDER.equals(lsPath1));
       Assert.assertTrue(
           HDFS_USER_FOLDER.equals(lsPath2) || LOCAL_FOLDER.equals(lsPath2));
-    } finally {
-      fs.close();
     }
   }
 
@@ -210,12 +203,10 @@ public class TestViewFsOverloadSchemeWithHdfsScheme {
 
     createLinks(false, hdfsTargetPath, localTragetPath);
 
-    ViewFsOverloadScheme fs = (ViewFsOverloadScheme) FileSystem.get(conf);
-    try {
+    try (final ViewFsOverloadScheme fs =
+        (ViewFsOverloadScheme) FileSystem.get(conf)) {
       fs.listStatus(new Path("/nonMount"));
       Assert.fail("It should fail as no mount link with /nonMount");
-    } finally {
-      fs.close();
     }
   }
 
@@ -233,16 +224,14 @@ public class TestViewFsOverloadSchemeWithHdfsScheme {
 
     createLinks(true, hdfsTargetPath, localTragetPath);
 
-    ViewFsOverloadScheme fs = (ViewFsOverloadScheme) FileSystem.get(conf);
-    try {
-      fs.create(new Path("/nonMount/myfile"));
+    try (final ViewFsOverloadScheme fs =
+        (ViewFsOverloadScheme) FileSystem.get(conf)) {
+      fs.createNewFile(new Path("/nonMount/myfile"));
       FileStatus[] ls = fs.listStatus(new Path("/nonMount"));
       Assert.assertEquals(1, ls.length);
       Assert.assertEquals(
           Path.getPathWithoutSchemeAndAuthority(ls[0].getPath()).getName(),
           "myfile");
-    } finally {
-      fs.close();
     }
   }
 
@@ -251,7 +240,7 @@ public class TestViewFsOverloadSchemeWithHdfsScheme {
    * hdfs://localhost:xxx/HDFSUser --> hdfs://localhost:xxx/HDFSUser/
    * hdfs://localhost:xxx/local --> file://TEST_ROOT_DIR/root/
    *
-   * It can not find any mount link. ViewFS expects a mount point from root.
+   * It cannot find any mount link. ViewFS expects a mount point from root.
    */
   @Test(expected = NotInMountpointException.class, timeout = 30000)
   public void testCreateOnRootShouldFailWhenMountLinkConfigured()
@@ -261,12 +250,10 @@ public class TestViewFsOverloadSchemeWithHdfsScheme {
 
     createLinks(false, hdfsTargetPath, localTragetPath);
 
-    ViewFsOverloadScheme fs = (ViewFsOverloadScheme) FileSystem.get(conf);
-    try {
-      fs.create(new Path("/newFileOnRoot"));
+    try (final ViewFsOverloadScheme fs =
+        (ViewFsOverloadScheme) FileSystem.get(conf)) {
+      fs.createNewFile(new Path("/newFileOnRoot"));
       Assert.fail("It should fail as root is read only in viewFS.");
-    } finally {
-      fs.close();
     }
   }
 
@@ -283,17 +270,13 @@ public class TestViewFsOverloadSchemeWithHdfsScheme {
       throws Exception {
     final Path hdfsTargetPath = new Path(defaultFSURI + HDFS_USER_FOLDER);
     final Path localTragetPath = new Path(localTargetDir.toURI());
-
     createLinks(true, hdfsTargetPath, localTragetPath);
-
-    ViewFsOverloadScheme fs = (ViewFsOverloadScheme) FileSystem.get(conf);
-    try {
-      fs.create(new Path("/onRootWhenFallBack"));
+    try (final ViewFsOverloadScheme fs =
+        (ViewFsOverloadScheme) FileSystem.get(conf)) {
+      fs.createNewFile(new Path("/onRootWhenFallBack"));
       Assert.fail(
           "It should fail as root is read only in viewFS, even when configured"
               + " with fallback.");
-    } finally {
-      fs.close();
     }
   }
 
@@ -303,7 +286,11 @@ public class TestViewFsOverloadSchemeWithHdfsScheme {
    * hdfs://localhost:xxx/local --> file://TEST_ROOT_DIR/root/
    * fallback --> hdfs://localhost:xxx/HDFSUser/
    *
-   * It will find fallback link, but root is not accessible and read only.
+   * Note: Above links created because to make fs initialization success.
+   * Otherwise will not proceed if no mount links.
+   *
+   * Don't set fs.viewfs.overload.scheme.target.hdfs.impl property.
+   * So, OverloadScheme target fs initialization will fail.
    */
   @Test(expected = UnsupportedFileSystemException.class, timeout = 30000)
   public void testInvalidOverloadSchemeTargetFS() throws Exception {
@@ -316,12 +303,10 @@ public class TestViewFsOverloadSchemeWithHdfsScheme {
     conf.set(String.format(FS_IMPL_PATTERN_KEY, HDFS_SCHEME),
         ViewFsOverloadScheme.class.getName());
 
-    ViewFsOverloadScheme fs = (ViewFsOverloadScheme) FileSystem.get(conf);
-    try {
-      fs.create(new Path("/onRootWhenFallBack"));
+    try (final ViewFsOverloadScheme fs =
+        (ViewFsOverloadScheme) FileSystem.get(conf)) {
+      fs.createNewFile(new Path("/onRootWhenFallBack"));
       Assert.fail("OverloadScheme target fs should be valid.");
-    } finally {
-      fs.close();
     }
   }
 
@@ -339,13 +324,94 @@ public class TestViewFsOverloadSchemeWithHdfsScheme {
     final Path localTragetPath = new Path(localTargetDir.toURI());
     createLinks(false, hdfsTargetPath, localTragetPath);
     conf.setBoolean(Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE, false);
-    ViewFsOverloadScheme fs = (ViewFsOverloadScheme) FileSystem.get(conf);
-    Path testFile = new Path(HDFS_USER_FOLDER + "/testFile");
-    fs.create(testFile);
-    try {
+    try (final ViewFsOverloadScheme fs =
+        (ViewFsOverloadScheme) FileSystem.get(conf)) {
+      Path testFile = new Path(HDFS_USER_FOLDER + "/testFile");
+      fs.createNewFile(testFile);
       Assert.assertTrue(fs.exists(testFile));
-    } finally {
-      fs.close();
+    }
+  }
+
+  /**
+   * Create mount links as follows
+   * hdfs://localhost:xxx/HDFSUser0 --> hdfs://localhost:xxx/HDFSUser/
+   * hdfs://localhost:xxx/HDFSUser1 --> hdfs://localhost:xxx/HDFSUser/
+   *
+   * 1. With cache, only one hdfs child file system instance should be there.
+   * 2. Without cache, there should 2 hdfs instances.
+   */
+  @Test(timeout = 30000)
+  public void testViewFsOverloadSchemeWithInnerCache()
+      throws Exception {
+    final Path hdfsTargetPath = new Path(defaultFSURI + HDFS_USER_FOLDER);
+    ConfigUtil.addLink(conf, defaultFSURI.getAuthority(), HDFS_USER_FOLDER + 0,
+        hdfsTargetPath.toUri());
+    ConfigUtil.addLink(conf, defaultFSURI.getAuthority(), HDFS_USER_FOLDER + 1,
+        hdfsTargetPath.toUri());
+
+    // 1. Only 1 hdfs child file system should be there with cache.
+    try (final ViewFsOverloadScheme vfs =
+        (ViewFsOverloadScheme) FileSystem.get(conf)) {
+      Assert.assertEquals(1, vfs.getChildFileSystems().length);
+    }
+
+    // 2. Two hdfs file systems should be there if no cache.
+    conf.setBoolean(Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE, false);
+    try (final ViewFsOverloadScheme vfs =
+        (ViewFsOverloadScheme) FileSystem.get(conf)) {
+      Assert.assertEquals(2, vfs.getChildFileSystems().length);
+    }
+  }
+
+  /**
+   * Create mount links as follows
+   * hdfs://localhost:xxx/HDFSUser0 --> hdfs://localhost:xxx/HDFSUser/
+   * hdfs://localhost:xxx/HDFSUser1 --> hdfs://localhost:xxx/HDFSUser/
+   *
+   * When InnerCache disabled, all matching ViewFSOverloadScheme initialized
+   * scheme file systems would not use FileSystem cache.
+   */
+  @Test(timeout = 3000)
+  public void testViewFsOverloadSchemeWithNoInnerCacheAndHdfsTargets()
+      throws Exception {
+    final Path hdfsTargetPath = new Path(defaultFSURI + HDFS_USER_FOLDER);
+    ConfigUtil.addLink(conf, defaultFSURI.getAuthority(), HDFS_USER_FOLDER + 0,
+        hdfsTargetPath.toUri());
+    ConfigUtil.addLink(conf, defaultFSURI.getAuthority(), HDFS_USER_FOLDER + 1,
+        hdfsTargetPath.toUri());
+
+    conf.setBoolean(Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE, false);
+    // Two hdfs file systems should be there if no cache.
+    try (final ViewFsOverloadScheme vfs =
+        (ViewFsOverloadScheme) FileSystem.get(conf)) {
+      Assert.assertEquals(2, vfs.getChildFileSystems().length);
+    }
+  }
+
+  /**
+   * Create mount links as follows
+   * hdfs://localhost:xxx/local0 --> file://localPath/
+   * hdfs://localhost:xxx/local1 --> file://localPath/
+   *
+   * When InnerCache disabled, all non matching ViewFSOverloadScheme
+   * initialized scheme file systems should continue to take advantage of
+   * FileSystem cache.
+   */
+  @Test(timeout = 3000)
+  public void testViewFsOverloadSchemeWithNoInnerCacheAndLocalSchemeTargets()
+      throws Exception {
+    final Path localTragetPath = new Path(localTargetDir.toURI());
+    ConfigUtil.addLink(conf, defaultFSURI.getAuthority(), LOCAL_FOLDER + 0,
+        localTragetPath.toUri());
+    ConfigUtil.addLink(conf, defaultFSURI.getAuthority(), LOCAL_FOLDER + 1,
+        localTragetPath.toUri());
+
+    // Only one local file system should be there if no InnerCache, but fs
+    // cache should work.
+    conf.setBoolean(Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE, false);
+    try (final ViewFsOverloadScheme vfs =
+        (ViewFsOverloadScheme) FileSystem.get(conf)) {
+      Assert.assertEquals(1, vfs.getChildFileSystems().length);
     }
   }
 }

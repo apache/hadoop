@@ -30,13 +30,28 @@ import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 
 /******************************************************************************
- * This class is extended from the ViewFileSystem for the overloaded scheme file
- * system. The objective here is to handle multiple mounted file systems
- * transparently. Mount link configurations and in-memory mount table
+ * This class is extended from the ViewFileSystem for the overloaded scheme
+ * file system. Mount link configurations and in-memory mount table
  * building behaviors are inherited from ViewFileSystem. Unlike ViewFileSystem
  * scheme (viewfs://), the users would be able to use any scheme.
  *
- * Example 1:
+ * To use this class, the following configurations need to be added in
+ * core-site.xml file.
+ * 1) fs.<scheme>.impl = org.apache.hadoop.fs.viewfs.ViewFsOverloadScheme
+ * 2) fs.viewfs.overload.scheme.target.<scheme>.impl
+ *    = <hadoop compatible file system implementation class name for the
+ *    <scheme>"
+ *
+ * Here <scheme> can be any scheme, but with that scheme there should be a
+ * hadoop compatible file system available. Second configuration value should
+ * be the respective scheme's file system implementation class.
+ * Example: if scheme is configured with "hdfs", then the 2nd configuration
+ * class name will be org.apache.hadoop.hdfs.DistributedFileSystem.
+ * if scheme is configured with "s3a", then the 2nd configuration class name
+ * will be org.apache.hadoop.fs.s3a.S3AFileSystem.
+ *
+ * Use Case 1:
+ * ===========
  * If users want some of their existing cluster (hdfs://Cluster)
  * data to mount with other hdfs and object store clusters(hdfs://NN1,
  * o3fs://bucket1.volume1/, s3a://bucket1/)
@@ -51,7 +66,8 @@ import org.apache.hadoop.fs.UnsupportedFileSystemException;
  * Op3: Create file hdfs://Cluster/backup/data.zip will go to
  *      s3a://bucket1/backup/data.zip
  *
- * Example 2:
+ * Use Case 2:
+ * ===========
  * If users want some of their existing cluster (s3a://bucketA/)
  * data to mount with other hdfs and object store clusters
  * (hdfs://NN1, o3fs://bucket1.volume1/)
