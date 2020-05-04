@@ -618,10 +618,14 @@ public class AzureBlobFileSystemStore implements Closeable {
               isNamespaceEnabled);
 
       final AbfsRestOperation op;
-
-      if (path.isRoot() && !isNamespaceEnabled) {
+      if (path.isRoot()) {
+        if (isNamespaceEnabled) {
+          perfInfo.registerCallee("getAclStatus");
+          op = client.getAclStatus(getRelativePath(path));
+        } else {
           perfInfo.registerCallee("getFilesystemProperties");
           op = client.getFilesystemProperties();
+        }
       } else {
         perfInfo.registerCallee("getPathStatus");
         op = client.getPathStatus(getRelativePath(path), false);
