@@ -298,13 +298,23 @@ public class EditLogTailer {
     SecurityUtil.doAsLoginUser(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        try {
-          // It is already under the full name system lock and the checkpointer
-          // thread is already stopped. No need to acqure any other lock.
-          doTailEdits();
-        } catch (InterruptedException e) {
-          throw new IOException(e);
-        }
+        long editsTailed = 0;
+        // Fully tail the journal to the end
+        do {
+          long startTime = Time.monotonicNow();
+          try {
+            NameNode.getNameNodeMetrics().addEditLogTailInterval(
+                startTime - lastLoadTimeMs);
+            // It is already under the name system lock and the checkpointer
+            // thread is already stopped. No need to acquire any other lock.
+            editsTailed = doTailEdits();
+          } catch (InterruptedException e) {
+            throw new IOException(e);
+          } finally {
+            NameNode.getNameNodeMetrics().addEditLogTailTime(
+                Time.monotonicNow() - startTime);
+          }
+        } while(editsTailed > 0);
         return null;
       }
     });
