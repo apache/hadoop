@@ -43,7 +43,7 @@ void hdfsThreadDestructor(void *v)
   jint ret;
 
   /* Detach the current thread from the JVM */
-  if (env) {
+  if ((env != NULL) && (*env != NULL)) {
     ret = (*env)->GetJavaVM(env, &vm);
     if (ret) {
       fprintf(stderr, "hdfsThreadDestructor: GetJavaVM failed with error %d\n",
