@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.test.GenericTestUtils;
 import static org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter.getFileInfo;
+import static org.apache.hadoop.hdfs.qjournal.client.QuorumJournalManager.QJM_RPC_MAX_TXNS_KEY;
 
 import org.junit.After;
 import org.junit.Before;
@@ -72,6 +73,8 @@ public class TestStandbyInProgressTail {
     conf.setBoolean(DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY, true);
     conf.setInt(DFSConfigKeys.DFS_QJOURNAL_SELECT_INPUT_STREAMS_TIMEOUT_KEY,
         500);
+    // Set very samll limit of transactions per a journal rpc call
+    conf.setInt(QJM_RPC_MAX_TXNS_KEY, 3);
     HAUtil.setAllowStandbyReads(conf, true);
     qjmhaCluster = new MiniQJMHACluster.Builder(conf).build();
     cluster = qjmhaCluster.getDfsCluster();
@@ -298,6 +301,31 @@ public class TestStandbyInProgressTail {
 
     // StandbyNameNode should tail the finalized edit and the new in-progress
     waitForFileInfo(nn1, "/test", "/test2", "/test3");
+  }
+
+  /**
+   * Test that Standby Node tails multiple segments while catching up
+   * during the transition to Active.
+   */
+  @Test
+  public void testUndertailingWhileFailover() throws Exception {
+    cluster.transitionToActive(0);
+    cluster.waitActive(0);
+
+    String p = "/testFailoverWhileTailingWithoutCache/";
+    mkdirs(nn0, p + 0, p + 1, p + 2, p + 3, p + 4);
+    nn0.getRpcServer().rollEditLog(); // create segment 1
+
+    mkdirs(nn0, p + 5, p + 6, p + 7, p + 8, p + 9);
+    nn0.getRpcServer().rollEditLog(); // create segment 2
+
+    mkdirs(nn0, p + 10, p + 11, p + 12, p + 13, p + 14);
+    nn0.getRpcServer().rollEditLog(); // create segment 3
+
+    cluster.transitionToStandby(0);
+    cluster.transitionToActive(1);
+    cluster.waitActive(1);
+    waitForFileInfo(nn1, p + 0, p + 1, p + 14);
   }
 
   @Test
