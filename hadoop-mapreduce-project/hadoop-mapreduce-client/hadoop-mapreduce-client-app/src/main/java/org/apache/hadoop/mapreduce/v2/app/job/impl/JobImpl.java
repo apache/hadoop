@@ -1162,7 +1162,12 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   public String getQueueName() {
     return queueName;
   }
-  
+
+  @Override
+  public String getResourceManagerHost() {
+    throw new UnsupportedOperationException();
+  }
+
   @Override
   public void setQueueName(String queueName) {
     this.queueName = queueName;

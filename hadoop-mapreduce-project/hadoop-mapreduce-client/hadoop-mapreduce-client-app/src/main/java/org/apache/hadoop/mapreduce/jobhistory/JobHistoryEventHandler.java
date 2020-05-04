@@ -1588,6 +1588,19 @@ public class JobHistoryEventHandler extends AbstractService
       this.jobIndexInfo =
           new JobIndexInfo(-1, -1, user, jobName, jobId, -1, -1, null,
                            queueName);
+
+      if (getConfig().getBoolean(
+          JHAdminConfig.MR_HISTORY_APPEND_RM_HOST_TO_HISTORY_FILE_NAME_ENABLED,
+          JHAdminConfig.DEFAULT_MR_HISTORY_APPEND_RM_HOST_TO_HISTORY_FILE_NAME_ENABLED)) {
+
+        String hostName = getConfig().get(YarnConfiguration.RM_HOSTNAME, "");
+        if (!hostName.isEmpty()) {
+          this.jobIndexInfo.setResourceManagerHost(hostName);
+        } else {
+          LOG.warn("Could not retreive a valid YARN host name");
+        }
+      }
+
       this.jobSummary = new JobSummary();
       this.flushTimer = new Timer("FlushTimer", true);
       this.forcedJobStateOnShutDown = forcedJobStateOnShutDown;

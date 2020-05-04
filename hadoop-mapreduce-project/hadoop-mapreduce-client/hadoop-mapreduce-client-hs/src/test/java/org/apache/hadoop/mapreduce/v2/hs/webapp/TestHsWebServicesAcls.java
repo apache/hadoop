@@ -379,6 +379,11 @@ public class TestHsWebServicesAcls {
     }
 
     @Override
+    public String getResourceManagerHost() {
+      return mockJob.getResourceManagerHost();
+    }
+
+    @Override
     public Path getConfFile() {
       return new Path("/some/path/to/conf");
     }

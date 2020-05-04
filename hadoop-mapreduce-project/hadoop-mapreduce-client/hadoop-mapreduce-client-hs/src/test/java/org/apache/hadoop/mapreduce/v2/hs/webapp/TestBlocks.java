@@ -398,6 +398,7 @@ public class TestBlocks {
     when(job.getReport()).thenReturn(report);
     when(job.getName()).thenReturn("JobName");
     when(job.getUserName()).thenReturn("UserName");
+    when(job.getResourceManagerHost()).thenReturn("ResourceManagerHost");
     when(job.getQueueName()).thenReturn("QueueName");
     when(job.getState()).thenReturn(JobState.SUCCEEDED);
     when(job.getTotalMaps()).thenReturn(3);
