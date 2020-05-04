@@ -40,17 +40,17 @@ import org.junit.Before;
 import org.junit.Test;
 
 /**
- * Tests ViewFsOverloadScheme with configured mount links.
+ * Tests ViewFileSystemOverloadScheme with configured mount links.
  */
-public class TestViewFsOverloadSchemeWithHdfsScheme {
+public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
   private static final String FS_IMPL_PATTERN_KEY = "fs.%s.impl";
   private static final String HDFS_SCHEME = "hdfs";
   private Configuration conf = null;
   private MiniDFSCluster cluster = null;
   private URI defaultFSURI;
   private File localTargetDir;
-  private static final String TEST_ROOT_DIR =
-      PathUtils.getTestDirName(TestViewFsOverloadSchemeWithHdfsScheme.class);
+  private static final String TEST_ROOT_DIR = PathUtils
+      .getTestDirName(TestViewFileSystemOverloadSchemeWithHdfsScheme.class);
   private static final String HDFS_USER_FOLDER = "/HDFSUser";
   private static final String LOCAL_FOLDER = "/local";
 
@@ -60,7 +60,7 @@ public class TestViewFsOverloadSchemeWithHdfsScheme {
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY,
         true);
     conf.set(String.format(FS_IMPL_PATTERN_KEY, HDFS_SCHEME),
-        ViewFsOverloadScheme.class.getName());
+        ViewFileSystemOverloadScheme.class.getName());
     conf.set(String.format(
         FsConstants.FS_VIEWFS_OVERLOAD_SCHEME_TARGET_FS_IMPL_PATTERN,
         HDFS_SCHEME), DistributedFileSystem.class.getName());
@@ -112,8 +112,8 @@ public class TestViewFsOverloadSchemeWithHdfsScheme {
     // /local/test
     Path localDir = new Path(LOCAL_FOLDER + "/test");
 
-    try (ViewFsOverloadScheme fs
-        = (ViewFsOverloadScheme) FileSystem.get(conf)) {
+    try (ViewFileSystemOverloadScheme fs
+        = (ViewFileSystemOverloadScheme) FileSystem.get(conf)) {
       Assert.assertEquals(2, fs.getMountPoints().length);
       fs.createNewFile(hdfsFile); // /HDFSUser/testfile
       fs.mkdirs(localDir); // /local/test
@@ -296,7 +296,7 @@ public class TestViewFsOverloadSchemeWithHdfsScheme {
     conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY,
         defaultFSURI.toString());
     conf.set(String.format(FS_IMPL_PATTERN_KEY, HDFS_SCHEME),
-        ViewFsOverloadScheme.class.getName());
+        ViewFileSystemOverloadScheme.class.getName());
 
     try (FileSystem fs = FileSystem.get(conf)) {
       fs.createNewFile(new Path("/onRootWhenFallBack"));
@@ -309,7 +309,7 @@ public class TestViewFsOverloadSchemeWithHdfsScheme {
    * hdfs://localhost:xxx/HDFSUser --> hdfs://localhost:xxx/HDFSUser/
    * hdfs://localhost:xxx/local --> file://TEST_ROOT_DIR/root/
    *
-   * It should be able to create file using ViewFsOverloadScheme.
+   * It should be able to create file using ViewFileSystemOverloadScheme.
    */
   @Test(timeout = 30000)
   public void testViewFsOverloadSchemeWhenInnerCacheDisabled()
@@ -343,15 +343,15 @@ public class TestViewFsOverloadSchemeWithHdfsScheme {
         hdfsTargetPath.toUri());
 
     // 1. Only 1 hdfs child file system should be there with cache.
-    try (ViewFsOverloadScheme vfs =
-        (ViewFsOverloadScheme) FileSystem.get(conf)) {
+    try (ViewFileSystemOverloadScheme vfs =
+        (ViewFileSystemOverloadScheme) FileSystem.get(conf)) {
       Assert.assertEquals(1, vfs.getChildFileSystems().length);
     }
 
     // 2. Two hdfs file systems should be there if no cache.
     conf.setBoolean(Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE, false);
-    try (ViewFsOverloadScheme vfs =
-        (ViewFsOverloadScheme) FileSystem.get(conf)) {
+    try (ViewFileSystemOverloadScheme vfs =
+        (ViewFileSystemOverloadScheme) FileSystem.get(conf)) {
       Assert.assertEquals(2, vfs.getChildFileSystems().length);
     }
   }
@@ -361,8 +361,8 @@ public class TestViewFsOverloadSchemeWithHdfsScheme {
    * hdfs://localhost:xxx/HDFSUser0 --> hdfs://localhost:xxx/HDFSUser/
    * hdfs://localhost:xxx/HDFSUser1 --> hdfs://localhost:xxx/HDFSUser/
    *
-   * When InnerCache disabled, all matching ViewFSOverloadScheme initialized
-   * scheme file systems would not use FileSystem cache.
+   * When InnerCache disabled, all matching ViewFileSystemOverloadScheme
+   * initialized scheme file systems would not use FileSystem cache.
    */
   @Test(timeout = 3000)
   public void testViewFsOverloadSchemeWithNoInnerCacheAndHdfsTargets()
@@ -375,8 +375,8 @@ public class TestViewFsOverloadSchemeWithHdfsScheme {
 
     conf.setBoolean(Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE, false);
     // Two hdfs file systems should be there if no cache.
-    try (ViewFsOverloadScheme vfs =
-        (ViewFsOverloadScheme) FileSystem.get(conf)) {
+    try (ViewFileSystemOverloadScheme vfs =
+        (ViewFileSystemOverloadScheme) FileSystem.get(conf)) {
       Assert.assertEquals(2, vfs.getChildFileSystems().length);
     }
   }
@@ -386,7 +386,7 @@ public class TestViewFsOverloadSchemeWithHdfsScheme {
    * hdfs://localhost:xxx/local0 --> file://localPath/
    * hdfs://localhost:xxx/local1 --> file://localPath/
    *
-   * When InnerCache disabled, all non matching ViewFSOverloadScheme
+   * When InnerCache disabled, all non matching ViewFileSystemOverloadScheme
    * initialized scheme file systems should continue to take advantage of
    * FileSystem cache.
    */
@@ -402,8 +402,8 @@ public class TestViewFsOverloadSchemeWithHdfsScheme {
     // Only one local file system should be there if no InnerCache, but fs
     // cache should work.
     conf.setBoolean(Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE, false);
-    try (ViewFsOverloadScheme vfs =
-        (ViewFsOverloadScheme) FileSystem.get(conf)) {
+    try (ViewFileSystemOverloadScheme vfs =
+        (ViewFileSystemOverloadScheme) FileSystem.get(conf)) {
       Assert.assertEquals(1, vfs.getChildFileSystems().length);
     }
   }

@@ -37,13 +37,13 @@ import org.junit.Test;
 
 /**
  *
- * Test the TestViewFsOverloadSchemeLocalFS using a file with authority:
+ * Test the TestViewFileSystemOverloadSchemeLF using a file with authority:
  * file://mountTableName/ i.e, the authority is used to load a mount table.
  */
-public class TestViewFsOverloadSchemeLocalFileSystem {
+public class TestViewFileSystemOverloadSchemeLocalFileSystem {
   private static final String FILE = "file";
   private static final Log LOG =
-      LogFactory.getLog(TestViewFsOverloadSchemeLocalFileSystem.class);
+      LogFactory.getLog(TestViewFileSystemOverloadSchemeLocalFileSystem.class);
   private FileSystem fsTarget;
   private Configuration conf;
   private Path targetTestRoot;
@@ -54,7 +54,7 @@ public class TestViewFsOverloadSchemeLocalFileSystem {
   public void setUp() throws Exception {
     conf = new Configuration();
     conf.set(String.format("fs.%s.impl", FILE),
-        ViewFsOverloadScheme.class.getName());
+        ViewFileSystemOverloadScheme.class.getName());
     conf.set(String.format(
         FsConstants.FS_VIEWFS_OVERLOAD_SCHEME_TARGET_FS_IMPL_PATTERN, FILE),
         LocalFileSystem.class.getName());
@@ -67,7 +67,7 @@ public class TestViewFsOverloadSchemeLocalFileSystem {
   }
 
   /**
-   * Tests write file and read file with ViewFSOverloadScheme.
+   * Tests write file and read file with ViewFileSystemOverloadScheme.
    */
   @Test
   public void testLocalTargetLinkWriteSimple() throws IOException {
@@ -89,7 +89,7 @@ public class TestViewFsOverloadSchemeLocalFileSystem {
   }
 
   /**
-   * Tests create file and delete file with ViewFSOverloadScheme.
+   * Tests create file and delete file with ViewFileSystemOverloadScheme.
    */
   @Test
   public void testLocalFsCreateAndDelete() throws Exception {
@@ -107,7 +107,8 @@ public class TestViewFsOverloadSchemeLocalFileSystem {
   }
 
   /**
-   * Tests root level file with linkMergeSlash with ViewFSOverloadScheme.
+   * Tests root level file with linkMergeSlash with
+   * ViewFileSystemOverloadScheme.
    */
   @Test
   public void testLocalFsLinkSlashMerge() throws Exception {
@@ -123,7 +124,8 @@ public class TestViewFsOverloadSchemeLocalFileSystem {
   }
 
   /**
-   * Tests with linkMergeSlash and other mounts in ViewFSOverloadScheme.
+   * Tests with linkMergeSlash and other mounts in
+   * ViewFileSystemOverloadScheme.
    */
   @Test(expected = IOException.class)
   public void testLocalFsLinkSlashMergeWithOtherMountLinks() throws Exception {

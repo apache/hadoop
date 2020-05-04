@@ -37,7 +37,8 @@ import org.apache.hadoop.fs.UnsupportedFileSystemException;
  *
  * To use this class, the following configurations need to be added in
  * core-site.xml file.
- * 1) fs.<scheme>.impl = org.apache.hadoop.fs.viewfs.ViewFsOverloadScheme
+ * 1) fs.<scheme>.impl
+ *    = org.apache.hadoop.fs.viewfs.ViewFileSystemOverloadScheme
  * 2) fs.viewfs.overload.scheme.target.<scheme>.impl
  *    = <hadoop compatible file system implementation class name for the
  *    <scheme>"
@@ -84,9 +85,9 @@ import org.apache.hadoop.fs.UnsupportedFileSystemException;
  *****************************************************************************/
 @InterfaceAudience.LimitedPrivate({ "MapReduce", "HBase", "Hive" })
 @InterfaceStability.Evolving
-public class ViewFsOverloadScheme extends ViewFileSystem {
+public class ViewFileSystemOverloadScheme extends ViewFileSystem {
   private URI myUri;
-  public ViewFsOverloadScheme() throws IOException {
+  public ViewFileSystemOverloadScheme() throws IOException {
     super();
   }
 
@@ -98,20 +99,20 @@ public class ViewFsOverloadScheme extends ViewFileSystem {
   @Override
   public void initialize(URI theUri, Configuration conf) throws IOException {
     if (LOG.isDebugEnabled()) {
-      LOG.debug(
-          "Initializing the ViewFsOverloadScheme with the uri: " + theUri);
+      LOG.debug("Initializing the ViewFileSystemOverloadScheme with the uri: "
+          + theUri);
     }
     this.myUri = theUri;
     super.initialize(theUri, conf);
   }
 
   /**
-   * This method is overridden because in ViewFsOverloadScheme if overloaded
-   * scheme matches with mounted target fs scheme, file system should be
-   * created without going into fs.<scheme>.impl based resolution. Otherwise
+   * This method is overridden because in ViewFileSystemOverloadScheme if
+   * overloaded cheme matches with mounted target fs scheme, file system should
+   * be created without going into fs.<scheme>.impl based resolution. Otherwise
    * it will end up in an infinite loop as the target will be resolved again
-   * to ViewFsOverloadScheme as fs.<scheme>.impl points to
-   * ViewFsOverloadScheme. So, below method will initialize the
+   * to ViewFileSystemOverloadScheme as fs.<scheme>.impl points to
+   * ViewFileSystemOverloadScheme. So, below method will initialize the
    * fs.viewfs.overload.scheme.target.<scheme>.impl. Other schemes can
    * follow fs.newInstance
    */
@@ -139,9 +140,9 @@ public class ViewFsOverloadScheme extends ViewFileSystem {
       }
 
       /**
-       * When ViewFSOverloadScheme scheme and target uri scheme are matching,
-       * it will not take advantage of FileSystem cache as it will create
-       * instance directly. For caching needs please set
+       * When ViewFileSystemOverloadScheme scheme and target uri scheme are
+       * matching, it will not take advantage of FileSystem cache as it will
+       * create instance directly. For caching needs please set
        * "fs.viewfs.enable.inner.cache" to true.
        */
       @Override

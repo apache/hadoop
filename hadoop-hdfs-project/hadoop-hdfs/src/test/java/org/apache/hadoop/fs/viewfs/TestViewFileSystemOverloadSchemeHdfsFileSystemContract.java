@@ -44,9 +44,9 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 /**
- * Tests ViewFsOverloadScheme with file system contract tests.
+ * Tests ViewFileSystemOverloadScheme with file system contract tests.
  */
-public class TestViewFsOverloadSchemeHdfsFileSystemContract
+public class TestViewFileSystemOverloadSchemeHdfsFileSystemContract
     extends TestHDFSFileSystemContract {
 
   private static MiniDFSCluster cluster;
@@ -68,7 +68,7 @@ public class TestViewFsOverloadSchemeHdfsFileSystemContract
   @Before
   public void setUp() throws Exception {
     conf.set(String.format("fs.%s.impl", "hdfs"),
-        ViewFsOverloadScheme.class.getName());
+        ViewFileSystemOverloadScheme.class.getName());
     conf.set(String.format(
         FsConstants.FS_VIEWFS_OVERLOAD_SCHEME_TARGET_FS_IMPL_PATTERN,
         "hdfs"),
