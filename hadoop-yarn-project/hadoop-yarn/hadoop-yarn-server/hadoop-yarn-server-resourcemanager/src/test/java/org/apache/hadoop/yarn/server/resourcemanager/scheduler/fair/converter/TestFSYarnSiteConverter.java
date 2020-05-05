@@ -63,21 +63,6 @@ public class TestFSYarnSiteConverter {
   }
 
   @Test
-  public void testSiteMinimumAllocationIncrementConversion() {
-    yarnConfig.setInt("yarn.resource-types.memory-mb.increment-allocation", 11);
-    yarnConfig.setInt("yarn.resource-types.vcores.increment-allocation", 5);
-
-    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false);
-
-    assertEquals("Memory alloc increment", 11,
-        yarnConvertedConfig.getInt("yarn.scheduler.minimum-allocation-mb",
-            -1));
-    assertEquals("Vcore increment", 5,
-        yarnConvertedConfig.getInt("yarn.scheduler.minimum-allocation-vcores",
-            -1));
-  }
-
-  @Test
   public void testSitePreemptionConversion() {
     yarnConfig.setBoolean(FairSchedulerConfiguration.PREEMPTION, true);
     yarnConfig.setInt(FairSchedulerConfiguration.WAIT_TIME_BEFORE_KILL, 123);

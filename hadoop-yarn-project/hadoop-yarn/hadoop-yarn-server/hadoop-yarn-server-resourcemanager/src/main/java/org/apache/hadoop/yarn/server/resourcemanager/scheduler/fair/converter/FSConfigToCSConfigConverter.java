@@ -392,11 +392,8 @@ public class FSConfigToCSConfigConverter {
 
     String defaultPolicy = allocConf.getDefaultSchedulingPolicy().getName();
 
-    if (DominantResourceFairnessPolicy.NAME.equals(defaultPolicy)) {
-      return true;
-    } else {
-      return isDrfUsedOnQueueLevel(rootQueue);
-    }
+    return DominantResourceFairnessPolicy.NAME.equals(defaultPolicy) ||
+        isDrfUsedOnQueueLevel(rootQueue);
   }
 
   private boolean isDrfUsedOnQueueLevel(FSQueue queue) {
