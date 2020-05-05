@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Locale;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
@@ -207,7 +208,7 @@ public class AbfsClient implements Closeable {
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
-    abfsUriQueryBuilder.addQuery(QUERY_PARAM_DIRECTORY, relativePath);
+    abfsUriQueryBuilder.addQuery(QUERY_PARAM_DIRECTORY, getDirectoryQueryParameter(relativePath));
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RECURSIVE, String.valueOf(recursive));
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_CONTINUATION, continuation);
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_MAXRESULTS, String.valueOf(listMaxResults));
@@ -610,6 +611,25 @@ public class AbfsClient implements Closeable {
         AbfsHttpConstants.HTTP_METHOD_HEAD, url, createDefaultHeaders());
     op.execute();
     return op;
+  }
+
+  /**
+   * Get the directory query parameter used by the List Paths REST API and used
+   * as the path in the continuation token.  If the input path is null or the
+   * root path "/", empty string is returned. If the input path begins with '/',
+   * the return value is the substring beginning at offset 1.  Otherwise, the
+   * input path is returned.
+   * @param path the path to be listed.
+   * @return the value of the directory query parameter
+   */
+  public static String getDirectoryQueryParameter(final String path) {
+    String directory = path;
+    if (Strings.isNullOrEmpty(directory)) {
+      directory = AbfsHttpConstants.EMPTY_STRING;
+    } else if (directory.charAt(0) == '/') {
+      directory = directory.substring(1);
+    }
+    return directory;
   }
 
   /**

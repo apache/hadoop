@@ -803,12 +803,13 @@ public class AzureBlobFileSystemStore implements Closeable {
   }
 
   // generate continuation token for non-xns account
-  private String generateContinuationTokenForNonXns(final String path, final String firstEntryName) {
+  private String generateContinuationTokenForNonXns(String path, final String firstEntryName) {
     Preconditions.checkArgument(!Strings.isNullOrEmpty(firstEntryName)
             && !firstEntryName.startsWith(AbfsHttpConstants.ROOT_PATH),
             "startFrom must be a dir/file name and it can not be a full path");
 
     // Notice: non-xns continuation token requires full path (first "/" is not included) for startFrom
+    path = AbfsClient.getDirectoryQueryParameter(path);
     final String startFrom = (path.isEmpty() || path.equals(ROOT_PATH))
             ? firstEntryName
             : path + ROOT_PATH + firstEntryName;
