@@ -20,12 +20,13 @@ package org.apache.hadoop.fs.s3a.impl.statistics;
 
 import java.io.Closeable;
 
-import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
 /**
  * Block output stream statistics.
  */
-public interface BlockOutputStreamStatistics extends Closeable {
+public interface BlockOutputStreamStatistics extends Closeable,
+    IOStatisticsSource {
 
   /**
    * Block is queued for upload.
@@ -94,13 +95,6 @@ public interface BlockOutputStreamStatistics extends Closeable {
    * @return the counter value.
    */
   long getBytesWritten();
-
-  /**
-   * Convert to an IOStatistics source which is
-   * dynamically updated.
-   * @return statistics
-   */
-  IOStatistics createIOStatistics();
 
   /**
    * A block has been allocated.

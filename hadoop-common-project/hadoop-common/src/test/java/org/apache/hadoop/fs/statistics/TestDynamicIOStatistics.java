@@ -37,6 +37,8 @@ import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatis
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticIsUnknown;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticIsUntracked;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticValue;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.NULL_SOURCE;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringify;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.iostatisticsToString;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.dynamicIOStatistics;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.emptyStatistics;
@@ -60,18 +62,27 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
 
   private static final String EVAL = "eval";
 
+  /**
+   * The statistics.
+   */
   private IOStatistics statistics = emptyStatistics();
 
-  private AtomicLong aLong = new AtomicLong();
+  /**
+   * A source of these statistics.
+   */
+  private IOStatisticsSource statsSource;
 
-  private AtomicInteger aInt = new AtomicInteger();
+  private final AtomicLong aLong = new AtomicLong();
 
-  private MutableCounterLong counter = new MutableCounterLong(
+  private final AtomicInteger aInt = new AtomicInteger();
+
+  private final MutableCounterLong counter = new MutableCounterLong(
       new Info("counter"), 0);
 
   private long evalLong;
 
   private static final String[] keys = new String[]{ALONG, AINT, COUNT, EVAL};
+
 
   @Before
   public void setUp() throws Exception {
@@ -81,6 +92,7 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
         .add(COUNT, counter)
         .add(EVAL, x -> evalLong)
         .build();
+    statsSource = new StaticSource(statistics);
   }
 
   /**
@@ -214,10 +226,55 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
   }
 
   @Test
-  public void testStringification2() throws Throwable {
-    assertThat(IOStatisticsLogging.demandStringify(statistics)
+  public void testDemandStringification() throws Throwable {
+    // this is not yet evaluated
+    Object demand = demandStringify(statistics);
+    // nor is this.
+    Object demandSource = demandStringify(statsSource);
+
+    // show it evaluates
+    String formatted1 = String.format(IOStatisticsLogging.ENTRY_PATTERN,
+        ALONG, aLong.get());
+    assertThat(demand
         .toString())
-        .contains(keys);
+        .contains(formatted1);
+    assertThat(demandSource
+        .toString())
+        .contains(formatted1);
+
+    // when the counters are incremented
+    incrementAllCounters();
+    incrementAllCounters();
+    // there are new values to expect
+    String formatted2 = String.format(IOStatisticsLogging.ENTRY_PATTERN,
+        ALONG, aLong.get());
+    assertThat(demand
+        .toString())
+        .doesNotContain(formatted1)
+        .contains(formatted2);
+    assertThat(demandSource
+        .toString())
+        .doesNotContain(formatted1)
+        .contains(formatted2);
+  }
+
+  @Test
+  public void testNullSourceStringification() throws Throwable {
+    assertThat(demandStringify((IOStatisticsSource)null)
+        .toString())
+        .isEqualTo(NULL_SOURCE);
+  }
+
+  @Test
+  public void testNullStatStringification() throws Throwable {
+    assertThat(demandStringify((IOStatistics)null)
+        .toString())
+        .isEqualTo(NULL_SOURCE);
+  }
+
+  @Test
+  public void testStringLogging() throws Throwable {
+    LOG.info("Output {}", demandStringify(statistics));
   }
 
   /**
@@ -253,4 +310,17 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
     }
   }
 
+  private final class StaticSource implements IOStatisticsSource {
+
+    private final IOStatistics statistics;
+
+    private StaticSource(IOStatistics statistics) {
+      this.statistics = statistics;
+    }
+
+    @Override
+    public IOStatistics getIOStatistics() {
+      return statistics;
+    }
+  }
 }

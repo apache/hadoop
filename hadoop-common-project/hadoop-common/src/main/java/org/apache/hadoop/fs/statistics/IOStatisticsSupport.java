@@ -25,7 +25,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 
 /**
- * Support for working with statistics.
+ * Support for working with IOStatistics.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
@@ -37,7 +37,7 @@ public final class IOStatisticsSupport {
   /**
    * Take a snapshot of the current statistics state.
    * This is not an atomic option.
-   * The instance can be serialized,. and it's
+   * The instance can be serialized, and its
    * {@code toString()} method lists all the values.
    * @param statistics statistics
    * @return a snapshot of the current values.

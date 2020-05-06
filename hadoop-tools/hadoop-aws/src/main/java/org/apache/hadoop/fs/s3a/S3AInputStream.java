@@ -156,7 +156,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     this.uri = "s3a://" + this.bucket + "/" + this.key;
     this.streamStatistics = ctx.getS3AStatisticsContext()
         .newInputStreamStatistics();
-    this.ioStatistics = streamStatistics.createIOStatistics();
+    this.ioStatistics = streamStatistics.getIOStatistics();
     this.serverSideEncryptionAlgorithm =
         s3Attributes.getServerSideEncryptionAlgorithm();
     this.serverSideEncryptionKey = s3Attributes.getServerSideEncryptionKey();

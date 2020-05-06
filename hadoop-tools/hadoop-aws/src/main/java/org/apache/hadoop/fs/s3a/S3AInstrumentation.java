@@ -655,9 +655,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
   /**
    * Statistics updated by an input stream during its actual operation.
-   * These counters are marked as volatile so that IOStatistics on the stream
-   * will get the latest values.
-   * They are only to be incremented within synchronized blocks.
+   * AtomicLongs so statististics can be queries.
    */
   private final class InputStreamStatisticsImpl implements
       S3AInputStreamStatistics {
@@ -968,11 +966,11 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     }
 
     /**
-     * Convert to an IOStatistics source which is dynamically updated.
+     * Create an IOStatistics instance which is dynamically updated.
      * @return statistics
      */
     @Override
-    public IOStatistics createIOStatistics() {
+    public IOStatistics getIOStatistics() {
       DynamicIOStatisticsBuilder builder
           = dynamicIOStatistics();
 
@@ -1350,11 +1348,11 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     }
 
     /**
-     * Convert to an IOStatistics source which is dynamically updated.
+     * Create an IOStatistics instance which is dynamically updated.
      * @return statistics
      */
     @Override
-    public IOStatistics createIOStatistics() {
+    public IOStatistics getIOStatistics() {
       DynamicIOStatisticsBuilder builder = dynamicIOStatistics();
 
       builder.add(StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS,

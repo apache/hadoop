@@ -18,13 +18,14 @@
 
 package org.apache.hadoop.fs.s3a.impl.statistics;
 
-import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
 /**
  * Statistics updated by an input stream during its actual operation.
  * It also contains getters for tests.
  */
-public interface S3AInputStreamStatistics extends AutoCloseable {
+public interface S3AInputStreamStatistics extends AutoCloseable,
+    IOStatisticsSource {
 
   /**
    * Seek backwards, incrementing the seek and backward seek counters.
@@ -116,13 +117,6 @@ public interface S3AInputStreamStatistics extends AutoCloseable {
    * closed instance.</b>
    */
   void merge(boolean isClosed);
-
-  /**
-   * Convert to an IOStatistics source which is
-   * dynamically updated.
-   * @return statistics
-   */
-  IOStatistics createIOStatistics();
 
   long getCloseOperations();
 

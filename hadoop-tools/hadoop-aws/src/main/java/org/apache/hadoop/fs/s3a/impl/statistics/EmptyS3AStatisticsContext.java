@@ -160,7 +160,7 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
      * @return an empty IO statistics instance.
      */
     @Override
-    public IOStatistics createIOStatistics() {
+    public IOStatistics getIOStatistics() {
       return emptyStatistics();
     }
 
@@ -373,7 +373,7 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     }
 
     @Override
-    public IOStatistics createIOStatistics() {
+    public IOStatistics getIOStatistics() {
       return emptyStatistics();
     }
 
