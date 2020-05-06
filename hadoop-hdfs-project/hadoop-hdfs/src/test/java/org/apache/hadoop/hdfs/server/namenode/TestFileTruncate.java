@@ -1420,4 +1420,44 @@ public class TestFileTruncate {
     fs.concat(trg, srcs);
     assertEquals(1, fs.getContentSummary(new Path(dir)).getFileCount());
   }
+
+  /**
+   * Test Quota space consumed with multiple snapshots.
+   */
+  @Test
+  public void testQuotaSpaceConsumedWithSnapshots() throws IOException {
+    Path root = new Path("/");
+    Path dir = new Path(root, "dir");
+    fs.mkdirs(dir);
+    fs.allowSnapshot(dir);
+
+    // create a file
+    Path file2 = new Path(dir, "file2");
+    DFSTestUtil.createFile(fs, file2, 30, (short) 1, 0);
+
+    // create a snapshot and truncate the file
+    fs.createSnapshot(dir, "s1");
+    boolean isReady = fs.truncate(file2, 20);
+    if (!isReady) {
+      checkBlockRecovery(file2);
+    }
+
+    // create one more snapshot and truncate the file which exists in previous
+    // snapshot
+    fs.createSnapshot(dir, "s2");
+    isReady = fs.truncate(file2, 10);
+    if (!isReady) {
+      checkBlockRecovery(file2);
+    }
+
+    // delete the snapshots and check quota space consumed usage
+    fs.deleteSnapshot(dir, "s1");
+    fs.deleteSnapshot(dir, "s2");
+    assertEquals(fs.getContentSummary(root).getSpaceConsumed(),
+        fs.getQuotaUsage(root).getSpaceConsumed());
+    fs.delete(dir, true);
+    assertEquals(fs.getContentSummary(root).getSpaceConsumed(),
+        fs.getQuotaUsage(root).getSpaceConsumed());
+
+  }
 }
