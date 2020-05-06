@@ -17,11 +17,14 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_READ_USE_CACHE_PRIORITY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.hamcrest.CoreMatchers.equalTo;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
@@ -33,7 +36,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
@@ -216,6 +221,64 @@ public class TestDFSInputStream {
       assertTrue("File size should be " + chunkSize,
           fs.getFileStatus(file).getLen() == chunkSize);
     } finally {
+      cluster.shutdown();
+    }
+  }
+
+  @Test
+  public void testReadWithPreferredCachingReplica() throws IOException {
+    Configuration conf = new Configuration();
+    conf.setBoolean(DFS_CLIENT_READ_USE_CACHE_PRIORITY, true);
+    MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+    cluster.waitActive();
+    DistributedFileSystem fs = null;
+    Path filePath = new Path("/testReadPreferredCachingReplica");
+    try {
+      fs = cluster.getFileSystem();
+      FSDataOutputStream out = fs.create(filePath, true, 4096, (short) 3, 512);
+      DFSInputStream dfsInputStream =
+          (DFSInputStream) fs.open(filePath).getWrappedStream();
+      LocatedBlock lb = mock(LocatedBlock.class);
+      when(lb.getCachedLocations()).thenReturn(new DatanodeInfo[0]);
+      DatanodeID nodeId = new DatanodeID("localhost", "localhost", "dn0", 1111,
+          1112, 1113, 1114);
+      DatanodeInfo dnInfo = new DatanodeDescriptor(nodeId);
+      when(lb.getCachedLocations()).thenReturn(new DatanodeInfo[] {dnInfo});
+      DatanodeInfo retDNInfo =
+          dfsInputStream.getBestNodeDNAddrPair(lb, null).info;
+      assertEquals(dnInfo, retDNInfo);
+    } finally {
+      fs.delete(filePath, true);
+      cluster.shutdown();
+    }
+  }
+
+  @Test
+  public void testReadWithoutPreferredCachingReplica() throws IOException {
+    Configuration conf = new Configuration();
+    conf.setBoolean(DFS_CLIENT_READ_USE_CACHE_PRIORITY, false);
+    MiniDFSCluster cluster =
+            new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+    cluster.waitActive();
+    DistributedFileSystem fs = null;
+    Path filePath = new Path("/testReadWithoutPreferredCachingReplica");
+    try {
+      fs = cluster.getFileSystem();
+      FSDataOutputStream out = fs.create(filePath, true, 4096, (short) 3, 512);
+      DFSInputStream dfsInputStream =
+              (DFSInputStream) fs.open(filePath).getWrappedStream();
+      LocatedBlock lb = mock(LocatedBlock.class);
+      when(lb.getCachedLocations()).thenReturn(new DatanodeInfo[0]);
+      DatanodeID nodeId = new DatanodeID("localhost", "localhost", "dn0", 1111,
+              1112, 1113, 1114);
+      DatanodeInfo dnInfo = new DatanodeDescriptor(nodeId);
+      when(lb.getLocations()).thenReturn(new DatanodeInfo[] {dnInfo});
+      DatanodeInfo retDNInfo =
+              dfsInputStream.getBestNodeDNAddrPair(lb, null).info;
+      assertEquals(dnInfo, retDNInfo);
+    } finally {
+      fs.delete(filePath, true);
       cluster.shutdown();
     }
   }

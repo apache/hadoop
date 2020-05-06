@@ -2979,6 +2979,15 @@
 </property>
 
 <property>
+  <name>dfs.client.read.use.cache.priority</name>
+  <value>false</value>
+  <description>
+    If true, the cached replica of the datanode is preferred
+    else the replica closest to client is preferred.
+  </description>
+</property>
+
+<property>
   <name>dfs.block.local-path-access.user</name>
   <value></value>
   <description>

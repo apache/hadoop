@@ -268,6 +268,7 @@ public class LocatedBlock {
         + "; corrupt=" + corrupt
         + "; offset=" + offset
         + "; locs=" + Arrays.asList(locs)
+        + "; cachedLocs=" + Arrays.asList(cachedLocs)
         + "}";
   }
 
