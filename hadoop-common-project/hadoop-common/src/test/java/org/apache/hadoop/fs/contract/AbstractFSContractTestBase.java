@@ -214,6 +214,7 @@ public abstract class AbstractFSContractTestBase extends Assert
     LOG.debug("== Teardown ==");
     deleteTestDirInTeardown();
     LOG.debug("== Teardown complete ==");
+    contract.teardown();
   }
 
   /**

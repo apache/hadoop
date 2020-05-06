@@ -70,6 +70,14 @@ public abstract class AbstractFSContract extends Configured {
   }
 
   /**
+   * Any teardown logic can go here
+   * @throws IOException IO problems
+   */
+  public void teardown() throws IOException {
+
+  }
+
+  /**
    * Add a configuration resource to this instance's configuration
    * @param resource resource reference
    * @throws AssertionError if the resource was not found.

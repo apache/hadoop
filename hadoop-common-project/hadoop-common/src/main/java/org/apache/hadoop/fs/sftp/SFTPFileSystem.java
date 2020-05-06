@@ -516,16 +516,13 @@ public class SFTPFileSystem extends FileSystem {
       disconnect(channel);
       throw new IOException(String.format(E_PATH_DIR, f));
     }
-    InputStream is;
     try {
       // the path could be a symbolic link, so get the real path
       absolute = new Path("/", channel.realpath(absolute.toUri().getPath()));
-
-      is = channel.get(absolute.toUri().getPath());
     } catch (SftpException e) {
       throw new IOException(e);
     }
-    return new FSDataInputStream(new SFTPInputStream(is, statistics)){
+    return new FSDataInputStream(new SFTPInputStream(channel, absolute, statistics)){
       @Override
       public void close() throws IOException {
         super.close();

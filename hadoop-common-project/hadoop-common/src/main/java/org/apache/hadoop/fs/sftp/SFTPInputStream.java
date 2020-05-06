@@ -17,49 +17,83 @@
  */
 package org.apache.hadoop.fs.sftp;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 
+import com.jcraft.jsch.ChannelSftp;
+import com.jcraft.jsch.SftpATTRS;
+import com.jcraft.jsch.SftpException;
+import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
 
 /** SFTP FileSystem input stream. */
 class SFTPInputStream extends FSInputStream {
 
-  public static final String E_SEEK_NOTSUPPORTED = "Seek not supported";
-  public static final String E_NULL_INPUTSTREAM = "Null InputStream";
   public static final String E_STREAM_CLOSED = "Stream closed";
-
+  private final ChannelSftp channel;
+  private final Path path;
   private InputStream wrappedStream;
   private FileSystem.Statistics stats;
-  private boolean closed;
+  private volatile boolean closed;
   private long pos;
+  private long contentLength;
+  private long nextPos;
 
-  SFTPInputStream(InputStream stream,  FileSystem.Statistics stats) {
-
-    if (stream == null) {
-      throw new IllegalArgumentException(E_NULL_INPUTSTREAM);
-    }
-    this.wrappedStream = stream;
+  SFTPInputStream(ChannelSftp channel, Path path, FileSystem.Statistics stats) {
+    this.channel = channel;
+    this.path = path;
+    this.wrappedStream = openStream(channel, path);
+    this.contentLength = getContentLength(channel, path);
     this.stats = stats;
-
-    this.pos = 0;
-    this.closed = false;
   }
 
   @Override
   public void seek(long position) throws IOException {
-    throw new IOException(E_SEEK_NOTSUPPORTED);
+    checkNotClosed();
+    if (position < 0) {
+      throw new EOFException(FSExceptionMessages.NEGATIVE_SEEK);
+    }
+    nextPos = position;
+  }
+
+  @Override
+  public int available() throws IOException {
+    checkNotClosed();
+    long remaining = contentLength - nextPos;
+    if (remaining > Integer.MAX_VALUE) {
+      return Integer.MAX_VALUE;
+    }
+    return (int) remaining;
+  }
+
+  private void seekInternal() throws IOException {
+    if (pos == nextPos) {
+      return;
+    }
+    if (nextPos > pos) {
+      long skipped = wrappedStream.skip(nextPos - pos);
+      pos = pos + skipped;
+    }
+    if (nextPos < pos) {
+      IOUtils.closeStream(wrappedStream);
+      wrappedStream = openStream(channel, path);
+      pos = wrappedStream.skip(nextPos);
+    }
   }
 
   @Override
   public boolean seekToNewSource(long targetPos) throws IOException {
-    throw new IOException(E_SEEK_NOTSUPPORTED);
+    return false;
   }
 
   @Override
   public long getPos() throws IOException {
-    return pos;
+    return nextPos;
   }
 
   @Override
@@ -67,32 +101,19 @@ class SFTPInputStream extends FSInputStream {
     if (closed) {
       throw new IOException(E_STREAM_CLOSED);
     }
-
+    if (this.contentLength == 0 || (nextPos >= contentLength)) {
+      return -1;
+    }
+    seekInternal();
     int byteRead = wrappedStream.read();
     if (byteRead >= 0) {
       pos++;
+      nextPos++;
     }
     if (stats != null & byteRead >= 0) {
       stats.incrementBytesRead(1);
     }
     return byteRead;
-  }
-
-  public synchronized int read(byte[] buf, int off, int len)
-      throws IOException {
-    if (closed) {
-      throw new IOException(E_STREAM_CLOSED);
-    }
-
-    int result = wrappedStream.read(buf, off, len);
-    if (result > 0) {
-      pos += result;
-    }
-    if (stats != null & result > 0) {
-      stats.incrementBytesRead(result);
-    }
-
-    return result;
   }
 
   public synchronized void close() throws IOException {
@@ -102,5 +123,33 @@ class SFTPInputStream extends FSInputStream {
     super.close();
     wrappedStream.close();
     closed = true;
+  }
+
+  /**
+   * Verify that the input stream is open. Non blocking; this gives
+   * the last state of the volatile {@link #closed} field.
+   * @throws IOException if the connection is closed.
+   */
+  private void checkNotClosed() throws IOException {
+    if (closed) {
+      throw new IOException(path.toUri() + ": " + FSExceptionMessages.STREAM_IS_CLOSED);
+    }
+  }
+
+  private InputStream openStream(ChannelSftp channel, Path path) {
+    try {
+      return channel.get(path.toUri().getPath());
+    } catch (SftpException e) {
+      throw new UncheckedIOException(new IOException(e));
+    }
+  }
+
+  private long getContentLength(ChannelSftp channel, Path path) {
+    try {
+      SftpATTRS stat = channel.lstat(path.toString());
+      return stat.getSize();
+    } catch (SftpException e) {
+      throw new UncheckedIOException(new IOException(e));
+    }
   }
 }
