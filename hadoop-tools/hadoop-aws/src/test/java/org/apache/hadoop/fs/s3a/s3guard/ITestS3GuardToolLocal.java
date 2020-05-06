@@ -65,9 +65,9 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-    removeBaseAndBucketOverrides(conf, S3_METADATA_STORE_IMPL);
+    removeBaseAndBucketOverrides(conf,
+        S3_METADATA_STORE_IMPL, S3A_BUCKET_PROBE);
     conf.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_LOCAL);
-    removeBaseAndBucketOverrides(conf, S3A_BUCKET_PROBE);
     conf.setInt(S3A_BUCKET_PROBE, S3A_BUCKET_PROBE_DEFAULT);
     return conf;
   }
