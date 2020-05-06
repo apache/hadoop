@@ -1054,10 +1054,21 @@ public class DFSInputStream extends FSInputStream
     StorageType[] storageTypes = block.getStorageTypes();
     DatanodeInfo chosenNode = null;
     StorageType storageType = null;
-    if (nodes != null) {
+    if (dfsClient.getConf().isReadUseCachePriority()) {
+      DatanodeInfo[] cachedLocs = block.getCachedLocations();
+      if (cachedLocs != null) {
+        for (int i = 0; i < cachedLocs.length; i++) {
+          if (isValidNode(cachedLocs[i], ignoredNodes)) {
+            chosenNode = cachedLocs[i];
+            break;
+          }
+        }
+      }
+    }
+
+    if (chosenNode == null && nodes != null) {
       for (int i = 0; i < nodes.length; i++) {
-        if (!dfsClient.getDeadNodes(this).containsKey(nodes[i])
-            && (ignoredNodes == null || !ignoredNodes.contains(nodes[i]))) {
+        if (isValidNode(nodes[i], ignoredNodes)) {
           chosenNode = nodes[i];
           // Storage types are ordered to correspond with nodes, so use the same
           // index to get storage type.
@@ -1088,6 +1099,15 @@ public class DFSInputStream extends FSInputStream
     DFSClient.LOG.warn("No live nodes contain block " + lostBlock.getBlock() +
         " after checking nodes = " + Arrays.toString(nodes) +
         ", ignoredNodes = " + ignoredNodes);
+  }
+
+  private boolean isValidNode(DatanodeInfo node,
+      Collection<DatanodeInfo> ignoredNodes) {
+    if (!dfsClient.getDeadNodes(this).containsKey(node)
+        && (ignoredNodes == null || !ignoredNodes.contains(node))) {
+      return true;
+    }
+    return false;
   }
 
   private static String getBestNodeDNAddrPairErrorString(
