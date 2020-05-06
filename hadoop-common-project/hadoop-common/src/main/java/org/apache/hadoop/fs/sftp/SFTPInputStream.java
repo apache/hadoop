@@ -1,19 +1,14 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Licensed to the Apache Software Foundation (ASF) under one or more contributor license agreements.  See the NOTICE
+ * file distributed with this work for additional information regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
+ * License.  You may obtain a copy of the License at
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
  */
 package org.apache.hadoop.fs.sftp;
 
@@ -45,11 +40,16 @@ class SFTPInputStream extends FSInputStream {
   private long nextPos;
 
   SFTPInputStream(ChannelSftp channel, Path path, FileSystem.Statistics stats) {
-    this.channel = channel;
-    this.path = path;
-    this.wrappedStream = openStream(channel, path);
-    this.contentLength = getContentLength(channel, path);
-    this.stats = stats;
+    try {
+      this.channel = channel;
+      this.path = path;
+      this.stats = stats;
+      this.wrappedStream = channel.get(path.toUri().getPath());
+      SftpATTRS stat = channel.lstat(path.toString());
+      this.contentLength = stat.getSize();
+    } catch (SftpException e) {
+      throw new UncheckedIOException(new IOException(e));
+    }
   }
 
   @Override
@@ -80,9 +80,13 @@ class SFTPInputStream extends FSInputStream {
       pos = pos + skipped;
     }
     if (nextPos < pos) {
-      IOUtils.closeStream(wrappedStream);
-      wrappedStream = openStream(channel, path);
-      pos = wrappedStream.skip(nextPos);
+      wrappedStream.close();
+      try {
+        wrappedStream = channel.get(path.toUri().getPath());
+        pos = wrappedStream.skip(nextPos);
+      } catch (SftpException e) {
+        throw new UncheckedIOException(new IOException(e));
+      }
     }
   }
 
@@ -132,24 +136,9 @@ class SFTPInputStream extends FSInputStream {
    */
   private void checkNotClosed() throws IOException {
     if (closed) {
-      throw new IOException(path.toUri() + ": " + FSExceptionMessages.STREAM_IS_CLOSED);
-    }
-  }
-
-  private InputStream openStream(ChannelSftp channel, Path path) {
-    try {
-      return channel.get(path.toUri().getPath());
-    } catch (SftpException e) {
-      throw new UncheckedIOException(new IOException(e));
-    }
-  }
-
-  private long getContentLength(ChannelSftp channel, Path path) {
-    try {
-      SftpATTRS stat = channel.lstat(path.toString());
-      return stat.getSize();
-    } catch (SftpException e) {
-      throw new UncheckedIOException(new IOException(e));
+      throw new IOException(
+          path.toUri() + ": " + FSExceptionMessages.STREAM_IS_CLOSED
+      );
     }
   }
 }

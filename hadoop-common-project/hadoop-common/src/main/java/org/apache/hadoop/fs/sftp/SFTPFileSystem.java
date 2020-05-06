@@ -19,7 +19,6 @@ package org.apache.hadoop.fs.sftp;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.URLDecoder;
@@ -522,7 +521,8 @@ public class SFTPFileSystem extends FileSystem {
     } catch (SftpException e) {
       throw new IOException(e);
     }
-    return new FSDataInputStream(new SFTPInputStream(channel, absolute, statistics)){
+    return new FSDataInputStream(
+        new SFTPInputStream(channel, absolute, statistics)){
       @Override
       public void close() throws IOException {
         super.close();

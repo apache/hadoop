@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -15,13 +14,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.sftp.SFTPFileSystem;
 import org.apache.sshd.common.NamedFactory;
-import org.apache.sshd.server.Command;
 import org.apache.sshd.server.SshServer;
 import org.apache.sshd.server.auth.UserAuth;
-import org.apache.sshd.server.auth.password.PasswordAuthenticator;
 import org.apache.sshd.server.auth.password.UserAuthPasswordFactory;
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
-import org.apache.sshd.server.session.ServerSession;
 import org.apache.sshd.server.subsystem.sftp.SftpSubsystemFactory;
 
 public class SFTPContract extends AbstractFSContract {
@@ -81,7 +77,9 @@ public class SFTPContract extends AbstractFSContract {
   @Override
   public Path getTestPath() {
     try {
-      FileSystem fs = FileSystem.get(URI.create("sftp://user:password@localhost"), conf);
+      FileSystem fs = FileSystem.get(
+          URI.create("sftp://user:password@localhost"), conf
+      );
       return fs.makeQualified(new Path(testDataDir));
     } catch (IOException e) {
       throw new UncheckedIOException(e);
