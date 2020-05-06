@@ -209,7 +209,7 @@ public abstract class AbstractContractStreamIOStatisticsTest
   }
 
   /**
-   * Keys which the output stream must support.
+   * Keys which the input stream must support.
    * @return a list of keys
    */
   public List<String> inputStreamStatisticKeys() {

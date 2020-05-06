@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.statistics;
 import javax.annotation.Nullable;
 import java.util.Map;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,6 +35,13 @@ public class IOStatisticsLogging {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(IOStatisticsLogging.class);
+
+  /** Pattern used for each entry. */
+  @VisibleForTesting
+  static final String ENTRY_PATTERN = "(%s=%s)";
+
+  /** used when a source is null. */
+  static final String NULL_SOURCE = "()";
 
   /**
    * Convert IOStatistics to a string form.
@@ -50,11 +58,9 @@ public class IOStatisticsLogging {
           sb.append(' ');
         }
         count++;
-        sb.append("(")
-            .append(entry.getKey())
-            .append("=")
-            .append(entry.getValue())
-            .append(")");
+        sb.append(String.format(ENTRY_PATTERN,
+            entry.getKey(),
+            entry.getValue()));
       }
       sb.append(")");
       return sb.toString();
@@ -82,8 +88,9 @@ public class IOStatisticsLogging {
    * On demand stringifier.
    * Whenever this object's toString() method is called, it evaluates the
    * statistics.
-   * This is for use in log statements where for the cost of creation
-   * of this entry is low; it is affordable to use in log statements.
+   * This is designed to affordable to use in log statements.
+   * @param source source of statistics.
+   * @return an object whose toString() operation returns the current values.
    */
    public static Object demandStringify(
        @Nullable IOStatisticsSource source) {
@@ -96,9 +103,11 @@ public class IOStatisticsLogging {
    * statistics.
    * This is for use in log statements where for the cost of creation
    * of this entry is low; it is affordable to use in log statements.
+   * @param statistics statistics to scan.
+   * @return an object whose toString() operation returns the current values.
    */
-   public static Object demandStringify(@Nullable IOStatistics source) {
-     return new StatisticsToString(source);
+   public static Object demandStringify(@Nullable IOStatistics statistics) {
+     return new StatisticsToString(statistics);
   }
 
   /**
@@ -118,7 +127,7 @@ public class IOStatisticsLogging {
     public String toString() {
       return source != null
           ? sourceToString(source)
-          : "";
+          : NULL_SOURCE;
     }
   }
 
@@ -146,7 +155,7 @@ public class IOStatisticsLogging {
     public String toString() {
       return statistics != null
           ? iostatisticsToString(statistics)
-          : "";
+          : NULL_SOURCE;
     }
   }
 }

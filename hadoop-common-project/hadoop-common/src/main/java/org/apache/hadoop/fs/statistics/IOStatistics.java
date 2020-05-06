@@ -21,12 +21,14 @@ package org.apache.hadoop.fs.statistics;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * IO Statistics.
  * <p>
- *   These are low-cost per-instance statistics provided by any IO components.
+ * These are low-cost per-instance statistics provided by any Hadoop
+ * I/O class instance.
  * <p>
  * The statistics MUST BE for the specific instance of the source;
  * possibly including aggregate statistics from other objects
@@ -44,6 +46,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  *     The set of statistic keys SHOULD remain unchanged, and MUST NOT
  *     remove keys.
  *   </li>
+ *   <li>
  *     The statistics SHOULD be dynamic: every call to {@code iterator()}
  *     MAY return a current/recent set of statistics.
  *   </li>
@@ -70,12 +73,13 @@ import org.apache.hadoop.classification.InterfaceStability;
  *   </li>
  *   <li>
  *     Thread safety: an instance of IOStatistics can be shared across threads;
- *     a call to @code iterator()} is thread safe.
+ *     a call to {@code iterator()} is thread safe.
  *     The actual Iterable returned MUST NOT be shared across threads.
  *   </li>
  *
  * </ol>
  */
+@InterfaceAudience.Public
 @InterfaceStability.Unstable
 public interface IOStatistics extends Iterable<Map.Entry<String, Long>> {
 
