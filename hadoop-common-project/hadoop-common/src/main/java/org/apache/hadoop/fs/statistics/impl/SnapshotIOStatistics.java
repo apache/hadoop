@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 
 /**
  * Snapshot of statistics from a different source.
+ * <p>
  * It is serializable so that frameworks which can use java serialization
  * to propagate data (Spark, Flink...) can send the statistics
  * back.

@@ -116,7 +116,7 @@ public final class IOStatisticAssertions {
   }
 
   /**
-   * query the source for the statistics; fails if the statistics
+   * Query the source for the statistics; fails if the statistics
    * returned are null.
    * @param source source object.
    * @return the statistics it provides.

@@ -29,6 +29,10 @@ public class SourceWrappedStatistics implements IOStatisticsSource {
 
   private final IOStatistics source;
 
+  /**
+   * Constructor.
+   * @param source source of statistics.
+   */
   public SourceWrappedStatistics(final IOStatistics source) {
     this.source = source;
   }

@@ -22,7 +22,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * These are common statistic names.
- *
+ * <p>
  * When adding new common statistic name constants, please make them unique.
  * By convention, they are implicitly unique:
  * <ul>
@@ -32,7 +32,11 @@ import org.apache.hadoop.classification.InterfaceStability;
  * </ul>
  */
 @InterfaceStability.Unstable
-public class StoreStatisticNames {
+public final class StoreStatisticNames {
+
+
+  private StoreStatisticNames() {
+  }
 
   /** {@value}. */
   public static final String OP_APPEND = "op_append";
@@ -45,7 +49,8 @@ public class StoreStatisticNames {
   public static final String OP_CREATE = "op_create";
 
   /** {@value}. */
-  public static final String OP_CREATE_NON_RECURSIVE = "op_create_non_recursive";
+  public static final String OP_CREATE_NON_RECURSIVE =
+      "op_create_non_recursive";
 
   /** {@value}. */
   public static final String OP_DELETE = "op_delete";
@@ -54,13 +59,16 @@ public class StoreStatisticNames {
   public static final String OP_EXISTS = "op_exists";
 
   /** {@value}. */
-  public static final String OP_GET_CONTENT_SUMMARY = "op_get_content_summary";
+  public static final String OP_GET_CONTENT_SUMMARY =
+      "op_get_content_summary";
 
   /** {@value}. */
-  public static final String OP_GET_DELEGATION_TOKEN = "op_get_delegation_token";
+  public static final String OP_GET_DELEGATION_TOKEN =
+      "op_get_delegation_token";
 
   /** {@value}. */
-  public static final String OP_GET_FILE_CHECKSUM = "op_get_file_checksum";
+  public static final String OP_GET_FILE_CHECKSUM =
+      "op_get_file_checksum";
 
   /** {@value}. */
   public static final String OP_GET_FILE_STATUS = "op_get_file_status";
@@ -81,7 +89,8 @@ public class StoreStatisticNames {
   public static final String OP_LIST_FILES = "op_list_files";
 
   /** {@value}. */
-  public static final String OP_LIST_LOCATED_STATUS = "op_list_located_status";
+  public static final String OP_LIST_LOCATED_STATUS =
+      "op_list_located_status";
 
   /** {@value}. */
   public static final String OP_LIST_STATUS = "op_list_status";

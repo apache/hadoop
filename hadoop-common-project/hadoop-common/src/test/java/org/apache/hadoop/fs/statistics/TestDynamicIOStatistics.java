@@ -29,6 +29,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.statistics.impl.SourceWrappedStatistics;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
@@ -81,8 +82,7 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
 
   private long evalLong;
 
-  private static final String[] keys = new String[]{ALONG, AINT, COUNT, EVAL};
-
+  private static final String[] KEYS = new String[]{ALONG, AINT, COUNT, EVAL};
 
   @Before
   public void setUp() throws Exception {
@@ -92,7 +92,7 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
         .add(COUNT, counter)
         .add(EVAL, x -> evalLong)
         .build();
-    statsSource = new StaticSource(statistics);
+    statsSource = new SourceWrappedStatistics(statistics);
   }
 
   /**
@@ -142,7 +142,7 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
   public void testKeys() throws Throwable {
     Assertions.assertThat(statistics.keys())
         .describedAs("statistic keys of %s", statistics)
-        .containsExactlyInAnyOrder(keys);
+        .containsExactlyInAnyOrder(KEYS);
   }
 
   @Test
@@ -151,7 +151,7 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
     // the values.
     assertThat(statistics)
         .extracting(s -> s.getKey())
-        .containsExactlyInAnyOrder(keys);
+        .containsExactlyInAnyOrder(KEYS);
   }
 
   /**
@@ -210,7 +210,7 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
     IOStatistics deser = IOStatisticAssertions.roundTrip(stat);
     assertThat(deser)
         .extracting(s -> s.getKey())
-        .containsExactlyInAnyOrder(keys);
+        .containsExactlyInAnyOrder(KEYS);
     for (Map.Entry<String, Long> e: deser) {
       assertThat(e.getValue())
           .describedAs("Value of entry %s", e)
@@ -222,7 +222,7 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
   public void testStringification() throws Throwable {
     assertThat(iostatisticsToString(statistics))
         .isNotBlank()
-        .contains(keys);
+        .contains(KEYS);
   }
 
   @Test
@@ -310,17 +310,4 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
     }
   }
 
-  private final class StaticSource implements IOStatisticsSource {
-
-    private final IOStatistics statistics;
-
-    private StaticSource(IOStatistics statistics) {
-      this.statistics = statistics;
-    }
-
-    @Override
-    public IOStatistics getIOStatistics() {
-      return statistics;
-    }
-  }
 }

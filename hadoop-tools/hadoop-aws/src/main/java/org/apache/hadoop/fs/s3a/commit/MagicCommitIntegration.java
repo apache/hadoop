@@ -98,7 +98,8 @@ public class MagicCommitIntegration {
       if (isMagicCommitPath(elements)) {
         final String destKey = keyOfFinalDestination(elements, key);
         String pendingsetPath = key + CommitConstants.PENDING_SUFFIX;
-        storeContext.incrementStatistic(Statistic.COMMITTER_MAGIC_FILES_CREATED);
+        storeContext.incrementStatistic(
+            Statistic.COMMITTER_MAGIC_FILES_CREATED);
         tracker = new MagicCommitTracker(path,
             storeContext.getBucket(),
             key,

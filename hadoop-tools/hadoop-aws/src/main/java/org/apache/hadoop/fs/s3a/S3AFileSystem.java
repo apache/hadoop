@@ -111,7 +111,7 @@ import org.apache.hadoop.fs.s3a.impl.RenameOperation;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.statistics.CommitterStatistics;
-import org.apache.hadoop.fs.s3a.impl.statistics.IntegratedS3AStatisticsContext;
+import org.apache.hadoop.fs.s3a.impl.statistics.BondedS3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.impl.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.impl.statistics.StatisticsFromAwsSdk;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
@@ -525,8 +525,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * different statistics binding, if desired.
    */
   protected void initializeStatisticsBinding() {
-    statisticsContext = new IntegratedS3AStatisticsContext(
-        new IntegratedS3AStatisticsContext.S3AFSStatisticsSource() {
+    statisticsContext = new BondedS3AStatisticsContext(
+        new BondedS3AStatisticsContext.S3AFSStatisticsSource() {
 
           @Override
           public S3AInstrumentation getInstrumentation() {

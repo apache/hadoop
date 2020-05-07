@@ -37,7 +37,7 @@ public class ActiveOperationContext {
   private final long operationId;
 
   /**
-   * Statistics context
+   * Statistics context.
    */
   private final S3AStatisticsContext statisticsContext;
 
@@ -79,14 +79,14 @@ public class ActiveOperationContext {
     return statisticsContext;
   }
 
-  private static final AtomicLong nextOperationId = new AtomicLong(0);
+  private static final AtomicLong NEXT_OPERATION_ID = new AtomicLong(0);
 
   /**
    * Create an operation ID. The nature of it should be opaque.
    * @return an ID for the constructor.
    */
   protected static long newOperationId() {
-    return nextOperationId.incrementAndGet();
+    return NEXT_OPERATION_ID.incrementAndGet();
   }
 
 }

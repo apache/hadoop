@@ -19,7 +19,7 @@
 package org.apache.hadoop.fs.s3a.impl.statistics;
 
 /**
- * Interface for change tracking.
+ * Interface for change tracking statistics.
  */
 public interface ChangeTrackerStatistics {
 

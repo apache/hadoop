@@ -203,7 +203,8 @@ public enum Statistic {
       "Count of total data uploaded in block output"),
   STREAM_WRITE_BYTES(
       StreamStatisticNames.STREAM_WRITE_BYTES,
-      "Count of bytes written to output stream (including all not yet uploaded"),
+      "Count of bytes written to output stream"
+          + " (including all not yet uploaded"),
   STREAM_WRITE_QUEUE_DURATION("stream_write_queue_duration",
       "Total queue duration of all block uploads"),
 
@@ -286,9 +287,7 @@ public enum Statistic {
       "requests made of the remote store"),
 
   STORE_IO_RETRY(StoreStatisticNames.STORE_IO_RETRY,
-      "retried requests made of the remote store"),
-
-      ;
+      "retried requests made of the remote store");
 
   private static final Map<String, Statistic> SYMBOL_MAP =
       new HashMap<>(Statistic.values().length);

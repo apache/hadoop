@@ -39,7 +39,7 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.emptyStat
 public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
 
   @Override
-  public MetastoreInstrumentation getMetastoreInstrumentation() {
+  public MetastoreInstrumentation getS3GuardInstrumentation() {
     return new MetastoreInstrumentationImpl();
   }
 

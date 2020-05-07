@@ -29,7 +29,7 @@ public interface S3AStatisticsContext extends CountersAndGauges {
    * Get the metastore instrumentation.
    * @return an instance of the metastore statistics tracking.
    */
-  MetastoreInstrumentation getMetastoreInstrumentation();
+  MetastoreInstrumentation getS3GuardInstrumentation();
 
   /**
    * Create a stream input statistics instance.

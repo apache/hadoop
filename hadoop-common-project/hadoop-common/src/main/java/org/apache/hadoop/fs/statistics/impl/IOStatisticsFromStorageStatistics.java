@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 
 /**
- * This provides an IOStatistics implementation from a storage statistics
+ * This provides an IOStatistics instance from a {@link StorageStatistics}
  * instance.
  */
 final class IOStatisticsFromStorageStatistics
@@ -45,6 +45,11 @@ final class IOStatisticsFromStorageStatistics
    */
   private final Set<String> keys;
 
+  /**
+   * Instantiate. This will iterate through the
+   * statistics to enumerate the keys.
+   * @param storageStatistics source
+   */
   IOStatisticsFromStorageStatistics(
       final StorageStatistics storageStatistics) {
     Preconditions.checkArgument(storageStatistics != null,
