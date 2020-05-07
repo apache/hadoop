@@ -39,10 +39,10 @@ class SFTPInputStream extends FSInputStream {
   private final Path path;
   private InputStream wrappedStream;
   private FileSystem.Statistics stats;
-  private volatile boolean closed;
+  private boolean closed;
   private long pos;
-  private long contentLength;
   private long nextPos;
+  private long contentLength;
 
   SFTPInputStream(ChannelSftp channel, Path path, FileSystem.Statistics stats) {
     try {
@@ -58,7 +58,7 @@ class SFTPInputStream extends FSInputStream {
   }
 
   @Override
-  public void seek(long position) throws IOException {
+  public synchronized void seek(long position) throws IOException {
     checkNotClosed();
     if (position < 0) {
       throw new EOFException(FSExceptionMessages.NEGATIVE_SEEK);
@@ -67,7 +67,7 @@ class SFTPInputStream extends FSInputStream {
   }
 
   @Override
-  public int available() throws IOException {
+  public synchronized int available() throws IOException {
     checkNotClosed();
     long remaining = contentLength - nextPos;
     if (remaining > Integer.MAX_VALUE) {
@@ -101,7 +101,7 @@ class SFTPInputStream extends FSInputStream {
   }
 
   @Override
-  public long getPos() throws IOException {
+  public synchronized long getPos() throws IOException {
     return nextPos;
   }
 
@@ -134,11 +134,6 @@ class SFTPInputStream extends FSInputStream {
     closed = true;
   }
 
-  /**
-   * Verify that the input stream is open. Non blocking; this gives
-   * the last state of the volatile {@link #closed} field.
-   * @throws IOException if the connection is closed.
-   */
   private void checkNotClosed() throws IOException {
     if (closed) {
       throw new IOException(
