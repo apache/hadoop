@@ -34,7 +34,6 @@ import org.apache.hadoop.fs.Path;
 /** SFTP FileSystem input stream. */
 class SFTPInputStream extends FSInputStream {
 
-  public static final String E_STREAM_CLOSED = "Stream closed";
   private final ChannelSftp channel;
   private final Path path;
   private InputStream wrappedStream;
@@ -107,9 +106,7 @@ class SFTPInputStream extends FSInputStream {
 
   @Override
   public synchronized int read() throws IOException {
-    if (closed) {
-      throw new IOException(E_STREAM_CLOSED);
-    }
+    checkNotClosed();
     if (this.contentLength == 0 || (nextPos >= contentLength)) {
       return -1;
     }
