@@ -54,7 +54,6 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.StringUtils;
 
-import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_REGION_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CREATE_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_NAME_KEY;
@@ -188,7 +187,7 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
     conf.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL);
     URI fsUri = fs.getUri();
     S3AUtils.setBucketOption(conf,fsUri.getHost(),
-        METADATASTORE_AUTHORITATIVE,
+        S3_METADATA_STORE_IMPL,
         S3GUARD_METASTORE_NULL);
     rawFs = (S3AFileSystem) FileSystem.newInstance(fsUri, conf);
   }
