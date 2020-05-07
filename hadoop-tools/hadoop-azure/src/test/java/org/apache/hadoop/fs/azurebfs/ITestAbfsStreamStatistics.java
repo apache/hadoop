@@ -96,7 +96,8 @@ public class ITestAbfsStreamStatistics extends AbstractAbfsIntegrationTest {
        * different setups.
        *
        */
-      assertTrue("Mismatch in read operations",
+      assertTrue(String.format("The actual value of %d was not equal to the "
+              + "expected value of 2 or 3", statistics.getReadOps()),
           statistics.getReadOps() == 2 || statistics.getReadOps() == 3);
 
     } finally {
