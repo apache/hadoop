@@ -22,7 +22,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * These are common statistic names.
- *
+ * <p>
  * When adding new common statistic name constants, please make them unique.
  * By convention, they are implicitly unique:
  * <ul>
@@ -36,7 +36,10 @@ import org.apache.hadoop.classification.InterfaceStability;
  * </ul>
  */
 @InterfaceStability.Unstable
-public class StreamStatisticNames {
+public final class StreamStatisticNames {
+
+  private StreamStatisticNames() {
+  }
 
   /** {@value}. */
   public static final String STREAM_ABORTED = "stream_aborted";

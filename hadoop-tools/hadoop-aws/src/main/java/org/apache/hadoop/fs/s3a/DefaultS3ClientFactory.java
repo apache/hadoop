@@ -51,7 +51,7 @@ import static org.apache.hadoop.fs.s3a.Constants.PATH_STYLE_ACCESS;
 
 /**
  * The default {@link S3ClientFactory} implementation.
- * This which calls the AWS SDK to configure and create an
+ * This calls the AWS SDK to configure and create an
  * {@link AmazonS3Client} that communicates with the S3 service.
  */
 @InterfaceAudience.Private
@@ -71,6 +71,7 @@ public class DefaultS3ClientFactory extends Configured
 
   /**
    * Create the client.
+   * <p>
    * If the AWS stats are not null then a {@link AwsStatisticsCollector}.
    * is created to bind to the two.
    * <i>Important: until this binding works properly across regions,
@@ -140,6 +141,7 @@ public class DefaultS3ClientFactory extends Configured
 
   /**
    * Use the (newer) Builder SDK to create a an AWS S3 client.
+   * <p>
    * This has a more complex endpoint configuration in a
    * way which does not yet work in this code in a way
    * which doesn't trigger regressions. So it is only used
@@ -179,7 +181,10 @@ public class DefaultS3ClientFactory extends Configured
 
   /**
    * Wrapper around constructor for {@link AmazonS3} client.
-   * Override this to provide an extended version of the client
+   * Override this to provide an extended version of the client.
+   * <p>
+   * This uses a deprecated constructor -it is currently
+   * the only one which works for us.
    * @param credentials credentials to use
    * @param awsConf  AWS configuration
    * @param endpoint endpoint string; may be ""
@@ -197,7 +202,7 @@ public class DefaultS3ClientFactory extends Configured
 
   /**
    * Configure classic S3 client.
-   *
+   * <p>
    * This includes: endpoint, Path Access and possibly other
    * options.
    *
@@ -227,18 +232,19 @@ public class DefaultS3ClientFactory extends Configured
    * the Hadoop configuration.
    * This is different from the general AWS configuration creation as
    * it is unique to S3 connections.
-   *
+   * <p>
    * The {@link Constants#PATH_STYLE_ACCESS} option enables path-style access
    * to S3 buckets if configured.  By default, the
    * behavior is to use virtual hosted-style access with URIs of the form
    * {@code http://bucketname.s3.amazonaws.com}
+   * <p>
    * Enabling path-style access and a
    * region-specific endpoint switches the behavior to use URIs of the form
    * {@code http://s3-eu-west-1.amazonaws.com/bucketname}.
    * It is common to use this when connecting to private S3 servers, as it
    * avoids the need to play with DNS entries.
    * @param s3 S3 client
-   * @param conf Hadoop configuration
+   * @param pathStyleAccess enable path style access?
    * @return the S3 client
    */
   protected static AmazonS3 applyS3ClientOptions(AmazonS3 s3,
@@ -255,6 +261,7 @@ public class DefaultS3ClientFactory extends Configured
   /**
    * Given an endpoint string, return an endpoint config, or null, if none
    * is needed.
+   * <p>
    * This is a pretty painful piece of code. It is trying to replicate
    * what AwsClient.setEndpoint() does, because you can't
    * call that setter on an AwsClient constructed via

@@ -55,8 +55,9 @@ public final class StatsMapEntry implements Map.Entry<String, Long> {
 
   @SuppressWarnings("NestedAssignment")
   @Override
-  public Long setValue(final Long value) {
-    return this.value = value;
+  public Long setValue(final Long val) {
+    this.value = val;
+    return val;
   }
 
   @Override

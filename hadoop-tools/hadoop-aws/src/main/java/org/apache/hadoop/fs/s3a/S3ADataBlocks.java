@@ -211,7 +211,7 @@ final class S3ADataBlocks {
 
     private volatile DestState state = Writing;
     protected final long index;
-    protected final BlockOutputStreamStatistics statistics;
+    private final BlockOutputStreamStatistics statistics;
 
     protected DataBlock(long index,
         BlockOutputStreamStatistics statistics) {
@@ -372,6 +372,10 @@ final class S3ADataBlocks {
       if (statistics != null) {
         statistics.blockReleased();
       }
+    }
+
+    protected BlockOutputStreamStatistics getStatistics() {
+      return statistics;
     }
   }
 

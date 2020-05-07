@@ -38,9 +38,10 @@ import static com.amazonaws.util.AWSRequestMetrics.Field.ThrottleException;
 
 /**
  * Collect statistics from the AWS SDK and update our statistics.
- *
+ * <p>
  * See {@code com.facebook.presto.hive.s3.PrestoS3FileSystemMetricCollector}
  * for the inspiration for this.
+ * <p>
  * See {@code com.amazonaws.util.AWSRequestMetrics} for metric names.
  */
 public class AwsStatisticsCollector extends RequestMetricCollector {
@@ -58,6 +59,12 @@ public class AwsStatisticsCollector extends RequestMetricCollector {
     this.collector = collector;
   }
 
+  /**
+   * This is the callback from the AWS SDK where metrics
+   * can be collected.
+   * @param request AWS request
+   * @param response AWS response
+   */
   @Override
   public void collectMetrics(
       final Request<?> request,

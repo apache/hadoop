@@ -19,16 +19,17 @@
 /**
  * This package contains support for statistic collection and reporting.
  * This is the public API; implementation classes are to be kept elsewhere.
- *
+ * <p>
  * This package defines two interfaces:
- *
+ * <p>
  * {@link org.apache.hadoop.fs.statistics.IOStatisticsSource}:
  * a source of statistic data, which can be retrieved
  * through a call to
  * {@link org.apache.hadoop.fs.statistics.IOStatisticsSource#getIOStatistics()} .
- *
- * {@link org.apache.hadoop.fs.statistics.IOStatistics} the statistics retrieved from a statistics source.
- *
+ * <p>
+ * {@link org.apache.hadoop.fs.statistics.IOStatistics} the statistics retrieved
+ * from a statistics source.
+ * <p>
  * The retrieved statistics may be an immutable snapshot -in which case to get
  * updated statistics another call to
  * {@link org.apache.hadoop.fs.statistics.IOStatisticsSource#getIOStatistics()}
@@ -51,15 +52,15 @@
  * When iterating through the set, the values of the iterator SHOULD
  * be frozen at the time the iterator was requested.
  * <p>
- * These statistics can be used to: log operations, profile applications, make
- * assertions about the state of the output.
+ * These statistics can be used to: log operations, profile applications,
+ * and make assertions about the state of the output.
  * <p>
  * The names of statistics are a matter of choice of the specific source.
  * However, {@link org.apache.hadoop.fs.statistics.StoreStatisticNames}
  * contains a
  * set of names recommended for object store operations.
  * {@link org.apache.hadoop.fs.statistics.StreamStatisticNames} declares
- * recommended names for statistics provided for
+ * recommended names for statistics provided forInconsistentS3ClientFactoryInconsistentS3ClientFactory
  * input and output streams.
  * <p>
  * Utility classes are includes to assist use
@@ -77,7 +78,7 @@
  * </ul>
  *
  * <p>
- * Implementors notes
+ * Implementors notes:
  * <ol>
  * <li>
  * IOStatistics keys SHOULD be standard names where possible.
@@ -105,14 +106,16 @@
  * be fast and return values even while slow/blocking remote IO is underway.
  * </li>
  * <li>
- * MUST support value enumeration and retrieval after the source has been closed.
+ * MUST support value enumeration and retrieval after the source has been
+ * closed.
  * </li>
  * <li>
- * SHOULD NOT have back-references to potentially expensive objects (filesystem
- * instances etc)
+ * SHOULD NOT have back-references to potentially expensive objects
+ * (filesystem instances etc.)
  * </li>
  * <li>
- * SHOULD provide statistics which can be added to generate aggregate statistics.
+ * SHOULD provide statistics which can be added to generate aggregate
+ * statistics.
  * </li>
  * </ol>
  */

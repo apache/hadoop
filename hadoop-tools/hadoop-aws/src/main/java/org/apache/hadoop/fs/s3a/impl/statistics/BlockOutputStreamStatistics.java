@@ -41,6 +41,7 @@ public interface BlockOutputStreamStatistics extends Closeable,
 
   /**
    *  A block upload has failed.
+   * <p>
    *  A final transfer completed event is still expected, so this
    *  does not decrement the active block counter.
    */
@@ -78,7 +79,7 @@ public interface BlockOutputStreamStatistics extends Closeable,
   int getBlocksReleased();
 
   /**
-   * Get counters of blocks actively allocated; my be inaccurate
+   * Get counters of blocks actively allocated; may be inaccurate
    * if the numbers change during the (non-synchronized) calculation.
    * @return the number of actively allocated blocks.
    */

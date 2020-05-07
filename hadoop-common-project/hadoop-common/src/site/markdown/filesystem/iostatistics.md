@@ -33,16 +33,17 @@ applications such as
 The new IOStatistics API is intended to 
 
 1. Be instance specific:, rather than shared across multiple instances
-   of a class.
+   of a class, or thread local.
 1. Be public and stable enough to be used by applications.
 1. Be easy to use in applications written in Java, Scala, and, via libhdfs, C/C++
 1. Have foundational interfaces and classes in the `hadoop-common` JAR.
 
 ## Core model
 
-IO classes *may* implement `IOStatisticsSource`
+Any Hadoop I/O class *may* implement `IOStatisticsSource` in order to
+provide statistics.
 
-Wrapper IO Classes (e.g `FSDataInputStream`, `FSDataOutputStream` *should*
+Wrapper I/O Classes (e.g `FSDataInputStream`, `FSDataOutputStream` *should*
 implement the interface and forward it to the wrapped class, if they also
 implement it -or return `null` if they do not.
 
@@ -56,12 +57,16 @@ The `IOStatistics` implementations provide
 * An iterator over all such keys and their latest values.
 * A way to explitly request the value of specific statistic.
 
+## package `org.apache.hadoop.fs.statistics`
+
+This package contains the public statistics APIs intended
+for use by applications.
 
 <!--  ============================================================= -->
 <!--  Interface: IOStatisticsSource -->
 <!--  ============================================================= -->
 
-# class `org.apache.hadoop.fs.statistics.IOStatisticsSource`
+### class `org.apache.hadoop.fs.statistics.IOStatisticsSource`
 
 ```java
 
@@ -92,7 +97,7 @@ IOStatistics information.
 <!--  Interface: IOStatistics -->
 <!--  ============================================================= -->
 
-# class `org.apache.hadoop.fs.statistics.IOStatistics`
+### class `org.apache.hadoop.fs.statistics.IOStatistics`
 
 These are low-cost per-instance statistics provided by any Hadoop I/O class instance.
 
@@ -160,10 +165,25 @@ remove keys.
  operations (e.g stream IO statistics as provided by a filesystem
  instance).
 
-* Thread safety: an instance of IOStatistics can be shared across threads;
+
+### Thread Model
+
+1. An instance of IOStatistics can be shared across threads;
  a call to `iterator()` is thread safe.
- 
-The actual `Iterable` returned MUST NOT be shared across threads.
+
+1. The actual `Iterable` returned MUST NOT be shared across threads.
+
+1. The statistics collected MUST include all operations which took place across all threads performing work for the monitored object.
+
+1. The statistics reported MUST NOT be local to the active thread.
+
+This is different from the `FileSystem.Statistics` behavior where per-thread statistics
+are collected and reported.
+That mechanism supports collecting limited read/write statistics for different
+worker threads sharing the same FS instance, but as the collection is thread local,
+it invariably under-reports IO performed in other threads on behalf of a worker thread.
+
+
 
 
 ## Helper Classes
@@ -203,5 +223,5 @@ the provisioning of a public implementation should be raised via the Hadoop deve
 channels.
 
 These MAY be used by those implementations of the Hadoop `FileSystem`, `AbstractFileSystem`
-and related classes which are not in the hadoop source tree. Implementors must
-be aware that all this code is unstable.
+and related classes which are not in the hadoop source tree. Implementors MUST BR
+that all this code is unstable and may change across minor point releases of Hadoop.

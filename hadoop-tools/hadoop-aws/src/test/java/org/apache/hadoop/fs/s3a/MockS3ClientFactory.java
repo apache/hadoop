@@ -24,7 +24,6 @@ import java.net.URI;
 import java.util.ArrayList;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.metrics.RequestMetricCollector;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.MultipartUploadListing;
 import com.amazonaws.services.s3.model.Region;

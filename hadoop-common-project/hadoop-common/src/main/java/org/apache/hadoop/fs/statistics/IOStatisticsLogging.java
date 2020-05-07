@@ -31,16 +31,19 @@ import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStat
  * Utility operations convert IO Statistics sources/instances
  * to strings, especially for robustly logging.
  */
-public class IOStatisticsLogging {
+public final class IOStatisticsLogging {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(IOStatisticsLogging.class);
+
+  private IOStatisticsLogging() {
+  }
 
   /** Pattern used for each entry. */
   @VisibleForTesting
   static final String ENTRY_PATTERN = "(%s=%s)";
 
-  /** used when a source is null. */
+  /** String to return when a source is null. */
   static final String NULL_SOURCE = "()";
 
   /**
@@ -71,6 +74,7 @@ public class IOStatisticsLogging {
 
   /**
    * Extract the statistics from a source.
+   * <p>
    * Exceptions are caught and downgraded to debug logging.
    * @param source source of statistics.
    * @return a string for logging.
@@ -86,8 +90,10 @@ public class IOStatisticsLogging {
 
   /**
    * On demand stringifier.
+   * <p>
    * Whenever this object's toString() method is called, it evaluates the
    * statistics.
+   * <p>
    * This is designed to affordable to use in log statements.
    * @param source source of statistics.
    * @return an object whose toString() operation returns the current values.
@@ -99,8 +105,10 @@ public class IOStatisticsLogging {
 
   /**
    * On demand stringifier.
+   * <p>
    * Whenever this object's toString() method is called, it evaluates the
    * statistics.
+   * <p>
    * This is for use in log statements where for the cost of creation
    * of this entry is low; it is affordable to use in log statements.
    * @param statistics statistics to scan.

@@ -29,40 +29,44 @@ import org.apache.hadoop.fs.s3a.s3guard.MetastoreInstrumentation;
  * An S3A statistics context which is bonded to a
  * S3AInstrumentation instance -inevitably that of an S3AFileSystem
  * instance.
+ * <p>
  * An interface is used to bind to the relevant fields, rather
  * than have them passed in the constructor because some
  * production code, specifically, DelegateToFileSystem,
  * patches the protected field after initialization.
- *
+ * <p>
  * All operations are passed through directly to that class.
+ * <p>
  *
  * If an instance of FileSystem.Statistics is passed in, it
  * will be used whenever input stream statistics are created -
  * However, Internally always increments the statistics in the
  * current thread.
  * As a result, cross-thread IO will under-report.
+ * <p>
  *
  * This is addressed through the stream statistics classes
  * only updating the stats in the close() call. Provided
  * they are closed in the worker thread, all stats collected in
  * helper threads will be included.
  */
-public class IntegratedS3AStatisticsContext implements S3AStatisticsContext {
+public class BondedS3AStatisticsContext implements S3AStatisticsContext {
 
+  /** Source of statistics services. */
   private final S3AFSStatisticsSource statisticsSource;
 
   /**
    * Instantiate.
    * @param statisticsSource integration binding
    */
-  public IntegratedS3AStatisticsContext(
+  public BondedS3AStatisticsContext(
       final S3AFSStatisticsSource statisticsSource) {
     this.statisticsSource = statisticsSource;
   }
 
 
   /**
-   * Get the instrumentation from the FS integraation.
+   * Get the instrumentation from the FS integration.
    * @return instrumentation instance.
    */
   private S3AInstrumentation getInstrumentation() {
@@ -83,7 +87,7 @@ public class IntegratedS3AStatisticsContext implements S3AStatisticsContext {
    * @return the S3Guard getInstrumentation() point.
    */
   @Override
-  public MetastoreInstrumentation getMetastoreInstrumentation() {
+  public MetastoreInstrumentation getS3GuardInstrumentation() {
     return getInstrumentation().getS3GuardInstrumentation();
   }
 
@@ -118,6 +122,7 @@ public class IntegratedS3AStatisticsContext implements S3AStatisticsContext {
 
   /**
    * Increment a specific counter.
+   * <p>
    * No-op if not defined.
    * @param op operation
    * @param count increment value
@@ -129,6 +134,7 @@ public class IntegratedS3AStatisticsContext implements S3AStatisticsContext {
 
   /**
    * Increment a specific gauge.
+   * <p>
    * No-op if not defined.
    * @param op operation
    * @param count increment value
@@ -141,6 +147,7 @@ public class IntegratedS3AStatisticsContext implements S3AStatisticsContext {
 
   /**
    * Decrement a specific gauge.
+   * <p>
    * No-op if not defined.
    * @param op operation
    * @param count increment value
