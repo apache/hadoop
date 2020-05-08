@@ -179,9 +179,9 @@ public class TestSnappyCompressorDecompressor {
     compressor.setInput(bytes, 0, bytes.length);
     assertTrue("SnappyCompressDecompress getBytesRead error !!!",
         compressor.getBytesRead() > 0);
-    assertTrue(
+    assertEquals(
         "SnappyCompressDecompress getBytesWritten before compress error !!!",
-        compressor.getBytesWritten() == 0);
+        0, compressor.getBytesWritten());
 
     // snappy compression may increase data size.
     // This calculation comes from "Snappy::MaxCompressedLength(size_t)"
@@ -205,8 +205,8 @@ public class TestSnappyCompressorDecompressor {
     Assert.assertArrayEquals(bytes, decompressed);
     compressor.reset();
     decompressor.reset();
-    assertTrue("decompressor getRemaining error !!!",
-        decompressor.getRemaining() == 0);
+    assertEquals("decompressor getRemaining error !!!",
+        0, decompressor.getRemaining());
   }
 
   @Test
