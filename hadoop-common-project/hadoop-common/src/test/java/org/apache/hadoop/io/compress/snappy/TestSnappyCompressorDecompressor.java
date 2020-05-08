@@ -30,7 +30,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.Random;
 
 import org.apache.hadoop.io.DataInputBuffer;
