@@ -184,7 +184,7 @@ public class TestSnappyCompressorDecompressor {
         "SnappyCompressDecompress getBytesWritten before compress error !!!",
         compressor.getBytesWritten() == 0);
 
-    // snappy compression may increase data.
+    // snappy compression may increase data size.
     // This calculation comes from "Snappy::MaxCompressedLength(size_t)"
     int max_bytes = 32 + BYTE_SIZE + BYTE_SIZE / 6;
     byte[] compressed = new byte[max_bytes];
