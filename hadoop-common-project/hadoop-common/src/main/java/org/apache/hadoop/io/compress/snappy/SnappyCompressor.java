@@ -226,6 +226,8 @@ public class SnappyCompressor implements Compressor {
 
     // Compress data
     n = compressBytesDirect();
+    LOG.info("n: {}", n);
+    LOG.info("uncompressedDirectBufLen: {}", uncompressedDirectBufLen);
     compressedDirectBuf.limit(n);
     uncompressedDirectBuf.clear(); // snappy consumes all buffer input
 
