@@ -184,7 +184,10 @@ public class TestSnappyCompressorDecompressor {
         "SnappyCompressDecompress getBytesWritten before compress error !!!",
         compressor.getBytesWritten() == 0);
 
-    byte[] compressed = new byte[BYTE_SIZE];
+    // snappy compression may increase data.
+    // This calculation comes from "Snappy::MaxCompressedLength(size_t)"
+    int max_bytes = 32 + BYTE_SIZE + BYTE_SIZE / 6;
+    byte[] compressed = new byte[max_bytes];
     int cSize = compressor.compress(compressed, 0, compressed.length);
     LOG.info("input size: {}", BYTE_SIZE);
     LOG.info("compressed size: {}", cSize);
@@ -192,7 +195,7 @@ public class TestSnappyCompressorDecompressor {
         "SnappyCompressDecompress getBytesWritten after compress error !!!",
         compressor.getBytesWritten() > 0);
 
-    SnappyDecompressor decompressor = new SnappyDecompressor(Math.max(cSize, BYTE_SIZE));
+    SnappyDecompressor decompressor = new SnappyDecompressor();
     // set as input for decompressor only compressed data indicated with cSize
     decompressor.setInput(compressed, 0, cSize);
     byte[] decompressed = new byte[BYTE_SIZE];
