@@ -176,7 +176,6 @@ public class TestSnappyCompressorDecompressor {
   public void testSnappyCompressDecompress() {
     int BYTE_SIZE = 1024 * 54;
     byte[] bytes = BytesGenerator.get(BYTE_SIZE);
-    // LOG.info(Arrays.toString(bytes));
     SnappyCompressor compressor = new SnappyCompressor();
     try {
       compressor.setInput(bytes, 0, bytes.length);
@@ -188,13 +187,13 @@ public class TestSnappyCompressorDecompressor {
 
       byte[] compressed = new byte[BYTE_SIZE];
       int cSize = compressor.compress(compressed, 0, compressed.length);
-      LOG.info("cSize: {}", cSize);
-      // LOG.info(Arrays.toString(compressed));
+      LOG.info("input size: {}", BYTE_SIZE);
+      LOG.info("compressed size: {}", cSize);
       assertTrue(
           "SnappyCompressDecompress getBytesWritten after compress error !!!",
           compressor.getBytesWritten() > 0);
 
-      SnappyDecompressor decompressor = new SnappyDecompressor(BYTE_SIZE);
+      SnappyDecompressor decompressor = new SnappyDecompressor(Math.max(cSize, BYTE_SIZE));
       // set as input for decompressor only compressed data indicated with cSize
       decompressor.setInput(compressed, 0, cSize);
       byte[] decompressed = new byte[BYTE_SIZE];

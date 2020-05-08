@@ -226,8 +226,6 @@ public class SnappyCompressor implements Compressor {
 
     // Compress data
     n = compressBytesDirect();
-    LOG.info("n: {}", n);
-    LOG.info("uncompressedDirectBufLen: {}", uncompressedDirectBufLen);
     compressedDirectBuf.limit(n);
     uncompressedDirectBuf.clear(); // snappy consumes all buffer input
 
@@ -236,8 +234,6 @@ public class SnappyCompressor implements Compressor {
       finished = true;
     }
 
-    // Get atmost 'len' bytes
-    n = Math.min(n, len);
     bytesWritten += n;
     ((ByteBuffer) compressedDirectBuf).get(b, off, n);
 
