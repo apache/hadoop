@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
 public class SnappyDecompressor implements Decompressor {
   private static final Logger LOG =
       LoggerFactory.getLogger(SnappyDecompressor.class.getName());
-  private static final int DEFAULT_DIRECT_BUFFER_SIZE = 64 * 1024;
+  private static final int DEFAULT_DIRECT_BUFFER_SIZE = 256 * 1024;
 
   private int directBufferSize;
   private Buffer compressedDirectBuf = null;
