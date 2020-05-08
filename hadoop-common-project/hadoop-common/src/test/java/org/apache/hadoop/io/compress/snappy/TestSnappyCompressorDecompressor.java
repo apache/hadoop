@@ -30,6 +30,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Random;
 
 import org.apache.hadoop.io.DataInputBuffer;
@@ -44,10 +45,15 @@ import org.apache.hadoop.test.MultithreadedTestUtil;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.junit.Assume.*;
 
 public class TestSnappyCompressorDecompressor {
+
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestSnappyCompressorDecompressor.class);
 
   @Before
   public void before() {
@@ -170,6 +176,7 @@ public class TestSnappyCompressorDecompressor {
   public void testSnappyCompressDecompress() {
     int BYTE_SIZE = 1024 * 54;
     byte[] bytes = BytesGenerator.get(BYTE_SIZE);
+    LOG.info(Arrays.toString(bytes));
     SnappyCompressor compressor = new SnappyCompressor();
     try {
       compressor.setInput(bytes, 0, bytes.length);
@@ -181,6 +188,7 @@ public class TestSnappyCompressorDecompressor {
 
       byte[] compressed = new byte[BYTE_SIZE];
       int cSize = compressor.compress(compressed, 0, compressed.length);
+      LOG.info(Arrays.toString(compressed));
       assertTrue(
           "SnappyCompressDecompress getBytesWritten after compress error !!!",
           compressor.getBytesWritten() > 0);
