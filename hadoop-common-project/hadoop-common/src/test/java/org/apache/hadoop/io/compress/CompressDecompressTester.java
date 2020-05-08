@@ -291,7 +291,9 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
 
         int cSize = 0;
         int decompressedSize = 0;
-        byte[] compressedResult = new byte[rawData.length];
+        // Snappy compression can increase data size
+        int maxCompressedLength = 32 + rawData.length + rawData.length/6;
+        byte[] compressedResult = new byte[maxCompressedLength];
         byte[] decompressedBytes = new byte[rawData.length];
         assertTrue(
             joiner.join(name, "compressor.needsInput before error !!!"),
