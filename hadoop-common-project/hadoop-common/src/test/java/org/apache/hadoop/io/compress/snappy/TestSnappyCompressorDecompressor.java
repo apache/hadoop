@@ -185,8 +185,8 @@ public class TestSnappyCompressorDecompressor {
 
     // snappy compression may increase data size.
     // This calculation comes from "Snappy::MaxCompressedLength(size_t)"
-    int max_bytes = 32 + BYTE_SIZE + BYTE_SIZE / 6;
-    byte[] compressed = new byte[max_bytes];
+    int maxSize = 32 + BYTE_SIZE + BYTE_SIZE / 6;
+    byte[] compressed = new byte[maxSize];
     int cSize = compressor.compress(compressed, 0, compressed.length);
     LOG.info("input size: {}", BYTE_SIZE);
     LOG.info("compressed size: {}", cSize);
