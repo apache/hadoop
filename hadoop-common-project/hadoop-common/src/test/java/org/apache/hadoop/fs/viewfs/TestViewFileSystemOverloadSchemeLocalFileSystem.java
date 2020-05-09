@@ -46,8 +46,8 @@ public class TestViewFileSystemOverloadSchemeLocalFileSystem {
   private static final Log LOG =
       LogFactory.getLog(TestViewFileSystemOverloadSchemeLocalFileSystem.class);
   private FileSystem fsTarget;
-  Configuration conf;
-  Path targetTestRoot;
+  private Configuration conf;
+  private Path targetTestRoot;
   private FileSystemTestHelper fileSystemTestHelper =
       new FileSystemTestHelper();
 
@@ -85,8 +85,8 @@ public class TestViewFileSystemOverloadSchemeLocalFileSystem {
     LOG.info("Starting testLocalTargetLinkWriteSimple");
     final String testString = "Hello Local!...";
     final Path lfsRoot = new Path("/lfsRoot");
-    addMountLinks(null, new String[] { lfsRoot.toString() },
-        new String[] { targetTestRoot + "/local" }, conf);
+    addMountLinks(null, new String[] {lfsRoot.toString() },
+        new String[] {targetTestRoot + "/local" }, conf);
     try (FileSystem lViewFs = FileSystem.get(URI.create("file:///"), conf)) {
       final Path testPath = new Path(lfsRoot, "test.txt");
       try (FSDataOutputStream fsDos = lViewFs.create(testPath)) {
@@ -105,8 +105,8 @@ public class TestViewFileSystemOverloadSchemeLocalFileSystem {
   @Test
   public void testLocalFsCreateAndDelete() throws Exception {
     LOG.info("Starting testLocalFsCreateAndDelete");
-    addMountLinks("mt", new String[] { "/lfsroot" },
-        new String[] { targetTestRoot + "/wd2" }, conf);
+    addMountLinks("mt", new String[] {"/lfsroot" },
+        new String[] {targetTestRoot + "/wd2" }, conf);
     final URI mountURI = URI.create("file://mt/");
     try (FileSystem lViewFS = FileSystem.get(mountURI, conf)) {
       Path testPath = new Path(mountURI.toString() + "/lfsroot/test");
@@ -125,8 +125,8 @@ public class TestViewFileSystemOverloadSchemeLocalFileSystem {
   public void testLocalFsLinkSlashMerge() throws Exception {
     LOG.info("Starting testLocalFsLinkSlashMerge");
     addMountLinks("mt",
-        new String[] { Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH },
-        new String[] { targetTestRoot + "/wd2" }, conf);
+        new String[] {Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH },
+        new String[] {targetTestRoot + "/wd2" }, conf);
     final URI mountURI = URI.create("file://mt/");
     try (FileSystem lViewFS = FileSystem.get(mountURI, conf)) {
       Path fileOnRoot = new Path(mountURI.toString() + "/NewFile");
@@ -143,9 +143,8 @@ public class TestViewFileSystemOverloadSchemeLocalFileSystem {
   public void testLocalFsLinkSlashMergeWithOtherMountLinks() throws Exception {
     LOG.info("Starting testLocalFsLinkSlashMergeWithOtherMountLinks");
     addMountLinks("mt",
-        new String[] { "/lfsroot", Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH },
-        new String[] { targetTestRoot + "/wd2", targetTestRoot + "/wd2" },
-        conf);
+        new String[] {"/lfsroot", Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH },
+        new String[] {targetTestRoot + "/wd2", targetTestRoot + "/wd2" }, conf);
     final URI mountURI = URI.create("file://mt/");
     FileSystem.get(mountURI, conf);
     Assert.fail("A merge slash cannot be configured with other mount links.");
@@ -157,5 +156,19 @@ public class TestViewFileSystemOverloadSchemeLocalFileSystem {
       fsTarget.delete(fileSystemTestHelper.getTestRootPath(fsTarget), true);
       fsTarget.close();
     }
+  }
+
+  /**
+   * Returns the test root dir.
+   */
+  public Path getTestRoot() {
+    return this.targetTestRoot;
+  }
+
+  /**
+   * Returns the conf.
+   */
+  public Configuration getConf() {
+    return this.conf;
   }
 }

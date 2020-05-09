@@ -32,19 +32,19 @@ import org.junit.Before;
  */
 public class TestViewFSOverloadSchemeWithMountTableConfigInHDFS
     extends TestViewFileSystemOverloadSchemeWithHdfsScheme {
-  Path oldVersionMountTablePath;
-  Path newVersionMountTablePath;
+  private Path oldVersionMountTablePath;
+  private Path newVersionMountTablePath;
 
   @Before
   @Override
   public void startCluster() throws IOException {
     super.startCluster();
-    defaultFSURI =
-        URI.create(conf.get(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY));
-    String mountTableDir = defaultFSURI.toString() + "/MountTable/";
-    conf.set(Constants.CONFIG_VIEWFS_MOUNTTABLE_PATH, mountTableDir);
+    String mountTableDir =
+        URI.create(getConf().get(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY))
+            .toString() + "/MountTable/";
+    getConf().set(Constants.CONFIG_VIEWFS_MOUNTTABLE_PATH, mountTableDir);
     FileSystem fs = new ViewFileSystemOverloadScheme.ChildFsGetter("hdfs")
-        .getNewInstance(new Path(mountTableDir).toUri(), conf);
+        .getNewInstance(new Path(mountTableDir).toUri(), getConf());
     fs.mkdirs(new Path(mountTableDir));
     String oldVersionMountTable = "mount-table.30.xml";
     String newVersionMountTable = "mount-table.31.xml";
@@ -63,6 +63,6 @@ public class TestViewFSOverloadSchemeWithMountTableConfigInHDFS
   void addMountLinks(String mountTable, String[] sources, String[] targets,
       Configuration config) throws IOException, URISyntaxException {
     ViewFsTestSetup.addMountLinksToFile(mountTable, sources, targets,
-        newVersionMountTablePath, conf);
+        newVersionMountTablePath, getConf());
   }
 }

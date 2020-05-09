@@ -22,7 +22,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 
 /**
- * A interface for loading mount-table configuration. This class can have more
+ * An interface for loading mount-table configuration. This class can have more
  * APIs like refreshing mount tables automatically etc.
  */
 public interface MountTableConfigLoader {
@@ -30,11 +30,11 @@ public interface MountTableConfigLoader {
   /**
    * Loads the mount-table configuration into given configuration.
    *
-   * @param mountTableConfigPath: Path of the mount table. It can be a file or a
-   *          directory in the case of multiple versions of mount-table
+   * @param mountTableConfigPath - Path of the mount table. It can be a file or
+   *          a directory in the case of multiple versions of mount-table
    *          files(Recommended option).
-   * @param conf: Configuration object to add mount table.
+   * @param conf - Configuration object to add mount table.
    */
-   void load(String mountTableConfigPath, Configuration conf)
+  void load(String mountTableConfigPath, Configuration conf)
       throws IOException;
 }

@@ -43,11 +43,11 @@ public class TestViewFSOverloadSchemeCentralMountTableConfig
     String mountTableFileName1 = "mount-table.1.xml";
     String mountTableFileName2 = "mount-table.2.xml";
     oldMountTablePath =
-        new Path(targetTestRoot + File.separator + mountTableFileName1);
+        new Path(getTestRoot() + File.separator + mountTableFileName1);
     latestMountTablepath =
-        new Path(targetTestRoot + File.separator + mountTableFileName2);
-    conf.set(Constants.CONFIG_VIEWFS_MOUNTTABLE_PATH,
-        targetTestRoot.toString());
+        new Path(getTestRoot() + File.separator + mountTableFileName2);
+    getConf().set(Constants.CONFIG_VIEWFS_MOUNTTABLE_PATH,
+        getTestRoot().toString());
     File f = new File(oldMountTablePath.toUri());
     f.createNewFile(); // Just creating empty mount-table file.
     File f2 = new File(latestMountTablepath.toUri());

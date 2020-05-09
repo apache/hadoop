@@ -60,11 +60,11 @@ public class TestHCFSMountTableConfigLoader {
       new FileSystemTestHelper();
   private static File oldVersionMountTableFile;
   private static File newVersionMountTableFile;
-  private static String MOUNT_LINK_KEY_SRC_ONE =
+  private static final String MOUNT_LINK_KEY_SRC_ONE =
       new StringBuilder(Constants.CONFIG_VIEWFS_PREFIX).append(DOT)
           .append(TABLE_NAME).append(DOT).append(Constants.CONFIG_VIEWFS_LINK)
           .append(DOT).append(SRC_ONE).toString();
-  private static String MOUNT_LINK_KEY_SRC_TWO =
+  private static final String MOUNT_LINK_KEY_SRC_TWO =
       new StringBuilder(Constants.CONFIG_VIEWFS_PREFIX).append(DOT)
           .append(TABLE_NAME).append(DOT).append(Constants.CONFIG_VIEWFS_LINK)
           .append(DOT).append(SRC_TWO).toString();
@@ -79,7 +79,7 @@ public class TestHCFSMountTableConfigLoader {
   }
 
   @Before
-  public void SetUp() throws Exception {
+  public void setUp() throws Exception {
     conf = new Configuration();
     conf.set(String.format(
         FsConstants.FS_VIEWFS_OVERLOAD_SCHEME_TARGET_FS_IMPL_PATTERN, "file"),
@@ -96,8 +96,8 @@ public class TestHCFSMountTableConfigLoader {
   public void testMountTableFileLoadingWhenMultipleFilesExist()
       throws Exception {
     ViewFsTestSetup.addMountLinksToFile(TABLE_NAME,
-        new String[] { SRC_ONE, SRC_TWO },
-        new String[] { TARGET_ONE, TARGET_TWO },
+        new String[] {SRC_ONE, SRC_TWO }, new String[] {TARGET_ONE,
+            TARGET_TWO },
         new Path(newVersionMountTableFile.toURI()), conf);
     loader.load(targetTestRoot.toString(), conf);
     Assert.assertEquals(conf.get(MOUNT_LINK_KEY_SRC_TWO), TARGET_TWO);
@@ -114,8 +114,8 @@ public class TestHCFSMountTableConfigLoader {
     invalidMountFileName.createNewFile();
     // Adding mount links to make sure it will not read it.
     ViewFsTestSetup.addMountLinksToFile(TABLE_NAME,
-        new String[] { SRC_ONE, SRC_TWO },
-        new String[] { TARGET_ONE, TARGET_TWO },
+        new String[] {SRC_ONE, SRC_TWO }, new String[] {TARGET_ONE,
+            TARGET_TWO },
         new Path(invalidMountFileName.toURI()), conf);
     // Pass mount table directory
     loader.load(path.toString(), conf);
@@ -123,7 +123,7 @@ public class TestHCFSMountTableConfigLoader {
     Assert.assertEquals(null, conf.get(MOUNT_LINK_KEY_SRC_ONE));
     invalidMountFileName.delete();
   }
-  
+
   @Test
   public void testMountTableFileWithInvalidFormatWithNoDotsInName()
       throws Exception {
@@ -149,8 +149,8 @@ public class TestHCFSMountTableConfigLoader {
   @Test
   public void testLoadWithNonExistentMountFile() throws Exception {
     ViewFsTestSetup.addMountLinksToFile(TABLE_NAME,
-        new String[] { SRC_ONE, SRC_TWO },
-        new String[] { TARGET_ONE, TARGET_TWO },
+        new String[] {SRC_ONE, SRC_TWO },
+        new String[] {TARGET_ONE, TARGET_TWO },
         new Path(oldVersionMountTableFile.toURI()), conf);
     loader.load(oldVersionMountTableFile.toURI().toString(), conf);
     Assert.assertEquals(conf.get(MOUNT_LINK_KEY_SRC_TWO), TARGET_TWO);

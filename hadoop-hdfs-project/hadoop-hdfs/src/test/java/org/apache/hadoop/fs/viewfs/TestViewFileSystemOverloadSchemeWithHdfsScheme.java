@@ -46,9 +46,9 @@ import org.junit.Test;
 public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
   private static final String FS_IMPL_PATTERN_KEY = "fs.%s.impl";
   private static final String HDFS_SCHEME = "hdfs";
-  Configuration conf = null;
-  MiniDFSCluster cluster = null;
-  URI defaultFSURI;
+  private Configuration conf = null;
+  private MiniDFSCluster cluster = null;
+  private URI defaultFSURI;
   private File localTargetDir;
   private static final String TEST_ROOT_DIR = PathUtils
       .getTestDirName(TestViewFileSystemOverloadSchemeWithHdfsScheme.class);
@@ -107,8 +107,8 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
     final Path localTragetPath = new Path(localTargetDir.toURI());
 
     addMountLinks(defaultFSURI.getAuthority(),
-        new String[] { HDFS_USER_FOLDER, LOCAL_FOLDER },
-        new String[] { hdfsTargetPath.toUri().toString(),
+        new String[] {HDFS_USER_FOLDER, LOCAL_FOLDER },
+        new String[] {hdfsTargetPath.toUri().toString(),
             localTargetDir.toURI().toString() },
         conf);
 
@@ -161,8 +161,8 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
      * Below addLink will create following mount points
      * hdfs://localhost:xxx/User --> nonexistent://NonExistent/User/
      */
-    addMountLinks(defaultFSURI.getAuthority(), new String[] { userFolder },
-        new String[] { nonExistTargetPath.toUri().toString() }, conf);
+    addMountLinks(defaultFSURI.getAuthority(), new String[] {userFolder },
+        new String[] {nonExistTargetPath.toUri().toString() }, conf);
     FileSystem.get(conf);
     Assert.fail("Expected to fail with non existent link");
   }
@@ -177,8 +177,8 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
   public void testListStatusOnRootShouldListAllMountLinks() throws Exception {
     final Path hdfsTargetPath = new Path(defaultFSURI + HDFS_USER_FOLDER);
     addMountLinks(defaultFSURI.getAuthority(),
-        new String[] { HDFS_USER_FOLDER, LOCAL_FOLDER },
-        new String[] { hdfsTargetPath.toUri().toString(),
+        new String[] {HDFS_USER_FOLDER, LOCAL_FOLDER },
+        new String[] {hdfsTargetPath.toUri().toString(),
             localTargetDir.toURI().toString() },
         conf);
 
@@ -206,9 +206,8 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
   public void testListStatusOnNonMountedPath() throws Exception {
     final Path hdfsTargetPath = new Path(defaultFSURI + HDFS_USER_FOLDER);
     addMountLinks(defaultFSURI.getAuthority(),
-        new String[] { HDFS_USER_FOLDER, LOCAL_FOLDER
-             },
-        new String[] { hdfsTargetPath.toUri().toString(),
+        new String[] {HDFS_USER_FOLDER, LOCAL_FOLDER },
+        new String[] {hdfsTargetPath.toUri().toString(),
             localTargetDir.toURI().toString() },
         conf);
 
@@ -229,9 +228,9 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
   public void testWithLinkFallBack() throws Exception {
     final Path hdfsTargetPath = new Path(defaultFSURI + HDFS_USER_FOLDER);
     addMountLinks(defaultFSURI.getAuthority(),
-        new String[] { HDFS_USER_FOLDER, LOCAL_FOLDER,
+        new String[] {HDFS_USER_FOLDER, LOCAL_FOLDER,
             Constants.CONFIG_VIEWFS_LINK_FALLBACK },
-        new String[] { hdfsTargetPath.toUri().toString(),
+        new String[] {hdfsTargetPath.toUri().toString(),
             localTargetDir.toURI().toString(),
             hdfsTargetPath.toUri().toString() },
         conf);
@@ -258,9 +257,9 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
       throws Exception {
     final Path hdfsTargetPath = new Path(defaultFSURI + HDFS_USER_FOLDER);
     addMountLinks(defaultFSURI.getAuthority(),
-        new String[] { HDFS_USER_FOLDER, LOCAL_FOLDER },
-        new String[] { hdfsTargetPath.toUri().toString(),
-            localTargetDir.toURI().toString(), },
+        new String[] {HDFS_USER_FOLDER, LOCAL_FOLDER },
+        new String[] {hdfsTargetPath.toUri().toString(),
+            localTargetDir.toURI().toString() },
         conf);
     try (FileSystem fs = FileSystem.get(conf)) {
       fs.createNewFile(new Path("/newFileOnRoot"));
@@ -281,9 +280,9 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
       throws Exception {
     final Path hdfsTargetPath = new Path(defaultFSURI + HDFS_USER_FOLDER);
     addMountLinks(defaultFSURI.getAuthority(),
-        new String[] { HDFS_USER_FOLDER, LOCAL_FOLDER,
+        new String[] {HDFS_USER_FOLDER, LOCAL_FOLDER,
             Constants.CONFIG_VIEWFS_LINK_FALLBACK },
-        new String[] { hdfsTargetPath.toUri().toString(),
+        new String[] {hdfsTargetPath.toUri().toString(),
             localTargetDir.toURI().toString(),
             hdfsTargetPath.toUri().toString() },
         conf);
@@ -312,9 +311,9 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
     final Path hdfsTargetPath = new Path(defaultFSURI + HDFS_USER_FOLDER);
     conf = new Configuration();
     addMountLinks(defaultFSURI.getAuthority(),
-        new String[] { HDFS_USER_FOLDER, LOCAL_FOLDER,
+        new String[] {HDFS_USER_FOLDER, LOCAL_FOLDER,
             Constants.CONFIG_VIEWFS_LINK_FALLBACK },
-        new String[] { hdfsTargetPath.toUri().toString(),
+        new String[] {hdfsTargetPath.toUri().toString(),
             localTargetDir.toURI().toString(),
             hdfsTargetPath.toUri().toString() },
         conf);
@@ -341,8 +340,8 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
       throws Exception {
     final Path hdfsTargetPath = new Path(defaultFSURI + HDFS_USER_FOLDER);
     addMountLinks(defaultFSURI.getAuthority(),
-        new String[] { HDFS_USER_FOLDER, LOCAL_FOLDER },
-        new String[] { hdfsTargetPath.toUri().toString(),
+        new String[] {HDFS_USER_FOLDER, LOCAL_FOLDER },
+        new String[] {hdfsTargetPath.toUri().toString(),
             localTargetDir.toURI().toString(), },
         conf);
     conf.setBoolean(Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE, false);
@@ -366,8 +365,8 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
       throws Exception {
     final Path hdfsTargetPath = new Path(defaultFSURI + HDFS_USER_FOLDER);
     addMountLinks(defaultFSURI.getAuthority(),
-        new String[] { HDFS_USER_FOLDER + 0, HDFS_USER_FOLDER + 1 },
-        new String[] { hdfsTargetPath.toUri().toString(),
+        new String[] {HDFS_USER_FOLDER + 0, HDFS_USER_FOLDER + 1 },
+        new String[] {hdfsTargetPath.toUri().toString(),
             hdfsTargetPath.toUri().toString() },
         conf);
 
@@ -398,8 +397,8 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
       throws Exception {
     final Path hdfsTargetPath = new Path(defaultFSURI + HDFS_USER_FOLDER);
     addMountLinks(defaultFSURI.getAuthority(),
-        new String[] { HDFS_USER_FOLDER + 0, HDFS_USER_FOLDER + 1 },
-        new String[] { hdfsTargetPath.toUri().toString(),
+        new String[] {HDFS_USER_FOLDER + 0, HDFS_USER_FOLDER + 1 },
+        new String[] {hdfsTargetPath.toUri().toString(),
             hdfsTargetPath.toUri().toString() },
         conf);
 
@@ -425,8 +424,8 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
       throws Exception {
     final Path localTragetPath = new Path(localTargetDir.toURI());
     addMountLinks(defaultFSURI.getAuthority(),
-        new String[] { LOCAL_FOLDER + 0, LOCAL_FOLDER + 1 },
-        new String[] { localTragetPath.toUri().toString(),
+        new String[] {LOCAL_FOLDER + 0, LOCAL_FOLDER + 1 },
+        new String[] {localTragetPath.toUri().toString(),
             localTragetPath.toUri().toString() },
         conf);
 
@@ -437,5 +436,12 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
         (ViewFileSystemOverloadScheme) FileSystem.get(conf)) {
       Assert.assertEquals(1, vfs.getChildFileSystems().length);
     }
+  }
+
+  /**
+   * @return configuration.
+   */
+  public Configuration getConf() {
+    return this.conf;
   }
 }

@@ -109,7 +109,7 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
       MountTableConfigLoader loader = new HCFSMountTableConfigLoader();
       loader.load(mountTableConfigPath, conf);
     } else {
-      // TODO: Should we make it mandatory and fail here?
+      // TODO: Should we fail here.?
       if (LOG.isDebugEnabled()) {
         LOG.debug(
             "Missing configuration for fs.viewfs.mounttable.path. Proceeding"
@@ -141,9 +141,9 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
    */
   static class ChildFsGetter extends FsGetter {
 
-    String rootScheme;
+    private final String rootScheme;
 
-    public ChildFsGetter(String rootScheme) {
+    ChildFsGetter(String rootScheme) {
       this.rootScheme = rootScheme;
     }
 
