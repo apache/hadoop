@@ -234,6 +234,8 @@ public class SnappyCompressor implements Compressor {
       finished = true;
     }
 
+    // Get atmost 'len' bytes
+    n = Math.min(n, len);
     bytesWritten += n;
     ((ByteBuffer) compressedDirectBuf).get(b, off, n);
 
