@@ -18,6 +18,8 @@
 package org.apache.hadoop.fs.viewfs;
 
 import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE;
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE_DEFAULT;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -26,10 +28,13 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.Map.Entry;
 
@@ -90,6 +95,72 @@ public class ViewFileSystem extends FileSystem {
   }
 
   /**
+   * Caching children filesystems. HADOOP-15565.
+   */
+  static class InnerCache {
+    private Map<Key, FileSystem> map = new HashMap<>();
+
+    FileSystem get(URI uri, Configuration config) throws IOException {
+      Key key = new Key(uri);
+      if (map.get(key) == null) {
+        FileSystem fs = FileSystem.newInstance(uri, config);
+        map.put(key, fs);
+        return fs;
+      } else {
+        return map.get(key);
+      }
+    }
+
+    void closeAll() {
+      for (FileSystem fs : map.values()) {
+        try {
+          fs.close();
+        } catch (IOException e) {
+          LOG.info("Fail closing ViewFileSystem's child filesystem " + fs, e);
+        }
+      }
+    }
+
+    InnerCache unmodifiableCache() {
+      map = Collections.unmodifiableMap(map);
+      return this;
+    }
+
+    /**
+     * All the cached instances share the same UGI so there is no need to have a
+     * URI in the Key. Make the Key simple with just the scheme and authority.
+     */
+    private static class Key {
+      private final String scheme;
+      private final String authority;
+
+      Key(URI uri) {
+        scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase();
+        authority =
+            uri.getAuthority() == null ? "" : uri.getAuthority().toLowerCase();
+      }
+
+      @Override
+      public int hashCode() {
+        return Objects.hash(scheme, authority);
+      }
+
+      @Override
+      public boolean equals(Object obj) {
+        if (obj == this) {
+          return true;
+        }
+        if (obj != null && obj instanceof Key) {
+          Key that = (Key) obj;
+          return this.scheme.equals(that.scheme) && this.authority
+              .equals(that.authority);
+        }
+        return false;
+      }
+    }
+  }
+
+  /**
    * MountPoint representation built from the configuration.
    */
   public static class MountPoint {
@@ -125,6 +196,8 @@ public class ViewFileSystem extends FileSystem {
   Configuration config;
   InodeTree<FileSystem> fsState;  // the fs state; ie the mount table
   Path homeDir = null;
+  private boolean enableInnerCache = false;
+  private InnerCache cache;
   // Default to rename within same mountpoint
   private RenameStrategy renameStrategy = RenameStrategy.SAME_MOUNTPOINT;
   /**
@@ -178,6 +251,9 @@ public class ViewFileSystem extends FileSystem {
     super.initialize(theUri, conf);
     setConf(conf);
     config = conf;
+    enableInnerCache = config.getBoolean(CONFIG_VIEWFS_ENABLE_INNER_CACHE,
+        CONFIG_VIEWFS_ENABLE_INNER_CACHE_DEFAULT);
+    final InnerCache innerCache = new InnerCache();
     // Now build  client side view (i.e. client side mount table) from config.
     final String authority = theUri.getAuthority();
     try {
@@ -187,7 +263,13 @@ public class ViewFileSystem extends FileSystem {
         @Override
         protected FileSystem getTargetFileSystem(final URI uri)
           throws URISyntaxException, IOException {
-            return new ChRootedFileSystem(uri, config);
+            FileSystem fs;
+            if (enableInnerCache) {
+              fs = innerCache.get(uri, config);
+            } else {
+              fs = FileSystem.get(uri, config);
+            }
+            return new ChRootedFileSystem(fs, uri);
         }
 
         @Override
@@ -210,6 +292,12 @@ public class ViewFileSystem extends FileSystem {
       throw new IOException("URISyntax exception: " + theUri);
     }
 
+    if (enableInnerCache) {
+      // All fs instances are created and cached on startup. The cache is
+      // readonly after the initialize() so the concurrent access of the cache
+      // is safe.
+      cache = innerCache.unmodifiableCache();
+    }
   }
 
   /**
@@ -1296,5 +1384,13 @@ public class ViewFileSystem extends FileSystem {
   enum RenameStrategy {
     SAME_MOUNTPOINT, SAME_TARGET_URI_ACROSS_MOUNTPOINT,
     SAME_FILESYSTEM_ACROSS_MOUNTPOINT
+  }
+
+  @Override
+  public void close() throws IOException {
+    super.close();
+    if (enableInnerCache && cache != null) {
+      cache.closeAll();
+    }
   }
 }

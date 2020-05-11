@@ -1671,4 +1671,10 @@ public class TestFileUtil {
     assertEquals(write, read);
   }
 
+  /*
+   * The size of FileSystem cache.
+   */
+  public static int getCacheSize() {
+    return FileSystem.cacheSize();
+  }
 }
