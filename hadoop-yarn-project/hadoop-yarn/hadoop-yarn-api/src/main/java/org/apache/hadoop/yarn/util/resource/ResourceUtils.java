@@ -66,6 +66,8 @@ public class ResourceUtils {
   private static final Pattern RESOURCE_REQUEST_VALUE_PATTERN =
       Pattern.compile("^([0-9]+) ?([a-zA-Z]*)$");
 
+  public static final String YARN_IO_OPTIONAL = "(yarn\\.io/)?";
+
   private static volatile boolean initializedResources = false;
   private static final Map<String, Integer> RESOURCE_NAME_TO_INDEX =
       new ConcurrentHashMap<String, Integer>();
@@ -596,7 +598,7 @@ public class ResourceUtils {
       Configuration configuration, String prefix) {
     List<ResourceInformation> result = new ArrayList<>();
     Map<String, String> customResourcesMap = configuration
-        .getValByRegex("^" + Pattern.quote(prefix) + "[^.]+$");
+        .getValByRegex("^" + Pattern.quote(prefix) + YARN_IO_OPTIONAL + "[^.]+$");
     for (Entry<String, String> resource : customResourcesMap.entrySet()) {
       String resourceName = resource.getKey().substring(prefix.length());
       Matcher matcher =
