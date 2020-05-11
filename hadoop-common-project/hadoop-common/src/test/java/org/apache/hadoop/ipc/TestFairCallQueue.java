@@ -170,15 +170,10 @@ public class TestFairCallQueue {
     // default weights i.e. all queues share capacity
     fcq = new FairCallQueue<Schedulable>(numQueues, 4, "ns", conf);
     FairCallQueue<Schedulable> fcq1 = new FairCallQueue<Schedulable>(
-        numQueues, capacity, "ns", new int[]{3, 1}, conf);
+        numQueues, capacity, "ns", new int[]{1, 3}, conf);
 
     for (int i=0; i < capacity; i++) {
       Schedulable call = mockCall("u", i%2);
-      calls.add(call);
-      fcq.add(call);
-      fcq1.add(call);
-
-      call = mockCall("u", (i++)%2);
       calls.add(call);
       fcq.add(call);
       fcq1.add(call);
@@ -200,24 +195,24 @@ public class TestFairCallQueue {
 
     // either queue will have two calls
     //    v
-    // 0  2
-    // 1  3
+    // 0  1
+    // 2  3
     currentIndex.set(1);
-    assertSame(calls.get(2), fcq.poll());
+    assertSame(calls.get(1), fcq.poll());
     assertSame(calls.get(3), fcq.poll());
     assertSame(calls.get(0), fcq.poll());
-    assertSame(calls.get(1), fcq.poll());
+    assertSame(calls.get(2), fcq.poll());
 
     // queues with different number of calls
     //    v
-    // 0  3
-    // 1
-    // 2
+    // 0  1
+    //    2
+    //    3
     currentIndex.set(1);
-    assertSame(calls.get(3), fcq1.poll());
-    assertSame(calls.get(0), fcq1.poll());
     assertSame(calls.get(1), fcq1.poll());
     assertSame(calls.get(2), fcq1.poll());
+    assertSame(calls.get(3), fcq1.poll());
+    assertSame(calls.get(0), fcq1.poll());
   }
 
   @SuppressWarnings("unchecked")

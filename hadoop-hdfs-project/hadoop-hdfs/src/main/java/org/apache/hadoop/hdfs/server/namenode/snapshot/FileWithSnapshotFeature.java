@@ -163,6 +163,12 @@ public class FileWithSnapshotFeature implements INode.Feature {
       if (removed.getBlocks() != null) {
         allBlocks.addAll(Arrays.asList(removed.getBlocks()));
       }
+      for (FileDiff diff : diffs) {
+        BlockInfo[] diffBlocks = diff.getBlocks();
+        if (diffBlocks != null) {
+          allBlocks.addAll(Arrays.asList(diffBlocks));
+        }
+      }
       for (BlockInfo b: allBlocks) {
         short replication = b.getReplication();
         long blockSize = b.isComplete() ? b.getNumBytes() : file
