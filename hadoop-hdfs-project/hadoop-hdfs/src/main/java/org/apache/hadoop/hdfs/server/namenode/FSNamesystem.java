@@ -1904,6 +1904,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   BatchedListEntries<OpenFileEntry> listOpenFiles(long prevId,
       EnumSet<OpenFilesType> openFilesTypes, String path) throws IOException {
+    INode.checkAbsolutePath(path);
     final String operationName = "listOpenFiles";
     checkSuperuserPrivilege();
     checkOperation(OperationCategory.READ);

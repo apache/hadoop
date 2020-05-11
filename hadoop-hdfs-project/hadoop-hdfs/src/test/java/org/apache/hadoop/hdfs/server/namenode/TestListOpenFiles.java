@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -294,5 +295,30 @@ public class TestListOpenFiles {
       DFSTestUtil.closeOpenFiles(openFiles, 1);
       verifyOpenFiles(openFiles, OpenFilesIterator.FILTER_PATH_DEFAULT);
     }
+  }
+
+  @Test
+  public void testListOpenFilesWithInvalidPathServerSide() throws Exception {
+    HashMap<Path, FSDataOutputStream> openFiles = new HashMap<>();
+    openFiles.putAll(
+        DFSTestUtil.createOpenFiles(fs, new Path("/base"), "open-1", 1));
+    verifyOpenFiles(openFiles, EnumSet.of(OpenFilesType.ALL_OPEN_FILES),
+        "/base");
+    intercept(AssertionError.class, "Absolute path required",
+        "Expect InvalidPathException", () -> verifyOpenFiles(new HashMap<>(),
+            EnumSet.of(OpenFilesType.ALL_OPEN_FILES), "hdfs://cluster/base"));
+    while(openFiles.size() > 0) {
+      DFSTestUtil.closeOpenFiles(openFiles, 1);
+      verifyOpenFiles(openFiles);
+    }
+  }
+
+  @Test
+  public void testListOpenFilesWithInvalidPathClientSide() throws Exception {
+    intercept(IllegalArgumentException.class, "Wrong FS",
+        "Expect IllegalArgumentException", () -> fs
+            .listOpenFiles(EnumSet.of(OpenFilesType.ALL_OPEN_FILES),
+                "hdfs://non-cluster/"));
+    fs.listOpenFiles(EnumSet.of(OpenFilesType.ALL_OPEN_FILES), "/path");
   }
 }
