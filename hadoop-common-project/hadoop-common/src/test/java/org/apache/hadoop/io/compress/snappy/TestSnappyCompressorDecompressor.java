@@ -302,8 +302,8 @@ public class TestSnappyCompressorDecompressor {
       int len = compressor.compress(buffer, 0, buffer.length);
       out.write(buffer, 0, len);
     }
-    out.reset();
     byte[] compressed = out.toByteArray();
+    out.reset();
 
     SnappyDecompressor decompressor = new SnappyDecompressor();
     decompressor.setInput(compressed, 0, compressed.length);
