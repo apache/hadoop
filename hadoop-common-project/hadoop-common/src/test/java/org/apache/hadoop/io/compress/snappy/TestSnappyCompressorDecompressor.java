@@ -287,7 +287,7 @@ public class TestSnappyCompressorDecompressor {
   }
 
   @Test
-  // Data size is greater than the buffer size.
+  // The buffer size is smaller than the input.
   public void testSnappyCompressDecompressWithSmallBuffer() throws Exception {
     int BYTE_SIZE = 1024 * 50;
     int BUFFER_SIZE = 512;
