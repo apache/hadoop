@@ -4070,7 +4070,7 @@
 
 <property>
   <name>dfs.client.failover.random.order</name>
-  <value>false</value>
+  <value>true</value>
   <description>
     Determines if the failover proxies are picked in random order instead of the
     configured order. Random order may be enabled for better load balancing
