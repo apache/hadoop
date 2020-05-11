@@ -96,9 +96,14 @@ public final class InternalConstants {
   public static final String X_DIRECTORY =
       "application/x-directory";
 
+  /**
+   * A configuration option for test use only: maximum
+   * part count on block writes/uploads.
+   * Value: {@value}.
+   */
   @VisibleForTesting
   public static final String UPLOAD_PART_COUNT_LIMIT =
-          "fs.s3a.upload.part.count.limit";
+          "fs.s3a.internal.upload.part.count.limit";
 
   /**
    * Maximum entries you can upload in a single file write/copy/upload.

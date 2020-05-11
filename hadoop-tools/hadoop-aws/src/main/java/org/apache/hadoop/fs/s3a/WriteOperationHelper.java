@@ -50,7 +50,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
-import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
 import org.apache.hadoop.fs.s3a.select.SelectBinding;
@@ -59,6 +58,7 @@ import org.apache.hadoop.util.DurationInfo;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.Invoker.*;
+import static org.apache.hadoop.fs.s3a.S3AUtils.longOption;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DEFAULT_UPLOAD_PART_COUNT_LIMIT;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.UPLOAD_PART_COUNT_LIMIT;
 
@@ -419,14 +419,16 @@ public class WriteOperationHelper {
 
     LOG.debug("Creating part upload request for {} #{} size {}",
         uploadId, partNumber, size);
-    long partCountLimit = conf.getLong(UPLOAD_PART_COUNT_LIMIT,
-            DEFAULT_UPLOAD_PART_COUNT_LIMIT);
+    long partCountLimit = longOption(conf,
+        UPLOAD_PART_COUNT_LIMIT,
+        DEFAULT_UPLOAD_PART_COUNT_LIMIT,
+        1);
     if (partCountLimit != DEFAULT_UPLOAD_PART_COUNT_LIMIT) {
       LOG.warn("Configuration property {} shouldn't be overridden by client",
               UPLOAD_PART_COUNT_LIMIT);
     }
-    final String pathErrorMsg = "Number of parts in multipart upload exceeded." +
-            " Current part count = %s, Part count limit = %s ";
+    final String pathErrorMsg = "Number of parts in multipart upload exceeded."
+        + " Current part count = %s, Part count limit = %s ";
     if (partNumber > partCountLimit) {
       throw new PathIOException(destKey,
           String.format(pathErrorMsg, partNumber, partCountLimit));

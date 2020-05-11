@@ -521,7 +521,6 @@ public class CommitOperations {
       return commitData;
     } finally {
       if (threw && uploadId != null) {
-        statistics.commitAborted();
         try {
           abortMultipartCommit(destKey, uploadId);
         } catch (IOException e) {
