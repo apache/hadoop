@@ -289,14 +289,14 @@ public class TestSnappyCompressorDecompressor {
   @Test
   // The buffer size is smaller than the input.
   public void testSnappyCompressDecompressWithSmallBuffer() throws Exception {
-    int BYTE_SIZE = 1024 * 50;
-    int BUFFER_SIZE = 512;
+    int inputSize = 1024 * 50;
+    int bufferSize = 512;
     ByteArrayOutputStream out = new ByteArrayOutputStream();
-    byte[] buffer = new byte[BUFFER_SIZE];
-    byte[] bytes = BytesGenerator.get(BYTE_SIZE);
+    byte[] buffer = new byte[bufferSize];
+    byte[] input = BytesGenerator.get(inputSize);
 
     SnappyCompressor compressor = new SnappyCompressor();
-    compressor.setInput(bytes, 0, BYTE_SIZE);
+    compressor.setInput(input, 0, inputSize);
     compressor.finish();
     while (!compressor.finished()) {
       int len = compressor.compress(buffer, 0, buffer.length);
@@ -314,7 +314,7 @@ public class TestSnappyCompressorDecompressor {
     }
     byte[] decompressed = out.toByteArray();
 
-    assertThat(decompressed).isEqualTo(bytes);
+    assertThat(decompressed).isEqualTo(input);
   }
 
   private void compressDecompressLoop(int rawDataSize) throws IOException {
