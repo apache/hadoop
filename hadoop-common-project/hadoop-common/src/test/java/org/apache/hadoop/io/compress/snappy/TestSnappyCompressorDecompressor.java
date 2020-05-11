@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.io.compress.snappy;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -284,7 +285,37 @@ public class TestSnappyCompressorDecompressor {
       fail("testSnappyBlockCompression ex error !!!");
     }
   }
-  
+
+  @Test
+  // Data size is greater than the buffer size.
+  public void testSnappyCompressDecompressWithSmallBuffer() throws Exception {
+    int BYTE_SIZE = 1024 * 50;
+    int BUFFER_SIZE = 512;
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    byte[] buffer = new byte[BUFFER_SIZE];
+    byte[] bytes = BytesGenerator.get(BYTE_SIZE);
+
+    SnappyCompressor compressor = new SnappyCompressor();
+    compressor.setInput(bytes, 0, BYTE_SIZE);
+    compressor.finish();
+    while (!compressor.finished()) {
+      int len = compressor.compress(buffer, 0, buffer.length);
+      out.write(buffer, 0, len);
+    }
+    out.reset();
+    byte[] compressed = out.toByteArray();
+
+    SnappyDecompressor decompressor = new SnappyDecompressor();
+    decompressor.setInput(compressed, 0, compressed.length);
+    while (!decompressor.finished()) {
+      int len = decompressor.decompress(buffer, 0, buffer.length);
+      out.write(buffer, 0, len);
+    }
+    byte[] decompressed = out.toByteArray();
+
+    assertThat(decompressed).isEqualTo(bytes);
+  }
+
   private void compressDecompressLoop(int rawDataSize) throws IOException {
     byte[] rawData = BytesGenerator.get(rawDataSize);    
     byte[] compressedResult = new byte[rawDataSize+20];
