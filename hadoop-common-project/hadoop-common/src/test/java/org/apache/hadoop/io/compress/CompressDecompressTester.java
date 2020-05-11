@@ -126,7 +126,7 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
     builder.add(new TesterPair<T, E>(name, compressor, decompressor));
   }
 
-  public void test() throws InstantiationException, IllegalAccessException {
+  public void test() throws Exception {
     pairs = builder.build();
     pairs = assertionDelegate.filterOnAssumeWhat(pairs);
 
@@ -287,47 +287,45 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
 
       @Override
       public void assertCompression(String name, Compressor compressor,
-          Decompressor decompressor, byte[] rawData) {
+          Decompressor decompressor, byte[] rawData) throws Exception {
 
         int cSize = 0;
         int decompressedSize = 0;
-        byte[] compressedResult = new byte[rawData.length];
+        // Snappy compression can increase data size
+        int maxCompressedLength = 32 + rawData.length + rawData.length/6;
+        byte[] compressedResult = new byte[maxCompressedLength];
         byte[] decompressedBytes = new byte[rawData.length];
-        try {
-          assertTrue(
-              joiner.join(name, "compressor.needsInput before error !!!"),
-              compressor.needsInput());
-          assertTrue(
+        assertTrue(
+            joiner.join(name, "compressor.needsInput before error !!!"),
+            compressor.needsInput());
+        assertEquals(
               joiner.join(name, "compressor.getBytesWritten before error !!!"),
-              compressor.getBytesWritten() == 0);
-          compressor.setInput(rawData, 0, rawData.length);
-          compressor.finish();
-          while (!compressor.finished()) {
-            cSize += compressor.compress(compressedResult, 0,
-                compressedResult.length);
-          }
-          compressor.reset();
-
-          assertTrue(
-              joiner.join(name, "decompressor.needsInput() before error !!!"),
-              decompressor.needsInput());
-          decompressor.setInput(compressedResult, 0, cSize);
-          assertFalse(
-              joiner.join(name, "decompressor.needsInput() after error !!!"),
-              decompressor.needsInput());
-          while (!decompressor.finished()) {
-            decompressedSize = decompressor.decompress(decompressedBytes, 0,
-                decompressedBytes.length);
-          }
-          decompressor.reset();
-          assertTrue(joiner.join(name, " byte size not equals error !!!"),
-              decompressedSize == rawData.length);
-          assertArrayEquals(
-              joiner.join(name, " byte arrays not equals error !!!"), rawData,
-              decompressedBytes);
-        } catch (Exception ex) {
-          fail(joiner.join(name, ex.getMessage()));
+            0, compressor.getBytesWritten());
+        compressor.setInput(rawData, 0, rawData.length);
+        compressor.finish();
+        while (!compressor.finished()) {
+          cSize += compressor.compress(compressedResult, 0,
+              compressedResult.length);
         }
+        compressor.reset();
+
+        assertTrue(
+            joiner.join(name, "decompressor.needsInput() before error !!!"),
+            decompressor.needsInput());
+        decompressor.setInput(compressedResult, 0, cSize);
+        assertFalse(
+            joiner.join(name, "decompressor.needsInput() after error !!!"),
+            decompressor.needsInput());
+        while (!decompressor.finished()) {
+          decompressedSize = decompressor.decompress(decompressedBytes, 0,
+              decompressedBytes.length);
+        }
+        decompressor.reset();
+        assertEquals(joiner.join(name, " byte size not equals error !!!"),
+            rawData.length, decompressedSize);
+        assertArrayEquals(
+            joiner.join(name, " byte arrays not equals error !!!"), rawData,
+            decompressedBytes);
       }
     }),
 
@@ -519,6 +517,6 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
     protected final Logger logger = Logger.getLogger(getClass());
 
     abstract void assertCompression(String name, Compressor compressor,
-        Decompressor decompressor, byte[] originalRawData);
+        Decompressor decompressor, byte[] originalRawData) throws Exception;
   }
 }
