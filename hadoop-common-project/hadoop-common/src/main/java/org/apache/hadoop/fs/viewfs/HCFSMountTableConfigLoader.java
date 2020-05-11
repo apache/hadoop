@@ -40,11 +40,13 @@ public class HCFSMountTableConfigLoader implements MountTableConfigLoader {
   /**
    * Loads the mount-table configuration from hadoop compatible file system and
    * add the configuration items to given configuration. Mount-table
-   * configuration format should be suffixed with version number. Format:
-   * mount-table.<versionNumber>.xml Example: mount-table.1.xml When user wants
-   * to update mount table, the expectation is to upload new configuration file
-   * with incremented version number. This API loads the highest version number
-   * file. We can also configure single file path directly.
+   * configuration format should be suffixed with version number.
+   * Format: mount-table.<versionNumber>.xml
+   * Example: mount-table.1.xml
+   * When user wants to update mount-table, the expectation is to upload new
+   * mount-table configuration file with monotonically increasing integer as
+   * version number. This API loads the highest version number file. We can
+   * also configure single file path directly.
    *
    * @param mountTableConfigPath : A directory path where mount-table files
    *          stored or a mount-table file path. We recommend to configure
@@ -63,7 +65,7 @@ public class HCFSMountTableConfigLoader implements MountTableConfigLoader {
     RemoteIterator<LocatedFileStatus> listFiles =
         fs.listFiles(mountTablePath, false);
     LocatedFileStatus lfs = null;
-    int higheirVersion = -1;
+    int higherVersion = -1;
     while (listFiles.hasNext()) {
       LocatedFileStatus curLfs = listFiles.next();
       String cur = curLfs.getPath().getName();
@@ -72,7 +74,7 @@ public class HCFSMountTableConfigLoader implements MountTableConfigLoader {
         logInvalidFileNameFormat(cur);
         continue; // invalid file name
       }
-      int curVersion = higheirVersion;
+      int curVersion = higherVersion;
       try {
         curVersion = Integer.parseInt(nameParts[nameParts.length - 2]);
       } catch (NumberFormatException nfe) {
@@ -80,8 +82,8 @@ public class HCFSMountTableConfigLoader implements MountTableConfigLoader {
         continue;
       }
 
-      if (curVersion > higheirVersion) {
-        higheirVersion = curVersion;
+      if (curVersion > higherVersion) {
+        higherVersion = curVersion;
         lfs = curLfs;
       }
     }
@@ -90,22 +92,26 @@ public class HCFSMountTableConfigLoader implements MountTableConfigLoader {
       // No valid mount table file found.
       // TODO: Should we fail? Currently viewfs init will fail if no mount
       // links anyway.
-      LOGGER.warn("No valid mount-table file exist at: " + mountTableConfigPath
-          + ". At least one mount-table file should present with the name "
-          + "format: mount-table.<versionNumber>.xml");
+      LOGGER.warn("No valid mount-table file exist at: {}. At least one "
+          + "mount-table file should present with the name format: "
+          + "mount-table.<versionNumber>.xml", mountTableConfigPath);
       return;
     }
     // Latest version file.
     Path letestVersionMountTable = lfs.getPath();
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug("Loading the mount-table {} into configuration.",
+          letestVersionMountTable);
+    }
     // We don't need to close this stream as it would have cached in
     // ChildFsGetter.
     conf.addResource(fs.open(letestVersionMountTable));
   }
 
   private void logInvalidFileNameFormat(String cur) {
-    LOGGER.warn("Invalid file name format for mount-table version file: " + cur
-        + ". The valid file name format is "
-        + "mount-table-name.<versionNumber>.xml");
+    LOGGER.warn("Invalid file name format for mount-table version file: {}. "
+        + "The valid file name format is mount-table-name.<versionNumber>.xml",
+        cur);
   }
 
 }
