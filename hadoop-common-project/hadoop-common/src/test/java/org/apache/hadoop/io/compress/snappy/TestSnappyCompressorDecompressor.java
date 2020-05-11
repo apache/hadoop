@@ -303,6 +303,7 @@ public class TestSnappyCompressorDecompressor {
       out.write(buffer, 0, len);
     }
     byte[] compressed = out.toByteArray();
+    assertThat(compressed).hasSizeGreaterThan(0);
     out.reset();
 
     SnappyDecompressor decompressor = new SnappyDecompressor();
