@@ -828,7 +828,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     return path != null && path.startsWith(Path.SEPARATOR);
   }
 
-  private static void checkAbsolutePath(final String path) {
+  static void checkAbsolutePath(final String path) {
     if (!isValidAbsolutePath(path)) {
       throw new AssertionError("Absolute path required, but got '"
           + path + "'");
