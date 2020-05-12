@@ -23,4 +23,17 @@ package org.apache.hadoop.fs.azurebfs.services;
  * to store common configs among input and output streams.
  */
 public abstract class AbfsStreamContext {
+  private long sasTokenRenewPeriodForStreamsInSeconds;
+
+  // hide default constructor
+  private AbfsStreamContext() {
+  }
+
+  public AbfsStreamContext(final long sasTokenRenewPeriodForStreamsInSeconds) {
+    this.sasTokenRenewPeriodForStreamsInSeconds = sasTokenRenewPeriodForStreamsInSeconds;
+  }
+
+  public long getSasTokenRenewPeriodForStreamsInSeconds() {
+    return sasTokenRenewPeriodForStreamsInSeconds;
+  }
 }
