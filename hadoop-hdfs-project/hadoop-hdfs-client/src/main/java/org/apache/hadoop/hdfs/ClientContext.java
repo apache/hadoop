@@ -239,7 +239,7 @@ public class ClientContext {
 
   // Keeping this deprecated method to avoid runtime issues
   public ShortCircuitCache getShortCircuitCache() {
-    return shortCircuitCache[0];
+    return getShortCircuitCache(0);
   }
 
   public ShortCircuitCache getShortCircuitCache(long idx) {
