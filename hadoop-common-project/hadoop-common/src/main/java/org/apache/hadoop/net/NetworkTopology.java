@@ -950,6 +950,7 @@ public class NetworkTopology {
    * <p>
    * As an additional twist, we also randomize the nodes at each network
    * distance. This helps with load balancing when there is data skew.
+   * And it helps choose node with more fast storage type.
    *
    * @param reader    Node where data will be read
    * @param nodes     Available replicas with the requested data
