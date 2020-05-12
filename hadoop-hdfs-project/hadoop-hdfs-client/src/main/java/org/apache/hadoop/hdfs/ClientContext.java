@@ -237,6 +237,7 @@ public class ClientContext {
     return confString;
   }
 
+  // Keeping this deprecated method to avoid runtime issues
   public ShortCircuitCache getShortCircuitCache() {
     return shortCircuitCache[0];
   }
