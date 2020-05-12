@@ -5870,4 +5870,12 @@
       directories when permissions is enabled. Default value is false;
     </description>
   </property>
+
+  <property>
+    <name>dfs.protected.subdirectories.enable</name>
+    <value>false</value>
+    <description>whether to protect the subdirectories of directories which
+      set on fs.protected.directories.
+    </description>
+  </property>
 </configuration>
