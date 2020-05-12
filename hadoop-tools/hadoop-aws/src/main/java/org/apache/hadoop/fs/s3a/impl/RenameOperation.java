@@ -391,7 +391,6 @@ Are   * @throws IOException failure
       Path source = entry.getKey();
       String key = entry.getValue().getLeft();
       S3ALocatedFileStatus stat = entry.getValue().getRight();
-      queueToDelete(source, key);
       String newDestKey =
           dstKey + key.substring(srcKey.length());
       Path childDestPath = storeContext.keyToPath(newDestKey);
