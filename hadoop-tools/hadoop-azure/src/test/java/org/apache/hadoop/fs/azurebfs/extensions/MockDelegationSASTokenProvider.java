@@ -18,18 +18,6 @@
 
 package org.apache.hadoop.fs.azurebfs.extensions;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
-import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
-import org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider;
-import org.apache.hadoop.fs.azurebfs.services.AbfsHttpHeader;
-import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
-import org.apache.hadoop.fs.azurebfs.utils.Base64;
-import org.apache.hadoop.fs.azurebfs.utils.DelegationSASGenerator;
-import org.apache.hadoop.fs.azurebfs.utils.SASGenerator;
-import org.apache.hadoop.security.AccessControlException;
-
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -38,7 +26,18 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
+import org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpHeader;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
+import org.apache.hadoop.fs.azurebfs.utils.Base64;
+import org.apache.hadoop.fs.azurebfs.utils.DelegationSASGenerator;
+import org.apache.hadoop.fs.azurebfs.utils.SASGenerator;
+import org.apache.hadoop.security.AccessControlException;
 
 /**
  * A mock SAS token provider implementation

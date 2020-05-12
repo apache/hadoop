@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.fs.azurebfs.utils;
 
-import org.apache.hadoop.fs.azurebfs.services.AbfsUriQueryBuilder;
-
 import java.time.Instant;
+
+import org.apache.hadoop.fs.azurebfs.services.AbfsUriQueryBuilder;
 
 /**
  * Test Service SAS generator.

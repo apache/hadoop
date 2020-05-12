@@ -18,11 +18,11 @@
 
 package org.apache.hadoop.fs.azurebfs.utils;
 
+import java.time.Instant;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.services.AbfsUriQueryBuilder;
-
-import java.time.Instant;
 
 
 /**
