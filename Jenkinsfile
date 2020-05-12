@@ -155,6 +155,7 @@ pipeline {
                         YETUS_ARGS+=("--github-use-emoji-vote")
 
                         # test with Java 8 and 11
+                        YETUS_ARGS+=("--java-home=/usr/lib/jvm/java-8-openjdk-amd64")
                         YETUS_ARGS+=("--multijdkdirs=/usr/lib/jvm/java-11-openjdk-amd64")
 
                         "${TESTPATCHBIN}" "${YETUS_ARGS[@]}"
