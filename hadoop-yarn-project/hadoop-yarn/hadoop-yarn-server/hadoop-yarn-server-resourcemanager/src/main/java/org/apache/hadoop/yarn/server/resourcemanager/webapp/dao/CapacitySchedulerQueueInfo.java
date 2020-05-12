@@ -83,6 +83,8 @@ public class CapacitySchedulerQueueInfo {
   protected QueueAclsInfo queueAcls;
   protected int queuePriority;
   protected String orderingPolicyInfo;
+  protected boolean autoCreateChildQueueEnabled;
+  protected LeafQueueTemplateInfo leafQueueTemplate;
 
   CapacitySchedulerQueueInfo() {
   };
@@ -162,6 +164,10 @@ public class CapacitySchedulerQueueInfo {
         CapacitySchedulerConfiguration.getQueuePrefix(queuePath) + CAPACITY);
     isAbsoluteResource = (configuredCapacity != null)
         && RESOURCE_PATTERN.matcher(configuredCapacity).find();
+
+    autoCreateChildQueueEnabled = conf.
+        isAutoCreateChildQueueEnabled(queuePath);
+    leafQueueTemplate = new LeafQueueTemplateInfo(conf, queuePath);
   }
 
   protected void populateQueueResourceUsage(ResourceUsage queueResourceUsage) {
@@ -290,5 +296,13 @@ public class CapacitySchedulerQueueInfo {
 
   public boolean isLeafQueue() {
     return getQueues() == null;
+  }
+
+  public boolean isAutoCreateChildQueueEnabled() {
+    return autoCreateChildQueueEnabled;
+  }
+
+  public LeafQueueTemplateInfo getLeafQueueTemplate() {
+    return leafQueueTemplate;
   }
 }
