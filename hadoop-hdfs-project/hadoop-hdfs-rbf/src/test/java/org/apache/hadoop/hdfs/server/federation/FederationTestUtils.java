@@ -138,8 +138,15 @@ public final class FederationTestUtils {
   public static NamenodeStatusReport createNamenodeReport(String ns, String nn,
       HAServiceState state) {
     Random rand = new Random();
-    NamenodeStatusReport report = new NamenodeStatusReport(ns, nn,
-        "localhost:" + rand.nextInt(10000), "localhost:" + rand.nextInt(10000),
+    return createNamenodeReport(ns, nn, "localhost:"
+        + rand.nextInt(10000), state);
+  }
+
+  public static NamenodeStatusReport createNamenodeReport(String ns, String nn,
+      String rpcAddress, HAServiceState state) {
+    Random rand = new Random();
+    NamenodeStatusReport report = new NamenodeStatusReport(ns, nn, rpcAddress,
+        "localhost:" + rand.nextInt(10000),
         "localhost:" + rand.nextInt(10000), "http",
         "testwebaddress-" + ns + nn);
     if (state == null) {
