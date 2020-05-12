@@ -4138,7 +4138,7 @@
 </property>
 
 <property>
-  <name>dfs.short.circuit.num</name>
+  <name>dfs.client.short.circuit.num</name>
   <value>1</value>
   <description>
     Number of short-circuit caches. This setting should
