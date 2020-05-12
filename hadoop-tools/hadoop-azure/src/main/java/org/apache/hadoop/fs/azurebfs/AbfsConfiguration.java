@@ -130,10 +130,20 @@ public class AbfsConfiguration{
       DefaultValue = AZURE_BLOCK_LOCATION_HOST_DEFAULT)
   private String azureBlockLocationHost;
 
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_CONCURRENT_CONNECTION_VALUE_OUT,
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = AZURE_SHOULD_USE_OLD_ABFSOUTPUTSTREAM,
+      DefaultValue = DEFAULT_AZURE_SHOULD_USE_OLD_ABFSOUTPUTSTREAM)
+  private boolean shouldUseOlderAbfsOutputStream;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_WRITE_CONCURRENCY_FACTOR,
       MinValue = 1,
-      DefaultValue = MAX_CONCURRENT_WRITE_THREADS)
-  private int maxConcurrentWriteThreads;
+      DefaultValue = DEFAULT_WRITE_CONCURRENCY_FACTOR)
+  private int writeConcurrencyFactor;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_MAX_WRITE_MEM_USAGE_PERCENTAGE,
+      MinValue = MIN_VALUE_MAX_AZURE_WRITE_MEM_USAGE_PERCENTAGE,
+      MaxValue = MAX_VALUE_MAX_AZURE_WRITE_MEM_USAGE_PERCENTAGE,
+      DefaultValue = DEFAULT_MAX_AZURE_WRITE_MEM_USAGE_PERCENTAGE)
+  private int maxWriteMemoryUsagePercentage;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_LIST_MAX_RESULTS,
       MinValue = 1,
@@ -455,8 +465,16 @@ public class AbfsConfiguration{
     return this.azureBlockLocationHost;
   }
 
-  public int getMaxConcurrentWriteThreads() {
-    return this.maxConcurrentWriteThreads;
+  public boolean shouldUseOlderAbfsOutputStream() {
+    return this.shouldUseOlderAbfsOutputStream;
+  }
+
+  public int getWriteConcurrencyFactor() {
+    return this.writeConcurrencyFactor;
+  }
+
+  public int getMaxWriteMemoryUsagePercentage() {
+    return this.maxWriteMemoryUsagePercentage;
   }
 
   public int getMaxConcurrentReadThreads() {
@@ -773,6 +791,12 @@ public class AbfsConfiguration{
       authority = authority + AbfsHttpConstants.FORWARD_SLASH;
     }
     return authority;
+  }
+
+  @VisibleForTesting
+  void setShouldUseOlderAbfsOutputStream(
+      boolean shouldUseOlderAbfsOutputStream) {
+    this.shouldUseOlderAbfsOutputStream = shouldUseOlderAbfsOutputStream;
   }
 
 }

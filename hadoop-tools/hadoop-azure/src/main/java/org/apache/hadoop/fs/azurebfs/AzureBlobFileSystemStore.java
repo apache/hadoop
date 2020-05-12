@@ -51,6 +51,7 @@ import java.util.Set;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStreamOld;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -423,6 +424,15 @@ public class AzureBlobFileSystemStore implements Closeable {
               isNamespaceEnabled ? getOctalNotation(umask) : null);
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
 
+      if (abfsConfiguration.shouldUseOlderAbfsOutputStream()) {
+        return new AbfsOutputStreamOld(
+            client,
+            statistics,
+            AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
+            0,
+            populateAbfsOutputStreamContext());
+      }
+
       return new AbfsOutputStream(
           client,
           statistics,
@@ -438,6 +448,10 @@ public class AzureBlobFileSystemStore implements Closeable {
             .enableFlush(abfsConfiguration.isFlushEnabled())
             .disableOutputStreamFlush(abfsConfiguration.isOutputStreamFlushDisabled())
             .withStreamStatistics(new AbfsOutputStreamStatisticsImpl())
+            .withWriteConcurrencyFactor(abfsConfiguration
+                .getWriteConcurrencyFactor())
+            .withMaxWriteMemoryUsagePercentage(abfsConfiguration
+                .getMaxWriteMemoryUsagePercentage())
             .build();
   }
 
@@ -524,6 +538,16 @@ public class AzureBlobFileSystemStore implements Closeable {
       final long offset = overwrite ? 0 : contentLength;
 
       perfInfo.registerSuccess(true);
+
+
+      if (abfsConfiguration.shouldUseOlderAbfsOutputStream()) {
+        return new AbfsOutputStreamOld(
+            client,
+            statistics,
+            AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
+            0,
+            populateAbfsOutputStreamContext());
+      }
 
       return new AbfsOutputStream(
           client,

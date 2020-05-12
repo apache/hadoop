@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -31,6 +32,8 @@ import java.io.IOException;
 
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
+import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStreamOld;
+import org.assertj.core.api.Assertions;
 import org.hamcrest.core.IsEqual;
 import org.hamcrest.core.IsNot;
 import org.junit.Test;
@@ -40,6 +43,9 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+
+import static org.hamcrest.core.Is.is;
+import static org.hamcrest.core.IsEqual.equalTo;
 
 /**
  * Test flush operation.
@@ -53,7 +59,7 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
   private static final int ONE_MB = 1024 * 1024;
   private static final int FLUSH_TIMES = 200;
   private static final int THREAD_SLEEP_TIME = 1000;
-
+  private static final int CONCURRENT_STREAM_OBJS_TEST_OBJ_COUNT = 25;
   private static final int TEST_FILE_LENGTH = 1024 * 1024 * 8;
   private static final int WAITING_TIME = 1000;
 
@@ -208,6 +214,92 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
   }
 
   @Test
+  public void testShouldUseOlderAbfsOutputStreamConf() throws IOException {
+    AzureBlobFileSystem fs = getFileSystem();
+    Path testPath = new Path(methodName.getMethodName() + "1");
+    getFileSystem().getAbfsStore().getAbfsConfiguration()
+        .setShouldUseOlderAbfsOutputStream(true);
+    try (FSDataOutputStream stream = fs.create(testPath)) {
+      Assertions.assertThat(stream.getWrappedStream()).describedAs("When the "
+          + "shouldUseOlderAbfsOutputStream is set the wrapped stream inside "
+          + "the FSDataOutputStream object should be of class "
+          + "AbfsOutputStreamOld.").isInstanceOf(AbfsOutputStreamOld.class);
+    }
+    testPath = new Path(methodName.getMethodName());
+    getFileSystem().getAbfsStore().getAbfsConfiguration()
+        .setShouldUseOlderAbfsOutputStream(false);
+    try (FSDataOutputStream stream = fs.create(testPath)) {
+      Assertions.assertThat(stream.getWrappedStream()).describedAs("When the "
+          + "shouldUseOlderAbfsOutputStream is set the wrapped stream inside "
+          + "the FSDataOutputStream object should be of class "
+          + "AbfsOutputStream.").isInstanceOf(AbfsOutputStream.class);
+    }
+  }
+
+  @Test
+  public void testWriteWithMultipleOutputStreamAtTheSameTime()
+      throws IOException, InterruptedException, ExecutionException {
+    AzureBlobFileSystem fs = getFileSystem();
+    String testFilePath = methodName.getMethodName();
+    Path[] testPaths = new Path[CONCURRENT_STREAM_OBJS_TEST_OBJ_COUNT];
+    createNStreamsAndWriteDifferentSizesConcurrently(fs, testFilePath,
+        CONCURRENT_STREAM_OBJS_TEST_OBJ_COUNT, testPaths);
+    assertSuccessfulWritesOnAllStreams(fs,
+        CONCURRENT_STREAM_OBJS_TEST_OBJ_COUNT, testPaths);
+  }
+
+  private void assertSuccessfulWritesOnAllStreams(final FileSystem fs,
+      final int numConcurrentObjects, final Path[] testPaths)
+      throws IOException {
+    for (int i = 0; i < numConcurrentObjects; i++) {
+      FileStatus fileStatus = fs.getFileStatus(testPaths[i]);
+      int numWritesMadeOnStream = i + 1;
+      long expectedLength = TEST_BUFFER_SIZE * numWritesMadeOnStream;
+      assertThat(fileStatus.getLen(), is(equalTo(expectedLength)));
+    }
+  }
+
+  private void createNStreamsAndWriteDifferentSizesConcurrently(
+      final FileSystem fs, final String testFilePath,
+      final int numConcurrentObjects, final Path[] testPaths)
+      throws ExecutionException, InterruptedException {
+    final byte[] b = new byte[TEST_BUFFER_SIZE];
+    new Random().nextBytes(b);
+    final ExecutorService es = Executors.newFixedThreadPool(40);
+    final List<Future<Void>> futureTasks = new ArrayList<>();
+    for (int i = 0; i < numConcurrentObjects; i++) {
+      Path testPath = new Path(testFilePath + i);
+      testPaths[i] = testPath;
+      int numWritesToBeDone = i + 1;
+      futureTasks.add(es.submit(() -> {
+        try (FSDataOutputStream stream = fs.create(testPath)) {
+          makeNWritesToStream(stream, numWritesToBeDone, b, es);
+        }
+        return null;
+      }));
+    }
+    for (Future<Void> futureTask : futureTasks) {
+      futureTask.get();
+    }
+    es.shutdownNow();
+  }
+
+  private void makeNWritesToStream(final FSDataOutputStream stream,
+      final int numWrites, final byte[] b, final ExecutorService es)
+      throws ExecutionException, InterruptedException, IOException {
+    final List<Future<Void>> futureTasks = new ArrayList<>();
+    for (int i = 0; i < numWrites; i++) {
+      futureTasks.add(es.submit(() -> {
+        stream.write(b);
+        return null;
+      }));
+    }
+    for (Future<Void> futureTask : futureTasks) {
+      futureTask.get();
+    }
+  }
+
+  @Test
   public void testFlushWithOutputStreamFlushEnabled() throws Exception {
     testFlush(false);
   }
@@ -236,10 +328,15 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
       stream.write(buffer);
 
       // Write asynchronously uploads data, so we must wait for completion
-      AbfsOutputStream abfsStream = (AbfsOutputStream) stream
-          .getWrappedStream();
-      abfsStream.waitForPendingUploads();
-
+      if (stream.getWrappedStream() instanceof AbfsOutputStream) {
+        AbfsOutputStream abfsStream = (AbfsOutputStream) stream
+            .getWrappedStream();
+        abfsStream.waitForPendingUploads();
+      } else {
+        AbfsOutputStreamOld abfsStream = (AbfsOutputStreamOld) stream
+            .getWrappedStream();
+        abfsStream.waitForPendingUploads();
+      }
       // Flush commits the data so it can be read.
       stream.flush();
 

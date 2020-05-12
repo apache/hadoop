@@ -29,6 +29,10 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   private boolean disableOutputStreamFlush;
 
+  private int writeConcurrencyFactor;
+
+  private int maxWriteMemoryUsagePercentage;
+
   private AbfsOutputStreamStatistics streamStatistics;
 
   public AbfsOutputStreamContext() {
@@ -57,6 +61,18 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
     return this;
   }
 
+  public AbfsOutputStreamContext withWriteConcurrencyFactor(
+      final int writeConcurrencyFactor) {
+    this.writeConcurrencyFactor = writeConcurrencyFactor;
+    return this;
+  }
+
+  public AbfsOutputStreamContext withMaxWriteMemoryUsagePercentage(
+      final int maxWriteMemoryUsagePercentage) {
+    this.maxWriteMemoryUsagePercentage = maxWriteMemoryUsagePercentage;
+    return this;
+  }
+
   public AbfsOutputStreamContext build() {
     // Validation of parameters to be done here.
     return this;
@@ -72,6 +88,14 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   public boolean isDisableOutputStreamFlush() {
     return disableOutputStreamFlush;
+  }
+
+  public int getWriteConcurrencyFactor() {
+    return writeConcurrencyFactor;
+  }
+
+  public int getMaxWriteMemoryUsagePercentage() {
+    return maxWriteMemoryUsagePercentage;
   }
 
   public AbfsOutputStreamStatistics getStreamStatistics() {
