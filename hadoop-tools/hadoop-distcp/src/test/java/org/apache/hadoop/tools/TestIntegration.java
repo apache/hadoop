@@ -21,12 +21,18 @@ package org.apache.hadoop.tools;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
+import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.hadoop.mapreduce.JobSubmissionFiles;
 import org.apache.hadoop.tools.util.TestDistCpUtils;
+import org.apache.hadoop.util.Progressable;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
@@ -39,6 +45,7 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.List;
 
 @RunWith(value = Parameterized.class)
@@ -511,7 +518,24 @@ public class TestIntegration {
       Assert.fail("testCleanup failed " + e.getMessage());
     }
   }
-  
+
+  @Test(timeout=100000)
+  public void testNoLocalWrite() throws IOException {
+    try {
+      addEntries(listFile, "singlefile1/file1");
+      createFiles("singlefile1/file1", "target");
+
+      Configuration conf = new Configuration(getConf());
+      conf.set("fs.file.impl", MockFileSystem.class.getName());
+      conf.setBoolean("fs.file.impl.disable.cache", true);
+      runTest(listFile, target, false, false, false, false, true, conf);
+
+      checkResult(target, 1);
+    } finally {
+      TestDistCpUtils.delete(fs, root);
+    }
+  }
+
   private void addEntries(Path listFile, String... entries) throws IOException {
     OutputStream out = fs.create(listFile);
     try {
@@ -556,15 +580,23 @@ public class TestIntegration {
     runTest(listFile, target, targetExists, sync, false, false);
   }
   
-  private void runTest(Path listFile, Path target, boolean targetExists, 
-      boolean sync, boolean delete,
-      boolean overwrite) throws IOException {
-    final DistCpOptions options = new DistCpOptions.Builder(listFile, target)
+  private void runTest(Path innerListFile, Path innerTarget,
+      boolean targetExists, boolean sync, boolean delete, boolean overwrite)
+      throws IOException {
+    runTest(innerListFile, innerTarget, targetExists, sync, delete, overwrite,
+        false, getConf());
+  }
+
+  private void runTest(Path innerListFile, Path innerTarget,
+      boolean targetExists, boolean sync, boolean delete, boolean overwrite,
+      boolean noLocalWrite, Configuration conf) throws IOException {
+    final DistCpOptions options =
+        new DistCpOptions.Builder(innerListFile, innerTarget)
         .withSyncFolder(sync)
         .withDeleteMissing(delete)
         .withOverwrite(overwrite)
         .withNumListstatusThreads(numListstatusThreads)
-        .build();
+        .withNoLocalWrite(noLocalWrite).build();
     try {
       final DistCp distCp = new DistCp(getConf(), options);
       distCp.context.setTargetPathExists(targetExists);
@@ -586,4 +618,22 @@ public class TestIntegration {
     }
   }
 
+  static class MockFileSystem extends LocalFileSystem {
+    MockFileSystem() {
+      super();
+    }
+
+    @Override
+    public FSDataOutputStream create(Path f, FsPermission permission,
+        EnumSet<CreateFlag> flags, int bufferSize, short replication,
+        long blockSize, Progressable progress, ChecksumOpt checksumOpt)
+        throws IOException {
+      // check flags in create-op should contain NO_LOCAL_WRITE
+      Assert.assertTrue("Should contain flag NO_LOCAL_WRITE.",
+          flags.contains(CreateFlag.NO_LOCAL_WRITE));
+      return super.create(f, permission, flags, bufferSize, replication,
+          blockSize, progress, checksumOpt);
+
+    }
+  }
 }

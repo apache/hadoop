@@ -178,6 +178,10 @@ public enum DistCpOptionSwitch {
       "Use target snapshot diff report to identify changes made on target"),
       2),
 
+  NO_LOCAL_WRITE(DistCpConstants.CONF_LABEL_NO_LOCAL_WRITE,
+      new Option("noLocalWrite", false,
+          "Avoid writing blocks on local Datanode.")),
+
   /**
    * Should DisctpExecution be blocking
    */
