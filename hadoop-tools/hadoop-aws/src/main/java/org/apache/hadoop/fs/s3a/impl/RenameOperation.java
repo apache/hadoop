@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.impl;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -31,6 +32,7 @@ import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.RenameFailedException;
@@ -299,8 +301,9 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
 
   /**
    * Execute a full recursive rename.
-   * The source is a file: rename it to the destination.
-   * @throws IOException failure
+   * There is a special handling of directly markers here -only leaf markers
+   * are copied. This reduces incompatibility "regions" across versions.
+Are   * @throws IOException failure
    */
   protected void recursiveDirectoryRename() throws IOException {
     final StoreContext storeContext = getStoreContext();
@@ -328,6 +331,7 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
       // TODO: dir marker policy doesn't always need to do this.
       callbacks.deleteObjectAtPath(destStatus.getPath(), dstKey, false, null);
     }
+    DirMarkerTracker dirMarkerTracker = new DirMarkerTracker();
 
     Path parentPath = storeContext.keyToPath(srcKey);
     final RemoteIterator<S3ALocatedFileStatus> iterator =
@@ -351,32 +355,57 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
       // mark for deletion on a successful copy.
       queueToDelete(childSourcePath, key);
 
-      // the destination key is that of the key under the source tree,
-      // remapped under the new destination path.
+
+
+      boolean isMarker = key.endsWith("/");
+      if (isMarker) {
+        // markers are not replicated until we know
+        // that they are leaf markers.
+        dirMarkerTracker.markerFound(childSourcePath, key, child);
+      } else {
+        // its a file, note
+        dirMarkerTracker.fileFound(childSourcePath, key, child);
+        // the destination key is that of the key under the source tree,
+        // remapped under the new destination path.
+        String newDestKey =
+            dstKey + key.substring(srcKey.length());
+        Path childDestPath = storeContext.keyToPath(newDestKey);
+        // now begin the single copy
+        activeCopies.add(initiateCopy(child, key,
+            childSourcePath, newDestKey, childDestPath));
+        bytesCopied.addAndGet(sourceStatus.getLen());
+      }
+      endOfLoopActions();
+    } // end of iteration through the list
+
+    // directory marker work.
+    // for all leaf markers: copy the original
+    Map<Path, Pair<String, S3ALocatedFileStatus>> leafMarkers =
+        dirMarkerTracker.getLeafMarkers();
+    Map<Path, Pair<String, S3ALocatedFileStatus>> surplus =
+        dirMarkerTracker.getSurplusMarkers();
+    LOG.debug("copying {} leaf markers; {} surplus",
+        leafMarkers.size(), surplus.size());
+    for (Map.Entry<Path, Pair<String, S3ALocatedFileStatus>> entry :
+        leafMarkers.entrySet()) {
+      Path source = entry.getKey();
+      String key = entry.getValue().getLeft();
+      S3ALocatedFileStatus stat = entry.getValue().getRight();
+      queueToDelete(source, key);
       String newDestKey =
           dstKey + key.substring(srcKey.length());
       Path childDestPath = storeContext.keyToPath(newDestKey);
-
-      // now begin the single copy
-      CompletableFuture<Path> copy = initiateCopy(child, key,
-          childSourcePath, newDestKey, childDestPath);
-      activeCopies.add(copy);
-      bytesCopied.addAndGet(sourceStatus.getLen());
-
-      if (activeCopies.size() == RENAME_PARALLEL_LIMIT) {
-        // the limit of active copies has been reached;
-        // wait for completion or errors to surface.
-        LOG.debug("Waiting for active copies to complete");
-        completeActiveCopies("batch threshold reached");
-      }
-      if (keysToDelete.size() == pageSize) {
-        // finish ongoing copies then delete all queued keys.
-        // provided the parallel limit is a factor of the max entry
-        // constant, this will not need to block for the copy, and
-        // simply jump straight to the delete.
-        completeActiveCopiesAndDeleteSources("paged delete");
-      }
-    } // end of iteration through the list
+      LOG.debug("copying dir marker from {} to {}", key, newDestKey);
+      activeCopies.add(initiateCopy(stat, key,
+          source, newDestKey, childDestPath));
+      endOfLoopActions();
+    }
+    // the surplus ones are also explicitly deleted
+    for (Map.Entry<Path, Pair<String, S3ALocatedFileStatus>> entry :
+        surplus.entrySet()) {
+      queueToDelete(entry.getKey(), entry.getValue().getLeft());
+      endOfLoopActions();
+    }
 
     // await the final set of copies and their deletion
     // This will notify the renameTracker that these objects
@@ -386,6 +415,22 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
     // We moved all the children, now move the top-level dir
     // Empty directory should have been added as the object summary
     renameTracker.moveSourceDirectory();
+  }
+
+  private void endOfLoopActions() throws IOException {
+    if (activeCopies.size() == RENAME_PARALLEL_LIMIT) {
+      // the limit of active copies has been reached;
+      // wait for completion or errors to surface.
+      LOG.debug("Waiting for active copies to complete");
+      completeActiveCopies("batch threshold reached");
+    }
+    if (keysToDelete.size() == pageSize) {
+      // finish ongoing copies then delete all queued keys.
+      // provided the parallel limit is a factor of the max entry
+      // constant, this will not need to block for the copy, and
+      // simply jump straight to the delete.
+      completeActiveCopiesAndDeleteSources("paged delete");
+    }
   }
 
   /**

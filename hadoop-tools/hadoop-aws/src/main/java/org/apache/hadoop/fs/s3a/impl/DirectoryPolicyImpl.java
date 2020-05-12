@@ -40,36 +40,53 @@ import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_KEEP;
 public final class DirectoryPolicyImpl
     implements DirectoryPolicy {
 
+  /**
+   * Error string when unable to parse the marker policy option.
+   */
   public static final String UNKNOWN_MARKER_POLICY = "Unknown value of "
       + DIRECTORY_MARKER_POLICY + ": ";
 
   private static final Logger LOG = LoggerFactory.getLogger(
       DirectoryPolicyImpl.class);
 
+  /**
+   * Chosen marker policy.
+   */
   private final MarkerPolicy markerPolicy;
 
-  private final Predicate<Path> authoritativenes;
+  /**
+   * Callback to evaluate authoritativeness of a
+   * path.
+   */
+  private final Predicate<Path> authoritativeness;
 
+  /**
+   * Constructor.
+   * @param conf config
+   * @param authoritativeness Callback to evaluate authoritativeness of a
+   * path.
+   */
   public DirectoryPolicyImpl(
       final Configuration conf,
-      final Predicate<Path> authoritativenes) {
-    this.authoritativenes = authoritativenes;
+      final Predicate<Path> authoritativeness) {
+    this.authoritativeness = authoritativeness;
     String option = conf.getTrimmed(DIRECTORY_MARKER_POLICY,
         DEFAULT_DIRECTORY_MARKER_POLICY);
     MarkerPolicy p;
     switch (option.toLowerCase(Locale.ENGLISH)) {
-
+    case DIRECTORY_MARKER_POLICY_DELETE:
+      // backwards compatible.
+      p = MarkerPolicy.Delete;
+      LOG.debug("Directory markers will be deleted");
+      break;
     case DIRECTORY_MARKER_POLICY_KEEP:
       p = MarkerPolicy.Keep;
-      LOG.info("Directory markers will be deleted");
+      LOG.info("Directory markers will be kept");
       break;
     case DIRECTORY_MARKER_POLICY_AUTHORITATIVE:
       p = MarkerPolicy.Authoritative;
-      LOG.info("Directory markers will be deleted on authoritative"
+      LOG.info("Directory markers will be kept on authoritative"
           + " paths");
-      break;
-    case DIRECTORY_MARKER_POLICY_DELETE:
-      p = MarkerPolicy.Delete;
       break;
     default:
       throw new IllegalArgumentException(UNKNOWN_MARKER_POLICY + option);
@@ -83,7 +100,7 @@ public final class DirectoryPolicyImpl
     case Keep:
       return true;
     case Authoritative:
-      return authoritativenes.test(path);
+      return authoritativeness.test(path);
     case Delete:
     default:   // which cannot happen
       return false;
