@@ -573,11 +573,10 @@ The declared class also holds responsibility to implement retry logic while fetc
 #### <a name="delegationtokensupportconfigoptions"></a> Delegation token support
 
 Delegation token support can be achieved by making the following config true
-`fs.azure.enable.delegation.token` and specifying the config
-CustomDelegationTokenManager to be used with the config
-`fs.azure.delegation.token.provider.type`. In case delegation token is enabled,
-and the config `fs.azure.delegation.token.provider.type` is not provided an
-IlleagalArgumentException is thrown.
+`fs.azure.enable.delegation.token`. Specify the CustomDelegationTokenManager
+needs to be used with the config `fs.azure.delegation.token.provider.type`.
+In case delegation token is enabled, and the config `fs.azure.delegation.token
+.provider.type` is not provided then an IlleagalArgumentException is thrown.
 
 #### <a name="sastokensupportconfigoptions"></a> SAS token support
 
@@ -717,12 +716,12 @@ Config `fs.azure.enable.check.access` needs to be set true to enable
  the AzureBlobFileSystem.access().
 
 ### <a name="featureconfigoptions"></a> Primary User Group Options
-The group name which is part FileStatus and AclStatus will be set the same as
+The group name which is part of FileStatus and AclStatus will be set the same as
 the username if the following config is set to true
 `fs.azure.skipUserGroupMetadataDuringInitialization`.
 
 ### <a name="ioconfigoptions"></a> IO Options
-The following configs are related to read, write and r.
+The following configs are related to read and write operations.
 
 `fs.azure.io.retry.max.retries`: Sets the number of retries for IO operations.
 Currently this is used only for the server call retry logic. Used within
@@ -730,9 +729,8 @@ AbfsClient class as part of the ExponentialRetryPolicy. The value should be
 >= 0.
 
 `fs.azure.write.request.size`: To set the write buffer size. Specify the value
-in bytes. Specify the value in bytes. The value should be between 16384 to
-104857600 both inclusive (16 KB to 100 MB). The default value will be 8388608
-(8 MB).
+in bytes. The value should be between 16384 to 104857600 both inclusive (16 KB
+to 100 MB). The default value will be 8388608 (8 MB).
 
 `fs.azure.read.request.size`: To set the read buffer size.Specify the value in
 bytes. The value should be between 16384 to 104857600 both inclusive (16 KB to
@@ -759,9 +757,9 @@ When the config `fs.azure.io.read.tolerate.concurrent.append` is made true, the
 If-Match header sent to the server for read calls will be set as * otherwise the
 same will be set with ETag. This is basically a mechanism in place to handle the
 reads with optimistic concurrency.
-Please refer the following link for further information.
-1.	https://docs.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/read
-2.	https://azure.microsoft.com/de-de/blog/managing-concurrency-in-microsoft-azure-storage-2/
+Please refer the following links for further information.
+1. https://docs.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/read
+2. https://azure.microsoft.com/de-de/blog/managing-concurrency-in-microsoft-azure-storage-2/
 
 listStatus API fetches the FileStatus information from server in a page by page
 manner. The config `fs.azure.list.max.results` used to set the maxResults URI
