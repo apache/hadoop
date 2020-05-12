@@ -1471,6 +1471,16 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.namenode.state.context.enabled";
   public static final boolean DFS_NAMENODE_STATE_CONTEXT_ENABLED_DEFAULT = false;
 
+  /**
+   * whether to protect the subdirectories of directories which
+   * set on fs.protected.directories.
+   */
+  public static final String DFS_PROTECTED_SUBDIRECTORIES_ENABLE =
+      "dfs.protected.subdirectories.enable";
+  // Default value for DFS_PROTECTED_SUBDIRECTORIES_ENABLE.
+  public static final boolean DFS_PROTECTED_SUBDIRECTORIES_ENABLE_DEFAULT =
+      false;
+
   // dfs.client.retry confs are moved to HdfsClientConfigKeys.Retry
   @Deprecated
   public static final String  DFS_CLIENT_RETRY_POLICY_ENABLED_KEY
