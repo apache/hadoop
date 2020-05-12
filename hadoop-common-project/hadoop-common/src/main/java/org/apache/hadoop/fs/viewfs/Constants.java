@@ -68,4 +68,11 @@ public interface Constants {
       new FsPermission((short) 0555);
 
   String CONFIG_VIEWFS_RENAME_STRATEGY = "fs.viewfs.rename.strategy";
+
+  /**
+   * Enable ViewFileSystem to cache all children filesystems in inner cache.
+   */
+  String CONFIG_VIEWFS_ENABLE_INNER_CACHE = "fs.viewfs.enable.inner.cache";
+
+  boolean CONFIG_VIEWFS_ENABLE_INNER_CACHE_DEFAULT = true;
 }

@@ -1261,4 +1261,11 @@ public class TestFileUtil {
     assertEquals(FileUtil.compareFs(fs3,fs4),true);
     assertEquals(FileUtil.compareFs(fs1,fs6),false);
   }
+
+  /*
+   * The size of FileSystem cache.
+   */
+  public static int getCacheSize() {
+    return FileSystem.cacheSize();
+  }
 }
