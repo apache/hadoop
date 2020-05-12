@@ -65,8 +65,8 @@ RUN apt-get -q update \
         locales \
         make \
         maven \
-        openjdk-8-jdk \
         openjdk-11-jdk \
+        openjdk-8-jdk \
         pinentry-curses \
         pkg-config \
         python \
