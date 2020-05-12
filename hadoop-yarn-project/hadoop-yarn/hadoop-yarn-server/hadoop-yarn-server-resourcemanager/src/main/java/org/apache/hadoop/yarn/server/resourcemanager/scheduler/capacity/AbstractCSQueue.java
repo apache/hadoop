@@ -1092,10 +1092,6 @@ public abstract class AbstractCSQueue implements CSQueue {
       if (getState() == QueueState.RUNNING) {
         LOG.info("The specified queue:" + queueName
             + " is already in the RUNNING state.");
-      } else if (getState() == QueueState.DRAINING) {
-        throw new YarnException(
-            "The queue:" + queueName + " is in the Stopping process. "
-            + "Please wait for the queue getting fully STOPPED.");
       } else {
         CSQueue parent = getParent();
         if (parent == null || parent.getState() == QueueState.RUNNING) {
