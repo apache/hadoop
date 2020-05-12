@@ -23,9 +23,16 @@ import java.util.Map;
 
 import org.junit.Test;
 
+/**
+ * Unit tests for Abfs common counters.
+ */
 public class TestAbfsStatistics extends AbstractAbfsIntegrationTest {
 
   private static final int LARGE_OPS = 100;
+  private String getDelegationTokenOp =
+      AbfsStatistic.CALL_GET_DELEGATION_TOKEN.getStatName();
+  private String errorIgnored =
+      AbfsStatistic.ERROR_IGNORED.getStatName();
 
   public TestAbfsStatistics() throws Exception {
   }
@@ -34,20 +41,11 @@ public class TestAbfsStatistics extends AbstractAbfsIntegrationTest {
    * Tests for op_get_delegation_token and error_ignore counter values.
    */
   @Test
-  public void testInitialiseStats() throws IOException {
+  public void testInitializeStats() throws IOException {
     describe("Testing the counter values after Abfs is initialised");
 
     AbfsInstrumentation instrumentation =
         new AbfsInstrumentation(getFileSystem().getUri());
-    Map<String, Long> metricMap = instrumentation.toMap();
-
-    System.out.println(metricMap);
-
-    //Testing the statistics values at initial stage.
-    assertEquals("Mismatch in op_get_delegation_token", 0,
-        (long) metricMap.get("op_get_delegation_token"));
-    assertEquals("Mismatch in error_ignored", 0,
-        (long) metricMap.get("error_ignored"));
 
     //Testing summation of the counter values.
     for (int i = 0; i < LARGE_OPS; i++) {
@@ -55,12 +53,12 @@ public class TestAbfsStatistics extends AbstractAbfsIntegrationTest {
       instrumentation.incrementStat(AbfsStatistic.ERROR_IGNORED, 1);
     }
 
-    metricMap = instrumentation.toMap();
+    Map<String, Long> metricMap = instrumentation.toMap();
 
-    assertEquals("Mismatch in op_get_delegation_token", LARGE_OPS,
-        (long) metricMap.get("op_get_delegation_token"));
-    assertEquals("Mismatch in error_ignored", LARGE_OPS,
-        (long) metricMap.get("error_ignored"));
+    assertEquals("Mismatch in " + getDelegationTokenOp, LARGE_OPS,
+        (long) metricMap.get(getDelegationTokenOp));
+    assertEquals("Mismatch in " + errorIgnored, LARGE_OPS,
+        (long) metricMap.get(errorIgnored));
 
   }
 }
