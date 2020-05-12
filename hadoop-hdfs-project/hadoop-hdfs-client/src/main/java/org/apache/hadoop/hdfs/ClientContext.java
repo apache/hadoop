@@ -237,6 +237,10 @@ public class ClientContext {
     return confString;
   }
 
+  public ShortCircuitCache getShortCircuitCache() {
+    return shortCircuitCache[0];
+  }
+
   public ShortCircuitCache getShortCircuitCache(long idx) {
     return shortCircuitCache[(int) (idx % clientShortCircuitNum)];
   }
