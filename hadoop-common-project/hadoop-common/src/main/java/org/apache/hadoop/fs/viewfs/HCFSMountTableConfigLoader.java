@@ -98,14 +98,14 @@ public class HCFSMountTableConfigLoader implements MountTableConfigLoader {
       return;
     }
     // Latest version file.
-    Path letestVersionMountTable = lfs.getPath();
+    Path latestVersionMountTable = lfs.getPath();
     if (LOGGER.isDebugEnabled()) {
       LOGGER.debug("Loading the mount-table {} into configuration.",
-          letestVersionMountTable);
+          latestVersionMountTable);
     }
     // We don't need to close this stream as it would have cached in
     // ChildFsGetter.
-    conf.addResource(fs.open(letestVersionMountTable));
+    conf.addResource(fs.open(latestVersionMountTable));
   }
 
   private void logInvalidFileNameFormat(String cur) {
