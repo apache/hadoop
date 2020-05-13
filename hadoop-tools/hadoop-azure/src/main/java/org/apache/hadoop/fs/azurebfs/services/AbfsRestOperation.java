@@ -44,6 +44,7 @@ public class AbfsRestOperation {
   private final AbfsClient client;
   // the HTTP method (PUT, PATCH, POST, GET, HEAD, or DELETE)
   private final String method;
+
   // full URL including query parameters
   private final URL url;
   // all the custom HTTP request headers provided by the caller
@@ -61,7 +62,7 @@ public class AbfsRestOperation {
   private int bufferOffset;
   private int bufferLength;
 
-  private boolean isARetriedRequest = false;
+  private int retryCount = 0;
 
   private AbfsHttpOperation result;
 
@@ -69,8 +70,21 @@ public class AbfsRestOperation {
     return result;
   }
 
-  public boolean isARetriedRequest() {
-    return isARetriedRequest;
+  public void hardSetResult(int httpStatus) {
+    result = AbfsHttpOperation.GetAbfsHttpOperationWithFixedResult(this.url,
+        this.method, httpStatus);
+  }
+
+  public URL getUrl() {
+    return url;
+  }
+
+  public List<AbfsHttpHeader> getRequestHeaders() {
+    return requestHeaders;
+  }
+
+  public int getRetryCount() {
+    return retryCount;
   }
 
   /**
@@ -135,11 +149,10 @@ public class AbfsRestOperation {
       requestHeaders.add(httpHeader);
     }
 
-    int retryCount = 0;
+    retryCount = 0;
     LOG.debug("First execution of REST operation - {}", operationType);
     while (!executeHttpOperation(retryCount++)) {
       try {
-        isARetriedRequest = true;
         LOG.debug("Retrying REST operation {}. RetryCount = {}",
             operationType, retryCount);
         Thread.sleep(client.getRetryPolicy().getRetryInterval(retryCount));

@@ -34,7 +34,6 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.StandardCharsets;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -96,6 +95,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsPerfTracker;
 import org.apache.hadoop.fs.azurebfs.services.AbfsPerfInfo;
 import org.apache.hadoop.fs.azurebfs.utils.Base64;
 import org.apache.hadoop.fs.azurebfs.utils.CRC64;
+import org.apache.hadoop.fs.azurebfs.utils.DateTimeUtils;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
@@ -128,7 +128,6 @@ public class AzureBlobFileSystemStore implements Closeable {
   private URI uri;
   private String userName;
   private String primaryUserGroup;
-  private static final String DATE_TIME_PATTERN = "E, dd MMM yyyy HH:mm:ss z";
   private static final String TOKEN_DATE_PATTERN = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSS'Z'";
   private static final String XMS_PROPERTIES_ENCODING = "ISO-8859-1";
   private static final int GET_SET_AGGREGATE_COUNT = 2;
@@ -662,7 +661,7 @@ public class AzureBlobFileSystemStore implements Closeable {
               resourceIsDir,
               1,
               blockSize,
-              parseLastModifiedTime(lastModified),
+              DateTimeUtils.ParseLastModifiedTime(lastModified),
               path,
               eTag);
     }
@@ -738,7 +737,7 @@ public class AzureBlobFileSystemStore implements Closeable {
           long contentLength = entry.contentLength() == null ? 0 : entry.contentLength();
           boolean isDirectory = entry.isDirectory() == null ? false : entry.isDirectory();
           if (entry.lastModified() != null && !entry.lastModified().isEmpty()) {
-            lastModifiedMillis = parseLastModifiedTime(entry.lastModified());
+            lastModifiedMillis = DateTimeUtils.ParseLastModifiedTime(entry.lastModified());
           }
 
           Path entryPath = new Path(File.separator + entry.name());
@@ -1230,18 +1229,6 @@ public class AzureBlobFileSystemStore implements Closeable {
   private boolean parseIsDirectory(final String resourceType) {
     return resourceType != null
         && resourceType.equalsIgnoreCase(AbfsHttpConstants.DIRECTORY);
-  }
-
-  private long parseLastModifiedTime(final String lastModifiedTime) {
-    long parsedTime = 0;
-    try {
-      Date utcDate = new SimpleDateFormat(DATE_TIME_PATTERN, Locale.US).parse(lastModifiedTime);
-      parsedTime = utcDate.getTime();
-    } catch (ParseException e) {
-      LOG.error("Failed to parse the date {}", lastModifiedTime);
-    } finally {
-      return parsedTime;
-    }
   }
 
   private String convertXmsPropertiesToCommaSeparatedString(final Hashtable<String, String> properties) throws

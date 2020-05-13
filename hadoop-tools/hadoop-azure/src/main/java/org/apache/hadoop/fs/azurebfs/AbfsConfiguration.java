@@ -756,6 +756,11 @@ public class AbfsConfiguration{
   }
 
   @VisibleForTesting
+  public void setMaxBackoffIntervalMilliseconds(int maxBackoffInterval) {
+    this.maxBackoffInterval = maxBackoffInterval;
+  }
+
+  @VisibleForTesting
   void setIsNamespaceEnabledAccount(String isNamespaceEnabledAccount) {
     this.isNamespaceEnabledAccount = isNamespaceEnabledAccount;
   }

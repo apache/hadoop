@@ -80,5 +80,7 @@ public final class FileSystemConfigurations {
   public static final String DEFAULT_FS_AZURE_USER_AGENT_PREFIX = EMPTY_STRING;
   public static final String DEFAULT_VALUE_UNKNOWN = "UNKNOWN";
 
+  public static final boolean DEFAULT_DELETE_CONSIDERED_IDEMPOTENT = true;
+
   private FileSystemConfigurations() {}
 }
