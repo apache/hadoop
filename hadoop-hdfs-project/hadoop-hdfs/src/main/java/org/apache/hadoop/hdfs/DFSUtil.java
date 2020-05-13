@@ -1787,6 +1787,18 @@ public class DFSUtil {
             + descendant);
       }
     }
+
+    if (fsd.isProtectedSubDirectoriesEnable()) {
+      while (!src.isEmpty()) {
+        int index = src.lastIndexOf(Path.SEPARATOR_CHAR);
+        src = src.substring(0, index);
+        if (protectedDirs.contains(src)) {
+          throw new AccessControlException(
+              "Cannot delete/rename subdirectory under protected subdirectory "
+              + src);
+        }
+      }
+    }
   }
 
   /**

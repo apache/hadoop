@@ -35,9 +35,11 @@ import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfoWithStorage;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.net.unix.DomainSocket;
@@ -273,7 +275,10 @@ public class TestDFSInputStream {
       DatanodeID nodeId = new DatanodeID("localhost", "localhost", "dn0", 1111,
               1112, 1113, 1114);
       DatanodeInfo dnInfo = new DatanodeDescriptor(nodeId);
-      when(lb.getLocations()).thenReturn(new DatanodeInfo[] {dnInfo});
+      DatanodeInfoWithStorage dnInfoStorage =
+          new DatanodeInfoWithStorage(dnInfo, "DISK", StorageType.DISK);
+      when(lb.getLocations()).thenReturn(
+          new DatanodeInfoWithStorage[] {dnInfoStorage});
       DatanodeInfo retDNInfo =
               dfsInputStream.getBestNodeDNAddrPair(lb, null).info;
       assertEquals(dnInfo, retDNInfo);

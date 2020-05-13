@@ -46,6 +46,7 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.HAServiceStatus;
@@ -58,6 +59,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfoWithStorage;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -537,7 +539,10 @@ public class MockNamenode {
     DatanodeID nodeId = new DatanodeID("localhost", "localhost", "dn0",
         1111, 1112, 1113, 1114);
     DatanodeInfo dnInfo = new DatanodeDescriptor(nodeId);
-    when(lb.getLocations()).thenReturn(new DatanodeInfo[] {dnInfo});
+    DatanodeInfoWithStorage datanodeInfoWithStorage =
+        new DatanodeInfoWithStorage(dnInfo, "storageID", StorageType.DEFAULT);
+    when(lb.getLocations())
+        .thenReturn(new DatanodeInfoWithStorage[] {datanodeInfoWithStorage});
     ExtendedBlock eb = mock(ExtendedBlock.class);
     when(eb.getBlockPoolId()).thenReturn(nsId);
     when(lb.getBlock()).thenReturn(eb);

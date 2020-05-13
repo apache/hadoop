@@ -78,6 +78,7 @@ public class TestObserverReadProxyProvider {
     // transition observer back and forth
     conf.setTimeDuration(
         OBSERVER_PROBE_RETRY_PERIOD_KEY, 0, TimeUnit.MILLISECONDS);
+    conf.setBoolean(HdfsClientConfigKeys.Failover.RANDOM_ORDER, false);
   }
 
   private void setupProxyProvider(int namenodeCount) throws Exception {

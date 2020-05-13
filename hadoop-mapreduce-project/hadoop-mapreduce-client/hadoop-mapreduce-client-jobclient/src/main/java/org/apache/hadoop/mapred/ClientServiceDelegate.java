@@ -225,7 +225,7 @@ public class ClientServiceDelegate {
         try {
           Thread.sleep(2000);
         } catch (InterruptedException e1) {
-          LOG.warn("getProxy() call interruped", e1);
+          LOG.warn("getProxy() call interrupted", e1);
           throw new YarnRuntimeException(e1);
         }
         try {
@@ -239,7 +239,7 @@ public class ClientServiceDelegate {
           return checkAndGetHSProxy(null, JobState.RUNNING);
         }
       } catch (InterruptedException e) {
-        LOG.warn("getProxy() call interruped", e);
+        LOG.warn("getProxy() call interrupted", e);
         throw new YarnRuntimeException(e);
       } catch (YarnException e) {
         throw new IOException(e);

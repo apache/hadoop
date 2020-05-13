@@ -313,6 +313,7 @@ driven by them.
 1. Using OAuth 2.0 tokens of one form or another.
 1. Deployed in-Azure with the Azure VMs providing OAuth 2.0 tokens to the application,
  "Managed Instance".
+1. Using Shared Access Signature (SAS) tokens provided by a custom implementation of the SASTokenProvider interface.
 
 What can be changed is what secrets/credentials are used to authenticate the caller.
 
@@ -540,6 +541,24 @@ The declared class must implement `org.apache.hadoop.fs.azurebfs.extensions.Cust
 and optionally `org.apache.hadoop.fs.azurebfs.extensions.BoundDTExtension`.
 
 The declared class also holds responsibility to implement retry logic while fetching access tokens.
+
+### Shared Access Signature (SAS) Token Provider
+
+A Shared Access Signature (SAS) token provider supplies the ABFS connector with SAS
+tokens by implementing the SASTokenProvider interface.
+
+```xml
+<property>
+  <name>fs.azure.account.auth.type</name>
+  <value>SAS</value>
+</property>
+<property>
+  <name>fs.azure.sas.token.provider.type</name>
+  <value>{fully-qualified-class-name-for-implementation-of-SASTokenProvider-interface}</value>
+</property>
+```
+
+The declared class must implement `org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider`.
 
 ## <a name="technical"></a> Technical notes
 

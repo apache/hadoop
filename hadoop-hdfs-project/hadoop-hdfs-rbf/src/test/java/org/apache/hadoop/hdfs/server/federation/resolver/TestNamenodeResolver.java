@@ -307,6 +307,23 @@ public class TestNamenodeResolver {
         FederationNamenodeServiceState.ACTIVE, namenode1.getState());
   }
 
+  @Test
+  public void testCacheUpdateOnNamenodeStateUpdateWithIp()
+      throws IOException {
+    final String rpcAddress = "127.0.0.1:10000";
+    assertTrue(namenodeResolver.registerNamenode(
+        createNamenodeReport(NAMESERVICES[0], NAMENODES[0], rpcAddress,
+            HAServiceState.STANDBY)));
+    stateStore.refreshCaches(true);
+
+    InetSocketAddress inetAddr = getInetSocketAddress(rpcAddress);
+    namenodeResolver.updateActiveNamenode(NAMESERVICES[0], inetAddr);
+    FederationNamenodeContext namenode =
+        namenodeResolver.getNamenodesForNameserviceId(NAMESERVICES[0]).get(0);
+    assertEquals("The namenode state should be ACTIVE post update.",
+        FederationNamenodeServiceState.ACTIVE, namenode.getState());
+  }
+
   /**
    * Creates InetSocketAddress from the given RPC address.
    * @param rpcAddr RPC address (host:port).

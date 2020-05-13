@@ -90,6 +90,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECI
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_QUOTA_BY_STORAGETYPE_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_QUOTA_BY_STORAGETYPE_ENABLED_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROTECTED_SUBDIRECTORIES_ENABLE;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROTECTED_SUBDIRECTORIES_ENABLE_DEFAULT;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_ENCRYPTION_ZONE;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.SECURITY_XATTR_UNREADABLE_BY_SUPERUSER;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY;
@@ -170,6 +172,7 @@ public class FSDirectory implements Closeable {
   //
   // Each entry in this set must be a normalized path.
   private volatile SortedSet<String> protectedDirectories;
+  private final boolean isProtectedSubDirectoriesEnable;
 
   private final boolean isPermissionEnabled;
   private final boolean isPermissionContentSummarySubAccess;
@@ -382,6 +385,9 @@ public class FSDirectory implements Closeable {
         DFSConfigKeys.DFS_NAMENODE_MAX_XATTRS_PER_INODE_DEFAULT);
 
     this.protectedDirectories = parseProtectedDirectories(conf);
+    this.isProtectedSubDirectoriesEnable = conf.getBoolean(
+        DFS_PROTECTED_SUBDIRECTORIES_ENABLE,
+        DFS_PROTECTED_SUBDIRECTORIES_ENABLE_DEFAULT);
 
     Preconditions.checkArgument(this.inodeXAttrsLimit >= 0,
         "Cannot set a negative limit on the number of xattrs per inode (%s).",
@@ -540,6 +546,10 @@ public class FSDirectory implements Closeable {
 
   public SortedSet<String> getProtectedDirectories() {
     return protectedDirectories;
+  }
+
+  public boolean isProtectedSubDirectoriesEnable() {
+    return isProtectedSubDirectoriesEnable;
   }
 
   /**
