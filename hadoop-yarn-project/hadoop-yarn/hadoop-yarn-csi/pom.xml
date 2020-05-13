@@ -44,7 +44,7 @@
             <version>${protobuf.version}</version>
         </dependency>
         <dependency>
-            <groupId>io.netty</groupId>
+            <groupId>${netty4.group}</groupId>
             <artifactId>netty-all</artifactId>
         </dependency>
         <dependency>
