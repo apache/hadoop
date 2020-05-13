@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
 import static org.junit.Assert.*;
 
 /**
- * This tests timout out from SocketInputStream and
+ * This tests timeout out from SocketInputStream and
  * SocketOutputStream using pipes.
  * 
  * Normal read and write using these streams are tested by pretty much

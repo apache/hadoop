@@ -234,6 +234,15 @@ public class TestClusterTopology extends Assert {
     assertSame("node3", node.getName());
   }
 
+  @Test
+  public void testNodeBaseNormalizeRemoveLeadingSlash() {
+    assertEquals("/d1", NodeBase.normalize("/d1///"));
+    assertEquals("/d1", NodeBase.normalize("/d1/"));
+    assertEquals("/d1", NodeBase.normalize("/d1"));
+    assertEquals("", NodeBase.normalize("///"));
+    assertEquals("", NodeBase.normalize("/"));
+  }
+
   private NodeElement getNewNode(String name, String rackLocation) {
     NodeElement node = new NodeElement(name);
     node.setNetworkLocation(rackLocation);

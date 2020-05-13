@@ -80,17 +80,27 @@ public class FairCallQueue<E extends Schedulable> extends AbstractQueue<E>
 
   /* Failover if queue is filled up */
   private boolean serverFailOverEnabled;
+
+  @VisibleForTesting
+  public FairCallQueue(int priorityLevels, int capacity, String ns,
+      Configuration conf) {
+    this(priorityLevels, capacity, ns,
+        CallQueueManager.getDefaultQueueCapacityWeights(priorityLevels), conf);
+  }
+
   /**
    * Create a FairCallQueue.
    * @param capacity the total size of all sub-queues
    * @param ns the prefix to use for configuration
+   * @param capacityWeights the weights array for capacity allocation
+   *                        among subqueues
    * @param conf the configuration to read from
    * Notes: Each sub-queue has a capacity of `capacity / numSubqueues`.
    * The first or the highest priority sub-queue has an excess capacity
    * of `capacity % numSubqueues`
    */
   public FairCallQueue(int priorityLevels, int capacity, String ns,
-      Configuration conf) {
+      int[] capacityWeights, Configuration conf) {
     if(priorityLevels < 1) {
       throw new IllegalArgumentException("Number of Priority Levels must be " +
           "at least 1");
@@ -101,11 +111,18 @@ public class FairCallQueue<E extends Schedulable> extends AbstractQueue<E>
 
     this.queues = new ArrayList<BlockingQueue<E>>(numQueues);
     this.overflowedCalls = new ArrayList<AtomicLong>(numQueues);
-    int queueCapacity = capacity / numQueues;
-    int capacityForFirstQueue = queueCapacity + (capacity % numQueues);
+    int totalWeights = 0;
+    for (int i = 0; i < capacityWeights.length; i++) {
+      totalWeights += capacityWeights[i];
+    }
+    int residueCapacity = capacity % totalWeights;
+    int unitCapacity = capacity / totalWeights;
+    int queueCapacity;
     for(int i=0; i < numQueues; i++) {
+      queueCapacity = unitCapacity * capacityWeights[i];
       if (i == 0) {
-        this.queues.add(new LinkedBlockingQueue<E>(capacityForFirstQueue));
+        this.queues.add(new LinkedBlockingQueue<E>(
+            queueCapacity + residueCapacity));
       } else {
         this.queues.add(new LinkedBlockingQueue<E>(queueCapacity));
       }

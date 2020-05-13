@@ -93,7 +93,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
   private int maxCompletedAppsInMemory;
   private int maxCompletedAppsInStateStore;
   protected int completedAppsInStateStore = 0;
-  protected LinkedList<ApplicationId> completedApps = new LinkedList<>();
+  private LinkedList<ApplicationId> completedApps = new LinkedList<>();
 
   private final RMContext rmContext;
   private final ApplicationMasterService masterService;
@@ -316,70 +316,29 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
    * check to see if hit the limit for max # completed apps kept
    */
   protected synchronized void checkAppNumCompletedLimit() {
-    if (completedAppsInStateStore > maxCompletedAppsInStateStore) {
-      removeCompletedAppsFromStateStore();
-    }
-
-    if (completedApps.size() > maxCompletedAppsInMemory) {
-      removeCompletedAppsFromMemory();
-    }
-  }
-
-  private void removeCompletedAppsFromStateStore() {
-    int numDelete = completedAppsInStateStore - maxCompletedAppsInStateStore;
-    for (int i = 0; i < numDelete; i++) {
-      ApplicationId removeId = completedApps.get(i);
+    // check apps kept in state store.
+    while (completedAppsInStateStore > this.maxCompletedAppsInStateStore) {
+      ApplicationId removeId =
+          completedApps.get(completedApps.size() - completedAppsInStateStore);
       RMApp removeApp = rmContext.getRMApps().get(removeId);
-      boolean deleteApp = shouldDeleteApp(removeApp);
-
-      if (deleteApp) {
-        LOG.info("Max number of completed apps kept in state store met:"
-            + " maxCompletedAppsInStateStore = "
-            + maxCompletedAppsInStateStore + ", removing app " + removeId
-            + " from state store.");
-        rmContext.getStateStore().removeApplication(removeApp);
-        completedAppsInStateStore--;
-      } else {
-        LOG.info("Max number of completed apps kept in state store met:"
-            + " maxCompletedAppsInStateStore = "
-            + maxCompletedAppsInStateStore + ", but not removing app "
-            + removeId
-            + " from state store as log aggregation have not finished yet.");
-      }
+      LOG.info("Max number of completed apps kept in state store met:"
+          + " maxCompletedAppsInStateStore = " + maxCompletedAppsInStateStore
+          + ", removing app " + removeApp.getApplicationId()
+          + " from state store.");
+      rmContext.getStateStore().removeApplication(removeApp);
+      completedAppsInStateStore--;
     }
-  }
 
-  private void removeCompletedAppsFromMemory() {
-    int numDelete = completedApps.size() - maxCompletedAppsInMemory;
-    int offset = 0;
-    for (int i = 0; i < numDelete; i++) {
-      int deletionIdx = i - offset;
-      ApplicationId removeId = completedApps.get(deletionIdx);
-      RMApp removeApp = rmContext.getRMApps().get(removeId);
-      boolean deleteApp = shouldDeleteApp(removeApp);
-
-      if (deleteApp) {
-        ++offset;
-        LOG.info("Application should be expired, max number of completed apps"
-                + " kept in memory met: maxCompletedAppsInMemory = "
-                + this.maxCompletedAppsInMemory + ", removing app " + removeId
-                + " from memory: ");
-        completedApps.remove(deletionIdx);
-        rmContext.getRMApps().remove(removeId);
-        this.applicationACLsManager.removeApplication(removeId);
-      } else {
-        LOG.info("Application should be expired, max number of completed apps"
-                + " kept in memory met: maxCompletedAppsInMemory = "
-                + this.maxCompletedAppsInMemory + ", but not removing app "
-                + removeId
-                + " from memory as log aggregation have not finished yet.");
-      }
+    // check apps kept in memory.
+    while (completedApps.size() > this.maxCompletedAppsInMemory) {
+      ApplicationId removeId = completedApps.remove();
+      LOG.info("Application should be expired, max number of completed apps"
+          + " kept in memory met: maxCompletedAppsInMemory = "
+          + this.maxCompletedAppsInMemory + ", removing app " + removeId
+          + " from memory: ");
+      rmContext.getRMApps().remove(removeId);
+      this.applicationACLsManager.removeApplication(removeId);
     }
-  }
-
-  private boolean shouldDeleteApp(RMApp app) {
-    return !app.isLogAggregationEnabled()
-            || app.isLogAggregationFinished();
   }
 
   @SuppressWarnings("unchecked")

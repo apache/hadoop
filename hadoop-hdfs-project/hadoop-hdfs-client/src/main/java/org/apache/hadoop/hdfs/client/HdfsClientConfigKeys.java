@@ -108,6 +108,9 @@ public interface HdfsClientConfigKeys {
   String  DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL =
       "dfs.client.use.legacy.blockreader.local";
   boolean DFS_CLIENT_USE_LEGACY_BLOCKREADERLOCAL_DEFAULT = false;
+  String DFS_CLIENT_READ_USE_CACHE_PRIORITY =
+      "dfs.client.read.use.cache.priority";
+  boolean DFS_CLIENT_READ_USE_CACHE_PRIORITY_DEFAULT = false;
   String  DFS_CLIENT_DATANODE_RESTART_TIMEOUT_KEY =
       "dfs.client.datanode-restart.timeout";
   long    DFS_CLIENT_DATANODE_RESTART_TIMEOUT_DEFAULT = 30;
@@ -340,7 +343,7 @@ public interface HdfsClientConfigKeys {
         PREFIX + "connection.retries.on.timeouts";
     int     CONNECTION_RETRIES_ON_SOCKET_TIMEOUTS_DEFAULT = 0;
     String  RANDOM_ORDER = PREFIX + "random.order";
-    boolean RANDOM_ORDER_DEFAULT = false;
+    boolean RANDOM_ORDER_DEFAULT = true;
     String  RESOLVE_ADDRESS_NEEDED_KEY = PREFIX + "resolve-needed";
     boolean RESOLVE_ADDRESS_NEEDED_DEFAULT = false;
     String RESOLVE_SERVICE_KEY = PREFIX + "resolver.impl";

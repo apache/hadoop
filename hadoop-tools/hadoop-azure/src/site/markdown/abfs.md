@@ -314,6 +314,7 @@ driven by them.
 1. Using OAuth 2.0 tokens of one form or another.
 1. Deployed in-Azure with the Azure VMs providing OAuth 2.0 tokens to the application,
  "Managed Instance".
+1. Using Shared Access Signature (SAS) tokens provided by a custom implementation of the SASTokenProvider interface.
 
 What can be changed is what secrets/credentials are used to authenticate the caller.
 
@@ -570,19 +571,43 @@ and optionally `org.apache.hadoop.fs.azurebfs.extensions.BoundDTExtension`.
 
 The declared class also holds responsibility to implement retry logic while fetching access tokens.
 
-#### <a name="delegationtokensupportconfigoptions"></a> Delegation token support
+### <a name="delegationtokensupportconfigoptions"></a> Delegation Token Provider
 
-Delegation token support can be achieved by making the following config true
-`fs.azure.enable.delegation.token`. Specify the CustomDelegationTokenManager
-needs to be used with the config `fs.azure.delegation.token.provider.type`.
+A delegation token provider supplies the ABFS connector with delegation tokens,
+helps renew and cancel the tokens by implementing the
+CustomDelegationTokenManager interface.
+
+```xml
+<property>
+  <name>fs.azure.enable.delegation.token</name>
+  <value>true</value>
+  <description>Make this true to use delegation token provider</description>
+</property>
+<property>
+  <name>fs.azure.delegation.token.provider.type</name>
+  <value>{fully-qualified-class-name-for-implementation-of-CustomDelegationTokenManager-interface}</value>
+</property>
+```
 In case delegation token is enabled, and the config `fs.azure.delegation.token
 .provider.type` is not provided then an IlleagalArgumentException is thrown.
 
-#### <a name="sastokensupportconfigoptions"></a> SAS token support
+### Shared Access Signature (SAS) Token Provider
 
-`fs.azure.sas.token.provider.type` If the auth type is set as AuthType.SAS then
-it is expected to specify a class which is an implementation of SASTokenProvider
-otherwise IlleagalArgumentException will be thrown.
+A Shared Access Signature (SAS) token provider supplies the ABFS connector with SAS
+tokens by implementing the SASTokenProvider interface.
+
+```xml
+<property>
+  <name>fs.azure.account.auth.type</name>
+  <value>SAS</value>
+</property>
+<property>
+  <name>fs.azure.sas.token.provider.type</name>
+  <value>{fully-qualified-class-name-for-implementation-of-SASTokenProvider-interface}</value>
+</property>
+```
+
+The declared class must implement `org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider`.
 
 ## <a name="technical"></a> Technical notes
 

@@ -61,6 +61,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.AppAdminClient;
+import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -772,6 +773,9 @@ public class RMAppImpl implements RMApp, Recoverable {
       report.setUnmanagedApp(submissionContext.getUnmanagedAM());
       report.setAppNodeLabelExpression(getAppNodeLabelExpression());
       report.setAmNodeLabelExpression(getAmNodeLabelExpression());
+      if (HAUtil.isFederationEnabled(conf)) {
+        report.setRMClusterId(YarnConfiguration.getClusterId(conf));
+      }
 
       ApplicationTimeout timeout = ApplicationTimeout
           .newInstance(ApplicationTimeoutType.LIFETIME, UNLIMITED, UNKNOWN);
@@ -1763,16 +1767,6 @@ public class RMAppImpl implements RMApp, Recoverable {
 
   public void aggregateLogReport(NodeId nodeId, LogAggregationReport report) {
     logAggregation.aggregateLogReport(nodeId, report, this);
-  }
-
-  @Override
-  public boolean isLogAggregationFinished() {
-    return logAggregation.isFinished();
-  }
-
-  @Override
-  public boolean isLogAggregationEnabled() {
-    return logAggregation.isEnabled();
   }
 
   public String getLogAggregationFailureMessagesForNM(NodeId nodeId) {

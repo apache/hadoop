@@ -29,7 +29,8 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
 
   private boolean tolerateOobAppends;
 
-  public AbfsInputStreamContext() {
+  public AbfsInputStreamContext(final long sasTokenRenewPeriodForStreamsInSeconds) {
+    super(sasTokenRenewPeriodForStreamsInSeconds);
   }
 
   public AbfsInputStreamContext withReadBufferSize(final int readBufferSize) {
