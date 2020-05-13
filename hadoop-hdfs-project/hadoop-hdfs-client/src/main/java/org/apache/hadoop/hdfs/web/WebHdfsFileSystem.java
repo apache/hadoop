@@ -140,7 +140,6 @@ public class WebHdfsFileSystem extends FileSystem
       + "/v" + VERSION;
   public static final String EZ_HEADER = "X-Hadoop-Accept-EZ";
   public static final String FEFINFO_HEADER = "X-Hadoop-feInfo";
-  public static final String DFS_HTTP_POLICY_KEY = "dfs.http.policy";
 
   /**
    * Default connection factory may be overridden in tests to use smaller
@@ -170,7 +169,6 @@ public class WebHdfsFileSystem extends FileSystem
       new ObjectMapper().reader(Map.class);
 
   private DFSOpsCountStatistics storageStatistics;
-  private boolean isTLSKrb;
 
   /**
    * Return the protocol scheme for the FileSystem.
@@ -232,8 +230,6 @@ public class WebHdfsFileSystem extends FileSystem
       connectionFactory = URLConnectionFactory
           .newDefaultURLConnectionFactory(connectTimeout, readTimeout, conf);
     }
-
-    this.isTLSKrb = "HTTPS_ONLY".equals(conf.get(DFS_HTTP_POLICY_KEY));
 
     ugi = UserGroupInformation.getCurrentUser();
     this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
@@ -694,11 +690,6 @@ public class WebHdfsFileSystem extends FileSystem
       //redirect hostname and port
       redirectHost = null;
 
-      if (url.getProtocol().equals(getTransportScheme()) &&
-        UserGroupInformation.isSecurityEnabled() &&
-        isTLSKrb) {
-        throw new IOException("Access denied: dfs.http.policy is HTTPS_ONLY.");
-      }
 
       // resolve redirects for a DN operation unless already resolved
       if (op.getRedirect() && !redirected) {
