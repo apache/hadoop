@@ -70,6 +70,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.XAttrCodec;
+import org.apache.hadoop.fs.http.client.HttpFSUtils;
+import org.apache.hadoop.fs.http.client.HttpFSFileSystem.Operation;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.DataParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.NoRedirectParam;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -88,6 +90,7 @@ import org.apache.hadoop.security.authentication.util.Signer;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.HFSTestCase;
 import org.apache.hadoop.test.HadoopUsersConfTestHelper;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.test.TestDir;
 import org.apache.hadoop.test.TestDirHelper;
 import org.apache.hadoop.test.TestHdfs;
@@ -1879,5 +1882,33 @@ public class TestHttpFSServer extends HFSTestCase {
     location = (String) json.get("Location");
     Assert.assertEquals(TestJettyHelper.getJettyURL() + "/webhdfs/v1" + path,
         location);
+  }
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testContentType() throws Exception {
+    createHttpFSServer(false, false);
+    FileSystem fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
+    Path dir = new Path("/tmp");
+    Path file = new Path(dir, "foo");
+    fs.mkdirs(dir);
+    fs.create(file);
+
+    String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
+    URL url = new URL(TestJettyHelper.getJettyURL(), MessageFormat.format(
+        "/webhdfs/v1/tmp/foo?user.name={0}&op=open&offset=1&length=2", user));
+
+    // test jsonParse with non-json type.
+    final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod(Operation.OPEN.getMethod());
+    conn.connect();
+
+    LambdaTestUtils.intercept(IOException.class,
+        "Content-Type \"text/html;charset=iso-8859-1\" "
+            + "is incompatible with \"application/json\"",
+        () -> HttpFSUtils.jsonParse(conn));
+    conn.disconnect();
   }
 }

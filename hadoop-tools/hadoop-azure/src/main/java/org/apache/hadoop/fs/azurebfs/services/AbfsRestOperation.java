@@ -54,6 +54,9 @@ public class AbfsRestOperation {
   // request body and all the download methods have a response body.
   private final boolean hasRequestBody;
 
+  // Used only by AbfsInputStream/AbfsOutputStream to reuse SAS tokens.
+  private final String sasToken;
+
   private static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
 
   // For uploads, this is the request entity body.  For downloads,
@@ -87,6 +90,11 @@ public class AbfsRestOperation {
     return retryCount;
   }
 
+  String getSasToken() {
+    return sasToken;
+
+  }
+
   /**
    * Initializes a new REST operation.
    *
@@ -100,6 +108,24 @@ public class AbfsRestOperation {
                     final String method,
                     final URL url,
                     final List<AbfsHttpHeader> requestHeaders) {
+    this(operationType, client, method, url, requestHeaders, null);
+  }
+
+  /**
+   * Initializes a new REST operation.
+   *
+   * @param client The Blob FS client.
+   * @param method The HTTP method (PUT, PATCH, POST, GET, HEAD, or DELETE).
+   * @param url The full URL including query string parameters.
+   * @param requestHeaders The HTTP request headers.
+   * @param sasToken A sasToken for optional re-use by AbfsInputStream/AbfsOutputStream.
+   */
+  AbfsRestOperation(final AbfsRestOperationType operationType,
+                    final AbfsClient client,
+                    final String method,
+                    final URL url,
+                    final List<AbfsHttpHeader> requestHeaders,
+                    final String sasToken) {
     this.operationType = operationType;
     this.client = client;
     this.method = method;
@@ -107,6 +133,7 @@ public class AbfsRestOperation {
     this.requestHeaders = requestHeaders;
     this.hasRequestBody = (AbfsHttpConstants.HTTP_METHOD_PUT.equals(method)
             || AbfsHttpConstants.HTTP_METHOD_PATCH.equals(method));
+    this.sasToken = sasToken;
   }
 
   /**
@@ -121,6 +148,7 @@ public class AbfsRestOperation {
    *               this will hold the response entity body.
    * @param bufferOffset An offset into the buffer where the data beings.
    * @param bufferLength The length of the data in the buffer.
+   * @param sasToken A sasToken for optional re-use by AbfsInputStream/AbfsOutputStream.
    */
   AbfsRestOperation(AbfsRestOperationType operationType,
                     AbfsClient client,
@@ -129,8 +157,9 @@ public class AbfsRestOperation {
                     List<AbfsHttpHeader> requestHeaders,
                     byte[] buffer,
                     int bufferOffset,
-                    int bufferLength) {
-    this(operationType, client, method, url, requestHeaders);
+                    int bufferLength,
+                    String sasToken) {
+    this(operationType, client, method, url, requestHeaders, sasToken);
     this.buffer = buffer;
     this.bufferOffset = bufferOffset;
     this.bufferLength = bufferLength;

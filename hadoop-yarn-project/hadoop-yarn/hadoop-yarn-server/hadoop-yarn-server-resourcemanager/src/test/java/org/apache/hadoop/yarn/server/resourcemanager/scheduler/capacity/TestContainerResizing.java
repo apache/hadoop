@@ -224,7 +224,7 @@ public class TestContainerResizing {
     verifyContainerDecreased(response, containerId1, 1 * GB);
 
     // Wait for scheduler to finish processing kill events..
-    dispatcher.waitForEventThreadToWait();
+    dispatcher.await();
 
     checkUsedResource(rm1, "default", 1 * GB, null);
     Assert.assertEquals(1 * GB,
@@ -657,7 +657,7 @@ public class TestContainerResizing {
     // Trigger a node heartbeat..
     cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
 
-    dispatcher.waitForEventThreadToWait();
+    dispatcher.await();
     /* Check statuses after reservation satisfied */
     // Increase request should be unreserved
     Assert.assertTrue(app.getReservedContainers().isEmpty());
@@ -774,7 +774,7 @@ public class TestContainerResizing {
     am1.allocate(null, null);
 
     // Wait for scheduler to process all events.
-    dispatcher.waitForEventThreadToWait();
+    dispatcher.await();
 
     /* Check statuses after reservation satisfied */
     // Increase request should be unreserved

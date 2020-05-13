@@ -210,6 +210,11 @@ public class AbfsConfiguration{
           DefaultValue = DEFAULT_ABFS_LATENCY_TRACK)
   private boolean trackLatency;
 
+  @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_SAS_TOKEN_RENEW_PERIOD_FOR_STREAMS,
+      MinValue = 0,
+      DefaultValue = DEFAULT_SAS_TOKEN_RENEW_PERIOD_FOR_STREAMS_IN_SECONDS)
+  private long sasTokenRenewPeriodForStreamsInSeconds;
+
   private Map<String, String> storageAccountKeys;
 
   public AbfsConfiguration(final Configuration rawConfig, String accountName)
@@ -449,6 +454,10 @@ public class AbfsConfiguration{
 
   public boolean isCheckAccessEnabled() {
     return this.isCheckAccessEnabled;
+  }
+
+  public long getSasTokenRenewPeriodForStreamsInSeconds() {
+    return this.sasTokenRenewPeriodForStreamsInSeconds;
   }
 
   public String getAzureBlockLocationHost() {

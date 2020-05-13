@@ -114,6 +114,9 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
       "callqueue.overflow.trigger.failover";
   public static final boolean IPC_CALLQUEUE_SERVER_FAILOVER_ENABLE_DEFAULT =
       false;
+  /** Callqueue subqueue capacity weights. */
+  public static final String IPC_CALLQUEUE_CAPACITY_WEIGHTS_KEY =
+      "callqueue.capacity.weights";
 
   /**
    * IPC scheduler priority levels.

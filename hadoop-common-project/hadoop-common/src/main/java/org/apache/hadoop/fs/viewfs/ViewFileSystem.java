@@ -18,9 +18,9 @@
 package org.apache.hadoop.fs.viewfs;
 
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
-import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE_DEFAULT;
+import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -35,9 +35,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
-import java.util.Map.Entry;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -97,15 +97,48 @@ public class ViewFileSystem extends FileSystem {
   }
 
   /**
+   * File system instance getter.
+   */
+  static class FsGetter {
+
+    /**
+     * Gets new file system instance of given uri.
+     */
+    public FileSystem getNewInstance(URI uri, Configuration conf)
+        throws IOException {
+      return FileSystem.newInstance(uri, conf);
+    }
+
+    /**
+     * Gets file system instance of given uri.
+     */
+    public FileSystem get(URI uri, Configuration conf) throws IOException {
+      return FileSystem.get(uri, conf);
+    }
+  }
+
+  /**
+   * Gets file system creator instance.
+   */
+  protected FsGetter fsGetter() {
+    return new FsGetter();
+  }
+
+  /**
    * Caching children filesystems. HADOOP-15565.
    */
   static class InnerCache {
     private Map<Key, FileSystem> map = new HashMap<>();
+    private FsGetter fsCreator;
+
+    InnerCache(FsGetter fsCreator) {
+      this.fsCreator = fsCreator;
+    }
 
     FileSystem get(URI uri, Configuration config) throws IOException {
       Key key = new Key(uri);
       if (map.get(key) == null) {
-        FileSystem fs = FileSystem.newInstance(uri, config);
+        FileSystem fs = fsCreator.getNewInstance(uri, config);
         map.put(key, fs);
         return fs;
       } else {
@@ -193,7 +226,7 @@ public class ViewFileSystem extends FileSystem {
 
   final long creationTime; // of the the mount table
   final UserGroupInformation ugi; // the user/group of user who created mtable
-  URI myUri;
+  private URI myUri;
   private Path workingDir;
   Configuration config;
   InodeTree<FileSystem> fsState;  // the fs state; ie the mount table
@@ -255,13 +288,13 @@ public class ViewFileSystem extends FileSystem {
     config = conf;
     enableInnerCache = config.getBoolean(CONFIG_VIEWFS_ENABLE_INNER_CACHE,
         CONFIG_VIEWFS_ENABLE_INNER_CACHE_DEFAULT);
-    final InnerCache innerCache = new InnerCache();
+    FsGetter fsGetter = fsGetter();
+    final InnerCache innerCache = new InnerCache(fsGetter);
     // Now build  client side view (i.e. client side mount table) from config.
     final String authority = theUri.getAuthority();
     try {
-      myUri = new URI(FsConstants.VIEWFS_SCHEME, authority, "/", null, null);
+      myUri = new URI(getScheme(), authority, "/", null, null);
       fsState = new InodeTree<FileSystem>(conf, authority) {
-
         @Override
         protected FileSystem getTargetFileSystem(final URI uri)
           throws URISyntaxException, IOException {
@@ -269,7 +302,7 @@ public class ViewFileSystem extends FileSystem {
             if (enableInnerCache) {
               fs = innerCache.get(uri, config);
             } else {
-              fs = FileSystem.get(uri, config);
+              fs = fsGetter.get(uri, config);
             }
             return new ChRootedFileSystem(fs, uri);
         }

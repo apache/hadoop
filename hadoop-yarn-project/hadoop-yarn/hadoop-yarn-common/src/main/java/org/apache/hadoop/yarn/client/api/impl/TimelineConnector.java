@@ -78,7 +78,7 @@ public class TimelineConnector extends AbstractService {
   public final static int DEFAULT_SOCKET_TIMEOUT = 1 * 60 * 1000; // 1 minute
 
   private SSLFactory sslFactory;
-  private Client client;
+  Client client;
   private ConnectionConfigurator connConfigurator;
   private DelegationTokenAuthenticator authenticator;
   private DelegationTokenAuthenticatedURL.Token token;
@@ -200,6 +200,9 @@ public class TimelineConnector extends AbstractService {
   }
 
   protected void serviceStop() {
+    if (this.client != null) {
+      this.client.destroy();
+    }
     if (this.sslFactory != null) {
       this.sslFactory.destroy();
     }

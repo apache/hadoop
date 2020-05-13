@@ -108,7 +108,7 @@ abstract public class FsCommand extends Command {
         HADOOP_SHELL_MISSING_DEFAULT_FS_WARNING_KEY,
         HADOOP_SHELL_MISSING_DEFAULT_FS_WARNING_DEFAULT);
     if (displayWarnings) {
-      final String defaultFs = getConf().get(FS_DEFAULT_NAME_KEY);
+      final String defaultFs = getConf().getTrimmed(FS_DEFAULT_NAME_KEY);
       final boolean missingDefaultFs =
           defaultFs == null || defaultFs.equals(FS_DEFAULT_NAME_DEFAULT);
       if (missingDefaultFs) {

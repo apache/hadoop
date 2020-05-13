@@ -288,6 +288,7 @@ message ApplicationReportProto {
   repeated AppTimeoutsMapProto appTimeouts = 26;
   optional int64 launchTime = 27;
   optional int64 submitTime = 28;
+  optional string rmClusterId = 29;
 }
 
 message AppTimeoutsMapProto {
