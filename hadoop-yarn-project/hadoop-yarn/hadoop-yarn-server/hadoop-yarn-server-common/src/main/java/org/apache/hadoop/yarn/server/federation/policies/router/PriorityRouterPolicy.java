@@ -24,6 +24,7 @@ import java.util.Map;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
+import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
@@ -64,6 +65,10 @@ public class PriorityRouterPolicy extends AbstractRouterPolicy {
         currentBest = weights.get(idInfo);
         chosen = id;
       }
+    }
+    if (chosen == null) {
+      throw new FederationPolicyException(
+          "No Active Subcluster with weight vector greater than zero");
     }
 
     return chosen;
