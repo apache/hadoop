@@ -29,6 +29,8 @@ import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.viewfs.ViewFileSystem.MountPoint;
+import org.apache.hadoop.security.AccessControlException;
+
 
 /**
  * Utility APIs for ViewFileSystem.
@@ -159,6 +161,17 @@ public final class ViewFileSystemUtil {
       final MountPoint mountPoint, final Path path) throws IOException {
     FsStatus fsStatus = viewFileSystem.getStatus(path);
     mountPointMap.put(mountPoint, fsStatus);
+  }
+
+  static AccessControlException readOnlyMountTable(final String operation,
+      final String p) {
+    return new AccessControlException(
+        "InternalDir of ViewFileSystem is readonly, operation " + operation +
+            " not permitted on path " + p + ".");
+  }
+  static AccessControlException readOnlyMountTable(final String operation,
+      final Path p) {
+    return readOnlyMountTable(operation, p.toString());
   }
 
 }
