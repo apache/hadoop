@@ -1009,7 +1009,7 @@ public class ViewFs extends AbstractFileSystem {
     private FileStatus[] listStatusForFallbackLink() throws IOException {
       if (theInternalDir.isRoot() && theInternalDir.getFallbackLink() != null) {
         URI fallBackUri = theInternalDir.getFallbackLink().targetDirLinkList[0];
-        ChRootedFileSystem linkedFs = (ChRootedFileSystem)
+        ChRootedFs linkedFs = (ChRootedFs)
             theInternalDir.getFallbackLink().getTargetFileSystem();
         return linkedFs.getMyFs().listStatus(new Path(fallBackUri.toString()));
       } else {
