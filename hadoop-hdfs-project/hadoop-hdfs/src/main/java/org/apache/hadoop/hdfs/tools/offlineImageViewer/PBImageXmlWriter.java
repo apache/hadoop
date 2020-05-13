@@ -31,7 +31,7 @@ import java.util.Date;
 import java.util.Map;
 import java.util.TimeZone;
 
-import com.google.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -433,7 +433,7 @@ public final class PBImageXmlWriter {
       int ns = (XATTR_NAMESPACE_MASK & (encodedName >> XATTR_NAMESPACE_OFFSET)) |
           ((XATTR_NAMESPACE_EXT_MASK & (encodedName >> XATTR_NAMESPACE_EXT_OFFSET)) << 2);
       o(INODE_SECTION_NS, XAttrProtos.XAttrProto.
-          XAttrNamespaceProto.valueOf(ns).toString());
+          XAttrNamespaceProto.forNumber(ns).toString());
       o(SECTION_NAME, SerialNumberManager.XATTR.getString(
           XATTR_NAME_MASK & (encodedName >> XATTR_NAME_OFFSET),
           stringTable));

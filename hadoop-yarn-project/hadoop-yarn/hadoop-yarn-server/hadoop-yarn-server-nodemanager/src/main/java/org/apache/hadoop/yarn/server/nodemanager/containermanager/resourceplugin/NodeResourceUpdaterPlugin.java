@@ -28,25 +28,11 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 public abstract class NodeResourceUpdaterPlugin {
   /**
    * Update configured resource for the given component.
-   * @param res resource passed in by external mododule (such as
+   * @param res resource passed in by external module (such as
    *            {@link org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater}
    * @throws YarnException when any issue happens.
    */
   public abstract void updateConfiguredResource(Resource res)
       throws YarnException;
 
-  /**
-   * This method will be called when the node's resource is loaded from
-   * dynamic-resources.xml in ResourceManager.
-   *
-   * @param newResource newResource reported by RM
-   * @throws YarnException when any mismatch between NM/RM
-   */
-  public void handleUpdatedResourceFromRM(Resource newResource) throws
-      YarnException {
-    // by default do nothing, subclass should implement this method when any
-    // special activities required upon new resource reported by RM.
-  }
-
-  // TODO: add implementation to update node attribute once YARN-3409 merged.
 }

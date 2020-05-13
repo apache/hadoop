@@ -23,6 +23,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.util.List;
@@ -33,6 +34,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
@@ -93,6 +95,7 @@ public class TestRouterAdminCLI {
         .metrics()
         .admin()
         .rpc()
+        .quota()
         .safemode()
         .build();
     cluster.addRouterOverrides(conf);
@@ -122,8 +125,9 @@ public class TestRouterAdminCLI {
     // Mock the quota module since no real namenode is started up.
     Quota quota = Mockito
         .spy(routerContext.getRouter().createRpcServer().getQuotaModule());
-    Mockito.doNothing().when(quota).setQuota(Mockito.anyString(),
-        Mockito.anyLong(), Mockito.anyLong(), Mockito.any());
+    Mockito.doNothing().when(quota)
+        .setQuota(Mockito.anyString(), Mockito.anyLong(), Mockito.anyLong(),
+            Mockito.any(), Mockito.anyBoolean());
     Whitebox.setInternalState(
         routerContext.getRouter().getRpcServer(), "quotaCall", quota);
 
@@ -157,6 +161,8 @@ public class TestRouterAdminCLI {
     String dest = "/addmounttable";
     String[] argv = new String[] {"-add", src, nsId, dest};
     assertEquals(0, ToolRunner.run(admin, argv));
+    assertEquals(-1, ToolRunner.run(admin, argv));
+
 
     stateStore.loadCache(MountTableStoreImpl.class, true);
     GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
@@ -300,19 +306,22 @@ public class TestRouterAdminCLI {
     stateStore.loadCache(MountTableStoreImpl.class, true);
     argv = new String[] {"-ls", src};
     assertEquals(0, ToolRunner.run(admin, argv));
-    assertTrue(out.toString().contains(src));
+    String response = out.toString();
+    assertTrue("Wrong response: " + response, response.contains(src));
 
     // Test with not-normalized src input
     argv = new String[] {"-ls", srcWithSlash};
     assertEquals(0, ToolRunner.run(admin, argv));
-    assertTrue(out.toString().contains(src));
+    response = out.toString();
+    assertTrue("Wrong response: " + response, response.contains(src));
 
     // Test with wrong number of arguments
     argv = new String[] {"-ls", srcWithSlash, "check", "check2"};
     System.setErr(new PrintStream(err));
     ToolRunner.run(admin, argv);
-    assertTrue(
-        err.toString().contains("Too many arguments, Max=1 argument allowed"));
+    response = err.toString();
+    assertTrue("Wrong response: " + response,
+        response.contains("Too many arguments, Max=2 argument allowed"));
 
     out.reset();
     GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
@@ -324,12 +333,72 @@ public class TestRouterAdminCLI {
     // mount table under root path.
     argv = new String[] {"-ls"};
     assertEquals(0, ToolRunner.run(admin, argv));
-    assertTrue(out.toString().contains(src));
-    String outStr = out.toString();
+    response = out.toString();
+    assertTrue("Wrong response: " + response, response.contains(src));
     // verify if all the mount table are listed
-    for(MountTable entry: getResponse.getEntries()) {
-      assertTrue(outStr.contains(entry.getSourcePath()));
+    for (MountTable entry : getResponse.getEntries()) {
+      assertTrue("Wrong response: " + response,
+          response.contains(entry.getSourcePath()));
     }
+  }
+
+  @Test
+  public void testListWithDetails() throws Exception {
+    // Create mount entry.
+    String[] argv = new String[] {"-add", "/testLsWithDetails", "ns0,ns1",
+        "/dest", "-order", "HASH_ALL", "-readonly", "-faulttolerant"};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    System.setOut(new PrintStream(out));
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+
+    // Test list with detail for a mount entry.
+    argv = new String[] {"-ls", "-d", "/testLsWithDetails"};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    String response =  out.toString();
+    assertTrue(response.contains("Read-Only"));
+    assertTrue(response.contains("Fault-Tolerant"));
+    out.reset();
+
+    // Test list with detail without path.
+    argv = new String[] {"-ls", "-d"};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    response =  out.toString();
+    assertTrue("Wrong response: " + response, response.contains("Read-Only"));
+    assertTrue("Wrong response: " + response,
+        response.contains("Fault-Tolerant"));
+  }
+
+  @Test
+  public void testListNestedMountTable() throws Exception {
+    String dir1 = "/test-ls";
+    String dir2 = "/test-ls-longger";
+    String[] nsIdList = {"ns0", "ns1", "ns2", "ns3", "ns3"};
+    String[] sourceList =
+        {dir1, dir1 + "/subdir1", dir2, dir2 + "/subdir1", dir2 + "/subdir2"};
+    String[] destList =
+        {"/test-ls", "/test-ls/subdir1", "/ls", "/ls/subdir1", "/ls/subdir2"};
+    for (int i = 0; i < nsIdList.length; i++) {
+      String[] argv =
+          new String[] {"-add", sourceList[i], nsIdList[i], destList[i]};
+      assertEquals(0, ToolRunner.run(admin, argv));
+    }
+
+    // prepare for test
+    System.setOut(new PrintStream(out));
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+
+    // Test ls dir1
+    String[] argv = new String[] {"-ls", dir1};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    String outStr = out.toString();
+    assertTrue(out.toString().contains(dir1 + "/subdir1"));
+    assertFalse(out.toString().contains(dir2));
+
+    // Test ls dir2
+    argv = new String[] {"-ls", dir2};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    assertTrue(out.toString().contains(dir2 + "/subdir1"));
+    assertTrue(out.toString().contains(dir2 + "/subdir2"));
   }
 
   @Test
@@ -448,6 +517,187 @@ public class TestRouterAdminCLI {
     assertEquals(ugi.getShortUserName(), mountTable.getOwnerName());
     assertEquals(group, mountTable.getGroupName());
     assertEquals((short) 0755, mountTable.getMode().toShort());
+  }
+
+  @Test
+  public void testUpdateMountTableWithoutPermission() throws Exception {
+    UserGroupInformation superUser = UserGroupInformation.getCurrentUser();
+    String superUserName = superUser.getShortUserName();
+    // re-set system out for testing
+    System.setOut(new PrintStream(out));
+
+    try {
+      stateStore.loadCache(MountTableStoreImpl.class, true);
+      // add mount table using super user.
+      String[] argv = new String[]{"-add", "/testpath3-1", "ns0", "/testdir3-1",
+          "-owner", superUserName, "-group", superUserName, "-mode", "755"};
+      assertEquals(0, ToolRunner.run(admin, argv));
+
+      UserGroupInformation remoteUser = UserGroupInformation
+          .createRemoteUser(TEST_USER);
+      UserGroupInformation.setLoginUser(remoteUser);
+
+      stateStore.loadCache(MountTableStoreImpl.class, true);
+      // update mount table using normal user
+      argv = new String[]{"-update", "/testpath3-1", "ns0", "/testdir3-2",
+          "-owner", TEST_USER, "-group", TEST_USER, "-mode", "777"};
+      assertEquals("Normal user update mount table which created by " +
+          "superuser unexpected.", -1, ToolRunner.run(admin, argv));
+    } finally {
+      // set back login user
+      UserGroupInformation.setLoginUser(superUser);
+    }
+  }
+
+  @Test
+  public void testOperateMountTableWithGroupPermission() throws Exception {
+    UserGroupInformation superUser = UserGroupInformation.getCurrentUser();
+    // re-set system out for testing
+    System.setOut(new PrintStream(out));
+
+    try {
+      String testUserA = "test-user-a";
+      String testUserB = "test-user-b";
+      String testUserC = "test-user-c";
+      String testUserD = "test-user-d";
+      String testGroup = "test-group";
+
+      stateStore.loadCache(MountTableStoreImpl.class, true);
+      // add mount point with usera.
+      UserGroupInformation userA = UserGroupInformation.createUserForTesting(
+          testUserA, new String[] {testGroup});
+      UserGroupInformation.setLoginUser(userA);
+
+      String[] argv = new String[]{"-add", "/testpath4-1", "ns0", "/testdir4-1",
+          "-owner", testUserA, "-group", testGroup, "-mode", "775"};
+      assertEquals("Normal user can't add mount table unexpected.", 0,
+          ToolRunner.run(admin, argv));
+
+      stateStore.loadCache(MountTableStoreImpl.class, true);
+      // update mount point with userb which is same group with owner.
+      UserGroupInformation userB = UserGroupInformation.createUserForTesting(
+          testUserB, new String[] {testGroup});
+      UserGroupInformation.setLoginUser(userB);
+      argv = new String[]{"-update", "/testpath4-1", "ns0", "/testdir4-2",
+          "-owner", testUserA, "-group", testGroup, "-mode", "775"};
+      assertEquals("Another user in same group can't update mount table " +
+          "unexpected.", 0, ToolRunner.run(admin, argv));
+
+      stateStore.loadCache(MountTableStoreImpl.class, true);
+      // update mount point with userc which is not same group with owner.
+      UserGroupInformation userC = UserGroupInformation.createUserForTesting(
+          testUserC, new String[] {});
+      UserGroupInformation.setLoginUser(userC);
+      argv = new String[]{"-update", "/testpath4-1", "ns0", "/testdir4-3",
+          "-owner", testUserA, "-group", testGroup, "-mode", "775"};
+      assertEquals("Another user not in same group have no permission but " +
+              "update mount table successful unexpected.", -1,
+          ToolRunner.run(admin, argv));
+
+      stateStore.loadCache(MountTableStoreImpl.class, true);
+      // add mount point with userd but immediate parent of mount point
+      // does not exist.
+      UserGroupInformation userD = UserGroupInformation.createUserForTesting(
+          testUserD, new String[] {testGroup});
+      UserGroupInformation.setLoginUser(userD);
+      argv = new String[]{"-add", "/testpath4-1/foo/bar", "ns0",
+          "/testdir4-1/foo/bar", "-owner", testUserD, "-group", testGroup,
+          "-mode", "775"};
+      assertEquals("Normal user can't add mount table unexpected.", 0,
+          ToolRunner.run(admin, argv));
+
+      // test remove mount point with userc.
+      UserGroupInformation.setLoginUser(userC);
+      argv = new String[]{"-rm", "/testpath4-1"};
+      assertEquals(-1, ToolRunner.run(admin, argv));
+
+      // test remove mount point with userb.
+      UserGroupInformation.setLoginUser(userB);
+      assertEquals("Another user in same group can't remove mount table " +
+          "unexpected.", 0, ToolRunner.run(admin, argv));
+    } finally {
+      // set back login user
+      UserGroupInformation.setLoginUser(superUser);
+    }
+  }
+
+  @Test
+  public void testOperateMountTableWithSuperUserPermission() throws Exception {
+    UserGroupInformation superUser = UserGroupInformation.getCurrentUser();
+    // re-set system out for testing
+    System.setOut(new PrintStream(out));
+
+    try {
+      String testUserA = "test-user-a";
+      String testGroup = "test-group";
+
+      stateStore.loadCache(MountTableStoreImpl.class, true);
+      // add mount point with usera.
+      UserGroupInformation userA = UserGroupInformation.createUserForTesting(
+          testUserA, new String[] {testGroup});
+      UserGroupInformation.setLoginUser(userA);
+      String[] argv = new String[]{"-add", "/testpath5-1", "ns0", "/testdir5-1",
+          "-owner", testUserA, "-group", testGroup, "-mode", "755"};
+      assertEquals(0, ToolRunner.run(admin, argv));
+
+      // test update mount point with super user.
+      stateStore.loadCache(MountTableStoreImpl.class, true);
+      UserGroupInformation.setLoginUser(superUser);
+      argv = new String[]{"-update", "/testpath5-1", "ns0", "/testdir5-2",
+          "-owner", testUserA, "-group", testGroup, "-mode", "755"};
+      assertEquals("Super user can't update mount table unexpected.", 0,
+          ToolRunner.run(admin, argv));
+
+      // test remove mount point with super user.
+      argv = new String[]{"-rm", "/testpath5-1"};
+      assertEquals("Super user can't remove mount table unexpected.", 0,
+          ToolRunner.run(admin, argv));
+    } finally {
+      // set back login user
+      UserGroupInformation.setLoginUser(superUser);
+    }
+  }
+
+  @Test
+  public void testAddMountTableIfParentExist() throws Exception {
+    UserGroupInformation superUser = UserGroupInformation.getCurrentUser();
+    // re-set system out for testing
+    System.setOut(new PrintStream(out));
+
+    try {
+      String testUserA = "test-user-a";
+      String testUserB = "test-user-b";
+      String testGroup = "test-group";
+
+      stateStore.loadCache(MountTableStoreImpl.class, true);
+      // add mount point with usera.
+      UserGroupInformation userA = UserGroupInformation.createUserForTesting(
+          testUserA, new String[] {testGroup});
+      UserGroupInformation.setLoginUser(userA);
+      String[] argv = new String[]{"-add", "/testpath6-1", "ns0", "/testdir6-1",
+          "-owner", testUserA, "-group", testGroup, "-mode", "755"};
+      assertEquals(0, ToolRunner.run(admin, argv));
+
+      // add mount point with userb will be success since the nearest parent
+      // does not exist but have other EXECUTE permission.
+      UserGroupInformation userB = UserGroupInformation.createUserForTesting(
+          testUserB, new String[] {testGroup});
+      UserGroupInformation.setLoginUser(userB);
+      argv = new String[]{"-add", "/testpath6-1/parent/foo", "ns0",
+          "/testdir6-1/parent/foo", "-owner", testUserA, "-group", testGroup,
+          "-mode", "755"};
+      assertEquals(0, ToolRunner.run(admin, argv));
+
+      // add mount point with userb will be failure since the nearest parent
+      // does exist but no WRITE permission.
+      argv = new String[]{"-add", "/testpath6-1/foo", "ns0",
+          "/testdir6-1/foo", "-owner", testUserA, "-group", testGroup,
+          "-mode", "755"};
+      assertEquals(-1, ToolRunner.run(admin, argv));
+    } finally {
+      // set back login user
+      UserGroupInformation.setLoginUser(superUser);
+    }
   }
 
   @Test
@@ -576,6 +826,12 @@ public class TestRouterAdminCLI {
     assertTrue(out.toString().contains("\t[-getDestination <path>]"));
     out.reset();
 
+    argv = new String[] {"-refreshRouterArgs"};
+    assertEquals(-1, ToolRunner.run(admin, argv));
+    assertTrue(out.toString().contains("\t[-refreshRouterArgs " +
+            "<host:ipc_port> <key> [arg1..argn]]"));
+    out.reset();
+
     argv = new String[] {"-Random"};
     assertEquals(-1, ToolRunner.run(admin, argv));
     String expected = "Usage: hdfs dfsrouteradmin :\n"
@@ -588,15 +844,114 @@ public class TestRouterAdminCLI {
         + " [-faulttolerant true|false] "
         + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
         + "-owner <owner> -group <group> -mode <mode>]\n" + "\t[-rm <source>]\n"
-        + "\t[-ls <path>]\n"
+        + "\t[-ls [-d] <path>]\n"
         + "\t[-getDestination <path>]\n"
-        + "\t[-setQuota <path> -nsQuota <nsQuota> -ssQuota "
-        + "<quota in bytes or quota size string>]\n" + "\t[-clrQuota <path>]\n"
+        + "\t[-setQuota <path> -nsQuota <nsQuota> -ssQuota"
+        + " <quota in bytes or quota size string>]\n"
+        + "\t[-setStorageTypeQuota <path> -storageType <storage type>"
+        + " <quota in bytes or quota size string>]\n"
+        + "\t[-clrQuota <path>]\n"
+        + "\t[-clrStorageTypeQuota <path>]\n"
         + "\t[-safemode enter | leave | get]\n"
         + "\t[-nameservice enable | disable <nameservice>]\n"
-        + "\t[-getDisabledNameservices]";
+        + "\t[-getDisabledNameservices]\n"
+        + "\t[-refresh]\n"
+        + "\t[-refreshRouterArgs <host:ipc_port> <key> [arg1..argn]]";
     assertTrue("Wrong message: " + out, out.toString().contains(expected));
     out.reset();
+  }
+
+  /**
+   * Test command -setStorageTypeQuota with wrong arguments.
+   */
+  @Test
+  public void testWrongArgumentsWhenSetStorageTypeQuota() throws Exception {
+    String src = "/type-QuotaMounttable";
+    // verify wrong arguments.
+    System.setErr(new PrintStream(err));
+    String[] argv =
+        new String[] {"-setStorageTypeQuota", src, "check", "c2", "c3"};
+    ToolRunner.run(admin, argv);
+    assertTrue(err.toString().contains("Invalid argument : check"));
+  }
+
+  /**
+   * Test command -setStorageTypeQuota.
+   */
+  @Test
+  public void testSetStorageTypeQuota() throws Exception {
+    String nsId = "ns0";
+    String src = "/type-QuotaMounttable";
+    String dest = "/type-QuotaMounttable";
+    try {
+      addMountTable(src, nsId, dest);
+
+      // verify the default quota.
+      MountTable mountTable = getMountTable(src).get(0);
+      RouterQuotaUsage quotaUsage = mountTable.getQuota();
+      for (StorageType t : StorageType.values()) {
+        assertEquals(RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT,
+            quotaUsage.getTypeConsumed(t));
+        assertEquals(HdfsConstants.QUOTA_RESET, quotaUsage.getTypeQuota(t));
+      }
+
+      // set storage type quota.
+      long ssQuota = 100;
+      setStorageTypeQuota(src, ssQuota, StorageType.DISK);
+
+      // verify if the quota is set
+      mountTable = getMountTable(src).get(0);
+      quotaUsage = mountTable.getQuota();
+      assertEquals(ssQuota, quotaUsage.getTypeQuota(StorageType.DISK));
+    } finally {
+      rmMountTable(src);
+    }
+  }
+
+  /**
+   * Test command -clrStorageTypeQuota.
+   */
+  @Test
+  public void testClearStorageTypeQuota() throws Exception {
+    String nsId = "ns0";
+    String src = "/type-QuotaMounttable";
+    String src1 = "/type-QuotaMounttable1";
+    String dest = "/type-QuotaMounttable";
+    String dest1 = "/type-QuotaMounttable1";
+    long ssQuota = 100;
+    try {
+      // add mount points.
+      addMountTable(src, nsId, dest);
+      addMountTable(src1, nsId, dest1);
+
+      // set storage type quota to src and src1.
+      setStorageTypeQuota(src, ssQuota, StorageType.DISK);
+      assertEquals(ssQuota,
+          getMountTable(src).get(0).getQuota().getTypeQuota(StorageType.DISK));
+      setStorageTypeQuota(src1, ssQuota, StorageType.DISK);
+      assertEquals(ssQuota,
+          getMountTable(src1).get(0).getQuota().getTypeQuota(StorageType.DISK));
+
+      // clrQuota of src and src1.
+      assertEquals(0, ToolRunner
+          .run(admin, new String[] {"-clrStorageTypeQuota", src, src1}));
+      stateStore.loadCache(MountTableStoreImpl.class, true);
+
+      // Verify whether the storage type quotas are cleared.
+      List<MountTable> mountTables = getMountTable("/");
+      for (int i = 0; i < 2; i++) {
+        MountTable mountTable = mountTables.get(i);
+        RouterQuotaUsage quotaUsage = mountTable.getQuota();
+        for (StorageType t : StorageType.values()) {
+          assertEquals(RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT,
+              quotaUsage.getTypeConsumed(t));
+          assertEquals(HdfsConstants.QUOTA_RESET, quotaUsage.getTypeQuota(t));
+        }
+      }
+    } finally {
+      rmMountTable(src);
+      rmMountTable(src1);
+    }
   }
 
   @Test
@@ -671,9 +1026,7 @@ public class TestRouterAdminCLI {
 
     // verify multi args ClrQuota
     String dest1 = "/QuotaMounttable1";
-    // Add mount table entries.
-    argv = new String[] {"-add", src, nsId, dest};
-    assertEquals(0, ToolRunner.run(admin, argv));
+    // Add one more mount table entry.
     argv = new String[] {"-add", src1, nsId, dest1};
     assertEquals(0, ToolRunner.run(admin, argv));
 
@@ -691,6 +1044,8 @@ public class TestRouterAdminCLI {
     assertEquals(0, ToolRunner.run(admin, argv));
 
     stateStore.loadCache(MountTableStoreImpl.class, true);
+
+    getRequest = GetMountTableEntriesRequest.newInstance("/");
     getResponse =
         client.getMountTableManager().getMountTableEntries(getRequest);
 
@@ -785,6 +1140,43 @@ public class TestRouterAdminCLI {
     out.reset();
     assertEquals(0, ToolRunner.run(admin, new String[] {"-safemode", "get" }));
     assertTrue(out.toString().contains("false"));
+  }
+
+  @Test
+  public void testSafeModePermission() throws Exception {
+    // ensure the Router become RUNNING state
+    waitState(RouterServiceState.RUNNING);
+    assertFalse(routerContext.getRouter().getSafemodeService().isInSafeMode());
+
+    UserGroupInformation superUser = UserGroupInformation.createRemoteUser(
+        UserGroupInformation.getCurrentUser().getShortUserName());
+    UserGroupInformation remoteUser = UserGroupInformation
+        .createRemoteUser(TEST_USER);
+    try {
+      // use normal user as current user to test
+      UserGroupInformation.setLoginUser(remoteUser);
+      assertEquals(-1,
+          ToolRunner.run(admin, new String[]{"-safemode", "enter"}));
+
+      // set back login user
+      UserGroupInformation.setLoginUser(superUser);
+      assertEquals(0,
+          ToolRunner.run(admin, new String[]{"-safemode", "enter"}));
+
+      // use normal user as current user to test
+      UserGroupInformation.setLoginUser(remoteUser);
+      assertEquals(-1,
+          ToolRunner.run(admin, new String[]{"-safemode", "leave"}));
+
+      // set back login user
+      UserGroupInformation.setLoginUser(superUser);
+      assertEquals(0,
+          ToolRunner.run(admin, new String[]{"-safemode", "leave"}));
+    } finally {
+      // set back login user to make sure it doesn't pollute other unit tests
+      // even this one fails.
+      UserGroupInformation.setLoginUser(superUser);
+    }
   }
 
   @Test
@@ -1137,6 +1529,55 @@ public class TestRouterAdminCLI {
   }
 
   @Test
+  public void testUpdateReadonlyWithQuota() throws Exception {
+    // Add a mount table
+    String nsId = "ns0";
+    String src = "/test-updateReadonlywithQuota";
+    String dest = "/UpdateReadonlywithQuota";
+    String[] argv = new String[] {"-add", src, nsId, dest };
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
+        .newInstance(src);
+    GetMountTableEntriesResponse getResponse = client.getMountTableManager()
+        .getMountTableEntries(getRequest);
+    // Ensure mount table added successfully
+    MountTable mountTable = getResponse.getEntries().get(0);
+    assertEquals(src, mountTable.getSourcePath());
+    RemoteLocation localDest = mountTable.getDestinations().get(0);
+    assertEquals(nsId, localDest.getNameserviceId());
+    assertEquals(dest, localDest.getDest());
+    assertFalse(mountTable.isReadOnly());
+
+    argv = new String[] {"-update", src, nsId, dest, "-readonly", "true" };
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    getResponse = client.getMountTableManager()
+        .getMountTableEntries(getRequest);
+    mountTable = getResponse.getEntries().get(0);
+    assertTrue(mountTable.isReadOnly());
+
+    // Update Quota
+    long nsQuota = 50;
+    long ssQuota = 100;
+    argv = new String[] {"-setQuota", src, "-nsQuota", String.valueOf(nsQuota),
+        "-ssQuota", String.valueOf(ssQuota) };
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    getResponse = client.getMountTableManager()
+        .getMountTableEntries(getRequest);
+
+    mountTable = getResponse.getEntries().get(0);
+    RouterQuotaUsage quota = mountTable.getQuota();
+    assertEquals(nsQuota, quota.getQuota());
+    assertEquals(ssQuota, quota.getSpaceQuota());
+    assertTrue(mountTable.isReadOnly());
+  }
+
+  @Test
   public void testUpdateOrderMountTable() throws Exception {
     testUpdateOrderMountTable(DestinationOrder.HASH);
     testUpdateOrderMountTable(DestinationOrder.LOCAL);
@@ -1291,5 +1732,34 @@ public class TestRouterAdminCLI {
     argv = new String[] {"-add", "/mntft", "ns0,ns1", "/tmp",
         "-order", "HASH_ALL", "-faulttolerant"};
     assertEquals(0, ToolRunner.run(admin, argv));
+  }
+
+  private void addMountTable(String src, String nsId, String dst)
+      throws Exception {
+    String[] argv = new String[] {"-add", src, nsId, dst};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+  }
+
+  private List<MountTable> getMountTable(String src) throws IOException {
+    GetMountTableEntriesRequest getRequest =
+        GetMountTableEntriesRequest.newInstance(src);
+    GetMountTableEntriesResponse getResponse =
+        client.getMountTableManager().getMountTableEntries(getRequest);
+    return getResponse.getEntries();
+  }
+
+  private void setStorageTypeQuota(String src, long ssQuota, StorageType type)
+      throws Exception {
+    assertEquals(0, ToolRunner.run(admin,
+        new String[] {"-setStorageTypeQuota", src, "-storageType", type.name(),
+            String.valueOf(ssQuota)}));
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+  }
+
+  private void rmMountTable(String src) throws Exception {
+    String[] argv = new String[] {"-rm", src};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    stateStore.loadCache(MountTableStoreImpl.class, true);
   }
 }

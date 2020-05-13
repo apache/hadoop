@@ -120,6 +120,20 @@ Deployment
 To enable consistent reads from Observer NameNode, you'll need to add a
 few configurations to your **hdfs-site.xml**:
 
+*  **dfs.namenode.state.context.enabled** - to enable NameNode to maintain
+   and update server state and id.
+
+   This will lead to NameNode creating alignment context instance, which
+   keeps track of current server state id. Server state id will be carried
+   back to client. It is disabled by default to optimize performance of
+   Observer read cases. But this is **required to be turned on**
+   for the Observer NameNode feature.
+
+        <property>
+           <name>dfs.namenode.state.context.enabled</name>
+           <value>true</value>
+        </property>
+
 *  **dfs.ha.tail-edits.in-progress** - to enable fast tailing on
    in-progress edit logs.
 
@@ -140,11 +154,31 @@ few configurations to your **hdfs-site.xml**:
    If too large, RPC time will increase as client requests will wait
    longer in the RPC queue before Observer tails edit logs and catches
    up the latest state of Active. The default value is 1min. It is
-   **highly recommend** to configure this to a much lower value.
+   **highly recommend** to configure this to a much lower value. It is also
+   recommended to configure backoff to be enabled when using low values; please
+   see below.
 
         <property>
           <name>dfs.ha.tail-edits.period</name>
           <value>0ms</value>
+        </property>
+
+*  **dfs.ha.tail-edits.period.backoff-max** - whether the Standby/Observer
+   NameNodes should perform backoff when tailing edits.
+
+   This determines the behavior of a Standby/Observer when it attempts to
+   tail edits from the JournalNodes and finds no edits available. This is a
+   common situation when the edit tailing period is very low, but the cluster
+   is not heavily loaded. Without this configuration, such a situation will
+   cause high utilization on the Standby/Observer as it constantly attempts to
+   read edits even though there are none available. With this configuration
+   enabled, exponential backoff will be performed when an edit tail attempt
+   returns 0 edits. This configuration specifies the maximum time to wait
+   between edit tailing attempts.
+
+        <property>
+          <name>dfs.ha.tail-edits.period.backoff-max</name>
+          <value>10s</value>
         </property>
 
 *  **dfs.journalnode.edit-cache-size.bytes** - the in-memory cache size,
@@ -159,6 +193,21 @@ few configurations to your **hdfs-site.xml**:
           <name>dfs.journalnode.edit-cache-size.bytes</name>
           <value>1048576</value>
         </property>
+
+*  **dfs.namenode.accesstime.precision** -- whether to enable access
+   time for HDFS file.
+
+   It is **highly recommended** to disable this configuration. If
+   enabled, this will turn a `getBlockLocations` call into a write call,
+   as it needs to hold write lock to update the time for the opened
+   file. Therefore, the request will fail on all Observer NameNodes and fall
+   back to the active eventually. As result, RPC performance will degrade.
+
+        <property>
+          <name>dfs.namenode.accesstime.precision</name>
+          <value>0</value>
+        </property>
+
 
 ### New administrative command
 
@@ -175,10 +224,10 @@ Observer NameNode, which transition it to the standby state.
 
 **NOTE**: the feature for Observer NameNode to participate in failover
 is not implemented yet. Therefore, as described in the next section, you
-should only use **transitionToObserver** to bring up an observer and put
-it outside the ZooKeeper controlled failover group. You should not use
-**transitionToStandby** since the host for the Observer NameNode cannot
-have ZKFC running.
+should only use **transitionToObserver** to bring up an observer. ZKFC
+could be turned on the Observer NameNode, but it doesn't do anything when
+the NameNode is in Observer state. ZKFC will participate in the election of
+Active after the NameNode is transitioned to standby state.
 
 ### Deployment details
 
@@ -191,9 +240,11 @@ on the intensity of read requests and HA requirements.
 
 Note that currently Observer NameNode doesn't integrate fully when
 automatic failover is enabled. If the
-**dfs.ha.automatic-failover.enabled** is turned on, you'll also need to
-disable ZKFC on the namenode for observer. In addition to that, you'll
-also need to add **forcemanual** flag to the **transitionToObserver**
+**dfs.ha.automatic-failover.enabled** is turned on, the only benefit for
+running ZKFC on Observer NameNode is that it will automatically join election
+of Active after you transition the NameNode to Standby. If this is not desired,
+you can disable ZKFC on the Observer NameNode. In addition to that, you'll also
+need to add **forcemanual** flag to the **transitionToObserver**
 command:
 
     haadmin -transitionToObserver -forcemanual

@@ -61,13 +61,10 @@ public abstract class HdfsAuditLogger implements AuditLogger {
    * @param dtSecretManager The token secret manager, or null if not logging
    *          token tracking information
    */
-  public void logAuditEvent(boolean succeeded, String userName,
+  public abstract void logAuditEvent(boolean succeeded, String userName,
       InetAddress addr, String cmd, String src, String dst,
       FileStatus stat, CallerContext callerContext, UserGroupInformation ugi,
-      DelegationTokenSecretManager dtSecretManager) {
-    logAuditEvent(succeeded, userName, addr, cmd, src, dst, stat,
-                  ugi, dtSecretManager);
-  }
+      DelegationTokenSecretManager dtSecretManager);
 
   /**
    * Same as

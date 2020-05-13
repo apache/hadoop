@@ -36,6 +36,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
+import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3ARetryPolicy;
@@ -225,7 +226,7 @@ public class SessionTokenBinding extends AbstractDelegationTokenBinding {
         "Session Token Binding",
         new MarshalledCredentialProvider(
             SESSION_TOKEN,
-            getFileSystem().getUri(),
+            getStoreContext().getFsURI(),
             getConfig(),
             marshalledCredentials,
             MarshalledCredentials.CredentialTypeRequired.SessionOnly));
@@ -297,11 +298,12 @@ public class SessionTokenBinding extends AbstractDelegationTokenBinding {
     hasSessionCreds = parentCredentials instanceof AWSSessionCredentials;
 
     if (!hasSessionCreds) {
-      LOG.info("Creating STS client for {}", getDescription());
+      LOG.debug("Creating STS client for {}", getDescription());
 
       invoker = new Invoker(new S3ARetryPolicy(conf), LOG_EVENT);
       ClientConfiguration awsConf =
-          S3AUtils.createAwsConf(conf, uri.getHost());
+          S3AUtils.createAwsConf(conf, uri.getHost(),
+              Constants.AWS_SERVICE_IDENTIFIER_STS);
       AWSSecurityTokenService tokenService =
           STSClientFactory.builder(parentAuthChain,
               awsConf,
@@ -351,7 +353,8 @@ public class SessionTokenBinding extends AbstractDelegationTokenBinding {
   @Retries.RetryTranslated
   public SessionTokenIdentifier createTokenIdentifier(
       final Optional<RoleModel.Policy> policy,
-      final EncryptionSecrets encryptionSecrets) throws IOException {
+      final EncryptionSecrets encryptionSecrets,
+      final Text renewer) throws IOException {
     requireServiceStarted();
 
     final MarshalledCredentials marshalledCredentials;
@@ -382,11 +385,12 @@ public class SessionTokenBinding extends AbstractDelegationTokenBinding {
       }
     }
     return new SessionTokenIdentifier(getKind(),
-        getOwnerText(),
-        getCanonicalUri(),
-        marshalledCredentials,
-        encryptionSecrets,
-        origin);
+         getOwnerText(),
+         renewer,
+         getCanonicalUri(),
+         marshalledCredentials,
+         encryptionSecrets,
+         origin);
   }
 
   @Override

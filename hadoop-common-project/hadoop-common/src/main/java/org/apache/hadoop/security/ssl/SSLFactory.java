@@ -72,7 +72,7 @@ public class SSLFactory implements ConnectionConfigurator {
   public static final String SSL_ENABLED_PROTOCOLS_KEY =
       "hadoop.ssl.enabled.protocols";
   public static final String SSL_ENABLED_PROTOCOLS_DEFAULT =
-      "TLSv1.1,TLSv1.2";
+      "TLSv1.2";
 
   public static final String SSL_SERVER_NEED_CLIENT_AUTH =
       "ssl.server.need.client.auth";

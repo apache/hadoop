@@ -184,45 +184,45 @@ public class NNStorageRetentionManager {
    * @return the transaction ID corresponding to the oldest checkpoint
    * that should be retained. 
    */
-  private long getImageTxIdToRetain(FSImageTransactionalStorageInspector inspector) {
-      
-    List<FSImageFile> images = inspector.getFoundImages();
-    TreeSet<Long> imageTxIds = Sets.newTreeSet();
+  private long getImageTxIdToRetain(
+      FSImageTransactionalStorageInspector inspector) {
+
+    final List<FSImageFile> images = inspector.getFoundImages();
+    if (images.isEmpty()) {
+      return 0L;
+    }
+
+    TreeSet<Long> imageTxIds = Sets.newTreeSet(Collections.reverseOrder());
     for (FSImageFile image : images) {
       imageTxIds.add(image.getCheckpointTxId());
     }
-    
+
     List<Long> imageTxIdsList = Lists.newArrayList(imageTxIds);
-    if (imageTxIdsList.isEmpty()) {
-      return 0;
-    }
-    
-    Collections.reverse(imageTxIdsList);
-    int toRetain = Math.min(numCheckpointsToRetain, imageTxIdsList.size());    
+    int toRetain = Math.min(numCheckpointsToRetain, imageTxIdsList.size());
     long minTxId = imageTxIdsList.get(toRetain - 1);
-    LOG.info("Going to retain " + toRetain + " images with txid >= " +
-        minTxId);
+    LOG.info("Going to retain {} images with txid >= {}", toRetain, minTxId);
     return minTxId;
   }
-  
+
   /**
    * Interface responsible for disposing of old checkpoints and edit logs.
    */
-  static interface StoragePurger {
+  interface StoragePurger {
     void purgeLog(EditLogFile log);
     void purgeImage(FSImageFile image);
+    void markStale(EditLogFile log);
   }
   
   static class DeletionStoragePurger implements StoragePurger {
     @Override
     public void purgeLog(EditLogFile log) {
-      LOG.info("Purging old edit log " + log);
+      LOG.info("Purging old edit log {}", log);
       deleteOrWarn(log.getFile());
     }
 
     @Override
     public void purgeImage(FSImageFile image) {
-      LOG.info("Purging old image " + image);
+      LOG.info("Purging old image {}", image);
       deleteOrWarn(image.getFile());
       deleteOrWarn(MD5FileUtils.getDigestFileForFile(image.getFile()));
     }
@@ -231,8 +231,18 @@ public class NNStorageRetentionManager {
       if (!file.delete()) {
         // It's OK if we fail to delete something -- we'll catch it
         // next time we swing through this directory.
-        LOG.warn("Could not delete " + file);
+        LOG.warn("Could not delete {}", file);
       }      
+    }
+
+    public void markStale(EditLogFile log){
+      try {
+        log.moveAsideStaleInprogressFile();
+      } catch (IOException e) {
+        // It is ok to just log the rename failure and go on, we will try next
+        // time just as with deletions.
+        LOG.warn("Could not mark {} as stale", log, e);
+      }
     }
   }
 

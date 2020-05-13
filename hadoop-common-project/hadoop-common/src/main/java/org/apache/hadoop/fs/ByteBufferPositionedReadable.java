@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -55,6 +56,8 @@ public interface ByteBufferPositionedReadable {
    * <p>
    * Implementations should treat 0-length requests as legitimate, and must not
    * signal an error upon their receipt.
+   * <p>
+   * This does not change the current offset of a file, and is thread-safe.
    *
    * @param position position within file
    * @param buf the ByteBuffer to receive the results of the read operation.
@@ -63,4 +66,25 @@ public interface ByteBufferPositionedReadable {
    * @throws IOException if there is some error performing the read
    */
   int read(long position, ByteBuffer buf) throws IOException;
+
+  /**
+   * Reads {@code buf.remaining()} bytes into buf from a given position in
+   * the file or until the end of the data was reached before the read
+   * operation completed. Callers should use {@code buf.limit(...)} to
+   * control the size of the desired read and {@code buf.position(...)} to
+   * control the offset into the buffer the data should be written to.
+   * <p>
+   * This operation provides similar semantics to
+   * {@link #read(long, ByteBuffer)}, the difference is that this method is
+   * guaranteed to read data until the {@link ByteBuffer} is full, or until
+   * the end of the data stream is reached.
+   *
+   * @param position position within file
+   * @param buf the ByteBuffer to receive the results of the read operation.
+   * @throws IOException if there is some error performing the read
+   * @throws EOFException the end of the data was reached before
+   * the read operation completed
+   * @see #read(long, ByteBuffer)
+   */
+  void readFully(long position, ByteBuffer buf) throws IOException;
 }

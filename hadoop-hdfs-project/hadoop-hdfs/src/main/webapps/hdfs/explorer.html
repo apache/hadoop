@@ -19,8 +19,8 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <link rel="stylesheet" type="text/css" href="/static/bootstrap-3.3.7/css/bootstrap.min.css" />
-    <link rel="stylesheet" type="text/css" href="/static/bootstrap-3.3.7/css/bootstrap-editable.css"/>
+    <link rel="stylesheet" type="text/css" href="/static/bootstrap-3.4.1/css/bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="/static/bootstrap-3.4.1/css/bootstrap-editable.css"/>
     <link rel="stylesheet" type="text/css" href="/static/dataTables.bootstrap.css" />
     <link rel="stylesheet" type="text/css" href="/static/hadoop.css" />
     <title>Browsing HDFS</title>
@@ -172,7 +172,7 @@
   </div>
 
       <div class="row">
-      <div class="col-xs-10 col-md-10">
+      <div class="col-xs-9 col-md-9">
         <form onsubmit="return false;">
           <div class="input-group">
             <input type="text" class="form-control" id="directory"/>
@@ -182,7 +182,7 @@
           </div>
         </form>
       </div>
-      <div class="col-xs-2 col-md-2">
+      <div class="col-xs-3 col-md-3">
         <button type="button" class="btn btn-default" data-toggle="modal"
           aria-label="New Directory" data-target="#btn-create-directory"
           title="Create Directory" id="btn-create-dir">
@@ -199,6 +199,10 @@
           <li><a id="explorer-cut">Cut</a></li>
           <li><a id="explorer-paste">Paste</a></li>
         </ul>
+        <button type="button" class="btn btn-default"  data-toggle="modal"
+          aria-label="Parent Directory" title="Parent Directory" id="parentDir">
+          <span class="glyphicon glyphicon-level-up"></span>
+        </button>
       </div>
     </div>
 
@@ -306,10 +310,10 @@
         </ul>
       </p>
     </script>
-    <script type="text/javascript" src="/static/jquery-3.3.1.min.js">
+    <script type="text/javascript" src="/static/jquery-3.4.1.min.js">
     </script><script type="text/javascript" src="/static/jquery.dataTables.min.js">
-    </script><script type="text/javascript" src="/static/bootstrap-3.3.7/js/bootstrap.min.js">
-    </script><script type="text/javascript" src="/static/bootstrap-3.3.7/js/bootstrap-editable.min.js">
+    </script><script type="text/javascript" src="/static/bootstrap-3.4.1/js/bootstrap.min.js">
+    </script><script type="text/javascript" src="/static/bootstrap-3.4.1/js/bootstrap-editable.min.js">
     </script><script type="text/javascript" src="/static/dataTables.bootstrap.js">
     </script><script type="text/javascript" src="/static/dust-full-2.0.0.min.js">
     </script><script type="text/javascript" src="/static/dust-helpers-1.1.1.min.js">

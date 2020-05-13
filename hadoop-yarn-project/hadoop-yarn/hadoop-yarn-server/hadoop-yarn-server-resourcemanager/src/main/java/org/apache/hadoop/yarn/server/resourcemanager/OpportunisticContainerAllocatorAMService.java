@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.yarn.server.metrics.OpportunisticSchedulerMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.distributed.CentralizedOpportunisticContainerAllocator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -37,7 +38,6 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.DistributedSchedulingAMProtocol;
 import org.apache.hadoop.yarn.api.impl.pb.service.ApplicationMasterProtocolPBServiceImpl;
 
@@ -76,7 +76,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretMan
 
 import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerAllocator;
 import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerContext;
-import org.apache.hadoop.yarn.server.utils.YarnServerSecurityUtils;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -102,7 +101,7 @@ public class OpportunisticContainerAllocatorAMService
   private final NodeQueueLoadMonitor nodeMonitor;
   private final OpportunisticContainerAllocator oppContainerAllocator;
 
-  private final int k;
+  private final int numNodes;
 
   private final long cacheRefreshInterval;
   private volatile List<RemoteNode> cachedNodes;
@@ -175,7 +174,7 @@ public class OpportunisticContainerAllocatorAMService
 
       if (!appAttempt.getApplicationAttemptId().equals(appAttemptId)){
         LOG.error("Calling allocate on previous or removed or non "
-            + "existent application attempt " + appAttemptId);
+            + "existent application attempt {}", appAttemptId);
         return;
       }
 
@@ -233,10 +232,7 @@ public class OpportunisticContainerAllocatorAMService
         YarnConfiguration.OPP_CONTAINER_MAX_ALLOCATIONS_PER_AM_HEARTBEAT,
         YarnConfiguration.
             DEFAULT_OPP_CONTAINER_MAX_ALLOCATIONS_PER_AM_HEARTBEAT);
-    this.oppContainerAllocator = new OpportunisticContainerAllocator(
-        rmContext.getContainerTokenSecretManager(),
-        maxAllocationsPerAMHeartbeat);
-    this.k = rmContext.getYarnConfiguration().getInt(
+    this.numNodes = rmContext.getYarnConfiguration().getInt(
         YarnConfiguration.OPP_CONTAINER_ALLOCATION_NODES_NUMBER_USED,
         YarnConfiguration.DEFAULT_OPP_CONTAINER_ALLOCATION_NODES_NUMBER_USED);
     long nodeSortInterval = rmContext.getYarnConfiguration().getLong(
@@ -253,7 +249,7 @@ public class OpportunisticContainerAllocatorAMService
                     DEFAULT_NM_CONTAINER_QUEUING_LOAD_COMPARATOR));
 
     NodeQueueLoadMonitor topKSelector =
-        new NodeQueueLoadMonitor(nodeSortInterval, comparator);
+        new NodeQueueLoadMonitor(nodeSortInterval, comparator, numNodes);
 
     float sigma = rmContext.getYarnConfiguration()
         .getFloat(YarnConfiguration.NM_CONTAINER_QUEUING_LIMIT_STDEV,
@@ -285,6 +281,10 @@ public class OpportunisticContainerAllocatorAMService
 
     topKSelector.initThresholdCalculator(sigma, limitMin, limitMax);
     this.nodeMonitor = topKSelector;
+    this.oppContainerAllocator =
+        new CentralizedOpportunisticContainerAllocator(
+            rmContext.getContainerTokenSecretManager(),
+            maxAllocationsPerAMHeartbeat, nodeMonitor);
   }
 
   @Override
@@ -372,6 +372,14 @@ public class OpportunisticContainerAllocatorAMService
   }
 
   @Override
+  protected void serviceStop() throws Exception {
+    if (nodeMonitor != null) {
+      nodeMonitor.stop();
+    }
+    super.serviceStop();
+  }
+
+  @Override
   public void handle(SchedulerEvent event) {
     switch (event.getType()) {
     case NODE_ADDED:
@@ -438,12 +446,12 @@ public class OpportunisticContainerAllocatorAMService
     // <-- IGNORED EVENTS : END -->
     default:
       LOG.error("Unknown event arrived at" +
-          "OpportunisticContainerAllocatorAMService: " + event.toString());
+          "OpportunisticContainerAllocatorAMService: {}", event);
     }
 
   }
 
-  public QueueLimitCalculator getNodeManagerQueueLimitCalculator() {
+  QueueLimitCalculator getNodeManagerQueueLimitCalculator() {
     return nodeMonitor.getThresholdCalculator();
   }
 
@@ -453,7 +461,7 @@ public class OpportunisticContainerAllocatorAMService
     if ((currTime - lastCacheUpdateTime > cacheRefreshInterval)
         || (cachedNodes == null)) {
       cachedNodes = convertToRemoteNodes(
-          this.nodeMonitor.selectLeastLoadedNodes(this.k));
+          this.nodeMonitor.selectLeastLoadedNodes(this.numNodes));
       if (cachedNodes.size() > 0) {
         lastCacheUpdateTime = currTime;
       }
@@ -482,13 +490,5 @@ public class OpportunisticContainerAllocatorAMService
       return rNode;
     }
     return null;
-  }
-
-  private static ApplicationAttemptId getAppAttemptId() throws YarnException {
-    AMRMTokenIdentifier amrmTokenIdentifier =
-        YarnServerSecurityUtils.authorizeRequest();
-    ApplicationAttemptId applicationAttemptId =
-        amrmTokenIdentifier.getApplicationAttemptId();
-    return applicationAttemptId;
   }
 }

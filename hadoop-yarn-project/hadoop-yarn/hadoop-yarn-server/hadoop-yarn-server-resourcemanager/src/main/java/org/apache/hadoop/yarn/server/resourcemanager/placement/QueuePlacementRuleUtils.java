@@ -23,6 +23,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ManagedParentQueue;
+
 import java.io.IOException;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
@@ -36,27 +37,31 @@ public final class QueuePlacementRuleUtils {
 
   public static final String PRIMARY_GROUP_MAPPING = "%primary_group";
 
+  public static final String SECONDARY_GROUP_MAPPING = "%secondary_group";
+
   private QueuePlacementRuleUtils() {
   }
 
-  private static void validateQueueMappingUnderParentQueue(CSQueue parentQueue,
-      String parentQueueName, String leafQueueName) throws IOException {
+  public static void validateQueueMappingUnderParentQueue(
+            CSQueue parentQueue, String parentQueueName,
+            String leafQueuePath) throws IOException {
     if (parentQueue == null) {
       throw new IOException(
-          "mapping contains invalid or non-leaf queue [" + leafQueueName
+          "mapping contains invalid or non-leaf queue [" + leafQueuePath
               + "] and invalid parent queue [" + parentQueueName + "]");
     } else if (!(parentQueue instanceof ManagedParentQueue)) {
-      throw new IOException("mapping contains leaf queue [" + leafQueueName
+      throw new IOException("mapping contains leaf queue [" + leafQueuePath
           + "] and invalid parent queue which "
           + "does not have auto creation of leaf queues enabled ["
           + parentQueueName + "]");
-    } else if (!parentQueue.getQueueName().equals(parentQueueName)) {
+    } else if (!parentQueue.getQueueShortName().equals(parentQueueName)
+        && !parentQueue.getQueuePath().equals(parentQueueName)) {
       throw new IOException(
-          "mapping contains invalid or non-leaf queue [" + leafQueueName
+          "mapping contains invalid or non-leaf queue [" + leafQueuePath
               + "] and invalid parent queue "
               + "which does not match existing leaf queue's parent : ["
               + parentQueueName + "] does not match [ " + parentQueue
-              .getQueueName() + "]");
+              .getQueueShortName() + "]");
     }
   }
 
@@ -68,9 +73,9 @@ public final class QueuePlacementRuleUtils {
       // then it should exist and be an instance of ManagedParentQueue
       validateQueueMappingUnderParentQueue(queueManager.getQueue(
           queuePath.getParentQueue()), queuePath.getParentQueue(),
-          queuePath.getLeafQueue());
+          queuePath.getFullPath());
       return new QueueMappingEntity(mapping.getSource(),
-          queuePath.getLeafQueue(), queuePath.getParentQueue());
+          queuePath.getFullPath(), queuePath.getParentQueue());
     }
 
     return null;
@@ -81,7 +86,8 @@ public final class QueuePlacementRuleUtils {
       QueueMappingEntity mapping, QueuePath queuePath) throws IOException {
     if (!(queue instanceof LeafQueue)) {
       throw new IOException(
-          "mapping contains invalid or non-leaf queue : " + mapping.getQueue());
+          "mapping contains invalid or non-leaf queue : " +
+          mapping.getFullPath());
     }
 
     if (queue instanceof AutoCreatedLeafQueue && queue
@@ -91,7 +97,8 @@ public final class QueuePlacementRuleUtils {
           queueManager, mapping, queuePath);
       if (newMapping == null) {
         throw new IOException(
-            "mapping contains invalid or non-leaf queue " + mapping.getQueue());
+            "mapping contains invalid or non-leaf queue " +
+            mapping.getFullPath());
       }
       return newMapping;
     }
@@ -100,31 +107,40 @@ public final class QueuePlacementRuleUtils {
 
   public static boolean isStaticQueueMapping(QueueMappingEntity mapping) {
     return !mapping.getQueue().contains(CURRENT_USER_MAPPING) && !mapping
-        .getQueue().contains(PRIMARY_GROUP_MAPPING);
+        .getQueue().contains(PRIMARY_GROUP_MAPPING)
+        && !mapping.getQueue().contains(SECONDARY_GROUP_MAPPING);
   }
 
-  public static QueuePath extractQueuePath(String queueName)
-      throws IOException {
-    int parentQueueNameEndIndex = queueName.lastIndexOf(DOT);
+  public static QueuePath extractQueuePath(String queuePath) {
+    int parentQueueNameEndIndex = queuePath.lastIndexOf(DOT);
 
     if (parentQueueNameEndIndex > -1) {
-      final String parentQueue = queueName.substring(0, parentQueueNameEndIndex)
+      final String parentQueue = queuePath.substring(0, parentQueueNameEndIndex)
           .trim();
-      final String leafQueue = queueName.substring(parentQueueNameEndIndex + 1)
+      final String leafQueue = queuePath.substring(parentQueueNameEndIndex + 1)
           .trim();
       return new QueuePath(parentQueue, leafQueue);
     }
 
-    return new QueuePath(queueName);
+    return new QueuePath(queuePath);
   }
 
   public static ApplicationPlacementContext getPlacementContext(
-      QueueMappingEntity mapping) {
-    return getPlacementContext(mapping, mapping.getQueue());
+      QueueMappingEntity mapping, CapacitySchedulerQueueManager queueManager)
+      throws IOException {
+    return getPlacementContext(mapping, mapping.getQueue(), queueManager);
   }
 
   public static ApplicationPlacementContext getPlacementContext(
-      QueueMappingEntity mapping, String leafQueueName) {
+      QueueMappingEntity mapping, String leafQueueName,
+      CapacitySchedulerQueueManager queueManager) throws IOException {
+
+    //leafQueue name no longer identifies a queue uniquely checking ambiguity
+    if (!mapping.hasParentQueue() && queueManager.isAmbiguous(leafQueueName)) {
+      throw new IOException("mapping contains ambiguous leaf queue reference " +
+          leafQueueName);
+    }
+
     if (!org.apache.commons.lang3.StringUtils.isEmpty(mapping.getParentQueue())) {
       return new ApplicationPlacementContext(leafQueueName,
           mapping.getParentQueue());

@@ -21,7 +21,7 @@
  * Please see http://wiki.apache.org/hadoop/Compatibility
  * for what changes are allowed for a *stable* .proto interface.
  */
-
+syntax="proto2";
 // This file contains protocol buffers that are used throughout HDFS -- i.e.
 // by the client, server, and data transfer protocols.
 
@@ -140,6 +140,7 @@ message GetVolumeReportResponseProto {
 
 message TriggerBlockReportRequestProto {
   required bool incremental = 1;
+  optional string nnAddress = 2;
 }
 
 message TriggerBlockReportResponseProto {

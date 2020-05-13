@@ -17,16 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Random;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -47,12 +37,22 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.hdfs.util.Canceler;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.slf4j.event.Level;
-
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.event.Level;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Random;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Test FSImage save/load when Snapshot is supported
@@ -64,7 +64,7 @@ public class TestFSImageWithSnapshot {
   }
 
   static final long seed = 0;
-  static final short NUM_DATANODES = 3;
+  static final short NUM_DATANODES = 1;
   static final int BLOCKSIZE = 1024;
   static final long txid = 1;
 
@@ -142,7 +142,8 @@ public class TestFSImageWithSnapshot {
   private File saveFSImageToTempFile() throws IOException {
     SaveNamespaceContext context = new SaveNamespaceContext(fsn, txid,
         new Canceler());
-    FSImageFormatProtobuf.Saver saver = new FSImageFormatProtobuf.Saver(context);
+    FSImageFormatProtobuf.Saver saver = new FSImageFormatProtobuf.Saver(context,
+        conf);
     FSImageCompression compression = FSImageCompression.createCompression(conf);
     File imageFile = getImageFile(testDir, txid);
     fsn.readLock();
@@ -507,6 +508,143 @@ public class TestFSImageWithSnapshot {
     cluster.shutdown();
     cluster = new MiniDFSCluster.Builder(conf).format(false)
         .numDataNodes(NUM_DATANODES).build();
+    cluster.waitActive();
+    fsn = cluster.getNamesystem();
+    hdfs = cluster.getFileSystem();
+  }
+
+  void rename(Path src, Path dst) throws Exception {
+    printTree("Before rename " + src + " -> " + dst);
+    hdfs.rename(src, dst);
+    printTree("After rename " + src + " -> " + dst);
+  }
+
+  void createFile(Path directory, String filename) throws Exception {
+    final Path f = new Path(directory, filename);
+    DFSTestUtil.createFile(hdfs, f, 0, NUM_DATANODES, seed);
+  }
+
+  void appendFile(Path directory, String filename) throws Exception {
+    final Path f = new Path(directory, filename);
+    DFSTestUtil.appendFile(hdfs, f, "more data");
+    printTree("appended " + f);
+  }
+
+  void deleteSnapshot(Path directory, String snapshotName) throws Exception {
+    hdfs.deleteSnapshot(directory, snapshotName);
+    printTree("deleted snapshot " + snapshotName);
+  }
+
+  @Test (timeout=60000)
+  public void testDoubleRename() throws Exception {
+    final Path parent = new Path("/parent");
+    hdfs.mkdirs(parent);
+    final Path sub1 = new Path(parent, "sub1");
+    final Path sub1foo = new Path(sub1, "foo");
+    hdfs.mkdirs(sub1);
+    hdfs.mkdirs(sub1foo);
+    createFile(sub1foo, "file0");
+
+    printTree("before s0");
+    hdfs.allowSnapshot(parent);
+    hdfs.createSnapshot(parent, "s0");
+
+    createFile(sub1foo, "file1");
+    createFile(sub1foo, "file2");
+
+    final Path sub2 = new Path(parent, "sub2");
+    hdfs.mkdirs(sub2);
+    final Path sub2foo = new Path(sub2, "foo");
+    // mv /parent/sub1/foo to /parent/sub2/foo
+    rename(sub1foo, sub2foo);
+
+    hdfs.createSnapshot(parent, "s1");
+    hdfs.createSnapshot(parent, "s2");
+    printTree("created snapshots: s1, s2");
+
+    appendFile(sub2foo, "file1");
+    createFile(sub2foo, "file3");
+
+    final Path sub3 = new Path(parent, "sub3");
+    hdfs.mkdirs(sub3);
+    // mv /parent/sub2/foo to /parent/sub3/foo
+    rename(sub2foo, sub3);
+
+    hdfs.delete(sub3,  true);
+    printTree("deleted " + sub3);
+
+    deleteSnapshot(parent, "s1");
+    restartCluster();
+
+    deleteSnapshot(parent, "s2");
+    restartCluster();
+  }
+
+  void restartCluster() throws Exception {
+    final File before = dumpTree2File("before.txt");
+
+    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.saveNamespace();
+    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+
+    cluster.shutdown();
+    cluster = new MiniDFSCluster.Builder(conf).format(false)
+        .numDataNodes(NUM_DATANODES).build();
+    cluster.waitActive();
+    fsn = cluster.getNamesystem();
+    hdfs = cluster.getFileSystem();
+    final File after = dumpTree2File("after.txt");
+    SnapshotTestHelper.compareDumpedTreeInFile(before, after, true);
+  }
+
+  private final PrintWriter output = new PrintWriter(System.out, true);
+  private int printTreeCount = 0;
+
+  String printTree(String label) throws Exception {
+    output.println();
+    output.println();
+    output.println("***** " + printTreeCount++ + ": " + label);
+    final String b =
+        fsn.getFSDirectory().getINode("/").dumpTreeRecursively().toString();
+    output.println(b);
+    return b;
+  }
+
+  @Test (timeout=60000)
+  public void testFSImageWithDoubleRename() throws Exception {
+    final Path dir1 = new Path("/dir1");
+    final Path dir2 = new Path("/dir2");
+    hdfs.mkdirs(dir1);
+    hdfs.mkdirs(dir2);
+    Path dira = new Path(dir1, "dira");
+    Path dirx = new Path(dir1, "dirx");
+    Path dirb = new Path(dira, "dirb");
+    hdfs.mkdirs(dira);
+    hdfs.mkdirs(dirb);
+    hdfs.mkdirs(dirx);
+    hdfs.allowSnapshot(dir1);
+    hdfs.createSnapshot(dir1, "s0");
+    Path file1 = new Path(dirb, "file1");
+    DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, (short) 1, seed);
+    Path rennamePath = new Path(dirx, "dirb");
+    // mv /dir1/dira/dirb to /dir1/dirx/dirb
+    hdfs.rename(dirb, rennamePath);
+    hdfs.createSnapshot(dir1, "s1");
+    DFSTestUtil.appendFile(hdfs, new Path("/dir1/dirx/dirb/file1"),
+            "more data");
+    Path renamePath1 = new Path(dir2, "dira");
+    hdfs.mkdirs(renamePath1);
+    //mv dirx/dirb to /dir2/dira/dirb
+    hdfs.rename(rennamePath, renamePath1);
+    hdfs.delete(renamePath1, true);
+    hdfs.deleteSnapshot(dir1, "s1");
+    // save namespace and restart cluster
+    hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    hdfs.saveNamespace();
+    hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    cluster.shutdown();
+    cluster = new MiniDFSCluster.Builder(conf).format(false)
+            .numDataNodes(NUM_DATANODES).build();
     cluster.waitActive();
     fsn = cluster.getNamesystem();
     hdfs = cluster.getFileSystem();

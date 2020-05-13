@@ -76,6 +76,8 @@ public class AuditReplayThread extends Thread {
   // and merge them all together at the end.
   private Map<REPLAYCOUNTERS, Counter> replayCountersMap = new HashMap<>();
   private Map<String, Counter> individualCommandsMap = new HashMap<>();
+  private Map<UserCommandKey, CountTimeWritable> commandLatencyMap
+      = new HashMap<>();
 
   AuditReplayThread(Mapper.Context mapperContext,
       DelayQueue<AuditReplayCommand> queue,
@@ -120,6 +122,14 @@ public class AuditReplayThread extends Thread {
     for (Map.Entry<String, Counter> ent : individualCommandsMap.entrySet()) {
       context.getCounter(INDIVIDUAL_COMMANDS_COUNTER_GROUP, ent.getKey())
           .increment(ent.getValue().getValue());
+    }
+  }
+
+  void drainCommandLatencies(Mapper.Context context)
+      throws InterruptedException, IOException {
+    for (Map.Entry<UserCommandKey, CountTimeWritable> ent
+        : commandLatencyMap.entrySet()) {
+      context.write(ent.getKey(), ent.getValue());
     }
   }
 
@@ -279,6 +289,14 @@ public class AuditReplayThread extends Thread {
         throw new RuntimeException("Unexpected command: " + replayCommand);
       }
       long latency = System.currentTimeMillis() - startTime;
+
+      UserCommandKey userCommandKey = new UserCommandKey(command.getSimpleUgi(),
+          replayCommand.toString(), replayCommand.getType().toString());
+      commandLatencyMap.putIfAbsent(userCommandKey, new CountTimeWritable());
+      CountTimeWritable latencyWritable = commandLatencyMap.get(userCommandKey);
+      latencyWritable.setCount(latencyWritable.getCount() + 1);
+      latencyWritable.setTime(latencyWritable.getTime() + latency);
+
       switch (replayCommand.getType()) {
       case WRITE:
         replayCountersMap.get(REPLAYCOUNTERS.TOTALWRITECOMMANDLATENCY)

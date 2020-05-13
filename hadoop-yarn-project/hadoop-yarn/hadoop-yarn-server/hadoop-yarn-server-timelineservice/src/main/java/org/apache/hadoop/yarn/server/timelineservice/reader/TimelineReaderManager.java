@@ -206,7 +206,7 @@ public class TimelineReaderManager extends AbstractService {
   public Set<String> getEntityTypes(TimelineReaderContext context)
       throws IOException{
     context.setClusterId(getClusterID(context.getClusterId(), getConfig()));
-    return reader.getEntityTypes(new TimelineReaderContext(context));
+    return reader.getEntityTypes(context);
   }
 
   /**

@@ -204,6 +204,11 @@ function set_defaults
   DOCKERFILE="${BASEDIR}/dev-support/docker/Dockerfile"
   DOCKERRAN=false
 
+  CPU_ARCH=$(echo "$MACHTYPE" | cut -d- -f1)
+  if [ "$CPU_ARCH" = "aarch64" ]; then
+    DOCKERFILE="${BASEDIR}/dev-support/docker/Dockerfile_aarch64"
+  fi
+
   # Extract Java version from ${BASEDIR}/pom.xml
   # doing this outside of maven means we can do this before
   # the docker container comes up...
@@ -249,7 +254,9 @@ function startgpgagent
       eval $("${GPGAGENT}" --daemon \
         --options "${LOGDIR}/gpgagent.conf" \
         --log-file="${LOGDIR}/create-release-gpgagent.log")
-      GPGAGENTPID=$(echo "${GPG_AGENT_INFO}" | cut -f 2 -d:)
+      GPGAGENTPID=$(pgrep "${GPGAGENT}")
+      GPG_AGENT_INFO="$HOME/.gnupg/S.gpg-agent:$GPGAGENTPID:1"
+      export GPG_AGENT_INFO
     fi
 
     if [[ -n "${GPG_AGENT_INFO}" ]]; then
@@ -499,7 +506,12 @@ function dockermode
 
     # we always force build with the OpenJDK JDK
     # but with the correct version
-    echo "ENV JAVA_HOME /usr/lib/jvm/java-${JVM_VERSION}-openjdk-amd64"
+    if [ "$CPU_ARCH" = "aarch64" ]; then
+      echo "ENV JAVA_HOME /usr/lib/jvm/java-${JVM_VERSION}-openjdk-arm64"
+    else
+      echo "ENV JAVA_HOME /usr/lib/jvm/java-${JVM_VERSION}-openjdk-amd64"
+    fi
+
     echo "USER ${user_name}"
     printf "\n\n"
   ) | docker build -t "${imgname}" -
@@ -639,10 +651,12 @@ function signartifacts
 
   big_console_header "Signing the release"
 
-  for i in ${ARTIFACTS_DIR}/*; do
+  run cd "${ARTIFACTS_DIR}"
+  for i in *; do
     ${GPG} --use-agent --armor --output "${i}.asc" --detach-sig "${i}"
-    ${GPG} --print-mds "${i}" > "${i}.mds"
+    sha512sum --tag "${i}" > "${i}.sha512"
   done
+  run cd "${BASEDIR}"
 
   if [[ "${ASFRELEASE}" = true ]]; then
     echo "Fetching the Apache Hadoop KEYS file..."

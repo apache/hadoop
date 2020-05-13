@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugi
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -44,7 +45,6 @@ import org.slf4j.LoggerFactory;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -65,11 +65,32 @@ public class ResourcePluginManager {
 
   private DeviceMappingManager deviceMappingManager = null;
 
-  public synchronized void initialize(Context context)
+  public void initialize(Context context)
       throws YarnException, ClassNotFoundException {
     Configuration conf = context.getConf();
-    Map<String, ResourcePlugin> pluginMap = new HashMap<>();
+    String[] plugins = getPluginsFromConfig(conf);
 
+    Map<String, ResourcePlugin> pluginMap = Maps.newHashMap();
+    if (plugins != null) {
+      pluginMap = initializePlugins(conf, context, plugins);
+    }
+
+    // Try to load pluggable device plugins
+    boolean pluggableDeviceFrameworkEnabled = conf.getBoolean(
+        YarnConfiguration.NM_PLUGGABLE_DEVICE_FRAMEWORK_ENABLED,
+        YarnConfiguration.DEFAULT_NM_PLUGGABLE_DEVICE_FRAMEWORK_ENABLED);
+
+    if (pluggableDeviceFrameworkEnabled) {
+      initializePluggableDevicePlugins(context, conf, pluginMap);
+    } else {
+      LOG.info("The pluggable device framework is not enabled."
+              + " If you want, please set true to {}",
+          YarnConfiguration.NM_PLUGGABLE_DEVICE_FRAMEWORK_ENABLED);
+    }
+    configuredPlugins = Collections.unmodifiableMap(pluginMap);
+  }
+
+  private String[] getPluginsFromConfig(Configuration conf) {
     String[] plugins = conf.getStrings(YarnConfiguration.NM_RESOURCE_PLUGINS);
     if (plugins == null || plugins.length == 0) {
       LOG.info("No Resource plugins found from configuration!");
@@ -77,30 +98,23 @@ public class ResourcePluginManager {
     LOG.info("Found Resource plugins from configuration: "
         + Arrays.toString(plugins));
 
-    if (plugins != null) {
-      // Initialize each plugins
-      for (String resourceName : plugins) {
-        resourceName = resourceName.trim();
-        if (!SUPPORTED_RESOURCE_PLUGINS.contains(resourceName)) {
-          String msg =
-              "Trying to initialize resource plugin with name=" + resourceName
-                  + ", it is not supported, list of supported plugins:"
-                  + StringUtils.join(",", SUPPORTED_RESOURCE_PLUGINS);
-          LOG.error(msg);
-          throw new YarnException(msg);
-        }
+    return plugins;
+  }
 
-        if (pluginMap.containsKey(resourceName)) {
-          LOG.warn("Ignoring duplicate Resource plugin definition: " +
-              resourceName);
-          continue;
-        }
+  private Map<String, ResourcePlugin> initializePlugins(Configuration conf,
+      Context context, String[] plugins) throws YarnException {
+    Map<String, ResourcePlugin> pluginMap = Maps.newHashMap();
 
+    for (String resourceName : plugins) {
+      resourceName = resourceName.trim();
+      ensurePluginIsSupported(resourceName);
+
+      if (!isPluginDuplicate(pluginMap, resourceName)) {
         ResourcePlugin plugin = null;
         if (resourceName.equals(GPU_URI)) {
           final GpuDiscoverer gpuDiscoverer = new GpuDiscoverer();
           final GpuNodeResourceUpdateHandler updateHandler =
-              new GpuNodeResourceUpdateHandler(gpuDiscoverer);
+              new GpuNodeResourceUpdateHandler(gpuDiscoverer, conf);
           plugin = new GpuResourcePlugin(updateHandler, gpuDiscoverer);
         } else if (resourceName.equals(FPGA_URI)) {
           plugin = new FpgaResourcePlugin();
@@ -116,19 +130,29 @@ public class ResourcePluginManager {
         pluginMap.put(resourceName, plugin);
       }
     }
-    // Try to load pluggable device plugins
-    boolean puggableDeviceFrameworkEnabled = conf.getBoolean(
-        YarnConfiguration.NM_PLUGGABLE_DEVICE_FRAMEWORK_ENABLED,
-        YarnConfiguration.DEFAULT_NM_PLUGGABLE_DEVICE_FRAMEWORK_ENABLED);
+    return pluginMap;
+  }
 
-    if (puggableDeviceFrameworkEnabled) {
-      initializePluggableDevicePlugins(context, conf, pluginMap);
-    } else {
-      LOG.info("The pluggable device framework is not enabled."
-              + " If you want, please set true to {}",
-          YarnConfiguration.NM_PLUGGABLE_DEVICE_FRAMEWORK_ENABLED);
+  private void ensurePluginIsSupported(String resourceName)
+      throws YarnException {
+    if (!SUPPORTED_RESOURCE_PLUGINS.contains(resourceName)) {
+      String msg =
+          "Trying to initialize resource plugin with name=" + resourceName
+              + ", it is not supported, list of supported plugins:"
+              + StringUtils.join(",", SUPPORTED_RESOURCE_PLUGINS);
+      LOG.error(msg);
+      throw new YarnException(msg);
     }
-    configuredPlugins = Collections.unmodifiableMap(pluginMap);
+  }
+
+  private boolean isPluginDuplicate(Map<String, ResourcePlugin> pluginMap,
+      String resourceName) {
+    if (pluginMap.containsKey(resourceName)) {
+      LOG.warn("Ignoring duplicate Resource plugin definition: " +
+          resourceName);
+      return true;
+    }
+    return false;
   }
 
   public void initializePluggableDevicePlugins(Context context,
@@ -274,7 +298,7 @@ public class ResourcePluginManager {
     return deviceMappingManager;
   }
 
-  public synchronized void cleanup() throws YarnException {
+  public void cleanup() throws YarnException {
     for (ResourcePlugin plugin : configuredPlugins.values()) {
       plugin.cleanup();
     }

@@ -399,7 +399,7 @@ public class DiskBalancer {
 
     if ((planID == null) ||
         (planID.length() != sha1Length) ||
-        !DigestUtils.shaHex(plan.getBytes(Charset.forName("UTF-8")))
+        !DigestUtils.sha1Hex(plan.getBytes(Charset.forName("UTF-8")))
             .equalsIgnoreCase(planID)) {
       LOG.error("Disk Balancer - Invalid plan hash.");
       throw new DiskBalancerException("Invalid or mis-matched hash.",

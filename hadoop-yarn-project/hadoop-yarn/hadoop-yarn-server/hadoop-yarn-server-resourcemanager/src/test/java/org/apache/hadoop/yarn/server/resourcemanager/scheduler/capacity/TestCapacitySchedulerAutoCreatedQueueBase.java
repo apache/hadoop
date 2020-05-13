@@ -20,11 +20,11 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.RandomUtils;
+import org.apache.hadoop.security.Groups;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.security.GroupMappingServiceProvider;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.TestGroupsCaching;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -39,13 +39,15 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels
     .NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.placement
     .ApplicationPlacementContext;
-import org.apache.hadoop.yarn.server.resourcemanager.placement
-    .UserGroupMappingPlacementRule;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.QueueMappingBuilder;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
@@ -64,8 +66,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event
     .AppAttemptAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event
     .SchedulerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
-    .SimpleGroupsMapping;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
@@ -113,21 +113,31 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
   public static final String C = CapacitySchedulerConfiguration.ROOT + ".c";
   public static final String D = CapacitySchedulerConfiguration.ROOT + ".d";
   public static final String E = CapacitySchedulerConfiguration.ROOT + ".e";
+  public static final String ASUBGROUP1 =
+      CapacitySchedulerConfiguration.ROOT + ".esubgroup1";
+  public static final String AGROUP =
+      CapacitySchedulerConfiguration.ROOT + ".fgroup";
   public static final String A1 = A + ".a1";
   public static final String A2 = A + ".a2";
   public static final String B1 = B + ".b1";
   public static final String B2 = B + ".b2";
   public static final String B3 = B + ".b3";
+  public static final String B4 = B + ".b4subgroup1";
+  public static final String ASUBGROUP1_A = ASUBGROUP1 + ".e";
+  public static final String AGROUP_A = AGROUP + ".f";
   public static final float A_CAPACITY = 20f;
-  public static final float B_CAPACITY = 40f;
+  public static final float B_CAPACITY = 20f;
   public static final float C_CAPACITY = 20f;
   public static final float D_CAPACITY = 20f;
+  public static final float ASUBGROUP1_CAPACITY = 10f;
+  public static final float AGROUP_CAPACITY = 10f;
+
   public static final float A1_CAPACITY = 30;
   public static final float A2_CAPACITY = 70;
   public static final float B1_CAPACITY = 60f;
   public static final float B2_CAPACITY = 20f;
-  public static final float B3_CAPACITY = 20f;
-
+  public static final float B3_CAPACITY = 10f;
+  public static final float B4_CAPACITY = 10f;
   public static final int NODE_MEMORY = 16;
 
   public static final int NODE1_VCORES = 16;
@@ -136,6 +146,10 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
 
   public static final String TEST_GROUP = "testusergroup";
   public static final String TEST_GROUPUSER = "testuser";
+  public static final String TEST_GROUP1 = "testusergroup1";
+  public static final String TEST_GROUPUSER1 = "testuser1";
+  public static final String TEST_GROUP2 = "testusergroup2";
+  public static final String TEST_GROUPUSER2 = "testuser2";
   public static final String USER = "user_";
   public static final String USER0 = USER + 0;
   public static final String USER1 = USER + 1;
@@ -258,19 +272,19 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     queuePlacementRules.add(YarnConfiguration.USER_GROUP_PLACEMENT_RULE);
     conf.setQueuePlacementRules(queuePlacementRules);
 
-    List<UserGroupMappingPlacementRule.QueueMapping> existingMappings =
-        conf.getQueueMappings();
+    List<QueueMapping> existingMappings = conf.getQueueMappings();
 
     //set queue mapping
-    List<UserGroupMappingPlacementRule.QueueMapping> queueMappings =
-        new ArrayList<>();
+    List<QueueMapping> queueMappings = new ArrayList<>();
     for (int i = 0; i < userIds.length; i++) {
       //Set C as parent queue name for auto queue creation
-      UserGroupMappingPlacementRule.QueueMapping userQueueMapping =
-          new UserGroupMappingPlacementRule.QueueMapping(
-              UserGroupMappingPlacementRule.QueueMapping.MappingType.USER,
-              USER + userIds[i],
-              getQueueMapping(parentQueue, USER + userIds[i]));
+      QueueMapping userQueueMapping = QueueMappingBuilder.create()
+                                          .type(QueueMapping.MappingType.USER)
+                                          .source(USER + userIds[i])
+                                          .queue(
+                                              getQueueMapping(parentQueue,
+                                                  USER + userIds[i]))
+                                          .build();
       queueMappings.add(userQueueMapping);
     }
 
@@ -285,26 +299,46 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
       (String parentQueue, CapacitySchedulerConfiguration conf, String
           leafQueueName) {
 
-    List<UserGroupMappingPlacementRule.QueueMapping> existingMappings =
-        conf.getQueueMappings();
+    List<QueueMapping> existingMappings = conf.getQueueMappings();
 
     //set queue mapping
-    List<UserGroupMappingPlacementRule.QueueMapping> queueMappings =
-        new ArrayList<>();
+    List<QueueMapping> queueMappings = new ArrayList<>();
 
     //setup group mapping
     conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
         TestGroupsCaching.FakeunPrivilegedGroupMapping.class, ShellBasedUnixGroupsMapping.class);
     conf.set(CommonConfigurationKeys.HADOOP_USER_GROUP_STATIC_OVERRIDES,
-        TEST_GROUPUSER +"=" + TEST_GROUP + ";invalid_user=invalid_group");
+        TEST_GROUPUSER +"=" + TEST_GROUP + ";" + TEST_GROUPUSER1 +"="
+            + TEST_GROUP1 + ";" + TEST_GROUPUSER2 + "=" + TEST_GROUP2 + ";invalid_user=invalid_group");
+    Groups.getUserToGroupsMappingServiceWithLoadedConfiguration(conf);
 
-    UserGroupMappingPlacementRule.QueueMapping userQueueMapping =
-        new UserGroupMappingPlacementRule.QueueMapping(
-            UserGroupMappingPlacementRule.QueueMapping.MappingType.GROUP,
-            TEST_GROUP,
-            getQueueMapping(parentQueue, leafQueueName));
+    QueueMapping userQueueMapping = QueueMappingBuilder.create()
+                                        .type(QueueMapping.MappingType.GROUP)
+                                        .source(TEST_GROUP)
+                                        .queue(
+                                            getQueueMapping(parentQueue,
+                                                leafQueueName))
+                                        .build();
+
+    QueueMapping userQueueMapping1 = QueueMappingBuilder.create()
+        .type(QueueMapping.MappingType.GROUP)
+        .source(TEST_GROUP1)
+        .queue(
+            getQueueMapping(parentQueue,
+                leafQueueName))
+        .build();
+
+    QueueMapping userQueueMapping2 = QueueMappingBuilder.create()
+        .type(QueueMapping.MappingType.GROUP)
+        .source(TEST_GROUP2)
+        .queue(
+            getQueueMapping(parentQueue,
+                leafQueueName))
+        .build();
 
     queueMappings.add(userQueueMapping);
+    queueMappings.add(userQueueMapping1);
+    queueMappings.add(userQueueMapping2);
     existingMappings.addAll(queueMappings);
     conf.setQueueMappings(existingMappings);
     return conf;
@@ -329,12 +363,15 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     // Define top-level queues
     // Set childQueue for root
     conf.setQueues(ROOT,
-        new String[] { "a", "b", "c", "d" });
+        new String[] {"a", "b", "c", "d", "esubgroup1", "esubgroup2", "fgroup",
+            "a1group", "ggroup", "g"});
 
     conf.setCapacity(A, A_CAPACITY);
     conf.setCapacity(B, B_CAPACITY);
     conf.setCapacity(C, C_CAPACITY);
     conf.setCapacity(D, D_CAPACITY);
+    conf.setCapacity(ASUBGROUP1, ASUBGROUP1_CAPACITY);
+    conf.setCapacity(AGROUP, AGROUP_CAPACITY);
 
     // Define 2nd-level queues
     conf.setQueues(A, new String[] { "a1", "a2" });
@@ -343,13 +380,22 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     conf.setCapacity(A2, A2_CAPACITY);
     conf.setUserLimitFactor(A2, 100.0f);
 
-    conf.setQueues(B, new String[] { "b1", "b2", "b3" });
+    conf.setQueues(B, new String[] { "b1", "b2", "b3", "b4subgroup1" });
     conf.setCapacity(B1, B1_CAPACITY);
     conf.setUserLimitFactor(B1, 100.0f);
     conf.setCapacity(B2, B2_CAPACITY);
     conf.setUserLimitFactor(B2, 100.0f);
     conf.setCapacity(B3, B3_CAPACITY);
     conf.setUserLimitFactor(B3, 100.0f);
+    conf.setCapacity(B4, B4_CAPACITY);
+    conf.setUserLimitFactor(B4, 100.0f);
+
+    conf.setQueues(ASUBGROUP1, new String[] {"e"});
+    conf.setCapacity(ASUBGROUP1_A, 100f);
+    conf.setUserLimitFactor(ASUBGROUP1_A, 100.0f);
+    conf.setQueues(AGROUP, new String[] {"f"});
+    conf.setCapacity(AGROUP_A, 100f);
+    conf.setUserLimitFactor(AGROUP_A, 100.0f);
 
     conf.setUserLimitFactor(C, 1.0f);
     conf.setAutoCreateChildQueueEnabled(C, true);
@@ -457,8 +503,8 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     if (queue != null) {
       setEntitlement(queue, new QueueEntitlement(0.0f, 0.0f));
       ((ManagedParentQueue) queue.getParent()).removeChildQueue(
-          queue.getQueueName());
-      cs.getCapacitySchedulerQueueManager().removeQueue(queue.getQueueName());
+          queue.getQueuePath());
+      cs.getCapacitySchedulerQueueManager().removeQueue(queue.getQueuePath());
     }
   }
 
@@ -469,12 +515,19 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     CapacityScheduler capacityScheduler =
         (CapacityScheduler) rm.getResourceScheduler();
     // submit an app
-    RMApp rmApp = rm.submitApp(GB, "test-auto-queue-activation", user, null,
-        leafQueueName);
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("test-auto-queue-activation")
+            .withUser(user)
+            .withAcls(null)
+            .withQueue(leafQueueName)
+            .withUnmanagedAM(false)
+            .build();
+    RMApp rmApp = MockRMAppSubmitter.submit(rm, data);
 
     // check preconditions
     List<ApplicationAttemptId> appsInParentQueue =
-        capacityScheduler.getAppsInQueue(parentQueue.getQueueName());
+        capacityScheduler.getAppsInQueue(parentQueue.getQueuePath());
     assertEquals(expectedNumAppsInParentQueue, appsInParentQueue.size());
 
     List<ApplicationAttemptId> appsInLeafQueue =
@@ -484,13 +537,14 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     return rmApp.getApplicationId();
   }
 
-  protected List<UserGroupMappingPlacementRule.QueueMapping> setupQueueMapping(
+  protected List<QueueMapping> setupQueueMapping(
       CapacityScheduler newCS, String user, String parentQueue, String queue) {
-    List<UserGroupMappingPlacementRule.QueueMapping> queueMappings =
-        new ArrayList<>();
-    queueMappings.add(new UserGroupMappingPlacementRule.QueueMapping(
-        UserGroupMappingPlacementRule.QueueMapping.MappingType.USER, user,
-        getQueueMapping(parentQueue, queue)));
+    List<QueueMapping> queueMappings = new ArrayList<>();
+    queueMappings.add(QueueMappingBuilder.create()
+                          .type(QueueMapping.MappingType.USER)
+                          .source(user)
+                          .queue(getQueueMapping(parentQueue, queue))
+                          .build());
     newCS.getConfiguration().setQueueMappings(queueMappings);
     return queueMappings;
   }
@@ -564,9 +618,15 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
 
   protected RMApp submitApp(String user, String queue, String nodeLabel)
       throws Exception {
-    RMApp app = mockRM.submitApp(GB,
-        "test-auto-queue-creation" + RandomUtils.nextInt(0, 100), user, null,
-        queue, nodeLabel);
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, mockRM)
+            .withAppName("test-auto-queue-creation" + RandomUtils.nextInt(0, 100))
+            .withUser(user)
+            .withAcls(null)
+            .withQueue(queue)
+            .withAmLabel(nodeLabel)
+            .build();
+    RMApp app = MockRMAppSubmitter.submit(mockRM, data);
     Assert.assertEquals(app.getAmNodeLabelExpression(), nodeLabel);
     // check preconditions
     List<ApplicationAttemptId> appsInC = cs.getAppsInQueue(PARENT_QUEUE);
@@ -775,8 +835,8 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     boolean found = false;
 
     for (QueueManagementChange entitlementChange : queueEntitlementChanges) {
-      if (leafQueue.getQueueName().equals(
-          entitlementChange.getQueue().getQueueName())) {
+      if (leafQueue.getQueuePath().equals(
+          entitlementChange.getQueue().getQueuePath())) {
 
         AutoCreatedLeafQueueConfig updatedQueueTemplate =
             entitlementChange.getUpdatedQueueTemplate();
@@ -797,7 +857,7 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     if (!found) {
       fail(
           "Could not find the specified leaf queue in entitlement changes : "
-              + leafQueue.getQueueName());
+              + leafQueue.getQueuePath());
     }
   }
 

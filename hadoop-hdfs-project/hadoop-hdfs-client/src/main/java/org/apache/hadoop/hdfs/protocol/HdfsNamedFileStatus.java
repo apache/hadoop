@@ -95,7 +95,7 @@ public class HdfsNamedFileStatus extends FileStatus implements HdfsFileStatus {
 
   @Override
   public boolean isSymlink() {
-    return uSymlink != null;
+    return uSymlink != null && uSymlink.length > 0;
   }
 
   @Override

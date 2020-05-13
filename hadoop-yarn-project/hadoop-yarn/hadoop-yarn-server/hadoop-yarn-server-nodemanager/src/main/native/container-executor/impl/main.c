@@ -26,6 +26,8 @@
 #include "modules/cgroups/cgroups-operations.h"
 #include "modules/devices/devices-module.h"
 #include "utils/string-utils.h"
+#include "runc/runc.h"
+#include "runc/runc_reap.h"
 
 #include <errno.h>
 #include <grp.h>
@@ -35,45 +37,33 @@
 #include <signal.h>
 
 static void display_usage(FILE *stream) {
+  const char* disabled = "[DISABLED]";
+  const char* enabled  = "      ";
+
+  fputs("Usage: container-executor --checksetup\n"
+        "       container-executor --mount-cgroups <hierarchy> "
+        "<controller=path>...\n", stream);
+
+  const char* de = is_tc_support_enabled() ? enabled : disabled;
   fprintf(stream,
-    "Usage: container-executor --checksetup\n"
-    "       container-executor --mount-cgroups <hierarchy> "
-    "<controller=path>\n" );
+      "%s container-executor --tc-modify-state <command-file>\n"
+      "%s container-executor --tc-read-state <command-file>\n"
+      "%s container-executor --tc-read-stats <command-file>\n",
+      de, de, de);
 
-  if(is_tc_support_enabled()) {
-    fprintf(stream,
-      "       container-executor --tc-modify-state <command-file>\n"
-      "       container-executor --tc-read-state <command-file>\n"
-      "       container-executor --tc-read-stats <command-file>\n" );
-  } else {
-    fprintf(stream,
-      "[DISABLED] container-executor --tc-modify-state <command-file>\n"
-      "[DISABLED] container-executor --tc-read-state <command-file>\n"
-      "[DISABLED] container-executor --tc-read-stats <command-file>\n");
-  }
+  de = is_terminal_support_enabled() ? enabled : disabled;
+  fprintf(stream, "%s container-executor --exec-container <command-file>\n", de);
 
-  if(is_docker_support_enabled()) {
-    fprintf(stream,
-      "       container-executor --run-docker <command-file>\n"
-      "       container-executor --remove-docker-container [hierarchy] "
-      "<container_id>\n"
-      "       container-executor --inspect-docker-container <container_id>\n");
-  } else {
-    fprintf(stream,
-      "[DISABLED] container-executor --run-docker <command-file>\n"
-      "[DISABLED] container-executor --remove-docker-container [hierarchy] "
-      "<container_id>\n"
-      "[DISABLED] container-executor --inspect-docker-container "
-      "<format> ... <container_id>\n");
-  }
+  de = is_docker_support_enabled() ? enabled : disabled;
+  fprintf(stream, "%s container-executor --run-docker <command-file>\n", de);
+  fprintf(stream, "%s container-executor --remove-docker-container [hierarchy] <container_id>\n", de);
+  fprintf(stream, "%s container-executor --inspect-docker-container <container_id>\n", de);
 
-  if (is_terminal_support_enabled()) {
-    fprintf(stream,
-      "       container-executor --exec-container <command-file>\n");
-  } else {
-    fprintf(stream,
-      "[DISABLED] container-executor --exec-container <command-file>\n");
-  }
+  de = is_runc_support_enabled() ? enabled : disabled;
+  fprintf(stream,
+      "%s container-executor --run-runc-container <command-file>\n", de);
+  fprintf(stream,
+      "%s container-executor --reap-runc-layer-mounts <retain-count>\n", de);
 
   fprintf(stream,
       "       container-executor <user> <yarn-user> <command> <command-args>\n"
@@ -81,32 +71,36 @@ static void display_usage(FILE *stream) {
       "            initialize container:  %2d appid tokens nm-local-dirs "
       "nm-log-dirs cmd app...\n"
       "            launch container:      %2d appid containerid workdir "
-      "container-script tokens pidfile nm-local-dirs nm-log-dirs resources ",
+      "container-script tokens http-option pidfile nm-local-dirs nm-log-dirs resources ",
       INITIALIZE_CONTAINER, LAUNCH_CONTAINER);
 
   if(is_tc_support_enabled()) {
-    fprintf(stream, "optional-tc-command-file\n");
+    fputs("optional-tc-command-file\n", stream);
   } else {
-    fprintf(stream, "\n");
+    fputs("\n", stream);
   }
 
-  if(is_docker_support_enabled()) {
-    fprintf(stream,
-      "            launch docker container:      %2d appid containerid workdir "
-      "container-script tokens pidfile nm-local-dirs nm-log-dirs "
-      "docker-command-file resources ", LAUNCH_DOCKER_CONTAINER);
-  } else {
-    fprintf(stream,
-      "[DISABLED]  launch docker container:      %2d appid containerid workdir "
-      "container-script tokens pidfile nm-local-dirs nm-log-dirs "
-      "docker-command-file resources ", LAUNCH_DOCKER_CONTAINER);
-  }
+  fputs(
+      "                                      where http-option is one of:\n"
+      "                                      --http\n"
+      "                                      --https keystorepath truststorepath\n", stream);
+
+  de = is_docker_support_enabled() ? enabled : disabled;
+  fprintf(stream,
+      "%11s launch docker container:%2d appid containerid workdir "
+      "container-script tokens http-option pidfile nm-local-dirs nm-log-dirs "
+      "docker-command-file resources ", de, LAUNCH_DOCKER_CONTAINER);
 
   if(is_tc_support_enabled()) {
-    fprintf(stream, "optional-tc-command-file\n");
+    fputs("optional-tc-command-file\n", stream);
   } else {
-    fprintf(stream, "\n");
+    fputs("\n", stream);
   }
+
+  fputs(
+      "                                      where http-option is one of:\n"
+      "                                      --http\n"
+      "                                      --https keystorepath truststorepath\n", stream);
 
   fprintf(stream,
       "            signal container:      %2d container-pid signal\n"
@@ -130,10 +124,20 @@ static void display_usage(FILE *stream) {
 static void open_log_files() {
   if (LOGFILE == NULL) {
     LOGFILE = stdout;
+    if (setvbuf(LOGFILE, NULL, _IOLBF, BUFSIZ)) {
+      fprintf(LOGFILE, "Failed to invoke setvbuf() for LOGFILE: %s\n", strerror(errno));
+      fflush(LOGFILE);
+      exit(ERROR_CALLING_SETVBUF);
+    }
   }
 
   if (ERRORFILE == NULL) {
     ERRORFILE = stderr;
+    if (setvbuf(ERRORFILE, NULL, _IOLBF, BUFSIZ)) {
+      fprintf(ERRORFILE, "Failed to invoke setvbuf() for ERRORFILE: %s\n", strerror(errno));
+      fflush(ERRORFILE);
+      exit(ERROR_CALLING_SETVBUF);
+    }
   }
 
   // There may be a process reading from stdout/stderr, and if it
@@ -232,10 +236,9 @@ static void assert_valid_setup(char *argv0) {
 
 static void display_feature_disabled_message(const char* name) {
     fprintf(ERRORFILE, "Feature disabled: %s\n", name);
-    fflush(ERRORFILE);
 }
 
-/* Use to store parsed input parmeters for various operations */
+/* Use to store parsed input parameters for various operations */
 static struct {
   char *cgroups_hierarchy;
   char *traffic_control_command_file;
@@ -258,6 +261,7 @@ static struct {
   const char *target_dir;
   int container_pid;
   int signal;
+  int runc_layer_count;
   const char *command_file;
 } cmd_input;
 
@@ -426,6 +430,44 @@ static int validate_arguments(int argc, char **argv , int *operation) {
     }
   }
 
+  if (strcmp("--run-runc-container", argv[1]) == 0) {
+    if (is_runc_support_enabled()) {
+      if (argc != 3) {
+        display_usage(stdout);
+        return INVALID_ARGUMENT_NUMBER;
+      }
+      optind++;
+      cmd_input.command_file = argv[optind++];
+      *operation = RUN_RUNC_CONTAINER;
+      return 0;
+    } else {
+      display_feature_disabled_message("runc");
+      return FEATURE_DISABLED;
+    }
+  }
+
+  if (strcmp("--reap-runc-layer-mounts", argv[1]) == 0) {
+    if (is_runc_support_enabled()) {
+      if (argc != 3) {
+        display_usage(stdout);
+        return INVALID_ARGUMENT_NUMBER;
+      }
+      optind++;
+      const char* valstr = argv[optind++];
+      if (sscanf(valstr, "%d", &cmd_input.runc_layer_count) != 1
+          || cmd_input.runc_layer_count < 0) {
+        fprintf(ERRORFILE, "Bad runc layer count: %s\n", valstr);
+        return INVALID_COMMAND_PROVIDED;
+      }
+      *operation = REAP_RUNC_LAYER_MOUNTS;
+      return 0;
+    } else {
+      display_feature_disabled_message("runc");
+      return FEATURE_DISABLED;
+    }
+  }
+
+
   /* Now we have to validate 'run as user' operations that don't use
     a 'long option' - we should fix this at some point. The validation/argument
     parsing here is extensive enough that it done in a separate function */
@@ -450,7 +492,6 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
   fprintf(LOGFILE, "main : command provided %d\n", command);
   fprintf(LOGFILE, "main : run as user is %s\n", cmd_input.run_as_user_name);
   fprintf(LOGFILE, "main : requested yarn user is %s\n", cmd_input.yarn_user_name);
-  fflush(LOGFILE);
   char * resources = NULL;// key,value pair describing resources
   char * resources_key = NULL;
   char * resources_value = NULL;
@@ -459,14 +500,12 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
     if (argc < 10) {
       fprintf(ERRORFILE, "Too few arguments (%d vs 10) for initialize container\n",
        argc);
-      fflush(ERRORFILE);
       return INVALID_ARGUMENT_NUMBER;
     }
     cmd_input.app_id = argv[optind++];
     cmd_input.container_id = argv[optind++];
     if (!validate_container_id(cmd_input.container_id)) {
       fprintf(ERRORFILE, "Invalid container id %s\n", cmd_input.container_id);
-      fflush(ERRORFILE);
       return INVALID_CONTAINER_ID;
     }
     cmd_input.cred_file = argv[optind++];
@@ -481,7 +520,6 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
       if (!(argc >= 14 && argc <= 17)) {
         fprintf(ERRORFILE, "Wrong number of arguments (%d vs 14 - 17) for"
           " launch docker container\n", argc);
-        fflush(ERRORFILE);
         return INVALID_ARGUMENT_NUMBER;
       }
 
@@ -525,7 +563,6 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
     if (!(argc >= 14 && argc <= 17)) {
       fprintf(ERRORFILE, "Wrong number of arguments (%d vs 14 - 17)"
         " for launch container\n", argc);
-      fflush(ERRORFILE);
       return INVALID_ARGUMENT_NUMBER;
     }
 
@@ -550,9 +587,8 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
 
     if (get_kv_key(resources, resources_key, strlen(resources)) < 0 ||
         get_kv_value(resources, resources_value, strlen(resources)) < 0) {
-        fprintf(ERRORFILE, "Invalid arguments for cgroups resources: %s",
+        fprintf(ERRORFILE, "Invalid arguments for cgroups resources: %s\n",
                            resources);
-        fflush(ERRORFILE);
         free(resources_key);
         free(resources_value);
         return INVALID_ARGUMENT_NUMBER;
@@ -578,7 +614,6 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
     if (argc != 6) {
       fprintf(ERRORFILE, "Wrong number of arguments (%d vs 6) for " \
           "signal container\n", argc);
-      fflush(ERRORFILE);
       return INVALID_ARGUMENT_NUMBER;
     }
 
@@ -587,14 +622,12 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
     cmd_input.container_pid = strtol(option, &end_ptr, 10);
     if (option == end_ptr || *end_ptr != '\0') {
       fprintf(ERRORFILE, "Illegal argument for container pid %s\n", option);
-      fflush(ERRORFILE);
       return INVALID_ARGUMENT_NUMBER;
     }
     option = argv[optind++];
     cmd_input.signal = strtol(option, &end_ptr, 10);
     if (option == end_ptr || *end_ptr != '\0') {
       fprintf(ERRORFILE, "Illegal argument for signal %s\n", option);
-      fflush(ERRORFILE);
       return INVALID_ARGUMENT_NUMBER;
     }
 
@@ -615,8 +648,7 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
     *operation = RUN_AS_USER_SYNC_YARN_SYSFS;
     return 0;
   default:
-    fprintf(ERRORFILE, "Invalid command %d not supported.",command);
-    fflush(ERRORFILE);
+    fprintf(ERRORFILE, "Invalid command %d not supported.\n",command);
     return INVALID_COMMAND_PROVIDED;
   }
 }
@@ -787,6 +819,21 @@ int main(int argc, char **argv) {
       exit_code = FEATURE_DISABLED;
     }
     break;
+  case RUN_RUNC_CONTAINER:
+    exit_code = run_runc_container(cmd_input.command_file);
+    break;
+  case REAP_RUNC_LAYER_MOUNTS:
+    exit_code = reap_runc_layer_mounts(cmd_input.runc_layer_count);
+    break;
+  default:
+    fprintf(ERRORFILE, "Unexpected operation code: %d\n", operation);
+    exit_code = INVALID_COMMAND_PROVIDED;
+    break;
+  }
+
+  if (exit_code) {
+    fprintf(ERRORFILE, "Nonzero exit code=%d, error message='%s'\n", exit_code,
+            get_error_message(exit_code));
   }
 
   flush_and_close_log_files();

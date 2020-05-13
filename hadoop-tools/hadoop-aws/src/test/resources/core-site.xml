@@ -51,6 +51,12 @@
         managed by s3guard</description>
   </property>
 
+  <property>
+    <name>fs.s3a.bucket.landsat-pds.probe</name>
+    <value>0</value>
+    <description>Let's postpone existence checks to the first IO operation </description>
+  </property>
+
   <!-- Convenience definitions. -->
   <property>
     <name>s3guard.null</name>
@@ -153,11 +159,11 @@
   <!-- Reduce DDB capacity on auto-created tables, to keep bills down. -->
   <property>
     <name>fs.s3a.s3guard.ddb.table.capacity.read</name>
-    <value>10</value>
+    <value>0</value>
   </property>
   <property>
     <name>fs.s3a.s3guard.ddb.table.capacity.write</name>
-    <value>10</value>
+    <value>0</value>
   </property>
 
   <!--

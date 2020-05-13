@@ -61,7 +61,6 @@ static int is_block_device(const char* value) {
   char* block_path = malloc(max_path_size);
   if (block_path == NULL) {
     fprintf(ERRORFILE, "Failed to allocate memory for sys device path string.\n");
-    fflush(ERRORFILE);
     goto cleanup;
   }
   if (snprintf(block_path, max_path_size, "/sys/dev/block/%s",

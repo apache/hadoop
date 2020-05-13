@@ -28,13 +28,12 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerException;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.fpga.FpgaResourceAllocator;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.fpga.FpgaResourceAllocator.FpgaDevice;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga.discovery.AoclOutputBasedDiscoveryStrategy;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga.discovery.FPGADiscoveryStrategy;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga.discovery.ScriptBasedFPGADiscoveryStrategy;
@@ -46,13 +45,12 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 
-public class FpgaDiscoverer {
+public class FpgaDiscoverer extends Configured {
   private static final Logger LOG = LoggerFactory.getLogger(
       FpgaDiscoverer.class);
 
-  private Configuration conf = null;
   private AbstractFpgaVendorPlugin plugin = null;
-  private List<FpgaResourceAllocator.FpgaDevice> currentFpgaInfo = null;
+  private List<FpgaDevice> currentFpgaInfo = null;
 
   private Function<String, Optional<String>> scriptRunner = this::runScript;
 
@@ -62,11 +60,6 @@ public class FpgaDiscoverer {
   @VisibleForTesting
   void setScriptRunner(Function<String, Optional<String>> scriptRunner) {
     this.scriptRunner = scriptRunner;
-  }
-
-  @VisibleForTesting
-  public void setConf(Configuration configuration) {
-    this.conf = configuration;
   }
 
   public List<FpgaDevice> getCurrentFpgaInfo() {
@@ -82,7 +75,7 @@ public class FpgaDiscoverer {
   }
 
   public void initialize(Configuration config) throws YarnException {
-    this.conf = config;
+    setConf(config);
     this.plugin.initPlugin(config);
     // Try to diagnose FPGA
     LOG.info("Trying to diagnose FPGA information ...");
@@ -100,11 +93,11 @@ public class FpgaDiscoverer {
   public List<FpgaDevice> discover()
       throws ResourceHandlerException {
     List<FpgaDevice> list;
-    String allowed = this.conf.get(YarnConfiguration.NM_FPGA_ALLOWED_DEVICES);
+    String allowed = getConf().get(YarnConfiguration.NM_FPGA_ALLOWED_DEVICES);
 
-    String availableDevices = conf.get(
+    String availableDevices = getConf().get(
         YarnConfiguration.NM_FPGA_AVAILABLE_DEVICES);
-    String discoveryScript = conf.get(
+    String discoveryScript = getConf().get(
         YarnConfiguration.NM_FPGA_DEVICE_DISCOVERY_SCRIPT);
 
     FPGADiscoveryStrategy discoveryStrategy;

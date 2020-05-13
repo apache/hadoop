@@ -31,11 +31,15 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.security.AccessControlException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -55,6 +59,7 @@ import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
@@ -197,6 +202,7 @@ public class TestClientRMService {
   
   private final static String QUEUE_1 = "Q-1";
   private final static String QUEUE_2 = "Q-2";
+  private final static String APPLICATION_TAG_SC_PREPROCESSOR ="mytag:foo";
   private File resourceTypesFile = null;
 
   @Test
@@ -588,6 +594,51 @@ public class TestClientRMService {
   }
 
   @Test
+  public void testApplicationTagsValidation() throws IOException {
+    YarnConfiguration conf = new YarnConfiguration();
+    int maxtags = 3, appMaxTagLength = 5;
+    conf.setInt(YarnConfiguration.RM_APPLICATION_MAX_TAGS, maxtags);
+    conf.setInt(YarnConfiguration.RM_APPLICATION_MAX_TAG_LENGTH,
+        appMaxTagLength);
+    MockRM rm = new MockRM(conf);
+    rm.init(conf);
+    rm.start();
+
+    ClientRMService rmService = rm.getClientRMService();
+
+    List<String> tags = Arrays.asList("Tag1", "Tag2", "Tag3", "Tag4");
+    validateApplicationTag(rmService, tags,
+        "Too many applicationTags, a maximum of only " + maxtags
+            + " are allowed!");
+
+    tags = Arrays.asList("ApplicationTag1", "ApplicationTag2",
+        "ApplicationTag3");
+    // tags are converted to lowercase in
+    // ApplicationSubmissionContext#setApplicationTags
+    validateApplicationTag(rmService, tags,
+        "Tag applicationtag1 is too long, maximum allowed length of a tag is "
+            + appMaxTagLength);
+
+    tags = Arrays.asList("tãg1", "tag2#");
+    validateApplicationTag(rmService, tags,
+        "A tag can only have ASCII characters! Invalid tag - tãg1");
+    rm.close();
+  }
+
+  private void validateApplicationTag(ClientRMService rmService,
+      List<String> tags, String errorMsg) {
+    SubmitApplicationRequest submitRequest = mockSubmitAppRequest(
+        getApplicationId(101), MockApps.newAppName(), QUEUE_1,
+        new HashSet<String>(tags));
+    try {
+      rmService.submitApplication(submitRequest);
+      Assert.fail();
+    } catch (Exception ex) {
+      Assert.assertTrue(ex.getMessage().contains(errorMsg));
+    }
+  }
+
+  @Test
   public void testForceKillApplication() throws Exception {
     YarnConfiguration conf = new YarnConfiguration();
     conf.setBoolean(MockRM.ENABLE_WEBAPP, true);
@@ -599,8 +650,12 @@ public class TestClientRMService {
     GetApplicationsRequest getRequest = GetApplicationsRequest.newInstance(
         EnumSet.of(YarnApplicationState.KILLED));
 
-    RMApp app1 = rm.submitApp(1024);
-    RMApp app2 = rm.submitApp(1024, true);
+    RMApp app1 = MockRMAppSubmitter.submitWithMemory(1024, rm);
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
+            .withUnmanagedAM(true)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm, data);
 
     assertEquals("Incorrect number of apps in the RM", 0,
         rmService.getApplications(getRequest).getApplicationList().size());
@@ -975,6 +1030,178 @@ public class TestClientRMService {
     Assert.assertEquals(0, applications1.size());
   }
 
+  @Test (timeout = 30000)
+  @SuppressWarnings ("rawtypes")
+  public void testAppSubmitWithSubmissionPreProcessor() throws Exception {
+    ResourceScheduler scheduler = mockResourceScheduler();
+    RMContext rmContext = mock(RMContext.class);
+    mockRMContext(scheduler, rmContext);
+    YarnConfiguration yConf = new YarnConfiguration();
+    yConf.setBoolean(YarnConfiguration.RM_SUBMISSION_PREPROCESSOR_ENABLED,
+        true);
+    yConf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
+    // Override the YARN configuration.
+    when(rmContext.getYarnConfiguration()).thenReturn(yConf);
+    RMStateStore stateStore = mock(RMStateStore.class);
+    when(rmContext.getStateStore()).thenReturn(stateStore);
+    RMAppManager appManager = new RMAppManager(rmContext, scheduler,
+        null, mock(ApplicationACLsManager.class), new Configuration());
+    when(rmContext.getDispatcher().getEventHandler()).thenReturn(
+        new EventHandler<Event>() {
+          public void handle(Event event) {}
+        });
+    ApplicationId appId1 = getApplicationId(100);
+    ApplicationACLsManager mockAclsManager = mock(ApplicationACLsManager.class);
+    when(
+        mockAclsManager.checkAccess(UserGroupInformation.getCurrentUser(),
+            ApplicationAccessType.VIEW_APP, null, appId1)).thenReturn(true);
+
+    QueueACLsManager mockQueueACLsManager = mock(QueueACLsManager.class);
+    when(mockQueueACLsManager.checkAccess(any(UserGroupInformation.class),
+        any(QueueACL.class), any(RMApp.class), any(String.class),
+        any()))
+        .thenReturn(true);
+
+    ClientRMService rmService =
+        new ClientRMService(rmContext, scheduler, appManager,
+            mockAclsManager, mockQueueACLsManager, null);
+    File rulesFile = File.createTempFile("submission_rules", ".tmp");
+    rulesFile.deleteOnExit();
+    rulesFile.createNewFile();
+
+    yConf.set(YarnConfiguration.RM_SUBMISSION_PREPROCESSOR_FILE_PATH,
+        rulesFile.getAbsolutePath());
+    rmService.serviceInit(yConf);
+    rmService.serviceStart();
+
+    BufferedWriter writer = new BufferedWriter(new FileWriter(rulesFile));
+    writer.write("host.cluster1.com   NL=foo     Q=bar  TA=cluster:cluster1");
+    writer.newLine();
+    writer.write("host.cluster2.com   Q=hello  NL=zuess   TA=cluster:cluster2");
+    writer.newLine();
+    writer.write("host.cluster.*.com   Q=hello  NL=reg   TA=cluster:reg");
+    writer.newLine();
+    writer.write("host.cluster.*.com   Q=hello  NL=reg   TA=cluster:reg");
+    writer.newLine();
+    writer.write("*   TA=cluster:other    Q=default  NL=barfoo");
+    writer.newLine();
+    writer.write("host.testcluster1.com  Q=default");
+    writer.flush();
+    writer.close();
+    rmService.getContextPreProcessor().refresh();
+    setupCurrentCall("host.cluster1.com");
+    SubmitApplicationRequest submitRequest1 = mockSubmitAppRequest(
+        appId1, null, null);
+    try {
+      rmService.submitApplication(submitRequest1);
+    } catch (YarnException e) {
+      Assert.fail("Exception is not expected.");
+    }
+    RMApp app1 = rmContext.getRMApps().get(appId1);
+    Assert.assertNotNull("app doesn't exist", app1);
+    Assert.assertEquals("app name doesn't match",
+        YarnConfiguration.DEFAULT_APPLICATION_NAME, app1.getName());
+    Assert.assertTrue("custom tag not present",
+        app1.getApplicationTags().contains("cluster:cluster1"));
+    Assert.assertEquals("app queue doesn't match", "bar", app1.getQueue());
+    Assert.assertEquals("app node label doesn't match",
+        "foo", app1.getApplicationSubmissionContext().getNodeLabelExpression());
+    setupCurrentCall("host.cluster2.com");
+    ApplicationId appId2 = getApplicationId(101);
+    SubmitApplicationRequest submitRequest2 = mockSubmitAppRequest(
+        appId2, null, null);
+    submitRequest2.getApplicationSubmissionContext().setApplicationType(
+        "matchType");
+    Set<String> aTags = new HashSet<String>();
+    aTags.add(APPLICATION_TAG_SC_PREPROCESSOR);
+    submitRequest2.getApplicationSubmissionContext().setApplicationTags(aTags);
+    try {
+      rmService.submitApplication(submitRequest2);
+    } catch (YarnException e) {
+      Assert.fail("Exception is not expected.");
+    }
+    RMApp app2 = rmContext.getRMApps().get(appId2);
+    Assert.assertNotNull("app doesn't exist", app2);
+    Assert.assertEquals("app name doesn't match",
+        YarnConfiguration.DEFAULT_APPLICATION_NAME, app2.getName());
+    Assert.assertTrue("client tag not present",
+        app2.getApplicationTags().contains(APPLICATION_TAG_SC_PREPROCESSOR));
+    Assert.assertTrue("custom tag not present",
+        app2.getApplicationTags().contains("cluster:cluster2"));
+    Assert.assertEquals("app queue doesn't match", "hello", app2.getQueue());
+    Assert.assertEquals("app node label doesn't match",
+        "zuess",
+        app2.getApplicationSubmissionContext().getNodeLabelExpression());
+    // Test Default commands
+    setupCurrentCall("host2.cluster3.com");
+    ApplicationId appId3 = getApplicationId(102);
+    SubmitApplicationRequest submitRequest3 = mockSubmitAppRequest(
+        appId3, null, null);
+    submitRequest3.getApplicationSubmissionContext().setApplicationType(
+        "matchType");
+    submitRequest3.getApplicationSubmissionContext().setApplicationTags(aTags);
+    try {
+      rmService.submitApplication(submitRequest3);
+    } catch (YarnException e) {
+      Assert.fail("Exception is not expected.");
+    }
+    RMApp app3 = rmContext.getRMApps().get(appId3);
+    Assert.assertNotNull("app doesn't exist", app3);
+    Assert.assertEquals("app name doesn't match",
+        YarnConfiguration.DEFAULT_APPLICATION_NAME, app3.getName());
+    Assert.assertTrue("client tag not present",
+        app3.getApplicationTags().contains(APPLICATION_TAG_SC_PREPROCESSOR));
+    Assert.assertTrue("custom tag not present",
+        app3.getApplicationTags().contains("cluster:other"));
+    Assert.assertEquals("app queue doesn't match", "default", app3.getQueue());
+    Assert.assertEquals("app node label doesn't match",
+        "barfoo",
+        app3.getApplicationSubmissionContext().getNodeLabelExpression());
+    // Test regex
+    setupCurrentCall("host.cluster100.com");
+    ApplicationId appId4 = getApplicationId(103);
+    SubmitApplicationRequest submitRequest4 = mockSubmitAppRequest(
+        appId4, null, null);
+    try {
+      rmService.submitApplication(submitRequest4);
+    } catch (YarnException e) {
+      Assert.fail("Exception is not expected.");
+    }
+    RMApp app4 = rmContext.getRMApps().get(appId4);
+    Assert.assertTrue("custom tag not present",
+        app4.getApplicationTags().contains("cluster:reg"));
+    Assert.assertEquals("app node label doesn't match",
+        "reg", app4.getApplicationSubmissionContext().getNodeLabelExpression());
+    testSubmissionContextWithAbsentTAG(rmService, rmContext);
+    rmService.serviceStop();
+  }
+
+  private void testSubmissionContextWithAbsentTAG(ClientRMService rmService,
+      RMContext rmContext) throws Exception {
+    setupCurrentCall("host.testcluster1.com");
+    ApplicationId appId5 = getApplicationId(104);
+    SubmitApplicationRequest submitRequest5 = mockSubmitAppRequest(
+        appId5, null, null);
+    try {
+      rmService.submitApplication(submitRequest5);
+    } catch (YarnException e) {
+      Assert.fail("Exception is not expected.");
+    }
+    RMApp app5 = rmContext.getRMApps().get(appId5);
+    Assert.assertEquals("custom tag  present",
+        app5.getApplicationTags().size(), 0);
+    Assert.assertNull("app node label present",
+        app5.getApplicationSubmissionContext().getNodeLabelExpression());
+    Assert.assertEquals("Queue name is not present",
+        app5.getQueue(), "default");
+  }
+  private void setupCurrentCall(String hostName) throws UnknownHostException {
+    Server.Call mockCall = mock(Server.Call.class);
+    when(mockCall.getHostInetAddress()).thenReturn(
+                InetAddress.getByAddress(hostName,
+                        new byte[]{123, 123, 123, 123}));
+    Server.getCurCall().set(mockCall);
+  }
   
   @Test (timeout = 30000)
   @SuppressWarnings ("rawtypes")
@@ -2259,7 +2486,11 @@ public class TestClientRMService {
     MockRM rm = new MockRM(conf);
     rm.init(conf);
     rm.start();
-    RMApp app1 = rm.submitApp(1024, Priority.newInstance(appPriority));
+    MockRMAppSubmissionData data = MockRMAppSubmissionData.Builder
+        .createWithMemory(1024, rm)
+        .withAppPriority(Priority.newInstance(appPriority))
+        .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     ClientRMService rmService = rm.getClientRMService();
     testApplicationPriorityUpdation(rmService, app1, appPriority, appPriority);
     rm.killApp(app1.getApplicationId());
@@ -2282,7 +2513,11 @@ public class TestClientRMService {
     rm.start();
     rm.registerNode("host1:1234", 1024);
     // Start app1 with appPriority 5
-    RMApp app1 = rm.submitApp(1024, Priority.newInstance(appPriority));
+    MockRMAppSubmissionData data = MockRMAppSubmissionData.Builder
+        .createWithMemory(1024, rm)
+        .withAppPriority(Priority.newInstance(appPriority))
+        .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
 
     Assert.assertEquals("Incorrect priority has been set to application",
         appPriority, app1.getApplicationPriority().getPriority());

@@ -285,6 +285,7 @@ are allowed. It contains the following properties:
 | `docker.inspect.max.retries` | Integer value to check docker container readiness.  Each inspection is set with 3 seconds delay.  Default value of 10 will wait 30 seconds for docker container to become ready before marked as container failed. |
 | `docker.no-new-privileges.enabled` | Enable/disable the no-new-privileges flag for docker run. Set to "true" to enable, disabled by default. |
 | `docker.allowed.runtimes` | Comma seperated runtimes that containers are allowed to use. By default no runtimes are allowed to be added.|
+| `docker.service-mode.enabled` | Set to "true" or "false" to enable or disable docker container service mode. Default value is "false". |
 
 Please note that if you wish to run Docker containers that require access to the YARN local directories, you must add them to the docker.allowed.rw-mounts list.
 
@@ -436,6 +437,7 @@ environment variables in the application's environment:
 | `YARN_CONTAINER_RUNTIME_DOCKER_TMPFS_MOUNTS` | Adds additional tmpfs mounts to the Docker container. The value of the environment variable should be a comma-separated list of absolute mount points within the container. |
 | `YARN_CONTAINER_RUNTIME_DOCKER_DELAYED_REMOVAL` | Allows a user to request delayed deletion of the Docker container on a per container basis. If true, Docker containers will not be removed until the duration defined by yarn.nodemanager.delete.debug-delay-sec has elapsed. Administrators can disable this feature through the yarn-site property yarn.nodemanager.runtime.linux.docker.delayed-removal.allowed. This feature is disabled by default. When this feature is disabled or set to false, the container will be removed as soon as it exits. |
 | `YARN_CONTAINER_RUNTIME_YARN_SYSFS_ENABLE` | Enable mounting of container working directory sysfs sub-directory into Docker container /hadoop/yarn/sysfs.  This is useful for populating cluster information into container. |
+| `YARN_CONTAINER_RUNTIME_DOCKER_SERVICE_MODE` | Enable Service Mode which runs the docker container as defined by the image but does not set the user (--user and --group-add). |
 
 The first two are required. The remainder can be set as needed. While
 controlling the container type through environment variables is somewhat less
@@ -1080,3 +1082,24 @@ YARN service framework automatically populates cluster information
 to /hadoop/yarn/sysfs/app.json.  For more information about
 YARN service, see: [YARN Service](./yarn-service/Overview.html).
 
+Docker Container Service Mode
+-----------------------------
+
+Docker Container Service Mode runs the container as defined by the image
+but does not set the user (--user and --group-add). This mode is disabled
+by default. The administrator sets docker.service-mode.enabled to true
+in container-executor.cfg under docker section to enable.
+
+Part of a container-executor.cfg which allows docker service mode is below:
+
+```
+yarn.nodemanager.linux-container-executor.group=yarn
+[docker]
+  module.enabled=true
+  docker.privileged-containers.enabled=true
+  docker.service-mode.enabled=true
+```
+
+Application User can enable or disable service mode at job level by exporting
+environment variable YARN_CONTAINER_RUNTIME_DOCKER_SERVICE_MODE in the application's
+environment with value true or false respectively.

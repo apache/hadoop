@@ -18,7 +18,7 @@
 package org.apache.hadoop.hdfs.protocolPB;
 
 
-import com.google.protobuf.UninitializedMessageException;
+import org.apache.hadoop.thirdparty.protobuf.UninitializedMessageException;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
@@ -118,7 +118,7 @@ import org.junit.Test;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 /**
  * Tests for {@link PBHelper}
@@ -910,7 +910,7 @@ public class TestPBHelper {
     b.setFileBufferSize(DFSConfigKeys.IO_FILE_BUFFER_SIZE_DEFAULT);
     b.setEncryptDataTransfer(DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_DEFAULT);
     b.setTrashInterval(DFSConfigKeys.FS_TRASH_INTERVAL_DEFAULT);
-    b.setChecksumType(HdfsProtos.ChecksumTypeProto.valueOf(
+    b.setChecksumType(HdfsProtos.ChecksumTypeProto.forNumber(
         DataChecksum.Type.valueOf(DFSConfigKeys.DFS_CHECKSUM_TYPE_DEFAULT).id));
     HdfsProtos.FsServerDefaultsProto proto = b.build();
 

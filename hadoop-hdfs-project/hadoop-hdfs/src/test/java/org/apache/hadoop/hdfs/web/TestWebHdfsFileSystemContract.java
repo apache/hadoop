@@ -410,8 +410,9 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
     {//test GETHOMEDIRECTORY
       final URL url = webhdfs.toUrl(GetOpParam.Op.GETHOMEDIRECTORY, root);
       final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-      final Map<?, ?> m = WebHdfsTestUtil.connectAndGetJson(
-          conn, HttpServletResponse.SC_OK);
+      assertEquals(WebHdfsTestUtil.sendRequest(conn),
+          HttpServletResponse.SC_OK);
+      final Map<?, ?> m = WebHdfsTestUtil.getAndParseResponse(conn);
       assertEquals(webhdfs.getHomeDirectory().toUri().getPath(),
           m.get(Path.class.getSimpleName()));
       conn.disconnect();

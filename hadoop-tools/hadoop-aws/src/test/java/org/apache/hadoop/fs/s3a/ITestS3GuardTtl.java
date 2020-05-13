@@ -18,9 +18,13 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -30,6 +34,7 @@ import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -54,7 +59,7 @@ public class ITestS3GuardTtl extends AbstractS3ATestBase {
    * Test array for parameterized test runs.
    * @return a list of parameter tuples.
    */
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name = "auth={0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {true}, {false}
@@ -91,6 +96,12 @@ public class ITestS3GuardTtl extends AbstractS3ATestBase {
     return configuration;
   }
 
+  @Override
+  public void setup() throws Exception {
+    super.setup();
+    Assume.assumeTrue(getFileSystem().hasMetadataStore());
+  }
+
   @Test
   public void testDirectoryListingAuthoritativeTtl() throws Exception {
     LOG.info("Authoritative mode: {}", authoritative);
@@ -122,21 +133,30 @@ public class ITestS3GuardTtl extends AbstractS3ATestBase {
 
       // get an authoritative listing in ms
       fs.listStatus(dir);
+
       // check if authoritative
       DirListingMetadata dirListing =
-          S3Guard.listChildrenWithTtl(ms, dir, mockTimeProvider);
+          S3Guard.listChildrenWithTtl(ms, dir, mockTimeProvider, authoritative);
       assertTrue("Listing should be authoritative.",
           dirListing.isAuthoritative());
       // change the time, and assume it's not authoritative anymore
+      // if the metadatastore is not authoritative.
       when(mockTimeProvider.getNow()).thenReturn(102L);
-      dirListing = S3Guard.listChildrenWithTtl(ms, dir, mockTimeProvider);
-      assertFalse("Listing should not be authoritative.",
-          dirListing.isAuthoritative());
+      dirListing = S3Guard.listChildrenWithTtl(ms, dir, mockTimeProvider,
+          authoritative);
+      if (authoritative) {
+        assertTrue("Listing should be authoritative.",
+            dirListing.isAuthoritative());
+      } else {
+        assertFalse("Listing should not be authoritative.",
+            dirListing.isAuthoritative());
+      }
 
       // get an authoritative listing in ms again - retain test
       fs.listStatus(dir);
       // check if authoritative
-      dirListing = S3Guard.listChildrenWithTtl(ms, dir, mockTimeProvider);
+      dirListing = S3Guard.listChildrenWithTtl(ms, dir, mockTimeProvider,
+          authoritative);
       assertTrue("Listing shoud be authoritative after listStatus.",
           dirListing.isAuthoritative());
     } finally {
@@ -178,16 +198,24 @@ public class ITestS3GuardTtl extends AbstractS3ATestBase {
       when(mockTimeProvider.getNow()).thenReturn(110L);
 
       // metadata is expired so this should refresh the metadata with
-      // last_updated to the getNow()
+      // last_updated to the getNow() if the store is not authoritative
       final FileStatus fileExpire1Status = fs.getFileStatus(fileExpire1);
       assertNotNull(fileExpire1Status);
-      assertEquals(110L, ms.get(fileExpire1).getLastUpdated());
+      if (authoritative) {
+        assertEquals(100L, ms.get(fileExpire1).getLastUpdated());
+      } else {
+        assertEquals(110L, ms.get(fileExpire1).getLastUpdated());
+      }
 
       // metadata is expired so this should refresh the metadata with
-      // last_updated to the getNow()
+      // last_updated to the getNow() if the store is not authoritative
       final FileStatus fileExpire2Status = fs.getFileStatus(fileExpire2);
       assertNotNull(fileExpire2Status);
-      assertEquals(110L, ms.get(fileExpire2).getLastUpdated());
+      if (authoritative) {
+        assertEquals(101L, ms.get(fileExpire2).getLastUpdated());
+      } else {
+        assertEquals(110L, ms.get(fileExpire2).getLastUpdated());
+      }
 
       final FileStatus fileRetainStatus = fs.getFileStatus(fileRetain);
       assertEquals("Modification time of these files should be equal.",
@@ -284,6 +312,91 @@ public class ITestS3GuardTtl extends AbstractS3ATestBase {
       fs.delete(dirPath, true);
       fs.setTtlTimeProvider(originalTimeProvider);
     }
+  }
+
+  /**
+   * Test that listing of metadatas is filtered from expired items.
+   */
+  @Test
+  public void testListingFilteredExpiredItems() throws Exception {
+    LOG.info("Authoritative mode: {}", authoritative);
+    final S3AFileSystem fs = getFileSystem();
+
+    long oldTime = 100L;
+    long newTime = 110L;
+    long ttl = 9L;
+    final String basedir = "testListingFilteredExpiredItems";
+    final Path tombstonedPath = path(basedir + "/tombstonedPath");
+    final Path baseDirPath = path(basedir);
+    final List<Path> filesToCreate = new ArrayList<>();
+    final MetadataStore ms = fs.getMetadataStore();
+
+    for (int i = 0; i < 10; i++) {
+      filesToCreate.add(path(basedir + "/file" + i));
+    }
+
+    ITtlTimeProvider mockTimeProvider = mock(ITtlTimeProvider.class);
+    ITtlTimeProvider originalTimeProvider = fs.getTtlTimeProvider();
+
+    try {
+      fs.setTtlTimeProvider(mockTimeProvider);
+      when(mockTimeProvider.getMetadataTtl()).thenReturn(ttl);
+
+      // add and delete entry with the oldtime
+      when(mockTimeProvider.getNow()).thenReturn(oldTime);
+      touch(fs, tombstonedPath);
+      fs.delete(tombstonedPath, false);
+
+      // create items with newTime
+      when(mockTimeProvider.getNow()).thenReturn(newTime);
+      for (Path path : filesToCreate) {
+        touch(fs, path);
+      }
+
+      // listing will contain the tombstone with oldtime
+      when(mockTimeProvider.getNow()).thenReturn(oldTime);
+      final DirListingMetadata fullDLM = getDirListingMetadata(ms, baseDirPath);
+      List<Path> containedPaths = fullDLM.getListing().stream()
+          .map(pm -> pm.getFileStatus().getPath())
+          .collect(Collectors.toList());
+      Assertions.assertThat(containedPaths)
+          .describedAs("Full listing of path %s", baseDirPath)
+          .hasSize(11)
+          .contains(tombstonedPath);
+
+      // listing will be filtered if the store is not authoritative,
+      // and won't contain the tombstone with oldtime
+      when(mockTimeProvider.getNow()).thenReturn(newTime);
+      final DirListingMetadata filteredDLM = S3Guard.listChildrenWithTtl(
+          ms, baseDirPath, mockTimeProvider, authoritative);
+      containedPaths = filteredDLM.getListing().stream()
+          .map(pm -> pm.getFileStatus().getPath())
+          .collect(Collectors.toList());
+      if (authoritative) {
+        Assertions.assertThat(containedPaths)
+            .describedAs("Full listing of path %s", baseDirPath)
+            .hasSize(11)
+            .contains(tombstonedPath);
+      } else {
+        Assertions.assertThat(containedPaths)
+            .describedAs("Full listing of path %s", baseDirPath)
+            .hasSize(10)
+            .doesNotContain(tombstonedPath);
+      }
+    } finally {
+      fs.delete(baseDirPath, true);
+      fs.setTtlTimeProvider(originalTimeProvider);
+    }
+  }
+
+  protected DirListingMetadata getDirListingMetadata(final MetadataStore ms,
+      final Path baseDirPath) throws IOException {
+    final DirListingMetadata fullDLM = ms.listChildren(baseDirPath);
+    Assertions.assertThat(fullDLM)
+        .describedAs("Metastrore directory listing of %s",
+            baseDirPath)
+        .isNotNull();
+    return fullDLM;
   }
 
 }

@@ -29,10 +29,13 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.federation.store.MountTableStore;
+import org.apache.hadoop.hdfs.server.federation.store.RouterStore;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreUnavailableException;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreUtils;
 import org.apache.hadoop.hdfs.server.federation.store.records.RouterState;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,7 +60,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  */
 public class MountTableRefresherService extends AbstractService {
   private static final String ROUTER_CONNECT_ERROR_MSG =
-      "Router {} connection failed. Mount table cache will not refesh.";
+      "Router {} connection failed. Mount table cache will not refresh.";
   private static final Logger LOG =
       LoggerFactory.getLogger(MountTableRefresherService.class);
 
@@ -66,7 +69,7 @@ public class MountTableRefresherService extends AbstractService {
   /** Mount table store. */
   private MountTableStore mountTableStore;
   /** Local router admin address in the form of host:port. */
-  private String localAdminAdress;
+  private String localAdminAddress;
   /** Timeout in ms to update mount table cache on all the routers. */
   private long cacheUpdateTimeout;
 
@@ -97,9 +100,9 @@ public class MountTableRefresherService extends AbstractService {
   protected void serviceInit(Configuration conf) throws Exception {
     super.serviceInit(conf);
     this.mountTableStore = getMountTableStore();
-    // attach this service to mount table store.
+    // Attach this service to mount table store.
     this.mountTableStore.setRefreshService(this);
-    this.localAdminAdress =
+    this.localAdminAddress =
         StateStoreUtils.getHostPortString(router.getAdminServerAddress());
     this.cacheUpdateTimeout = conf.getTimeDuration(
         RBFConfigKeys.MOUNT_TABLE_CACHE_UPDATE_TIMEOUT,
@@ -169,7 +172,12 @@ public class MountTableRefresherService extends AbstractService {
   @VisibleForTesting
   protected RouterClient createRouterClient(InetSocketAddress routerSocket,
       Configuration config) throws IOException {
-    return new RouterClient(routerSocket, config);
+    return SecurityUtil.doAsLoginUser(() -> {
+      if (UserGroupInformation.isSecurityEnabled()) {
+        UserGroupInformation.getLoginUser().checkTGTAndReloginFromKeytab();
+      }
+      return new RouterClient(routerSocket, config);
+    });
   }
 
   @Override
@@ -198,19 +206,27 @@ public class MountTableRefresherService extends AbstractService {
    * Refresh mount table cache of this router as well as all other routers.
    */
   public void refresh() throws StateStoreUnavailableException {
-    List<RouterState> cachedRecords =
-        router.getRouterStateManager().getCachedRecords();
+    RouterStore routerStore = router.getRouterStateManager();
+
+    try {
+      routerStore.loadCache(true);
+    } catch (IOException e) {
+      LOG.warn("RouterStore load cache failed,", e);
+    }
+
+    List<RouterState> cachedRecords = routerStore.getCachedRecords();
     List<MountTableRefresherThread> refreshThreads = new ArrayList<>();
     for (RouterState routerState : cachedRecords) {
       String adminAddress = routerState.getAdminAddress();
       if (adminAddress == null || adminAddress.length() == 0) {
-        // this router has not enabled router admin
+        // this router has not enabled router admin.
         continue;
       }
       // No use of calling refresh on router which is not running state
       if (routerState.getStatus() != RouterServiceState.RUNNING) {
         LOG.info(
-            "Router {} is not running. Mount table cache will not refesh.");
+            "Router {} is not running. Mount table cache will not refresh.",
+            routerState.getAddress());
         // remove if RouterClient is cached.
         removeFromCache(adminAddress);
       } else if (isLocalAdmin(adminAddress)) {
@@ -268,22 +284,23 @@ public class MountTableRefresherService extends AbstractService {
   }
 
   private boolean isLocalAdmin(String adminAddress) {
-    return adminAddress.contentEquals(localAdminAdress);
+    return adminAddress.contentEquals(localAdminAddress);
   }
 
   private void logResult(List<MountTableRefresherThread> refreshThreads) {
-    int succesCount = 0;
+    int successCount = 0;
     int failureCount = 0;
     for (MountTableRefresherThread mountTableRefreshThread : refreshThreads) {
       if (mountTableRefreshThread.isSuccess()) {
-        succesCount++;
+        successCount++;
       } else {
         failureCount++;
         // remove RouterClient from cache so that new client is created
         removeFromCache(mountTableRefreshThread.getAdminAddress());
       }
     }
-    LOG.info("Mount table entries cache refresh succesCount={},failureCount={}",
-        succesCount, failureCount);
+    LOG.info(
+        "Mount table entries cache refresh successCount={},failureCount={}",
+        successCount, failureCount);
   }
 }

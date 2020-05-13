@@ -156,6 +156,7 @@ public class TestRBFMetrics extends TestMetricsBase {
           stats.getNumOfEnteringMaintenanceDataNodes());
       assertEquals(json.getLong("numOfBlocks"), stats.getNumOfBlocks());
       assertEquals(json.getString("rpcAddress"), mockEntry.getRpcAddress());
+      assertEquals(json.getString("webScheme"), mockEntry.getWebScheme());
       assertEquals(json.getString("webAddress"), mockEntry.getWebAddress());
       nnsFound++;
     }
@@ -285,6 +286,11 @@ public class TestRBFMetrics extends TestMetricsBase {
     long numInMaintenanceLive = 0;
     long numInMaintenanceDead = 0;
     long numEnteringMaintenance = 0;
+    int numCorruptsFilesCount = 0;
+    long scheduledReplicationBlocks = 0;
+    long numberOfMissingBlocksWithReplicationFactorOne = 0;
+    long highestPriorityLowRedundancyReplicatedBlocks = 0;
+    long highestPriorityLowRedundancyECBlocks = 0;
     long numFiles = 0;
     for (MembershipState mock : getActiveMemberships()) {
       MembershipStats stats = mock.getStats();
@@ -298,6 +304,14 @@ public class TestRBFMetrics extends TestMetricsBase {
       numInMaintenanceLive += stats.getNumOfInMaintenanceLiveDataNodes();
       numInMaintenanceDead += stats.getNumOfInMaintenanceLiveDataNodes();
       numEnteringMaintenance += stats.getNumOfEnteringMaintenanceDataNodes();
+      numCorruptsFilesCount += stats.getCorruptFilesCount();
+      scheduledReplicationBlocks += stats.getScheduledReplicationBlocks();
+      numberOfMissingBlocksWithReplicationFactorOne +=
+          stats.getNumberOfMissingBlocksWithReplicationFactorOne();
+      highestPriorityLowRedundancyReplicatedBlocks +=
+          stats.getHighestPriorityLowRedundancyReplicatedBlocks();
+      highestPriorityLowRedundancyECBlocks +=
+          stats.getHighestPriorityLowRedundancyECBlocks();
     }
 
     assertEquals(numBlocks, bean.getNumBlocks());
@@ -315,6 +329,15 @@ public class TestRBFMetrics extends TestMetricsBase {
     assertEquals(getActiveMemberships().size() + getStandbyMemberships().size(),
         bean.getNumNamenodes());
     assertEquals(getNameservices().size(), bean.getNumNameservices());
+    assertEquals(numCorruptsFilesCount, bean.getCorruptFilesCount());
+    assertEquals(scheduledReplicationBlocks,
+        bean.getScheduledReplicationBlocks());
+    assertEquals(numberOfMissingBlocksWithReplicationFactorOne,
+        bean.getNumberOfMissingBlocksWithReplicationFactorOne());
+    assertEquals(highestPriorityLowRedundancyReplicatedBlocks,
+        bean.getHighestPriorityLowRedundancyReplicatedBlocks());
+    assertEquals(highestPriorityLowRedundancyECBlocks,
+        bean.getHighestPriorityLowRedundancyECBlocks());
   }
 
   private void validateClusterStatsRouterBean(RouterMBean bean) {

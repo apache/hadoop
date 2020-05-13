@@ -97,7 +97,15 @@ public class TestApplicationMasterServiceFair extends
             ImmutableMap.<String, String> builder()
                 .put(CUSTOM_RES, "5G").build()));
 
-    RMApp app1 = rm.submitApp(GB, "app", "user", null, DEFAULT_QUEUE);
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue(DEFAULT_QUEUE)
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
     // Now request res_1, 500M < 5G so it should be allowed

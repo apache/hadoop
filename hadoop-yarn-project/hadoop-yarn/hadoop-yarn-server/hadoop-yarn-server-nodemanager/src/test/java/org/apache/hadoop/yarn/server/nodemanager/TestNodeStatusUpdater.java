@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.nodemanager;
 
 import static org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils.newNodeHeartbeatResponse;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -107,6 +108,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Ap
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitor;
+import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
@@ -1993,5 +1995,22 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
         return myNodeStatusUpdater;
       }
     };
+  }
+
+  @Test
+  public void testExceptionReported() {
+    nm = new NodeManager();
+    YarnConfiguration conf = new YarnConfiguration();
+    nm.init(conf);
+    NodeStatusUpdater nodeStatusUpdater = nm.getNodeStatusUpdater();
+    NodeHealthCheckerService nodeHealthChecker = nm.getNodeHealthChecker();
+
+    assertThat(nodeHealthChecker.isHealthy()).isTrue();
+
+    String message = "exception message";
+    Exception e = new Exception(message);
+    nodeStatusUpdater.reportException(e);
+    assertThat(nodeHealthChecker.isHealthy()).isFalse();
+    assertThat(nodeHealthChecker.getHealthReport()).isEqualTo(message);
   }
 }

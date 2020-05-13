@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.app;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -111,10 +112,10 @@ import org.junit.Test;
      appMaster.shutDownJob();
      ((RunningAppContext) appMaster.getContext()).resetIsLastAMRetry();
      if (shouldHaveDeleted) {
-       Assert.assertEquals(new Boolean(true), appMaster.isLastAMRetry());
+       assertTrue(appMaster.isLastAMRetry());
        verify(fs).delete(stagingJobPath, true);
      } else {
-       Assert.assertEquals(new Boolean(false), appMaster.isLastAMRetry());
+       assertFalse(appMaster.isLastAMRetry());
        verify(fs, never()).delete(stagingJobPath, true);
      }
    }
@@ -141,7 +142,7 @@ import org.junit.Test;
      appMaster.start();
      appMaster.shutDownJob();
      //test whether notifyIsLastAMRetry called
-     Assert.assertEquals(true, ((TestMRApp)appMaster).getTestIsLastAMRetry());
+     assertTrue(((TestMRApp)appMaster).getTestIsLastAMRetry());
      verify(fs).delete(stagingJobPath, true);
    }
 
@@ -165,7 +166,7 @@ import org.junit.Test;
      //shutdown the job, not the lastRetry
      appMaster.shutDownJob();
      //test whether notifyIsLastAMRetry called
-     Assert.assertEquals(false, ((TestMRApp)appMaster).getTestIsLastAMRetry());
+     assertFalse(((TestMRApp)appMaster).getTestIsLastAMRetry());
      verify(fs, times(0)).delete(stagingJobPath, true);
    }
 
@@ -192,7 +193,7 @@ import org.junit.Test;
      //shutdown the job, is lastRetry
      appMaster.shutDownJob();
      //test whether notifyIsLastAMRetry called
-     Assert.assertEquals(true, ((TestMRApp)appMaster).getTestIsLastAMRetry());
+     assertTrue(((TestMRApp)appMaster).getTestIsLastAMRetry());
      verify(fs).delete(stagingJobPath, true);
    }
    
@@ -276,7 +277,7 @@ import org.junit.Test;
      appMaster.start();
      appMaster.shutDownJob();
      //test whether notifyIsLastAMRetry called
-     Assert.assertEquals(true, ((TestMRApp) appMaster).getTestIsLastAMRetry());
+     assertTrue(((TestMRApp) appMaster).getTestIsLastAMRetry());
      verify(fs, times(0)).delete(stagingJobPath, true);
    }
 
@@ -304,7 +305,7 @@ import org.junit.Test;
      appMaster.start();
      appMaster.shutDownJob();
      //test whether notifyIsLastAMRetry called
-     Assert.assertEquals(true, ((TestMRApp) appMaster).getTestIsLastAMRetry());
+     assertTrue(((TestMRApp) appMaster).getTestIsLastAMRetry());
      verify(fs, times(0)).delete(stagingJobPath, true);
    }
 
@@ -330,7 +331,7 @@ import org.junit.Test;
     appMaster.start();
     appMaster.shutDownJob();
     //test whether notifyIsLastAMRetry called
-    Assert.assertEquals(true, ((TestMRApp) appMaster).getTestIsLastAMRetry());
+    assertTrue(((TestMRApp) appMaster).getTestIsLastAMRetry());
     //Staging dir should be deleted because it is not matched with
     //PRESERVE_FILES_PATTERN
     verify(fs, times(1)).delete(stagingJobPath, true);
@@ -361,7 +362,7 @@ import org.junit.Test;
     appMaster.start();
     appMaster.shutDownJob();
     //test whether notifyIsLastAMRetry called
-    Assert.assertEquals(true, ((TestMRApp) appMaster).getTestIsLastAMRetry());
+    assertTrue(((TestMRApp) appMaster).getTestIsLastAMRetry());
     verify(fs, times(0)).delete(stagingJobPath, true);
   }
 

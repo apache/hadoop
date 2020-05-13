@@ -96,6 +96,10 @@ public class RoundRobinVolumeChoosingPolicy<V extends FsVolumeSpi>
         throw new DiskOutOfSpaceException("Out of space: "
             + "The volume with the most available space (=" + maxAvailable
             + " B) is less than the block size (=" + blockSize + " B).");
+      } else {
+        LOG.warn("The volume[{}] with the available space (={} B) is "
+            + "less than the block size (={} B).", volume.getBaseURI(),
+            availableVolumeSize, blockSize);
       }
     }
   }

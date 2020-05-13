@@ -68,6 +68,7 @@ import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
@@ -219,7 +220,7 @@ public class TestTaskAttemptListenerImpl {
       JVMId.forName("jvm_001_002_m_004_006");
       fail();
     } catch (IllegalArgumentException e) {
-      assertEquals(e.getMessage(),
+      assertThat(e.getMessage()).isEqualTo(
           "TaskId string : jvm_001_002_m_004_006 is not properly formed");
     }
 
@@ -500,6 +501,8 @@ public class TestTaskAttemptListenerImpl {
 
     Configuration conf = new Configuration();
     conf.setLong(MRJobConfig.TASK_TIMEOUT_CHECK_INTERVAL_MS, 1);
+    conf.setDouble(MRJobConfig.TASK_LOG_PROGRESS_DELTA_THRESHOLD, 0.01);
+    conf.setDouble(MRJobConfig.TASK_LOG_PROGRESS_WAIT_INTERVAL_SECONDS, 1);
     tal.init(conf);
     tal.start();
 

@@ -660,4 +660,19 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * Acquire the lock of the data set.
    */
   AutoCloseableLock acquireDatasetLock();
+
+  /***
+   * Acquire the read lock of the data set.
+   * @return The AutoClosable read lock instance.
+   */
+  AutoCloseableLock acquireDatasetReadLock();
+
+
+  /**
+   * Deep copy the replica info belonging to given block pool.
+   * @param bpid Specified block pool id.
+   * @return A set of replica info.
+   * @throws IOException
+   */
+  Set<? extends Replica> deepCopyReplica(String bpid) throws IOException;
 }

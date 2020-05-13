@@ -453,7 +453,7 @@ public class ZKRMStateStore extends RMStateStore {
       verifyActiveStatusThread.join(1000);
     }
 
-    if (!HAUtil.isHAEnabled(getConfig())) {
+    if (resourceManager.getZKManager() == null) {
       CuratorFramework curatorFramework = zkManager.getCurator();
       IOUtils.closeStream(curatorFramework);
     }

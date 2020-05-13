@@ -180,10 +180,10 @@ public class DFSNetworkTopology extends NetworkTopology {
       String excludedScope, final Collection<Node> excludedNodes,
       StorageType type) {
     if (excludedScope != null) {
-      if (scope.startsWith(excludedScope)) {
+      if (isChildScope(scope, excludedScope)) {
         return null;
       }
-      if (!excludedScope.startsWith(scope)) {
+      if (!isChildScope(excludedScope, scope)) {
         excludedScope = null;
       }
     }
@@ -194,7 +194,13 @@ public class DFSNetworkTopology extends NetworkTopology {
     }
     if (!(node instanceof DFSTopologyNodeImpl)) {
       // a node is either DFSTopologyNodeImpl, or a DatanodeDescriptor
-      return ((DatanodeDescriptor)node).hasStorageType(type) ? node : null;
+      // if a node is DatanodeDescriptor and excludedNodes contains it,
+      // return null;
+      if (excludedNodes != null && excludedNodes.contains(node)) {
+        LOG.debug("{} in excludedNodes", node);
+        return null;
+      }
+      return ((DatanodeDescriptor) node).hasStorageType(type) ? node : null;
     }
     DFSTopologyNodeImpl root = (DFSTopologyNodeImpl)node;
     Node excludeRoot = excludedScope == null ? null : getNode(excludedScope);
@@ -212,6 +218,9 @@ public class DFSNetworkTopology extends NetworkTopology {
     }
     if (excludedNodes != null) {
       for (Node excludedNode : excludedNodes) {
+        if (excludeRoot != null && isNodeInScope(excludedNode, excludedScope)) {
+          continue;
+        }
         if (excludedNode instanceof DatanodeDescriptor) {
           availableCount -= ((DatanodeDescriptor) excludedNode)
               .hasStorageType(type) ? 1 : 0;
@@ -226,6 +235,9 @@ public class DFSNetworkTopology extends NetworkTopology {
           String nodeLocation = excludedNode.getNetworkLocation()
               + "/" + excludedNode.getName();
           DatanodeDescriptor dn = (DatanodeDescriptor)getNode(nodeLocation);
+          if (dn == null) {
+            continue;
+          }
           availableCount -= dn.hasStorageType(type)? 1 : 0;
         } else {
           LOG.error("Unexpected node type: {}.", excludedNode.getClass());

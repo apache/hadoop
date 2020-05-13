@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -29,6 +30,7 @@ import com.google.gson.GsonBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -57,14 +59,14 @@ public class FSSchedulerConfigurationStore extends YarnConfigurationStore {
   private int maxVersion;
   private Path schedulerConfDir;
   private FileSystem fileSystem;
-  private LogMutation pendingMutation;
   private PathFilter configFilePathFilter;
   private volatile Configuration schedConf;
   private volatile Configuration oldConf;
   private Path tempConfigPath;
+  private Path configVersionFile;
 
   @Override
-  public void initialize(Configuration conf, Configuration vSchedConf,
+  public void initialize(Configuration fsConf, Configuration vSchedConf,
       RMContext rmContext) throws Exception {
     this.configFilePathFilter = new PathFilter() {
       @Override
@@ -78,6 +80,7 @@ public class FSSchedulerConfigurationStore extends YarnConfigurationStore {
       }
     };
 
+    Configuration conf = new Configuration(fsConf);
     String schedulerConfPathStr = conf.get(
         YarnConfiguration.SCHEDULER_CONFIGURATION_FS_PATH);
     if (schedulerConfPathStr == null || schedulerConfPathStr.isEmpty()) {
@@ -86,6 +89,15 @@ public class FSSchedulerConfigurationStore extends YarnConfigurationStore {
               + " must be set");
     }
     this.schedulerConfDir = new Path(schedulerConfPathStr);
+    String scheme = schedulerConfDir.toUri().getScheme();
+    if (scheme == null) {
+      scheme = FileSystem.getDefaultUri(conf).getScheme();
+    }
+    if (scheme != null) {
+      String disableCacheName = String.format("fs.%s.impl.disable.cache",
+          scheme);
+      conf.setBoolean(disableCacheName, true);
+    }
     this.fileSystem = this.schedulerConfDir.getFileSystem(conf);
     this.maxVersion = conf.getInt(
         YarnConfiguration.SCHEDULER_CONFIGURATION_FS_MAX_VERSION,
@@ -99,9 +111,17 @@ public class FSSchedulerConfigurationStore extends YarnConfigurationStore {
       }
     }
 
+    this.configVersionFile = new Path(schedulerConfPathStr, "ConfigVersion");
+    if (!fileSystem.exists(configVersionFile)) {
+      fileSystem.createNewFile(configVersionFile);
+      writeConfigVersion(0L);
+    }
+
     // create capacity-schedule.xml.ts file if not existing
     if (this.getConfigFileInputStream() == null) {
       writeConfigurationToFileSystem(vSchedConf);
+      long configVersion = getConfigVersion() + 1L;
+      writeConfigVersion(configVersion);
     }
 
     this.schedConf = this.getConfigurationFromFileSystem();
@@ -114,10 +134,9 @@ public class FSSchedulerConfigurationStore extends YarnConfigurationStore {
    */
   @Override
   public void logMutation(LogMutation logMutation) throws IOException {
-    pendingMutation = logMutation;
     LOG.info(new GsonBuilder().serializeNulls().create().toJson(logMutation));
     oldConf = new Configuration(schedConf);
-    Map<String, String> mutations = pendingMutation.getUpdates();
+    Map<String, String> mutations = logMutation.getUpdates();
     for (Map.Entry<String, String> kv : mutations.entrySet()) {
       if (kv.getValue() == null) {
         this.schedConf.unset(kv.getKey());
@@ -129,18 +148,22 @@ public class FSSchedulerConfigurationStore extends YarnConfigurationStore {
   }
 
   /**
+   * @param pendingMutation the log mutation to apply
    * @param isValid if true, finalize temp configuration file
    *                if false, remove temp configuration file and rollback
    * @throws Exception throw IOE when write temp configuration file fail
    */
   @Override
-  public void confirmMutation(boolean isValid) throws Exception {
+  public void confirmMutation(LogMutation pendingMutation,
+      boolean isValid) throws Exception {
     if (pendingMutation == null || tempConfigPath == null) {
       LOG.warn("pendingMutation or tempConfigPath is null, do nothing");
       return;
     }
     if (isValid) {
       finalizeFileSystemFile();
+      long configVersion = getConfigVersion() + 1L;
+      writeConfigVersion(configVersion);
     } else {
       schedConf = oldConf;
       removeTmpConfigFile();
@@ -154,6 +177,19 @@ public class FSSchedulerConfigurationStore extends YarnConfigurationStore {
     fileSystem.rename(tempConfigPath, finalConfigPath);
     LOG.info("finalize temp configuration file successfully, finalConfigPath="
         + finalConfigPath);
+  }
+
+  @Override
+  public void format() throws Exception {
+    FileStatus[] fileStatuses = fileSystem.listStatus(this.schedulerConfDir,
+        this.configFilePathFilter);
+    if (fileStatuses == null) {
+      return;
+    }
+    for (int i = 0; i < fileStatuses.length; i++) {
+      fileSystem.delete(fileStatuses[i].getPath(), false);
+      LOG.info("delete config file " + fileStatuses[i].getPath());
+    }
   }
 
   private Path getFinalConfigPath(Path tempPath) {
@@ -216,6 +252,27 @@ public class FSSchedulerConfigurationStore extends YarnConfigurationStore {
 
     return fileStatuses[fileStatuses.length - 1].getPath();
   }
+
+  private void writeConfigVersion(long configVersion) throws IOException {
+    try (FSDataOutputStream out = fileSystem.create(configVersionFile, true)) {
+      out.writeLong(configVersion);
+    } catch (IOException e) {
+      LOG.info("Failed to write config version at {}", configVersionFile, e);
+      throw e;
+    }
+  }
+
+  @Override
+  public long getConfigVersion() throws Exception {
+    try (FSDataInputStream in = fileSystem.open(configVersionFile)) {
+      return in.readLong();
+    } catch (IOException e) {
+      LOG.info("Failed to read config version at {}", configVersionFile, e);
+      throw e;
+    }
+  }
+
+
 
   @VisibleForTesting
   private Path writeTmpConfig(Configuration vSchedConf) throws IOException {
@@ -281,6 +338,12 @@ public class FSSchedulerConfigurationStore extends YarnConfigurationStore {
   }
 
   @Override
+  protected LinkedList<LogMutation> getLogs() {
+    // Unimplemented.
+    return null;
+  }
+
+  @Override
   protected Version getConfStoreVersion() throws Exception {
     return null;
   }
@@ -295,6 +358,7 @@ public class FSSchedulerConfigurationStore extends YarnConfigurationStore {
     return CURRENT_VERSION_INFO;
   }
 
+  @Override
   public void close() throws IOException {
     if (fileSystem != null) {
       fileSystem.close();

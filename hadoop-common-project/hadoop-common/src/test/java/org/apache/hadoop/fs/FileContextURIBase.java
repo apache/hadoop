@@ -130,7 +130,7 @@ public abstract class FileContextURIBase {
 
   @Test
   public void testCreateExistingFile() throws IOException {
-    String fileName = "testFile";
+    String fileName = "testCreateExistingFile";
     Path testPath = qualifiedPath(fileName, fc2);
 
     // Ensure file does not exist
@@ -153,7 +153,7 @@ public abstract class FileContextURIBase {
 
   @Test
   public void testCreateFileInNonExistingDirectory() throws IOException {
-    String fileName = "testDir/testFile";
+    String fileName = "testCreateFileInNonExistingDirectory/testFile";
 
     Path testPath = qualifiedPath(fileName, fc2);
 
@@ -165,7 +165,8 @@ public abstract class FileContextURIBase {
 
     // Ensure using fc2 that file is created
     Assert.assertTrue(isDir(fc2, testPath.getParent()));
-    Assert.assertEquals("testDir", testPath.getParent().getName());
+    Assert.assertEquals("testCreateFileInNonExistingDirectory",
+        testPath.getParent().getName());
     Assert.assertTrue(exists(fc2, testPath));
 
   }
@@ -293,7 +294,7 @@ public abstract class FileContextURIBase {
 
   @Test
   public void testDeleteFile() throws IOException {
-    Path testPath = qualifiedPath("testFile", fc2);
+    Path testPath = qualifiedPath("testDeleteFile", fc2);
 
     // Ensure file does not exist
     Assert.assertFalse(exists(fc2, testPath));
@@ -314,7 +315,7 @@ public abstract class FileContextURIBase {
 
   @Test
   public void testDeleteNonExistingFile() throws IOException {
-    String testFileName = "testFile";
+    String testFileName = "testDeleteNonExistingFile";
     Path testPath = qualifiedPath(testFileName, fc2);
 
     // TestCase1 : Test delete on file never existed
@@ -341,7 +342,7 @@ public abstract class FileContextURIBase {
 
   @Test
   public void testDeleteNonExistingFileInDir() throws IOException {
-    String testFileInDir = "testDir/testDir/TestFile";
+    String testFileInDir = "testDeleteNonExistingFileInDir/testDir/TestFile";
     Path testPath = qualifiedPath(testFileInDir, fc2);
 
     // TestCase1 : Test delete on file never existed
@@ -418,7 +419,7 @@ public abstract class FileContextURIBase {
 
   @Test
   public void testDeleteNonExistingDirectory() throws IOException {
-    String testDirName = "testFile";
+    String testDirName = "testDeleteNonExistingDirectory";
     Path testPath = qualifiedPath(testDirName, fc2);
 
     // TestCase1 : Test delete on directory never existed
@@ -445,7 +446,7 @@ public abstract class FileContextURIBase {
 
   @Test
   public void testModificationTime() throws IOException {
-    String testFile = "file1";
+    String testFile = "testModificationTime";
     long fc2ModificationTime, fc1ModificationTime;
 
     Path testPath = qualifiedPath(testFile, fc2);
@@ -461,7 +462,7 @@ public abstract class FileContextURIBase {
 
   @Test
   public void testFileStatus() throws IOException {
-    String fileName = "file1";
+    String fileName = "testModificationTime";
     Path path2 = fc2.makeQualified(new Path(BASE, fileName));
 
     // Create a file on fc2's file system using fc1

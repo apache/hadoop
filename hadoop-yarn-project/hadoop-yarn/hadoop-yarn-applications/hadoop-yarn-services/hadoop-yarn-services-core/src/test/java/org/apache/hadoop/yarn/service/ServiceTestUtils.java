@@ -218,6 +218,8 @@ public class ServiceTestUtils {
       setConf(new YarnConfiguration());
       conf.setBoolean(YarnConfiguration.YARN_MINICLUSTER_FIXED_PORTS, false);
       conf.setBoolean(YarnConfiguration.YARN_MINICLUSTER_USE_RPC, false);
+      conf.setInt(YarnConfiguration.RM_MAX_COMPLETED_APPLICATIONS,
+          YarnConfiguration.DEFAULT_RM_MAX_COMPLETED_APPLICATIONS);
     }
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 128);
     // reduce the teardown waiting time

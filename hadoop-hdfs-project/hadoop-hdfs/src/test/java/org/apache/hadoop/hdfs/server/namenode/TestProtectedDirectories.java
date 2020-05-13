@@ -39,6 +39,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.*;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROTECTED_SUBDIRECTORIES_ENABLE;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -193,6 +194,25 @@ public class TestProtectedDirectories {
     return matrix;
   }
 
+  private Collection<TestMatrixEntry> createTestMatrixForProtectSubDirs() {
+    Collection<TestMatrixEntry> matrix = new ArrayList<TestMatrixEntry>();
+
+    // Nested unprotected dirs.
+    matrix.add(TestMatrixEntry.get()
+            .addUnprotectedDir("/1", true)
+            .addUnprotectedDir("/1/2", true)
+            .addUnprotectedDir("/1/2/3", true)
+            .addUnprotectedDir("/1/2/3/4", true));
+
+    // Non-empty protected dir.
+    matrix.add(TestMatrixEntry.get()
+            .addProtectedDir("/1", false)
+            .addUnprotectedDir("/1/2", false)
+            .addUnprotectedDir("/1/2/3", false)
+            .addUnprotectedDir("/1/2/3/4", true));
+    return matrix;
+  }
+
   @Test
   public void testReconfigureProtectedPaths() throws Throwable {
     Configuration conf = new HdfsConfiguration();
@@ -234,7 +254,7 @@ public class TestProtectedDirectories {
   }
 
   @Test
-  public void testAll() throws Throwable {
+  public void testDelete() throws Throwable {
     for (TestMatrixEntry testMatrixEntry : createTestMatrix()) {
       Configuration conf = new HdfsConfiguration();
       MiniDFSCluster cluster = setupTestCase(
@@ -256,6 +276,95 @@ public class TestProtectedDirectories {
             assertThat(
                 "Either all paths should be deleted or none",
                 countAfter, is(countBefore));
+          }
+        }
+      } finally {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /*
+   * Verify that protected directories could not be renamed.
+   */
+  @Test
+  public void testRename() throws Throwable {
+    for (TestMatrixEntry testMatrixEntry : createTestMatrix()) {
+      Configuration conf = new HdfsConfiguration();
+      MiniDFSCluster cluster = setupTestCase(
+          conf, testMatrixEntry.getProtectedPaths(),
+          testMatrixEntry.getUnprotectedPaths());
+
+      try {
+        LOG.info("Running {}", testMatrixEntry);
+        FileSystem fs = cluster.getFileSystem();
+        for (Path srcPath : testMatrixEntry.getAllPathsToBeDeleted()) {
+          assertThat(
+              testMatrixEntry + ": Testing whether "
+                  + srcPath + " can be renamed",
+              renamePath(fs, srcPath,
+                  new Path(srcPath.toString() + "_renamed")),
+              is(testMatrixEntry.canPathBeRenamed(srcPath)));
+        }
+      } finally {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test
+  public void testRenameProtectSubDirs() throws Throwable {
+    for (TestMatrixEntry testMatrixEntry :
+            createTestMatrixForProtectSubDirs()) {
+      Configuration conf = new HdfsConfiguration();
+      conf.setBoolean(DFS_PROTECTED_SUBDIRECTORIES_ENABLE, true);
+      MiniDFSCluster cluster = setupTestCase(
+              conf, testMatrixEntry.getProtectedPaths(),
+              testMatrixEntry.getUnprotectedPaths());
+
+      try {
+        LOG.info("Running {}", testMatrixEntry);
+        FileSystem fs = cluster.getFileSystem();
+        for (Path srcPath : testMatrixEntry.getAllPathsToBeDeleted()) {
+          assertThat(
+                  testMatrixEntry + ": Testing whether "
+                          + srcPath + " can be renamed",
+                  renamePath(fs, srcPath,
+                          new Path(srcPath.toString() + "_renamed")),
+                  is(testMatrixEntry.canPathBeRenamed(srcPath)));
+        }
+      } finally {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test
+  public void testDeleteProtectSubDirs() throws Throwable {
+    for (TestMatrixEntry testMatrixEntry :
+            createTestMatrixForProtectSubDirs()) {
+      Configuration conf = new HdfsConfiguration();
+      conf.setBoolean(DFS_PROTECTED_SUBDIRECTORIES_ENABLE, true);
+      MiniDFSCluster cluster = setupTestCase(
+              conf, testMatrixEntry.getProtectedPaths(),
+              testMatrixEntry.getUnprotectedPaths());
+
+      try {
+        LOG.info("Running {}", testMatrixEntry);
+        FileSystem fs = cluster.getFileSystem();
+        for (Path path : testMatrixEntry.getAllPathsToBeDeleted()) {
+          final long countBefore = cluster.getNamesystem().getFilesTotal();
+          assertThat(
+                  testMatrixEntry + ": Testing whether "
+                          + path + " can be deleted",
+                  deletePath(fs, path),
+                  is(testMatrixEntry.canPathBeDeleted(path)));
+          final long countAfter = cluster.getNamesystem().getFilesTotal();
+
+          if (!testMatrixEntry.canPathBeDeleted(path)) {
+            assertThat(
+                    "Either all paths should be deleted or none",
+                    countAfter, is(countBefore));
           }
         }
       } finally {
@@ -356,6 +465,26 @@ public class TestProtectedDirectories {
     }
   }
 
+  /**
+   * Return true if the path was successfully renamed. False if it
+   * failed with AccessControlException. Any other exceptions are
+   * propagated to the caller.
+   *
+   * @param fs
+   * @param srcPath
+   * @param dstPath
+   * @return
+   */
+  private boolean renamePath(FileSystem fs, Path srcPath, Path dstPath)
+      throws IOException {
+    try {
+      fs.rename(srcPath, dstPath);
+      return true;
+    } catch (AccessControlException ace) {
+      return false;
+    }
+  }
+
   private static class TestMatrixEntry {
     // true if the path can be deleted.
     final Map<Path, Boolean> protectedPaths = Maps.newHashMap();
@@ -395,6 +524,10 @@ public class TestProtectedDirectories {
           protectedPaths.get(path) : unProtectedPaths.get(path);
     }
 
+    public boolean canPathBeRenamed(Path path) {
+      return protectedPaths.containsKey(path) ?
+          protectedPaths.get(path) : unProtectedPaths.get(path);
+    }
 
     public TestMatrixEntry addProtectedDir(String dir, boolean canBeDeleted) {
       protectedPaths.put(new Path(dir), canBeDeleted);

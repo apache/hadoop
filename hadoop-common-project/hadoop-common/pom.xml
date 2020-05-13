@@ -20,11 +20,11 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project-dist</artifactId>
-    <version>3.3.0-SNAPSHOT</version>
+    <version>3.4.0-SNAPSHOT</version>
     <relativePath>../../hadoop-project-dist</relativePath>
   </parent>
   <artifactId>hadoop-common</artifactId>
-  <version>3.3.0-SNAPSHOT</version>
+  <version>3.4.0-SNAPSHOT</version>
   <description>Apache Hadoop Common</description>
   <name>Apache Hadoop Common</name>
   <packaging>jar</packaging>
@@ -39,6 +39,10 @@
 
 
   <dependencies>
+    <dependency>
+      <groupId>org.apache.hadoop.thirdparty</groupId>
+      <artifactId>hadoop-shaded-protobuf_3_7</artifactId>
+    </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-annotations</artifactId>
@@ -272,6 +276,11 @@
       <artifactId>sshd-core</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.ftpserver</groupId>
+      <artifactId>ftpserver-core</artifactId>
+      <scope>test</scope>
+    </dependency>
 
     <dependency>
       <groupId>org.apache.htrace</groupId>
@@ -343,6 +352,16 @@
       <artifactId>dnsjava</artifactId>
       <scope>compile</scope>
     </dependency>
+    <dependency>
+      <groupId>org.wildfly.openssl</groupId>
+      <artifactId>wildfly-openssl</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.wildfly.openssl</groupId>
+      <artifactId>wildfly-openssl-java</artifactId>
+      <scope>provided</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -371,6 +390,50 @@
     </resources>
     <plugins>
       <plugin>
+        <groupId>org.xolstice.maven.plugins</groupId>
+        <artifactId>protobuf-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>src-compile-protoc</id>
+            <configuration><skip>false</skip></configuration>
+          </execution>
+          <execution>
+            <id>src-test-compile-protoc</id>
+            <configuration><skip>false</skip></configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>com.google.code.maven-replacer-plugin</groupId>
+        <artifactId>replacer</artifactId>
+        <executions>
+          <execution>
+            <id>replace-generated-sources</id>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
+          </execution>
+          <execution>
+            <id>replace-generated-test-sources</id>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
+          </execution>
+          <execution>
+            <id>replace-sources</id>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
+          </execution>
+          <execution>
+            <id>replace-test-sources</id>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-maven-plugins</artifactId>
         <executions>
@@ -386,58 +449,6 @@
                 <includes>
                   <include>java/**/*.java</include>
                   <include>proto/**/*.proto</include>
-                </includes>
-              </source>
-            </configuration>
-          </execution>
-          <execution>
-            <id>compile-protoc</id>
-            <goals>
-              <goal>protoc</goal>
-            </goals>
-            <configuration>
-              <protocVersion>${protobuf.version}</protocVersion>
-              <protocCommand>${protoc.path}</protocCommand>
-              <imports>
-                <param>${basedir}/src/main/proto</param>
-              </imports>
-              <source>
-                <directory>${basedir}/src/main/proto</directory>
-                <includes>
-                  <include>HAServiceProtocol.proto</include>
-                  <include>IpcConnectionContext.proto</include>
-                  <include>ProtocolInfo.proto</include>
-                  <include>RpcHeader.proto</include>
-                  <include>ZKFCProtocol.proto</include>
-                  <include>ProtobufRpcEngine.proto</include>
-                  <include>Security.proto</include>
-                  <include>GetUserMappingsProtocol.proto</include>
-                  <include>TraceAdmin.proto</include>
-                  <include>RefreshAuthorizationPolicyProtocol.proto</include>
-                  <include>RefreshUserMappingsProtocol.proto</include>
-                  <include>RefreshCallQueueProtocol.proto</include>
-                  <include>GenericRefreshProtocol.proto</include>
-                  <include>FSProtos.proto</include>
-                </includes>
-              </source>
-            </configuration>
-          </execution>
-          <execution>
-            <id>compile-test-protoc</id>
-            <goals>
-              <goal>test-protoc</goal>
-            </goals>
-            <configuration>
-              <protocVersion>${protobuf.version}</protocVersion>
-              <protocCommand>${protoc.path}</protocCommand>
-              <imports>
-                <param>${basedir}/src/test/proto</param>
-              </imports>
-              <source>
-                <directory>${basedir}/src/test/proto</directory>
-                <includes>
-                  <include>test.proto</include>
-                  <include>test_rpc_service.proto</include>
                 </includes>
               </source>
             </configuration>
@@ -870,9 +881,13 @@
             <executions>
               <execution>
                 <id>parallel-tests-createdir</id>
+                <phase>process-test-resources</phase>
                 <goals>
                   <goal>parallel-tests-createdir</goal>
                 </goals>
+                <configuration>
+                  <testBuildData>${test.build.data}</testBuildData>
+                </configuration>
               </execution>
             </executions>
           </plugin>
@@ -880,6 +895,7 @@
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-surefire-plugin</artifactId>
             <configuration>
+              <testFailureIgnore>${ignoreTestFailure}</testFailureIgnore>
               <forkCount>${testsThreadCount}</forkCount>
               <reuseForks>false</reuseForks>
               <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>

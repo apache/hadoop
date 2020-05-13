@@ -23,12 +23,14 @@ import AbstractRoute from './abstract';
 
 export default AbstractRoute.extend({
   model(param) {
-    var id = param.node_addr + Constants.PARAM_SEPARATOR + param.container_id +
+    var nodeAddress = decodeURIComponent(param.node_addr);
+    nodeAddress = nodeAddress.replace(/(^\w+:|^)\/\//, '');
+    var id = nodeAddress + Constants.PARAM_SEPARATOR + param.container_id +
         Constants.PARAM_SEPARATOR + param.filename;
     return Ember.RSVP.hash({
       containerLog: this.store.findRecord('yarn-container-log', id),
       containerInfo: { id: param.container_id },
-      nodeInfo: { id: param.node_id, addr: param.node_addr }
+      nodeInfo: { id: param.node_id, addr: nodeAddress }
     }).then(function(hash) {
       // Just return as its success.
       return hash;
@@ -38,7 +40,7 @@ export default AbstractRoute.extend({
         return reason;
       } else {
         // Assume empty response received from server.
-        return { nodeInfo: { id: param.node_id, addr: param.node_addr },
+        return { nodeInfo: { id: param.node_id, addr: nodeAddress },
             containerInfo: { id: param.container_id },
             containerLog: { logs: "", containerID: param.container_id,
                 logFileName: param.filename}};

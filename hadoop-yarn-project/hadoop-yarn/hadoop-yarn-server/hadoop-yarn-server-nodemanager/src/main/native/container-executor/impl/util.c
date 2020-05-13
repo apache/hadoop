@@ -141,8 +141,7 @@ int execute_regex_match(const char *regex_str, const char *input) {
   regex_t regex;
   int regex_match;
   if (0 != regcomp(&regex, regex_str, REG_EXTENDED|REG_NOSUB)) {
-    fprintf(LOGFILE, "Unable to compile regex.");
-    fflush(LOGFILE);
+    fprintf(LOGFILE, "Unable to compile regex.\n");
     exit(ERROR_COMPILING_REGEX);
   }
   regex_match = regexec(&regex, input, (size_t) 0, NULL, 0);
@@ -195,4 +194,147 @@ void quote_and_append_arg(char **str, size_t *size, const char* param, const cha
   char *cur_ptr = *str + len_str;
   sprintf(cur_ptr, append_format, param, tmp);
   free(tmp);
+}
+
+
+const char *get_error_message(const int error_code) {
+    switch (error_code) {
+      case INVALID_ARGUMENT_NUMBER:
+        return "Invalid argument number";
+      case INVALID_COMMAND_PROVIDED:
+        return "Invalid command provided";
+      case INVALID_NM_ROOT_DIRS:
+        return "Invalid NM root dirs";
+      case SETUID_OPER_FAILED:
+        return "setuid operation failed";
+      case UNABLE_TO_EXECUTE_CONTAINER_SCRIPT:
+        return "Unable to execute container script";
+      case UNABLE_TO_SIGNAL_CONTAINER:
+        return "Unable to signal container";
+      case INVALID_CONTAINER_PID:
+        return "Invalid container PID";
+      case OUT_OF_MEMORY:
+        return "Out of memory";
+      case INITIALIZE_USER_FAILED:
+        return "Initialize user failed";
+      case PATH_TO_DELETE_IS_NULL:
+        return "Path to delete is null";
+      case INVALID_CONTAINER_EXEC_PERMISSIONS:
+        return "Invalid container-executor permissions";
+      case INVALID_CONFIG_FILE:
+        return "Invalid config file";
+      case SETSID_OPER_FAILED:
+        return "setsid operation failed";
+      case WRITE_PIDFILE_FAILED:
+        return "Write to pidfile failed";
+      case WRITE_CGROUP_FAILED:
+        return "Write to cgroup failed";
+      case TRAFFIC_CONTROL_EXECUTION_FAILED:
+        return "Traffic control execution failed";
+      case DOCKER_RUN_FAILED:
+        return "Docker run failed";
+      case ERROR_OPENING_DOCKER_FILE:
+        return "Error opening Docker file";
+      case ERROR_READING_DOCKER_FILE:
+        return "Error reading Docker file";
+      case FEATURE_DISABLED:
+        return "Feature disabled";
+      case COULD_NOT_CREATE_SCRIPT_COPY:
+        return "Could not create script copy";
+      case COULD_NOT_CREATE_CREDENTIALS_COPY:
+        return "Could not create credentials copy";
+      case COULD_NOT_CREATE_WORK_DIRECTORIES:
+        return "Could not create work dirs";
+      case COULD_NOT_CREATE_APP_LOG_DIRECTORIES:
+        return "Could not create app log dirs";
+      case COULD_NOT_CREATE_TMP_DIRECTORIES:
+        return "Could not create tmp dirs";
+      case ERROR_CREATE_CONTAINER_DIRECTORIES_ARGUMENTS:
+        return "Error in create container directories arguments";
+      case ERROR_SANITIZING_DOCKER_COMMAND:
+        return "Error sanitizing Docker command";
+      case DOCKER_IMAGE_INVALID:
+        return "Docker image invalid";
+      case ERROR_COMPILING_REGEX:
+        return "Error compiling regex";
+      case INVALID_CONTAINER_ID:
+        return "Invalid container id";
+      case DOCKER_EXEC_FAILED:
+        return "Docker exec failed";
+      case COULD_NOT_CREATE_KEYSTORE_COPY:
+        return "Could not create keystore copy";
+      case COULD_NOT_CREATE_TRUSTSTORE_COPY:
+        return "Could not create truststore copy";
+      case ERROR_CALLING_SETVBUF:
+        return "Error calling setvbuf";
+      case BUFFER_TOO_SMALL:
+        return "Buffer too small";
+      case INVALID_MOUNT:
+        return "Invalid mount";
+      case INVALID_RO_MOUNT:
+        return "Invalid read-only mount";
+      case INVALID_RW_MOUNT:
+        return "Invalid read-write mount";
+      case MOUNT_ACCESS_ERROR:
+        return "Mount access error";
+      case INVALID_DOCKER_COMMAND_FILE:
+        return "Invalid docker command file passed";
+      case INCORRECT_DOCKER_COMMAND:
+        return "Incorrect command";
+      case INVALID_DOCKER_CONTAINER_NAME:
+        return "Invalid docker container name";
+      case INVALID_DOCKER_IMAGE_NAME:
+        return "Invalid docker image name";
+      case INVALID_DOCKER_USER_NAME:
+        return "Invalid docker user name";
+      case INVALID_DOCKER_INSPECT_FORMAT:
+        return "Invalid docker inspect format";
+      case UNKNOWN_DOCKER_COMMAND:
+        return "Unknown docker command";
+      case INVALID_DOCKER_NETWORK:
+        return "Invalid docker network";
+      case INVALID_DOCKER_PORTS_MAPPING:
+        return "Invalid docker ports mapping";
+      case INVALID_DOCKER_CAPABILITY:
+        return "Invalid docker capability";
+      case PRIVILEGED_DOCKER_CONTAINERS_DISABLED:
+        return "Privileged docker containers are disabled";
+      case INVALID_DOCKER_DEVICE:
+        return "Invalid docker device";
+      case INVALID_DOCKER_STOP_COMMAND:
+        return "Invalid docker stop command";
+      case INVALID_DOCKER_KILL_COMMAND:
+        return "Invalid docker kill command";
+      case INVALID_DOCKER_VOLUME_DRIVER:
+        return "Invalid docker volume-driver";
+      case INVALID_DOCKER_VOLUME_NAME:
+        return "Invalid docker volume name";
+      case INVALID_DOCKER_VOLUME_COMMAND:
+        return "Invalid docker volume command";
+      case DOCKER_PID_HOST_DISABLED:
+        return "Docker host pid namespace is disabled";
+      case INVALID_DOCKER_PID_NAMESPACE:
+        return "Invalid docker pid namespace";
+      case INVALID_DOCKER_IMAGE_TRUST:
+        return "Docker image is not trusted";
+      case INVALID_DOCKER_TMPFS_MOUNT:
+        return "Invalid docker tmpfs mount";
+      case INVALID_DOCKER_RUNTIME:
+        return "Invalid docker runtime";
+      case DOCKER_SERVICE_MODE_DISABLED:
+        return "Docker service mode disabled";
+      case ERROR_RUNC_SETUP_FAILED:
+        return "runC setup failed";
+      case ERROR_RUNC_RUN_FAILED:
+        return "runC run failed";
+      case ERROR_RUNC_REAP_LAYER_MOUNTS_FAILED:
+        return "runC reap layer mounts failed";
+      default:
+        return "Unknown error code";
+    }
+}
+
+int is_regex(const char *str) {
+    // regex should begin with prefix "regex:"
+    return (strncmp(str, "regex:", 6) == 0);
 }

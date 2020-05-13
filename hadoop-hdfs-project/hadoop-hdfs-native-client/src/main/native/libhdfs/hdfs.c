@@ -57,6 +57,9 @@ tSize readDirect(hdfsFS fs, hdfsFile f, void* buffer, tSize length);
 tSize preadDirect(hdfsFS fs, hdfsFile file, tOffset position, void* buffer,
                   tSize length);
 
+int preadFullyDirect(hdfsFS fs, hdfsFile file, tOffset position, void* buffer,
+                  tSize length);
+
 static void hdfsFreeFileInfoEntry(hdfsFileInfo *hdfsFileInfo);
 
 /**
@@ -1645,6 +1648,7 @@ tSize hdfsPread(hdfsFS fs, hdfsFile f, tOffset position,
             "hdfsPread: NewByteArray");
         return -1;
     }
+
     jthr = invokeMethod(env, &jVal, INSTANCE, f->file,
             JC_FS_DATA_INPUT_STREAM, "read", "(J[BII)I", position,
             jbRarray, 0, length);
@@ -1725,6 +1729,119 @@ tSize preadDirect(hdfsFS fs, hdfsFile f, tOffset position, void* buffer,
         return -1;
     }
     return jVal.i;
+}
+
+/**
+ * Like hdfsPread, if the underlying stream supports the
+ * ByteBufferPositionedReadable interface then this method will transparently
+ * use readFully(long, ByteBuffer).
+ */
+int hdfsPreadFully(hdfsFS fs, hdfsFile f, tOffset position,
+                void* buffer, tSize length) {
+    JNIEnv* env;
+    jbyteArray jbRarray;
+    jthrowable jthr;
+
+    if (length == 0) {
+        return 0;
+    } else if (length < 0) {
+        errno = EINVAL;
+        return -1;
+    }
+    if (!f || f->type == HDFS_STREAM_UNINITIALIZED) {
+        errno = EBADF;
+        return -1;
+    }
+
+    if (f->flags & HDFS_FILE_SUPPORTS_DIRECT_PREAD) {
+        return preadFullyDirect(fs, f, position, buffer, length);
+    }
+
+    env = getJNIEnv();
+    if (env == NULL) {
+        errno = EINTERNAL;
+        return -1;
+    }
+
+    //Error checking... make sure that this file is 'readable'
+    if (f->type != HDFS_STREAM_INPUT) {
+        fprintf(stderr, "Cannot read from a non-InputStream object!\n");
+        errno = EINVAL;
+        return -1;
+    }
+
+    // JAVA EQUIVALENT:
+    //  byte [] bR = new byte[length];
+    //  fis.read(pos, bR, 0, length);
+    jbRarray = (*env)->NewByteArray(env, length);
+    if (!jbRarray) {
+        errno = printPendingExceptionAndFree(env, PRINT_EXC_ALL,
+                                             "hdfsPread: NewByteArray");
+        return -1;
+    }
+
+    jthr = invokeMethod(env, NULL, INSTANCE, f->file,
+                        JC_FS_DATA_INPUT_STREAM, "readFully", "(J[BII)V",
+                        position, jbRarray, 0, length);
+    if (jthr) {
+        destroyLocalReference(env, jbRarray);
+        errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+                                      "hdfsPread: FSDataInputStream#read");
+        return -1;
+    }
+
+    (*env)->GetByteArrayRegion(env, jbRarray, 0, length, buffer);
+    destroyLocalReference(env, jbRarray);
+    if ((*env)->ExceptionCheck(env)) {
+        errno = printPendingExceptionAndFree(env, PRINT_EXC_ALL,
+                "hdfsPread: GetByteArrayRegion");
+        return -1;
+    }
+    return 0;
+}
+
+int preadFullyDirect(hdfsFS fs, hdfsFile f, tOffset position, void* buffer,
+                  tSize length)
+{
+    // JAVA EQUIVALENT:
+    //  ByteBuffer buf = ByteBuffer.allocateDirect(length) // wraps C buffer
+    //  fis.read(position, buf);
+
+    jthrowable jthr;
+    jobject bb;
+
+    //Get the JNIEnv* corresponding to current thread
+    JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+        errno = EINTERNAL;
+        return -1;
+    }
+
+    //Error checking... make sure that this file is 'readable'
+    if (f->type != HDFS_STREAM_INPUT) {
+        fprintf(stderr, "Cannot read from a non-InputStream object!\n");
+        errno = EINVAL;
+        return -1;
+    }
+
+    //Read the requisite bytes
+    bb = (*env)->NewDirectByteBuffer(env, buffer, length);
+    if (bb == NULL) {
+        errno = printPendingExceptionAndFree(env, PRINT_EXC_ALL,
+                "readDirect: NewDirectByteBuffer");
+        return -1;
+    }
+
+    jthr = invokeMethod(env, NULL, INSTANCE, f->file,
+            JC_FS_DATA_INPUT_STREAM, "readFully",
+            "(JLjava/nio/ByteBuffer;)V", position, bb);
+    destroyLocalReference(env, bb);
+    if (jthr) {
+        errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+                "preadDirect: FSDataInputStream#read");
+        return -1;
+    }
+    return 0;
 }
 
 tSize hdfsWrite(hdfsFS fs, hdfsFile f, const void* buffer, tSize length)
@@ -3212,7 +3329,7 @@ tOffset hdfsGetDefaultBlockSizeAtPath(hdfsFS fs, const char *path)
             path);
         return -1;
     }
-    jthr = getDefaultBlockSize(env, jFS, jPath, &blockSize);
+    jthr = getDefaultBlockSize(env, jFS, jPath, (jlong *)&blockSize);
     (*env)->DeleteLocalRef(env, jPath);
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
@@ -3292,7 +3409,7 @@ tOffset hdfsGetUsed(hdfsFS fs)
     }
     fss = (jobject)jVal.l;
     jthr = invokeMethod(env, &jVal, INSTANCE, fss, JC_FS_STATUS,
-            HADOOP_FSSTATUS,"getUsed", "()J");
+            "getUsed", "()J");
     destroyLocalReference(env, fss);
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
@@ -3480,7 +3597,6 @@ done:
     destroyLocalReference(env, jUserName);
     destroyLocalReference(env, jGroupName);
     destroyLocalReference(env, jPermission);
-    destroyLocalReference(env, jPath);
     return jthr;
 }
 

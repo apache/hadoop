@@ -1,0 +1,840 @@
+Apache Hadoop
+Copyright 2006 and onwards The Apache Software Foundation.
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+Export Control Notice
+---------------------
+
+This distribution includes cryptographic software.  The country in
+which you currently reside may have restrictions on the import,
+possession, use, and/or re-export to another country, of
+encryption software.  BEFORE using any encryption software, please
+check your country's laws, regulations and policies concerning the
+import, possession, or use, and re-export of encryption software, to
+see if this is permitted.  See <http://www.wassenaar.org/> for more
+information.
+
+The U.S. Government Department of Commerce, Bureau of Industry and
+Security (BIS), has classified this software as Export Commodity
+Control Number (ECCN) 5D002.C.1, which includes information security
+software using or performing cryptographic functions with asymmetric
+algorithms.  The form and manner of this Apache Software Foundation
+distribution makes it eligible for export under the License Exception
+ENC Technology Software Unrestricted (TSU) exception (see the BIS
+Export Administration Regulations, Section 740.13) for both object
+code and source code.
+
+The following provides more details on the included cryptographic software:
+
+This software uses the SSL libraries from the Jetty project written
+by mortbay.org.
+Hadoop Yarn Server Web Proxy uses the BouncyCastle Java
+cryptography APIs written by the Legion of the Bouncy Castle Inc.
+
+// ------------------------------------------------------------------
+// NOTICE file corresponding to the section 4d of The Apache License,
+// Version 2.0, in this case for
+// ------------------------------------------------------------------
+
+
+Apache Yetus
+Copyright 2008-2017 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+---
+Additional licenses for the Apache Yetus Source/Website:
+---
+
+
+See LICENSE for terms.
+
+
+
+Apache Avro
+Copyright 2010 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+C JSON parsing provided by Jansson and
+written by Petri Lehtinen. The original software is
+available from http://www.digip.org/jansson/.
+
+
+AWS SDK for Java
+Copyright 2010-2014 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+This product includes software developed by
+Amazon Technologies, Inc (http://www.amazon.com/).
+
+**********************
+THIRD PARTY COMPONENTS
+**********************
+This software includes third party software subject to the following copyrights:
+- XML parsing and utility functions from JetS3t - Copyright 2006-2009 James Murty.
+- PKCS#1 PEM encoded private key parsing and utility functions from oauth.googlecode.com - Copyright 1998-2010 AOL Inc.
+
+The licenses for these third party components are included in LICENSE.txt
+
+
+Apache Commons BeanUtils
+Copyright 2000-2016 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+
+Apache Commons CLI
+Copyright 2001-2009 The Apache Software Foundation
+
+This product includes software developed by
+The Apache Software Foundation (http://www.apache.org/).
+
+
+Apache Commons Codec
+Copyright 2002-2017 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+src/test/org/apache/commons/codec/language/DoubleMetaphoneTest.java
+contains test data from http://aspell.net/test/orig/batch0.tab.
+Copyright (C) 2002 Kevin Atkinson (kevina@gnu.org)
+
+===============================================================================
+
+The content of package org.apache.commons.codec.language.bm has been translated
+from the original php source code available at http://stevemorse.org/phoneticinfo.htm
+with permission from the original authors.
+Original source copyright:
+Copyright (c) 2008 Alexander Beider & Stephen P. Morse.
+
+
+Apache Commons Collections
+Copyright 2001-2018 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+
+Apache Commons Compress
+Copyright 2002-2018 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (https://www.apache.org/).
+
+The files in the package org.apache.commons.compress.archivers.sevenz
+were derived from the LZMA SDK, version 9.20 (C/ and CPP/7zip/),
+which has been placed in the public domain:
+
+"LZMA SDK is placed in the public domain." (http://www.7-zip.org/sdk.html)
+
+
+Apache Commons Configuration
+Copyright 2001-2017 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+
+Apache Commons CSV
+Copyright 2005-2014 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+src/main/resources/contract.txt
+This file was downloaded from http://www.ferc.gov/docs-filing/eqr/soft-tools/sample-csv/contract.txt and contains neither copyright notice nor license.
+
+src/main/resources/transaction.txt
+This file was downloaded from http://www.ferc.gov/docs-filing/eqr/soft-tools/sample-csv/transaction.txt and contains neither copyright notice nor license.
+
+src/test/resources/CSVFileParser/bom.csv
+src/test/resources/CSVFileParser/test.csv
+src/test/resources/CSVFileParser/test_default.txt
+src/test/resources/CSVFileParser/test_default_comment.txt
+src/test/resources/CSVFileParser/test_rfc4180.txt
+src/test/resources/CSVFileParser/test_rfc4180_trim.txt
+src/test/resources/CSVFileParser/testCSV85.csv
+src/test/resources/CSVFileParser/testCSV85_default.txt
+src/test/resources/CSVFileParser/testCSV85_ignoreEmpty.txt
+These files are used as test data and test result specifications.
+
+
+Apache Commons Daemon
+Copyright 1999-2013 The Apache Software Foundation
+
+This product includes software developed by
+The Apache Software Foundation (http://www.apache.org/).
+
+
+Apache Commons Digester
+Copyright 2001-2008 The Apache Software Foundation
+
+This product includes software developed by
+The Apache Software Foundation (http://www.apache.org/).
+
+
+Apache Commons IO
+Copyright 2002-2016 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+
+Apache Commons Lang
+Copyright 2001-2017 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+This product includes software from the Spring Framework,
+under the Apache License 2.0 (see: StringUtils.containsWhitespace())
+
+
+Apache Commons Logging
+Copyright 2003-2013 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+
+Apache Commons Math
+Copyright 2001-2012 The Apache Software Foundation
+
+This product includes software developed by
+The Apache Software Foundation (http://www.apache.org/).
+
+===============================================================================
+
+The BracketFinder (package org.apache.commons.math3.optimization.univariate)
+and PowellOptimizer (package org.apache.commons.math3.optimization.general)
+classes are based on the Python code in module "optimize.py" (version 0.5)
+developed by Travis E. Oliphant for the SciPy library (http://www.scipy.org/)
+Copyright © 2003-2009 SciPy Developers.
+===============================================================================
+
+The LinearConstraint, LinearObjectiveFunction, LinearOptimizer,
+RelationShip, SimplexSolver and SimplexTableau classes in package
+org.apache.commons.math3.optimization.linear include software developed by
+Benjamin McCann (http://www.benmccann.com) and distributed with
+the following copyright: Copyright 2009 Google Inc.
+===============================================================================
+
+This product includes software developed by the
+University of Chicago, as Operator of Argonne National
+Laboratory.
+The LevenbergMarquardtOptimizer class in package
+org.apache.commons.math3.optimization.general includes software
+translated from the lmder, lmpar and qrsolv Fortran routines
+from the Minpack package
+Minpack Copyright Notice (1999) University of Chicago.  All rights reserved
+===============================================================================
+
+The GraggBulirschStoerIntegrator class in package
+org.apache.commons.math3.ode.nonstiff includes software translated
+from the odex Fortran routine developed by E. Hairer and G. Wanner.
+Original source copyright:
+Copyright (c) 2004, Ernst Hairer
+===============================================================================
+
+The EigenDecompositionImpl class in package
+org.apache.commons.math3.linear includes software translated
+from some LAPACK Fortran routines.  Original source copyright:
+Copyright (c) 1992-2008 The University of Tennessee.  All rights reserved.
+===============================================================================
+
+The MersenneTwister class in package org.apache.commons.math3.random
+includes software translated from the 2002-01-26 version of
+the Mersenne-Twister generator written in C by Makoto Matsumoto and Takuji
+Nishimura. Original source copyright:
+Copyright (C) 1997 - 2002, Makoto Matsumoto and Takuji Nishimura,
+All rights reserved
+===============================================================================
+
+The LocalizedFormatsTest class in the unit tests is an adapted version of
+the OrekitMessagesTest class from the orekit library distributed under the
+terms of the Apache 2 licence. Original source copyright:
+Copyright 2010 CS Systèmes d'Information
+===============================================================================
+
+The HermiteInterpolator class and its corresponding test have been imported from
+the orekit library distributed under the terms of the Apache 2 licence. Original
+source copyright:
+Copyright 2010-2012 CS Systèmes d'Information
+===============================================================================
+
+The creation of the package "o.a.c.m.analysis.integration.gauss" was inspired
+by an original code donated by Sébastien Brisard.
+===============================================================================
+
+
+The complete text of licenses and disclaimers associated with the the original
+sources enumerated above at the time of code translation are in the LICENSE.txt
+file.
+
+
+Apache Commons Net
+Copyright 2001-2017 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+
+Apache Commons Text
+Copyright 2014-2018 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+
+Apache Commons Validator
+Copyright 2001-2017 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+
+Apache Curator
+Copyright 2013-2014 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+
+Ehcache V3
+Copyright 2014-2016 Terracotta, Inc.
+
+The product includes software from the Apache Commons Lang project,
+under the Apache License 2.0 (see: org.ehcache.impl.internal.classes.commonslang)
+
+
+Apache Geronimo
+Copyright 2003-2018 The Apache Software Foundation
+
+This product includes software developed by
+The Apache Software Foundation (http://www.apache.org/).
+
+
+Copyright 2014 The gRPC Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+-----------------------------------------------------------------------
+
+This product contains a modified portion of 'OkHttp', an open source
+HTTP & SPDY client for Android and Java applications, which can be obtained
+at:
+
+  * LICENSE:
+    * okhttp/third_party/okhttp/LICENSE (Apache License 2.0)
+  * HOMEPAGE:
+    * https://github.com/square/okhttp
+  * LOCATION_IN_GRPC:
+    * okhttp/third_party/okhttp
+
+This product contains a modified portion of 'Netty', an open source
+networking library, which can be obtained at:
+
+  * LICENSE:
+    * netty/third_party/netty/LICENSE.txt (Apache License 2.0)
+  * HOMEPAGE:
+    * https://netty.io
+  * LOCATION_IN_GRPC:
+    * netty/third_party/netty
+
+
+Apache HBase
+Copyright 2007-2018 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+--
+This product incorporates portions of the 'Hadoop' project
+
+Copyright 2007-2009 The Apache Software Foundation
+
+Licensed under the Apache License v2.0
+--
+Our Orca logo we got here: http://www.vectorfree.com/jumping-orca
+It is licensed Creative Commons Attribution 3.0.
+See https://creativecommons.org/licenses/by/3.0/us/
+We changed the logo by stripping the colored background, inverting
+it and then rotating it some.
+
+Later we found that vectorfree.com image is not properly licensed.
+The original is owned by vectorportal.com. The original was
+relicensed so we could use it as Creative Commons Attribution 3.0.
+The license is bundled with the download available here:
+http://www.vectorportal.com/subcategory/205/KILLER-WHALE-FREE-VECTOR.eps/ifile/9136/detailtest.asp
+--
+This product includes portions of the Bootstrap project v3.0.0
+
+Copyright 2013 Twitter, Inc.
+
+Licensed under the Apache License v2.0
+
+This product uses the Glyphicons Halflings icon set.
+
+http://glyphicons.com/
+
+Copyright Jan Kovařík
+
+Licensed under the Apache License v2.0 as a part of the Bootstrap project.
+
+--
+This product includes portions of the Guava project v14 and v21, specifically
+'hbase-common/src/main/java/org/apache/hadoop/hbase/io/LimitInputStream.java'
+'hbase-common/src/main/java/org/apache/hadoop/hbase/util/Bytes.java'
+
+Copyright (C) 2007 The Guava Authors
+
+Licensed under the Apache License, Version 2.0
+
+
+Apache HTrace
+Copyright 2016 The Apache Software Foundation
+
+This product includes software developed at The Apache Software
+Foundation (http://www.apache.org/).
+
+In addition, this product includes software dependencies. See
+the accompanying LICENSE.txt for a listing of dependencies
+that are NOT Apache licensed (with pointers to their licensing)
+
+Apache HTrace includes an Apache Thrift connector to Zipkin. Zipkin
+is a distributed tracing system that is Apache 2.0 Licensed.
+Copyright 2012 Twitter, Inc.
+
+
+Apache HttpComponents Client
+Copyright 1999-2018 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+
+Apache HttpComponents Core
+Copyright 2005-2018 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+
+==============================================================
+ Jetty Web Container
+ Copyright 1995-2017 Mort Bay Consulting Pty Ltd.
+==============================================================
+
+The Jetty Web Container is Copyright Mort Bay Consulting Pty Ltd
+unless otherwise noted.
+
+Jetty is dual licensed under both
+
+  * The Apache 2.0 License
+    http://www.apache.org/licenses/LICENSE-2.0.html
+
+      and
+
+  * The Eclipse Public 1.0 License
+    http://www.eclipse.org/legal/epl-v10.html
+
+Jetty may be distributed under either license.
+
+------
+Eclipse
+
+The following artifacts are EPL.
+ * org.eclipse.jetty.orbit:org.eclipse.jdt.core
+
+The following artifacts are EPL and ASL2.
+ * org.eclipse.jetty.orbit:javax.security.auth.message
+
+
+The following artifacts are EPL and CDDL 1.0.
+ * org.eclipse.jetty.orbit:javax.mail.glassfish
+
+
+------
+Oracle
+
+The following artifacts are CDDL + GPLv2 with classpath exception.
+https://glassfish.dev.java.net/nonav/public/CDDL+GPL.html
+
+ * javax.servlet:javax.servlet-api
+ * javax.annotation:javax.annotation-api
+ * javax.transaction:javax.transaction-api
+ * javax.websocket:javax.websocket-api
+
+------
+Oracle OpenJDK
+
+If ALPN is used to negotiate HTTP/2 connections, then the following
+artifacts may be included in the distribution or downloaded when ALPN
+module is selected.
+
+ * java.sun.security.ssl
+
+These artifacts replace/modify OpenJDK classes.  The modififications
+are hosted at github and both modified and original are under GPL v2 with
+classpath exceptions.
+http://openjdk.java.net/legal/gplv2+ce.html
+
+
+------
+OW2
+
+The following artifacts are licensed by the OW2 Foundation according to the
+terms of http://asm.ow2.org/license.html
+
+org.ow2.asm:asm-commons
+org.ow2.asm:asm
+
+
+------
+Apache
+
+The following artifacts are ASL2 licensed.
+
+org.apache.taglibs:taglibs-standard-spec
+org.apache.taglibs:taglibs-standard-impl
+
+
+------
+MortBay
+
+The following artifacts are ASL2 licensed.  Based on selected classes from
+following Apache Tomcat jars, all ASL2 licensed.
+
+org.mortbay.jasper:apache-jsp
+  org.apache.tomcat:tomcat-jasper
+  org.apache.tomcat:tomcat-juli
+  org.apache.tomcat:tomcat-jsp-api
+  org.apache.tomcat:tomcat-el-api
+  org.apache.tomcat:tomcat-jasper-el
+  org.apache.tomcat:tomcat-api
+  org.apache.tomcat:tomcat-util-scan
+  org.apache.tomcat:tomcat-util
+
+org.mortbay.jasper:apache-el
+  org.apache.tomcat:tomcat-jasper-el
+  org.apache.tomcat:tomcat-el-api
+
+
+------
+Mortbay
+
+The following artifacts are CDDL + GPLv2 with classpath exception.
+
+https://glassfish.dev.java.net/nonav/public/CDDL+GPL.html
+
+org.eclipse.jetty.toolchain:jetty-schemas
+
+------
+Assorted
+
+The UnixCrypt.java code implements the one way cryptography used by
+Unix systems for simple password protection.  Copyright 1996 Aki Yoshida,
+modified April 2001  by Iris Van den Broeke, Daniel Deville.
+Permission to use, copy, modify and distribute UnixCrypt
+for non-commercial or commercial purposes and without fee is
+granted provided that the copyright notice appears in all copies.
+
+
+Apache Kafka
+Copyright 2012 The Apache Software Foundation.
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+
+Apache Kerby
+Copyright 2015-2017 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+
+Apache log4j
+Copyright 2010 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+
+Metrics
+Copyright 2010-2013 Coda Hale and Yammer, Inc.
+
+This product includes software developed by Coda Hale and Yammer, Inc.
+
+This product includes code derived from the JSR-166 project (ThreadLocalRandom, Striped64,
+LongAdder), which was released with the following comments:
+
+    Written by Doug Lea with assistance from members of JCP JSR-166
+    Expert Group and released to the public domain, as explained at
+    http://creativecommons.org/publicdomain/zero/1.0/
+
+
+
+                            The Netty Project
+                            =================
+
+Please visit the Netty web site for more information:
+
+  * http://netty.io/
+
+Copyright 2014 The Netty Project
+
+The Netty Project licenses this file to you under the Apache License,
+version 2.0 (the "License"); you may not use this file except in compliance
+with the License. You may obtain a copy of the License at:
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+License for the specific language governing permissions and limitations
+under the License.
+
+Also, please refer to each LICENSE.<component>.txt file, which is located in
+the 'license' directory of the distribution file, for the license terms of the
+components that this product depends on.
+
+-------------------------------------------------------------------------------
+This product contains the extensions to Java Collections Framework which has
+been derived from the works by JSR-166 EG, Doug Lea, and Jason T. Greene:
+
+  * LICENSE:
+    * license/LICENSE.jsr166y.txt (Public Domain)
+  * HOMEPAGE:
+    * http://gee.cs.oswego.edu/cgi-bin/viewcvs.cgi/jsr166/
+    * http://viewvc.jboss.org/cgi-bin/viewvc.cgi/jbosscache/experimental/jsr166/
+
+This product contains a modified version of Robert Harder's Public Domain
+Base64 Encoder and Decoder, which can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.base64.txt (Public Domain)
+  * HOMEPAGE:
+    * http://iharder.sourceforge.net/current/java/base64/
+
+This product contains a modified portion of 'Webbit', an event based
+WebSocket and HTTP server, which can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.webbit.txt (BSD License)
+  * HOMEPAGE:
+    * https://github.com/joewalnes/webbit
+
+This product contains a modified portion of 'SLF4J', a simple logging
+facade for Java, which can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.slf4j.txt (MIT License)
+  * HOMEPAGE:
+    * http://www.slf4j.org/
+
+This product contains a modified portion of 'Apache Harmony', an open source
+Java SE, which can be obtained at:
+
+  * NOTICE:
+    * license/NOTICE.harmony.txt
+  * LICENSE:
+    * license/LICENSE.harmony.txt (Apache License 2.0)
+  * HOMEPAGE:
+    * http://archive.apache.org/dist/harmony/
+
+This product contains a modified portion of 'jbzip2', a Java bzip2 compression
+and decompression library written by Matthew J. Francis. It can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.jbzip2.txt (MIT License)
+  * HOMEPAGE:
+    * https://code.google.com/p/jbzip2/
+
+This product contains a modified portion of 'libdivsufsort', a C API library to construct
+the suffix array and the Burrows-Wheeler transformed string for any input string of
+a constant-size alphabet written by Yuta Mori. It can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.libdivsufsort.txt (MIT License)
+  * HOMEPAGE:
+    * https://github.com/y-256/libdivsufsort
+
+This product contains a modified portion of Nitsan Wakart's 'JCTools', Java Concurrency Tools for the JVM,
+ which can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.jctools.txt (ASL2 License)
+  * HOMEPAGE:
+    * https://github.com/JCTools/JCTools
+
+This product optionally depends on 'JZlib', a re-implementation of zlib in
+pure Java, which can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.jzlib.txt (BSD style License)
+  * HOMEPAGE:
+    * http://www.jcraft.com/jzlib/
+
+This product optionally depends on 'Compress-LZF', a Java library for encoding and
+decoding data in LZF format, written by Tatu Saloranta. It can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.compress-lzf.txt (Apache License 2.0)
+  * HOMEPAGE:
+    * https://github.com/ning/compress
+
+This product optionally depends on 'lz4', a LZ4 Java compression
+and decompression library written by Adrien Grand. It can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.lz4.txt (Apache License 2.0)
+  * HOMEPAGE:
+    * https://github.com/jpountz/lz4-java
+
+This product optionally depends on 'lzma-java', a LZMA Java compression
+and decompression library, which can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.lzma-java.txt (Apache License 2.0)
+  * HOMEPAGE:
+    * https://github.com/jponge/lzma-java
+
+This product contains a modified portion of 'jfastlz', a Java port of FastLZ compression
+and decompression library written by William Kinney. It can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.jfastlz.txt (MIT License)
+  * HOMEPAGE:
+    * https://code.google.com/p/jfastlz/
+
+This product contains a modified portion of and optionally depends on 'Protocol Buffers', Google's data
+interchange format, which can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.protobuf.txt (New BSD License)
+  * HOMEPAGE:
+    * https://github.com/google/protobuf
+
+This product optionally depends on 'Bouncy Castle Crypto APIs' to generate
+a temporary self-signed X.509 certificate when the JVM does not provide the
+equivalent functionality.  It can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.bouncycastle.txt (MIT License)
+  * HOMEPAGE:
+    * http://www.bouncycastle.org/
+
+This product optionally depends on 'Snappy', a compression library produced
+by Google Inc, which can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.snappy.txt (New BSD License)
+  * HOMEPAGE:
+    * https://github.com/google/snappy
+
+This product optionally depends on 'JBoss Marshalling', an alternative Java
+serialization API, which can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.jboss-marshalling.txt (GNU LGPL 2.1)
+  * HOMEPAGE:
+    * http://www.jboss.org/jbossmarshalling
+
+This product optionally depends on 'Caliper', Google's micro-
+benchmarking framework, which can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.caliper.txt (Apache License 2.0)
+  * HOMEPAGE:
+    * https://github.com/google/caliper
+
+This product optionally depends on 'Apache Commons Logging', a logging
+framework, which can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.commons-logging.txt (Apache License 2.0)
+  * HOMEPAGE:
+    * http://commons.apache.org/logging/
+
+This product optionally depends on 'Apache Log4J', a logging framework, which
+can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.log4j.txt (Apache License 2.0)
+  * HOMEPAGE:
+    * http://logging.apache.org/log4j/
+
+This product optionally depends on 'Aalto XML', an ultra-high performance
+non-blocking XML processor, which can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.aalto-xml.txt (Apache License 2.0)
+  * HOMEPAGE:
+    * http://wiki.fasterxml.com/AaltoHome
+
+This product contains a modified version of 'HPACK', a Java implementation of
+the HTTP/2 HPACK algorithm written by Twitter. It can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.hpack.txt (Apache License 2.0)
+  * HOMEPAGE:
+    * https://github.com/twitter/hpack
+
+This product contains a modified portion of 'Apache Commons Lang', a Java library
+provides utilities for the java.lang API, which can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.commons-lang.txt (Apache License 2.0)
+  * HOMEPAGE:
+    * https://commons.apache.org/proper/commons-lang/
+
+
+This product contains the Maven wrapper scripts from 'Maven Wrapper', that provides an easy way to ensure a user has everything necessary to run the Maven build.
+
+  * LICENSE:
+    * license/LICENSE.mvn-wrapper.txt (Apache License 2.0)
+  * HOMEPAGE:
+    * https://github.com/takari/maven-wrapper
+
+
+This product includes software developed by Google
+ Snappy: http://code.google.com/p/snappy/ (New BSD License)
+
+This product includes software developed by Apache
+ PureJavaCrc32C from apache-hadoop-common http://hadoop.apache.org/
+ (Apache 2.0 license)
+
+This library containd statically linked libstdc++. This inclusion is allowed by
+"GCC RUntime Library Exception"
+http://gcc.gnu.org/onlinedocs/libstdc++/manual/license.html
+
+== Contributors ==
+  * Tatu Saloranta
+    * Providing benchmark suite
+  * Alec Wysoker
+    * Performance and memory usage improvement
+
+
+Apache ZooKeeper
+Copyright 2009-2018 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).

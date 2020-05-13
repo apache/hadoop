@@ -189,21 +189,15 @@ public class UserGroupInformation {
 
     @Override
     public boolean commit() throws LoginException {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("hadoop login commit");
-      }
+      LOG.debug("hadoop login commit");
       // if we already have a user, we are done.
       if (!subject.getPrincipals(User.class).isEmpty()) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("using existing subject:"+subject.getPrincipals());
-        }
+        LOG.debug("Using existing subject: {}", subject.getPrincipals());
         return true;
       }
       Principal user = getCanonicalUser(KerberosPrincipal.class);
       if (user != null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("using kerberos user:"+user);
-        }
+        LOG.debug("Using kerberos user: {}", user);
       }
       //If we don't have a kerberos user and security is disabled, check
       //if user is specified in the environment or properties
@@ -217,15 +211,11 @@ public class UserGroupInformation {
       // use the OS user
       if (user == null) {
         user = getCanonicalUser(OS_PRINCIPAL_CLASS);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("using local user:"+user);
-        }
+        LOG.debug("Using local user: {}", user);
       }
       // if we found the user, add our principal
       if (user != null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Using user: \"" + user + "\" with name " + user.getName());
-        }
+        LOG.debug("Using user: \"{}\" with name: {}", user, user.getName());
 
         User userEntry = null;
         try {
@@ -237,15 +227,12 @@ public class UserGroupInformation {
         } catch (Exception e) {
           throw (LoginException)(new LoginException(e.toString()).initCause(e));
         }
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("User entry: \"" + userEntry.toString() + "\"" );
-        }
+        LOG.debug("User entry: \"{}\"", userEntry);
 
         subject.getPrincipals().add(userEntry);
         return true;
       }
-      LOG.error("Can't find user in " + subject);
-      throw new LoginException("Can't find user name");
+      throw new LoginException("Failed to find user in name " + subject);
     }
 
     @Override
@@ -256,17 +243,13 @@ public class UserGroupInformation {
 
     @Override
     public boolean login() throws LoginException {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("hadoop login");
-      }
+      LOG.debug("Hadoop login");
       return true;
     }
 
     @Override
     public boolean logout() throws LoginException {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("hadoop logout");
-      }
+      LOG.debug("Hadoop logout");
       return true;
     }
   }
@@ -444,23 +427,12 @@ public class UserGroupInformation {
   
   private static final boolean windows =
       System.getProperty("os.name").startsWith("Windows");
-  private static final boolean is64Bit =
-      System.getProperty("os.arch").contains("64") ||
-      System.getProperty("os.arch").contains("s390x");
-  private static final boolean aix = System.getProperty("os.name").equals("AIX");
 
   /* Return the OS login module class name */
+  /* For IBM JDK, use the common OS login module class name for all platforms */
   private static String getOSLoginModuleName() {
     if (IBM_JAVA) {
-      if (windows) {
-        return is64Bit ? "com.ibm.security.auth.module.Win64LoginModule"
-            : "com.ibm.security.auth.module.NTLoginModule";
-      } else if (aix) {
-        return is64Bit ? "com.ibm.security.auth.module.AIX64LoginModule"
-            : "com.ibm.security.auth.module.AIXLoginModule";
-      } else {
-        return "com.ibm.security.auth.module.LinuxLoginModule";
-      }
+      return "com.ibm.security.auth.module.JAASLoginModule";
     } else {
       return windows ? "com.sun.security.auth.module.NTLoginModule"
         : "com.sun.security.auth.module.UnixLoginModule";
@@ -468,23 +440,14 @@ public class UserGroupInformation {
   }
 
   /* Return the OS principal class */
+  /* For IBM JDK, use the common OS principal class for all platforms */
   @SuppressWarnings("unchecked")
   private static Class<? extends Principal> getOsPrincipalClass() {
     ClassLoader cl = ClassLoader.getSystemClassLoader();
     try {
       String principalClass = null;
       if (IBM_JAVA) {
-        if (is64Bit) {
-          principalClass = "com.ibm.security.auth.UsernamePrincipal";
-        } else {
-          if (windows) {
-            principalClass = "com.ibm.security.auth.NTUserPrincipal";
-          } else if (aix) {
-            principalClass = "com.ibm.security.auth.AIXPrincipal";
-          } else {
-            principalClass = "com.ibm.security.auth.LinuxPrincipal";
-          }
-        }
+        principalClass = "com.ibm.security.auth.UsernamePrincipal";
       } else {
         principalClass = windows ? "com.sun.security.auth.NTUserPrincipal"
             : "com.sun.security.auth.UnixPrincipal";
@@ -601,6 +564,7 @@ public class UserGroupInformation {
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
   public static UserGroupInformation getCurrentUser() throws IOException {
+    ensureInitialized();
     AccessControlContext context = AccessController.getContext();
     Subject subject = Subject.getSubject(context);
     if (subject == null || subject.getPrincipals(User.class).isEmpty()) {
@@ -687,6 +651,7 @@ public class UserGroupInformation {
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
   public static UserGroupInformation getLoginUser() throws IOException {
+    ensureInitialized();
     UserGroupInformation loginUser = loginUserRef.get();
     // a potential race condition exists only for the initial creation of
     // the login user.  there's no need to penalize all subsequent calls
@@ -808,12 +773,10 @@ public class UserGroupInformation {
         LOG.debug("Loaded {} base64 tokens", numTokenBase64);
       }
     } catch (IOException ioe) {
-      LOG.debug("failure to load login credentials", ioe);
+      LOG.debug("Failure to load login credentials", ioe);
       throw ioe;
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("UGI loginUser:"+loginUser);
-    }
+    LOG.debug("UGI loginUser: {}", loginUser);
     return loginUser;
   }
 
@@ -994,10 +957,7 @@ public class UserGroupInformation {
       do {
         try {
           long now = Time.now();
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Current time is " + now);
-            LOG.debug("Next refresh is " + nextRefresh);
-          }
+          LOG.debug("Current time is {}, next refresh is {}", now, nextRefresh);
           if (now < nextRefresh) {
             Thread.sleep(nextRefresh - now);
           }
@@ -1033,18 +993,18 @@ public class UserGroupInformation {
           try {
             tgtEndTime = tgt.getEndTime().getTime();
           } catch (NullPointerException npe) {
-            LOG.error(String.format("NPE thrown while getting " +
-                "KerberosTicket endTime. Aborting renew thread for %s.",
-                getUserName()), ie);
+            LOG.error("NPE thrown while getting KerberosTicket endTime. "
+                + "Aborting renew thread for {}.", getUserName(), ie);
             return;
           }
 
-          LOG.warn(String.format("Exception encountered while running the " +
-                  "renewal command for %s. " +
-                  "(TGT end time:%d, renewalFailures: %d, " +
-                  "renewalFailuresTotal: %d)", getUserName(), tgtEndTime,
-              metrics.renewalFailures.value(),
-              metrics.renewalFailuresTotal.value()), ie);
+          LOG.warn(
+              "Exception encountered while running the "
+                  + "renewal command for {}. "
+                  + "(TGT end time:{}, renewalFailures: {}, "
+                  + "renewalFailuresTotal: {})",
+              getUserName(), tgtEndTime, metrics.renewalFailures.value(),
+              metrics.renewalFailuresTotal.value(), ie);
           if (rp == null) {
             // Use a dummy maxRetries to create the policy. The policy will
             // only be used to get next retry time with exponential back-off.
@@ -1091,9 +1051,7 @@ public class UserGroupInformation {
     @Override
     public void relogin() throws IOException {
       String output = Shell.execCommand(kinitCmd, "-R");
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Renewed ticket. kinit output: {}", output);
-      }
+      LOG.debug("Renewed ticket. kinit output: {}", output);
       reloginFromTicketCache();
     }
   }
@@ -1193,9 +1151,7 @@ public class UserGroupInformation {
     }
 
     try {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Initiating logout for " + getUserName());
-      }
+      LOG.debug("Initiating logout for {}", getUserName());
       // hadoop login context internally locks credentials.
       login.logout();
     } catch (LoginException le) {
@@ -1329,9 +1285,7 @@ public class UserGroupInformation {
     // register most recent relogin attempt
     user.setLastLogin(now);
     try {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Initiating logout for " + getUserName());
-      }
+      LOG.debug("Initiating logout for {}", getUserName());
       //clear up the kerberos state. But the tokens are not cleared! As per 
       //the Java kerberos login module code, only the kerberos credentials
       //are cleared
@@ -1340,9 +1294,7 @@ public class UserGroupInformation {
       //have the new credentials (pass it to the LoginContext constructor)
       login = newLoginContext(
         login.getAppName(), login.getSubject(), login.getConfiguration());
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Initiating re-login for " + getUserName());
-      }
+      LOG.debug("Initiating re-login for {}", getUserName());
       login.login();
       // this should be unnecessary.  originally added due to improper locking
       // of the subject during relogin.
@@ -1748,11 +1700,7 @@ public class UserGroupInformation {
     try {
       return groups.getGroups(getShortUserName());
     } catch (IOException ie) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Failed to get groups for user " + getShortUserName()
-            + " by " + ie);
-        LOG.trace("TRACE", ie);
-      }
+      LOG.debug("Failed to get groups for user {}", getShortUserName(), ie);
       return Collections.emptyList();
     }
   }
@@ -1867,7 +1815,10 @@ public class UserGroupInformation {
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
   public <T> T doAs(PrivilegedAction<T> action) {
-    logPrivilegedAction(subject, action);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("PrivilegedAction [as: {}][action: {}]", this, action,
+          new Exception());
+    }
     return Subject.doAs(subject, action);
   }
   
@@ -1887,13 +1838,14 @@ public class UserGroupInformation {
   public <T> T doAs(PrivilegedExceptionAction<T> action
                     ) throws IOException, InterruptedException {
     try {
-      logPrivilegedAction(subject, action);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("PrivilegedAction [as: {}][action: {}]", this, action,
+            new Exception());
+      }
       return Subject.doAs(subject, action);
     } catch (PrivilegedActionException pae) {
       Throwable cause = pae.getCause();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("PrivilegedActionException as:" + this + " cause:" + cause);
-      }
+      LOG.debug("PrivilegedActionException as: {}", this, cause);
       if (cause == null) {
         throw new RuntimeException("PrivilegedActionException with no " +
                 "underlying cause. UGI [" + this + "]" +": " + pae, pae);
@@ -1908,14 +1860,6 @@ public class UserGroupInformation {
       } else {
         throw new UndeclaredThrowableException(cause);
       }
-    }
-  }
-
-  private void logPrivilegedAction(Subject subject, Object action) {
-    if (LOG.isDebugEnabled()) {
-      // would be nice if action included a descriptive toString()
-      String where = new Throwable().getStackTrace()[2].toString();
-      LOG.debug("PrivilegedAction as:"+this+" from:"+where);
     }
   }
 

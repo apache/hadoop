@@ -23,7 +23,14 @@ import javax.security.sasl.SaslException;
 
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
+import org.apache.hadoop.security.AccessControlException;
 
+/**
+ * For the usage and purpose of this class see {@link UnreliableInterface}
+ * which this class implements.
+ *
+ * @see UnreliableInterface
+ */
 class UnreliableImplementation implements UnreliableInterface {
 
   private int failsOnceInvocationCount,
@@ -32,6 +39,7 @@ class UnreliableImplementation implements UnreliableInterface {
     failsOnceRemoteExceptionInvocationCount,
     failsTenTimesInvocationCount,
     failsWithSASLExceptionTenTimesInvocationCount,
+    failsWithAccessControlExceptionInvocationCount,
     succeedsOnceThenFailsCount,
     succeedsOnceThenFailsIdempotentCount,
     succeedsTenTimesThenFailsCount;
@@ -121,6 +129,21 @@ class UnreliableImplementation implements UnreliableInterface {
     if (failsWithSASLExceptionTenTimesInvocationCount ++ < 10) {
       throw new SaslException();
     }
+  }
+
+  @Override
+  public void failsWithAccessControlExceptionEightTimes()
+      throws AccessControlException {
+    if (failsWithAccessControlExceptionInvocationCount++ < 8) {
+      throw new AccessControlException();
+    }
+  }
+
+  public void failsWithWrappedAccessControlException()
+      throws IOException {
+    AccessControlException ace = new AccessControlException();
+    IOException ioe = new IOException(ace);
+    throw new IOException(ioe);
   }
 
   @Override

@@ -26,6 +26,7 @@ import java.util.List;
 import com.google.common.base.Charsets;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.DelegationTokenRenewer;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -33,18 +34,24 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PositionedReadable;
+import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.XAttrCodec;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.web.JsonUtilClient;
@@ -84,7 +91,10 @@ import java.net.URL;
 import java.security.PrivilegedExceptionAction;
 import java.text.MessageFormat;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
+
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
 /**
  * HttpFSServer implementation of the FileSystemAccess FileSystem.
@@ -125,6 +135,8 @@ public class HttpFSFileSystem extends FileSystem
   public static final String POLICY_NAME_PARAM = "storagepolicy";
   public static final String SNAPSHOT_NAME_PARAM = "snapshotname";
   public static final String OLD_SNAPSHOT_NAME_PARAM = "oldsnapshotname";
+  public static final String FSACTION_MODE_PARAM = "fsaction";
+  public static final String EC_POLICY_NAME_PARAM = "ecpolicy";
 
   public static final Short DEFAULT_PERMISSION = 0755;
   public static final String ACLSPEC_DEFAULT = "";
@@ -176,11 +188,16 @@ public class HttpFSFileSystem extends FileSystem
   public static final String ACCESS_TIME_JSON = "accessTime";
   public static final String MODIFICATION_TIME_JSON = "modificationTime";
   public static final String BLOCK_SIZE_JSON = "blockSize";
+  public static final String CHILDREN_NUM_JSON = "childrenNum";
+  public static final String FILE_ID_JSON = "fileId";
   public static final String REPLICATION_JSON = "replication";
+  public static final String STORAGEPOLICY_JSON = "storagePolicy";
+  public static final String ECPOLICYNAME_JSON = "ecPolicy";
   public static final String XATTRS_JSON = "XAttrs";
   public static final String XATTR_NAME_JSON = "name";
   public static final String XATTR_VALUE_JSON = "value";
   public static final String XATTRNAMES_JSON = "XAttrNames";
+  public static final String ECPOLICY_JSON = "ecPolicyObj";
 
   public static final String FILE_CHECKSUM_JSON = "FileChecksum";
   public static final String CHECKSUM_ALGORITHM_JSON = "algorithm";
@@ -189,11 +206,19 @@ public class HttpFSFileSystem extends FileSystem
 
   public static final String CONTENT_SUMMARY_JSON = "ContentSummary";
   public static final String CONTENT_SUMMARY_DIRECTORY_COUNT_JSON = "directoryCount";
+  public static final String CONTENT_SUMMARY_ECPOLICY_JSON = "ecPolicy";
   public static final String CONTENT_SUMMARY_FILE_COUNT_JSON = "fileCount";
   public static final String CONTENT_SUMMARY_LENGTH_JSON = "length";
-  public static final String CONTENT_SUMMARY_QUOTA_JSON = "quota";
-  public static final String CONTENT_SUMMARY_SPACE_CONSUMED_JSON = "spaceConsumed";
-  public static final String CONTENT_SUMMARY_SPACE_QUOTA_JSON = "spaceQuota";
+
+  public static final String QUOTA_USAGE_JSON = "QuotaUsage";
+  public static final String QUOTA_USAGE_FILE_AND_DIRECTORY_COUNT_JSON =
+      "fileAndDirectoryCount";
+  public static final String QUOTA_USAGE_QUOTA_JSON = "quota";
+  public static final String QUOTA_USAGE_SPACE_CONSUMED_JSON = "spaceConsumed";
+  public static final String QUOTA_USAGE_SPACE_QUOTA_JSON = "spaceQuota";
+  public static final String QUOTA_USAGE_CONSUMED_JSON = "consumed";
+  public static final String QUOTA_USAGE_TYPE_QUOTA_JSON = "typeQuota";
+
 
   public static final String ACL_STATUS_JSON = "AclStatus";
   public static final String ACL_STICKY_BIT_JSON = "stickyBit";
@@ -222,8 +247,9 @@ public class HttpFSFileSystem extends FileSystem
   public enum Operation {
     OPEN(HTTP_GET), GETFILESTATUS(HTTP_GET), LISTSTATUS(HTTP_GET),
     GETHOMEDIRECTORY(HTTP_GET), GETCONTENTSUMMARY(HTTP_GET),
-    GETFILECHECKSUM(HTTP_GET),  GETFILEBLOCKLOCATIONS(HTTP_GET),
-    INSTRUMENTATION(HTTP_GET), GETACLSTATUS(HTTP_GET), GETTRASHROOT(HTTP_GET),
+    GETQUOTAUSAGE(HTTP_GET), GETFILECHECKSUM(HTTP_GET),
+    GETFILEBLOCKLOCATIONS(HTTP_GET), INSTRUMENTATION(HTTP_GET),
+    GETACLSTATUS(HTTP_GET), GETTRASHROOT(HTTP_GET),
     APPEND(HTTP_POST), CONCAT(HTTP_POST), TRUNCATE(HTTP_POST),
     CREATE(HTTP_PUT), MKDIRS(HTTP_PUT), RENAME(HTTP_PUT), SETOWNER(HTTP_PUT),
     SETPERMISSION(HTTP_PUT), SETREPLICATION(HTTP_PUT), SETTIMES(HTTP_PUT),
@@ -236,7 +262,9 @@ public class HttpFSFileSystem extends FileSystem
     ALLOWSNAPSHOT(HTTP_PUT), DISALLOWSNAPSHOT(HTTP_PUT),
     CREATESNAPSHOT(HTTP_PUT), DELETESNAPSHOT(HTTP_DELETE),
     RENAMESNAPSHOT(HTTP_PUT), GETSNAPSHOTDIFF(HTTP_GET),
-    GETSNAPSHOTTABLEDIRECTORYLIST(HTTP_GET);
+    GETSNAPSHOTTABLEDIRECTORYLIST(HTTP_GET), GETSERVERDEFAULTS(HTTP_GET),
+    CHECKACCESS(HTTP_GET), SETECPOLICY(HTTP_PUT), GETECPOLICY(
+        HTTP_GET), UNSETECPOLICY(HTTP_POST), SATISFYSTORAGEPOLICY(HTTP_PUT);
 
     private String httpMethod;
 
@@ -774,6 +802,11 @@ public class HttpFSFileSystem extends FileSystem
    */
   @Override
   public void setWorkingDirectory(Path newDir) {
+    String result = newDir.toUri().getPath();
+    if (!DFSUtilClient.isValidName(result)) {
+      throw new IllegalArgumentException(
+          "Invalid DFS directory name " + result);
+    }
     workingDir = newDir;
   }
 
@@ -825,9 +858,8 @@ public class HttpFSFileSystem extends FileSystem
                                            params, f, true);
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
-    json = (JSONObject) json.get(FILE_STATUS_JSON);
-    f = makeQualified(f);
-    return createFileStatus(f, json);
+    HdfsFileStatus status = JsonUtilClient.toFileStatus(json, true);
+    return status.makeQualified(getUri(), f);
   }
 
   /**
@@ -1109,6 +1141,8 @@ public class HttpFSFileSystem extends FileSystem
             .owner((String) json.get(OWNER_JSON))
             .group((String) json.get(GROUP_JSON))
             .stickyBit((Boolean) json.get(ACL_STICKY_BIT_JSON));
+    final FsPermission permission = toFsPermission(json);
+    aclStatusBuilder.setPermission(permission);
     JSONArray entries = (JSONArray) json.get(ACL_ENTRIES_JSON);
     for ( Object e : entries ) {
       aclStatusBuilder.addEntry(AclEntry.parseAclEntry(e.toString(), true));
@@ -1124,14 +1158,66 @@ public class HttpFSFileSystem extends FileSystem
       getConnection(Operation.GETCONTENTSUMMARY.getMethod(), params, f, true);
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) ((JSONObject)
-      HttpFSUtils.jsonParse(conn)).get(CONTENT_SUMMARY_JSON);
-    return new ContentSummary.Builder().
-        length((Long) json.get(CONTENT_SUMMARY_LENGTH_JSON)).
-        fileCount((Long) json.get(CONTENT_SUMMARY_FILE_COUNT_JSON)).
-        directoryCount((Long) json.get(CONTENT_SUMMARY_DIRECTORY_COUNT_JSON)).
-        quota((Long) json.get(CONTENT_SUMMARY_QUOTA_JSON)).
-        spaceConsumed((Long) json.get(CONTENT_SUMMARY_SPACE_CONSUMED_JSON)).
-        spaceQuota((Long) json.get(CONTENT_SUMMARY_SPACE_QUOTA_JSON)).build();
+        HttpFSUtils.jsonParse(conn)).get(CONTENT_SUMMARY_JSON);
+    ContentSummary.Builder builder = new ContentSummary.Builder()
+        .length((Long) json.get(CONTENT_SUMMARY_LENGTH_JSON))
+        .fileCount((Long) json.get(CONTENT_SUMMARY_FILE_COUNT_JSON))
+        .directoryCount((Long) json.get(CONTENT_SUMMARY_DIRECTORY_COUNT_JSON))
+        .erasureCodingPolicy((String) json.get(CONTENT_SUMMARY_ECPOLICY_JSON));
+    builder = buildQuotaUsage(builder, json, ContentSummary.Builder.class);
+    return builder.build();
+  }
+
+  @Override
+  public QuotaUsage getQuotaUsage(Path f) throws IOException {
+    Map<String, String> params = new HashMap<>();
+    params.put(OP_PARAM, Operation.GETQUOTAUSAGE.toString());
+    HttpURLConnection conn =
+        getConnection(Operation.GETQUOTAUSAGE.getMethod(), params, f, true);
+    JSONObject json = (JSONObject) ((JSONObject)
+        HttpFSUtils.jsonParse(conn)).get(QUOTA_USAGE_JSON);
+    QuotaUsage.Builder builder = new QuotaUsage.Builder();
+    builder = buildQuotaUsage(builder, json, QuotaUsage.Builder.class);
+    return builder.build();
+  }
+
+  /**
+   * Given a builder for QuotaUsage, parse the provided JSON object and
+   * construct the relevant fields. Return the updated builder.
+   */
+  private static <T extends QuotaUsage.Builder> T buildQuotaUsage(
+      T builder, JSONObject json, Class<T> type) {
+    long quota = (Long) json.get(QUOTA_USAGE_QUOTA_JSON);
+    long spaceConsumed = (Long) json.get(QUOTA_USAGE_SPACE_CONSUMED_JSON);
+    long spaceQuota = (Long) json.get(QUOTA_USAGE_SPACE_QUOTA_JSON);
+    JSONObject typeJson = (JSONObject) json.get(QUOTA_USAGE_TYPE_QUOTA_JSON);
+
+    builder = type.cast(builder
+        .quota(quota)
+        .spaceConsumed(spaceConsumed)
+        .spaceQuota(spaceQuota)
+    );
+
+    // ContentSummary doesn't set this so check before using it
+    if (json.get(QUOTA_USAGE_FILE_AND_DIRECTORY_COUNT_JSON) != null) {
+      long fileAndDirectoryCount = (Long)
+          json.get(QUOTA_USAGE_FILE_AND_DIRECTORY_COUNT_JSON);
+      builder = type.cast(builder.fileAndDirectoryCount(fileAndDirectoryCount));
+    }
+
+    if (typeJson != null) {
+      for (StorageType t : StorageType.getTypesSupportingQuota()) {
+        JSONObject typeQuota = (JSONObject) typeJson.get(t.toString());
+        if (typeQuota != null) {
+          builder = type.cast(builder
+              .typeQuota(t, ((Long) typeQuota.get(QUOTA_USAGE_QUOTA_JSON)))
+              .typeConsumed(t, ((Long) typeQuota.get(QUOTA_USAGE_CONSUMED_JSON))
+          ));
+        }
+      }
+    }
+
+    return builder;
   }
 
   @Override
@@ -1496,4 +1582,95 @@ public class HttpFSFileSystem extends FileSystem
     return JsonUtilClient.toSnapshottableDirectoryList(json);
   }
 
+  /**
+   * This filesystem's capabilities must be in sync with that of
+   * {@code DistributedFileSystem.hasPathCapability()} except
+   * where the feature is not exposed (e.g. symlinks).
+   * {@inheritDoc}
+   */
+  @Override
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+    // query the superclass, which triggers argument validation.
+    final Path p = makeQualified(path);
+    switch (validatePathCapabilityArgs(p, capability)) {
+    case CommonPathCapabilities.FS_ACLS:
+    case CommonPathCapabilities.FS_APPEND:
+    case CommonPathCapabilities.FS_CONCAT:
+    case CommonPathCapabilities.FS_PERMISSIONS:
+    case CommonPathCapabilities.FS_SNAPSHOTS:
+    case CommonPathCapabilities.FS_STORAGEPOLICY:
+    case CommonPathCapabilities.FS_XATTRS:
+      return true;
+    case CommonPathCapabilities.FS_SYMLINKS:
+      return false;
+    default:
+      return super.hasPathCapability(p, capability);
+    }
+  }
+
+  @Override
+  public FsServerDefaults getServerDefaults() throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.GETSERVERDEFAULTS.toString());
+    HttpURLConnection conn =
+        getConnection(Operation.GETSERVERDEFAULTS.getMethod(), params,
+            new Path(getUri().toString(), "/"), true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+    return JsonUtilClient.toFsServerDefaults(json);
+  }
+
+  @Override
+  public FsServerDefaults getServerDefaults(Path p) throws IOException {
+    return getServerDefaults();
+  }
+
+  @Override
+  public void access(final Path path, final FsAction mode) throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.CHECKACCESS.toString());
+    params.put(FSACTION_MODE_PARAM, mode.SYMBOL);
+    HttpURLConnection conn =
+        getConnection(Operation.CHECKACCESS.getMethod(), params, path, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+  }
+
+  public void setErasureCodingPolicy(final Path path, String policyName)
+      throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.SETECPOLICY.toString());
+    params.put(EC_POLICY_NAME_PARAM, policyName);
+    HttpURLConnection conn =
+        getConnection(Operation.SETECPOLICY.getMethod(), params, path, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+  }
+
+  public ErasureCodingPolicy getErasureCodingPolicy(final Path path)
+      throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.GETECPOLICY.toString());
+    HttpURLConnection conn =
+        getConnection(Operation.GETECPOLICY.getMethod(), params, path, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+    return JsonUtilClient.toECPolicy(json);
+  }
+
+  public void unsetErasureCodingPolicy(final Path path) throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.UNSETECPOLICY.toString());
+    HttpURLConnection conn =
+        getConnection(Operation.UNSETECPOLICY.getMethod(), params, path, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+  }
+
+  @Override
+  public void satisfyStoragePolicy(final Path path) throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.SATISFYSTORAGEPOLICY.toString());
+    HttpURLConnection conn = getConnection(
+        Operation.SATISFYSTORAGEPOLICY.getMethod(), params, path, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+  }
 }

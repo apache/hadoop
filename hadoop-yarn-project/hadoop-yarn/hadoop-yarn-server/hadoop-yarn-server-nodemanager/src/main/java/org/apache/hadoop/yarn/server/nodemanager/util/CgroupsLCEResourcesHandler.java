@@ -37,6 +37,8 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsMountConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,8 +75,7 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
 
   private Configuration conf;
   private String cgroupPrefix;
-  private boolean cgroupMount;
-  private String cgroupMountPath;
+  private CGroupsMountConfig cGroupsMountConfig;
 
   private boolean cpuWeightEnabled = true;
   private boolean strictResourceUsageMode = false;
@@ -115,11 +116,7 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
 
     this.cgroupPrefix = conf.get(YarnConfiguration.
             NM_LINUX_CONTAINER_CGROUPS_HIERARCHY, "/hadoop-yarn");
-    this.cgroupMount = conf.getBoolean(YarnConfiguration.
-            NM_LINUX_CONTAINER_CGROUPS_MOUNT, false);
-    this.cgroupMountPath = conf.get(YarnConfiguration.
-            NM_LINUX_CONTAINER_CGROUPS_MOUNT_PATH, null);
-
+    this.cGroupsMountConfig = new CGroupsMountConfig(conf);
     this.deleteCgroupTimeout = conf.getLong(
         YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_DELETE_TIMEOUT,
         YarnConfiguration.DEFAULT_NM_LINUX_CONTAINER_CGROUPS_DELETE_TIMEOUT);
@@ -156,10 +153,10 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
     initConfig();
 
     // mount cgroups if requested
-    if (cgroupMount && cgroupMountPath != null) {
+    if (cGroupsMountConfig.mountEnabledAndMountPathDefined()) {
       ArrayList<String> cgroupKVs = new ArrayList<String>();
-      cgroupKVs.add(CONTROLLER_CPU + "=" + cgroupMountPath + "/" +
-                    CONTROLLER_CPU);
+      cgroupKVs.add(CONTROLLER_CPU + "=" +
+          cGroupsMountConfig.getMountPath() + "/" + CONTROLLER_CPU);
       lce.mountCgroups(cgroupKVs, cgroupPrefix);
     }
 
@@ -456,9 +453,9 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
     String controllerPath;
     Map<String, Set<String>> parsedMtab = null;
 
-    if (this.cgroupMountPath != null && !this.cgroupMount) {
+    if (this.cGroupsMountConfig.mountDisabledButMountPathDefined()) {
       parsedMtab = ResourceHandlerModule.
-          parseConfiguredCGroupPath(this.cgroupMountPath);
+          parseConfiguredCGroupPath(this.cGroupsMountConfig.getMountPath());
     }
 
     if (parsedMtab == null) {

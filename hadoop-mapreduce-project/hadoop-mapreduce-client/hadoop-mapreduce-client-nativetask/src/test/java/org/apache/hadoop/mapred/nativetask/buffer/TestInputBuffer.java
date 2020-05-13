@@ -18,9 +18,9 @@
 package org.apache.hadoop.mapred.nativetask.buffer;
 
 import java.io.IOException;
-
 import org.junit.Test;
-import org.junit.Assert;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestInputBuffer {
 
@@ -28,27 +28,27 @@ public class TestInputBuffer {
   public void testInputBuffer() throws IOException {
     final int size = 100;
     final InputBuffer input1 = new InputBuffer(BufferType.DIRECT_BUFFER, size);
-    Assert.assertEquals(input1.getType(), BufferType.DIRECT_BUFFER);
+    assertThat(input1.getType()).isEqualTo(BufferType.DIRECT_BUFFER);
 
-    Assert.assertTrue(input1.position() == 0);
-    Assert.assertTrue(input1.length() == 0);
-    Assert.assertTrue(input1.remaining() == 0);
-    Assert.assertTrue(input1.capacity() == size);
+    assertThat(input1.position()).isZero();
+    assertThat(input1.length()).isZero();
+    assertThat(input1.remaining()).isZero();
+    assertThat(input1.capacity()).isEqualTo(size);
 
     final InputBuffer input2 = new InputBuffer(BufferType.HEAP_BUFFER, size);
-    Assert.assertEquals(input2.getType(), BufferType.HEAP_BUFFER);
+    assertThat(input2.getType()).isEqualTo(BufferType.HEAP_BUFFER);
 
-    Assert.assertTrue(input2.position() == 0);
-    Assert.assertTrue(input2.length() == 0);
-    Assert.assertTrue(input2.remaining() == 0);
-    Assert.assertTrue(input2.capacity() == size);
+    assertThat(input2.position()).isZero();
+    assertThat(input2.length()).isZero();
+    assertThat(input2.remaining()).isZero();
+    assertThat(input2.capacity()).isEqualTo(size);
 
     final InputBuffer input3 = new InputBuffer(new byte[size]);
-    Assert.assertEquals(input3.getType(), BufferType.HEAP_BUFFER);
+    assertThat(input3.getType()).isEqualTo(BufferType.HEAP_BUFFER);
 
-    Assert.assertTrue(input3.position() == 0);
-    Assert.assertTrue(input3.length() == 0);
-    Assert.assertTrue(input3.remaining() == 0);
-    Assert.assertEquals(input3.capacity(), size);
+    assertThat(input3.position()).isZero();
+    assertThat(input3.length()).isZero();
+    assertThat(input3.remaining()).isZero();
+    assertThat(input3.capacity()).isEqualTo(size);
   }
 }

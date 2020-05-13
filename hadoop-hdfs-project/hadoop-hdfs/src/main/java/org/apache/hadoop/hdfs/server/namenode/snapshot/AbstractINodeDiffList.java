@@ -45,6 +45,10 @@ abstract class AbstractINodeDiffList<N extends INode,
     return diffs != null ?
         DiffList.unmodifiableList(diffs) : DiffList.emptyList();
   }
+
+  public boolean isEmpty() {
+    return diffs == null || diffs.isEmpty();
+  }
   
   /** Clear the list. */
   public void clear() {
@@ -314,6 +318,19 @@ abstract class AbstractINodeDiffList<N extends INode,
 
   @Override
   public String toString() {
-    return getClass().getSimpleName() + ": " + (diffs != null ? diffs : "[]");
+    if (diffs != null) {
+      final StringBuilder b =
+          new StringBuilder(getClass().getSimpleName()).append("@")
+              .append(Integer.toHexString(hashCode())).append(": ");
+      b.append("[");
+      for (D d : diffs) {
+        b.append(d).append(", ");
+      }
+      b.setLength(b.length() - 2);
+      b.append("]");
+      return b.toString();
+    } else {
+      return "";
+    }
   }
 }

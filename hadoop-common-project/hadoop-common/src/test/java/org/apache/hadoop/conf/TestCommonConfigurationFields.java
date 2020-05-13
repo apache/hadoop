@@ -135,6 +135,30 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add("fs.azure.saskey.usecontainersaskeyforallaccess");
     xmlPropsToSkipCompare.add("fs.azure.user.agent.prefix");
 
+    // FairCallQueue configs that includes dynamic ports in its keys
+    xmlPropsToSkipCompare.add("ipc.[port_number].backoff.enable");
+    xmlPropsToSkipCompare.add("ipc.[port_number].callqueue.impl");
+    xmlPropsToSkipCompare.add("ipc.[port_number].scheduler.impl");
+    xmlPropsToSkipCompare.add("ipc.[port_number].scheduler.priority.levels");
+    xmlPropsToSkipCompare.add(
+        "ipc.[port_number].faircallqueue.multiplexer.weights");
+    xmlPropsToSkipCompare.add("ipc.[port_number].identity-provider.impl");
+    xmlPropsToSkipCompare.add("ipc.[port_number].cost-provider.impl");
+    xmlPropsToSkipCompare.add("ipc.[port_number].decay-scheduler.period-ms");
+    xmlPropsToSkipCompare.add("ipc.[port_number].decay-scheduler.decay-factor");
+    xmlPropsToSkipCompare.add("ipc.[port_number].decay-scheduler.thresholds");
+    xmlPropsToSkipCompare.add(
+        "ipc.[port_number].decay-scheduler.backoff.responsetime.enable");
+    xmlPropsToSkipCompare.add(
+        "ipc.[port_number].decay-scheduler.backoff.responsetime.thresholds");
+    xmlPropsToSkipCompare.add(
+        "ipc.[port_number].decay-scheduler.metrics.top.user.count");
+    xmlPropsToSkipCompare.add("ipc.[port_number].weighted-cost.lockshared");
+    xmlPropsToSkipCompare.add("ipc.[port_number].weighted-cost.lockexclusive");
+    xmlPropsToSkipCompare.add("ipc.[port_number].weighted-cost.handler");
+    xmlPropsToSkipCompare.add("ipc.[port_number].weighted-cost.lockfree");
+    xmlPropsToSkipCompare.add("ipc.[port_number].weighted-cost.response");
+
     // Deprecated properties.  These should eventually be removed from the
     // class.
     configurationPropsToSkipCompare
@@ -202,6 +226,6 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     // - org.apache.hadoop.io.SequenceFile
     xmlPropsToSkipCompare.add("io.seqfile.local.dir");
 
-
+    xmlPropsToSkipCompare.add("hadoop.http.sni.host.check.enabled");
   }
 }

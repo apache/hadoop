@@ -282,7 +282,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-count \[-q\] \[-h\] \[-v\] \[-t \[&lt;storage type&gt;\]\] \[-u\] \[-x\] \[-e\] &lt;path&gt; \.\.\. :( )*</expected-output>
+          <expected-output>^-count \[-q\] \[-h\] \[-v\] \[-t \[&lt;storage type&gt;\]\] \[-u\] \[-x\] \[-e\] \[-s\] &lt;path&gt; \.\.\. :( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -923,7 +923,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-test -\[defsz\] &lt;path&gt; :\s*</expected-output>
+          <expected-output>^-test -\[defswrz\] &lt;path&gt; :\s*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -931,7 +931,7 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^\s*-[defsz]\s+return 0 if .*</expected-output>
+          <expected-output>^\s*-[defswrz]\s+return 0 if .*</expected-output>
         </comparator>
       </comparators>
     </test>

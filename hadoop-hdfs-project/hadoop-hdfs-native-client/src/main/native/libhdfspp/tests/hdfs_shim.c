@@ -317,6 +317,12 @@ tSize hdfsPread(hdfsFS fs, hdfsFile file, tOffset position,
   return ret;
 }
 
+int hdfsPreadFully(hdfsFS fs, hdfsFile file, tOffset position,
+                void* buffer, tSize length) {
+  return libhdfs_hdfsPreadFully(fs->libhdfsRep, file->libhdfsRep, position,
+          buffer, length);
+}
+
 tSize hdfsWrite(hdfsFS fs, hdfsFile file, const void* buffer,
                 tSize length) {
   return libhdfs_hdfsWrite(fs->libhdfsRep, file->libhdfsRep, buffer, length);

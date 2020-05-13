@@ -294,10 +294,8 @@ public class TestRMFailover extends ClientBaseWithFixes {
     redirectURL = getRedirectURL(rm2Url + "/metrics");
     assertEquals(redirectURL,rm1Url + "/metrics");
 
-    redirectURL = getRedirectURL(rm2Url + "/jmx?param1=value1+x&param2=y");
-    assertEquals(rm1Url + "/jmx?param1=value1+x&param2=y", redirectURL);
 
-    // standby RM links /conf, /stacks, /logLevel, /static, /logs,
+    // standby RM links /conf, /stacks, /logLevel, /static, /logs, /jmx
     // /cluster/cluster as well as webService
     // /ws/v1/cluster/info should not be redirected to active RM
     redirectURL = getRedirectURL(rm2Url + "/cluster/cluster");
@@ -316,6 +314,9 @@ public class TestRMFailover extends ClientBaseWithFixes {
     assertNull(redirectURL);
 
     redirectURL = getRedirectURL(rm2Url + "/logs");
+    assertNull(redirectURL);
+
+    redirectURL = getRedirectURL(rm2Url + "/jmx?param1=value1+x&param2=y");
     assertNull(redirectURL);
 
     redirectURL = getRedirectURL(rm2Url + "/ws/v1/cluster/info");

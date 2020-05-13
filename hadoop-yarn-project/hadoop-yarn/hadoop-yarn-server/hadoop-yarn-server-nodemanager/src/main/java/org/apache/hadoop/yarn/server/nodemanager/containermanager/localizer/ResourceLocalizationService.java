@@ -141,6 +141,7 @@ import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.Re
 import org.apache.hadoop.yarn.server.nodemanager.security.authorize.NMPolicyProvider;
 import org.apache.hadoop.yarn.server.nodemanager.util.NodeManagerBuilderUtils;
 import org.apache.hadoop.yarn.util.FSDownload;
+import org.apache.hadoop.yarn.util.LRUCacheHashMap;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.cache.CacheBuilder;
@@ -722,6 +723,8 @@ public class ResourceLocalizationService extends CompositeService
 
     private final PublicLocalizer publicLocalizer;
     private final Map<String,LocalizerRunner> privLocalizers;
+    private final Map<String, String> recentlyCleanedLocalizers;
+    private final int maxRecentlyCleaned = 128;
 
     LocalizerTracker(Configuration conf) {
       this(conf, new HashMap<String,LocalizerRunner>());
@@ -732,6 +735,8 @@ public class ResourceLocalizationService extends CompositeService
       super(LocalizerTracker.class.getName());
       this.publicLocalizer = new PublicLocalizer(conf);
       this.privLocalizers = privLocalizers;
+      this.recentlyCleanedLocalizers =
+          new LRUCacheHashMap<String, String>(maxRecentlyCleaned, false);
     }
     
     @Override
@@ -783,14 +788,24 @@ public class ResourceLocalizationService extends CompositeService
           synchronized (privLocalizers) {
             LocalizerRunner localizer = privLocalizers.get(locId);
             if (localizer != null && localizer.killContainerLocalizer.get()) {
-              // Old localizer thread has been stopped, remove it and creates
+              // Old localizer thread has been stopped, remove it and create
               // a new localizer thread.
               LOG.info("New " + event.getType() + " localize request for "
                   + locId + ", remove old private localizer.");
-              cleanupPrivLocalizers(locId);
+              privLocalizers.remove(locId);
+              localizer.interrupt();
               localizer = null;
             }
             if (null == localizer) {
+              // Don't create a new localizer if this one has been recently
+              // cleaned up - this can happen if localization requests come
+              // in after cleanupPrivLocalizers has been called.
+              if (recentlyCleanedLocalizers.containsKey(locId)) {
+                LOG.info(
+                    "Skipping localization request for recently cleaned " +
+                    "localizer " + locId + " resource:" + req.getResource());
+                break;
+              }
               LOG.info("Created localizer for " + locId);
               localizer = new LocalizerRunner(req.getContext(), locId);
               privLocalizers.put(locId, localizer);
@@ -808,6 +823,7 @@ public class ResourceLocalizationService extends CompositeService
     public void cleanupPrivLocalizers(String locId) {
       synchronized (privLocalizers) {
         LocalizerRunner localizer = privLocalizers.get(locId);
+        recentlyCleanedLocalizers.put(locId, locId);
         if (null == localizer) {
           return; // ignore; already gone
         }
@@ -979,8 +995,10 @@ public class ResourceLocalizationService extends CompositeService
                 getLocalResourcesTracker(LocalResourceVisibility.APPLICATION, user, applicationId);
               final String diagnostics = "Failed to download resource " +
                   assoc.getResource() + " " + e.getCause();
-              tracker.handle(new ResourceFailedLocalizationEvent(
-                  assoc.getResource().getRequest(), diagnostics));
+              if(tracker != null) {
+                tracker.handle(new ResourceFailedLocalizationEvent(
+                    assoc.getResource().getRequest(), diagnostics));
+              }
               publicRsrc.handle(new ResourceFailedLocalizationEvent(
                   assoc.getResource().getRequest(), diagnostics));
               LOG.error(diagnostics);
@@ -1047,44 +1065,74 @@ public class ResourceLocalizationService extends CompositeService
      * 
      * @return the next resource to be localized
      */
-    private LocalResource findNextResource() {
+    private ResourceLocalizationSpec findNextResource(
+        String user, ApplicationId applicationId) {
       synchronized (pending) {
         for (Iterator<LocalizerResourceRequestEvent> i = pending.iterator();
             i.hasNext();) {
-         LocalizerResourceRequestEvent evt = i.next();
-         LocalizedResource nRsrc = evt.getResource();
-         // Resource download should take place ONLY if resource is in
-         // Downloading state
-         if (nRsrc.getState() != ResourceState.DOWNLOADING) {
-           i.remove();
-           continue;
-         }
-         /*
-          * Multiple containers will try to download the same resource. So the
-          * resource download should start only if
-          * 1) We can acquire a non blocking semaphore lock on resource
-          * 2) Resource is still in DOWNLOADING state
-          */
-         if (nRsrc.tryAcquire()) {
-           if (nRsrc.getState() == ResourceState.DOWNLOADING) {
-             LocalResourceRequest nextRsrc = nRsrc.getRequest();
-             LocalResource next =
-                 recordFactory.newRecordInstance(LocalResource.class);
-             next.setResource(URL.fromPath(nextRsrc
-               .getPath()));
-             next.setTimestamp(nextRsrc.getTimestamp());
-             next.setType(nextRsrc.getType());
-             next.setVisibility(evt.getVisibility());
-             next.setPattern(evt.getPattern());
-             scheduled.put(nextRsrc, evt);
-             return next;
-           } else {
-             // Need to release acquired lock
-             nRsrc.unlock();
-           }
-         }
-       }
-       return null;
+          LocalizerResourceRequestEvent evt = i.next();
+          LocalizedResource nRsrc = evt.getResource();
+          // Resource download should take place ONLY if resource is in
+          // Downloading state
+          if (nRsrc.getState() != ResourceState.DOWNLOADING) {
+            i.remove();
+            continue;
+          }
+          /*
+           * Multiple containers will try to download the same resource. So the
+           * resource download should start only if
+           * 1) We can acquire a non blocking semaphore lock on resource
+           * 2) Resource is still in DOWNLOADING state
+           */
+          if (nRsrc.tryAcquire()) {
+            if (nRsrc.getState() == ResourceState.DOWNLOADING) {
+              LocalResourceRequest nextRsrc = nRsrc.getRequest();
+              LocalResource next =
+                  recordFactory.newRecordInstance(LocalResource.class);
+              next.setResource(URL.fromPath(nextRsrc.getPath()));
+              next.setTimestamp(nextRsrc.getTimestamp());
+              next.setType(nextRsrc.getType());
+              next.setVisibility(evt.getVisibility());
+              next.setPattern(evt.getPattern());
+              ResourceLocalizationSpec nextSpec = null;
+              try {
+                LocalResourcesTracker tracker = getLocalResourcesTracker(
+                    next.getVisibility(), user, applicationId);
+                if (tracker != null) {
+                  Path localPath = getPathForLocalization(next, tracker);
+                  if (localPath != null) {
+                    nextSpec = NodeManagerBuilderUtils.
+                        newResourceLocalizationSpec(next, localPath);
+                  }
+                }
+              } catch (IOException e) {
+                LOG.error("local path for PRIVATE localization could not be " +
+                    "found. Disks might have failed.", e);
+              } catch (IllegalArgumentException e) {
+                LOG.error("Incorrect path for PRIVATE localization."
+                    + next.getResource().getFile(), e);
+              } catch (URISyntaxException e) {
+                LOG.error(
+                    "Got exception in parsing URL of LocalResource:"
+                        + next.getResource(), e);
+              }
+              if (nextSpec != null) {
+                scheduled.put(nextRsrc, evt);
+                return nextSpec;
+              } else {
+                // We failed to get a path for this, don't try to localize this
+                // resource again.
+                nRsrc.unlock();
+                i.remove();
+                continue;
+              }
+            } else {
+              // Need to release acquired lock
+              nRsrc.unlock();
+            }
+          }
+        }
+        return null;
       }
     }
 
@@ -1139,7 +1187,7 @@ public class ResourceLocalizationService extends CompositeService
             break;
           case FETCH_FAILURE:
             final String diagnostics = stat.getException().toString();
-            LOG.warn(req + " failed: " + diagnostics);
+            LOG.warn("{} failed for {} : {}", req, localizerId, diagnostics);
             fetchFailed = true;
             tracker.handle(new ResourceFailedLocalizationEvent(req,
                 diagnostics));
@@ -1170,29 +1218,9 @@ public class ResourceLocalizationService extends CompositeService
        * TODO : It doesn't support multiple downloads per ContainerLocalizer
        * at the same time. We need to think whether we should support this.
        */
-      LocalResource next = findNextResource();
+      ResourceLocalizationSpec next = findNextResource(user, applicationId);
       if (next != null) {
-        try {
-          LocalResourcesTracker tracker = getLocalResourcesTracker(
-              next.getVisibility(), user, applicationId);
-          if (tracker != null) {
-            Path localPath = getPathForLocalization(next, tracker);
-            if (localPath != null) {
-              rsrcs.add(NodeManagerBuilderUtils.newResourceLocalizationSpec(
-                  next, localPath));
-            }
-          }
-        } catch (IOException e) {
-          LOG.error("local path for PRIVATE localization could not be " +
-            "found. Disks might have failed.", e);
-        } catch (IllegalArgumentException e) {
-          LOG.error("Incorrect path for PRIVATE localization."
-              + next.getResource().getFile(), e);
-        } catch (URISyntaxException e) {
-          LOG.error(
-              "Got exception in parsing URL of LocalResource:"
-                  + next.getResource(), e);
-        }
+        rsrcs.add(next);
       }
 
       response.setLocalizerAction(LocalizerAction.LIVE);
@@ -1672,5 +1700,15 @@ public class ResourceLocalizationService extends CompositeService
     localDirPathFsPermissionsMap.put(fileDir, defaultPermission);
     localDirPathFsPermissionsMap.put(sysDir, nmPrivatePermission);
     return localDirPathFsPermissionsMap;
+  }
+
+  public LocalizedResource getLocalizedResource(LocalResourceRequest req,
+      String user, ApplicationId appId) {
+    LocalResourcesTracker tracker =
+        getLocalResourcesTracker(req.getVisibility(), user, appId);
+    if (tracker == null) {
+      return null;
+    }
+    return tracker.getLocalizedResource(req);
   }
 }

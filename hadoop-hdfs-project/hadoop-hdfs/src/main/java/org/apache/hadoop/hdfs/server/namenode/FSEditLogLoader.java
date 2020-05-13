@@ -801,7 +801,8 @@ public class FSEditLogLoader {
       INodesInPath iip = fsDir.getINodesInPath(snapshotRoot, DirOp.WRITE);
       String path = fsNamesys.getSnapshotManager().createSnapshot(
           fsDir.getFSNamesystem().getLeaseManager(),
-          iip, snapshotRoot, createSnapshotOp.snapshotName);
+          iip, snapshotRoot, createSnapshotOp.snapshotName,
+          createSnapshotOp.mtime);
       if (toAddRetryCache) {
         fsNamesys.addCacheEntryWithPayload(createSnapshotOp.rpcClientId,
             createSnapshotOp.rpcCallId, path);
@@ -819,7 +820,7 @@ public class FSEditLogLoader {
       fsNamesys.getSnapshotManager().deleteSnapshot(iip,
           deleteSnapshotOp.snapshotName,
           new INode.ReclaimContext(fsNamesys.dir.getBlockStoragePolicySuite(),
-              collectedBlocks, removedINodes, null));
+              collectedBlocks, removedINodes, null), deleteSnapshotOp.mtime);
       fsNamesys.getBlockManager().removeBlocksAndUpdateSafemodeTotal(
           collectedBlocks);
       collectedBlocks.clear();
@@ -840,7 +841,7 @@ public class FSEditLogLoader {
       INodesInPath iip = fsDir.getINodesInPath(snapshotRoot, DirOp.WRITE);
       fsNamesys.getSnapshotManager().renameSnapshot(iip,
           snapshotRoot, renameSnapshotOp.snapshotOldName,
-          renameSnapshotOp.snapshotNewName);
+          renameSnapshotOp.snapshotNewName, renameSnapshotOp.mtime);
       
       if (toAddRetryCache) {
         fsNamesys.addCacheEntry(renameSnapshotOp.rpcClientId,
@@ -867,8 +868,10 @@ public class FSEditLogLoader {
     }
     case OP_SET_GENSTAMP_V2: {
       SetGenstampV2Op setGenstampV2Op = (SetGenstampV2Op) op;
-      blockManager.getBlockIdManager().setGenerationStamp(
-          setGenstampV2Op.genStampV2);
+      // update the impending gen stamp, but not the actual genstamp,
+      // see HDFS-14941
+      blockManager.getBlockIdManager()
+          .setImpendingGenerationStamp(setGenstampV2Op.genStampV2);
       break;
     }
     case OP_ALLOCATE_BLOCK_ID: {
@@ -1285,6 +1288,12 @@ public class FSEditLogLoader {
             + lastPos, t);
         in.resync();
         FSImage.LOG.warn("After resync, position is " + in.getPosition());
+        if (in.getPosition() <= lastPos) {
+          FSImage.LOG.warn("After resync, the position, {} is not greater " +
+              "than the previous position {}. Skipping remainder of this log.",
+              in.getPosition(), lastPos);
+          break;
+        }
         continue;
       }
       if (lastTxId == HdfsServerConstants.INVALID_TXID || txid > lastTxId) {

@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+syntax = "proto2";
 option java_package = "org.apache.hadoop.hdfs.server.namenode";
 option java_outer_classname = "FsImageProto";
 
@@ -98,7 +98,7 @@ message INodeSection {
      * format. The bits can be divided in four segments:
      * [0:2) || [2:26) || [26:27) || [27:29) || [29:32)
      *
-     * [0:2) -- reserved for futute uses.
+     * [0:2) -- reserved for future uses.
      * [2:26) -- the name of the entry, which is an ID that points to a
      * string in the StringTableSection.
      * [26:27) -- the scope of the entry (AclEntryScopeProto)

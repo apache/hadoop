@@ -425,6 +425,32 @@ public class StringUtils {
   }
 
   /**
+   * Returns a collection of strings, trimming leading and trailing whitespace
+   * on each value. Duplicates are not removed.
+   *
+   * @param str
+   *          String separated by delim.
+   * @param delim
+   *          Delimiter to separate the values in str.
+   * @return Collection of string values.
+   */
+  public static Collection<String> getTrimmedStringCollection(String str,
+      String delim) {
+    List<String> values = new ArrayList<String>();
+    if (str == null)
+      return values;
+    StringTokenizer tokenizer = new StringTokenizer(str, delim);
+    while (tokenizer.hasMoreTokens()) {
+      String next = tokenizer.nextToken();
+      if (next == null || next.trim().isEmpty()) {
+        continue;
+      }
+      values.add(next.trim());
+    }
+    return values;
+  }
+
+  /**
    * Splits a comma separated value <code>String</code>, trimming leading and
    * trailing whitespace on each value. Duplicate and empty values are removed.
    *

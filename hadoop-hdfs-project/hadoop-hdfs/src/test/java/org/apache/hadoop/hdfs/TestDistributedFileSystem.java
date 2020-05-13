@@ -79,6 +79,7 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StorageStatistics.LongStatistic;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DistributedFileSystem.HdfsDataOutputStreamBuilder;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
@@ -88,12 +89,16 @@ import org.apache.hadoop.hdfs.DFSOpsCountStatistics.OpType;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
+import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
+import org.apache.hadoop.hdfs.protocol.OpenFilesIterator;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
@@ -194,8 +199,10 @@ public class TestDistributedFileSystem {
    * Tests DFSClient.close throws no ConcurrentModificationException if 
    * multiple files are open.
    * Also tests that any cached sockets are closed. (HDFS-3359)
+   * Also tests deprecated listOpenFiles(EnumSet<>). (HDFS-14595)
    */
   @Test
+  @SuppressWarnings("deprecation") // call to listOpenFiles(EnumSet<>)
   public void testDFSClose() throws Exception {
     Configuration conf = getTestConfiguration();
     MiniDFSCluster cluster = null;
@@ -206,6 +213,19 @@ public class TestDistributedFileSystem {
       // create two files, leaving them open
       fileSys.create(new Path("/test/dfsclose/file-0"));
       fileSys.create(new Path("/test/dfsclose/file-1"));
+
+      // Test listOpenFiles(EnumSet<>)
+      List<OpenFilesIterator.OpenFilesType> types = new ArrayList<>();
+      types.add(OpenFilesIterator.OpenFilesType.ALL_OPEN_FILES);
+      RemoteIterator<OpenFileEntry> listOpenFiles =
+          fileSys.listOpenFiles(EnumSet.copyOf(types));
+      assertTrue("Two files should be open", listOpenFiles.hasNext());
+      int countOpenFiles = 0;
+      while (listOpenFiles.hasNext()) {
+        listOpenFiles.next();
+        ++countOpenFiles;
+      }
+      assertEquals("Mismatch of open files count", 2, countOpenFiles);
 
       // create another file, close it, and read it, so
       // the client gets a socket in its SocketCache
@@ -898,6 +918,21 @@ public class TestDistributedFileSystem {
       dfs.getEZForPath(dir);
       checkStatistics(dfs, ++readOps, writeOps, 0);
       checkOpStatistics(OpType.GET_ENCRYPTION_ZONE, opCount + 1);
+
+      opCount = getOpStatistics(OpType.GET_SNAPSHOTTABLE_DIRECTORY_LIST);
+      dfs.getSnapshottableDirListing();
+      checkStatistics(dfs, ++readOps, writeOps, 0);
+      checkOpStatistics(OpType.GET_SNAPSHOTTABLE_DIRECTORY_LIST, opCount + 1);
+
+      opCount = getOpStatistics(OpType.GET_STORAGE_POLICIES);
+      dfs.getAllStoragePolicies();
+      checkStatistics(dfs, ++readOps, writeOps, 0);
+      checkOpStatistics(OpType.GET_STORAGE_POLICIES, opCount + 1);
+
+      opCount = getOpStatistics(OpType.GET_TRASH_ROOT);
+      dfs.getTrashRoot(dir);
+      checkStatistics(dfs, ++readOps, writeOps, 0);
+      checkOpStatistics(OpType.GET_TRASH_ROOT, opCount + 1);
     }
   }
 
@@ -1038,7 +1073,7 @@ public class TestDistributedFileSystem {
   }
 
   /** Checks statistics. -1 indicates do not check for the operations */
-  private void checkStatistics(FileSystem fs, int readOps, int writeOps,
+  public static void checkStatistics(FileSystem fs, int readOps, int writeOps,
       int largeReadOps) {
     assertEquals(readOps, DFSTestUtil.getStatistics(fs).getReadOps());
     assertEquals(writeOps, DFSTestUtil.getStatistics(fs).getWriteOps());
@@ -1144,12 +1179,12 @@ public class TestDistributedFileSystem {
     }
   }
 
-  private static void checkOpStatistics(OpType op, long count) {
+  public static void checkOpStatistics(OpType op, long count) {
     assertEquals("Op " + op.getSymbol() + " has unexpected count!",
         count, getOpStatistics(op));
   }
 
-  private static long getOpStatistics(OpType op) {
+  public static long getOpStatistics(OpType op) {
     return GlobalStorageStatistics.INSTANCE.get(
         DFSOpsCountStatistics.NAME)
         .getLong(op.getSymbol());
@@ -1689,7 +1724,7 @@ public class TestDistributedFileSystem {
     HdfsDataOutputStreamBuilder builder = fs.createFile(testFilePath);
 
     builder.append().overwrite(false).newBlock().lazyPersist().noLocalWrite()
-        .ecPolicyName("ec-policy");
+        .ecPolicyName("ec-policy").noLocalRack();
     EnumSet<CreateFlag> flags = builder.getFlags();
     assertTrue(flags.contains(CreateFlag.APPEND));
     assertTrue(flags.contains(CreateFlag.CREATE));
@@ -1697,6 +1732,7 @@ public class TestDistributedFileSystem {
     assertTrue(flags.contains(CreateFlag.NO_LOCAL_WRITE));
     assertFalse(flags.contains(CreateFlag.OVERWRITE));
     assertFalse(flags.contains(CreateFlag.SYNC_BLOCK));
+    assertTrue(flags.contains(CreateFlag.NO_LOCAL_RACK));
 
     assertEquals("ec-policy", builder.getEcPolicyName());
     assertFalse(builder.shouldReplicate());
@@ -1863,6 +1899,34 @@ public class TestDistributedFileSystem {
   }
 
   @Test
+  public void testListingStoragePolicyNonSuperUser() throws Exception {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build()) {
+      cluster.waitActive();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      Path dir = new Path("/dir");
+      dfs.mkdirs(dir);
+      dfs.setPermission(dir,
+          new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL));
+
+      // Create a non-super user.
+      UserGroupInformation user = UserGroupInformation.createUserForTesting(
+          "Non_SuperUser", new String[] {"Non_SuperGroup"});
+
+      DistributedFileSystem userfs = (DistributedFileSystem) user.doAs(
+          (PrivilegedExceptionAction<FileSystem>) () -> FileSystem.get(conf));
+      Path sDir = new Path("/dir/sPolicy");
+      userfs.mkdirs(sDir);
+      userfs.setStoragePolicy(sDir, "COLD");
+      HdfsFileStatus[] list = userfs.getClient()
+          .listPaths(dir.toString(), HdfsFileStatus.EMPTY_NAME)
+          .getPartialListing();
+      assertEquals(HdfsConstants.COLD_STORAGE_POLICY_ID,
+          list[0].getStoragePolicy());
+    }
+  }
+
+  @Test
   public void testRemoveErasureCodingPolicy() throws Exception {
     Configuration conf = getTestConfiguration();
     MiniDFSCluster cluster = null;
@@ -1926,10 +1990,12 @@ public class TestDistributedFileSystem {
       fs.addErasureCodingPolicies(policies);
       assertEquals(policyName, ErasureCodingPolicyManager.getInstance().
           getByName(policyName).getName());
-      fs.disableErasureCodingPolicy(policyName);
       fs.enableErasureCodingPolicy(policyName);
       assertEquals(policyName, ErasureCodingPolicyManager.getInstance().
-          getByName(policyName).getName());
+          getEnabledPolicyByName(policyName).getName());
+      fs.disableErasureCodingPolicy(policyName);
+      assertNull(ErasureCodingPolicyManager.getInstance().
+          getEnabledPolicyByName(policyName));
 
       //test enable a policy that doesn't exist
       try {
@@ -2006,6 +2072,37 @@ public class TestDistributedFileSystem {
       int numSSD = Collections.frequency(
           Arrays.asList(locations[0].getStorageTypes()), StorageType.SSD);
       assertEquals("Number of SSD should be 1 but was : " + numSSD, 1, numSSD);
+    }
+  }
+
+  @Test
+  public void testGetECTopologyResultForPolicies() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    try (MiniDFSCluster cluster = DFSTestUtil.setupCluster(conf, 9, 3, 0)) {
+      DistributedFileSystem dfs = cluster.getFileSystem();
+      dfs.enableErasureCodingPolicy("RS-6-3-1024k");
+      // No policies specified should return result for the enabled policy.
+      ECTopologyVerifierResult result = dfs.getECTopologyResultForPolicies();
+      assertTrue(result.isSupported());
+      // Specified policy requiring more datanodes than present in
+      // the actual cluster.
+      result = dfs.getECTopologyResultForPolicies("RS-10-4-1024k");
+      assertFalse(result.isSupported());
+      // Specify multiple policies that require datanodes equlal or less then
+      // present in the actual cluster
+      result =
+          dfs.getECTopologyResultForPolicies("XOR-2-1-1024k", "RS-3-2-1024k");
+      assertTrue(result.isSupported());
+      // Specify multiple policies with one policy requiring more datanodes than
+      // present in the actual cluster
+      result =
+          dfs.getECTopologyResultForPolicies("RS-10-4-1024k", "RS-3-2-1024k");
+      assertFalse(result.isSupported());
+      // Enable a policy requiring more datanodes than present in
+      // the actual cluster.
+      dfs.enableErasureCodingPolicy("RS-10-4-1024k");
+      result = dfs.getECTopologyResultForPolicies();
+      assertFalse(result.isSupported());
     }
   }
 }

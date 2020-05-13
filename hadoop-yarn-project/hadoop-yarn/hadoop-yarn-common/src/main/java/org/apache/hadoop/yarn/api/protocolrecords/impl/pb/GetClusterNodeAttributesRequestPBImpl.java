@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 import static org.apache.hadoop.classification.InterfaceAudience.*;
 import static org.apache.hadoop.classification.InterfaceStability.*;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeAttributesRequest;

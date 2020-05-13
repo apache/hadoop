@@ -153,13 +153,18 @@ mvn -T 1C clean verify
 ```
 
 It's also possible to execute multiple test suites in parallel by passing the
-`parallel-tests` property on the command line.  The tests spend most of their
+`parallel-tests=wasb|abfs|both` property on the command line.  The tests spend most of their
 time blocked on network I/O, so running in parallel tends to
 complete full test runs faster.
 
 ```bash
-mvn -T 1C -Dparallel-tests clean verify
+mvn -T 1C -Dparallel-tests=both clean verify
+mvn -T 1C -Dparallel-tests=wasb clean verify
+mvn -T 1C -Dparallel-tests=abfs clean verify
 ```
+`-Dparallel-tests=wasb` runs the WASB related integration tests from azure directory<br/>
+`-Dparallel-tests=abfs` runs the ABFS related integration tests from azurebfs directory<br/>
+`-Dparallel-tests=both` runs all the integration tests from both azure and azurebfs directory<br/>
 
 Some tests must run with exclusive access to the storage container, so even with the
 `parallel-tests` property, several test suites will run in serial in a separate
@@ -641,7 +646,7 @@ hierarchical namespace enabled, and set the following configuration settings:
 <property>
   <name>fs.azure.account.auth.type.{YOUR_ABFS_ACCOUNT_NAME}</name>
   <value>{AUTH TYPE}</value>
-  <description>The authorization type can be SharedKey, OAuth, or Custom. The
+  <description>The authorization type can be SharedKey, OAuth, Custom or SAS. The
   default is SharedKey.</description>
 </property>
 
@@ -787,6 +792,79 @@ hierarchical namespace enabled, and set the following configuration settings:
         </description>
     </property>
    -->
+
+```
+To run Delegation SAS test cases you must use a storage account with the
+hierarchical namespace enabled and set the following configuration settings:
+
+```xml
+<!--=========================== AUTHENTICATION  OPTIONS ===================-->
+<!--=============================   FOR SAS   ===========================-->
+<!-- To run ABFS Delegation SAS tests, you must register an app, create the
+     necessary role assignments, and set the configuration discussed below:
+
+    1) Register an app:
+      a) Login to https://portal.azure.com, select your AAD directory and search for app registrations.
+      b) Click "New registration".
+      c) Provide a display name, such as "abfs-app".
+      d) Set the account type to "Accounts in this organizational directory only ({YOUR_Tenant} only - Single tenant)".
+      e) For Redirect URI select Web and enter "http://localhost".
+      f) Click Register.
+
+    2)  Create necessary role assignments:
+      a) Login to https://portal.azure.com and find the Storage account with hierarchical namespace enabled
+         that you plan to run the tests against.
+      b) Select "Access Control (IAM)".
+      c) Select Role Assignments
+      d) Click Add and select "Add role assignments"
+      e) For Role and enter "Storage Blob Data Owner".
+      f) Under Select enter the name of the app you registered in step 1 and select it.
+      g) Click Save.
+      h) Repeat above steps to create a second role assignment for the app but this time for
+         the "Storage Blob Delegator" role.
+
+    3) Generate a new client secret for the application:
+      a) Login to https://portal.azure.com and find the app registered in step 1.
+      b) Select "Certificates and secrets".
+      c) Click "New client secret".
+      d) Enter a description (eg. Secret1)
+      e) Set expiration period.  Expires in 1 year is good.
+      f) Click Add
+      g) Copy the secret and expiration to a safe location.
+
+    4) Set the following configuration values:
+-->
+
+  <property>
+    <name>fs.azure.sas.token.provider.type</name>
+    <value>org.apache.hadoop.fs.azurebfs.extensions.MockDelegationSASTokenProvider</value>
+    <description>The fully qualified class name of the SAS token provider implementation.</description>
+  </property>
+
+  <property>
+    <name>fs.azure.test.app.service.principal.tenant.id</name>
+    <value>{TID}</value>
+    <description>Tenant ID for the application's service principal.</description>
+  </property>
+
+  <property>
+    <name>fs.azure.test.app.service.principal.object.id</name>
+    <value>{OID}</value>
+    <description>Object ID for the application's service principal.</description>
+  </property>
+
+  <property>
+    <name>fs.azure.test.app.id</name>
+    <value>{app id}</value>
+    <description>The application's ID, also known as the client id.</description>
+  </property>
+
+   <property>
+     <name>fs.azure.test.app.secret</name>
+     <value>{client secret}</value>
+     <description>The application's secret, also known as the client secret.</description>
+   </property>
+
 
 ```
 

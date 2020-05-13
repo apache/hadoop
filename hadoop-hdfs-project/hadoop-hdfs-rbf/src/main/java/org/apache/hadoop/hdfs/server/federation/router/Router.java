@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.server.federation.metrics.RBFMetrics;
 import org.apache.hadoop.hdfs.server.federation.metrics.NamenodeBeanMetrics;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
+import org.apache.hadoop.hdfs.server.federation.store.MountTableStore;
 import org.apache.hadoop.hdfs.server.federation.store.RouterStore;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -285,13 +286,20 @@ public class Router extends CompositeService implements
             MountTableRefresherService.class.getSimpleName());
       } else {
         LOG.warn(
-            "Service {} not enabled: depenendent service(s) {} not enabled.",
+            "Service {} not enabled: dependent service(s) {} not enabled.",
             MountTableRefresherService.class.getSimpleName(),
             disabledDependentServices);
       }
     }
 
     super.serviceInit(conf);
+
+    // Set quota manager in mount store to update quota usage in mount table.
+    if (stateStore != null) {
+      MountTableStore mountstore =
+          this.stateStore.getRegisteredRecordStore(MountTableStore.class);
+      mountstore.setQuotaManager(this.quotaManager);
+    }
   }
 
   private String getDisabledDependentServices() {

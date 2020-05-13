@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.InputFormat;
+import org.apache.hadoop.tools.DistCpConstants;
 import org.apache.hadoop.tools.CopyListing.AclsNotSupportedException;
 import org.apache.hadoop.tools.CopyListing.XAttrsNotSupportedException;
 import org.apache.hadoop.tools.CopyListingFileStatus;
@@ -198,6 +199,9 @@ public class DistCpUtils {
                               EnumSet<FileAttribute> attributes,
                               boolean preserveRawXattrs) throws IOException {
 
+    // strip out those attributes we don't need any more
+    attributes.remove(FileAttribute.BLOCKSIZE);
+    attributes.remove(FileAttribute.CHECKSUMTYPE);
     // If not preserving anything from FileStatus, don't bother fetching it.
     FileStatus targetFileStatus = attributes.isEmpty() ? null :
         targetFS.getFileStatus(path);
@@ -565,13 +569,15 @@ public class DistCpUtils {
    * @throws IOException if there's an exception while retrieving checksums.
    */
   public static boolean checksumsAreEqual(FileSystem sourceFS, Path source,
-      FileChecksum sourceChecksum, FileSystem targetFS, Path target)
+                                          FileChecksum sourceChecksum,
+                                          FileSystem targetFS,
+                                          Path target, long sourceLen)
       throws IOException {
     FileChecksum targetChecksum = null;
     try {
       sourceChecksum = sourceChecksum != null
           ? sourceChecksum
-          : sourceFS.getFileChecksum(source);
+          : sourceFS.getFileChecksum(source, sourceLen);
       if (sourceChecksum != null) {
         // iff there's a source checksum, look for one at the destination.
         targetChecksum = targetFS.getFileChecksum(target);
@@ -581,6 +587,65 @@ public class DistCpUtils {
     }
     return (sourceChecksum == null || targetChecksum == null ||
             sourceChecksum.equals(targetChecksum));
+  }
+
+  /**
+   * Utility to compare file lengths and checksums for source and target.
+   *
+   * @param sourceFS FileSystem for the source path.
+   * @param source The source path.
+   * @param sourceChecksum The checksum of the source file. If it is null we
+   * still need to retrieve it through sourceFS.
+   * @param targetFS FileSystem for the target path.
+   * @param target The target path.
+   * @param skipCrc The flag to indicate whether to skip checksums.
+   * @throws IOException if there's a mismatch in file lengths or checksums.
+   */
+  public static void compareFileLengthsAndChecksums(long srcLen,
+             FileSystem sourceFS, Path source, FileChecksum sourceChecksum,
+             FileSystem targetFS, Path target, boolean skipCrc,
+             long targetLen) throws IOException {
+    if (srcLen != targetLen) {
+      throw new IOException(
+          DistCpConstants.LENGTH_MISMATCH_ERROR_MSG + source + " (" + srcLen
+              + ") and target:" + target + " (" + targetLen + ")");
+    }
+
+    //At this point, src & dest lengths are same. if length==0, we skip checksum
+    if ((srcLen != 0) && (!skipCrc)) {
+      if (!checksumsAreEqual(sourceFS, source, sourceChecksum,
+          targetFS, target, srcLen)) {
+        StringBuilder errorMessage =
+            new StringBuilder(DistCpConstants.CHECKSUM_MISMATCH_ERROR_MSG)
+                .append(source).append(" and ").append(target).append(".");
+        boolean addSkipHint = false;
+        String srcScheme = sourceFS.getScheme();
+        String targetScheme = targetFS.getScheme();
+        if (!srcScheme.equals(targetScheme)) {
+          // the filesystems are different and they aren't both hdfs connectors
+          errorMessage.append("Source and destination filesystems are of"
+              + " different types\n")
+              .append("Their checksum algorithms may be incompatible");
+          addSkipHint = true;
+        } else if (sourceFS.getFileStatus(source).getBlockSize() !=
+            targetFS.getFileStatus(target).getBlockSize()) {
+          errorMessage.append(" Source and target differ in block-size.\n")
+              .append(" Use -pb to preserve block-sizes during copy.");
+          addSkipHint = true;
+        }
+        if (addSkipHint) {
+          errorMessage
+              .append(" You can choose file-level checksum validation via "
+                  + "-Ddfs.checksum.combine.mode=COMPOSITE_CRC when block-sizes"
+                  + " or filesystems are different.")
+              .append(" Or you can skip checksum-checks altogether "
+                  + " with -skipcrccheck.\n")
+              .append(" (NOTE: By skipping checksums, one runs the risk of " +
+                  "masking data-corruption during file-transfer.)\n");
+        }
+        throw new IOException(errorMessage.toString());
+      }
+    }
   }
 
   /*

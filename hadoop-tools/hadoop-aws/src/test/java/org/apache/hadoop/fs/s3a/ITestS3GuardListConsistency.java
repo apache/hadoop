@@ -87,7 +87,7 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
     conf.setFloat(FAIL_INJECT_INCONSISTENCY_PROBABILITY, 1.0f);
     // this is a long value to guarantee that the inconsistency holds
     // even over long-haul connections, and in the debugger too/
-    conf.setLong(FAIL_INJECT_INCONSISTENCY_MSEC, (long) (60 * 1000));
+    conf.setLong(FAIL_INJECT_INCONSISTENCY_MSEC, 600_1000L);
     return new S3AContract(conf);
   }
 
@@ -151,13 +151,13 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
   @Test
   public void testConsistentListAfterRename() throws Exception {
     Path d1f = path("d1/f");
-    Path d1f2 = path("d1/f" + DEFAULT_DELAY_KEY_SUBSTRING);
+    Path d1f2 = path("d1/f-" + DEFAULT_DELAY_KEY_SUBSTRING);
     Path[] mkdirs = {d1f, d1f2};
     Path d1 = path("d1");
     Path[] srcdirs = {d1};
     Path d2 = path("d2");
     Path[] dstdirs = {d2};
-    Path d2f2 = path("d2/f" + DEFAULT_DELAY_KEY_SUBSTRING);
+    Path d2f2 = path("d2/f-" + DEFAULT_DELAY_KEY_SUBSTRING);
     Path[] yesdirs = {d2, path("d2/f"), d2f2};
     Path[] nodirs = {
         d1, d1f, d1f2};
@@ -218,8 +218,11 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
     Path inconsistentPath =
         path("a/b/dir3-" + DEFAULT_DELAY_KEY_SUBSTRING);
 
-    Path[] testDirs = {path("a/b/dir1"),
-        path("a/b/dir2"),
+    Path dir1 = path("a/b/dir1");
+    Path dir2 = path("a/b/dir2");
+    Path[] testDirs = {
+        dir1,
+        dir2,
         inconsistentPath};
 
     for (Path path : testDirs) {
@@ -235,13 +238,11 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
     for (FileStatus fileState : paths) {
       list.add(fileState.getPath());
     }
-
-    assertFalse("This path should be deleted.",
-        list.contains(path("a/b/dir1")));
-    assertFalse("This path should be deleted.",
-        list.contains(path("a/b/dir2")));
-    assertFalse("This should fail without S3Guard, and succeed with it.",
-        list.contains(inconsistentPath));
+    Assertions.assertThat(list)
+        .describedAs("Expected deleted files to be excluded")
+        .doesNotContain(dir1)
+        .doesNotContain(dir2)
+        .doesNotContain(inconsistentPath);
   }
 
   /**
@@ -276,11 +277,11 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
     for (FileStatus fileState : paths) {
       list.add(fileState.getPath());
     }
-    assertTrue(list.contains(path("a3/b/dir1")));
-    assertFalse(list.contains(path("a3/b/dir2")));
-    // This should fail without S3Guard, and succeed with it.
-    assertFalse(list.contains(path("a3/b/dir3-" +
-        DEFAULT_DELAY_KEY_SUBSTRING)));
+    Assertions.assertThat(list)
+        .contains(path("a3/b/dir1"))
+        .doesNotContain(path("a3/b/dir2"))
+        .doesNotContain(path("a3/b/dir3-" +
+            DEFAULT_DELAY_KEY_SUBSTRING));
 
     intercept(FileNotFoundException.class, "",
         "Recently renamed dir should not be visible",
@@ -312,10 +313,10 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
     for (FileStatus fileState : paths) {
       list.add(fileState.getPath());
     }
-    assertTrue(list.contains(path("a/b/dir1")));
-    assertTrue(list.contains(path("a/b/dir2")));
-    // This should fail without S3Guard, and succeed with it.
-    assertTrue(list.contains(inconsistentPath));
+    Assertions.assertThat(list)
+        .contains(path("a/b/dir1"))
+        .contains(path("a/b/dir2"))
+        .contains(inconsistentPath);
   }
 
   /**
@@ -526,30 +527,35 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
 
   @Test
   public void testInconsistentS3ClientDeletes() throws Throwable {
+    describe("Verify that delete adds tombstones which block entries"
+        + " returned in (inconsistent) listings");
     // Test only implemented for v2 S3 list API
-    Assume.assumeTrue(getConfiguration()
-        .getInt(LIST_VERSION, DEFAULT_LIST_VERSION) == 2);
+    assumeV2ListAPI();
 
     S3AFileSystem fs = getFileSystem();
-    Path root = path("testInconsistentClient" + DEFAULT_DELAY_KEY_SUBSTRING);
+    Path root = path("testInconsistentS3ClientDeletes-"
+        + DEFAULT_DELAY_KEY_SUBSTRING);
     for (int i = 0; i < 3; i++) {
-      fs.mkdirs(new Path(root, "dir" + i));
-      touch(fs, new Path(root, "file" + i));
+      fs.mkdirs(new Path(root, "dir-" + i));
+      touch(fs, new Path(root, "file-" + i));
       for (int j = 0; j < 3; j++) {
-        touch(fs, new Path(new Path(root, "dir" + i), "file" + i + "-" + j));
+        touch(fs, new Path(new Path(root, "dir-" + i), "file-" + i + "-" + j));
       }
     }
     clearInconsistency(fs);
 
     String key = fs.pathToKey(root) + "/";
 
+    LOG.info("Listing objects before executing delete()");
     ListObjectsV2Result preDeleteDelimited = listObjectsV2(fs, key, "/");
     ListObjectsV2Result preDeleteUndelimited = listObjectsV2(fs, key, null);
 
+    LOG.info("Deleting the directory {}", root);
     fs.delete(root, true);
+    LOG.info("Delete completed; listing results which must exclude deleted"
+        + " paths");
 
     ListObjectsV2Result postDeleteDelimited = listObjectsV2(fs, key, "/");
-    ListObjectsV2Result postDeleteUndelimited = listObjectsV2(fs, key, null);
     assertListSizeEqual(
         "InconsistentAmazonS3Client added back objects incorrectly " +
             "in a non-recursive listing",
@@ -561,6 +567,8 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
         preDeleteDelimited.getCommonPrefixes(),
         postDeleteDelimited.getCommonPrefixes()
     );
+    LOG.info("Executing Deep listing");
+    ListObjectsV2Result postDeleteUndelimited = listObjectsV2(fs, key, null);
     assertListSizeEqual("InconsistentAmazonS3Client added back objects incorrectly " +
             "in a recursive listing",
         preDeleteUndelimited.getObjectSummaries(),
@@ -572,6 +580,60 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
         preDeleteUndelimited.getCommonPrefixes(),
         postDeleteUndelimited.getCommonPrefixes()
     );
+  }
+
+  /**
+   * Require the v2 S3 list API.
+   */
+  protected void assumeV2ListAPI() {
+    Assume.assumeTrue(getConfiguration()
+        .getInt(LIST_VERSION, DEFAULT_LIST_VERSION) == 2);
+  }
+
+  /**
+   * Verify that delayed S3 listings doesn't stop the FS from deleting
+   * a directory tree. This has not always been the case; this test
+   * verifies the fix and prevents regression.
+   */
+  @Test
+  public void testDeleteUsesS3Guard() throws Throwable {
+    describe("Verify that delete() uses S3Guard to get a consistent"
+        + " listing of its directory structure");
+    assumeV2ListAPI();
+    S3AFileSystem fs = getFileSystem();
+    Path root = path(
+        "testDeleteUsesS3Guard-" + DEFAULT_DELAY_KEY_SUBSTRING);
+    for (int i = 0; i < 3; i++) {
+      Path path = new Path(root, "file-" + i);
+      touch(fs, path);
+    }
+    // we now expect the listing to miss these
+    String key = fs.pathToKey(root) + "/";
+
+    // verify that the inconsistent listing does not show these
+    LOG.info("Listing objects before executing delete()");
+    List<Path> preDeletePaths = objectsToPaths(listObjectsV2(fs, key, null));
+    Assertions.assertThat(preDeletePaths)
+        .isEmpty();
+    // do the delete
+    fs.delete(root, true);
+
+    // now go through every file and verify that it is not there.
+    // if you comment out the delete above and run this test case,
+    // the assertion will fail; this is how the validity of the assertions
+    // were verified.
+    clearInconsistency(fs);
+    List<Path> postDeletePaths =
+        objectsToPaths(listObjectsV2(fs, key, null));
+    Assertions.assertThat(postDeletePaths)
+        .isEmpty();
+  }
+
+  private List<Path> objectsToPaths(ListObjectsV2Result r) {
+    S3AFileSystem fs = getFileSystem();
+    return r.getObjectSummaries().stream()
+        .map(s -> fs.keyToQualifiedPath(s.getKey()))
+        .collect(Collectors.toList());
   }
 
   /**
@@ -633,7 +695,13 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
         .map(n -> n.toString())
         .collect(Collectors.joining("\n"));
     String summary = "\nExpected:" + leftContents
-        + "\n-----------\nActual:" + rightContents;
+        + "\n-----------\n"
+        + "Actual:" + rightContents
+        + "\n-----------\n";
+
+    if (expected.size() != actual.size()) {
+      LOG.error(message + summary);
+    }
     assertEquals(message + summary, expected.size(), actual.size());
   }
 

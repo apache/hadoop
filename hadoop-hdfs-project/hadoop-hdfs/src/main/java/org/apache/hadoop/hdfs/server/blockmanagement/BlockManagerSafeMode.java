@@ -85,7 +85,7 @@ class BlockManagerSafeMode {
   private volatile BMSafeModeStatus status = BMSafeModeStatus.OFF;
 
   /** Safe mode threshold condition %.*/
-  private final double threshold;
+  private final float threshold;
   /** Number of blocks needed to satisfy safe mode threshold condition. */
   private long blockThreshold;
   /** Total number of blocks. */
@@ -97,7 +97,7 @@ class BlockManagerSafeMode {
   /** Min replication required by safe mode. */
   private final int safeReplication;
   /** Threshold for populating needed replication queues. */
-  private final double replQueueThreshold;
+  private final float replQueueThreshold;
   /** Number of blocks needed before populating replication queues. */
   private long blockReplQueueThreshold;
 
@@ -150,8 +150,7 @@ class BlockManagerSafeMode {
     // default to safe mode threshold (i.e., don't populate queues before
     // leaving safe mode)
     this.replQueueThreshold =
-        conf.getFloat(DFS_NAMENODE_REPL_QUEUE_THRESHOLD_PCT_KEY,
-            (float) threshold);
+        conf.getFloat(DFS_NAMENODE_REPL_QUEUE_THRESHOLD_PCT_KEY, threshold);
     this.extension = conf.getTimeDuration(DFS_NAMENODE_SAFEMODE_EXTENSION_KEY,
         DFS_NAMENODE_SAFEMODE_EXTENSION_DEFAULT,
         MILLISECONDS);
@@ -211,7 +210,7 @@ class BlockManagerSafeMode {
     switch (status) {
     case PENDING_THRESHOLD:
       if (areThresholdsMet()) {
-        if (extension > 0) {
+        if (blockTotal > 0 && extension > 0) {
           // PENDING_THRESHOLD -> EXTENSION
           status = BMSafeModeStatus.EXTENSION;
           reachedTime.set(monotonicNow());
@@ -533,11 +532,13 @@ class BlockManagerSafeMode {
 
   /**
    * Get time (counting in milliseconds) left to leave extension period.
+   * It should leave safemode at once if blockTotal = 0 rather than wait
+   * extension time (30s by default).
    *
    * Negative value indicates the extension period has passed.
    */
   private long timeToLeaveExtension() {
-    return reachedTime.get() + extension - monotonicNow();
+    return blockTotal > 0 ? reachedTime.get() + extension - monotonicNow() : 0;
   }
 
   /**
@@ -573,12 +574,18 @@ class BlockManagerSafeMode {
     assert namesystem.hasWriteLock();
     // Calculating the number of live datanodes is time-consuming
     // in large clusters. Skip it when datanodeThreshold is zero.
-    int datanodeNum = 0;
-    if (datanodeThreshold > 0) {
-      datanodeNum = blockManager.getDatanodeManager().getNumLiveDataNodes();
-    }
+    // We need to evaluate getNumLiveDataNodes only when
+    // (blockSafe >= blockThreshold) is true and hence moving evaluation
+    // of datanodeNum conditional to isBlockThresholdMet as well
     synchronized (this) {
-      return blockSafe >= blockThreshold && datanodeNum >= datanodeThreshold;
+      boolean isBlockThresholdMet = (blockSafe >= blockThreshold);
+      boolean isDatanodeThresholdMet = true;
+      if (isBlockThresholdMet && datanodeThreshold > 0) {
+        int datanodeNum = blockManager.getDatanodeManager().
+                getNumLiveDataNodes();
+        isDatanodeThresholdMet = (datanodeNum >= datanodeThreshold);
+      }
+      return isBlockThresholdMet && isDatanodeThresholdMet;
     }
   }
 

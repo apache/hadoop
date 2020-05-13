@@ -23,6 +23,7 @@ import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import java.io.IOException;
 
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -46,6 +47,7 @@ public class TestDisableRouterQuota {
         .quota(false) //set false to verify the quota disabled in Router
         .rpc()
         .build();
+    routerConf.set(RBFConfigKeys.DFS_ROUTER_RPC_ADDRESS_KEY, "0.0.0.0:0");
     router.init(routerConf);
     router.setRouterId("TestRouterId");
     router.start();
@@ -71,7 +73,7 @@ public class TestDisableRouterQuota {
 
     try {
       Quota quotaModule = router.getRpcServer().getQuotaModule();
-      quotaModule.setQuota("/test", nsQuota, ssQuota, null);
+      quotaModule.setQuota("/test", nsQuota, ssQuota, null, false);
       fail("The setQuota call should fail.");
     } catch (IOException ioe) {
       GenericTestUtils.assertExceptionContains(
@@ -91,4 +93,13 @@ public class TestDisableRouterQuota {
     }
   }
 
+  @Test
+  public void testGetGlobalQuota() throws Exception {
+    LambdaTestUtils.intercept(IOException.class,
+        "The quota system is disabled in Router.",
+        "The getGlobalQuota call should fail.", () -> {
+          Quota quotaModule = router.getRpcServer().getQuotaModule();
+          quotaModule.getGlobalQuota("/test");
+        });
+  }
 }

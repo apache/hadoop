@@ -42,4 +42,6 @@ public interface FsConstants {
    */
   public static final URI VIEWFS_URI = URI.create("viewfs:///");
   public static final String VIEWFS_SCHEME = "viewfs";
+  String FS_VIEWFS_OVERLOAD_SCHEME_TARGET_FS_IMPL_PATTERN =
+      "fs.viewfs.overload.scheme.target.%s.impl";
 }

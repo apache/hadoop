@@ -671,6 +671,7 @@ public class TestNameNodeMXBean {
   public void testNNDirectorySize() throws Exception{
     Configuration conf = new Configuration();
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY, 0);
     MiniDFSCluster cluster = null;
     for (int i = 0; i < 5; i++) {
       try{
@@ -700,8 +701,6 @@ public class TestNameNodeMXBean {
 
       FSNamesystem nn0 = cluster.getNamesystem(0);
       FSNamesystem nn1 = cluster.getNamesystem(1);
-      checkNNDirSize(cluster.getNameDirs(0), nn0.getNameDirSize());
-      checkNNDirSize(cluster.getNameDirs(1), nn1.getNameDirSize());
       cluster.transitionToActive(0);
       fs = cluster.getFileSystem(0);
       DFSTestUtil.createFile(fs, new Path("/file"), 0, (short) 1, 0L);

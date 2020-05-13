@@ -33,11 +33,13 @@ public class S3ALocatedFileStatus extends LocatedFileStatus {
   private final String eTag;
   private final String versionId;
 
-  public S3ALocatedFileStatus(S3AFileStatus status, BlockLocation[] locations,
-      String eTag, String versionId) {
+  private final Tristate isEmptyDirectory;
+
+  public S3ALocatedFileStatus(S3AFileStatus status, BlockLocation[] locations) {
     super(checkNotNull(status), locations);
-    this.eTag = eTag;
-    this.versionId = versionId;
+    this.eTag = status.getETag();
+    this.versionId = status.getVersionId();
+    isEmptyDirectory = status.isEmptyDirectory();
   }
 
   public String getETag() {
@@ -67,12 +69,28 @@ public class S3ALocatedFileStatus extends LocatedFileStatus {
    */
   public S3AFileStatus toS3AFileStatus() {
     return new S3AFileStatus(
+        getPath(),
+        isDirectory(),
+        isEmptyDirectory,
         getLen(),
         getModificationTime(),
-        getPath(),
         getBlockSize(),
         getOwner(),
         getETag(),
         getVersionId());
+  }
+
+  @Override
+  public String toString() {
+    final StringBuilder sb = new StringBuilder(
+        super.toString());
+    sb.append("[eTag='").
+        append(eTag != null ? eTag : "")
+        .append('\'');
+    sb.append(", versionId='")
+        .append(versionId != null ? versionId: "")
+        .append('\'');
+    sb.append(']');
+    return sb.toString();
   }
 }

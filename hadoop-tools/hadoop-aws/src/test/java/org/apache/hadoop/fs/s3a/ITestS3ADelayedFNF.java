@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
@@ -30,7 +30,13 @@ import org.junit.Assume;
 import org.junit.Test;
 
 import java.io.FileNotFoundException;
-import java.util.concurrent.Callable;
+
+import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_MODE;
+import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_SOURCE;
+import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
+import static org.apache.hadoop.fs.s3a.Constants.RETRY_INTERVAL;
+import static org.apache.hadoop.fs.s3a.Constants.RETRY_LIMIT;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 
 /**
  * Tests behavior of a FileNotFound error that happens after open(), i.e. on
@@ -38,6 +44,21 @@ import java.util.concurrent.Callable;
  */
 public class ITestS3ADelayedFNF extends AbstractS3ATestBase {
 
+  @Override
+  protected Configuration createConfiguration() {
+    Configuration conf = super.createConfiguration();
+    // reduce retry limit so FileNotFoundException cases timeout faster,
+    // speeding up the tests
+    removeBaseAndBucketOverrides(conf,
+        CHANGE_DETECT_SOURCE,
+        CHANGE_DETECT_MODE,
+        RETRY_LIMIT,
+        RETRY_INTERVAL,
+        METADATASTORE_AUTHORITATIVE);
+    conf.setInt(RETRY_LIMIT, 2);
+    conf.set(RETRY_INTERVAL, "1ms");
+    return conf;
+  }
 
   /**
    * See debugging documentation
@@ -46,9 +67,9 @@ public class ITestS3ADelayedFNF extends AbstractS3ATestBase {
    */
   @Test
   public void testNotFoundFirstRead() throws Exception {
-    FileSystem fs = getFileSystem();
+    S3AFileSystem fs = getFileSystem();
     ChangeDetectionPolicy changeDetectionPolicy =
-        ((S3AFileSystem) fs).getChangeDetectionPolicy();
+        fs.getChangeDetectionPolicy();
     Assume.assumeFalse("FNF not expected when using a bucket with"
             + " object versioning",
         changeDetectionPolicy.getSource() == Source.VersionId);
@@ -61,12 +82,7 @@ public class ITestS3ADelayedFNF extends AbstractS3ATestBase {
 
     // This should fail since we deleted after the open.
     LambdaTestUtils.intercept(FileNotFoundException.class,
-        new Callable<Integer>() {
-          @Override
-          public Integer call() throws Exception {
-            return in.read();
-          }
-        });
+        () -> in.read());
   }
 
 }

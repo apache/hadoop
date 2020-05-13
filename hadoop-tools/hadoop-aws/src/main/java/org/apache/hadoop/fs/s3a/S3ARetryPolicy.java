@@ -33,6 +33,8 @@ import java.util.concurrent.TimeUnit;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputExceededException;
 import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.InvalidRequestException;
@@ -80,15 +82,21 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
 @SuppressWarnings("visibilitymodifier")  // I want a struct of finals, for real.
 public class S3ARetryPolicy implements RetryPolicy {
 
+  private static final Logger LOG = LoggerFactory.getLogger(
+      S3ARetryPolicy.class);
+
+  private final Configuration configuration;
+
   /** Final retry policy we end up with. */
   private final RetryPolicy retryPolicy;
 
   // Retry policies for mapping exceptions to
 
-  /** Base policy from configuration. */
-  protected final RetryPolicy fixedRetries;
+  /** Exponential policy for the base of normal failures. */
+  protected final RetryPolicy baseExponentialRetry;
 
-  /** Rejection of all non-idempotent calls except specific failures. */
+  /** Idempotent calls which raise IOEs are retried.
+   *  */
   protected final RetryPolicy retryIdempotentCalls;
 
   /** Policy for throttle requests, which are considered repeatable, even for
@@ -98,7 +106,10 @@ public class S3ARetryPolicy implements RetryPolicy {
   /** No retry on network and tangible API issues. */
   protected final RetryPolicy fail = RetryPolicies.TRY_ONCE_THEN_FAIL;
 
-  /** Client connectivity: fixed retries without care for idempotency. */
+  /**
+   * Client connectivity: baseExponentialRetry without worrying about whether
+   * or not the command is idempotent.
+   */
   protected final RetryPolicy connectivityFailure;
 
   /**
@@ -107,19 +118,26 @@ public class S3ARetryPolicy implements RetryPolicy {
    */
   public S3ARetryPolicy(Configuration conf) {
     Preconditions.checkArgument(conf != null, "Null configuration");
+    this.configuration = conf;
 
     // base policy from configuration
-    fixedRetries = retryUpToMaximumCountWithFixedSleep(
-        conf.getInt(RETRY_LIMIT, RETRY_LIMIT_DEFAULT),
-        conf.getTimeDuration(RETRY_INTERVAL,
-            RETRY_INTERVAL_DEFAULT,
-            TimeUnit.MILLISECONDS),
+    int limit = conf.getInt(RETRY_LIMIT, RETRY_LIMIT_DEFAULT);
+    long interval = conf.getTimeDuration(RETRY_INTERVAL,
+        RETRY_INTERVAL_DEFAULT,
+        TimeUnit.MILLISECONDS);
+    baseExponentialRetry = exponentialBackoffRetry(
+        limit,
+        interval,
         TimeUnit.MILLISECONDS);
 
-    // which is wrapped by a rejection of all non-idempotent calls except
-    // for specific failures.
+    LOG.debug("Retrying on recoverable AWS failures {} times with an"
+        + " initial interval of {}ms", limit, interval);
+
+    // which is wrapped by a rejection of failures of non-idempotent calls
+    // except for specific exceptions considered recoverable.
+    // idempotent calls are retried on IOEs but not other exceptions
     retryIdempotentCalls = new FailNonIOEs(
-        new IdempotencyRetryFilter(fixedRetries));
+        new IdempotencyRetryFilter(baseExponentialRetry));
 
     // and a separate policy for throttle requests, which are considered
     // repeatable, even for non-idempotent calls, as the service
@@ -127,7 +145,7 @@ public class S3ARetryPolicy implements RetryPolicy {
     throttlePolicy = createThrottleRetryPolicy(conf);
 
     // client connectivity: fixed retries without care for idempotency
-    connectivityFailure = fixedRetries;
+    connectivityFailure = baseExponentialRetry;
 
     Map<Class<? extends Exception>, RetryPolicy> policyMap =
         createExceptionMap();
@@ -170,6 +188,7 @@ public class S3ARetryPolicy implements RetryPolicy {
     policyMap.put(AccessDeniedException.class, fail);
     policyMap.put(NoAuthWithAWSException.class, fail);
     policyMap.put(FileNotFoundException.class, fail);
+    policyMap.put(UnknownStoreException.class, fail);
     policyMap.put(InvalidRequestException.class, fail);
 
     // metadata stores should do retries internally when it makes sense
@@ -237,6 +256,14 @@ public class S3ARetryPolicy implements RetryPolicy {
           (AmazonClientException) exception);
     }
     return retryPolicy.shouldRetry(ex, retries, failovers, idempotent);
+  }
+
+  /**
+   * Get the configuration this policy was created from.
+   * @return the configuration.
+   */
+  protected Configuration getConfiguration() {
+    return configuration;
   }
 
   /**

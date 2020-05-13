@@ -22,6 +22,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.KerberosTestUtils;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
@@ -743,12 +744,6 @@ public class TestWebDelegationToken {
       final boolean doAs) throws Exception {
     final String doAsUser = doAs ? OK_USER : null;
 
-    // setting hadoop security to kerberos
-    org.apache.hadoop.conf.Configuration conf =
-        new org.apache.hadoop.conf.Configuration();
-    conf.set("hadoop.security.authentication", "kerberos");
-    UserGroupInformation.setConfiguration(conf);
-
     File testDir = new File("target/" + UUID.randomUUID().toString());
     Assert.assertTrue(testDir.mkdirs());
     MiniKdc kdc = new MiniKdc(MiniKdc.createConf(), testDir);
@@ -759,6 +754,10 @@ public class TestWebDelegationToken {
     context.addFilter(new FilterHolder(KDTAFilter.class), "/*",
         EnumSet.of(DispatcherType.REQUEST));
     context.addServlet(new ServletHolder(UserServlet.class), "/bar");
+    org.apache.hadoop.conf.Configuration conf =
+        new org.apache.hadoop.conf.Configuration();
+    conf.set("hadoop.security.authentication", "kerberos");
+    conf.set("java.security.krb5.realm", KerberosTestUtils.getRealm());
     try {
       kdc.start();
       File keytabFile = new File(testDir, "test.keytab");

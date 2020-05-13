@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import javax.annotation.Nullable;
+
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.annotations.VisibleForTesting;
@@ -57,6 +59,9 @@ public class Listing {
 
   private final S3AFileSystem owner;
   private static final Logger LOG = S3AFileSystem.LOG;
+
+  static final FileStatusAcceptor ACCEPT_ALL_BUT_S3N =
+      new AcceptAllButS3nDirs();
 
   public Listing(S3AFileSystem owner) {
     this.owner = owner;
@@ -339,7 +344,8 @@ public class Listing {
     FileStatusListingIterator(ObjectListingIterator source,
         PathFilter filter,
         FileStatusAcceptor acceptor,
-        RemoteIterator<S3AFileStatus> providedStatus) throws IOException {
+        @Nullable RemoteIterator<S3AFileStatus> providedStatus)
+        throws IOException {
       this.source = source;
       this.filter = filter;
       this.acceptor = acceptor;

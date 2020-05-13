@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.s3a;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Optional;
@@ -61,8 +61,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.readUTF8;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.s3a.Constants.*;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBucketOverrides;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.CHANGE_DETECTED;
 import static org.apache.hadoop.fs.s3a.select.SelectConstants.S3_SELECT_CAPABILITY;
 import static org.apache.hadoop.fs.s3a.select.SelectConstants.SELECT_SQL;
@@ -123,12 +122,16 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
 
   private static final byte[] TEST_DATA_BYTES = TEST_DATA.getBytes(
       Charsets.UTF_8);
-  private static final int TEST_MAX_RETRIES = 5;
-  private static final String TEST_RETRY_INTERVAL = "10ms";
+  private static final int TEST_MAX_RETRIES = 4;
+  private static final String TEST_RETRY_INTERVAL = "1ms";
   private static final String QUOTED_TEST_DATA =
       "\"" + TEST_DATA + "\"";
 
   private Optional<AmazonS3> originalS3Client = Optional.empty();
+
+  private static final String INCONSISTENT = "inconsistent";
+
+  private static final String CONSISTENT = "consistent";
 
   private enum InteractionType {
     READ,
@@ -276,21 +279,26 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-    String bucketName = getTestBucketName(conf);
-    removeBucketOverrides(bucketName, conf,
+    removeBaseAndBucketOverrides(conf,
         CHANGE_DETECT_SOURCE,
         CHANGE_DETECT_MODE,
         RETRY_LIMIT,
         RETRY_INTERVAL,
-        METADATASTORE_AUTHORITATIVE);
+        S3GUARD_CONSISTENCY_RETRY_LIMIT,
+        S3GUARD_CONSISTENCY_RETRY_INTERVAL,
+        METADATASTORE_AUTHORITATIVE,
+        AUTHORITATIVE_PATH);
     conf.set(CHANGE_DETECT_SOURCE, changeDetectionSource);
     conf.set(CHANGE_DETECT_MODE, changeDetectionMode);
     conf.setBoolean(METADATASTORE_AUTHORITATIVE, authMode);
+    conf.set(AUTHORITATIVE_PATH, "");
 
     // reduce retry limit so FileNotFoundException cases timeout faster,
     // speeding up the tests
     conf.setInt(RETRY_LIMIT, TEST_MAX_RETRIES);
     conf.set(RETRY_INTERVAL, TEST_RETRY_INTERVAL);
+    conf.setInt(S3GUARD_CONSISTENCY_RETRY_LIMIT, TEST_MAX_RETRIES);
+    conf.set(S3GUARD_CONSISTENCY_RETRY_INTERVAL, TEST_RETRY_INTERVAL);
 
     if (conf.getClass(S3_METADATA_STORE_IMPL, MetadataStore.class) ==
         NullMetadataStore.class) {
@@ -425,6 +433,106 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   }
 
   /**
+   * Verifies that when the openFile builder is passed in a status,
+   * then that is used to eliminate the getFileStatus call in open();
+   * thus the version and etag passed down are still used.
+   */
+  @Test
+  public void testOpenFileWithStatus() throws Throwable {
+    final Path testpath = path("testOpenFileWithStatus.dat");
+    final byte[] dataset = TEST_DATA_BYTES;
+    S3AFileStatus originalStatus =
+        writeFile(testpath, dataset, dataset.length, true);
+
+    // forge a file status with a different etag
+    // no attempt is made to change the versionID as it will
+    // get rejected by S3 as an invalid version
+    S3AFileStatus forgedStatus =
+        S3AFileStatus.fromFileStatus(originalStatus, Tristate.FALSE,
+            originalStatus.getETag() + "-fake",
+            originalStatus.getVersionId() + "");
+    fs.getMetadataStore().put(
+        new PathMetadata(forgedStatus, Tristate.FALSE, false));
+
+    // verify the bad etag gets picked up.
+    LOG.info("Opening stream with s3guard's (invalid) status.");
+    try (FSDataInputStream instream = fs.openFile(testpath)
+        .build()
+        .get()) {
+      try {
+        instream.read();
+        // No exception only if we don't enforce change detection as exception
+        assertTrue(
+            "Read did not raise an exception even though the change detection "
+                + "mode was " + changeDetectionMode
+                + " and the inserted file status was invalid",
+            changeDetectionMode.equals(CHANGE_DETECT_MODE_NONE)
+                || changeDetectionMode.equals(CHANGE_DETECT_MODE_WARN)
+                || changeDetectionSource.equals(CHANGE_DETECT_SOURCE_VERSION_ID));
+      } catch (RemoteFileChangedException ignored) {
+        // Ignored.
+      }
+    }
+
+    // By passing in the status open() doesn't need to check s3guard
+    // And hence the existing file is opened
+    LOG.info("Opening stream with the original status.");
+    try (FSDataInputStream instream = fs.openFile(testpath)
+        .withFileStatus(originalStatus)
+        .build()
+        .get()) {
+      instream.read();
+    }
+
+    // and this holds for S3A Located Status
+    LOG.info("Opening stream with S3ALocatedFileStatus.");
+    try (FSDataInputStream instream = fs.openFile(testpath)
+        .withFileStatus(new S3ALocatedFileStatus(originalStatus, null))
+        .build()
+        .get()) {
+      instream.read();
+    }
+
+    // if you pass in a status of a dir, it will be rejected
+    S3AFileStatus s2 = new S3AFileStatus(true, testpath, "alice");
+    assertTrue("not a directory " + s2, s2.isDirectory());
+    LOG.info("Open with directory status");
+    interceptFuture(FileNotFoundException.class, "",
+        fs.openFile(testpath)
+            .withFileStatus(s2)
+            .build());
+
+    // now, we delete the file from the store and s3guard
+    // when we pass in the status, there's no HEAD request, so it's only
+    // in the read call where the 404 surfaces.
+    // and there, when versionID is passed to the GET, the data is returned
+    LOG.info("Testing opening a deleted file");
+    fs.delete(testpath, false);
+    try (FSDataInputStream instream = fs.openFile(testpath)
+        .withFileStatus(originalStatus)
+        .build()
+        .get()) {
+      if (changeDetectionSource.equals(CHANGE_DETECT_SOURCE_VERSION_ID)
+          && changeDetectionMode.equals(CHANGE_DETECT_MODE_SERVER)) {
+          // the deleted file is still there if you know the version ID
+          // and the check is server-side
+          instream.read();
+      } else {
+        // all other cases, the read will return 404.
+        intercept(FileNotFoundException.class,
+            () -> instream.read());
+      }
+
+    }
+
+    // whereas without that status, you fail in the get() when a HEAD is
+    // issued
+    interceptFuture(FileNotFoundException.class, "",
+        fs.openFile(testpath).build());
+
+  }
+
+  /**
    * Ensures a file can be read when there is no version metadata
    * (ETag, versionId).
    */
@@ -516,9 +624,11 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
         writeFileWithNoVersionMetadata("selectnoversion.dat");
 
     try (FSDataInputStream instream = fs.openFile(testpath)
-        .must(SELECT_SQL, "SELECT * FROM S3OBJECT").build().get()) {
+        .must(SELECT_SQL, "SELECT * FROM S3OBJECT")
+        .build()
+        .get()) {
       assertEquals(QUOTED_TEST_DATA,
-          IOUtils.toString(instream, Charset.forName("UTF-8")).trim());
+          IOUtils.toString(instream, StandardCharsets.UTF_8).trim());
     }
   }
 
@@ -699,10 +809,8 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
     Path sourcedir = new Path(basedir, "sourcedir");
     fs.mkdirs(sourcedir);
     Path destdir = new Path(basedir, "destdir");
-    String inconsistent = "inconsistent";
-    String consistent = "consistent";
-    Path inconsistentFile = new Path(sourcedir, inconsistent);
-    Path consistentFile = new Path(sourcedir, consistent);
+    Path inconsistentFile = new Path(sourcedir, INCONSISTENT);
+    Path consistentFile = new Path(sourcedir, CONSISTENT);
 
     // write the consistent data
     writeDataset(fs, consistentFile, TEST_DATA_BYTES, TEST_DATA_BYTES.length,
@@ -723,6 +831,82 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
     // must not fail since the inconsistency doesn't last through the
     // configured retry limit
     fs.rename(sourcedir, destdir);
+  }
+
+  /**
+   * Tests doing a rename() on a file which is eventually visible.
+   */
+  @Test
+  public void testRenameEventuallyVisibleFile() throws Throwable {
+    requireS3Guard();
+    AmazonS3 s3ClientSpy = spyOnFilesystem();
+    Path basedir = path();
+    Path sourcedir = new Path(basedir, "sourcedir");
+    fs.mkdirs(sourcedir);
+    Path destdir = new Path(basedir, "destdir");
+    Path inconsistentFile = new Path(sourcedir, INCONSISTENT);
+    Path consistentFile = new Path(sourcedir, CONSISTENT);
+
+    // write the consistent data
+    writeDataset(fs, consistentFile, TEST_DATA_BYTES, TEST_DATA_BYTES.length,
+        1024, true, true);
+
+    Pair<Integer, Integer> counts = renameInconsistencyCounts(0);
+    int metadataInconsistencyCount = counts.getLeft();
+
+    writeDataset(fs, inconsistentFile, TEST_DATA_BYTES, TEST_DATA_BYTES.length,
+        1024, true, true);
+
+    stubTemporaryNotFound(s3ClientSpy, metadataInconsistencyCount,
+        inconsistentFile);
+
+    // must not fail since the inconsistency doesn't last through the
+    // configured retry limit
+    fs.rename(sourcedir, destdir);
+  }
+
+  /**
+   * Tests doing a rename() on a file which never quite appears will
+   * fail with a RemoteFileChangedException rather than have the exception
+   * downgraded to a failure.
+   */
+  @Test
+  public void testRenameMissingFile()
+      throws Throwable {
+    requireS3Guard();
+    AmazonS3 s3ClientSpy = spyOnFilesystem();
+    Path basedir = path();
+    Path sourcedir = new Path(basedir, "sourcedir");
+    fs.mkdirs(sourcedir);
+    Path destdir = new Path(basedir, "destdir");
+    Path inconsistentFile = new Path(sourcedir, INCONSISTENT);
+    Path consistentFile = new Path(sourcedir, CONSISTENT);
+
+    // write the consistent data
+    writeDataset(fs, consistentFile, TEST_DATA_BYTES, TEST_DATA_BYTES.length,
+        1024, true, true);
+
+    Pair<Integer, Integer> counts = renameInconsistencyCounts(0);
+    int metadataInconsistencyCount = counts.getLeft();
+
+    writeDataset(fs, inconsistentFile, TEST_DATA_BYTES, TEST_DATA_BYTES.length,
+        1024, true, true);
+
+    stubTemporaryNotFound(s3ClientSpy, metadataInconsistencyCount + 1,
+        inconsistentFile);
+
+    String expected = fs.hasMetadataStore()
+        ? RemoteFileChangedException.FILE_NEVER_FOUND
+        : RemoteFileChangedException.FILE_NOT_FOUND_SINGLE_ATTEMPT;
+    RemoteFileChangedException ex = intercept(
+        RemoteFileChangedException.class,
+        expected,
+        () -> fs.rename(sourcedir, destdir));
+    assertEquals("Path in " + ex,
+        inconsistentFile, ex.getPath());
+    if (!(ex.getCause() instanceof FileNotFoundException)) {
+      throw ex;
+    }
   }
 
   /**
@@ -820,15 +1004,12 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   private Path writeOutOfSyncFileVersion(String filename) throws IOException {
     final Path testpath = path(filename);
     final byte[] dataset = TEST_DATA_BYTES;
-    writeDataset(fs, testpath, dataset, dataset.length,
-        1024, false);
-    S3AFileStatus originalStatus = (S3AFileStatus) fs.getFileStatus(testpath);
+    S3AFileStatus originalStatus =
+        writeFile(testpath, dataset, dataset.length, false);
 
     // overwrite with half the content
-    writeDataset(fs, testpath, dataset, dataset.length / 2,
-        1024, true);
-
-    S3AFileStatus newStatus = (S3AFileStatus) fs.getFileStatus(testpath);
+    S3AFileStatus newStatus = writeFile(testpath, dataset, dataset.length / 2,
+        true);
 
     // put back the original etag, versionId
     S3AFileStatus forgedStatus =
@@ -838,6 +1019,23 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
         new PathMetadata(forgedStatus, Tristate.FALSE, false));
 
     return testpath;
+  }
+
+  /**
+   * Write data to a file; return the status from the filesystem.
+   * @param path file path
+   * @param dataset dataset to write from
+   * @param length number of bytes from the dataset to write.
+   * @param overwrite overwrite flag
+   * @return the retrieved file status.
+   */
+  private S3AFileStatus writeFile(final Path path,
+      final byte[] dataset,
+      final int length,
+      final boolean overwrite) throws IOException {
+    writeDataset(fs, path, dataset, length,
+        1024, overwrite);
+    return (S3AFileStatus) fs.getFileStatus(path);
   }
 
   /**
@@ -912,6 +1110,9 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
     LOG.debug("Updated file info: {}: version={}, etag={}", testpath,
         newStatus.getVersionId(), newStatus.getETag());
 
+    LOG.debug("File {} will be inconsistent for {} HEAD and {} GET requests",
+        testpath, getMetadataInconsistencyCount, getObjectInconsistencyCount);
+
     stubTemporaryUnavailable(s3ClientSpy, getObjectInconsistencyCount,
         testpath, newStatus);
 
@@ -921,6 +1122,8 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
     if (versionCheckingIsOnServer()) {
       // only stub inconsistency when mode is server since no constraints that
       // should trigger inconsistency are passed in any other mode
+      LOG.debug("File {} will be inconsistent for {} COPY operations",
+          testpath, copyInconsistencyCount);
       stubTemporaryCopyInconsistency(s3ClientSpy, testpath, newStatus,
           copyInconsistencyCount);
     }
@@ -1121,9 +1324,8 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   private Path writeFileWithNoVersionMetadata(String filename)
       throws IOException {
     final Path testpath = path(filename);
-    writeDataset(fs, testpath, TEST_DATA_BYTES, TEST_DATA_BYTES.length,
-        1024, false);
-    S3AFileStatus originalStatus = (S3AFileStatus) fs.getFileStatus(testpath);
+    S3AFileStatus originalStatus = writeFile(testpath, TEST_DATA_BYTES,
+        TEST_DATA_BYTES.length, false);
 
     // remove ETag and versionId
     S3AFileStatus newStatus = S3AFileStatus.fromFileStatus(originalStatus,
@@ -1233,6 +1435,18 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   }
 
   /**
+   * Match any getObjectMetadata request against a given path.
+   * @param path path to to match.
+   * @return the matching request.
+   */
+  private GetObjectMetadataRequest matchingMetadataRequest(Path path) {
+    return ArgumentMatchers.argThat(request -> {
+      return request.getBucketName().equals(fs.getBucket())
+          && request.getKey().equals(fs.pathToKey(path));
+    });
+  }
+
+  /**
    * Skip a test case if it needs S3Guard and the filesystem does
    * not have it.
    */
@@ -1292,4 +1506,42 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   private boolean versionCheckingIsOnServer() {
     return fs.getChangeDetectionPolicy().getMode() == Mode.Server;
   }
+
+  /**
+   * Stubs {@link AmazonS3#getObject(GetObjectRequest)}
+   * within s3ClientSpy to return throw a FileNotFoundException
+   * until inconsistentCallCount calls have been made.
+   * This simulates the condition where the S3 endpoint is caching
+   * a 404 request, or there is a tombstone in the way which has yet
+   * to clear.
+   * @param s3ClientSpy the spy to stub
+   * @param inconsistentCallCount the number of calls that should return the
+   * null response
+   * @param testpath the path of the object the stub should apply to
+   */
+  private void stubTemporaryNotFound(AmazonS3 s3ClientSpy,
+      int inconsistentCallCount, Path testpath) {
+    Answer<ObjectMetadata> notFound = new Answer<ObjectMetadata>() {
+      private int callCount = 0;
+
+      @Override
+      public ObjectMetadata answer(InvocationOnMock invocation
+      ) throws Throwable {
+        // simulates delayed visibility.
+        callCount++;
+        if (callCount <= inconsistentCallCount) {
+          LOG.info("Temporarily unavailable {} count {} of {}",
+              testpath, callCount, inconsistentCallCount);
+          logLocationAtDebug();
+          throw new FileNotFoundException(testpath.toString());
+        }
+        return (ObjectMetadata) invocation.callRealMethod();
+      }
+    };
+
+    // HEAD requests will fail
+    doAnswer(notFound).when(s3ClientSpy).getObjectMetadata(
+        matchingMetadataRequest(testpath));
+  }
+
 }

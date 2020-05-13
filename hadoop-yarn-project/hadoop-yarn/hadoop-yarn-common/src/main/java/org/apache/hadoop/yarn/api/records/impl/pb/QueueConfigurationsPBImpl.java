@@ -24,7 +24,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.QueueConfigurationsProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueConfigurationsProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 public class QueueConfigurationsPBImpl extends QueueConfigurations {
 

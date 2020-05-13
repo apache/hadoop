@@ -785,7 +785,8 @@ public class ContainerLaunch implements Callable<Integer> {
     StringBuilder analysis = new StringBuilder();
     if (errorMsg.indexOf("Error: Could not find or load main class"
         + " org.apache.hadoop.mapreduce") != -1) {
-      analysis.append("Please check whether your etc/hadoop/mapred-site.xml "
+      analysis.append(
+          "Please check whether your <HADOOP_HOME>/etc/hadoop/mapred-site.xml "
           + "contains the below configuration:\n");
       analysis.append("<property>\n")
           .append("  <name>yarn.app.mapreduce.am.env</name>\n")

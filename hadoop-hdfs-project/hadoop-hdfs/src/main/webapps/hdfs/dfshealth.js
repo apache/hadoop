@@ -65,8 +65,9 @@
     };
 
     var data = {};
+    var non_ha = false;
 
-    $.ajax({'url': '/conf', 'dataType': 'xml', 'async': false}).done(
+    $.ajax({'url': '/conf', 'dataType': 'xml', 'async': true}).done(
       function(d) {
         var $xml = $(d);
         var namespace, nnId;
@@ -80,6 +81,8 @@
         });
         if (namespace && nnId) {
           data['HAInfo'] = {"Namespace": namespace, "NamenodeID": nnId};
+        } else {
+          non_ha = true;
         }
     });
 
@@ -109,7 +112,17 @@
 
         data.fs.ObjectsTotal = data.fs.FilesTotal + data.fs.BlocksTotal;
 
-        render();
+        var wait_for_conf =  setInterval(function() {
+          if (non_ha ||
+              (('HAInfo' in data) &&
+                  ("Namespace" in data['HAInfo']) &&
+                  ("NamenodeID" in data['HAInfo'])
+              )
+          ) {
+            render();
+            clearInterval(wait_for_conf);
+          }
+        }, 5);
       }),
       function (url, jqxhr, text, err) {
         show_err_msg('<p>Failed to retrieve data from ' + url + ', cause: ' + err + '</p>');
@@ -333,16 +346,37 @@
           $('#tab-datanode').html(out);
           $('#table-datanodes').dataTable( {
             'lengthMenu': [ [25, 50, 100, -1], [25, 50, 100, "All"] ],
+            'columnDefs': [
+              { 'targets': [ 0 ], 'visible': false, 'searchable': false }
+             ],
             'columns': [
               { 'orderDataType': 'ng-value', 'searchable': true , "defaultContent": "" },
+              { 'orderDataType': 'ng-value', 'searchable': true , "defaultContent": "" },
               { 'orderDataType': 'ng-value', 'searchable': true , "defaultContent": ""},
+              { 'orderDataType': 'ng-value', 'type': 'num' , "defaultContent": 0},
+              { 'orderDataType': 'ng-value', 'type': 'num' , "defaultContent": 0},
               { 'orderDataType': 'ng-value', 'type': 'num' , "defaultContent": 0},
               { 'orderDataType': 'ng-value', 'type': 'num' , "defaultContent": 0},
               { 'orderDataType': 'ng-value', 'type': 'num' , "defaultContent": 0},
               { 'type': 'num' , "defaultContent": 0},
               { 'orderDataType': 'ng-value', 'type': 'num' , "defaultContent": 0},
               { 'type': 'string' , "defaultContent": ""}
-            ]});
+              ],
+              initComplete: function () {
+                var column = this.api().column([0]);
+                var select = $('<select class="datanodestatus form-control input-sm"><option value="">All</option></select>')
+                              .appendTo('#datanodefilter')
+                              .on('change', function () {
+                                var val = $.fn.dataTable.util.escapeRegex(
+                                $(this).val());
+                                column.search(val ? '^' + val + '$' : '', true, false).draw();
+                              });
+                console.log(select);
+                column.data().unique().sort().each(function (d, j) {
+                  select.append('<option value="' + d + '">' + d + '</option>');
+                });
+            }
+          });
           renderHistogram(data);
           $('#ui-tabs a[href="#tab-datanode"]').tab('show');
         });

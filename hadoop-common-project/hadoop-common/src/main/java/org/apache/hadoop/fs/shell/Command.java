@@ -458,7 +458,7 @@ abstract public class Command extends Configured {
     if (e instanceof InterruptedIOException) {
       throw new CommandInterruptException();
     }
-    
+    LOG.debug("{} failure", getName(), e);
     String errorMessage = e.getLocalizedMessage();
     if (errorMessage == null) {
       // this is an unexpected condition, so dump the whole exception since

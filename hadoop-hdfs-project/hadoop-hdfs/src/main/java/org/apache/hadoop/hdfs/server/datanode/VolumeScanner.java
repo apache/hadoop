@@ -290,12 +290,7 @@ public class VolumeScanner extends Thread {
         return;
       }
       LOG.warn("Reporting bad {} on {}", block, volume);
-      try {
-        scanner.datanode.reportBadBlocks(block, volume);
-      } catch (IOException ie) {
-        // This is bad, but not bad enough to shut down the scanner.
-        LOG.warn("Cannot report bad block " + block, ie);
-      }
+      scanner.datanode.handleBadBlock(block, e, true);
     }
   }
 

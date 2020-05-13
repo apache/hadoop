@@ -201,6 +201,9 @@ public class DFSOutputStream extends FSOutputSummer
     if (flag.contains(CreateFlag.NO_LOCAL_WRITE)) {
       this.addBlockFlags.add(AddBlockFlag.NO_LOCAL_WRITE);
     }
+    if (flag.contains(CreateFlag.NO_LOCAL_RACK)) {
+      this.addBlockFlags.add(AddBlockFlag.NO_LOCAL_RACK);
+    }
     if (flag.contains(CreateFlag.IGNORE_CLIENT_LOCALITY)) {
       this.addBlockFlags.add(AddBlockFlag.IGNORE_CLIENT_LOCALITY);
     }

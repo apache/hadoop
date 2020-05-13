@@ -38,6 +38,8 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
@@ -128,7 +130,7 @@ public class NNStorage extends Storage implements Closeable,
   private boolean restoreFailedStorage = false;
   private final Object restorationLock = new Object();
   private boolean disablePreUpgradableLayoutCheck = false;
-
+  private final Configuration conf;
 
   /**
    * TxId of the last transaction that was included in the most
@@ -171,6 +173,7 @@ public class NNStorage extends Storage implements Closeable,
                    Collection<URI> imageDirs, Collection<URI> editsDirs) 
       throws IOException {
     super(NodeType.NAME_NODE);
+    this.conf = conf;
 
     // this may modify the editsDirs, so copy before passing in
     setStorageDirectories(imageDirs, 
@@ -312,10 +315,16 @@ public class NNStorage extends Storage implements Closeable,
                           NameNodeDirType.IMAGE;
       // Add to the list of storage directories, only if the
       // URI is of type file://
-      if(dirName.getScheme().compareTo("file") == 0) {
-        this.addStorageDir(new StorageDirectory(new File(dirName.getPath()),
+      if (dirName.getScheme().compareTo("file") == 0) {
+        // Don't lock the dir if it's shared.
+        StorageDirectory sd = new StorageDirectory(new File(dirName.getPath()),
             dirType,
-            sharedEditsDirs.contains(dirName))); // Don't lock the dir if it's shared.
+            sharedEditsDirs.contains(dirName),
+            new FsPermission(conf.get(
+                DFSConfigKeys.DFS_NAMENODE_NAME_DIR_PERMISSION_KEY,
+                DFSConfigKeys.DFS_NAMENODE_NAME_DIR_PERMISSION_DEFAULT)));
+
+        this.addStorageDir(sd);
       }
     }
 
@@ -324,9 +333,12 @@ public class NNStorage extends Storage implements Closeable,
       checkSchemeConsistency(dirName);
       // Add to the list of storage directories, only if the
       // URI is of type file://
-      if(dirName.getScheme().compareTo("file") == 0) {
+      if (dirName.getScheme().compareTo("file") == 0) {
         this.addStorageDir(new StorageDirectory(new File(dirName.getPath()),
-            NameNodeDirType.EDITS, sharedEditsDirs.contains(dirName)));
+            NameNodeDirType.EDITS, sharedEditsDirs.contains(dirName),
+            new FsPermission(conf.get(
+                DFSConfigKeys.DFS_NAMENODE_NAME_DIR_PERMISSION_KEY,
+                DFSConfigKeys.DFS_NAMENODE_NAME_DIR_PERMISSION_DEFAULT))));
       }
     }
   }

@@ -242,4 +242,10 @@ public interface FSNamesystemMBean {
    * @return Number of ENTERING_MAINTENANCE data nodes
    */
   int getNumEnteringMaintenanceDataNodes();
+
+  /**
+   * Get the current number of delegation tokens in memory.
+   * @return number of DTs
+   */
+  long getCurrentTokensCount();
 }

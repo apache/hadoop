@@ -34,6 +34,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.DirectoryListingStartAfterNotFoundException;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -45,6 +46,7 @@ import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotDirectoryException;
+import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -1231,5 +1233,36 @@ public class TestINodeFile {
     assertEquals(1, toBeCleared.getBlocks().length);
     toBeCleared.clearBlocks();
     assertTrue(toBeCleared.getBlocks().length == 0);
+  }
+
+  @Test
+  public void testConcat() throws IOException {
+    Configuration conf = new Configuration();
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build()) {
+      cluster.waitActive();
+      DistributedFileSystem dfs = cluster.getFileSystem();
+      String dir = "/testConcat";
+      dfs.mkdirs(new Path(dir), FsPermission.getDirDefault());
+      dfs.setQuota(new Path(dir), 100L, HdfsConstants.QUOTA_DONT_SET);
+
+      // Create 4 files
+      Path trg = new Path(dir + "/file");
+      DFSTestUtil.createFile(dfs, trg, 512, (short) 1, 0);
+      Path[] srcs = new Path[4];
+      for (int i = 0; i < 4; i++) {
+        srcs[i] = new Path(dir + "/file" + i);
+        DFSTestUtil.createFile(dfs, srcs[i], 512, (short) 1, 0);
+      }
+
+      // Concat file1, file2, file3 to file0
+      dfs.concat(trg, srcs);
+
+      // Check the file and directory count and consumed space
+      ContentSummary cs = dfs.getContentSummary(new Path(dir));
+      QuotaUsage qu = dfs.getQuotaUsage(new Path(dir));
+
+      Assert.assertEquals(cs.getFileCount() + cs.getDirectoryCount(),
+          qu.getFileAndDirectoryCount());
+    }
   }
 }

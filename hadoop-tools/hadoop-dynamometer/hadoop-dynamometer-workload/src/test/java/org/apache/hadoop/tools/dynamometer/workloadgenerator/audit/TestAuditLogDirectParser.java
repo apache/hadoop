@@ -59,6 +59,15 @@ public class TestAuditLogDirectParser {
   }
 
   @Test
+  public void testInputWithEquals() throws Exception {
+    Text in = getAuditString("1970-01-01 00:00:11,000", "fakeUser",
+            "listStatus", "day=1970", "null");
+    AuditReplayCommand expected = new AuditReplayCommand(1000, "fakeUser",
+            "listStatus", "day=1970", "null", "0.0.0.0");
+    assertEquals(expected, parser.parse(in, Function.identity()));
+  }
+
+  @Test
   public void testInputWithRenameOptions() throws Exception {
     Text in = getAuditString("1970-01-01 00:00:11,000", "fakeUser",
         "rename (options=[TO_TRASH])", "sourcePath", "destPath");

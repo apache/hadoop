@@ -107,6 +107,11 @@ public class ITestS3ACommitterFactory extends AbstractCommitITest {
     taskConfRef = tContext.getConfiguration();
   }
 
+  @Override
+  public boolean useInconsistentClient() {
+    return false;
+  }
+
   @Test
   public void testEverything() throws Throwable {
     testImplicitFileBinding();

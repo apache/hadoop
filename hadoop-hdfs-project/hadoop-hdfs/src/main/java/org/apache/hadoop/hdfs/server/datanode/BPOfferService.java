@@ -421,7 +421,7 @@ class BPOfferService {
             reg.getStorageInfo().getClusterID(), "cluster ID");
       }
       bpRegistration = reg;
-
+      DataNodeFaultInjector.get().delayWhenOfferServiceHoldLock();
       dn.bpRegistrationSucceeded(bpRegistration, getBlockPoolId());
       // Add the initial block token secret keys to the DN's secret manager.
       if (dn.isBlockTokenEnabled) {
@@ -496,7 +496,7 @@ class BPOfferService {
    */
   void scheduleBlockReport(long delay) {
     for (BPServiceActor actor : bpServices) {
-      actor.getScheduler().scheduleBlockReport(delay);
+      actor.getScheduler().scheduleBlockReport(delay, false);
     }
   }
 

@@ -203,9 +203,6 @@ class FsVolumeList {
             long timeTaken = Time.monotonicNow() - startTime;
             FsDatasetImpl.LOG.info("Time to add replicas to map for block pool"
                 + " " + bpid + " on volume " + v + ": " + timeTaken + "ms");
-          } catch (ClosedChannelException e) {
-            FsDatasetImpl.LOG.info("The volume " + v + " is closed while " +
-                "adding replicas, ignored.");
           } catch (IOException ioe) {
             FsDatasetImpl.LOG.info("Caught exception while adding replicas " +
                 "from " + v + ". Will throw later.", ioe);
@@ -413,8 +410,6 @@ class FsVolumeList {
             long timeTaken = Time.monotonicNow() - startTime;
             FsDatasetImpl.LOG.info("Time taken to scan block pool " + bpid +
                 " on " + v + ": " + timeTaken + "ms");
-          } catch (ClosedChannelException e) {
-            // ignore.
           } catch (IOException ioe) {
             FsDatasetImpl.LOG.info("Caught exception while scanning " + v +
                 ". Will throw later.", ioe);

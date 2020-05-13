@@ -32,22 +32,28 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.DataOutput;
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.EnumSet;
 import java.util.GregorianCalendar;
 import java.util.Set;
 
+import org.mockito.Mockito;
+import org.apache.commons.lang3.reflect.FieldUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -62,6 +68,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetRep
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetReplicaVisibleLengthResponseProto;
 import org.apache.hadoop.hdfs.protocolPB.ClientDatanodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.TestWritable;
@@ -87,8 +95,9 @@ import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import com.google.protobuf.BlockingService;
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.BlockingService;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
+
 import org.apache.hadoop.fs.StorageType;
 
 /** Unit tests for block tokens */
@@ -609,6 +618,24 @@ public class TestBlockToken {
     readToken.readFields(dib);
   }
 
+  /**
+   * If the NameNode predates HDFS-6708 and HDFS-9807, then the LocatedBlocks
+   * that it returns to the client will have block tokens that don't include
+   * the storage types or storage IDs. Simulate this by setting the storage
+   * type and storage ID to null to test backwards compatibility.
+   */
+  @Test
+  public void testLegacyBlockTokenWithoutStorages() throws IOException,
+          IllegalAccessException {
+    BlockTokenIdentifier identifier = new BlockTokenIdentifier("user",
+            "blockpool", 123,
+            EnumSet.allOf(BlockTokenIdentifier.AccessMode.class), null, null,
+            false);
+    FieldUtils.writeField(identifier, "storageTypes", null, true);
+    FieldUtils.writeField(identifier, "storageIds", null, true);
+    testCraftedBlockTokenIdentifier(identifier, false, false, false);
+  }
+
   @Test
   public void testProtobufBlockTokenBytesIsProtobuf() throws IOException {
     final boolean useProto = true;
@@ -654,13 +681,17 @@ public class TestBlockToken {
     assertEquals(protobufToken, readToken);
   }
 
-  private void testCraftedProtobufBlockTokenIdentifier(
+  private void testCraftedBlockTokenIdentifier(
       BlockTokenIdentifier identifier, boolean expectIOE,
-      boolean expectRTE) throws IOException {
+      boolean expectRTE, boolean isProtobuf) throws IOException {
     DataOutputBuffer dob = new DataOutputBuffer(4096);
     DataInputBuffer dib = new DataInputBuffer();
 
-    identifier.writeProtobuf(dob);
+    if (isProtobuf) {
+      identifier.writeProtobuf(dob);
+    } else {
+      identifier.writeLegacy(dob);
+    }
     byte[] identBytes = Arrays.copyOf(dob.getData(), dob.getLength());
 
     BlockTokenIdentifier legacyToken = new BlockTokenIdentifier();
@@ -683,22 +714,23 @@ public class TestBlockToken {
       invalidLegacyMessage = true;
     }
 
-    assertTrue(invalidLegacyMessage);
+    if (isProtobuf) {
+      assertTrue(invalidLegacyMessage);
 
-    dib.reset(identBytes, identBytes.length);
-    protobufToken.readFieldsProtobuf(dib);
-
-    dib.reset(identBytes, identBytes.length);
-    readToken.readFieldsProtobuf(dib);
-    assertEquals(protobufToken, readToken);
-    assertEquals(identifier, readToken);
+      dib.reset(identBytes, identBytes.length);
+      protobufToken.readFieldsProtobuf(dib);
+      dib.reset(identBytes, identBytes.length);
+      readToken.readFields(dib);
+      assertEquals(identifier, readToken);
+      assertEquals(protobufToken, readToken);
+    }
   }
 
   @Test
   public void testEmptyProtobufBlockTokenBytesIsProtobuf() throws IOException {
     // Empty BlockTokenIdentifiers throw IOException
     BlockTokenIdentifier identifier = new BlockTokenIdentifier();
-    testCraftedProtobufBlockTokenIdentifier(identifier, true, false);
+    testCraftedBlockTokenIdentifier(identifier, true, false, true);
   }
 
   @Test
@@ -719,10 +751,10 @@ public class TestBlockToken {
     datetime = ((datetime / 1000) * 1000); // strip milliseconds.
     datetime = datetime + 71; // 2017-02-09 00:12:35,071+0100
     identifier.setExpiryDate(datetime);
-    testCraftedProtobufBlockTokenIdentifier(identifier, false, true);
+    testCraftedBlockTokenIdentifier(identifier, false, true, true);
     datetime += 1; // 2017-02-09 00:12:35,072+0100
     identifier.setExpiryDate(datetime);
-    testCraftedProtobufBlockTokenIdentifier(identifier, true, false);
+    testCraftedBlockTokenIdentifier(identifier, true, false, true);
   }
 
   private BlockTokenIdentifier writeAndReadBlockToken(
@@ -819,4 +851,117 @@ public class TestBlockToken {
     testBadStorageIDCheckAccess(true);
   }
 
+  /**
+   * Verify that block token serialNo is always within the range designated to
+   * to the NameNode.
+   */
+  @Test
+  public void testBlockTokenRanges() throws IOException {
+    final int interval = 1024;
+    final int numNNs = Integer.MAX_VALUE / interval;
+    for(int nnIdx = 0; nnIdx < 64; nnIdx++) {
+      BlockTokenSecretManager sm = new BlockTokenSecretManager(
+          blockKeyUpdateInterval, blockTokenLifetime, nnIdx, numNNs,
+          "fake-pool", null, false);
+      int rangeStart = nnIdx * interval;
+      for(int i = 0; i < interval * 3; i++) {
+        int serialNo = sm.getSerialNoForTesting();
+        assertTrue(
+            "serialNo " + serialNo + " is not in the designated range: [" +
+                rangeStart + ", " + (rangeStart + interval) + ")",
+                serialNo >= rangeStart && serialNo < (rangeStart + interval));
+        sm.updateKeys();
+      }
+    }
+  }
+
+  @Test
+  public void testRetrievePasswordWithUnknownFields() throws IOException {
+    BlockTokenIdentifier id = new BlockTokenIdentifier();
+    BlockTokenIdentifier spyId = Mockito.spy(id);
+    Mockito.doAnswer(new Answer<Void>() {
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
+        DataOutput out = (DataOutput) invocation.getArguments()[0];
+        invocation.callRealMethod();
+        // write something at the end that BlockTokenIdentifier#readFields()
+        // will ignore, but which is still a part of the password
+        out.write(7);
+        return null;
+      }
+    }).when(spyId).write(Mockito.any());
+
+    BlockTokenSecretManager sm =
+        new BlockTokenSecretManager(blockKeyUpdateInterval, blockTokenLifetime,
+            0, 1, "fake-pool", null, false);
+    // master create password
+    byte[] password = sm.createPassword(spyId);
+
+    BlockTokenIdentifier slaveId = new BlockTokenIdentifier();
+    slaveId.readFields(
+        new DataInputStream(new ByteArrayInputStream(spyId.getBytes())));
+
+    // slave retrieve password
+    assertArrayEquals(password, sm.retrievePassword(slaveId));
+  }
+
+  @Test
+  public void testRetrievePasswordWithRecognizableFieldsOnly()
+      throws IOException {
+    BlockTokenSecretManager sm =
+        new BlockTokenSecretManager(blockKeyUpdateInterval, blockTokenLifetime,
+            0, 1, "fake-pool", null, false);
+    // master create password
+    BlockTokenIdentifier masterId = new BlockTokenIdentifier();
+    byte[] password = sm.createPassword(masterId);
+    // set cache to null, so that master getBytes() were only recognizable bytes
+    masterId.setExpiryDate(masterId.getExpiryDate());
+    BlockTokenIdentifier slaveId = new BlockTokenIdentifier();
+    slaveId.readFields(
+        new DataInputStream(new ByteArrayInputStream(masterId.getBytes())));
+    assertArrayEquals(password, sm.retrievePassword(slaveId));
+  }
+
+  /** Test for last in-progress block token expiry.
+   * 1. Write file with one block which is in-progress.
+   * 2. Open input stream and close the output stream.
+   * 3. Wait for block token expiration and read the data.
+   * 4. Read should be success.
+   */
+  @Test
+  public void testLastLocatedBlockTokenExpiry()
+      throws IOException, InterruptedException {
+    Configuration conf = new Configuration();
+    conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(1).build()) {
+      cluster.waitClusterUp();
+      final NameNode nn = cluster.getNameNode();
+      final BlockManager bm = nn.getNamesystem().getBlockManager();
+      final BlockTokenSecretManager sm = bm.getBlockTokenSecretManager();
+
+      // set a short token lifetime (1 second)
+      SecurityTestUtil.setBlockTokenLifetime(sm, 1000L);
+
+      DistributedFileSystem fs = cluster.getFileSystem();
+      Path p = new Path("/tmp/abc.log");
+      FSDataOutputStream out = fs.create(p);
+      byte[] data = "hello\n".getBytes(StandardCharsets.UTF_8);
+      out.write(data);
+      out.hflush();
+      FSDataInputStream in = fs.open(p);
+      out.close();
+
+      // wait for last block token to expire
+      Thread.sleep(2000L);
+
+      byte[] readData = new byte[data.length];
+      long startTime = System.currentTimeMillis();
+      in.read(readData);
+      // DFSInputStream#refetchLocations() minimum wait for 1sec to refetch
+      // complete located blocks.
+      assertTrue("Should not wait for refetch complete located blocks",
+          1000L > (System.currentTimeMillis() - startTime));
+    }
+  }
 }

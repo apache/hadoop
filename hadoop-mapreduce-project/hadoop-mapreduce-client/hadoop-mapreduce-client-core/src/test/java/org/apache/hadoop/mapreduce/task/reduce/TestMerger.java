@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.mapreduce.task.reduce;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -181,8 +182,10 @@ public class TestMerger {
       readOnDiskMapOutput(conf, fs, next, keys, values);
       paths.add(next);
     }
-    Assert.assertEquals(keys, Arrays.asList("apple", "banana", "carrot", "apple", "banana", "carrot"));
-    Assert.assertEquals(values, Arrays.asList("awesome", "bla", "amazing", "disgusting", "pretty good", "delicious"));
+    assertThat(keys).isEqualTo(Arrays.asList("apple", "banana", "carrot",
+        "apple", "banana", "carrot"));
+    assertThat(values).isEqualTo(Arrays.asList("awesome", "bla", "amazing",
+        "disgusting", "pretty good", "delicious"));
     mergeManager.close();
 
     mergeManager = new MergeManagerImpl<Text, Text>(
@@ -197,8 +200,10 @@ public class TestMerger {
     keys = new ArrayList<String>();
     values = new ArrayList<String>();
     readOnDiskMapOutput(conf, fs, mergeManager.onDiskMapOutputs.iterator().next(), keys, values);
-    Assert.assertEquals(keys, Arrays.asList("apple", "apple", "banana", "banana", "carrot", "carrot"));
-    Assert.assertEquals(values, Arrays.asList("awesome", "disgusting", "pretty good", "bla", "amazing", "delicious"));
+    assertThat(keys).isEqualTo(Arrays.asList("apple", "apple", "banana",
+            "banana", "carrot", "carrot"));
+    assertThat(values).isEqualTo(Arrays.asList("awesome", "disgusting",
+            "pretty good", "bla", "amazing", "delicious"));
 
     mergeManager.close();
     Assert.assertEquals(0, mergeManager.inMemoryMapOutputs.size());

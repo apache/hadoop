@@ -53,6 +53,7 @@ import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DurationInfo;
+import org.apache.hadoop.util.Progressable;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
@@ -417,12 +418,14 @@ public class CommitOperations {
   /**
    * Revert a pending commit by deleting the destination.
    * @param commit pending commit
+   * @param operationState nullable operational state for a bulk update
    * @throws IOException failure
    */
-  public void revertCommit(SinglePendingCommit commit) throws IOException {
+  public void revertCommit(SinglePendingCommit commit,
+      BulkOperationState operationState) throws IOException {
     LOG.info("Revert {}", commit);
     try {
-      writeOperations.revertCommit(commit.getDestinationKey());
+      writeOperations.revertCommit(commit.getDestinationKey(), operationState);
     } finally {
       statistics.commitReverted();
     }
@@ -435,13 +438,15 @@ public class CommitOperations {
    * @param destPath destination path
    * @param partition partition/subdir. Not used
    * @param uploadPartSize size of upload
+   * @param progress progress callback
    * @return a pending upload entry
    * @throws IOException failure
    */
   public SinglePendingCommit uploadFileToPendingCommit(File localFile,
       Path destPath,
       String partition,
-      long uploadPartSize)
+      long uploadPartSize,
+      Progressable progress)
       throws IOException {
 
     LOG.debug("Initiating multipart upload from {} to {}",
@@ -500,6 +505,7 @@ public class CommitOperations {
 
       commitData.bindCommitData(parts);
       statistics.commitUploaded(length);
+      progress.progress();
       threw = false;
       return commitData;
     } finally {
@@ -614,13 +620,13 @@ public class CommitOperations {
     }
 
     /**
-     * See {@link CommitOperations#revertCommit(SinglePendingCommit)}.
+     * See {@link CommitOperations#revertCommit(SinglePendingCommit, BulkOperationState)}.
      * @param commit pending commit
      * @throws IOException failure
      */
     public void revertCommit(final SinglePendingCommit commit)
         throws IOException {
-      CommitOperations.this.revertCommit(commit);
+      CommitOperations.this.revertCommit(commit, operationState);
     }
 
     /**

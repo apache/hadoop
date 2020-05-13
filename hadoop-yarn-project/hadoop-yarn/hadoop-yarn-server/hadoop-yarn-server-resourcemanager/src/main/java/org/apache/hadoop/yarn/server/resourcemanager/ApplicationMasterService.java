@@ -94,6 +94,8 @@ public class ApplicationMasterService extends AbstractService implements
       RecordFactoryProvider.getRecordFactory(null);
   private final ConcurrentMap<ApplicationAttemptId, AllocateResponseLock> responseMap =
       new ConcurrentHashMap<ApplicationAttemptId, AllocateResponseLock>();
+  private final ConcurrentHashMap<ApplicationAttemptId, Boolean>
+      finishedAttemptCache = new ConcurrentHashMap<>();
   protected final RMContext rmContext;
   private final AMSProcessingChain amsProcessingChain;
   private boolean timelineServiceV2Enabled;
@@ -339,11 +341,14 @@ public class ApplicationMasterService extends AbstractService implements
         throw new ApplicationMasterNotRegisteredException(message);
       }
 
-      this.amLivelinessMonitor.receivedPing(applicationAttemptId);
       FinishApplicationMasterResponse response =
           FinishApplicationMasterResponse.newInstance(false);
-      this.amsProcessingChain.finishApplicationMaster(
-          applicationAttemptId, request, response);
+      if (finishedAttemptCache.putIfAbsent(applicationAttemptId, true)
+          == null) {
+        this.amsProcessingChain
+            .finishApplicationMaster(applicationAttemptId, request, response);
+      }
+      this.amLivelinessMonitor.receivedPing(applicationAttemptId);
       return response;
     }
   }
@@ -492,6 +497,7 @@ public class ApplicationMasterService extends AbstractService implements
   public void unregisterAttempt(ApplicationAttemptId attemptId) {
     LOG.info("Unregistering app attempt : " + attemptId);
     responseMap.remove(attemptId);
+    finishedAttemptCache.remove(attemptId);
     rmContext.getNMTokenSecretManager().unregisterApplicationAttempt(attemptId);
   }
 
@@ -506,6 +512,8 @@ public class ApplicationMasterService extends AbstractService implements
     if (this.server != null) {
       this.server.stop();
     }
+    responseMap.clear();
+    finishedAttemptCache.clear();
     super.serviceStop();
   }
   

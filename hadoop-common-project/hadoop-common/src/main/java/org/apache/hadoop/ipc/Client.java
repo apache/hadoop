@@ -638,6 +638,10 @@ public class Client implements AutoCloseable {
         LOG.warn("Address change detected. Old: " + server.toString() +
                                  " New: " + currentAddr.toString());
         server = currentAddr;
+        UserGroupInformation ticket = remoteId.getTicket();
+        this.setName("IPC Client (" + socketFactory.hashCode()
+            + ") connection to " + server.toString() + " from "
+            + ((ticket == null) ? "an unknown user" : ticket.getUserName()));
         return true;
       }
       return false;
@@ -757,8 +761,17 @@ public class Client implements AutoCloseable {
               throw (IOException) new IOException(msg).initCause(ex);
             }
           } else {
-            LOG.warn("Exception encountered while connecting to "
-                + "the server : " + ex);
+            // With RequestHedgingProxyProvider, one rpc call will send multiple
+            // requests to all namenodes. After one request return successfully,
+            // all other requests will be interrupted. It's not a big problem,
+            // and should not print a warning log.
+            if (ex instanceof InterruptedIOException) {
+              LOG.debug("Exception encountered while connecting to the server",
+                  ex);
+            } else {
+              LOG.warn("Exception encountered while connecting to the server ",
+                  ex);
+            }
           }
           if (ex instanceof RemoteException)
             throw (RemoteException) ex;

@@ -42,6 +42,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.net.UnknownHostException;
 
 /**
@@ -121,7 +122,7 @@ public class MicroZookeeperService
    * @throws UnknownHostException if the server cannot resolve the host
    */
   private InetSocketAddress getAddress(int port) throws UnknownHostException {
-    return new InetSocketAddress(host, port < 0 ? 0 : port);
+    return new InetSocketAddress(host, port <= 0 ? getRandomAvailablePort() : port);
   }
 
   /**
@@ -227,10 +228,8 @@ public class MicroZookeeperService
 
     setupSecurity();
 
-    ZooKeeperServer zkServer = new ZooKeeperServer();
     FileTxnSnapLog ftxn = new FileTxnSnapLog(dataDir, dataDir);
-    zkServer.setTxnLogFactory(ftxn);
-    zkServer.setTickTime(tickTime);
+    ZooKeeperServer zkServer = new ZooKeeperServer(ftxn, tickTime);
 
     LOG.info("Starting Local Zookeeper service");
     factory = ServerCnxnFactory.createFactory();
@@ -245,7 +244,7 @@ public class MicroZookeeperService
       PrintWriter pw = new PrintWriter(sw);
       zkServer.dumpConf(pw);
       pw.flush();
-      LOG.debug(sw.toString());
+      LOG.debug("ZooKeeper config:\n" + sw.toString());
     }
     binding = new BindingInformation();
     binding.ensembleProvider = new FixedEnsembleProvider(connectString);
@@ -278,5 +277,21 @@ public class MicroZookeeperService
     Preconditions.checkNotNull(binding,
         "Service is not started: binding information undefined");
     return binding;
+  }
+
+  /**
+   * Returns with a random open port can be used to set as server port for ZooKeeper.
+   * @return a random open port or 0 (in case of error)
+   */
+  private int getRandomAvailablePort() {
+      port = 0;
+      try {
+        final ServerSocket s = new ServerSocket(0);
+        port = s.getLocalPort();
+        s.close();
+      } catch (IOException e) {
+        LOG.warn("ERROR during selecting random port for ZooKeeper server to bind." , e);
+      }
+      return port;
   }
 }

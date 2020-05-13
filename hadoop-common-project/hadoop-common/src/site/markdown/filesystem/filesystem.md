@@ -43,6 +43,15 @@ The implementations of `FileSystem` shipped with Apache Hadoop
 All the requirements of a valid FileSystem are considered implicit preconditions and postconditions:
 all operations on a valid FileSystem MUST result in a new FileSystem that is also valid.
 
+## Feasible features
+
+### <a name="ProtectedDirectories"></a>Protected directories
+
+HDFS has the notion of *Protected Directories*, which are declared in
+the option `fs.protected.directories`. Any attempt to delete or rename
+such a directory or a parent thereof raises an `AccessControlException`.
+Accordingly, any attempt to delete the root directory SHALL, if there is
+a protected directory, result in such an exception being raised.
 
 ## Predicates and other state access operations
 
@@ -220,21 +229,21 @@ directory contains many thousands of files.
 
 Consider a directory `"/d"` with the contents:
 
-	a
-	part-0000001
-	part-0000002
-	...
-	part-9999999
+    a
+    part-0000001
+    part-0000002
+    ...
+    part-9999999
 
 
 If the number of files is such that HDFS returns a partial listing in each
 response, then, if a listing `listStatus("/d")` takes place concurrently with the operation
 `rename("/d/a","/d/z"))`, the result may be one of:
 
-	[a, part-0000001, ... , part-9999999]
-	[part-0000001, ... , part-9999999, z]
-	[a, part-0000001, ... , part-9999999, z]
-	[part-0000001, ... , part-9999999]
+    [a, part-0000001, ... , part-9999999]
+    [part-0000001, ... , part-9999999, z]
+    [a, part-0000001, ... , part-9999999, z]
+    [part-0000001, ... , part-9999999]
 
 While this situation is likely to be a rare occurrence, it MAY happen. In HDFS
 these inconsistent views are only likely when listing a directory with many children.
@@ -477,11 +486,11 @@ running out of memory as it calculates the partitions.
 
 Any FileSystem that does not actually break files into blocks SHOULD
 return a number for this that results in efficient processing.
-A FileSystem MAY make this user-configurable (the S3 and Swift filesystem clients do this).
+A FileSystem MAY make this user-configurable (the object store connectors usually do this).
 
 ###  `long getDefaultBlockSize(Path p)`
 
-Get the "default" block size for a path —that is, the block size to be used
+Get the "default" block size for a path --that is, the block size to be used
 when writing objects to a path in the filesystem.
 
 #### Preconditions
@@ -526,18 +535,25 @@ on the filesystem.
    `getFileStatus(P).getBlockSize()`.
 1. By inference, it MUST be > 0 for any file of length > 0.
 
-## State Changing Operations
+## <a name="state_changing_operations"></a> State Changing Operations
 
 ### `boolean mkdirs(Path p, FsPermission permission)`
 
-Create a directory and all its parents
+Create a directory and all its parents.
 
 #### Preconditions
 
 
+The path must either be a directory or not exist
+ 
      if exists(FS, p) and not isDir(FS, p) :
          raise [ParentNotDirectoryException, FileAlreadyExistsException, IOException]
 
+No ancestor may be a file
+
+    forall d = ancestors(FS, p) : 
+        if exists(FS, d) and not isDir(FS, d) :
+            raise [ParentNotDirectoryException, FileAlreadyExistsException, IOException]
 
 #### Postconditions
 
@@ -577,6 +593,11 @@ Writing to or overwriting a directory must fail.
 
     if isDir(FS, p) : raise {FileAlreadyExistsException, FileNotFoundException, IOException}
 
+No ancestor may be a file
+
+    forall d = ancestors(FS, p) : 
+        if exists(FS, d) and not isDir(FS, d) :
+            raise [ParentNotDirectoryException, FileAlreadyExistsException, IOException]
 
 FileSystems may reject the request for other
 reasons, such as the FS being read-only  (HDFS),
@@ -584,7 +605,8 @@ the block size being below the minimum permitted (HDFS),
 the replication count being out of range (HDFS),
 quotas on namespace or filesystem being exceeded, reserved
 names, etc. All rejections SHOULD be `IOException` or a subclass thereof
-and MAY be a `RuntimeException` or subclass. For instance, HDFS may raise a `InvalidPathException`.
+and MAY be a `RuntimeException` or subclass.
+For instance, HDFS may raise an `InvalidPathException`.
 
 #### Postconditions
 
@@ -709,24 +731,29 @@ exists in the metadata, but no copies of any its blocks can be located;
 Creates a [`FSDataInputStreamBuilder`](fsdatainputstreambuilder.html)
 to construct a operation to open the file at `path` for reading.
 
-
 When `build()` is invoked on the returned `FSDataInputStreamBuilder` instance,
 the builder parameters are verified and
-`openFileWithOptions(Path, Set<String>, Configuration, int)` invoked.
+`openFileWithOptions(Path, OpenFileParameters)` invoked.
 
 This (protected) operation returns a `CompletableFuture<FSDataInputStream>`
 which, when its `get()` method is called, either returns an input
 stream of the contents of opened file, or raises an exception.
 
-The base implementation of the `openFileWithOptions(PathHandle, Set<String>, Configuration, int)`
+The base implementation of the `openFileWithOptions(PathHandle, OpenFileParameters)`
 ultimately invokes `open(Path, int)`.
 
 Thus the chain `openFile(path).build().get()` has the same preconditions
 and postconditions as `open(Path p, int bufferSize)`
 
+However, there is one difference which implementations are free to
+take advantage of: 
 
-The `openFile()` operation may check the state of the filesystem during this
-call, but as the state of the filesystem may change betwen this call and
+The returned stream MAY implement a lazy open where file non-existence or
+access permission failures may not surface until the first `read()` of the
+actual data.
+
+The `openFile()` operation may check the state of the filesystem during its
+invocation, but as the state of the filesystem may change betwen this call and
 the actual `build()` and `get()` operations, this file-specific
 preconditions (file exists, file is readable, etc) MUST NOT be checked here.
 
@@ -757,6 +784,10 @@ It SHOULD be possible to always open a file without specifying any options,
 so as to present a consistent model to users. However, an implementation MAY
 opt to require one or more mandatory options to be set.
 
+The returned stream may perform "lazy" evaluation of file access. This is
+relevant for object stores where the probes for existence are expensive, and,
+even with an asynchronous open, may be considered needless.
+ 
 ### `FSDataInputStreamBuilder openFile(PathHandle)`
 
 Creates a `FSDataInputStreamBuilder` to build an operation to open a file.
@@ -765,13 +796,13 @@ to construct a operation to open the file identified by the given `PathHandle` f
 
 When `build()` is invoked on the returned `FSDataInputStreamBuilder` instance,
 the builder parameters are verified and
-`openFileWithOptions(PathHandle, Set<String>, Configuration, int)` invoked.
+`openFileWithOptions(PathHandle, OpenFileParameters)` invoked.
 
 This (protected) operation returns a `CompletableFuture<FSDataInputStream>`
 which, when its `get()` method is called, either returns an input
 stream of the contents of opened file, or raises an exception.
 
-The base implementation of the `openFileWithOptions(Path,PathHandle, Set<String>, Configuration, int)` method
+The base implementation of the `openFileWithOptions(PathHandle, OpenFileParameters)` method
 returns a future which invokes `open(Path, int)`.
 
 Thus the chain `openFile(pathhandle).build().get()` has the same preconditions
@@ -964,7 +995,7 @@ A path referring to a file is removed, return value: `True`
 Deleting an empty root does not change the filesystem state
 and may return true or false.
 
-    if isDir(FS, p) and isRoot(p) and children(FS, p) == {} :
+    if isRoot(p) and children(FS, p) == {} :
         FS ' = FS
         result = (undetermined)
 
@@ -972,6 +1003,9 @@ There is no consistent return code from an attempt to delete the root directory.
 
 Implementations SHOULD return true; this avoids code which checks for a false
 return value from overreacting.
+
+*Object Stores*: see [Object Stores: root directory deletion](#object-stores-rm-root).
+
 
 ##### Empty (non-root) directory `recursive == False`
 
@@ -986,7 +1020,7 @@ return true.
 ##### Recursive delete of non-empty root directory
 
 Deleting a root path with children and `recursive==True`
- can do one of two things.
+can generally have three outcomes:
 
 1. The POSIX model assumes that if the user has
 the correct permissions to delete everything,
@@ -1004,11 +1038,7 @@ filesystem is desired.
             FS' = FS
             result = False
 
-HDFS has the notion of *Protected Directories*, which are declared in
-the option `fs.protected.directories`. Any attempt to delete such a directory
-or a parent thereof raises an `AccessControlException`. Accordingly, any
-attempt to delete the root directory SHALL, if there is a protected directory,
-result in such an exception being raised.
+1. Object Stores: see [Object Stores: root directory deletion](#object-stores-rm-root).
 
 This specification does not recommend any specific action. Do note, however,
 that the POSIX model assumes that there is a permissions model such that normal
@@ -1018,6 +1048,23 @@ which only system administrators should be able to perform.
 Any filesystem client which interacts with a remote filesystem which lacks
 such a security model, MAY reject calls to `delete("/", true)` on the basis
 that it makes it too easy to lose data.
+
+
+### <a name="object-stores-rm-root"></a> Object Stores: root directory deletion
+
+Some of the object store based filesystem implementations always return
+false when deleting the root, leaving the state of the store unchanged.
+
+    if isRoot(p) :
+        FS ' = FS
+        result = False
+
+This is irrespective of the recursive flag status or the state of the directory.
+
+This is a simplification which avoids the inevitably non-atomic scan and delete
+of the contents of the store. It also avoids any confusion about whether
+the operation actually deletes that specific store/container itself, and
+adverse consequences of the simpler permissions models of stores.
 
 ##### Recursive delete of non-root directory
 
@@ -1457,7 +1504,7 @@ public interface StreamCapabilities {
 
 ### `boolean hasCapability(capability)`
 
-Return true if the `OutputStream`, `InputStream`, or other FileSystem class
+Return true iff the `OutputStream`, `InputStream`, or other FileSystem class
 has the desired capability.
 
 The caller can query the capabilities of a stream using a string value.
@@ -1470,3 +1517,4 @@ hsync        | HSYNC      | Syncable         | Flush out the data in client's us
 in:readahead | READAHEAD  | CanSetReadahead  | Set the readahead on the input stream.
 dropbehind   | DROPBEHIND | CanSetDropBehind | Drop the cache.
 in:unbuffer  | UNBUFFER   | CanUnbuffer      | Reduce the buffering on the input stream.
+

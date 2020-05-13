@@ -30,29 +30,37 @@ import org.slf4j.LoggerFactory;
 public class AllocationActivity {
   private String childName = null;
   private String parentName = null;
-  private String appPriority = null;
-  private String requestPriority = null;
+  private Integer appPriority = null;
+  private Integer requestPriority = null;
   private ActivityState state;
   private String diagnostic = null;
   private NodeId nodeId;
-  private String allocationRequestId;
+  private Long allocationRequestId;
+  private ActivityLevel level;
 
   private static final Logger LOG =
       LoggerFactory.getLogger(AllocationActivity.class);
 
   public AllocationActivity(String parentName, String queueName,
-      String priority, ActivityState state, String diagnostic, String type,
-      NodeId nodeId, String allocationRequestId) {
+      Integer priority, ActivityState state, String diagnostic,
+      ActivityLevel level, NodeId nodeId, Long allocationRequestId) {
     this.childName = queueName;
     this.parentName = parentName;
-    if (type != null) {
-      if (type.equals("app")) {
+    if (level != null) {
+      this.level = level;
+      switch (level) {
+      case APP:
         this.appPriority = priority;
-      } else if (type.equals("request")) {
+        break;
+      case REQUEST:
         this.requestPriority = priority;
         this.allocationRequestId = allocationRequestId;
-      } else if (type.equals("container")) {
+        break;
+      case NODE:
         this.nodeId = nodeId;
+        break;
+      default:
+        break;
       }
     }
     this.state = state;
@@ -60,21 +68,11 @@ public class AllocationActivity {
   }
 
   public ActivityNode createTreeNode() {
-    if (appPriority != null) {
-      return new ActivityNode(this.childName, this.parentName, this.appPriority,
-          this.state, this.diagnostic, "app");
-    } else if (requestPriority != null) {
-      return new ActivityNode(this.childName, this.parentName,
-          this.requestPriority, this.state, this.diagnostic, "request", null,
-          allocationRequestId);
-    } else if (nodeId != null) {
-      return new ActivityNode(this.childName, this.parentName,
-          this.requestPriority, this.state, this.diagnostic, "container",
-          this.nodeId, null);
-    } else {
-      return new ActivityNode(this.childName, this.parentName, null, this.state,
-          this.diagnostic, null);
-    }
+    return new ActivityNode(this.childName, this.parentName,
+        this.level == ActivityLevel.APP ?
+            this.appPriority : this.requestPriority,
+        this.state, this.diagnostic, this.level,
+        this.nodeId, this.allocationRequestId);
   }
 
   public String getName() {

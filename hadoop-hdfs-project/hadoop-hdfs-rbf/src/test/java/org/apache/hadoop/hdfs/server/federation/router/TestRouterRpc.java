@@ -65,6 +65,7 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
@@ -86,17 +87,21 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.ReplicatedBlockStats;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.NamenodeContext;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
 import org.apache.hadoop.hdfs.server.federation.MockResolver;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.metrics.NamenodeBeanMetrics;
+import org.apache.hadoop.hdfs.server.federation.metrics.RBFMetrics;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -191,6 +196,9 @@ public class TestRouterRpc {
     cluster.setNumDatanodesPerNameservice(NUM_DNS);
     cluster.setIndependentDNs();
 
+    Configuration conf = new Configuration();
+    conf.setInt(DFSConfigKeys.DFS_LIST_LIMIT, 5);
+    cluster.addNamenodeOverrides(conf);
     // Start NNs and DNs and wait until ready
     cluster.startCluster();
 
@@ -422,6 +430,62 @@ public class TestRouterRpc {
     String badPath = "/unknownlocation/unknowndir";
     compareResponses(routerProtocol, nnProtocol, m,
         new Object[] {badPath, HdfsFileStatus.EMPTY_NAME, false});
+  }
+
+  @Test
+  public void testProxyListFilesLargeDir() throws IOException {
+    // Call listStatus against a dir with many files
+    // Create a parent point as well as a subfolder mount
+    // /parent
+    //    ns0 -> /parent
+    // /parent/file-7
+    //    ns0 -> /parent/file-7
+    // /parent/file-0
+    //    ns0 -> /parent/file-0
+    for (RouterContext rc : cluster.getRouters()) {
+      MockResolver resolver =
+          (MockResolver) rc.getRouter().getSubclusterResolver();
+      resolver.addLocation("/parent", ns, "/parent");
+      // file-0 is only in mount table
+      resolver.addLocation("/parent/file-0", ns, "/parent/file-0");
+      // file-7 is both in mount table and in file system
+      resolver.addLocation("/parent/file-7", ns, "/parent/file-7");
+    }
+
+    // Test the case when there is no subcluster path and only mount point
+    FileStatus[] result = routerFS.listStatus(new Path("/parent"));
+    assertEquals(2, result.length);
+    // this makes sure file[0-8] is added in order
+    assertEquals("file-0", result[0].getPath().getName());
+    assertEquals("file-7", result[1].getPath().getName());
+
+    // Create files and test full listing in order
+    NamenodeContext nn = cluster.getNamenode(ns, null);
+    FileSystem nnFileSystem = nn.getFileSystem();
+    for (int i = 1; i < 9; i++) {
+      createFile(nnFileSystem, "/parent/file-"+i, 32);
+    }
+
+    result = routerFS.listStatus(new Path("/parent"));
+    assertEquals(9, result.length);
+    // this makes sure file[0-8] is added in order
+    for (int i = 0; i < 9; i++) {
+      assertEquals("file-"+i, result[i].getPath().getName());
+    }
+
+    // Add file-9 and now this listing will be added from mount point
+    for (RouterContext rc : cluster.getRouters()) {
+      MockResolver resolver =
+          (MockResolver) rc.getRouter().getSubclusterResolver();
+      resolver.addLocation("/parent/file-9", ns, "/parent/file-9");
+    }
+    assertFalse(verifyFileExists(nnFileSystem, "/parent/file-9"));
+    result = routerFS.listStatus(new Path("/parent"));
+    // file-9 will be added by mount point
+    assertEquals(10, result.length);
+    for (int i = 0; i < 10; i++) {
+      assertEquals("file-"+i, result[i].getPath().getName());
+    }
   }
 
   @Test
@@ -1380,6 +1444,46 @@ public class TestRouterRpc {
             "Parent directory doesn't exist: /a/a/b", "/a", "/ns1/a"));
   }
 
+  /**
+   * Create a file for each NameSpace, then find their 1st block and mark one of
+   * the replica as corrupt through BlockManager#findAndMarkBlockAsCorrupt.
+   *
+   * After all NameNode received the corrupt replica report, the
+   * replicatedBlockStats.getCorruptBlocks() should equal to the sum of
+   * corruptBlocks of all NameSpaces.
+   */
+  @Test
+  public void testGetReplicatedBlockStats() throws Exception {
+    String testFile = "/test-file";
+    for (String nsid : cluster.getNameservices()) {
+      NamenodeContext context = cluster.getNamenode(nsid, null);
+      NameNode nameNode = context.getNamenode();
+      FSNamesystem namesystem = nameNode.getNamesystem();
+      BlockManager bm = namesystem.getBlockManager();
+      FileSystem fileSystem = context.getFileSystem();
+
+      // create a test file
+      createFile(fileSystem, testFile, 1024);
+      // mark a replica as corrupt
+      LocatedBlock block = NameNodeAdapter
+          .getBlockLocations(nameNode, testFile, 0, 1024).get(0);
+      namesystem.writeLock();
+      bm.findAndMarkBlockAsCorrupt(block.getBlock(), block.getLocations()[0],
+          "STORAGE_ID", "TEST");
+      namesystem.writeUnlock();
+      BlockManagerTestUtil.updateState(bm);
+      DFSTestUtil.waitCorruptReplicas(fileSystem, namesystem,
+          new Path(testFile), block.getBlock(), 1);
+      // save the getReplicatedBlockStats result
+      ReplicatedBlockStats stats =
+          context.getClient().getNamenode().getReplicatedBlockStats();
+      assertEquals(1, stats.getCorruptBlocks());
+    }
+    ReplicatedBlockStats routerStat = routerProtocol.getReplicatedBlockStats();
+    assertEquals("There should be 1 corrupt blocks for each NN",
+        cluster.getNameservices().size(), routerStat.getCorruptBlocks());
+  }
+
   @Test
   public void testErasureCoding() throws Exception {
 
@@ -1530,6 +1634,13 @@ public class TestRouterRpc {
         .setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
   }
 
+  /*
+   * This case is used to test NameNodeMetrics on 2 purposes:
+   * 1. NameNodeMetrics should be cached, since the cost of gathering the
+   * metrics is expensive
+   * 2. Metrics cache should updated regularly
+   * 3. Without any subcluster available, we should return an empty list
+   */
   @Test
   public void testNamenodeMetrics() throws Exception {
     final NamenodeBeanMetrics metrics =
@@ -1561,17 +1672,42 @@ public class TestRouterRpc {
     MockResolver resolver =
         (MockResolver) router.getRouter().getNamenodeResolver();
     resolver.cleanRegistrations();
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        return !jsonString2.equals(metrics.getLiveNodes());
-      }
-    }, 500, 5 * 1000);
-    assertEquals("{}", metrics.getLiveNodes());
+    resolver.setDisableRegistration(true);
+    try {
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          return !jsonString2.equals(metrics.getLiveNodes());
+        }
+      }, 500, 5 * 1000);
+      assertEquals("{}", metrics.getLiveNodes());
+    } finally {
+      // Reset the registrations again
+      resolver.setDisableRegistration(false);
+      cluster.registerNamenodes();
+      cluster.waitNamenodeRegistration();
+    }
+  }
 
-    // Reset the registrations again
-    cluster.registerNamenodes();
-    cluster.waitNamenodeRegistration();
+  @Test
+  public void testRBFMetricsMethodsRelayOnStateStore() {
+    assertNull(router.getRouter().getStateStore());
+
+    RBFMetrics metrics = router.getRouter().getMetrics();
+    assertEquals("{}", metrics.getNamenodes());
+    assertEquals("[]", metrics.getMountTable());
+    assertEquals("{}", metrics.getRouters());
+    assertEquals(0, metrics.getNumNamenodes());
+    assertEquals(0, metrics.getNumExpiredNamenodes());
+
+    // These 2 methods relays on {@link RBFMetrics#getNamespaceInfo()}
+    assertEquals("[]", metrics.getClusterId());
+    assertEquals("[]", metrics.getBlockPoolId());
+
+    // These methods relays on
+    // {@link RBFMetrics#getActiveNamenodeRegistration()}
+    assertEquals("{}", metrics.getNameservices());
+    assertEquals(0, metrics.getNumLiveNodes());
   }
 
   @Test

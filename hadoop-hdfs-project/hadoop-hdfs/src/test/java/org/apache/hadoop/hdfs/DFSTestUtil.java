@@ -368,6 +368,25 @@ public class DFSTestUtil {
     createFiles(fs, topdir, (short)3);
   }
 
+  public static String readResoucePlainFile(
+      String fileName) throws IOException {
+    File file = new File(System.getProperty(
+        "test.cache.data", "build/test/cache"), fileName);
+    StringBuilder s = new StringBuilder();
+    try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+      String line;
+      while ((line = reader.readLine()) != null) {
+        line = line.trim();
+        if (line.length() <= 0 || line.startsWith("#")) {
+          continue;
+        }
+        s.append(line);
+        s.append("\n");
+      }
+    }
+    return s.toString();
+  }
+
   public static byte[] readFileAsBytes(FileSystem fs, Path fileName) throws IOException {
     try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
       IOUtils.copyBytes(fs.open(fileName), os, 1024);
@@ -537,17 +556,24 @@ public class DFSTestUtil {
     }
   }
 
+  public static void waitForReplication(MiniDFSCluster cluster, ExtendedBlock b,
+      int racks, int replicas, int neededReplicas)
+      throws TimeoutException, InterruptedException {
+    waitForReplication(cluster, b, racks, replicas, neededReplicas, 0);
+  }
+
   /*
    * Wait up to 20s for the given block to be replicated across
    * the requested number of racks, with the requested number of
    * replicas, and the requested number of replicas still needed.
    */
   public static void waitForReplication(MiniDFSCluster cluster, ExtendedBlock b,
-      int racks, int replicas, int neededReplicas)
+      int racks, int replicas, int neededReplicas, int neededDomains)
       throws TimeoutException, InterruptedException {
     int curRacks = 0;
     int curReplicas = 0;
     int curNeededReplicas = 0;
+    int curDomains = 0;
     int count = 0;
     final int ATTEMPTS = 20;
 
@@ -558,17 +584,21 @@ public class DFSTestUtil {
       curRacks = r[0];
       curReplicas = r[1];
       curNeededReplicas = r[2];
+      curDomains = r[3];
       count++;
     } while ((curRacks != racks ||
               curReplicas != replicas ||
-              curNeededReplicas != neededReplicas) && count < ATTEMPTS);
+        curNeededReplicas != neededReplicas ||
+        (neededDomains != 0 && curDomains != neededDomains))
+        && count < ATTEMPTS);
 
     if (count == ATTEMPTS) {
       throw new TimeoutException("Timed out waiting for replication."
           + " Needed replicas = "+neededReplicas
           + " Cur needed replicas = "+curNeededReplicas
           + " Replicas = "+replicas+" Cur replicas = "+curReplicas
-          + " Racks = "+racks+" Cur racks = "+curRacks);
+          + " Racks = "+racks+" Cur racks = "+curRacks
+          + " Domains = "+neededDomains+" Cur domains = "+curDomains);
     }
   }
 
@@ -2000,6 +2030,15 @@ public class DFSTestUtil {
     GenericTestUtils.setLogLevel(NameNode.blockStateChangeLog, level);
   }
 
+  public static void setNameNodeLogLevel(org.slf4j.event.Level level) {
+    GenericTestUtils.setLogLevel(FSNamesystem.LOG, level);
+    GenericTestUtils.setLogLevel(BlockManager.LOG, level);
+    GenericTestUtils.setLogLevel(LeaseManager.LOG, level);
+    GenericTestUtils.setLogLevel(NameNode.LOG, level);
+    GenericTestUtils.setLogLevel(NameNode.stateChangeLog, level);
+    GenericTestUtils.setLogLevel(NameNode.blockStateChangeLog, level);
+  }
+
   /**
    * Get the NamenodeProtocol RPC proxy for the NN associated with this
    * DFSClient object
@@ -2282,16 +2321,13 @@ public class DFSTestUtil {
       public Boolean get() {
         try {
           final int currentValue = Integer.parseInt(jmx.getValue(metricName));
-          LOG.info("Waiting for " + metricName +
-                       " to reach value " + expectedValue +
-                       ", current value = " + currentValue);
           return currentValue == expectedValue;
         } catch (Exception e) {
           throw new RuntimeException(
               "Test failed due to unexpected exception", e);
         }
       }
-    }, 1000, 60000);
+    }, 50, 60000);
   }
 
   /**
@@ -2362,13 +2398,32 @@ public class DFSTestUtil {
     }
   }
 
+  /**
+   * Create open files under root path.
+   * @param fs the filesystem.
+   * @param filePrefix the prefix of the files.
+   * @param numFilesToCreate the number of files to create.
+   */
   public static Map<Path, FSDataOutputStream> createOpenFiles(FileSystem fs,
       String filePrefix, int numFilesToCreate) throws IOException {
+    return createOpenFiles(fs, new Path("/"), filePrefix, numFilesToCreate);
+  }
+
+  /**
+   * Create open files.
+   * @param fs the filesystem.
+   * @param baseDir the base path of the files.
+   * @param filePrefix the prefix of the files.
+   * @param numFilesToCreate the number of files to create.
+   */
+  public static Map<Path, FSDataOutputStream> createOpenFiles(FileSystem fs,
+      Path baseDir, String filePrefix, int numFilesToCreate)
+      throws IOException {
     final Map<Path, FSDataOutputStream> filesCreated = new HashMap<>();
     final byte[] buffer = new byte[(int) (1024 * 1.75)];
     final Random rand = new Random(0xFEED0BACL);
     for (int i = 0; i < numFilesToCreate; i++) {
-      Path file = new Path("/" + filePrefix + "-" + i);
+      Path file = new Path(baseDir, filePrefix + "-" + i);
       FSDataOutputStream stm = fs.create(file, true, 1024, (short) 1, 1024);
       rand.nextBytes(buffer);
       stm.write(buffer);

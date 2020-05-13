@@ -42,7 +42,6 @@ import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
-import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineDomains;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
@@ -56,6 +55,7 @@ import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.timeline.TimelineDataManager.CheckAcl;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
+import org.apache.hadoop.yarn.util.Apps;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -104,11 +104,6 @@ public class EntityGroupFSTimelineStore extends CompositeService
   private static final FsPermission DONE_DIR_PERMISSION =
       new FsPermission((short) 0700);
 
-  private static final EnumSet<YarnApplicationState>
-      APP_FINAL_STATES = EnumSet.of(
-      YarnApplicationState.FAILED,
-      YarnApplicationState.KILLED,
-      YarnApplicationState.FINISHED);
   // Active dir: <activeRoot>/appId/attemptId/cacheId.log
   // Done dir: <doneRoot>/cluster_ts/hash1/hash2/appId/attemptId/cacheId.log
   private static final String APP_DONE_DIR_PREFIX_FORMAT =
@@ -376,7 +371,12 @@ public class EntityGroupFSTimelineStore extends CompositeService
         AppLogs logs = getAndSetActiveLog(appId, stat.getPath());
         executor.execute(new ActiveLogParser(logs));
       } else {
-        logsToScanCount += scanActiveLogs(stat.getPath());
+        if (stat.isDirectory()) {
+          logsToScanCount += scanActiveLogs(stat.getPath());
+        } else {
+          LOG.warn("Ignoring unexpected file in active directory {}",
+              stat.getPath());
+        }
       }
     }
     return logsToScanCount;
@@ -469,8 +469,8 @@ public class EntityGroupFSTimelineStore extends CompositeService
     RemoteIterator<FileStatus> iter = list(dirpath);
     while (iter.hasNext()) {
       FileStatus stat = iter.next();
-      Path clusterTimeStampPath = stat.getPath();
-      if (isValidClusterTimeStampDir(clusterTimeStampPath)) {
+      if (isValidClusterTimeStampDir(stat)) {
+        Path clusterTimeStampPath = stat.getPath();
         MutableBoolean appLogDirPresent = new MutableBoolean(false);
         cleanAppLogDir(clusterTimeStampPath, retainMillis, appLogDirPresent);
         if (appLogDirPresent.isFalse() &&
@@ -520,11 +520,9 @@ public class EntityGroupFSTimelineStore extends CompositeService
     }
   }
 
-  private boolean isValidClusterTimeStampDir(Path clusterTimeStampPath)
-      throws IOException {
-    FileStatus stat = fs.getFileStatus(clusterTimeStampPath);
+  private boolean isValidClusterTimeStampDir(FileStatus stat) {
     return stat.isDirectory() &&
-        StringUtils.isNumeric(clusterTimeStampPath.getName());
+        StringUtils.isNumeric(stat.getPath().getName());
   }
 
 
@@ -551,15 +549,11 @@ public class EntityGroupFSTimelineStore extends CompositeService
 
   // converts the String to an ApplicationId or null if conversion failed
   private static ApplicationId parseApplicationId(String appIdStr) {
-    ApplicationId appId = null;
-    if (appIdStr.startsWith(ApplicationId.appIdStrPrefix)) {
-      try {
-        appId = ApplicationId.fromString(appIdStr);
-      } catch (IllegalArgumentException e) {
-        appId = null;
-      }
+    try {
+      return ApplicationId.fromString(appIdStr);
+    } catch (IllegalArgumentException e) {
+      return null;
     }
-    return appId;
   }
 
   private static ClassLoader createPluginClassLoader(
@@ -650,8 +644,7 @@ public class EntityGroupFSTimelineStore extends CompositeService
     AppState appState = AppState.ACTIVE;
     try {
       ApplicationReport report = yarnClient.getApplicationReport(appId);
-      YarnApplicationState yarnState = report.getYarnApplicationState();
-      if (APP_FINAL_STATES.contains(yarnState)) {
+      if (Apps.isApplicationFinalState(report.getYarnApplicationState())) {
         appState = AppState.COMPLETED;
       }
     } catch (ApplicationNotFoundException e) {

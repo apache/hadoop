@@ -47,6 +47,7 @@ function hadoop_usage
   hadoop_add_subcommand "queue" client "prints queue information"
   hadoop_add_subcommand "registrydns" daemon "run the registry DNS server"
   hadoop_add_subcommand "resourcemanager" daemon "run the ResourceManager"
+  hadoop_add_subcommand "fs2cs" client "converts Fair Scheduler configuration to Capacity Scheduler (EXPERIMENTAL)"
   hadoop_add_subcommand "rmadmin" admin "admin tools"
   hadoop_add_subcommand "router" daemon "run the Router daemon"
   hadoop_add_subcommand "schedulerconf" client "Updates scheduler configuration"
@@ -164,6 +165,9 @@ ${HADOOP_COMMON_HOME}/${HADOOP_COMMON_DIR},\
 ${HADOOP_COMMON_HOME}/${HADOOP_COMMON_LIB_JARS_DIR}"
       hadoop_translate_cygwin_path sld
       hadoop_add_param HADOOP_OPTS service.libdir "-Dservice.libdir=${sld}"
+    ;;
+    fs2cs)
+      HADOOP_CLASSNAME="org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigConverterMain"
     ;;
     rmadmin)
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.client.cli.RMAdminCLI'

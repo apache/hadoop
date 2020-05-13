@@ -34,9 +34,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
-import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.auth.RoleModel;
+import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -154,11 +154,13 @@ public class S3ADelegationTokens extends AbstractDTService {
   }
 
   @Override
-  public void bindToFileSystem(final URI uri, final S3AFileSystem fs)
+  public void bindToFileSystem(final URI uri,
+      final StoreContext context,
+      final DelegationOperations delegationOperations)
       throws IOException {
-    super.bindToFileSystem(uri, fs);
+    super.bindToFileSystem(uri, context, delegationOperations);
     service = getTokenService(getCanonicalUri());
-    stats = fs.getInstrumentation().newDelegationTokenStatistics();
+    stats = context.getInstrumentation().newDelegationTokenStatistics();
   }
 
   /**
@@ -179,10 +181,12 @@ public class S3ADelegationTokens extends AbstractDTService {
         SessionTokenBinding.class,
         AbstractDelegationTokenBinding.class);
     tokenBinding = binding.newInstance();
-    tokenBinding.bindToFileSystem(getCanonicalUri(), getFileSystem());
+    tokenBinding.bindToFileSystem(getCanonicalUri(),
+        getStoreContext(),
+        getPolicyProvider());
     tokenBinding.init(conf);
     tokenBindingName = tokenBinding.getKind().toString();
-    LOG.info("Filesystem {} is using delegation tokens of kind {}",
+    LOG.debug("Filesystem {} is using delegation tokens of kind {}",
         getCanonicalUri(), tokenBindingName);
   }
 
@@ -197,7 +201,7 @@ public class S3ADelegationTokens extends AbstractDTService {
     super.serviceStart();
     tokenBinding.start();
     bindToAnyDelegationToken();
-    LOG.info("S3A Delegation support token {} with {}",
+    LOG.debug("S3A Delegation support token {} with {}",
         identifierToString(),
         tokenBinding.getDescription());
   }
@@ -241,7 +245,7 @@ public class S3ADelegationTokens extends AbstractDTService {
     requireServiceStarted();
     checkState(!isBoundToDT(),
         "Already Bound to a delegation token");
-    LOG.info("No delegation tokens present: using direct authentication");
+    LOG.debug("No delegation tokens present: using direct authentication");
     credentialProviders = Optional.of(tokenBinding.deployUnbonded());
   }
 
@@ -352,7 +356,7 @@ public class S3ADelegationTokens extends AbstractDTService {
 
   /**
    * Predicate: will this binding issue a DT if requested
-   * in a call to {@link #getBoundOrNewDT(EncryptionSecrets)}?
+   * in a call to {@link #getBoundOrNewDT(EncryptionSecrets, Text)}?
    * That is: should the filesystem declare that it is issuing
    * delegation tokens?
    * @return a declaration of what will happen when asked for a token.
@@ -368,10 +372,12 @@ public class S3ADelegationTokens extends AbstractDTService {
    * @return a delegation token.
    * @throws IOException if one cannot be created
    * @param encryptionSecrets encryption secrets for any new token.
+   * @param renewer the token renewer.
    */
   @SuppressWarnings("OptionalGetWithoutIsPresent")
   public Token<AbstractS3ATokenIdentifier> getBoundOrNewDT(
-      final EncryptionSecrets encryptionSecrets)
+      final EncryptionSecrets encryptionSecrets,
+      final Text renewer)
       throws IOException {
     LOG.debug("Delegation token requested");
     if (isBoundToDT()) {
@@ -382,13 +388,13 @@ public class S3ADelegationTokens extends AbstractDTService {
       // not bound to a token, so create a new one.
       // issued DTs are not cached so that long-lived filesystems can
       // reliably issue session/role tokens.
-      return createDelegationToken(encryptionSecrets);
+      return createDelegationToken(encryptionSecrets, renewer);
     }
   }
 
   /**
    * How many delegation tokens have been issued?
-   * @return the number times {@link #createDelegationToken(EncryptionSecrets)}
+   * @return the number times {@link #createDelegationToken(EncryptionSecrets, Text)}
    * returned a token.
    */
   public int getCreationCount() {
@@ -400,18 +406,20 @@ public class S3ADelegationTokens extends AbstractDTService {
    * This will only be called if a new DT is needed, that is: the
    * filesystem has been deployed unbonded.
    * @param encryptionSecrets encryption secrets for the token.
+   * @param renewer the token renewer
    * @return the token
    * @throws IOException if one cannot be created
    */
   @VisibleForTesting
   public Token<AbstractS3ATokenIdentifier> createDelegationToken(
-      final EncryptionSecrets encryptionSecrets) throws IOException {
+      final EncryptionSecrets encryptionSecrets,
+      final Text renewer) throws IOException {
     requireServiceStarted();
     checkArgument(encryptionSecrets != null,
         "Null encryption secrets");
     // this isn't done in in advance as it needs S3Guard initialized in the
     // filesystem before it can generate complete policies.
-    List<RoleModel.Statement> statements = getFileSystem()
+    List<RoleModel.Statement> statements = getPolicyProvider()
         .listAWSPolicyRules(ACCESS_POLICY);
     Optional<RoleModel.Policy> rolePolicy =
         statements.isEmpty() ?
@@ -420,7 +428,7 @@ public class S3ADelegationTokens extends AbstractDTService {
     try(DurationInfo ignored = new DurationInfo(LOG, DURATION_LOG_AT_INFO,
         "Creating New Delegation Token", tokenBinding.getKind())) {
       Token<AbstractS3ATokenIdentifier> token
-          = tokenBinding.createDelegationToken(rolePolicy, encryptionSecrets);
+          = tokenBinding.createDelegationToken(rolePolicy, encryptionSecrets, renewer);
       if (token != null) {
         token.setService(service);
         noteTokenCreated(token);

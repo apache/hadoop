@@ -53,6 +53,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.DockerLinuxContainerRuntime.isDockerContainerRequested;
+import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.RuncContainerRuntime.isRuncContainerRequested;
 
 /**
  * <p>This class is a {@link ContainerRuntime} implementation that uses the
@@ -117,7 +118,8 @@ public abstract class OCIContainerRuntime implements LinuxContainerRuntime {
 
   public static boolean isOCICompliantContainerRequested(
       Configuration daemonConf, Map<String, String> env) {
-    return isDockerContainerRequested(daemonConf, env);
+    return isDockerContainerRequested(daemonConf, env) ||
+        isRuncContainerRequested(daemonConf, env);
   }
 
   @VisibleForTesting

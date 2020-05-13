@@ -86,6 +86,7 @@ public class WorkerId implements Writable {
    * Print workerId.
    * @return workeId in string
    */
+  @Override
   public final String toString() {
     return workerId.toString();
   }
@@ -111,11 +112,15 @@ public class WorkerId implements Writable {
    * Implememt equals method for WorkerId.
    */
   public final boolean equals(final Object o) {
+    if (o == null || this.getClass() != o.getClass()) {
+      return false;
+    }
     WorkerId x = (WorkerId) o;
     return x.getHostname().equals(this.hostname);
   }
 
   /** {@inheritDoc} */
+  @Override
   public final void write(final DataOutput dataOutput) throws IOException {
     workerId.write(dataOutput);
     hostname.write(dataOutput);
@@ -123,6 +128,7 @@ public class WorkerId implements Writable {
   }
 
   /** {@inheritDoc} */
+  @Override
   public final void readFields(final DataInput dataInput) throws IOException {
     workerId.readFields(dataInput);
     hostname.readFields(dataInput);

@@ -208,43 +208,44 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
   }
 
   @Test
-  public void testFlushWithFlushEnabled() throws Exception {
-    testFlush(true);
-  }
-
-  @Test
-  public void testFlushWithFlushDisabled() throws Exception {
+  public void testFlushWithOutputStreamFlushEnabled() throws Exception {
     testFlush(false);
   }
 
-  private void testFlush(boolean flushEnabled) throws Exception {
+  @Test
+  public void testFlushWithOutputStreamFlushDisabled() throws Exception {
+    testFlush(true);
+  }
+
+  private void testFlush(boolean disableOutputStreamFlush) throws Exception {
     final AzureBlobFileSystem fs = (AzureBlobFileSystem) getFileSystem();
 
-    // Simulate setting "fs.azure.enable.flush" to true or false
-    fs.getAbfsStore().getAbfsConfiguration().setEnableFlush(flushEnabled);
+    // Simulate setting "fs.azure.disable.outputstream.flush" to true or false
+    fs.getAbfsStore().getAbfsConfiguration()
+        .setDisableOutputStreamFlush(disableOutputStreamFlush);
 
     final Path testFilePath = path(methodName.getMethodName());
     byte[] buffer = getRandomBytesArray();
 
     // The test case must write "fs.azure.write.request.size" bytes
     // to the stream in order for the data to be uploaded to storage.
-    assertEquals(
-        fs.getAbfsStore().getAbfsConfiguration().getWriteBufferSize(),
+    assertEquals(fs.getAbfsStore().getAbfsConfiguration().getWriteBufferSize(),
         buffer.length);
 
     try (FSDataOutputStream stream = fs.create(testFilePath)) {
       stream.write(buffer);
 
       // Write asynchronously uploads data, so we must wait for completion
-      AbfsOutputStream abfsStream = (AbfsOutputStream) stream.getWrappedStream();
+      AbfsOutputStream abfsStream = (AbfsOutputStream) stream
+          .getWrappedStream();
       abfsStream.waitForPendingUploads();
 
       // Flush commits the data so it can be read.
       stream.flush();
 
-      // Verify that the data can be read if flushEnabled is true; and otherwise
-      // cannot be read.
-      validate(fs.open(testFilePath), buffer, flushEnabled);
+      // Verify that the data can be read if disableOutputStreamFlush is
+      // false; and otherwise cannot be read.
+      validate(fs.open(testFilePath), buffer, !disableOutputStreamFlush);
     }
   }
 

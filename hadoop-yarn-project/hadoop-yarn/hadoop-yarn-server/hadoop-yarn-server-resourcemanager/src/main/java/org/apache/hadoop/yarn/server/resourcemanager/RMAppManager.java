@@ -21,6 +21,8 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
@@ -64,6 +66,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRecoverEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
@@ -90,7 +93,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
   private int maxCompletedAppsInMemory;
   private int maxCompletedAppsInStateStore;
   protected int completedAppsInStateStore = 0;
-  protected LinkedList<ApplicationId> completedApps = new LinkedList<>();
+  private LinkedList<ApplicationId> completedApps = new LinkedList<>();
 
   private final RMContext rmContext;
   private final ApplicationMasterService masterService;
@@ -100,6 +103,9 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
   private YarnAuthorizationProvider authorizer;
   private boolean timelineServiceV2Enabled;
   private boolean nodeLabelsEnabled;
+  private Set<String> exclusiveEnforcedPartitions;
+
+  private static final String USER_ID_PREFIX = "userid=";
 
   public RMAppManager(RMContext context,
       YarnScheduler scheduler, ApplicationMasterService masterService,
@@ -124,6 +130,8 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         timelineServiceV2Enabled(conf);
     this.nodeLabelsEnabled = YarnConfiguration
         .areNodeLabelsEnabled(rmContext.getYarnConfiguration());
+    this.exclusiveEnforcedPartitions = YarnConfiguration
+        .getExclusiveEnforcedPartitions(rmContext.getYarnConfiguration());
   }
 
   /**
@@ -210,7 +218,19 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
               .getResourceSecondsString(metrics.getResourceSecondsMap()))
           .add("preemptedResourceSeconds", StringHelper
               .getResourceSecondsString(
-                  metrics.getPreemptedResourceSecondsMap()));
+                  metrics.getPreemptedResourceSecondsMap()))
+          .add("applicationTags", StringHelper.CSV_JOINER.join(
+              app.getApplicationTags() != null ? new TreeSet<>(
+                  app.getApplicationTags()) : Collections.<String>emptySet()))
+          .add("applicationNodeLabel",
+              app.getApplicationSubmissionContext().getNodeLabelExpression()
+                  == null
+                  ? ""
+                  : app.getApplicationSubmissionContext()
+                      .getNodeLabelExpression())
+          .add("diagnostics", app.getDiagnostics())
+          .add("totalAllocatedContainers",
+              metrics.getTotalAllocatedContainers());
       return summary;
     }
 
@@ -296,70 +316,29 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
    * check to see if hit the limit for max # completed apps kept
    */
   protected synchronized void checkAppNumCompletedLimit() {
-    if (completedAppsInStateStore > maxCompletedAppsInStateStore) {
-      removeCompletedAppsFromStateStore();
-    }
-
-    if (completedApps.size() > maxCompletedAppsInMemory) {
-      removeCompletedAppsFromMemory();
-    }
-  }
-
-  private void removeCompletedAppsFromStateStore() {
-    int numDelete = completedAppsInStateStore - maxCompletedAppsInStateStore;
-    for (int i = 0; i < numDelete; i++) {
-      ApplicationId removeId = completedApps.get(i);
+    // check apps kept in state store.
+    while (completedAppsInStateStore > this.maxCompletedAppsInStateStore) {
+      ApplicationId removeId =
+          completedApps.get(completedApps.size() - completedAppsInStateStore);
       RMApp removeApp = rmContext.getRMApps().get(removeId);
-      boolean deleteApp = shouldDeleteApp(removeApp);
-
-      if (deleteApp) {
-        LOG.info("Max number of completed apps kept in state store met:"
-            + " maxCompletedAppsInStateStore = "
-            + maxCompletedAppsInStateStore + ", removing app " + removeId
-            + " from state store.");
-        rmContext.getStateStore().removeApplication(removeApp);
-        completedAppsInStateStore--;
-      } else {
-        LOG.info("Max number of completed apps kept in state store met:"
-            + " maxCompletedAppsInStateStore = "
-            + maxCompletedAppsInStateStore + ", but not removing app "
-            + removeId
-            + " from state store as log aggregation have not finished yet.");
-      }
+      LOG.info("Max number of completed apps kept in state store met:"
+          + " maxCompletedAppsInStateStore = " + maxCompletedAppsInStateStore
+          + ", removing app " + removeApp.getApplicationId()
+          + " from state store.");
+      rmContext.getStateStore().removeApplication(removeApp);
+      completedAppsInStateStore--;
     }
-  }
 
-  private void removeCompletedAppsFromMemory() {
-    int numDelete = completedApps.size() - maxCompletedAppsInMemory;
-    int offset = 0;
-    for (int i = 0; i < numDelete; i++) {
-      int deletionIdx = i - offset;
-      ApplicationId removeId = completedApps.get(deletionIdx);
-      RMApp removeApp = rmContext.getRMApps().get(removeId);
-      boolean deleteApp = shouldDeleteApp(removeApp);
-
-      if (deleteApp) {
-        ++offset;
-        LOG.info("Application should be expired, max number of completed apps"
-                + " kept in memory met: maxCompletedAppsInMemory = "
-                + this.maxCompletedAppsInMemory + ", removing app " + removeId
-                + " from memory: ");
-        completedApps.remove(deletionIdx);
-        rmContext.getRMApps().remove(removeId);
-        this.applicationACLsManager.removeApplication(removeId);
-      } else {
-        LOG.info("Application should be expired, max number of completed apps"
-                + " kept in memory met: maxCompletedAppsInMemory = "
-                + this.maxCompletedAppsInMemory + ", but not removing app "
-                + removeId
-                + " from memory as log aggregation have not finished yet.");
-      }
+    // check apps kept in memory.
+    while (completedApps.size() > this.maxCompletedAppsInMemory) {
+      ApplicationId removeId = completedApps.remove();
+      LOG.info("Application should be expired, max number of completed apps"
+          + " kept in memory met: maxCompletedAppsInMemory = "
+          + this.maxCompletedAppsInMemory + ", removing app " + removeId
+          + " from memory: ");
+      rmContext.getRMApps().remove(removeId);
+      this.applicationACLsManager.removeApplication(removeId);
     }
-  }
-
-  private boolean shouldDeleteApp(RMApp app) {
-    return !app.isLogAggregationEnabled()
-            || app.isLogAggregationFinished();
   }
 
   @SuppressWarnings("unchecked")
@@ -371,7 +350,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     // Passing start time as -1. It will be eventually set in RMAppImpl
     // constructor.
     RMAppImpl application = createAndPopulateNewRMApp(
-        submissionContext, submitTime, user, false, -1);
+        submissionContext, submitTime, user, false, -1, null);
     try {
       if (UserGroupInformation.isSecurityEnabled()) {
         this.rmContext.getDelegationTokenRenewer()
@@ -408,18 +387,22 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     // create and recover app.
     RMAppImpl application =
         createAndPopulateNewRMApp(appContext, appState.getSubmitTime(),
-            appState.getUser(), true, appState.getStartTime());
+            appState.getUser(), true, appState.getStartTime(),
+            appState.getState());
 
     application.handle(new RMAppRecoverEvent(appId, rmState));
   }
 
   private RMAppImpl createAndPopulateNewRMApp(
       ApplicationSubmissionContext submissionContext, long submitTime,
-      String user, boolean isRecovery, long startTime) throws YarnException {
+      String user, boolean isRecovery, long startTime,
+      RMAppState recoveredFinalState) throws YarnException {
 
-    ApplicationPlacementContext placementContext =
-        placeApplication(rmContext.getQueuePlacementManager(),
-            submissionContext, user, isRecovery);
+    ApplicationPlacementContext placementContext = null;
+    if (recoveredFinalState == null) {
+      placementContext = placeApplication(rmContext.getQueuePlacementManager(),
+          submissionContext, user, isRecovery);
+    }
 
     // We only replace the queue when it's a new application
     if (!isRecovery) {
@@ -577,6 +560,9 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
           throw new InvalidResourceRequestException("Invalid resource request, "
               + "no resource request specified with " + ResourceRequest.ANY);
         }
+        SchedulerUtils.enforcePartitionExclusivity(anyReq,
+            exclusiveEnforcedPartitions,
+            submissionContext.getNodeLabelExpression());
 
         // Make sure that all of the requests agree with the ANY request
         // and have correct values
@@ -717,6 +703,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
               app.getStartTime(), app.getApplicationSubmissionContext(),
               app.getUser(), app.getCallerContext());
       appState.setApplicationTimeouts(currentExpireTimeouts);
+      appState.setLaunchTime(app.getLaunchTime());
 
       // update to state store. Though it synchronous call, update via future to
       // know any exception has been set. It is required because in non-HA mode,
@@ -842,6 +829,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         app.getApplicationSubmissionContext(), app.getUser(),
         app.getCallerContext());
     appState.setApplicationTimeouts(app.getApplicationTimeouts());
+    appState.setLaunchTime(app.getLaunchTime());
     rmContext.getStateStore().updateApplicationStateSynchronously(appState,
         false, future);
 
@@ -864,7 +852,10 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     ApplicationPlacementContext placementContext = null;
     if (placementManager != null) {
       try {
-        placementContext = placementManager.placeApplication(context, user);
+        String usernameUsedForPlacement =
+                getUserNameForPlacement(user, context, placementManager);
+        placementContext = placementManager
+                .placeApplication(context, usernameUsedForPlacement);
       } catch (YarnException e) {
         // Placement could also fail if the user doesn't exist in system
         // skip if the user is not found during recovery.
@@ -889,6 +880,83 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       throw new YarnException(msg);
     }
     return placementContext;
+  }
+
+  @VisibleForTesting
+  protected String getUserNameForPlacement(final String user,
+      final ApplicationSubmissionContext context,
+      final PlacementManager placementManager) throws YarnException {
+
+    boolean applicationTagBasedPlacementEnabled = conf
+        .getBoolean(YarnConfiguration.APPLICATION_TAG_BASED_PLACEMENT_ENABLED,
+        YarnConfiguration.DEFAULT_APPLICATION_TAG_BASED_PLACEMENT_ENABLED);
+    String usernameUsedForPlacement = user;
+    if (!applicationTagBasedPlacementEnabled) {
+      return usernameUsedForPlacement;
+    }
+    if (!isWhitelistedUser(user, conf)) {
+      LOG.warn("User '{}' is not allowed to do placement based " +
+              "on application tag", user);
+      return usernameUsedForPlacement;
+    }
+    LOG.debug("Application tag based placement is enabled, checking for " +
+        "'userid' among the application tags");
+    Set<String> applicationTags = context.getApplicationTags();
+    String userNameFromAppTag = getUserNameFromApplicationTag(applicationTags);
+    if (userNameFromAppTag != null) {
+      LOG.debug("Found 'userid' '{}' in application tag", userNameFromAppTag);
+      UserGroupInformation callerUGI = UserGroupInformation
+              .createRemoteUser(user);
+      // check if the actual user has rights to submit application to the
+      // user's queue from the application tag
+      ApplicationPlacementContext appPlacementContext = placementManager
+              .placeApplication(context, userNameFromAppTag);
+      if (appPlacementContext == null) {
+        LOG.warn("No rule was found for user '{}'", userNameFromAppTag);
+        return usernameUsedForPlacement;
+      }
+      String queue = appPlacementContext.getQueue();
+      if (callerUGI != null && scheduler
+              .checkAccess(callerUGI, QueueACL.SUBMIT_APPLICATIONS, queue)) {
+        usernameUsedForPlacement = userNameFromAppTag;
+      } else {
+        LOG.warn("User '{}' from application tag does not have access to " +
+                " queue '{}'. " + "The placement is done for user '{}'",
+                userNameFromAppTag, queue, user);
+      }
+    } else {
+      LOG.warn("'userid' was not found in application tags");
+    }
+    return usernameUsedForPlacement;
+  }
+
+  private boolean isWhitelistedUser(final String user,
+                                    final Configuration config) {
+    String[] userWhitelist = config.getStrings(YarnConfiguration
+            .APPLICATION_TAG_BASED_PLACEMENT_USER_WHITELIST);
+    if (userWhitelist == null || userWhitelist.length == 0) {
+      return false;
+    }
+    for (String s: userWhitelist) {
+      if (s.equals(user)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private String getUserNameFromApplicationTag(Set<String> applicationTags) {
+    for (String tag: applicationTags) {
+      if (tag.startsWith(USER_ID_PREFIX)) {
+        String[] userIdTag = tag.split("=");
+        if (userIdTag.length == 2) {
+          return userIdTag[1];
+        } else {
+          LOG.warn("Found wrongly qualified username in tag");
+        }
+      }
+    }
+    return null;
   }
 
   private void copyPlacementQueueToSubmissionContext(

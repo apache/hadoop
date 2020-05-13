@@ -22,7 +22,7 @@ import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeHealthStatusProto
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeHealthStatusProtoOrBuilder;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 public class NodeHealthStatusPBImpl extends NodeHealthStatus {
 

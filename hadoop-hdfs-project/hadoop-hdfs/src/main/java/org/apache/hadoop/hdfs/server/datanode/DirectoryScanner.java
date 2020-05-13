@@ -66,7 +66,7 @@ public class DirectoryScanner implements Runnable {
       LoggerFactory.getLogger(DirectoryScanner.class);
 
   private static final int DEFAULT_MAP_SIZE = 32768;
-
+  private static final int RECONCILE_BLOCKS_BATCH_SIZE = 1000;
   private final FsDatasetSpi<?> dataset;
   private final ExecutorService reportCompileThreadPool;
   private final ScheduledExecutorService masterThread;
@@ -349,7 +349,9 @@ public class DirectoryScanner implements Runnable {
    * Clear the current cache of diffs and statistics.
    */
   private void clear() {
-    diffs.clear();
+    synchronized (diffs) {
+      diffs.clear();
+    }
     stats.clear();
   }
 
@@ -424,10 +426,25 @@ public class DirectoryScanner implements Runnable {
    */
   @VisibleForTesting
   public void reconcile() throws IOException {
+    LOG.debug("reconcile start DirectoryScanning");
     scan();
 
-    for (final Map.Entry<String, ScanInfo> entry : diffs.getEntries()) {
-      dataset.checkAndUpdate(entry.getKey(), entry.getValue());
+    // HDFS-14476: run checkAndUpadte with batch to avoid holding the lock too
+    // long
+    int loopCount = 0;
+    synchronized (diffs) {
+      for (final Map.Entry<String, ScanInfo> entry : diffs.getEntries()) {
+        dataset.checkAndUpdate(entry.getKey(), entry.getValue());
+
+        if (loopCount % RECONCILE_BLOCKS_BATCH_SIZE == 0) {
+          try {
+            Thread.sleep(2000);
+          } catch (InterruptedException e) {
+            // do nothing
+          }
+        }
+        loopCount++;
+      }
     }
 
     if (!retainDiffs) {
@@ -532,7 +549,9 @@ public class DirectoryScanner implements Runnable {
           }
           d++;
         }
-        diffs.addAll(bpid, diffRecord);
+        synchronized (diffs) {
+          diffs.addAll(bpid, diffRecord);
+        }
         LOG.info("Scan Results: {}", statsRecord);
       }
     }

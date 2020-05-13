@@ -28,9 +28,16 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.times;
 
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.junit.Before;
 import org.junit.Test;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
@@ -48,6 +55,8 @@ import org.mockito.Mockito;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.CallQueueManager.CallQueueOverflowException;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcStatusProto;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestFairCallQueue {
   private FairCallQueue<Schedulable> fcq;
@@ -84,17 +93,20 @@ public class TestFairCallQueue {
     Configuration conf = new Configuration();
     FairCallQueue<Schedulable> fairCallQueue;
     fairCallQueue = new FairCallQueue<Schedulable>(1, 1000, "ns", conf);
-    assertEquals(fairCallQueue.remainingCapacity(), 1000);
+    assertThat(fairCallQueue.remainingCapacity()).isEqualTo(1000);
     fairCallQueue = new FairCallQueue<Schedulable>(4, 1000, "ns", conf);
-    assertEquals(fairCallQueue.remainingCapacity(), 1000);
+    assertThat(fairCallQueue.remainingCapacity()).isEqualTo(1000);
     fairCallQueue = new FairCallQueue<Schedulable>(7, 1000, "ns", conf);
-    assertEquals(fairCallQueue.remainingCapacity(), 1000);
+    assertThat(fairCallQueue.remainingCapacity()).isEqualTo(1000);
     fairCallQueue = new FairCallQueue<Schedulable>(1, 1025, "ns", conf);
-    assertEquals(fairCallQueue.remainingCapacity(), 1025);
+    assertThat(fairCallQueue.remainingCapacity()).isEqualTo(1025);
     fairCallQueue = new FairCallQueue<Schedulable>(4, 1025, "ns", conf);
-    assertEquals(fairCallQueue.remainingCapacity(), 1025);
+    assertThat(fairCallQueue.remainingCapacity()).isEqualTo(1025);
     fairCallQueue = new FairCallQueue<Schedulable>(7, 1025, "ns", conf);
-    assertEquals(fairCallQueue.remainingCapacity(), 1025);
+    assertThat(fairCallQueue.remainingCapacity()).isEqualTo(1025);
+    fairCallQueue = new FairCallQueue<Schedulable>(7, 1025, "ns",
+        new int[]{7, 6, 5, 4, 3, 2, 1}, conf);
+    assertThat(fairCallQueue.remainingCapacity()).isEqualTo(1025);
   }
 
   @Test
@@ -146,6 +158,120 @@ public class TestFairCallQueue {
     //----------
     assertNull(fcq.poll());
     assertNull(fcq.poll());
+  }
+
+  @Test
+  public void testQueueCapacity() {
+    int numQueues = 2;
+    int capacity = 4;
+    Configuration conf = new Configuration();
+    List<Schedulable> calls = new ArrayList<>();
+
+    // default weights i.e. all queues share capacity
+    fcq = new FairCallQueue<Schedulable>(numQueues, 4, "ns", conf);
+    FairCallQueue<Schedulable> fcq1 = new FairCallQueue<Schedulable>(
+        numQueues, capacity, "ns", new int[]{1, 3}, conf);
+
+    for (int i=0; i < capacity; i++) {
+      Schedulable call = mockCall("u", i%2);
+      calls.add(call);
+      fcq.add(call);
+      fcq1.add(call);
+    }
+
+    final AtomicInteger currentIndex = new AtomicInteger();
+    fcq.setMultiplexer(new RpcMultiplexer(){
+      @Override
+      public int getAndAdvanceCurrentIndex() {
+        return currentIndex.get();
+      }
+    });
+    fcq1.setMultiplexer(new RpcMultiplexer(){
+      @Override
+      public int getAndAdvanceCurrentIndex() {
+        return currentIndex.get();
+      }
+    });
+
+    // either queue will have two calls
+    //    v
+    // 0  1
+    // 2  3
+    currentIndex.set(1);
+    assertSame(calls.get(1), fcq.poll());
+    assertSame(calls.get(3), fcq.poll());
+    assertSame(calls.get(0), fcq.poll());
+    assertSame(calls.get(2), fcq.poll());
+
+    // queues with different number of calls
+    //    v
+    // 0  1
+    //    2
+    //    3
+    currentIndex.set(1);
+    assertSame(calls.get(1), fcq1.poll());
+    assertSame(calls.get(2), fcq1.poll());
+    assertSame(calls.get(3), fcq1.poll());
+    assertSame(calls.get(0), fcq1.poll());
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  public void testInsertionWithFailover() {
+    Configuration conf = new Configuration();
+    // Config for server to throw StandbyException instead of the
+    // regular RetriableException if call queue is full.
+    conf.setBoolean(
+        "ns." + CommonConfigurationKeys.IPC_CALLQUEUE_SERVER_FAILOVER_ENABLE,
+        true);
+    // 3 queues, 2 slots each.
+    fcq = Mockito.spy(new FairCallQueue<>(3, 6, "ns", conf));
+
+    Schedulable p0 = mockCall("a", 0);
+    Schedulable p1 = mockCall("b", 1);
+
+    // add to first queue.
+    addToQueueAndVerify(p0, 1, 0, 0);
+    // 0:x- 1:-- 2:--
+
+    // add to second queue.
+    addToQueueAndVerify(p1, 0, 1, 0);
+    // 0:x- 1:x- 2:--
+
+    // add to first queue.
+    addToQueueAndVerify(p0, 1, 0, 0);
+    // 0:xx 1:x- 2:--
+
+    // add to first full queue spills over to second.
+    addToQueueAndVerify(p0, 1, 1, 0);
+    // 0:xx 1:xx 2:--
+
+    // add to second full queue spills over to third.
+    addToQueueAndVerify(p1, 0, 1, 1);
+    // 0:xx 1:xx 2:x-
+
+    // add to first and second full queue spills over to third.
+    addToQueueAndVerify(p0, 1, 1, 1);
+    // 0:xx 1:xx 2:xx
+
+    // adding non-lowest priority with all queues full throws a
+    // standby exception for client to try another server.
+    Mockito.reset(fcq);
+    try {
+      fcq.add(p0);
+      fail("didn't fail");
+    } catch (IllegalStateException ise) {
+      checkOverflowException(ise, RpcStatusProto.FATAL, true);
+    }
+  }
+
+  private void addToQueueAndVerify(Schedulable call, int expectedQueue0,
+      int expectedQueue1, int expectedQueue2) {
+    Mockito.reset(fcq);
+    fcq.add(call);
+    Mockito.verify(fcq, times(expectedQueue0)).offerQueue(0, call);
+    Mockito.verify(fcq, times(expectedQueue1)).offerQueue(1, call);
+    Mockito.verify(fcq, times(expectedQueue2)).offerQueue(2, call);
   }
 
   @SuppressWarnings("unchecked") // for mock reset.
@@ -215,7 +341,7 @@ public class TestFairCallQueue {
       fcq.add(p0);
       fail("didn't fail");
     } catch (IllegalStateException ise) {
-      checkOverflowException(ise, RpcStatusProto.ERROR);
+      checkOverflowException(ise, RpcStatusProto.ERROR, false);
     }
     Mockito.verify(fcq, times(1)).offerQueue(0, p0);
     Mockito.verify(fcq, times(1)).offerQueue(1, p0);
@@ -228,7 +354,7 @@ public class TestFairCallQueue {
       fcq.add(p1);
       fail("didn't fail");
     } catch (IllegalStateException ise) {
-      checkOverflowException(ise, RpcStatusProto.ERROR);
+      checkOverflowException(ise, RpcStatusProto.ERROR, false);
     }
     Mockito.verify(fcq, times(0)).offerQueue(0, p1);
     Mockito.verify(fcq, times(1)).offerQueue(1, p1);
@@ -241,7 +367,7 @@ public class TestFairCallQueue {
       fcq.add(p2);
       fail("didn't fail");
     } catch (IllegalStateException ise) {
-      checkOverflowException(ise, RpcStatusProto.FATAL);
+      checkOverflowException(ise, RpcStatusProto.FATAL, false);
     }
     Mockito.verify(fcq, times(0)).offerQueue(0, p2);
     Mockito.verify(fcq, times(0)).offerQueue(1, p2);
@@ -280,7 +406,8 @@ public class TestFairCallQueue {
     Mockito.verify(fcq, times(1)).putQueue(2, p2);
   }
 
-  private void checkOverflowException(Exception ex, RpcStatusProto status) {
+  private void checkOverflowException(Exception ex, RpcStatusProto status,
+      boolean failOverTriggered) {
     // should be an overflow exception
     assertTrue(ex.getClass().getName() + " != CallQueueOverflowException",
         ex instanceof CallQueueOverflowException);
@@ -289,10 +416,15 @@ public class TestFairCallQueue {
     assertTrue(ioe.getClass().getName() + " != RpcServerException",
         ioe instanceof RpcServerException);
     RpcServerException rse = (RpcServerException)ioe;
-    // check error/fatal status and if it embeds a retriable ex.
+    // check error/fatal status and if it embeds a retriable ex or standby ex.
     assertEquals(status, rse.getRpcStatusProto());
-    assertTrue(rse.getClass().getName() + " != RetriableException",
-        rse.getCause() instanceof RetriableException);
+    if (failOverTriggered) {
+      assertTrue(rse.getClass().getName() + " != RetriableException",
+          rse.getCause() instanceof StandbyException);
+    } else {
+      assertTrue(rse.getClass().getName() + " != RetriableException",
+          rse.getCause() instanceof RetriableException);
+    }
   }
 
   //

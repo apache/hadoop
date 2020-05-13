@@ -46,6 +46,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.ContentSummary.Builder;
 import org.apache.hadoop.fs.CreateFlag;
@@ -70,6 +71,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.VersionInfo;
 
 import static org.apache.hadoop.fs.adl.AdlConfKeys.*;
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
 /**
  * A FileSystem to access Azure Data Lake Store.
@@ -202,6 +204,10 @@ public class AdlFileSystem extends FileSystem {
     } else {
       LOG.info("No valid ADL SDK timeout configured: using SDK default.");
     }
+
+    String sslChannelMode = conf.get(ADL_SSL_CHANNEL_MODE,
+        "Default");
+    options.setSSLChannelMode(sslChannelMode);
 
     adlClient.setOptions(options);
 
@@ -1028,5 +1034,21 @@ public class AdlFileSystem extends FileSystem {
       dest.set(generic, value, key + " via " + origin);
     }
     return dest;
+  }
+
+  @Override
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+
+    switch (validatePathCapabilityArgs(makeQualified(path), capability)) {
+
+    case CommonPathCapabilities.FS_ACLS:
+    case CommonPathCapabilities.FS_APPEND:
+    case CommonPathCapabilities.FS_CONCAT:
+    case CommonPathCapabilities.FS_PERMISSIONS:
+      return true;
+    default:
+      return super.hasPathCapability(path, capability);
+    }
   }
 }

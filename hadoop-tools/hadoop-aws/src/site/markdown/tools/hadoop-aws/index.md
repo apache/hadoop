@@ -400,6 +400,31 @@ for credentials to access S3.  Within the AWS SDK, this functionality is
 provided by `InstanceProfileCredentialsProvider`, which internally enforces a
 singleton instance in order to prevent throttling problem.
 
+### <a name="auth_named_profile"></a> Using Named Profile Credentials with `ProfileCredentialsProvider`
+
+You can configure Hadoop to authenticate to AWS using a [named profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html).
+
+To authenticate with a named profile:
+
+1. Declare `com.amazonaws.auth.profile.ProfileCredentialsProvider` as the provider.
+1. Set your profile via the `AWS_PROFILE` environment variable.
+1. Due to a [bug in version 1 of the AWS Java SDK](https://github.com/aws/aws-sdk-java/issues/803),
+you'll need to remove the `profile` prefix from the AWS configuration section heading.
+
+    Here's an example of what your AWS configuration files should look like:
+
+    ```
+    $ cat ~/.aws/config
+    [user1]
+    region = us-east-1
+    $ cat ~/.aws/credentials
+    [user1]
+    aws_access_key_id = ...
+    aws_secret_access_key = ...
+    aws_session_token = ...
+    aws_security_token = ...
+    ```
+
 ### <a name="auth_session"></a> Using Session Credentials with `TemporaryAWSCredentialsProvider`
 
 [Temporary Security Credentials](http://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp.html)
@@ -537,10 +562,10 @@ This means that the default S3A authentication chain can be defined as
        Uses the values of fs.s3a.access.key and fs.s3a.secret.key.
     * com.amazonaws.auth.EnvironmentVariableCredentialsProvider: supports
         configuration of AWS access key ID and secret access key in
-        environment variables named AWS_ACCESS_KEY_ID and
-        AWS_SECRET_ACCESS_KEY, as documented in the AWS SDK.
-    * com.amazonaws.auth.InstanceProfileCredentialsProvider: supports use
-        of instance profile credentials if running in an EC2 VM.
+        environment variables named AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY,
+        and AWS_SESSION_TOKEN as documented in the AWS SDK.
+    * org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider: picks up
+       IAM credentials of any EC2 VM or AWS container in which the process is running.
   </description>
 </property>
 ```
@@ -860,7 +885,7 @@ options are covered in [Testing](./testing.md).
 
 <property>
   <name>fs.s3a.multipart.size</name>
-  <value>100M</value>
+  <value>64M</value>
   <description>How big (in bytes) to split upload or copy operations up into.
     A suffix from the set {K,M,G,T,P} may be used to scale the numeric value.
   </description>
@@ -868,7 +893,7 @@ options are covered in [Testing](./testing.md).
 
 <property>
   <name>fs.s3a.multipart.threshold</name>
-  <value>2147483647</value>
+  <value>128MB</value>
   <description>How big (in bytes) to split upload or copy operations up into.
     This also controls the partition size in renamed files, as rename() involves
     copying the source file(s).
@@ -983,6 +1008,43 @@ options are covered in [Testing](./testing.md).
   <description>Select which version of the S3 SDK's List Objects API to use.
   Currently support 2 (default) and 1 (older API).</description>
 </property>
+
+<property>
+  <name>fs.s3a.connection.request.timeout</name>
+  <value>0</value>
+  <description>
+  Time out on HTTP requests to the AWS service; 0 means no timeout.
+  Measured in seconds; the usual time suffixes are all supported
+
+  Important: this is the maximum duration of any AWS service call,
+  including upload and copy operations. If non-zero, it must be larger
+  than the time to upload multi-megabyte blocks to S3 from the client,
+  and to rename many-GB files. Use with care.
+
+  Values that are larger than Integer.MAX_VALUE milliseconds are
+  converged to Integer.MAX_VALUE milliseconds
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.bucket.probe</name>
+  <value>2</value>
+  <description>
+     The value can be 0, 1 or 2 (default).
+     When set to 0, bucket existence checks won't be done
+     during initialization thus making it faster.
+     Though it should be noted that when the bucket is not available in S3,
+     or if fs.s3a.endpoint points to the wrong instance of a private S3 store
+     consecutive calls like listing, read, write etc. will fail with
+     an UnknownStoreException.
+     When set to 1, the bucket existence check will be done using the
+     V1 API of the S3 protocol which doesn't verify the client's permissions
+     to list or read data in the bucket.
+     When set to 2, the bucket existence check will be done using the
+     V2 API of the S3 protocol which does verify that the
+     client has permission to read the bucket.
+  </description>
+</property>
 ```
 
 ## <a name="retry_and_recovery"></a>Retry and Recovery
@@ -1018,7 +1080,7 @@ is unrecoverable; it's the generic "No" response. Very rarely it
 does recover, which is why it is in this category, rather than that
 of unrecoverable failures.
 
-These failures will be retried with a fixed sleep interval set in
+These failures will be retried with an exponential sleep interval set in
 `fs.s3a.retry.interval`, up to the limit set in `fs.s3a.retry.limit`.
 
 
@@ -1033,7 +1095,7 @@ after the request was processed by S3.
 * "No response from Server" (443, 444) HTTP responses.
 * Any other AWS client, service or S3 exception.
 
-These failures will be retried with a fixed sleep interval set in
+These failures will be retried with an exponential sleep interval set in
 `fs.s3a.retry.interval`, up to the limit set in `fs.s3a.retry.limit`.
 
 *Important*: DELETE is considered idempotent, hence: `FileSystem.delete()`
@@ -1202,9 +1264,9 @@ The configurations items controlling this behavior are:
 In the default configuration, S3 object eTags are used to detect changes.  When
 the filesystem retrieves a file from S3 using
 [Get Object](https://docs.aws.amazon.com/AmazonS3/latest/API/RESTObjectGET.html),
-it captures the eTag and uses that eTag in an 'If-Match' condition on each
+it captures the eTag and uses that eTag in an `If-Match` condition on each
 subsequent request.  If a concurrent writer has overwritten the file, the
-'If-Match' condition will fail and a RemoteFileChangedException will be thrown.
+'If-Match' condition will fail and a `RemoteFileChangedException` will be thrown.
 
 Even in this default configuration, a new write may not trigger this exception
 on an open reader.  For example, if the reader only reads forward in the file
@@ -1229,7 +1291,7 @@ It is possible to switch to using the
 instead of eTag as the change detection mechanism.  Use of this option requires
 object versioning to be enabled on any S3 buckets used by the filesystem.  The
 benefit of using version id instead of eTag is potentially reduced frequency
-of RemoteFileChangedException. With object versioning enabled, old versions
+of `RemoteFileChangedException`. With object versioning enabled, old versions
 of objects remain available after they have been overwritten.
 This means an open input stream will still be able to seek backwards after a
 concurrent writer has overwritten the file.
@@ -1879,3 +1941,61 @@ To disable checksum verification in `distcp`, use the `-skipcrccheck` option:
 hadoop distcp -update -skipcrccheck -numListstatusThreads 40 /user/alice/datasets s3a://alice-backup/datasets
 ```
 
+### <a name="customsigners"></a> Advanced - Custom Signers
+
+AWS uees request signing to authenticate requests. In general, there should
+be no need to override the signers, and the defaults work out of the box.
+If, however, this is required - this section talks about how to configure
+custom signers. There’s 2 broad config categories to be set - one for
+registering a custom signer and another to specify usage.
+
+#### Registering Custom Signers
+```xml
+<property>
+  <name>fs.s3a.custom.signers</name>
+  <value>comma separated list of signers</value>
+  <!-- Example
+  <value>AWS4SignerType,CS1:CS1ClassName,CS2:CS2ClassName:CS2InitClass</value>
+  -->
+</property>
+```
+Acceptable value for each custom signer
+
+`SignerName`- this is used in case one of the default signers is being used.
+(E.g `AWS4SignerType`, `QueryStringSignerType`, `AWSS3V4SignerType`).
+If no custom signers are being used - this value does not need to be set.
+
+`SignerName:SignerClassName` - register a new signer with the specified name,
+and the class for this signer.
+The Signer Class must implement `com.amazonaws.auth.Signer`.
+
+`SignerName:SignerClassName:SignerInitializerClassName` - similar time above
+except also allows for a custom SignerInitializer
+(`org.apache.hadoop.fs.s3a.AwsSignerInitializer`) class to be specified.
+
+#### Usage of the Signers
+Signers can be set at a per service level(S3, dynamodb, etc) or a common
+signer for all services.
+
+```xml
+<property>
+  <name>fs.s3a.s3.signing-algorithm</name>
+  <value>${S3SignerName}</value>
+  <description>Specify the signer for S3</description>
+</property>
+
+<property>
+  <name>fs.s3a.ddb.signing-algorithm</name>
+  <value>${DdbSignerName}</value>
+  <description>Specify the signer for DDB</description>
+</property>
+
+<property>
+  <name>fs.s3a.signing-algorithm</name>
+  <value>${SignerName}</value>
+</property>
+```
+
+For a specific service, the service specific signer is looked up first.
+If that is not specified, the common signer is looked up. If this is
+not specified as well, SDK settings are used.

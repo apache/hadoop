@@ -42,6 +42,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.webapp.dao.AppInfo;
+import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
@@ -211,10 +212,8 @@ public class AppsBlock extends HtmlBlock {
 
       String trackingUI =
           app.getTrackingUrl() == null || app.getTrackingUrl().equals(UNAVAILABLE)
-              ? "Unassigned"
-              : app.getAppState() == YarnApplicationState.FINISHED
-                  || app.getAppState() == YarnApplicationState.FAILED
-                  || app.getAppState() == YarnApplicationState.KILLED
+              ? "Unassigned" :
+              Apps.isApplicationFinalState(app.getAppState())
                   ? "History" : "ApplicationMaster";
       appsTableData.append(trackingURL == null ? "#" : "href='" + trackingURL)
         .append("'>").append(trackingUI).append("</a>\"],\n");

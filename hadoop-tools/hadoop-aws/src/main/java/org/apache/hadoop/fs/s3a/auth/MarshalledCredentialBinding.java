@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import com.amazonaws.ClientConfiguration;
+import com.amazonaws.SdkClientException;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSSessionCredentials;
@@ -33,6 +34,8 @@ import com.amazonaws.auth.BasicSessionCredentials;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
 import com.amazonaws.services.securitytoken.model.Credentials;
 import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.Invoker;
@@ -52,6 +55,9 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.lookupPassword;
  * to load.
  */
 public final class MarshalledCredentialBinding {
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(MarshalledCredentialBinding.class);
 
   private MarshalledCredentialBinding() {
   }
@@ -194,15 +200,23 @@ public final class MarshalledCredentialBinding {
       final String stsRegion,
       final int duration,
       final Invoker invoker) throws IOException {
-    final AWSSecurityTokenService tokenService =
-        STSClientFactory.builder(parentCredentials,
-            awsConf,
-            stsEndpoint.isEmpty() ? null : stsEndpoint,
-            stsRegion)
-            .build();
-    return fromSTSCredentials(
-        STSClientFactory.createClientConnection(tokenService, invoker)
-            .requestSessionCredentials(duration, TimeUnit.SECONDS));
+    try {
+      final AWSSecurityTokenService tokenService =
+          STSClientFactory.builder(parentCredentials,
+              awsConf,
+              stsEndpoint.isEmpty() ? null : stsEndpoint,
+              stsRegion)
+              .build();
+      return fromSTSCredentials(
+          STSClientFactory.createClientConnection(tokenService, invoker)
+              .requestSessionCredentials(duration, TimeUnit.SECONDS));
+    } catch (SdkClientException e) {
+      if (stsRegion.isEmpty()) {
+        LOG.error("Region must be provided when requesting session credentials.",
+            e);
+      }
+      throw e;
+    }
   }
 
 }

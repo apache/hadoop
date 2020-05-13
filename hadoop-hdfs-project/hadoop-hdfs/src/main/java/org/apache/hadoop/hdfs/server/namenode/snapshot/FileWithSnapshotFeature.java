@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -154,9 +156,20 @@ public class FileWithSnapshotFeature implements INode.Feature {
     QuotaCounts oldCounts;
     if (removed.snapshotINode != null) {
       oldCounts = new QuotaCounts.Builder().build();
-      BlockInfo[] blocks = file.getBlocks() == null ? new
-          BlockInfo[0] : file.getBlocks();
-      for (BlockInfo b: blocks) {
+      List<BlockInfo> allBlocks = new ArrayList<BlockInfo>();
+      if (file.getBlocks() != null) {
+        allBlocks.addAll(Arrays.asList(file.getBlocks()));
+      }
+      if (removed.getBlocks() != null) {
+        allBlocks.addAll(Arrays.asList(removed.getBlocks()));
+      }
+      for (FileDiff diff : diffs) {
+        BlockInfo[] diffBlocks = diff.getBlocks();
+        if (diffBlocks != null) {
+          allBlocks.addAll(Arrays.asList(diffBlocks));
+        }
+      }
+      for (BlockInfo b: allBlocks) {
         short replication = b.getReplication();
         long blockSize = b.isComplete() ? b.getNumBytes() : file
             .getPreferredBlockSize();
@@ -224,5 +237,10 @@ public class FileWithSnapshotFeature implements INode.Feature {
     else
       file.collectBlocksBeyondSnapshot(snapshotBlocks,
                                        reclaimContext.collectedBlocks());
+  }
+
+  @Override
+  public String toString() {
+    return "" + diffs;
   }
 }

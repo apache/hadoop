@@ -73,6 +73,7 @@ public class CopyCommitter extends FileOutputCommitter {
   private boolean overwrite = false;
   private boolean targetPathExists = true;
   private boolean ignoreFailures = false;
+  private boolean skipCrc = false;
   private int blocksPerChunk = 0;
 
   /**
@@ -87,6 +88,9 @@ public class CopyCommitter extends FileOutputCommitter {
     blocksPerChunk = context.getConfiguration().getInt(
         DistCpOptionSwitch.BLOCKS_PER_CHUNK.getConfigLabel(), 0);
     LOG.debug("blocks per chunk {}", blocksPerChunk);
+    skipCrc = context.getConfiguration().getBoolean(
+        DistCpOptionSwitch.SKIP_CRC.getConfigLabel(), false);
+    LOG.debug("skip CRC is {}", skipCrc);
     this.taskAttemptContext = context;
   }
 
@@ -109,13 +113,6 @@ public class CopyCommitter extends FileOutputCommitter {
 
     cleanupTempFiles(jobContext);
 
-    String attributes = conf.get(DistCpConstants.CONF_LABEL_PRESERVE_STATUS);
-    final boolean preserveRawXattrs =
-        conf.getBoolean(DistCpConstants.CONF_LABEL_PRESERVE_RAWXATTRS, false);
-    if ((attributes != null && !attributes.isEmpty()) || preserveRawXattrs) {
-      preserveFileAttributesForDirectories(conf);
-    }
-
     try {
       if (conf.getBoolean(DistCpConstants.CONF_LABEL_DELETE_MISSING, false)) {
         deleteMissing(conf);
@@ -124,6 +121,13 @@ public class CopyCommitter extends FileOutputCommitter {
       } else if (conf.get(CONF_LABEL_TRACK_MISSING) != null) {
         // save missing information to a directory
         trackMissing(conf);
+      }
+      // for HDFS-14621, should preserve status after -delete
+      String attributes = conf.get(DistCpConstants.CONF_LABEL_PRESERVE_STATUS);
+      final boolean preserveRawXattrs = conf.getBoolean(
+              DistCpConstants.CONF_LABEL_PRESERVE_RAWXATTRS, false);
+      if ((attributes != null && !attributes.isEmpty()) || preserveRawXattrs) {
+        preserveFileAttributesForDirectories(conf);
       }
       taskAttemptContext.setStatus("Commit Successful");
     }
@@ -247,7 +251,8 @@ public class CopyCommitter extends FileOutputCommitter {
             == srcFileStatus.getLen()) {
           // This is the last chunk of the splits, consolidate allChunkPaths
           try {
-            concatFileChunks(conf, targetFile, allChunkPaths);
+            concatFileChunks(conf, srcFileStatus.getPath(), targetFile,
+                allChunkPaths, srcFileStatus);
           } catch (IOException e) {
             // If the concat failed because a chunk file doesn't exist,
             // then we assume that the CopyMapper has skipped copying this
@@ -603,8 +608,10 @@ public class CopyCommitter extends FileOutputCommitter {
   /**
    * Concat the passed chunk files into one and rename it the targetFile.
    */
-  private void concatFileChunks(Configuration conf, Path targetFile,
-      LinkedList<Path> allChunkPaths) throws IOException {
+  private void concatFileChunks(Configuration conf, Path sourceFile,
+                                Path targetFile, LinkedList<Path> allChunkPaths,
+                                CopyListingFileStatus srcFileStatus)
+      throws IOException {
     if (allChunkPaths.size() == 1) {
       return;
     }
@@ -613,6 +620,7 @@ public class CopyCommitter extends FileOutputCommitter {
           + allChunkPaths.size());
     }
     FileSystem dstfs = targetFile.getFileSystem(conf);
+    FileSystem srcfs = sourceFile.getFileSystem(conf);
 
     Path firstChunkFile = allChunkPaths.removeFirst();
     Path[] restChunkFiles = new Path[allChunkPaths.size()];
@@ -630,6 +638,9 @@ public class CopyCommitter extends FileOutputCommitter {
       LOG.debug("concat: result: " + dstfs.getFileStatus(firstChunkFile));
     }
     rename(dstfs, firstChunkFile, targetFile);
+    DistCpUtils.compareFileLengthsAndChecksums(srcFileStatus.getLen(),
+        srcfs, sourceFile, null, dstfs,
+            targetFile, skipCrc, srcFileStatus.getLen());
   }
 
   /**

@@ -77,7 +77,6 @@ public class TestFilterFileSystem {
         boolean overwrite, int bufferSize, short replication, long blockSize,
         Progressable progress) throws IOException;
 
-    public boolean mkdirs(Path f);
     public FSDataInputStream open(Path f);
     public FSDataInputStream open(PathHandle f);
     public FSDataOutputStream create(Path f);
@@ -135,6 +134,8 @@ public class TestFilterFileSystem {
     public Path fixRelativePart(Path p);
     public ContentSummary getContentSummary(Path f);
     public QuotaUsage getQuotaUsage(Path f);
+    void setQuota(Path f, long namespaceQuota, long storagespaceQuota);
+    void setQuotaByStorageType(Path f, StorageType type, long quota);
     StorageStatistics getStorageStatistics();
   }
 

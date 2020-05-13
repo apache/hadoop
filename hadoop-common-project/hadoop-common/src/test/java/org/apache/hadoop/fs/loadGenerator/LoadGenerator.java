@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Random;
+import java.util.UUID;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -295,7 +296,8 @@ public class LoadGenerator extends Configured implements Tool {
      */
     private void write() throws IOException {
       String dirName = dirs.get(r.nextInt(dirs.size()));
-      Path file = new Path(dirName, hostname+id);
+      Path file =
+          new Path(dirName, hostname + id + UUID.randomUUID().toString());
       double fileSize = 0;
       while ((fileSize = r.nextGaussian()+2)<=0) {}
       genFile(file, (long)(fileSize*BLOCK_SIZE));

@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -63,6 +65,39 @@ public class TestRMStoreCommands {
       assertTrue("After store format parent path should have no child nodes",
           curatorFramework.getChildren().forPath(
           YarnConfiguration.DEFAULT_ZK_RM_STATE_STORE_PARENT_PATH).isEmpty());
+    }
+  }
+
+  @Test
+  public void testFormatConfStoreCmdForZK() throws Exception {
+    try (TestingServer curatorTestingServer =
+        TestZKRMStateStore.setupCuratorServer();
+        CuratorFramework curatorFramework = TestZKRMStateStore.
+            setupCuratorFramework(curatorTestingServer)) {
+      Configuration conf = TestZKRMStateStore.createHARMConf("rm1,rm2", "rm1",
+          1234, false, curatorTestingServer);
+      conf.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
+          YarnConfiguration.ZK_CONFIGURATION_STORE);
+
+      ResourceManager rm = new MockRM(conf);
+      rm.start();
+
+      String confStorePath = conf.get(
+          YarnConfiguration.RM_SCHEDCONF_STORE_ZK_PARENT_PATH,
+          YarnConfiguration.DEFAULT_RM_SCHEDCONF_STORE_ZK_PARENT_PATH)
+          + "/CONF_STORE";
+      assertNotNull("Failed to initialize ZKConfigurationStore",
+          curatorFramework.checkExists().forPath(confStorePath));
+
+      rm.close();
+      try {
+        ResourceManager.deleteRMConfStore(conf);
+      } catch (Exception e) {
+        fail("Exception should not be thrown during format rm conf store" +
+            " operation.");
+      }
+      assertNull("Failed to format ZKConfigurationStore",
+          curatorFramework.checkExists().forPath(confStorePath));
     }
   }
 

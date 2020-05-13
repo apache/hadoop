@@ -24,7 +24,11 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public class TestSLSUtils {
@@ -33,13 +37,13 @@ public class TestSLSUtils {
   public void testGetRackHostname() {
     String str = "/rack1/node1";
     String rackHostname[] = SLSUtils.getRackHostName(str);
-    Assert.assertEquals(rackHostname[0], "rack1");
-    Assert.assertEquals(rackHostname[1], "node1");
+    Assert.assertEquals("rack1", rackHostname[0]);
+    Assert.assertEquals("node1", rackHostname[1]);
 
     str = "/rackA/rackB/node1";
     rackHostname = SLSUtils.getRackHostName(str);
-    Assert.assertEquals(rackHostname[0], "rackA/rackB");
-    Assert.assertEquals(rackHostname[1], "node1");
+    Assert.assertEquals("rackA/rackB", rackHostname[0]);
+    Assert.assertEquals("node1", rackHostname[1]);
   }
 
   @Test
@@ -107,6 +111,26 @@ public class TestSLSUtils {
     nodes = SLSUtils.generateNodes(3, 0);
     Assert.assertEquals("Number of nodes is wrong.", 3, nodes.size());
     Assert.assertEquals("Number of racks is wrong.", 1, getNumRack(nodes));
+  }
+
+  /**
+   * Tests creation of table mapping based on given node details.
+   * @throws Exception
+   */
+  @Test
+  public void testGenerateNodeTableMapping() throws Exception {
+    Set<NodeDetails> nodes = SLSUtils.generateNodes(3, 3);
+    File tempFile = File.createTempFile("testslsutils", ".tmp");
+    tempFile.deleteOnExit();
+    String fileName = tempFile.getAbsolutePath();
+    SLSUtils.generateNodeTableMapping(nodes, fileName);
+
+    List<String> lines = Files.readAllLines(Paths.get(fileName));
+    Assert.assertEquals(3, lines.size());
+    for (String line : lines) {
+      Assert.assertTrue(line.contains("node"));
+      Assert.assertTrue(line.contains("/rack"));
+    }
   }
 
   private int getNumRack(Set<NodeDetails> nodes) {

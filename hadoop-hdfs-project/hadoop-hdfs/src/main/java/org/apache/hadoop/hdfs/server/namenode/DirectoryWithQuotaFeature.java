@@ -140,7 +140,7 @@ public final class DirectoryWithQuotaFeature implements INode.Feature {
 
   private void checkStoragespace(final INodeDirectory dir, final long computed) {
     if (-1 != quota.getStorageSpace() && usage.getStorageSpace() != computed) {
-      NameNode.LOG.error("BUG: Inconsistent storagespace for directory "
+      NameNode.LOG.warn("BUG: Inconsistent storagespace for directory "
           + dir.getFullPathName() + ". Cached = " + usage.getStorageSpace()
           + " != Computed = " + computed);
     }

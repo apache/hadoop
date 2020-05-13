@@ -174,7 +174,7 @@ Perform the following steps:
 * Refresh the Datanodes to pickup the newly added Namenode by running
   the following command against all the Datanodes in the cluster:
 
-        [hdfs]$ $HADOOP_HOME/bin/hdfs dfsadmin -refreshNamenodes <datanode_host_name>:<datanode_rpc_port>
+        [hdfs]$ $HADOOP_HOME/bin/hdfs dfsadmin -refreshNamenodes <datanode_host_name>:<datanode_ipc_port>
 
 Managing the cluster
 --------------------

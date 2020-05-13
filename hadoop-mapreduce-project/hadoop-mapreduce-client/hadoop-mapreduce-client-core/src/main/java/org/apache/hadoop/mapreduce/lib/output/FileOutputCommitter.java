@@ -409,7 +409,7 @@ public class FileOutputCommitter extends PathOutputCommitter {
         LOG.info("Skip cleanup the _temporary folders under job's output " +
             "directory in commitJob.");
       } else {
-        // delete the _temporary folder and create a _done file in the o/p
+        // delete the _temporary folder and create a _SUCCESS file in the o/p
         // folder
         try {
           cleanupJob(context);
@@ -426,6 +426,7 @@ public class FileOutputCommitter extends PathOutputCommitter {
       }
       // True if the job requires output.dir marked on successful job.
       // Note that by default it is set to true.
+      // Create a _SUCCESS file in the o/p folder.
       if (context.getConfiguration().getBoolean(
           SUCCESSFUL_JOB_OUTPUT_DIR_MARKER, true)) {
         Path markerPath = new Path(outputPath, SUCCEEDED_FILE_NAME);

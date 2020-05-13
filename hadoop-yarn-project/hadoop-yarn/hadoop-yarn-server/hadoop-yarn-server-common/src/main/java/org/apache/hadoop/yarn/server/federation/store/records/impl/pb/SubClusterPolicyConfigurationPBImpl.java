@@ -26,7 +26,7 @@ import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.SubClu
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.SubClusterPolicyConfigurationProtoOrBuilder;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 /**
  * Protobuf based implementation of {@link SubClusterPolicyConfiguration}.

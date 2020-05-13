@@ -23,7 +23,7 @@ import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRespo
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenResponseProtoOrBuilder;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenResponse;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 @Private
 @Unstable

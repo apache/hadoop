@@ -454,4 +454,15 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   public AutoCloseableLock acquireDatasetLock() {
     return null;
   }
+
+  @Override
+  public AutoCloseableLock acquireDatasetReadLock() {
+    return null;
+  }
+
+  @Override
+  public Set<? extends Replica> deepCopyReplica(String bpid)
+      throws IOException {
+    return Collections.EMPTY_SET;
+  }
 }

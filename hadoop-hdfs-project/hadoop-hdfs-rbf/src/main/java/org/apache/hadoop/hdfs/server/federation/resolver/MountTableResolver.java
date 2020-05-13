@@ -24,7 +24,7 @@ import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDE
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_MOUNT_TABLE_CACHE_ENABLE;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_MOUNT_TABLE_CACHE_ENABLE_DEFAULT;
-import static org.apache.hadoop.hdfs.server.federation.router.FederationUtil.isParentEntry;
+import static org.apache.hadoop.hdfs.DFSUtil.isParentEntry;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -257,10 +257,11 @@ public class MountTableResolver
     Iterator<Entry<String, PathLocation>> it = entries.iterator();
     while (it.hasNext()) {
       Entry<String, PathLocation> entry = it.next();
+      String key = entry.getKey();
       PathLocation loc = entry.getValue();
       String src = loc.getSourcePath();
       if (src != null) {
-        if (isParentEntry(src, path)) {
+        if (isParentEntry(key, path)) {
           LOG.debug("Removing {}", src);
           it.remove();
         }
@@ -422,8 +423,8 @@ public class MountTableResolver
     } else {
       // Not found, use default location
       if (!defaultNSEnable) {
-        throw new IOException("Cannot find locations for " + path + ", " +
-            "because the default nameservice is disabled to read or write");
+        throw new RouterResolveException("Cannot find locations for " + path
+            + ", because the default nameservice is disabled to read or write");
       }
       RemoteLocation remoteLocation =
           new RemoteLocation(defaultNameService, path, path);

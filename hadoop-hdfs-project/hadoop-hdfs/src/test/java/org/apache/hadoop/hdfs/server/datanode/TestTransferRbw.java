@@ -42,6 +42,8 @@ import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Test;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY;
+
 /** Test transferring RBW between datanodes */
 public class TestTransferRbw {
   private static final Logger LOG =
@@ -102,13 +104,22 @@ public class TestTransferRbw {
       final String bpid = cluster.getNamesystem().getBlockPoolId();
       {
         final DataNode oldnode = cluster.getDataNodes().get(0);
+        // DataXceiverServer#writeThrottler is null if
+        // dfs.datanode.data.write.bandwidthPerSec default value is 0.
+        Assert.assertNull(oldnode.xserver.getWriteThrottler());
         oldrbw = getRbw(oldnode, bpid);
         LOG.info("oldrbw = " + oldrbw);
         
         //add a datanode
+        conf.setLong(DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY,
+            1024 * 1024 * 8);
         cluster.startDataNodes(conf, 1, true, null, null);
         newnode = cluster.getDataNodes().get(REPLICATION);
-        
+        // DataXceiverServer#writeThrottler#balancer is equal to
+        // dfs.datanode.data.write.bandwidthPerSec value if
+        // dfs.datanode.data.write.bandwidthPerSec value is not zero.
+        Assert.assertEquals(1024 * 1024 * 8,
+            newnode.xserver.getWriteThrottler().getBandwidth());
         final DatanodeInfo oldnodeinfo;
         {
           final DatanodeInfo[] datatnodeinfos = cluster.getNameNodeRpc(

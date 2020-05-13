@@ -21,6 +21,8 @@ import static org.apache.hadoop.fs.permission.AclEntryScope.*;
 import static org.apache.hadoop.fs.permission.AclEntryType.*;
 import static org.apache.hadoop.fs.permission.FsAction.*;
 import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 import java.io.IOException;
 import java.util.EnumSet;
@@ -34,6 +36,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrCodec;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -46,6 +49,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus.Flags;
 import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.Assert;
 import org.junit.Test;
@@ -104,6 +108,48 @@ public class TestJsonUtil {
     Assert.assertEquals(status.getErasureCodingPolicy(),
         s2.getErasureCodingPolicy());
     Assert.assertEquals(fstatus, fs2);
+  }
+
+  /**
+   * Verify isSymlink when symlink ie empty.
+   */
+  @Test
+  public void testHdfsFileStatus() throws Exception {
+    HdfsFileStatus hdfsFileStatus = new HdfsFileStatus.Builder()
+        .replication(1)
+        .blocksize(1024)
+        .perm(new FsPermission((short) 777))
+        .owner("owner")
+        .group("group")
+        .symlink(new byte[0])
+        .path(new byte[0])
+        .fileId(1010)
+        .isdir(true)
+        .build();
+
+    assertFalse(hdfsFileStatus.isSymlink());
+    LambdaTestUtils.intercept(IOException.class,
+        "Path " + hdfsFileStatus.getPath() + " is not a symbolic link",
+        () -> hdfsFileStatus.getSymlink());
+
+    String expectString = new StringBuilder()
+        .append("HdfsLocatedFileStatus")
+        .append("{")
+        .append("path=" + null)
+        .append("; isDirectory=" + true)
+        .append("; modification_time=" + 0)
+        .append("; access_time=" + 0)
+        .append("; owner=" + "owner")
+        .append("; group=" + "group")
+        .append("; permission=" + "r----x--t")
+        .append("; isSymlink=" + false)
+        .append("; hasAcl=" + false)
+        .append("; isEncrypted=" + false)
+        .append("; isErasureCoded=" + false)
+        .append("}")
+        .toString();
+
+    assertEquals(expectString, hdfsFileStatus.toString());
   }
 
   @Test
@@ -256,7 +302,40 @@ public class TestJsonUtil {
         JsonUtil.toJsonString(aclStatusBuilder.build()));
 
   }
-  
+
+  @Test
+  public void testToJsonFromContentSummary() {
+    String jsonString =
+        "{\"ContentSummary\":{\"directoryCount\":33333,\"ecPolicy\":"
+            + "\"RS-6-3-1024k\",\"fileCount\":22222,\"length\":11111,"
+            + "\"quota\":44444,\"snapshotDirectoryCount\":1,"
+            + "\"snapshotFileCount\":2,\"snapshotLength\":10,"
+            + "\"snapshotSpaceConsumed\":30,\"spaceConsumed\":55555,"
+            + "\"spaceQuota\":66666,\"typeQuota\":{}}}";
+
+    long length = 11111;
+    long fileCount = 22222;
+    long directoryCount = 33333;
+    long quota = 44444;
+    long spaceConsumed = 55555;
+    long spaceQuota = 66666;
+    String ecPolicy = "RS-6-3-1024k";
+    long snapshotLength = 10;
+    long snapshotFileCount = 2;
+    long snapshotDirectoryCount = 1;
+    long snapshotSpaceConsumed = 30;
+
+    ContentSummary contentSummary = new ContentSummary.Builder().length(length)
+        .fileCount(fileCount).directoryCount(directoryCount).quota(quota)
+        .spaceConsumed(spaceConsumed).spaceQuota(spaceQuota)
+        .erasureCodingPolicy(ecPolicy).snapshotLength(snapshotLength)
+        .snapshotFileCount(snapshotFileCount)
+        .snapshotDirectoryCount(snapshotDirectoryCount)
+        .snapshotSpaceConsumed(snapshotSpaceConsumed).build();
+
+    Assert.assertEquals(jsonString, JsonUtil.toJsonString(contentSummary));
+  }
+
   @Test
   public void testToJsonFromXAttrs() throws IOException {
     String jsonString = 

@@ -24,8 +24,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.TargetApplicationsNamespace;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -56,6 +59,7 @@ import org.junit.runners.Parameterized.Parameters;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -106,6 +110,22 @@ public class TestSchedulingRequestContainerAllocation {
     mgr.init(conf);
   }
 
+  private RMApp submitApp(MockRM rm, int memory, Set<String> appTags)
+      throws Exception {
+    Resource resource = Resource.newInstance(memory, 0);
+    ResourceRequest amResourceRequest = ResourceRequest.newInstance(
+        Priority.newInstance(0), ResourceRequest.ANY, resource, 1);
+    List<ResourceRequest> amResourceRequests =
+        Collections.singletonList(amResourceRequest);
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithResource(resource, rm)
+            .withAmLabel(null)
+            .withAmResourceRequests(amResourceRequests)
+            .withApplicationTags(appTags)
+            .build();
+    return MockRMAppSubmitter.submit(rm, data);
+  }
+
   @Test(timeout = 30000L)
   public void testIntraAppAntiAffinity() throws Exception {
     Configuration csConf = TestUtils.getConfigurationWithMultipleQueues(conf);
@@ -130,7 +150,15 @@ public class TestSchedulingRequestContainerAllocation {
     }
 
     // app1 -> c
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "c");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("c")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nms[0]);
 
     // app1 asks for 10 anti-affinity containers for the same app. It should
@@ -196,7 +224,15 @@ public class TestSchedulingRequestContainerAllocation {
     }
 
     // app1 -> c
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "c");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("c")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nms[0]);
 
     // app1 asks for 2 anti-affinity containers for the same app.
@@ -266,7 +302,15 @@ public class TestSchedulingRequestContainerAllocation {
     }
 
     // app1 -> c
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "c");
+    MockRMAppSubmissionData data2 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("c")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data2);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nms[0]);
 
     // app1 asks for 3 anti-affinity containers for the same app. It should
@@ -287,7 +331,15 @@ public class TestSchedulingRequestContainerAllocation {
         + rmNodes[2].getAllocationTagsWithCount().get("mapper"));
 
     // app2 -> c
-    RMApp app2 = rm1.submitApp(1 * GB, "app", "user", null, "c");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("c")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm1, data1);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nms[0]);
 
     // App2 asks for 3 containers that anti-affinity with any mapper,
@@ -322,7 +374,15 @@ public class TestSchedulingRequestContainerAllocation {
         }));
 
     // app3 -> c
-    RMApp app3 = rm1.submitApp(1 * GB, "app", "user", null, "c");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("c")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app3 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am3 = MockRM.launchAndRegisterAM(app3, rm1, nms[0]);
 
     // App3 asks for 3 containers that anti-affinity with any mapper.
@@ -368,7 +428,15 @@ public class TestSchedulingRequestContainerAllocation {
     }
 
     // app1 -> c
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "c");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("c")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nms[0]);
 
     // app1 asks for 2 anti-affinity containers for the same app.
@@ -410,7 +478,15 @@ public class TestSchedulingRequestContainerAllocation {
     }
 
     // app1 -> c
-    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "c");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("c")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nms[0]);
 
     CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
@@ -446,6 +522,66 @@ public class TestSchedulingRequestContainerAllocation {
     Assert.assertEquals(2, allocated.size());
 
     rm1.close();
+  }
+
+  @Test(timeout = 30000L)
+  public void testInvalidSchedulingRequest() throws Exception {
+
+    Configuration csConf = TestUtils.getConfigurationWithMultipleQueues(conf);
+    MockRM rm1 = new MockRM(csConf) {
+      @Override
+      public RMNodeLabelsManager createNodeLabelManager() {
+        return mgr;
+      }
+    };
+
+    rm1.getRMContext().setNodeLabelManager(mgr);
+    rm1.start();
+
+    // 4 NMs.
+    MockNM[] nms = new MockNM[4];
+    RMNode[] rmNodes = new RMNode[4];
+    for (int i = 0; i < 4; i++) {
+      nms[i] = rm1.registerNode("192.168.0." + i + ":1234", 10 * GB);
+      rmNodes[i] = rm1.getRMContext().getRMNodes().get(nms[i].getNodeId());
+    }
+
+    MockRMAppSubmissionData submissionData =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm1)
+        .withAppName("app")
+        .withUser("user")
+        .withAcls(null)
+        .withQueue("c")
+        .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, submissionData);
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nms[0]);
+
+    // Constraint with Invalid Allocation Tag Namespace
+    PlacementConstraint constraint = targetNotIn("node",
+        allocationTagWithNamespace("invalid", "t1")).build();
+    SchedulingRequest sc = SchedulingRequest
+        .newInstance(1, Priority.newInstance(1),
+        ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED),
+        ImmutableSet.of("t1"),
+        ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)),
+        constraint);
+    AllocateRequest request = AllocateRequest.newBuilder()
+        .schedulingRequests(ImmutableList.of(sc)).build();
+    am1.allocate(request);
+
+    try {
+      GenericTestUtils.waitFor(() -> {
+        try {
+          doNodeHeartbeat(nms);
+          AllocateResponse response = am1.schedule();
+          return response.getRejectedSchedulingRequests().size() == 1;
+        } catch (Exception e) {
+          return false;
+        }
+      }, 500, 20000);
+    } catch (Exception e) {
+      Assert.fail("Failed to reject invalid scheduling request");
+    }
   }
 
   private static void doNodeHeartbeat(MockNM... nms) throws Exception {
@@ -528,7 +664,7 @@ public class TestSchedulingRequestContainerAllocation {
       MockNM nm4 = rm.registerNode("192.168.0.4:1234", 100*GB, 100);
       MockNM nm5 = rm.registerNode("192.168.0.5:1234", 100*GB, 100);
 
-      RMApp app1 = rm.submitApp(1*GB, ImmutableSet.of("hbase"));
+      RMApp app1 = submitApp(rm, 1*GB, ImmutableSet.of("hbase"));
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
       // App1 (hbase)
@@ -567,7 +703,7 @@ public class TestSchedulingRequestContainerAllocation {
       // App2 (web-server)
       // Web server instance has 2 instance and non of them can be co-allocated
       // with hbase-master.
-      RMApp app2 = rm.submitApp(1*GB, ImmutableSet.of("web-server"));
+      RMApp app2 = submitApp(rm, 1*GB, ImmutableSet.of("web-server"));
       MockAM am2 = MockRM.launchAndRegisterAM(app2, rm, nm2);
 
       // App2 (web-server)
@@ -604,7 +740,7 @@ public class TestSchedulingRequestContainerAllocation {
       // App3 has multiple instances that must be co-allocated
       // with app2 server instance, and each node cannot have more than
       // 3 instances.
-      RMApp app3 = rm.submitApp(1*GB, ImmutableSet.of("ws-servants"));
+      RMApp app3 = submitApp(rm, 1*GB, ImmutableSet.of("ws-servants"));
       MockAM am3 = MockRM.launchAndRegisterAM(app3, rm, nm3);
 
 
@@ -656,7 +792,7 @@ public class TestSchedulingRequestContainerAllocation {
       MockNM nm4 = rm.registerNode("192.168.0.4:1234", 10*GB, 10);
       MockNM nm5 = rm.registerNode("192.168.0.5:1234", 10*GB, 10);
 
-      RMApp app1 = rm.submitApp(1*GB, ImmutableSet.of("server1"));
+      RMApp app1 = submitApp(rm, 1*GB, ImmutableSet.of("server1"));
       // Allocate AM container on nm1
       doNodeHeartbeat(nm1);
       RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
@@ -683,7 +819,7 @@ public class TestSchedulingRequestContainerAllocation {
 
       // App1 uses ports: 6000
       String[] server2Ports = new String[] {"port_6000"};
-      RMApp app2 = rm.submitApp(1*GB, ImmutableSet.of("server2"));
+      RMApp app2 = submitApp(rm, 1*GB, ImmutableSet.of("server2"));
       // Allocate AM container on nm1
       doNodeHeartbeat(nm2);
       RMAppAttempt app2attempt1 = app2.getCurrentAppAttempt();
@@ -739,7 +875,7 @@ public class TestSchedulingRequestContainerAllocation {
         // App1 ~ app5 tag "former5"
         // App6 ~ app10 tag "latter5"
         String applicationTag = i<5 ? "former5" : "latter5";
-        RMApp app = rm.submitApp(1*GB, ImmutableSet.of(applicationTag));
+        RMApp app = submitApp(rm, 1*GB, ImmutableSet.of(applicationTag));
         // Allocate AM container on nm1
         doNodeHeartbeat(nm1, nm2, nm3, nm4, nm5);
         RMAppAttempt attempt = app.getCurrentAppAttempt();
@@ -766,7 +902,7 @@ public class TestSchedulingRequestContainerAllocation {
 
       // *** app-id
       // Submit another app, use app-id constraint against app5
-      RMApp app1 = rm.submitApp(1*GB, ImmutableSet.of("xyz"));
+      RMApp app1 = submitApp(rm, 1*GB, ImmutableSet.of("xyz"));
       // Allocate AM container on nm1
       doNodeHeartbeat(nm1);
       RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
@@ -796,7 +932,7 @@ public class TestSchedulingRequestContainerAllocation {
       }
 
       // *** app-tag
-      RMApp app2 = rm.submitApp(1*GB);
+      RMApp app2 = MockRMAppSubmitter.submitWithMemory(1 * GB, rm);
       // Allocate AM container on nm1
       doNodeHeartbeat(nm2);
       RMAppAttempt app2attempt1 = app2.getCurrentAppAttempt();
@@ -821,7 +957,7 @@ public class TestSchedulingRequestContainerAllocation {
       }
 
       // *** not-self
-      RMApp app3 = rm.submitApp(1*GB);
+      RMApp app3 = MockRMAppSubmitter.submitWithMemory(1 * GB, rm);
       // Allocate AM container on nm1
       doNodeHeartbeat(nm3);
       RMAppAttempt app3attempt1 = app3.getCurrentAppAttempt();

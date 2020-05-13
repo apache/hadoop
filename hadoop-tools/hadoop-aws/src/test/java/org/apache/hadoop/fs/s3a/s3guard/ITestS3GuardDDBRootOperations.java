@@ -153,6 +153,7 @@ public class ITestS3GuardDDBRootOperations extends AbstractS3ATestBase {
     Configuration conf = fs.getConf();
     int result = S3GuardTool.run(conf,
         S3GuardTool.Prune.NAME,
+        "-seconds", "1",
         fsUriStr);
     Assertions.assertThat(result)
         .describedAs("Result of prune %s", fsUriStr)
@@ -186,6 +187,7 @@ public class ITestS3GuardDDBRootOperations extends AbstractS3ATestBase {
     int result = S3GuardTool.run(conf,
         S3GuardTool.Prune.NAME,
         "-meta", checkNotNull(metastoreUriStr),
+        "-region", fs.getBucketLocation(),
         "-seconds", "1");
     Assertions.assertThat(result)
         .describedAs("Result of prune %s", fsUriStr)
@@ -234,7 +236,7 @@ public class ITestS3GuardDDBRootOperations extends AbstractS3ATestBase {
       assertDeleted(file, false);
 
 
-      assertTrue("Root directory delete failed",
+      assertFalse("Root directory delete failed",
           fs.delete(root, true));
 
       ContractTestUtils.touch(fs, file2);

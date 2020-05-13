@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.service.provider.tarball;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
+import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
 import org.apache.hadoop.yarn.service.containerlaunch.ContainerLaunchService;
@@ -43,7 +44,8 @@ public class TarballProviderService extends AbstractProviderService {
     }
     log.info("Adding resource {}", artifact);
     LocalResourceType type = LocalResourceType.ARCHIVE;
-    LocalResource packageResource = fileSystem.createAmResource(artifact, type);
+    LocalResource packageResource = fileSystem.createAmResource(artifact, type,
+        LocalResourceVisibility.APPLICATION);
     launcher.addLocalResource(APP_LIB_DIR, packageResource);
   }
 }

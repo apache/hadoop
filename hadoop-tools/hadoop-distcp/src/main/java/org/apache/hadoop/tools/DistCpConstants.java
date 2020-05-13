@@ -120,6 +120,17 @@ public final class DistCpConstants {
   /* DistCp CopyListing class override param */
   public static final String CONF_LABEL_COPY_LISTING_CLASS = "distcp.copy.listing.class";
 
+  /**
+   *  DistCp Filter class override param.
+   */
+  public static final String CONF_LABEL_FILTERS_CLASS = "distcp.filters.class";
+
+  /**
+   *  Distcp exclude file regex override param.
+   */
+  public static final String DISTCP_EXCLUDE_FILE_REGEX =
+          "distcp.exclude-file-regex";
+
   /* DistCp Copy Buffer Size */
   public static final String CONF_LABEL_COPY_BUFFER_SIZE =
       "distcp.copy.buffer.size";
@@ -171,4 +182,13 @@ public final class DistCpConstants {
 
   /** Filename of sorted target listing. */
   public static final String TARGET_SORTED_FILE = "target_sorted.seq";
+
+  public static final String LENGTH_MISMATCH_ERROR_MSG =
+          "Mismatch in length of source:";
+
+  public static final String CHECKSUM_MISMATCH_ERROR_MSG =
+          "Checksum mismatch between ";
+
+  public static final String CLASS_INSTANTIATION_ERROR_MSG =
+          "Unable to instantiate ";
 }

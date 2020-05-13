@@ -227,7 +227,7 @@ public class SaslDataTransferClient {
       throws IOException {
     boolean localTrusted = trustedChannelResolver.isTrusted();
     boolean remoteTrusted = trustedChannelResolver.isTrusted(addr);
-    LOG.info("SASL encryption trust check: localHostTrusted = {}, "
+    LOG.debug("SASL encryption trust check: localHostTrusted = {}, "
         + "remoteHostTrusted = {}", localTrusted, remoteTrusted);
     if (!localTrusted || !remoteTrusted) {
       // The encryption key factory only returns a key if encryption is enabled.

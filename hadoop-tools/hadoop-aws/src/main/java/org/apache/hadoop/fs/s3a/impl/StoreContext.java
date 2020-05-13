@@ -29,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Invoker;
+import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3AStorageStatistics;
@@ -301,6 +302,10 @@ public class StoreContext {
     return createThrottledExecutor(executorCapacity);
   }
 
+  /**
+   * Get the owner of the filesystem.
+   * @return the user who created this filesystem.
+   */
   public UserGroupInformation getOwner() {
     return owner;
   }
@@ -331,5 +336,19 @@ public class StoreContext {
    */
   public ITtlTimeProvider getTimeProvider() {
     return timeProvider;
+  }
+
+  /**
+   * Build the full S3 key for a request from the status entry,
+   * possibly adding a "/" if it represents directory and it does
+   * not have a trailing slash already.
+   * @param stat status to build the key from
+   * @return a key for a delete request
+   */
+  public String fullKey(final S3AFileStatus stat) {
+    String k = pathToKey(stat.getPath());
+    return (stat.isDirectory() && !k.endsWith("/"))
+        ? k + "/"
+        : k;
   }
 }

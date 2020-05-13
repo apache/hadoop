@@ -25,10 +25,8 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.http.lib.StaticUserWebFilter;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.AuthenticationFilterInitializer;
@@ -47,6 +45,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnSched
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigConverterTestCommons;
 import org.apache.hadoop.yarn.server.security.http.RMAuthenticationFilterInitializer;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
@@ -55,29 +54,36 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestResourceManager {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestResourceManager.class);
-  
+
   private ResourceManager resourceManager = null;
 
   @Rule
   public ExpectedException thrown = ExpectedException.none();
+  private FSConfigConverterTestCommons converterTestCommons;
 
   @Before
   public void setUp() throws Exception {
-    Configuration conf = new YarnConfiguration();
+    YarnConfiguration conf = new YarnConfiguration();
     UserGroupInformation.setConfiguration(conf);
     resourceManager = new ResourceManager();
     resourceManager.init(conf);
     resourceManager.getRMContext().getContainerTokenSecretManager().rollMasterKey();
     resourceManager.getRMContext().getNMTokenSecretManager().rollMasterKey();
+
+    converterTestCommons = new FSConfigConverterTestCommons();
+    converterTestCommons.setUp();
   }
 
   @After
   public void tearDown() throws Exception {
     resourceManager.stop();
+    converterTestCommons.tearDown();
   }
 
   private org.apache.hadoop.yarn.server.resourcemanager.NodeManager
@@ -231,7 +237,7 @@ public class TestResourceManager {
   @Test (timeout = 30000)
   public void testResourceManagerInitConfigValidation() throws Exception {
     Configuration conf = new YarnConfiguration();
-    conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, -1);
+    conf.setInt(YarnConfiguration.GLOBAL_RM_AM_MAX_ATTEMPTS, -1);
     try {
       resourceManager = new MockRM(conf);
       fail("Exception is expected because the global max attempts" +
@@ -240,6 +246,17 @@ public class TestResourceManager {
       // Exception is expected.
       if (!e.getMessage().startsWith(
               "Invalid global max attempts configuration")) throw e;
+    }
+    Configuration yarnConf = new YarnConfiguration();
+    yarnConf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, -1);
+    try {
+      resourceManager = new MockRM(yarnConf);
+      fail("Exception is expected because AM max attempts" +
+          " is negative.");
+    } catch (YarnRuntimeException e) {
+      // Exception is expected.
+      if (!e.getMessage().startsWith(
+              "Invalid rm am max attempts configuration")) throw e;
     }
   }
 
@@ -356,5 +373,4 @@ public class TestResourceManager {
       dummyResourceManager.stop();
     }
   }
-
 }

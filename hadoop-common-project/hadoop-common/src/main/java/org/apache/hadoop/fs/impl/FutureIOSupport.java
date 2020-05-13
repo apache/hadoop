@@ -144,13 +144,13 @@ public final class FutureIOSupport {
     Throwable cause = e.getCause();
     if (cause instanceof IOException) {
       return (IOException) cause;
-    } else if (cause instanceof WrappedIOException){
+    } else if (cause instanceof WrappedIOException) {
       return ((WrappedIOException) cause).getCause();
-    } else if (cause instanceof CompletionException){
+    } else if (cause instanceof CompletionException) {
       return unwrapInnerException(cause);
-    } else if (cause instanceof ExecutionException){
+    } else if (cause instanceof ExecutionException) {
       return unwrapInnerException(cause);
-    } else if (cause instanceof RuntimeException){
+    } else if (cause instanceof RuntimeException) {
       throw (RuntimeException) cause;
     } else if (cause != null) {
       // other type: wrap with a new IOE

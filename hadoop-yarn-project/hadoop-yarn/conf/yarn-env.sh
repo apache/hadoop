@@ -53,6 +53,9 @@
 # d) ... or set them directly
 # export YARN_RESOURCEMANAGER_OPTS="-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps -Xloggc:${HADOOP_LOG_DIR}/gc-rm.log-$(date +'%Y%m%d%H%M')"
 #
+# e) Enable ResourceManager audit logging
+# export YARN_RESOURCEMANAGER_OPTS="-Drm.audit.logger=INFO,RMAUDIT"
+#
 #
 # export YARN_RESOURCEMANAGER_OPTS=
 
@@ -70,6 +73,9 @@
 # Specify the JVM options to be used when starting the NodeManager.
 # These options will be appended to the options specified as HADOOP_OPTS
 # and therefore may override any similar flags set in HADOOP_OPTS
+#
+# a) Enable NodeManager audit logging
+# export YARN_NODEMANAGER_OPTS="-Dnm.audit.logger=INFO,NMAUDIT"
 #
 # See ResourceManager for some examples
 #

@@ -24,6 +24,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.*;
 import org.apache.hadoop.tools.CopyListingFileStatus;
 import org.apache.hadoop.tools.mapred.CopyMapper.FileAction;
+
+import org.junit.Assert;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -57,5 +59,26 @@ public class TestRetriableFileCopyCommand {
     }
     assertNotNull("close didn't fail", actualEx);
     assertEquals(expectedEx, actualEx);
-  }  
+  }
+
+  @Test(timeout = 40000)
+  public void testGetNumBytesToRead() {
+    long pos = 100;
+    long buffLength = 1024;
+    long fileLength = 2058;
+    RetriableFileCopyCommand retriableFileCopyCommand =
+            new RetriableFileCopyCommand("Testing NumBytesToRead ",
+                    FileAction.OVERWRITE);
+    long numBytes = retriableFileCopyCommand
+            .getNumBytesToRead(fileLength, pos, buffLength);
+    Assert.assertEquals(1024, numBytes);
+    pos += numBytes;
+    numBytes = retriableFileCopyCommand
+            .getNumBytesToRead(fileLength, pos, buffLength);
+    Assert.assertEquals(934, numBytes);
+    pos += numBytes;
+    numBytes = retriableFileCopyCommand
+            .getNumBytesToRead(fileLength, pos, buffLength);
+    Assert.assertEquals(0, numBytes);
+  }
 }

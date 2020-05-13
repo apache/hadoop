@@ -17,8 +17,6 @@
 */
 package org.apache.hadoop.mapreduce.v2.hs;
 
-import static org.junit.Assert.assertEquals;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -51,7 +49,10 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
 
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
 @RunWith(value = Parameterized.class)
@@ -106,7 +107,7 @@ public class TestJobHistoryEntities {
     assertEquals(1, completedJob.getCompletedReduces());
     assertEquals(12, completedJob.getTasks().size());
     //Verify tasks loaded at this point.
-    assertEquals(true, completedJob.tasksLoaded.get());
+    assertThat(completedJob.tasksLoaded.get()).isTrue();
     assertEquals(10, completedJob.getTasks(TaskType.MAP).size());
     assertEquals(2, completedJob.getTasks(TaskType.REDUCE).size());
     assertEquals("user", completedJob.getUserName());

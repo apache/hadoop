@@ -21,9 +21,7 @@ package org.apache.hadoop.fs.s3a;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.apache.hadoop.fs.contract.s3a.S3AContract;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.Source;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
@@ -40,6 +38,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.FailureInjectionPolicy.*;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.test.LambdaTestUtils.eventually;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -53,16 +52,40 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  */
 public class ITestS3AInconsistency extends AbstractS3ATestBase {
 
-  private static final int OPEN_READ_ITERATIONS = 20;
+  private static final int OPEN_READ_ITERATIONS = 10;
+
+  public static final int INCONSISTENCY_MSEC = 800;
+
+  private static final int INITIAL_RETRY = 128;
+
+  private static final int RETRIES = 4;
+
+  /** By using a power of 2 for the initial time, the total is a shift left. */
+  private static final int TOTAL_RETRY_DELAY = INITIAL_RETRY << RETRIES;
 
   @Override
-  protected AbstractFSContract createContract(Configuration conf) {
+  protected Configuration createConfiguration() {
+    Configuration conf = super.createConfiguration();
+    // reduce retry limit so FileNotFoundException cases timeout faster,
+    // speeding up the tests
+    removeBaseAndBucketOverrides(conf,
+        CHANGE_DETECT_SOURCE,
+        CHANGE_DETECT_MODE,
+        RETRY_LIMIT,
+        RETRY_INTERVAL,
+        METADATASTORE_AUTHORITATIVE,
+        S3_CLIENT_FACTORY_IMPL);
     conf.setClass(S3_CLIENT_FACTORY_IMPL, InconsistentS3ClientFactory.class,
         S3ClientFactory.class);
     conf.set(FAIL_INJECT_INCONSISTENCY_KEY, DEFAULT_DELAY_KEY_SUBSTRING);
+    // the reads are always inconsistent
     conf.setFloat(FAIL_INJECT_INCONSISTENCY_PROBABILITY, 1.0f);
-    conf.setLong(FAIL_INJECT_INCONSISTENCY_MSEC, DEFAULT_DELAY_KEY_MSEC);
-    return new S3AContract(conf);
+    // but the inconsistent time is less than exponential growth of the
+    // retry interval (128 -> 256 -> 512 -> 1024
+    conf.setLong(FAIL_INJECT_INCONSISTENCY_MSEC, INCONSISTENCY_MSEC);
+    conf.setInt(RETRY_LIMIT, RETRIES);
+    conf.set(RETRY_INTERVAL, String.format("%dms", INITIAL_RETRY));
+    return conf;
   }
 
   @Test
@@ -111,7 +134,7 @@ public class ITestS3AInconsistency extends AbstractS3ATestBase {
   public void testOpenDeleteRead() throws Exception {
     S3AFileSystem fs = getFileSystem();
     ChangeDetectionPolicy changeDetectionPolicy =
-        ((S3AFileSystem) fs).getChangeDetectionPolicy();
+        fs.getChangeDetectionPolicy();
     Assume.assumeFalse("FNF not expected when using a bucket with"
             + " object versioning",
         changeDetectionPolicy.getSource() == Source.VersionId);
@@ -124,7 +147,7 @@ public class ITestS3AInconsistency extends AbstractS3ATestBase {
       fs.setMetadataStore(new NullMetadataStore());
       fs.delete(p, false);
       fs.setMetadataStore(metadataStore);
-      eventually(1000, 200, () -> {
+      eventually(TOTAL_RETRY_DELAY * 2, INITIAL_RETRY * 2, () -> {
         intercept(FileNotFoundException.class, () -> s.read());
       });
     }

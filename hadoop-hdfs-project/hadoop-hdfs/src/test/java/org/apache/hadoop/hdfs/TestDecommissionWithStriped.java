@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -27,6 +28,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.BitSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -38,19 +40,28 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -72,6 +83,9 @@ public class TestDecommissionWithStriped {
   private static final int BLOCKREPORT_INTERVAL_MSEC = 1000;
   // replication interval
   private static final int NAMENODE_REPLICATION_INTERVAL = 1;
+
+  private int replicationStreamsHardLimit =
+      DFSConfigKeys.DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_DEFAULT;
 
   private Path decommissionDir;
   private Path hostsFile;
@@ -95,10 +109,13 @@ public class TestDecommissionWithStriped {
   private BlockManager bm;
   private DFSClient client;
 
+  protected Configuration createConfiguration() {
+    return new HdfsConfiguration();
+  }
+
   @Before
   public void setup() throws IOException {
-    conf = new HdfsConfiguration();
-
+    conf = createConfiguration();
     // Set up the hosts/exclude files.
     localFileSys = FileSystem.getLocal(conf);
     Path workingDir = localFileSys.getWorkingDirectory();
@@ -132,7 +149,7 @@ public class TestDecommissionWithStriped {
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
         false);
 
-    numDNs = dataBlocks + parityBlocks + 2;
+    numDNs = dataBlocks + parityBlocks + 5;
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     cluster.waitActive();
     dfs = cluster.getFileSystem(0);
@@ -265,7 +282,6 @@ public class TestDecommissionWithStriped {
         fsn.getNumDecomLiveDataNodes());
 
     // Ensure decommissioned datanode is not automatically shutdown
-    DFSClient client = getDfsClient(cluster.getNameNode(0), conf);
     assertEquals("All datanodes must be alive", numDNs,
         client.datanodeReport(DatanodeReportType.LIVE).length);
 
@@ -273,6 +289,128 @@ public class TestDecommissionWithStriped {
     StripedFileTestUtil.checkData(dfs, ecFile, writeBytes, decommisionNodes,
         null, blockGroupSize);
     cleanupFile(dfs, ecFile);
+  }
+
+  /**
+   * DN decommission shouldn't reconstruction busy DN block.
+   * @throws Exception
+   */
+  @Test(timeout = 120000)
+  public void testDecommissionWithBusyNode() throws Exception {
+    byte busyDNIndex = 1;
+    byte decommisionDNIndex = 0;
+    //1. create EC file
+    final Path ecFile = new Path(ecDir, "testDecommissionWithBusyNode");
+    int writeBytes = cellSize * dataBlocks;
+    writeStripedFile(dfs, ecFile, writeBytes);
+    Assert.assertEquals(0, bm.numOfUnderReplicatedBlocks());
+    FileChecksum fileChecksum1 = dfs.getFileChecksum(ecFile, writeBytes);
+
+    //2. make once DN busy
+    final INodeFile fileNode = cluster.getNamesystem().getFSDirectory()
+        .getINode4Write(ecFile.toString()).asFile();
+    BlockInfo firstBlock = fileNode.getBlocks()[0];
+    DatanodeStorageInfo[] dnStorageInfos = bm.getStorages(firstBlock);
+    DatanodeDescriptor busyNode =
+        dnStorageInfos[busyDNIndex].getDatanodeDescriptor();
+    for (int j = 0; j < replicationStreamsHardLimit; j++) {
+      busyNode.incrementPendingReplicationWithoutTargets();
+    }
+
+    //3. decomission one node
+    List<DatanodeInfo> decommisionNodes = new ArrayList<>();
+    decommisionNodes.add(
+        dnStorageInfos[decommisionDNIndex].getDatanodeDescriptor());
+    decommissionNode(0, decommisionNodes, AdminStates.DECOMMISSIONED);
+    assertEquals(decommisionNodes.size(), fsn.getNumDecomLiveDataNodes());
+
+    //4. wait for decommission block to replicate
+    Thread.sleep(3000);
+    DatanodeStorageInfo[] newDnStorageInfos = bm.getStorages(firstBlock);
+    Assert.assertEquals("Busy DN shouldn't be reconstructed",
+        dnStorageInfos[busyDNIndex].getStorageID(),
+        newDnStorageInfos[busyDNIndex].getStorageID());
+
+    //5. check decommission DN block index, it should be reconstructed again
+    LocatedBlocks lbs = cluster.getNameNodeRpc().getBlockLocations(
+        ecFile.toString(), 0, writeBytes);
+    LocatedStripedBlock bg = (LocatedStripedBlock) (lbs.get(0));
+    int decommissionBlockIndexCount = 0;
+    for (byte index : bg.getBlockIndices()) {
+      if (index == decommisionDNIndex) {
+        decommissionBlockIndexCount++;
+      }
+    }
+
+    Assert.assertEquals("Decommission DN block should be reconstructed", 2,
+        decommissionBlockIndexCount);
+
+    FileChecksum fileChecksum2 = dfs.getFileChecksum(ecFile, writeBytes);
+    Assert.assertTrue("Checksum mismatches!",
+        fileChecksum1.equals(fileChecksum2));
+  }
+
+  /**
+   * Decommission may generate the parity block's content with all 0
+   * in some case.
+   * @throws Exception
+   */
+  @Test(timeout = 120000)
+  public void testDecommission2NodeWithBusyNode() throws Exception {
+    byte busyDNIndex = 6;
+    byte decommissionDNIndex = 6;
+    byte decommissionDNIndex2 = 8;
+    //1. create EC file
+    final Path ecFile = new Path(ecDir, "testDecommission2NodeWithBusyNode");
+    int writeBytes = cellSize * dataBlocks;
+    writeStripedFile(dfs, ecFile, writeBytes);
+
+    Assert.assertEquals(0, bm.numOfUnderReplicatedBlocks());
+    FileChecksum fileChecksum1 = dfs.getFileChecksum(ecFile, writeBytes);
+
+    //2. make once DN busy
+    final INodeFile fileNode = cluster.getNamesystem().getFSDirectory()
+        .getINode4Write(ecFile.toString()).asFile();
+    BlockInfo firstBlock = fileNode.getBlocks()[0];
+    DatanodeStorageInfo[] dnStorageInfos = bm.getStorages(firstBlock);
+    DatanodeDescriptor busyNode = dnStorageInfos[busyDNIndex]
+        .getDatanodeDescriptor();
+    for (int j = 0; j < replicationStreamsHardLimit; j++) {
+      busyNode.incrementPendingReplicationWithoutTargets();
+    }
+
+    //3. decommissioning one node
+    List<DatanodeInfo> decommissionNodes = new ArrayList<>();
+    decommissionNodes.add(dnStorageInfos[decommissionDNIndex]
+        .getDatanodeDescriptor());
+    decommissionNodes.add(dnStorageInfos[decommissionDNIndex2]
+        .getDatanodeDescriptor());
+    decommissionNode(0, decommissionNodes, AdminStates.DECOMMISSION_INPROGRESS);
+
+    //4. wait for decommissioning and not busy block to replicate(9-2+1=8)
+    GenericTestUtils.waitFor(
+        () -> bm.countNodes(firstBlock).liveReplicas() >= 8,
+        100, 60000);
+
+    //5. release busy DN, make the decommissioning and busy block can replicate
+    busyNode.decrementPendingReplicationWithoutTargets();
+
+    //6. decommissioned one node,make the decommission finished
+    decommissionNode(0, decommissionNodes, AdminStates.DECOMMISSIONED);
+
+    //7. Busy DN shouldn't be reconstructed
+    DatanodeStorageInfo[] newDnStorageInfos = bm.getStorages(firstBlock);
+    Assert.assertEquals("Busy DN shouldn't be reconstructed",
+        dnStorageInfos[busyDNIndex].getStorageID(),
+        newDnStorageInfos[busyDNIndex].getStorageID());
+
+    //8. check the checksum of a file
+    FileChecksum fileChecksum2 = dfs.getFileChecksum(ecFile, writeBytes);
+    Assert.assertEquals("Checksum mismatches!", fileChecksum1, fileChecksum2);
+
+    //9. check the data is correct
+    StripedFileTestUtil.checkData(dfs, ecFile, writeBytes, decommissionNodes,
+        null, blockGroupSize);
   }
 
   /**
@@ -428,14 +566,15 @@ public class TestDecommissionWithStriped {
     return new DFSClient(nn.getNameNodeAddress(), conf);
   }
 
-  private void writeStripedFile(DistributedFileSystem dfs, Path ecFile,
-      int writeBytes) throws IOException, Exception {
+  private byte[] writeStripedFile(DistributedFileSystem fs, Path ecFile,
+      int writeBytes) throws Exception {
     byte[] bytes = StripedFileTestUtil.generateBytes(writeBytes);
-    DFSTestUtil.writeFile(dfs, ecFile, new String(bytes));
-    StripedFileTestUtil.waitBlockGroupsReported(dfs, ecFile.toString());
+    DFSTestUtil.writeFile(fs, ecFile, new String(bytes));
+    StripedFileTestUtil.waitBlockGroupsReported(fs, ecFile.toString());
 
-    StripedFileTestUtil.checkData(dfs, ecFile, writeBytes,
+    StripedFileTestUtil.checkData(fs, ecFile, writeBytes,
         new ArrayList<DatanodeInfo>(), null, blockGroupSize);
+    return bytes;
   }
 
   private void writeConfigFile(Path name, List<String> nodes)
@@ -584,5 +723,383 @@ public class TestDecommissionWithStriped {
       }
     }
     return null;
+  }
+
+  /**
+   * Simulate that There are 2 nodes(dn0,dn1) in decommission. Firstly dn0
+   * replicates in success, dn1 replicates in failure. Decommissions go on.
+   */
+  @Test (timeout = 120000)
+  public void testDecommissionWithFailedReplicating() throws Exception {
+
+    // Write ec file.
+    Path ecFile = new Path(ecDir, "firstReplicationFailedFile");
+    int writeBytes = cellSize * 6;
+    writeStripedFile(dfs, ecFile, writeBytes);
+
+    // Get 2 nodes of ec block and set them in decommission.
+    // The 2 nodes are not in pendingNodes of DatanodeAdminManager.
+    List<LocatedBlock> lbs = ((HdfsDataInputStream) dfs.open(ecFile))
+        .getAllBlocks();
+    LocatedStripedBlock blk = (LocatedStripedBlock) lbs.get(0);
+    DatanodeInfo[] dnList = blk.getLocations();
+    DatanodeDescriptor dn0 = bm.getDatanodeManager()
+        .getDatanode(dnList[0].getDatanodeUuid());
+    dn0.startDecommission();
+    DatanodeDescriptor dn1 = bm.getDatanodeManager()
+        .getDatanode(dnList[1].getDatanodeUuid());
+    dn1.startDecommission();
+
+    assertEquals(0, bm.getDatanodeManager().getDatanodeAdminManager()
+        .getNumPendingNodes());
+
+    // Replicate dn0 block to another dn
+    // Simulate that dn0 replicates in success, dn1 replicates in failure.
+    final byte blockIndex = blk.getBlockIndices()[0];
+    final Block targetBlk = new Block(blk.getBlock().getBlockId() + blockIndex,
+        cellSize, blk.getBlock().getGenerationStamp());
+    DatanodeInfo extraDn = getDatanodeOutOfTheBlock(blk);
+    DatanodeDescriptor target = bm.getDatanodeManager()
+        .getDatanode(extraDn.getDatanodeUuid());
+    dn0.addBlockToBeReplicated(targetBlk,
+        new DatanodeStorageInfo[] {target.getStorageInfos()[0]});
+
+    // dn0 replicates in success
+    GenericTestUtils.waitFor(
+        () -> dn0.getNumberOfReplicateBlocks() == 0,
+        100, 60000);
+    GenericTestUtils.waitFor(
+        () -> {
+          Iterator<DatanodeStorageInfo> it =
+              bm.getStoredBlock(targetBlk).getStorageInfos();
+          while(it.hasNext()) {
+            if (it.next().getDatanodeDescriptor().equals(target)) {
+              return true;
+            }
+          }
+          return false;
+        },
+        100, 60000);
+
+    // There are 8 live replicas
+    BlockInfoStriped blockInfo =
+        (BlockInfoStriped)bm.getStoredBlock(
+            new Block(blk.getBlock().getBlockId()));
+    assertEquals(8, bm.countNodes(blockInfo).liveReplicas());
+
+    // Add the 2 nodes to pendingNodes of DatanodeAdminManager
+    bm.getDatanodeManager().getDatanodeAdminManager()
+        .getPendingNodes().add(dn0);
+    bm.getDatanodeManager().getDatanodeAdminManager()
+        .getPendingNodes().add(dn1);
+
+    waitNodeState(dn0, AdminStates.DECOMMISSIONED);
+    waitNodeState(dn1, AdminStates.DECOMMISSIONED);
+
+    // There are 9 live replicas
+    assertEquals(9, bm.countNodes(blockInfo).liveReplicas());
+
+    // After dn0 & dn1 decommissioned, all internal Blocks(0~8) are there
+    Iterator<DatanodeStorageInfo> it = blockInfo.getStorageInfos();
+    BitSet indexBitSet = new BitSet(9);
+    while(it.hasNext()) {
+      DatanodeStorageInfo storageInfo = it.next();
+      if(storageInfo.getDatanodeDescriptor().equals(dn0)
+          || storageInfo.getDatanodeDescriptor().equals(dn1)) {
+        // Skip decommissioned nodes
+        continue;
+      }
+      byte index = blockInfo.getStorageBlockIndex(storageInfo);
+      indexBitSet.set(index);
+    }
+    for (int i = 0; i < 9; ++i) {
+      assertEquals(true, indexBitSet.get(i));
+    }
+  }
+
+  /**
+   * Get a Datanode which does not contain the block.
+   */
+  private DatanodeInfo getDatanodeOutOfTheBlock(LocatedStripedBlock blk)
+      throws Exception {
+    DatanodeInfo[] allDnInfos = client.datanodeReport(DatanodeReportType.LIVE);
+    DatanodeInfo[] blkDnInos= blk.getLocations();
+    for (DatanodeInfo dnInfo : allDnInfos) {
+      boolean in = false;
+      for (DatanodeInfo blkDnInfo : blkDnInos) {
+        if (blkDnInfo.equals(dnInfo)) {
+          in = true;
+        }
+      }
+      if(!in) {
+        return dnInfo;
+      }
+    }
+    return null;
+  }
+
+  @Test (timeout = 120000)
+  public void testDecommissionWithMissingBlock() throws Exception {
+    // Write ec file.
+    Path ecFile = new Path(ecDir, "missingOneInternalBLockFile");
+    int writeBytes = cellSize * 6;
+    writeStripedFile(dfs, ecFile, writeBytes);
+
+    final List<DatanodeInfo> decommisionNodes = new ArrayList<DatanodeInfo>();
+    LocatedBlock lb = dfs.getClient().getLocatedBlocks(ecFile.toString(), 0)
+        .get(0);
+    LocatedStripedBlock lsb = (LocatedStripedBlock)lb;
+    DatanodeInfo[] dnLocs = lsb.getLocations();
+    BlockInfoStriped blockInfo =
+        (BlockInfoStriped)bm.getStoredBlock(
+            new Block(lsb.getBlock().getBlockId()));
+
+    assertEquals(dataBlocks + parityBlocks, dnLocs.length);
+    int decommNodeIndex = 1;
+    int numDecommission= 4;
+    int stopNodeIndex = 0;
+
+    // Add the 4 nodes, and set the 4 nodes decommissioning.
+    // So that they are decommissioning at the same time
+    for (int i = decommNodeIndex; i < numDecommission + decommNodeIndex; ++i) {
+      decommisionNodes.add(dnLocs[i]);
+      DatanodeDescriptor dn = bm.getDatanodeManager()
+          .getDatanode(dnLocs[i].getDatanodeUuid());
+      dn.startDecommission();
+    }
+    GenericTestUtils.waitFor(
+        () -> bm.countNodes(blockInfo).decommissioning() == numDecommission,
+        100, 10000);
+
+    // Namenode does not handle decommissioning nodes now
+    assertEquals(0, bm.getDatanodeManager().getDatanodeAdminManager()
+        .getNumPendingNodes());
+
+    // Replicate dn1 block to another dn
+    // So that one of the 4 replicas has been replicated.
+    final byte blockIndex = lsb.getBlockIndices()[decommNodeIndex];
+    final Block targetBlk = new Block(lsb.getBlock().getBlockId() + blockIndex,
+        cellSize, lsb.getBlock().getGenerationStamp());
+    DatanodeInfo extraDn = getDatanodeOutOfTheBlock(lsb);
+    DatanodeDescriptor target = bm.getDatanodeManager()
+        .getDatanode(extraDn.getDatanodeUuid());
+    DatanodeDescriptor dnStartIndexDecommission = bm.getDatanodeManager()
+        .getDatanode(dnLocs[decommNodeIndex].getDatanodeUuid());
+    dnStartIndexDecommission.addBlockToBeReplicated(targetBlk,
+        new DatanodeStorageInfo[] {target.getStorageInfos()[0]});
+
+    // Wait for replication success.
+    GenericTestUtils.waitFor(
+        () -> {
+          Iterator<DatanodeStorageInfo> it =
+              bm.getStoredBlock(targetBlk).getStorageInfos();
+          while(it.hasNext()) {
+            if (it.next().getDatanodeDescriptor().equals(target)) {
+              return true;
+            }
+          }
+          return false;
+        },
+        100, 60000);
+
+    // Reopen ecFile, get the new locations.
+    lb = dfs.getClient().getLocatedBlocks(ecFile.toString(), 0)
+        .get(0);
+    lsb = (LocatedStripedBlock)lb;
+    DatanodeInfo[] newDnLocs = lsb.getLocations();
+
+    // Now the block has 10 internal blocks.
+    assertEquals(10, newDnLocs.length);
+
+    // Stop the dn0(stopNodeIndex) datanode
+    // So that the internal block from this dn misses
+    DataNode dn = cluster.getDataNode(dnLocs[stopNodeIndex].getIpcPort());
+    cluster.stopDataNode(dnLocs[stopNodeIndex].getXferAddr());
+    cluster.setDataNodeDead(dn.getDatanodeId());
+
+    // So far, there are 4 decommissioning nodes, 1 replica has been
+    // replicated, and 1 replica misses. There are 8 total internal
+    // blocks, 5 live and 3 decommissioning internal blocks.
+    assertEquals(5, bm.countNodes(blockInfo).liveReplicas());
+    assertEquals(3, bm.countNodes(blockInfo).decommissioning());
+
+    // Handle decommission nodes in a new thread.
+    // Verify that nodes are decommissioned.
+    final CountDownLatch decomStarted = new CountDownLatch(0);
+    new Thread(
+        () -> {
+          try {
+            decomStarted.countDown();
+            decommissionNode(0, decommisionNodes, AdminStates.DECOMMISSIONED);
+          } catch (Exception e) {
+            LOG.error("Exception while decommissioning", e);
+            Assert.fail("Shouldn't throw exception!");
+          }
+        }).start();
+    decomStarted.await(5, TimeUnit.SECONDS);
+
+    // Wake up to reconstruct the block.
+    BlockManagerTestUtil.wakeupPendingReconstructionTimerThread(bm);
+
+    // Wait for decommissioning
+    GenericTestUtils.waitFor(
+        // Whether there are 8 live replicas after decommission.
+        () -> bm.countNodes(blockInfo).liveReplicas() == 9,
+        100, 60000);
+
+    StripedFileTestUtil.checkData(dfs, ecFile, writeBytes, decommisionNodes,
+        null, blockGroupSize);
+    cleanupFile(dfs, ecFile);
+  }
+
+  @Test (timeout = 120000)
+  public void testCountNodes() throws Exception{
+    // Write ec file.
+    Path ecFile = new Path(ecDir, "testCountNodes");
+    int writeBytes = cellSize * 6;
+    writeStripedFile(dfs, ecFile, writeBytes);
+
+    List<LocatedBlock> lbs = ((HdfsDataInputStream) dfs.open(ecFile))
+        .getAllBlocks();
+    LocatedStripedBlock blk = (LocatedStripedBlock) lbs.get(0);
+    DatanodeInfo[] dnList = blk.getLocations();
+    DatanodeDescriptor dn0 = bm.getDatanodeManager()
+        .getDatanode(dnList[0].getDatanodeUuid());
+    dn0.startDecommission();
+
+    // Replicate dn0 block to another dn
+    final byte blockIndex = blk.getBlockIndices()[0];
+    final Block targetBlk = new Block(blk.getBlock().getBlockId() + blockIndex,
+        cellSize, blk.getBlock().getGenerationStamp());
+    DatanodeInfo extraDn = getDatanodeOutOfTheBlock(blk);
+    DatanodeDescriptor target = bm.getDatanodeManager()
+        .getDatanode(extraDn.getDatanodeUuid());
+    dn0.addBlockToBeReplicated(targetBlk,
+        new DatanodeStorageInfo[] {target.getStorageInfos()[0]});
+
+    // dn0 replicates in success
+    GenericTestUtils.waitFor(
+        () -> dn0.getNumberOfReplicateBlocks() == 0,
+        100, 60000);
+    GenericTestUtils.waitFor(
+        () -> {
+          Iterator<DatanodeStorageInfo> it =
+              bm.getStoredBlock(targetBlk).getStorageInfos();
+          while(it.hasNext()) {
+            if (it.next().getDatanodeDescriptor().equals(target)) {
+              return true;
+            }
+          }
+          return false;
+        },
+        100, 60000);
+
+    // There are 9 live replicas, 0 decommissioning replicas.
+    BlockInfoStriped blockInfo =
+        (BlockInfoStriped)bm.getStoredBlock(
+            new Block(blk.getBlock().getBlockId()));
+    Iterator<BlockInfoStriped.StorageAndBlockIndex> it =
+        blockInfo.getStorageAndIndexInfos().iterator();
+    DatanodeStorageInfo decommissioningStorage = null;
+    DatanodeStorageInfo liveStorage = null;
+    while(it.hasNext()) {
+      BlockInfoStriped.StorageAndBlockIndex si = it.next();
+      if(si.getStorage().getDatanodeDescriptor().equals(dn0)) {
+        decommissioningStorage = si.getStorage();
+      }
+      if(si.getStorage().getDatanodeDescriptor().equals(target)) {
+        liveStorage = si.getStorage();
+      }
+    }
+    assertNotNull(decommissioningStorage);
+    assertNotNull(liveStorage);
+
+    // Adjust internal block locations
+    // [b0(decommissioning), b1, b2, b3, b4, b5, b6, b7, b8, b0(live)] changed
+    // to [b0(live), b1, b2, b3, b4, b5, b6, b7, b8, b0(decommissioning)]
+    BlockManagerTestUtil.removeStorage(blockInfo, decommissioningStorage);
+    BlockManagerTestUtil.addStorage(blockInfo, liveStorage, targetBlk);
+    BlockManagerTestUtil.addStorage(blockInfo, decommissioningStorage,
+        targetBlk);
+    assertEquals(0, bm.countNodes(blockInfo).decommissioning());
+    assertEquals(9, bm.countNodes(blockInfo).liveReplicas());
+    cleanupFile(dfs, ecFile);
+  }
+
+  /**
+   * Test recovery for an ec block, its storage array contains these internal
+   * blocks which are {b0, b1, b2, b3, null, b5, b6, b7, b8, b0, b1, b2,
+   * b3}, array[0]{b0} in decommissioning, array[1-3]{b1, b2, b3} are
+   * in decommissioned. array[4] is null, array[5-12]{b[5-8],b[0-3]} are
+   * in live.
+   */
+  @Test (timeout = 120000)
+  public void testRecoveryWithDecommission() throws Exception {
+    final Path ecFile = new Path(ecDir, "testRecoveryWithDecommission");
+    int writeBytes = cellSize * dataBlocks;
+    byte[] originBytesArray = writeStripedFile(dfs, ecFile, writeBytes);
+    List<LocatedBlock> lbs = ((HdfsDataInputStream) dfs.open(ecFile))
+        .getAllBlocks();
+    LocatedStripedBlock blk = (LocatedStripedBlock) lbs.get(0);
+    DatanodeInfo[] dnList = blk.getLocations();
+    BlockInfoStriped blockInfo =
+        (BlockInfoStriped)bm.getStoredBlock(
+            new Block(blk.getBlock().getBlockId()));
+
+    // Decommission datanode dn0 contains block b0
+    // Aim to add storageinfo of replicated block b0 to storages[9] of ec block
+    List<DatanodeInfo> decommissionedNodes = new ArrayList<>();
+    decommissionedNodes.add(dnList[0]);
+    decommissionNode(0, decommissionedNodes, AdminStates.DECOMMISSIONED);
+
+    // Now storages of ec block are (b0{decommissioned}, b[1-8]{live},
+    // b0{live})
+    assertEquals(9, bm.countNodes(blockInfo).liveReplicas());
+    assertEquals(1, bm.countNodes(blockInfo).decommissioned());
+
+    int decommissionNodesNum = 4;
+
+    // Decommission nodes contain blocks of b[0-3]
+    // dn0 has been decommissioned
+    for (int i = 1; i < decommissionNodesNum; i++) {
+      decommissionedNodes.add(dnList[i]);
+    }
+    decommissionNode(0, decommissionedNodes, AdminStates.DECOMMISSIONED);
+
+    // Now storages of ec block are (b[0-3]{decommissioned}, b[4-8]{live},
+    // b0{live}, b[1-3]{live})
+    // There are 9 live and 4 decommissioned internal blocks
+    assertEquals(9, bm.countNodes(blockInfo).liveReplicas());
+    assertEquals(4, bm.countNodes(blockInfo).decommissioned());
+
+    // There are no reconstruction tasks
+    assertEquals(0, bm.getDatanodeManager().getDatanodeAdminManager()
+        .getNumPendingNodes());
+    assertEquals(0, bm.getUnderReplicatedNotMissingBlocks());
+
+    // Set dn0 in decommissioning
+    // So that the block on dn0 can be used for reconstruction task
+    DatanodeDescriptor dn0 = bm.getDatanodeManager()
+        .getDatanode(dnList[0].getDatanodeUuid());
+    dn0.startDecommission();
+
+    // Stop the datanode contains b4
+    DataNode dn = cluster.getDataNode(
+        dnList[decommissionNodesNum].getIpcPort());
+    cluster.stopDataNode(dnList[decommissionNodesNum].getXferAddr());
+    cluster.setDataNodeDead(dn.getDatanodeId());
+
+    // Now storages of ec block are (b[0]{decommissioning},
+    // b[1-3]{decommissioned}, null, b[5-8]{live}, b0{live}, b[1-3]{live})
+    // There are 8 live and 1 decommissioning internal blocks
+    // Wait for reconstruction EC block.
+    GenericTestUtils.waitFor(
+        () -> bm.countNodes(blockInfo).liveReplicas() == 9,
+        100, 10000);
+
+    byte[] readBytesArray = new byte[writeBytes];
+    StripedFileTestUtil.verifyPread(dfs, ecFile, writeBytes,
+        originBytesArray, readBytesArray, ecPolicy);
+    cleanupFile(dfs, ecFile);
   }
 }

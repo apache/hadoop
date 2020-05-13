@@ -46,6 +46,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.impl.FutureDataInputStreamBuilderImpl;
+import org.apache.hadoop.fs.impl.FsLinkResolution;
+import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -67,6 +69,8 @@ import com.google.common.base.Preconditions;
 import org.apache.htrace.core.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
 /**
  * The FileContext class provides an interface for users of the Hadoop
@@ -171,7 +175,7 @@ import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class FileContext {
+public class FileContext implements PathCapabilities {
   
   public static final Logger LOG = LoggerFactory.getLogger(FileContext.class);
   /**
@@ -479,7 +483,7 @@ public class FileContext {
    */
   public static FileContext getFileContext(final Configuration aConf)
       throws UnsupportedFileSystemException {
-    final URI defaultFsUri = URI.create(aConf.get(FS_DEFAULT_NAME_KEY,
+    final URI defaultFsUri = URI.create(aConf.getTrimmed(FS_DEFAULT_NAME_KEY,
         FS_DEFAULT_NAME_DEFAULT));
     if (   defaultFsUri.getScheme() != null
         && !defaultFsUri.getScheme().trim().isEmpty()) {
@@ -2920,18 +2924,37 @@ public class FileContext {
     @Override
     public CompletableFuture<FSDataInputStream> build() throws IOException {
       final Path absF = fixRelativePart(getPath());
+      OpenFileParameters parameters = new OpenFileParameters()
+          .withMandatoryKeys(getMandatoryKeys())
+          .withOptions(getOptions())
+          .withBufferSize(getBufferSize())
+          .withStatus(getStatus());
       return new FSLinkResolver<CompletableFuture<FSDataInputStream>>() {
         @Override
         public CompletableFuture<FSDataInputStream> next(
             final AbstractFileSystem fs,
             final Path p)
             throws IOException {
-          return fs.openFileWithOptions(p,
-              getMandatoryKeys(),
-              getOptions(),
-              getBufferSize());
+          return fs.openFileWithOptions(p, parameters);
         }
       }.resolve(FileContext.this, absF);
     }
   }
+
+  /**
+   * Return the path capabilities of the bonded {@code AbstractFileSystem}.
+   * @param path path to query the capability of.
+   * @param capability string to query the stream support for.
+   * @return true iff the capability is supported under that FS.
+   * @throws IOException path resolution or other IO failure
+   * @throws IllegalArgumentException invalid arguments
+   */
+  public boolean hasPathCapability(Path path, String capability)
+      throws IOException {
+    validatePathCapabilityArgs(path, capability);
+    return FsLinkResolution.resolve(this,
+        fixRelativePart(path),
+        (fs, p) -> fs.hasPathCapability(p, capability));
+  }
+
 }

@@ -518,7 +518,7 @@ Use the following URI to obtain a Container Object, from a container identified 
 
 HTTP Request:
 
-      GET http://nm-http-address:port/ws/v1/nodes/containers/container_1326121700862_0007_01_000001
+      GET http://nm-http-address:port/ws/v1/node/containers/container_1326121700862_0007_01_000001
 
 Response Header:
 

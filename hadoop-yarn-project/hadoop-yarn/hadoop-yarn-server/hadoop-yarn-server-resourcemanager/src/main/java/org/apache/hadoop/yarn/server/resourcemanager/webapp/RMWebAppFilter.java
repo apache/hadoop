@@ -69,7 +69,8 @@ public class RMWebAppFilter extends GuiceContainer {
 
   // define a set of URIs which do not need to do redirection
   private static final Set<String> NON_REDIRECTED_URIS = Sets.newHashSet(
-      "/conf", "/stacks", "/logLevel", "/logs", IsActiveServlet.PATH_SPEC);
+      "/conf", "/stacks", "/logLevel", "/logs", IsActiveServlet.PATH_SPEC,
+      "/jmx");
   private String path;
   private boolean ahsEnabled;
   private String ahsPageURLPrefix;

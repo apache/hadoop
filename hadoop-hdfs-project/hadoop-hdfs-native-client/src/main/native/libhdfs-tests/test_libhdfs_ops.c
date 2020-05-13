@@ -360,6 +360,25 @@ int main(int argc, char **argv) {
             shutdown_and_exit(cl, -1);
         }
 
+        // hdfsPreadFully (direct) test
+        if (hdfsPreadFully(fs, preadFile, 0, (void*)buffer,
+                (tSize)(strlen(fileContents) + 1))) {
+            fprintf(stderr, "Failed to preadFully (direct).");
+            shutdown_and_exit(cl, -1);
+        }
+        if (strncmp(fileContents, buffer, strlen(fileContents)) != 0) {
+            fprintf(stderr, "Failed to preadFully (direct). Expected %s but "
+                            "got %s\n", fileContents, buffer);
+            shutdown_and_exit(cl, -1);
+        }
+        fprintf(stderr, "PreadFully (direct) following %d bytes:\n%s\n",
+                num_pread_bytes, buffer);
+        memset(buffer, 0, strlen(fileContents + 1));
+        if (hdfsTell(fs, preadFile) != 0) {
+            fprintf(stderr, "PreadFully changed position of file\n");
+            shutdown_and_exit(cl, -1);
+        }
+
         // Disable the direct pread path so that we really go through the slow
         // read path
         hdfsFileDisableDirectPread(preadFile);
@@ -388,16 +407,36 @@ int main(int argc, char **argv) {
             shutdown_and_exit(cl, -1);
         }
 
+        // Test pread midway through the file rather than at the beginning
         num_pread_bytes = hdfsPread(fs, preadFile, 7, (void*)buffer, sizeof(buffer));
         if (strncmp(fileContentsChunk, buffer, strlen(fileContentsChunk)) != 0) {
-            fprintf(stderr, "Failed to pread (direct). Expected %s but got %s (%d bytes)\n",
+            fprintf(stderr, "Failed to pread. Expected %s but got %s (%d bytes)\n",
                     fileContentsChunk, buffer, num_read_bytes);
             shutdown_and_exit(cl, -1);
         }
-        fprintf(stderr, "Pread (direct) following %d bytes:\n%s\n", num_pread_bytes, buffer);
+        fprintf(stderr, "Pread following %d bytes:\n%s\n", num_pread_bytes, buffer);
         memset(buffer, 0, strlen(fileContents + 1));
         if (hdfsTell(fs, preadFile) != 0) {
             fprintf(stderr, "Pread changed position of file\n");
+            shutdown_and_exit(cl, -1);
+        }
+
+        // hdfsPreadFully test
+        if (hdfsPreadFully(fs, preadFile, 0, (void*)buffer,
+                            (tSize)(strlen(fileContents) + 1))) {
+            fprintf(stderr, "Failed to preadFully.");
+            shutdown_and_exit(cl, -1);
+        }
+        if (strncmp(fileContents, buffer, strlen(fileContents)) != 0) {
+            fprintf(stderr, "Failed to preadFully. Expected %s but got %s\n",
+                    fileContents, buffer);
+            shutdown_and_exit(cl, -1);
+        }
+        fprintf(stderr, "PreadFully following %d bytes:\n%s\n",
+                num_pread_bytes, buffer);
+        memset(buffer, 0, strlen(fileContents + 1));
+        if (hdfsTell(fs, preadFile) != 0) {
+            fprintf(stderr, "PreadFully changed position of file\n");
             shutdown_and_exit(cl, -1);
         }
 

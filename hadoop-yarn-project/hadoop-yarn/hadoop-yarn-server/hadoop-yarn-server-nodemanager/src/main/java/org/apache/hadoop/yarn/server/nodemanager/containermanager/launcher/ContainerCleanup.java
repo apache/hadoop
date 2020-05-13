@@ -35,7 +35,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerExitEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.DockerContainerDeletionTask;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.OCIContainerRuntime;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.DockerLinuxContainerRuntime;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReapContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerSignalContext;
 import org.slf4j.Logger;
@@ -147,7 +147,7 @@ public class ContainerCleanup implements Runnable {
       }
 
       // rm container in docker
-      if (OCIContainerRuntime.isOCICompliantContainerRequested(conf,
+      if (DockerLinuxContainerRuntime.isDockerContainerRequested(conf,
           container.getLaunchContext().getEnvironment())) {
         rmDockerContainerDelayed();
       }
@@ -214,19 +214,5 @@ public class ContainerCleanup implements Runnable {
     return exec.signalContainer(
         new ContainerSignalContext.Builder().setContainer(container)
             .setUser(user).setPid(processId).setSignal(signal).build());
-  }
-
-  private void reapDockerContainerNoPid(String user) throws IOException {
-    String containerIdStr =
-        container.getContainerTokenIdentifier().getContainerID().toString();
-    LOG.info("Unable to obtain pid, but docker container request detected. "
-        + "Attempting to reap container " + containerIdStr);
-    boolean result = exec.reapContainer(
-        new ContainerReapContext.Builder()
-            .setContainer(container)
-            .setUser(container.getUser())
-            .build());
-    LOG.debug("Sent signal to docker container {} as user {}, result={}",
-        containerIdStr, user, (result ? "success" : "failed"));
   }
 }

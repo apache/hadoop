@@ -183,6 +183,8 @@ class BlockSender implements java.io.Closeable {
   // would risk sending too much unnecessary data. 512 (1 disk sector)
   // is likely to result in minimal extra IO.
   private static final long CHUNK_SIZE = 512;
+
+  private static final String EIO_ERROR = "Input/output error";
   /**
    * Constructor
    * 
@@ -324,13 +326,22 @@ class BlockSender implements java.io.Closeable {
             // storage.  The header is important for determining the checksum
             // type later when lazy persistence copies the block to non-transient
             // storage and computes the checksum.
+            int expectedHeaderSize = BlockMetadataHeader.getHeaderSize();
             if (!replica.isOnTransientStorage() &&
-                metaIn.getLength() >= BlockMetadataHeader.getHeaderSize()) {
+                metaIn.getLength() >= expectedHeaderSize) {
               checksumIn = new DataInputStream(new BufferedInputStream(
                   metaIn, IO_FILE_BUFFER_SIZE));
-  
+
               csum = BlockMetadataHeader.readDataChecksum(checksumIn, block);
               keepMetaInOpen = true;
+            } else if (!replica.isOnTransientStorage() &&
+                metaIn.getLength() < expectedHeaderSize) {
+              LOG.warn("The meta file length {} is less than the expected " +
+                  "header length {}, indicating the meta file is corrupt",
+                  metaIn.getLength(), expectedHeaderSize);
+              throw new CorruptMetaHeaderException("The meta file length "+
+                  metaIn.getLength()+" is less than the expected length "+
+                  expectedHeaderSize);
             }
           } else {
             LOG.warn("Could not find metadata file for " + block);
@@ -576,7 +587,14 @@ class BlockSender implements java.io.Closeable {
     
     int dataOff = checksumOff + checksumDataLen;
     if (!transferTo) { // normal transfer
-      ris.readDataFully(buf, dataOff, dataLen);
+      try {
+        ris.readDataFully(buf, dataOff, dataLen);
+      } catch (IOException ioe) {
+        if (ioe.getMessage().startsWith(EIO_ERROR)) {
+          throw new DiskFileCorruptException("A disk IO error occurred", ioe);
+        }
+        throw ioe;
+      }
 
       if (verifyChecksum) {
         verifyChecksum(buf, dataOff, dataLen, numChunks, checksumOff);
@@ -623,11 +641,21 @@ class BlockSender implements java.io.Closeable {
          * It was done here because the NIO throws an IOException for EPIPE.
          */
         String ioem = e.getMessage();
-        if (!ioem.startsWith("Broken pipe") && !ioem.startsWith("Connection reset")) {
-          LOG.error("BlockSender.sendChunks() exception: ", e);
-          datanode.getBlockScanner().markSuspectBlock(
-              ris.getVolumeRef().getVolume().getStorageID(),
-              block);
+        if (ioem != null) {
+          /*
+           * If we got an EIO when reading files or transferTo the client
+           * socket, it's very likely caused by bad disk track or other file
+           * corruptions.
+           */
+          if (ioem.startsWith(EIO_ERROR)) {
+            throw new DiskFileCorruptException("A disk IO error occurred", e);
+          }
+          if (!ioem.startsWith("Broken pipe")
+              && !ioem.startsWith("Connection reset")) {
+            LOG.error("BlockSender.sendChunks() exception: ", e);
+            datanode.getBlockScanner().markSuspectBlock(
+                ris.getVolumeRef().getVolume().getStorageID(), block);
+          }
         }
       }
       throw ioeToSocketException(e);

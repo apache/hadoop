@@ -43,7 +43,7 @@ public class TestErasureCodingPolicyInfo {
     try {
       new ErasureCodingPolicyInfo(SystemErasureCodingPolicies
           .getByID(RS_6_3_POLICY_ID), null);
-      fail("Null policy should fail");
+      fail("Null policy state should fail");
     } catch (NullPointerException expected) {
     }
   }

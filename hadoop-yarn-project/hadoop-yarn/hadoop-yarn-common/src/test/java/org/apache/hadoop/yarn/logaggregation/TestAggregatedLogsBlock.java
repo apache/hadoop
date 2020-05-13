@@ -145,7 +145,11 @@ public class TestAggregatedLogsBlock {
     block.getWriter().flush();
     String out = data.toString();
     assertTrue(out
-        .contains("Logs not available for entity. Aggregation may not be complete, Check back later or try the nodemanager at localhost:1234"));
+        .contains("Logs not available for entity. Aggregation may not be "
+        + "complete, Check back later or try to find the container logs "
+        + "in the local directory of nodemanager localhost:1234"));
+    assertTrue(out
+        .contains("Or see application log at http://localhost:8042"));
 
   }
 

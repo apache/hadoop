@@ -40,6 +40,9 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ORDERING_POLICY;
 
 /**
  * CS configuration provider which implements
@@ -58,32 +61,16 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
   private ConfigurationMutationACLPolicy aclMutationPolicy;
   private RMContext rmContext;
 
+  private final ReentrantReadWriteLock formatLock =
+      new ReentrantReadWriteLock();
+
   public MutableCSConfigurationProvider(RMContext rmContext) {
     this.rmContext = rmContext;
   }
 
   @Override
   public void init(Configuration config) throws IOException {
-    String store = config.get(
-        YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
-        YarnConfiguration.MEMORY_CONFIGURATION_STORE);
-    switch (store) {
-    case YarnConfiguration.MEMORY_CONFIGURATION_STORE:
-      this.confStore = new InMemoryConfigurationStore();
-      break;
-    case YarnConfiguration.LEVELDB_CONFIGURATION_STORE:
-      this.confStore = new LeveldbConfigurationStore();
-      break;
-    case YarnConfiguration.ZK_CONFIGURATION_STORE:
-      this.confStore = new ZKConfigurationStore();
-      break;
-    case YarnConfiguration.FS_CONFIGURATION_STORE:
-      this.confStore = new FSSchedulerConfigurationStore();
-      break;
-    default:
-      this.confStore = YarnConfigurationStoreFactory.getStore(config);
-      break;
-    }
+    this.confStore = YarnConfigurationStoreFactory.getStore(config);
     Configuration initialSchedConf = new Configuration(false);
     initialSchedConf.addResource(YarnConfiguration.CS_CONFIGURATION_FILE);
     this.schedConf = new Configuration(false);
@@ -131,37 +118,112 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
   }
 
   @Override
+  public long getConfigVersion() throws Exception {
+    return confStore.getConfigVersion();
+  }
+
+  @Override
   public ConfigurationMutationACLPolicy getAclMutationPolicy() {
     return aclMutationPolicy;
   }
 
   @Override
-  public void logAndApplyMutation(UserGroupInformation user,
+  public LogMutation logAndApplyMutation(UserGroupInformation user,
       SchedConfUpdateInfo confUpdate) throws Exception {
     oldConf = new Configuration(schedConf);
-    Map<String, String> kvUpdate = constructKeyValueConfUpdate(confUpdate);
+    CapacitySchedulerConfiguration proposedConf =
+            new CapacitySchedulerConfiguration(schedConf, false);
+    Map<String, String> kvUpdate
+            = constructKeyValueConfUpdate(proposedConf, confUpdate);
     LogMutation log = new LogMutation(kvUpdate, user.getShortUserName());
     confStore.logMutation(log);
+    applyMutation(proposedConf, kvUpdate);
+    schedConf = proposedConf;
+    return log;
+  }
+
+  public Configuration applyChanges(Configuration oldConfiguration,
+                           SchedConfUpdateInfo confUpdate) throws IOException {
+    CapacitySchedulerConfiguration proposedConf =
+            new CapacitySchedulerConfiguration(oldConfiguration, false);
+    Map<String, String> kvUpdate
+            = constructKeyValueConfUpdate(proposedConf, confUpdate);
+    applyMutation(proposedConf, kvUpdate);
+    return proposedConf;
+  }
+
+  private void applyMutation(Configuration conf, Map<String, String> kvUpdate) {
     for (Map.Entry<String, String> kv : kvUpdate.entrySet()) {
       if (kv.getValue() == null) {
-        schedConf.unset(kv.getKey());
+        conf.unset(kv.getKey());
       } else {
-        schedConf.set(kv.getKey(), kv.getValue());
+        conf.set(kv.getKey(), kv.getValue());
       }
     }
   }
 
   @Override
-  public void confirmPendingMutation(boolean isValid) throws Exception {
-    confStore.confirmMutation(isValid);
-    if (!isValid) {
+  public void formatConfigurationInStore(Configuration config)
+      throws Exception {
+    formatLock.writeLock().lock();
+    try {
+      confStore.format();
+      oldConf = new Configuration(schedConf);
+      Configuration initialSchedConf = new Configuration(false);
+      initialSchedConf.addResource(YarnConfiguration.CS_CONFIGURATION_FILE);
+      this.schedConf = new Configuration(false);
+      // We need to explicitly set the key-values in schedConf, otherwise
+      // these configuration keys cannot be deleted when
+      // configuration is reloaded.
+      for (Map.Entry<String, String> kv : initialSchedConf) {
+        schedConf.set(kv.getKey(), kv.getValue());
+      }
+      confStore.initialize(config, schedConf, rmContext);
+      confStore.checkVersion();
+    } catch (Exception e) {
+      throw new IOException(e);
+    } finally {
+      formatLock.writeLock().unlock();
+    }
+  }
+
+  @Override
+  public void revertToOldConfig(Configuration config) throws Exception {
+    formatLock.writeLock().lock();
+    try {
       schedConf = oldConf;
+      confStore.format();
+      confStore.initialize(config, oldConf, rmContext);
+      confStore.checkVersion();
+    } catch (Exception e) {
+      throw new IOException(e);
+    } finally {
+      formatLock.writeLock().unlock();
+    }
+  }
+
+  @Override
+  public void confirmPendingMutation(LogMutation pendingMutation,
+      boolean isValid) throws Exception {
+    formatLock.readLock().lock();
+    try {
+      confStore.confirmMutation(pendingMutation, isValid);
+      if (!isValid) {
+        schedConf = oldConf;
+      }
+    } finally {
+      formatLock.readLock().unlock();
     }
   }
 
   @Override
   public void reloadConfigurationFromStore() throws Exception {
-    schedConf = confStore.retrieve();
+    formatLock.readLock().lock();
+    try {
+      schedConf = confStore.retrieve();
+    } finally {
+      formatLock.readLock().unlock();
+    }
   }
 
   private List<String> getSiblingQueues(String queuePath, Configuration conf) {
@@ -173,9 +235,9 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
   }
 
   private Map<String, String> constructKeyValueConfUpdate(
+      CapacitySchedulerConfiguration proposedConf,
       SchedConfUpdateInfo mutationInfo) throws IOException {
-    CapacitySchedulerConfiguration proposedConf =
-        new CapacitySchedulerConfiguration(schedConf, false);
+
     Map<String, String> confUpdate = new HashMap<>();
     for (String queueToRemove : mutationInfo.getRemoveQueueInfo()) {
       removeQueue(queueToRemove, proposedConf, confUpdate);
@@ -219,6 +281,13 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
             + CapacitySchedulerConfiguration.QUEUES;
         if (siblingQueues.size() == 0) {
           confUpdate.put(queuesConfig, null);
+          // Unset Ordering Policy of Leaf Queue converted from
+          // Parent Queue after removeQueue
+          String queueOrderingPolicy = CapacitySchedulerConfiguration.PREFIX
+              + parentQueuePath + CapacitySchedulerConfiguration.DOT
+              + ORDERING_POLICY;
+          proposedConf.unset(queueOrderingPolicy);
+          confUpdate.put(queueOrderingPolicy, null);
         } else {
           confUpdate.put(queuesConfig, Joiner.on(',').join(siblingQueues));
         }
@@ -267,6 +336,14 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
         }
         confUpdate.put(keyPrefix + kv.getKey(), kv.getValue());
       }
+      // Unset Ordering Policy of Parent Queue converted from
+      // Leaf Queue after addQueue
+      String queueOrderingPolicy = CapacitySchedulerConfiguration.PREFIX
+          + parentQueue + CapacitySchedulerConfiguration.DOT + ORDERING_POLICY;
+      if (siblingQueues.size() == 1) {
+        proposedConf.unset(queueOrderingPolicy);
+        confUpdate.put(queueOrderingPolicy, null);
+      }
     }
   }
 
@@ -280,12 +357,14 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
       String keyPrefix = CapacitySchedulerConfiguration.PREFIX
           + queuePath + CapacitySchedulerConfiguration.DOT;
       for (Map.Entry<String, String> kv : updateInfo.getParams().entrySet()) {
-        if (kv.getValue() == null) {
+        String keyValue = kv.getValue();
+        if (keyValue == null || keyValue.isEmpty()) {
+          keyValue = null;
           proposedConf.unset(keyPrefix + kv.getKey());
         } else {
-          proposedConf.set(keyPrefix + kv.getKey(), kv.getValue());
+          proposedConf.set(keyPrefix + kv.getKey(), keyValue);
         }
-        confUpdate.put(keyPrefix + kv.getKey(), kv.getValue());
+        confUpdate.put(keyPrefix + kv.getKey(), keyValue);
       }
     }
   }

@@ -793,39 +793,42 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
             entity = getEntity(entityId, entityType, startTime, queryFields,
                 iterator, key, kp.getOffset());
           }
-          // determine if the retrieved entity matches the provided secondary
-          // filters, and if so add it to the list of entities to return
-          boolean filterPassed = true;
-          if (secondaryFilters != null) {
-            for (NameValuePair filter : secondaryFilters) {
-              Object v = entity.getOtherInfo().get(filter.getName());
-              if (v == null) {
-                Set<Object> vs = entity.getPrimaryFilters()
-                    .get(filter.getName());
-                if (vs == null || !vs.contains(filter.getValue())) {
+
+          if (entity != null) {
+            // determine if the retrieved entity matches the provided secondary
+            // filters, and if so add it to the list of entities to return
+            boolean filterPassed = true;
+            if (secondaryFilters != null) {
+              for (NameValuePair filter : secondaryFilters) {
+                Object v = entity.getOtherInfo().get(filter.getName());
+                if (v == null) {
+                  Set<Object> vs = entity.getPrimaryFilters()
+                          .get(filter.getName());
+                  if (vs == null || !vs.contains(filter.getValue())) {
+                    filterPassed = false;
+                    break;
+                  }
+                } else if (!v.equals(filter.getValue())) {
                   filterPassed = false;
                   break;
                 }
-              } else if (!v.equals(filter.getValue())) {
-                filterPassed = false;
-                break;
               }
             }
-          }
-          if (filterPassed) {
-            if (entity.getDomainId() == null) {
-              entity.setDomainId(DEFAULT_DOMAIN_ID);
-            }
-            if (checkAcl == null || checkAcl.check(entity)) {
-              // Remove primary filter and other info if they are added for
-              // matching secondary filters
-              if (addPrimaryFilters) {
-                entity.setPrimaryFilters(null);
+            if (filterPassed) {
+              if (entity.getDomainId() == null) {
+                entity.setDomainId(DEFAULT_DOMAIN_ID);
               }
-              if (addOtherInfo) {
-                entity.setOtherInfo(null);
+              if (checkAcl == null || checkAcl.check(entity)) {
+                // Remove primary filter and other info if they are added for
+                // matching secondary filters
+                if (addPrimaryFilters) {
+                  entity.setPrimaryFilters(null);
+                }
+                if (addOtherInfo) {
+                  entity.setOtherInfo(null);
+                }
+                entities.addEntity(entity);
               }
-              entities.addEntity(entity);
             }
           }
         }

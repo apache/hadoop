@@ -12,7 +12,8 @@
       "container.end.ms": 23707,
       "container.priority": 20,
       "container.type": "map",
-      "container.execution.type": "GUARANTEED"
+      "container.execution.type": "GUARANTEED",
+      "container.allocation.id": 1
     },
     {
       "container.host": "/default-rack/node3",
@@ -20,7 +21,8 @@
       "container.end.ms": 21593,
       "container.priority": 20,
       "container.type": "map",
-      "container.execution.type": "GUARANTEED"
+      "container.execution.type": "GUARANTEED",
+      "container.allocation.id": 2
     },
     {
       "container.host": "/default-rack/node2",
@@ -28,7 +30,8 @@
       "container.end.ms": 86613,
       "container.priority": 20,
       "container.type": "map",
-      "container.execution.type": "GUARANTEED"
+      "container.execution.type": "GUARANTEED",
+      "container.allocation.id": 2
     }
   ]
 }

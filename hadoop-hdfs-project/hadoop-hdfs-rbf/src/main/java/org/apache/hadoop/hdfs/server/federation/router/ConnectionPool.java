@@ -374,7 +374,7 @@ public class ConnectionPool {
       throws IOException {
     if (!PROTO_MAP.containsKey(proto)) {
       String msg = "Unsupported protocol for connection to NameNode: "
-          + ((proto != null) ? proto.getClass().getName() : "null");
+          + ((proto != null) ? proto.getName() : "null");
       LOG.error(msg);
       throw new IllegalStateException(msg);
     }

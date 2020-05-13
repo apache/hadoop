@@ -22,6 +22,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_PLACEMENT_EC_CLASSNAME_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
@@ -246,6 +248,31 @@ public class TestDFSAdmin {
   }
 
   @Test(timeout = 30000)
+  public void testTriggerBlockReport() throws Exception {
+    redirectStream();
+    final DFSAdmin dfsAdmin = new DFSAdmin(conf);
+    final DataNode dn = cluster.getDataNodes().get(0);
+    final NameNode nn = cluster.getNameNode();
+
+    final String dnAddr = String.format(
+        "%s:%d",
+        dn.getXferAddress().getHostString(),
+        dn.getIpcPort());
+    final String nnAddr = nn.getHostAndPort();
+    resetStream();
+    final List<String> outs = Lists.newArrayList();
+    final int ret = ToolRunner.run(dfsAdmin,
+        new String[]{"-triggerBlockReport", dnAddr, "-incremental", "-namenode", nnAddr});
+    assertEquals(0, ret);
+
+    scanIntoList(out, outs);
+    assertEquals(1, outs.size());
+    assertThat(outs.get(0),
+        is(allOf(containsString("Triggering an incremental block report on "),
+            containsString(" to namenode "))));
+  }
+
+  @Test(timeout = 30000)
   public void testGetVolumeReport() throws Exception {
     redirectStream();
     final DFSAdmin dfsAdmin = new DFSAdmin(conf);
@@ -394,9 +421,11 @@ public class TestDFSAdmin {
     final List<String> outs = Lists.newArrayList();
     final List<String> errs = Lists.newArrayList();
     getReconfigurableProperties("namenode", address, outs, errs);
-    assertEquals(10, outs.size());
-    assertEquals(DFS_HEARTBEAT_INTERVAL_KEY, outs.get(1));
-    assertEquals(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, outs.get(2));
+    assertEquals(12, outs.size());
+    assertEquals(DFS_BLOCK_PLACEMENT_EC_CLASSNAME_KEY, outs.get(1));
+    assertEquals(DFS_BLOCK_REPLICATOR_CLASSNAME_KEY, outs.get(2));
+    assertEquals(DFS_HEARTBEAT_INTERVAL_KEY, outs.get(3));
+    assertEquals(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, outs.get(4));
     assertEquals(errs.size(), 0);
   }
 

@@ -27,7 +27,6 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.Callable;
 
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -84,9 +83,13 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
       }
     }
 
-    S3GuardTool.Import cmd = new S3GuardTool.Import(fs.getConf());
-    cmd.setStore(ms);
-    exec(cmd, "import", parent.toString());
+    S3GuardTool.Import cmd = toClose(new S3GuardTool.Import(fs.getConf()));
+    try {
+      cmd.setStore(ms);
+      exec(cmd, "import", parent.toString());
+    } finally {
+      cmd.setStore(new NullMetadataStore());
+    }
 
     DirListingMetadata children =
         ms.listChildren(dir);
@@ -94,7 +97,7 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
         .getListing().size());
     assertEquals("Expected 2 items: empty directory and a parent directory", 2,
         ms.listChildren(parent).getListing().size());
-    // assertTrue(children.isAuthoritative());
+    assertTrue(children.isAuthoritative());
   }
 
   @Test
@@ -120,9 +123,13 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
         "bogusVersionId", retrievedBogusStatus.getVersionId());
 
     // execute the import
-    S3GuardTool.Import cmd = new S3GuardTool.Import(fs.getConf());
+    S3GuardTool.Import cmd = toClose(new S3GuardTool.Import(fs.getConf()));
     cmd.setStore(ms);
-    exec(cmd, "import", path.toString());
+    try {
+      exec(cmd, "import", path.toString());
+    } finally {
+      cmd.setStore(new NullMetadataStore());
+    }
 
     // make sure ETag and versionId were corrected
     S3AFileStatus updatedStatus = (S3AFileStatus) fs.getFileStatus(path);
@@ -141,34 +148,27 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
 
   @Test
   public void testImportNoFilesystem() throws Throwable {
-    final Import importer =
-        new S3GuardTool.Import(getConfiguration());
+    final Import importer = toClose(new S3GuardTool.Import(getConfiguration()));
     importer.setStore(getMetadataStore());
-    intercept(IOException.class,
-        new Callable<Integer>() {
-          @Override
-          public Integer call() throws Exception {
-            return importer.run(
-                new String[]{
-                    "import",
-                    "-meta", LOCAL_METADATA,
-                    S3A_THIS_BUCKET_DOES_NOT_EXIST
-                });
-          }
-        });
+    try {
+      intercept(IOException.class,
+          () -> importer.run(
+              new String[]{
+                  "import",
+                  "-meta", LOCAL_METADATA,
+                  S3A_THIS_BUCKET_DOES_NOT_EXIST
+              }));
+    } finally {
+      importer.setStore(new NullMetadataStore());
+    }
   }
 
   @Test
   public void testInfoBucketAndRegionNoFS() throws Throwable {
     intercept(FileNotFoundException.class,
-        new Callable<Integer>() {
-          @Override
-          public Integer call() throws Exception {
-            return run(BucketInfo.NAME, "-meta",
-                LOCAL_METADATA, "-region",
-                "any-region", S3A_THIS_BUCKET_DOES_NOT_EXIST);
-          }
-        });
+        () -> run(BucketInfo.NAME, "-meta",
+            LOCAL_METADATA, "-region",
+            "any-region", S3A_THIS_BUCKET_DOES_NOT_EXIST));
   }
 
   @Test
@@ -230,24 +230,33 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
 
   @Test
   public void testStoreInfo() throws Throwable {
-    S3GuardTool.BucketInfo cmd = new S3GuardTool.BucketInfo(
-        getFileSystem().getConf());
+    S3GuardTool.BucketInfo cmd =
+        toClose(new S3GuardTool.BucketInfo(getFileSystem().getConf()));
     cmd.setStore(getMetadataStore());
-    String output = exec(cmd, cmd.getName(),
-        "-" + S3GuardTool.BucketInfo.GUARDED_FLAG,
-        getFileSystem().getUri().toString());
-    LOG.info("Exec output=\n{}", output);
+    try {
+      String output = exec(cmd, cmd.getName(),
+          "-" + BucketInfo.GUARDED_FLAG,
+          getFileSystem().getUri().toString());
+      LOG.info("Exec output=\n{}", output);
+    } finally {
+      cmd.setStore(new NullMetadataStore());
+    }
   }
 
   @Test
   public void testSetCapacity() throws Throwable {
-    S3GuardTool cmd = new S3GuardTool.SetCapacity(getFileSystem().getConf());
+    S3GuardTool cmd = toClose(
+        new S3GuardTool.SetCapacity(getFileSystem().getConf()));
     cmd.setStore(getMetadataStore());
-    String output = exec(cmd, cmd.getName(),
-        "-" + READ_FLAG, "100",
-        "-" + WRITE_FLAG, "100",
-        getFileSystem().getUri().toString());
-    LOG.info("Exec output=\n{}", output);
+    try {
+      String output = exec(cmd, cmd.getName(),
+          "-" + READ_FLAG, "100",
+          "-" + WRITE_FLAG, "100",
+          getFileSystem().getUri().toString());
+      LOG.info("Exec output=\n{}", output);
+    } finally {
+      cmd.setStore(new NullMetadataStore());
+    }
   }
 
   private final static String UPLOAD_PREFIX = "test-upload-prefix";
@@ -416,7 +425,7 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
       while ((line = reader.readLine()) != null) {
         String[] fields = line.split("\\s");
         if (fields.length == 4 && fields[0].equals(Uploads.TOTAL)) {
-          int parsedUploads = Integer.valueOf(fields[1]);
+          int parsedUploads = Integer.parseInt(fields[1]);
           LOG.debug("Matched CLI output: {} {} {} {}",
               fields[0], fields[1], fields[2], fields[3]);
           assertEquals("Unexpected number of uploads", numUploads,

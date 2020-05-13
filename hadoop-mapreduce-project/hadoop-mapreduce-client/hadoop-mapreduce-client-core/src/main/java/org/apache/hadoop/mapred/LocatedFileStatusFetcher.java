@@ -46,15 +46,23 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
 /**
  * Utility class to fetch block locations for specified Input paths using a
  * configured number of threads.
+ * The thread count is determined from the value of
+ * "mapreduce.input.fileinputformat.list-status.num-threads" in the
+ * configuration.
  */
 @Private
 public class LocatedFileStatusFetcher {
 
+  public static final Logger LOG =
+      LoggerFactory.getLogger(LocatedFileStatusFetcher.class.getName());
   private final Path[] inputDirs;
   private final PathFilter inputFilter;
   private final Configuration conf;
@@ -64,7 +72,7 @@ public class LocatedFileStatusFetcher {
   private final ExecutorService rawExec;
   private final ListeningExecutorService exec;
   private final BlockingQueue<List<FileStatus>> resultQueue;
-  private final List<IOException> invalidInputErrors = new LinkedList<IOException>();
+  private final List<IOException> invalidInputErrors = new LinkedList<>();
 
   private final ProcessInitialInputPathCallback processInitialInputPathCallback = 
       new ProcessInitialInputPathCallback();
@@ -79,25 +87,30 @@ public class LocatedFileStatusFetcher {
   private volatile Throwable unknownError;
 
   /**
+   * Instantiate.
+   * The newApi switch is only used to configure what exception is raised
+   * on failure of {@link #getFileStatuses()}, it does not change the algorithm.
    * @param conf configuration for the job
    * @param dirs the initial list of paths
-   * @param recursive whether to traverse the patchs recursively
+   * @param recursive whether to traverse the paths recursively
    * @param inputFilter inputFilter to apply to the resulting paths
    * @param newApi whether using the mapred or mapreduce API
    * @throws InterruptedException
    * @throws IOException
    */
   public LocatedFileStatusFetcher(Configuration conf, Path[] dirs,
-      boolean recursive, PathFilter inputFilter, boolean newApi) throws InterruptedException,
-      IOException {
+      boolean recursive, PathFilter inputFilter, boolean newApi)
+      throws InterruptedException, IOException {
     int numThreads = conf.getInt(FileInputFormat.LIST_STATUS_NUM_THREADS,
         FileInputFormat.DEFAULT_LIST_STATUS_NUM_THREADS);
+    LOG.debug("Instantiated LocatedFileStatusFetcher with {} threads",
+        numThreads);
     rawExec = HadoopExecutors.newFixedThreadPool(
         numThreads,
         new ThreadFactoryBuilder().setDaemon(true)
             .setNameFormat("GetFileInfo #%d").build());
     exec = MoreExecutors.listeningDecorator(rawExec);
-    resultQueue = new LinkedBlockingQueue<List<FileStatus>>();
+    resultQueue = new LinkedBlockingQueue<>();
     this.conf = conf;
     this.inputDirs = dirs;
     this.recursive = recursive;
@@ -106,10 +119,13 @@ public class LocatedFileStatusFetcher {
   }
 
   /**
-   * Start executing and return FileStatuses based on the parameters specified
+   * Start executing and return FileStatuses based on the parameters specified.
    * @return fetched file statuses
-   * @throws InterruptedException
-   * @throws IOException
+   * @throws InterruptedException interruption waiting for results.
+   * @throws IOException IO failure or other error.
+   * @throws InvalidInputException on an invalid input and the old API
+   * @throws org.apache.hadoop.mapreduce.lib.input.InvalidInputException on an
+   *         invalid input and the new API.
    */
   public Iterable<FileStatus> getFileStatuses() throws InterruptedException,
       IOException {
@@ -117,6 +133,7 @@ public class LocatedFileStatusFetcher {
     // rest being scheduled does not lead to a termination.
     runningTasks.incrementAndGet();
     for (Path p : inputDirs) {
+      LOG.debug("Queuing scan of directory {}", p);
       runningTasks.incrementAndGet();
       ListenableFuture<ProcessInitialInputPathCallable.Result> future = exec
           .submit(new ProcessInitialInputPathCallable(p, conf, inputFilter));
@@ -128,14 +145,20 @@ public class LocatedFileStatusFetcher {
 
     lock.lock();
     try {
+      LOG.debug("Waiting scan completion");
       while (runningTasks.get() != 0 && unknownError == null) {
         condition.await();
       }
     } finally {
       lock.unlock();
     }
+    // either the scan completed or an error was raised.
+    // in the case of an error shutting down the executor will interrupt all
+    // active threads, which can add noise to the logs.
+    LOG.debug("Scan complete: shutting down");
     this.exec.shutdownNow();
     if (this.unknownError != null) {
+      LOG.debug("Scan failed", this.unknownError);
       if (this.unknownError instanceof Error) {
         throw (Error) this.unknownError;
       } else if (this.unknownError instanceof RuntimeException) {
@@ -148,7 +171,11 @@ public class LocatedFileStatusFetcher {
         throw new IOException(this.unknownError);
       }
     }
-    if (this.invalidInputErrors.size() != 0) {
+    if (!this.invalidInputErrors.isEmpty()) {
+      LOG.debug("Invalid Input Errors raised");
+      for (IOException error : invalidInputErrors) {
+        LOG.debug("Error", error);
+      }
       if (this.newApi) {
         throw new org.apache.hadoop.mapreduce.lib.input.InvalidInputException(
             invalidInputErrors);
@@ -161,7 +188,7 @@ public class LocatedFileStatusFetcher {
 
   /**
    * Collect misconfigured Input errors. Errors while actually reading file info
-   * are reported immediately
+   * are reported immediately.
    */
   private void registerInvalidInputError(List<IOException> errors) {
     synchronized (this) {
@@ -171,9 +198,10 @@ public class LocatedFileStatusFetcher {
 
   /**
    * Register fatal errors - example an IOException while accessing a file or a
-   * full exection queue
+   * full execution queue.
    */
   private void registerError(Throwable t) {
+    LOG.debug("Error", t);
     lock.lock();
     try {
       if (unknownError == null) {
@@ -221,7 +249,7 @@ public class LocatedFileStatusFetcher {
     public Result call() throws Exception {
       Result result = new Result();
       result.fs = fs;
-
+      LOG.debug("ProcessInputDirCallable {}", fileStatus);
       if (fileStatus.isDirectory()) {
         RemoteIterator<LocatedFileStatus> iter = fs
             .listLocatedStatus(fileStatus.getPath());
@@ -231,7 +259,8 @@ public class LocatedFileStatusFetcher {
             if (recursive && stat.isDirectory()) {
               result.dirsNeedingRecursiveCalls.add(stat);
             } else {
-              result.locatedFileStatuses.add(stat);
+              result.locatedFileStatuses.add(org.apache.hadoop.mapreduce.lib.
+                  input.FileInputFormat.shrinkStatus(stat));
             }
           }
         }
@@ -242,8 +271,8 @@ public class LocatedFileStatusFetcher {
     }
 
     private static class Result {
-      private List<FileStatus> locatedFileStatuses = new LinkedList<FileStatus>();
-      private List<FileStatus> dirsNeedingRecursiveCalls = new LinkedList<FileStatus>();
+      private List<FileStatus> locatedFileStatuses = new LinkedList<>();
+      private List<FileStatus> dirsNeedingRecursiveCalls = new LinkedList<>();
       private FileSystem fs;
     }
   }
@@ -259,11 +288,12 @@ public class LocatedFileStatusFetcher {
     @Override
     public void onSuccess(ProcessInputDirCallable.Result result) {
       try {
-        if (result.locatedFileStatuses.size() != 0) {
+        if (!result.locatedFileStatuses.isEmpty()) {
           resultQueue.add(result.locatedFileStatuses);
         }
-        if (result.dirsNeedingRecursiveCalls.size() != 0) {
+        if (!result.dirsNeedingRecursiveCalls.isEmpty()) {
           for (FileStatus fileStatus : result.dirsNeedingRecursiveCalls) {
+            LOG.debug("Queueing directory scan {}", fileStatus.getPath());
             runningTasks.incrementAndGet();
             ListenableFuture<ProcessInputDirCallable.Result> future = exec
                 .submit(new ProcessInputDirCallable(result.fs, fileStatus,
@@ -285,7 +315,7 @@ public class LocatedFileStatusFetcher {
     }
   }
 
-  
+
   /**
    * Processes an initial Input Path pattern through the globber and PathFilter
    * to generate a list of files which need further processing.
@@ -309,6 +339,7 @@ public class LocatedFileStatusFetcher {
       Result result = new Result();
       FileSystem fs = path.getFileSystem(conf);
       result.fs = fs;
+      LOG.debug("ProcessInitialInputPathCallable path {}", path);
       FileStatus[] matches = fs.globStatus(path, inputFilter);
       if (matches == null) {
         result.addError(new IOException("Input path does not exist: " + path));
@@ -337,7 +368,7 @@ public class LocatedFileStatusFetcher {
 
   /**
    * The callback handler to handle results generated by
-   * {@link ProcessInitialInputPathCallable}
+   * {@link ProcessInitialInputPathCallable}.
    * 
    */
   private class ProcessInitialInputPathCallback implements

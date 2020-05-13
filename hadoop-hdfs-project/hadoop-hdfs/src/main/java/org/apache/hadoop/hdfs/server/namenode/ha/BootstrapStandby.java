@@ -108,6 +108,9 @@ public class BootstrapStandby implements Tool, Configurable {
   @Override
   public int run(String[] args) throws Exception {
     parseArgs(args);
+    // Disable using the RPC tailing mechanism for bootstrapping the standby
+    // since it is less efficient in this case; see HDFS-14806
+    conf.setBoolean(DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY, false);
     parseConfAndFindOtherNN();
     NameNode.checkAllowFormat(conf);
 

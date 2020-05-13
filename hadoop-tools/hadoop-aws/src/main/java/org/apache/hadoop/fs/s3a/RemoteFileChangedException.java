@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.PathIOException;
 /**
  * Indicates the S3 object is out of sync with the expected version.  Thrown in
  * cases such as when the object is updated while an {@link S3AInputStream} is
- * open.
+ * open, or when a file expected was never found.
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Public
@@ -34,6 +34,20 @@ public class RemoteFileChangedException extends PathIOException {
 
   public static final String PRECONDITIONS_FAILED =
       "Constraints of request were unsatisfiable";
+
+  /**
+   * While trying to get information on a file known to S3Guard, the
+   * file never became visible in S3.
+   */
+  public static final String FILE_NEVER_FOUND =
+      "File to rename not found on guarded S3 store after repeated attempts";
+
+  /**
+   * The file wasn't found in rename after a single attempt -the unguarded
+   * codepath.
+   */
+  public static final String FILE_NOT_FOUND_SINGLE_ATTEMPT =
+      "File to rename not found on unguarded S3 store";
 
   /**
    * Constructs a RemoteFileChangedException.

@@ -38,6 +38,8 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -220,7 +222,15 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     ContainerId containerId;
     // launch an app to queue a1 (label = x), and check all container will
     // be allocated in h1
-    RMApp app1 = rm.submitApp(GB, "app", "user", null, "a");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm3);
     ApplicationResourceUsageReport appResourceUsageReport =
         rm.getResourceScheduler().getAppResourceUsageReport(
@@ -285,7 +295,15 @@ public class TestCapacitySchedulerNodeLabelUpdate {
 
     // launch an app to queue a1 (label = x), and check all container will
     // be allocated in h1
-    RMApp app1 = rm.submitApp(GB, "app", "user", null, "a");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm3);
 
     // request a container.
@@ -446,7 +464,15 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     MockNM nm4 = rm.registerNode("h4:1234", 4096 * 2);
     // launch an app to queue a1 (label = x), and check all container will
     // be allocated in h1
-    RMApp app1 = rm.submitApp(GB, "app", "user", null, "a1");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a1")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm3);
     am1.allocate("*", GB, 1, new ArrayList<ContainerId>(), "x");
     ContainerId container1 =
@@ -466,7 +492,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     } catch (Exception e) {
       Assert.assertTrue("Yarn Exception should be thrown",
           e instanceof YarnException);
-      Assert.assertEquals("Specified queue=a2 can't satisfy "
+      Assert.assertEquals("Specified queue=root.a.a2 can't satisfy "
           + "following apps label expressions =[x] accessible "
           + "node labels =[y]", e.getMessage());
     }
@@ -524,7 +550,15 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     MockNM nm2 = rm.registerNode("h2:1234", 80000);
 
     // app1
-    RMApp app1 = rm.submitApp(GB, "app", "u1", null, "a");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("app")
+            .withUser("u1")
+            .withAcls(null)
+            .withQueue("a")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data1);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm2);
 
     // c2 on n1, c3 on n2
@@ -540,7 +574,15 @@ public class TestCapacitySchedulerNodeLabelUpdate {
         RMContainerState.ALLOCATED));
     
     // app2
-    RMApp app2 = rm.submitApp(GB, "app", "u2", null, "a");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("app")
+            .withUser("u2")
+            .withAcls(null)
+            .withQueue("a")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app2 = MockRMAppSubmitter.submit(rm, data);
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm, nm2);
 
     // c2/c3 on n1
@@ -664,7 +706,15 @@ public class TestCapacitySchedulerNodeLabelUpdate {
 
     // launch an app to queue a1 (label = x), and check all container will
     // be allocated in h1
-    RMApp app1 = rm.submitApp(GB, "app", "user", null, "a", "x");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a")
+            .withAmLabel("x")
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
     // request a container.
@@ -760,7 +810,15 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     rm.registerNode("h9:1234", 2048);
 
     // Submit app with AM container launched on default partition i.e. h1.
-    RMApp app = rm.submitApp(GB, "app", "user", null, "a");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app = MockRMAppSubmitter.submit(rm, data);
     MockRM.launchAndRegisterAM(app, rm, nm1);
     RMAppAttempt appAttempt = app.getCurrentAppAttempt();
     // Add default node blacklist from default
@@ -776,7 +834,15 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     Assert.assertEquals(2, blacklistUpdates.getBlacklistRemovals().size());
 
     // Submission in label x
-    RMApp applabel = rm.submitApp(GB, "app", "user", null, "a", "x");
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a")
+            .withAmLabel("x")
+            .build();
+    RMApp applabel = MockRMAppSubmitter.submit(rm, data1);
     MockRM.launchAndRegisterAM(applabel, rm, nm2);
     RMAppAttempt appAttemptlabelx = applabel.getCurrentAppAttempt();
     appAttemptlabelx.getAMBlacklistManager().addNode("h2");

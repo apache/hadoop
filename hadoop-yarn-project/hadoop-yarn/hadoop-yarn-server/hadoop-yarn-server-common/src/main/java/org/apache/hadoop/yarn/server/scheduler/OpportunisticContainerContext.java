@@ -201,7 +201,7 @@ public class OpportunisticContainerContext {
   }
 
   @VisibleForTesting
-  OpportunisticSchedulerMetrics getOppSchedulerMetrics() {
+  public OpportunisticSchedulerMetrics getOppSchedulerMetrics() {
     return OpportunisticSchedulerMetrics.getMetrics();
   }
 }

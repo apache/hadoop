@@ -53,6 +53,8 @@ import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
+
 /****************************************************************
  * Implement the FileSystem API for the raw local filesystem.
  *
@@ -1059,5 +1061,22 @@ public class RawLocalFileSystem extends FileSystem {
     FileStatus fi = getFileLinkStatusInternal(f, false);
     // return an unqualified symlink target
     return fi.getSymlink();
+  }
+
+  @Override
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+    switch (validatePathCapabilityArgs(makeQualified(path), capability)) {
+    case CommonPathCapabilities.FS_APPEND:
+    case CommonPathCapabilities.FS_CONCAT:
+    case CommonPathCapabilities.FS_PATHHANDLES:
+    case CommonPathCapabilities.FS_PERMISSIONS:
+    case CommonPathCapabilities.FS_TRUNCATE:
+      return true;
+    case CommonPathCapabilities.FS_SYMLINKS:
+      return FileSystem.areSymlinksEnabled();
+    default:
+      return super.hasPathCapability(path, capability);
+    }
   }
 }

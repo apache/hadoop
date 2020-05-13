@@ -62,7 +62,6 @@ public class ITestAbfsIdentityTransformer extends AbstractAbfsScaleTest{
 
   public ITestAbfsIdentityTransformer() throws Exception {
     super();
-    UserGroupInformation.reset();
     userGroupInfo = UserGroupInformation.getCurrentUser();
     localUser = userGroupInfo.getShortUserName();
     localGroup = userGroupInfo.getPrimaryGroupName();
@@ -250,9 +249,13 @@ public class ITestAbfsIdentityTransformer extends AbstractAbfsScaleTest{
             aclEntry(DEFAULT, MASK, ALL)               //         to make the behavior consistent with HDI.
     );
 
+    // make a copy
+    List<AclEntry> aclEntries = Lists.newArrayList(aclEntriesToBeTransformed);
+
     // Default config should not change the identities
     IdentityTransformer identityTransformer = getTransformerWithDefaultIdentityConfig(config);
-    checkAclEntriesList(aclEntriesToBeTransformed, identityTransformer.transformAclEntriesForSetRequest(aclEntriesToBeTransformed));
+    identityTransformer.transformAclEntriesForSetRequest(aclEntries);
+    checkAclEntriesList(aclEntriesToBeTransformed, aclEntries);
 
     resetIdentityConfig(config);
     // With config
@@ -261,6 +264,8 @@ public class ITestAbfsIdentityTransformer extends AbstractAbfsScaleTest{
     config.set(FS_AZURE_FILE_OWNER_DOMAINNAME, DOMAIN);
     config.set(FS_AZURE_OVERRIDE_OWNER_SP, SERVICE_PRINCIPAL_ID);
     identityTransformer = getTransformerWithCustomizedIdentityConfig(config);
+
+    identityTransformer.transformAclEntriesForSetRequest(aclEntries);
 
     // expected acl entries
     List<AclEntry> expectedAclEntries = Lists.newArrayList(
@@ -275,8 +280,56 @@ public class ITestAbfsIdentityTransformer extends AbstractAbfsScaleTest{
             aclEntry(DEFAULT, MASK, ALL)
     );
 
-    checkAclEntriesList(identityTransformer.transformAclEntriesForSetRequest(aclEntriesToBeTransformed), expectedAclEntries);
+    checkAclEntriesList(aclEntries, expectedAclEntries);
+  }
 
+  @Test
+  public void transformAclEntriesForGetRequest() throws IOException {
+    Configuration config = this.getRawConfiguration();
+    resetIdentityConfig(config);
+
+    List<AclEntry> aclEntriesToBeTransformed = Lists.newArrayList(
+            aclEntry(ACCESS, USER, FULLY_QUALIFIED_NAME, ALL),
+            aclEntry(DEFAULT, USER, SUPER_USER, ALL),
+            aclEntry(DEFAULT, USER, SERVICE_PRINCIPAL_ID, ALL),
+            aclEntry(DEFAULT, USER, SHORT_NAME, ALL),
+            aclEntry(DEFAULT, GROUP, SHORT_NAME, ALL),
+            aclEntry(DEFAULT, OTHER, ALL),
+            aclEntry(DEFAULT, MASK, ALL)
+    );
+
+    // make a copy
+    List<AclEntry> aclEntries = Lists.newArrayList(aclEntriesToBeTransformed);
+
+    // Default config should not change the identities
+    IdentityTransformer identityTransformer = getTransformerWithDefaultIdentityConfig(config);
+    identityTransformer.transformAclEntriesForGetRequest(aclEntries, localUser, localGroup);
+    checkAclEntriesList(aclEntriesToBeTransformed, aclEntries);
+
+    resetIdentityConfig(config);
+    // With config
+    config.set(FS_AZURE_OVERRIDE_OWNER_SP_LIST, localUser + ",a,b,c,d");
+    config.setBoolean(FS_AZURE_FILE_OWNER_ENABLE_SHORTNAME, true);
+    config.set(FS_AZURE_FILE_OWNER_DOMAINNAME, DOMAIN);
+    config.set(FS_AZURE_OVERRIDE_OWNER_SP, SERVICE_PRINCIPAL_ID);
+    identityTransformer = getTransformerWithCustomizedIdentityConfig(config);
+
+    // make a copy
+    aclEntries = Lists.newArrayList(aclEntriesToBeTransformed);
+    identityTransformer.transformAclEntriesForGetRequest(aclEntries, localUser, localGroup);
+
+    // expected acl entries
+    List<AclEntry> expectedAclEntries = Lists.newArrayList(
+            aclEntry(ACCESS, USER, SHORT_NAME, ALL), // Full UPN should be transformed to shortName
+            aclEntry(DEFAULT, USER, localUser, ALL), // $SuperUser should be transformed to shortName
+            aclEntry(DEFAULT, USER, localUser, ALL), // principal Id should be transformed to local user name
+            aclEntry(DEFAULT, USER, SHORT_NAME, ALL),
+            aclEntry(DEFAULT, GROUP, SHORT_NAME, ALL),
+            aclEntry(DEFAULT, OTHER, ALL),
+            aclEntry(DEFAULT, MASK, ALL)
+    );
+
+    checkAclEntriesList(aclEntries, expectedAclEntries);
   }
 
   private void resetIdentityConfig(Configuration config) {

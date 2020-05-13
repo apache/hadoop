@@ -29,7 +29,10 @@ import org.apache.log4j.PatternLayout;
 import org.apache.log4j.Priority;
 import org.apache.log4j.spi.LoggingEvent;
 import org.junit.Test;
-import static org.junit.Assert.*;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class TestTaskLogAppender {
 /**
@@ -43,9 +46,9 @@ public class TestTaskLogAppender {
     System.setProperty(TaskLogAppender.TASKID_PROPERTY,"attempt_01_02_m03_04_001");
     System.setProperty(TaskLogAppender.LOGSIZE_PROPERTY, "1003");
     appender.activateOptions();
-    assertEquals(appender.getTaskId(), "attempt_01_02_m03_04_001");
-    assertEquals(appender.getTotalLogFileSize(),1000);
-    assertEquals(appender.getIsCleanup(),false);
+    assertThat(appender.getTaskId()).isEqualTo("attempt_01_02_m03_04_001");
+    assertThat(appender.getTotalLogFileSize()).isEqualTo(1000);
+    assertFalse(appender.getIsCleanup());
     
     // test writer   
     Writer writer= new StringWriter();
@@ -63,7 +66,7 @@ public class TestTaskLogAppender {
     appender= new TaskLogAppender();
     appender.setIsCleanup(true);
     appender.activateOptions();
-    assertEquals(appender.getIsCleanup(),true);
+    assertTrue(appender.getIsCleanup());
 
   
   }

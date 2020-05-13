@@ -6,6 +6,7 @@
       <Class name="org.apache.hadoop.hdfs.inotify.EventBatch"/>
       <Class name="org.apache.hadoop.hdfs.protocol.HdfsFileStatus"/>
       <Class name="org.apache.hadoop.hdfs.protocol.LocatedBlock"/>
+      <Class name="org.apache.hadoop.hdfs.protocol.BatchedDirectoryListing" />
       <Class name="org.apache.hadoop.hdfs.protocol.BlockStoragePolicy"/>
       <Class name="org.apache.hadoop.hdfs.protocol.CorruptFileBlocks"/>
       <Class name="org.apache.hadoop.hdfs.protocol.StripedBlockInfo"/>
@@ -90,11 +91,6 @@
     <Class name="org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus" />
     <Method name="getSymlinkInBytes" />
     <Bug pattern="EI_EXPOSE_REP" />
-  </Match>
-  <Match>
-    <Class name="org.apache.hadoop.hdfs.protocolPB.PBHelperClient" />
-    <Method name="getFixedByteString" />
-    <Bug pattern="AT_OPERATION_SEQUENCE_ON_CONCURRENT_ABSTRACTION" />
   </Match>
 
 </FindBugsFilter>

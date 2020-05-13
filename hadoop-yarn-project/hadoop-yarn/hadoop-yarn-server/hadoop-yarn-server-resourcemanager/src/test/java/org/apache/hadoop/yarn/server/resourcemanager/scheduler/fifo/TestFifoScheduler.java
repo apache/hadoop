@@ -69,6 +69,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.NodeManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
@@ -193,6 +194,7 @@ public class TestFifoScheduler {
 
     Configuration conf = new Configuration();
     ((RMContextImpl) rmContext).setScheduler(scheduler);
+    ((RMContextImpl) rmContext).setYarnConfiguration(conf);
     scheduler.setRMContext(rmContext);
     scheduler.init(conf);
     scheduler.start();
@@ -661,7 +663,7 @@ public class TestFifoScheduler {
     rm.start();
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 6 * GB);
 
-    RMApp app1 = rm.submitApp(2048);
+    RMApp app1 = MockRMAppSubmitter.submitWithMemory(2048, rm);
     // kick the scheduling, 2 GB given to AM1, remaining 4GB on nm1
     nm1.nodeHeartbeat(true);
     RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
@@ -692,7 +694,7 @@ public class TestFifoScheduler {
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 6 * GB);
     MockNM nm2 = rm.registerNode("127.0.0.2:5678", 4 * GB);
 
-    RMApp app1 = rm.submitApp(2048);
+    RMApp app1 = MockRMAppSubmitter.submitWithMemory(2048, rm);
     // kick the scheduling, 2 GB given to AM1, remaining 4GB on nm1
     nm1.nodeHeartbeat(true);
     RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
@@ -702,7 +704,7 @@ public class TestFifoScheduler {
         rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
     Assert.assertEquals(2 * GB, report_nm1.getUsedResource().getMemorySize());
 
-    RMApp app2 = rm.submitApp(2048);
+    RMApp app2 = MockRMAppSubmitter.submitWithMemory(2048, rm);
     // kick the scheduling, 2GB given to AM, remaining 2 GB on nm2
     nm2.nodeHeartbeat(true);
     RMAppAttempt attempt2 = app2.getCurrentAppAttempt();
@@ -812,7 +814,7 @@ public class TestFifoScheduler {
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 6 * GB);
 
     // Submit an application
-    RMApp app1 = rm.submitApp(testAlloc);
+    RMApp app1 = MockRMAppSubmitter.submitWithMemory(testAlloc, rm);
 
     // kick the scheduling
     nm1.nodeHeartbeat(true);
@@ -1107,7 +1109,7 @@ public class TestFifoScheduler {
 
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 4 * GB);
 
-    RMApp app1 = rm.submitApp(2048);
+    RMApp app1 = MockRMAppSubmitter.submitWithMemory(2048, rm);
     // kick the scheduling, 2 GB given to AM1, remaining 2GB on nm1
     nm1.nodeHeartbeat(true);
     RMAppAttempt attempt1 = app1.getCurrentAppAttempt();

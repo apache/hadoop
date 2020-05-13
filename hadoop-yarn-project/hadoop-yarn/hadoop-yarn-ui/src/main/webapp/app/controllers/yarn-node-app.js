@@ -35,6 +35,11 @@ export default Ember.Controller.extend({
     }, {
       text: `Application [ ${nodeInfo.appId} ]`,
     }];
+  }),
+
+  encodedNodeAddr: Ember.computed("model.nodeInfo", function() {
+    var nodeInfo = this.get("model.nodeInfo");
+    return encodeURIComponent(nodeInfo.addr);
   })
 
 });

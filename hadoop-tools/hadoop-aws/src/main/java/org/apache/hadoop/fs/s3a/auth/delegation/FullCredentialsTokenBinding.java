@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialProvider;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.auth.RoleModel;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
+import org.apache.hadoop.io.Text;
 
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.FULL_TOKEN_KIND;
 
@@ -61,7 +62,7 @@ public class FullCredentialsTokenBinding extends
   private String credentialOrigin;
 
   /**
-   * Constructor, uses name of {@link #name} and token kind of
+   * Constructor, uses name of {@link #NAME} and token kind of
    * {@link DelegationConstants#FULL_TOKEN_KIND}.
    *
    */
@@ -119,7 +120,7 @@ public class FullCredentialsTokenBinding extends
         "Full Credentials Token Binding",
         new MarshalledCredentialProvider(
             FULL_TOKEN,
-            getFileSystem().getUri(),
+            getStoreContext().getFsURI(),
             getConfig(),
             awsCredentials,
             MarshalledCredentials.CredentialTypeRequired.AnyNonEmpty));
@@ -138,11 +139,13 @@ public class FullCredentialsTokenBinding extends
   @Override
   public AbstractS3ATokenIdentifier createTokenIdentifier(
       final Optional<RoleModel.Policy> policy,
-      final EncryptionSecrets encryptionSecrets) throws IOException {
+      final EncryptionSecrets encryptionSecrets,
+      final Text renewer) throws IOException {
     requireServiceStarted();
 
     return new FullCredentialsTokenIdentifier(getCanonicalUri(),
         getOwnerText(),
+        renewer,
         awsCredentials,
         encryptionSecrets,
         credentialOrigin);
@@ -156,9 +159,10 @@ public class FullCredentialsTokenBinding extends
         convertTokenIdentifier(retrievedIdentifier,
             FullCredentialsTokenIdentifier.class);
     return new AWSCredentialProviderList(
-        "", new MarshalledCredentialProvider(
+        "Full Credentials Token Binding",
+        new MarshalledCredentialProvider(
             FULL_TOKEN,
-            getFileSystem().getUri(),
+            getStoreContext().getFsURI(),
             getConfig(),
             tokenIdentifier.getMarshalledCredentials(),
             MarshalledCredentials.CredentialTypeRequired.AnyNonEmpty));

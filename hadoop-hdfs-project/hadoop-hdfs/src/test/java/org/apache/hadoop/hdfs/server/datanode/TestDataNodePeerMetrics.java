@@ -46,7 +46,7 @@ public class TestDataNodePeerMetrics {
     conf.setBoolean(DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY, true);
 
     final DataNodePeerMetrics peerMetrics = DataNodePeerMetrics.create(
-        "Sample-DataNode");
+        "Sample-DataNode", conf);
     MetricsTestHelper.replaceRollingAveragesScheduler(
         peerMetrics.getSendPacketDownstreamRollingAverages(),
         numWindows, windowSize, TimeUnit.SECONDS);

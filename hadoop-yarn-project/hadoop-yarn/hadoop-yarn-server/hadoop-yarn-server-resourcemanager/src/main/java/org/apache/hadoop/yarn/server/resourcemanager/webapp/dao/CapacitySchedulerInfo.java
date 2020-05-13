@@ -24,11 +24,17 @@ import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 import javax.xml.bind.annotation.XmlType;
 
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.List;
 
 @XmlRootElement(name = "capacityScheduler")
@@ -43,6 +49,10 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
   protected CapacitySchedulerQueueInfoList queues;
   protected QueueCapacitiesInfo capacities;
   protected CapacitySchedulerHealthInfo health;
+  protected ResourceInfo maximumAllocation;
+  protected QueueAclsInfo queueAcls;
+  protected int queuePriority;
+  protected String orderingPolicyInfo;
 
   @XmlTransient
   static final float EPSILON = 1e-8f;
@@ -61,8 +71,33 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
 
     capacities = new QueueCapacitiesInfo(parent.getQueueCapacities(),
         parent.getQueueResourceQuotas(), false);
-    queues = getQueues(parent);
+    queues = getQueues(cs, parent);
     health = new CapacitySchedulerHealthInfo(cs);
+    maximumAllocation = new ResourceInfo(parent.getMaximumAllocation());
+
+    CapacitySchedulerConfiguration conf = cs.getConfiguration();
+    queueAcls = new QueueAclsInfo();
+    for (Map.Entry<AccessType, AccessControlList> e : conf
+        .getAcls(queueName).entrySet()) {
+      QueueAclInfo queueAcl = new QueueAclInfo(e.getKey().toString(),
+          e.getValue().getAclString());
+      queueAcls.add(queueAcl);
+    }
+
+    String aclApplicationMaxPriority = "acl_" +
+        StringUtils.toLowerCase(AccessType.APPLICATION_MAX_PRIORITY.toString());
+    String priorityAcls = conf.get(parent.getQueuePath()
+        + aclApplicationMaxPriority, conf.ALL_ACL);
+
+    QueueAclInfo queueAcl = new QueueAclInfo(
+        AccessType.APPLICATION_MAX_PRIORITY.toString(), priorityAcls);
+    queueAcls.add(queueAcl);
+
+    queuePriority = parent.getPriority().getPriority();
+    if (parent instanceof ParentQueue) {
+      orderingPolicyInfo = ((ParentQueue) parent).getQueueOrderingPolicy()
+          .getConfigName();
+    }
   }
 
   public float getCapacity() {
@@ -85,11 +120,28 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
     return this.queueName;
   }
 
+  public ResourceInfo getMaximumAllocation() {
+    return maximumAllocation;
+  }
+
+  public QueueAclsInfo getQueueAcls() {
+    return queueAcls;
+  }
+
+  public int getPriority() {
+    return queuePriority;
+  }
+
+  public String getOrderingPolicyInfo() {
+    return orderingPolicyInfo;
+  }
+
   public CapacitySchedulerQueueInfoList getQueues() {
     return this.queues;
   }
 
-  protected CapacitySchedulerQueueInfoList getQueues(CSQueue parent) {
+  protected CapacitySchedulerQueueInfoList getQueues(
+      CapacityScheduler cs, CSQueue parent) {
     CapacitySchedulerQueueInfoList queuesInfo =
         new CapacitySchedulerQueueInfoList();
     // JAXB marashalling leads to situation where the "type" field injected
@@ -112,10 +164,10 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
     for (CSQueue queue : childQueues) {
       CapacitySchedulerQueueInfo info;
       if (queue instanceof LeafQueue) {
-        info = new CapacitySchedulerLeafQueueInfo((LeafQueue) queue);
+        info = new CapacitySchedulerLeafQueueInfo(cs, (LeafQueue) queue);
       } else {
-        info = new CapacitySchedulerQueueInfo(queue);
-        info.queues = getQueues(queue);
+        info = new CapacitySchedulerQueueInfo(cs, queue);
+        info.queues = getQueues(cs, queue);
       }
       queuesInfo.addToQueueInfoList(info);
     }

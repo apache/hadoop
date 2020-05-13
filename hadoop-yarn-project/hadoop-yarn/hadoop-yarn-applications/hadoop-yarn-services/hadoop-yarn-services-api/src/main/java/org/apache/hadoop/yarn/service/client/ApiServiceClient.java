@@ -24,6 +24,7 @@ import java.net.URI;
 import java.text.MessageFormat;
 import java.util.List;
 import java.util.Map;
+import java.security.PrivilegedExceptionAction;
 
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
@@ -44,6 +45,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.client.api.AppAdminClient;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.util.YarnClientUtils;
+import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.service.api.records.Component;
@@ -94,7 +96,7 @@ public class ApiServiceClient extends AppAdminClient {
   /**
    * Calculate Resource Manager address base on working REST API.
    */
-  String getRMWebAddress() {
+  String getRMWebAddress() throws IOException {
     Configuration conf = getConfig();
     String scheme = "http://";
     String path = "/app/v1/services/version";
@@ -105,43 +107,50 @@ public class ApiServiceClient extends AppAdminClient {
       rmAddress = conf
           .get("yarn.resourcemanager.webapp.https.address");
     }
-    boolean useKerberos = UserGroupInformation.isSecurityEnabled();
-    List<String> rmServers = getRMHAWebAddresses(conf);
-    for (String host : rmServers) {
-      try {
-        Client client = Client.create();
-        client.setFollowRedirects(false);
-        StringBuilder sb = new StringBuilder();
-        sb.append(scheme)
-            .append(host)
-            .append(path);
-        if (!useKerberos) {
-          try {
-            String username = UserGroupInformation.getCurrentUser().getShortUserName();
-            sb.append("?user.name=")
-                .append(username);
-          } catch (IOException e) {
-            LOG.debug("Fail to resolve username: {}", e);
+
+    if (HAUtil.isHAEnabled(conf)) {
+      boolean useKerberos = UserGroupInformation.isSecurityEnabled();
+      List<String> rmServers = getRMHAWebAddresses(conf);
+      StringBuilder diagnosticsMsg = new StringBuilder();
+      for (String host : rmServers) {
+        try {
+          Client client = Client.create();
+          client.setFollowRedirects(false);
+          StringBuilder sb = new StringBuilder();
+          sb.append(scheme)
+              .append(host)
+              .append(path);
+          if (!useKerberos) {
+            try {
+              String username = UserGroupInformation.getCurrentUser()
+                  .getShortUserName();
+              sb.append("?user.name=")
+                  .append(username);
+            } catch (IOException e) {
+              LOG.debug("Fail to resolve username: {}", e);
+            }
           }
+          Builder builder = client
+              .resource(sb.toString()).type(MediaType.APPLICATION_JSON);
+          if (useKerberos) {
+            String[] server = host.split(":");
+            String challenge = YarnClientUtils.generateToken(server[0]);
+            builder.header(HttpHeaders.AUTHORIZATION, "Negotiate " +
+                challenge);
+            LOG.debug("Authorization: Negotiate {}", challenge);
+          }
+          ClientResponse test = builder.get(ClientResponse.class);
+          if (test.getStatus() == 200) {
+            return scheme + host;
+          }
+        } catch (Exception e) {
+          LOG.info("Fail to connect to: " + host);
+          LOG.debug("Root cause: ", e);
+          diagnosticsMsg.append("Error connecting to " + host
+              + " due to " + e.getMessage() + "\n");
         }
-        Builder builder = client
-            .resource(sb.toString()).type(MediaType.APPLICATION_JSON);
-        if (useKerberos) {
-          String[] server = host.split(":");
-          String challenge = YarnClientUtils.generateToken(server[0]);
-          builder.header(HttpHeaders.AUTHORIZATION, "Negotiate " +
-              challenge);
-          LOG.debug("Authorization: Negotiate {}", challenge);
-        }
-        ClientResponse test = builder.get(ClientResponse.class);
-        if (test.getStatus() == 200) {
-          rmAddress = host;
-          break;
-        }
-      } catch (Exception e) {
-        LOG.info("Fail to connect to: "+host);
-        LOG.debug("Root cause: {}", e);
       }
+      throw new IOException(diagnosticsMsg.toString());
     }
     return scheme+rmAddress;
   }
@@ -649,13 +658,26 @@ public class ApiServiceClient extends AppAdminClient {
 
   @Override
   public int actionCleanUp(String appName, String userName) throws
-      IOException, YarnException {
-    ServiceClient sc = new ServiceClient();
-    sc.init(getConfig());
-    sc.start();
-    int result = sc.actionCleanUp(appName, userName);
-    sc.close();
-    return result;
+      IOException, YarnException, InterruptedException {
+    UserGroupInformation proxyUser;
+    UserGroupInformation ugi;
+    if (UserGroupInformation.isSecurityEnabled()) {
+      proxyUser = UserGroupInformation.getLoginUser();
+      ugi = UserGroupInformation.createProxyUser(userName, proxyUser);
+    } else {
+      ugi = UserGroupInformation.createRemoteUser(userName);
+    }
+    return ugi.doAs((PrivilegedExceptionAction<Integer>) () -> {
+      ServiceClient sc = new ServiceClient();
+      try {
+        sc.init(getConfig());
+        sc.start();
+        int result = sc.actionCleanUp(appName, userName);
+        return result;
+      } finally {
+        sc.close();
+      }
+    });
   }
 
   @Override

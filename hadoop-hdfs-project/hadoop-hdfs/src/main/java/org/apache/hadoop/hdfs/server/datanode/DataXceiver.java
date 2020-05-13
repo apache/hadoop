@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import javax.crypto.SecretKey;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.fs.StorageType;
@@ -647,6 +647,12 @@ class DataXceiver extends Receiver implements Runnable {
             dnR, block, remoteAddress, ioe);
         incrDatanodeNetworkErrors();
       }
+      // Normally the client reports a bad block to the NN. However if the
+      // meta file is corrupt or an disk error occurs (EIO), then the client
+      // never gets a chance to do validation, and hence will never report
+      // the block as bad. For some classes of IO exception, the DN should
+      // report the block as bad, via the handleBadBlock() method
+      datanode.handleBadBlock(block, ioe, false);
       throw ioe;
     } finally {
       IOUtils.closeStream(blockSender);
@@ -899,8 +905,8 @@ class DataXceiver extends Receiver implements Runnable {
       // receive the block and mirror to the next target
       if (blockReceiver != null) {
         String mirrorAddr = (mirrorSock == null) ? null : mirrorNode;
-        blockReceiver.receiveBlock(mirrorOut, mirrorIn, replyOut,
-            mirrorAddr, null, targets, false);
+        blockReceiver.receiveBlock(mirrorOut, mirrorIn, replyOut, mirrorAddr,
+            dataXceiverServer.getWriteThrottler(), targets, false);
 
         // send close-ack for transfer-RBW/Finalized 
         if (isTransfer) {
@@ -1118,6 +1124,12 @@ class DataXceiver extends Receiver implements Runnable {
       isOpSuccess = false;
       LOG.info("opCopyBlock {} received exception {}", block, ioe.toString());
       incrDatanodeNetworkErrors();
+      // Normally the client reports a bad block to the NN. However if the
+      // meta file is corrupt or an disk error occurs (EIO), then the client
+      // never gets a chance to do validation, and hence will never report
+      // the block as bad. For some classes of IO exception, the DN should
+      // report the block as bad, via the handleBadBlock() method
+      datanode.handleBadBlock(block, ioe, false);
       throw ioe;
     } finally {
       dataXceiverServer.balanceThrottler.release();

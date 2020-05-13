@@ -1921,6 +1921,22 @@ function hadoop_start_secure_daemon
     exit 1
   fi
 
+  if [[ -z "${HADOOP_DAEMON_JSVC_EXTRA_OPTS}" ]]; then
+    # If HADOOP_DAEMON_JSVC_EXTRA_OPTS is not set
+    if ${jsvc} -help | grep -q "\-cwd"; then
+      # Check if jsvc -help has entry for option -cwd
+      hadoop_debug "Your jsvc supports -cwd option." \
+        "Adding option '-cwd .'. See HADOOP-16276 for details."
+      HADOOP_DAEMON_JSVC_EXTRA_OPTS="-cwd ."
+    else
+      hadoop_debug "Your jsvc doesn't support -cwd option." \
+        "No need to add option '-cwd .'. See HADOOP-16276 for details."
+    fi
+  else
+    hadoop_debug "HADOOP_DAEMON_JSVC_EXTRA_OPTS is set." \
+      "Ignoring jsvc -cwd option detection and addition."
+  fi
+
   # note that shellcheck will throw a
   # bogus for-our-use-case 2086 here.
   # it doesn't properly support multi-line situations

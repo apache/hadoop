@@ -21,7 +21,7 @@
  * Please see http://wiki.apache.org/hadoop/Compatibility
  * for what changes are allowed for a *stable* .proto interface.
  */
-
+syntax="proto2";
 option java_package = "org.apache.hadoop.hdfs.protocol.proto";
 option java_outer_classname = "ClientNamenodeProtocolProtos";
 option java_generic_services = true;
@@ -283,6 +283,18 @@ message GetListingRequestProto {
 }
 message GetListingResponseProto {
   optional DirectoryListingProto dirList = 1;
+}
+
+message GetBatchedListingRequestProto {
+  repeated string paths = 1;
+  required bytes startAfter = 2;
+  required bool needLocation = 3;
+}
+
+message GetBatchedListingResponseProto {
+  repeated BatchedDirectoryListingProto listings = 1;
+  required bool hasMore = 2;
+  required bytes startAfter = 3;
 }
 
 message GetSnapshottableDirListingRequestProto { // no input parameters
@@ -887,6 +899,7 @@ service ClientNamenodeProtocol {
   rpc delete(DeleteRequestProto) returns(DeleteResponseProto);
   rpc mkdirs(MkdirsRequestProto) returns(MkdirsResponseProto);
   rpc getListing(GetListingRequestProto) returns(GetListingResponseProto);
+  rpc getBatchedListing (GetBatchedListingRequestProto) returns (GetBatchedListingResponseProto);
   rpc renewLease(RenewLeaseRequestProto) returns(RenewLeaseResponseProto);
   rpc recoverLease(RecoverLeaseRequestProto)
       returns(RecoverLeaseResponseProto);
@@ -1017,6 +1030,8 @@ service ClientNamenodeProtocol {
       returns(SetErasureCodingPolicyResponseProto);
   rpc unsetErasureCodingPolicy(UnsetErasureCodingPolicyRequestProto)
       returns(UnsetErasureCodingPolicyResponseProto);
+  rpc getECTopologyResultForPolicies(GetECTopologyResultForPoliciesRequestProto)
+      returns(GetECTopologyResultForPoliciesResponseProto);
   rpc getCurrentEditLogTxid(GetCurrentEditLogTxidRequestProto)
       returns(GetCurrentEditLogTxidResponseProto);
   rpc getEditsFromTxid(GetEditsFromTxidRequestProto)

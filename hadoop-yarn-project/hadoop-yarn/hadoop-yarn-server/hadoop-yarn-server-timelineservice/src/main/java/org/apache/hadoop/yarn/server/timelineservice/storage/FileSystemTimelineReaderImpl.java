@@ -432,6 +432,10 @@ public class FileSystemTimelineReaderImpl extends AbstractService
     String flowRunPathStr = getFlowRunPath(context.getUserId(),
         context.getClusterId(), context.getFlowName(), context.getFlowRunId(),
         context.getAppId());
+    if (context.getUserId() == null) {
+      context.setUserId(new Path(flowRunPathStr).getParent().getParent().
+          getName());
+    }
     Path clusterIdPath = new Path(entitiesPath, context.getClusterId());
     Path flowRunPath = new Path(clusterIdPath, flowRunPathStr);
     Path appIdPath = new Path(flowRunPath, context.getAppId());

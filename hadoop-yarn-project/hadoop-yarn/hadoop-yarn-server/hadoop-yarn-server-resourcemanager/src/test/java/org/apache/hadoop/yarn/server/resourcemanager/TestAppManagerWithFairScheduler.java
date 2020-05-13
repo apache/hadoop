@@ -25,9 +25,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.Collections;
 
 import org.apache.hadoop.security.AccessControlException;
@@ -47,6 +45,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
+
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
+    .allocationfile.AllocationFileQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
+    .allocationfile.AllocationFileWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.Records;
@@ -73,13 +77,9 @@ public class TestAppManagerWithFairScheduler extends AppManagerTestBase {
   @Before
   public void setup() throws IOException {
     // Basic config with one queue (override in test if needed)
-    PrintWriter out = new PrintWriter(new FileWriter(allocFileName));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println(" <queue name=\"test\">");
-    out.println(" </queue>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("test").build())
+        .writeToFile(allocFileName);
 
     conf.setClass(YarnConfiguration.RM_SCHEDULER, FairScheduler.class,
         ResourceScheduler.class);
@@ -111,19 +111,15 @@ public class TestAppManagerWithFairScheduler extends AppManagerTestBase {
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB;
 
     // scheduler config with a limited queue
-    PrintWriter out = new PrintWriter(new FileWriter(allocFileName));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("  <queue name=\"root\">");
-    out.println("    <queue name=\"limited\">");
-    out.println("      <maxContainerAllocation>" + maxAlloc + " mb 1 vcores");
-    out.println("      </maxContainerAllocation>");
-    out.println("    </queue>");
-    out.println("    <queue name=\"unlimited\">");
-    out.println("    </queue>");
-    out.println("  </queue>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("root")
+            .subQueue(new AllocationFileQueue.Builder("limited")
+                .maxContainerAllocation(maxAlloc + " mb 1 vcores")
+                .build())
+            .subQueue(new AllocationFileQueue.Builder("unlimited")
+                .build())
+            .build())
+        .writeToFile(allocFileName);
     rmContext.getScheduler().reinitialize(conf, rmContext);
 
     ApplicationId appId = MockApps.newAppID(1);
@@ -153,25 +149,22 @@ public class TestAppManagerWithFairScheduler extends AppManagerTestBase {
 
     conf.set(YarnConfiguration.YARN_ACL_ENABLE, "true");
 
-    PrintWriter out = new PrintWriter(new FileWriter(allocFileName));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("  <queue name=\"root\">");
-    out.println("    <aclSubmitApps> </aclSubmitApps>");
-    out.println("    <aclAdministerApps> </aclAdministerApps>");
-    out.println("    <queue name=\"noaccess\">");
-    out.println("    </queue>");
-    out.println("    <queue name=\"submitonly\">");
-    out.println("      <aclSubmitApps>test </aclSubmitApps>");
-    out.println("      <aclAdministerApps> </aclAdministerApps>");
-    out.println("    </queue>");
-    out.println("    <queue name=\"adminonly\">");
-    out.println("      <aclSubmitApps> </aclSubmitApps>");
-    out.println("      <aclAdministerApps>test </aclAdministerApps>");
-    out.println("    </queue>");
-    out.println("  </queue>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("root")
+            .aclSubmitApps(" ")
+            .aclAdministerApps(" ")
+            .subQueue(new AllocationFileQueue.Builder("noaccess")
+                .build())
+            .subQueue(new AllocationFileQueue.Builder("submitonly")
+                .aclSubmitApps("test ")
+                .aclAdministerApps(" ")
+                .build())
+            .subQueue(new AllocationFileQueue.Builder("adminonly")
+                .aclSubmitApps(" ")
+                .aclAdministerApps("test ")
+                .build())
+            .build())
+        .writeToFile(allocFileName);
     rmContext.getScheduler().reinitialize(conf, rmContext);
 
     ApplicationId appId = MockApps.newAppID(1);
@@ -206,17 +199,14 @@ public class TestAppManagerWithFairScheduler extends AppManagerTestBase {
 
     conf.set(YarnConfiguration.YARN_ACL_ENABLE, "true");
 
-    PrintWriter out = new PrintWriter(new FileWriter(allocFileName));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("  <queue name=\"root\">");
-    out.println("    <queue name=\"noaccess\">");
-    out.println("      <aclSubmitApps> </aclSubmitApps>");
-    out.println("      <aclAdministerApps> </aclAdministerApps>");
-    out.println("    </queue>");
-    out.println("  </queue>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("root")
+            .subQueue(new AllocationFileQueue.Builder("noaccess")
+                .aclSubmitApps(" ")
+                .aclAdministerApps(" ")
+                .build())
+            .build())
+        .writeToFile(allocFileName);
     rmContext.getScheduler().reinitialize(conf, rmContext);
 
     ApplicationId appId = MockApps.newAppID(1);
@@ -235,20 +225,19 @@ public class TestAppManagerWithFairScheduler extends AppManagerTestBase {
 
     conf.set(YarnConfiguration.YARN_ACL_ENABLE, "true");
 
-    PrintWriter out = new PrintWriter(new FileWriter(allocFileName));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("  <queue name=\"root\">");
-    out.println("    <aclSubmitApps> </aclSubmitApps>");
-    out.println("    <aclAdministerApps> </aclAdministerApps>");
-    out.println("    <queue name=\"noaccess\" type=\"parent\">");
-    out.println("    </queue>");
-    out.println("    <queue name=\"submitonly\" type=\"parent\">");
-    out.println("      <aclSubmitApps>test </aclSubmitApps>");
-    out.println("    </queue>");
-    out.println("  </queue>");
-    out.println("</allocations>");
-    out.close();
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("root")
+            .aclSubmitApps(" ")
+            .aclAdministerApps(" ")
+            .subQueue(new AllocationFileQueue.Builder("noaccess")
+                .parent(true)
+                .build())
+            .subQueue(new AllocationFileQueue.Builder("submitonly")
+                .parent(true)
+                .aclSubmitApps("test ")
+                .build())
+            .build())
+        .writeToFile(allocFileName);
     rmContext.getScheduler().reinitialize(conf, rmContext);
 
     ApplicationId appId = MockApps.newAppID(1);

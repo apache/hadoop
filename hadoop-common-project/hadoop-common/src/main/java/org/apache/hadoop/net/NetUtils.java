@@ -639,6 +639,22 @@ public class NetUtils {
   }
 
   /**
+   * Attempt to normalize the given string to "host:port"
+   * if it like "ip:port".
+   *
+   * @param ipPort maybe lik ip:port or host:port.
+   * @return host:port
+   */
+  public static String normalizeIP2HostName(String ipPort) {
+    if (null == ipPort || !ipPortPattern.matcher(ipPort).matches()) {
+      return ipPort;
+    }
+
+    InetSocketAddress address = createSocketAddr(ipPort);
+    return getHostPortString(address);
+  }
+
+  /**
    * Return hostname without throwing exception.
    * The returned hostname String format is "hostname".
    * @return hostname
@@ -804,7 +820,11 @@ public class NetUtils {
                 + ";"
                 + see("SocketException"));
       } else {
-        // Return instance of same type if Exception has a String constructor
+        // 1. Return instance of same type with exception msg if Exception has a
+        // String constructor.
+        // 2. Return instance of same type if Exception doesn't have a String
+        // constructor.
+        // Related HADOOP-16453.
         return wrapWithMessage(exception,
             "DestHost:destPort " + destHost + ":" + destPort
                 + " , LocalHost:localPort " + localHost
@@ -832,9 +852,9 @@ public class NetUtils {
       Constructor<? extends Throwable> ctor = clazz.getConstructor(String.class);
       Throwable t = ctor.newInstance(msg);
       return (T)(t.initCause(exception));
+    } catch (NoSuchMethodException e) {
+      return exception;
     } catch (Throwable e) {
-      LOG.trace("Unable to wrap exception of type {}: it has no (String) "
-          + "constructor", clazz, e);
       throw exception;
     }
   }

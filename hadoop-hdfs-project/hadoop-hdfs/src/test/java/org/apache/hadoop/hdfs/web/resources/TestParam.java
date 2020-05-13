@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.web.resources;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
@@ -25,6 +26,7 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 
+import org.apache.hadoop.fs.StorageType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -503,6 +505,33 @@ public class TestParam {
     Assert.assertEquals(null, p.getValue());
     p = new StoragePolicyParam("COLD");
     Assert.assertEquals("COLD", p.getValue());
+  }
+
+  @Test
+  public void testNamespaceQuotaParam() {
+    NameSpaceQuotaParam p =
+        new NameSpaceQuotaParam(NameSpaceQuotaParam.DEFAULT);
+    assertEquals(Long.valueOf(NameSpaceQuotaParam.DEFAULT), p.getValue());
+    p = new NameSpaceQuotaParam(100L);
+    assertEquals(100L, p.getValue().longValue());
+  }
+
+  @Test
+  public void testStorageSpaceQuotaParam() {
+    StorageSpaceQuotaParam sp = new StorageSpaceQuotaParam(
+        StorageSpaceQuotaParam.DEFAULT);
+    assertEquals(Long.valueOf(StorageSpaceQuotaParam.DEFAULT),
+        sp.getValue());
+    sp = new StorageSpaceQuotaParam(100L);
+    assertEquals(100L, sp.getValue().longValue());
+  }
+
+  @Test
+  public void testStorageTypeParam() {
+    StorageTypeParam p = new StorageTypeParam(StorageTypeParam.DEFAULT);
+    assertNull(p.getValue());
+    p = new StorageTypeParam(StorageType.DISK.name());
+    assertEquals(StorageType.DISK.name(), p.getValue());
   }
 
   @Test

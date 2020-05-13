@@ -744,6 +744,9 @@ public class INodeFile extends INodeWithAdditionalFields
       sf.cleanFile(reclaimContext, this, snapshot, priorSnapshotId,
           getStoragePolicyID());
       updateRemovedUnderConstructionFiles(reclaimContext);
+      if (sf.getDiffs().isEmpty()) {
+        this.removeFeature(sf);
+      }
     } else {
       if (snapshot == CURRENT_STATE_ID) {
         if (priorSnapshotId == NO_SNAPSHOT_ID) {
@@ -870,8 +873,18 @@ public class INodeFile extends INodeWithAdditionalFields
     counts.addContent(Content.FILE, 1);
     final long fileLen = computeFileSize(snapshotId);
     counts.addContent(Content.LENGTH, fileLen);
-    counts.addContent(Content.DISKSPACE, storagespaceConsumed(null)
-        .getStorageSpace());
+
+    FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
+    if (sf == null) {
+      counts.addContent(Content.DISKSPACE,
+          storagespaceConsumed(null).getStorageSpace());
+    } else if (isStriped()) {
+      counts.addContent(Content.DISKSPACE,
+          storagespaceConsumedStriped().getStorageSpace());
+    } else {
+      long diskSpaceQuota = getDiskSpaceQuota(counts, sf, snapshotId);
+      counts.addContent(Content.DISKSPACE, diskSpaceQuota);
+    }
 
     if (getStoragePolicyID() != BLOCK_STORAGE_POLICY_ID_UNSPECIFIED){
       BlockStoragePolicy bsp = summary.getBlockStoragePolicySuite().
@@ -885,6 +898,34 @@ public class INodeFile extends INodeWithAdditionalFields
       }
     }
     return summary;
+  }
+
+  /**
+   * Compute disk space consumed by all the blocks in snapshots.
+   */
+  private long getDiskSpaceQuota(ContentCounts counts,
+      FileWithSnapshotFeature sf, int lastSnapshotId) {
+    FileDiffList fileDiffList = sf.getDiffs();
+    int last = fileDiffList.getLastSnapshotId();
+
+    if (lastSnapshotId == Snapshot.CURRENT_STATE_ID
+        || last == Snapshot.CURRENT_STATE_ID) {
+      return storagespaceConsumed(null).getStorageSpace();
+    }
+
+    final long ssDeltaNoReplication;
+    short replication;
+
+    if (last < lastSnapshotId) {
+      ssDeltaNoReplication = computeFileSize(true, false);
+      replication = getFileReplication();
+    } else {
+      int sid = fileDiffList.getSnapshotById(lastSnapshotId);
+      ssDeltaNoReplication = computeFileSize(sid);
+      replication = getFileReplication(sid);
+    }
+
+    return ssDeltaNoReplication * replication;
   }
 
   /** The same as computeFileSize(null). */
@@ -1045,6 +1086,18 @@ public class INodeFile extends INodeWithAdditionalFields
     // only compare the first block
     out.print(", blocks=");
     out.print(blocks.length == 0 ? null: blocks[0]);
+    out.println();
+
+    final FileWithSnapshotFeature snapshotFeature =
+        getFileWithSnapshotFeature();
+    if (snapshotFeature != null) {
+      if (prefix.length() >= 2) {
+        prefix.setLength(prefix.length() - 2);
+        prefix.append("  ");
+      }
+      out.print(prefix);
+      out.print(snapshotFeature);
+    }
     out.println();
   }
 

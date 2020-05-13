@@ -70,7 +70,7 @@ public final class NameNodeUtils {
     final Collection<String> nameservices =
         DFSUtilClient.getNameServiceIds(conf);
 
-    final String nnAddr = conf.get(FS_DEFAULT_NAME_KEY);
+    final String nnAddr = conf.getTrimmed(FS_DEFAULT_NAME_KEY);
     if (nnAddr == null) {
       // default fs is not set.
       return null;

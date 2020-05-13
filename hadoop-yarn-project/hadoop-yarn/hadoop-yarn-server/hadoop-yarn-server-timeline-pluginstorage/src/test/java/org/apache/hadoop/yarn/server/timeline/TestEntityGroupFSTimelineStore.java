@@ -511,6 +511,23 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
   }
 
   @Test
+  public void testScanActiveLogsWithInvalidFile() throws Exception {
+    Path invalidFile = new Path(testActiveDirPath, "invalidfile");
+    try {
+      if (!fs.exists(invalidFile)) {
+        fs.createNewFile(invalidFile);
+      }
+      store.scanActiveLogs();
+    } catch (StackOverflowError error) {
+      Assert.fail("EntityLogScanner crashed with StackOverflowError");
+    } finally {
+      if (fs.exists(invalidFile)) {
+        fs.delete(invalidFile, false);
+      }
+    }
+  }
+
+  @Test
   public void testScanActiveLogsAndMoveToDonePluginRead() throws Exception {
     EntityGroupFSTimelineStore store = null;
     ApplicationId appId =

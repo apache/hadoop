@@ -26,7 +26,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.commit.ITestCommitOperations;
 
 import static org.apache.hadoop.fs.s3a.Constants.ASSUMED_ROLE_ARN;
@@ -34,6 +33,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.*;
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.*;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.*;
+import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**
  * Verify that the commit operations work with a restricted set of operations.
@@ -84,7 +84,7 @@ public class ITestAssumedRoleCommitOperations extends ITestCommitOperations {
 
   @Override
   public void teardown() throws Exception {
-    S3AUtils.closeAll(LOG, roleFS);
+    cleanupWithLogger(LOG, roleFS);
     // switches getFileSystem() back to the full FS.
     roleFS = null;
     super.teardown();

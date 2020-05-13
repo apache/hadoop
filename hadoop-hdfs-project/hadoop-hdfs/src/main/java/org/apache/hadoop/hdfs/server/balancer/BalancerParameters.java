@@ -45,6 +45,8 @@ final class BalancerParameters {
    */
   private final boolean runDuringUpgrade;
 
+  private final boolean runAsService;
+
   static final BalancerParameters DEFAULT = new BalancerParameters();
 
   private BalancerParameters() {
@@ -60,6 +62,7 @@ final class BalancerParameters {
     this.sourceNodes = builder.sourceNodes;
     this.blockpools = builder.blockpools;
     this.runDuringUpgrade = builder.runDuringUpgrade;
+    this.runAsService = builder.runAsService;
   }
 
   BalancingPolicy getBalancingPolicy() {
@@ -94,6 +97,10 @@ final class BalancerParameters {
     return this.runDuringUpgrade;
   }
 
+  boolean getRunAsService() {
+    return this.runAsService;
+  }
+
   @Override
   public String toString() {
     return String.format("%s.%s [%s," + " threshold = %s,"
@@ -117,6 +124,7 @@ final class BalancerParameters {
     private Set<String> sourceNodes = Collections.<String> emptySet();
     private Set<String> blockpools = Collections.<String> emptySet();
     private boolean runDuringUpgrade = false;
+    private boolean runAsService = false;
 
     Builder() {
     }
@@ -158,6 +166,11 @@ final class BalancerParameters {
 
     Builder setRunDuringUpgrade(boolean run) {
       this.runDuringUpgrade = run;
+      return this;
+    }
+
+    Builder setRunAsService(boolean asService) {
+      this.runAsService = asService;
       return this;
     }
 

@@ -33,6 +33,10 @@ import java.io.OutputStreamWriter;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
+import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.concurrent.CountDownLatch;
@@ -67,7 +71,6 @@ public class TestAggregatedLogFormat {
 
   private static final File testWorkDir = new File("target",
       "TestAggregatedLogFormat");
-  private static final Configuration conf = new Configuration();
   private static final FileSystem fs;
   private static final char filler = 'x';
   private static final Logger LOG = LoggerFactory
@@ -75,7 +78,7 @@ public class TestAggregatedLogFormat {
 
   static {
     try {
-      fs = FileSystem.get(conf);
+      fs = FileSystem.get(new Configuration());
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -121,6 +124,20 @@ public class TestAggregatedLogFormat {
       if(e.toString().contains("NumberFormatException")) {
         Assert.fail("Aggregated logs are corrupted.");
       }
+    }
+
+    //Append some corrupted text to the end of the aggregated file.
+    URI logUri = URI.create("file:///" + remoteAppLogFile.toUri().toString());
+    Files.write(Paths.get(logUri),
+        "corrupt_text".getBytes(), StandardOpenOption.APPEND);
+    try {
+      // Trying to read a corrupted log file created above should cause
+      // log reading to fail below with an IOException.
+      logReader = new LogReader(conf, remoteAppLogFile);
+      Assert.fail("Expect IOException from reading corrupt aggregated logs.");
+    } catch (IOException ioe) {
+      DataInputStream dIS = logReader.next(rLogKey);
+      Assert.assertNull("Input stream not available for reading", dIS);
     }
   }
 
@@ -280,6 +297,45 @@ public class TestAggregatedLogFormat {
     Assert.assertTrue("Log content incorrect", s.contains(expectedContent));
     
     Assert.assertEquals(expectedLength, s.length());
+  }
+
+  @Test
+  public void testZeroLengthLog() throws IOException {
+    Configuration conf = new Configuration();
+    File workDir = new File(testWorkDir, "testZeroLength");
+    Path remoteAppLogFile = new Path(workDir.getAbsolutePath(),
+        "aggregatedLogFile");
+    Path srcFileRoot = new Path(workDir.getAbsolutePath(), "srcFiles");
+    ContainerId testContainerId = TestContainerId.newContainerId(1, 1, 1, 1);
+    Path t = new Path(srcFileRoot, testContainerId.getApplicationAttemptId()
+        .getApplicationId().toString());
+    Path srcFilePath = new Path(t, testContainerId.toString());
+
+    // Create zero byte file
+    writeSrcFile(srcFilePath, "stdout", 0);
+
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    try (LogWriter logWriter = new LogWriter()) {
+      logWriter.initialize(conf, remoteAppLogFile, ugi);
+
+      LogKey logKey = new LogKey(testContainerId);
+      LogValue logValue =
+          new LogValue(Collections.singletonList(srcFileRoot.toString()),
+              testContainerId, ugi.getShortUserName());
+
+      logWriter.append(logKey, logValue);
+    }
+
+    LogReader logReader = new LogReader(conf, remoteAppLogFile);
+    LogKey rLogKey = new LogKey();
+    DataInputStream dis = logReader.next(rLogKey);
+    Writer writer = new StringWriter();
+    LogReader.readAcontainerLogs(dis, writer);
+
+    Assert.assertEquals("LogType:stdout\n" +
+        "LogLength:0\n" +
+        "Log Contents:\n\n" +
+        "End of LogType:stdout\n\n", writer.toString());
   }
 
   @Test(timeout=10000)

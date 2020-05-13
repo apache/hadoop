@@ -24,9 +24,9 @@ import static org.mockito.Mockito.when;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
-import com.google.protobuf.BlockingService;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.BlockingService;
+import org.apache.hadoop.thirdparty.protobuf.RpcController;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.ClientId;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;

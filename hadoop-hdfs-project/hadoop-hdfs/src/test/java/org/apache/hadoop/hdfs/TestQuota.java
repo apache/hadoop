@@ -150,12 +150,12 @@ public class TestQuota {
     resetStream();
   }
 
-  private void runCommand(DFSAdmin admin, boolean expectError, String... args) 
+  static void runCommand(DFSAdmin admin, boolean expectError, String... args)
                          throws Exception {
     runCommand(admin, args, expectError);
   }
-  
-  private void runCommand(DFSAdmin admin, String args[], boolean expectEror)
+
+  static void runCommand(DFSAdmin admin, String[] args, boolean expectEror)
   throws Exception {
     int val = admin.run(args);
     if (expectEror) {
@@ -1579,6 +1579,44 @@ public class TestQuota {
   }
 
   @Test
+  public void testRename() throws Exception {
+    int fileLen = 1024;
+    short replication = 3;
+
+    final Path parent = new Path(PathUtils.getTestDir(getClass()).getPath(),
+        GenericTestUtils.getMethodName());
+    assertTrue(dfs.mkdirs(parent));
+
+    final Path srcDir = new Path(parent, "src-dir");
+    Path file = new Path(srcDir, "file1");
+    DFSTestUtil.createFile(dfs, file, fileLen, replication, 0);
+    dfs.setStoragePolicy(srcDir, HdfsConstants.HOT_STORAGE_POLICY_NAME);
+
+    final Path dstDir = new Path(parent, "dst-dir");
+    assertTrue(dfs.mkdirs(dstDir));
+    dfs.setStoragePolicy(dstDir, HdfsConstants.ALLSSD_STORAGE_POLICY_NAME);
+
+    dfs.setQuota(srcDir, 100000, 100000);
+    dfs.setQuota(dstDir, 100000, 100000);
+
+    Path dstFile = new Path(dstDir, "file1");
+    // Test quota check of rename. Expect a QuotaExceedException.
+    dfs.setQuotaByStorageType(dstDir, StorageType.SSD, 10);
+    try {
+      dfs.rename(file, dstFile);
+      fail("Expect QuotaExceedException.");
+    } catch (QuotaExceededException qe) {
+    }
+
+    // Set enough quota, expect a successful rename.
+    dfs.setQuotaByStorageType(dstDir, StorageType.SSD, fileLen * replication);
+    dfs.rename(file, dstFile);
+    // Verify the storage type usage is properly updated on source and dst.
+    checkQuotaAndCount(dfs, srcDir);
+    checkQuotaAndCount(dfs, dstDir);
+  }
+
+  @Test
   public void testSpaceQuotaExceptionOnAppend() throws Exception {
     GenericTestUtils.setLogLevel(DFSOutputStream.LOG, Level.TRACE);
     GenericTestUtils.setLogLevel(DataStreamer.LOG, Level.TRACE);
@@ -1647,5 +1685,16 @@ public class TestQuota {
       list.add(scanner.nextLine());
     }
     scanner.close();
+  }
+
+  // quota and count should match.
+  private void checkQuotaAndCount(DistributedFileSystem fs, Path path)
+      throws IOException {
+    QuotaUsage qu = fs.getQuotaUsage(path);
+    ContentSummary cs = fs.getContentSummary(path);
+    for (StorageType st : StorageType.values()) {
+      // it will fail here, because the quota and consume is not handled right.
+      assertEquals(qu.getTypeConsumed(st), cs.getTypeConsumed(st));
+    }
   }
 }

@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -35,6 +36,7 @@ import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -52,7 +54,7 @@ public final class PmemVolumeManager {
    * Counts used bytes for persistent memory.
    */
   private static class UsedBytesCount {
-    private final long maxBytes;
+    private long maxBytes;
     private final AtomicLong usedBytes = new AtomicLong(0);
 
     UsedBytesCount(long maxBytes) {
@@ -102,6 +104,10 @@ public final class PmemVolumeManager {
     long getAvailableBytes() {
       return maxBytes - usedBytes.get();
     }
+
+    void setMaxBytes(long maxBytes) {
+      this.maxBytes = maxBytes;
+    }
   }
 
   private static final Logger LOG =
@@ -113,6 +119,7 @@ public final class PmemVolumeManager {
   private final Map<ExtendedBlockId, Byte> blockKeyToVolume =
       new ConcurrentHashMap<>();
   private final List<UsedBytesCount> usedBytesCounts = new ArrayList<>();
+  private boolean cacheRecoveryEnabled;
 
   /**
    * The total cache capacity in bytes of persistent memory.
@@ -122,12 +129,14 @@ public final class PmemVolumeManager {
   private int count = 0;
   private byte nextIndex = 0;
 
-  private PmemVolumeManager(String[] pmemVolumesConfig) throws IOException {
+  private PmemVolumeManager(String[] pmemVolumesConfig,
+                            boolean cacheRecoveryEnabled) throws IOException {
     if (pmemVolumesConfig == null || pmemVolumesConfig.length == 0) {
       throw new IOException("The persistent memory volume, " +
-          DFSConfigKeys.DFS_DATANODE_CACHE_PMEM_DIRS_KEY +
+          DFSConfigKeys.DFS_DATANODE_PMEM_CACHE_DIRS_KEY +
           " is not configured!");
     }
+    this.cacheRecoveryEnabled = cacheRecoveryEnabled;
     this.loadVolumes(pmemVolumesConfig);
     cacheCapacity = 0L;
     for (UsedBytesCount counter : usedBytesCounts) {
@@ -135,10 +144,12 @@ public final class PmemVolumeManager {
     }
   }
 
-  public synchronized static void init(String[] pmemVolumesConfig)
+  public synchronized static void init(
+      String[] pmemVolumesConfig, boolean cacheRecoveryEnabled)
       throws IOException {
     if (pmemVolumeManager == null) {
-      pmemVolumeManager = new PmemVolumeManager(pmemVolumesConfig);
+      pmemVolumeManager = new PmemVolumeManager(pmemVolumesConfig,
+          cacheRecoveryEnabled);
     }
   }
 
@@ -148,6 +159,11 @@ public final class PmemVolumeManager {
           "The pmemVolumeManager should be instantiated!");
     }
     return pmemVolumeManager;
+  }
+
+  @VisibleForTesting
+  public static void reset() {
+    pmemVolumeManager = null;
   }
 
   @VisibleForTesting
@@ -218,6 +234,10 @@ public final class PmemVolumeManager {
       try {
         File pmemDir = new File(volumes[n]);
         File realPmemDir = verifyIfValidPmemVolume(pmemDir);
+        if (!cacheRecoveryEnabled) {
+          // Clean up the cache left before, if any.
+          cleanup(realPmemDir);
+        }
         this.pmemVolumes.add(realPmemDir.getPath());
         long maxBytes;
         if (maxBytesPerPmem == -1) {
@@ -242,18 +262,56 @@ public final class PmemVolumeManager {
       throw new IOException(
           "At least one valid persistent memory volume is required!");
     }
-    cleanup();
+  }
+
+  void cleanup(File realPmemDir) {
+    try {
+      FileUtils.cleanDirectory(realPmemDir);
+    } catch (IOException e) {
+      LOG.error("Failed to clean up " + realPmemDir.getPath(), e);
+    }
   }
 
   void cleanup() {
     // Remove all files under the volume.
-    for (String pmemDir: pmemVolumes) {
-      try {
-        FileUtils.cleanDirectory(new File(pmemDir));
-      } catch (IOException e) {
-        LOG.error("Failed to clean up " + pmemDir, e);
-      }
+    for (String pmemVolume : pmemVolumes) {
+      cleanup(new File(pmemVolume));
     }
+  }
+
+  /**
+   * Recover cache from the cached files in the configured pmem volumes.
+   */
+  public Map<ExtendedBlockId, MappableBlock> recoverCache(
+      String bpid, MappableBlockLoader cacheLoader) throws IOException {
+    final Map<ExtendedBlockId, MappableBlock> keyToMappableBlock
+        = new ConcurrentHashMap<>();
+    for (byte volumeIndex = 0; volumeIndex < pmemVolumes.size();
+         volumeIndex++) {
+      long maxBytes = usedBytesCounts.get(volumeIndex).getMaxBytes();
+      long usedBytes = 0;
+      File cacheDir = new File(pmemVolumes.get(volumeIndex), bpid);
+      Collection<File> cachedFileList = FileUtils.listFiles(cacheDir,
+          TrueFileFilter.INSTANCE, TrueFileFilter.INSTANCE);
+      // Scan the cached files in pmem volumes for cache recovery.
+      for (File cachedFile : cachedFileList) {
+        MappableBlock mappableBlock = cacheLoader.
+            getRecoveredMappableBlock(cachedFile, bpid, volumeIndex);
+        ExtendedBlockId key = mappableBlock.getKey();
+        keyToMappableBlock.put(key, mappableBlock);
+        usedBytes += cachedFile.length();
+      }
+      // Update maxBytes and cache capacity according to cache space
+      // used by recovered cached files.
+      usedBytesCounts.get(volumeIndex).setMaxBytes(maxBytes + usedBytes);
+      cacheCapacity += usedBytes;
+      usedBytesCounts.get(volumeIndex).reserve(usedBytes);
+    }
+    return keyToMappableBlock;
+  }
+
+  public void recoverBlockKeyToVolume(ExtendedBlockId key, byte volumeIndex) {
+    blockKeyToVolume.put(key, volumeIndex);
   }
 
   @VisibleForTesting
@@ -311,6 +369,18 @@ public final class PmemVolumeManager {
     }
   }
 
+  /**
+   * Create cache subdirectory specified with blockPoolId.
+   */
+  public void createBlockPoolDir(String bpid) throws IOException {
+    for (String volume : pmemVolumes) {
+      File cacheDir = new File(volume, bpid);
+      if (!cacheDir.exists() && !cacheDir.mkdir()) {
+        throw new IOException("Failed to create " + cacheDir.getPath());
+      }
+    }
+  }
+
   public static String getRealPmemDir(String rawPmemDir) {
     return new File(rawPmemDir, CACHE_DIR).getAbsolutePath();
   }
@@ -350,19 +420,22 @@ public final class PmemVolumeManager {
     return pmemVolumes.get(index);
   }
 
-  /**
-   * The cache file is named as BlockPoolId-BlockId.
-   * So its name can be inferred by BlockPoolId and BlockId.
-   */
-  public String getCacheFileName(ExtendedBlockId key) {
-    return key.getBlockPoolId() + "-" + key.getBlockId();
+  ArrayList<String> getVolumes() {
+    return pmemVolumes;
   }
 
   /**
-   * Considering the pmem volume size is below TB level currently,
-   * it is tolerable to keep cache files under one directory.
-   * The strategy will be optimized, especially if one pmem volume
-   * has huge cache capacity.
+   * A cache file is named after the corresponding BlockId.
+   * Thus, cache file name can be inferred according to BlockId.
+   */
+  public String idToCacheFileName(ExtendedBlockId key) {
+    return String.valueOf(key.getBlockId());
+  }
+
+  /**
+   * Create and get the directory where a cache file with this key and
+   * volumeIndex should be stored. Use hierarchical strategy of storing
+   * blocks to avoid keeping cache files under one directory.
    *
    * @param volumeIndex   The index of pmem volume where a replica will be
    *                      cached to or has been cached to.
@@ -371,19 +444,31 @@ public final class PmemVolumeManager {
    *
    * @return              A path to which the block replica is mapped.
    */
-  public String inferCacheFilePath(Byte volumeIndex, ExtendedBlockId key) {
-    return pmemVolumes.get(volumeIndex) + "/" + getCacheFileName(key);
+  public String idToCacheFilePath(Byte volumeIndex, ExtendedBlockId key)
+      throws IOException {
+    final String cacheSubdirPrefix = "subdir";
+    long blockId = key.getBlockId();
+    String bpid = key.getBlockPoolId();
+    int d1 = (int) ((blockId >> 16) & 0x1F);
+    int d2 = (int) ((blockId >> 8) & 0x1F);
+    String parentDir = pmemVolumes.get(volumeIndex) + "/" + bpid;
+    String subDir = cacheSubdirPrefix + d1 + "/" + cacheSubdirPrefix + d2;
+    File filePath = new File(parentDir, subDir);
+    if (!filePath.exists() && !filePath.mkdirs()) {
+      throw new IOException("Failed to create " + filePath.getPath());
+    }
+    return filePath.getAbsolutePath() + "/" + idToCacheFileName(key);
   }
 
   /**
-   * The cache file path is pmemVolume/BlockPoolId-BlockId.
+   * The cache file path is pmemVolume/BlockPoolId/subdir#/subdir#/BlockId.
    */
-  public String getCachePath(ExtendedBlockId key) {
+  public String getCachePath(ExtendedBlockId key) throws IOException {
     Byte volumeIndex = blockKeyToVolume.get(key);
     if (volumeIndex == null) {
       return  null;
     }
-    return inferCacheFilePath(volumeIndex, key);
+    return idToCacheFilePath(volumeIndex, key);
   }
 
   @VisibleForTesting

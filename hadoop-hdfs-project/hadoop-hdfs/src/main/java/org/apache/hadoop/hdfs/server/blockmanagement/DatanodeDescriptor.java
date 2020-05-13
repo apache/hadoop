@@ -339,7 +339,9 @@ public class DatanodeDescriptor extends DatanodeInfo {
 
   public void resetBlocks() {
     updateStorageStats(this.getStorageReports(), 0L, 0L, 0, 0, null);
-    this.invalidateBlocks.clear();
+    synchronized (invalidateBlocks) {
+      this.invalidateBlocks.clear();
+    }
     this.volumeFailures = 0;
     // pendingCached, cached, and pendingUncached are protected by the
     // FSN lock.
@@ -632,18 +634,22 @@ public class DatanodeDescriptor extends DatanodeInfo {
     return new BlockIterator(startBlock, getStorageInfos());
   }
 
-  void incrementPendingReplicationWithoutTargets() {
+  @VisibleForTesting
+  public void incrementPendingReplicationWithoutTargets() {
     pendingReplicationWithoutTargets++;
   }
 
-  void decrementPendingReplicationWithoutTargets() {
+  @VisibleForTesting
+  public void decrementPendingReplicationWithoutTargets() {
     pendingReplicationWithoutTargets--;
   }
 
   /**
    * Store block replication work.
    */
-  void addBlockToBeReplicated(Block block, DatanodeStorageInfo[] targets) {
+  @VisibleForTesting
+  public void addBlockToBeReplicated(Block block,
+      DatanodeStorageInfo[] targets) {
     assert(block != null && targets != null && targets.length > 0);
     replicateBlocks.offer(new BlockTargetPair(block, targets));
   }
@@ -701,7 +707,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
     return erasurecodeBlocks.size();
   }
 
-  int getNumberOfReplicateBlocks() {
+  @VisibleForTesting
+  public int getNumberOfReplicateBlocks() {
     return replicateBlocks.size();
   }
 

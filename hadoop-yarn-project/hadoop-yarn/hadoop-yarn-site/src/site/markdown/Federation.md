@@ -133,7 +133,7 @@ AMRMProxy, Global Policy Generator (GPG) and Router work together to make this h
 
 The figure shows a sequence diagram for the following job execution flow:
 
-1. The Router receives an application submission request that is complaint to the YARN Application Client Protocol.
+1. The Router receives an application submission request that is compliant with the YARN Application Client Protocol.
 2. The router interrogates a routing table / policy to choose the “home RM” for the job (the policy configuration is received from the state-store on heartbeat).
 3. The router queries the membership state to determine the endpoint of the home RM.
 4. The router then redirects the application submission request to the home RM.

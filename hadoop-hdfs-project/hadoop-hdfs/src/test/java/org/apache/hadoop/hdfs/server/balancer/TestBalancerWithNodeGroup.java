@@ -82,6 +82,7 @@ public class TestBalancerWithNodeGroup {
     Configuration conf = new HdfsConfiguration();
     TestBalancer.initConf(conf);
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
+    conf.setBoolean(DFSConfigKeys.DFS_USE_DFS_NETWORK_TOPOLOGY_KEY, false);
     conf.set(CommonConfigurationKeysPublic.NET_TOPOLOGY_IMPL_KEY, 
         NetworkTopologyWithNodeGroup.class.getName());
     conf.set(DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY, 

@@ -147,7 +147,7 @@ public class NNThroughputBenchmark implements Tool {
   }
 
   static void setNameNodeLoggingLevel(Level logLevel) {
-    LOG.error("Log level = " + logLevel.toString());
+    LOG.info("Log level = " + logLevel.toString());
     // change log level to NameNode logs
     DFSTestUtil.setNameNodeLogLevel(logLevel);
     GenericTestUtils.setLogLevel(LogManager.getLogger(

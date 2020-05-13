@@ -127,4 +127,9 @@
     <value>true</value>
   </property>
 
+  <property>
+    <name>fs.contract.create-file-under-file-allowed</name>
+    <value>true</value>
+  </property>
+
 </configuration>

@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.fs.adl.live;
 
+import com.microsoft.azure.datalake.store.SSLSocketFactoryEx.SSLChannelMode;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.adl.AdlFileSystem;
 import org.junit.Assert;
@@ -29,6 +31,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 
 import static org.apache.hadoop.fs.adl.AdlConfKeys.ADL_HTTP_TIMEOUT;
+import static org.apache.hadoop.fs.adl.AdlConfKeys.ADL_SSL_CHANNEL_MODE;
 
 /**
  * Tests interactions with SDK and ensures configuration is having the desired
@@ -53,7 +56,6 @@ public class TestAdlSdkConfiguration {
 
     // Skip this test if we can't get a real FS
     Assume.assumeNotNull(fs);
-
     effectiveTimeout = fs.getAdlClient().getDefaultTimeout();
     Assert.assertFalse("A negative timeout is not supposed to take effect",
         effectiveTimeout < 0);
@@ -73,5 +75,34 @@ public class TestAdlSdkConfiguration {
         effectiveTimeout, 17);
 
     // The default value may vary by SDK, so that value is not tested here.
+  }
+
+  @Test
+  public void testSSLChannelModeConfig()
+      throws IOException, URISyntaxException {
+    testSSLChannelMode(SSLChannelMode.OpenSSL, "OpenSSL");
+    testSSLChannelMode(SSLChannelMode.Default_JSE, "Default_JSE");
+    testSSLChannelMode(SSLChannelMode.Default, "Default");
+    // If config set is invalid, SSL channel mode will be Default.
+    testSSLChannelMode(SSLChannelMode.Default, "Invalid");
+    // Config value is case insensitive.
+    testSSLChannelMode(SSLChannelMode.OpenSSL, "openssl");
+  }
+
+  public void testSSLChannelMode(SSLChannelMode expectedMode,
+      String sslChannelModeConfigValue) throws IOException, URISyntaxException {
+
+    AdlFileSystem fs = null;
+    Configuration conf = null;
+
+    conf = AdlStorageConfiguration.getConfiguration();
+    conf.set(ADL_SSL_CHANNEL_MODE, sslChannelModeConfigValue);
+    fs = (AdlFileSystem) (AdlStorageConfiguration.createStorageConnector(conf));
+    Assume.assumeNotNull(fs);
+
+    SSLChannelMode sslChannelMode = fs.getAdlClient().getSSLChannelMode();
+    Assert.assertEquals(
+        "Unexpected SSL Channel Mode for adl.ssl.channel.mode config value : "
+            + sslChannelModeConfigValue, expectedMode, sslChannelMode);
   }
 }

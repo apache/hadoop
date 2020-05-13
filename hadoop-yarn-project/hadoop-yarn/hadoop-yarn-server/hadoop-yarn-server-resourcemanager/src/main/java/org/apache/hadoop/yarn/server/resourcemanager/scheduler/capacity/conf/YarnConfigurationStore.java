@@ -23,11 +23,11 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateVersionIncompatibleException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -52,7 +52,7 @@ public abstract class YarnConfigurationStore {
    * LogMutation encapsulates the fields needed for configuration mutation
    * audit logging and recovery.
    */
-  static class LogMutation implements Serializable {
+  public static class LogMutation implements Serializable {
     private Map<String, String> updates;
     private String user;
 
@@ -99,10 +99,11 @@ public abstract class YarnConfigurationStore {
    * Closes the configuration store, releasing any required resources.
    * @throws IOException on failure to close
    */
-  public void close() throws IOException {}
+  public abstract void close() throws IOException;
 
   /**
    * Logs the configuration change to backing store.
+   *
    * @param logMutation configuration change to be persisted in write ahead log
    * @throws IOException if logging fails
    */
@@ -113,17 +114,32 @@ public abstract class YarnConfigurationStore {
    * last logged by {@code logMutation} and marks the mutation as persisted (no
    * longer pending). If isValid is true, merge the mutation with the persisted
    * configuration.
+   * @param pendingMutation the log mutation to apply
    * @param isValid if true, update persisted configuration with pending
    *                mutation.
    * @throws Exception if mutation confirmation fails
    */
-  public abstract void confirmMutation(boolean isValid) throws Exception;
+  public abstract void confirmMutation(LogMutation pendingMutation,
+      boolean isValid) throws Exception;
 
   /**
    * Retrieve the persisted configuration.
    * @return configuration as key-value
    */
   public abstract Configuration retrieve() throws IOException;
+
+
+  /**
+   * Format the persisted configuration.
+   * @throws IOException on failure to format
+   */
+  public abstract void format() throws Exception;
+
+  /**
+   * Get the last updated config version.
+   * @return Last updated config version.
+   */
+  public abstract long getConfigVersion() throws Exception;
 
   /**
    * Get a list of confirmed configuration mutations starting from a given id.
@@ -141,6 +157,13 @@ public abstract class YarnConfigurationStore {
   protected abstract Version getConfStoreVersion() throws Exception;
 
   /**
+   * Get a list of configuration mutations.
+   * @return list of configuration mutations.
+   * @throws Exception On mutation fetch failure
+   */
+  protected abstract LinkedList<LogMutation> getLogs() throws Exception;
+
+  /**
    * Persist the hard-coded schema version to the conf store.
    * @throws Exception On storage failure
    */
@@ -154,23 +177,22 @@ public abstract class YarnConfigurationStore {
   protected abstract Version getCurrentVersion();
 
   public void checkVersion() throws Exception {
-    // TODO this was taken from RMStateStore. Should probably refactor
     Version loadedVersion = getConfStoreVersion();
-    LOG.info("Loaded configuration store version info " + loadedVersion);
-    if (loadedVersion != null && loadedVersion.equals(getCurrentVersion())) {
+    Version currentVersion = getCurrentVersion();
+    LOG.info("Loaded configuration store version info {}", loadedVersion);
+
+    // when hard-coded schema version (currentVersion) is null the version check
+    // is unnecessary
+    if (currentVersion == null || currentVersion.equals(loadedVersion)) {
       return;
     }
     // if there is no version info, treat it as CURRENT_VERSION_INFO;
-    if (loadedVersion == null) {
-      loadedVersion = getCurrentVersion();
-    }
-    if (loadedVersion.isCompatibleTo(getCurrentVersion())) {
-      LOG.info("Storing configuration store version info "
-          + getCurrentVersion());
+    if (loadedVersion == null || loadedVersion.isCompatibleTo(currentVersion)) {
+      LOG.info("Storing configuration store version info {}", currentVersion);
       storeVersion();
     } else {
-      throw new RMStateVersionIncompatibleException(
-          "Expecting configuration store version " + getCurrentVersion()
+      throw new YarnConfStoreVersionIncompatibleException(
+          "Expecting configuration store version " + currentVersion
               + ", but loading version " + loadedVersion);
     }
   }

@@ -18,7 +18,7 @@
 # Dockerfile for installing the necessary dependencies for building Hadoop.
 # See BUILDING.txt.
 
-FROM ubuntu:xenial
+FROM ubuntu:bionic
 
 WORKDIR /root
 
@@ -44,9 +44,11 @@ ENV DEBCONF_TERSE true
 RUN apt-get -q update \
     && apt-get -q install -y --no-install-recommends \
         apt-utils \
+        bats \
         build-essential \
         bzip2 \
         clang \
+        cmake \
         curl \
         doxygen \
         fuse \
@@ -62,6 +64,7 @@ RUN apt-get -q update \
         libsasl2-dev \
         libsnappy-dev \
         libssl-dev \
+        libsnappy-dev \
         libtool \
         libzstd1-dev \
         locales \
@@ -75,8 +78,8 @@ RUN apt-get -q update \
         python-setuptools \
         python-wheel \
         rsync \
+        shellcheck \
         software-properties-common \
-        snappy \
         sudo \
         valgrind \
         zlib1g-dev \
@@ -93,25 +96,13 @@ RUN apt-get -q update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-
 ######
-# Install cmake 3.1.0 (3.5.1 ships with Xenial)
-######
-RUN mkdir -p /opt/cmake \
-    && curl -L -s -S \
-      https://cmake.org/files/v3.1/cmake-3.1.0-Linux-x86_64.tar.gz \
-      -o /opt/cmake.tar.gz \
-    && tar xzf /opt/cmake.tar.gz --strip-components 1 -C /opt/cmake
-ENV CMAKE_HOME /opt/cmake
-ENV PATH "${PATH}:/opt/cmake/bin"
-
-######
-# Install Google Protobuf 2.5.0 (2.6.0 ships with Xenial)
+# Install Google Protobuf 3.7.1 (3.0.0 ships with Bionic)
 ######
 # hadolint ignore=DL3003
 RUN mkdir -p /opt/protobuf-src \
     && curl -L -s -S \
-      https://github.com/google/protobuf/releases/download/v2.5.0/protobuf-2.5.0.tar.gz \
+      https://github.com/protocolbuffers/protobuf/releases/download/v3.7.1/protobuf-java-3.7.1.tar.gz \
       -o /opt/protobuf.tar.gz \
     && tar xzf /opt/protobuf.tar.gz --strip-components 1 -C /opt/protobuf-src \
     && cd /opt/protobuf-src \
@@ -123,7 +114,7 @@ ENV PROTOBUF_HOME /opt/protobuf
 ENV PATH "${PATH}:/opt/protobuf/bin"
 
 ######
-# Install Apache Maven 3.3.9 (3.3.9 ships with Xenial)
+# Install Apache Maven 3.6.0 (3.6.0 ships with Bionic)
 ######
 # hadolint ignore=DL3008
 RUN apt-get -q update \
@@ -131,9 +122,11 @@ RUN apt-get -q update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 ENV MAVEN_HOME /usr
+# JAVA_HOME must be set in Maven >= 3.5.0 (MNG-6003)
+ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
 
 ######
-# Install findbugs 3.0.1 (3.0.1 ships with Xenial)
+# Install findbugs 3.1.0 (3.1.0 ships with Bionic)
 # Ant is needed for findbugs
 ######
 # hadolint ignore=DL3008
@@ -144,29 +137,12 @@ RUN apt-get -q update \
 ENV FINDBUGS_HOME /usr
 
 ####
-# Install shellcheck (0.4.6, the latest as of 2017-09-26)
-####
-# hadolint ignore=DL3008
-RUN add-apt-repository -y ppa:jonathonf/ghc-8.0.2 \
-    && apt-get -q update \
-    && apt-get -q install -y --no-install-recommends shellcheck \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-####
-# Install bats (0.4.0, the latest as of 2017-09-26, ships with Xenial)
-####
-# hadolint ignore=DL3008
-RUN apt-get -q update \
-    && apt-get -q install -y --no-install-recommends bats \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-####
 # Install pylint at fixed version (2.0.0 removed python2 support)
 # https://github.com/PyCQA/pylint/issues/2294
 ####
-RUN pip2 install pylint==1.9.2
+RUN pip2 install \
+    configparser==4.0.2 \
+    pylint==1.9.2
 
 ####
 # Install dateutil.parser
@@ -174,16 +150,23 @@ RUN pip2 install pylint==1.9.2
 RUN pip2 install python-dateutil==2.7.3
 
 ###
-# Install node.js for web UI framework (4.2.6 ships with Xenial)
+# Install node.js 8.17.0 for web UI framework (4.2.6 ships with Xenial)
 ###
-# hadolint ignore=DL3008, DL3016
-RUN apt-get -q update \
-    && apt-get install -y --no-install-recommends nodejs npm \
+RUN curl -L -s -S https://deb.nodesource.com/setup_8.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs=8.17.0-1nodesource1 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
-    && ln -s /usr/bin/nodejs /usr/bin/node \
-    && npm install npm@latest -g \
-    && npm install -g jshint
+    && npm install -g bower@1.8.8
+
+###
+## Install Yarn 1.12.1 for web UI framework
+####
+RUN curl -s -S https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - \
+    && echo 'deb https://dl.yarnpkg.com/debian/ stable main' > /etc/apt/sources.list.d/yarn.list \
+    && apt-get -q update \
+    && apt-get install -y --no-install-recommends yarn=1.21.1-1 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 ###
 # Install hadolint
@@ -200,7 +183,6 @@ RUN curl -L -s -S \
 ###
 ENV MAVEN_OPTS -Xms256m -Xmx1536m
 
-
 ###
 # Everything past this point is either not needed for testing or breaks Yetus.
 # So tell Yetus not to read the rest of the file:
@@ -208,9 +190,10 @@ ENV MAVEN_OPTS -Xms256m -Xmx1536m
 ###
 
 # Hugo static website generator (for new hadoop site and Ozone docs)
-RUN curl -L -o hugo.deb https://github.com/gohugoio/hugo/releases/download/v0.30.2/hugo_0.30.2_Linux-64bit.deb \
+RUN curl -L -o hugo.deb https://github.com/gohugoio/hugo/releases/download/v0.58.3/hugo_0.58.3_Linux-64bit.deb \
     && dpkg --install hugo.deb \
     && rm hugo.deb
+
 
 # Add a welcome message and environment checks.
 COPY hadoop_env_checks.sh /root/hadoop_env_checks.sh

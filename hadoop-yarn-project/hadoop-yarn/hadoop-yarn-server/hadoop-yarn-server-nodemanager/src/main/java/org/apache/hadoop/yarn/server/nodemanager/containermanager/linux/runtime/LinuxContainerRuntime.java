@@ -1,5 +1,4 @@
 /*
- * *
  *  Licensed to the Apache Software Foundation (ASF) under one
  *  or more contributor license agreements.  See the NOTICE file
  *  distributed with this work for additional information
@@ -15,7 +14,6 @@
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- * /
  */
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime;
@@ -23,10 +21,13 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntime;
 
+import java.io.IOException;
 import java.util.Map;
 
 /**
@@ -55,5 +56,14 @@ public interface LinuxContainerRuntime extends ContainerRuntime {
    * @return whether this runtime is requested
    */
   boolean isRuntimeRequested(Map<String, String> env);
+
+  default void start() {}
+
+  default void stop() {}
+
+  default Map<String, LocalResource> getLocalResources(Container container)
+      throws IOException {
+    return container.getLaunchContext().getLocalResources();
+  }
 }
 

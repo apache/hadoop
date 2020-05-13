@@ -57,6 +57,7 @@ import org.apache.hadoop.hdfs.web.resources.GroupParam;
 import org.apache.hadoop.hdfs.web.resources.HttpOpParam;
 import org.apache.hadoop.hdfs.web.resources.LengthParam;
 import org.apache.hadoop.hdfs.web.resources.ModificationTimeParam;
+import org.apache.hadoop.hdfs.web.resources.NameSpaceQuotaParam;
 import org.apache.hadoop.hdfs.web.resources.NewLengthParam;
 import org.apache.hadoop.hdfs.web.resources.NoRedirectParam;
 import org.apache.hadoop.hdfs.web.resources.OffsetParam;
@@ -73,6 +74,8 @@ import org.apache.hadoop.hdfs.web.resources.ReplicationParam;
 import org.apache.hadoop.hdfs.web.resources.SnapshotNameParam;
 import org.apache.hadoop.hdfs.web.resources.StartAfterParam;
 import org.apache.hadoop.hdfs.web.resources.StoragePolicyParam;
+import org.apache.hadoop.hdfs.web.resources.StorageSpaceQuotaParam;
+import org.apache.hadoop.hdfs.web.resources.StorageTypeParam;
 import org.apache.hadoop.hdfs.web.resources.TokenArgumentParam;
 import org.apache.hadoop.hdfs.web.resources.TokenKindParam;
 import org.apache.hadoop.hdfs.web.resources.TokenServiceParam;
@@ -209,7 +212,10 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
       final CreateFlagParam createFlagParam,
       final NoRedirectParam noredirectParam,
       final StoragePolicyParam policyName,
-      final ECPolicyParam ecpolicy
+      final ECPolicyParam ecpolicy,
+      final NameSpaceQuotaParam namespaceQuota,
+      final StorageSpaceQuotaParam storagespaceQuota,
+      final StorageTypeParam storageType
   ) throws IOException, URISyntaxException {
 
     switch(op.getValue()) {
@@ -261,7 +267,7 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
           accessTime, renameOptions, createParent, delegationTokenArgument,
           aclPermission, xattrName, xattrValue, xattrSetFlag, snapshotName,
           oldSnapshotName, exclDatanodes, createFlagParam, noredirectParam,
-          policyName, ecpolicy);
+          policyName, ecpolicy, namespaceQuota, storagespaceQuota, storageType);
     }
     default:
       throw new UnsupportedOperationException(op + " is not supported");
