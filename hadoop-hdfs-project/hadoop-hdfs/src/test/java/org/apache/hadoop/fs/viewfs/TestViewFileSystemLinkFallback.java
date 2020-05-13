@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import java.util.HashSet;
 import javax.security.auth.login.LoginException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -259,6 +260,86 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
     } catch (IOException e) {
       assertTrue("Unexpected error: " + e.getMessage(),
           e.getMessage().contains(expectedErrorMsg));
+    }
+  }
+
+  /**
+   * This tests whether the fallback link gets listed for list operation
+   * of root directory of mount table
+   * @throws Exception
+   */
+  @Test
+  public void testListingWithFallbackLink() throws Exception {
+    Path dir1 = new Path(targetTestRoot, "fallbackDir/dir1");
+    fsTarget.mkdirs(dir1);
+    String clusterName = Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE;
+    URI viewFsUri = new URI(FsConstants.VIEWFS_SCHEME, clusterName,
+        "/", null, null);
+
+    HashSet<Path> beforeFallback = new HashSet<>();
+    try(FileSystem vfs = FileSystem.get(viewFsUri, conf)) {
+      for (FileStatus stat : vfs.listStatus(new Path(viewFsUri.toString()))) {
+        beforeFallback.add(stat.getPath());
+      }
+    }
+
+    ConfigUtil.addLinkFallback(conf, clusterName,
+        new Path(targetTestRoot, "fallbackDir").toUri());
+
+    try (FileSystem vfs = FileSystem.get(viewFsUri, conf)) {
+      HashSet<Path> afterFallback = new HashSet<>();
+      for (FileStatus stat : vfs.listStatus(new Path(viewFsUri.toString()))) {
+        afterFallback.add(stat.getPath());
+      }
+      afterFallback.removeAll(beforeFallback);
+      assertTrue("Listing didn't include fallback link",
+          afterFallback.size() == 1);
+      Path[] fallbackArray = new Path[afterFallback.size()];
+      assertEquals("Path did not match" ,
+          dir1, afterFallback.toArray(fallbackArray)[0]);
+    }
+  }
+
+  /**
+   * This tests whether fallback directory gets shaded during list operation
+   * of root directory of mount table when the same directory name exists as
+   * mount point as well as in the fallback linked directory
+   * @throws Exception
+   */
+  @Test
+  public void testListingWithFallbackLinkWithSameMountDirectories()
+      throws Exception {
+    // Creating two directories under the fallback directory.
+    // "user" directory already exists as configured mount point.
+    Path dir1 = new Path(targetTestRoot, "fallbackDir/user");
+    Path dir2 = new Path(targetTestRoot, "fallbackDir/user1");
+    fsTarget.mkdirs(dir1);
+    fsTarget.mkdirs(dir2);
+    String clusterName = Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE;
+    URI viewFsUri = new URI(FsConstants.VIEWFS_SCHEME, clusterName,
+        "/", null, null);
+
+    HashSet<Path> beforeFallback = new HashSet<>();
+    try(FileSystem vfs = FileSystem.get(viewFsUri, conf)) {
+      for (FileStatus stat : vfs.listStatus(new Path(viewFsUri.toString()))) {
+        beforeFallback.add(stat.getPath());
+      }
+    }
+    ConfigUtil.addLinkFallback(conf, clusterName,
+        new Path(targetTestRoot, "fallbackDir").toUri());
+
+    try (FileSystem vfs = FileSystem.get(viewFsUri, conf)) {
+      HashSet<Path> afterFallback = new HashSet<>();
+      for (FileStatus stat : vfs.listStatus(new Path(viewFsUri.toString()))) {
+        afterFallback.add(stat.getPath());
+      }
+      afterFallback.removeAll(beforeFallback);
+      assertTrue("The same directory name in fallback link should be shaded",
+          afterFallback.size() == 1);
+      Path[] fallbackArray = new Path[afterFallback.size()];
+      // Only dir2 should be listed as fallback link
+      assertEquals("Path did not match" ,
+          dir2, afterFallback.toArray(fallbackArray)[0]);
     }
   }
 }

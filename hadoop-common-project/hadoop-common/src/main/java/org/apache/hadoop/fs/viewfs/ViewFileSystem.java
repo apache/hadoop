@@ -1204,6 +1204,7 @@ public class ViewFileSystem extends FileSystem {
     public FileStatus[] listStatus(Path f) throws AccessControlException,
         FileNotFoundException, IOException {
       checkPathIsSlash(f);
+      FileStatus[] fallbackStatuses = listStatusForFallbackLink();
       FileStatus[] result = new FileStatus[theInternalDir.getChildren().size()];
       int i = 0;
       for (Entry<String, INode<FileSystem>> iEntry :
@@ -1226,7 +1227,39 @@ public class ViewFileSystem extends FileSystem {
                 myUri, null));
         }
       }
-      return result;
+      if (fallbackStatuses.length > 0) {
+        return consolidateFileStatuses(fallbackStatuses, result);
+      } else {
+        return result;
+      }
+    }
+
+    private FileStatus[] consolidateFileStatuses(FileStatus[] fallbackStatuses,
+        FileStatus[] mountPointStatuses) {
+      ArrayList<FileStatus> result = new ArrayList<>();
+      Set<String> pathSet = new HashSet<>();
+      int i = 0;
+      for (FileStatus status : mountPointStatuses) {
+        result.add(status);
+        pathSet.add(status.getPath().getName());
+      }
+      for (FileStatus status : fallbackStatuses) {
+        if (!pathSet.contains(status.getPath().getName())) {
+          result.add(status);
+        }
+      }
+      return result.toArray(new FileStatus[0]);
+    }
+
+    private FileStatus[] listStatusForFallbackLink() throws IOException {
+      if (theInternalDir.isRoot() && theInternalDir.getFallbackLink() != null) {
+        URI fallBackUri = theInternalDir.getFallbackLink().targetDirLinkList[0];
+        ChRootedFileSystem linkedFs = (ChRootedFileSystem)
+            theInternalDir.getFallbackLink().getTargetFileSystem();
+        return linkedFs.getMyFs().listStatus(new Path(fallBackUri.toString()));
+      } else {
+        return new FileStatus[0];
+      }
     }
 
     @Override
