@@ -23,7 +23,7 @@ pipeline {
 
     options {
         buildDiscarder(logRotator(numToKeepStr: '5'))
-        timeout (time: 5, unit: 'HOURS')
+        timeout (time: 10, unit: 'HOURS')
         timestamps()
         checkoutToSubdirectory('src')
     }
