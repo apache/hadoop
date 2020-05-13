@@ -30,7 +30,7 @@ public final class DateTimeUtils {
   public static final Logger LOG = LoggerFactory.getLogger(DateTimeUtils.class);
   private static final String DATE_TIME_PATTERN = "E, dd MMM yyyy HH:mm:ss z";
 
-  public static long ParseLastModifiedTime(final String lastModifiedTime) {
+  public static long parseLastModifiedTime(final String lastModifiedTime) {
     long parsedTime = 0;
     try {
       Date utcDate = new SimpleDateFormat(DATE_TIME_PATTERN, Locale.US).parse(lastModifiedTime);
@@ -40,5 +40,9 @@ public final class DateTimeUtils {
     } finally {
       return parsedTime;
     }
+  }
+
+  private DateTimeUtils() {
+
   }
 }

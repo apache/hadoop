@@ -344,12 +344,12 @@ public class AbfsClient implements Closeable {
    * @param op Rename request REST operation response
    * @param destination rename destination path
    * @return REST operation response post idempotency check
-   * @throws AzureBlobFileSystemException
+   * @throws AzureBlobFileSystemException if GetFileStatus hits any exception
    */
   public AbfsRestOperation renameIdempotencyCheckOp(final AbfsRestOperation op,
       final String destination) throws AzureBlobFileSystemException {
-    if ((op.getRetryCount() > 0) &&
-        (op.getResult().getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND)) {
+    if ((op.getRetryCount() > 0)
+        && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND)) {
       // Server has returned HTTP 404, which means rename source no longer
       // exists. Check on destination status and if it has a recent LMT timestamp.
       // If yes, return success, else fall back to original rename request failure response.
@@ -376,6 +376,7 @@ public class AbfsClient implements Closeable {
    * each retry. To include factors like clock skew and request network time
    * factors, setting the timespan to be 2 times the max timespan the
    * re-tries could incurr.
+   * @param retryCount number of retries done for the request
    * @return timespan in milli-seconds within which operation should have
    * occurred to qualify as recent operation.
    */
@@ -393,7 +394,7 @@ public class AbfsClient implements Closeable {
    */
   private boolean isRecentlyModified(final String lastModifiedTime,
       final int timeIntervalToTagOperationRecent) {
-    long lmtEpochTime = DateTimeUtils.ParseLastModifiedTime(lastModifiedTime);
+    long lmtEpochTime = DateTimeUtils.parseLastModifiedTime(lastModifiedTime);
     long currentEpochTime = java.time.Instant.now().toEpochMilli();
 
     return (currentEpochTime - lmtEpochTime) <= timeIntervalToTagOperationRecent;
@@ -573,12 +574,11 @@ public class AbfsClient implements Closeable {
    * should help the job to continue.
    * @param op Delete request REST operation response
    * @return REST operation response post idempotency check
-   * @throws AzureBlobFileSystemException
    */
   public AbfsRestOperation deleteIdempotencyCheckOp(final AbfsRestOperation op) {
-    if ((op.getRetryCount() > 0) &&
-        (op.getResult().getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) &&
-        DEFAULT_DELETE_CONSIDERED_IDEMPOTENT) {
+    if ((op.getRetryCount() > 0)
+        && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND)
+        && DEFAULT_DELETE_CONSIDERED_IDEMPOTENT) {
       // Server has returned HTTP 404, which means path no longer
       // exists. Assuming delete result to be idempotent, return success.
       final AbfsRestOperation successOp = new AbfsRestOperation(

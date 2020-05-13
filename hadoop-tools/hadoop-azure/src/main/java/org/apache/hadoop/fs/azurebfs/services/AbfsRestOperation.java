@@ -74,7 +74,7 @@ public class AbfsRestOperation {
   }
 
   public void hardSetResult(int httpStatus) {
-    result = AbfsHttpOperation.GetAbfsHttpOperationWithFixedResult(this.url,
+    result = AbfsHttpOperation.getAbfsHttpOperationWithFixedResult(this.url,
         this.method, httpStatus);
   }
 

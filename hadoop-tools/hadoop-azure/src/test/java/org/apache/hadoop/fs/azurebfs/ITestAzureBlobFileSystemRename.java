@@ -218,8 +218,8 @@ public class ITestAzureBlobFileSystemRename extends
     assertTrue(
         "Timestamp range for LMT update should be twice of "
             + "MaxIoRetries * MaxBackoffIntervalMilliseconds",
-        testClient.getTimeIntervalToTagOperationRecent(reducedRetryCount) ==
-        (2 * reducedRetryCount * reducedMaxBackoffIntervalMs));
+        testClient.getTimeIntervalToTagOperationRecent(reducedRetryCount)
+            == (2 * reducedRetryCount * reducedMaxBackoffIntervalMs));
 
     // Mock instance of AbfsRestOperation
     AbfsRestOperation op = mock(AbfsRestOperation.class);
@@ -252,7 +252,7 @@ public class ITestAzureBlobFileSystemRename extends
           (testClient.renameIdempotencyCheckOp(op, destinationPath.toUri().getPath())
               .getResult()
               .getStatusCode() == renameIdempotencyCheckStatus));
-    } else if (isOldOp == false) {
+    } else if (!isOldOp) {
       // case 2: Rename failed as FileNotFound and the destination LMT is
       // within TimespanForIdentifyingRecentOperationThroughLMT
 

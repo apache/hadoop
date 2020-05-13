@@ -691,6 +691,18 @@ Config `fs.azure.account.hns.enabled` provides an option to specify whether
 Config `fs.azure.enable.check.access` needs to be set true to enable
  the AzureBlobFileSystem.access().
 
+### <a name="idempotency"></a> Operation Idempotency
+
+Requests failing due to server timeouts and network failures will be retried
+exponentially. PUT/POST operations are idempotent and need no specific handling
+except for Rename and Delete operations.
+
+Rename idempotency checks are made by ensuring the LastModifiedTime on destination
+is recent if source path is found to be non-existent on retry.
+
+Delete is considered to be idempotent by default if the target does not exist on
+retry.
+
 ### <a name="perfoptions"></a> Perf Options
 
 #### <a name="abfstracklatencyoptions"></a> 1. HTTP Request Tracking Options
