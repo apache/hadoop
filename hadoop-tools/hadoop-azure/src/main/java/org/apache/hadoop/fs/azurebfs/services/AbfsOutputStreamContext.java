@@ -35,7 +35,8 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   private AbfsOutputStreamStatistics streamStatistics;
 
-  public AbfsOutputStreamContext() {
+  public AbfsOutputStreamContext(final long sasTokenRenewPeriodForStreamsInSeconds) {
+    super(sasTokenRenewPeriodForStreamsInSeconds);
   }
 
   public AbfsOutputStreamContext withWriteBufferSize(

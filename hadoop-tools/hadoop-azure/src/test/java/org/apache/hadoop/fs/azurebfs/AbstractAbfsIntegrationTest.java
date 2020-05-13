@@ -25,6 +25,7 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,6 +79,7 @@ public abstract class AbstractAbfsIntegrationTest extends
   private String testUrl;
   private AuthType authType;
   private boolean useConfiguredFileSystem = false;
+  private boolean usingFilesystemForSASTests = false;
 
   protected AbstractAbfsIntegrationTest() throws Exception {
     fileSystemName = TEST_CONTAINER_PREFIX + UUID.randomUUID().toString();
@@ -174,8 +176,13 @@ public abstract class AbstractAbfsIntegrationTest extends
         return;
       }
 
-      // Delete all uniquely created filesystem from the account
-      if (!useConfiguredFileSystem) {
+      if (usingFilesystemForSASTests) {
+        abfsConfig.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey.name());
+        AzureBlobFileSystem tempFs = (AzureBlobFileSystem) FileSystem.newInstance(rawConfig);
+        tempFs.getAbfsStore().deleteFilesystem();
+      }
+      else if (!useConfiguredFileSystem) {
+        // Delete all uniquely created filesystem from the account
         final AzureBlobFileSystemStore abfsStore = abfs.getAbfsStore();
         abfsStore.deleteFilesystem();
 
@@ -222,6 +229,16 @@ public abstract class AbstractAbfsIntegrationTest extends
           defaultUri.toString());
 
     useConfiguredFileSystem = true;
+  }
+
+  protected void createFilesystemForSASTests() throws Exception {
+    // The SAS tests do not have permission to create a filesystem
+    // so first create temporary instance of the filesystem using SharedKey
+    // then re-use the filesystem it creates with SAS auth instead of SharedKey.
+    AzureBlobFileSystem tempFs = (AzureBlobFileSystem) FileSystem.newInstance(rawConfig);
+    Assert.assertTrue(tempFs.exists(new Path("/")));
+    abfsConfig.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SAS.name());
+    usingFilesystemForSASTests = true;
   }
 
   public AzureBlobFileSystem getFileSystem() throws IOException {

@@ -3556,7 +3556,8 @@ public class DistributedFileSystem extends FileSystem
 
   public RemoteIterator<OpenFileEntry> listOpenFiles(
       EnumSet<OpenFilesType> openFilesTypes, String path) throws IOException {
-    return dfs.listOpenFiles(openFilesTypes, path);
+    Path absF = fixRelativePart(new Path(path));
+    return dfs.listOpenFiles(openFilesTypes, getPathName(absF));
   }
 
 

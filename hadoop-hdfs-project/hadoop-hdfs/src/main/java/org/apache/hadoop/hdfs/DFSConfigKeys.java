@@ -243,6 +243,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.namenode.read.considerLoad";
   public static final boolean DFS_NAMENODE_READ_CONSIDERLOAD_DEFAULT =
       false;
+  public static final String DFS_NAMENODE_READ_CONSIDERSTORAGETYPE_KEY =
+      "dfs.namenode.read.considerStorageType";
+  public static final boolean DFS_NAMENODE_READ_CONSIDERSTORAGETYPE_DEFAULT =
+      false;
   public static final String  DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_FACTOR =
       "dfs.namenode.redundancy.considerLoad.factor";
   public static final double
@@ -1459,6 +1463,16 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY =
       "dfs.namenode.state.context.enabled";
   public static final boolean DFS_NAMENODE_STATE_CONTEXT_ENABLED_DEFAULT = false;
+
+  /**
+   * whether to protect the subdirectories of directories which
+   * set on fs.protected.directories.
+   */
+  public static final String DFS_PROTECTED_SUBDIRECTORIES_ENABLE =
+      "dfs.protected.subdirectories.enable";
+  // Default value for DFS_PROTECTED_SUBDIRECTORIES_ENABLE.
+  public static final boolean DFS_PROTECTED_SUBDIRECTORIES_ENABLE_DEFAULT =
+      false;
 
   // dfs.client.retry confs are moved to HdfsClientConfigKeys.Retry
   @Deprecated
