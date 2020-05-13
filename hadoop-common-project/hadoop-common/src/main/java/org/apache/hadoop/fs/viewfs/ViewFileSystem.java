@@ -1087,7 +1087,6 @@ public class ViewFileSystem extends FileSystem {
     final long creationTime; // of the the mount table
     final UserGroupInformation ugi; // the user/group of user who created mtable
     final URI myUri;
-    final Configuration conf;
     
     public InternalDirOfViewFs(final InodeTree.INodeDir<FileSystem> dir,
         final long cTime, final UserGroupInformation ugi, URI uri,
@@ -1101,7 +1100,6 @@ public class ViewFileSystem extends FileSystem {
       theInternalDir = dir;
       creationTime = cTime;
       this.ugi = ugi;
-      this.conf = config;
     }
 
     static private void checkPathIsSlash(final Path f) throws IOException {
@@ -1205,14 +1203,17 @@ public class ViewFileSystem extends FileSystem {
           // For MERGE or NFLY links, the first target link is considered
           // for fetching the FileStatus with an assumption that the permission
           // and the owner will be the same for all the target directories.
-          FileStatus status = FileSystem.get(link.targetDirLinkList[0], conf)
+          ChRootedFileSystem linkedFs = (ChRootedFileSystem)
+              link.getTargetFileSystem();
+          FileStatus status = linkedFs.getMyFs()
               .getFileStatus(new Path(link.targetDirLinkList[0].toString()));
 
-          result[i++] = new FileStatus(status.getLen(), false, 0, 0,
-              status.getModificationTime(), status.getAccessTime(),
-              status.getPermission(), status.getOwner(), status.getGroup(),
-              link.getTargetLink(),
-              new Path(inode.fullPath).makeQualified(
+          result[i++] = new FileStatus(status.getLen(), false,
+            status.getReplication(), status.getBlockSize(),
+            status.getModificationTime(), status.getAccessTime(),
+            status.getPermission(), status.getOwner(), status.getGroup(),
+            link.getTargetLink(),
+            new Path(inode.fullPath).makeQualified(
                 myUri, null));
         } else {
           result[i++] = new FileStatus(0, true, 0, 0,
