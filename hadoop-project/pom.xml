@@ -141,6 +141,7 @@
     <metrics.version>3.2.4</metrics.version>
     <netty3.version>3.10.6.Final</netty3.version>
     <netty4.version>4.1.48.Final</netty4.version>
+    <netty4.group>io.netty</netty4.group>
 
     <!-- Maven protoc compiler -->
     <protobuf-maven-plugin.version>0.5.1</protobuf-maven-plugin.version>
@@ -892,7 +893,7 @@
       </dependency>
 
       <dependency>
-        <groupId>io.netty</groupId>
+        <groupId>${netty4.group}</groupId>
         <artifactId>netty-all</artifactId>
         <version>${netty4.version}</version>
       </dependency>
@@ -2214,6 +2215,21 @@
           </plugin>
         </plugins>
       </build>
+    </profile>
+    <profile>
+      <id>aarch64</id>
+      <properties>
+        <!-- To make hadoop fully support ARM64 now, here add a workaround using an unofficial
+        netty-all package which support ARM64. Once the Netty officially support ARM64 in a
+        new release, we need to remove this and upgrade to use Netty official package -->
+        <netty4.group>org.openlabtesting.netty</netty4.group>
+      </properties>
+      <activation>
+        <os>
+          <family>linux</family>
+          <arch>aarch64</arch>
+        </os>
+      </activation>
     </profile>
     <profile>
       <id>test-patch</id>

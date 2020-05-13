@@ -176,7 +176,7 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>io.netty</groupId>
+      <groupId>${netty4.group}</groupId>
       <artifactId>netty-all</artifactId>
       <scope>compile</scope>
     </dependency>
