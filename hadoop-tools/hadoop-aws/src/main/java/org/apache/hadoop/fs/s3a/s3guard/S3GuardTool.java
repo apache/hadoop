@@ -99,16 +99,16 @@ public abstract class S3GuardTool extends Configured implements Tool,
       "Commands: \n" +
       "\t" + Init.NAME + " - " + Init.PURPOSE + "\n" +
       "\t" + Destroy.NAME + " - " + Destroy.PURPOSE + "\n" +
-      "\t" + MarkerTool.NAME + " - " + MarkerTool.PURPOSE + "\n" +
-      "\t" + Import.NAME + " - " + Import.PURPOSE + "\n" +
+      "\t" + Authoritative.NAME + " - " + Authoritative.PURPOSE + "\n" +
       "\t" + BucketInfo.NAME + " - " + BucketInfo.PURPOSE + "\n" +
-      "\t" + Uploads.NAME + " - " + Uploads.PURPOSE + "\n" +
       "\t" + Diff.NAME + " - " + Diff.PURPOSE + "\n" +
+      "\t" + Fsck.NAME + " - " + Fsck.PURPOSE + "\n" +
+      "\t" + Import.NAME + " - " + Import.PURPOSE + "\n" +
+      "\t" + MarkerTool.NAME + " - " + MarkerTool.PURPOSE + "\n" +
       "\t" + Prune.NAME + " - " + Prune.PURPOSE + "\n" +
       "\t" + SetCapacity.NAME + " - " + SetCapacity.PURPOSE + "\n" +
       "\t" + SelectTool.NAME + " - " + SelectTool.PURPOSE + "\n" +
-      "\t" + Fsck.NAME + " - " + Fsck.PURPOSE + "\n" +
-      "\t" + Authoritative.NAME + " - " + Authoritative.PURPOSE + "\n"
+      "\t" + Uploads.NAME + " - " + Uploads.PURPOSE + "\n"
       ;
   private static final String DATA_IN_S3_IS_PRESERVED
       = "(all data in S3 is preserved)";
@@ -1993,6 +1993,9 @@ public abstract class S3GuardTool extends Configured implements Tool,
       break;
     case Diff.NAME:
       command = new Diff(conf);
+      break;
+    case MarkerTool.NAME:
+      command = new MarkerTool(conf);
       break;
     case Prune.NAME:
       command = new Prune(conf);

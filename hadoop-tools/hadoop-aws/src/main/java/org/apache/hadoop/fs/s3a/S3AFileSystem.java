@@ -4843,6 +4843,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
+   * Get the operation callbacks for this FS.
+   * @return callbacks for operations.
+   */
+  @InterfaceAudience.Private
+  public OperationCallbacks getOperationCallbacks() {
+    return operationCallbacks;
+  }
+
+  /**
    * The implementation of context accessors.
    */
   private class ContextAccessorsImpl implements ContextAccessors {

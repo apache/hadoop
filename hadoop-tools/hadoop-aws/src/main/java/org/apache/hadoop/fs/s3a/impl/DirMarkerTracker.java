@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.s3a.impl;
 import java.util.Map;
 import java.util.TreeMap;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
@@ -45,14 +47,36 @@ import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
  */
 public class DirMarkerTracker {
 
+  /**
+   * all leaf markers.
+   */
   private final Map<Path, Pair<String, S3ALocatedFileStatus>> leafMarkers
       = new TreeMap<>();
 
+  /**
+   * all surplus markers.
+   */
   private final Map<Path, Pair<String, S3ALocatedFileStatus>> surplusMarkers
       = new TreeMap<>();
 
+  /**
+   * last parent directory checked.
+   */
   private Path lastDirChecked;
 
+  /**
+   * Count of scans; used for test assertions.
+   */
+  private int scanCount;
+
+  /**
+   * A marker has been found; this may or may not be a leaf.
+   * Trigger a move of all markers above it into the surplus map.
+   * @param path marker path
+   * @param key object key
+   * @param source listing source
+   * @return the number of surplus markers found.
+   */
   public int markerFound(Path path,
       final String key,
       final S3ALocatedFileStatus source) {
@@ -60,6 +84,14 @@ public class DirMarkerTracker {
     return fileFound(path, key, source);
   }
 
+  /**
+   * A file has been found. Trigger a move of all
+   * markers above it into the surplus map.
+   * @param path marker path
+   * @param key object key
+   * @param source listing source
+   * @return the number of surplus markers found.
+   */
   public int fileFound(Path path,
       final String key,
       final S3ALocatedFileStatus source) {
@@ -83,6 +115,7 @@ public class DirMarkerTracker {
     if (path == null || path.isRoot()) {
       return 0;
     }
+    scanCount++;
     int parents = removeParentMarkers(path.getParent());
     final Pair<String, S3ALocatedFileStatus> value = leafMarkers.remove(path);
     if (value != null) {
@@ -93,11 +126,29 @@ public class DirMarkerTracker {
     return parents;
   }
 
+  /**
+   * get the map of leaf markers.
+   * @return all leaf markers.
+   */
   public Map<Path, Pair<String, S3ALocatedFileStatus>> getLeafMarkers() {
     return leafMarkers;
   }
 
+  /**
+   * get the map of surplus markers.
+   * @return all surplus markers.
+   */
   public Map<Path, Pair<String, S3ALocatedFileStatus>> getSurplusMarkers() {
     return surplusMarkers;
+  }
+
+  @VisibleForTesting
+  public Path getLastDirChecked() {
+    return lastDirChecked;
+  }
+
+  @VisibleForTesting
+  public int getScanCount() {
+    return scanCount;
   }
 }
