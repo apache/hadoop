@@ -1339,4 +1339,10 @@ public class TestFileUtil {
     file.delete();
   }
 
+  /*
+   * The size of FileSystem cache.
+   */
+  public static int getCacheSize() {
+    return FileSystem.cacheSize();
+  }
 }

@@ -194,6 +194,11 @@ public abstract class FileSystem extends Configured
     CACHE.map.put(new Cache.Key(uri, conf), fs);
   }
 
+  @VisibleForTesting
+  static int cacheSize() {
+    return CACHE.map.size();
+  }
+
   /**
    * Get a FileSystem instance based on the uri, the passed in
    * configuration and the user.
