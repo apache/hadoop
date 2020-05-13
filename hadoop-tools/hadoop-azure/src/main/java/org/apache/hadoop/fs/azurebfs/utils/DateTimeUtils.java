@@ -43,6 +43,5 @@ public final class DateTimeUtils {
   }
 
   private DateTimeUtils() {
-
   }
 }

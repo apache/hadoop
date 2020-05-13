@@ -35,7 +35,6 @@ import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -593,7 +592,6 @@ public class AbfsClient implements Closeable {
 
     return op;
   }
-
 
   public AbfsRestOperation setOwner(final String path, final String owner, final String group)
       throws AzureBlobFileSystemException {

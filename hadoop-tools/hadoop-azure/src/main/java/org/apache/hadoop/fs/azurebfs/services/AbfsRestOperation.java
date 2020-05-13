@@ -44,7 +44,6 @@ public class AbfsRestOperation {
   private final AbfsClient client;
   // the HTTP method (PUT, PATCH, POST, GET, HEAD, or DELETE)
   private final String method;
-
   // full URL including query parameters
   private final URL url;
   // all the custom HTTP request headers provided by the caller
@@ -64,7 +63,6 @@ public class AbfsRestOperation {
   private byte[] buffer;
   private int bufferOffset;
   private int bufferLength;
-
   private int retryCount = 0;
 
   private AbfsHttpOperation result;
@@ -92,7 +90,6 @@ public class AbfsRestOperation {
 
   String getSasToken() {
     return sasToken;
-
   }
 
   /**
