@@ -639,6 +639,22 @@ public class NetUtils {
   }
 
   /**
+   * Attempt to normalize the given string to "host:port"
+   * if it like "ip:port".
+   *
+   * @param ipPort maybe lik ip:port or host:port.
+   * @return host:port
+   */
+  public static String normalizeIP2HostName(String ipPort) {
+    if (null == ipPort || !ipPortPattern.matcher(ipPort).matches()) {
+      return ipPort;
+    }
+
+    InetSocketAddress address = createSocketAddr(ipPort);
+    return getHostPortString(address);
+  }
+
+  /**
    * Return hostname without throwing exception.
    * The returned hostname String format is "hostname".
    * @return hostname

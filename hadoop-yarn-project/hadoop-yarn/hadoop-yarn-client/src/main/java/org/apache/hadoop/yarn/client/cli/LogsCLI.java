@@ -27,17 +27,13 @@ import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.WebResource.Builder;
 import com.sun.jersey.api.client.filter.ClientFilter;
-import com.sun.jersey.client.urlconnection.HttpURLConnectionFactory;
-import com.sun.jersey.client.urlconnection.URLConnectionClientHandler;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.ConnectException;
-import java.net.HttpURLConnection;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -68,8 +64,6 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
-import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -87,6 +81,7 @@ import org.apache.hadoop.yarn.logaggregation.ContainerLogsRequest;
 import org.apache.hadoop.yarn.logaggregation.LogCLIHelpers;
 import org.apache.hadoop.yarn.logaggregation.LogToolUtils;
 import org.apache.hadoop.yarn.server.metrics.AppAttemptMetricsConstants;
+import org.apache.hadoop.yarn.server.webapp.WebServiceClient;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.hadoop.yarn.webapp.util.YarnWebServiceUtils;
@@ -122,7 +117,7 @@ public class LogsCLI extends Configured implements Tool {
 
   private PrintStream outStream = System.out;
   private YarnClient yarnClient = null;
-  private Client webServiceClient = null;
+  private Client client = null;
 
   private static final int DEFAULT_MAX_RETRIES = 30;
   private static final long DEFAULT_RETRY_INTERVAL = 1000;
@@ -139,28 +134,14 @@ public class LogsCLI extends Configured implements Tool {
   @Override
   public int run(String[] args) throws Exception {
     try {
-      webServiceClient = new Client(new URLConnectionClientHandler(
-          new HttpURLConnectionFactory() {
-          @Override
-          public HttpURLConnection getHttpURLConnection(URL url)
-              throws IOException {
-            AuthenticatedURL.Token token = new AuthenticatedURL.Token();
-            HttpURLConnection conn = null;
-            try {
-              conn = new AuthenticatedURL().openConnection(url, token);
-            } catch (AuthenticationException e) {
-              throw new IOException(e);
-            }
-            return conn;
-          }
-        }));
+      client = WebServiceClient.getWebServiceClient().createClient();
       return runCommand(args);
     } finally {
       if (yarnClient != null) {
         yarnClient.close();
       }
-      if (webServiceClient != null) {
-        webServiceClient.destroy();
+      if (client != null) {
+        client.destroy();
       }
     }
   }
@@ -310,7 +291,7 @@ public class LogsCLI extends Configured implements Tool {
     // Set up Retry WebService Client
     connectionRetry = new ClientConnectionRetry(maxRetries, retryInterval);
     ClientJerseyRetryFilter retryFilter = new ClientJerseyRetryFilter();
-    webServiceClient.addFilter(retryFilter);
+    client.addFilter(retryFilter);
 
     LogCLIHelpers logCliHelper = new LogCLIHelpers();
     logCliHelper.setConf(getConf());
@@ -411,7 +392,9 @@ public class LogsCLI extends Configured implements Tool {
     Configuration conf = new YarnConfiguration();
     LogsCLI logDumper = new LogsCLI();
     logDumper.setConf(conf);
+    WebServiceClient.initialize(conf);
     int exitCode = logDumper.run(args);
+    WebServiceClient.destroy();
     System.exit(exitCode);
   }
 
@@ -436,7 +419,7 @@ public class LogsCLI extends Configured implements Tool {
     List<JSONObject> amContainersList = new ArrayList<JSONObject>();
     ClientResponse response = null;
     try {
-      Builder builder = webServiceClient.resource(webAppAddress)
+      Builder builder = client.resource(webAppAddress)
           .path("ws").path("v1").path("cluster")
           .path("apps").path(appId).path("appattempts")
           .accept(MediaType.APPLICATION_JSON);
@@ -461,7 +444,7 @@ public class LogsCLI extends Configured implements Tool {
     String webAppAddress =
         WebAppUtils.getHttpSchemePrefix(conf)
             + WebAppUtils.getAHSWebAppURLWithoutScheme(conf);
-    WebResource webResource = webServiceClient.resource(webAppAddress);
+    WebResource webResource = client.resource(webAppAddress);
 
     ClientResponse response =
         webResource.path("ws").path("v1").path("applicationhistory")
@@ -511,7 +494,7 @@ public class LogsCLI extends Configured implements Tool {
     List<Pair<ContainerLogFileInfo, String>> logFileInfos
         = new ArrayList<>();
     try {
-      WebResource webResource = webServiceClient
+      WebResource webResource = client
           .resource(WebAppUtils.getHttpSchemePrefix(conf) + nodeHttpAddress);
       ClientResponse response =
           webResource.path("ws").path("v1").path("node").path("containers")
@@ -599,7 +582,7 @@ public class LogsCLI extends Configured implements Tool {
         InputStream is = null;
         try {
           ClientResponse response = getResponseFromNMWebService(conf,
-              webServiceClient, request, logFile);
+              client, request, logFile);
           if (response != null && response.getStatusInfo().getStatusCode() ==
               ClientResponse.Status.OK.getStatusCode()) {
             is = response.getEntityInputStream();
@@ -811,7 +794,7 @@ public class LogsCLI extends Configured implements Tool {
       Configuration conf, String appId) throws IOException {
     String webAppAddress = WebAppUtils.getHttpSchemePrefix(conf) + WebAppUtils
         .getTimelineReaderWebAppURLWithoutScheme(conf);
-    WebResource webResource = webServiceClient.resource(webAppAddress);
+    WebResource webResource = client.resource(webAppAddress);
 
     ClientResponse response =
         webResource.path("ws").path("v2").path("timeline").path("clusters")

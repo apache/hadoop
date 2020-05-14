@@ -192,38 +192,53 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
      *
      */
     if (this.capacityConfigType.equals(CapacityConfigType.ABSOLUTE_RESOURCE)) {
-      for (String label : queueCapacities.getExistingNodeLabels()) {
-        queueCapacities.setCapacity(label,
-            this.csContext.getResourceCalculator().divide(
-                this.csContext.getClusterResource(),
-                this.csContext.getConfiguration().getMinimumResourceRequirement(
-                    label,
-                    this.csContext.getConfiguration()
-                        .getAutoCreatedQueueTemplateConfPrefix(getQueuePath()),
-                    resourceTypes),
-                getQueueResourceQuotas().getConfiguredMinResource(label)));
-
-        queueCapacities.setMaximumCapacity(label,
-            this.csContext.getResourceCalculator().divide(
-                this.csContext.getClusterResource(),
-                this.csContext.getConfiguration().getMaximumResourceRequirement(
-                    label,
-                    this.csContext.getConfiguration()
-                        .getAutoCreatedQueueTemplateConfPrefix(getQueuePath()),
-                    resourceTypes),
-                getQueueResourceQuotas().getConfiguredMaxResource(label)));
-
-        queueCapacities.setAbsoluteCapacity(label,
-            queueCapacities.getCapacity(label)
-                * getQueueCapacities().getAbsoluteCapacity(label));
-
-        queueCapacities.setAbsoluteMaximumCapacity(label,
-            queueCapacities.getMaximumCapacity(label)
-                * getQueueCapacities().getAbsoluteMaximumCapacity(label));
-      }
+      updateQueueCapacities(queueCapacities);
     }
     builder.capacities(queueCapacities);
     return builder;
+  }
+
+  private void updateQueueCapacities(QueueCapacities queueCapacities) {
+    for (String label : queueCapacities.getExistingNodeLabels()) {
+      queueCapacities.setCapacity(label,
+          this.csContext.getResourceCalculator().divide(
+              this.csContext.getClusterResource(),
+              this.csContext.getConfiguration().getMinimumResourceRequirement(
+                  label,
+                  this.csContext.getConfiguration()
+                      .getAutoCreatedQueueTemplateConfPrefix(getQueuePath()),
+                  resourceTypes),
+              getQueueResourceQuotas().getConfiguredMinResource(label)));
+
+      Resource childMaxResource = this.csContext.getConfiguration()
+          .getMaximumResourceRequirement(label,
+              this.csContext.getConfiguration()
+                  .getAutoCreatedQueueTemplateConfPrefix(getQueuePath()),
+              resourceTypes);
+      Resource parentMaxRes = getQueueResourceQuotas()
+          .getConfiguredMaxResource(label);
+
+      Resource effMaxResource = Resources.min(
+          this.csContext.getResourceCalculator(),
+          this.csContext.getClusterResource(),
+          childMaxResource.equals(Resources.none()) ? parentMaxRes
+              : childMaxResource,
+          parentMaxRes);
+
+      queueCapacities.setMaximumCapacity(
+          label, this.csContext.getResourceCalculator().divide(
+               this.csContext.getClusterResource(),
+               effMaxResource,
+               getQueueResourceQuotas().getConfiguredMaxResource(label)));
+
+      queueCapacities.setAbsoluteCapacity(
+          label, queueCapacities.getCapacity(label)
+          * getQueueCapacities().getAbsoluteCapacity(label));
+
+      queueCapacities.setAbsoluteMaximumCapacity(label,
+          queueCapacities.getMaximumCapacity(label)
+          * getQueueCapacities().getAbsoluteMaximumCapacity(label));
+    }
   }
 
   protected void validate(final CSQueue newlyParsedQueue) throws IOException {
@@ -276,6 +291,16 @@ public class ManagedParentQueue extends AbstractManagedParentQueue {
 
       AutoCreatedLeafQueue leafQueue = (AutoCreatedLeafQueue) childQueue;
       super.addChildQueue(leafQueue);
+
+      /* Below is to avoid Setting Queue Capacity to NaN when ClusterResource
+         is zero during RM Startup with DominantResourceCalculator */
+      if (this.capacityConfigType.equals(
+          CapacityConfigType.ABSOLUTE_RESOURCE)) {
+        QueueCapacities queueCapacities =
+            getLeafQueueTemplate().getQueueCapacities();
+        updateQueueCapacities(queueCapacities);
+      }
+
       final AutoCreatedLeafQueueConfig initialLeafQueueTemplate =
           queueManagementPolicy.getInitialLeafQueueConfiguration(leafQueue);
 

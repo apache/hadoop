@@ -1008,11 +1008,15 @@ public class LeafQueue extends AbstractCSQueue {
   private CSAssignment allocateFromReservedContainer(Resource clusterResource,
       CandidateNodeSet<FiCaSchedulerNode> candidates,
       ResourceLimits currentResourceLimits, SchedulingMode schedulingMode) {
-    // Considering multi-node scheduling, its better to iterate through
-    // all candidates and stop once we get atleast one good node to allocate
-    // where reservation was made earlier. In normal case, there is only one
-    // node and hence there wont be any impact after this change.
-    for (FiCaSchedulerNode node : candidates.getAllNodes().values()) {
+
+    // Irrespective of Single / Multi Node Placement, the allocate from
+    // Reserved Container has to happen only for the single node which
+    // CapacityScheduler#allocateFromReservedContainer invokes with.
+    // Else In Multi Node Placement, there won't be any Allocation or
+    // Reserve of new containers when there is a RESERVED container on
+    // a node which is full.
+    FiCaSchedulerNode node = CandidateNodeSetUtils.getSingleNode(candidates);
+    if (node != null) {
       RMContainer reservedContainer = node.getReservedContainer();
       if (reservedContainer != null) {
         FiCaSchedulerApp application = getApplication(
