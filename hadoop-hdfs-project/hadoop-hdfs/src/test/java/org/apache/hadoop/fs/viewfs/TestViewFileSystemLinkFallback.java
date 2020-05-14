@@ -265,7 +265,7 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
 
   /**
    * This tests whether the fallback link gets listed for list operation
-   * of root directory of mount table
+   * of root directory of mount table.
    * @throws Exception
    */
   @Test
@@ -295,7 +295,7 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
       assertTrue("Listing didn't include fallback link",
           afterFallback.size() == 1);
       Path[] fallbackArray = new Path[afterFallback.size()];
-      assertEquals("Path did not match" ,
+      assertEquals("Path did not match",
           dir1, afterFallback.toArray(fallbackArray)[0]);
     }
   }
@@ -303,7 +303,7 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
   /**
    * This tests whether fallback directory gets shaded during list operation
    * of root directory of mount table when the same directory name exists as
-   * mount point as well as in the fallback linked directory
+   * mount point as well as in the fallback linked directory.
    * @throws Exception
    */
   @Test
@@ -338,7 +338,7 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
           afterFallback.size() == 1);
       Path[] fallbackArray = new Path[afterFallback.size()];
       // Only dir2 should be listed as fallback link
-      assertEquals("Path did not match" ,
+      assertEquals("Path did not match",
           dir2, afterFallback.toArray(fallbackArray)[0]);
     }
   }
