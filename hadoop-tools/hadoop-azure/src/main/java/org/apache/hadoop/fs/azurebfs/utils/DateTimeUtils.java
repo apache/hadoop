@@ -27,13 +27,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public final class DateTimeUtils {
-  public static final Logger LOG = LoggerFactory.getLogger(DateTimeUtils.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DateTimeUtils.class);
   private static final String DATE_TIME_PATTERN = "E, dd MMM yyyy HH:mm:ss z";
 
   public static long parseLastModifiedTime(final String lastModifiedTime) {
     long parsedTime = 0;
     try {
-      Date utcDate = new SimpleDateFormat(DATE_TIME_PATTERN, Locale.US).parse(lastModifiedTime);
+      Date utcDate = new SimpleDateFormat(DATE_TIME_PATTERN, Locale.US)
+          .parse(lastModifiedTime);
       parsedTime = utcDate.getTime();
     } catch (ParseException e) {
       LOG.error("Failed to parse the date {}", lastModifiedTime);

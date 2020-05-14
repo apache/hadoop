@@ -41,13 +41,15 @@ import org.apache.hadoop.fs.Path;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DOT;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_DELETE_CONSIDERED_IDEMPOTENT;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertDeleted;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+
 
 /**
  * Test delete operation.
@@ -55,8 +57,8 @@ import static org.mockito.Mockito.when;
 public class ITestAzureBlobFileSystemDelete extends
     AbstractAbfsIntegrationTest {
 
-  private final int reducedRetryCount = 1;
-  private final int reducedMaxBackoffIntervalMs = 5000;
+  private final static int REDUCED_RETRY_COUNT = 1;
+  private final static int REDUCED_MAX_BACKOFF_INTERVALS_MS = 5000;
 
   public ITestAzureBlobFileSystemDelete() throws Exception {
     super();
@@ -152,8 +154,8 @@ public class ITestAzureBlobFileSystemDelete extends
     org.junit.Assume.assumeTrue(DEFAULT_DELETE_CONSIDERED_IDEMPOTENT);
     // Config to reduce the retry and maxBackoff time for test run
     AbfsConfiguration abfsConfig = getConfiguration();
-    abfsConfig.setMaxIoRetries(reducedRetryCount);
-    abfsConfig.setMaxBackoffIntervalMilliseconds(reducedMaxBackoffIntervalMs);
+    abfsConfig.setMaxIoRetries(REDUCED_RETRY_COUNT);
+    abfsConfig.setMaxBackoffIntervalMilliseconds(REDUCED_MAX_BACKOFF_INTERVALS_MS);
 
     final AzureBlobFileSystem fs = getFileSystem();
     AbfsClient abfsClient = fs.getAbfsStore().getClient();
@@ -168,14 +170,14 @@ public class ITestAzureBlobFileSystemDelete extends
             abfsConfig.getAccountName().indexOf(DOT)),
             abfsConfig.getStorageAccountKey()),
         abfsConfig,
-        new ExponentialRetryPolicy(reducedRetryCount),
+        new ExponentialRetryPolicy(REDUCED_RETRY_COUNT),
         abfsConfig.getTokenProvider(),
         tracker);
 
     // Mock instance of AbfsRestOperation
     AbfsRestOperation op = mock(AbfsRestOperation.class);
     // Set retryCount to non-zero
-    when(op.getRetryCount()).thenReturn(reducedRetryCount);
+    when(op.getRetryCount()).thenReturn(REDUCED_RETRY_COUNT);
 
     // Mock instance of Http Operation response. This will return HTTP:Not Found
     AbfsHttpOperation http404Op = mock(AbfsHttpOperation.class);
@@ -184,11 +186,12 @@ public class ITestAzureBlobFileSystemDelete extends
     // Mock delete response to 404
     when(op.getResult()).thenReturn(http404Op);
 
-    assertTrue(
+    assertEquals(
         "Delete is considered idempotent by default and should return success.",
-        (testClient.deleteIdempotencyCheckOp(op)
+        HTTP_OK,
+        testClient.deleteIdempotencyCheckOp(op)
             .getResult()
-            .getStatusCode() == HTTP_OK));
+            .getStatusCode());
   }
 
 }

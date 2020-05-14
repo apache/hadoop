@@ -747,7 +747,8 @@ public class AzureBlobFileSystemStore implements Closeable {
           long contentLength = entry.contentLength() == null ? 0 : entry.contentLength();
           boolean isDirectory = entry.isDirectory() == null ? false : entry.isDirectory();
           if (entry.lastModified() != null && !entry.lastModified().isEmpty()) {
-            lastModifiedMillis = DateTimeUtils.parseLastModifiedTime(entry.lastModified());
+            lastModifiedMillis = DateTimeUtils.parseLastModifiedTime(
+                entry.lastModified());
           }
 
           Path entryPath = new Path(File.separator + entry.name());

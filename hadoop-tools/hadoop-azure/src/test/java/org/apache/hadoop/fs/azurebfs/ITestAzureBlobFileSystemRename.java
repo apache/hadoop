@@ -42,13 +42,15 @@ import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DOT;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertRenameOutcome;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+
 
 /**
  * Test rename operation.
@@ -56,8 +58,8 @@ import static org.mockito.Mockito.when;
 public class ITestAzureBlobFileSystemRename extends
     AbstractAbfsIntegrationTest {
 
-  private final int reducedRetryCount = 1;
-  private final int reducedMaxBackoffIntervalMs = 5000;
+  private final static int REDUCED_RETRY_COUNT = 1;
+  private final static int REDUCED_MAX_BACKOFF_INTERVALS_MS = 5000;
 
   public ITestAzureBlobFileSystemRename() throws Exception {
     super();
@@ -171,31 +173,41 @@ public class ITestAzureBlobFileSystemRename extends
   public void testRenameRetryFailureAsHTTP400() throws Exception {
     // Rename failed as Bad Request
     // RenameIdempotencyCheck should throw back the rename failure Op
-    testRenameTimeout(HTTP_BAD_REQUEST, HTTP_BAD_REQUEST, false);
+    testRenameTimeout(HTTP_BAD_REQUEST, HTTP_BAD_REQUEST, false,
+        "renameIdempotencyCheckOp should return rename BadRequest "
+            + "response itself.");
   }
 
   @Test
   public void testRenameRetryFailureAsHTTP404() throws Exception {
     // Rename failed as FileNotFound and the destination LMT is
     // within TimespanForIdentifyingRecentOperationThroughLMT
-    testRenameTimeout(HTTP_NOT_FOUND, HTTP_OK, false);
+    testRenameTimeout(HTTP_NOT_FOUND, HTTP_OK, false,
+        "Rename should return success response because the destination "
+            + "path is present and its LMT is within "
+            + "TimespanForIdentifyingRecentOperationThroughLMT.");
   }
 
   @Test
   public void testRenameRetryFailureWithDestOldLMT() throws Exception {
     // Rename failed as FileNotFound and the destination LMT is
     // older than TimespanForIdentifyingRecentOperationThroughLMT
-    testRenameTimeout(HTTP_NOT_FOUND, HTTP_NOT_FOUND, true);
+    testRenameTimeout(HTTP_NOT_FOUND, HTTP_NOT_FOUND, true,
+        "Rename should return original rename failure response "
+            + "because the destination path LMT is older than "
+            + "TimespanForIdentifyingRecentOperationThroughLMT.");
   }
 
   private void testRenameTimeout(
       int renameRequestStatus,
       int renameIdempotencyCheckStatus,
-      boolean isOldOp) throws Exception {
+      boolean isOldOp,
+      String assertMessage) throws Exception {
     // Config to reduce the retry and maxBackoff time for test run
     AbfsConfiguration abfsConfig = getConfiguration();
-    abfsConfig.setMaxIoRetries(reducedRetryCount);
-    abfsConfig.setMaxBackoffIntervalMilliseconds(reducedMaxBackoffIntervalMs);
+    abfsConfig.setMaxIoRetries(REDUCED_RETRY_COUNT);
+    abfsConfig.setMaxBackoffIntervalMilliseconds(
+        REDUCED_MAX_BACKOFF_INTERVALS_MS);
 
     final AzureBlobFileSystem fs = getFileSystem();
     AbfsClient abfsClient = fs.getAbfsStore().getClient();
@@ -210,7 +222,7 @@ public class ITestAzureBlobFileSystemRename extends
             abfsConfig.getAccountName().indexOf(DOT)),
             abfsConfig.getStorageAccountKey()),
         abfsConfig,
-        new ExponentialRetryPolicy(reducedRetryCount),
+        new ExponentialRetryPolicy(REDUCED_RETRY_COUNT),
         abfsConfig.getTokenProvider(),
         tracker);
 
@@ -218,13 +230,13 @@ public class ITestAzureBlobFileSystemRename extends
     assertTrue(
         "Timestamp range for LMT update should be twice of "
             + "MaxIoRetries * MaxBackoffIntervalMilliseconds",
-        testClient.getTimeIntervalToTagOperationRecent(reducedRetryCount)
-            == (2 * reducedRetryCount * reducedMaxBackoffIntervalMs));
+        testClient.getTimeIntervalToTagOperationRecent(REDUCED_RETRY_COUNT)
+            == (2 * REDUCED_RETRY_COUNT * REDUCED_MAX_BACKOFF_INTERVALS_MS));
 
     // Mock instance of AbfsRestOperation
     AbfsRestOperation op = mock(AbfsRestOperation.class);
     // Set retryCount to non-zero
-    when(op.getRetryCount()).thenReturn(reducedRetryCount);
+    when(op.getRetryCount()).thenReturn(REDUCED_RETRY_COUNT);
 
     // Mock instance of Http Operation response. This will return HTTP:Bad Request
     AbfsHttpOperation http400Op = mock(AbfsHttpOperation.class);
@@ -238,63 +250,29 @@ public class ITestAzureBlobFileSystemRename extends
         new Path("destination" + randomUUID().toString()));
 
     if (renameRequestStatus == HTTP_BAD_REQUEST) {
-      // case 1: Rename failed as Bad Request
-      // RenameIdempotencyCheck should throw back the rename failure Op
-
-      // Mock response
-      // passed in op.getResult() will be called twice. Within renameIdempotencyCheckOp,
-      // and as the return value from renameIdempotencyCheckOp.
-      // In both cases return 400 Bad Rquest response.
       when(op.getResult()).thenReturn(http400Op);
-
-      assertTrue(
-          "renameIdempotencyCheckOp should return rename BadRequest response itself.",
-          (testClient.renameIdempotencyCheckOp(op, destinationPath.toUri().getPath())
-              .getResult()
-              .getStatusCode() == renameIdempotencyCheckStatus));
-    } else if (!isOldOp) {
-      // case 2: Rename failed as FileNotFound and the destination LMT is
-      // within TimespanForIdentifyingRecentOperationThroughLMT
-
-      // Mock response
-      // passed in op.getResult() will be called only once. Within renameIdempotencyCheckOp,
-      // as return will be of GetFileStatus Op which should be 200 OK.
-      when(op.getResult()).thenReturn(http404Op);
-
+    } else if (renameRequestStatus == HTTP_NOT_FOUND) {
       // Create the file new.
       fs.create(destinationPath);
 
-      assertTrue(
-          "Rename should return success response because the destination "
-              + "path is present and its LMT is within TimespanForIdentifyingRecentOperationThroughLMT.",
-          (testClient.renameIdempotencyCheckOp(op, destinationPath.toUri().getPath())
-              .getResult()
-              .getStatusCode() == renameIdempotencyCheckStatus));
-    } else {
-      // case 3: Rename failed as FileNotFound and the destination LMT is
-      // older than TimespanForIdentifyingRecentOperationThroughLMT
-
-      // Create the file new.
-      fs.create(destinationPath);
-
-      // sleep to cross the threshold for old LMT.
-      Thread.sleep(
-          testClient.getTimeIntervalToTagOperationRecent(reducedRetryCount));
-
-      // Mock response
-      // passed in op.getResult() will be called twice. Within renameIdempotencyCheckOp,
-      // as return Op. Though GetFileStatus will be called, being an older LMT,
-      // rename op response will be returned.
       when(op.getResult()).thenReturn(http404Op);
 
-      assertTrue(
-          "Rename should return original rename failure response because the destination "
-              + "path LMT is older than TimespanForIdentifyingRecentOperationThroughLMT.",
-          (testClient.renameIdempotencyCheckOp(op,
-              destinationPath.toUri().getPath())
-              .getResult()
-              .getStatusCode() == renameIdempotencyCheckStatus));
+      if (isOldOp) {
+        // sleep to cross the threshold for old LMT.
+        Thread.sleep(
+            testClient.getTimeIntervalToTagOperationRecent(
+                REDUCED_RETRY_COUNT));
+      }
+
     }
+
+    assertEquals(
+        assertMessage,
+        renameIdempotencyCheckStatus,
+        testClient.renameIdempotencyCheckOp(op,
+            destinationPath.toUri().getPath())
+            .getResult()
+            .getStatusCode());
 
   }
 }
