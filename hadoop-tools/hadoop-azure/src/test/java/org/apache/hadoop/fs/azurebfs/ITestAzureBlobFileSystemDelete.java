@@ -57,8 +57,8 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 public class ITestAzureBlobFileSystemDelete extends
     AbstractAbfsIntegrationTest {
 
-  private final static int REDUCED_RETRY_COUNT = 1;
-  private final static int REDUCED_MAX_BACKOFF_INTERVALS_MS = 5000;
+  private static final int REDUCED_RETRY_COUNT = 1;
+  private static final int REDUCED_MAX_BACKOFF_INTERVALS_MS = 5000;
 
   public ITestAzureBlobFileSystemDelete() throws Exception {
     super();
