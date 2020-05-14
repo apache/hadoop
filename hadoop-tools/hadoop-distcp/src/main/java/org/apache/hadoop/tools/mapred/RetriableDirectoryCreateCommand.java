@@ -18,10 +18,17 @@
 
 package org.apache.hadoop.tools.mapred;
 
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.tools.DistCpOptions;
 import org.apache.hadoop.tools.util.RetriableCommand;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.mapreduce.Mapper;
+
+import static org.apache.hadoop.tools.mapred.CopyMapper.getFileAttributeSettings;
 
 /**
  * This class extends Retriable command to implement the creation of directories
@@ -46,11 +53,25 @@ public class RetriableDirectoryCreateCommand extends RetriableCommand {
    */
   @Override
   protected Object doExecute(Object... arguments) throws Exception {
-    assert arguments.length == 2 : "Unexpected argument list.";
+    assert arguments.length == 3 : "Unexpected argument list.";
     Path target = (Path)arguments[0];
     Mapper.Context context = (Mapper.Context)arguments[1];
+    FileStatus sourceStatus = (FileStatus)arguments[2];
 
     FileSystem targetFS = target.getFileSystem(context.getConfiguration());
-    return targetFS.mkdirs(target);
+    if(!targetFS.mkdirs(target)) {
+      return false;
+    }
+
+    boolean preserveEC = getFileAttributeSettings(context)
+        .contains(DistCpOptions.FileAttribute.ERASURECODINGPOLICY);
+    if (preserveEC && sourceStatus.isErasureCoded()
+        && targetFS instanceof DistributedFileSystem) {
+      ErasureCodingPolicy ecPolicy =
+          ((HdfsFileStatus) sourceStatus).getErasureCodingPolicy();
+      DistributedFileSystem dfs = (DistributedFileSystem) targetFS;
+      dfs.setErasureCodingPolicy(target, ecPolicy.getName());
+    }
+    return true;
   }
 }
