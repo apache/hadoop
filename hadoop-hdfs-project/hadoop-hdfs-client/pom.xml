@@ -64,7 +64,7 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>${netty4.group}</groupId>
+      <groupId>io.netty</groupId>
       <artifactId>netty-all</artifactId>
       <scope>test</scope>
     </dependency>
