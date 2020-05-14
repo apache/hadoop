@@ -84,8 +84,8 @@ public class AbfsRestOperation {
     return requestHeaders;
   }
 
-  public int getRetryCount() {
-    return retryCount;
+  public boolean isARetriedRequest() {
+    return (retryCount > 0);
   }
 
   String getSasToken() {

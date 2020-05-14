@@ -177,7 +177,7 @@ public class ITestAzureBlobFileSystemDelete extends
     // Mock instance of AbfsRestOperation
     AbfsRestOperation op = mock(AbfsRestOperation.class);
     // Set retryCount to non-zero
-    when(op.getRetryCount()).thenReturn(REDUCED_RETRY_COUNT);
+    when(op.isARetriedRequest()).thenReturn(true);
 
     // Mock instance of Http Operation response. This will return HTTP:Not Found
     AbfsHttpOperation http404Op = mock(AbfsHttpOperation.class);

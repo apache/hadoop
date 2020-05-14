@@ -693,8 +693,8 @@ Config `fs.azure.enable.check.access` needs to be set true to enable
 
 ### <a name="idempotency"></a> Operation Idempotency
 
-Requests failing due to server timeouts and network failures will be retried
-exponentially. PUT/POST operations are idempotent and need no specific handling
+Requests failing due to server timeouts and network failures will be retried.
+PUT/POST operations are idempotent and need no specific handling
 except for Rename and Delete operations.
 
 Rename idempotency checks are made by ensuring the LastModifiedTime on destination
