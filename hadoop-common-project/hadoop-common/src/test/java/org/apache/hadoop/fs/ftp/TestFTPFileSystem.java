@@ -55,13 +55,16 @@ import static org.junit.Assert.assertEquals;
 public class TestFTPFileSystem {
 
   private FtpTestServer server;
-
+  private java.nio.file.Path testDir;
   @Rule
   public Timeout testTimeout = new Timeout(180000);
 
   @Before
   public void setUp() throws Exception {
-    server = new FtpTestServer(GenericTestUtils.getTestDir().toPath()).start();
+    testDir = Files.createTempDirectory(
+        GenericTestUtils.getTestDir().toPath(), getClass().getName()
+    );
+    server = new FtpTestServer(testDir).start();
   }
 
   @After
@@ -69,7 +72,7 @@ public class TestFTPFileSystem {
   public void tearDown() throws Exception {
     if (server != null) {
       server.stop();
-      Files.walk(server.getFtpRoot())
+      Files.walk(testDir)
           .sorted(Comparator.reverseOrder())
           .map(java.nio.file.Path::toFile)
           .forEach(File::delete);
