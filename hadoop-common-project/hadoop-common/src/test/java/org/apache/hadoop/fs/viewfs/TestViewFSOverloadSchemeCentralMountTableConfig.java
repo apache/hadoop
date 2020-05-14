@@ -39,7 +39,7 @@ public class TestViewFSOverloadSchemeCentralMountTableConfig
   @Before
   public void setUp() throws Exception {
     super.setUp();
-    // Mount table name format: mount-table=<versionNumber>.xml
+    // Mount table name format: mount-table.<versionNumber>.xml
     String mountTableFileName1 = "mount-table.1.xml";
     String mountTableFileName2 = "mount-table.2.xml";
     oldMountTablePath =

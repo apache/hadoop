@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.viewfs;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
@@ -35,7 +36,7 @@ public class HCFSMountTableConfigLoader implements MountTableConfigLoader {
   private static final String REGEX_DOT = "[.]";
   private static final Logger LOGGER =
       LoggerFactory.getLogger(HCFSMountTableConfigLoader.class);
-  private Path mountTablePath = null;
+  private Path mountTable = null;
 
   /**
    * Loads the mount-table configuration from hadoop compatible file system and
@@ -56,56 +57,60 @@ public class HCFSMountTableConfigLoader implements MountTableConfigLoader {
   @Override
   public void load(String mountTableConfigPath, Configuration conf)
       throws IOException {
-    this.mountTablePath = new Path(mountTableConfigPath);
-    String scheme = mountTablePath.toUri().getScheme();
+    this.mountTable = new Path(mountTableConfigPath);
+    String scheme = mountTable.toUri().getScheme();
     ViewFileSystem.FsGetter fsGetter =
         new ViewFileSystemOverloadScheme.ChildFsGetter(scheme);
-    FileSystem fs = fsGetter.getNewInstance(mountTablePath.toUri(), conf);
+    try (FileSystem fs = fsGetter.getNewInstance(mountTable.toUri(), conf)) {
+      RemoteIterator<LocatedFileStatus> listFiles =
+          fs.listFiles(mountTable, false);
+      LocatedFileStatus lfs = null;
+      int higherVersion = -1;
+      while (listFiles.hasNext()) {
+        LocatedFileStatus curLfs = listFiles.next();
+        String cur = curLfs.getPath().getName();
+        String[] nameParts = cur.split(REGEX_DOT);
+        if (nameParts.length < 2) {
+          logInvalidFileNameFormat(cur);
+          continue; // invalid file name
+        }
+        int curVersion = higherVersion;
+        try {
+          curVersion = Integer.parseInt(nameParts[nameParts.length - 2]);
+        } catch (NumberFormatException nfe) {
+          logInvalidFileNameFormat(cur);
+          continue;
+        }
 
-    RemoteIterator<LocatedFileStatus> listFiles =
-        fs.listFiles(mountTablePath, false);
-    LocatedFileStatus lfs = null;
-    int higherVersion = -1;
-    while (listFiles.hasNext()) {
-      LocatedFileStatus curLfs = listFiles.next();
-      String cur = curLfs.getPath().getName();
-      String[] nameParts = cur.split(REGEX_DOT);
-      if (nameParts.length < 2) {
-        logInvalidFileNameFormat(cur);
-        continue; // invalid file name
-      }
-      int curVersion = higherVersion;
-      try {
-        curVersion = Integer.parseInt(nameParts[nameParts.length - 2]);
-      } catch (NumberFormatException nfe) {
-        logInvalidFileNameFormat(cur);
-        continue;
+        if (curVersion > higherVersion) {
+          higherVersion = curVersion;
+          lfs = curLfs;
+        }
       }
 
-      if (curVersion > higherVersion) {
-        higherVersion = curVersion;
-        lfs = curLfs;
+      if (lfs == null) {
+        // No valid mount table file found.
+        // TODO: Should we fail? Currently viewfs init will fail if no mount
+        // links anyway.
+        LOGGER.warn("No valid mount-table file exist at: {}. At least one "
+            + "mount-table file should present with the name format: "
+            + "mount-table.<versionNumber>.xml", mountTableConfigPath);
+        return;
+      }
+      // Latest version file.
+      Path latestVersionMountTable = lfs.getPath();
+      if (LOGGER.isDebugEnabled()) {
+        LOGGER.debug("Loading the mount-table {} into configuration.",
+            latestVersionMountTable);
+      }
+      try (FSDataInputStream open = fs.open(latestVersionMountTable)) {
+        Configuration newConf = new Configuration(false);
+        newConf.addResource(open);
+        // This will add configuration props as resource, instead of stream
+        // itself. So, that stream can be closed now.
+        conf.addResource(newConf);
       }
     }
-
-    if (lfs == null) {
-      // No valid mount table file found.
-      // TODO: Should we fail? Currently viewfs init will fail if no mount
-      // links anyway.
-      LOGGER.warn("No valid mount-table file exist at: {}. At least one "
-          + "mount-table file should present with the name format: "
-          + "mount-table.<versionNumber>.xml", mountTableConfigPath);
-      return;
-    }
-    // Latest version file.
-    Path latestVersionMountTable = lfs.getPath();
-    if (LOGGER.isDebugEnabled()) {
-      LOGGER.debug("Loading the mount-table {} into configuration.",
-          latestVersionMountTable);
-    }
-    // We don't need to close this stream as it would have cached in
-    // ChildFsGetter.
-    conf.addResource(fs.open(latestVersionMountTable));
   }
 
   private void logInvalidFileNameFormat(String cur) {
