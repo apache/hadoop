@@ -395,6 +395,7 @@ public class LocalDirAllocator {
       int numDirsSearched = 0;
       long maxCapacity = 0;
       String errorText = null;
+      IOException diskException = null;
       //remove the leading slash from the path (to make sure that the uri
       //resolution results in a valid path on the dir being checked)
       if (pathStr.startsWith("/")) {
@@ -450,8 +451,12 @@ public class LocalDirAllocator {
             try {
               returnPath = createPath(ctx.localDirs[dirNum], pathStr,
                   checkWrite);
-            } catch (Exception e) {
+            } catch (IOException e) {
               errorText = e.getMessage();
+              diskException = e;
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("DiskException caught for dir " + ctx.localDirs[dirNum].toString(), e);
+              }
             }
             if (returnPath != null) {
               ctx.getAndIncrDirNumLastAccessed(numDirsSearched);
@@ -474,7 +479,7 @@ public class LocalDirAllocator {
       if (errorText != null) {
         newErrorText = newErrorText + " due to " + errorText;
       }
-      throw new DiskErrorException(newErrorText);
+      throw new DiskErrorException(newErrorText, diskException);
     }
 
     /** Creates a file on the local FS. Pass size as 

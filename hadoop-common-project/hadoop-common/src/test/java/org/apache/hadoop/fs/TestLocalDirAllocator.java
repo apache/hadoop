@@ -543,8 +543,9 @@ public class TestLocalDirAllocator {
     String dir0 = buildBufferDir(ROOT, 0);
     String dir1 = buildBufferDir(ROOT, 1);
     conf.set(CONTEXT, dir0 + "," + dir1);
-    LambdaTestUtils.intercept(DiskErrorException.class, "as the max capacity" +
-        " in any directory is", "Expect a DiskErrorException.", () ->
+    LambdaTestUtils.intercept(DiskErrorException.class,
+        "as the max capacity in any directory is",
+        "Expect a DiskErrorException.", () ->
         dirAllocator.getLocalPathForWrite("p1/x", Long.MAX_VALUE-1, conf));
   }
 
