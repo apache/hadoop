@@ -30,6 +30,11 @@ public interface Constants {
    * Prefix for the config variable prefix for the ViewFs mount-table
    */
   public static final String CONFIG_VIEWFS_PREFIX = "fs.viewfs.mounttable";
+
+  /**
+   * Prefix for the config variable for the ViewFs mount-table path.
+   */
+  String CONFIG_VIEWFS_MOUNTTABLE_PATH = CONFIG_VIEWFS_PREFIX + ".path";
  
   /**
    * Prefix for the home dir for the mount table - if not specified
