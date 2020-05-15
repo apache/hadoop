@@ -218,11 +218,6 @@
       <scope>provided</scope>
     </dependency>
 
-    <dependency>
-      <groupId>com.google.code.findbugs</groupId>
-      <artifactId>annotations</artifactId>
-    </dependency>
-
     <!-- dependencies use for test only -->
     <dependency>
       <groupId>junit</groupId>
@@ -300,13 +295,9 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest-core</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>net.jodah</groupId>
       <artifactId>concurrentunit</artifactId>
+      <version>0.4.6</version>
       <scope>test</scope>
     </dependency>
 
