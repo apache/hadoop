@@ -47,7 +47,6 @@ import static org.mockito.Mockito.when;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_DELETE_CONSIDERED_IDEMPOTENT;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertDeleted;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
-
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 
