@@ -157,8 +157,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     return true;
   }
 
-  @VisibleForTesting
-  public static synchronized void initWriteBufferPool(AbfsOutputStreamContext abfsosContext) {
+  private static synchronized void initWriteBufferPool(AbfsOutputStreamContext abfsosContext) {
     bufferSize = abfsosContext.getWriteBufferSize();
     int corePoolSize =
         1 + (abfsosContext.getWriteConcurrencyFactor() * Runtime.getRuntime()
