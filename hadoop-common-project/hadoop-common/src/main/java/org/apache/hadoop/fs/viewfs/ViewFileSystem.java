@@ -1238,7 +1238,6 @@ public class ViewFileSystem extends FileSystem {
         FileStatus[] mountPointStatuses) {
       ArrayList<FileStatus> result = new ArrayList<>();
       Set<String> pathSet = new HashSet<>();
-      int i = 0;
       for (FileStatus status : mountPointStatuses) {
         result.add(status);
         pathSet.add(status.getPath().getName());
@@ -1252,11 +1251,18 @@ public class ViewFileSystem extends FileSystem {
     }
 
     private FileStatus[] listStatusForFallbackLink() throws IOException {
-      if (theInternalDir.isRoot() && theInternalDir.getFallbackLink() != null) {
-        URI fallBackUri = theInternalDir.getFallbackLink().targetDirLinkList[0];
-        ChRootedFileSystem linkedFs = (ChRootedFileSystem)
+      if (theInternalDir.isRoot() &&
+          theInternalDir.getFallbackLink() != null) {
+        FileSystem linkedFs =
             theInternalDir.getFallbackLink().getTargetFileSystem();
-        return linkedFs.getMyFs().listStatus(new Path(fallBackUri.toString()));
+        // Fallback link is only applicable for root
+        FileStatus[] statuses = linkedFs.listStatus(new Path("/"));
+        for (FileStatus status : statuses) {
+          // Fix the path back to viewfs scheme
+          status.setPath(
+              new Path(myUri.toString(), status.getPath().getName()));
+        }
+        return statuses;
       } else {
         return new FileStatus[0];
       }

@@ -295,8 +295,17 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
       assertTrue("Listing didn't include fallback link",
           afterFallback.size() == 1);
       Path[] fallbackArray = new Path[afterFallback.size()];
+      afterFallback.toArray(fallbackArray);
+      Path expected = new Path(viewFsUri.toString(), "dir1");
       assertEquals("Path did not match",
-          dir1, afterFallback.toArray(fallbackArray)[0]);
+          expected, fallbackArray[0]);
+
+      // Create a directory using the returned fallback path and verify
+      Path childDir = new Path(fallbackArray[0], "child");
+      vfs.mkdirs(childDir);
+      FileStatus status = fsTarget.getFileStatus(new Path(dir1, "child"));
+      assertTrue(status.isDirectory());
+      assertTrue(vfs.getFileStatus(childDir).isDirectory());
     }
   }
 
@@ -337,9 +346,17 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
       assertTrue("The same directory name in fallback link should be shaded",
           afterFallback.size() == 1);
       Path[] fallbackArray = new Path[afterFallback.size()];
-      // Only dir2 should be listed as fallback link
+      // Only user1 should be listed as fallback link
+      Path expected = new Path(viewFsUri.toString(), "user1");
       assertEquals("Path did not match",
-          dir2, afterFallback.toArray(fallbackArray)[0]);
+          expected, afterFallback.toArray(fallbackArray)[0]);
+
+      // Create a directory using the returned fallback path and verify
+      Path childDir = new Path(fallbackArray[0], "child");
+      vfs.mkdirs(childDir);
+      FileStatus status = fsTarget.getFileStatus(new Path(dir2, "child"));
+      assertTrue(status.isDirectory());
+      assertTrue(vfs.getFileStatus(childDir).isDirectory());
     }
   }
 }
