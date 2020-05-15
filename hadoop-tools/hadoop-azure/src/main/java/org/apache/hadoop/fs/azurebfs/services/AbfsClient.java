@@ -135,7 +135,7 @@ public class AbfsClient implements Closeable {
     return filesystem;
   }
 
-  public AbfsPerfTracker getAbfsPerfTracker() {
+  protected AbfsPerfTracker getAbfsPerfTracker() {
     return abfsPerfTracker;
   }
 
@@ -884,7 +884,7 @@ public class AbfsClient implements Closeable {
   }
 
   @VisibleForTesting
-  public URL getBaseUrl() {
+  URL getBaseUrl() {
     return baseUrl;
   }
 

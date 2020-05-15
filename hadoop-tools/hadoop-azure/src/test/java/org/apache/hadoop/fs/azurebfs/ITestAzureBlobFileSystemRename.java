@@ -26,32 +26,30 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import org.junit.Assert;
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
+import org.junit.Assert;
 
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
-import org.apache.hadoop.fs.azurebfs.services.AbfsPerfTracker;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
-import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
-import org.apache.hadoop.fs.azurebfs.services.SharedKeyCredentials;
+import org.apache.hadoop.fs.azurebfs.services.TestAbfsClient;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 
-import static java.util.UUID.randomUUID;
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
+import static java.util.UUID.randomUUID;
+
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DOT;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_CLOCK_SKEW_WITH_SERVER_IN_MS;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertRenameOutcome;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_CLOCK_SKEW_WITH_SERVER_IN_MS;
-
 
 /**
  * Test rename operation.
@@ -205,27 +203,16 @@ public class ITestAzureBlobFileSystemRename extends
       boolean isOldOp,
       String assertMessage) throws Exception {
     // Config to reduce the retry and maxBackoff time for test run
-    AbfsConfiguration abfsConfig = getConfiguration();
-    abfsConfig.setMaxIoRetries(REDUCED_RETRY_COUNT);
-    abfsConfig.setMaxBackoffIntervalMilliseconds(
-        REDUCED_MAX_BACKOFF_INTERVALS_MS);
+    AbfsConfiguration abfsConfig
+        = TestAbfsConfigurationFieldsValidation.updateRetryConfigs(
+        getConfiguration(),
+        REDUCED_RETRY_COUNT, REDUCED_MAX_BACKOFF_INTERVALS_MS);
 
     final AzureBlobFileSystem fs = getFileSystem();
     AbfsClient abfsClient = fs.getAbfsStore().getClient();
-    AbfsPerfTracker tracker = new AbfsPerfTracker("test",
-        this.getAccountName(),
+    AbfsClient testClient = TestAbfsClient.createTestClientFromCurrentContext(
+        abfsClient,
         abfsConfig);
-
-    // Create test AbfsClient
-    AbfsClient testClient = new AbfsClient(
-        abfsClient.getBaseUrl(),
-        new SharedKeyCredentials(abfsConfig.getAccountName().substring(0,
-            abfsConfig.getAccountName().indexOf(DOT)),
-            abfsConfig.getStorageAccountKey()),
-        abfsConfig,
-        new ExponentialRetryPolicy(REDUCED_RETRY_COUNT),
-        abfsConfig.getTokenProvider(),
-        tracker);
 
     // Mock instance of AbfsRestOperation
     AbfsRestOperation op = mock(AbfsRestOperation.class);
@@ -263,14 +250,14 @@ public class ITestAzureBlobFileSystemRename extends
 
     }
 
-    assertEquals(
-        assertMessage,
-        renameIdempotencyCheckStatus,
-        testClient.renameIdempotencyCheckOp(renameRequestStartTime,
-            op,
-            destinationPath.toUri().getPath())
-            .getResult()
-            .getStatusCode());
-
+    Assertions.assertThat(testClient.renameIdempotencyCheckOp(
+        renameRequestStartTime,
+        op,
+        destinationPath.toUri().getPath())
+        .getResult()
+        .getStatusCode())
+        .describedAs(assertMessage)
+        .isEqualTo(renameIdempotencyCheckStatus);
   }
+
 }

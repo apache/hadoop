@@ -765,7 +765,7 @@ public class AbfsConfiguration{
   }
 
   @VisibleForTesting
-  public void setMaxBackoffIntervalMilliseconds(int maxBackoffInterval) {
+  void setMaxBackoffIntervalMilliseconds(int maxBackoffInterval) {
     this.maxBackoffInterval = maxBackoffInterval;
   }
 

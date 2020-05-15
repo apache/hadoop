@@ -26,14 +26,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.assertj.core.api.Assertions;
+import org.junit.Assume;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
-import org.apache.hadoop.fs.azurebfs.services.AbfsPerfTracker;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
-import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
-import org.apache.hadoop.fs.azurebfs.services.SharedKeyCredentials;
+import org.apache.hadoop.fs.azurebfs.services.TestAbfsClient;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -44,10 +44,10 @@ import static java.net.HttpURLConnection.HTTP_OK;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DOT;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_DELETE_CONSIDERED_IDEMPOTENT;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertDeleted;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
+
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 
@@ -151,28 +151,18 @@ public class ITestAzureBlobFileSystemDelete extends
 
   @Test
   public void testDeleteIdempotency() throws Exception {
-    org.junit.Assume.assumeTrue(DEFAULT_DELETE_CONSIDERED_IDEMPOTENT);
+    Assume.assumeTrue(DEFAULT_DELETE_CONSIDERED_IDEMPOTENT);
     // Config to reduce the retry and maxBackoff time for test run
-    AbfsConfiguration abfsConfig = getConfiguration();
-    abfsConfig.setMaxIoRetries(REDUCED_RETRY_COUNT);
-    abfsConfig.setMaxBackoffIntervalMilliseconds(REDUCED_MAX_BACKOFF_INTERVALS_MS);
+    AbfsConfiguration abfsConfig
+        = TestAbfsConfigurationFieldsValidation.updateRetryConfigs(
+        getConfiguration(),
+        REDUCED_RETRY_COUNT, REDUCED_MAX_BACKOFF_INTERVALS_MS);
 
     final AzureBlobFileSystem fs = getFileSystem();
     AbfsClient abfsClient = fs.getAbfsStore().getClient();
-    AbfsPerfTracker tracker = new AbfsPerfTracker("test",
-        this.getAccountName(),
+    AbfsClient testClient = TestAbfsClient.createTestClientFromCurrentContext(
+        abfsClient,
         abfsConfig);
-
-    // Create test AbfsClient
-    AbfsClient testClient = new AbfsClient(
-        abfsClient.getBaseUrl(),
-        new SharedKeyCredentials(abfsConfig.getAccountName().substring(0,
-            abfsConfig.getAccountName().indexOf(DOT)),
-            abfsConfig.getStorageAccountKey()),
-        abfsConfig,
-        new ExponentialRetryPolicy(REDUCED_RETRY_COUNT),
-        abfsConfig.getTokenProvider(),
-        tracker);
 
     // Mock instance of AbfsRestOperation
     AbfsRestOperation op = mock(AbfsRestOperation.class);
@@ -186,12 +176,12 @@ public class ITestAzureBlobFileSystemDelete extends
     // Mock delete response to 404
     when(op.getResult()).thenReturn(http404Op);
 
-    assertEquals(
-        "Delete is considered idempotent by default and should return success.",
-        HTTP_OK,
-        testClient.deleteIdempotencyCheckOp(op)
-            .getResult()
-            .getStatusCode());
+    Assertions.assertThat(testClient.deleteIdempotencyCheckOp(op)
+        .getResult()
+        .getStatusCode())
+        .describedAs(
+            "Delete is considered idempotent by default and should return success.")
+        .isEqualTo(HTTP_OK);
   }
 
 }
