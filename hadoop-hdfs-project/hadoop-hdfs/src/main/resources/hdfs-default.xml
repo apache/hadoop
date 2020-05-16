@@ -4603,6 +4603,15 @@
 </property>
 
 <property>
+  <name>dfs.ha.allow.stale.reads</name>
+  <value>false</value>
+  <description>
+    If true, a NameNode in Standby state can process read request and the result
+    could be stale.
+  </description>
+</property>
+
+<property>
   <name>dfs.journalnode.edits.dir</name>
   <value>/tmp/hadoop/dfs/journalnode/</value>
   <description>
