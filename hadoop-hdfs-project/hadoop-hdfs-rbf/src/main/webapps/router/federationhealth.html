@@ -23,6 +23,11 @@
 <link rel="stylesheet" type="text/css" href="static/dataTables.bootstrap.css" />
 <link rel="stylesheet" type="text/css" href="static/rbf.css" />
 <title>Router Information</title>
+<style>
+  .col-sm-6 {
+    width: 30%;
+  }
+</style>
 </head>
 <body>
 
@@ -315,29 +320,44 @@
   <ul class="dfshealth-node-legend">
     <li class="dfshealth-node-icon dfshealth-node-alive">In service</li>
     <li class="dfshealth-node-icon dfshealth-node-down">Down</li>
+    <li class="dfshealth-node-icon dfshealth-node-decommissioning">Decommissioning</li>
     <li class="dfshealth-node-icon dfshealth-node-decommissioned">Decommissioned</li>
     <li class="dfshealth-node-icon dfshealth-node-down-decommissioned">Decommissioned &amp; dead</li>
   </ul>
+  <ul class="dfshealth-node-legend">
+    <li class="dfshealth-node-icon dfshealth-node-entering-maintenance">Entering Maintenance</li>
+    <li class="dfshealth-node-icon dfshealth-node-in-maintenance">In Maintenance</li>
+    <li class="dfshealth-node-icon dfshealth-node-down-maintenance">In Maintenance &amp; dead</li>
+  </ul>
 </div>
+<div class="page-header"><h1><small>Datanode usage histogram</small></h1></div>
+<small><div id="datanode-usage-histogram"></div></small>
 <div class="page-header"><h1><small>In operation</small></h1></div>
 <small>
+<p id="datanodefilter" class="col-sm-6">DataNode State </p>
 <table class="table" id="table-datanodes">
   <thead>
     <tr>
+      <th>State</th>
       <th>Node</th>
+      <th>Http Address</th>
       <th>Last contact</th>
+      <th>Last Block Report</th>
       <th>Used</th>
       <th>Non DFS Used</th>
       <th style="width:180px; text-align:center">Capacity</th>
-      <!--th>Blocks</th-->
+      <th>Blocks</th-->
       <th>Block pool used</th>
-      <!--th>Version</th-->
+      <th>Version</th>
     </tr>
   </thead>
   {#LiveNodes}
   <tr>
+    <td ng-value="{state}">{state}</td>
     <td ng-value="{state}-{name}" class="dfshealth-node-icon dfshealth-node-{state}">{location}/{name} ({xferaddr})</td>
-    <td ng-value="{lastContact}">{#helper_relative_time value="{lastContact}"/}</td>
+    <td ng-value="{state}-{name}"><a href='{dnWebAddress}'>{dnWebAddress}</a></td>
+    <td ng-value="{lastContact}">{lastContact}s</td>
+    <td ng-value="{lastBlockReport}">{lastBlockReport}m</td>
     <td ng-value="{used}">{used|fmt_bytes}</td>
     <td ng-value="{nonDfsUsedSpace}">{nonDfsUsedSpace|fmt_bytes}</td>
     <td ng-value="{usedPercentage}" style="width:210px">
@@ -349,26 +369,58 @@
         </div>
       </div>
     </td>
-    <!--td>{numBlocks}</td-->
+    <td>{numBlocks}</td>
     <td ng-value="{blockPoolUsedPercent}">{blockPoolUsed|fmt_bytes} ({blockPoolUsedPercent|fmt_percentage})</td>
-    <!--td>{version}</td-->
+    <td>{version}</td>
   </tr>
   {/LiveNodes}
   {#DeadNodes}
   <tr class="danger">
+    <td ng-value="{state}">{state}</td>
     <td ng-value="{state}-{name}" class="dfshealth-node-icon dfshealth-node-{state}">{location}/{name} ({xferaddr})</td>
+    <td></td>
     <td>{#helper_relative_time value="{lastContact}"/}</td>
     <td></td>
-    <!--td></td-->
     <td></td>
-    <!--td></td-->
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
   </tr>
   {/DeadNodes}
 </table>
 </small>
 
+<div class="page-header"><h1><small>Entering Maintenance</small></h1></div>
+<small>
+  {?EnteringMaintenanceNodes}
+  <table class="table">
+    <thead>
+    <tr>
+      <th>Node</th>
+      <th>Under replicated blocks</th>
+      <th>Blocks with no live replicas</th>
+      <th>Under Replicated Blocks <br/>In files under construction</th>
+    </tr>
+    </thead>
+    {#EnteringMaintenanceNodes}
+    <tr>
+      <td>{name} ({xferaddr})</td>
+      <td>{underReplicatedBlocks}</td>
+      <td>{maintenanceOnlyReplicas}</td>
+      <td>{underReplicateInOpenFiles}</td>
+    </tr>
+    {/EnteringMaintenanceNodes}
+  </table>
+  {:else}
+  No nodes are entering maintenance.
+  {/EnteringMaintenanceNodes}
+</small>
+
 <div class="page-header"><h1><small>Decommissioning</small></h1></div>
 <small>
+{?DecomNodes}
 <table class="table">
   <thead>
     <tr>
@@ -387,6 +439,9 @@
   </tr>
   {/DecomNodes}
 </table>
+{:else}
+No nodes are decommissioning.
+{/DecomNodes}
 </small>
 </script>
 
@@ -449,6 +504,7 @@
 <script type="text/javascript" src="static/dust-full-2.0.0.min.js"></script>
 <script type="text/javascript" src="static/dust-helpers-1.1.1.min.js"></script>
 <script type="text/javascript" src="static/dfs-dust.js"></script>
+<script type="text/javascript" src="/static/d3-v4.1.1.min.js"></script>
 <script type="text/javascript" src="federationhealth.js"></script>
 </body>
 </html>
