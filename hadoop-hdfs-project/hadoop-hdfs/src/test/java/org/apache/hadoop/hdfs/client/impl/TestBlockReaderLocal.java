@@ -251,10 +251,8 @@ public class TestBlockReaderLocal {
 
   @Test
   public void testBlockReaderLocalImmediateClose() throws IOException {
-    runBlockReaderLocalTest(new TestBlockReaderLocalImmediateClose(),
-        true, 0, 1);
-    runBlockReaderLocalTest(new TestBlockReaderLocalImmediateClose(),
-        false, 0, 1);
+    runBlockReaderLocalTest(new TestBlockReaderLocalImmediateClose(), true, 0);
+    runBlockReaderLocalTest(new TestBlockReaderLocalImmediateClose(), false, 0);
   }
 
   private static class TestBlockReaderSimpleReads
