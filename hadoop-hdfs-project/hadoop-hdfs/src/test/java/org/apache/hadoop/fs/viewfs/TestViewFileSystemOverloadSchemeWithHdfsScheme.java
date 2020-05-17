@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -24,6 +28,9 @@ import java.net.URISyntaxException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsConstants;
@@ -33,6 +40,7 @@ import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.test.PathUtils;
 import org.junit.After;
@@ -44,6 +52,7 @@ import org.junit.Test;
  * Tests ViewFileSystemOverloadScheme with configured mount links.
  */
 public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
+  private static final String TEST_STRING = "Hello ViewFSOverloadedScheme!";
   private static final String FS_IMPL_PATTERN_KEY = "fs.%s.impl";
   private static final String HDFS_SCHEME = "hdfs";
   private Configuration conf = null;
@@ -63,6 +72,8 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
     conf = new Configuration();
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY,
         true);
+    conf.setInt(
+        CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 1);
     conf.set(String.format(FS_IMPL_PATTERN_KEY, HDFS_SCHEME),
         ViewFileSystemOverloadScheme.class.getName());
     conf.set(String.format(
@@ -435,6 +446,124 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
     try (ViewFileSystemOverloadScheme vfs =
         (ViewFileSystemOverloadScheme) FileSystem.get(conf)) {
       Assert.assertEquals(1, vfs.getChildFileSystems().length);
+    }
+  }
+
+  /**
+   * Tests the rename with nfly mount link.
+   */
+  @Test
+  public void testNflyRename() throws Exception {
+    final Path hdfsTargetPath1 = new Path(defaultFSURI + HDFS_USER_FOLDER);
+    final Path hdfsTargetPath2 = new Path(defaultFSURI + HDFS_USER_FOLDER + 1);
+    final URI uri1 = hdfsTargetPath1.toUri();
+    final URI uri2 = hdfsTargetPath2.toUri();
+    final Path nflyRoot = new Path("/nflyroot");
+
+    addMountLinks(defaultFSURI.getAuthority(),
+        new String[] {Constants.CONFIG_VIEWFS_LINK_NFLY + "."
+            + "minReplication=2" + "." + nflyRoot.toString() },
+        new String[] {uri1.toString() + "," + uri2.toString() }, conf);
+    final FileSystem nfly = FileSystem.get(defaultFSURI, conf);
+
+    final Path testDir = new Path("/nflyroot/testdir1/sub1/sub3");
+    final Path testDir_tmp = new Path("/nflyroot/testdir1/sub1/sub3_temp");
+    assertTrue(testDir + ": Failed to create!", nfly.mkdirs(testDir));
+
+    // Test renames
+    assertTrue(nfly.rename(testDir, testDir_tmp));
+    assertTrue(nfly.rename(testDir_tmp, testDir));
+
+    final URI[] testUris = new URI[] {uri1, uri2 };
+    for (final URI testUri : testUris) {
+      final FileSystem fs = FileSystem.get(testUri, conf);
+      assertTrue(testDir + " should exist!", fs.exists(testDir));
+    }
+  }
+
+  /**
+   * Tests the write and read contents with nfly mount link.
+   */
+  @Test
+  public void testNflyWriteRead() throws Exception {
+    final Path hdfsTargetPath1 = new Path(defaultFSURI + HDFS_USER_FOLDER);
+    final Path hdfsTargetPath2 = new Path(defaultFSURI + HDFS_USER_FOLDER + 1);
+    final URI uri1 = hdfsTargetPath1.toUri();
+    final URI uri2 = hdfsTargetPath2.toUri();
+    final Path nflyRoot = new Path("/nflyroot");
+    addMountLinks(defaultFSURI.getAuthority(),
+        new String[] {Constants.CONFIG_VIEWFS_LINK_NFLY + "."
+            + "minReplication=2" + "." + nflyRoot.toString() },
+        new String[] {uri1.toString() + "," + uri2.toString() }, conf);
+    final FileSystem nfly = FileSystem.get(defaultFSURI, conf);
+    final Path testFile = new Path("/nflyroot/test.txt");
+    writeString(nfly, TEST_STRING, testFile);
+    final URI[] testUris = new URI[] {uri1, uri2 };
+    for (final URI testUri : testUris) {
+      final FileSystem fs = FileSystem.get(testUri, conf);
+      readString(fs, testFile, TEST_STRING, testUri);
+    }
+  }
+
+  /**
+   * 1. Writes contents with nfly link having two target uris. 2. Deletes one
+   * target file. 3. Tests the read works with repairOnRead flag. 4. Tests that
+   * previously deleted file fully recovered and exists.
+   */
+  @Test
+  public void testNflyRepair() throws Exception {
+    final NflyFSystem.NflyKey repairKey = NflyFSystem.NflyKey.repairOnRead;
+    final Path hdfsTargetPath1 = new Path(defaultFSURI + HDFS_USER_FOLDER);
+    final Path hdfsTargetPath2 = new Path(defaultFSURI + HDFS_USER_FOLDER + 1);
+    final URI uri1 = hdfsTargetPath1.toUri();
+    final URI uri2 = hdfsTargetPath2.toUri();
+    final Path nflyRoot = new Path("/nflyroot");
+    addMountLinks(defaultFSURI.getAuthority(),
+        new String[] {
+            Constants.CONFIG_VIEWFS_LINK_NFLY + "." + "minReplication=2,"
+                + repairKey + "=true" + "." + nflyRoot.toString() },
+        new String[] {uri1.toString() + "," + uri2.toString() }, conf);
+
+    final FileSystem nfly = FileSystem.get(defaultFSURI, conf);
+
+    // write contents to nfly
+    final Path testFilePath = new Path("/nflyroot/test.txt");
+    writeString(nfly, TEST_STRING, testFilePath);
+
+    final URI[] testUris = new URI[] {uri1, uri2 };
+    // both nodes are up again, test repair
+    FsGetter getter = new ViewFileSystemOverloadScheme.ChildFsGetter("hdfs");
+    FileSystem fs1 = getter.getNewInstance(testUris[0], conf);
+
+    // Delete a file from one target URI
+    String testFile = "/test.txt";
+    assertTrue(fs1.delete(new Path(testUris[0].toString() + testFile), false));
+    assertFalse(fs1.exists(new Path(testUris[0].toString() + testFile)));
+
+    // Verify read success.
+    readString(nfly, testFilePath, TEST_STRING, testUris[0]);
+    // Verify file recovered.
+    assertTrue(fs1.exists(new Path(testUris[0].toString() + testFile)));
+  }
+
+  private void writeString(final FileSystem nfly, final String testString,
+      final Path testFile) throws IOException {
+    final FSDataOutputStream fsDos = nfly.create(testFile);
+    try {
+      fsDos.writeUTF(testString);
+    } finally {
+      fsDos.close();
+    }
+  }
+
+  private void readString(final FileSystem nfly, final Path testFile,
+      final String testString, final URI testUri) throws IOException {
+    FSDataInputStream fsDis = null;
+    try {
+      fsDis = nfly.open(testFile);
+      assertEquals("Wrong file content", testString, fsDis.readUTF());
+    } finally {
+      IOUtils.cleanupWithLogger(null, fsDis);
     }
   }
 
