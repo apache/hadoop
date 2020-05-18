@@ -73,6 +73,7 @@ public class LayeredNodeUsageBinPackingPolicy<N extends SchedulerNode>
   private final float busyLayerMaxScore = 1000;
   private final float busyLayerSlope = -3;
   private final float busyLayerThreshold = (float)0.6;
+  private final float freeLayerThreshold = (float)0.1;
 
   protected Comparator<N> comparator;
 
@@ -132,12 +133,15 @@ public class LayeredNodeUsageBinPackingPolicy<N extends SchedulerNode>
     // fall in normal layer, the higher resource usage, the higher score
     if (resourceUsage < busyLayerThreshold && resourceUsage > 0) {
       return normalLayerMinimumScore + normalLayerSlope * resourceUsage * 100;
-    } else if (resourceUsage >= busyLayerThreshold) {
+    } else if (resourceUsage >= busyLayerThreshold && resourceUsage < 1) {
       // fall in busy layer. The higher resource usage, the lower score
       return busyLayerMaxScore + busyLayerSlope * resourceUsage * 100;
-    } else {
+    } else if (resourceUsage == 0){
       // fall in free layer. Get a random score. Max 100
-      return new Random().nextFloat() * 100;
+      return freeLayerThreshold + new Random().nextFloat() * 99;
+    } else {
+      //fall in fully utilised node layer. The score is 0
+      return 0;
     }
   }
 

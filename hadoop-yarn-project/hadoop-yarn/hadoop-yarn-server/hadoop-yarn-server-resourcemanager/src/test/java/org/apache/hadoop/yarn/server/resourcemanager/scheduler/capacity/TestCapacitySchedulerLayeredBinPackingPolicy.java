@@ -19,6 +19,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -130,16 +134,78 @@ public class TestCapacitySchedulerLayeredBinPackingPolicy {
       Assert.assertTrue(true);
     }
 
-    Assert.assertTrue(
-        "High usage busy node score should be smaller to avoid hot spot",
-        busyNodeScore2 < busyNodeScore);
-    Assert.assertTrue(
-        "Busy node score should be smaller than normal node",
-        busyNodeScore < normalNodeScore);
-    Assert.assertTrue(
-        "Busy node score should be larger than free node",
-        busyNodeScore > freeNodeScore);
-  }
+      assertTrue("Node usage 0 shoudn't have a score higher than 100. Actual:"
+          + freeNodeScore, freeNodeScore < 100.0);
+
+      //node with resource usage 1, the score should be 0
+      currentUsage = (float)1.0;
+      float fullNodeScore = policy.scorer(currentUsage, threshold);
+      assertEquals(0, fullNodeScore, 0);
+
+      assertTrue(
+          "High usage busy node score should be smaller to avoid hot spot",
+          busyNodeScore2 < busyNodeScore);
+      assertTrue("Busy node score should be smaller than normal node",
+          busyNodeScore < normalNodeScore);
+      assertTrue("Busy node score should be larger than free node",
+          busyNodeScore > freeNodeScore);
+      assertTrue("Full usage node score should be smaller than free node",
+          fullNodeScore < freeNodeScore);
+    }
+
+    @Test
+    public void testLayeredFullResourceUsageOrdering() throws Exception {
+      MockRM rm = new MockRM(conf);
+      rm.start();
+      MockNM[] nms = new MockNM[4];
+      MockNM nm1 = rm.registerNode("127.0.0.1:1234", 10 * GB, 1);
+      nms[0] = nm1;
+      MockNM nm2 = rm.registerNode("127.0.0.2:1235", 10 * GB, 1);
+      nms[1] = nm2;
+      MockNM nm3 = rm.registerNode("127.0.0.3:1236", 10 * GB, 1);
+      nms[2] = nm3;
+      MockNM nm4 = rm.registerNode("127.0.0.4:1237", 10 * GB, 1);
+      nms[3] = nm4;
+      MultiNodeSortingManager<SchedulerNode> mns = rm.getRMContext()
+            .getMultiNodeSortingManager();
+      MultiNodeSorter<SchedulerNode> sorter = mns
+            .getMultiNodePolicy(POLICY_CLASS_NAME);
+      sorter.reSortClusterNodes();
+      MockRMAppSubmissionData data =
+          MockRMAppSubmissionData.Builder.createWithMemory(10 * GB, rm)
+              .withAppName("app-1")
+              .withUser("user1")
+              .withAcls(null)
+              .withQueue("default")
+              .build();
+      RMApp app1 = MockRMAppSubmitter.submit(rm, data);
+      MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nms);
+      heartbeat(rm, nm1);
+      heartbeat(rm, nm2);
+      heartbeat(rm, nm3);
+      heartbeat(rm, nm4);
+      MockNM chosenNode = null;
+      for(int i=0; i<nms.length; i++) {
+        SchedulerNodeReport reportNM =
+              rm.getResourceScheduler().getNodeReport(nms[i].getNodeId());
+        if(reportNM.getUsedResource().getMemorySize() == 10 * GB) {
+          chosenNode = nms[i];
+          break;
+        }
+      }
+      sorter.reSortClusterNodes();
+      Set<SchedulerNode> nodeList = sorter.getMultiNodeLookupPolicy()
+           .getNodesPerPartition("");
+      Iterator<SchedulerNode> nodes = sorter.getMultiNodeLookupPolicy()
+            .getPreferredNodeIterator(nodeList, "", null);
+      Assert.assertEquals("Nodes size does not match", 4, nodeList.size());
+      SchedulerNode lastNM = nodes.next();
+      while (nodes.hasNext()) {
+        lastNM = nodes.next();
+      }
+      Assert.assertEquals(chosenNode.getNodeId(), lastNM.getNodeID());
+      rm.stop();
+    }
 
   /**
    * The container requests will generate nodes with resource usage
