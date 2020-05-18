@@ -37,7 +37,6 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -689,7 +688,7 @@ public class Balancer {
    * execute a {@link Balancer} to work through all datanodes once.  
    */
   static private int doBalance(Collection<URI> namenodes,
-      Collection<String> nsIds, final BalancerParameters p, Configuration conf)
+      final BalancerParameters p, Configuration conf)
       throws IOException, InterruptedException {
     final long sleeptime =
         conf.getTimeDuration(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
@@ -708,12 +707,13 @@ public class Balancer {
     System.out.println("Time Stamp               Iteration#  Bytes Already Moved  Bytes Left To Move  Bytes Being Moved");
     
     List<NameNodeConnector> connectors = Collections.emptyList();
-    boolean done = false;
-    for(int iteration = 0; !done; iteration++) {
-      try {
-        connectors = NameNodeConnector.newNameNodeConnectors(namenodes, nsIds,
-            Balancer.class.getSimpleName(), BALANCER_ID_PATH, conf,
-            p.getMaxIdleIteration());
+    try {
+      connectors = NameNodeConnector.newNameNodeConnectors(namenodes, 
+              Balancer.class.getSimpleName(), BALANCER_ID_PATH, conf,
+              p.getMaxIdleIteration());
+
+      boolean done = false;
+      for(int iteration = 0; !done; iteration++) {
         done = true;
         Collections.shuffle(connectors);
         for(NameNodeConnector nnc : connectors) {
@@ -741,25 +741,19 @@ public class Balancer {
         if (!done) {
           Thread.sleep(sleeptime);
         }
-      } finally {
-        for(NameNodeConnector nnc : connectors) {
-          IOUtils.cleanupWithLogger(LOG, nnc);
-        }
+      }
+    } finally {
+      for(NameNodeConnector nnc : connectors) {
+        IOUtils.cleanupWithLogger(LOG, nnc);
       }
     }
     return ExitStatus.SUCCESS.getExitCode();
   }
 
   static int run(Collection<URI> namenodes, final BalancerParameters p,
-                 Configuration conf) throws IOException, InterruptedException {
-    return run(namenodes, null, p, conf);
-  }
-
-  static int run(Collection<URI> namenodes, Collection<String> nsIds,
-      final BalancerParameters p, Configuration conf)
-      throws IOException, InterruptedException {
+      Configuration conf) throws IOException, InterruptedException {
     if (!p.getRunAsService()) {
-      return doBalance(namenodes, nsIds, p, conf);
+      return doBalance(namenodes, p, conf);
     }
     if (!serviceRunning) {
       serviceRunning = true;
@@ -778,7 +772,7 @@ public class Balancer {
 
     while (serviceRunning) {
       try {
-        int retCode = doBalance(namenodes, nsIds, p, conf);
+        int retCode = doBalance(namenodes, p, conf);
         if (retCode < 0) {
           LOG.info("Balance failed, error code: " + retCode);
           failedTimesSinceLastSuccessfulBalance++;
@@ -862,8 +856,7 @@ public class Balancer {
         checkReplicationPolicyCompatibility(conf);
 
         final Collection<URI> namenodes = DFSUtil.getInternalNsRpcUris(conf);
-        final Collection<String> nsIds = DFSUtilClient.getNameServiceIds(conf);
-        return Balancer.run(namenodes, nsIds, parse(args), conf);
+        return Balancer.run(namenodes, parse(args), conf);
       } catch (IOException e) {
         System.out.println(e + ".  Exiting ...");
         return ExitStatus.IO_EXCEPTION.getExitCode();
