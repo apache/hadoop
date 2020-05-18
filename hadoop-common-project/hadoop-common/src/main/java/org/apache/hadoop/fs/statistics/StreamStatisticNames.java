@@ -115,8 +115,16 @@ public final class StreamStatisticNames {
       "stream_read_seek_backward_operations";
 
   /** {@value}. */
-  public static final String STREAM_WRITE_FAILURES =
-      "stream_write_failures";
+  public static final String STREAM_READ_SKIP_OPERATIONS =
+      "stream_read_skip_operations";
+
+  /** {@value}. */
+  public static final String STREAM_READ_SKIP_BYTES =
+      "stream_read_skip_bytes";
+
+  /** {@value}. */
+  public static final String STREAM_WRITE_EXCEPTIONS =
+      "stream_write_exceptions";
 
   /** {@value}. */
   public static final String STREAM_WRITE_BLOCK_UPLOADS

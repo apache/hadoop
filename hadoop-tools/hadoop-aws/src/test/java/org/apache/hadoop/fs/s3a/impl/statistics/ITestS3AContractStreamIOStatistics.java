@@ -56,7 +56,7 @@ public class ITestS3AContractStreamIOStatistics extends
   public List<String> outputStreamStatisticKeys() {
     return Arrays.asList(STREAM_WRITE_BYTES,
         STREAM_WRITE_BLOCK_UPLOADS,
-        STREAM_WRITE_FAILURES);
+        STREAM_WRITE_EXCEPTIONS);
   }
 
 }

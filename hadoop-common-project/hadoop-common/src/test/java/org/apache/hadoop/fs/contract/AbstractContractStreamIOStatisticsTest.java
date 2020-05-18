@@ -68,6 +68,15 @@ public abstract class AbstractContractStreamIOStatisticsTest
     }
   }
 
+  /**
+   * If the stream writes in blocks, then counters during the write may be
+   * zero until a whole block is written -or the write has finished.
+   * @return true if writes are buffered into whole blocks.
+   */
+  public boolean streamWritesInBlocks() {
+    return false;
+  }
+
   @Test
   public void testWriteSingleByte() throws Throwable {
     describe("Write a byte to a file and verify"
@@ -75,12 +84,14 @@ public abstract class AbstractContractStreamIOStatisticsTest
     Path path = methodPath();
     FileSystem fs = getFileSystem();
     fs.mkdirs(path.getParent());
+    boolean writesInBlocks = streamWritesInBlocks();
     try (FSDataOutputStream out = fs.create(path, true)) {
       IOStatistics statistics = extractStatistics(out);
       // before a write, no bytes
       verifyStatisticValue(statistics, STREAM_WRITE_BYTES, 0);
       out.write('0');
-      verifyStatisticValue(statistics, STREAM_WRITE_BYTES, 1);
+      verifyStatisticValue(statistics, STREAM_WRITE_BYTES,
+          writesInBlocks ? 0 : 1);
       // close the stream
       out.close();
       // statistics are still valid after the close
@@ -101,16 +112,21 @@ public abstract class AbstractContractStreamIOStatisticsTest
     Path path = methodPath();
     FileSystem fs = getFileSystem();
     fs.mkdirs(path.getParent());
+    boolean writesInBlocks = streamWritesInBlocks();
     try (FSDataOutputStream out = fs.create(path, true)) {
       // before a write, no bytes
       final byte[] bytes = ContractTestUtils.toAsciiByteArray(
           "statistically-speaking");
       final int len = bytes.length;
       out.write(bytes);
+      out.flush();
       IOStatistics statistics = extractStatistics(out);
-      verifyStatisticValue(statistics, STREAM_WRITE_BYTES, len);
+      verifyStatisticValue(statistics, STREAM_WRITE_BYTES,
+          writesInBlocks ? 0 : len);
       out.write(bytes);
-      verifyStatisticValue(statistics, STREAM_WRITE_BYTES, len * 2);
+      out.flush();
+      verifyStatisticValue(statistics, STREAM_WRITE_BYTES,
+          writesInBlocks ? 0 : len * 2);
       // close the stream
       out.close();
       // statistics are still valid after the close
@@ -153,11 +169,12 @@ public abstract class AbstractContractStreamIOStatisticsTest
     ContractTestUtils.writeDataset(fs, path, ds, fileLen, 8_000, true);
 
     try (FSDataInputStream in = fs.open(path)) {
-      long current = 0;
+      long current;
       IOStatistics statistics = extractStatistics(in);
       verifyStatisticValue(statistics, STREAM_READ_BYTES, 0);
       Assertions.assertThat(in.read()).isEqualTo('a');
-      current = verifyStatisticValue(statistics, STREAM_READ_BYTES, 1);
+      int blockSize = readBlockSize();
+      current = verifyStatisticValue(statistics, STREAM_READ_BYTES, blockSize);
       final int bufferLen = 128;
       byte[] buf128 = new byte[bufferLen];
       in.read(buf128);
@@ -193,11 +210,20 @@ public abstract class AbstractContractStreamIOStatisticsTest
       Assertions.assertThat(in.read(pos, buf128, 0, bufferLen))
           .describedAs("Read(buffer) overlapping EOF")
           .isEqualTo(sublen);
-      current = verifyStatisticValue(statistics, STREAM_READ_BYTES,
+      verifyStatisticValue(statistics, STREAM_READ_BYTES,
           current + sublen);
     } finally {
       fs.delete(path, false);
     }
+  }
+
+  /**
+   * Block size for reads.
+   * Filesystems performing block reads (checksum, etc) will have a value greater than 1.
+   * @return what the minimum read will be
+   */
+  public int readBlockSize() {
+    return 1;
   }
 
   /**
