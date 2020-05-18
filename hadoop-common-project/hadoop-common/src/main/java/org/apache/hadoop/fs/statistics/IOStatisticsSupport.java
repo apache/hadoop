@@ -62,6 +62,6 @@ public final class IOStatisticsSupport {
       final Object source) {
     return (source instanceof IOStatisticsSource)
         ? ((IOStatisticsSource) source).getIOStatistics()
-        : null;
+        : null; // null source or interface not implemented
   }
 }

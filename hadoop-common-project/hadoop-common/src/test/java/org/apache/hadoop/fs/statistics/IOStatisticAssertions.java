@@ -25,6 +25,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -36,6 +37,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  * we need to explicitly cast it to call methods on the interface
  * other than iterator().
  */
+
+@InterfaceAudience.Private
 @InterfaceStability.Unstable
 public final class IOStatisticAssertions {
 

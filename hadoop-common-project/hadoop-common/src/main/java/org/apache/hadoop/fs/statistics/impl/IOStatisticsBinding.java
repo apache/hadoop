@@ -80,4 +80,16 @@ public final class IOStatisticsBinding {
   public static IOStatisticsSource wrap(IOStatistics statistics) {
     return new SourceWrappedStatistics(statistics);
   }
+
+  /**
+   * Create an IOStatistics instance from a varargs list of counter keys.
+   * This is the simplest way to build an IOStatistics instance as all
+   * the details are handled internally.
+   *
+   * @param keys key to use for the counter statistics.
+   * @return a new instance.
+   */
+  public static CounterIOStatistics counterIOStatistics(String...keys) {
+    return new CounterIOStatisticsImpl(keys);
+  }
 }

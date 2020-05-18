@@ -176,7 +176,7 @@ public enum Statistic {
       StreamStatisticNames.STREAM_BYTES_DISCARDED_ABORT,
       "Count of bytes discarded by aborting the stream"),
   STREAM_WRITE_FAILURES(
-      StreamStatisticNames.STREAM_WRITE_FAILURES,
+      StreamStatisticNames.STREAM_WRITE_EXCEPTIONS,
       "Count of stream write failures reported"),
   STREAM_WRITE_BLOCK_UPLOADS(
       StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS,
