@@ -241,8 +241,7 @@ public class TestBlockReaderLocal {
 
   public void runBlockReaderLocalTest(BlockReaderLocalTest test,
       boolean checksum, long readahead) throws IOException {
-    runBlockReaderLocalTest(BlockReaderLocalTest test,
-      boolean checksum, long readahead, 1);
+    runBlockReaderLocalTest(test, checksum, readahead, 1);
   }
 
   private static class TestBlockReaderLocalImmediateClose
