@@ -235,24 +235,52 @@ export default Ember.Controller.extend({
 
   fetchLogFilesForContainerId(containerId) {
     let queryName = this.fallbackToJHS ? "yarn-jhs-log" : "yarn-log";
+    let redirectQuery = queryName === "yarn-jhs-log" ? "yarn-jhs-redirect-log" : "yarn-redirect-log";
 
     return Ember.RSVP.hash({
-      logs: this.store
-        .query(queryName, {
-          containerId: containerId
-        })
-        .catch(function() {
-          return Ember.A();
+      logs: this.resolveRedirectableQuery(
+        this.store.query(queryName, { containerId }),
+        m => {
+          return m.map(model => model.get('redirectedUrl'))[0];
+        },
+        url => {
+          return this.store.query(redirectQuery, url);
         })
     });
   },
 
   fetchContentForLogFile(id) {
     let queryName = this.fallbackToJHS ? 'yarn-app-jhs-log' : 'yarn-app-log';
+    let redirectQuery = queryName === "yarn-app-jhs-log" ? "yarn-app-jhs-redirect-log" : "yarn-app-redirect-log";
 
     return Ember.RSVP.hash({
-      logs: this.store.findRecord(queryName, id)
+      logs: this.resolveRedirectableQuery(
+        this.store.findRecord(queryName, id),
+        m => {
+          return m.get('redirectedUrl');
+        },
+        url => {
+          return this.store.findRecord(redirectQuery, url + Constants.PARAM_SEPARATOR + id);
+        })
     });
+  },
+
+  resolveRedirectableQuery(initial, urlResolver, redirectResolver) {
+    return initial.then(m => {
+      let redirectedUrl = urlResolver(m);
+      if (redirectedUrl !== null && redirectedUrl !== undefined && redirectedUrl !== '') {
+        let logFromRedirect = redirectResolver(redirectedUrl);
+        return Promise.all([m, logFromRedirect]);
+      } else {
+        return Promise.all([m, null]);
+      }
+    })
+      .then(([originalLog, logFromRedirect]) => {
+        return logFromRedirect !== null ? logFromRedirect : originalLog;
+      })
+      .catch(function () {
+        return Ember.A();
+      });
   },
 
   resetAfterRefresh() {

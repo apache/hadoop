@@ -698,8 +698,11 @@ public class CapacityScheduler extends
     Set<String> distinguishRuleSet = CapacitySchedulerConfigValidator
             .validatePlacementRules(placementRuleStrs);
 
-    // add UserGroupMappingPlacementRule if absent
-    distinguishRuleSet.add(YarnConfiguration.USER_GROUP_PLACEMENT_RULE);
+    // add UserGroupMappingPlacementRule if empty,default value of
+    // yarn.scheduler.queue-placement-rules is user-group
+    if (distinguishRuleSet.isEmpty()) {
+      distinguishRuleSet.add(YarnConfiguration.USER_GROUP_PLACEMENT_RULE);
+    }
 
     placementRuleStrs = new ArrayList<>(distinguishRuleSet);
 
@@ -2686,10 +2689,10 @@ public class CapacityScheduler extends
       }
 
       // Lets check for ACLs here.
-      if (!appPriorityACLManager.checkAccess(user, queuePath, appPriority)) {
+      if (!appPriorityACLManager.checkAccess(user, normalizeQueueName(queuePath), appPriority)) {
         throw new YarnException(new AccessControlException(
-            "User " + user + " does not have permission to submit/update "
-                + applicationId + " for " + appPriority));
+                "User " + user + " does not have permission to submit/update "
+                        + applicationId + " for " + appPriority));
       }
 
       LOG.info("Priority '" + appPriority.getPriority()

@@ -152,6 +152,7 @@ public class WebHdfsFileSystem extends FileSystem
       + "/v" + VERSION;
   public static final String EZ_HEADER = "X-Hadoop-Accept-EZ";
   public static final String FEFINFO_HEADER = "X-Hadoop-feInfo";
+  public static final String DFS_HTTP_POLICY_KEY = "dfs.http.policy";
 
   /**
    * Default connection factory may be overridden in tests to use smaller
@@ -181,6 +182,7 @@ public class WebHdfsFileSystem extends FileSystem
 
   private DFSOpsCountStatistics storageStatistics;
   private KeyProvider testProvider;
+  private boolean isTLSKrb;
 
   /**
    * Return the protocol scheme for the FileSystem.
@@ -242,6 +244,7 @@ public class WebHdfsFileSystem extends FileSystem
           .newDefaultURLConnectionFactory(connectTimeout, readTimeout, conf);
     }
 
+    this.isTLSKrb = "HTTPS_ONLY".equals(conf.get(DFS_HTTP_POLICY_KEY));
 
     ugi = UserGroupInformation.getCurrentUser();
     this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
@@ -699,6 +702,11 @@ public class WebHdfsFileSystem extends FileSystem
       //redirect hostname and port
       redirectHost = null;
 
+      if (url.getProtocol().equals(getTransportScheme()) &&
+        UserGroupInformation.isSecurityEnabled() &&
+        isTLSKrb) {
+        throw new IOException("Access denied: dfs.http.policy is HTTPS_ONLY.");
+      }
 
       // resolve redirects for a DN operation unless already resolved
       if (op.getRedirect() && !redirected) {
@@ -1331,6 +1339,8 @@ public class WebHdfsFileSystem extends FileSystem
 
   @Override
   public void satisfyStoragePolicy(final Path p) throws IOException {
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.SATISFY_STORAGE_POLICY);
     final HttpOpParam.Op op = PutOpParam.Op.SATISFYSTORAGEPOLICY;
     new FsPathRunner(op, p).run();
   }
@@ -1420,6 +1430,7 @@ public class WebHdfsFileSystem extends FileSystem
 
   public SnapshotDiffReport getSnapshotDiffReport(final Path snapshotDir,
       final String fromSnapshot, final String toSnapshot) throws IOException {
+    statistics.incrementReadOps(1);
     storageStatistics.incrementOpCounter(OpType.GET_SNAPSHOT_DIFF);
     final HttpOpParam.Op op = GetOpParam.Op.GETSNAPSHOTDIFF;
     return new FsPathResponseRunner<SnapshotDiffReport>(op, snapshotDir,
@@ -1434,6 +1445,7 @@ public class WebHdfsFileSystem extends FileSystem
 
   public SnapshottableDirectoryStatus[] getSnapshottableDirectoryList()
       throws IOException {
+    statistics.incrementReadOps(1);
     storageStatistics
         .incrementOpCounter(OpType.GET_SNAPSHOTTABLE_DIRECTORY_LIST);
     final HttpOpParam.Op op = GetOpParam.Op.GETSNAPSHOTTABLEDIRECTORYLIST;
@@ -1995,6 +2007,8 @@ public class WebHdfsFileSystem extends FileSystem
   @Override
   public Collection<BlockStoragePolicy> getAllStoragePolicies()
       throws IOException {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_STORAGE_POLICIES);
     final HttpOpParam.Op op = GetOpParam.Op.GETALLSTORAGEPOLICY;
     return new FsPathResponseRunner<Collection<BlockStoragePolicy>>(op, null) {
       @Override
@@ -2007,6 +2021,8 @@ public class WebHdfsFileSystem extends FileSystem
 
   @Override
   public BlockStoragePolicy getStoragePolicy(Path src) throws IOException {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_STORAGE_POLICY);
     final HttpOpParam.Op op = GetOpParam.Op.GETSTORAGEPOLICY;
     return new FsPathResponseRunner<BlockStoragePolicy>(op, src) {
       @Override

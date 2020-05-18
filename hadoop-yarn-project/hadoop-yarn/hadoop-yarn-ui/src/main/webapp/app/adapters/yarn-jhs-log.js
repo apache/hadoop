@@ -17,6 +17,7 @@
  */
 
 import AbstractAdapter from './abstract';
+import { createEmptyContainerLogInfo } from 'yarn-ui/helpers/log-adapter-helper';
 
 export default AbstractAdapter.extend({
   address: "jhsAddress",
@@ -27,6 +28,15 @@ export default AbstractAdapter.extend({
     var url = this._buildURL();
     var containerId = query['containerId'];
     delete query.containerId;
-    return url + '/containers/' + containerId + '/logs';
+    return url + '/containers/' + containerId + '/logs' + '?manual_redirection=true';
+  },
+
+  handleResponse(status, headers, payload, requestData) {
+    if (headers['location'] !== undefined && headers['location'] !== null) {
+      return createEmptyContainerLogInfo(headers['location']);
+    } else {
+      return payload;
+    }
   }
+
 });

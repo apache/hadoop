@@ -42,7 +42,6 @@ public class FSYarnSiteConverter {
     yarnSiteConfig.set(YarnConfiguration.RM_SCHEDULER,
         CapacityScheduler.class.getCanonicalName());
 
-    // TODO: deprecated property, check if necessary
     if (conf.getBoolean(
         FairSchedulerConfiguration.CONTINUOUS_SCHEDULING_ENABLED,
         FairSchedulerConfiguration.DEFAULT_CONTINUOUS_SCHEDULING_ENABLED)) {
@@ -53,20 +52,6 @@ public class FSYarnSiteConverter {
           FairSchedulerConfiguration.DEFAULT_CONTINUOUS_SCHEDULING_SLEEP_MS);
       yarnSiteConfig.setInt(PREFIX +
           "schedule-asynchronously.scheduling-interval-ms", interval);
-    }
-
-    String mbIncrementAllocation =
-        conf.get("yarn.resource-types.memory-mb.increment-allocation");
-    if (mbIncrementAllocation != null) {
-      yarnSiteConfig.set("yarn.scheduler.minimum-allocation-mb",
-          mbIncrementAllocation);
-    }
-
-    String vcoreIncrementAllocation =
-        conf.get("yarn.resource-types.vcores.increment-allocation");
-    if (vcoreIncrementAllocation != null) {
-      yarnSiteConfig.set("yarn.scheduler.minimum-allocation-vcores",
-          vcoreIncrementAllocation);
     }
 
     if (conf.getBoolean(FairSchedulerConfiguration.PREEMPTION,

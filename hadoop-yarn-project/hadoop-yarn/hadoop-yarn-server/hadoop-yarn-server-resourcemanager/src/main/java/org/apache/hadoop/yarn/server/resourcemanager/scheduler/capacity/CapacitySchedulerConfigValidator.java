@@ -28,7 +28,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 public final class CapacitySchedulerConfigValidator {
@@ -42,19 +42,23 @@ public final class CapacitySchedulerConfigValidator {
   public static boolean validateCSConfiguration(
           final Configuration oldConf, final Configuration newConf,
           final RMContext rmContext) throws IOException {
-    //TODO: extract all the validation steps and replace reinitialize with
-    //the specific validation steps
     CapacityScheduler newCs = new CapacityScheduler();
-    newCs.setConf(oldConf);
-    newCs.setRMContext(rmContext);
-    newCs.init(oldConf);
-    newCs.reinitialize(newConf, rmContext, true);
-    return true;
+    try {
+      //TODO: extract all the validation steps and replace reinitialize with
+      //the specific validation steps
+      newCs.setConf(oldConf);
+      newCs.setRMContext(rmContext);
+      newCs.init(oldConf);
+      newCs.reinitialize(newConf, rmContext, true);
+      return true;
+    } finally {
+      newCs.stop();
+    }
   }
 
   public static Set<String> validatePlacementRules(
           Collection<String> placementRuleStrs) throws IOException {
-    Set<String> distinguishRuleSet = new HashSet<>();
+    Set<String> distinguishRuleSet = new LinkedHashSet<>();
     // fail the case if we get duplicate placementRule add in
     for (String pls : placementRuleStrs) {
       if (!distinguishRuleSet.add(pls)) {

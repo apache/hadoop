@@ -327,8 +327,22 @@
   <description>
     Decide if sort block locations considers the target's load or not when read.
     Turn off by default.
+    It is not possible to enable this feature along with dfs.namenode.read.considerStorageType as only one sort can be
+    enabled at a time.
   </description>
 </property>
+
+  <property>
+    <name>dfs.namenode.read.considerStorageType</name>
+    <value>false</value>
+    <description>
+      Decide if sort block locations considers the target's storage type or not when read. Any locations with the same
+      network distance are sorted in order of the storage speed, fastest first (RAM, SSD, Disk, Archive). This is
+      disabled by default, and the locations will be ordered randomly.
+      It is not possible to enable this feature along with dfs.namenode.read.considerLoad as only one sort can be
+      enabled at a time.
+    </description>
+  </property>
 
 <property>
   <name>dfs.datanode.httpserver.filter.handlers</name>
@@ -2979,6 +2993,15 @@
 </property>
 
 <property>
+  <name>dfs.client.read.use.cache.priority</name>
+  <value>false</value>
+  <description>
+    If true, the cached replica of the datanode is preferred
+    else the replica closest to client is preferred.
+  </description>
+</property>
+
+<property>
   <name>dfs.block.local-path-access.user</name>
   <value></value>
   <description>
@@ -4061,7 +4084,7 @@
 
 <property>
   <name>dfs.client.failover.random.order</name>
-  <value>false</value>
+  <value>true</value>
   <description>
     Determines if the failover proxies are picked in random order instead of the
     configured order. Random order may be enabled for better load balancing
@@ -5859,6 +5882,14 @@
     <description>
       Whether the owner(not superuser) of a directory can set quota of his sub
       directories when permissions is enabled. Default value is false;
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.protected.subdirectories.enable</name>
+    <value>false</value>
+    <description>whether to protect the subdirectories of directories which
+      set on fs.protected.directories.
     </description>
   </property>
 </configuration>

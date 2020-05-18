@@ -524,16 +524,26 @@ public abstract class AbstractCSQueue implements CSQueue {
     return unionInheritedWeights;
   }
 
+  protected Resource getMinimumAbsoluteResource(String queuePath, String label) {
+    Resource minResource = csContext.getConfiguration()
+        .getMinimumResourceRequirement(label, queuePath, resourceTypes);
+    return minResource;
+  }
+
+  protected Resource getMaximumAbsoluteResource(String queuePath, String label) {
+    Resource maxResource = csContext.getConfiguration()
+        .getMaximumResourceRequirement(label, queuePath, resourceTypes);
+    return maxResource;
+  }
+
   protected void updateConfigurableResourceRequirement(String queuePath,
       Resource clusterResource) {
     CapacitySchedulerConfiguration conf = csContext.getConfiguration();
     Set<String> configuredNodelabels = conf.getConfiguredNodeLabels(queuePath);
 
     for (String label : configuredNodelabels) {
-      Resource minResource = conf.getMinimumResourceRequirement(label,
-          queuePath, resourceTypes);
-      Resource maxResource = conf.getMaximumResourceRequirement(label,
-          queuePath, resourceTypes);
+      Resource minResource = getMinimumAbsoluteResource(queuePath, label);
+      Resource maxResource = getMaximumAbsoluteResource(queuePath, label);
 
       LOG.debug("capacityConfigType is '{}' for queue {}",
           capacityConfigType, getQueuePath());
@@ -1349,10 +1359,6 @@ public abstract class AbstractCSQueue implements CSQueue {
       if (getState() == QueueState.RUNNING) {
         LOG.info("The specified queue:" + getQueuePath()
             + " is already in the RUNNING state.");
-      } else if (getState() == QueueState.DRAINING) {
-        throw new YarnException(
-            "The queue:" + getQueuePath() + " is in the Stopping process. "
-            + "Please wait for the queue getting fully STOPPED.");
       } else {
         CSQueue parent = getParent();
         if (parent == null || parent.getState() == QueueState.RUNNING) {

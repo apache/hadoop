@@ -146,6 +146,10 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
 
   public static final String TEST_GROUP = "testusergroup";
   public static final String TEST_GROUPUSER = "testuser";
+  public static final String TEST_GROUP1 = "testusergroup1";
+  public static final String TEST_GROUPUSER1 = "testuser1";
+  public static final String TEST_GROUP2 = "testusergroup2";
+  public static final String TEST_GROUPUSER2 = "testuser2";
   public static final String USER = "user_";
   public static final String USER0 = USER + 0;
   public static final String USER1 = USER + 1;
@@ -304,7 +308,8 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
         TestGroupsCaching.FakeunPrivilegedGroupMapping.class, ShellBasedUnixGroupsMapping.class);
     conf.set(CommonConfigurationKeys.HADOOP_USER_GROUP_STATIC_OVERRIDES,
-        TEST_GROUPUSER +"=" + TEST_GROUP + ";invalid_user=invalid_group");
+        TEST_GROUPUSER +"=" + TEST_GROUP + ";" + TEST_GROUPUSER1 +"="
+            + TEST_GROUP1 + ";" + TEST_GROUPUSER2 + "=" + TEST_GROUP2 + ";invalid_user=invalid_group");
     Groups.getUserToGroupsMappingServiceWithLoadedConfiguration(conf);
 
     QueueMapping userQueueMapping = QueueMappingBuilder.create()
@@ -315,7 +320,25 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
                                                 leafQueueName))
                                         .build();
 
+    QueueMapping userQueueMapping1 = QueueMappingBuilder.create()
+        .type(QueueMapping.MappingType.GROUP)
+        .source(TEST_GROUP1)
+        .queue(
+            getQueueMapping(parentQueue,
+                leafQueueName))
+        .build();
+
+    QueueMapping userQueueMapping2 = QueueMappingBuilder.create()
+        .type(QueueMapping.MappingType.GROUP)
+        .source(TEST_GROUP2)
+        .queue(
+            getQueueMapping(parentQueue,
+                leafQueueName))
+        .build();
+
     queueMappings.add(userQueueMapping);
+    queueMappings.add(userQueueMapping1);
+    queueMappings.add(userQueueMapping2);
     existingMappings.addAll(queueMappings);
     conf.setQueueMappings(existingMappings);
     return conf;

@@ -161,17 +161,19 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
     String group =
         CapacitySchedulerConfiguration.ROOT + "." + getPrimaryGroup(user);
 
-    CSQueue parent = queueManager.getQueue(mapping.getParentQueue());
+    String parent = mapping.getParentQueue();
+    CSQueue groupQueue = queueManager.getQueue(group);
 
-    if (parent instanceof ManagedParentQueue) {
-      return getPlacementContext(mapping, group);
-    } else {
-      CSQueue queue = this.queueManager.getQueue(group);
-      if ( queue != null) {
-        return getPlacementContext(mapping, queue.getQueuePath());
+    if (parent != null) {
+      CSQueue parentQueue = queueManager.getQueue(parent);
+
+      if (parentQueue instanceof ManagedParentQueue) {
+        return getPlacementContext(mapping, group);
       } else {
-        return null;
+        return groupQueue == null ? null : getPlacementContext(mapping, group);
       }
+    } else {
+      return groupQueue == null ? null : getPlacementContext(mapping, group);
     }
   }
 

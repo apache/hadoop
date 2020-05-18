@@ -99,7 +99,7 @@ public class ExecuteCommand extends Command {
     String dataNodeAddress = plan.getNodeName() + ":" + plan.getPort();
     Preconditions.checkNotNull(dataNodeAddress);
     ClientDatanodeProtocol dataNode = getDataNodeProxy(dataNodeAddress);
-    String planHash = DigestUtils.shaHex(planData);
+    String planHash = DigestUtils.sha1Hex(planData);
     try {
       dataNode.submitDiskBalancerPlan(planHash, DiskBalancerCLI.PLAN_VERSION,
                                       planFile, planData, skipDateCheck);

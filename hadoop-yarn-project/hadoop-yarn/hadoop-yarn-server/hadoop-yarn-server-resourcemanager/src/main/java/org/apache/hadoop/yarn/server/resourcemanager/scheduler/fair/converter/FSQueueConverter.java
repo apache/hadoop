@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.ConfigurableResource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
@@ -225,7 +226,8 @@ public class FSQueueConverter {
    * @param queueName
    */
   private void emitAutoCreateChildQueue(String queueName, FSQueue queue) {
-    if (autoCreateChildQueues && !queue.getChildQueues().isEmpty()) {
+    if (autoCreateChildQueues && !queue.getChildQueues().isEmpty()
+        && !queueName.equals(CapacitySchedulerConfiguration.ROOT)) {
       capacitySchedulerConfig.setBoolean(PREFIX + queueName +
           ".auto-create-child-queue.enabled", true);
     }

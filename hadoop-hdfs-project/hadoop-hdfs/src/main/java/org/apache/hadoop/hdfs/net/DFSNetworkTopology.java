@@ -180,10 +180,10 @@ public class DFSNetworkTopology extends NetworkTopology {
       String excludedScope, final Collection<Node> excludedNodes,
       StorageType type) {
     if (excludedScope != null) {
-      if (scope.startsWith(excludedScope)) {
+      if (isChildScope(scope, excludedScope)) {
         return null;
       }
-      if (!excludedScope.startsWith(scope)) {
+      if (!isChildScope(excludedScope, scope)) {
         excludedScope = null;
       }
     }
@@ -262,15 +262,6 @@ public class DFSNetworkTopology extends NetworkTopology {
     } while (true);
     LOG.debug("chooseRandom returning {}", chosen);
     return chosen;
-  }
-
-  private boolean isNodeInScope(Node node, String scope) {
-    if (!scope.endsWith(NodeBase.PATH_SEPARATOR_STR)) {
-      scope += NodeBase.PATH_SEPARATOR_STR;
-    }
-    String nodeLocation =
-        node.getNetworkLocation() + NodeBase.PATH_SEPARATOR_STR;
-    return nodeLocation.startsWith(scope);
   }
 
   /**

@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.azurebfs.diagnostics.BooleanConfigurationBasicValida
 import org.apache.hadoop.fs.azurebfs.diagnostics.IntegerConfigurationBasicValidator;
 import org.apache.hadoop.fs.azurebfs.diagnostics.LongConfigurationBasicValidator;
 import org.apache.hadoop.fs.azurebfs.diagnostics.StringConfigurationBasicValidator;
+import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.apache.hadoop.fs.azurebfs.extensions.CustomTokenProviderAdaptee;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
@@ -81,6 +82,10 @@ public class AbfsConfiguration{
   private final boolean isSecure;
   private static final Logger LOG = LoggerFactory.getLogger(AbfsConfiguration.class);
 
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ACCOUNT_IS_HNS_ENABLED,
+      DefaultValue = DEFAULT_FS_AZURE_ACCOUNT_IS_HNS_ENABLED)
+  private String isNamespaceEnabledAccount;
+
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_WRITE_BUFFER_SIZE,
       MinValue = MIN_BUFFER_SIZE,
       MaxValue = MAX_BUFFER_SIZE,
@@ -109,6 +114,11 @@ public class AbfsConfiguration{
       MinValue = 0,
       DefaultValue = DEFAULT_MAX_RETRY_ATTEMPTS)
   private int maxIoRetries;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_CUSTOM_TOKEN_FETCH_RETRY_COUNT,
+      MinValue = 0,
+      DefaultValue = DEFAULT_CUSTOM_TOKEN_FETCH_RETRY_COUNT)
+  private int customTokenFetchRetryCount;
 
   @LongConfigurationValidatorAnnotation(ConfigurationKey = AZURE_BLOCK_SIZE_PROPERTY_NAME,
       MinValue = 0,
@@ -168,8 +178,16 @@ public class AbfsConfiguration{
   private boolean enableAutoThrottling;
 
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_USER_AGENT_PREFIX_KEY,
-      DefaultValue = "")
+      DefaultValue = DEFAULT_FS_AZURE_USER_AGENT_PREFIX)
   private String userAgentId;
+
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_CLUSTER_NAME,
+      DefaultValue = DEFAULT_VALUE_UNKNOWN)
+  private String clusterName;
+
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_CLUSTER_TYPE,
+      DefaultValue = DEFAULT_VALUE_UNKNOWN)
+  private String clusterType;
 
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_DELEGATION_TOKEN,
       DefaultValue = DEFAULT_ENABLE_DELEGATION_TOKEN)
@@ -191,6 +209,11 @@ public class AbfsConfiguration{
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ABFS_LATENCY_TRACK,
           DefaultValue = DEFAULT_ABFS_LATENCY_TRACK)
   private boolean trackLatency;
+
+  @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_SAS_TOKEN_RENEW_PERIOD_FOR_STREAMS,
+      MinValue = 0,
+      DefaultValue = DEFAULT_SAS_TOKEN_RENEW_PERIOD_FOR_STREAMS_IN_SECONDS)
+  private long sasTokenRenewPeriodForStreamsInSeconds;
 
   private Map<String, String> storageAccountKeys;
 
@@ -217,6 +240,10 @@ public class AbfsConfiguration{
         field.set(this, validateBoolean(field));
       }
     }
+  }
+
+  public Trilean getIsNamespaceEnabledAccount() {
+    return Trilean.getTrilean(isNamespaceEnabledAccount);
   }
 
   /**
@@ -417,12 +444,20 @@ public class AbfsConfiguration{
     return this.maxIoRetries;
   }
 
+  public int getCustomTokenFetchRetryCount() {
+    return this.customTokenFetchRetryCount;
+  }
+
   public long getAzureBlockSize() {
     return this.azureBlockSize;
   }
 
   public boolean isCheckAccessEnabled() {
     return this.isCheckAccessEnabled;
+  }
+
+  public long getSasTokenRenewPeriodForStreamsInSeconds() {
+    return this.sasTokenRenewPeriodForStreamsInSeconds;
   }
 
   public String getAzureBlockLocationHost() {
@@ -477,6 +512,14 @@ public class AbfsConfiguration{
 
   public String getCustomUserAgentPrefix() {
     return this.userAgentId;
+  }
+
+  public String getClusterName() {
+    return this.clusterName;
+  }
+
+  public String getClusterType() {
+    return this.clusterType;
   }
 
   public DelegatingSSLSocketFactory.SSLChannelMode getPreferredSSLFactoryOption() {
@@ -581,7 +624,7 @@ public class AbfsConfiguration{
         LOG.trace("Initializing {}", customTokenProviderClass.getName());
         azureTokenProvider.initialize(rawConfig, accountName);
         LOG.trace("{} init complete", customTokenProviderClass.getName());
-        return new CustomTokenProviderAdapter(azureTokenProvider);
+        return new CustomTokenProviderAdapter(azureTokenProvider, getCustomTokenFetchRetryCount());
       } catch(IllegalArgumentException e) {
         throw e;
       } catch (Exception e) {
@@ -714,6 +757,16 @@ public class AbfsConfiguration{
   @VisibleForTesting
   void setListMaxResults(int listMaxResults) {
     this.listMaxResults = listMaxResults;
+  }
+
+  @VisibleForTesting
+  public void setMaxIoRetries(int maxIoRetries) {
+    this.maxIoRetries = maxIoRetries;
+  }
+
+  @VisibleForTesting
+  void setIsNamespaceEnabledAccount(String isNamespaceEnabledAccount) {
+    this.isNamespaceEnabledAccount = isNamespaceEnabledAccount;
   }
 
   private String getTrimmedPasswordString(String key, String defaultValue) throws IOException {

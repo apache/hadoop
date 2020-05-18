@@ -93,6 +93,7 @@ public class TestUserGroupMappingPlacementRule {
     when(queueManager.getQueue("bsubgroup2")).thenReturn(bsubgroup2);
     when(queueManager.getQueue("asubgroup2")).thenReturn(asubgroup2);
     when(queueManager.getQueue("managedParent")).thenReturn(managedParent);
+    when(queueManager.getQueue(null)).thenThrow(new NullPointerException());
 
     when(queueManager.getQueue("root.agroup")).thenReturn(agroup);
     when(queueManager.getQueue("root.bsubgroup2")).thenReturn(bsubgroup2);

@@ -664,6 +664,11 @@ public class ApplicationCLI extends YarnCLI {
         appReportStr.println(
             "\tRemainingTime : " + timeout.getRemainingTime() + "seconds");
       }
+      String rmClusterId = appReport.getRMClusterId();
+      if (rmClusterId != null) {
+        appReportStr.print("\tRMClusterId : ");
+        appReportStr.println(rmClusterId);
+      }
     } else {
       appReportStr.print("Application with id '" + applicationId
           + "' doesn't exist in RM.");

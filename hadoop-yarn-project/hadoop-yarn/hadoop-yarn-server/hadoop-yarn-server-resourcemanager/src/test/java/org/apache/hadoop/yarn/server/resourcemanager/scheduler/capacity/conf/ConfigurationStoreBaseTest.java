@@ -78,13 +78,24 @@ public abstract class ConfigurationStoreBaseTest {
     confStore.close();
   }
 
-  YarnConfigurationStore.LogMutation prepareLogMutation(String key,
-                                                        String value)
+  YarnConfigurationStore.LogMutation prepareLogMutation(String... values)
       throws Exception {
-    Map<String, String> update = new HashMap<>();
-    update.put(key, value);
+    Map<String, String> updates = new HashMap<>();
+    String key;
+    String value;
+
+    if (values.length % 2 != 0) {
+      throw new IllegalArgumentException("The number of parameters should be " +
+        "even.");
+    }
+
+    for (int i = 1; i <= values.length; i += 2) {
+      key = values[i - 1];
+      value = values[i];
+      updates.put(key, value);
+    }
     YarnConfigurationStore.LogMutation mutation =
-        new YarnConfigurationStore.LogMutation(update, TEST_USER);
+        new YarnConfigurationStore.LogMutation(updates, TEST_USER);
     confStore.logMutation(mutation);
 
     return mutation;
