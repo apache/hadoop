@@ -4179,6 +4179,16 @@
 </property>
 
 <property>
+  <name>dfs.client.short.circuit.num</name>
+  <value>1</value>
+  <description>
+    Number of short-circuit caches. This setting should
+    be in the range 1 - 5. Lower values will result in lower CPU consumption; higher
+    values may speed up massive parallel reading files.
+  </description>
+</property>
+
+<property>
   <name>dfs.client.read.striped.threadpool.size</name>
   <value>18</value>
   <description>
