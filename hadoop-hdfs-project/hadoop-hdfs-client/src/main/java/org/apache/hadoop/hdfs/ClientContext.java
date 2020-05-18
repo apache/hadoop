@@ -77,7 +77,7 @@ public class ClientContext {
   /**
    * Caches short-circuit file descriptors, mmap regions.
    */
-  private final ShortCircuitCache[] shortCircuitCache;
+  private final ShortCircuitCache shortCircuitCache;
 
   /**
    * Caches TCP and UNIX domain sockets for reuse.
@@ -132,23 +132,13 @@ public class ClientContext {
    */
   private DeadNodeDetector deadNodeDetector = null;
 
-  /**
-   * ShortCircuitCache array size.
-   */
-  private final int clientShortCircuitNum;
-
   private ClientContext(String name, DfsClientConf conf,
       Configuration config) {
     final ShortCircuitConf scConf = conf.getShortCircuitConf();
 
     this.name = name;
     this.confString = scConf.confAsString();
-    this.clientShortCircuitNum = conf.getClientShortCircuitNum();
-    this.shortCircuitCache = new ShortCircuitCache[this.clientShortCircuitNum];
-    for (int i = 0; i < this.clientShortCircuitNum; i++) {
-      this.shortCircuitCache[i] = ShortCircuitCache.fromConf(scConf);
-    }
-
+    this.shortCircuitCache = ShortCircuitCache.fromConf(scConf);
     this.peerCache = new PeerCache(scConf.getSocketCacheCapacity(),
         scConf.getSocketCacheExpiry());
     this.keyProviderCache = new KeyProviderCache(
@@ -238,11 +228,7 @@ public class ClientContext {
   }
 
   public ShortCircuitCache getShortCircuitCache() {
-    return shortCircuitCache[0];
-  }
-
-  public ShortCircuitCache getShortCircuitCache(long idx) {
-    return shortCircuitCache[(int) (idx % clientShortCircuitNum)];
+    return shortCircuitCache;
   }
 
   public PeerCache getPeerCache() {
