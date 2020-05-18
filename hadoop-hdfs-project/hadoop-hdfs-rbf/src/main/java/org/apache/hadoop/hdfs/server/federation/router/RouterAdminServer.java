@@ -32,9 +32,11 @@ import java.util.Set;
 import com.google.common.base.Preconditions;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.protocol.FSLimitException.PathComponentTooLongException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.proto.RouterProtocolProtos.RouterAdminProtocolService;
@@ -123,6 +125,7 @@ public class RouterAdminServer extends AbstractService
   private static String superGroup;
   private static boolean isPermissionEnabled;
   private boolean iStateStoreCache;
+  private final long maxComponentLength;
 
   public RouterAdminServer(Configuration conf, Router router)
       throws IOException {
@@ -177,6 +180,10 @@ public class RouterAdminServer extends AbstractService
     router.setAdminServerAddress(this.adminAddress);
     iStateStoreCache =
         router.getSubclusterResolver() instanceof StateStoreCache;
+    // The mount table destination path length limit keys.
+    this.maxComponentLength = (int) conf.getLongBytes(
+        RBFConfigKeys.DFS_ROUTER_ADMIN_MAX_COMPONENT_LENGTH_KEY,
+        RBFConfigKeys.DFS_ROUTER_ADMIN_MAX_COMPONENT_LENGTH_DEFAULT);
 
     GenericRefreshProtocolServerSideTranslatorPB genericRefreshXlator =
         new GenericRefreshProtocolServerSideTranslatorPB(this);
@@ -249,6 +256,50 @@ public class RouterAdminServer extends AbstractService
     }
   }
 
+  /**
+   * Verify each component name of a destination path for fs limit.
+   *
+   * @param destPath destination path name of mount point.
+   * @throws PathComponentTooLongException destination path name is too long.
+   */
+  void verifyMaxComponentLength(String destPath)
+      throws PathComponentTooLongException {
+    if (maxComponentLength <= 0) {
+      return;
+    }
+    if (destPath == null) {
+      return;
+    }
+    String[] components = destPath.split(Path.SEPARATOR);
+    for (String component : components) {
+      int length = component.length();
+      if (length > maxComponentLength) {
+        PathComponentTooLongException e = new PathComponentTooLongException(
+            maxComponentLength, length, destPath, component);
+        throw e;
+      }
+    }
+  }
+
+  /**
+   * Verify each component name of every destination path of mount table
+   * for fs limit.
+   *
+   * @param mountTable mount point.
+   * @throws PathComponentTooLongException destination path name is too long.
+   */
+  void verifyMaxComponentLength(MountTable mountTable)
+      throws PathComponentTooLongException {
+    if (mountTable != null) {
+      List<RemoteLocation> dests = mountTable.getDestinations();
+      if (dests != null && !dests.isEmpty()) {
+        for (RemoteLocation dest : dests) {
+          verifyMaxComponentLength(dest.getDest());
+        }
+      }
+    }
+  }
+
   @Override
   protected void serviceInit(Configuration configuration) throws Exception {
     this.conf = configuration;
@@ -272,6 +323,9 @@ public class RouterAdminServer extends AbstractService
   @Override
   public AddMountTableEntryResponse addMountTableEntry(
       AddMountTableEntryRequest request) throws IOException {
+    // Checks max component length limit.
+    MountTable mountTable = request.getEntry();
+    verifyMaxComponentLength(mountTable);
     return getMountTableStore().addMountTableEntry(request);
   }
 
@@ -280,6 +334,8 @@ public class RouterAdminServer extends AbstractService
       UpdateMountTableEntryRequest request) throws IOException {
     MountTable updateEntry = request.getEntry();
     MountTable oldEntry = null;
+    // Checks max component length limit.
+    verifyMaxComponentLength(updateEntry);
     if (this.router.getSubclusterResolver() instanceof MountTableResolver) {
       MountTableResolver mResolver =
           (MountTableResolver) this.router.getSubclusterResolver();
