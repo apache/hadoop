@@ -154,11 +154,11 @@ abstract class InodeTree<T> {
       return fallbackLink;
     }
 
-    void addFallbackLink(INodeLink<T> fallbackLink) throws IOException {
+    void addFallbackLink(INodeLink<T> link) throws IOException {
       if (!isRoot) {
-        throw new IOException("fallbackLink can only be set for root");
+        throw new IOException("Fallback link can only be added for root");
       }
-      this.fallbackLink = fallbackLink;
+      this.fallbackLink = link;
     }
 
     Map<String, INode<T>> getChildren() {
