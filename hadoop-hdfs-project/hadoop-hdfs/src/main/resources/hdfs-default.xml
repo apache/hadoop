@@ -1587,6 +1587,16 @@
 </property>
 
 <property>
+  <name>dfs.block.scanner.skip.recent.accessed</name>
+  <value>false</value>
+  <description>
+    If this is true, scanner will check the access time of block file to avoid
+    scanning blocks accessed during recent scan peroid, reducing disk IO.
+    This feature will not work if the DataNode volume has noatime mount option.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.readahead.bytes</name>
   <value>4194304</value>
   <description>
