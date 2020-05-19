@@ -18,12 +18,9 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import java.io.IOException;
-
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 
 import org.junit.Test;
 import org.slf4j.Logger;

@@ -28,7 +28,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.amazonaws.AmazonClientException;
 import com.amazonaws.event.ProgressEvent;
 import com.amazonaws.event.ProgressEventType;
 import com.amazonaws.event.ProgressListener;
@@ -694,7 +693,7 @@ class S3ABlockOutputStream extends OutputStream implements
     }
 
     /**
-     * Cancel all active uploads
+     * Cancel all active uploads.
      */
     private void cancelAllActiveFutures() {
       LOG.debug("Cancelling futures");

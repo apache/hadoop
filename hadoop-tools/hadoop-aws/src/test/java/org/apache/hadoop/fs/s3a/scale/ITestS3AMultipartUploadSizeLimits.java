@@ -84,10 +84,10 @@ public class ITestS3AMultipartUploadSizeLimits extends S3AScaleTestBase {
     // Creating a file with more than configured part count should
     // throw a PathIOE
     intercept(PathIOException.class,
-            () -> createFile(fs,
-                    file,
-                    false,
-                    dataset(15 * _1MB, 'a', 'z' - 'a')));
+       () -> createFile(fs,
+           file,
+           false,
+           dataset(15 * _1MB, 'a', 'z' - 'a')));
     // and the path does not exist
     assertPathDoesNotExist("upload must not have completed", file);
   }
