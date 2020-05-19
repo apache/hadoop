@@ -525,8 +525,11 @@ public class SFTPFileSystem extends FileSystem {
         new SFTPInputStream(channel, absolute, statistics)){
       @Override
       public void close() throws IOException {
-        super.close();
-        disconnect(channel);
+        try {
+          super.close();
+        } finally {
+          disconnect(channel);
+        }
       }
     };
   }
