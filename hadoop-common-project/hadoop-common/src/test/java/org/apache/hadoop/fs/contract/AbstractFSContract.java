@@ -121,7 +121,7 @@ public abstract class AbstractFSContract extends Configured {
   public abstract FileSystem getTestFileSystem() throws IOException;
 
   /**
-   * Get the scheme of this FS
+   * Get the scheme of this FS.
    * @return the scheme this FS supports
    */
   public abstract String getScheme();

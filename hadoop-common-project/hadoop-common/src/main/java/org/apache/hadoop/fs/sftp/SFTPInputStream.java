@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.sftp;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UncheckedIOException;
 
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.SftpATTRS;
@@ -44,7 +43,8 @@ class SFTPInputStream extends FSInputStream {
   private long nextPos;
   private long contentLength;
 
-  SFTPInputStream(ChannelSftp channel, Path path, FileSystem.Statistics stats) throws IOException {
+  SFTPInputStream(ChannelSftp channel, Path path, FileSystem.Statistics stats)
+      throws IOException {
     try {
       this.channel = channel;
       this.path = path;

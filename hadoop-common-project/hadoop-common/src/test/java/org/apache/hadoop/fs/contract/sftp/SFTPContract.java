@@ -41,8 +41,10 @@ import org.apache.sshd.server.subsystem.sftp.SftpSubsystemFactory;
 public class SFTPContract extends AbstractFSContract {
 
   private static final String CONTRACT_XML = "contract/sftp.xml";
-  private static final URI TEST_URI = URI.create("sftp://user:password@localhost");
-  private final String testDataDir = new FileSystemTestHelper().getTestRootDir();
+  private static final URI TEST_URI =
+      URI.create("sftp://user:password@localhost");
+  private final String testDataDir =
+      new FileSystemTestHelper().getTestRootDir();
   private final Configuration conf;
   private SshServer sshd;
 
