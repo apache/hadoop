@@ -89,5 +89,8 @@ public final class FileSystemConfigurations {
   public static final String DEFAULT_FS_AZURE_USER_AGENT_PREFIX = EMPTY_STRING;
   public static final String DEFAULT_VALUE_UNKNOWN = "UNKNOWN";
 
+  public static final boolean DEFAULT_DELETE_CONSIDERED_IDEMPOTENT = true;
+  public static final int DEFAULT_CLOCK_SKEW_WITH_SERVER_IN_MS = 5 * 60 * 1000; // 5 mins
+
   private FileSystemConfigurations() {}
 }

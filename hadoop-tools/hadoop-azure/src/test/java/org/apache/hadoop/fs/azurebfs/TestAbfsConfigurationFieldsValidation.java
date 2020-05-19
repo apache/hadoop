@@ -182,4 +182,11 @@ public class TestAbfsConfigurationFieldsValidation {
     assertEquals(DelegatingSSLSocketFactory.SSLChannelMode.OpenSSL, localAbfsConfiguration.getPreferredSSLFactoryOption());
   }
 
+  public static AbfsConfiguration updateRetryConfigs(AbfsConfiguration abfsConfig,
+      int retryCount,
+      int backoffTime) {
+    abfsConfig.setMaxIoRetries(retryCount);
+    abfsConfig.setMaxBackoffIntervalMilliseconds(backoffTime);
+    return abfsConfig;
+  }
 }

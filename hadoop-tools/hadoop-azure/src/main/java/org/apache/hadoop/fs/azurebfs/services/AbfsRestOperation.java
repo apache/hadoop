@@ -63,11 +63,29 @@ public class AbfsRestOperation {
   private byte[] buffer;
   private int bufferOffset;
   private int bufferLength;
+  private int retryCount = 0;
 
   private AbfsHttpOperation result;
 
   public AbfsHttpOperation getResult() {
     return result;
+  }
+
+  public void hardSetResult(int httpStatus) {
+    result = AbfsHttpOperation.getAbfsHttpOperationWithFixedResult(this.url,
+        this.method, httpStatus);
+  }
+
+  public URL getUrl() {
+    return url;
+  }
+
+  public List<AbfsHttpHeader> getRequestHeaders() {
+    return requestHeaders;
+  }
+
+  public boolean isARetriedRequest() {
+    return (retryCount > 0);
   }
 
   String getSasToken() {
@@ -157,7 +175,7 @@ public class AbfsRestOperation {
       requestHeaders.add(httpHeader);
     }
 
-    int retryCount = 0;
+    retryCount = 0;
     LOG.debug("First execution of REST operation - {}", operationType);
     while (!executeHttpOperation(retryCount++)) {
       try {
