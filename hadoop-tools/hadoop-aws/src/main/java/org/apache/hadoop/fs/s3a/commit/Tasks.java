@@ -25,7 +25,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -76,7 +75,7 @@ public final class Tasks {
    */
   public static class Builder<I> {
     private final Iterable<I> items;
-    private ExecutorService service = null;
+    private Submitter service = new DisabledSubmitter();
     private FailureTask<I, ?> onFailure = null;
     private boolean stopOnFailure = false;
     private boolean suppressExceptions = false;
@@ -96,11 +95,11 @@ public final class Tasks {
     /**
      * Declare executor service: if null, the tasks are executed in a single
      * thread.
-     * @param executorService service to schedule tasks with.
+     * @param submitter service to schedule tasks with.
      * @return this builder.
      */
-    public Builder<I> executeWith(ExecutorService executorService) {
-      this.service = executorService;
+    public Builder<I> executeWith(Submitter submitter) {
+      this.service = submitter;
       return this;
     }
 
@@ -144,7 +143,7 @@ public final class Tasks {
     }
 
     public <E extends Exception> boolean run(Task<I, E> task) throws E {
-      if (service != null) {
+      if (service.enabled()) {
         return runParallel(task);
       } else {
         return runSingleThreaded(task);
@@ -407,4 +406,41 @@ public final class Tasks {
     }
     throw (E) e;
   }
+
+  /**
+   * Interface to whatever lets us submit tasks.
+   */
+  public interface Submitter {
+
+    /**
+     * Submit work.
+     * @param task task to execute
+     * @return the future of the submitted task.
+     */
+    Future<?> submit(Runnable task);
+
+    /**
+     * Is this submitter enabled?
+     * @return true if work can be submitted to it.
+     */
+    boolean enabled();
+  }
+
+  /**
+   * The disabled submitter declares itself as not enabled, which is
+   * used to switch Task's execution to single threaded.
+   */
+  public static class DisabledSubmitter implements Tasks.Submitter {
+
+    @Override
+    public Future<?> submit(final Runnable task) {
+      throw new UnsupportedOperationException("submitter is disabled");
+    }
+
+    @Override
+    public boolean enabled() {
+      return false;
+    }
+  }
+
 }

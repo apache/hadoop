@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -472,7 +473,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
       Tasks.foreach(pending.getSourceFiles())
           .stopOnFailure()
           .suppressExceptions(false)
-          .executeWith(buildThreadPool(context))
+          .executeWith(buildSubmitter(context))
           .abortWith(path ->
               loadAndAbort(commitContext, pending, path, true, false))
           .revertWith(path ->
@@ -502,7 +503,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
       Tasks.foreach(pending.getSourceFiles())
           .stopOnFailure()
           .suppressExceptions(false)
-          .executeWith(buildThreadPool(context))
+          .executeWith(buildSubmitter(context))
           .run(path -> PendingSet.load(sourceFS, path));
     }
   }
@@ -525,7 +526,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
       Tasks.foreach(pendingSet.getCommits())
           .stopOnFailure()
           .suppressExceptions(false)
-          .executeWith(singleCommitThreadPool())
+          .executeWith(singleThreadSubmitter())
           .onFailure((commit, exception) ->
               commitContext.abortSingleCommit(commit))
           .abortWith(commitContext::abortSingleCommit)
@@ -580,7 +581,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
           path);
       FileSystem fs = getDestFS();
       Tasks.foreach(pendingSet.getCommits())
-          .executeWith(singleCommitThreadPool())
+          .executeWith(singleThreadSubmitter())
           .suppressExceptions(suppressExceptions)
           .run(commit -> {
             try {
@@ -674,7 +675,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
         return;
       }
       Tasks.foreach(pending)
-          .executeWith(buildThreadPool(getJobContext()))
+          .executeWith(buildSubmitter(getJobContext()))
           .suppressExceptions(suppressExceptions)
           .run(u -> commitContext.abortMultipartCommit(
               u.getKey(), u.getUploadId()));
@@ -838,32 +839,97 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
   }
 
   /**
+   * Returns an {@link Tasks.Submitter} for parallel tasks. The number of
+   * threads in the thread-pool is set by fs.s3a.committer.threads.
+   * If num-threads is 0, this will a submitter instance which will
+   * declare itself as disabled; this is used in Tasks as a cue
+   * to switch to single-threaded execution.
+   *
+   * @param context the JobContext for this commit
+   * @return a submitter
+   */
+  protected Tasks.Submitter buildSubmitter(
+      JobContext context) {
+    if (getThreadCount(context) > 0) {
+      return new PoolSubmitter(context);
+    } else {
+      return new Tasks.DisabledSubmitter();
+    }
+  }
+
+  /**
    * Returns an {@link ExecutorService} for parallel tasks. The number of
    * threads in the thread-pool is set by fs.s3a.committer.threads.
-   * If num-threads is 0, this will return null;
+   * If num-threads is 0, this will raise an exception.
    *
    * @param context the JobContext for this commit
    * @return an {@link ExecutorService} or null for the number of threads
    */
-  protected final synchronized ExecutorService buildThreadPool(
+  private synchronized ExecutorService buildThreadPool(
       JobContext context) {
 
     if (threadPool == null) {
-      int numThreads = context.getConfiguration().getInt(
-          FS_S3A_COMMITTER_THREADS,
-          DEFAULT_COMMITTER_THREADS);
+      int numThreads = getThreadCount(context);
+      Preconditions.checkState(numThreads > 0,
+          "Cannot create a thread pool with no threads");
       LOG.debug("{}: creating thread pool of size {}", getRole(), numThreads);
-      if (numThreads > 0) {
-        threadPool = HadoopExecutors.newFixedThreadPool(numThreads,
-            new ThreadFactoryBuilder()
-                .setDaemon(true)
-                .setNameFormat(THREAD_PREFIX + context.getJobID() + "-%d")
-                .build());
-      } else {
-        return null;
-      }
+      threadPool = HadoopExecutors.newFixedThreadPool(numThreads,
+          new ThreadFactoryBuilder()
+              .setDaemon(true)
+              .setNameFormat(THREAD_PREFIX + context.getJobID() + "-%d")
+              .build());
     }
     return threadPool;
+  }
+
+  /**
+   * Get the thread count for this job's commit operations.
+   * @param context the JobContext for this commit
+   * @return a possibly zero thread count.
+   */
+  private int getThreadCount(final JobContext context) {
+    return context.getConfiguration().getInt(
+        FS_S3A_COMMITTER_THREADS,
+        DEFAULT_COMMITTER_THREADS);
+  }
+
+  /**
+   * Submit a runnable.
+   * This will demand-create the thread pool if needed.
+   * <p></p>
+   * This is synchronized to ensure the thread pool is always valid when
+   * work is synchronized. See HADOOP-16798.
+   * @param context the JobContext for this commit
+   * @param task task to execute
+   * @return the future of the submitted task.
+   */
+  private synchronized Future<?> submitRunnable(
+      final JobContext context,
+      final Runnable task) {
+    return buildThreadPool(context).submit(task);
+  }
+
+  /**
+   * The real task submitter, which hands off the work to
+   * the current thread pool.
+   */
+  private final class PoolSubmitter implements Tasks.Submitter {
+
+    private final JobContext context;
+
+    private PoolSubmitter(final JobContext context) {
+      this.context = context;
+    }
+
+    @Override
+    public Future<?> submit(final Runnable task) {
+      return submitRunnable(context, task);
+    }
+
+    @Override
+    public boolean enabled() {
+      return true;
+    }
   }
 
   /**
@@ -887,16 +953,13 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
   }
 
   /**
-   * Get the thread pool for executing the single file commit/revert
+   * Get the submitter pool for executing the single file commit/revert
    * within the commit of all uploads of a single task.
-   * This is currently null; it is here to allow the Tasks class to
-   * provide the logic for execute/revert.
-   * Why not use the existing thread pool? Too much fear of deadlocking,
-   * and tasks are being committed in parallel anyway.
-   * @return null. always.
+   *
+   * @return a disabled submitter
    */
-  protected final synchronized ExecutorService singleCommitThreadPool() {
-    return null;
+  protected final synchronized Tasks.Submitter singleThreadSubmitter() {
+    return new Tasks.DisabledSubmitter();
   }
 
   /**
@@ -939,7 +1002,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
            CommitOperations.CommitContext commitContext
                = initiateCommitOperation()) {
         Tasks.foreach(pending)
-            .executeWith(buildThreadPool(context))
+            .executeWith(buildSubmitter(context))
             .suppressExceptions(suppressExceptions)
             .run(commitContext::abortSingleCommit);
       }
@@ -968,7 +1031,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
            CommitOperations.CommitContext commitContext
                = initiateCommitOperation()) {
         Tasks.foreach(pending.getSourceFiles())
-            .executeWith(buildThreadPool(context))
+            .executeWith(buildSubmitter(context))
             .suppressExceptions(suppressExceptions)
             .run(path ->
                 loadAndAbort(commitContext,
