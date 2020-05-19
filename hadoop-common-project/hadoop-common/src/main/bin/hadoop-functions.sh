@@ -2051,6 +2051,7 @@ function hadoop_start_secure_daemon_wrapper
     hadoop_error "ERROR: Cannot disconnect ${daemonname} process $!"
   fi
   # capture the ulimit output
+  #shellcheck disable=SC2024
   sudo -u "${HADOOP_SECURE_USER}" bash -c "ulimit -a" >> "${jsvcoutfile}" 2>&1
   #shellcheck disable=SC2086
   if ! ps -p $! >/dev/null 2>&1; then
