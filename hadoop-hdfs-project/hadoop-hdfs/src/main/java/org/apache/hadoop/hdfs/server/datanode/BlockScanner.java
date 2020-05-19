@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SCANNER_SKIP_RECENT_ACCESSED;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SCANNER_SKIP_RECENT_ACCESSED_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SCANNER_VOLUME_BYTES_PER_SECOND;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SCANNER_VOLUME_BYTES_PER_SECOND_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY;
@@ -112,6 +114,7 @@ public class BlockScanner {
     final long maxStalenessMs;
     final long scanPeriodMs;
     final long cursorSaveMs;
+    final boolean skipRecentAccessed;
     final Class<? extends ScanResultHandler> resultHandler;
 
     private static long getUnitTestLong(Configuration conf, String key,
@@ -163,6 +166,9 @@ public class BlockScanner {
       this.cursorSaveMs = Math.max(0L, getUnitTestLong(conf,
           INTERNAL_DFS_BLOCK_SCANNER_CURSOR_SAVE_INTERVAL_MS,
           INTERNAL_DFS_BLOCK_SCANNER_CURSOR_SAVE_INTERVAL_MS_DEFAULT));
+      this.skipRecentAccessed = conf.getBoolean(
+          DFS_BLOCK_SCANNER_SKIP_RECENT_ACCESSED,
+          DFS_BLOCK_SCANNER_SKIP_RECENT_ACCESSED_DEFAULT);
       if (allowUnitTestSettings) {
         this.resultHandler = (Class<? extends ScanResultHandler>)
             conf.getClass(INTERNAL_VOLUME_SCANNER_SCAN_RESULT_HANDLER,

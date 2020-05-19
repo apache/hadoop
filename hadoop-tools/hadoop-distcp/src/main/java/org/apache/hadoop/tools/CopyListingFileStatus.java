@@ -75,6 +75,7 @@ public final class CopyListingFileStatus implements Writable {
   private FsPermission permission;
   private String owner;
   private String group;
+  private String ecPolicy;
 
   // Retain static arrays of enum values to prevent repeated allocation of new
   // arrays during deserialization.

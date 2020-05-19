@@ -99,6 +99,19 @@ public class ImageServlet extends HttpServlet {
       "recent.image.check.enabled";
   public static final boolean RECENT_IMAGE_CHECK_ENABLED_DEFAULT = true;
 
+  /*
+   * Specify a relaxation for the time delta check, the relaxation is to account
+   * for the scenario that there are chances that minor time difference (e.g.
+   * due to image upload delay, or minor machine clock skew) can cause ANN to
+   * reject a fsImage too aggressively.
+   */
+  private static double recentImageCheckTimePrecision = 0.75;
+
+  @VisibleForTesting
+  static void setRecentImageCheckTimePrecision(double ratio) {
+    recentImageCheckTimePrecision = ratio;
+  }
+
   @Override
   public void doGet(final HttpServletRequest request,
       final HttpServletResponse response) throws ServletException, IOException {
@@ -592,6 +605,9 @@ public class ImageServlet extends HttpServlet {
               long checkpointPeriod =
                   conf.getTimeDuration(DFS_NAMENODE_CHECKPOINT_PERIOD_KEY,
                       DFS_NAMENODE_CHECKPOINT_PERIOD_DEFAULT, TimeUnit.SECONDS);
+              checkpointPeriod = Math.round(
+                  checkpointPeriod * recentImageCheckTimePrecision);
+
               long checkpointTxnCount =
                   conf.getLong(DFS_NAMENODE_CHECKPOINT_TXNS_KEY,
                       DFS_NAMENODE_CHECKPOINT_TXNS_DEFAULT);
@@ -612,21 +628,24 @@ public class ImageServlet extends HttpServlet {
                 // a new fsImage
                 // 1. most recent image's txid is too far behind
                 // 2. last checkpoint time was too old
-                response.sendError(HttpServletResponse.SC_CONFLICT,
-                    "Most recent checkpoint is neither too far behind in "
-                        + "txid, nor too old. New txnid cnt is "
-                        + (txid - lastCheckpointTxid)
-                        + ", expecting at least " + checkpointTxnCount
-                        + " unless too long since last upload.");
+                String message = "Rejecting a fsimage due to small time delta "
+                    + "and txnid delta. Time since previous checkpoint is "
+                    + timeDelta + " expecting at least " + checkpointPeriod
+                    + " txnid delta since previous checkpoint is " +
+                    (txid - lastCheckpointTxid) + " expecting at least "
+                    + checkpointTxnCount;
+                LOG.info(message);
+                response.sendError(HttpServletResponse.SC_CONFLICT, message);
                 return null;
               }
 
               try {
                 if (nnImage.getStorage().findImageFile(nnf, txid) != null) {
-                  response.sendError(HttpServletResponse.SC_CONFLICT,
-                      "Either current namenode has checkpointed or "
-                          + "another checkpointer already uploaded an "
-                          + "checkpoint for txid " + txid);
+                  String message = "Either current namenode has checkpointed or "
+                      + "another checkpointer already uploaded an "
+                      + "checkpoint for txid " + txid;
+                  LOG.info(message);
+                  response.sendError(HttpServletResponse.SC_CONFLICT, message);
                   return null;
                 }
 

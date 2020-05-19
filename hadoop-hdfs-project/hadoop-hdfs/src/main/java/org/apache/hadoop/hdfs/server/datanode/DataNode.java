@@ -1082,7 +1082,7 @@ public class DataNode extends ReconfigurableBase
     }
 
     // Is the user a member of the super group?
-    List<String> groups = Arrays.asList(callerUgi.getGroupNames());
+    List<String> groups = callerUgi.getGroups();
     if (groups.contains(supergroup)) {
       return;
     }

@@ -19,6 +19,7 @@ package org.apache.hadoop.fs.viewfs;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -67,15 +68,25 @@ public class TestViewFileSystemOverloadSchemeLocalFileSystem {
   }
 
   /**
+   * Adds the given mount links to config. sources contains mount link src and
+   * the respective index location in targets contains the target uri.
+   */
+  void addMountLinks(String mountTable, String[] sources, String[] targets,
+      Configuration config) throws IOException, URISyntaxException {
+    ViewFsTestSetup.addMountLinksToConf(mountTable, sources, targets, config);
+  }
+
+  /**
    * Tests write file and read file with ViewFileSystemOverloadScheme.
    */
   @Test
-  public void testLocalTargetLinkWriteSimple() throws IOException {
+  public void testLocalTargetLinkWriteSimple()
+      throws IOException, URISyntaxException {
     LOG.info("Starting testLocalTargetLinkWriteSimple");
     final String testString = "Hello Local!...";
     final Path lfsRoot = new Path("/lfsRoot");
-    ConfigUtil.addLink(conf, lfsRoot.toString(),
-        URI.create(targetTestRoot + "/local"));
+    addMountLinks(null, new String[] {lfsRoot.toString() },
+        new String[] {targetTestRoot + "/local" }, conf);
     try (FileSystem lViewFs = FileSystem.get(URI.create("file:///"), conf)) {
       final Path testPath = new Path(lfsRoot, "test.txt");
       try (FSDataOutputStream fsDos = lViewFs.create(testPath)) {
@@ -94,8 +105,8 @@ public class TestViewFileSystemOverloadSchemeLocalFileSystem {
   @Test
   public void testLocalFsCreateAndDelete() throws Exception {
     LOG.info("Starting testLocalFsCreateAndDelete");
-    ConfigUtil.addLink(conf, "mt", "/lfsroot",
-        URI.create(targetTestRoot + "/wd2"));
+    addMountLinks("mt", new String[] {"/lfsroot" },
+        new String[] {targetTestRoot + "/wd2" }, conf);
     final URI mountURI = URI.create("file://mt/");
     try (FileSystem lViewFS = FileSystem.get(mountURI, conf)) {
       Path testPath = new Path(mountURI.toString() + "/lfsroot/test");
@@ -113,8 +124,9 @@ public class TestViewFileSystemOverloadSchemeLocalFileSystem {
   @Test
   public void testLocalFsLinkSlashMerge() throws Exception {
     LOG.info("Starting testLocalFsLinkSlashMerge");
-    ConfigUtil.addLinkMergeSlash(conf, "mt",
-        URI.create(targetTestRoot + "/wd2"));
+    addMountLinks("mt",
+        new String[] {Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH },
+        new String[] {targetTestRoot + "/wd2" }, conf);
     final URI mountURI = URI.create("file://mt/");
     try (FileSystem lViewFS = FileSystem.get(mountURI, conf)) {
       Path fileOnRoot = new Path(mountURI.toString() + "/NewFile");
@@ -130,10 +142,9 @@ public class TestViewFileSystemOverloadSchemeLocalFileSystem {
   @Test(expected = IOException.class)
   public void testLocalFsLinkSlashMergeWithOtherMountLinks() throws Exception {
     LOG.info("Starting testLocalFsLinkSlashMergeWithOtherMountLinks");
-    ConfigUtil.addLink(conf, "mt", "/lfsroot",
-        URI.create(targetTestRoot + "/wd2"));
-    ConfigUtil.addLinkMergeSlash(conf, "mt",
-        URI.create(targetTestRoot + "/wd2"));
+    addMountLinks("mt",
+        new String[] {"/lfsroot", Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH },
+        new String[] {targetTestRoot + "/wd2", targetTestRoot + "/wd2" }, conf);
     final URI mountURI = URI.create("file://mt/");
     FileSystem.get(mountURI, conf);
     Assert.fail("A merge slash cannot be configured with other mount links.");
@@ -145,5 +156,19 @@ public class TestViewFileSystemOverloadSchemeLocalFileSystem {
       fsTarget.delete(fileSystemTestHelper.getTestRootPath(fsTarget), true);
       fsTarget.close();
     }
+  }
+
+  /**
+   * Returns the test root dir.
+   */
+  public Path getTestRoot() {
+    return this.targetTestRoot;
+  }
+
+  /**
+   * Returns the conf.
+   */
+  public Configuration getConf() {
+    return this.conf;
   }
 }

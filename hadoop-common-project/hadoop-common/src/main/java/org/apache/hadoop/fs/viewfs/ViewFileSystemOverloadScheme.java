@@ -98,107 +98,133 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
 
   @Override
   public void initialize(URI theUri, Configuration conf) throws IOException {
+    this.myUri = theUri;
     if (LOG.isDebugEnabled()) {
       LOG.debug("Initializing the ViewFileSystemOverloadScheme with the uri: "
           + theUri);
     }
-    this.myUri = theUri;
+    String mountTableConfigPath =
+        conf.get(Constants.CONFIG_VIEWFS_MOUNTTABLE_PATH);
+    if (null != mountTableConfigPath) {
+      MountTableConfigLoader loader = new HCFSMountTableConfigLoader();
+      loader.load(mountTableConfigPath, conf);
+    } else {
+      // TODO: Should we fail here.?
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(
+            "Missing configuration for fs.viewfs.mounttable.path. Proceeding"
+                + "with core-site.xml mount-table information if avaialable.");
+      }
+    }
     super.initialize(theUri, conf);
   }
 
   /**
    * This method is overridden because in ViewFileSystemOverloadScheme if
-   * overloaded cheme matches with mounted target fs scheme, file system should
-   * be created without going into fs.<scheme>.impl based resolution. Otherwise
-   * it will end up in an infinite loop as the target will be resolved again
-   * to ViewFileSystemOverloadScheme as fs.<scheme>.impl points to
-   * ViewFileSystemOverloadScheme. So, below method will initialize the
+   * overloaded scheme matches with mounted target fs scheme, file system
+   * should be created without going into fs.<scheme>.impl based resolution.
+   * Otherwise it will end up in an infinite loop as the target will be
+   * resolved again to ViewFileSystemOverloadScheme as fs.<scheme>.impl points
+   * to ViewFileSystemOverloadScheme. So, below method will initialize the
    * fs.viewfs.overload.scheme.target.<scheme>.impl. Other schemes can
    * follow fs.newInstance
    */
   @Override
   protected FsGetter fsGetter() {
-
-    return new FsGetter() {
-      @Override
-      public FileSystem getNewInstance(URI uri, Configuration conf)
-          throws IOException {
-        if (uri.getScheme().equals(getScheme())) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(
-                "The file system initialized uri scheme is matching with the "
-                    + "given target uri scheme. The target uri is: " + uri);
-          }
-          /*
-           * Avoid looping when target fs scheme is matching to overloaded
-           * scheme.
-           */
-          return createFileSystem(uri, conf);
-        } else {
-          return FileSystem.newInstance(uri, conf);
-        }
-      }
-
-      /**
-       * When ViewFileSystemOverloadScheme scheme and target uri scheme are
-       * matching, it will not take advantage of FileSystem cache as it will
-       * create instance directly. For caching needs please set
-       * "fs.viewfs.enable.inner.cache" to true.
-       */
-      @Override
-      public FileSystem get(URI uri, Configuration conf) throws IOException {
-        if (uri.getScheme().equals(getScheme())) {
-          // Avoid looping when target fs scheme is matching to overloaded
-          // scheme.
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(
-                "The file system initialized uri scheme is matching with the "
-                    + "given target uri scheme. So, the target file system "
-                    + "instances will not be cached. To cache fs instances, "
-                    + "please set fs.viewfs.enable.inner.cache to true. "
-                    + "The target uri is: " + uri);
-          }
-          return createFileSystem(uri, conf);
-        } else {
-          return FileSystem.get(uri, conf);
-        }
-      }
-
-      private FileSystem createFileSystem(URI uri, Configuration conf)
-          throws IOException {
-        final String fsImplConf = String.format(
-            FsConstants.FS_VIEWFS_OVERLOAD_SCHEME_TARGET_FS_IMPL_PATTERN,
-            uri.getScheme());
-        Class<?> clazz = conf.getClass(fsImplConf, null);
-        if (clazz == null) {
-          throw new UnsupportedFileSystemException(
-              String.format("%s=null: %s: %s", fsImplConf,
-                  "No overload scheme fs configured", uri.getScheme()));
-        }
-        FileSystem fs = (FileSystem) newInstance(clazz, uri, conf);
-        fs.initialize(uri, conf);
-        return fs;
-      }
-
-      private <T> T newInstance(Class<T> theClass, URI uri,
-          Configuration conf) {
-        T result;
-        try {
-          Constructor<T> meth = theClass.getConstructor();
-          meth.setAccessible(true);
-          result = meth.newInstance();
-        } catch (InvocationTargetException e) {
-          Throwable cause = e.getCause();
-          if (cause instanceof RuntimeException) {
-            throw (RuntimeException) cause;
-          } else {
-            throw new RuntimeException(cause);
-          }
-        } catch (Exception e) {
-          throw new RuntimeException(e);
-        }
-        return result;
-      }
-    };
+    return new ChildFsGetter(getScheme());
   }
+
+  /**
+   * This class checks whether the rooScheme is same as URI scheme. If both are
+   * same, then it will initialize file systems by using the configured
+   * fs.viewfs.overload.scheme.target.<scheme>.impl class.
+   */
+  static class ChildFsGetter extends FsGetter {
+
+    private final String rootScheme;
+
+    ChildFsGetter(String rootScheme) {
+      this.rootScheme = rootScheme;
+    }
+
+    @Override
+    public FileSystem getNewInstance(URI uri, Configuration conf)
+        throws IOException {
+      if (uri.getScheme().equals(this.rootScheme)) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(
+              "The file system initialized uri scheme is matching with the "
+                  + "given target uri scheme. The target uri is: " + uri);
+        }
+        /*
+         * Avoid looping when target fs scheme is matching to overloaded scheme.
+         */
+        return createFileSystem(uri, conf);
+      } else {
+        return FileSystem.newInstance(uri, conf);
+      }
+    }
+
+    /**
+     * When ViewFileSystemOverloadScheme scheme and target uri scheme are
+     * matching, it will not take advantage of FileSystem cache as it will
+     * create instance directly. For caching needs please set
+     * "fs.viewfs.enable.inner.cache" to true.
+     */
+    @Override
+    public FileSystem get(URI uri, Configuration conf) throws IOException {
+      if (uri.getScheme().equals(this.rootScheme)) {
+        // Avoid looping when target fs scheme is matching to overloaded
+        // scheme.
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(
+              "The file system initialized uri scheme is matching with the "
+                  + "given target uri scheme. So, the target file system "
+                  + "instances will not be cached. To cache fs instances, "
+                  + "please set fs.viewfs.enable.inner.cache to true. "
+                  + "The target uri is: " + uri);
+        }
+        return createFileSystem(uri, conf);
+      } else {
+        return FileSystem.get(uri, conf);
+      }
+    }
+
+    private FileSystem createFileSystem(URI uri, Configuration conf)
+        throws IOException {
+      final String fsImplConf = String.format(
+          FsConstants.FS_VIEWFS_OVERLOAD_SCHEME_TARGET_FS_IMPL_PATTERN,
+          uri.getScheme());
+      Class<?> clazz = conf.getClass(fsImplConf, null);
+      if (clazz == null) {
+        throw new UnsupportedFileSystemException(
+            String.format("%s=null: %s: %s", fsImplConf,
+                "No overload scheme fs configured", uri.getScheme()));
+      }
+      FileSystem fs = (FileSystem) newInstance(clazz, uri, conf);
+      fs.initialize(uri, conf);
+      return fs;
+    }
+
+    private <T> T newInstance(Class<T> theClass, URI uri, Configuration conf) {
+      T result;
+      try {
+        Constructor<T> meth = theClass.getConstructor();
+        meth.setAccessible(true);
+        result = meth.newInstance();
+      } catch (InvocationTargetException e) {
+        Throwable cause = e.getCause();
+        if (cause instanceof RuntimeException) {
+          throw (RuntimeException) cause;
+        } else {
+          throw new RuntimeException(cause);
+        }
+      } catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+      return result;
+    }
+
+  }
+
 }

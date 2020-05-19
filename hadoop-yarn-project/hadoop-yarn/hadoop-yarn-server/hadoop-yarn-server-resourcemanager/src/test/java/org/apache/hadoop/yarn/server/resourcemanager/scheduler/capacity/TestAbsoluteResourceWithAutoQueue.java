@@ -22,6 +22,7 @@ import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager.NO_LABEL
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueueUtils.EPSILON;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
 import java.util.HashMap;
@@ -33,11 +34,17 @@ import java.util.Set;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.queuemanagement.GuaranteedOrZeroCapacityOverTimePolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FifoOrderingPolicy;
+import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -273,5 +280,39 @@ public class TestAbsoluteResourceWithAutoQueue
     mockRM = new MockRM(csConf);
     fail("Exception should be thrown as leaf queue template configuration is "
         + "not same as Parent configuration");
+  }
+
+  @Test(timeout = 20000)
+  public void testApplicationRunningWithDRF() throws Exception {
+    CapacitySchedulerConfiguration csConf =
+        setupSimpleQueueConfiguration(false);
+    setupMinMaxResourceConfiguration(csConf);
+    csConf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+
+    // Validate Leaf Queue Template in Absolute Resource with DRF
+    csConf.setResourceComparator(DominantResourceCalculator.class);
+    setupGroupQueueMappings(QUEUED, csConf, "%user");
+
+    mockRM = new MockRM(csConf);
+    mockRM.start();
+
+    MockNM nm1 = mockRM.registerNode("127.0.0.1:1234", 250 * GB, 40);
+
+    // Submit a Application and validate if it is moving to RUNNING state
+    RMApp app1 = MockRMAppSubmitter.submit(mockRM,
+        MockRMAppSubmissionData.Builder.createWithMemory(1024, mockRM)
+            .withAppName("app1")
+            .withUser(TEST_GROUPUSER)
+            .withAcls(null)
+            .build());
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, mockRM, nm1);
+
+    cs = (CapacityScheduler) mockRM.getResourceScheduler();
+    AutoCreatedLeafQueue autoCreatedLeafQueue =
+        (AutoCreatedLeafQueue) cs.getQueue(TEST_GROUPUSER);
+    assertNotNull("Auto Creation of Queue failed", autoCreatedLeafQueue);
+    ManagedParentQueue parentQueue = (ManagedParentQueue) cs.getQueue(QUEUED);
+    assertEquals(parentQueue, autoCreatedLeafQueue.getParent());
   }
 }
