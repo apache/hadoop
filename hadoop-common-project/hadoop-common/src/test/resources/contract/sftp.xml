@@ -18,7 +18,7 @@
 
 <configuration>
   <!--
-  FTP -these options are for testing against a remote unix filesystem.
+  SFTP -these options are for testing against a remote unix filesystem.
   -->
 
   <property>

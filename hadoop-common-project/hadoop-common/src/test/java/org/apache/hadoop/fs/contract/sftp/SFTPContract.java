@@ -40,9 +40,10 @@ import org.apache.sshd.server.subsystem.sftp.SftpSubsystemFactory;
 
 public class SFTPContract extends AbstractFSContract {
 
-  private String testDataDir = new FileSystemTestHelper().getTestRootDir();
-  private Configuration conf;
-  public static final String CONTRACT_XML = "contract/sftp.xml";
+  private static final String CONTRACT_XML = "contract/sftp.xml";
+  private static final URI TEST_URI = URI.create("sftp://user:password@localhost");
+  private final String testDataDir = new FileSystemTestHelper().getTestRootDir();
+  private final Configuration conf;
   private SshServer sshd;
 
   public SFTPContract(Configuration conf) {
@@ -86,7 +87,7 @@ public class SFTPContract extends AbstractFSContract {
 
   @Override
   public FileSystem getTestFileSystem() throws IOException {
-    return FileSystem.get(URI.create("sftp://user:password@localhost"), conf);
+    return FileSystem.get(TEST_URI, conf);
   }
 
   @Override

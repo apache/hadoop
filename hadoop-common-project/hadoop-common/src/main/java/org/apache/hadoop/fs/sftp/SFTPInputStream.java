@@ -26,6 +26,7 @@ import java.io.UncheckedIOException;
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.SftpATTRS;
 import com.jcraft.jsch.SftpException;
+
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -43,7 +44,7 @@ class SFTPInputStream extends FSInputStream {
   private long nextPos;
   private long contentLength;
 
-  SFTPInputStream(ChannelSftp channel, Path path, FileSystem.Statistics stats) {
+  SFTPInputStream(ChannelSftp channel, Path path, FileSystem.Statistics stats) throws IOException {
     try {
       this.channel = channel;
       this.path = path;
@@ -52,7 +53,7 @@ class SFTPInputStream extends FSInputStream {
       SftpATTRS stat = channel.lstat(path.toString());
       this.contentLength = stat.getSize();
     } catch (SftpException e) {
-      throw new UncheckedIOException(new IOException(e));
+      throw new IOException(e);
     }
   }
 
@@ -89,7 +90,7 @@ class SFTPInputStream extends FSInputStream {
         wrappedStream = channel.get(path.toUri().getPath());
         pos = wrappedStream.skip(nextPos);
       } catch (SftpException e) {
-        throw new UncheckedIOException(new IOException(e));
+        throw new IOException(e);
       }
     }
   }
