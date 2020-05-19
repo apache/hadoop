@@ -451,7 +451,7 @@ final class ReadBufferManager {
   }
 
   @VisibleForTesting
-  void setThresholdAgeMilliseconds(int thresholdAgeMs) {
+  static void setThresholdAgeMilliseconds(int thresholdAgeMs) {
     thresholdAgeMilliseconds = thresholdAgeMs;
   }
 
