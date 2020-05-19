@@ -223,6 +223,9 @@ public class ShortCircuitCache implements Closeable {
             retries--;
             domainSocket.close();
             domainSocket = null;
+            if (retries == 0) {
+              throw new SocketException("Create domain socket failed");
+            }
           }
         }
       } catch (IOException e) {
