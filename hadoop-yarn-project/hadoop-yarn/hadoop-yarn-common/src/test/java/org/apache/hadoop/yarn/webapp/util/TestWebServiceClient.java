@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.webapp;
+package org.apache.hadoop.yarn.webapp.util;
 
 import java.io.File;
 import java.net.HttpURLConnection;
@@ -37,7 +37,7 @@ public class TestWebServiceClient {
   private static final String BASEDIR = System.getProperty("test.build.dir",
       "target/test-dir") + "/" + TestWebServiceClient.class.getSimpleName();
   static final String SSL_SERVER_KEYSTORE_PROP_PREFIX = "ssl.server.keystore";
-  static final String SSL_SERVER_TRUSTSTORE_PROP_PREFIX = 
+  static final String SSL_SERVER_TRUSTSTORE_PROP_PREFIX =
       "ssl.server.truststore";
   static final String SERVLET_NAME_ECHO = "echo";
   static final String SERVLET_PATH_ECHO = "/" + SERVLET_NAME_ECHO;
@@ -47,7 +47,8 @@ public class TestWebServiceClient {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.YARN_HTTP_POLICY_KEY, "HTTPS_ONLY");
     WebServiceClient.initialize(conf);
-    Assert.assertNotNull(WebServiceClient.sslFactory);
+    WebServiceClient client = WebServiceClient.getWebServiceClient();
+    Assert.assertNotNull(client.getSSLFactory());
     WebServiceClient.destroy();
   }
 

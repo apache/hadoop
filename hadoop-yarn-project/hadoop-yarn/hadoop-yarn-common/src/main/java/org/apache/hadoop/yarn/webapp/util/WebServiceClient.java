@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.webapp;
+package org.apache.hadoop.yarn.webapp.util;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -34,12 +34,11 @@ import com.sun.jersey.client.urlconnection.HttpURLConnectionFactory;
 import com.sun.jersey.client.urlconnection.URLConnectionClientHandler;
 
 /**
- * Utility for handling Web client. 
+ * Utility for handling Web client.
  *
  */
 public class WebServiceClient {
-  @VisibleForTesting
-  protected static SSLFactory sslFactory = null;
+  private static SSLFactory sslFactory = null;
   private static volatile WebServiceClient instance = null;
   private static boolean isHttps = false;
 
@@ -66,6 +65,11 @@ public class WebServiceClient {
 
   public static WebServiceClient getWebServiceClient() {
     return instance;
+  }
+
+  @VisibleForTesting
+  SSLFactory getSSLFactory() {
+    return sslFactory;
   }
 
   /**
