@@ -230,9 +230,12 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
         (long) metricMap.get(renameOp));
 
     //Testing if file exists at path.
-    assertTrue("File should exist",
+    assertTrue(String.format("File with name %s should exist",
+        destCreateFilePath),
         fs.exists(destCreateFilePath));
-    assertFalse("File should not exist", fs.exists(createFilePath));
+    assertFalse(String.format("File with name %s should not exist",
+        createFilePath),
+        fs.exists(createFilePath));
 
     metricMap = fs.getInstrumentation().toMap();
     //Testing exists() calls.
@@ -263,9 +266,11 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
       fs.rename(createFilePath, destCreateFilePath);
 
       //check if first name is existing and 2nd is not existing.
-      assertTrue("File should exist",
+      assertTrue(String.format("File with name %s should exist",
+          destCreateFilePath),
           fs.exists(destCreateFilePath));
-      assertFalse("File should not exist",
+      assertFalse(String.format("File with name %s should not exist",
+          createFilePath),
           fs.exists(createFilePath));
 
     }
