@@ -26,6 +26,7 @@ import org.junit.Test;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TimeoutException;
+import org.apache.hadoop.fs.azurebfs.utils.TestCachedSASToken;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
@@ -34,6 +35,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_SLASH;
 
@@ -53,6 +55,7 @@ public class TestAbfsInputStream extends
     AbfsHttpOperation httpOp = mock(AbfsHttpOperation.class);
     when(httpOp.getBytesReceived()).thenReturn(1024L);
     when(op.getResult()).thenReturn(httpOp);
+    when(op.getSasToken()).thenReturn(TestCachedSASToken.getTestCachedSASTokenInstance().get());
     return op;
   }
 
@@ -76,8 +79,11 @@ public class TestAbfsInputStream extends
         null,
         FORWARD_SLASH + fileName,
         THREE_KB,
-        inputStreamContext.withReadBufferSize(ONE_KB),
+        inputStreamContext.withReadBufferSize(ONE_KB).withReadAheadQueueDepth(10),
         "eTag");
+
+    inputStream.setCachedSasToken(
+        TestCachedSASToken.getTestCachedSASTokenInstance());
 
     return inputStream;
   }
