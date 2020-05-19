@@ -32,31 +32,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
 
   private static final int NUMBER_OF_OPS = 10;
-  private String createOp =
-      AbfsStatistic.CALL_CREATE.getStatName();
-  private String createNonRecursiveOp =
-      AbfsStatistic.CALL_CREATE_NON_RECURSIVE.getStatName();
-  private String fileCreated =
-      AbfsStatistic.FILES_CREATED.getStatName();
-  private String directoriesCreated =
-      AbfsStatistic.DIRECTORIES_CREATED.getStatName();
-  private String mkdirOp = AbfsStatistic.CALL_MKDIRS.getStatName();
-  private String getFileStatusOp =
-      AbfsStatistic.CALL_GET_FILE_STATUS.getStatName();
-  private String deleteOp =
-      AbfsStatistic.CALL_DELETE.getStatName();
-  private String fileDeleted =
-      AbfsStatistic.FILES_DELETED.getStatName();
-  private String directoriesDeleted =
-      AbfsStatistic.DIRECTORIES_DELETED.getStatName();
-  private String listStatusOp =
-      AbfsStatistic.CALL_LIST_STATUS.getStatName();
-  private String openOp = AbfsStatistic.CALL_OPEN.getStatName();
-  private String appendOp =
-      AbfsStatistic.CALL_APPEND.getStatName();
-  private String renameOp =
-      AbfsStatistic.CALL_RENAME.getStatName();
-  private String existsOp = AbfsStatistic.CALL_EXIST.getStatName();
 
   public ITestAbfsStatistics() throws Exception {
   }
@@ -102,18 +77,18 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
     getFileStatus is called 1 time after creating file and 1 time at time of
     initialising.
      */
-    assertEquals("Mismatch in " + createOp, 1,
-        (long) metricMap.get(createOp));
-    assertEquals("Mismatch in " + createNonRecursiveOp, 1,
-        (long) metricMap.get(createNonRecursiveOp));
-    assertEquals("Mismatch in " + fileCreated, 1,
-        (long) metricMap.get(fileCreated));
-    assertEquals("Mismatch in " + directoriesCreated, 1,
-        (long) metricMap.get(directoriesCreated));
-    assertEquals("Mismatch in " + mkdirOp, 1,
-        (long) metricMap.get(mkdirOp));
-    assertEquals("Mismatch in " + getFileStatusOp, 2,
-        (long) metricMap.get(getFileStatusOp));
+    assertEquals("Mismatch in " + AbfsStatistic.CALL_CREATE.getStatName(), 1,
+        (long) metricMap.get(AbfsStatistic.CALL_CREATE.getStatName()));
+    assertEquals("Mismatch in " + AbfsStatistic.CALL_CREATE_NON_RECURSIVE.getStatName(), 1,
+        (long) metricMap.get(AbfsStatistic.CALL_CREATE_NON_RECURSIVE.getStatName()));
+    assertEquals("Mismatch in " + AbfsStatistic.FILES_CREATED.getStatName(), 1,
+        (long) metricMap.get(AbfsStatistic.FILES_CREATED.getStatName()));
+    assertEquals("Mismatch in " + AbfsStatistic.DIRECTORIES_CREATED.getStatName(), 1,
+        (long) metricMap.get(AbfsStatistic.DIRECTORIES_CREATED.getStatName()));
+    assertEquals("Mismatch in " + AbfsStatistic.CALL_MKDIRS.getStatName(), 1,
+        (long) metricMap.get(AbfsStatistic.CALL_MKDIRS.getStatName()));
+    assertEquals("Mismatch in " + AbfsStatistic.CALL_GET_FILE_STATUS.getStatName(), 2,
+        (long) metricMap.get(AbfsStatistic.CALL_GET_FILE_STATUS.getStatName()));
 
     //re-initialising Abfs to reset statistic values.
     fs.initialize(fs.getUri(), fs.getConf());
@@ -135,18 +110,26 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
     getFileStatus is called 1 time at initialise() plus number of times file
     is created.
      */
-    assertEquals("Mismatch in " + createOp, NUMBER_OF_OPS,
-        (long) metricMap.get(createOp));
-    assertEquals("Mismatch in " + createNonRecursiveOp, NUMBER_OF_OPS,
-        (long) metricMap.get(createNonRecursiveOp));
-    assertEquals("Mismatch in " + fileCreated, NUMBER_OF_OPS,
-        (long) metricMap.get(fileCreated));
-    assertEquals("Mismatch in " + directoriesCreated, NUMBER_OF_OPS,
-        (long) metricMap.get(directoriesCreated));
-    assertEquals("Mismatch in " + mkdirOp, NUMBER_OF_OPS,
-        (long) metricMap.get(mkdirOp));
-    assertEquals("Mismatch in " + getFileStatusOp, 1 + NUMBER_OF_OPS,
-        (long) metricMap.get(getFileStatusOp));
+    assertEquals("Mismatch in " + AbfsStatistic.CALL_CREATE.getStatName(),
+        NUMBER_OF_OPS,
+        (long) metricMap.get(AbfsStatistic.CALL_CREATE.getStatName()));
+    assertEquals("Mismatch in " + AbfsStatistic.CALL_CREATE_NON_RECURSIVE.getStatName(),
+        NUMBER_OF_OPS,
+        (long) metricMap.get(AbfsStatistic.CALL_CREATE_NON_RECURSIVE.getStatName()));
+    assertEquals("Mismatch in " + AbfsStatistic.FILES_CREATED.getStatName(),
+        NUMBER_OF_OPS,
+        (long) metricMap.get(AbfsStatistic.FILES_CREATED.getStatName()));
+    assertEquals(
+        "Mismatch in " + AbfsStatistic.DIRECTORIES_CREATED.getStatName(),
+        NUMBER_OF_OPS,
+        (long) metricMap.get(AbfsStatistic.DIRECTORIES_CREATED.getStatName()));
+    assertEquals("Mismatch in " + AbfsStatistic.CALL_MKDIRS.getStatName(),
+        NUMBER_OF_OPS,
+        (long) metricMap.get(AbfsStatistic.CALL_MKDIRS.getStatName()));
+    assertEquals(
+        "Mismatch in " + AbfsStatistic.CALL_GET_FILE_STATUS.getStatName(),
+        1 + NUMBER_OF_OPS,
+        (long) metricMap.get(AbfsStatistic.CALL_GET_FILE_STATUS.getStatName()));
 
   }
 
@@ -182,12 +165,12 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
     since directory is delete recursively op_delete is called 2 times.
     1 file is deleted, 1 listStatus() call is made.
      */
-    assertEquals("Mismatch in " + deleteOp, 2,
-        (long) metricMap.get(deleteOp));
-    assertEquals("Mismatch in " + fileDeleted, 1,
-        (long) metricMap.get(fileDeleted));
-    assertEquals("Mismatch in " + listStatusOp, 1,
-        (long) metricMap.get(listStatusOp));
+    assertEquals("Mismatch in " + AbfsStatistic.CALL_DELETE.getStatName(), 2,
+        (long) metricMap.get(AbfsStatistic.CALL_DELETE.getStatName()));
+    assertEquals("Mismatch in " + AbfsStatistic.FILES_DELETED.getStatName(), 1,
+        (long) metricMap.get(AbfsStatistic.FILES_DELETED.getStatName()));
+    assertEquals("Mismatch in " + AbfsStatistic.CALL_LIST_STATUS.getStatName(),
+        1, (long) metricMap.get(AbfsStatistic.CALL_LIST_STATUS.getStatName()));
 
     /*
     creating a root directory and deleting it recursively to see if
@@ -199,8 +182,9 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
     metricMap = fs.getInstrumentation().toMap();
 
     //Test for directories_deleted.
-    assertEquals("Mismatch in " + directoriesDeleted, 1,
-        (long) metricMap.get(directoriesDeleted));
+    assertEquals(
+        "Mismatch in " + AbfsStatistic.DIRECTORIES_DELETED.getStatName(), 1,
+        (long) metricMap.get(AbfsStatistic.DIRECTORIES_DELETED.getStatName()));
   }
 
   /**
@@ -222,12 +206,12 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
 
     Map<String, Long> metricMap = fs.getInstrumentation().toMap();
     //Testing single method calls to open, append and rename.
-    assertEquals("Mismatch in " + openOp, 1,
-        (long) metricMap.get(openOp));
-    assertEquals("Mismatch in " + appendOp, 1,
-        (long) metricMap.get(appendOp));
-    assertEquals("Mismatch in " + renameOp, 1,
-        (long) metricMap.get(renameOp));
+    assertEquals("Mismatch in " + AbfsStatistic.CALL_OPEN.getStatName(), 1,
+        (long) metricMap.get(AbfsStatistic.CALL_OPEN.getStatName()));
+    assertEquals("Mismatch in " + AbfsStatistic.CALL_APPEND.getStatName(), 1,
+        (long) metricMap.get(AbfsStatistic.CALL_APPEND.getStatName()));
+    assertEquals("Mismatch in " + AbfsStatistic.CALL_RENAME.getStatName(), 1,
+        (long) metricMap.get(AbfsStatistic.CALL_RENAME.getStatName()));
 
     //Testing if file exists at path.
     assertTrue(String.format("File with name %s should exist",
@@ -239,8 +223,8 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
 
     metricMap = fs.getInstrumentation().toMap();
     //Testing exists() calls.
-    assertEquals("Mismatch in " + existsOp, 2,
-        (long) metricMap.get(existsOp));
+    assertEquals("Mismatch in " + AbfsStatistic.CALL_EXIST.getStatName(), 2,
+        (long) metricMap.get(AbfsStatistic.CALL_EXIST.getStatName()));
 
     //re-initialising Abfs to reset statistic values.
     fs.initialize(fs.getUri(), fs.getConf());
@@ -255,10 +239,12 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
     metricMap = fs.getInstrumentation().toMap();
 
     //Testing large number of method calls to open, append.
-    assertEquals("Mismatch in " + openOp, NUMBER_OF_OPS,
-        (long) metricMap.get(openOp));
-    assertEquals("Mismatch in " + appendOp, NUMBER_OF_OPS,
-        (long) metricMap.get(appendOp));
+    assertEquals("Mismatch in " + AbfsStatistic.CALL_OPEN.getStatName(),
+        NUMBER_OF_OPS,
+        (long) metricMap.get(AbfsStatistic.CALL_OPEN.getStatName()));
+    assertEquals("Mismatch in " + AbfsStatistic.CALL_APPEND.getStatName(),
+        NUMBER_OF_OPS,
+        (long) metricMap.get(AbfsStatistic.CALL_APPEND.getStatName()));
 
     for (int i = 0; i < NUMBER_OF_OPS; i++) {
       // rename and then back to earlier name for no error while looping.
@@ -281,10 +267,12 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
     Testing exists() calls and rename calls. Since both were called 2
     times in 1 loop. 2*numberOfOps is expectedValue.
     */
-    assertEquals("Mismatch in " + renameOp, 2 * NUMBER_OF_OPS,
-        (long) metricMap.get(renameOp));
-    assertEquals("Mismatch in " + existsOp, 2 * NUMBER_OF_OPS,
-        (long) metricMap.get(existsOp));
+    assertEquals("Mismatch in " + AbfsStatistic.CALL_RENAME.getStatName(),
+        2 * NUMBER_OF_OPS,
+        (long) metricMap.get(AbfsStatistic.CALL_RENAME.getStatName()));
+    assertEquals("Mismatch in " + AbfsStatistic.CALL_EXIST.getStatName(),
+        2 * NUMBER_OF_OPS,
+        (long) metricMap.get(AbfsStatistic.CALL_EXIST.getStatName()));
 
   }
 

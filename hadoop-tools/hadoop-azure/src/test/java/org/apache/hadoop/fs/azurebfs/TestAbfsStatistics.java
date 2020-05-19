@@ -29,10 +29,6 @@ import org.junit.Test;
 public class TestAbfsStatistics extends AbstractAbfsIntegrationTest {
 
   private static final int LARGE_OPS = 100;
-  private String getDelegationTokenOp =
-      AbfsStatistic.CALL_GET_DELEGATION_TOKEN.getStatName();
-  private String errorIgnored =
-      AbfsStatistic.ERROR_IGNORED.getStatName();
 
   public TestAbfsStatistics() throws Exception {
   }
@@ -55,10 +51,12 @@ public class TestAbfsStatistics extends AbstractAbfsIntegrationTest {
 
     Map<String, Long> metricMap = instrumentation.toMap();
 
-    assertEquals("Mismatch in " + getDelegationTokenOp, LARGE_OPS,
-        (long) metricMap.get(getDelegationTokenOp));
-    assertEquals("Mismatch in " + errorIgnored, LARGE_OPS,
-        (long) metricMap.get(errorIgnored));
+    assertEquals("Mismatch in " + AbfsStatistic.CALL_GET_DELEGATION_TOKEN.getStatName(),
+        LARGE_OPS,
+        (long) metricMap.get(AbfsStatistic.CALL_GET_DELEGATION_TOKEN.getStatName()));
+    assertEquals("Mismatch in " + AbfsStatistic.ERROR_IGNORED.getStatName(),
+        LARGE_OPS,
+        (long) metricMap.get(AbfsStatistic.ERROR_IGNORED.getStatName()));
 
   }
 }
