@@ -72,9 +72,9 @@ import org.apache.hadoop.util.Progressable;
  * </ul>
  */
 
-@InterfaceAudience.Private
+@InterfaceAudience.Public
 @InterfaceStability.Evolving /*Evolving for a release,to be changed to Stable */
-class ChRootedFileSystem extends FilterFileSystem {
+public class ChRootedFileSystem extends FilterFileSystem {
   private final URI myUri; // the base URI + the chRoot
   private final Path chRootPathPart; // the root below the root of the base
   private final String chRootPathPartString;

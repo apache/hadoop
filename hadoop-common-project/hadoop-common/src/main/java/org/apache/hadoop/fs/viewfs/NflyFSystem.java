@@ -18,9 +18,10 @@
 package org.apache.hadoop.fs.viewfs;
 
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -57,7 +58,8 @@ import java.util.List;
 /**
  * Nfly is a multi filesystem mount point.
  */
-@Private
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
 final class NflyFSystem extends FileSystem {
   private static final Logger LOG = LoggerFactory.getLogger(NflyFSystem.class);
   private static final String NFLY_TMP_PREFIX = "_nfly_tmp_";
@@ -920,7 +922,7 @@ final class NflyFSystem extends FileSystem {
    * @return an Nfly filesystem
    * @throws IOException
    */
-  static FileSystem createFileSystem(URI[] uris, Configuration conf,
+  public static FileSystem createFileSystem(URI[] uris, Configuration conf,
       String settings) throws IOException {
     // assert settings != null
     int minRepl = DEFAULT_MIN_REPLICATION;

@@ -55,9 +55,9 @@ import org.apache.hadoop.util.StringUtils;
  * {@link #resolve(String, boolean)} 
  */
 
-@InterfaceAudience.Private
+@InterfaceAudience.Public
 @InterfaceStability.Unstable
-abstract class InodeTree<T> {
+public abstract class InodeTree<T> {
   enum ResultKind {
     INTERNAL_DIR,
     EXTERNAL_DIR
@@ -119,7 +119,7 @@ abstract class InodeTree<T> {
    * Internal class to represent an internal dir of the mount table.
    * @param <T>
    */
-  static class INodeDir<T> extends INode<T> {
+  public static class INodeDir<T> extends INode<T> {
     private final Map<String, INode<T>> children = new HashMap<>();
     private T internalDirFs =  null; //filesystem of this internal directory
     private boolean isRoot = false;
@@ -448,7 +448,7 @@ abstract class InodeTree<T> {
    * @throws FileAlreadyExistsException
    * @throws IOException
    */
-  protected InodeTree(final Configuration config, final String viewName)
+  public InodeTree(final Configuration config, final String viewName)
       throws UnsupportedFileSystemException, URISyntaxException,
       FileAlreadyExistsException, IOException {
     String mountTableName = viewName;
@@ -600,7 +600,7 @@ abstract class InodeTree<T> {
    * If the input pathname leads to an internal mount-table entry then
    * the target file system is one that represents the internal inode.
    */
-  static class ResolveResult<T> {
+  public static class ResolveResult<T> {
     final ResultKind kind;
     final T targetFileSystem;
     final String resolvedPath;
@@ -614,8 +614,23 @@ abstract class InodeTree<T> {
       remainingPath = remainingP;
     }
 
+    // Gets the target filesystem the path is pointing to
+    public T getTargetFileSystem() {
+      return targetFileSystem;
+    }
+
+    // Gets the resolved path from the result
+    public String getResolvedPath() {
+      return resolvedPath;
+    }
+
+    // Gets the remaining path from the result
+    public Path getRemainingPath() {
+      return remainingPath;
+    }
+
     // Internal dir path resolution completed within the mount table
-    boolean isInternalDir() {
+    public boolean isInternalDir() {
       return (kind == ResultKind.INTERNAL_DIR);
     }
   }
@@ -627,7 +642,7 @@ abstract class InodeTree<T> {
    * @return ResolveResult which allows further resolution of the remaining path
    * @throws FileNotFoundException
    */
-  ResolveResult<T> resolve(final String p, final boolean resolveLastComponent)
+  public ResolveResult<T> resolve(final String p, final boolean resolveLastComponent)
       throws FileNotFoundException {
     String[] path = breakIntoPathComponents(p);
     if (path.length <= 1) { // special case for when path is "/"
