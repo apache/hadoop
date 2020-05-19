@@ -32,7 +32,6 @@ import java.util.Locale;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
-
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
