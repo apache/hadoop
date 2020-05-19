@@ -2464,7 +2464,7 @@ public class TestCheckpoint {
   }
 
   @Test(timeout = 300000)
-  public void testActiveRejectSmallerDeltaImage() throws Exception {
+  public void testActiveRejectSmallerTxidDeltaImage() throws Exception {
     MiniDFSCluster cluster = null;
     Configuration conf = new HdfsConfiguration();
     // Set the delta txid threshold to 10
@@ -2514,6 +2514,57 @@ public class TestCheckpoint {
     } finally {
       cleanup(secondary);
       cleanup(cluster);
+    }
+  }
+
+  /**
+   * Test that even with txid and time delta threshold, by having time
+   * relaxation, SBN can still upload images to ANN.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testActiveImageWithTimeDeltaRelaxation() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    // Set the delta txid threshold to some arbitrarily large value, so
+    // it does not trigger a checkpoint during this test.
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 1000000);
+    // Set the delta time threshold to some arbitrarily large value, so
+    // it does not trigger a checkpoint during this test.
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY, 900000);
+    // Set relaxation to 0, means time delta = 0 from previous image is fine,
+    // this will effectively disable reject small delta image
+    ImageServlet.setRecentImageCheckTimePrecision(0);
+
+    SecondaryNameNode secondary = null;
+
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(0).format(true).build()) {
+      // enable small delta rejection
+      NameNode active = cluster.getNameNode();
+      active.httpServer.getHttpServer()
+          .setAttribute(RECENT_IMAGE_CHECK_ENABLED, true);
+
+      secondary = startSecondaryNameNode(conf);
+
+      FileSystem fs = cluster.getFileSystem();
+      assertEquals(0, active.getNamesystem().getFSImage()
+          .getMostRecentCheckpointTxId());
+
+      // create 5 dir.
+      for (int i = 0; i < 5; i++) {
+        fs.mkdirs(new Path("dir-" + i));
+      }
+
+      // Checkpoint 1st
+      secondary.doCheckpoint();
+      // at this point, despite this is a small delta change, w.r.t both
+      // txid and time delta, due to we set relaxation to 0, this image
+      // still gets accepted
+      assertEquals(9, active.getNamesystem().getFSImage()
+          .getMostRecentCheckpointTxId());
+    } finally {
+      cleanup(secondary);
     }
   }
 
