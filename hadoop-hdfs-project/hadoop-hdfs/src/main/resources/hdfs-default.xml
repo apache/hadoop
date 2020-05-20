@@ -1587,6 +1587,16 @@
 </property>
 
 <property>
+  <name>dfs.block.scanner.skip.recent.accessed</name>
+  <value>false</value>
+  <description>
+    If this is true, scanner will check the access time of block file to avoid
+    scanning blocks accessed during recent scan peroid, reducing disk IO.
+    This feature will not work if the DataNode volume has noatime mount option.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.readahead.bytes</name>
   <value>4194304</value>
   <description>
@@ -4179,6 +4189,16 @@
 </property>
 
 <property>
+  <name>dfs.client.short.circuit.num</name>
+  <value>1</value>
+  <description>
+    Number of short-circuit caches. This setting should
+    be in the range 1 - 5. Lower values will result in lower CPU consumption; higher
+    values may speed up massive parallel reading files.
+  </description>
+</property>
+
+<property>
   <name>dfs.client.read.striped.threadpool.size</name>
   <value>18</value>
   <description>
@@ -4599,6 +4619,15 @@
   <description>
     The port number that the zookeeper failover controller RPC
     server binds to.
+  </description>
+</property>
+
+<property>
+  <name>dfs.ha.allow.stale.reads</name>
+  <value>false</value>
+  <description>
+    If true, a NameNode in Standby state can process read request and the result
+    could be stale.
   </description>
 </property>
 

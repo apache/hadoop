@@ -26,6 +26,7 @@ import java.util.regex.Pattern;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
@@ -35,6 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APN_VERSION;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CLIENT_VERSION;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DOT;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_SLASH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.JAVA_VENDOR;
@@ -240,4 +242,25 @@ public final class TestAbfsClient {
       .contains(DEFAULT_VALUE_UNKNOWN);
   }
 
+  public static AbfsClient createTestClientFromCurrentContext(
+      AbfsClient baseAbfsClientInstance,
+      AbfsConfiguration abfsConfig)
+      throws AzureBlobFileSystemException {
+      AbfsPerfTracker tracker = new AbfsPerfTracker("test",
+          abfsConfig.getAccountName(),
+          abfsConfig);
+
+      // Create test AbfsClient
+      AbfsClient testClient = new AbfsClient(
+          baseAbfsClientInstance.getBaseUrl(),
+          new SharedKeyCredentials(abfsConfig.getAccountName().substring(0,
+              abfsConfig.getAccountName().indexOf(DOT)),
+              abfsConfig.getStorageAccountKey()),
+          abfsConfig,
+          new ExponentialRetryPolicy(abfsConfig.getMaxIoRetries()),
+          abfsConfig.getTokenProvider(),
+          tracker);
+
+      return testClient;
+    }
 }

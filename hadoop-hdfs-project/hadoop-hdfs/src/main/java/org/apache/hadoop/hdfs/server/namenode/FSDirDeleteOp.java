@@ -61,10 +61,10 @@ class FSDirDeleteOp {
             removedUCFiles);
         if (unprotectedDelete(fsd, iip, context, mtime)) {
           filesRemoved = context.quotaDelta().getNsDelta();
+          fsn.removeSnapshottableDirs(snapshottableDirs);
         }
         fsd.updateReplicationFactor(context.collectedBlocks()
                                         .toUpdateReplicationInfo());
-        fsn.removeSnapshottableDirs(snapshottableDirs);
         fsd.updateCount(iip, context.quotaDelta(), false);
       }
     } finally {
@@ -144,9 +144,9 @@ class FSDirDeleteOp {
         new ReclaimContext(fsd.getBlockStoragePolicySuite(),
             collectedBlocks, removedINodes, removedUCFiles),
         mtime);
-    fsn.removeSnapshottableDirs(snapshottableDirs);
 
     if (filesRemoved) {
+      fsn.removeSnapshottableDirs(snapshottableDirs);
       fsn.removeLeasesAndINodes(removedUCFiles, removedINodes, false);
       fsn.getBlockManager().removeBlocksAndUpdateSafemodeTotal(collectedBlocks);
     }

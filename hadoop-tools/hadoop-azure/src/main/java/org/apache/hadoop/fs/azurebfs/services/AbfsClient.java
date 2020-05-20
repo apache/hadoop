@@ -21,9 +21,11 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -44,9 +46,11 @@ import org.apache.hadoop.fs.azurebfs.extensions.ExtensionHelper;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
+import org.apache.hadoop.fs.azurebfs.utils.DateTimeUtils;
 import org.apache.hadoop.io.IOUtils;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.*;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_DELETE_CONSIDERED_IDEMPOTENT;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.HTTPS_SCHEME;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.*;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.*;
@@ -320,7 +324,51 @@ public class AbfsClient implements Closeable {
             HTTP_METHOD_PUT,
             url,
             requestHeaders);
+    Instant renameRequestStartTime = Instant.now();
     op.execute();
+
+    if (op.getResult().getStatusCode() != HttpURLConnection.HTTP_OK) {
+      return renameIdempotencyCheckOp(renameRequestStartTime, op, destination);
+    }
+
+    return op;
+  }
+
+  /**
+   * Check if the rename request failure is post a retry and if earlier rename
+   * request might have succeeded at back-end.
+   *
+   * If there is a parallel rename activity happening from any other store
+   * interface, the logic here will detect the rename to have happened due to
+   * the one initiated from this ABFS filesytem instance as it was retried. This
+   * should be a corner case hence going ahead with LMT check.
+   * @param renameRequestStartTime startTime for the rename request
+   * @param op Rename request REST operation response
+   * @param destination rename destination path
+   * @return REST operation response post idempotency check
+   * @throws AzureBlobFileSystemException if GetFileStatus hits any exception
+   */
+  public AbfsRestOperation renameIdempotencyCheckOp(
+      final Instant renameRequestStartTime,
+      final AbfsRestOperation op,
+      final String destination) throws AzureBlobFileSystemException {
+    if ((op.isARetriedRequest())
+        && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND)) {
+      // Server has returned HTTP 404, which means rename source no longer
+      // exists. Check on destination status and if it has a recent LMT timestamp.
+      // If yes, return success, else fall back to original rename request failure response.
+
+      final AbfsRestOperation destStatusOp = getPathStatus(destination, false);
+      if (destStatusOp.getResult().getStatusCode() == HttpURLConnection.HTTP_OK) {
+        String lmt = destStatusOp.getResult().getResponseHeader(
+            HttpHeaderConfigurations.LAST_MODIFIED);
+
+        if (DateTimeUtils.isRecentlyModified(lmt, renameRequestStartTime)) {
+          return destStatusOp;
+        }
+      }
+    }
+
     return op;
   }
 
@@ -476,6 +524,45 @@ public class AbfsClient implements Closeable {
             url,
             requestHeaders);
     op.execute();
+
+    if (op.getResult().getStatusCode() != HttpURLConnection.HTTP_OK) {
+      return deleteIdempotencyCheckOp(op);
+    }
+
+    return op;
+  }
+
+  /**
+   * Check if the delete request failure is post a retry and if delete failure
+   * qualifies to be a success response assuming idempotency.
+   *
+   * There are below scenarios where delete could be incorrectly deducted as
+   * success post request retry:
+   * 1. Target was originally not existing and initial delete request had to be
+   * re-tried.
+   * 2. Parallel delete issued from any other store interface rather than
+   * delete issued from this filesystem instance.
+   * These are few corner cases and usually returning a success at this stage
+   * should help the job to continue.
+   * @param op Delete request REST operation response
+   * @return REST operation response post idempotency check
+   */
+  public AbfsRestOperation deleteIdempotencyCheckOp(final AbfsRestOperation op) {
+    if ((op.isARetriedRequest())
+        && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND)
+        && DEFAULT_DELETE_CONSIDERED_IDEMPOTENT) {
+      // Server has returned HTTP 404, which means path no longer
+      // exists. Assuming delete result to be idempotent, return success.
+      final AbfsRestOperation successOp = new AbfsRestOperation(
+          AbfsRestOperationType.DeletePath,
+          this,
+          HTTP_METHOD_DELETE,
+          op.getUrl(),
+          op.getRequestHeaders());
+      successOp.hardSetResult(HttpURLConnection.HTTP_OK);
+      return successOp;
+    }
+
     return op;
   }
 

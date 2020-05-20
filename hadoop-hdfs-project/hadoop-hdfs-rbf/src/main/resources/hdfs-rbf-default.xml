@@ -264,6 +264,18 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.fs-limits.max-component-length</name>
+    <value>0</value>
+    <description>
+      Defines the maximum number of bytes in UTF-8 encoding in each
+      component of a path at Router side. A value of 0 will disable the check.
+      Support multiple size unit suffix(case insensitive). It is act as
+      configuration dfs.namenode.fs-limits.max-component-length at NameNode
+      side.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.file.resolver.client.class</name>
     <value>org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver</value>
     <description>
