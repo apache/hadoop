@@ -995,8 +995,8 @@ public class TestShortCircuitCache {
       }
       cache.scheduleSlotReleaser(slot2);
       Thread.sleep(2000);
-      Assert.assertEquals(0, cluster.getDataNodes().get(0)
-          .getShortCircuitRegistry().getShmNum() == 0);
+      Assert.assertEquals(0,
+          cluster.getDataNodes().get(0).getShortCircuitRegistry().getShmNum());
       Assert.assertEquals(0, cache.getDfsClientShmManager().getShmNum());
     } finally {
       cluster.shutdown();
