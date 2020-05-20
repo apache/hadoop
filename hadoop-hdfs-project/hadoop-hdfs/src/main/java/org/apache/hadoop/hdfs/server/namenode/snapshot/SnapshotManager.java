@@ -96,7 +96,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
   private final boolean snapshotDiffAllowSnapRootDescendant;
 
   private final AtomicInteger numSnapshots = new AtomicInteger();
-  private static final int SNAPSHOT_ID_BIT_WIDTH = 24;
+  private static final int SNAPSHOT_ID_BIT_WIDTH = 28;
 
   private boolean allowNestedSnapshots = false;
   private int snapshotCounter = 0;
@@ -346,13 +346,14 @@ public class SnapshotManager implements SnapshotStatsMXBean {
   /**
    * Delete a snapshot for a snapshottable directory
    * @param snapshotName Name of the snapshot to be deleted
+   * @param now is the snapshot deletion time set by Time.now().
    * @param reclaimContext Used to collect information to reclaim blocks
    *                       and inodes
    */
   public void deleteSnapshot(final INodesInPath iip, final String snapshotName,
-      INode.ReclaimContext reclaimContext) throws IOException {
+      INode.ReclaimContext reclaimContext, long now) throws IOException {
     INodeDirectory srcRoot = getSnapshottableRoot(iip);
-    srcRoot.removeSnapshot(reclaimContext, snapshotName);
+    srcRoot.removeSnapshot(reclaimContext, snapshotName, now);
     numSnapshots.getAndDecrement();
   }
 
@@ -540,7 +541,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
    *
    * @return maximum allowable snapshot ID.
    */
-   public int getMaxSnapshotID() {
+  public int getMaxSnapshotID() {
     return ((1 << SNAPSHOT_ID_BIT_WIDTH) - 1);
   }
 

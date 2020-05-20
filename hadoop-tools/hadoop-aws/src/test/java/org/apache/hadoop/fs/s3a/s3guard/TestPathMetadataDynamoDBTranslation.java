@@ -243,14 +243,17 @@ public class TestPathMetadataDynamoDBTranslation extends Assert {
   @Test
   public void testPathToKey() throws Exception {
     LambdaTestUtils.intercept(IllegalArgumentException.class,
-        new Callable<PrimaryKey>() {
-          @Override
-          public PrimaryKey call() throws Exception {
-            return pathToKey(new Path("/"));
-          }
-        });
+        () -> pathToKey(new Path("/")));
     doTestPathToKey(TEST_DIR_PATH);
     doTestPathToKey(TEST_FILE_PATH);
+  }
+
+  @Test
+  public void testPathToKeyTrailing() throws Exception {
+    doTestPathToKey(new Path("s3a://test-bucket/myDir/trailing//"));
+    doTestPathToKey(new Path("s3a://test-bucket/myDir/trailing/"));
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        () -> pathToKey(new Path("s3a://test-bucket//")));
   }
 
   private static void doTestPathToKey(Path path) {

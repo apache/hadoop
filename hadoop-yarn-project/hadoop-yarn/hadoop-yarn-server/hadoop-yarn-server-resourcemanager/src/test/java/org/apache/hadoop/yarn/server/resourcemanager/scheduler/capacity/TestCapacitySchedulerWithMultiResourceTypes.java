@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.resourcetypes.ResourceTypesTestHelper;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
@@ -298,16 +299,16 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
     MockRM rm = new MockRM(conf);
     rm.start();
 
-    Map<String, Integer> nameToValues = new HashMap<>();
-    nameToValues.put(ResourceInformation.GPU_URI, 4);
+    Map<String, String> nameToValues = new HashMap<>();
+    nameToValues.put(ResourceInformation.GPU_URI, "4");
     // Register NM1 with 10GB memory, 4 CPU and 4 GPU
     MockNM nm1 = rm.registerNode("127.0.0.1:1234",
-        TestUtils.createResource(10 * GB, 4, nameToValues));
+        ResourceTypesTestHelper.newResource(10 * GB, 4, nameToValues));
 
     nameToValues.clear();
     // Register NM2 with 10GB memory, 4 CPU and 0 GPU
     rm.registerNode("127.0.0.1:1235",
-        TestUtils.createResource(10 * GB, 4, nameToValues));
+        ResourceTypesTestHelper.newResource(10 * GB, 4, nameToValues));
 
     RMApp app1 = MockRMAppSubmitter.submit(rm,
         MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
@@ -330,9 +331,9 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
     Assert.assertEquals(4, report_nm1.getAvailableResource()
         .getResourceInformation(ResourceInformation.GPU_URI).getValue());
 
-    nameToValues.put(ResourceInformation.GPU_URI, 4);
+    nameToValues.put(ResourceInformation.GPU_URI, "4");
     Resource containerGpuResource =
-        TestUtils.createResource(1 * GB, 1, nameToValues);
+        ResourceTypesTestHelper.newResource(1 * GB, 1, nameToValues);
 
     // Allocate one container which takes all 4 GPU
     am1.allocate(
@@ -355,7 +356,7 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
 
     nameToValues.clear();
     Resource containerResource =
-        TestUtils.createResource(1 * GB, 1, nameToValues);
+        ResourceTypesTestHelper.newResource(1 * GB, 1, nameToValues);
     // Allocate one more container which doesnt need GPU
     am1.allocate(
         Collections.singletonList(ResourceRequest.newInstance(
@@ -479,8 +480,8 @@ public class TestCapacitySchedulerWithMultiResourceTypes {
     for (int i = 0; i < 8; i++) {
       fiCaApp1.updateResourceRequests(Collections.singletonList(
           ResourceRequest.newBuilder()
-          .capability(TestUtils.createResource(1 * GB, 1,
-              ImmutableMap.of("res_1", 10)))
+          .capability(ResourceTypesTestHelper.newResource(1 * GB, 1,
+              ImmutableMap.of("res_1", "10")))
           .numContainers(1)
           .resourceName("*")
           .build()));

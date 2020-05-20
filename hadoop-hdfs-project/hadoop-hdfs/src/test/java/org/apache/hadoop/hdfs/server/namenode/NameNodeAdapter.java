@@ -83,6 +83,9 @@ public class NameNodeAdapter {
       IOException {
     final FSPermissionChecker pc =
         namenode.getNamesystem().getPermissionChecker();
+    // consistent with FSNamesystem#getFileInfo()
+    final String operationName = needBlockToken ? "open" : "getfileinfo";
+    FSPermissionChecker.setOperationType(operationName);
     namenode.getNamesystem().readLock();
     try {
       return FSDirStatAndListingOp.getFileInfo(namenode.getNamesystem()

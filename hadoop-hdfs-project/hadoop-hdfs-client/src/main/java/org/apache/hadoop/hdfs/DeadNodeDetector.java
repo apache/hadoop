@@ -24,7 +24,6 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeLocalInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.util.Daemon;
-import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -103,11 +102,6 @@ public class DeadNodeDetector implements Runnable {
    */
   private Map<String, DatanodeInfo> probeInProg =
       new ConcurrentHashMap<String, DatanodeInfo>();
-
-  /**
-   * The last time when detect dead node.
-   */
-  private long lastDetectDeadTS = 0;
 
   /**
    * Interval time in milliseconds for probing dead node behavior.
@@ -249,7 +243,7 @@ public class DeadNodeDetector implements Runnable {
 
   @Override
   public void run() {
-    while (true) {
+    while (!Thread.currentThread().isInterrupted()) {
       clearAndGetDetectedDeadNodes();
       LOG.debug("Current detector state {}, the detected nodes: {}.", state,
           deadNodes.values());
@@ -267,6 +261,8 @@ public class DeadNodeDetector implements Runnable {
         try {
           Thread.sleep(ERROR_SLEEP_MS);
         } catch (InterruptedException e) {
+          LOG.debug("Got interrupted while DeadNodeDetector is error.", e);
+          Thread.currentThread().interrupt();
         }
         return;
       default:
@@ -276,8 +272,9 @@ public class DeadNodeDetector implements Runnable {
   }
 
   @VisibleForTesting
-  static void disabledProbeThreadForTest() {
-    disabledProbeThreadForTest = true;
+  static void setDisabledProbeThreadForTest(
+      boolean disabledProbeThreadForTest) {
+    DeadNodeDetector.disabledProbeThreadForTest = disabledProbeThreadForTest;
   }
 
   /**
@@ -416,20 +413,15 @@ public class DeadNodeDetector implements Runnable {
    * Check dead node periodically.
    */
   private void checkDeadNodes() {
-    long ts = Time.monotonicNow();
-    if (ts - lastDetectDeadTS > deadNodeDetectInterval) {
-      Set<DatanodeInfo> datanodeInfos = clearAndGetDetectedDeadNodes();
-      for (DatanodeInfo datanodeInfo : datanodeInfos) {
-        LOG.debug("Add dead node to check: {}.", datanodeInfo);
-        if (!deadNodesProbeQueue.offer(datanodeInfo)) {
-          LOG.debug("Skip to add dead node {} to check " +
-              "since the probe queue is full.", datanodeInfo);
-          break;
-        }
+    Set<DatanodeInfo> datanodeInfos = clearAndGetDetectedDeadNodes();
+    for (DatanodeInfo datanodeInfo : datanodeInfos) {
+      LOG.debug("Add dead node to check: {}.", datanodeInfo);
+      if (!deadNodesProbeQueue.offer(datanodeInfo)) {
+        LOG.debug("Skip to add dead node {} to check " +
+                "since the probe queue is full.", datanodeInfo);
+        break;
       }
-      lastDetectDeadTS = ts;
     }
-
     state = State.IDLE;
   }
 
@@ -437,7 +429,8 @@ public class DeadNodeDetector implements Runnable {
     try {
       Thread.sleep(IDLE_SLEEP_MS);
     } catch (InterruptedException e) {
-
+      LOG.debug("Got interrupted while DeadNodeDetector is idle.", e);
+      Thread.currentThread().interrupt();
     }
 
     state = State.CHECK_DEAD;
@@ -559,7 +552,9 @@ public class DeadNodeDetector implements Runnable {
     try {
       Thread.sleep(time);
     } catch (InterruptedException e) {
+      LOG.debug("Got interrupted while probe is scheduling.", e);
       Thread.currentThread().interrupt();
+      return;
     }
   }
 
@@ -577,7 +572,7 @@ public class DeadNodeDetector implements Runnable {
 
     @Override
     public void run() {
-      while (true) {
+      while (!Thread.currentThread().isInterrupted()) {
         deadNodeDetector.scheduleProbe(type);
         if (type == ProbeType.CHECK_SUSPECT) {
           probeSleep(deadNodeDetector.suspectNodeDetectInterval);

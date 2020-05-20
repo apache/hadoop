@@ -76,6 +76,10 @@ interface NativeFileSystemStore {
   void changePermissionStatus(String key, PermissionStatus newPermission)
       throws AzureException;
 
+  byte[] retrieveAttribute(String key, String attribute) throws IOException;
+
+  void storeAttribute(String key, String attribute, byte[] value) throws IOException;
+
   /**
    * API to delete a blob in the back end azure storage.
    * @param key - key to the blob being deleted.

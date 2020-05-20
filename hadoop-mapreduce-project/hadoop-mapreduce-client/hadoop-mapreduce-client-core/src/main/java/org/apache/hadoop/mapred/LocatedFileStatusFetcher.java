@@ -259,7 +259,8 @@ public class LocatedFileStatusFetcher {
             if (recursive && stat.isDirectory()) {
               result.dirsNeedingRecursiveCalls.add(stat);
             } else {
-              result.locatedFileStatuses.add(stat);
+              result.locatedFileStatuses.add(org.apache.hadoop.mapreduce.lib.
+                  input.FileInputFormat.shrinkStatus(stat));
             }
           }
         }

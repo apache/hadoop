@@ -545,16 +545,22 @@ public final class HttpServer2 implements FilterContainer {
       SslContextFactory.Server sslContextFactory =
           new SslContextFactory.Server();
       sslContextFactory.setNeedClientAuth(needsClientAuth);
-      sslContextFactory.setKeyManagerPassword(keyPassword);
+      if (keyPassword != null) {
+        sslContextFactory.setKeyManagerPassword(keyPassword);
+      }
       if (keyStore != null) {
         sslContextFactory.setKeyStorePath(keyStore);
         sslContextFactory.setKeyStoreType(keyStoreType);
-        sslContextFactory.setKeyStorePassword(keyStorePassword);
+        if (keyStorePassword != null) {
+          sslContextFactory.setKeyStorePassword(keyStorePassword);
+        }
       }
       if (trustStore != null) {
         sslContextFactory.setTrustStorePath(trustStore);
         sslContextFactory.setTrustStoreType(trustStoreType);
-        sslContextFactory.setTrustStorePassword(trustStorePassword);
+        if (trustStorePassword != null) {
+          sslContextFactory.setTrustStorePassword(trustStorePassword);
+        }
       }
       if(null != excludeCiphers && !excludeCiphers.isEmpty()) {
         sslContextFactory.setExcludeCipherSuites(

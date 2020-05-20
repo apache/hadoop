@@ -550,6 +550,8 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     conf.setBoolean(CommitConstants.MAGIC_COMMITTER_ENABLED, true);
     final int uploadPartSize = 5 * 1024 * 1024;
 
+    ProgressCounter progress = new ProgressCounter();
+    progress.assertCount("Progress counter should be zero", 0);
     Path basePath = methodPath();
     Path readOnlyDir = new Path(basePath, "readOnlyDir");
     Path writeableDir = new Path(basePath, "writeableDir");
@@ -577,8 +579,9 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     forbidden("initiate MultiPartUpload",
         () -> {
           return operations.uploadFileToPendingCommit(localSrc,
-              uploadDest, "", uploadPartSize);
+              uploadDest, "", uploadPartSize, progress);
         });
+    progress.assertCount("progress counter not expected.", 0);
     // delete the file
     localSrc.delete();
     // create a directory there
@@ -596,11 +599,13 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
           writeCSVData(src);
           SinglePendingCommit pending =
               fullOperations.uploadFileToPendingCommit(src, dest, "",
-                  uploadPartSize);
+                  uploadPartSize, progress);
           pending.save(fs, new Path(readOnlyDir,
               name + CommitConstants.PENDING_SUFFIX), true);
           assertTrue(src.delete());
         }));
+    progress.assertCount("Process counter is not expected",
+        range);
 
     try {
       // we expect to be able to list all the files here

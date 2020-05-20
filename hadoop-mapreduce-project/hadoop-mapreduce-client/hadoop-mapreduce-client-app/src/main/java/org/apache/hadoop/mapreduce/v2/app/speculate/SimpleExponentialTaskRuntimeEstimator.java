@@ -33,7 +33,22 @@ import org.apache.hadoop.mapreduce.v2.app.speculate.forecast.SimpleExponentialSm
  * A task Runtime Estimator based on exponential smoothing.
  */
 public class SimpleExponentialTaskRuntimeEstimator extends StartEndTimesBase {
-  private final static long DEFAULT_ESTIMATE_RUNTIME = -1L;
+
+  /**
+   * The default value returned by the estimator when no records exist.
+   */
+  private static final long DEFAULT_ESTIMATE_RUNTIME = -1L;
+
+  /**
+   * Given a forecast of value 0.0, it is getting replaced by the default value
+   * to avoid division by 0.
+   */
+  private static final double DEFAULT_PROGRESS_VALUE = 1E-10;
+
+  /**
+   * Factor used to calculate the confidence interval.
+   */
+  private static final double CONFIDENCE_INTERVAL_FACTOR = 0.25;
 
   /**
    * Constant time used to calculate the smoothing exponential factor.
@@ -53,11 +68,15 @@ public class SimpleExponentialTaskRuntimeEstimator extends StartEndTimesBase {
    */
   private long stagnatedWindow;
 
+  /**
+   * A map of TA Id to the statistic model of smooth exponential.
+   */
   private final ConcurrentMap<TaskAttemptId,
       AtomicReference<SimpleExponentialSmoothing>>
       estimates = new ConcurrentHashMap<>();
 
-  private SimpleExponentialSmoothing getForecastEntry(TaskAttemptId attemptID) {
+  private SimpleExponentialSmoothing getForecastEntry(
+      final TaskAttemptId attemptID) {
     AtomicReference<SimpleExponentialSmoothing> entryRef = estimates
         .get(attemptID);
     if (entryRef == null) {
@@ -66,13 +85,13 @@ public class SimpleExponentialTaskRuntimeEstimator extends StartEndTimesBase {
     return entryRef.get();
   }
 
-  private void incorporateReading(TaskAttemptId attemptID,
-      float newRawData, long newTimeStamp) {
+  private void incorporateReading(final TaskAttemptId attemptID,
+      final float newRawData, final long newTimeStamp) {
     SimpleExponentialSmoothing foreCastEntry = getForecastEntry(attemptID);
     if (foreCastEntry == null) {
       Long tStartTime = startTimes.get(attemptID);
       // skip if the startTime is not set yet
-      if(tStartTime == null) {
+      if (tStartTime == null) {
         return;
       }
       estimates.putIfAbsent(attemptID,
@@ -86,7 +105,8 @@ public class SimpleExponentialTaskRuntimeEstimator extends StartEndTimesBase {
   }
 
   @Override
-  public void contextualize(Configuration conf, AppContext context) {
+  public void contextualize(final Configuration conf,
+      final AppContext context) {
     super.contextualize(conf, context);
 
     constTime
@@ -103,18 +123,16 @@ public class SimpleExponentialTaskRuntimeEstimator extends StartEndTimesBase {
   }
 
   @Override
-  public long estimatedRuntime(TaskAttemptId id) {
+  public long estimatedRuntime(final TaskAttemptId id) {
     SimpleExponentialSmoothing foreCastEntry = getForecastEntry(id);
     if (foreCastEntry == null) {
       return DEFAULT_ESTIMATE_RUNTIME;
     }
-    // TODO: What should we do when estimate is zero
-    double remainingWork = Math.min(1.0, 1.0 - foreCastEntry.getRawData());
-    double forecast = foreCastEntry.getForecast();
-    if (forecast <= 0.0) {
-      return DEFAULT_ESTIMATE_RUNTIME;
-    }
-    long remainingTime = (long)(remainingWork / forecast);
+    double remainingWork = Math
+        .max(0.0, Math.min(1.0, 1.0 - foreCastEntry.getRawData()));
+    double forecast = Math
+        .max(DEFAULT_PROGRESS_VALUE, foreCastEntry.getForecast());
+    long remainingTime = (long) (remainingWork / forecast);
     long estimatedRuntime = remainingTime
         + foreCastEntry.getTimeStamp()
         - foreCastEntry.getStartTime();
@@ -122,30 +140,32 @@ public class SimpleExponentialTaskRuntimeEstimator extends StartEndTimesBase {
   }
 
   @Override
-  public long estimatedNewAttemptRuntime(TaskId id) {
+  public long estimatedNewAttemptRuntime(final TaskId id) {
     DataStatistics statistics = dataStatisticsForTask(id);
 
     if (statistics == null) {
-      return -1L;
+      return DEFAULT_ESTIMATE_RUNTIME;
     }
 
     double statsMeanCI = statistics.meanCI();
     double expectedVal =
-        statsMeanCI + Math.min(statsMeanCI * 0.25, statistics.std() / 2);
-    return (long)(expectedVal);
+        statsMeanCI + Math.min(statsMeanCI * CONFIDENCE_INTERVAL_FACTOR,
+            statistics.std() / 2);
+    return (long) (expectedVal);
   }
 
   @Override
-  public boolean hasStagnatedProgress(TaskAttemptId id, long timeStamp) {
+  public boolean hasStagnatedProgress(final TaskAttemptId id,
+      final long timeStamp) {
     SimpleExponentialSmoothing foreCastEntry = getForecastEntry(id);
-    if(foreCastEntry == null) {
+    if (foreCastEntry == null) {
       return false;
     }
     return foreCastEntry.isDataStagnated(timeStamp);
   }
 
   @Override
-  public long runtimeEstimateVariance(TaskAttemptId id) {
+  public long runtimeEstimateVariance(final TaskAttemptId id) {
     SimpleExponentialSmoothing forecastEntry = getForecastEntry(id);
     if (forecastEntry == null) {
       return DEFAULT_ESTIMATE_RUNTIME;
@@ -154,12 +174,13 @@ public class SimpleExponentialTaskRuntimeEstimator extends StartEndTimesBase {
     if (forecastEntry.isDefaultForecast(forecast)) {
       return DEFAULT_ESTIMATE_RUNTIME;
     }
-    //TODO: What is the best way to measure variance in runtime
+    //TODO What is the best way to measure variance in runtime
     return 0L;
   }
 
   @Override
-  public void updateAttempt(TaskAttemptStatus status, long timestamp) {
+  public void updateAttempt(final TaskAttemptStatus status,
+      final long timestamp) {
     super.updateAttempt(status, timestamp);
     TaskAttemptId attemptID = status.id;
 

@@ -196,7 +196,7 @@ public class WorkflowPriorityMappingsManager {
           Priority mappedPriority = getMappedPriority(workflowID, queue);
           if (mappedPriority != null) {
             LOG.info("Application " + applicationId + " user " + user
-                + " workflow " + workflowID + " queue " + queue.getQueueName()
+                + " workflow " + workflowID + " queue " + queue.getQueuePath()
                 + " mapping [" + priority + "] to [" + mappedPriority
                 + "] override " + overrideWithPriorityMappings);
 
@@ -206,7 +206,7 @@ public class WorkflowPriorityMappingsManager {
             priority = mappedPriority;
             priority = scheduler.checkAndGetApplicationPriority(
                 priority, UserGroupInformation.createRemoteUser(user),
-                queue.getQueueName(), applicationId);
+                queue.getQueuePath(), applicationId);
             rmApp.getApplicationSubmissionContext().setPriority(priority);
             ((RMAppImpl)rmApp).setApplicationPriority(priority);
           }

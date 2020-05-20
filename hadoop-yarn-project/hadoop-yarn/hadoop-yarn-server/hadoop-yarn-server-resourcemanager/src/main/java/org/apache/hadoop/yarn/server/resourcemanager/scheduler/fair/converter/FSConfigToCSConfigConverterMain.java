@@ -34,20 +34,17 @@ public class FSConfigToCSConfigConverterMain {
 
   public static void main(String[] args) {
     try {
-      FSConfigToCSConfigRuleHandler ruleHandler =
-          new FSConfigToCSConfigRuleHandler();
-      FSConfigToCSConfigConverter converter =
-          new FSConfigToCSConfigConverter(ruleHandler);
       FSConfigToCSConfigArgumentHandler fsConfigConversionArgumentHandler =
-          new FSConfigToCSConfigArgumentHandler(converter);
+          new FSConfigToCSConfigArgumentHandler();
       int exitCode =
           fsConfigConversionArgumentHandler.parseAndConvert(args);
       if (exitCode != 0) {
         LOG.error(FATAL,
             "Error while starting FS configuration conversion, " +
                 "see previous error messages for details!");
-        System.exit(exitCode);
       }
+
+      System.exit(exitCode);
     } catch (Throwable t) {
       LOG.error(FATAL,
           "Error while starting FS configuration conversion!", t);

@@ -32,8 +32,11 @@ import java.util.Set;
 import com.google.common.base.Preconditions;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.protocol.FSLimitException.PathComponentTooLongException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.proto.RouterProtocolProtos.RouterAdminProtocolService;
@@ -90,7 +93,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.BlockingService;
+import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 
 /**
  * This class is responsible for handling all of the Admin calls to the HDFS
@@ -122,6 +125,7 @@ public class RouterAdminServer extends AbstractService
   private static String superGroup;
   private static boolean isPermissionEnabled;
   private boolean iStateStoreCache;
+  private final long maxComponentLength;
 
   public RouterAdminServer(Configuration conf, Router router)
       throws IOException {
@@ -176,6 +180,10 @@ public class RouterAdminServer extends AbstractService
     router.setAdminServerAddress(this.adminAddress);
     iStateStoreCache =
         router.getSubclusterResolver() instanceof StateStoreCache;
+    // The mount table destination path length limit keys.
+    this.maxComponentLength = (int) conf.getLongBytes(
+        RBFConfigKeys.DFS_ROUTER_ADMIN_MAX_COMPONENT_LENGTH_KEY,
+        RBFConfigKeys.DFS_ROUTER_ADMIN_MAX_COMPONENT_LENGTH_DEFAULT);
 
     GenericRefreshProtocolServerSideTranslatorPB genericRefreshXlator =
         new GenericRefreshProtocolServerSideTranslatorPB(this);
@@ -248,6 +256,50 @@ public class RouterAdminServer extends AbstractService
     }
   }
 
+  /**
+   * Verify each component name of a destination path for fs limit.
+   *
+   * @param destPath destination path name of mount point.
+   * @throws PathComponentTooLongException destination path name is too long.
+   */
+  void verifyMaxComponentLength(String destPath)
+      throws PathComponentTooLongException {
+    if (maxComponentLength <= 0) {
+      return;
+    }
+    if (destPath == null) {
+      return;
+    }
+    String[] components = destPath.split(Path.SEPARATOR);
+    for (String component : components) {
+      int length = component.length();
+      if (length > maxComponentLength) {
+        PathComponentTooLongException e = new PathComponentTooLongException(
+            maxComponentLength, length, destPath, component);
+        throw e;
+      }
+    }
+  }
+
+  /**
+   * Verify each component name of every destination path of mount table
+   * for fs limit.
+   *
+   * @param mountTable mount point.
+   * @throws PathComponentTooLongException destination path name is too long.
+   */
+  void verifyMaxComponentLength(MountTable mountTable)
+      throws PathComponentTooLongException {
+    if (mountTable != null) {
+      List<RemoteLocation> dests = mountTable.getDestinations();
+      if (dests != null && !dests.isEmpty()) {
+        for (RemoteLocation dest : dests) {
+          verifyMaxComponentLength(dest.getDest());
+        }
+      }
+    }
+  }
+
   @Override
   protected void serviceInit(Configuration configuration) throws Exception {
     this.conf = configuration;
@@ -271,6 +323,9 @@ public class RouterAdminServer extends AbstractService
   @Override
   public AddMountTableEntryResponse addMountTableEntry(
       AddMountTableEntryRequest request) throws IOException {
+    // Checks max component length limit.
+    MountTable mountTable = request.getEntry();
+    verifyMaxComponentLength(mountTable);
     return getMountTableStore().addMountTableEntry(request);
   }
 
@@ -279,6 +334,8 @@ public class RouterAdminServer extends AbstractService
       UpdateMountTableEntryRequest request) throws IOException {
     MountTable updateEntry = request.getEntry();
     MountTable oldEntry = null;
+    // Checks max component length limit.
+    verifyMaxComponentLength(updateEntry);
     if (this.router.getSubclusterResolver() instanceof MountTableResolver) {
       MountTableResolver mResolver =
           (MountTableResolver) this.router.getSubclusterResolver();
@@ -287,11 +344,24 @@ public class RouterAdminServer extends AbstractService
     UpdateMountTableEntryResponse response = getMountTableStore()
         .updateMountTableEntry(request);
     try {
-      if (updateEntry != null && router.isQuotaEnabled()
-          && isQuotaUpdated(request, oldEntry)) {
-        synchronizeQuota(updateEntry.getSourcePath(),
-            updateEntry.getQuota().getQuota(),
-            updateEntry.getQuota().getSpaceQuota());
+      if (updateEntry != null && router.isQuotaEnabled()) {
+        // update quota.
+        if (isQuotaUpdated(request, oldEntry)) {
+          synchronizeQuota(updateEntry.getSourcePath(),
+              updateEntry.getQuota().getQuota(),
+              updateEntry.getQuota().getSpaceQuota(), null);
+        }
+        // update storage type quota.
+        RouterQuotaUsage newQuota = request.getEntry().getQuota();
+        boolean locationsChanged = oldEntry == null ||
+            !oldEntry.getDestinations().equals(updateEntry.getDestinations());
+        for (StorageType t : StorageType.values()) {
+          if (locationsChanged || oldEntry.getQuota().getTypeQuota(t)
+              != newQuota.getTypeQuota(t)) {
+            synchronizeQuota(updateEntry.getSourcePath(),
+                HdfsConstants.QUOTA_DONT_SET, newQuota.getTypeQuota(t), t);
+          }
+        }
       }
     } catch (Exception e) {
       // Ignore exception, if any while reseting quota. Specifically to handle
@@ -344,16 +414,17 @@ public class RouterAdminServer extends AbstractService
    * @param path Source path in given mount table.
    * @param nsQuota Name quota definition in given mount table.
    * @param ssQuota Space quota definition in given mount table.
+   * @param type Storage type of quota. Null if it's not a storage type quota.
    * @throws IOException
    */
-  private void synchronizeQuota(String path, long nsQuota, long ssQuota)
-      throws IOException {
+  private void synchronizeQuota(String path, long nsQuota, long ssQuota,
+      StorageType type) throws IOException {
     if (isQuotaSyncRequired(nsQuota, ssQuota)) {
       if (iStateStoreCache) {
         ((StateStoreCache) this.router.getSubclusterResolver()).loadCache(true);
       }
       Quota routerQuota = this.router.getRpcServer().getQuotaModule();
-      routerQuota.setQuota(path, nsQuota, ssQuota, null, false);
+      routerQuota.setQuota(path, nsQuota, ssQuota, type, false);
     }
   }
 
@@ -380,7 +451,7 @@ public class RouterAdminServer extends AbstractService
     // clear sub-cluster's quota definition
     try {
       synchronizeQuota(request.getSrcPath(), HdfsConstants.QUOTA_RESET,
-          HdfsConstants.QUOTA_RESET);
+          HdfsConstants.QUOTA_RESET, null);
     } catch (Exception e) {
       // Ignore exception, if any while reseting quota. Specifically to handle
       // if the actual destination doesn't exist.

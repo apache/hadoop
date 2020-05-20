@@ -163,7 +163,7 @@ public class TestCapacitySchedulerPerf {
       when(apps[i].getCurrentAppAttempt()).thenReturn(attempts[i]);
 
       rm.getRMContext().getRMApps().put(appids[i], apps[i]);
-      String queueName = lqs[i % activeQueues].getQueueName();
+      String queueName = lqs[i % activeQueues].getQueuePath();
       addAppEvent =
           new AppAddedSchedulerEvent(appids[i], queueName, "user1");
       cs.handle(addAppEvent);

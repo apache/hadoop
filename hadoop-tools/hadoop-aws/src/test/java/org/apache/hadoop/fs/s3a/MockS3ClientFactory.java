@@ -41,6 +41,7 @@ public class MockS3ClientFactory implements S3ClientFactory {
       final String userAgentSuffix) {
     AmazonS3 s3 = mock(AmazonS3.class);
     when(s3.doesBucketExist(bucket)).thenReturn(true);
+    when(s3.doesBucketExistV2(bucket)).thenReturn(true);
     // this listing is used in startup if purging is enabled, so
     // return a stub value
     MultipartUploadListing noUploads = new MultipartUploadListing();

@@ -239,6 +239,18 @@ The federation admin tool supports setting quotas for specified mount table entr
 The above command means that we allow the path to have a maximum of 100 file/directories and use at most 1024 bytes storage space. The parameter for *ssQuota*
 supports multiple size-unit suffix (e.g. 1k is 1KB, 5m is 5MB). If no suffix is specified then bytes is assumed.
 
+Set storage type quota for specified mount table entry:
+
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -setStorageTypeQuota <path> -storageType <storage type>
+
+Remove quota for specified mount table entry:
+
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -clrQuota <path>
+
+Remove storage type quota for specified mount table entry:
+
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -clrStorageTypeQuota <path>
+
 Ls command will show below information for each mount table entry:
 
     Source                    Destinations              Owner                     Group                     Mode                      Quota/Usage

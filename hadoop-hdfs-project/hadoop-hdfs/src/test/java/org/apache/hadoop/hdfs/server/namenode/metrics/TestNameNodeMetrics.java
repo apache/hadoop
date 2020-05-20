@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.client.HdfsAdmin;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HA_HM_RPC_TIMEOUT_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HA_HM_RPC_TIMEOUT_KEY;
+import static org.apache.hadoop.metrics2.source.JvmMetricsInfo.GcTimePercentage;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounterGt;
 import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
@@ -103,6 +104,7 @@ public class TestNameNodeMetrics {
     new Path("/testNameNodeMetrics");
   private static final String NN_METRICS = "NameNodeActivity";
   private static final String NS_METRICS = "FSNamesystem";
+  private static final String JVM_METRICS = "JvmMetrics";
   private static final int BLOCK_SIZE = 1024 * 1024;
   private static final ErasureCodingPolicy EC_POLICY =
       SystemErasureCodingPolicies.getByID(
@@ -221,6 +223,15 @@ public class TestNameNodeMetrics {
     // considered.
     assert (capacityUsed + capacityRemaining + capacityUsedNonDFS <=
         capacityTotal);
+  }
+
+  /**
+   * Test the GcTimePercentage could be got successfully.
+   */
+  @Test
+  public void testGcTimePercentageMetrics() throws Exception {
+    MetricsRecordBuilder rb = getMetrics(JVM_METRICS);
+    MetricsAsserts.getIntGauge(GcTimePercentage.name(), rb);
   }
 
   /** Test metrics indicating the number of stale DataNodes */

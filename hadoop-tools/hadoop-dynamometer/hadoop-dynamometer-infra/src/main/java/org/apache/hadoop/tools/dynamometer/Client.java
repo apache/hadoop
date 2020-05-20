@@ -96,6 +96,7 @@ import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.Records;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -891,7 +892,8 @@ public class Client extends Configured implements Tool {
     boolean success = false;
 
     Thread namenodeMonitoringThread = new Thread(() -> {
-      Supplier<Boolean> exitCritera = () -> isCompleted(infraAppState);
+      Supplier<Boolean> exitCritera = () ->
+          Apps.isApplicationFinalState(infraAppState);
       Optional<Properties> namenodeProperties = Optional.empty();
       while (!exitCritera.get()) {
         try {
@@ -925,7 +927,7 @@ public class Client extends Configured implements Tool {
           return;
         }
       }
-      if (!isCompleted(infraAppState) && launchWorkloadJob) {
+      if (!Apps.isApplicationFinalState(infraAppState) && launchWorkloadJob) {
         launchAndMonitorWorkloadDriver(namenodeProperties.get());
       }
     });
@@ -1050,7 +1052,8 @@ public class Client extends Configured implements Tool {
       workloadJob = WorkloadDriver.getJobForSubmission(workloadConf,
           nameNodeURI.toString(), workloadStartTime, AuditReplayMapper.class);
       workloadJob.submit();
-      while (!isCompleted(infraAppState) && !isCompleted(workloadAppState)) {
+      while (!Apps.isApplicationFinalState(infraAppState) &&
+          !isCompleted(workloadAppState)) {
         workloadJob.monitorAndPrintJob();
         Thread.sleep(5000);
         workloadAppState = workloadJob.getJobState();
@@ -1093,7 +1096,7 @@ public class Client extends Configured implements Tool {
         }
       }
     }
-    if (infraAppId != null && !isCompleted(infraAppState)) {
+    if (infraAppId != null && !Apps.isApplicationFinalState(infraAppState)) {
       try {
         LOG.info("Attempting to kill infrastructure app: " + infraAppId);
         forceKillApplication(infraAppId);
@@ -1110,15 +1113,6 @@ public class Client extends Configured implements Tool {
   private static boolean isCompleted(JobStatus.State state) {
     return state == JobStatus.State.SUCCEEDED || state == JobStatus.State.FAILED
         || state == JobStatus.State.KILLED;
-  }
-
-  /**
-   * Check if the input state represents completion.
-   */
-  private static boolean isCompleted(YarnApplicationState state) {
-    return state == YarnApplicationState.FINISHED
-        || state == YarnApplicationState.FAILED
-        || state == YarnApplicationState.KILLED;
   }
 
   /**

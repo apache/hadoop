@@ -734,6 +734,7 @@ public class TestYarnNativeServices extends ServiceTestUtils {
         YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
     conf.setInt(YarnConfiguration.RM_MAX_COMPLETED_APPLICATIONS,
         YarnConfiguration.DEFAULT_RM_MAX_COMPLETED_APPLICATIONS);
+    conf.setInt(YarnConfiguration.NM_VCORES, 1);
     setConf(conf);
     setupInternal(3);
     ServiceClient client = createClient(getConf());
@@ -937,5 +938,48 @@ public class TestYarnNativeServices extends ServiceTestUtils {
     Service service = client.getStatus(exampleApp.getName());
     Assert.assertEquals("Restarted service state should be STABLE",
         ServiceState.STABLE, service.getState());
+  }
+
+  @Test(timeout = 200000)
+  public void testAMFailureValidity() throws Exception {
+    setupInternal(NUM_NMS);
+    ServiceClient client = createClient(getConf());
+    Service exampleApp = new Service();
+    exampleApp.setName("example-app");
+    exampleApp.setVersion("v1");
+    exampleApp.addComponent(createComponent("compa", 2, "sleep 1000"));
+    Configuration serviceConfig = new Configuration();
+    serviceConfig.setProperty(AM_RESTART_MAX, "2");
+    serviceConfig.setProperty(AM_FAILURES_VALIDITY_INTERVAL, "1000");
+    exampleApp.setConfiguration(serviceConfig);
+    client.actionCreate(exampleApp);
+    waitForServiceToBeStable(client, exampleApp);
+
+    Service appStatus1 = client.getStatus(exampleApp.getName());
+    ApplicationId exampleAppId = ApplicationId.fromString(appStatus1.getId());
+    YarnClient yarnClient = createYarnClient(getConf());
+
+    // kill AM1
+    ApplicationReport applicationReport = yarnClient.getApplicationReport(
+        exampleAppId);
+    ApplicationAttemptReport attemptReport = yarnClient
+        .getApplicationAttemptReport(applicationReport
+            .getCurrentApplicationAttemptId());
+    yarnClient.signalToContainer(attemptReport.getAMContainerId(),
+        SignalContainerCommand.GRACEFUL_SHUTDOWN);
+    waitForServiceToBeStable(client, exampleApp);
+    Assert.assertEquals(ServiceState.STABLE, client.getStatus(
+        exampleApp.getName()).getState());
+
+    // kill AM2 after 'yarn.service.am-failure.validity-interval-ms'
+    Thread.sleep(2000);
+    applicationReport = yarnClient.getApplicationReport(exampleAppId);
+    attemptReport = yarnClient.getApplicationAttemptReport(applicationReport
+        .getCurrentApplicationAttemptId());
+    yarnClient.signalToContainer(attemptReport.getAMContainerId(),
+        SignalContainerCommand.GRACEFUL_SHUTDOWN);
+    waitForServiceToBeStable(client, exampleApp);
+    Assert.assertEquals(ServiceState.STABLE, client.getStatus(
+        exampleApp.getName()).getState());
   }
 }

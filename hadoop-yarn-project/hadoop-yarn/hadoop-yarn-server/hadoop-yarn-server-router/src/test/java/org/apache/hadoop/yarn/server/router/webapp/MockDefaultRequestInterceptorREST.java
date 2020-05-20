@@ -117,7 +117,7 @@ public class MockDefaultRequestInterceptorREST
       Set<String> statesQuery, String finalStatusQuery, String userQuery,
       String queueQuery, String count, String startedBegin, String startedEnd,
       String finishBegin, String finishEnd, Set<String> applicationTypes,
-      Set<String> applicationTags, Set<String> unselectedFields) {
+      Set<String> applicationTags, String name, Set<String> unselectedFields) {
     if (!isRunning) {
       throw new RuntimeException("RM is stopped");
     }

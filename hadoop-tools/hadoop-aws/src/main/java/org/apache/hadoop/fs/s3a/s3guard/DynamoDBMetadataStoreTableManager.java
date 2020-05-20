@@ -44,6 +44,7 @@ import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputDescription;
 import com.amazonaws.services.dynamodbv2.model.ResourceInUseException;
 import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
+import com.amazonaws.services.dynamodbv2.model.SSESpecification;
 import com.amazonaws.services.dynamodbv2.model.ScanRequest;
 import com.amazonaws.services.dynamodbv2.model.ScanResult;
 import com.amazonaws.services.dynamodbv2.model.TableDescription;
@@ -63,12 +64,18 @@ import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 
 import static java.lang.String.valueOf;
+
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CAPACITY_READ_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CAPACITY_READ_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CAPACITY_WRITE_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CREATE_KEY;
+import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_SSE_CMK;
+import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_SSE_ENABLED;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_TAG;
+import static org.apache.hadoop.fs.s3a.S3AUtils.lookupPassword;
 import static org.apache.hadoop.fs.s3a.S3AUtils.translateDynamoDBException;
 import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
 import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.E_ON_DEMAND_NO_SET_CAPACITY;
@@ -101,6 +108,9 @@ public class DynamoDBMetadataStoreTableManager {
   /** Error: version mismatch. */
   public static final String E_INCOMPATIBLE_ITEM_VERSION
       = "Database table is from an incompatible S3Guard version based on table ITEM.";
+
+  /** The AWS managed CMK for DynamoDB server side encryption. */
+  public static final String SSE_DEFAULT_MASTER_KEY = "alias/aws/dynamodb";
 
   /** Invoker for IO. Until configured properly, use try-once. */
   private Invoker invoker = new Invoker(RetryPolicies.TRY_ONCE_THEN_FAIL,
@@ -298,6 +308,7 @@ public class DynamoDBMetadataStoreTableManager {
           .withTableName(tableName)
           .withKeySchema(keySchema())
           .withAttributeDefinitions(attributeDefinitions())
+          .withSSESpecification(getSseSpecFromConfig())
           .withTags(getTableTagsFromConfig());
       if (capacity != null) {
         mode = String.format("with provisioned read capacity %d and"
@@ -320,6 +331,39 @@ public class DynamoDBMetadataStoreTableManager {
     }
     waitForTableActive(table);
     putVersionMarkerItemToTable();
+  }
+
+  /**
+   * Get DynamoDB table server side encryption (SSE) settings from configuration.
+   */
+  private SSESpecification getSseSpecFromConfig() {
+    final SSESpecification sseSpecification = new SSESpecification();
+    boolean enabled = conf.getBoolean(S3GUARD_DDB_TABLE_SSE_ENABLED, false);
+    if (!enabled) {
+      // Do not set other options if SSE is disabled. Otherwise it will throw
+      // ValidationException.
+      return sseSpecification;
+    }
+    sseSpecification.setEnabled(Boolean.TRUE);
+    String cmk = null;
+    try {
+      // Get DynamoDB table SSE CMK from a configuration/credential provider.
+      cmk = lookupPassword("", conf, S3GUARD_DDB_TABLE_SSE_CMK);
+    } catch (IOException e) {
+      LOG.error("Cannot retrieve " + S3GUARD_DDB_TABLE_SSE_CMK, e);
+    }
+    if (isEmpty(cmk)) {
+      // Using Amazon managed default master key for DynamoDB table
+      return sseSpecification;
+    }
+    if (SSE_DEFAULT_MASTER_KEY.equals(cmk)) {
+      LOG.warn("Ignoring default DynamoDB table KMS Master Key {}",
+          SSE_DEFAULT_MASTER_KEY);
+    } else {
+      sseSpecification.setSSEType("KMS");
+      sseSpecification.setKMSMasterKeyId(cmk);
+    }
+    return sseSpecification;
   }
 
   /**

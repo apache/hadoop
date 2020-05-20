@@ -33,6 +33,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress.Counter;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -457,5 +458,15 @@ public class TestStartupProgress {
     assertEquals(800L, view.getTotal(LOADING_FSIMAGE,
       loadingFsImageDelegationKeys));
     assertEquals(10000L, view.getTotal(LOADING_EDITS, loadingEditsFile));
+
+    // Try adding another step to the completed phase
+    // Check the step is not added and the total is not updated
+    Step step2 = new Step("file_2", 7000L);
+    startupProgress.setTotal(LOADING_EDITS, step2, 2000L);
+    view = startupProgress.createView();
+    assertEquals(view.getTotal(LOADING_EDITS, step2), 0);
+    Counter counter = startupProgress.getCounter(Phase.LOADING_EDITS, step2);
+    counter.increment();
+    assertEquals(view.getCount(LOADING_EDITS, step2), 0);
   }
 }

@@ -1184,7 +1184,7 @@ class DataStreamer extends Daemon {
 
             one.releaseBuffer(byteArrayManager);
           }
-        } catch (Exception e) {
+        } catch (Throwable e) {
           if (!responderClosed) {
             lastException.set(e);
             errorState.setInternalError();

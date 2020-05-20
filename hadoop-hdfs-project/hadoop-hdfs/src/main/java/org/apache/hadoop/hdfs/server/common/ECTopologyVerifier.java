@@ -18,12 +18,12 @@ package org.apache.hadoop.hdfs.server.common;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.apache.hadoop.hdfs.server.namenode.ECTopologyVerifierResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -52,7 +52,8 @@ public final class ECTopologyVerifier {
    * @return the status of the verification
    */
   public static ECTopologyVerifierResult getECTopologyVerifierResult(
-      final DatanodeInfo[] report, final ErasureCodingPolicy... policies) {
+      final DatanodeInfo[] report,
+      final Collection<ErasureCodingPolicy> policies) {
     final int numOfRacks = getNumberOfRacks(report);
     return getECTopologyVerifierResult(numOfRacks, report.length, policies);
   }
@@ -60,14 +61,14 @@ public final class ECTopologyVerifier {
   /**
    * Verifies whether the cluster setup can support all enabled EC policies.
    *
-   * @param policies erasure coding policies to verify
    * @param numOfRacks number of racks
    * @param numOfDataNodes number of data nodes
+   * @param policies erasure coding policies to verify
    * @return the status of the verification
    */
   public static ECTopologyVerifierResult getECTopologyVerifierResult(
       final int numOfRacks, final int numOfDataNodes,
-      final ErasureCodingPolicy... policies) {
+      final Collection<ErasureCodingPolicy> policies) {
     int minDN = 0;
     int minRack = 0;
     for (ErasureCodingPolicy policy: policies) {
@@ -127,10 +128,8 @@ public final class ECTopologyVerifier {
   }
 
   private static String getReadablePolicies(
-      final ErasureCodingPolicy... policies) {
-    return Arrays.asList(policies)
-            .stream()
-            .map(policyInfo -> policyInfo.getName())
-            .collect(Collectors.joining(", "));
+      final Collection<ErasureCodingPolicy> policies) {
+    return policies.stream().map(policyInfo -> policyInfo.getName())
+        .collect(Collectors.joining(", "));
   }
 }

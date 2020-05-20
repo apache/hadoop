@@ -27,6 +27,9 @@ public final class FSConfigToCSConfigConverterParams {
   private boolean console;
   private String clusterResource;
   private String outputDirectory;
+  private boolean convertPlacementRules;
+
+
 
   private FSConfigToCSConfigConverterParams() {
     //must use builder
@@ -56,6 +59,10 @@ public final class FSConfigToCSConfigConverterParams {
     return outputDirectory;
   }
 
+  public boolean isConvertPlacementRules() {
+    return convertPlacementRules;
+  }
+
   @Override
   public String toString() {
     return "FSConfigToCSConfigConverterParams{" +
@@ -63,7 +70,8 @@ public final class FSConfigToCSConfigConverterParams {
         ", fairSchedulerXmlConfig='" + fairSchedulerXmlConfig + '\'' +
         ", conversionRulesConfig='" + conversionRulesConfig + '\'' +
         ", clusterResource='" + clusterResource + '\'' +
-        ", console=" + console +
+        ", console=" + console + '\'' +
+        ", convertPlacementRules=" + convertPlacementRules +
         '}';
   }
 
@@ -78,6 +86,7 @@ public final class FSConfigToCSConfigConverterParams {
     private boolean console;
     private String clusterResource;
     private String outputDirectory;
+    private boolean convertPlacementRules;
 
     private Builder() {
     }
@@ -116,6 +125,11 @@ public final class FSConfigToCSConfigConverterParams {
       return this;
     }
 
+    public Builder withConvertPlacementRules(boolean convertPlacementRules) {
+      this.convertPlacementRules = convertPlacementRules;
+      return this;
+    }
+
     public FSConfigToCSConfigConverterParams build() {
       FSConfigToCSConfigConverterParams params =
           new FSConfigToCSConfigConverterParams();
@@ -125,6 +139,7 @@ public final class FSConfigToCSConfigConverterParams {
       params.yarnSiteXmlConfig = this.yarnSiteXmlConfig;
       params.conversionRulesConfig = this.conversionRulesConfig;
       params.outputDirectory = this.outputDirectory;
+      params.convertPlacementRules = this.convertPlacementRules;
       return params;
     }
   }

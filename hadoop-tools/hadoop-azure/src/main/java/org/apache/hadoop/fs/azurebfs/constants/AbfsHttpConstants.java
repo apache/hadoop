@@ -42,10 +42,13 @@ public final class AbfsHttpConstants {
   public static final String DEFAULT_TIMEOUT = "90";
   public static final String TOKEN_VERSION = "2";
 
+  public static final String JAVA_VENDOR = "java.vendor";
   public static final String JAVA_VERSION = "java.version";
   public static final String OS_NAME = "os.name";
   public static final String OS_VERSION = "os.version";
+  public static final String OS_ARCH = "os.arch";
 
+  public static final String APN_VERSION = "APN/1.0";
   public static final String CLIENT_VERSION = "Azure Blob FS/" + VersionInfo.getVersion();
 
   // Abfs Http Verb

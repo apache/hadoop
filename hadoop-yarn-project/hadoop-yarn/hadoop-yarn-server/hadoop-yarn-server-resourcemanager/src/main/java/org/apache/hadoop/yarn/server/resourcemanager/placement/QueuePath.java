@@ -24,14 +24,18 @@ public class QueuePath {
 
   private String parentQueue;
   private String leafQueue;
+  private String fullPath;
 
   public QueuePath(final String leafQueue) {
+    //if the queue does not have a parent, the full path == leaf queue name
     this.leafQueue = leafQueue;
+    this.fullPath  = leafQueue;
   }
 
   public QueuePath(final String parentQueue, final String leafQueue) {
     this.parentQueue = parentQueue;
     this.leafQueue = leafQueue;
+    this.fullPath = parentQueue + DOT + leafQueue;
   }
 
   public String getParentQueue() {
@@ -46,8 +50,12 @@ public class QueuePath {
     return parentQueue != null;
   }
 
+  public String getFullPath() {
+    return fullPath;
+  }
+
   @Override
   public String toString() {
-    return parentQueue + DOT + leafQueue;
+    return fullPath;
   }
 }

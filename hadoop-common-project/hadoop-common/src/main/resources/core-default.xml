@@ -48,6 +48,14 @@
   ordering of the filters.</description>
 </property>
 
+  <property>
+    <name>hadoop.http.idle_timeout.ms</name>
+    <value>1000</value>
+    <description>
+      NN/JN/DN Server connection timeout in milliseconds.
+    </description>
+  </property>
+
 <!--- security properties -->
 
 <property>
@@ -1624,6 +1632,27 @@
 </property>
 
 <property>
+  <name>fs.s3a.s3guard.ddb.table.sse.enabled</name>
+  <value>false</value>
+  <description>
+    Whether server-side encryption (SSE) is enabled or disabled on the table.
+    By default it's disabled, meaning SSE is set to AWS owned CMK.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.s3guard.ddb.table.sse.cmk</name>
+  <value/>
+  <description>
+    The KMS Customer Master Key (CMK) used for the KMS encryption on the table.
+    To specify a CMK, this config value can be its key ID, Amazon Resource Name
+    (ARN), alias name, or alias ARN. Users only need to provide this config if
+    the key is different from the default DynamoDB KMS Master Key, which is
+    alias/aws/dynamodb.
+  </description>
+</property>
+
+<property>
   <name>fs.s3a.s3guard.ddb.max.retries</name>
   <value>9</value>
     <description>
@@ -1677,7 +1706,7 @@
 
 <property>
   <name>fs.s3a.retry.throttle.limit</name>
-  <value>${fs.s3a.attempts.maximum}</value>
+  <value>20</value>
   <description>
     Number of times to retry any throttled request.
   </description>
@@ -1685,9 +1714,12 @@
 
 <property>
   <name>fs.s3a.retry.throttle.interval</name>
-  <value>1000ms</value>
+  <value>100ms</value>
   <description>
-    Interval between retry attempts on throttled requests.
+    Initial between retry attempts on throttled requests, +/- 50%. chosen at random.
+    i.e. for an intial value of 3000ms, the initial delay would be in the range 1500ms to 4500ms.
+    Backoffs are exponential; again randomness is used to avoid the thundering heard problem.
+    500ms is the default value used by the AWS S3 Retry policy.
   </description>
 </property>
 
@@ -1920,6 +1952,23 @@
 </property>
 
 <property>
+  <name>fs.s3a.connection.request.timeout</name>
+  <value>0</value>
+  <description>
+    Time out on HTTP requests to the AWS service; 0 means no timeout.
+    Measured in seconds; the usual time suffixes are all supported
+
+    Important: this is the maximum duration of any AWS service call,
+    including upload and copy operations. If non-zero, it must be larger
+    than the time to upload multi-megabyte blocks to S3 from the client,
+    and to rename many-GB files. Use with care.
+
+    Values that are larger than Integer.MAX_VALUE milliseconds are
+    converged to Integer.MAX_VALUE milliseconds
+  </description>
+</property>
+
+<property>
   <name>fs.s3a.etag.checksum.enabled</name>
   <value>false</value>
   <description>
@@ -1978,11 +2027,16 @@
   <description>
     If secure connections to S3 are enabled, configures the SSL
     implementation used to encrypt connections to S3. Supported values are:
-    "default_jsse" and "default_jsse_with_gcm". "default_jsse" uses the Java
-    Secure Socket Extension package (JSSE). However, when running on Java 8,
-    the GCM cipher is removed from the list of enabled ciphers. This is due
-    to performance issues with GCM in Java 8. "default_jsse_with_gcm" uses
-    the JSSE with the default list of cipher suites.
+    "default_jsse", "default_jsse_with_gcm", "default", and "openssl".
+    "default_jsse" uses the Java Secure Socket Extension package (JSSE).
+    However, when running on Java 8, the GCM cipher is removed from the list
+    of enabled ciphers. This is due to performance issues with GCM in Java 8.
+    "default_jsse_with_gcm" uses the JSSE with the default list of cipher
+    suites. "default_jsse_with_gcm" is equivalent to the behavior prior to
+    this feature being introduced. "default" attempts to use OpenSSL rather
+    than the JSSE for SSL encryption, if OpenSSL libraries cannot be loaded,
+    it falls back to the "default_jsse" behavior. "openssl" attempts to use
+    OpenSSL as well, but fails if OpenSSL libraries cannot be loaded.
   </description>
 </property>
 
@@ -2673,7 +2727,7 @@
   <value>${user.home}/hadoop-http-auth-signature-secret</value>
   <description>
     The signature secret for signing the authentication tokens.
-    The same secret should be used for JT/NN/DN/TT configurations.
+    The same secret should be used for RM/NM/NN/DN configurations.
   </description>
 </property>
 
@@ -2928,6 +2982,7 @@
   <description>
     The supported SSL protocols. The parameter will only be used from
     DatanodeHttpServer.
+    Starting from Hadoop 3.3.0, TLSv1.3 is supported with Java 11 Runtime.
   </description>
 </property>
 
@@ -3795,6 +3850,15 @@
     <value>false</value>
     <description>
       Enable Server Name Indication (SNI) host check for HTTPS enabled server.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.metrics.jvm.use-thread-mxbean</name>
+    <value>false</value>
+    <description>
+      Whether or not ThreadMXBean is used for getting thread info in JvmMetrics,
+      ThreadGroup approach is preferred for better performance.
     </description>
   </property>
 </configuration>

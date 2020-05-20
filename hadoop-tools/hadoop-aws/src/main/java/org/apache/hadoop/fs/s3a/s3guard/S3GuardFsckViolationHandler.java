@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.List;
@@ -26,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 
@@ -43,6 +45,10 @@ public class S3GuardFsckViolationHandler {
 
   private static String newLine = System.getProperty("line.separator");
 
+  public enum HandleMode {
+    FIX, LOG
+  }
+
   public S3GuardFsckViolationHandler(S3AFileSystem fs,
       DynamoDBMetadataStore ddbms) {
 
@@ -50,7 +56,7 @@ public class S3GuardFsckViolationHandler {
     this.rawFs = fs;
   }
 
-  public void handle(S3GuardFsck.ComparePair comparePair) {
+  public void logError(S3GuardFsck.ComparePair comparePair) throws IOException {
     if (!comparePair.containsViolation()) {
       LOG.debug("There is no violation in the compare pair: {}", comparePair);
       return;
@@ -60,9 +66,24 @@ public class S3GuardFsckViolationHandler {
     sB.append(newLine)
         .append("On path: ").append(comparePair.getPath()).append(newLine);
 
-    handleComparePair(comparePair, sB);
+    handleComparePair(comparePair, sB, HandleMode.LOG);
 
     LOG.error(sB.toString());
+  }
+
+  public void doFix(S3GuardFsck.ComparePair comparePair) throws IOException {
+    if (!comparePair.containsViolation()) {
+      LOG.debug("There is no violation in the compare pair: {}", comparePair);
+      return;
+    }
+
+    StringBuilder sB = new StringBuilder();
+    sB.append(newLine)
+        .append("On path: ").append(comparePair.getPath()).append(newLine);
+
+    handleComparePair(comparePair, sB, HandleMode.FIX);
+
+    LOG.info(sB.toString());
   }
 
   /**
@@ -72,16 +93,28 @@ public class S3GuardFsckViolationHandler {
    * @param comparePair the compare pair with violations
    * @param sB StringBuilder to append error strings from violations.
    */
-  protected static void handleComparePair(S3GuardFsck.ComparePair comparePair,
-      StringBuilder sB) {
+  protected void handleComparePair(S3GuardFsck.ComparePair comparePair,
+      StringBuilder sB, HandleMode handleMode) throws IOException {
 
     for (S3GuardFsck.Violation violation : comparePair.getViolations()) {
       try {
         ViolationHandler handler = violation.getHandler()
             .getDeclaredConstructor(S3GuardFsck.ComparePair.class)
             .newInstance(comparePair);
-        final String errorStr = handler.getError();
-        sB.append(errorStr);
+
+        switch (handleMode) {
+          case FIX:
+            final String errorStr = handler.getError();
+            sB.append(errorStr);
+            break;
+          case LOG:
+            final String fixStr = handler.fixViolation(rawFs, metadataStore);
+            sB.append(fixStr);
+            break;
+          default:
+            throw new UnsupportedOperationException("Unknown handleMode: " + handleMode);
+        }
+
       } catch (NoSuchMethodException e) {
         LOG.error("Can not find declared constructor for handler: {}",
             violation.getHandler());
@@ -136,6 +169,12 @@ public class S3GuardFsckViolationHandler {
 
     public DirListingMetadata getMsDirListing() {
       return msDirListing;
+    }
+
+    public String fixViolation(S3AFileSystem fs,
+        DynamoDBMetadataStore ddbms) throws IOException {
+      return String.format("Fixing of violation: %s is not supported yet.",
+          this.getClass().getSimpleName());
     }
   }
 
@@ -356,6 +395,16 @@ public class S3GuardFsckViolationHandler {
     @Override
     public String getError() {
       return "The DDB entry is orphan - there is no parent in the MS.";
+    }
+
+    @Override
+    public String fixViolation(S3AFileSystem fs, DynamoDBMetadataStore ddbms)
+        throws IOException {
+      final Path path = getPathMetadata().getFileStatus().getPath();
+      ddbms.forgetMetadata(path);
+      return String.format(
+          "Fixing violation by removing metadata entry from the " +
+              "MS on path: %s", path);
     }
   }
 

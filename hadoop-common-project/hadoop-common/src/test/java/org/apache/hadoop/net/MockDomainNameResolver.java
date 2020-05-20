@@ -39,8 +39,8 @@ public class MockDomainNameResolver implements DomainNameResolver {
   public static final byte[] BYTE_ADDR_2 = new byte[]{10, 1, 1, 2};
   public static final String ADDR_1 = "10.1.1.1";
   public static final String ADDR_2 = "10.1.1.2";
-  public static final String FQDN_1 = "host01.com";
-  public static final String FQDN_2 = "host02.com";
+  public static final String FQDN_1 = "host01.test";
+  public static final String FQDN_2 = "host02.test";
 
   /** Internal mapping of domain names and IP addresses. */
   private Map<String, InetAddress[]> addrs = new TreeMap<>();

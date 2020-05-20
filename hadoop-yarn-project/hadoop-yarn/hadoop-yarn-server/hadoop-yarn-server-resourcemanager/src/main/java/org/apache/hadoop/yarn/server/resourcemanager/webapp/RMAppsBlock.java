@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.webapp.AppsBlock;
 import org.apache.hadoop.yarn.server.webapp.dao.AppInfo;
+import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.webapp.View;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
@@ -197,10 +198,8 @@ public class RMAppsBlock extends AppsBlock {
           app.getTrackingUrl() == null
               || app.getTrackingUrl().equals(UNAVAILABLE)
               || app.getAppState() == YarnApplicationState.NEW ? "Unassigned"
-              : app.getAppState() == YarnApplicationState.FINISHED
-              || app.getAppState() == YarnApplicationState.FAILED
-              || app.getAppState() == YarnApplicationState.KILLED ? "History"
-              : "ApplicationMaster";
+              : Apps.isApplicationFinalState(app.getAppState()) ?
+              "History" : "ApplicationMaster";
       appsTableData.append(trackingURL == null ? "#" : "href='" + trackingURL)
         .append("'>").append(trackingUI).append("</a>\",").append("\"")
         .append(blacklistedNodesCount).append("\"],\n");

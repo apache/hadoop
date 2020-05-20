@@ -70,6 +70,11 @@ public class NamenodeStatusReport {
   private long numOfBlocksPendingDeletion = -1;
   private long totalSpace = -1;
   private long providedSpace = -1;
+  private int corruptFilesCount = -1;
+  private long scheduledReplicationBlocks = -1;
+  private long numberOfMissingBlocksWithReplicationFactorOne = -1;
+  private long highestPriorityLowRedundancyReplicatedBlocks = -1;
+  private long highestPriorityLowRedundancyECBlocks = -1;
 
   /** If the fields are valid. */
   private boolean registrationValid = false;
@@ -251,11 +256,12 @@ public class NamenodeStatusReport {
    * @param numInMaintenanceLive Number of in maintenance live nodes.
    * @param numInMaintenanceDead Number of in maintenance dead nodes.
    * @param numEnteringMaintenance Number of entering maintenance nodes.
+   * @param numScheduledReplicationBlocks Number of scheduled rep. blocks.
    */
   public void setDatanodeInfo(int numLive, int numDead, int numStale,
       int numDecom, int numLiveDecom, int numDeadDecom,
       int numInMaintenanceLive, int numInMaintenanceDead,
-      int numEnteringMaintenance) {
+      int numEnteringMaintenance, long numScheduledReplicationBlocks) {
     this.liveDatanodes = numLive;
     this.deadDatanodes = numDead;
     this.staleDatanodes = numStale;
@@ -266,6 +272,7 @@ public class NamenodeStatusReport {
     this.inMaintenanceDeadDataNodes = numInMaintenanceDead;
     this.enteringMaintenanceDataNodes = numEnteringMaintenance;
     this.statsValid = true;
+    this.scheduledReplicationBlocks = numScheduledReplicationBlocks;
   }
 
   /**
@@ -376,6 +383,81 @@ public class NamenodeStatusReport {
     this.numOfFiles = numFiles;
     this.statsValid = true;
     this.providedSpace = providedSpace;
+  }
+
+  /**
+   * Set the namenode blocks information.
+   *
+   * @param numCorruptFiles number of corrupt files.
+   * @param numOfMissingBlocksWithReplicationFactorOne number of missing
+   * blocks with rep one.
+   * @param highestPriorityLowRedundancyRepBlocks number of high priority low
+   * redundancy rep blocks.
+   * @param highPriorityLowRedundancyECBlocks number of high priority low
+   * redundancy EC blocks.
+   */
+  public void setNamenodeInfo(int numCorruptFiles,
+      long numOfMissingBlocksWithReplicationFactorOne,
+      long highestPriorityLowRedundancyRepBlocks,
+      long highPriorityLowRedundancyECBlocks) {
+    this.corruptFilesCount = numCorruptFiles;
+    this.numberOfMissingBlocksWithReplicationFactorOne =
+        numOfMissingBlocksWithReplicationFactorOne;
+    this.highestPriorityLowRedundancyReplicatedBlocks =
+        highestPriorityLowRedundancyRepBlocks;
+    this.highestPriorityLowRedundancyECBlocks =
+        highPriorityLowRedundancyECBlocks;
+  }
+
+  /**
+   * Get the number of corrupt files.
+   *
+   * @return the total number of corrupt files
+   */
+  public int getCorruptFilesCount() {
+    return this.corruptFilesCount;
+  }
+
+  /**
+   * Blocks scheduled for replication.
+   *
+   * @return -  num of blocks scheduled for replication
+   */
+  public long getScheduledReplicationBlocks() {
+    return this.scheduledReplicationBlocks;
+  }
+
+  /**
+   * Gets the total number of missing blocks on the cluster with
+   * replication factor 1.
+   *
+   * @return the total number of missing blocks on the cluster with
+   * replication factor 1.
+   */
+  public long getNumberOfMissingBlocksWithReplicationFactorOne() {
+    return this.numberOfMissingBlocksWithReplicationFactorOne;
+  }
+
+  /**
+   * Gets the total number of replicated low redundancy blocks on the cluster
+   * with the highest risk of loss.
+   *
+   * @return the total number of low redundancy blocks on the cluster
+   * with the highest risk of loss.
+   */
+  public long getHighestPriorityLowRedundancyReplicatedBlocks() {
+    return this.highestPriorityLowRedundancyReplicatedBlocks;
+  }
+
+  /**
+   * Gets the total number of erasure coded low redundancy blocks on the cluster
+   * with the highest risk of loss.
+   *
+   * @return the total number of low redundancy blocks on the cluster
+   * with the highest risk of loss.
+   */
+  public long getHighestPriorityLowRedundancyECBlocks() {
+    return this.highestPriorityLowRedundancyECBlocks;
   }
 
   /**

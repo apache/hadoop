@@ -21,7 +21,10 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Lists;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
@@ -342,6 +345,8 @@ public class TestBlockManager {
   @Test
   public void testOneOfTwoRacksDecommissioned() throws Exception {
     addNodes(nodes);
+    NameNode.initMetrics(new Configuration(),
+        HdfsServerConstants.NamenodeRole.NAMENODE);
     for (int i = 0; i < NUM_TEST_ITERS; i++) {
       doTestOneOfTwoRacksDecommissioned(i);
     }
@@ -499,7 +504,41 @@ public class TestBlockManager {
       }
     }
   }
-  
+
+  @Test(timeout = 60000)
+  public void testDeleteCorruptReplicaWithStatleStorages() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    conf.setInt(HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.
+        MIN_REPLICATION, 2);
+    Path file = new Path("/test-file");
+    MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+    try {
+      cluster.waitActive();
+      BlockManager blockManager = cluster.getNamesystem().getBlockManager();
+      blockManager.getDatanodeManager().markAllDatanodesStale();
+      FileSystem fs = cluster.getFileSystem();
+      FSDataOutputStream out = fs.create(file);
+      for (int i = 0; i < 1024 * 1024 * 1; i++) {
+        out.write(i);
+      }
+      out.hflush();
+      MiniDFSCluster.DataNodeProperties datanode = cluster.stopDataNode(0);
+      for (int i = 0; i < 1024 * 1024 * 1; i++) {
+        out.write(i);
+      }
+      out.close();
+      cluster.restartDataNode(datanode);
+      cluster.triggerBlockReports();
+      DataNodeTestUtils.triggerBlockReport(datanode.getDatanode());
+      assertEquals(0, blockManager.getCorruptBlocks());
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
   /**
    * Tell the block manager that replication is completed for the given
    * pipeline.

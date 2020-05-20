@@ -17,18 +17,339 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+
+import java.util.Arrays;
 
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public abstract class INodeAttributeProvider {
+
+  public static class AuthorizationContext {
+    private String fsOwner;
+    private String supergroup;
+    private UserGroupInformation callerUgi;
+    private INodeAttributes[] inodeAttrs;
+    private INode[] inodes;
+    private byte[][] pathByNameArr;
+    private int snapshotId;
+    private String path;
+    private int ancestorIndex;
+    private boolean doCheckOwner;
+    private FsAction ancestorAccess;
+    private FsAction parentAccess;
+    private FsAction access;
+    private FsAction subAccess;
+    private boolean ignoreEmptyDir;
+    private String operationName;
+    private CallerContext callerContext;
+
+    public String getFsOwner() {
+      return fsOwner;
+    }
+
+    public void setFsOwner(String fsOwner) {
+      this.fsOwner = fsOwner;
+    }
+
+    public String getSupergroup() {
+      return supergroup;
+    }
+
+    public void setSupergroup(String supergroup) {
+      this.supergroup = supergroup;
+    }
+
+    public UserGroupInformation getCallerUgi() {
+      return callerUgi;
+    }
+
+    public void setCallerUgi(UserGroupInformation callerUgi) {
+      this.callerUgi = callerUgi;
+    }
+
+    public INodeAttributes[] getInodeAttrs() {
+      return inodeAttrs;
+    }
+
+    public void setInodeAttrs(INodeAttributes[] inodeAttrs) {
+      this.inodeAttrs = inodeAttrs;
+    }
+
+    public INode[] getInodes() {
+      return inodes;
+    }
+
+    public void setInodes(INode[] inodes) {
+      this.inodes = inodes;
+    }
+
+    public byte[][] getPathByNameArr() {
+      return pathByNameArr;
+    }
+
+    public void setPathByNameArr(byte[][] pathByNameArr) {
+      this.pathByNameArr = pathByNameArr;
+    }
+
+    public int getSnapshotId() {
+      return snapshotId;
+    }
+
+    public void setSnapshotId(int snapshotId) {
+      this.snapshotId = snapshotId;
+    }
+
+    public String getPath() {
+      return path;
+    }
+
+    public void setPath(String path) {
+      this.path = path;
+    }
+
+    public int getAncestorIndex() {
+      return ancestorIndex;
+    }
+
+    public void setAncestorIndex(int ancestorIndex) {
+      this.ancestorIndex = ancestorIndex;
+    }
+
+    public boolean isDoCheckOwner() {
+      return doCheckOwner;
+    }
+
+    public void setDoCheckOwner(boolean doCheckOwner) {
+      this.doCheckOwner = doCheckOwner;
+    }
+
+    public FsAction getAncestorAccess() {
+      return ancestorAccess;
+    }
+
+    public void setAncestorAccess(FsAction ancestorAccess) {
+      this.ancestorAccess = ancestorAccess;
+    }
+
+    public FsAction getParentAccess() {
+      return parentAccess;
+    }
+
+    public void setParentAccess(FsAction parentAccess) {
+      this.parentAccess = parentAccess;
+    }
+
+    public FsAction getAccess() {
+      return access;
+    }
+
+    public void setAccess(FsAction access) {
+      this.access = access;
+    }
+
+    public FsAction getSubAccess() {
+      return subAccess;
+    }
+
+    public void setSubAccess(FsAction subAccess) {
+      this.subAccess = subAccess;
+    }
+
+    public boolean isIgnoreEmptyDir() {
+      return ignoreEmptyDir;
+    }
+
+    public void setIgnoreEmptyDir(boolean ignoreEmptyDir) {
+      this.ignoreEmptyDir = ignoreEmptyDir;
+    }
+
+    public String getOperationName() {
+      return operationName;
+    }
+
+    public void setOperationName(String operationName) {
+      this.operationName = operationName;
+    }
+
+    public CallerContext getCallerContext() {
+      return callerContext;
+    }
+
+    public void setCallerContext(CallerContext callerContext) {
+      this.callerContext = callerContext;
+    }
+
+    public static class Builder {
+      private String fsOwner;
+      private String supergroup;
+      private UserGroupInformation callerUgi;
+      private INodeAttributes[] inodeAttrs;
+      private INode[] inodes;
+      private byte[][] pathByNameArr;
+      private int snapshotId;
+      private String path;
+      private int ancestorIndex;
+      private boolean doCheckOwner;
+      private FsAction ancestorAccess;
+      private FsAction parentAccess;
+      private FsAction access;
+      private FsAction subAccess;
+      private boolean ignoreEmptyDir;
+      private String operationName;
+      private CallerContext callerContext;
+
+      public AuthorizationContext build() {
+        return new AuthorizationContext(this);
+      }
+
+      public Builder fsOwner(String val) {
+        this.fsOwner = val;
+        return this;
+      }
+
+      public Builder supergroup(String val) {
+        this.supergroup = val;
+        return this;
+      }
+
+      public Builder callerUgi(UserGroupInformation val) {
+        this.callerUgi = val;
+        return this;
+      }
+
+      public Builder inodeAttrs(INodeAttributes[] val) {
+        this.inodeAttrs = val;
+        return this;
+      }
+
+      public Builder inodes(INode[] val) {
+        this.inodes = val;
+        return this;
+      }
+
+      public Builder pathByNameArr(byte[][] val) {
+        this.pathByNameArr = val;
+        return this;
+      }
+
+      public Builder snapshotId(int val) {
+        this.snapshotId = val;
+        return this;
+      }
+
+      public Builder path(String val) {
+        this.path = val;
+        return this;
+      }
+
+      public Builder ancestorIndex(int val) {
+        this.ancestorIndex = val;
+        return this;
+      }
+
+      public Builder doCheckOwner(boolean val) {
+        this.doCheckOwner = val;
+        return this;
+      }
+
+      public Builder ancestorAccess(FsAction val) {
+        this.ancestorAccess = val;
+        return this;
+      }
+
+      public Builder parentAccess(FsAction val) {
+        this.parentAccess = val;
+        return this;
+      }
+
+      public Builder access(FsAction val) {
+        this.access = val;
+        return this;
+      }
+
+      public Builder subAccess(FsAction val) {
+        this.subAccess = val;
+        return this;
+      }
+
+      public Builder ignoreEmptyDir(boolean val) {
+        this.ignoreEmptyDir = val;
+        return this;
+      }
+
+      public Builder operationName(String val) {
+        this.operationName = val;
+        return this;
+      }
+
+      public Builder callerContext(CallerContext val) {
+        this.callerContext = val;
+        return this;
+      }
+    }
+
+    public AuthorizationContext(Builder builder) {
+      this.setFsOwner(builder.fsOwner);
+      this.setSupergroup(builder.supergroup);
+      this.setCallerUgi(builder.callerUgi);
+      this.setInodeAttrs(builder.inodeAttrs);
+      this.setInodes(builder.inodes);
+      this.setPathByNameArr(builder.pathByNameArr);
+      this.setSnapshotId(builder.snapshotId);
+      this.setPath(builder.path);
+      this.setAncestorIndex(builder.ancestorIndex);
+      this.setDoCheckOwner(builder.doCheckOwner);
+      this.setAncestorAccess(builder.ancestorAccess);
+      this.setParentAccess(builder.parentAccess);
+      this.setAccess(builder.access);
+      this.setSubAccess(builder.subAccess);
+      this.setIgnoreEmptyDir(builder.ignoreEmptyDir);
+      this.setOperationName(builder.operationName);
+      this.setCallerContext(builder.callerContext);
+    }
+
+    @VisibleForTesting
+    @Override
+    public boolean equals(Object obj) {
+      if (obj == this) {
+        return true;
+      } else if (obj == null || getClass() != obj.getClass()) {
+        return false;
+      }
+      AuthorizationContext other = (AuthorizationContext)obj;
+      return getFsOwner().equals(other.getFsOwner()) &&
+          getSupergroup().equals(other.getSupergroup()) &&
+          getCallerUgi().equals(other.getCallerUgi()) &&
+          Arrays.deepEquals(getInodeAttrs(), other.getInodeAttrs()) &&
+          Arrays.deepEquals(getInodes(), other.getInodes()) &&
+          Arrays.deepEquals(getPathByNameArr(), other.getPathByNameArr()) &&
+          getSnapshotId() == other.getSnapshotId() &&
+          getPath().equals(other.getPath()) &&
+          getAncestorIndex() == other.getAncestorIndex() &&
+          isDoCheckOwner() == other.isDoCheckOwner() &&
+          getAncestorAccess() == other.getAncestorAccess() &&
+          getParentAccess() == other.getParentAccess() &&
+          getAccess() == other.getAccess() &&
+          getSubAccess() == other.getSubAccess() &&
+          isIgnoreEmptyDir() == other.isIgnoreEmptyDir();
+    }
+
+    @Override
+    public int hashCode() {
+      assert false : "hashCode not designed";
+      return 42; // any arbitrary constant will do
+    }
+  }
 
   /**
    * The AccessControlEnforcer allows implementations to override the
@@ -39,7 +360,7 @@ public abstract class INodeAttributeProvider {
 
     /**
      * Checks permission on a file system object. Has to throw an Exception
-     * if the filesystem object is not accessessible by the calling Ugi.
+     * if the filesystem object is not accessible by the calling Ugi.
      * @param fsOwner Filesystem owner (The Namenode user)
      * @param supergroup super user geoup
      * @param callerUgi UserGroupInformation of the caller
@@ -58,6 +379,8 @@ public abstract class INodeAttributeProvider {
      *                  the path and all the sub-directories. If path is not a
      *                  directory, there should ideally be no effect.
      * @param ignoreEmptyDir Ignore permission checking for empty directory?
+     * @deprecated use{@link #checkPermissionWithContext(AuthorizationContext)}}
+     * instead
      * @throws AccessControlException
      */
     public abstract void checkPermission(String fsOwner, String supergroup,
@@ -68,6 +391,20 @@ public abstract class INodeAttributeProvider {
         boolean ignoreEmptyDir)
             throws AccessControlException;
 
+    /**
+     * Checks permission on a file system object. Has to throw an Exception
+     * if the filesystem object is not accessessible by the calling Ugi.
+     * @param authzContext an {@link AuthorizationContext} object encapsulating
+     *                     the various parameters required to authorize an
+     *                     operation.
+     * @throws AccessControlException
+     */
+    default void checkPermissionWithContext(AuthorizationContext authzContext)
+        throws AccessControlException {
+      throw new AccessControlException("The authorization provider does not "
+          + "implement the checkPermissionWithContext(AuthorizationContext) "
+          + "API.");
+    }
   }
   /**
    * Initialize the provider. This method is called at NameNode startup

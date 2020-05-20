@@ -86,7 +86,7 @@ public class ReplicaCachingGetSpaceUsed extends FSCachingGetSpaceUsed {
         for (ReplicaInfo replicaInfo : replicaInfos) {
           if (Objects.equals(replicaInfo.getVolume().getStorageID(),
               volume.getStorageID())) {
-            dfsUsed += replicaInfo.getBlockDataLength();
+            dfsUsed += replicaInfo.getBytesOnDisk();
             dfsUsed += replicaInfo.getMetadataLength();
             count++;
           }

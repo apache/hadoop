@@ -111,8 +111,8 @@ public class TestQueueState {
       Assert.fail("Should throw an Exception.");
     } catch (Exception ex) {
       Assert.assertTrue(ex.getCause().getMessage().contains(
-          "The parent queue:q1 cannot be STOPPED as the child" +
-          " queue:q2 is in RUNNING state."));
+          "The parent queue:root.q1 cannot be STOPPED as the child" +
+          " queue:root.q1.q2 is in RUNNING state."));
     }
   }
 
@@ -148,6 +148,23 @@ public class TestQueueState {
     FiCaSchedulerApp app = getMockApplication(appId, userName,
         Resources.createResource(4, 0));
     cs.getQueue(Q2).submitApplicationAttempt(app, userName);
+
+    // set Q2 state to stop and do reinitialize.
+    csConf.setState(Q2_PATH, QueueState.STOPPED);
+    conf = new YarnConfiguration(csConf);
+    cs.reinitialize(conf, rmContext);
+    Assert.assertEquals(QueueState.RUNNING, cs.getQueue(Q1).getState());
+    Assert.assertEquals(QueueState.DRAINING, cs.getQueue(Q2).getState());
+    Assert.assertEquals(QueueState.RUNNING, cs.getQueue(Q3).getState());
+
+    // set Q2 state to RUNNING and do reinitialize.
+    // Q2 should transit from DRAINING to RUNNING
+    csConf.setState(Q2_PATH, QueueState.RUNNING);
+    conf = new YarnConfiguration(csConf);
+    cs.reinitialize(conf, rmContext);
+    Assert.assertEquals(QueueState.RUNNING, cs.getQueue(Q1).getState());
+    Assert.assertEquals(QueueState.RUNNING, cs.getQueue(Q2).getState());
+    Assert.assertEquals(QueueState.RUNNING, cs.getQueue(Q3).getState());
 
     // set Q2 state to stop and do reinitialize.
     csConf.setState(Q2_PATH, QueueState.STOPPED);

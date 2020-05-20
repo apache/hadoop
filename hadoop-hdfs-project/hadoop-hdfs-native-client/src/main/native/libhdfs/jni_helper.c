@@ -24,6 +24,8 @@
 #include "os/mutexes.h"
 #include "os/thread_local_storage.h"
 
+#include <errno.h>
+#include <dirent.h>
 #include <stdio.h> 
 #include <string.h> 
 
@@ -371,6 +373,277 @@ done:
 }
 
 /**
+ * For the given path, expand it by filling in with all *.jar or *.JAR files,
+ * separated by PATH_SEPARATOR. Assumes that expanded is big enough to hold the
+ * string, eg allocated after using this function with expanded=NULL to get the
+ * right size. Also assumes that the path ends with a "/.". The length of the
+ * expanded path is returned, which includes space at the end for either a
+ * PATH_SEPARATOR or null terminator.
+ */
+static ssize_t wildcard_expandPath(const char* path, char* expanded)
+{
+    struct dirent* file;
+    char* dest = expanded;
+    ssize_t length = 0;
+    size_t pathLength = strlen(path);
+    DIR* dir;
+
+    dir = opendir(path);
+    if (dir != NULL) {
+        // can open dir so try to match with all *.jar and *.JAR entries
+
+#ifdef _LIBHDFS_JNI_HELPER_DEBUGGING_ON_
+        printf("wildcard_expandPath: %s\n", path);
+#endif
+
+        errno = 0;
+        while ((file = readdir(dir)) != NULL) {
+            const char* filename = file->d_name;
+            const size_t filenameLength = strlen(filename);
+            const char* jarExtension;
+
+            // If filename is smaller than 4 characters then it can not possibly
+            // have extension ".jar" or ".JAR"
+            if (filenameLength < 4) {
+                continue;
+            }
+
+            jarExtension = &filename[filenameLength-4];
+            if ((strcmp(jarExtension, ".jar") == 0) ||
+                (strcmp(jarExtension, ".JAR") == 0)) {
+
+                // pathLength includes an extra '.' which we'll use for either
+                // separator or null termination
+                length += pathLength + filenameLength;
+
+#ifdef _LIBHDFS_JNI_HELPER_DEBUGGING_ON_
+                printf("wildcard_scanPath:\t%s\t:\t%zd\n", filename, length);
+#endif
+
+                if (expanded != NULL) {
+                    // pathLength includes an extra '.'
+                    strncpy(dest, path, pathLength-1);
+                    dest += pathLength - 1;
+                    strncpy(dest, filename, filenameLength);
+                    dest += filenameLength;
+                    *dest = PATH_SEPARATOR;
+                    dest++;
+
+#ifdef _LIBHDFS_JNI_HELPER_DEBUGGING_ON_
+                    printf("wildcard_expandPath:\t%s\t:\t%s\n",
+                      filename, expanded);
+#endif
+                }
+            }
+        }
+
+        if (errno != 0) {
+            fprintf(stderr, "wildcard_expandPath: on readdir %s: %s\n",
+              path, strerror(errno));
+            length = -1;
+        }
+
+        if (closedir(dir) != 0) {
+            fprintf(stderr, "wildcard_expandPath: on closedir %s: %s\n",
+                    path, strerror(errno));
+        }
+    } else if ((errno != EACCES) && (errno != ENOENT) && (errno != ENOTDIR)) {
+        // can not opendir due to an error we can not handle
+        fprintf(stderr, "wildcard_expandPath: on opendir %s: %s\n", path,
+                strerror(errno));
+        length = -1;
+    }
+
+    if (length == 0) {
+        // either we failed to open dir due to EACCESS, ENOENT, or ENOTDIR, or
+        // we did not find any file that matches *.jar or *.JAR
+
+#ifdef _LIBHDFS_JNI_HELPER_DEBUGGING_ON_
+        fprintf(stderr, "wildcard_expandPath: can not expand %.*s*: %s\n",
+                (int)(pathLength-1), path, strerror(errno));
+#endif
+
+        // in this case, the wildcard expansion is the same as the original
+        // +1 for PATH_SEPARTOR or null termination
+        length = pathLength + 1;
+        if (expanded != NULL) {
+            // pathLength includes an extra '.'
+            strncpy(dest, path, pathLength-1);
+            dest += pathLength-1;
+            *dest = '*'; // restore wildcard
+            dest++;
+            *dest = PATH_SEPARATOR;
+            dest++;
+        }
+    }
+
+    return length;
+}
+
+/**
+ * Helper to expand classpaths. Returns the total length of the expanded
+ * classpath. If expandedClasspath is not NULL, then fills that with the
+ * expanded classpath. It assumes that expandedClasspath is of correct size, eg
+ * allocated after using this function with expandedClasspath=NULL to get the
+ * right size.
+ */
+static ssize_t getClassPath_helper(const char *classpath, char* expandedClasspath)
+{
+    ssize_t length;
+    ssize_t retval;
+    char* expandedCP_curr;
+    char* cp_token;
+    char* classpath_dup;
+
+    classpath_dup = strdup(classpath);
+    if (classpath_dup == NULL) {
+        fprintf(stderr, "getClassPath_helper: failed strdup: %s\n",
+          strerror(errno));
+        return -1;
+    }
+
+    length = 0;
+
+    // expandedCP_curr is the current pointer
+    expandedCP_curr = expandedClasspath;
+
+    cp_token = strtok(classpath_dup, PATH_SEPARATOR_STR);
+    while (cp_token != NULL) {
+        size_t tokenlen;
+
+#ifdef _LIBHDFS_JNI_HELPER_DEBUGGING_ON_
+        printf("%s\n", cp_token);
+#endif
+
+        tokenlen = strlen(cp_token);
+        // We only expand if token ends with "/*"
+        if ((tokenlen > 1) &&
+          (cp_token[tokenlen-1] == '*') && (cp_token[tokenlen-2] == '/')) {
+            // replace the '*' with '.' so that we don't have to allocate another
+            // string for passing to opendir() in wildcard_expandPath()
+            cp_token[tokenlen-1] = '.';
+            retval = wildcard_expandPath(cp_token, expandedCP_curr);
+            if (retval < 0) {
+                free(classpath_dup);
+                return -1;
+            }
+
+            length += retval;
+            if (expandedCP_curr != NULL) {
+                expandedCP_curr += retval;
+            }
+        } else {
+            // +1 for path separator or null terminator
+            length += tokenlen + 1;
+            if (expandedCP_curr != NULL) {
+                strncpy(expandedCP_curr, cp_token, tokenlen);
+                expandedCP_curr += tokenlen;
+                *expandedCP_curr = PATH_SEPARATOR;
+                expandedCP_curr++;
+            }
+        }
+
+        cp_token = strtok(NULL, PATH_SEPARATOR_STR);
+    }
+
+    // Fix the last ':' and use it to null terminate
+    if (expandedCP_curr != NULL) {
+        expandedCP_curr--;
+        *expandedCP_curr = '\0';
+    }
+
+    free(classpath_dup);
+    return length;
+}
+
+/**
+ * Gets the classpath. Wild card entries are resolved only if the entry ends
+ * with "/\*" (backslash to escape commenting) to match against .jar and .JAR.
+ * All other wild card entries (eg /path/to/dir/\*foo*) are not resolved,
+ * following JAVA default behavior, see:
+ * https://docs.oracle.com/javase/8/docs/technotes/tools/unix/classpath.html
+ */
+static char* getClassPath()
+{
+    char* classpath;
+    char* expandedClasspath;
+    ssize_t length;
+    ssize_t retval;
+
+    classpath = getenv("CLASSPATH");
+    if (classpath == NULL) {
+      return NULL;
+    }
+
+    // First, get the total size of the string we will need for the expanded
+    // classpath
+    length = getClassPath_helper(classpath, NULL);
+    if (length < 0) {
+      return NULL;
+    }
+
+#ifdef _LIBHDFS_JNI_HELPER_DEBUGGING_ON_
+    printf("+++++++++++++++++\n");
+#endif
+
+    // we don't have to do anything if classpath has no valid wildcards
+    // we get length = 0 when CLASSPATH is set but empty
+    // if CLASSPATH is not empty, then length includes null terminator
+    // if length of expansion is same as original, then return a duplicate of
+    // original since expansion can only be longer
+    if ((length == 0) || ((length - 1) == strlen(classpath))) {
+
+#ifdef _LIBHDFS_JNI_HELPER_DEBUGGING_ON_
+        if ((length == 0) && (strlen(classpath) != 0)) {
+            fprintf(stderr, "Something went wrong with getting the wildcard \
+              expansion length\n" );
+        }
+#endif
+
+        expandedClasspath = strdup(classpath);
+
+#ifdef _LIBHDFS_JNI_HELPER_DEBUGGING_ON_
+        printf("Expanded classpath=%s\n", expandedClasspath);
+#endif
+
+        return expandedClasspath;
+    }
+
+    // Allocte memory for expanded classpath string
+    expandedClasspath = calloc(length, sizeof(char));
+    if (expandedClasspath == NULL) {
+        fprintf(stderr, "getClassPath: failed calloc: %s\n", strerror(errno));
+        return NULL;
+    }
+
+    // Actual expansion
+    retval = getClassPath_helper(classpath, expandedClasspath);
+    if (retval < 0) {
+        free(expandedClasspath);
+        return NULL;
+    }
+
+    // This should not happen, but dotting i's and crossing t's
+    if (retval != length) {
+        fprintf(stderr,
+          "Expected classpath expansion length to be %zu but instead got %zu\n",
+          length, retval);
+        free(expandedClasspath);
+        return NULL;
+    }
+
+#ifdef _LIBHDFS_JNI_HELPER_DEBUGGING_ON_
+    printf("===============\n");
+    printf("Allocated %zd for expanding classpath\n", length);
+    printf("Used %zu for expanding classpath\n", strlen(expandedClasspath) + 1);
+    printf("Expanded classpath=%s\n", expandedClasspath);
+#endif
+
+    return expandedClasspath;
+}
+
+
+/**
  * Get the global JNI environemnt.
  *
  * We only have to create the JVM once.  After that, we can use it in
@@ -406,7 +679,7 @@ static JNIEnv* getGlobalJNIEnv(void)
 
     if (noVMs == 0) {
         //Get the environment variables for initializing the JVM
-        hadoopClassPath = getenv("CLASSPATH");
+        hadoopClassPath = getClassPath();
         if (hadoopClassPath == NULL) {
             fprintf(stderr, "Environment variable CLASSPATH not set!\n");
             return NULL;
@@ -416,6 +689,8 @@ static JNIEnv* getGlobalJNIEnv(void)
         optHadoopClassPath = malloc(sizeof(char)*optHadoopClassPathLen);
         snprintf(optHadoopClassPath, optHadoopClassPathLen,
                 "%s%s", hadoopClassPathVMArg, hadoopClassPath);
+
+        free(hadoopClassPath);
 
         // Determine the # of LIBHDFS_OPTS args
         hadoopJvmArgs = getenv("LIBHDFS_OPTS");

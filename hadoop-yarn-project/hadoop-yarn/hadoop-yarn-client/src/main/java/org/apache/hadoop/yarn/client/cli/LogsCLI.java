@@ -27,17 +27,13 @@ import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.WebResource.Builder;
 import com.sun.jersey.api.client.filter.ClientFilter;
-import com.sun.jersey.client.urlconnection.HttpURLConnectionFactory;
-import com.sun.jersey.client.urlconnection.URLConnectionClientHandler;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.ConnectException;
-import java.net.HttpURLConnection;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -68,8 +64,6 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
-import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -87,7 +81,9 @@ import org.apache.hadoop.yarn.logaggregation.ContainerLogsRequest;
 import org.apache.hadoop.yarn.logaggregation.LogCLIHelpers;
 import org.apache.hadoop.yarn.logaggregation.LogToolUtils;
 import org.apache.hadoop.yarn.server.metrics.AppAttemptMetricsConstants;
+import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+import org.apache.hadoop.yarn.webapp.util.WebServiceClient;
 import org.apache.hadoop.yarn.webapp.util.YarnWebServiceUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
@@ -138,21 +134,7 @@ public class LogsCLI extends Configured implements Tool {
   @Override
   public int run(String[] args) throws Exception {
     try {
-      webServiceClient = new Client(new URLConnectionClientHandler(
-          new HttpURLConnectionFactory() {
-          @Override
-          public HttpURLConnection getHttpURLConnection(URL url)
-              throws IOException {
-            AuthenticatedURL.Token token = new AuthenticatedURL.Token();
-            HttpURLConnection conn = null;
-            try {
-              conn = new AuthenticatedURL().openConnection(url, token);
-            } catch (AuthenticationException e) {
-              throw new IOException(e);
-            }
-            return conn;
-          }
-        }));
+      webServiceClient = WebServiceClient.getWebServiceClient().createClient();
       return runCommand(args);
     } finally {
       if (yarnClient != null) {
@@ -355,9 +337,9 @@ public class LogsCLI extends Configured implements Tool {
     }
 
 
-    ContainerLogsRequest request = new ContainerLogsRequest(appId,
-        isApplicationFinished(appState), appOwner, nodeAddress, null,
-        containerIdStr, localDir, logs, bytes, null);
+    ContainerLogsRequest request = new ContainerLogsRequest(appId, null,
+        Apps.isApplicationFinalState(appState), appOwner, nodeAddress,
+        null, containerIdStr, localDir, logs, bytes, null);
 
     if (showContainerLogInfo) {
       return showContainerLogInfo(request, logCliHelper);
@@ -410,7 +392,9 @@ public class LogsCLI extends Configured implements Tool {
     Configuration conf = new YarnConfiguration();
     LogsCLI logDumper = new LogsCLI();
     logDumper.setConf(conf);
+    WebServiceClient.initialize(conf);
     int exitCode = logDumper.run(args);
+    WebServiceClient.destroy();
     System.exit(exitCode);
   }
 
@@ -597,7 +581,7 @@ public class LogsCLI extends Configured implements Tool {
       for (String logFile : request.getLogTypes()) {
         InputStream is = null;
         try {
-          ClientResponse response = getResponeFromNMWebService(conf,
+          ClientResponse response = getResponseFromNMWebService(conf,
               webServiceClient, request, logFile);
           if (response != null && response.getStatusInfo().getStatusCode() ==
               ClientResponse.Status.OK.getStatusCode()) {
@@ -643,12 +627,6 @@ public class LogsCLI extends Configured implements Tool {
       throws YarnException, IOException {
     return yarnClient.getContainerReport(
         ContainerId.fromString(containerIdStr));
-  }
-
-  private boolean isApplicationFinished(YarnApplicationState appState) {
-    return appState == YarnApplicationState.FINISHED
-        || appState == YarnApplicationState.FAILED
-        || appState == YarnApplicationState.KILLED; 
   }
 
   private int printAMContainerLogs(Configuration conf,
@@ -1462,16 +1440,10 @@ public class LogsCLI extends Configured implements Tool {
   }
 
   @VisibleForTesting
-  public ClientResponse getResponeFromNMWebService(Configuration conf,
+  public ClientResponse getResponseFromNMWebService(Configuration conf,
       Client webServiceClient, ContainerLogsRequest request, String logFile) {
-    WebResource webResource =
-        webServiceClient.resource(WebAppUtils.getHttpSchemePrefix(conf)
-        + request.getNodeHttpAddress());
-    return webResource.path("ws").path("v1").path("node")
-        .path("containers").path(request.getContainerId()).path("logs")
-        .path(logFile)
-        .queryParam("size", Long.toString(request.getBytes()))
-        .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
+    return LogToolUtils.getResponseFromNMWebService(
+        conf, webServiceClient, request, logFile);
   }
 
   @VisibleForTesting

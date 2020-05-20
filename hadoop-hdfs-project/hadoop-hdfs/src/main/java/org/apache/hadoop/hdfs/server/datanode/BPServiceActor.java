@@ -596,6 +596,9 @@ class BPServiceActor implements Runnable {
     if (bpThread != null) {
       bpThread.interrupt();
     }
+    if (commandProcessingThread != null) {
+      commandProcessingThread.interrupt();
+    }
   }
   
   //This must be called only by blockPoolManager
@@ -699,15 +702,7 @@ class BPServiceActor implements Runnable {
             if (state == HAServiceState.ACTIVE) {
               handleRollingUpgradeStatus(resp);
             }
-
-            long startProcessCommands = monotonicNow();
             commandProcessingThread.enqueue(resp.getCommands());
-            long endProcessCommands = monotonicNow();
-            if (endProcessCommands - startProcessCommands > 2000) {
-              LOG.info("Took " + (endProcessCommands - startProcessCommands)
-                  + "ms to process " + resp.getCommands().length
-                  + " commands from NN");
-            }
           }
         }
         if (!dn.areIBRDisabledForTests() &&
@@ -825,7 +820,7 @@ class BPServiceActor implements Runnable {
     fullBlockReportLeaseId = 0;
 
     // random short delay - helps scatter the BR from all DNs
-    scheduler.scheduleBlockReport(dnConf.initialBlockReportDelayMs);
+    scheduler.scheduleBlockReport(dnConf.initialBlockReportDelayMs, true);
   }
 
 
@@ -919,14 +914,17 @@ class BPServiceActor implements Runnable {
       // re-retrieve namespace info to make sure that, if the NN
       // was restarted, we still match its version (HDFS-2120)
       NamespaceInfo nsInfo = retrieveNamespaceInfo();
-      // and re-register
-      register(nsInfo);
-      scheduler.scheduleHeartbeat();
       // HDFS-9917,Standby NN IBR can be very huge if standby namenode is down
       // for sometime.
       if (state == HAServiceState.STANDBY || state == HAServiceState.OBSERVER) {
         ibrManager.clearIBRs();
       }
+      // HDFS-15113, register and trigger FBR after clean IBR to avoid missing
+      // some blocks report to Standby util next FBR.
+      // and re-register
+      register(nsInfo);
+      scheduler.scheduleHeartbeat();
+      DataNodeFaultInjector.get().blockUtilSendFullBlockReport();
     }
   }
 
@@ -1214,14 +1212,19 @@ class BPServiceActor implements Runnable {
 
     void forceFullBlockReportNow() {
       forceFullBlockReport.set(true);
-      resetBlockReportTime = true;
     }
 
     /**
      * This methods  arranges for the data node to send the block report at
      * the next heartbeat.
+     * @param delay specifies the maximum amount of random delay(in
+     *              milliseconds) in sending the block report. A value of 0
+     *              or less makes the BR to go right away without any delay.
+     * @param isRegistration if true, resets the future BRs for randomness,
+     *                       post first BR to avoid regular BRs from all DN's
+     *                       coming at one time.
      */
-    long scheduleBlockReport(long delay) {
+    long scheduleBlockReport(long delay, boolean isRegistration) {
       if (delay > 0) { // send BR after random delay
         // Numerical overflow is possible here and is okay.
         nextBlockReportTime =
@@ -1229,7 +1232,9 @@ class BPServiceActor implements Runnable {
       } else { // send at next heartbeat
         nextBlockReportTime = monotonicNow();
       }
-      resetBlockReportTime = true; // reset future BRs for randomness
+      resetBlockReportTime = isRegistration; // reset future BRs for
+      // randomness, post first block report to avoid regular BRs from all
+      // DN's coming at one time.
       return nextBlockReportTime;
     }
 
@@ -1254,9 +1259,18 @@ class BPServiceActor implements Runnable {
          *   2) unexpected like 21:35:43, next report should be at 2:20:14
          *      on the next day.
          */
-        nextBlockReportTime +=
-              (((monotonicNow() - nextBlockReportTime + blockReportIntervalMs) /
-                  blockReportIntervalMs)) * blockReportIntervalMs;
+        long factor =
+            (monotonicNow() - nextBlockReportTime + blockReportIntervalMs)
+                / blockReportIntervalMs;
+        if (factor != 0) {
+          nextBlockReportTime += factor * blockReportIntervalMs;
+        } else {
+          // If the difference between the present time and the scheduled
+          // time is very less, the factor can be 0, so in that case, we can
+          // ignore that negligible time, spent while sending the BRss and
+          // schedule the next BR after the blockReportInterval.
+          nextBlockReportTime += blockReportIntervalMs;
+        }
       }
     }
 
@@ -1331,6 +1345,7 @@ class BPServiceActor implements Runnable {
      */
     private boolean processCommand(DatanodeCommand[] cmds) {
       if (cmds != null) {
+        long startProcessCommands = monotonicNow();
         for (DatanodeCommand cmd : cmds) {
           try {
             if (!bpos.processCommandFromActor(cmd, actor)) {
@@ -1348,6 +1363,14 @@ class BPServiceActor implements Runnable {
           } catch (IOException ioe) {
             LOG.warn("Error processing datanode Command", ioe);
           }
+        }
+        long processCommandsMs = monotonicNow() - startProcessCommands;
+        if (cmds.length > 0) {
+          dn.getMetrics().addNumProcessedCommands(processCommandsMs);
+        }
+        if (processCommandsMs > dnConf.getProcessCommandsThresholdMs()) {
+          LOG.info("Took {} ms to process {} commands from NN",
+              processCommandsMs, cmds.length);
         }
       }
       return true;

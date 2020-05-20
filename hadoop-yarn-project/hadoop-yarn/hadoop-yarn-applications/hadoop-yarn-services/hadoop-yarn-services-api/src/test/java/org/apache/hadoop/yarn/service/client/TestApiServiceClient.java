@@ -29,6 +29,7 @@ import javax.servlet.http.HttpServletResponse;
 import com.google.common.collect.Lists;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
@@ -115,6 +116,27 @@ public class TestApiServiceClient {
   @AfterClass
   public static void tearDown() throws Exception {
     server.stop();
+  }
+
+  @Test
+  public void testGetRMWebAddress() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
+    conf.set(YarnConfiguration.RM_HA_IDS, "rm1");
+    conf.set(YarnConfiguration.RM_HA_ID, "rm1");
+    conf.set("yarn.resourcemanager.webapp.address.rm1", "localhost:0");
+    ApiServiceClient asc1 = new ApiServiceClient(conf);
+    boolean exceptionCaught = false;
+    String diagnosticsMsg = null;
+    try {
+      String rmWebAddress = asc1.getRMWebAddress();
+    } catch (IOException e){
+      exceptionCaught = true;
+      diagnosticsMsg = e.getMessage();
+    }
+    assertTrue("ApiServiceClient failed to throw exception", exceptionCaught);
+    assertTrue("Exception Message does not match",
+        diagnosticsMsg.contains("Error connecting to localhost:0"));
   }
 
   @Test

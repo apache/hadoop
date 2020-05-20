@@ -61,10 +61,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -242,13 +243,20 @@ public class TestAuxServices {
     @Override
     public ByteBuffer getMetaData() {
       ClassLoader loader = Thread.currentThread().getContextClassLoader();
-      URL[] urls = ((URLClassLoader)loader).getURLs();
-      List<String> urlString = new ArrayList<String>();
-      for (URL url : urls) {
-        urlString.add(url.toString());
+      try {
+        URL[] urls = ((URLClassLoader) loader).getURLs();
+        String joinedString = Arrays.stream(urls)
+            .map(URL::toString)
+            .collect(Collectors.joining(","));
+        return ByteBuffer.wrap(joinedString.getBytes());
+      } catch (ClassCastException e) {
+        // In Java 11+, Thread.currentThread().getContextClassLoader()
+        // returns jdk.internal.loader.ClassLoaders$AppClassLoader
+        // by default and it cannot cast to URLClassLoader.
+        // This exception does not happen when the custom class loader is
+        // used from AuxiliaryServiceWithCustomClassLoader.
+        return super.meta;
       }
-      String joinedString = StringUtils.join(",", urlString);
-      return ByteBuffer.wrap(joinedString.getBytes());
     }
   }
 

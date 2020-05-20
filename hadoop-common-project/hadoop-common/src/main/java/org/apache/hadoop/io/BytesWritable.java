@@ -19,6 +19,9 @@
 package org.apache.hadoop.io;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.io.DataInput;
 import java.io.DataOutput;
 
@@ -35,17 +38,22 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Stable
 public class BytesWritable extends BinaryComparable
     implements WritableComparable<BinaryComparable> {
+  private static final int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;
   private static final int LENGTH_BYTES = 4;
-  private static final byte[] EMPTY_BYTES = {};
+
+  private static final byte[] EMPTY_BYTES = new byte[0];
 
   private int size;
   private byte[] bytes;
-  
+
   /**
    * Create a zero-size sequence.
    */
-  public BytesWritable() {this(EMPTY_BYTES);}
-  
+  public BytesWritable() {
+    this.bytes = EMPTY_BYTES;
+    this.size = 0;
+  }
+
   /**
    * Create a BytesWritable using the byte array as the initial value.
    * @param bytes This array becomes the backing storage for the object.
@@ -65,17 +73,15 @@ public class BytesWritable extends BinaryComparable
     this.bytes = bytes;
     this.size = length;
   }
-  
+
   /**
    * Get a copy of the bytes that is exactly the length of the data.
    * See {@link #getBytes()} for faster access to the underlying array.
    */
   public byte[] copyBytes() {
-    byte[] result = new byte[size];
-    System.arraycopy(bytes, 0, result, 0, size);
-    return result;
+    return Arrays.copyOf(bytes, size);
   }
-  
+
   /**
    * Get the data backing the BytesWritable. Please use {@link #copyBytes()}
    * if you need the returned array to be precisely the length of the data.
@@ -111,7 +117,7 @@ public class BytesWritable extends BinaryComparable
   public int getSize() {
     return getLength();
   }
-  
+
   /**
    * Change the size of the buffer. The values in the old range are preserved
    * and any new values are undefined. The capacity is changed if it is 
@@ -121,41 +127,37 @@ public class BytesWritable extends BinaryComparable
   public void setSize(int size) {
     if (size > getCapacity()) {
       // Avoid overflowing the int too early by casting to a long.
-      long newSize = Math.min(Integer.MAX_VALUE, (3L * size) / 2L);
+      long newSize = Math.min(MAX_ARRAY_SIZE, (3L * size) / 2L);
       setCapacity((int) newSize);
     }
     this.size = size;
   }
-  
+
   /**
    * Get the capacity, which is the maximum size that could handled without
    * resizing the backing storage.
+   *
    * @return The number of bytes
    */
   public int getCapacity() {
     return bytes.length;
   }
-  
+
   /**
-   * Change the capacity of the backing storage.
-   * The data is preserved.
-   * @param new_cap The new capacity in bytes.
+   * Change the capacity of the backing storage. The data is preserved.
+   *
+   * @param capacity The new capacity in bytes.
    */
-  public void setCapacity(int new_cap) {
-    if (new_cap != getCapacity()) {
-      byte[] new_data = new byte[new_cap];
-      if (new_cap < size) {
-        size = new_cap;
-      }
-      if (size != 0) {
-        System.arraycopy(bytes, 0, new_data, 0, size);
-      }
-      bytes = new_data;
+  public void setCapacity(final int capacity) {
+    if (capacity != getCapacity()) {
+      this.size = Math.min(size, capacity);
+      this.bytes = Arrays.copyOf(this.bytes, capacity);
     }
   }
 
   /**
    * Set the BytesWritable to the contents of the given newData.
+   *
    * @param newData the value to set this BytesWritable to.
    */
   public void set(BytesWritable newData) {
@@ -163,7 +165,8 @@ public class BytesWritable extends BinaryComparable
   }
 
   /**
-   * Set the value to a copy of the given byte range
+   * Set the value to a copy of the given byte range.
+   *
    * @param newData the new values to copy in
    * @param offset the offset in newData to start at
    * @param length the number of bytes to copy
@@ -174,24 +177,17 @@ public class BytesWritable extends BinaryComparable
     System.arraycopy(newData, offset, bytes, 0, size);
   }
 
-  // inherit javadoc
   @Override
   public void readFields(DataInput in) throws IOException {
     setSize(0); // clear the old data
     setSize(in.readInt());
     in.readFully(bytes, 0, size);
   }
-  
-  // inherit javadoc
+
   @Override
   public void write(DataOutput out) throws IOException {
     out.writeInt(size);
     out.write(bytes, 0, size);
-  }
-  
-  @Override
-  public int hashCode() {
-    return super.hashCode();
   }
 
   /**
@@ -204,25 +200,19 @@ public class BytesWritable extends BinaryComparable
     return false;
   }
 
+  @Override
+  public int hashCode() {
+    return super.hashCode();
+  }
+
   /**
    * Generate the stream of bytes as hex pairs separated by ' '.
    */
   @Override
-  public String toString() { 
-    StringBuilder sb = new StringBuilder(3*size);
-    for (int idx = 0; idx < size; idx++) {
-      // if not the first, put a blank separator in
-      if (idx != 0) {
-        sb.append(' ');
-      }
-      String num = Integer.toHexString(0xff & bytes[idx]);
-      // if it is only one digit, add a leading 0.
-      if (num.length() < 2) {
-        sb.append('0');
-      }
-      sb.append(num);
-    }
-    return sb.toString();
+  public String toString() {
+    return IntStream.range(0, size)
+        .mapToObj(idx -> String.format("%02x", bytes[idx]))
+        .collect(Collectors.joining(" "));
   }
 
   /** A Comparator optimized for BytesWritable. */ 
@@ -230,20 +220,20 @@ public class BytesWritable extends BinaryComparable
     public Comparator() {
       super(BytesWritable.class);
     }
-    
+
     /**
      * Compare the buffers in serialized form.
      */
     @Override
     public int compare(byte[] b1, int s1, int l1,
                        byte[] b2, int s2, int l2) {
-      return compareBytes(b1, s1+LENGTH_BYTES, l1-LENGTH_BYTES, 
-                          b2, s2+LENGTH_BYTES, l2-LENGTH_BYTES);
+      return compareBytes(b1, s1 + LENGTH_BYTES, l1 - LENGTH_BYTES,
+                          b2, s2 + LENGTH_BYTES, l2 - LENGTH_BYTES);
     }
   }
-  
+
   static {                                        // register this comparator
     WritableComparator.define(BytesWritable.class, new Comparator());
   }
-  
+
 }

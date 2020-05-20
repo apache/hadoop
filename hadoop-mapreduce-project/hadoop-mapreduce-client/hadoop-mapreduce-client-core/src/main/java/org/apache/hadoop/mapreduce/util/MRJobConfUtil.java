@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.mapreduce.util;
 
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 
@@ -58,4 +59,75 @@ public final class MRJobConfUtil {
   }
 
   public static final float TASK_REPORT_INTERVAL_TO_TIMEOUT_RATIO = 0.01f;
+
+  /**
+   * Configurations to control the frequency of logging of task Attempt.
+   */
+  public static final double PROGRESS_MIN_DELTA_FACTOR = 100.0;
+  private static volatile Double progressMinDeltaThreshold = null;
+  private static volatile Long progressMaxWaitDeltaTimeThreshold = null;
+
+  /**
+   * load the values defined from a configuration file including the delta
+   * progress and the maximum time between each log message.
+   * @param conf
+   */
+  public static void setTaskLogProgressDeltaThresholds(
+      final Configuration conf) {
+    if (progressMinDeltaThreshold == null) {
+      progressMinDeltaThreshold =
+          new Double(PROGRESS_MIN_DELTA_FACTOR
+              * conf.getDouble(MRJobConfig.TASK_LOG_PROGRESS_DELTA_THRESHOLD,
+              MRJobConfig.TASK_LOG_PROGRESS_DELTA_THRESHOLD_DEFAULT));
+    }
+
+    if (progressMaxWaitDeltaTimeThreshold == null) {
+      progressMaxWaitDeltaTimeThreshold =
+          TimeUnit.SECONDS.toMillis(conf
+              .getLong(
+                  MRJobConfig.TASK_LOG_PROGRESS_WAIT_INTERVAL_SECONDS,
+                  MRJobConfig.TASK_LOG_PROGRESS_WAIT_INTERVAL_SECONDS_DEFAULT));
+    }
+  }
+
+  /**
+   * Retrieves the min delta progress required to log the task attempt current
+   * progress.
+   * @return the defined threshold in the conf.
+   *         returns the default value if
+   *         {@link #setTaskLogProgressDeltaThresholds} has not been called.
+   */
+  public static double getTaskProgressMinDeltaThreshold() {
+    if (progressMinDeltaThreshold == null) {
+      return PROGRESS_MIN_DELTA_FACTOR
+          * MRJobConfig.TASK_LOG_PROGRESS_DELTA_THRESHOLD_DEFAULT;
+    }
+    return progressMinDeltaThreshold.doubleValue();
+  }
+
+  /**
+   * Retrieves the min time required to log the task attempt current
+   * progress.
+   * @return the defined threshold in the conf.
+   *         returns the default value if
+   *         {@link #setTaskLogProgressDeltaThresholds} has not been called.
+   */
+  public static long getTaskProgressWaitDeltaTimeThreshold() {
+    if (progressMaxWaitDeltaTimeThreshold == null) {
+      return TimeUnit.SECONDS.toMillis(
+          MRJobConfig.TASK_LOG_PROGRESS_WAIT_INTERVAL_SECONDS_DEFAULT);
+    }
+    return progressMaxWaitDeltaTimeThreshold.longValue();
+  }
+
+  /**
+   * Coverts a progress between 0.0 to 1.0 to double format used to log the
+   * task attempt.
+   * @param progress of the task which is a value between 0.0 and 1.0.
+   * @return the double value that is less than or equal to the argument
+   *          multiplied by {@link #PROGRESS_MIN_DELTA_FACTOR}.
+   */
+  public static double convertTaskProgressToFactor(final float progress) {
+    return Math.floor(progress * MRJobConfUtil.PROGRESS_MIN_DELTA_FACTOR);
+  }
 }

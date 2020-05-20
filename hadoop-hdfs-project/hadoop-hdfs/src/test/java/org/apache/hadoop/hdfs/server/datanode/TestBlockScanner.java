@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SCANNER_SKIP_RECENT_ACCESSED;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SCANNER_VOLUME_BYTES_PER_SECOND;
 import static org.apache.hadoop.hdfs.server.datanode.BlockScanner.Conf.INTERNAL_DFS_DATANODE_SCAN_PERIOD_MS;
@@ -25,6 +26,7 @@ import static org.apache.hadoop.hdfs.server.datanode.BlockScanner.Conf.INTERNAL_
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.fail;
 
 import java.io.Closeable;
 import java.io.File;
@@ -973,5 +975,41 @@ public class TestBlockScanner {
       assertEquals("Did not expect bad blocks.", 0, info.badBlocks.size());
       info.blocksScanned = 0;
     }
+  }
+
+  @Test
+  public void testSkipRecentAccessFile() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(DFS_BLOCK_SCANNER_SKIP_RECENT_ACCESSED, true);
+    conf.setLong(INTERNAL_DFS_DATANODE_SCAN_PERIOD_MS, 2000L);
+    conf.set(INTERNAL_VOLUME_SCANNER_SCAN_RESULT_HANDLER,
+        TestScanResultHandler.class.getName());
+    final TestContext ctx = new TestContext(conf, 1);
+    final int totalBlocks =  5;
+    ctx.createFiles(0, totalBlocks, 4096);
+
+    final TestScanResultHandler.Info info =
+        TestScanResultHandler.getInfo(ctx.volumes.get(0));
+    synchronized (info) {
+      info.shouldRun = true;
+      info.notify();
+    }
+    try {
+      GenericTestUtils.waitFor(() -> {
+        synchronized (info) {
+          return info.blocksScanned > 0;
+        }
+      }, 10, 500);
+      fail("Scan nothing for all files are accessed in last period.");
+    } catch (TimeoutException e) {
+      LOG.debug("Timeout for all files are accessed in last period.");
+    }
+    synchronized (info) {
+      info.shouldRun = false;
+      info.notify();
+    }
+    assertEquals("Should not scan block accessed in last period",
+        0, info.blocksScanned);
+    ctx.close();
   }
 }

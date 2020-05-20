@@ -303,6 +303,14 @@ public class TestFSNamesystem {
               .or(instanceOf(TopAuditLogger.class))
               .or(instanceOf(DummyAuditLogger.class)));
     }
+
+    // Test Configuring TopAuditLogger.
+    conf.set(DFSConfigKeys.DFS_NAMENODE_AUDIT_LOGGERS_KEY,
+        "org.apache.hadoop.hdfs.server.namenode.top.TopAuditLogger");
+    fsn = new FSNamesystem(conf, fsImage);
+    auditLoggers = fsn.getAuditLoggers();
+    assertEquals(1, auditLoggers.size());
+    assertThat(auditLoggers.get(0), instanceOf(TopAuditLogger.class));
   }
 
   static class DummyAuditLogger implements AuditLogger {

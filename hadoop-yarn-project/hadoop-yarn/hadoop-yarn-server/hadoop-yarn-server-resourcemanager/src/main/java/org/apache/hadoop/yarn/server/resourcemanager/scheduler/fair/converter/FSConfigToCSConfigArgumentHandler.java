@@ -16,16 +16,20 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
+import java.io.File;
+import java.util.function.Supplier;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Parses arguments passed to the FS-&gt;CS converter.
@@ -35,11 +39,33 @@ import java.io.File;
 public class FSConfigToCSConfigArgumentHandler {
   private static final Logger LOG =
       LoggerFactory.getLogger(FSConfigToCSConfigArgumentHandler.class);
-  private final FSConfigToCSConfigConverter converter;
 
-  public FSConfigToCSConfigArgumentHandler(FSConfigToCSConfigConverter
-      converter) {
-    this.converter = converter;
+  private static final String ALREADY_CONTAINS_EXCEPTION_MSG =
+      "The %s (provided with %s|%s arguments) contains " +
+          "the %s provided with the %s|%s options.";
+  private static final String ALREADY_CONTAINS_FILE_EXCEPTION_MSG =
+      "The %s %s (provided with %s|%s arguments) already contains a file " +
+          "or directory named %s which will be the output of the conversion!";
+
+  private FSConfigToCSConfigRuleHandler ruleHandler;
+  private FSConfigToCSConfigConverterParams converterParams;
+  private ConversionOptions conversionOptions;
+  private ConvertedConfigValidator validator;
+
+  private Supplier<FSConfigToCSConfigConverter>
+      converterFunc = this::getConverter;
+
+  public FSConfigToCSConfigArgumentHandler() {
+    this.conversionOptions = new ConversionOptions(new DryRunResultHolder(),
+        false);
+    this.validator = new ConvertedConfigValidator();
+  }
+
+  @VisibleForTesting
+  FSConfigToCSConfigArgumentHandler(ConversionOptions conversionOptions,
+      ConvertedConfigValidator validator) {
+    this.conversionOptions = conversionOptions;
+    this.validator = validator;
   }
 
   /**
@@ -69,6 +95,20 @@ public class FSConfigToCSConfigArgumentHandler {
             " capacity-scheduler.xml files." +
             "Must have write permission for user who is running this script.",
             true),
+    DRY_RUN("dry run", "d", "dry-run", "Performs a dry-run of the conversion." +
+            "Outputs whether the conversion is possible or not.", false),
+    NO_TERMINAL_RULE_CHECK("no terminal rule check", "t",
+        "no-terminal-rule-check",
+        "Disables checking whether a placement rule is terminal to maintain" +
+        " backward compatibility with configs that were made before YARN-8967.",
+        false),
+    CONVERT_PLACEMENT_RULES("convert placement rules",
+        "m", "convert-placement-rules",
+        "Convert Fair Scheduler placement rules to Capacity" +
+        " Scheduler mapping rules", false),
+    SKIP_VERIFICATION("skip verification", "s",
+        "skip-verification",
+        "Skips the verification of the converted configuration", false),
     HELP("help", "h", "help", "Displays the list of options", false);
 
     private final String name;
@@ -94,6 +134,7 @@ public class FSConfigToCSConfigArgumentHandler {
 
   int parseAndConvert(String[] args) throws Exception {
     Options opts = createOptions();
+    int retVal = 0;
 
     try {
       if (args.length == 0) {
@@ -109,37 +150,55 @@ public class FSConfigToCSConfigArgumentHandler {
         return 0;
       }
 
-      checkOptionPresent(cliParser, CliOption.YARN_SITE);
-      checkOutputDefined(cliParser);
+      FSConfigToCSConfigConverter converter =
+          prepareAndGetConverter(cliParser);
 
-      FSConfigToCSConfigConverterParams params = validateInputFiles(cliParser);
-      converter.convert(params);
+      converter.convert(converterParams);
+
+      String outputDir = converterParams.getOutputDirectory();
+      boolean skipVerification =
+          cliParser.hasOption(CliOption.SKIP_VERIFICATION.shortSwitch);
+      if (outputDir != null && !skipVerification) {
+        validator.validateConvertedConfig(
+            converterParams.getOutputDirectory());
+      }
     } catch (ParseException e) {
       String msg = "Options parsing failed: " + e.getMessage();
       logAndStdErr(e, msg);
       printHelp(opts);
-      return -1;
+      retVal = -1;
     } catch (PreconditionException e) {
       String msg = "Cannot start FS config conversion due to the following"
           + " precondition error: " + e.getMessage();
-      logAndStdErr(e, msg);
-      return -1;
+      handleException(e, msg);
+      retVal = -1;
     } catch (UnsupportedPropertyException e) {
       String msg = "Unsupported property/setting encountered during FS config "
           + "conversion: " + e.getMessage();
-      logAndStdErr(e, msg);
-      return -1;
+      handleException(e, msg);
+      retVal = -1;
     } catch (ConversionException | IllegalArgumentException e) {
       String msg = "Fatal error during FS config conversion: " + e.getMessage();
-      logAndStdErr(e, msg);
-      return -1;
+      handleException(e, msg);
+      retVal = -1;
+    } catch (VerificationException e) {
+      Throwable cause = e.getCause();
+      String msg = "Verification failed: " + e.getCause().getMessage();
+      conversionOptions.handleVerificationFailure(cause, msg);
+      retVal = -1;
     }
 
-    return 0;
+    conversionOptions.handleParsingFinished();
+
+    return retVal;
   }
 
-  private void logAndStdErr(Exception e, String msg) {
-    LOG.debug("Stack trace", e);
+  private void handleException(Exception e, String msg) {
+    conversionOptions.handleGenericException(e, msg);
+  }
+
+  static void logAndStdErr(Throwable t, String msg) {
+    LOG.debug("Stack trace", t);
     LOG.error(msg);
     System.err.println(msg);
   }
@@ -154,6 +213,23 @@ public class FSConfigToCSConfigArgumentHandler {
     return opts;
   }
 
+  private FSConfigToCSConfigConverter prepareAndGetConverter(
+      CommandLine cliParser) {
+    boolean dryRun =
+        cliParser.hasOption(CliOption.DRY_RUN.shortSwitch);
+    conversionOptions.setDryRun(dryRun);
+    conversionOptions.setNoTerminalRuleCheck(
+        cliParser.hasOption(CliOption.NO_TERMINAL_RULE_CHECK.shortSwitch));
+
+    checkOptionPresent(cliParser, CliOption.YARN_SITE);
+    checkOutputDefined(cliParser, dryRun);
+
+    converterParams = validateInputFiles(cliParser);
+    ruleHandler = new FSConfigToCSConfigRuleHandler(conversionOptions);
+
+    return converterFunc.get();
+  }
+
   private FSConfigToCSConfigConverterParams validateInputFiles(
       CommandLine cliParser) {
     String yarnSiteXmlFile =
@@ -164,11 +240,14 @@ public class FSConfigToCSConfigArgumentHandler {
         cliParser.getOptionValue(CliOption.CONVERSION_RULES.shortSwitch);
     String outputDir =
         cliParser.getOptionValue(CliOption.OUTPUT_DIR.shortSwitch);
+    boolean convertPlacementRules =
+        cliParser.hasOption(CliOption.CONVERT_PLACEMENT_RULES.shortSwitch);
 
     checkFile(CliOption.YARN_SITE, yarnSiteXmlFile);
     checkFile(CliOption.FAIR_SCHEDULER, fairSchedulerXmlFile);
     checkFile(CliOption.CONVERSION_RULES, conversionRulesFile);
     checkDirectory(CliOption.OUTPUT_DIR, outputDir);
+    checkOutputDirDoesNotContainXmls(yarnSiteXmlFile, outputDir);
 
     return FSConfigToCSConfigConverterParams.Builder.create()
         .withYarnSiteXmlConfig(yarnSiteXmlFile)
@@ -178,7 +257,47 @@ public class FSConfigToCSConfigArgumentHandler {
             cliParser.getOptionValue(CliOption.CLUSTER_RESOURCE.shortSwitch))
         .withConsole(cliParser.hasOption(CliOption.CONSOLE_MODE.shortSwitch))
         .withOutputDirectory(outputDir)
+        .withConvertPlacementRules(convertPlacementRules)
         .build();
+  }
+
+  private static void checkOutputDirDoesNotContainXmls(String yarnSiteXmlFile,
+      String outputDir) {
+    if (yarnSiteXmlFile == null || outputDir == null) {
+      return;
+    }
+
+    // check whether yarn-site.xml is not in the output folder
+    File xmlFile = new File(yarnSiteXmlFile);
+    File xmlParentFolder = xmlFile.getParentFile();
+    File output = new File(outputDir);
+    if (output.equals(xmlParentFolder)) {
+      throw new IllegalArgumentException(
+          String.format(ALREADY_CONTAINS_EXCEPTION_MSG,
+              CliOption.OUTPUT_DIR.name, CliOption.OUTPUT_DIR.shortSwitch,
+              CliOption.OUTPUT_DIR.longSwitch, CliOption.YARN_SITE.name,
+              CliOption.YARN_SITE.shortSwitch,
+              CliOption.YARN_SITE.longSwitch));
+    }
+
+    // check whether the output folder does not contain nor yarn-site.xml
+    // neither capacity-scheduler.xml
+    checkFileNotInOutputDir(output,
+        YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
+    checkFileNotInOutputDir(output,
+        YarnConfiguration.CS_CONFIGURATION_FILE);
+  }
+
+  private static void checkFileNotInOutputDir(File output, String fileName) {
+    File file = new File(output, fileName);
+    if (file.exists()) {
+      throw new IllegalArgumentException(
+          String.format(ALREADY_CONTAINS_FILE_EXCEPTION_MSG,
+              CliOption.OUTPUT_DIR.name, output,
+              CliOption.OUTPUT_DIR.shortSwitch,
+              CliOption.OUTPUT_DIR.longSwitch,
+              fileName));
+    }
   }
 
   private void printHelp(Options opts) {
@@ -195,14 +314,15 @@ public class FSConfigToCSConfigArgumentHandler {
     }
   }
 
-  private static void checkOutputDefined(CommandLine cliParser) {
+  private static void checkOutputDefined(CommandLine cliParser,
+      boolean dryRun) {
     boolean hasOutputDir =
         cliParser.hasOption(CliOption.OUTPUT_DIR.shortSwitch);
 
     boolean console =
         cliParser.hasOption(CliOption.CONSOLE_MODE.shortSwitch);
 
-    if (!console && !hasOutputDir) {
+    if (!console && !hasOutputDir && !dryRun) {
       throw new PreconditionException(
          "Output directory or console mode was not defined. Please" +
           " use -h or --help to see command line switches");
@@ -238,5 +358,15 @@ public class FSConfigToCSConfigArgumentHandler {
           String.format("Specified path %s does not exist " +
           "(As value of parameter %s)", filePath, cliOption.name));
     }
+  }
+
+  private FSConfigToCSConfigConverter getConverter() {
+    return new FSConfigToCSConfigConverter(ruleHandler, conversionOptions);
+  }
+
+  @VisibleForTesting
+  void setConverterSupplier(Supplier<FSConfigToCSConfigConverter>
+      supplier) {
+    this.converterFunc = supplier;
   }
 }

@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.client;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -34,12 +35,15 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 
 /**
  * Tests Application Master Protocol with timeline service v2 enabled.
  */
 public class TestApplicationMasterServiceProtocolForTimelineV2
     extends ApplicationMasterServiceProtoTestBase {
+
+  public Timeout timeout = new Timeout(180, TimeUnit.SECONDS);
 
   @Before
   public void initialize() throws Exception {
@@ -53,7 +57,7 @@ public class TestApplicationMasterServiceProtocolForTimelineV2
     super.startupHAAndSetupClient();
   }
 
-  @Test(timeout = 15000)
+  @Test
   public void testAllocateForTimelineV2OnHA()
       throws YarnException, IOException {
     AllocateRequest request = AllocateRequest.newInstance(0, 50f,

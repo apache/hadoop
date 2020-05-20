@@ -19,8 +19,11 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -32,6 +35,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.BlockScanner.Conf;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeReference;
@@ -540,6 +544,24 @@ public class VolumeScanner extends Thread {
               this, curBlockIter.getBlockPoolId());
           saveBlockIterator(curBlockIter);
           return 0;
+        } else if (conf.skipRecentAccessed) {
+          // Check the access time of block file to avoid scanning recently
+          // changed blocks, reducing disk IO.
+          try {
+            BlockLocalPathInfo blockLocalPathInfo =
+                volume.getDataset().getBlockLocalPathInfo(block);
+            BasicFileAttributes attr = Files.readAttributes(
+                new File(blockLocalPathInfo.getBlockPath()).toPath(),
+                BasicFileAttributes.class);
+            if (System.currentTimeMillis() - attr.lastAccessTime().
+                to(TimeUnit.MILLISECONDS) < conf.scanPeriodMs) {
+              return 0;
+            }
+
+          } catch (IOException ioe) {
+            LOG.debug("Failed to get access time of block {}",
+                block, ioe);
+          }
         }
       }
       if (curBlockIter != null) {

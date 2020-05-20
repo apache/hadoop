@@ -20,6 +20,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.Event;
+import org.apache.hadoop.yarn.resourcetypes.ResourceTypesTestHelper;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,7 +47,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
@@ -112,8 +112,11 @@ public abstract class ApplicationMasterServiceTestBase {
 
   private void requestResources(MockAM am, long memory, int vCores,
       Map<String, Integer> customResources) throws Exception {
+    Map<String, String> convertedCustomResources =
+        ResourceTypesTestHelper.convertCustomResources(customResources);
     am.allocate(Collections.singletonList(ResourceRequest.newBuilder()
-        .capability(TestUtils.createResource(memory, vCores, customResources))
+        .capability(ResourceTypesTestHelper.newResource(
+            memory, vCores, convertedCustomResources))
         .numContainers(1)
         .resourceName("*")
         .build()), null);
@@ -551,9 +554,11 @@ public abstract class ApplicationMasterServiceTestBase {
     MockRM rm = new MockRM(yarnConf);
     rm.start();
 
-    MockNM nm1 = rm.registerNode("199.99.99.1:" + DEFAULT_PORT, TestUtils
-        .createResource(DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
-            DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES, null));
+    MockNM nm1 = rm.registerNode("199.99.99.1:" + DEFAULT_PORT,
+        ResourceTypesTestHelper.newResource(
+            DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+            DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
+            null));
 
     MockRMAppSubmissionData data =
         MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)
@@ -615,10 +620,11 @@ public abstract class ApplicationMasterServiceTestBase {
     MockRM rm = new MockRM(yarnConf);
     rm.start();
 
-    MockNM nm1 = rm.registerNode("199.99.99.1:" + DEFAULT_PORT, TestUtils
-        .createResource(DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+    MockNM nm1 = rm.registerNode("199.99.99.1:" + DEFAULT_PORT,
+        ResourceTypesTestHelper.newResource(
+            DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
             DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES,
-            ImmutableMap.of(CUSTOM_RES, 4)));
+            ImmutableMap.of(CUSTOM_RES, "4")));
 
     MockRMAppSubmissionData data =
         MockRMAppSubmissionData.Builder.createWithMemory(GB, rm)

@@ -800,7 +800,7 @@ public class TestNativeIO {
 
     // Incorrect file length
     try {
-      NativeIO.POSIX.Pmem.mapBlock(filePath, length);
+      NativeIO.POSIX.Pmem.mapBlock(filePath, length, false);
       fail("Illegal length parameter should be detected");
     } catch (Exception e) {
       LOG.info(e.getMessage());
@@ -810,7 +810,7 @@ public class TestNativeIO {
     filePath = "/mnt/pmem0/test_native_io";
     length = -1L;
     try {
-      NativeIO.POSIX.Pmem.mapBlock(filePath, length);
+      NativeIO.POSIX.Pmem.mapBlock(filePath, length, false);
       fail("Illegal length parameter should be detected");
     }catch (Exception e) {
       LOG.info(e.getMessage());
@@ -837,10 +837,10 @@ public class TestNativeIO {
     for (int i = 0; i < fileNumber; i++) {
       String path = filePath + i;
       LOG.info("File path = " + path);
-      NativeIO.POSIX.Pmem.mapBlock(path, length);
+      NativeIO.POSIX.Pmem.mapBlock(path, length, false);
     }
     try {
-      NativeIO.POSIX.Pmem.mapBlock(filePath, length);
+      NativeIO.POSIX.Pmem.mapBlock(filePath, length, false);
       fail("Request map extra file when persistent memory is all occupied");
     } catch (Exception e) {
       LOG.info(e.getMessage());
@@ -863,7 +863,7 @@ public class TestNativeIO {
     length = volumeSize + 1024L;
     try {
       LOG.info("File length = " + length);
-      NativeIO.POSIX.Pmem.mapBlock(filePath, length);
+      NativeIO.POSIX.Pmem.mapBlock(filePath, length, false);
       fail("File length exceeds persistent memory total volume size");
     }catch (Exception e) {
       LOG.info(e.getMessage());
@@ -881,7 +881,8 @@ public class TestNativeIO {
     // memory device.
     String filePath = "/mnt/pmem0/copy";
     long length = 4096;
-    PmemMappedRegion region = NativeIO.POSIX.Pmem.mapBlock(filePath, length);
+    PmemMappedRegion region = NativeIO.POSIX.Pmem.mapBlock(
+        filePath, length, false);
     assertTrue(NativeIO.POSIX.Pmem.isPmem(region.getAddress(), length));
     assertFalse(NativeIO.POSIX.Pmem.isPmem(region.getAddress(), length + 100));
     assertFalse(NativeIO.POSIX.Pmem.isPmem(region.getAddress() + 100, length));

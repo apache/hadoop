@@ -23,11 +23,15 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.namenode.AuditLogger;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hdfs.server.namenode.top.metrics.TopMetrics;
+
+import static org.apache.hadoop.hdfs.server.namenode.top.metrics.TopMetrics.TOPMETRICS_METRICS_SOURCE_NAME;
 
 /**
  * An {@link AuditLogger} that sends logged data directly to the metrics
@@ -38,6 +42,17 @@ public class TopAuditLogger implements AuditLogger {
   public static final Logger LOG = LoggerFactory.getLogger(TopAuditLogger.class);
 
   private final TopMetrics topMetrics;
+
+  public TopAuditLogger() {
+    Configuration conf = new HdfsConfiguration();
+    TopConf topConf = new TopConf(conf);
+    this.topMetrics = new TopMetrics(conf, topConf.nntopReportingPeriodsMs);
+    if (DefaultMetricsSystem.instance().getSource(
+            TOPMETRICS_METRICS_SOURCE_NAME) == null) {
+      DefaultMetricsSystem.instance().register(TOPMETRICS_METRICS_SOURCE_NAME,
+              "Top N operations by user", topMetrics);
+    }
+  }
 
   public TopAuditLogger(TopMetrics topMetrics) {
     Preconditions.checkNotNull(topMetrics, "Cannot init with a null " +

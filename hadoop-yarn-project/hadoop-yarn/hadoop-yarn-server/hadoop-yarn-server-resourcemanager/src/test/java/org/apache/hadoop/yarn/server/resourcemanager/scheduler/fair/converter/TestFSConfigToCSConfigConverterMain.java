@@ -26,9 +26,12 @@ import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.io.IOException;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.contrib.java.lang.system.ExpectedSystemExit;
 
 
 /**
@@ -38,6 +41,9 @@ import org.junit.Test;
 public class TestFSConfigToCSConfigConverterMain {
   private FSConfigConverterTestCommons converterTestCommons;
 
+  @Rule
+  public final ExpectedSystemExit exit = ExpectedSystemExit.none();
+
   @Before
   public void setUp() throws Exception {
     converterTestCommons = new FSConfigConverterTestCommons();
@@ -46,6 +52,7 @@ public class TestFSConfigToCSConfigConverterMain {
 
   @After
   public void tearDown() throws Exception {
+    QueueMetrics.clearQueueMetrics();
     converterTestCommons.tearDown();
   }
 
@@ -61,6 +68,7 @@ public class TestFSConfigToCSConfigConverterMain {
   public void testConvertFSConfigurationDefaults()
       throws Exception {
     setupFSConfigConversionFiles();
+    exit.expectSystemExitWithStatus(0);
 
     FSConfigToCSConfigConverterMain.main(new String[] {
         "-o", OUTPUT_DIR,
@@ -81,6 +89,7 @@ public class TestFSConfigToCSConfigConverterMain {
   public void testConvertFSConfigurationWithConsoleParam()
       throws Exception {
     setupFSConfigConversionFiles();
+    exit.expectSystemExitWithStatus(0);
 
     FSConfigToCSConfigConverterMain.main(new String[] {
         "-p",
@@ -97,6 +106,8 @@ public class TestFSConfigToCSConfigConverterMain {
 
   @Test
   public void testShortHelpSwitch() {
+    exit.expectSystemExitWithStatus(0);
+
     FSConfigToCSConfigConverterMain.main(new String[] {"-h"});
 
     verifyHelpText();
@@ -104,6 +115,8 @@ public class TestFSConfigToCSConfigConverterMain {
 
   @Test
   public void testLongHelpSwitch() {
+    exit.expectSystemExitWithStatus(0);
+
     FSConfigToCSConfigConverterMain.main(new String[] {"--help"});
 
     verifyHelpText();
@@ -112,6 +125,7 @@ public class TestFSConfigToCSConfigConverterMain {
   @Test
   public void testConvertFSConfigurationWithLongSwitches()
       throws IOException {
+    exit.expectSystemExitWithStatus(0);
     setupFSConfigConversionFiles();
 
     FSConfigToCSConfigConverterMain.main(new String[] {

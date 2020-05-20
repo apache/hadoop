@@ -19,7 +19,6 @@
 package org.apache.hadoop.security.token;
 
 import com.google.common.collect.Maps;
-import com.google.protobuf.ByteString;
 import com.google.common.primitives.Bytes;
 
 import org.apache.commons.codec.binary.Base64;
@@ -28,7 +27,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.*;
-import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -115,32 +113,6 @@ public class Token<T extends TokenIdentifier> implements Writable {
 
   public Token<T> copyToken() {
     return new Token<T>(this);
-  }
-
-  /**
-   * Construct a Token from a TokenProto.
-   * @param tokenPB the TokenProto object
-   */
-  public Token(TokenProto tokenPB) {
-    this.identifier = tokenPB.getIdentifier().toByteArray();
-    this.password = tokenPB.getPassword().toByteArray();
-    this.kind = new Text(tokenPB.getKindBytes().toByteArray());
-    this.service = new Text(tokenPB.getServiceBytes().toByteArray());
-  }
-
-  /**
-   * Construct a TokenProto from this Token instance.
-   * @return a new TokenProto object holding copies of data in this instance
-   */
-  public TokenProto toTokenProto() {
-    return TokenProto.newBuilder().
-        setIdentifier(ByteString.copyFrom(this.getIdentifier())).
-        setPassword(ByteString.copyFrom(this.getPassword())).
-        setKindBytes(ByteString.copyFrom(
-            this.getKind().getBytes(), 0, this.getKind().getLength())).
-        setServiceBytes(ByteString.copyFrom(
-            this.getService().getBytes(), 0, this.getService().getLength())).
-        build();
   }
 
   /**

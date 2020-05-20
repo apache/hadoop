@@ -870,6 +870,7 @@ public class TestBalancer {
         cluster.startDataNodes(conf, 1, true, null,
             new String[]{newRack}, null,new long[]{newCapacity});
         totalCapacity += newCapacity;
+        cluster.triggerHeartbeats();
       } else {
         //if running a test with "include list", include original nodes as well
         if (nodes.getNumberofIncludeNodes()>0) {
@@ -886,11 +887,13 @@ public class TestBalancer {
         if (nodes.getNames() != null) {
           cluster.startDataNodes(conf, nodes.getNumberofNewNodes(), true, null,
               newRacks, nodes.getNames(), newCapacities);
-          totalCapacity += newCapacity*nodes.getNumberofNewNodes();
+          cluster.triggerHeartbeats();
+          totalCapacity += newCapacity * nodes.getNumberofNewNodes();
         } else {  // host names are not specified
           cluster.startDataNodes(conf, nodes.getNumberofNewNodes(), true, null,
               newRacks, null, newCapacities);
-          totalCapacity += newCapacity*nodes.getNumberofNewNodes();
+          cluster.triggerHeartbeats();
+          totalCapacity += newCapacity * nodes.getNumberofNewNodes();
           //populate the include nodes
           if (nodes.getNumberofIncludeNodes() > 0) {
             int totalNodes = cluster.getDataNodes().size();
@@ -1905,6 +1908,7 @@ public class TestBalancer {
     // start up an empty node with the same capacity and on the same rack
     cluster.startDataNodes(conf, 1, true, null, new String[] { newRack },
         new long[] { newCapacity });
+    cluster.triggerHeartbeats();
 
     // Case1: Simulate first balancer by creating 'balancer.id' file. It
     // will keep this file until the balancing operation is completed.

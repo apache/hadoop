@@ -253,9 +253,11 @@ class FSDirSnapshotOp {
     ChunkedArrayList<INode> removedINodes = new ChunkedArrayList<>();
     INode.ReclaimContext context = new INode.ReclaimContext(
         fsd.getBlockStoragePolicySuite(), collectedBlocks, removedINodes, null);
+    // time of snapshot deletion
+    final long now = Time.now();
     fsd.writeLock();
     try {
-      snapshotManager.deleteSnapshot(iip, snapshotName, context);
+      snapshotManager.deleteSnapshot(iip, snapshotName, context, now);
       fsd.updateCount(iip, context.quotaDelta(), false);
       fsd.removeFromInodeMap(removedINodes);
       fsd.updateReplicationFactor(context.collectedBlocks()
@@ -265,7 +267,7 @@ class FSDirSnapshotOp {
     }
     removedINodes.clear();
     fsd.getEditLog().logDeleteSnapshot(snapshotRoot, snapshotName,
-        logRetryCache);
+        logRetryCache, now);
 
     return collectedBlocks;
   }

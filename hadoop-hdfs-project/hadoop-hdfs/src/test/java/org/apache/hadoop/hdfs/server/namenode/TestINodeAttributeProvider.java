@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -53,6 +54,7 @@ public class TestINodeAttributeProvider {
   private static final Set<String> CALLED = new HashSet<String>();
   private static final short HDFS_PERMISSION = 0777;
   private static final short PROVIDER_PERMISSION = 0770;
+  private static boolean runPermissionCheck = false;
 
   public static class MyAuthorizationProvider extends INodeAttributeProvider {
 
@@ -70,14 +72,27 @@ public class TestINodeAttributeProvider {
           int ancestorIndex, boolean doCheckOwner, FsAction ancestorAccess,
           FsAction parentAccess, FsAction access, FsAction subAccess,
           boolean ignoreEmptyDir) throws AccessControlException {
-        if (ancestorIndex > 1
+        if ((ancestorIndex > 1
             && inodes[1].getLocalName().equals("user")
-            && inodes[2].getLocalName().equals("acl")) {
+            && inodes[2].getLocalName().equals("acl")) || runPermissionCheck) {
           this.ace.checkPermission(fsOwner, supergroup, ugi, inodeAttrs, inodes,
               pathByNameArr, snapshotId, path, ancestorIndex, doCheckOwner,
               ancestorAccess, parentAccess, access, subAccess, ignoreEmptyDir);
         }
         CALLED.add("checkPermission|" + ancestorAccess + "|" + parentAccess + "|" + access);
+      }
+
+      @Override
+      public void checkPermissionWithContext(
+          AuthorizationContext authzContext) throws AccessControlException {
+        if (authzContext.getAncestorIndex() > 1
+            && authzContext.getInodes()[1].getLocalName().equals("user")
+            && authzContext.getInodes()[2].getLocalName().equals("acl")) {
+          this.ace.checkPermissionWithContext(authzContext);
+        }
+        CALLED.add("checkPermission|" + authzContext.getAncestorAccess()
+            + "|" + authzContext.getParentAccess() + "|" + authzContext
+            .getAccess());
       }
     }
 
@@ -188,8 +203,7 @@ public class TestINodeAttributeProvider {
     }
 
     private boolean useDefault(String[] pathElements) {
-      return (pathElements.length < 2) ||
-          !(pathElements[0].equals("user") && pathElements[1].equals("authz"));
+      return !Arrays.stream(pathElements).anyMatch("authz"::equals);
     }
 
     private boolean useNullAclFeature(String[] pathElements) {
@@ -220,6 +234,7 @@ public class TestINodeAttributeProvider {
       miniDFS.shutdown();
       miniDFS = null;
     }
+    runPermissionCheck = false;
     Assert.assertTrue(CALLED.contains("stop"));
   }
 
@@ -434,6 +449,38 @@ public class TestINodeAttributeProvider {
         Assert.assertEquals("bar", fs.getAclStatus(authzChild).getGroup());
         Assert.assertEquals(PROVIDER_PERMISSION,
             fs.getAclStatus(authzChild).getPermission().toShort());
+        return null;
+      }
+    });
+  }
+
+
+  @Test
+  // HDFS-15165 - ContentSummary calls should use the provider permissions(if
+  // attribute provider is configured) and not the underlying HDFS permissions.
+  public void testContentSummary() throws Exception {
+    runPermissionCheck = true;
+    FileSystem fs = FileSystem.get(miniDFS.getConfiguration(0));
+    final Path userPath = new Path("/user");
+    final Path authz = new Path("/user/authz");
+    final Path authzChild = new Path("/user/authz/child2");
+    // Create the path /user/authz/child2 where the HDFS permissions are
+    // 777, 700, 700.
+    // The permission provider will give permissions 770 to authz and child2
+    // with the owner foo, group bar.
+    fs.mkdirs(userPath);
+    fs.setPermission(userPath, new FsPermission(0777));
+    fs.mkdirs(authz);
+    fs.setPermission(authz, new FsPermission(0700));
+    fs.mkdirs(authzChild);
+    fs.setPermission(authzChild, new FsPermission(0700));
+    UserGroupInformation ugi = UserGroupInformation.createUserForTesting("foo",
+        new String[]{"g1"});
+    ugi.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        FileSystem fs = FileSystem.get(miniDFS.getConfiguration(0));
+        fs.getContentSummary(authz);
         return null;
       }
     });

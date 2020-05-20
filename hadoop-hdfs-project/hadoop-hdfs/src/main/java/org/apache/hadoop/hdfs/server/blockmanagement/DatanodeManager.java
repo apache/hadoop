@@ -137,6 +137,9 @@ public class DatanodeManager {
   /** Whether or not to consider lad for reading. */
   private final boolean readConsiderLoad;
 
+  /** Whether or not to consider storageType for reading. */
+  private final boolean readConsiderStorageType;
+
   /**
    * Whether or not to avoid using stale DataNodes for writing.
    * Note that, even if this is configured, the policy may be
@@ -320,6 +323,15 @@ public class DatanodeManager {
     this.readConsiderLoad = conf.getBoolean(
         DFSConfigKeys.DFS_NAMENODE_READ_CONSIDERLOAD_KEY,
         DFSConfigKeys.DFS_NAMENODE_READ_CONSIDERLOAD_DEFAULT);
+    this.readConsiderStorageType = conf.getBoolean(
+        DFSConfigKeys.DFS_NAMENODE_READ_CONSIDERSTORAGETYPE_KEY,
+        DFSConfigKeys.DFS_NAMENODE_READ_CONSIDERSTORAGETYPE_DEFAULT);
+    LOG.warn(
+        "{} and {} are incompatible and only one can be enabled. "
+            + "Both are currently enabled.",
+        DFSConfigKeys.DFS_NAMENODE_READ_CONSIDERLOAD_KEY,
+        DFSConfigKeys.DFS_NAMENODE_READ_CONSIDERSTORAGETYPE_KEY);
+
     this.avoidStaleDataNodesForWrite = conf.getBoolean(
         DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_KEY,
         DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_DEFAULT);
@@ -524,7 +536,7 @@ public class DatanodeManager {
       }
     }
 
-    DatanodeInfo[] di = lb.getLocations();
+    DatanodeInfoWithStorage[] di = lb.getLocations();
     // Move decommissioned/stale datanodes to the bottom
     Arrays.sort(di, comparator);
 
@@ -547,11 +559,15 @@ public class DatanodeManager {
     lb.updateCachedStorageInfo();
   }
 
-  private Consumer<List<DatanodeInfo>> createSecondaryNodeSorter() {
-    Consumer<List<DatanodeInfo>> secondarySort =
-        list -> Collections.shuffle(list);
+  private Consumer<List<DatanodeInfoWithStorage>> createSecondaryNodeSorter() {
+    Consumer<List<DatanodeInfoWithStorage>> secondarySort = null;
+    if (readConsiderStorageType) {
+      Comparator<DatanodeInfoWithStorage> comp =
+          Comparator.comparing(DatanodeInfoWithStorage::getStorageType);
+      secondarySort = list -> Collections.sort(list, comp);
+    }
     if (readConsiderLoad) {
-      Comparator<DatanodeInfo> comp =
+      Comparator<DatanodeInfoWithStorage> comp =
           Comparator.comparingInt(DatanodeInfo::getXceiverCount);
       secondarySort = list -> Collections.sort(list, comp);
     }
@@ -1713,8 +1729,24 @@ public class DatanodeManager {
       List<BlockTargetPair> pendingList = nodeinfo.getReplicationCommand(
           numReplicationTasks);
       if (pendingList != null && !pendingList.isEmpty()) {
-        cmds.add(new BlockCommand(DatanodeProtocol.DNA_TRANSFER, blockPoolId,
-            pendingList));
+        // If the block is deleted, the block size will become
+        // BlockCommand.NO_ACK (LONG.MAX_VALUE) . This kind of block we don't
+        // need
+        // to send for replication or reconstruction
+        Iterator<BlockTargetPair> iterator = pendingList.iterator();
+        while (iterator.hasNext()) {
+          BlockTargetPair cmd = iterator.next();
+          if (cmd.block != null
+              && cmd.block.getNumBytes() == BlockCommand.NO_ACK) {
+            // block deleted
+            DatanodeStorageInfo.decrementBlocksScheduled(cmd.targets);
+            iterator.remove();
+          }
+        }
+        if (!pendingList.isEmpty()) {
+          cmds.add(new BlockCommand(DatanodeProtocol.DNA_TRANSFER, blockPoolId,
+              pendingList));
+        }
       }
       // check pending erasure coding tasks
       List<BlockECReconstructionInfo> pendingECList = nodeinfo
@@ -1764,6 +1796,7 @@ public class DatanodeManager {
         }
         slowDiskTracker.addSlowDiskReport(nodeReg.getIpcAddr(false), slowDisks);
       }
+      slowDiskTracker.checkAndUpdateReportIfNecessary();
     }
 
     if (!cmds.isEmpty()) {

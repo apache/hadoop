@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -242,15 +243,11 @@ public class TestHarFileSystem {
 
     CompletableFuture<FSDataInputStream> openFileWithOptions(
         PathHandle pathHandle,
-        Set<String> mandatoryKeys,
-        Configuration options,
-        int bufferSize) throws IOException;
+        OpenFileParameters parameters) throws IOException;
 
     CompletableFuture<FSDataInputStream> openFileWithOptions(
         Path path,
-        Set<String> mandatoryKeys,
-        Configuration options,
-        int bufferSize) throws IOException;
+        OpenFileParameters parameters) throws IOException;
   }
 
   @Test

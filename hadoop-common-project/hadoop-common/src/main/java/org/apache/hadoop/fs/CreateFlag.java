@@ -123,7 +123,13 @@ public enum CreateFlag {
    * locality. The first block replica should be placed randomly within the
    * cluster. Subsequent block replicas should follow DataNode locality rules.
    */
-  IGNORE_CLIENT_LOCALITY((short) 0x100);
+  IGNORE_CLIENT_LOCALITY((short) 0x100),
+
+  /**
+   * Advise that a block replica NOT be written to the local rack DataNode where
+   * 'local' means the same rack as the client is being run on.
+   */
+  NO_LOCAL_RACK((short) 0x120);
 
   private final short mode;
 

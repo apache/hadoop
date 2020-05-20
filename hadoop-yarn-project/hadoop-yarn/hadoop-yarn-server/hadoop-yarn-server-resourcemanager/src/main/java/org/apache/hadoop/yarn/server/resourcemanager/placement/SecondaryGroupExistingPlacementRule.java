@@ -53,7 +53,8 @@ public class SecondaryGroupExistingPlacementRule extends FSPlacementRule {
   @Override
   public boolean initialize(ResourceScheduler scheduler) throws IOException {
     super.initialize(scheduler);
-    groupProvider = new Groups(((FairScheduler)scheduler).getConfig());
+    groupProvider = Groups.
+        getUserToGroupsMappingService(((FairScheduler)scheduler).getConfig());
 
     return true;
   }

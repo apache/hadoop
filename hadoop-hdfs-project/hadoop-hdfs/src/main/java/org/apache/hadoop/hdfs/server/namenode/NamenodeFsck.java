@@ -38,6 +38,7 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockUnderConstructionFeature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -147,7 +148,6 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
   private boolean showLocations = false;
   private boolean showRacks = false;
   private boolean showStoragePolcies = false;
-  private boolean showprogress = false;
   private boolean showCorruptFileBlocks = false;
 
   private boolean showReplicaDetails = false;
@@ -249,7 +249,10 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       } else if (key.equals("storagepolicies")) {
         this.showStoragePolcies = true;
       } else if (key.equals("showprogress")) {
-        this.showprogress = true;
+        out.println("The fsck switch -showprogress is deprecated and no " +
+                "longer has any effect. Progress is now shown by default.");
+        LOG.warn("The fsck switch -showprogress is deprecated and no longer " +
+            "has any effect. Progress is now shown by default.");
       } else if (key.equals("openforwrite")) {
         this.showOpenFiles = true;
       } else if (key.equals("listcorruptfileblocks")) {
@@ -501,9 +504,8 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
   void check(String parent, HdfsFileStatus file, Result replRes, Result ecRes)
       throws IOException {
     String path = file.getFullName(parent);
-    if (showprogress &&
-        (totalDirs + totalSymlinks + replRes.totalFiles + ecRes.totalFiles)
-            % 100 == 0) {
+    if ((totalDirs + totalSymlinks + replRes.totalFiles + ecRes.totalFiles)
+            % 1000 == 0) {
       out.println();
       out.flush();
     }
@@ -564,6 +566,8 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     long fileLen = file.getLen();
     LocatedBlocks blocks = null;
     final FSNamesystem fsn = namenode.getNamesystem();
+    final String operationName = "fsckGetBlockLocations";
+    FSPermissionChecker.setOperationType(operationName);
     fsn.readLock();
     try {
       blocks = FSDirStatAndListingOp.getBlockLocations(
@@ -573,7 +577,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     } catch (FileNotFoundException fnfe) {
       blocks = null;
     } finally {
-      fsn.readUnlock("fsckGetBlockLocations");
+      fsn.readUnlock(operationName);
     }
     return blocks;
   }
@@ -607,7 +611,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     } else if (showFiles) {
       out.print(path + " " + fileLen + " bytes, " + redundancyPolicy + " " +
         blocks.locatedBlockCount() + " block(s): ");
-    } else if (showprogress) {
+    } else if (res.totalFiles % 100 == 0) {
       out.print('.');
     }
   }
@@ -868,16 +872,20 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       String blkName = block.toString();
       BlockInfo storedBlock = blockManager.getStoredBlock(
           block.getLocalBlock());
-      DatanodeStorageInfo[] storages = storedBlock
-          .getUnderConstructionFeature().getExpectedStorageLocations();
-      report.append('\n')
-          .append("Under Construction Block:\n")
-          .append(blockNumber).append(". ").append(blkName)
-          .append(" len=").append(block.getNumBytes())
-          .append(" Expected_repl=" + storages.length);
-      String info=getReplicaInfo(storedBlock);
-      if (!info.isEmpty()){
-        report.append(" ").append(info);
+      BlockUnderConstructionFeature uc =
+          storedBlock.getUnderConstructionFeature();
+      if (uc != null) {
+        // BlockUnderConstructionFeature can be null, in case the block was
+        // in committed state, and the IBR came just after the check.
+        DatanodeStorageInfo[] storages = uc.getExpectedStorageLocations();
+        report.append('\n').append("Under Construction Block:\n")
+            .append(blockNumber).append(". ").append(blkName).append(" len=")
+            .append(block.getNumBytes())
+            .append(" Expected_repl=" + storages.length);
+        String info = getReplicaInfo(storedBlock);
+        if (!info.isEmpty()) {
+          report.append(" ").append(info);
+        }
       }
     }
 

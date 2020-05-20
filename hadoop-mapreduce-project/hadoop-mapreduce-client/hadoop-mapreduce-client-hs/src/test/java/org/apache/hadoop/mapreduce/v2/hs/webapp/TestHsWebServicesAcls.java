@@ -84,7 +84,7 @@ public class TestHsWebServicesAcls {
     this.ctx = buildHistoryContext(this.conf);
     WebApp webApp = mock(HsWebApp.class);
     when(webApp.name()).thenReturn("hsmockwebapp");
-    this.hsWebServices= new HsWebServices(ctx, conf, webApp);
+    this.hsWebServices = new HsWebServices(ctx, conf, webApp, null);
     this.hsWebServices.setResponse(mock(HttpServletResponse.class));
 
     Job job = ctx.getAllJobs().values().iterator().next();

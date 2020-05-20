@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.s3a.impl;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSocketFactory;
@@ -30,9 +32,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_SSL_CHANNEL_MODE;
+import static org.apache.hadoop.fs.s3a.Constants.ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.SSL_CHANNEL_MODE;
 
 /**
@@ -61,33 +66,28 @@ public class NetworkBinding {
    * @param awsConf the {@link ClientConfiguration} to set the
    *                SSLConnectionSocketFactory for.
    * @throws IOException if there is an error while initializing the
-   *                     {@link SSLSocketFactory}.
+   * {@link SSLSocketFactory} other than classloader problems.
    */
   public static void bindSSLChannelMode(Configuration conf,
       ClientConfiguration awsConf) throws IOException {
-    try {
-      // Validate that SSL_CHANNEL_MODE is set to a valid value.
-      String channelModeString = conf.get(
-              SSL_CHANNEL_MODE, DEFAULT_SSL_CHANNEL_MODE.name());
-      DelegatingSSLSocketFactory.SSLChannelMode channelMode = null;
-      for (DelegatingSSLSocketFactory.SSLChannelMode mode :
-              DelegatingSSLSocketFactory.SSLChannelMode.values()) {
-        if (mode.name().equalsIgnoreCase(channelModeString)) {
-          channelMode = mode;
-        }
-      }
-      if (channelMode == null) {
-        throw new IllegalArgumentException(channelModeString +
-                " is not a valid value for " + SSL_CHANNEL_MODE);
-      }
-      if (channelMode == DelegatingSSLSocketFactory.SSLChannelMode.OpenSSL ||
-          channelMode == DelegatingSSLSocketFactory.SSLChannelMode.Default) {
-        throw new UnsupportedOperationException("S3A does not support " +
-                "setting " + SSL_CHANNEL_MODE + " " +
-                DelegatingSSLSocketFactory.SSLChannelMode.OpenSSL + " or " +
-                DelegatingSSLSocketFactory.SSLChannelMode.Default);
-      }
 
+    // Validate that SSL_CHANNEL_MODE is set to a valid value.
+    String channelModeString = conf.getTrimmed(
+            SSL_CHANNEL_MODE, DEFAULT_SSL_CHANNEL_MODE.name());
+    DelegatingSSLSocketFactory.SSLChannelMode channelMode = null;
+    for (DelegatingSSLSocketFactory.SSLChannelMode mode :
+            DelegatingSSLSocketFactory.SSLChannelMode.values()) {
+      if (mode.name().equalsIgnoreCase(channelModeString)) {
+        channelMode = mode;
+      }
+    }
+    if (channelMode == null) {
+      throw new IllegalArgumentException(channelModeString +
+              " is not a valid value for " + SSL_CHANNEL_MODE);
+    }
+
+    DelegatingSSLSocketFactory.initializeDefaultFactory(channelMode);
+    try {
       // Look for AWS_SOCKET_FACTORY_CLASSNAME on the classpath and instantiate
       // an instance using the DelegatingSSLSocketFactory as the
       // SSLSocketFactory.
@@ -96,7 +96,6 @@ public class NetworkBinding {
       Constructor<?> factoryConstructor =
               sslConnectionSocketFactory.getDeclaredConstructor(
                       SSLSocketFactory.class, HostnameVerifier.class);
-      DelegatingSSLSocketFactory.initializeDefaultFactory(channelMode);
       awsConf.getApacheHttpClientConfig().setSslSocketFactory(
               (com.amazonaws.thirdparty.apache.http.conn.ssl.
                       SSLConnectionSocketFactory) factoryConstructor
@@ -105,7 +104,7 @@ public class NetworkBinding {
                               (HostnameVerifier) null));
     } catch (ClassNotFoundException | NoSuchMethodException |
             IllegalAccessException | InstantiationException |
-            InvocationTargetException e) {
+            InvocationTargetException | LinkageError  e) {
       LOG.debug("Unable to create class {}, value of {} will be ignored",
               AWS_SOCKET_FACTORY_CLASSNAME, SSL_CHANNEL_MODE, e);
     }
@@ -127,5 +126,31 @@ public class NetworkBinding {
     return region == null || region.equals("US")
         ? "us-east-1"
         : region;
+  }
+
+  /**
+   * Log the dns address associated with s3 endpoint. If endpoint is
+   * not set in the configuration, the {@code Constants#DEFAULT_ENDPOINT}
+   * will be used.
+   * @param conf input configuration.
+   */
+  public static void logDnsLookup(Configuration conf) {
+    String endPoint = conf.getTrimmed(ENDPOINT, DEFAULT_ENDPOINT);
+    String hostName = endPoint;
+    if (!endPoint.isEmpty() && LOG.isDebugEnabled()) {
+      // Updating the hostname if there is a scheme present.
+      if (endPoint.contains("://")) {
+        try {
+          URI uri = new URI(endPoint);
+          hostName = uri.getHost();
+        } catch (URISyntaxException e) {
+          LOG.debug("Got URISyntaxException, ignoring");
+        }
+      }
+      LOG.debug("Bucket endpoint : {}, Hostname : {}, DNSAddress : {}",
+              endPoint,
+              hostName,
+              NetUtils.normalizeHostName(hostName));
+    }
   }
 }

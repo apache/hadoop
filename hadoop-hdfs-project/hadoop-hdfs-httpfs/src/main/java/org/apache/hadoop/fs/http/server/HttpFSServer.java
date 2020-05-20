@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.AclPermissionPa
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.BlockSizeParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.DataParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.DestinationParam;
+import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.ECPolicyParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.FilterParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.FsActionParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.GroupParam;
@@ -438,6 +439,14 @@ public class HttpFSServer {
       response = Response.ok().build();
       break;
     }
+    case GETECPOLICY: {
+      FSOperations.FSGetErasureCodingPolicy command =
+          new FSOperations.FSGetErasureCodingPolicy(path);
+      String js = fsExecute(user, command);
+      AUDIT_LOG.info("[{}]", path);
+      response = Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+      break;
+    }
     default: {
       throw new IOException(
           MessageFormat.format("Invalid HTTP GET operation [{0}]", op.value()));
@@ -517,6 +526,30 @@ public class HttpFSServer {
   }
 
   /**
+   * Special binding for '/' as it is not handled by the wildcard binding.
+   * @param is the inputstream for the request payload.
+   * @param uriInfo the of the request.
+   * @param op the HttpFS operation of the request.
+   * @param params the HttpFS parameters of the request.
+   *
+   * @return the request response.
+   *
+   * @throws IOException thrown if an IO error occurred. Thrown exceptions are
+   *           handled by {@link HttpFSExceptionProvider}.
+   * @throws FileSystemAccessException thrown if a FileSystemAccess related
+   *           error occurred. Thrown exceptions are handled by
+   *           {@link HttpFSExceptionProvider}.
+   */
+  @POST
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8 })
+  public Response postRoot(InputStream is, @Context UriInfo uriInfo,
+      @QueryParam(OperationParam.NAME) OperationParam op,
+      @Context Parameters params, @Context HttpServletRequest request)
+      throws IOException, FileSystemAccessException {
+    return post(is, uriInfo, "/", op, params, request);
+  }
+
+  /**
    * Binding to handle POST requests.
    *
    * @param is the inputstream for the request payload.
@@ -552,23 +585,21 @@ public class HttpFSServer {
     switch (op.value()) {
       case APPEND: {
         Boolean hasData = params.get(DataParam.NAME, DataParam.class);
-        if (!hasData) {
-          URI redirectURL = createUploadRedirectionURL(
-              uriInfo, HttpFSFileSystem.Operation.APPEND);
-          Boolean noRedirect = params.get(
-              NoRedirectParam.NAME, NoRedirectParam.class);
-          if (noRedirect) {
+        URI redirectURL = createUploadRedirectionURL(uriInfo,
+            HttpFSFileSystem.Operation.APPEND);
+        Boolean noRedirect =
+            params.get(NoRedirectParam.NAME, NoRedirectParam.class);
+        if (noRedirect) {
             final String js = JsonUtil.toJsonString("Location", redirectURL);
             response = Response.ok(js).type(MediaType.APPLICATION_JSON).build();
-          } else {
-            response = Response.temporaryRedirect(redirectURL).build();
-          }
-        } else {
+        } else if (hasData) {
           FSOperations.FSAppend command =
             new FSOperations.FSAppend(is, path);
           fsExecute(user, command);
           AUDIT_LOG.info("[{}]", path);
           response = Response.ok().type(MediaType.APPLICATION_JSON).build();
+        } else {
+          response = Response.temporaryRedirect(redirectURL).build();
         }
         break;
       }
@@ -601,6 +632,14 @@ public class HttpFSServer {
          response = Response.ok().build();
          break;
       }
+      case UNSETECPOLICY: {
+        FSOperations.FSUnSetErasureCodingPolicy command =
+            new FSOperations.FSUnSetErasureCodingPolicy(path);
+        fsExecute(user, command);
+        AUDIT_LOG.info("Unset ec policy [{}]", path);
+        response = Response.ok().build();
+        break;
+      }
       default: {
         throw new IOException(
           MessageFormat.format("Invalid HTTP POST operation [{0}]",
@@ -621,10 +660,34 @@ public class HttpFSServer {
   protected URI createUploadRedirectionURL(UriInfo uriInfo, Enum<?> uploadOperation) {
     UriBuilder uriBuilder = uriInfo.getRequestUriBuilder();
     uriBuilder = uriBuilder.replaceQueryParam(OperationParam.NAME, uploadOperation).
-      queryParam(DataParam.NAME, Boolean.TRUE);
+            queryParam(DataParam.NAME, Boolean.TRUE)
+            .replaceQueryParam(NoRedirectParam.NAME, (Object[]) null);
     return uriBuilder.build(null);
   }
 
+  /**
+   * Special binding for '/' as it is not handled by the wildcard binding.
+   * @param is the inputstream for the request payload.
+   * @param uriInfo the of the request.
+   * @param op the HttpFS operation of the request.
+   * @param params the HttpFS parameters of the request.
+   *
+   * @return the request response.
+   *
+   * @throws IOException thrown if an IO error occurred. Thrown exceptions are
+   *           handled by {@link HttpFSExceptionProvider}.
+   * @throws FileSystemAccessException thrown if a FileSystemAccess related
+   *           error occurred. Thrown exceptions are handled by
+   *           {@link HttpFSExceptionProvider}.
+   */
+  @PUT
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8 })
+  public Response putRoot(InputStream is, @Context UriInfo uriInfo,
+      @QueryParam(OperationParam.NAME) OperationParam op,
+      @Context Parameters params, @Context HttpServletRequest request)
+      throws IOException, FileSystemAccessException {
+    return put(is, uriInfo, "/", op, params, request);
+  }
 
   /**
    * Binding to handle PUT requests.
@@ -662,18 +725,14 @@ public class HttpFSServer {
     switch (op.value()) {
       case CREATE: {
         Boolean hasData = params.get(DataParam.NAME, DataParam.class);
-        if (!hasData) {
-          URI redirectURL = createUploadRedirectionURL(
-              uriInfo, HttpFSFileSystem.Operation.CREATE);
-          Boolean noRedirect = params.get(
-              NoRedirectParam.NAME, NoRedirectParam.class);
-          if (noRedirect) {
+        URI redirectURL = createUploadRedirectionURL(uriInfo,
+            HttpFSFileSystem.Operation.CREATE);
+        Boolean noRedirect =
+            params.get(NoRedirectParam.NAME, NoRedirectParam.class);
+        if (noRedirect) {
             final String js = JsonUtil.toJsonString("Location", redirectURL);
             response = Response.ok(js).type(MediaType.APPLICATION_JSON).build();
-          } else {
-            response = Response.temporaryRedirect(redirectURL).build();
-          }
-        } else {
+        } else if (hasData) {
           Short permission = params.get(PermissionParam.NAME,
                                          PermissionParam.class);
           Short unmaskedPermission = params.get(UnmaskedPermissionParam.NAME,
@@ -697,6 +756,8 @@ public class HttpFSServer {
               "Location", uriInfo.getAbsolutePath());
           response = Response.created(uriInfo.getAbsolutePath())
               .type(MediaType.APPLICATION_JSON).entity(js).build();
+        } else {
+          response = Response.temporaryRedirect(redirectURL).build();
         }
         break;
       }
@@ -885,6 +946,23 @@ public class HttpFSServer {
         response = Response.ok().build();
         break;
       }
+      case SETECPOLICY: {
+        String policyName = params.get(ECPolicyParam.NAME, ECPolicyParam.class);
+        FSOperations.FSSetErasureCodingPolicy command =
+            new FSOperations.FSSetErasureCodingPolicy(path, policyName);
+        fsExecute(user, command);
+        AUDIT_LOG.info("[{}] to policy [{}]", path, policyName);
+        response = Response.ok().build();
+        break;
+    }
+    case SATISFYSTORAGEPOLICY: {
+      FSOperations.FSSatisyStoragePolicy command =
+          new FSOperations.FSSatisyStoragePolicy(path);
+      fsExecute(user, command);
+      AUDIT_LOG.info("satisfy storage policy for [{}]", path);
+      response = Response.ok().build();
+      break;
+    }
       default: {
         throw new IOException(
           MessageFormat.format("Invalid HTTP PUT operation [{0}]",

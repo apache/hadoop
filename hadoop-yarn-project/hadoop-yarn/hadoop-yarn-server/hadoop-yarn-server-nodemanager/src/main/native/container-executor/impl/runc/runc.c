@@ -885,7 +885,7 @@ int run_runc_container(const char* command_file) {
   pid_t child_pid = fork();
   if (child_pid == 0) {
     exec_runc(rlc->container_id, runc_config_path, rlc->pid_file);
-    exit(1);  // just in case exec_runc returns somehow
+    _exit(1);  // just in case exec_runc returns somehow
   } else if (child_pid == -1) {
     fprintf(ERRORFILE, "Error cannot fork: %s\n", strerror(errno));
     rc = OUT_OF_MEMORY;

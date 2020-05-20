@@ -351,6 +351,69 @@ public class TestDecommissionWithStriped {
   }
 
   /**
+   * Decommission may generate the parity block's content with all 0
+   * in some case.
+   * @throws Exception
+   */
+  @Test(timeout = 120000)
+  public void testDecommission2NodeWithBusyNode() throws Exception {
+    byte busyDNIndex = 6;
+    byte decommissionDNIndex = 6;
+    byte decommissionDNIndex2 = 8;
+    //1. create EC file
+    final Path ecFile = new Path(ecDir, "testDecommission2NodeWithBusyNode");
+    int writeBytes = cellSize * dataBlocks;
+    writeStripedFile(dfs, ecFile, writeBytes);
+
+    Assert.assertEquals(0, bm.numOfUnderReplicatedBlocks());
+    FileChecksum fileChecksum1 = dfs.getFileChecksum(ecFile, writeBytes);
+
+    //2. make once DN busy
+    final INodeFile fileNode = cluster.getNamesystem().getFSDirectory()
+        .getINode4Write(ecFile.toString()).asFile();
+    BlockInfo firstBlock = fileNode.getBlocks()[0];
+    DatanodeStorageInfo[] dnStorageInfos = bm.getStorages(firstBlock);
+    DatanodeDescriptor busyNode = dnStorageInfos[busyDNIndex]
+        .getDatanodeDescriptor();
+    for (int j = 0; j < replicationStreamsHardLimit; j++) {
+      busyNode.incrementPendingReplicationWithoutTargets();
+    }
+
+    //3. decommissioning one node
+    List<DatanodeInfo> decommissionNodes = new ArrayList<>();
+    decommissionNodes.add(dnStorageInfos[decommissionDNIndex]
+        .getDatanodeDescriptor());
+    decommissionNodes.add(dnStorageInfos[decommissionDNIndex2]
+        .getDatanodeDescriptor());
+    decommissionNode(0, decommissionNodes, AdminStates.DECOMMISSION_INPROGRESS);
+
+    //4. wait for decommissioning and not busy block to replicate(9-2+1=8)
+    GenericTestUtils.waitFor(
+        () -> bm.countNodes(firstBlock).liveReplicas() >= 8,
+        100, 60000);
+
+    //5. release busy DN, make the decommissioning and busy block can replicate
+    busyNode.decrementPendingReplicationWithoutTargets();
+
+    //6. decommissioned one node,make the decommission finished
+    decommissionNode(0, decommissionNodes, AdminStates.DECOMMISSIONED);
+
+    //7. Busy DN shouldn't be reconstructed
+    DatanodeStorageInfo[] newDnStorageInfos = bm.getStorages(firstBlock);
+    Assert.assertEquals("Busy DN shouldn't be reconstructed",
+        dnStorageInfos[busyDNIndex].getStorageID(),
+        newDnStorageInfos[busyDNIndex].getStorageID());
+
+    //8. check the checksum of a file
+    FileChecksum fileChecksum2 = dfs.getFileChecksum(ecFile, writeBytes);
+    Assert.assertEquals("Checksum mismatches!", fileChecksum1, fileChecksum2);
+
+    //9. check the data is correct
+    StripedFileTestUtil.checkData(dfs, ecFile, writeBytes, decommissionNodes,
+        null, blockGroupSize);
+  }
+
+  /**
    * Tests to verify that the file checksum should be able to compute after the
    * decommission operation.
    *

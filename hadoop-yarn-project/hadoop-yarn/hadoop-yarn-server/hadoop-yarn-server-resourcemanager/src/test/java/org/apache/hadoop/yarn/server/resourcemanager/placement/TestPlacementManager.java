@@ -18,15 +18,18 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.placement;
 
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.MappingType;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.QueueMappingBuilder;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.util.Records;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -47,20 +50,22 @@ public class TestPlacementManager {
   public static final String PARENT_QUEUE = "c";
 
   private MockRM mockRM = null;
-
-  private static final long CLUSTER_TIMESTAMP = System.currentTimeMillis();
+  private CapacitySchedulerConfiguration conf;
 
   private String getQueueMapping(String parentQueue, String leafQueue) {
     return parentQueue + DOT + leafQueue;
   }
 
-  @Test
-  public void testPlaceApplicationWithPlacementRuleChain() throws Exception {
-    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+  @Before
+  public void setup() {
+    conf = new CapacitySchedulerConfiguration();
     setupQueueConfiguration(conf);
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         ResourceScheduler.class);
+  }
 
+  @Test
+  public void testPlaceApplicationWithPlacementRuleChain() throws Exception {
     mockRM = new MockRM(conf);
     CapacityScheduler cs = (CapacityScheduler) mockRM.getResourceScheduler();
     mockRM.start();
@@ -70,11 +75,13 @@ public class TestPlacementManager {
         .getQueuePlacementManager();
 
     List<PlacementRule> queuePlacementRules = new ArrayList<>();
-    UserGroupMappingPlacementRule.QueueMapping userQueueMapping =
-        new UserGroupMappingPlacementRule.QueueMapping(
-            UserGroupMappingPlacementRule.QueueMapping.MappingType.USER,
-            USER1,
-            getQueueMapping(PARENT_QUEUE, USER1));
+    QueueMapping userQueueMapping = QueueMappingBuilder.create()
+                                          .type(MappingType.USER)
+                                          .source(USER1)
+                                          .queue(
+                                              getQueueMapping(PARENT_QUEUE,
+                                                  USER1))
+                                          .build();
 
     UserGroupMappingPlacementRule ugRule = new UserGroupMappingPlacementRule(
         false, Arrays.asList(userQueueMapping), null);
@@ -101,6 +108,40 @@ public class TestPlacementManager {
     } catch (Exception e) {
       e.printStackTrace();
       Assert.fail("Exception not expected");
+    }
+  }
+
+  @Test
+  public void testPlacementRuleUpdationOrder() throws Exception {
+    List<QueueMapping> queueMappings = new ArrayList<>();
+    QueueMapping userQueueMapping = QueueMappingBuilder.create()
+        .type(MappingType.USER).source(USER1)
+        .queue(getQueueMapping(PARENT_QUEUE, USER1)).build();
+    UserGroupMappingPlacementRule ugRule = new UserGroupMappingPlacementRule(
+        false, Arrays.asList(userQueueMapping), null);
+
+    // Configure placement rule
+    conf.set(YarnConfiguration.QUEUE_PLACEMENT_RULES, ugRule.getName());
+    queueMappings.add(userQueueMapping);
+    conf.setQueueMappings(queueMappings);
+
+    mockRM = new MockRM(conf);
+    CapacityScheduler cs = (CapacityScheduler) mockRM.getResourceScheduler();
+    mockRM.start();
+    PlacementManager pm = cs.getRMContext().getQueuePlacementManager();
+
+    // As we are setting placement rule, It shouldn't update default
+    // placement rule ie user-group. Number of placemnt rules should be 1.
+    Assert.assertEquals(1, pm.getPlacementRules().size());
+    // Verifying if placement rule set is same as the one we configured
+    Assert.assertEquals(ugRule.getName(),
+        pm.getPlacementRules().get(0).getName());
+  }
+
+  @After
+  public void tearDown() {
+    if (null != mockRM) {
+      mockRM.stop();
     }
   }
 

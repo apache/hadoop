@@ -491,6 +491,29 @@ public class TestSnapshot {
   }
 
   /**
+   * Test snapshot directory mtime after snapshot deletion.
+   */
+  @Test(timeout = 60000)
+  public void testDeletionSnapshotMtime() throws Exception {
+    Path dir = new Path("/dir");
+    Path sub = new Path(dir, "sub");
+    Path subFile = new Path(sub, "file");
+    DFSTestUtil.createFile(hdfs, subFile, BLOCKSIZE, REPLICATION, seed);
+
+    hdfs.allowSnapshot(dir);
+    Path snapshotPath = hdfs.createSnapshot(dir, "s1");
+    FileStatus oldSnapshotStatus = hdfs.getFileStatus(snapshotPath);
+    hdfs.deleteSnapshot(dir, "s1");
+    FileStatus dirStatus = hdfs.getFileStatus(dir);
+    assertNotEquals(dirStatus.getModificationTime(),
+        oldSnapshotStatus.getModificationTime());
+    cluster.restartNameNodes();
+    FileStatus newSnapshotStatus = hdfs.getFileStatus(dir);
+    assertEquals(dirStatus.getModificationTime(),
+        newSnapshotStatus.getModificationTime());
+  }
+
+  /**
    * Prepare a list of modifications. A modification may be a file creation,
    * file deletion, or a modification operation such as appending to an existing
    * file.

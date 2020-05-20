@@ -123,6 +123,7 @@ abstract class InodeTree<T> {
     private final Map<String, INode<T>> children = new HashMap<>();
     private T internalDirFs =  null; //filesystem of this internal directory
     private boolean isRoot = false;
+    private INodeLink<T> fallbackLink = null;
 
     INodeDir(final String pathToNode, final UserGroupInformation aUgi) {
       super(pathToNode, aUgi);
@@ -147,6 +148,17 @@ abstract class InodeTree<T> {
 
     boolean isRoot() {
       return isRoot;
+    }
+
+    INodeLink<T> getFallbackLink() {
+      return fallbackLink;
+    }
+
+    void addFallbackLink(INodeLink<T> link) throws IOException {
+      if (!isRoot) {
+        throw new IOException("Fallback link can only be added for root");
+      }
+      this.fallbackLink = link;
     }
 
     Map<String, INode<T>> getChildren() {
@@ -580,6 +592,7 @@ abstract class InodeTree<T> {
         }
       }
       rootFallbackLink = fallbackLink;
+      getRootDir().addFallbackLink(rootFallbackLink);
     }
 
     if (!gotMountTableEntry) {

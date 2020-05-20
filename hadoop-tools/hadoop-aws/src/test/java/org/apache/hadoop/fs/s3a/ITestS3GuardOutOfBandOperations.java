@@ -28,13 +28,13 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
 import org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -42,7 +42,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.Source;
 import org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
@@ -52,6 +51,8 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.readBytesToString;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.readDataset;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.toChar;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
 import static org.apache.hadoop.fs.s3a.Constants.AUTHORITATIVE_PATH;
@@ -60,19 +61,22 @@ import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
 import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_METADATA_TTL;
 import static org.apache.hadoop.fs.s3a.Constants.RETRY_INTERVAL;
 import static org.apache.hadoop.fs.s3a.Constants.RETRY_LIMIT;
+import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_CONSISTENCY_RETRY_INTERVAL;
+import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_CONSISTENCY_RETRY_LIMIT;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.PROBE_INTERVAL_MILLIS;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.STABILIZATION_TIME;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.TIMESTAMP_SLEEP;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.awaitDeletedFileDisappearance;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.awaitFileStatus;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.checkListingContainsPath;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.checkListingDoesNotContainPath;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.metadataStorePersistsAuthoritativeBit;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.read;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.readWithStatus;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.test.LambdaTestUtils.eventually;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
+import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
 import static org.junit.Assume.assumeTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -163,9 +167,14 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
     // speeding up the tests
     removeBaseAndBucketOverrides(conf,
         RETRY_LIMIT,
-        RETRY_INTERVAL);
+        RETRY_INTERVAL,
+        S3GUARD_CONSISTENCY_RETRY_INTERVAL,
+        S3GUARD_CONSISTENCY_RETRY_LIMIT);
     conf.setInt(RETRY_LIMIT, 3);
-    conf.set(RETRY_INTERVAL, "10ms");
+    conf.setInt(S3GUARD_CONSISTENCY_RETRY_LIMIT, 3);
+    final String delay = "10ms";
+    conf.set(RETRY_INTERVAL, delay);
+    conf.set(S3GUARD_CONSISTENCY_RETRY_INTERVAL, delay);
     return conf;
   }
 
@@ -284,11 +293,6 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
 
   @Test
   public void testOutOfBandDeletes() throws Exception {
-    ChangeDetectionPolicy changeDetectionPolicy =
-        ((S3AFileSystem) getFileSystem()).getChangeDetectionPolicy();
-    Assume.assumeFalse("FNF not expected when using a bucket with"
-            + " object versioning",
-        changeDetectionPolicy.getSource() == Source.VersionId);
 
     Path testFileName = path("OutOfBandDelete-" + UUID.randomUUID());
     outOfBandDeletes(testFileName, authoritative);
@@ -302,11 +306,6 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
   @Test
   public void testListingLongerLengthOverwrite() throws Exception {
     overwriteFileInListing("THE TEXT", "THE LONGER TEXT");
-  }
-
-  @Test
-  public void testListingDelete() throws Exception {
-    deleteFileInListing();
   }
 
   /**
@@ -658,8 +657,21 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
       FileStatus status = guardedFs.getFileStatus(testFilePath);
       LOG.info("Authoritative: {} status path: {}",
           allowAuthoritative, status.getPath());
-      expectExceptionWhenReading(testFilePath, text);
-      expectExceptionWhenReadingOpenFileAPI(testFilePath, text);
+      final boolean versionedChangeDetection =
+          isVersionedChangeDetection();
+      if (!versionedChangeDetection) {
+        expectExceptionWhenReading(testFilePath, text);
+        expectExceptionWhenReadingOpenFileAPI(testFilePath, text, null);
+        expectExceptionWhenReadingOpenFileAPI(testFilePath, text, status);
+      } else {
+        // FNFE not expected when using a bucket with object versioning
+        final String read1 = read(guardedFs, testFilePath);
+        assertEquals("File read from the auth FS", text, read1);
+        // and when the status is passed in, even the raw FS will ask for it
+        // via the versionId in the status
+        final String read2 = readWithStatus(rawFS, status);
+        assertEquals("File read from the raw FS", text, read2);
+      }
     } finally {
       guardedFs.delete(testFilePath, true);
     }
@@ -924,8 +936,8 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
   /**
    * Delete a file and use listStatus to build up the S3Guard cache.
    */
-  private void deleteFileInListing()
-      throws Exception {
+  @Test
+  public void testListingDelete() throws Exception {
 
     boolean allowAuthoritative = authoritative;
     LOG.info("Authoritative mode enabled: {}", allowAuthoritative);
@@ -953,14 +965,49 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
       // Delete the file without S3Guard (raw)
       deleteFile(rawFS, testFilePath);
 
+      // now, versioned FS or not, it will not be readable from the
+      // raw FS, and this will fail in both open APIs during the open
+      // phase, rather than when a read is attempted.
+      interceptFuture(FileNotFoundException.class, "",
+          rawFS.openFile(testFilePath).build());
+      intercept(FileNotFoundException.class, () ->
+          rawFS.open(testFilePath).close());
+
       // File status will be still readable from s3guard
-      FileStatus status = guardedFs.getFileStatus(testFilePath);
+      S3AFileStatus status = (S3AFileStatus)
+          guardedFs.getFileStatus(testFilePath);
       LOG.info("authoritative: {} status: {}", allowAuthoritative, status);
-      expectExceptionWhenReading(testFilePath, text);
-      expectExceptionWhenReadingOpenFileAPI(testFilePath, text);
+      if (isVersionedChangeDetection() && status.getVersionId() != null) {
+        // when the status entry has a version ID, then that may be used
+        // when opening the file on what is clearly a versioned store.
+        int length = text.length();
+        byte[] bytes = readOpenFileAPI(guardedFs, testFilePath, length, null);
+        Assertions.assertThat(toChar(bytes))
+            .describedAs("openFile(%s)", testFilePath)
+            .isEqualTo(text);
+        // reading the rawFS with status will also work.
+        bytes = readOpenFileAPI(rawFS, testFilePath, length, status);
+        Assertions.assertThat(toChar(bytes))
+            .describedAs("openFile(%s)", testFilePath)
+            .isEqualTo(text);
+        bytes = readDataset(guardedFs, testFilePath, length);
+        Assertions.assertThat(toChar(bytes))
+            .describedAs("open(%s)", testFilePath)
+            .isEqualTo(text);
+      } else {
+        // unversioned sequence
+        expectExceptionWhenReading(testFilePath, text);
+        expectExceptionWhenReadingOpenFileAPI(testFilePath, text, null);
+        expectExceptionWhenReadingOpenFileAPI(testFilePath, text, status);
+      }
     } finally {
       guardedFs.delete(testDirPath, true);
     }
+  }
+
+  private boolean isVersionedChangeDetection() {
+    return getFileSystem().getChangeDetectionPolicy().getSource()
+        == Source.VersionId;
   }
 
   /**
@@ -983,18 +1030,65 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
    * We expect the read to fail with an FNFE: open will be happy.
    * @param testFilePath path of the test file
    * @param text the context in the file.
+   * @param status optional status for the withFileStatus operation.
    * @throws Exception failure other than the FNFE
    */
   private void expectExceptionWhenReadingOpenFileAPI(
-      Path testFilePath, String text)
+      Path testFilePath, String text, FileStatus status)
       throws Exception {
-    try (
-        FSDataInputStream in = guardedFs.openFile(testFilePath).build().get()
-    ) {
+    expectExceptionWhenReadingOpenFileAPI(guardedFs,
+        testFilePath, text, status);
+  }
+
+  /**
+   * We expect the read to fail with an FNFE: open will be happy.
+   * @param fs filesystem
+   * @param testFilePath path of the test file
+   * @param text the context in the file.
+   * @param status optional status for the withFileStatus operation.
+   * @throws Exception failure other than the FNFE
+   */
+  private void expectExceptionWhenReadingOpenFileAPI(
+      final S3AFileSystem fs,
+      final Path testFilePath
+      , final String text,
+      final FileStatus status)
+      throws Exception {
+    final FutureDataInputStreamBuilder builder
+        = fs.openFile(testFilePath);
+    if (status != null) {
+      builder.withFileStatus(status);
+    }
+    try (FSDataInputStream in = builder.build().get()) {
       intercept(FileNotFoundException.class, () -> {
         byte[] bytes = new byte[text.length()];
         return in.read(bytes, 0, bytes.length);
       });
+    }
+  }
+
+  /**
+   * Open and read a file with the openFile API.
+   * @param fs FS to read from
+   * @param testFilePath path of the test file
+   * @param len data length to read
+   * @param status optional status for the withFileStatus operation.
+   * @throws Exception failure
+   * @return the data
+   */
+  private byte[] readOpenFileAPI(
+      S3AFileSystem fs,
+      Path testFilePath,
+      int len,
+      FileStatus status) throws Exception {
+    FutureDataInputStreamBuilder builder = fs.openFile(testFilePath);
+    if (status != null) {
+      builder.withFileStatus(status);
+    }
+    try (FSDataInputStream in = builder.build().get()) {
+      byte[] bytes = new byte[len];
+      in.readFully(0, bytes);
+      return bytes;
     }
   }
 

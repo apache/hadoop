@@ -21,6 +21,7 @@ import static org.apache.hadoop.hdfs.DFSUtil.isParentEntry;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -28,6 +29,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.Set;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageType;
@@ -165,12 +168,16 @@ public class Quota {
 
     long nQuota = HdfsConstants.QUOTA_RESET;
     long sQuota = HdfsConstants.QUOTA_RESET;
+    long[] typeQuota = new long[StorageType.values().length];
+    eachByStorageType(t -> typeQuota[t.ordinal()] = HdfsConstants.QUOTA_RESET);
+
     RouterQuotaManager manager = this.router.getQuotaManager();
     TreeMap<String, RouterQuotaUsage> pts =
         manager.getParentsContainingQuota(path);
     Entry<String, RouterQuotaUsage> entry = pts.lastEntry();
     while (entry != null && (nQuota == HdfsConstants.QUOTA_RESET
-        || sQuota == HdfsConstants.QUOTA_RESET)) {
+        || sQuota == HdfsConstants.QUOTA_RESET || orByStorageType(
+          t -> typeQuota[t.ordinal()] == HdfsConstants.QUOTA_RESET))) {
       String ppath = entry.getKey();
       QuotaUsage quota = entry.getValue();
       if (nQuota == HdfsConstants.QUOTA_RESET) {
@@ -179,9 +186,15 @@ public class Quota {
       if (sQuota == HdfsConstants.QUOTA_RESET) {
         sQuota = quota.getSpaceQuota();
       }
+      eachByStorageType(t -> {
+        if (typeQuota[t.ordinal()] == HdfsConstants.QUOTA_RESET) {
+          typeQuota[t.ordinal()] = quota.getTypeQuota(t);
+        }
+      });
       entry = pts.lowerEntry(ppath);
     }
-    return new QuotaUsage.Builder().quota(nQuota).spaceQuota(sQuota).build();
+    return new QuotaUsage.Builder().quota(nQuota).spaceQuota(sQuota)
+        .typeQuota(typeQuota).build();
   }
 
   /**
@@ -244,8 +257,11 @@ public class Quota {
       Map<RemoteLocation, QuotaUsage> results) throws IOException {
     long nsCount = 0;
     long ssCount = 0;
+    long[] typeCount = new long[StorageType.values().length];
     long nsQuota = HdfsConstants.QUOTA_RESET;
     long ssQuota = HdfsConstants.QUOTA_RESET;
+    long[] typeQuota = new long[StorageType.values().length];
+    eachByStorageType(t -> typeQuota[t.ordinal()] = HdfsConstants.QUOTA_RESET);
     boolean hasQuotaUnset = false;
     boolean isMountEntry = isMountEntry(path);
 
@@ -255,22 +271,27 @@ public class Quota {
       if (isMountEntry) {
         nsCount += usage.getFileAndDirectoryCount();
         ssCount += usage.getSpaceConsumed();
+        eachByStorageType(
+            t -> typeCount[t.ordinal()] += usage.getTypeConsumed(t));
       } else if (usage != null) {
         // If quota is not set in real FileSystem, the usage
         // value will return -1.
-        if (usage.getQuota() == -1 && usage.getSpaceQuota() == -1) {
+        if (!RouterQuotaManager.isQuotaSet(usage)) {
           hasQuotaUnset = true;
         }
         nsQuota = usage.getQuota();
         ssQuota = usage.getSpaceQuota();
+        eachByStorageType(t -> typeQuota[t.ordinal()] = usage.getTypeQuota(t));
 
         nsCount += usage.getFileAndDirectoryCount();
         ssCount += usage.getSpaceConsumed();
-        LOG.debug(
-            "Get quota usage for path: nsId: {}, dest: {},"
-                + " nsCount: {}, ssCount: {}.",
+        eachByStorageType(
+            t -> typeCount[t.ordinal()] += usage.getTypeConsumed(t));
+        LOG.debug("Get quota usage for path: nsId: {}, dest: {},"
+                + " nsCount: {}, ssCount: {}, typeCount: {}.",
             loc.getNameserviceId(), loc.getDest(),
-            usage.getFileAndDirectoryCount(), usage.getSpaceConsumed());
+            usage.getFileAndDirectoryCount(), usage.getSpaceConsumed(),
+            usage.toString(false, true, Arrays.asList(StorageType.values())));
       }
     }
 
@@ -278,17 +299,55 @@ public class Quota {
       QuotaUsage quota = getGlobalQuota(path);
       nsQuota = quota.getQuota();
       ssQuota = quota.getSpaceQuota();
+      eachByStorageType(t -> typeQuota[t.ordinal()] = quota.getTypeQuota(t));
     }
-    QuotaUsage.Builder builder = new QuotaUsage.Builder()
-        .fileAndDirectoryCount(nsCount).spaceConsumed(ssCount);
+    QuotaUsage.Builder builder =
+        new QuotaUsage.Builder().fileAndDirectoryCount(nsCount)
+            .spaceConsumed(ssCount).typeConsumed(typeCount);
     if (hasQuotaUnset) {
       builder.quota(HdfsConstants.QUOTA_RESET)
           .spaceQuota(HdfsConstants.QUOTA_RESET);
+      eachByStorageType(t -> builder.typeQuota(t, HdfsConstants.QUOTA_RESET));
     } else {
       builder.quota(nsQuota).spaceQuota(ssQuota);
+      eachByStorageType(t -> builder.typeQuota(t, typeQuota[t.ordinal()]));
     }
 
     return builder.build();
+  }
+
+  /**
+   * Invoke consumer by each storage type.
+   * @param consumer the function consuming the storage type.
+   */
+  public static void eachByStorageType(Consumer<StorageType> consumer) {
+    for (StorageType type : StorageType.values()) {
+      consumer.accept(type);
+    }
+  }
+
+  /**
+   * Invoke predicate by each storage type and bitwise inclusive OR the results.
+   * @param predicate the function test the storage type.
+   */
+  public static boolean orByStorageType(Predicate<StorageType> predicate) {
+    boolean res = false;
+    for (StorageType type : StorageType.values()) {
+      res |= predicate.test(type);
+    }
+    return res;
+  }
+
+  /**
+   * Invoke predicate by each storage type and bitwise AND the results.
+   * @param predicate the function test the storage type.
+   */
+  public static boolean andByStorageType(Predicate<StorageType> predicate) {
+    boolean res = false;
+    for (StorageType type : StorageType.values()) {
+      res &= predicate.test(type);
+    }
+    return res;
   }
 
   /**

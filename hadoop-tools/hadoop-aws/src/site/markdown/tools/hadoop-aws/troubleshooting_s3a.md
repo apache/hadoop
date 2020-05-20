@@ -92,6 +92,19 @@ classpath, do not add any of the `aws-sdk-` JARs.
 This happens if the `hadoop-aws` and `hadoop-common` JARs are out of sync.
 You can't mix them around: they have to have exactly matching version numbers.
 
+### `java.lang.NoClassDefFoundError: org/wildfly/openssl/OpenSSLProvider`
+
+This happens when <a href="performance.html#openssl">OpenSSL performance
+acceleration</a> has been configured by setting `fs.s3a.ssl.channel.mode`
+to `openssl` but the wildfly JAR is not on the classpath.
+
+Fixes:
+* Add it to the classpath
+* Use a different channel mode, including `default`, which will
+revert to the JVM SSL implementation when the wildfly
+or native openssl libraries cannot be loaded.
+
+
 ## <a name="authentication"></a> Authentication Failure
 
 If Hadoop cannot authenticate with the S3 service endpoint,
@@ -1203,29 +1216,44 @@ a new one than read to the end of a large file.
 Note: the threshold when data is read rather than the stream aborted can be tuned
 by `fs.s3a.readahead.range`; seek policy in `fs.s3a.experimental.input.fadvise`.
 
-### <a name="no_such_bucket"></a> `FileNotFoundException` Bucket does not exist.
+### <a name="no_such_bucket"></a> `UnknownStoreException` Bucket does not exist.
 
 The bucket does not exist.
 
 ```
-java.io.FileNotFoundException: Bucket stevel45r56666 does not exist
-  at org.apache.hadoop.fs.s3a.S3AFileSystem.verifyBucketExists(S3AFileSystem.java:361)
-  at org.apache.hadoop.fs.s3a.S3AFileSystem.initialize(S3AFileSystem.java:293)
-  at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:3288)
-  at org.apache.hadoop.fs.FileSystem.access$200(FileSystem.java:123)
-  at org.apache.hadoop.fs.FileSystem$Cache.getInternal(FileSystem.java:3337)
-  at org.apache.hadoop.fs.FileSystem$Cache.getUnique(FileSystem.java:3311)
-  at org.apache.hadoop.fs.FileSystem.newInstance(FileSystem.java:529)
-  at org.apache.hadoop.fs.s3a.s3guard.S3GuardTool$BucketInfo.run(S3GuardTool.java:997)
-  at org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.run(S3GuardTool.java:309)
-  at org.apache.hadoop.util.ToolRunner.run(ToolRunner.java:76)
-  at org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.run(S3GuardTool.java:1218)
-  at org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.main(S3GuardTool.java:1227)
+org.apache.hadoop.fs.s3a.UnknownStoreException:
+        Bucket random-bucket-33013fb8-f7f7-4edb-9c26-16a6ed019184 does not exist
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.verifyBucketExists(S3AFileSystem.java:537)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.doBucketProbing(S3AFileSystem.java:471)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.initialize(S3AFileSystem.java:387)
+    at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:3422)
+    at org.apache.hadoop.fs.FileSystem.get(FileSystem.java:502)
 ```
 
+Check the URI is correct, and that the bucket actually exists.
 
-Check the URI. If using a third-party store, verify that you've configured
+If using a third-party store, verify that you've configured
 the client to talk to the specific server in `fs.s3a.endpoint`.
+Forgetting to update this value and asking the AWS S3 endpoint
+for a bucket is not an unusual occurrence.
+
+This can surface during filesystem API calls if the bucket is deleted while you are using it,
+ -or the startup check for bucket existence has been disabled by setting `fs.s3a.bucket.probe` to 0.
+
+```
+org.apache.hadoop.fs.s3a.UnknownStoreException: s3a://random-bucket-7d9217b0-b426-4344-82ea-25d6cbb316f1/
+
+    at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:254)
+    at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:167)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.innerListFiles(S3AFileSystem.java:4149)
+    at org.apache.hadoop.fs.s3a.S3AFileSystem.listFiles(S3AFileSystem.java:3983)
+Caused by: com.amazonaws.services.s3.model.AmazonS3Exception:
+The specified bucket does not exist
+ (Service: Amazon S3; Status Code: 404; Error Code: NoSuchBucket
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.handleErrorResponse(AmazonHttpClient.java:1712)
+    at com.amazonaws.http.AmazonHttpClient$RequestExecutor.executeOneRequest(AmazonHttpClient.java:1367)
+```
+
 
 ## Other Issues
 
@@ -1384,3 +1412,43 @@ For this reason, the number of retry events are limited.
   </description>
 </property>
 ```
+
+### <a name="aws-timeouts"></a> Tuning AWS request timeouts
+
+It is possible to configure a global timeout for AWS service calls using following property:
+
+```xml
+<property>
+  <name>fs.s3a.connection.request.timeout</name>
+  <value>0</value>
+  <description>
+    Time out on HTTP requests to the AWS service; 0 means no timeout.
+    Measured in seconds; the usual time suffixes are all supported
+
+    Important: this is the maximum duration of any AWS service call,
+    including upload and copy operations. If non-zero, it must be larger
+    than the time to upload multi-megabyte blocks to S3 from the client,
+    and to rename many-GB files. Use with care.
+
+    Values that are larger than Integer.MAX_VALUE milliseconds are
+    converged to Integer.MAX_VALUE milliseconds
+  </description>
+</property>
+```
+
+If this value is configured too low, user may encounter `SdkClientException`s due to many requests
+timing-out.
+
+```
+com.amazonaws.SdkClientException: Unable to execute HTTP request:
+  Request did not complete before the request timeout configuration.:
+  Unable to execute HTTP request: Request did not complete before the request timeout configuration.
+  at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:205)
+  at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:112)
+  at org.apache.hadoop.fs.s3a.Invoker.lambda$retry$4(Invoker.java:315)
+  at org.apache.hadoop.fs.s3a.Invoker.retryUntranslated(Invoker.java:407)
+  at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:311)
+```
+
+When this happens, try to set `fs.s3a.connection.request.timeout` to a larger value or disable it
+completely by setting it to `0`.

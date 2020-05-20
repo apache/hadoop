@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_ALLOW_STALE_READ_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_ALLOW_STALE_READ_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTPS_BIND_HOST_KEY;
@@ -43,6 +45,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.NameNodeProxiesClient.ProxyAndInfo;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -56,10 +59,14 @@ import org.apache.hadoop.security.UserGroupInformation;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 public class HAUtil {
-  
+
+  public static final org.slf4j.Logger LOG =
+      LoggerFactory.getLogger(HAUtil.class.getName());
+
   private static final String[] HA_SPECIAL_INDEPENDENT_KEYS = new String[]{
     DFS_NAMENODE_RPC_ADDRESS_KEY,
     DFS_NAMENODE_RPC_BIND_HOST_KEY,
@@ -215,11 +222,12 @@ public class HAUtil {
    * @return true if the NN should allow read operations while in standby mode.
    */
   public static boolean shouldAllowStandbyReads(Configuration conf) {
-    return conf.getBoolean("dfs.ha.allow.stale.reads", false);
+    return conf.getBoolean(DFS_HA_ALLOW_STALE_READ_KEY,
+        DFS_HA_ALLOW_STALE_READ_DEFAULT);
   }
   
   public static void setAllowStandbyReads(Configuration conf, boolean val) {
-    conf.setBoolean("dfs.ha.allow.stale.reads", val);
+    conf.setBoolean(DFS_HA_ALLOW_STALE_READ_KEY, val);
   }
 
   /**
@@ -258,14 +266,34 @@ public class HAUtil {
    */
   public static InetSocketAddress getAddressOfActive(FileSystem fs)
       throws IOException {
+    InetSocketAddress inAddr = null;
     if (!(fs instanceof DistributedFileSystem)) {
       throw new IllegalArgumentException("FileSystem " + fs + " is not a DFS.");
     }
     // force client address resolution.
     fs.exists(new Path("/"));
     DistributedFileSystem dfs = (DistributedFileSystem) fs;
-    DFSClient dfsClient = dfs.getClient();
-    return RPC.getServerAddress(dfsClient.getNamenode());
+    Configuration dfsConf = dfs.getConf();
+    URI dfsUri = dfs.getUri();
+    String nsId = dfsUri.getHost();
+    if (isHAEnabled(dfsConf, nsId)) {
+      List<ClientProtocol> namenodes =
+          getProxiesForAllNameNodesInNameservice(dfsConf, nsId);
+      for (ClientProtocol proxy : namenodes) {
+        try {
+          if (proxy.getHAServiceState().equals(HAServiceState.ACTIVE)) {
+            inAddr = RPC.getServerAddress(proxy);
+          }
+        } catch (Exception e) {
+          //Ignore the exception while connecting to a namenode.
+          LOG.debug("Error while connecting to namenode", e);
+        }
+      }
+    } else {
+      DFSClient dfsClient = dfs.getClient();
+      inAddr = RPC.getServerAddress(dfsClient.getNamenode());
+    }
+    return inAddr;
   }
   
   /**

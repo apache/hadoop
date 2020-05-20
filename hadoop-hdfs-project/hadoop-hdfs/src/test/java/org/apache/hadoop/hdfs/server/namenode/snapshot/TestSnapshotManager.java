@@ -78,7 +78,7 @@ public class TestSnapshotManager {
 
     // Delete a snapshot to free up a slot.
     //
-    sm.deleteSnapshot(iip, "", mock(INode.ReclaimContext.class));
+    sm.deleteSnapshot(iip, "", mock(INode.ReclaimContext.class), Time.now());
 
     // Attempt to create a snapshot again. It should still fail due
     // to snapshot ID rollover.
@@ -92,4 +92,18 @@ public class TestSnapshotManager {
           StringUtils.toLowerCase(se.getMessage()).contains("rollover"));
     }
   }
+
+  /**
+   *  Snapshot is identified by INODE CURRENT_STATE_ID.
+   *  So maximum allowable snapshotID should be less than CURRENT_STATE_ID
+   */
+  @Test
+  public void testValidateSnapshotIDWidth() {
+    FSDirectory fsdir = mock(FSDirectory.class);
+    SnapshotManager snapshotManager = new SnapshotManager(new Configuration(),
+        fsdir);
+    Assert.assertTrue(snapshotManager.
+        getMaxSnapshotID() < Snapshot.CURRENT_STATE_ID);
+  }
+
 }
