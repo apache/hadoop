@@ -46,10 +46,12 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.yarn.service.conf.RestApiConstants.DEFAULT_UNLIMITED_LIFETIME;
 import static org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
 
 /**
  * Test for ServiceApiUtil helper methods.
@@ -744,10 +746,19 @@ public class TestServiceApiUtil extends ServiceTestUtils {
     Assert.assertTrue(thread.isAlive());
   }
 
-  @Test(expected = IllegalArgumentException.class)
-  public void testJvmOpts() {
-    String jvmOpts = "`ping -c 3 example.com`";
-    ServiceApiUtil.validateJvmOpts(jvmOpts);
+  @Test
+  public void testJvmOpts() throws Exception {
+    String invalidJvmOpts = "`ping -c 3 example.com`";
+    intercept(IllegalArgumentException.class,
+        "Invalid character in yarn.service.am.java.opts.",
+        () -> ServiceApiUtil.validateJvmOpts(invalidJvmOpts));
+    String validJvmOpts = "-Dyarn.service.am.java.opts=-Xmx768m "
+        + "-Djava.security.auth.login.config=/opt/hadoop/etc/jaas-zk.conf";
+    try {
+      ServiceApiUtil.validateJvmOpts(validJvmOpts);
+    } catch (Exception ex) {
+      fail("Invalid character in yarn.service.am.java.opts.");
+    }
   }
 
   public static Service createExampleApplication() {
