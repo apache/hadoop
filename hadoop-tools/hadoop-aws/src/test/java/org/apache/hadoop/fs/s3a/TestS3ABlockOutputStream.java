@@ -18,18 +18,23 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.commit.PutTracker;
 import org.apache.hadoop.util.Progressable;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for {@link S3ABlockOutputStream}.
@@ -57,10 +62,24 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
   public void testFlushNoOpWhenStreamClosed() throws Exception {
     doThrow(new IOException()).when(stream).checkOpen();
 
-    try {
-      stream.flush();
-    } catch (Exception e){
-      fail("Should not have any exception.");
-    }
+    stream.flush();
+  }
+
+  @Test
+  public void testWriteOperationHelperPartLimits() throws Throwable {
+    S3AFileSystem s3a = mock(S3AFileSystem.class);
+    when(s3a.getBucket()).thenReturn("bucket");
+    WriteOperationHelper woh = new WriteOperationHelper(s3a,
+        new Configuration());
+    ByteArrayInputStream inputStream = new ByteArrayInputStream(
+        "a".getBytes());
+    // first one works
+    String key = "destKey";
+    woh.newUploadPartRequest(key,
+        "uploadId", 1, 1024, inputStream, null, 0L);
+    // but ask past the limit and a PathIOE is raised
+    intercept(PathIOException.class, key,
+        () -> woh.newUploadPartRequest(key,
+            "uploadId", 50000, 1024, inputStream, null, 0L));
   }
 }

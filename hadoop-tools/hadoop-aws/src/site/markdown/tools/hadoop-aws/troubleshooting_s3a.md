@@ -1216,6 +1216,24 @@ a new one than read to the end of a large file.
 Note: the threshold when data is read rather than the stream aborted can be tuned
 by `fs.s3a.readahead.range`; seek policy in `fs.s3a.experimental.input.fadvise`.
 
+### <a name="upload_failure"></a> `PathIOException` Number of parts in multipart upload exceeded.
+
+Number of parts in multipart upload exceeded
+
+```
+org.apache.hadoop.fs.PathIOException: `test/testMultiPartUploadFailure': Number of parts in multipart upload exceeded. Current part count = X, Part count limit = Y
+
+	at org.apache.hadoop.fs.s3a.WriteOperationHelper.newUploadPartRequest(WriteOperationHelper.java:432)
+	at org.apache.hadoop.fs.s3a.S3ABlockOutputStream$MultiPartUpload.uploadBlockAsync(S3ABlockOutputStream.java:627)
+	at org.apache.hadoop.fs.s3a.S3ABlockOutputStream$MultiPartUpload.access$000(S3ABlockOutputStream.java:532)
+	at org.apache.hadoop.fs.s3a.S3ABlockOutputStream.uploadCurrentBlock(S3ABlockOutputStream.java:316)
+	at org.apache.hadoop.fs.s3a.S3ABlockOutputStream.write(S3ABlockOutputStream.java:301)
+```
+
+This is a known issue where upload fails if number of parts
+is more than 10000 (specified by aws SDK). You can configure
+`fs.s3a.multipart.size` to reduce the number of parts.
+
 ### <a name="no_such_bucket"></a> `UnknownStoreException` Bucket does not exist.
 
 The bucket does not exist.
