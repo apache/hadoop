@@ -841,19 +841,19 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
   /**
    * Returns an {@link Tasks.Submitter} for parallel tasks. The number of
    * threads in the thread-pool is set by fs.s3a.committer.threads.
-   * If num-threads is 0, this will a submitter instance which will
-   * declare itself as disabled; this is used in Tasks as a cue
+   * If num-threads is 0, this will return null;
+   * this is used in Tasks as a cue
    * to switch to single-threaded execution.
    *
    * @param context the JobContext for this commit
-   * @return a submitter
+   * @return a submitter or null
    */
   protected Tasks.Submitter buildSubmitter(
       JobContext context) {
     if (getThreadCount(context) > 0) {
       return new PoolSubmitter(context);
     } else {
-      return new Tasks.DisabledSubmitter();
+      return null;
     }
   }
 
@@ -863,15 +863,14 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
    * If num-threads is 0, this will raise an exception.
    *
    * @param context the JobContext for this commit
-   * @return an {@link ExecutorService} or null for the number of threads
+   * @param numThreads threads
+   * @return an {@link ExecutorService} for the number of threads
    */
   private synchronized ExecutorService buildThreadPool(
-      JobContext context) {
-
+      JobContext context, int numThreads) {
+    Preconditions.checkArgument(numThreads > 0,
+        "Cannot create a thread pool with no threads");
     if (threadPool == null) {
-      int numThreads = getThreadCount(context);
-      Preconditions.checkState(numThreads > 0,
-          "Cannot create a thread pool with no threads");
       LOG.debug("{}: creating thread pool of size {}", getRole(), numThreads);
       threadPool = HadoopExecutors.newFixedThreadPool(numThreads,
           new ThreadFactoryBuilder()
@@ -906,7 +905,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
   private synchronized Future<?> submitRunnable(
       final JobContext context,
       final Runnable task) {
-    return buildThreadPool(context).submit(task);
+    return buildThreadPool(context, getThreadCount(context)).submit(task);
   }
 
   /**
@@ -917,7 +916,12 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
 
     private final JobContext context;
 
+    private final int numThreads;
+
     private PoolSubmitter(final JobContext context) {
+      this.numThreads = getThreadCount(context);
+      Preconditions.checkArgument(numThreads > 0,
+          "Cannot create a thread pool with no threads");
       this.context = context;
     }
 
@@ -926,10 +930,6 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
       return submitRunnable(context, task);
     }
 
-    @Override
-    public boolean enabled() {
-      return true;
-    }
   }
 
   /**
@@ -953,13 +953,14 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
   }
 
   /**
-   * Get the submitter pool for executing the single file commit/revert
+   * Get the thread pool for executing the single file commit/revert
    * within the commit of all uploads of a single task.
-   *
-   * @return a disabled submitter
+   * This is currently null; it is here to allow the Tasks class to
+   * provide the logic for execute/revert.
+   * @return null. always.
    */
   protected final synchronized Tasks.Submitter singleThreadSubmitter() {
-    return new Tasks.DisabledSubmitter();
+    return null;
   }
 
   /**

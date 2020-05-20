@@ -61,7 +61,7 @@ public class TestTasks extends HadoopTestBase {
 
   /**
    * Task submitter bonded to the thread pool, or
-   * disabled for the 0-thread case.IsMeAs
+   * null for the 0-thread case.
    */
   Tasks.Submitter submitter;
   private final CounterTask failingTask
@@ -126,7 +126,7 @@ public class TestTasks extends HadoopTestBase {
               .build());
       submitter = new PoolSubmitter();
     } else {
-      submitter = new Tasks.DisabledSubmitter();
+      submitter = null;
     }
 
   }
@@ -146,11 +146,8 @@ public class TestTasks extends HadoopTestBase {
       return threadPool.submit(task);
     }
 
-    @Override
-    public boolean enabled() {
-      return true;
-    }
   }
+
   /**
    * create the builder.
    * @return pre-inited builder

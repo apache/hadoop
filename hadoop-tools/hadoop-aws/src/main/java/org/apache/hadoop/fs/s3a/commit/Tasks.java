@@ -75,7 +75,7 @@ public final class Tasks {
    */
   public static class Builder<I> {
     private final Iterable<I> items;
-    private Submitter service = new DisabledSubmitter();
+    private Submitter service = null;
     private FailureTask<I, ?> onFailure = null;
     private boolean stopOnFailure = false;
     private boolean suppressExceptions = false;
@@ -143,7 +143,7 @@ public final class Tasks {
     }
 
     public <E extends Exception> boolean run(Task<I, E> task) throws E {
-      if (service.enabled()) {
+      if (service != null) {
         return runParallel(task);
       } else {
         return runSingleThreaded(task);
@@ -418,29 +418,6 @@ public final class Tasks {
      * @return the future of the submitted task.
      */
     Future<?> submit(Runnable task);
-
-    /**
-     * Is this submitter enabled?
-     * @return true if work can be submitted to it.
-     */
-    boolean enabled();
-  }
-
-  /**
-   * The disabled submitter declares itself as not enabled, which is
-   * used to switch Task's execution to single threaded.
-   */
-  public static class DisabledSubmitter implements Tasks.Submitter {
-
-    @Override
-    public Future<?> submit(final Runnable task) {
-      throw new UnsupportedOperationException("submitter is disabled");
-    }
-
-    @Override
-    public boolean enabled() {
-      return false;
-    }
   }
 
 }
