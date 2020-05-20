@@ -150,18 +150,18 @@ public class TestWordStats {
 
       int medianIndex1 = (int) Math.ceil((this.wordsRead / 2.0));
       int medianIndex2 = (int) Math.floor((this.wordsRead / 2.0));
-
+      int prevLen = 0;
       for (Integer key : this.map.navigableKeySet()) {
         int prevNum = num;
         num += this.map.get(key);
 
-        if (medianIndex2 >= prevNum && medianIndex1 <= num) {
+        if (medianIndex2 >= prevNum && medianIndex1 <= num && medianIndex1 != medianIndex2) {
           return key;
-        } else if (medianIndex2 >= prevNum && medianIndex1 < num) {
-          Integer nextCurrLen = this.map.navigableKeySet().iterator().next();
-          double median = (key + nextCurrLen) / 2.0;
+        } else if (medianIndex2 == prevNum && medianIndex1 == medianIndex2) {
+          double median = (key + prevLen) / 2.0;
           return median;
         }
+        prevLen = key;
       }
       return -1;
     }
