@@ -162,6 +162,35 @@ public class TestCapacitySchedulerAutoQueueCreation
     }
   }
 
+  @Test(timeout = 20000)
+  public void testAutoCreateLeafQueueCreationUsingFullParentPath()
+      throws Exception {
+
+    try {
+      setupGroupQueueMappings("root.d", cs.getConfiguration(), "%user");
+      cs.reinitialize(cs.getConfiguration(), mockRM.getRMContext());
+
+      submitApp(mockRM, cs.getQueue("d"), TEST_GROUPUSER, TEST_GROUPUSER, 1, 1);
+      AutoCreatedLeafQueue autoCreatedLeafQueue =
+          (AutoCreatedLeafQueue) cs.getQueue(TEST_GROUPUSER);
+      ManagedParentQueue parentQueue = (ManagedParentQueue) cs.getQueue("d");
+      assertEquals(parentQueue, autoCreatedLeafQueue.getParent());
+
+      Map<String, Float> expectedChildQueueAbsCapacity =
+          new HashMap<String, Float>() {{
+            put(NO_LABEL, 0.02f);
+          }};
+
+      validateInitialQueueEntitlement(parentQueue, TEST_GROUPUSER,
+          expectedChildQueueAbsCapacity,
+          new HashSet<String>() {{ add(NO_LABEL); }});
+
+    } finally {
+      cleanupQueue(USER0);
+      cleanupQueue(TEST_GROUPUSER);
+    }
+  }
+
   @Test
   public void testReinitializeStoppedAutoCreatedLeafQueue() throws Exception {
     try {
