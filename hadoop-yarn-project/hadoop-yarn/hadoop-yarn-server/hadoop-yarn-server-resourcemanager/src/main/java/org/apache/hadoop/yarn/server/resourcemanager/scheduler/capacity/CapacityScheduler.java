@@ -989,12 +989,14 @@ public class CapacityScheduler extends
           // not auto-created above, then its parent queue should match
           // the parent queue specified in queue mapping
         } else if (!queue.getParent().getQueueShortName().equals(
-            placementContext.getParentQueue())) {
+                placementContext.getParentQueue())
+            && !queue.getParent().getQueuePath().equals(
+                placementContext.getParentQueue())) {
           String message =
               "Auto created Leaf queue " + placementContext.getQueue() + " "
                   + "already exists under queue : " + queue
                   .getParent().getQueueShortName()
-                  + ".But Queue mapping configuration " +
+                  + ". But Queue mapping configuration " +
                    CapacitySchedulerConfiguration.QUEUE_MAPPING + " has been "
                   + "updated to a different parent queue : "
                   + placementContext.getParentQueue()
