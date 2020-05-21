@@ -68,8 +68,23 @@ import static org.apache.hadoop.fs.s3a.Statistic.*;
 
 /**
  * Instrumentation of S3a.
- * Derived from the {@code AzureFileSystemInstrumentation}.
- *
+ * <p></p>
+ * History
+ * <ol>
+ *   <li>
+ *    HADOOP-13028. Initial implementation.
+ *    Derived from the {@code AzureFileSystemInstrumentation}.
+ *   </li>
+ *   <li>
+ *    Broadly (and directly) used in S3A.
+ *    The use of direct references causes "problems" in mocking tests.
+ *   </li>
+ *   <li>
+ *     HADOOP-16830. IOStatistics. Move to an interface and implementation
+ *     design for the different inner classes.
+ *   </li>
+ * </ol>
+ * <p></p>
  * Counters and metrics are generally addressed in code by their name or
  * {@link Statistic} key. There <i>may</i> be some Statistics which do
  * not have an entry here. To avoid attempts to access such counters failing,

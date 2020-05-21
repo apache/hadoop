@@ -31,7 +31,7 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.emptyStat
 /**
  * Special statistics context, all of whose context operations are no-ops.
  * All statistics instances it returns are also empty.
- *
+ * <p>
  * This class is here primarily to aid in testing, but it also allows for
  * classes to require a non-empty statistics context in their constructor -yet
  * still be instantiated without one bound to any filesystem.

@@ -42,4 +42,9 @@ public interface CounterIOStatistics extends IOStatistics {
    */
   void set(String key, long value);
 
+  /**
+   * Reset all counters.
+   * Unsynchronized.
+   */
+  void resetCounters();
 }

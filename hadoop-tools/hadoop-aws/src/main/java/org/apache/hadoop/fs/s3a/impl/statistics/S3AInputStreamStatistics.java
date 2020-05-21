@@ -110,11 +110,13 @@ public interface S3AInputStreamStatistics extends AutoCloseable,
 
   /**
    * Merge the statistics into the filesystem's instrumentation instance.
+   * <p>
    * Takes a diff between the current version of the stats and the
    * version of the stats when merge was last called, and merges the diff
    * into the instrumentation instance. Used to periodically merge the
-   * stats into the fs-wide stats. <b>Behavior is undefined if called on a
-   * closed instance.</b>
+   * stats into the fs-wide stats
+   * <p>
+   * <b>Behavior is undefined if called on a closed instance.</b>
    */
   void merge(boolean isClosed);
 
