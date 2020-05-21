@@ -404,4 +404,9 @@ public class ShortCircuitRegistry {
   public synchronized boolean visit(Visitor visitor) {
     return visitor.accept(segments, slots);
   }
+
+  @VisibleForTesting
+  public int getShmNum() {
+    return segments.size();
+  }
 }
