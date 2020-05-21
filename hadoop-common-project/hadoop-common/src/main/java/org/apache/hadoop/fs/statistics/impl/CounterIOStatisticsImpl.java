@@ -66,4 +66,13 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
     }
   }
 
+  /**
+   * Reset all counters.
+   * Unsynchronized.
+   */
+  @Override
+  public void resetCounters() {
+    counters.values().forEach(a -> a.set(0));
+  }
+
 }

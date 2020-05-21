@@ -42,6 +42,7 @@ import org.apache.hadoop.fs.s3a.s3guard.MetastoreInstrumentation;
  * will be used whenever input stream statistics are created -
  * However, Internally always increments the statistics in the
  * current thread.
+ * <p>
  * As a result, cross-thread IO will under-report.
  * <p>
  *
