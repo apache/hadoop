@@ -212,6 +212,21 @@ final class NflyFSystem extends FileSystem {
    */
   private NflyFSystem(URI[] uris, Configuration conf, int minReplication,
       EnumSet<NflyKey> nflyFlags) throws IOException {
+    this(uris, conf, minReplication, nflyFlags, null);
+  }
+
+  /**
+   * Creates a new Nfly instance.
+   *
+   * @param uris the list of uris in the mount point
+   * @param conf configuration object
+   * @param minReplication minimum copies to commit a write op
+   * @param nflyFlags modes such readMostRecent
+   * @param fsGetter to get the file system instance with the given uri
+   * @throws IOException
+   */
+  private NflyFSystem(URI[] uris, Configuration conf, int minReplication,
+      EnumSet<NflyKey> nflyFlags, FsGetter fsGetter) throws IOException {
     if (uris.length < minReplication) {
       throw new IOException(minReplication + " < " + uris.length
           + ": Minimum replication < #destinations");
@@ -238,8 +253,14 @@ final class NflyFSystem extends FileSystem {
     nodes = new NflyNode[uris.length];
     final Iterator<String> rackIter = rackStrings.iterator();
     for (int i = 0; i < nodes.length; i++) {
-      nodes[i] = new NflyNode(hostStrings.get(i), rackIter.next(), uris[i],
-          conf);
+      if (fsGetter != null) {
+        nodes[i] = new NflyNode(hostStrings.get(i), rackIter.next(),
+            new ChRootedFileSystem(fsGetter.getNewInstance(uris[i], conf),
+                uris[i]));
+      } else {
+        nodes[i] =
+            new NflyNode(hostStrings.get(i), rackIter.next(), uris[i], conf);
+      }
     }
     // sort all the uri's by distance from myNode, the local file system will
     // automatically be the the first one.
@@ -921,7 +942,7 @@ final class NflyFSystem extends FileSystem {
    * @throws IOException
    */
   static FileSystem createFileSystem(URI[] uris, Configuration conf,
-      String settings) throws IOException {
+      String settings, FsGetter fsGetter) throws IOException {
     // assert settings != null
     int minRepl = DEFAULT_MIN_REPLICATION;
     EnumSet<NflyKey> nflyFlags = EnumSet.noneOf(NflyKey.class);
@@ -946,6 +967,6 @@ final class NflyFSystem extends FileSystem {
         throw new IllegalArgumentException(nflyKey + ": Infeasible");
       }
     }
-    return new NflyFSystem(uris, conf, minRepl, nflyFlags);
+    return new NflyFSystem(uris, conf, minRepl, nflyFlags, fsGetter);
   }
 }

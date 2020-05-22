@@ -95,27 +95,6 @@ public class ViewFileSystem extends FileSystem {
   }
 
   /**
-   * File system instance getter.
-   */
-  static class FsGetter {
-
-    /**
-     * Gets new file system instance of given uri.
-     */
-    public FileSystem getNewInstance(URI uri, Configuration conf)
-        throws IOException {
-      return FileSystem.newInstance(uri, conf);
-    }
-
-    /**
-     * Gets file system instance of given uri.
-     */
-    public FileSystem get(URI uri, Configuration conf) throws IOException {
-      return FileSystem.get(uri, conf);
-    }
-  }
-
-  /**
    * Gets file system creator instance.
    */
   protected FsGetter fsGetter() {
@@ -314,7 +293,8 @@ public class ViewFileSystem extends FileSystem {
         @Override
         protected FileSystem getTargetFileSystem(final String settings,
             final URI[] uris) throws URISyntaxException, IOException {
-          return NflyFSystem.createFileSystem(uris, config, settings);
+          return NflyFSystem.createFileSystem(uris, config, settings,
+              fsGetter);
         }
       };
       workingDir = this.getHomeDirectory();
