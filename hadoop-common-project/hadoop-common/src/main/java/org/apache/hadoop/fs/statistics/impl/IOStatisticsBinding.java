@@ -45,6 +45,22 @@ public final class IOStatisticsBinding {
   }
 
   /**
+   * Create a diff of the current statistics states.
+   * This is not an atomic option.
+   * The instance can be serialized.
+   * @param left left value
+   * @param right right value
+   * @return a snapshot of the differences between left and right stats.
+   */
+  public static <X extends IOStatistics & Serializable> X diffStatistics(
+      IOStatistics left, IOStatistics right) {
+    SnapshotIOStatistics diff = new SnapshotIOStatistics();
+    diff.subtract(left, right);
+    return (X) diff;
+  }
+
+
+  /**
    * Create a builder for dynamic IO Statistics.
    * @return a builder to be completed.
    */

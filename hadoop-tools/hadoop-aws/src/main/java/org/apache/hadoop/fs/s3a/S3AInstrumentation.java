@@ -37,7 +37,10 @@ import org.apache.hadoop.fs.s3a.impl.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.fs.s3a.impl.statistics.StatisticsFromAwsSdk;
 import org.apache.hadoop.fs.s3a.s3guard.MetastoreInstrumentation;
 import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
+import org.apache.hadoop.fs.statistics.IOStatisticsSupport;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
+import org.apache.hadoop.fs.statistics.impl.CounterIOStatistics;
 import org.apache.hadoop.fs.statistics.impl.DynamicIOStatisticsBuilder;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricStringBuilder;
@@ -63,6 +66,8 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_OPENED;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.counterIOStatistics;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.dynamicIOStatistics;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 
@@ -632,24 +637,25 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
    */
   private void mergeInputStreamStatistics(
       InputStreamStatisticsImpl statistics) {
-    streamOpenOperations.incr(statistics.openOperations.get());
-    streamCloseOperations.incr(statistics.closeOperations.get());
-    streamClosed.incr(statistics.closed.get());
-    streamAborted.incr(statistics.aborted.get());
-    streamSeekOperations.incr(statistics.seekOperations.get());
-    streamReadExceptions.incr(statistics.readExceptions.get());
-    streamForwardSeekOperations.incr(statistics.forwardSeekOperations.get());
-    streamBytesSkippedOnSeek.incr(statistics.bytesSkippedOnSeek.get());
-    streamBackwardSeekOperations.incr(statistics.backwardSeekOperations.get());
-    streamBytesBackwardsOnSeek.incr(statistics.bytesBackwardsOnSeek.get());
-    streamBytesRead.incr(statistics.bytesRead.get());
-    streamReadOperations.incr(statistics.readOperations.get());
-    streamReadFullyOperations.incr(statistics.readFullyOperations.get());
-    streamReadsIncomplete.incr(statistics.readsIncomplete.get());
-    streamBytesReadInClose.incr(statistics.bytesReadInClose.get());
-    streamBytesDiscardedInAbort.incr(statistics.bytesDiscardedInAbort.get());
+
+    streamOpenOperations.incr(statistics.getStatistic(STREAM_READ_OPENED));
+    streamCloseOperations.incr(statistics.getCloseOperations());
+    streamClosed.incr(statistics.getClosed());
+    streamAborted.incr(statistics.getAborted());
+    streamSeekOperations.incr(statistics.getSeekOperations());
+    streamReadExceptions.incr(statistics.getReadExceptions());
+    streamForwardSeekOperations.incr(statistics.getForwardSeekOperations());
+    streamBytesSkippedOnSeek.incr(statistics.getBytesSkippedOnSeek());
+    streamBackwardSeekOperations.incr(statistics.getBackwardSeekOperations());
+    streamBytesBackwardsOnSeek.incr(statistics.getBytesBackwardsOnSeek());
+    streamBytesRead.incr(statistics.getBytesRead());
+    streamReadOperations.incr(statistics.getReadOperations());
+    streamReadFullyOperations.incr(statistics.getReadFullyOperations());
+    streamReadsIncomplete.incr(statistics.getReadsIncomplete());
+    streamBytesReadInClose.incr(statistics.getBytesReadInClose());
+    streamBytesDiscardedInAbort.incr(statistics.getBytesDiscardedInAbort());
     incrementCounter(STREAM_READ_VERSION_MISMATCHES,
-        statistics.versionMismatches.get());
+        statistics.getVersionMismatches());
   }
 
   @Override
@@ -689,22 +695,29 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
     private final FileSystem.Statistics filesystemStatistics;
 
-    private final AtomicLong openOperations= new AtomicLong(0);
-    private final AtomicLong closeOperations= new AtomicLong(0);
-    private final AtomicLong closed= new AtomicLong(0);
-    private final AtomicLong aborted= new AtomicLong(0);
-    private final AtomicLong seekOperations= new AtomicLong(0);
-    private final AtomicLong readExceptions= new AtomicLong(0);
-    private final AtomicLong forwardSeekOperations= new AtomicLong(0);
-    private final AtomicLong backwardSeekOperations= new AtomicLong(0);
-    private final AtomicLong bytesRead= new AtomicLong(0);
-    private final AtomicLong bytesSkippedOnSeek= new AtomicLong(0);
-    private final AtomicLong bytesBackwardsOnSeek= new AtomicLong(0);
-    private final AtomicLong readOperations= new AtomicLong(0);
-    private final AtomicLong readFullyOperations= new AtomicLong(0);
-    private final AtomicLong readsIncomplete= new AtomicLong(0);
-    private final AtomicLong bytesReadInClose= new AtomicLong(0);
-    private final AtomicLong bytesDiscardedInAbort= new AtomicLong(0);
+    /**
+     * Counters implemented directly in the IOStatistics.
+     */
+    private final CounterIOStatistics statsCounters = counterIOStatistics(
+        StreamStatisticNames.STREAM_READ_ABORTED,
+        StreamStatisticNames.STREAM_READ_BYTES_DISCARDED_ABORT,
+        StreamStatisticNames.STREAM_READ_CLOSED,
+        StreamStatisticNames.STREAM_READ_CLOSE_BYTES_READ,
+        StreamStatisticNames.STREAM_READ_CLOSE_OPERATIONS,
+        StreamStatisticNames.STREAM_READ_OPENED,
+        StreamStatisticNames.STREAM_READ_BYTES,
+        StreamStatisticNames.STREAM_READ_EXCEPTIONS,
+        StreamStatisticNames.STREAM_READ_FULLY_OPERATIONS,
+        StreamStatisticNames.STREAM_READ_OPERATIONS,
+        StreamStatisticNames.STREAM_READ_OPERATIONS_INCOMPLETE,
+        StreamStatisticNames.STREAM_READ_VERSION_MISMATCHES,
+        StreamStatisticNames.STREAM_READ_SEEK_OPERATIONS,
+        StreamStatisticNames.STREAM_READ_SEEK_BACKWARD_OPERATIONS,
+        StreamStatisticNames.STREAM_READ_SEEK_FORWARD_OPERATIONS,
+        StreamStatisticNames.STREAM_READ_SEEK_BYTES_BACKWARDS,
+        StreamStatisticNames.STREAM_READ_SEEK_BYTES_READ,
+        StreamStatisticNames.STREAM_READ_SEEK_BYTES_SKIPPED);
+
     private final AtomicLong policySetCount= new AtomicLong(0);
     private volatile long inputPolicy;
     private final AtomicLong versionMismatches = new AtomicLong(0);
@@ -715,6 +728,19 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       this.filesystemStatistics = filesystemStatistics;
     }
 
+    private long increment(String name) {
+      return statsCounters.increment(name);
+    }
+
+    private long increment(String name, long value) {
+      return statsCounters.increment(name, value);
+    }
+
+    @Override
+    public Long getStatistic(final String name) {
+      return statsCounters.getStatistic(name);
+    }
+
     /**
      * Seek backwards, incrementing the seek and backward seek counters.
      * @param negativeOffset how far was the seek?
@@ -722,9 +748,10 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
      */
     @Override
     public void seekBackwards(long negativeOffset) {
-      seekOperations.incrementAndGet();
-      backwardSeekOperations.incrementAndGet();
-      bytesBackwardsOnSeek.addAndGet(-negativeOffset);
+      increment(StreamStatisticNames.STREAM_READ_SEEK_OPERATIONS);
+      increment(StreamStatisticNames.STREAM_READ_SEEK_BACKWARD_OPERATIONS);
+      increment(StreamStatisticNames.STREAM_READ_SEEK_BYTES_BACKWARDS,
+          -negativeOffset);
     }
 
     /**
@@ -735,10 +762,11 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
      */
     @Override
     public void seekForwards(long skipped) {
-      seekOperations.incrementAndGet();
-      forwardSeekOperations.incrementAndGet();
+      increment(StreamStatisticNames.STREAM_READ_SEEK_OPERATIONS);
+      increment(StreamStatisticNames.STREAM_READ_SEEK_FORWARD_OPERATIONS);
       if (skipped > 0) {
-        bytesSkippedOnSeek.addAndGet(skipped);
+        increment(StreamStatisticNames.STREAM_READ_SEEK_BYTES_SKIPPED,
+            skipped);
       }
     }
 
@@ -748,7 +776,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
      */
     @Override
     public long streamOpened() {
-      return openOperations.getAndIncrement();
+      return increment(STREAM_READ_OPENED);
     }
 
     /**
@@ -761,13 +789,15 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     @Override
     public void streamClose(boolean abortedConnection,
         long remainingInCurrentRequest) {
-      closeOperations.incrementAndGet();
+      increment(StreamStatisticNames.STREAM_READ_CLOSED);
       if (abortedConnection) {
-        aborted.incrementAndGet();
-        bytesDiscardedInAbort.addAndGet(remainingInCurrentRequest);
+        increment(StreamStatisticNames.STREAM_READ_ABORTED);
+        increment(StreamStatisticNames.STREAM_READ_BYTES_DISCARDED_ABORT,
+            remainingInCurrentRequest);
       } else {
-        closed.incrementAndGet();
-        bytesReadInClose.addAndGet(remainingInCurrentRequest);
+        increment(StreamStatisticNames.STREAM_READ_CLOSED);
+        increment(StreamStatisticNames.STREAM_READ_CLOSE_BYTES_READ,
+            remainingInCurrentRequest);
       }
     }
 
@@ -776,7 +806,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
      */
     @Override
     public void readException() {
-      readExceptions.incrementAndGet();
+      increment(StreamStatisticNames.STREAM_READ_EXCEPTIONS);
     }
 
     /**
@@ -787,7 +817,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     @Override
     public void bytesRead(long bytes) {
       if (bytes > 0) {
-        bytesRead.addAndGet(bytes);
+        increment(StreamStatisticNames.STREAM_READ_BYTES, bytes);
       }
     }
 
@@ -798,7 +828,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
      */
     @Override
     public void readOperationStarted(long pos, long len) {
-      readOperations.incrementAndGet();
+      increment(StreamStatisticNames.STREAM_READ_OPERATIONS);
     }
 
     /**
@@ -809,7 +839,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
      */
     @Override
     public void readFullyOperationStarted(long pos, long len) {
-      readFullyOperations.incrementAndGet();
+      increment(StreamStatisticNames.STREAM_READ_FULLY_OPERATIONS);
     }
 
     /**
@@ -820,7 +850,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     @Override
     public void readOperationCompleted(int requested, int actual) {
       if (requested > actual) {
-        readsIncomplete.incrementAndGet();
+        increment(StreamStatisticNames.STREAM_READ_OPERATIONS_INCOMPLETE);
       }
     }
 
@@ -864,26 +894,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     public String toString() {
       final StringBuilder sb = new StringBuilder(
           "StreamStatistics{");
-      sb.append("OpenOperations=").append(openOperations.get());
-      sb.append(", CloseOperations=").append(closeOperations.get());
-      sb.append(", Closed=").append(closed.get());
-      sb.append(", Aborted=").append(aborted.get());
-      sb.append(", SeekOperations=").append(seekOperations.get());
-      sb.append(", ReadExceptions=").append(readExceptions.get());
-      sb.append(", ForwardSeekOperations=")
-          .append(forwardSeekOperations.get());
-      sb.append(", BackwardSeekOperations=")
-          .append(backwardSeekOperations.get());
-      sb.append(", BytesSkippedOnSeek=").append(bytesSkippedOnSeek.get());
-      sb.append(", BytesBackwardsOnSeek=").append(bytesBackwardsOnSeek.get());
-      sb.append(", BytesRead=").append(bytesRead.get());
-      sb.append(", BytesRead excluding skipped=")
-          .append(bytesRead.get() - bytesSkippedOnSeek.get());
-      sb.append(", ReadOperations=").append(readOperations.get());
-      sb.append(", ReadFullyOperations=").append(readFullyOperations.get());
-      sb.append(", ReadsIncomplete=").append(readsIncomplete.get());
-      sb.append(", BytesReadInClose=").append(bytesReadInClose.get());
-      sb.append(", BytesDiscardedInAbort=").append(bytesDiscardedInAbort.get());
+      sb.append(IOStatisticsLogging.iostatisticsToString(statsCounters));
       sb.append(", InputPolicy=").append(inputPolicy);
       sb.append(", InputPolicySetCount=").append(policySetCount);
       sb.append(", versionMismatches=").append(versionMismatches.get());
@@ -896,8 +907,9 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
      * Takes a diff between the current version of the stats and the
      * version of the stats when merge was last called, and merges the diff
      * into the instrumentation instance. Used to periodically merge the
-     * stats into the fs-wide stats. <b>Behavior is undefined if called on a
-     * closed instance.</b>
+     * stats into the fs-wide stats.
+     * <p></p>
+     * <b>Behavior is undefined if called on a closed instance.</b>
      */
     @Override
     public void merge(boolean isClosed) {
@@ -914,7 +926,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
         // increment the filesystem statistics for this thread.
         if (filesystemStatistics != null) {
           filesystemStatistics.incrementBytesReadByDistance(DISTANCE,
-              bytesRead.get() + bytesReadInClose.get());
+              getBytesRead() - getBytesReadInClose());
         }
       }
     }
@@ -938,38 +950,14 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
         InputStreamStatisticsImpl inputStats) {
       InputStreamStatisticsImpl diff =
           new InputStreamStatisticsImpl(filesystemStatistics);
-      setd(diff.openOperations, openOperations,
-          inputStats.openOperations);
-      setd(diff.closeOperations, closeOperations,
-          inputStats.closeOperations);
-      setd(diff.closed, closed, inputStats.closed);
-      setd(diff.aborted, aborted, inputStats.aborted);
-      setd(diff.seekOperations, seekOperations,
-          inputStats.seekOperations);
-      setd(diff.readExceptions, readExceptions,
-          inputStats.readExceptions);
-      setd(diff.forwardSeekOperations, forwardSeekOperations,
-          inputStats.forwardSeekOperations);
-      setd(diff.backwardSeekOperations, backwardSeekOperations,
-          inputStats.backwardSeekOperations);
-      setd(diff.bytesRead, bytesRead, inputStats.bytesRead);
-      setd(diff.bytesSkippedOnSeek, bytesSkippedOnSeek,
-          inputStats.bytesSkippedOnSeek);
-      setd(diff.bytesBackwardsOnSeek, bytesBackwardsOnSeek,
-          inputStats.bytesBackwardsOnSeek);
-      setd(diff.readOperations, readOperations,
-          inputStats.readOperations);
-      setd(diff.readFullyOperations, readFullyOperations,
-          inputStats.readFullyOperations);
-      setd(diff.readsIncomplete, readsIncomplete,
-          inputStats.readsIncomplete);
-      setd(diff.bytesReadInClose, bytesReadInClose,
-          inputStats.bytesReadInClose);
-      setd(diff.bytesDiscardedInAbort, bytesDiscardedInAbort,
-          inputStats.bytesDiscardedInAbort);
+
+      // build the io stats diff
+      diff.statsCounters.copy(statsCounters);
+      diff.statsCounters.subtract(inputStats.statsCounters);
+
       setd(diff.policySetCount, policySetCount,
           inputStats.policySetCount);
-      diff.inputPolicy = inputPolicy -inputStats.inputPolicy;
+      diff.inputPolicy = inputPolicy - inputStats.inputPolicy;
       diff.versionMismatches.set(versionMismatches.longValue() -
               inputStats.versionMismatches.longValue());
       return diff;
@@ -982,23 +970,9 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     private InputStreamStatisticsImpl copy() {
       InputStreamStatisticsImpl copy =
           new InputStreamStatisticsImpl(filesystemStatistics);
-      copy.openOperations.set(openOperations.get());
-      copy.closeOperations.set(closeOperations.get());
-      copy.closed.set(closed.get());
-      copy.aborted.set(aborted.get());
-      copy.seekOperations.set(seekOperations.get());
-      copy.readExceptions.set(readExceptions.get());
-      copy.forwardSeekOperations.set(forwardSeekOperations.get());
-      copy.backwardSeekOperations.set(backwardSeekOperations.get());
-      copy.bytesRead.set(bytesRead.get());
-      copy.bytesSkippedOnSeek.set(bytesSkippedOnSeek.get());
-      copy.bytesBackwardsOnSeek.set(bytesBackwardsOnSeek.get());
-      copy.readOperations.set(readOperations.get());
-      copy.readFullyOperations.set(readFullyOperations.get());
-      copy.readsIncomplete.set(readsIncomplete.get());
-      copy.bytesReadInClose.set(bytesReadInClose.get());
-      copy.bytesDiscardedInAbort.set(bytesDiscardedInAbort.get());
+
       copy.policySetCount.set(policySetCount.get());
+      copy.versionMismatches.set(versionMismatches.get());
       copy.inputPolicy = inputPolicy;
       return copy;
     }
@@ -1009,113 +983,96 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
      */
     @Override
     public IOStatistics getIOStatistics() {
-      DynamicIOStatisticsBuilder builder
-          = dynamicIOStatistics();
-
-      builder.add(StreamStatisticNames.STREAM_BYTES_DISCARDED_ABORT,
-          bytesDiscardedInAbort);
-      builder.add(StreamStatisticNames.STREAM_CLOSED,
-          closed);
-      builder.add(StreamStatisticNames.STREAM_CLOSE_OPERATIONS,
-          closeOperations);
-      builder.add(StreamStatisticNames.STREAM_OPENED,
-          openOperations);
-      builder.add(StreamStatisticNames.STREAM_READ_BYTES,
-          bytesRead);
-      builder.add(StreamStatisticNames.STREAM_READ_EXCEPTIONS,
-          readExceptions);
-      builder.add(StreamStatisticNames.STREAM_READ_FULLY_OPERATIONS,
-          readFullyOperations);
-      builder.add(StreamStatisticNames.STREAM_READ_OPERATIONS,
-          readOperations);
-      builder.add(StreamStatisticNames.STREAM_READ_OPERATIONS_INCOMPLETE,
-          readsIncomplete);
-      return builder.build();
+      return IOStatisticsSupport.snapshot(statsCounters);
     }
 
     @Override
     public long getCloseOperations() {
-      return closeOperations.get();
+      return getStatistic(StreamStatisticNames.STREAM_READ_CLOSE_OPERATIONS);
     }
 
     @Override
     public long getClosed() {
-      return closed.get();
+      return getStatistic(StreamStatisticNames.STREAM_READ_CLOSED);
     }
 
     @Override
     public long getAborted() {
-      return aborted.get();
+      return getStatistic(StreamStatisticNames.STREAM_READ_ABORTED);
     }
 
     @Override
     public long getForwardSeekOperations() {
-      return forwardSeekOperations.get();
+      return getStatistic(
+          StreamStatisticNames.STREAM_READ_SEEK_FORWARD_OPERATIONS);
     }
 
     @Override
     public long getBackwardSeekOperations() {
-      return backwardSeekOperations.get();
+      return getStatistic(
+          StreamStatisticNames.STREAM_READ_SEEK_BACKWARD_OPERATIONS);
     }
 
     @Override
     public long getBytesRead() {
-      return bytesRead.get();
+      return getStatistic(StreamStatisticNames.STREAM_READ_BYTES);
     }
 
     @Override
     public long getBytesSkippedOnSeek() {
-      return bytesSkippedOnSeek.get();
+      return getStatistic(StreamStatisticNames.STREAM_READ_SEEK_BYTES_SKIPPED);
     }
-
+    
     @Override
     public long getBytesBackwardsOnSeek() {
-      return bytesBackwardsOnSeek.get();
+      return getStatistic(
+          StreamStatisticNames.STREAM_READ_SEEK_BYTES_BACKWARDS);
     }
 
     @Override
     public long getBytesReadInClose() {
-      return bytesReadInClose.get();
+      return getStatistic(StreamStatisticNames.STREAM_READ_CLOSE_BYTES_READ);
     }
 
     @Override
     public long getBytesDiscardedInAbort() {
-      return bytesDiscardedInAbort.get();
+      return getStatistic(
+          StreamStatisticNames.STREAM_READ_BYTES_DISCARDED_ABORT);
     }
 
     @Override
     public long getOpenOperations() {
-      return openOperations.get();
+      return getStatistic(STREAM_READ_OPENED);
     }
 
     @Override
     public long getSeekOperations() {
-      return seekOperations.get();
+      return getStatistic(StreamStatisticNames.STREAM_READ_SEEK_OPERATIONS);
     }
-
+    
     @Override
     public long getReadExceptions() {
-      return readExceptions.get();
+      return getStatistic(StreamStatisticNames.STREAM_READ_EXCEPTIONS);
     }
 
     @Override
     public long getReadOperations() {
-      return readOperations.get();
+      return getStatistic(StreamStatisticNames.STREAM_READ_CLOSED);
     }
 
     @Override
     public long getReadFullyOperations() {
-      return readFullyOperations.get();
+      return getStatistic(StreamStatisticNames.STREAM_READ_CLOSED);
     }
 
     @Override
     public long getReadsIncomplete() {
-      return readsIncomplete.get();
+      return getStatistic(StreamStatisticNames.STREAM_READ_CLOSED);
     }
 
     @Override
     public long getPolicySetCount() {
-      return policySetCount.get();
+      return getStatistic(StreamStatisticNames.STREAM_READ_CLOSED);
     }
 
     @Override

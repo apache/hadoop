@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractStreamIOStatisticsTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
+import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeEnableS3Guard;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.*;
@@ -46,6 +47,33 @@ public class ITestS3AContractStreamIOStatistics extends
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
     return new S3AContract(conf);
+  }
+
+  /**
+   * Keys which the input stream must support.
+   * @return a list of keys
+   */
+  public List<String> inputStreamStatisticKeys() {
+    return Arrays.asList(
+        StreamStatisticNames.STREAM_READ_ABORTED,
+        StreamStatisticNames.STREAM_READ_BYTES_DISCARDED_ABORT,
+        StreamStatisticNames.STREAM_READ_CLOSED,
+        StreamStatisticNames.STREAM_READ_CLOSE_BYTES_READ,
+        StreamStatisticNames.STREAM_READ_CLOSE_OPERATIONS,
+        StreamStatisticNames.STREAM_READ_OPENED,
+        StreamStatisticNames.STREAM_READ_BYTES,
+        StreamStatisticNames.STREAM_READ_EXCEPTIONS,
+        StreamStatisticNames.STREAM_READ_FULLY_OPERATIONS,
+        StreamStatisticNames.STREAM_READ_OPERATIONS,
+        StreamStatisticNames.STREAM_READ_OPERATIONS_INCOMPLETE,
+        StreamStatisticNames.STREAM_READ_VERSION_MISMATCHES,
+        StreamStatisticNames.STREAM_READ_SEEK_OPERATIONS,
+        StreamStatisticNames.STREAM_READ_SEEK_BACKWARD_OPERATIONS,
+        StreamStatisticNames.STREAM_READ_SEEK_FORWARD_OPERATIONS,
+        StreamStatisticNames.STREAM_READ_SEEK_BYTES_BACKWARDS,
+        StreamStatisticNames.STREAM_READ_SEEK_BYTES_READ,
+        StreamStatisticNames.STREAM_READ_SEEK_BYTES_SKIPPED
+    );
   }
 
   /**

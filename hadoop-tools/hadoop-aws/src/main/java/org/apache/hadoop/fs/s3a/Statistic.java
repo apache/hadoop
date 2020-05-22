@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 
@@ -27,8 +28,13 @@ import java.util.Map;
 /**
  * Statistic which are collected in S3A.
  * These statistics are available at a low level in {@link S3AStorageStatistics}
- * and as metrics in {@link S3AInstrumentation}
+ * and as metrics in {@link S3AInstrumentation}.
+ * <p></p>
+ * Where possible, stream names come from {@link StreamStatisticNames}
+ * and {@link StoreStatisticNames}
+ *
  */
+@InterfaceStability.Unstable
 public enum Statistic {
 
   DIRECTORIES_CREATED("directories_created",
@@ -125,22 +131,22 @@ public enum Statistic {
   OBJECT_SELECT_REQUESTS("object_select_requests",
       "Count of S3 Select requests issued"),
   STREAM_ABORTED(
-      StreamStatisticNames.STREAM_ABORTED,
+      StreamStatisticNames.STREAM_READ_ABORTED,
       "Count of times the TCP stream was aborted"),
   STREAM_BACKWARD_SEEK_OPERATIONS(
       StreamStatisticNames.STREAM_READ_SEEK_BACKWARD_OPERATIONS,
       "Number of executed seek operations which went backwards in a stream"),
   STREAM_CLOSED(
-      StreamStatisticNames.STREAM_CLOSED,
+      StreamStatisticNames.STREAM_READ_CLOSED,
       "Count of times the TCP stream was closed"),
   STREAM_CLOSE_OPERATIONS(
-      StreamStatisticNames.STREAM_CLOSE_OPERATIONS,
+      StreamStatisticNames.STREAM_READ_CLOSE_OPERATIONS,
       "Total count of times an attempt to close a data stream was made"),
   STREAM_FORWARD_SEEK_OPERATIONS(
       StreamStatisticNames.STREAM_READ_SEEK_FORWARD_OPERATIONS,
       "Number of executed seek operations which went forward in a stream"),
   STREAM_OPENED(
-      StreamStatisticNames.STREAM_OPENED,
+      StreamStatisticNames.STREAM_READ_OPENED,
       "Total count of times an input stream to object store data was opened"),
   STREAM_READ_EXCEPTIONS(
       StreamStatisticNames.STREAM_READ_EXCEPTIONS,
@@ -170,10 +176,10 @@ public enum Statistic {
       StreamStatisticNames.STREAM_READ_SEEK_OPERATIONS,
       "Number of seek operations during stream IO."),
   STREAM_CLOSE_BYTES_READ(
-      StreamStatisticNames.STREAM_CLOSE_BYTES_READ,
+      StreamStatisticNames.STREAM_READ_CLOSE_BYTES_READ,
       "Count of bytes read when closing streams during seek operations."),
   STREAM_ABORT_BYTES_DISCARDED(
-      StreamStatisticNames.STREAM_BYTES_DISCARDED_ABORT,
+      StreamStatisticNames.STREAM_READ_BYTES_DISCARDED_ABORT,
       "Count of bytes discarded by aborting the stream"),
   STREAM_WRITE_FAILURES(
       StreamStatisticNames.STREAM_WRITE_EXCEPTIONS,

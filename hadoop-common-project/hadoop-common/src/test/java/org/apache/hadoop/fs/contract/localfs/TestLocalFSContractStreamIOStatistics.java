@@ -78,7 +78,7 @@ public class TestLocalFSContractStreamIOStatistics extends
   }
 
   @Override
-  public int readBlockSize() {
+  public int readBufferSize() {
     return 1024;
   }
 
@@ -87,22 +87,5 @@ public class TestLocalFSContractStreamIOStatistics extends
     return true;
   }
 
-  @Test
-  public void testInputStreamStatisticRead() throws Throwable {
-    describe("Read Data from an input stream");
-    Path path = methodPath();
-    FileSystem fs = getFileSystem();
-    final int fileLen = 1024;
-    final byte[] ds = dataset(fileLen, 'a', 26);
-    ContractTestUtils.writeDataset(fs, path, ds, fileLen, 8_000, true);
 
-    try (FSDataInputStream in = fs.open(path)) {
-      long current = 0;
-      IOStatistics statistics = extractStatistics(in);
-      verifyStatisticValue(statistics, STREAM_READ_BYTES, 0);
-      Assertions.assertThat(in.read()).isEqualTo('a');
-      int blockSize = readBlockSize();
-      current = verifyStatisticValue(statistics, STREAM_READ_BYTES, blockSize);
-    }
-  }
 }

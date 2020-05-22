@@ -157,4 +157,6 @@ public interface S3AInputStreamStatistics extends AutoCloseable,
   long getVersionMismatches();
 
   long getInputPolicy();
+
+  Long getStatistic(String name);
 }
