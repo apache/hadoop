@@ -260,6 +260,11 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     }
 
     @Override
+    public Long getStatistic(final String name) {
+      return 0L;
+    }
+
+    @Override
     public ChangeTrackerStatistics getChangeTrackerStatistics() {
       return new CountingChangeTracker();
     }

@@ -21,16 +21,22 @@ package org.apache.hadoop.fs.statistics;
 import javax.annotation.Nullable;
 import java.util.Map;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsImplementationUtils;
+
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsImplementationUtils.entrytoString;
 
 /**
  * Utility operations convert IO Statistics sources/instances
  * to strings, especially for robustly logging.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
 public final class IOStatisticsLogging {
 
   private static final Logger LOG =
@@ -38,13 +44,6 @@ public final class IOStatisticsLogging {
 
   private IOStatisticsLogging() {
   }
-
-  /** Pattern used for each entry. */
-  @VisibleForTesting
-  static final String ENTRY_PATTERN = "(%s=%s)";
-
-  /** String to return when a source is null. */
-  static final String NULL_SOURCE = "()";
 
   /**
    * Convert IOStatistics to a string form.
@@ -56,14 +55,12 @@ public final class IOStatisticsLogging {
     if (statistics != null) {
       int count = 0;
       StringBuilder sb = new StringBuilder("(");
-      for (Map.Entry entry : statistics) {
+      for (Map.Entry<String, Long> entry : statistics) {
         if (count > 0) {
           sb.append(' ');
         }
         count++;
-        sb.append(String.format(ENTRY_PATTERN,
-            entry.getKey(),
-            entry.getValue()));
+        sb.append(entrytoString(entry));
       }
       sb.append(")");
       return sb.toString();
@@ -135,7 +132,7 @@ public final class IOStatisticsLogging {
     public String toString() {
       return source != null
           ? sourceToString(source)
-          : NULL_SOURCE;
+          : IOStatisticsImplementationUtils.NULL_SOURCE;
     }
   }
 
@@ -163,7 +160,7 @@ public final class IOStatisticsLogging {
     public String toString() {
       return statistics != null
           ? iostatisticsToString(statistics)
-          : NULL_SOURCE;
+          : IOStatisticsImplementationUtils.NULL_SOURCE;
     }
   }
 }

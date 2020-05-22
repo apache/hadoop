@@ -29,6 +29,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsImplementationUtils;
 import org.apache.hadoop.fs.statistics.impl.SourceWrappedStatistics;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
@@ -38,7 +39,7 @@ import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatis
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticIsUnknown;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticIsUntracked;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticValue;
-import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.NULL_SOURCE;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsImplementationUtils.NULL_SOURCE;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringify;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.iostatisticsToString;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.dynamicIOStatistics;
@@ -233,7 +234,7 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
     Object demandSource = demandStringify(statsSource);
 
     // show it evaluates
-    String formatted1 = String.format(IOStatisticsLogging.ENTRY_PATTERN,
+    String formatted1 = String.format(IOStatisticsImplementationUtils.ENTRY_PATTERN,
         ALONG, aLong.get());
     assertThat(demand
         .toString())
@@ -246,7 +247,7 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
     incrementAllCounters();
     incrementAllCounters();
     // there are new values to expect
-    String formatted2 = String.format(IOStatisticsLogging.ENTRY_PATTERN,
+    String formatted2 = String.format(IOStatisticsImplementationUtils.ENTRY_PATTERN,
         ALONG, aLong.get());
     assertThat(demand
         .toString())

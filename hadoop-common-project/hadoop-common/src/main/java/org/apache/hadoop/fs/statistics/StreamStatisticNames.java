@@ -42,29 +42,29 @@ public final class StreamStatisticNames {
   }
 
   /** {@value}. */
-  public static final String STREAM_ABORTED = "stream_aborted";
+  public static final String STREAM_READ_ABORTED = "stream_aborted";
 
   /** {@value}. */
-  public static final String STREAM_BYTES_DISCARDED_ABORT
-      = "stream_bytes_discarded_in_abort";
+  public static final String STREAM_READ_BYTES_DISCARDED_ABORT
+      = "stream_read_bytes_discarded_in_abort";
 
   /** {@value}. */
-  public static final String STREAM_BYTES_DISCARDED_SEEK
-      = "stream_bytes_discarded_in_seek";
+  public static final String STREAM_READ_BYTES_DISCARDED_SEEK
+      = "stream_read_bytes_discarded_in_seek";
 
   /** {@value}. */
-  public static final String STREAM_CLOSED = "stream_closed";
+  public static final String STREAM_READ_CLOSED = "stream_read_closed";
 
   /** {@value}. */
-  public static final String STREAM_CLOSE_BYTES_READ
-      = "stream_bytes_read_in_close";
+  public static final String STREAM_READ_CLOSE_BYTES_READ
+      = "stream_read_bytes_read_in_close";
 
   /** {@value}. */
-  public static final String STREAM_CLOSE_OPERATIONS
-      = "stream_close_operations";
+  public static final String STREAM_READ_CLOSE_OPERATIONS
+      = "stream_read_close_operations";
 
   /** {@value}. */
-  public static final String STREAM_OPENED = "stream_opened";
+  public static final String STREAM_READ_OPENED = "stream_read_opened";
 
   /** {@value}. */
   public static final String STREAM_READ_BYTES
@@ -92,15 +92,7 @@ public final class StreamStatisticNames {
 
   /** {@value}. */
   public static final String STREAM_READ_SEEK_BYTES_BACKWARDS
-      = "stream_bytes_backwards_on_seek";
-
-  /** {@value}. */
-  public static final String STREAM_READ_SEEK_BYTES_READ =
-      "stream_read_seek_bytes_read";
-
-  /** {@value}. */
-  public static final String STREAM_READ_SEEK_BYTES_SKIPPED
-      = "stream_bytes_skipped_on_seek";
+      = "stream_read_bytes_backwards_on_seek";
 
   /** {@value}. */
   public static final String STREAM_READ_SEEK_FORWARD_OPERATIONS
@@ -113,6 +105,14 @@ public final class StreamStatisticNames {
   /** {@value}. */
   public static final String STREAM_READ_SEEK_BACKWARD_OPERATIONS =
       "stream_read_seek_backward_operations";
+
+  /** {@value}. */
+  public static final String STREAM_READ_SEEK_BYTES_READ =
+      "stream_read_seek_bytes_read";
+
+  /** {@value}. */
+  public static final String STREAM_READ_SEEK_BYTES_SKIPPED
+      = "stream_read_bytes_skipped_on_seek";
 
   /** {@value}. */
   public static final String STREAM_READ_SKIP_OPERATIONS =

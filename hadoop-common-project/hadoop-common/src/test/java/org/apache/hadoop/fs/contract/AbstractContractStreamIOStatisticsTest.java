@@ -35,12 +35,19 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.extractStatistics;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticValue;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringify;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_BYTES;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_WRITE_BYTES;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsImplementationUtils.entrytoString;
 
 /**
- * Tests {@link IOStatistics} support in input streams.
- * Requires both the input and output streams to offer statistics.
+ * Tests {@link IOStatistics} support in input and output streams.
+ * <p>
+ * Requires both the input and output streams to offer the basic
+ * bytes read/written statistics.
+ * <p></p>
+ * If the IO is buffered, that information must be provided,
+ * especially the input buffer size.
  */
 public abstract class AbstractContractStreamIOStatisticsTest
     extends AbstractFSContractTestBase {
@@ -114,10 +121,11 @@ public abstract class AbstractContractStreamIOStatisticsTest
     fs.mkdirs(path.getParent());
     boolean writesInBlocks = streamWritesInBlocks();
     try (FSDataOutputStream out = fs.create(path, true)) {
+      Object demandStatsString = demandStringify(out);
       // before a write, no bytes
       final byte[] bytes = ContractTestUtils.toAsciiByteArray(
           "statistically-speaking");
-      final int len = bytes.length;
+      final long len = bytes.length;
       out.write(bytes);
       out.flush();
       IOStatistics statistics = extractStatistics(out);
@@ -133,6 +141,9 @@ public abstract class AbstractContractStreamIOStatisticsTest
       // always call the output stream to check that behavior
       statistics = extractStatistics(out);
       verifyStatisticValue(statistics, STREAM_WRITE_BYTES, len * 2);
+      // the to string value must contain the same counterHiCable you mean
+      Assertions.assertThat(demandStatsString.toString())
+          .contains(entrytoString(STREAM_WRITE_BYTES, len * 2));
     } finally {
       fs.delete(path, false);
     }
@@ -169,61 +180,85 @@ public abstract class AbstractContractStreamIOStatisticsTest
     ContractTestUtils.writeDataset(fs, path, ds, fileLen, 8_000, true);
 
     try (FSDataInputStream in = fs.open(path)) {
-      long current;
+      long current = 0;
       IOStatistics statistics = extractStatistics(in);
       verifyStatisticValue(statistics, STREAM_READ_BYTES, 0);
       Assertions.assertThat(in.read()).isEqualTo('a');
-      int blockSize = readBlockSize();
-      current = verifyStatisticValue(statistics, STREAM_READ_BYTES, blockSize);
+      int bufferSize = readBufferSize();
+      // either a single byte was read or a whole block
+      current = verifyBytesRead(statistics, current, 1, bufferSize);
       final int bufferLen = 128;
       byte[] buf128 = new byte[bufferLen];
       in.read(buf128);
-      current = verifyStatisticValue(statistics, STREAM_READ_BYTES, current +
-          +bufferLen);
+      current = verifyBytesRead(statistics, current, bufferLen, bufferSize);
       in.readFully(buf128);
-      current = verifyStatisticValue(statistics, STREAM_READ_BYTES, current
-          + bufferLen);
+      current = verifyBytesRead(statistics, current, bufferLen, bufferSize);
       in.readFully(0, buf128);
-      current = verifyStatisticValue(statistics, STREAM_READ_BYTES, current
-          + bufferLen);
+      current = verifyBytesRead(statistics, current, bufferLen, bufferSize);
       // seek must not increment the read counter
       in.seek(256);
-      verifyStatisticValue(statistics, STREAM_READ_BYTES, current);
+      verifyBytesRead(statistics, current, 0, bufferSize);
 
       // if a stream implements lazy-seek the seek operation
       // may be postponed until the read
       final int sublen = 32;
       Assertions.assertThat(in.read(buf128, 0, sublen))
           .isEqualTo(sublen);
-      current = verifyStatisticValue(statistics, STREAM_READ_BYTES,
-          current + sublen);
+      current = verifyBytesRead(statistics, current, sublen, bufferSize);
 
       // perform some read operations near the end of the file such that
       // the buffer will not be completely read.
-      final int pos = fileLen - sublen;
-      in.seek(pos);
-      Assertions.assertThat(in.read(buf128))
-          .describedAs("Read overlapping EOF")
-          .isEqualTo(sublen);
-      current = verifyStatisticValue(statistics, STREAM_READ_BYTES,
-          current + sublen);
-      Assertions.assertThat(in.read(pos, buf128, 0, bufferLen))
-          .describedAs("Read(buffer) overlapping EOF")
-          .isEqualTo(sublen);
-      verifyStatisticValue(statistics, STREAM_READ_BYTES,
-          current + sublen);
+      // skip these tests for buffered IO as it is too complex to work out
+      if (bufferSize == 0) {
+        final int pos = fileLen - sublen;
+        in.seek(pos);
+        Assertions.assertThat(in.read(buf128))
+            .describedAs("Read overlapping EOF")
+            .isEqualTo(sublen);
+        current = verifyStatisticValue(statistics, STREAM_READ_BYTES,
+            current + sublen);
+        Assertions.assertThat(in.read(pos, buf128, 0, bufferLen))
+            .describedAs("Read(buffer) overlapping EOF")
+            .isEqualTo(sublen);
+        verifyStatisticValue(statistics, STREAM_READ_BYTES,
+            current + sublen);
+      }
     } finally {
       fs.delete(path, false);
     }
   }
 
   /**
-   * Block size for reads.
-   * Filesystems performing block reads (checksum, etc) will have a value greater than 1.
-   * @return what the minimum read will be
+   * Verify the bytes read value, taking into account block size.
+   * @param statistics stats
+   * @param current current count
+   * @param bytesRead bytes explicitly read
+   * @param bufferSize buffer size of stream
+   * @return the current count of bytes read <i>ignoring block size</i>
    */
-  public int readBlockSize() {
-    return 1;
+  public long verifyBytesRead(final IOStatistics statistics,
+      final long current,
+      final int bytesRead, final int bufferSize) {
+    // final position. for unbuffered read, this is the expected value
+    long finalPos = current + bytesRead;
+    long expected = finalPos;
+    if (bufferSize > 0) {
+      // buffered. count of read is number of buffers already read
+      // plus the current buffer, multiplied by that buffer size
+      expected = bufferSize * (1 + (current / bufferSize));
+    }
+    verifyStatisticValue(statistics, STREAM_READ_BYTES, expected);
+    return finalPos;
+  }
+
+  /**
+   * Buffer size for reads.
+   * Filesystems performing block reads (checksum, etc)
+   * must return their buffer value is
+   * @return buffer capacity; 0 for unbuffered
+   */
+  public int readBufferSize() {
+    return 0;
   }
 
   /**

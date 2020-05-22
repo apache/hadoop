@@ -23,6 +23,10 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 
+import com.google.common.base.Preconditions;
+
+import org.apache.hadoop.fs.statistics.IOStatistics;
+
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.dynamicIOStatistics;
 
 /**
@@ -51,10 +55,12 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
   }
 
   @Override
-  public void increment(final String key, final long value) {
+  public long increment(final String key, final long value) {
     AtomicLong counter = counters.get(key);
     if (counter != null) {
-      counter.addAndGet(value);
+      return counter.getAndAdd(value);
+    } else {
+      return 0;
     }
   }
 
@@ -75,4 +81,56 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
     counters.values().forEach(a -> a.set(0));
   }
 
+  /**
+   * Update the counter values from a statistics source.
+   * The source must have all keys in this instance;
+   * extra keys are ignored.
+   * @param source source of statistics.
+   */
+  @Override
+  public void copy(final IOStatistics source) {
+    counters.entrySet().forEach(e -> {
+      String key = e.getKey();
+      Long statisticValue = source.getStatistic(key);
+      Preconditions.checkState(statisticValue != null,
+          "No statistic %s in IOStatistic source %s",
+          key, source);
+      e.getValue().set(statisticValue);
+    });
+  }
+
+  /**
+   * Add the counter values from a statistics source.
+   * The source must have all keys in this instance;
+   * extra keys are ignored.
+   * @param source source of statistics.
+   */
+  @Override
+  public void add(final IOStatistics source) {
+    counters.entrySet().forEach(e -> {
+      String key = e.getKey();
+      Long statisticValue = source.getStatistic(key);
+      Preconditions.checkState(statisticValue != null,
+          "No statistic %s in IOStatistic source %s",
+          key, source);
+      e.getValue().addAndGet(statisticValue);
+    });
+  }
+  /**
+   * Subtract the counter values from a statistics source.
+   * The source must have all keys in this instance;
+   * extra keys are ignored.
+   * @param source source of statistics.
+   */
+  @Override
+  public void subtract(final IOStatistics source) {
+    counters.entrySet().forEach(e -> {
+      String key = e.getKey();
+      Long statisticValue = source.getStatistic(key);
+      Preconditions.checkState(statisticValue != null,
+          "No statistic %s in IOStatistic source %s",
+          key, source);
+      e.getValue().addAndGet(-statisticValue);
+    });
+  }
 }
