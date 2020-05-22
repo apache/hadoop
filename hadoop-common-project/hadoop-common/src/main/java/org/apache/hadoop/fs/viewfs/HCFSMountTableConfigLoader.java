@@ -59,8 +59,7 @@ public class HCFSMountTableConfigLoader implements MountTableConfigLoader {
       throws IOException {
     this.mountTable = new Path(mountTableConfigPath);
     String scheme = mountTable.toUri().getScheme();
-    ViewFileSystem.FsGetter fsGetter =
-        new ViewFileSystemOverloadScheme.ChildFsGetter(scheme);
+    FsGetter fsGetter = new ViewFileSystemOverloadScheme.ChildFsGetter(scheme);
     try (FileSystem fs = fsGetter.getNewInstance(mountTable.toUri(), conf)) {
       RemoteIterator<LocatedFileStatus> listFiles =
           fs.listFiles(mountTable, false);
