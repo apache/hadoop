@@ -688,7 +688,8 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     ArrayList<Rename> optionList = new ArrayList<Rename>();
     if(req.getOverwriteDest()) {
       optionList.add(Rename.OVERWRITE);
-    } else if(req.hasMoveToTrash() && req.getMoveToTrash()) {
+    }
+    if (req.hasMoveToTrash() && req.getMoveToTrash()) {
       optionList.add(Rename.TO_TRASH);
     }
 
