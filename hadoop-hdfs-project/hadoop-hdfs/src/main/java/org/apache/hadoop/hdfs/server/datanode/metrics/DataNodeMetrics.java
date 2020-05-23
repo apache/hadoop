@@ -109,6 +109,12 @@ public class DataNodeMetrics {
   @Metric("Count of active dataNode xceivers")
   private MutableGaugeInt dataNodeActiveXceiversCount;
 
+  @Metric("Count of active DataNode packetResponder")
+  private MutableGaugeInt dataNodePacketResponderCount;
+
+  @Metric("Count of active DataNode block recovery worker")
+  private MutableGaugeInt dataNodeBlockRecoveryWorkerCount;
+
   @Metric MutableRate readBlockOp;
   @Metric MutableRate writeBlockOp;
   @Metric MutableRate blockChecksumOp;
@@ -523,6 +529,42 @@ public class DataNodeMetrics {
 
   public void setDataNodeActiveXceiversCount(int value) {
     dataNodeActiveXceiversCount.set(value);
+  }
+
+  public int getDataNodeActiveXceiverCount() {
+    return dataNodeActiveXceiversCount.value();
+  }
+
+  public void incrDataNodePacketResponderCount() {
+    dataNodePacketResponderCount.incr();
+  }
+
+  public void decrDataNodePacketResponderCount() {
+    dataNodePacketResponderCount.decr();
+  }
+
+  public void setDataNodePacketResponderCount(int value) {
+    dataNodePacketResponderCount.set(value);
+  }
+
+  public int getDataNodePacketResponderCount() {
+    return dataNodePacketResponderCount.value();
+  }
+
+  public void incrDataNodeBlockRecoveryWorkerCount() {
+    dataNodeBlockRecoveryWorkerCount.incr();
+  }
+
+  public void decrDataNodeBlockRecoveryWorkerCount() {
+    dataNodeBlockRecoveryWorkerCount.decr();
+  }
+
+  public void setDataNodeBlockRecoveryWorkerCount(int value) {
+    dataNodeBlockRecoveryWorkerCount.set(value);
+  }
+
+  public int getDataNodeBlockRecoveryWorkerCount() {
+    return dataNodeBlockRecoveryWorkerCount.value();
   }
 
   public void incrECDecodingTime(long decodingTimeNanos) {

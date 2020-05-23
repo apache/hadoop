@@ -1368,6 +1368,7 @@ class BlockReceiver implements Closeable {
      */
     @Override
     public void run() {
+      datanode.metrics.incrDataNodePacketResponderCount();
       boolean lastPacketInBlock = false;
       final long startTime = ClientTraceLog.isInfoEnabled() ? System.nanoTime() : 0;
       while (isRunning() && !lastPacketInBlock) {
@@ -1505,6 +1506,9 @@ class BlockReceiver implements Closeable {
           }
         }
       }
+      // Any exception will be caught and processed in the previous loop, so we
+      // will always arrive here when the thread exiting
+      datanode.metrics.decrDataNodePacketResponderCount();
       LOG.info(myString + " terminating");
     }
     
