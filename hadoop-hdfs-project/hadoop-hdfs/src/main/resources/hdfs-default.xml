@@ -4962,6 +4962,20 @@
 </property>
 
 <property>
+  <name>dfs.namenode.available-space-rack-fault-tolerant-block-placement-policy.balanced-space-preference-fraction</name>
+  <value>0.6</value>
+  <description>
+    Only used when the dfs.block.replicator.classname is set to
+    org.apache.hadoop.hdfs.server.blockmanagement.AvailableSpaceRackFaultTolerantBlockPlacementPolicy.
+    Special value between 0 and 1, noninclusive.  Increases chance of
+    placing blocks on Datanodes with less disk space used. More the value near 1
+    more are the chances of choosing the datanode with less percentage of data.
+    Similarly as the value moves near 0, the chances of choosing datanode with
+    high load increases as the value reaches near 0.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.backup.dnrpc-address</name>
   <value></value>
   <description>
