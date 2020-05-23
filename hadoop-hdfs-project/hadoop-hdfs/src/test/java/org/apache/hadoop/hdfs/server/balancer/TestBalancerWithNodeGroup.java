@@ -47,6 +47,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyWithNodeGroup;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.NetworkTopologyWithNodeGroup;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -360,5 +361,31 @@ public class TestBalancerWithNodeGroup {
     } finally {
       cluster.shutdown();
     }
+  }
+
+  /**
+   * verify BlockPlacementPolicyNodeGroup uses NetworkTopologyWithNodeGroup.
+   */
+
+  @Test
+  public void testBPPNodeGroup() throws Exception {
+    Configuration conf = createConf();
+    conf.setBoolean(DFSConfigKeys.DFS_USE_DFS_NETWORK_TOPOLOGY_KEY, true);
+    long[] capacities = new long[] {CAPACITY, CAPACITY, CAPACITY, CAPACITY};
+    String[] racks = new String[] {RACK0, RACK0, RACK1, RACK1};
+    String[] nodeGroups =
+        new String[] {NODEGROUP0, NODEGROUP0, NODEGROUP1, NODEGROUP2};
+
+    int numOfDatanodes = capacities.length;
+    assertEquals(numOfDatanodes, racks.length);
+    assertEquals(numOfDatanodes, nodeGroups.length);
+    MiniDFSCluster.Builder builder =
+        new MiniDFSCluster.Builder(conf).numDataNodes(capacities.length)
+            .racks(racks).simulatedCapacities(capacities);
+    MiniDFSClusterWithNodeGroup.setNodeGroups(nodeGroups);
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Configured cluster topology should be "
+            + "org.apache.hadoop.net.NetworkTopologyWithNodeGroup",
+        () -> new MiniDFSClusterWithNodeGroup(builder));
   }
 }
