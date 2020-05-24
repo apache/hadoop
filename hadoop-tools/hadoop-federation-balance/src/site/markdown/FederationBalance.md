@@ -64,6 +64,14 @@ Usage
   This will scan the journal to find all the unfinished jobs, recover and
   continue to run them.
 
+Command Options
+--------------------
+Command `submit` has 2 options:
+
+| Option key                     | Description                          |
+| ------------------------------ | ------------------------------------ |
+| -router | If true, the source path would be taken as a mount point and it will disable write by setting the mount point readonly. Otherwise the source path would be taken as the full path with source cluster and it will disable write by cancelling the `x` permission of the source path. |
+| -forceCloseOpen | If true, the DIFF_DISTCP stage will force close all open files when there is no diff between the source path and the dst path. Otherwise the DIFF_DISTCP will wait until there is no open files. |
 
 Configuration Options
 --------------------
@@ -75,7 +83,6 @@ Configuration Options
 | federation.balance.class | The class used for federation balance |
 | distcp.procedure.map.num | The map number of distcp job |
 | distcp.procedure.bandwidth.limit | The bandwidth limit of distcp job |
-| distcp.procedure.force.close.open.files | When there is no diff between source path and target path but there are still open files in source path, force close all the open files then do the final distcp |
 | distcp.procedure.move.to.trash | Move source path to trash after all the data are sync to target |
 
 Architecture of Federation Balance
@@ -113,18 +120,21 @@ Architecture of Federation Balance
 
   * DistCpProcedure: This is the first procedure. It handles all the data copy
     works. There are 3 phases:
-    * Init Distcp: Creates a snapshot of the source path and distcp it to
+    * PRE_CHECK: Do the pre-check of the src and dst path.
+    * Init Distcp: Create a snapshot of the source path and distcp it to
       target.
     * Diff Distcp: Submit distcp with `-diff` round by round to sync source and
-      target paths.
-    * Final Distcp(optional): This phase is only triggered when
-      `distcp.procedure.force.close.open.files` is set. If there is no diff
-      between source and target and there are still some open files under source
-      , it will force close all the open files and submit the final distcp. If
-      the force close is not enabled, it will wait until there is no open files.
+      target paths. If `-forceCloseOpen` is set, this stage finishes when there
+      is no diff between src and dst. Otherwise this stage finishes when there
+      is no diff and no open files.  
+    * DISABLE_WRITE: Disable write operations so the src won't be changed.
+    * Final Distcp(optional): Force close all the open files and submit the
+      final distcp. 
+    * FINISH: Enable write and other cleanup works.
+    
+  * MountTableProcedure: This procedure updates the mount entry in Router. This
+    procedure is activated only when `-router` is true.
 
-  * SingleMountTableProcedure: This procedure updates the mount entry in Router.
+  * TrashProcedure: This procedure moves the source path to trash.
 
-  * TrashProcedure: This procedure move the source path to trash.
-
-  After all 3 phases finish, the balance job is done.
+  After all 3 procedures finish, the balance job is done.
