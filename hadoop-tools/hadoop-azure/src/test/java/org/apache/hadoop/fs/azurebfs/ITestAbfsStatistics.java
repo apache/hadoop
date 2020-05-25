@@ -24,6 +24,7 @@ import java.util.Map;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
 import org.apache.hadoop.fs.permission.FsPermission;
 
 /**
@@ -42,9 +43,10 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
   @Test
   public void testInitialStatsValues() throws IOException {
     describe("Testing the initial values of Abfs counters");
-    AbfsInstrumentation abfsInstrumentation =
+
+    AbfsCounters abfsCounters =
         new AbfsInstrumentation(getFileSystem().getUri());
-    Map<String, Long> metricMap = abfsInstrumentation.toMap();
+    Map<String, Long> metricMap = abfsCounters.toMap();
 
     for (Map.Entry<String, Long> entry : metricMap.entrySet()) {
       String key = entry.getKey();
@@ -71,24 +73,18 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
     fs.createNonRecursive(createFilePath, FsPermission
         .getDefault(), false, 1024, (short) 1, 1024, null);
 
-    Map<String, Long> metricMap = fs.getInstrumentation().toMap();
+    Map<String, Long> metricMap = fs.getInstrumentationMap();
     /*
     Test of statistic values after creating a directory and a file ;
     getFileStatus is called 1 time after creating file and 1 time at time of
     initialising.
      */
-    assertEquals("Mismatch in " + AbfsStatistic.CALL_CREATE.getStatName(), 1,
-        (long) metricMap.get(AbfsStatistic.CALL_CREATE.getStatName()));
-    assertEquals("Mismatch in " + AbfsStatistic.CALL_CREATE_NON_RECURSIVE.getStatName(), 1,
-        (long) metricMap.get(AbfsStatistic.CALL_CREATE_NON_RECURSIVE.getStatName()));
-    assertEquals("Mismatch in " + AbfsStatistic.FILES_CREATED.getStatName(), 1,
-        (long) metricMap.get(AbfsStatistic.FILES_CREATED.getStatName()));
-    assertEquals("Mismatch in " + AbfsStatistic.DIRECTORIES_CREATED.getStatName(), 1,
-        (long) metricMap.get(AbfsStatistic.DIRECTORIES_CREATED.getStatName()));
-    assertEquals("Mismatch in " + AbfsStatistic.CALL_MKDIRS.getStatName(), 1,
-        (long) metricMap.get(AbfsStatistic.CALL_MKDIRS.getStatName()));
-    assertEquals("Mismatch in " + AbfsStatistic.CALL_GET_FILE_STATUS.getStatName(), 2,
-        (long) metricMap.get(AbfsStatistic.CALL_GET_FILE_STATUS.getStatName()));
+    assertAbfsStatistics(AbfsStatistic.CALL_CREATE, 1, metricMap);
+    assertAbfsStatistics(AbfsStatistic.CALL_CREATE_NON_RECURSIVE, 1, metricMap);
+    assertAbfsStatistics(AbfsStatistic.FILES_CREATED, 1, metricMap);
+    assertAbfsStatistics(AbfsStatistic.DIRECTORIES_CREATED, 1, metricMap);
+    assertAbfsStatistics(AbfsStatistic.CALL_MKDIRS, 1, metricMap);
+    assertAbfsStatistics(AbfsStatistic.CALL_GET_FILE_STATUS, 2, metricMap);
 
     //re-initialising Abfs to reset statistic values.
     fs.initialize(fs.getUri(), fs.getConf());
@@ -104,33 +100,21 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
           1024, null);
     }
 
-    metricMap = fs.getInstrumentation().toMap();
+    metricMap = fs.getInstrumentationMap();
     /*
     Test of statistics values after creating 10 directories and files;
     getFileStatus is called 1 time at initialise() plus number of times file
     is created.
      */
-    assertEquals("Mismatch in " + AbfsStatistic.CALL_CREATE.getStatName(),
-        NUMBER_OF_OPS,
-        (long) metricMap.get(AbfsStatistic.CALL_CREATE.getStatName()));
-    assertEquals("Mismatch in " + AbfsStatistic.CALL_CREATE_NON_RECURSIVE.getStatName(),
-        NUMBER_OF_OPS,
-        (long) metricMap.get(AbfsStatistic.CALL_CREATE_NON_RECURSIVE.getStatName()));
-    assertEquals("Mismatch in " + AbfsStatistic.FILES_CREATED.getStatName(),
-        NUMBER_OF_OPS,
-        (long) metricMap.get(AbfsStatistic.FILES_CREATED.getStatName()));
-    assertEquals(
-        "Mismatch in " + AbfsStatistic.DIRECTORIES_CREATED.getStatName(),
-        NUMBER_OF_OPS,
-        (long) metricMap.get(AbfsStatistic.DIRECTORIES_CREATED.getStatName()));
-    assertEquals("Mismatch in " + AbfsStatistic.CALL_MKDIRS.getStatName(),
-        NUMBER_OF_OPS,
-        (long) metricMap.get(AbfsStatistic.CALL_MKDIRS.getStatName()));
-    assertEquals(
-        "Mismatch in " + AbfsStatistic.CALL_GET_FILE_STATUS.getStatName(),
-        1 + NUMBER_OF_OPS,
-        (long) metricMap.get(AbfsStatistic.CALL_GET_FILE_STATUS.getStatName()));
-
+    assertAbfsStatistics(AbfsStatistic.CALL_CREATE, NUMBER_OF_OPS, metricMap);
+    assertAbfsStatistics(AbfsStatistic.CALL_CREATE_NON_RECURSIVE, NUMBER_OF_OPS,
+        metricMap);
+    assertAbfsStatistics(AbfsStatistic.FILES_CREATED, NUMBER_OF_OPS, metricMap);
+    assertAbfsStatistics(AbfsStatistic.DIRECTORIES_CREATED, NUMBER_OF_OPS,
+        metricMap);
+    assertAbfsStatistics(AbfsStatistic.CALL_MKDIRS, NUMBER_OF_OPS, metricMap);
+    assertAbfsStatistics(AbfsStatistic.CALL_GET_FILE_STATUS,
+        1 + NUMBER_OF_OPS, metricMap);
   }
 
   /**
@@ -140,6 +124,7 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
   public void testDeleteStatistics() throws IOException {
     describe("Testing counter values got by deleting directory and files "
         + "in Abfs");
+
     AzureBlobFileSystem fs = getFileSystem();
     /*
     This directory path needs to be root for triggering the
@@ -158,19 +143,16 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
     fs.create(path(createDirectoryPath + getMethodName()));
     fs.delete(createDirectoryPath, true);
 
-    Map<String, Long> metricMap = fs.getInstrumentation().toMap();
+    Map<String, Long> metricMap = fs.getInstrumentationMap();
 
     /*
     Test for op_delete, files_deleted, op_list_status.
     since directory is delete recursively op_delete is called 2 times.
     1 file is deleted, 1 listStatus() call is made.
      */
-    assertEquals("Mismatch in " + AbfsStatistic.CALL_DELETE.getStatName(), 2,
-        (long) metricMap.get(AbfsStatistic.CALL_DELETE.getStatName()));
-    assertEquals("Mismatch in " + AbfsStatistic.FILES_DELETED.getStatName(), 1,
-        (long) metricMap.get(AbfsStatistic.FILES_DELETED.getStatName()));
-    assertEquals("Mismatch in " + AbfsStatistic.CALL_LIST_STATUS.getStatName(),
-        1, (long) metricMap.get(AbfsStatistic.CALL_LIST_STATUS.getStatName()));
+    assertAbfsStatistics(AbfsStatistic.CALL_DELETE, 2, metricMap);
+    assertAbfsStatistics(AbfsStatistic.FILES_DELETED, 1, metricMap);
+    assertAbfsStatistics(AbfsStatistic.CALL_LIST_STATUS, 1, metricMap);
 
     /*
     creating a root directory and deleting it recursively to see if
@@ -179,12 +161,10 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
     fs.mkdirs(createDirectoryPath);
     fs.create(createFilePath);
     fs.delete(createDirectoryPath, true);
-    metricMap = fs.getInstrumentation().toMap();
+    metricMap = fs.getInstrumentationMap();
 
     //Test for directories_deleted.
-    assertEquals(
-        "Mismatch in " + AbfsStatistic.DIRECTORIES_DELETED.getStatName(), 1,
-        (long) metricMap.get(AbfsStatistic.DIRECTORIES_DELETED.getStatName()));
+    assertAbfsStatistics(AbfsStatistic.DIRECTORIES_DELETED, 1, metricMap);
   }
 
   /**
@@ -202,16 +182,13 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
     fs.create(createFilePath);
     fs.open(createFilePath);
     fs.append(createFilePath);
-    fs.rename(createFilePath, destCreateFilePath);
+    assertTrue(fs.rename(createFilePath, destCreateFilePath));
 
-    Map<String, Long> metricMap = fs.getInstrumentation().toMap();
+    Map<String, Long> metricMap = fs.getInstrumentationMap();
     //Testing single method calls to open, append and rename.
-    assertEquals("Mismatch in " + AbfsStatistic.CALL_OPEN.getStatName(), 1,
-        (long) metricMap.get(AbfsStatistic.CALL_OPEN.getStatName()));
-    assertEquals("Mismatch in " + AbfsStatistic.CALL_APPEND.getStatName(), 1,
-        (long) metricMap.get(AbfsStatistic.CALL_APPEND.getStatName()));
-    assertEquals("Mismatch in " + AbfsStatistic.CALL_RENAME.getStatName(), 1,
-        (long) metricMap.get(AbfsStatistic.CALL_RENAME.getStatName()));
+    assertAbfsStatistics(AbfsStatistic.CALL_OPEN, 1, metricMap);
+    assertAbfsStatistics(AbfsStatistic.CALL_APPEND, 1, metricMap);
+    assertAbfsStatistics(AbfsStatistic.CALL_RENAME, 1, metricMap);
 
     //Testing if file exists at path.
     assertTrue(String.format("File with name %s should exist",
@@ -221,10 +198,9 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
         createFilePath),
         fs.exists(createFilePath));
 
-    metricMap = fs.getInstrumentation().toMap();
+    metricMap = fs.getInstrumentationMap();
     //Testing exists() calls.
-    assertEquals("Mismatch in " + AbfsStatistic.CALL_EXIST.getStatName(), 2,
-        (long) metricMap.get(AbfsStatistic.CALL_EXIST.getStatName()));
+    assertAbfsStatistics(AbfsStatistic.CALL_EXIST, 2, metricMap);
 
     //re-initialising Abfs to reset statistic values.
     fs.initialize(fs.getUri(), fs.getConf());
@@ -236,20 +212,16 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
       fs.append(destCreateFilePath);
     }
 
-    metricMap = fs.getInstrumentation().toMap();
+    metricMap = fs.getInstrumentationMap();
 
     //Testing large number of method calls to open, append.
-    assertEquals("Mismatch in " + AbfsStatistic.CALL_OPEN.getStatName(),
-        NUMBER_OF_OPS,
-        (long) metricMap.get(AbfsStatistic.CALL_OPEN.getStatName()));
-    assertEquals("Mismatch in " + AbfsStatistic.CALL_APPEND.getStatName(),
-        NUMBER_OF_OPS,
-        (long) metricMap.get(AbfsStatistic.CALL_APPEND.getStatName()));
+    assertAbfsStatistics(AbfsStatistic.CALL_OPEN, NUMBER_OF_OPS, metricMap);
+    assertAbfsStatistics(AbfsStatistic.CALL_APPEND, NUMBER_OF_OPS, metricMap);
 
     for (int i = 0; i < NUMBER_OF_OPS; i++) {
       // rename and then back to earlier name for no error while looping.
-      fs.rename(destCreateFilePath, createFilePath);
-      fs.rename(createFilePath, destCreateFilePath);
+      assertTrue(fs.rename(destCreateFilePath, createFilePath));
+      assertTrue(fs.rename(createFilePath, destCreateFilePath));
 
       //check if first name is existing and 2nd is not existing.
       assertTrue(String.format("File with name %s should exist",
@@ -261,18 +233,16 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
 
     }
 
-    metricMap = fs.getInstrumentation().toMap();
+    metricMap = fs.getInstrumentationMap();
 
     /*
     Testing exists() calls and rename calls. Since both were called 2
     times in 1 loop. 2*numberOfOps is expectedValue.
     */
-    assertEquals("Mismatch in " + AbfsStatistic.CALL_RENAME.getStatName(),
-        2 * NUMBER_OF_OPS,
-        (long) metricMap.get(AbfsStatistic.CALL_RENAME.getStatName()));
-    assertEquals("Mismatch in " + AbfsStatistic.CALL_EXIST.getStatName(),
-        2 * NUMBER_OF_OPS,
-        (long) metricMap.get(AbfsStatistic.CALL_EXIST.getStatName()));
+    assertAbfsStatistics(AbfsStatistic.CALL_RENAME, 2 * NUMBER_OF_OPS,
+        metricMap);
+    assertAbfsStatistics(AbfsStatistic.CALL_EXIST, 2 * NUMBER_OF_OPS,
+        metricMap);
 
   }
 

@@ -30,6 +30,7 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -68,6 +69,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
+import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -78,22 +80,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
 
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_APPEND;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_CREATE;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_CREATE_NON_RECURSIVE;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_DELETE;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_EXIST;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_GET_DELEGATION_TOKEN;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_GET_FILE_STATUS;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_LIST_STATUS;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_MKDIRS;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_OPEN;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_RENAME;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.DIRECTORIES_CREATED;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.DIRECTORIES_DELETED;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.ERROR_IGNORED;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.FILES_CREATED;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.FILES_DELETED;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
 /**
@@ -110,7 +97,7 @@ public class AzureBlobFileSystem extends FileSystem {
 
   private boolean delegationTokenEnabled = false;
   private AbfsDelegationTokenManager delegationTokenManager;
-  private AbfsInstrumentation instrumentation;
+  private AbfsCounters instrumentation;
 
   @Override
   public void initialize(URI uri, Configuration configuration)
@@ -396,17 +383,16 @@ public class AzureBlobFileSystem extends FileSystem {
    * @param statistic AbfsStatistic that needs increment.
    */
   private void statIncrement(AbfsStatistic statistic) {
-    incrementStatistic(statistic, 1);
+    incrementStatistic(statistic);
   }
 
   /**
    * Method for incrementing AbfsStatistic by a long value.
    *
    * @param statistic the Statistic to be incremented.
-   * @param value     value to be incremented.
    */
-  private void incrementStatistic(AbfsStatistic statistic, long value) {
-    instrumentation.incrementStat(statistic, value);
+  private void incrementStatistic(AbfsStatistic statistic) {
+    instrumentation.incrementCounter(statistic, 1);
   }
 
   /**
@@ -1250,8 +1236,8 @@ public class AzureBlobFileSystem extends FileSystem {
   }
 
   @VisibleForTesting
-  AbfsInstrumentation getInstrumentation() {
-    return instrumentation;
+  Map<String, Long> getInstrumentationMap() {
+    return instrumentation.toMap();
   }
 
   @Override

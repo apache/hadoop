@@ -23,6 +23,8 @@ import java.util.Map;
 
 import org.junit.Test;
 
+import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
+
 /**
  * Unit tests for Abfs common counters.
  */
@@ -40,23 +42,20 @@ public class TestAbfsStatistics extends AbstractAbfsIntegrationTest {
   public void testInitializeStats() throws IOException {
     describe("Testing the counter values after Abfs is initialised");
 
-    AbfsInstrumentation instrumentation =
+    AbfsCounters instrumentation =
         new AbfsInstrumentation(getFileSystem().getUri());
 
     //Testing summation of the counter values.
     for (int i = 0; i < LARGE_OPS; i++) {
-      instrumentation.incrementStat(AbfsStatistic.CALL_GET_DELEGATION_TOKEN, 1);
-      instrumentation.incrementStat(AbfsStatistic.ERROR_IGNORED, 1);
+      instrumentation.incrementCounter(AbfsStatistic.CALL_GET_DELEGATION_TOKEN, 1);
+      instrumentation.incrementCounter(AbfsStatistic.ERROR_IGNORED, 1);
     }
 
     Map<String, Long> metricMap = instrumentation.toMap();
 
-    assertEquals("Mismatch in " + AbfsStatistic.CALL_GET_DELEGATION_TOKEN.getStatName(),
-        LARGE_OPS,
-        (long) metricMap.get(AbfsStatistic.CALL_GET_DELEGATION_TOKEN.getStatName()));
-    assertEquals("Mismatch in " + AbfsStatistic.ERROR_IGNORED.getStatName(),
-        LARGE_OPS,
-        (long) metricMap.get(AbfsStatistic.ERROR_IGNORED.getStatName()));
+    assertAbfsStatistics(AbfsStatistic.CALL_GET_DELEGATION_TOKEN, LARGE_OPS,
+        metricMap);
+    assertAbfsStatistics(AbfsStatistic.ERROR_IGNORED, LARGE_OPS, metricMap);
 
   }
 }

@@ -25,7 +25,7 @@ import java.util.UUID;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricStringBuilder;
 import org.apache.hadoop.metrics2.MetricsCollector;
@@ -36,28 +36,12 @@ import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableMetric;
 
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_APPEND;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_CREATE;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_CREATE_NON_RECURSIVE;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_DELETE;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_EXIST;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_GET_DELEGATION_TOKEN;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_GET_FILE_STATUS;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_LIST_STATUS;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_MKDIRS;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_OPEN;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_RENAME;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.DIRECTORIES_CREATED;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.DIRECTORIES_DELETED;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.ERROR_IGNORED;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.FILES_CREATED;
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.FILES_DELETED;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
 
 /**
  * Instrumentation of Abfs counters.
  */
-@InterfaceStability.Unstable
-public class AbfsInstrumentation {
+public class AbfsInstrumentation implements AbfsCounters {
 
   /**
    * Single context for all the Abfs counters to separate them from other
@@ -149,12 +133,15 @@ public class AbfsInstrumentation {
   }
 
   /**
+   * {@inheritDoc}
+   *
    * Increment a statistic with some value.
    *
    * @param statistic AbfsStatistic need to be incremented.
    * @param value     long value to be incremented by.
    */
-  protected void incrementStat(AbfsStatistic statistic, long value) {
+  @Override
+  public void incrementCounter(AbfsStatistic statistic, long value) {
     MutableCounterLong counter = lookupCounter(statistic.getStatName());
     if (counter != null) {
       counter.incr(value);
@@ -171,6 +158,8 @@ public class AbfsInstrumentation {
   }
 
   /**
+   * {@inheritDoc}
+   *
    * Method to aggregate all the counters in the MetricRegistry and form a
    * string with prefix, separator and suffix.
    *
@@ -180,7 +169,8 @@ public class AbfsInstrumentation {
    * @param all       gets all the values even if unchanged.
    * @return a String with all the metrics and their values.
    */
-  protected String formString(String prefix, String separator, String suffix,
+  @Override
+  public String formString(String prefix, String separator, String suffix,
       boolean all) {
 
     MetricStringBuilder metricStringBuilder = new MetricStringBuilder(null,
@@ -190,12 +180,15 @@ public class AbfsInstrumentation {
   }
 
   /**
+   * {@inheritDoc}
+   *
    * Creating a map of all the counters for testing.
    *
    * @return a map of the metrics.
    */
   @VisibleForTesting
-  protected Map<String, Long> toMap() {
+  @Override
+  public Map<String, Long> toMap() {
     MetricsToMap metricBuilder = new MetricsToMap(null);
     registry.snapshot(metricBuilder, true);
     return metricBuilder.getMap();
