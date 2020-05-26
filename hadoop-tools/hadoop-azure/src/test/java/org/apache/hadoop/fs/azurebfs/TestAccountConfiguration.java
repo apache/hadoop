@@ -22,7 +22,6 @@ import java.io.IOException;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
-import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 
@@ -61,7 +60,6 @@ public class TestAccountConfiguration {
   private static final String TEST_OAUTH_ENDPOINT = "oauthEndpoint";
   private static final String TEST_CLIENT_ID = "clientId";
   private static final String TEST_CLIENT_SECRET = "clientSecret";
-
 
   @Test
   public void testStringPrecedence()
@@ -306,21 +304,23 @@ public class TestAccountConfiguration {
 
   @Test
   public void testSASProviderPrecedence()
-      throws java.io.IOException, IllegalAccessException {
+      throws IOException, IllegalAccessException {
     final String accountName = "account";
 
     final Configuration conf = new Configuration();
     final AbfsConfiguration abfsConf = new AbfsConfiguration(conf, accountName);
 
-    // AccountSpecific: SAS with provider set as MockSASProvider
+    // AccountSpecific: SAS with provider set as SAS_Provider_1
     abfsConf.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME + "." + accountName,
         "SAS");
     abfsConf.set(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE + "." + accountName,
         TEST_SAS_PROVIDER_CLASS_CONFIG_1);
 
-    // Global: SAS with provider set as dummyConfig
-    abfsConf.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SAS.toString());
-    abfsConf.set(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, TEST_SAS_PROVIDER_CLASS_CONFIG_2);
+    // Global: SAS with provider set as SAS_Provider_2
+    abfsConf.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME,
+        AuthType.SAS.toString());
+    abfsConf.set(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE,
+        TEST_SAS_PROVIDER_CLASS_CONFIG_2);
 
     Assertions.assertThat(
         abfsConf.getSASTokenProvider().getClass().getName())
@@ -338,13 +338,16 @@ public class TestAccountConfiguration {
     final AbfsConfiguration abfsConf = new AbfsConfiguration(conf, accountName);
 
     // Global: Custom , AccountSpecific: OAuth
-    testGlobalAndAccountOAuthPrecedence(abfsConf, AuthType.Custom, AuthType.OAuth);
+    testGlobalAndAccountOAuthPrecedence(abfsConf, AuthType.Custom,
+        AuthType.OAuth);
 
     // Global: OAuth , AccountSpecific: Custom
-    testGlobalAndAccountOAuthPrecedence(abfsConf, AuthType.OAuth, AuthType.Custom);
+    testGlobalAndAccountOAuthPrecedence(abfsConf, AuthType.OAuth,
+        AuthType.Custom);
 
     // Global: (non-oAuth) SAS , AccountSpecific: Custom
-    testGlobalAndAccountOAuthPrecedence(abfsConf, AuthType.SAS, AuthType.Custom);
+    testGlobalAndAccountOAuthPrecedence(abfsConf, AuthType.SAS,
+        AuthType.Custom);
 
     // Global: Custom , AccountSpecific: -
     testGlobalAndAccountOAuthPrecedence(abfsConf, AuthType.Custom, null);
@@ -362,7 +365,7 @@ public class TestAccountConfiguration {
   public void testGlobalAndAccountOAuthPrecedence(AbfsConfiguration abfsConf,
       AuthType globalAuthType,
       AuthType accountSpecificAuthType)
-      throws IOException, IllegalAccessException {
+      throws IOException {
     if (globalAuthType == null) {
       unsetAuthConfig(abfsConf, false);
     } else {
@@ -383,25 +386,17 @@ public class TestAccountConfiguration {
       expectedEffectiveAuthType = globalAuthType;
     }
 
-    Class<?> expectedEffectiveTokenProviderClassType = null;
-
-    switch(expectedEffectiveAuthType) {
-    case OAuth:
-      expectedEffectiveTokenProviderClassType = ClientCredsTokenProvider.class;
-      break;
-    case Custom:
-      expectedEffectiveTokenProviderClassType = CustomTokenProviderAdapter.class;
-      break;
-    default:
-      Assert.fail(
-          "Custom and OAuth are the only valid AccessTokenProvider supported modes.");
-    }
+    Class<?> expectedEffectiveTokenProviderClassType =
+        (expectedEffectiveAuthType == AuthType.OAuth)
+            ? ClientCredsTokenProvider.class
+            : CustomTokenProviderAdapter.class;
 
     Assertions.assertThat(
         abfsConf.getTokenProvider().getClass().getTypeName())
         .describedAs(
-            "Account specific auth settings takes precendence to global"
-                + " settings. In absence of Account settings, global settings should take effect.")
+            "Account-specific settings takes precendence to global"
+                + " settings. In absence of Account settings, global settings "
+                + "should take effect.")
         .isEqualTo(expectedEffectiveTokenProviderClassType.getTypeName());
 
 
@@ -409,9 +404,10 @@ public class TestAccountConfiguration {
     unsetAuthConfig(abfsConf, true);
   }
 
-  public void setAuthConfig(AbfsConfiguration abfsConf, boolean isAccountSetting, AuthType authType) throws IllegalAccessException, IOException {
+  public void setAuthConfig(AbfsConfiguration abfsConf,
+      boolean isAccountSetting,
+      AuthType authType) {
     final String accountNameSuffix = "." + abfsConf.getAccountName();
-
     String authKey = FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME
         + (isAccountSetting ? accountNameSuffix : "");
     String providerClassKey = "";

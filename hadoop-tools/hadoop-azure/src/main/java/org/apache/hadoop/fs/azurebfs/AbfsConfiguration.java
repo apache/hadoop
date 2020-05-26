@@ -617,9 +617,8 @@ public class AbfsConfiguration{
     AuthType authType = getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey);
     if (authType == AuthType.OAuth) {
       try {
-        Class<? extends AccessTokenProvider> tokenProviderClass;
-
-        tokenProviderClass = getTokenProviderClass(authType,
+        Class<? extends AccessTokenProvider> tokenProviderClass =
+            getTokenProviderClass(authType,
             FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME, null,
             AccessTokenProvider.class);
 
