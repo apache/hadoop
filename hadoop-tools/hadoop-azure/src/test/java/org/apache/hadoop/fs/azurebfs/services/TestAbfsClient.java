@@ -256,15 +256,16 @@ public final class TestAbfsClient {
     // Create test AbfsClient
     AbfsClient testClient = new AbfsClient(
         baseAbfsClientInstance.getBaseUrl(),
-        (currentAuthType == AuthType.SharedKey ?
-            new SharedKeyCredentials(
-                abfsConfig.getAccountName().substring(0,
-                    abfsConfig.getAccountName().indexOf(DOT)),
-                abfsConfig.getStorageAccountKey())
+        (currentAuthType == AuthType.SharedKey
+            ? new SharedKeyCredentials(
+            abfsConfig.getAccountName().substring(0,
+                abfsConfig.getAccountName().indexOf(DOT)),
+            abfsConfig.getStorageAccountKey())
             : null),
         abfsConfig,
         new ExponentialRetryPolicy(abfsConfig.getMaxIoRetries()),
-        (currentAuthType == AuthType.OAuth ? abfsConfig.getTokenProvider()
+        (currentAuthType == AuthType.OAuth
+            ? abfsConfig.getTokenProvider()
             : null),
         tracker);
 
