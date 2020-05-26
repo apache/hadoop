@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels
     .NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
@@ -495,6 +496,11 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
   }
 
   protected MockRM setupSchedulerInstance() throws Exception {
+
+    if (mockRM != null) {
+      mockRM.stop();
+    }
+
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     setupQueueConfiguration(conf);
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
@@ -579,16 +585,26 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
         autoCreatedLeafQueue.getMaxApplicationsPerUser());
   }
 
-  protected void validateInitialQueueEntitlement(CSQueue parentQueue, String
-      leafQueueName, Map<String, Float>
-      expectedTotalChildQueueAbsCapacityByLabel,
+  protected void validateInitialQueueEntitlement(CSQueue parentQueue,
+      String leafQueueName,
+      Map<String, Float> expectedTotalChildQueueAbsCapacityByLabel,
       Set<String> nodeLabels)
       throws SchedulerDynamicEditException, InterruptedException {
-    validateInitialQueueEntitlement(cs, parentQueue, leafQueueName,
+    validateInitialQueueEntitlement(mockRM, cs, parentQueue, leafQueueName,
         expectedTotalChildQueueAbsCapacityByLabel, nodeLabels);
   }
 
-  protected void validateInitialQueueEntitlement(
+  protected void validateInitialQueueEntitlement(ResourceManager rm,
+      CSQueue parentQueue, String leafQueueName,
+      Map<String, Float> expectedTotalChildQueueAbsCapacityByLabel,
+      Set<String> nodeLabels)
+      throws SchedulerDynamicEditException, InterruptedException {
+    validateInitialQueueEntitlement(rm,
+        (CapacityScheduler) rm.getResourceScheduler(), parentQueue,
+        leafQueueName, expectedTotalChildQueueAbsCapacityByLabel, nodeLabels);
+  }
+
+  protected void validateInitialQueueEntitlement(ResourceManager rm,
       CapacityScheduler capacityScheduler, CSQueue parentQueue,
       String leafQueueName,
       Map<String, Float> expectedTotalChildQueueAbsCapacityByLabel,
@@ -601,7 +617,8 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
         (GuaranteedOrZeroCapacityOverTimePolicy) autoCreateEnabledParentQueue
             .getAutoCreatedQueueManagementPolicy();
 
-    AutoCreatedLeafQueue leafQueue = (AutoCreatedLeafQueue) capacityScheduler.getQueue(leafQueueName);
+    AutoCreatedLeafQueue leafQueue =
+        (AutoCreatedLeafQueue) capacityScheduler.getQueue(leafQueueName);
 
     Map<String, QueueEntitlement> expectedEntitlements = new HashMap<>();
     QueueCapacities cap = autoCreateEnabledParentQueue.getLeafQueueTemplate()
@@ -619,7 +636,8 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
 
       expectedEntitlements.put(label, expectedEntitlement);
 
-      validateEffectiveMinResource(leafQueue, label, expectedEntitlements);
+      validateEffectiveMinResource(rm, capacityScheduler, leafQueue, label,
+          expectedEntitlements);
     }
   }
 
@@ -636,24 +654,24 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
             .getMaximumCapacity(label), EPSILON);
   }
 
-  protected void validateEffectiveMinResource(CSQueue leafQueue,
-      String label, Map<String, QueueEntitlement> expectedQueueEntitlements) {
+  protected void validateEffectiveMinResource(ResourceManager rm,
+      CapacityScheduler cs, CSQueue leafQueue, String label,
+      Map<String, QueueEntitlement> expectedQueueEntitlements) {
     ManagedParentQueue parentQueue = (ManagedParentQueue) leafQueue.getParent();
 
-    Resource resourceByLabel = mockRM.getRMContext().getNodeLabelManager().
-        getResourceByLabel(label, cs.getClusterResource());
+    Resource resourceByLabel = rm.getRMContext().getNodeLabelManager()
+        .getResourceByLabel(label, cs.getClusterResource());
     Resource effMinCapacity = Resources.multiply(resourceByLabel,
-        expectedQueueEntitlements.get(label).getCapacity() * parentQueue
-            .getQueueCapacities().getAbsoluteCapacity(label));
+        expectedQueueEntitlements.get(label).getCapacity()
+            * parentQueue.getQueueCapacities().getAbsoluteCapacity(label));
     assertEquals(effMinCapacity, Resources.multiply(resourceByLabel,
         leafQueue.getQueueCapacities().getAbsoluteCapacity(label)));
     assertEquals(effMinCapacity, leafQueue.getEffectiveCapacity(label));
 
     if (leafQueue.getQueueCapacities().getAbsoluteCapacity(label) > 0) {
-      assertTrue(Resources
-          .greaterThan(cs.getResourceCalculator(), cs.getClusterResource(),
-              effMinCapacity, Resources.none()));
-    } else{
+      assertTrue(Resources.greaterThan(cs.getResourceCalculator(),
+          cs.getClusterResource(), effMinCapacity, Resources.none()));
+    } else {
       assertTrue(Resources.equals(effMinCapacity, Resources.none()));
     }
   }
@@ -764,7 +782,7 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
               updatedQueueTemplate.getQueueCapacities().getMaximumCapacity
                   (label));
           assertEquals(expectedQueueEntitlements.get(label), newEntitlement);
-          validateEffectiveMinResource(leafQueue, label,
+          validateEffectiveMinResource(mockRM, cs, leafQueue, label,
               expectedQueueEntitlements);
         }
         found = true;

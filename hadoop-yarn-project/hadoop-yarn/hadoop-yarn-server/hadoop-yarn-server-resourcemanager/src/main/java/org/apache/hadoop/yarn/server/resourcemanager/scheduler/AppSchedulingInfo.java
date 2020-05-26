@@ -37,7 +37,6 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -549,7 +548,7 @@ public class AppSchedulingInfo {
 
   public ContainerRequest allocate(NodeType type,
       SchedulerNode node, SchedulerRequestKey schedulerKey,
-      Container containerAllocated) {
+      RMContainer containerAllocated) {
     try {
       writeLock.lock();
 
@@ -708,7 +707,7 @@ public class AppSchedulingInfo {
   }
 
   private void updateMetricsForAllocatedContainer(NodeType type,
-      SchedulerNode node, Container containerAllocated) {
+      SchedulerNode node, RMContainer containerAllocated) {
     QueueMetrics metrics = queue.getMetrics();
     if (pending) {
       // once an allocation is done we assume the application is
@@ -721,18 +720,21 @@ public class AppSchedulingInfo {
   }
 
   public static void updateMetrics(ApplicationId applicationId, NodeType type,
-      SchedulerNode node, Container containerAllocated, String user,
+      SchedulerNode node, RMContainer containerAllocated, String user,
       Queue queue) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("allocate: applicationId=" + applicationId + " container="
-          + containerAllocated.getId() + " host=" + containerAllocated
-          .getNodeId().toString() + " user=" + user + " resource="
-          + containerAllocated.getResource() + " type="
-          + type);
+          + containerAllocated.getContainer().getId() + " host="
+          + containerAllocated.getNodeId().toString() + " user="
+          + user + " resource="
+          + containerAllocated.getContainer().getResource() + " type=" + type);
     }
     if(node != null) {
       queue.getMetrics().allocateResources(node.getPartition(), user, 1,
-          containerAllocated.getResource(), true);
+          containerAllocated.getContainer().getResource(), false);
+      queue.getMetrics().decrPendingResources(
+          containerAllocated.getNodeLabelExpression(), user, 1,
+          containerAllocated.getContainer().getResource());
     }
     queue.getMetrics().incrNodeTypeAggregations(user, type);
   }
@@ -808,5 +810,9 @@ public class AppSchedulingInfo {
     } finally {
       this.readLock.unlock();
     }
+  }
+
+  public RMContext getRMContext() {
+    return this.rmContext;
   }
 }
