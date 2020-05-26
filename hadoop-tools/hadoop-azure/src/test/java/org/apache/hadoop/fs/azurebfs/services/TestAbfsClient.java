@@ -246,21 +246,26 @@ public final class TestAbfsClient {
       AbfsClient baseAbfsClientInstance,
       AbfsConfiguration abfsConfig)
       throws AzureBlobFileSystemException {
-      AbfsPerfTracker tracker = new AbfsPerfTracker("test",
-          abfsConfig.getAccountName(),
-          abfsConfig);
+    AbfsPerfTracker tracker = new AbfsPerfTracker("test",
+        abfsConfig.getAccountName(),
+        abfsConfig);
 
-      // Create test AbfsClient
-      AbfsClient testClient = new AbfsClient(
-          baseAbfsClientInstance.getBaseUrl(),
-          new SharedKeyCredentials(abfsConfig.getAccountName().substring(0,
-              abfsConfig.getAccountName().indexOf(DOT)),
-              abfsConfig.getStorageAccountKey()),
-          abfsConfig,
-          new ExponentialRetryPolicy(abfsConfig.getMaxIoRetries()),
-          abfsConfig.getTokenProvider(),
-          tracker);
+    // Create test AbfsClient
+    AbfsClient testClient = new AbfsClient(
+        baseAbfsClientInstance.getBaseUrl(),
+        ((abfsConfig.getAuthType(abfsConfig.getAccountName())
+            == AuthType.SharedKey) ?
+            new SharedKeyCredentials(
+                abfsConfig.getAccountName().substring(0,
+                    abfsConfig.getAccountName().indexOf(DOT)),
+                abfsConfig.getStorageAccountKey())
+            : null),
+        abfsConfig,
+        new ExponentialRetryPolicy(abfsConfig.getMaxIoRetries()),
+        ((abfsConfig.getAuthType(abfsConfig.getAccountName())
+            == AuthType.OAuth) ? abfsConfig.getTokenProvider() : null),
+        tracker);
 
-      return testClient;
-    }
+    return testClient;
+  }
 }
