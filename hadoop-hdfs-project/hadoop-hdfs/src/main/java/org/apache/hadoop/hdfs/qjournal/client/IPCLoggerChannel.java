@@ -275,12 +275,15 @@ public class IPCLoggerChannel implements AsyncLogger {
     int numThreads =
         conf.getInt(DFSConfigKeys.DFS_QJOURNAL_PARALLEL_READ_NUM_THREADS_KEY,
             DFSConfigKeys.DFS_QJOURNAL_PARALLEL_READ_NUM_THREADS_DEFAULT);
-    return new ThreadPoolExecutor(1, numThreads, 60L, TimeUnit.SECONDS,
+    ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(numThreads,
+        numThreads, 60L, TimeUnit.SECONDS,
         new LinkedBlockingQueue<>(),
         new ThreadFactoryBuilder().setDaemon(true)
             .setNameFormat("Logger channel (from parallel executor) to " + addr)
             .setUncaughtExceptionHandler(UncaughtExceptionHandlers.systemExit())
             .build());
+    threadPoolExecutor.allowCoreThreadTimeOut(true);
+    return threadPoolExecutor;
   }
   
   @Override
