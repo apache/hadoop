@@ -25,9 +25,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -47,11 +49,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppSchedulingInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.TestPartitionQueueMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.TestQueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
@@ -2032,10 +2037,9 @@ public class TestNodeLabelContainerAllocation {
     assertEquals(0 * GB, leafQueueB.getMetrics().getAvailableMB());
     assertEquals(0 * GB, leafQueueB.getMetrics().getAllocatedMB());
 
-    // The total memory tracked by QueueMetrics is 0GB for the default partition
     CSQueue rootQueue = cs.getRootQueue();
-    assertEquals(0*GB, rootQueue.getMetrics().getAvailableMB() +
-        rootQueue.getMetrics().getAllocatedMB());
+    assertEquals(0 * GB, rootQueue.getMetrics().getAvailableMB()
+        + rootQueue.getMetrics().getAllocatedMB());
 
     // Kill all apps in queue a
     cs.killAllAppsInQueue("a");
@@ -2084,6 +2088,8 @@ public class TestNodeLabelContainerAllocation {
     csConf.setCapacityByLabel(queueB, "x", 50);
     csConf.setMaximumCapacityByLabel(queueB, "x", 50);
 
+    csConf.setBoolean(CapacitySchedulerConfiguration.ENABLE_USER_METRICS, true);
+
     // set node -> label
     mgr.addToCluserNodeLabels(
         ImmutableSet.of(NodeLabel.newInstance("x", false)));
@@ -2102,6 +2108,54 @@ public class TestNodeLabelContainerAllocation {
     rm1.start();
     MockNM nm1 = rm1.registerNode("h1:1234", 10 * GB); // label = x
     MockNM nm2 = rm1.registerNode("h2:1234", 10 * GB); // label = <no_label>
+    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
+    RMNode rmNode1 = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
+    SchedulerNode schedulerNode1 = cs.getSchedulerNode(nm1.getNodeId());
+    RMNode rmNode2 = rm1.getRMContext().getRMNodes().get(nm2.getNodeId());
+    SchedulerNode schedulerNode2 = cs.getSchedulerNode(nm2.getNodeId());
+    for (int i = 0; i < 50; i++) {
+      cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+    }
+    for (int i = 0; i < 50; i++) {
+      cs.handle(new NodeUpdateSchedulerEvent(rmNode2));
+    }
+    double delta = 0.0001;
+    CSQueue leafQueue = cs.getQueue("a");
+    CSQueue leafQueueB = cs.getQueue("b");
+    CSQueue rootQueue = cs.getRootQueue();
+    assertEquals(10 * GB, rootQueue.getMetrics().getAvailableMB(), delta);
+    assertEquals(2.5 * GB, leafQueue.getMetrics().getAvailableMB(), delta);
+    assertEquals(7.5 * GB, leafQueueB.getMetrics().getAvailableMB(), delta);
+
+    MetricsSystem ms = leafQueueB.getMetrics().getMetricsSystem();
+    QueueMetrics partXMetrics =
+        (QueueMetrics) TestPartitionQueueMetrics.partitionSource(ms, "x");
+    QueueMetrics partDefaultMetrics =
+        (QueueMetrics) TestPartitionQueueMetrics.partitionSource(ms, "");
+    QueueMetrics queueAMetrics =
+        (QueueMetrics) TestQueueMetrics.queueSource(ms, "root.a");
+    QueueMetrics queueBMetrics =
+        (QueueMetrics) TestQueueMetrics.queueSource(ms, "root.b");
+    QueueMetrics queueAPartDefaultMetrics =
+        (QueueMetrics) TestPartitionQueueMetrics.queueSource(ms, "", "root.a");
+    QueueMetrics queueAPartXMetrics =
+        (QueueMetrics) TestPartitionQueueMetrics.queueSource(ms, "x", "root.a");
+    QueueMetrics queueBPartDefaultMetrics =
+        (QueueMetrics) TestPartitionQueueMetrics.queueSource(ms, "", "root.b");
+    QueueMetrics queueBPartXMetrics =
+        (QueueMetrics) TestPartitionQueueMetrics.queueSource(ms, "x", "root.b");
+    QueueMetrics rootMetrics =
+        (QueueMetrics) TestQueueMetrics.queueSource(ms, "root");
+    assertEquals(10 * GB, partXMetrics.getAvailableMB(), delta);
+    assertEquals(10 * GB, partDefaultMetrics.getAvailableMB(), delta);
+    assertEquals(2.5 * GB, queueAPartDefaultMetrics.getAvailableMB(), delta);
+    assertEquals(7.5 * GB, queueBPartDefaultMetrics.getAvailableMB(), delta);
+    assertEquals(5 * GB, queueAPartXMetrics.getAvailableMB(), delta);
+    assertEquals(5 * GB, queueBPartXMetrics.getAvailableMB(), delta);
+    assertEquals(10 * GB, rootMetrics.getAvailableMB(), delta);
+    assertEquals(2.5 * GB, queueAMetrics.getAvailableMB(), delta);
+    assertEquals(7.5 * GB, queueBMetrics.getAvailableMB(), delta);
+
     // app1 -> a
     RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "a");
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm2);
@@ -2109,47 +2163,73 @@ public class TestNodeLabelContainerAllocation {
     // app1 asks for 3 partition= containers
     am1.allocate("*", 1 * GB, 3, new ArrayList<ContainerId>());
 
-    // NM1 do 50 heartbeats
-    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
-    RMNode rmNode1 = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
-
-    SchedulerNode schedulerNode1 = cs.getSchedulerNode(nm1.getNodeId());
     for (int i = 0; i < 50; i++) {
       cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+    }
+    for (int i = 0; i < 50; i++) {
+      cs.handle(new NodeUpdateSchedulerEvent(rmNode2));
     }
 
     // app1 gets all resource in partition=x (non-exclusive)
     Assert.assertEquals(3, schedulerNode1.getNumContainers());
-
     SchedulerNodeReport reportNm1 = rm1.getResourceScheduler()
         .getNodeReport(nm1.getNodeId());
     Assert.assertEquals(3 * GB, reportNm1.getUsedResource().getMemorySize());
     Assert.assertEquals(7 * GB,
         reportNm1.getAvailableResource().getMemorySize());
-
     SchedulerNodeReport reportNm2 = rm1.getResourceScheduler()
         .getNodeReport(nm2.getNodeId());
     Assert.assertEquals(1 * GB, reportNm2.getUsedResource().getMemorySize());
     Assert.assertEquals(9 * GB,
         reportNm2.getAvailableResource().getMemorySize());
-
-    LeafQueue leafQueue = (LeafQueue) cs.getQueue("a");
-    // 3GB is used from label x quota. 1.5 GB is remaining from default label.
-    // 2GB is remaining from label x.
-    assertEquals(15 * GB / 10, leafQueue.getMetrics().getAvailableMB());
+    assertEquals(7 * GB, partXMetrics.getAvailableMB(), delta);
+    assertEquals(9 * GB, partDefaultMetrics.getAvailableMB(), delta);
+    assertEquals(1.5 * GB, queueAPartDefaultMetrics.getAvailableMB(), delta);
+    assertEquals(1 * GB, queueAPartDefaultMetrics.getAllocatedMB(), delta);
+    assertEquals(7.5 * GB, queueBPartDefaultMetrics.getAvailableMB(), delta);
+    assertEquals(2 * GB, queueAPartXMetrics.getAvailableMB(), delta);
+    assertEquals(3 * GB, queueAPartXMetrics.getAllocatedMB(), delta);
+    assertEquals(5 * GB, queueBPartXMetrics.getAvailableMB(), delta);
+    assertEquals(1 * GB, queueAMetrics.getAllocatedMB(), delta);
+    assertEquals(1.5 * GB, queueAMetrics.getAvailableMB(), delta);
+    assertEquals(0 * GB, queueBMetrics.getAllocatedMB(), delta);
+    assertEquals(7.5 * GB, queueBMetrics.getAvailableMB(), delta);
+    assertEquals(0 * GB, queueAMetrics.getPendingMB(), delta);
+    assertEquals(0 * GB, queueAPartDefaultMetrics.getPendingMB(), delta);
+    assertEquals(0 * GB, queueAPartXMetrics.getPendingMB(), delta);
+    assertEquals(0 * GB, queueBPartDefaultMetrics.getPendingMB(), delta);
+    assertEquals(0 * GB, queueBPartXMetrics.getPendingMB(), delta);
+    assertEquals(1.5 * GB, leafQueue.getMetrics().getAvailableMB(), delta);
     assertEquals(1 * GB, leafQueue.getMetrics().getAllocatedMB());
+    assertEquals(3 * GB, partXMetrics.getAllocatedMB(), delta);
+    assertEquals(1 * GB, partDefaultMetrics.getAllocatedMB(), delta);
 
-    // app1 asks for 1 default partition container
+    QueueMetrics partDefaultQueueAUserMetrics =
+        (QueueMetrics) TestPartitionQueueMetrics.userSource(ms, "", "user",
+            "root.a");
+    QueueMetrics partXQueueAUserMetrics =
+        (QueueMetrics) TestPartitionQueueMetrics.userSource(ms, "x", "user",
+            "root.a");
+    QueueMetrics queueAUserMetrics =
+        (QueueMetrics) TestQueueMetrics.userSource(ms, "root.a", "user");
+
+    assertEquals(2 * GB, queueAUserMetrics.getAvailableMB(), delta);
+    assertEquals(1 * GB, queueAUserMetrics.getAllocatedMB(), delta);
+    assertEquals(1.5 * GB, queueAPartDefaultMetrics.getAvailableMB(), delta);
+    assertEquals(1 * GB, queueAPartDefaultMetrics.getAllocatedMB(), delta);
+    assertEquals(2 * GB, queueAPartXMetrics.getAvailableMB(), delta);
+    assertEquals(3 * GB, queueAPartXMetrics.getAllocatedMB(), delta);
+    assertEquals(2 * GB, partDefaultQueueAUserMetrics.getAvailableMB(), delta);
+    assertEquals(1 * GB, partDefaultQueueAUserMetrics.getAllocatedMB(), delta);
+    assertEquals(2 * GB, partXQueueAUserMetrics.getAvailableMB(), delta);
+    assertEquals(3 * GB, partXQueueAUserMetrics.getAllocatedMB(), delta);
+
     am1.allocate("*", 1 * GB, 5, new ArrayList<ContainerId>());
 
-    // NM2 do couple of heartbeats
-    RMNode rmNode2 = rm1.getRMContext().getRMNodes().get(nm2.getNodeId());
-
-    SchedulerNode schedulerNode2 = cs.getSchedulerNode(nm2.getNodeId());
     cs.handle(new NodeUpdateSchedulerEvent(rmNode2));
 
-    // app1 gets all resource in default partition
     Assert.assertEquals(2, schedulerNode2.getNumContainers());
+    Assert.assertEquals(3, schedulerNode1.getNumContainers());
 
     // 3GB is used from label x quota. 2GB used from default label.
     // So 0.5 GB is remaining from default label.
@@ -2158,10 +2238,100 @@ public class TestNodeLabelContainerAllocation {
 
     // The total memory tracked by QueueMetrics is 10GB
     // for the default partition
-    CSQueue rootQueue = cs.getRootQueue();
     assertEquals(10*GB, rootQueue.getMetrics().getAvailableMB() +
         rootQueue.getMetrics().getAllocatedMB());
 
+    assertEquals(0.5 * GB, queueAMetrics.getAvailableMB(), delta);
+    assertEquals(2 * GB, queueAMetrics.getAllocatedMB());
+    assertEquals(0.5 * GB, queueAPartDefaultMetrics.getAvailableMB(), delta);
+    assertEquals(2 * GB, queueAPartDefaultMetrics.getAllocatedMB(), delta);
+    assertEquals(2 * GB, queueAPartXMetrics.getAvailableMB(), delta);
+    assertEquals(3 * GB, queueAPartXMetrics.getAllocatedMB(), delta);
+    assertEquals(1 * GB, partDefaultQueueAUserMetrics.getAvailableMB(),
+      delta);
+    assertEquals(2 * GB, partDefaultQueueAUserMetrics.getAllocatedMB(), delta);
+    assertEquals(2 * GB, partXQueueAUserMetrics.getAvailableMB(), delta);
+    assertEquals(3 * GB, partXQueueAUserMetrics.getAllocatedMB(), delta);
+    assertEquals(1 * GB, queueAUserMetrics.getAvailableMB(), delta);
+    assertEquals(2 * GB, queueAUserMetrics.getAllocatedMB(), delta);
+    assertEquals(7 * GB, partXMetrics.getAvailableMB(), delta);
+    assertEquals(3 * GB, partXMetrics.getAllocatedMB(), delta);
+    assertEquals(8 * GB, partDefaultMetrics.getAvailableMB(), delta);
+    assertEquals(2 * GB, partDefaultMetrics.getAllocatedMB(), delta);
+
+    // Pending Resources when containers are waiting on "default" partition
+    assertEquals(4 * GB, queueAMetrics.getPendingMB(), delta);
+    assertEquals(4 * GB, queueAPartDefaultMetrics.getPendingMB(), delta);
+    assertEquals(4 * GB, partDefaultQueueAUserMetrics.getPendingMB(),
+        delta);
+    assertEquals(4 * GB, queueAUserMetrics.getPendingMB(), delta);
+    assertEquals(4 * GB, partDefaultMetrics.getPendingMB(), delta);
+    assertEquals(0 * GB, queueAPartXMetrics.getPendingMB(), delta);
+    assertEquals(0 * GB, partXQueueAUserMetrics.getPendingMB(), delta);
+    assertEquals(0 * GB, partXMetrics.getPendingMB(), delta);
+
+    for (int i = 0; i < 50; i++) {
+      cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+    }
+    for (int i = 0; i < 50; i++) {
+      cs.handle(new NodeUpdateSchedulerEvent(rmNode2));
+    }
+
+    assertEquals(0.5 * GB, queueAMetrics.getAvailableMB(), delta);
+    assertEquals(2 * GB, queueAMetrics.getAllocatedMB());
+    assertEquals(0.5 * GB, queueAPartDefaultMetrics.getAvailableMB(), delta);
+    assertEquals(2 * GB, queueAPartDefaultMetrics.getAllocatedMB(), delta);
+    assertEquals(0 * GB, queueAPartXMetrics.getAvailableMB(), delta);
+    assertEquals(7 * GB, queueAPartXMetrics.getAllocatedMB(), delta);
+    assertEquals(1 * GB, partDefaultQueueAUserMetrics.getAvailableMB(),
+      delta);
+    assertEquals(2 * GB, partDefaultQueueAUserMetrics.getAllocatedMB(), delta);
+    assertEquals(0 * GB, partXQueueAUserMetrics.getAvailableMB(), delta);
+    assertEquals(7 * GB, partXQueueAUserMetrics.getAllocatedMB(), delta);
+    assertEquals(1 * GB, queueAUserMetrics.getAvailableMB(), delta);
+    assertEquals(2 * GB, queueAUserMetrics.getAllocatedMB(), delta);
+    assertEquals(3 * GB, partXMetrics.getAvailableMB(), delta);
+    assertEquals(7 * GB, partXMetrics.getAllocatedMB(), delta);
+    assertEquals(8 * GB, partDefaultMetrics.getAvailableMB(), delta);
+    assertEquals(2 * GB, partDefaultMetrics.getAllocatedMB(), delta);
+
+    // Pending Resources after containers has been assigned on "x" partition
+    assertEquals(0 * GB, queueAMetrics.getPendingMB(), delta);
+    assertEquals(0 * GB, queueAPartDefaultMetrics.getPendingMB(), delta);
+    assertEquals(0 * GB, partDefaultQueueAUserMetrics.getPendingMB(),
+        delta);
+    assertEquals(0 * GB, queueAUserMetrics.getPendingMB(), delta);
+    assertEquals(0 * GB, partDefaultMetrics.getPendingMB(), delta);
+    assertEquals(0 * GB, queueAPartXMetrics.getPendingMB(), delta);
+    assertEquals(0 * GB, partXQueueAUserMetrics.getPendingMB(), delta);
+    assertEquals(0 * GB, partXMetrics.getPendingMB(), delta);
+
+    rm1.killApp(app1.getApplicationId());
+    rm1.waitForState(app1.getApplicationId(), RMAppState.KILLED);
+
+    for (int i = 0; i < 50; i++) {
+      cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+    }
+    for (int i = 0; i < 50; i++) {
+      cs.handle(new NodeUpdateSchedulerEvent(rmNode2));
+    }
+
+    assertEquals(10 * GB, rootQueue.getMetrics().getAvailableMB(), delta);
+    assertEquals(2.5 * GB, leafQueue.getMetrics().getAvailableMB(), delta);
+    assertEquals(7.5 * GB, leafQueueB.getMetrics().getAvailableMB(), delta);
+    assertEquals(2, queueAMetrics.getAggregateAllocatedContainers());
+    assertEquals(2, queueAMetrics.getAggegatedReleasedContainers());
+    assertEquals(2, queueAPartDefaultMetrics.getAggregateAllocatedContainers());
+    assertEquals(2, queueAPartDefaultMetrics.getAggegatedReleasedContainers());
+    assertEquals(7, partXMetrics.getAggregateAllocatedContainers());
+    assertEquals(2, partDefaultMetrics.getAggregateAllocatedContainers());
+    assertEquals(7, queueAPartXMetrics.getAggregateAllocatedContainers());
+    assertEquals(7, queueAPartXMetrics.getAggegatedReleasedContainers());
+    assertEquals(2.5 * GB, queueAPartDefaultMetrics.getAvailableMB(), delta);
+    assertEquals(5 * GB, queueAPartXMetrics.getAvailableMB(), delta);
+    assertEquals(3 * GB, queueAUserMetrics.getAvailableMB(), delta);
+    assertEquals(3 * GB, partDefaultQueueAUserMetrics.getAvailableMB(), delta);
+    assertEquals(5 * GB, partXQueueAUserMetrics.getAvailableMB(), delta);
     rm1.close();
   }
 
@@ -2278,14 +2448,201 @@ public class TestNodeLabelContainerAllocation {
     // The total memory tracked by QueueMetrics is 12GB
     // for the default partition
     CSQueue rootQueue = cs.getRootQueue();
-    assertEquals(12*GB, rootQueue.getMetrics().getAvailableMB() +
-        rootQueue.getMetrics().getAllocatedMB());
+    assertEquals(12 * GB, rootQueue.getMetrics().getAvailableMB()
+        + rootQueue.getMetrics().getAllocatedMB());
 
     // Kill all apps in queue a
     cs.killAllAppsInQueue("a");
     rm1.waitForState(app1.getApplicationId(), RMAppState.KILLED);
     rm1.waitForAppRemovedFromScheduler(app1.getApplicationId());
 
+    assertEquals(0 * GB, leafQueueA.getMetrics().getUsedAMResourceMB());
+    assertEquals(0, leafQueueA.getMetrics().getUsedAMResourceVCores());
+    rm1.close();
+  }
+
+  @Test
+  public void testTwoLevelQueueMetricsWithLabels() throws Exception {
+
+    CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration(
+        this.conf);
+
+    // Define top-level queues
+    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
+        new String[] {"a"});
+    csConf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "x", 100);
+
+    final String queueA = CapacitySchedulerConfiguration.ROOT + ".a";
+    csConf.setCapacity(queueA, 100);
+    csConf.setAccessibleNodeLabels(queueA, toSet("x"));
+    csConf.setCapacityByLabel(queueA, "x", 100);
+    csConf.setMaximumCapacityByLabel(queueA, "x", 100);
+
+    csConf.setQueues(queueA, new String[] {"a1"});
+    final String queueA1 = queueA + ".a1";
+    csConf.setCapacity(queueA1, 100);
+
+    csConf.setAccessibleNodeLabels(queueA1, toSet("x"));
+    csConf.setCapacityByLabel(queueA1, "x", 100);
+    csConf.setMaximumCapacityByLabel(queueA1, "x", 100);
+
+    // set node -> label
+    // label x exclusivity is set to true
+    mgr.addToCluserNodeLabels(
+        ImmutableSet.of(NodeLabel.newInstance("x", true)));
+    mgr.addLabelsToNode(
+        ImmutableMap.of(NodeId.newInstance("h1", 0), toSet("x")));
+
+    // inject node label manager
+    MockRM rm1 = new MockRM(csConf) {
+      @Override
+      public RMNodeLabelsManager createNodeLabelManager() {
+        return mgr;
+      }
+    };
+
+    rm1.getRMContext().setNodeLabelManager(mgr);
+    rm1.start();
+    MockNM nm1 = rm1.registerNode("h1:1234", 10 * GB); // label = x
+    MockNM nm2 = rm1.registerNode("h2:1234", 12 * GB); // label = <no_label>
+
+    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
+    ParentQueue leafQueueA = (ParentQueue) cs.getQueue("a");
+    LeafQueue leafQueueA1 = (LeafQueue) cs.getQueue("a1");
+    assertEquals(12 * GB, leafQueueA1.getMetrics().getAvailableMB());
+    assertEquals(0 * GB, leafQueueA1.getMetrics().getAllocatedMB());
+    MetricsSystem ms = leafQueueA1.getMetrics().getMetricsSystem();
+    QueueMetrics partXMetrics =
+        (QueueMetrics) TestPartitionQueueMetrics.partitionSource(ms, "x");
+    QueueMetrics partDefaultMetrics =
+        (QueueMetrics) TestPartitionQueueMetrics.partitionSource(ms, "");
+    QueueMetrics queueAPartDefaultMetrics =
+        (QueueMetrics) TestPartitionQueueMetrics.queueSource(ms, "", "root.a");
+    QueueMetrics queueAPartXMetrics =
+        (QueueMetrics) TestPartitionQueueMetrics.queueSource(ms, "x", "root.a");
+    QueueMetrics queueA1PartDefaultMetrics =
+        (QueueMetrics) TestPartitionQueueMetrics.queueSource(ms, "", "root.a.a1");
+    QueueMetrics queueA1PartXMetrics =
+        (QueueMetrics) TestPartitionQueueMetrics.queueSource(ms, "x", "root.a.a1");
+    QueueMetrics queueRootPartDefaultMetrics =
+        (QueueMetrics) TestPartitionQueueMetrics.queueSource(ms, "", "root");
+    QueueMetrics queueRootPartXMetrics =
+        (QueueMetrics) TestPartitionQueueMetrics.queueSource(ms, "x", "root");
+    QueueMetrics queueAMetrics =
+        (QueueMetrics) TestQueueMetrics.queueSource(ms, "root.a");
+    QueueMetrics queueA1Metrics =
+        (QueueMetrics) TestQueueMetrics.queueSource(ms, "root.a.a1");
+    QueueMetrics queueRootMetrics =
+        (QueueMetrics) TestQueueMetrics.queueSource(ms, "root");
+    assertEquals(12 * GB, queueAMetrics.getAvailableMB());
+    assertEquals(12 * GB, queueA1Metrics.getAvailableMB());
+    assertEquals(12 * GB, queueRootMetrics.getAvailableMB());
+    assertEquals(12 * GB, leafQueueA.getMetrics().getAvailableMB());
+    assertEquals(10 * GB, queueA1PartXMetrics.getAvailableMB());
+    assertEquals(10 * GB, queueAPartXMetrics.getAvailableMB());
+    assertEquals(10 * GB, queueRootPartXMetrics.getAvailableMB());
+    assertEquals(12 * GB, queueA1PartDefaultMetrics.getAvailableMB());
+    assertEquals(12 * GB, queueAPartDefaultMetrics.getAvailableMB());
+    assertEquals(12 * GB, queueRootPartDefaultMetrics.getAvailableMB());
+    assertEquals(10 * GB, partXMetrics.getAvailableMB());
+    assertEquals(12 * GB, partDefaultMetrics.getAvailableMB());
+
+    // app1 -> a
+    RMApp app1 = rm1.submitApp(1 * GB, "app", "user", null, "a1", "x");
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+
+    // app1 asks for 5 partition=x containers
+    am1.allocate("*", 1 * GB, 5, new ArrayList<ContainerId>(), "x");
+    // NM1 do 50 heartbeats
+    RMNode rmNode1 = rm1.getRMContext().getRMNodes().get(nm1.getNodeId());
+
+    SchedulerNode schedulerNode1 = cs.getSchedulerNode(nm1.getNodeId());
+
+    for (int i = 0; i < 50; i++) {
+      cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+    }
+
+    // app1 gets all resource in partition=x
+    Assert.assertEquals(6, schedulerNode1.getNumContainers());
+
+    SchedulerNodeReport reportNm1 = rm1.getResourceScheduler()
+        .getNodeReport(nm1.getNodeId());
+    Assert.assertEquals(6 * GB, reportNm1.getUsedResource().getMemorySize());
+    Assert.assertEquals(4 * GB, reportNm1.getAvailableResource().getMemorySize());
+
+    SchedulerNodeReport reportNm2 = rm1.getResourceScheduler()
+        .getNodeReport(nm2.getNodeId());
+    Assert.assertEquals(0 * GB, reportNm2.getUsedResource().getMemorySize());
+    Assert.assertEquals(12 * GB,
+        reportNm2.getAvailableResource().getMemorySize());
+
+    assertEquals(0 * GB, queueAMetrics.getAllocatedMB());
+    assertEquals(0 * GB, queueA1Metrics.getAllocatedMB());
+    assertEquals(0 * GB, queueRootMetrics.getAllocatedMB());
+    assertEquals(0 * GB, leafQueueA.getMetrics().getAllocatedMB());
+    assertEquals(0 * GB, leafQueueA.getMetrics().getAllocatedMB());
+    assertEquals(6 * GB, queueA1PartXMetrics.getAllocatedMB());
+    assertEquals(6 * GB, queueAPartXMetrics.getAllocatedMB());
+    assertEquals(6 * GB, queueRootPartXMetrics.getAllocatedMB());
+    assertEquals(0 * GB, queueA1PartDefaultMetrics.getAllocatedMB());
+    assertEquals(0 * GB, queueAPartDefaultMetrics.getAllocatedMB());
+    assertEquals(0 * GB, queueRootPartDefaultMetrics.getAllocatedMB());
+    assertEquals(6 * GB, partXMetrics.getAllocatedMB());
+    assertEquals(0 * GB, partDefaultMetrics.getAllocatedMB());
+
+    // app2 -> a
+    RMApp app2 = rm1.submitApp(1 * GB, "app", "user", null, "a1", "");
+    MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm2);
+
+    // app2 asks for 5 partition= containers
+    am2.allocate("*", 1 * GB, 5, new ArrayList<ContainerId>(), "");
+    // NM2 do 50 heartbeats
+    RMNode rmNode2 = rm1.getRMContext().getRMNodes().get(nm2.getNodeId());
+
+    SchedulerNode schedulerNode2 = cs.getSchedulerNode(nm2.getNodeId());
+
+    for (int i = 0; i < 50; i++) {
+      cs.handle(new NodeUpdateSchedulerEvent(rmNode2));
+    }
+
+    // app1 gets all resource in partition=x
+    Assert.assertEquals(6, schedulerNode2.getNumContainers());
+
+    reportNm1 = rm1.getResourceScheduler().getNodeReport(nm1.getNodeId());
+    Assert.assertEquals(6 * GB, reportNm1.getUsedResource().getMemorySize());
+    Assert.assertEquals(4 * GB,
+        reportNm1.getAvailableResource().getMemorySize());
+
+    reportNm2 = rm1.getResourceScheduler().getNodeReport(nm2.getNodeId());
+    Assert.assertEquals(6 * GB, reportNm2.getUsedResource().getMemorySize());
+    Assert.assertEquals(6 * GB,
+        reportNm2.getAvailableResource().getMemorySize());
+
+    assertEquals(6 * GB, leafQueueA.getMetrics().getAvailableMB());
+    assertEquals(6 * GB, leafQueueA.getMetrics().getAllocatedMB());
+
+    // The total memory tracked by QueueMetrics is 12GB
+    // for the default partition
+    CSQueue rootQueue = cs.getRootQueue();
+    assertEquals(12 * GB, rootQueue.getMetrics().getAvailableMB()
+        + rootQueue.getMetrics().getAllocatedMB());
+
+    assertEquals(6 * GB, queueAMetrics.getAllocatedMB());
+    assertEquals(6 * GB, queueA1Metrics.getAllocatedMB());
+    assertEquals(6 * GB, queueRootMetrics.getAllocatedMB());
+    assertEquals(6 * GB, queueA1PartXMetrics.getAllocatedMB());
+    assertEquals(6 * GB, queueAPartXMetrics.getAllocatedMB());
+    assertEquals(6 * GB, queueRootPartXMetrics.getAllocatedMB());
+    assertEquals(6 * GB, queueA1PartDefaultMetrics.getAllocatedMB());
+    assertEquals(6 * GB, queueAPartDefaultMetrics.getAllocatedMB());
+    assertEquals(6 * GB, queueRootPartDefaultMetrics.getAllocatedMB());
+    assertEquals(6 * GB, partXMetrics.getAllocatedMB());
+    assertEquals(6 * GB, partDefaultMetrics.getAllocatedMB());
+
+    // Kill all apps in queue a
+    cs.killAllAppsInQueue("a1");
+    rm1.waitForState(app1.getApplicationId(), RMAppState.KILLED);
+    rm1.waitForAppRemovedFromScheduler(app1.getApplicationId());
     assertEquals(0 * GB, leafQueueA.getMetrics().getUsedAMResourceMB());
     assertEquals(0, leafQueueA.getMetrics().getUsedAMResourceVCores());
     rm1.close();
