@@ -20,6 +20,7 @@ Federation Balance Guide
  - [Overview](#Overview)
  - [Usage](#Usage)
      - [Basic Usage](#Basic_Usage)
+ - [Command Options](#Command_Options)
  - [Configuration Options](#Configuration_Options)
  - [Architecture of Federation Balance](#Architecture_of_Federation_Balance)
 
@@ -28,12 +29,12 @@ Federation Balance Guide
 Overview
 --------
 
-  Federation Balance is a tool used for balancing data across different
-  federation namespaces. It uses DistCp to copy data from source to the target.
-  First it creates a snapshot at src path and submit the initial distcp. Then it
-  uses distcp diff to do the incremental copy. Finally when the source and
-  target are the same, it updates the mount table on Router and move the source
-  to trash.
+  Federation Balance is a tool balancing data across different federation
+  namespaces. It uses DistCp to copy data from the source path to the target
+  path. First it creates a snapshot at the source path and submit the initial
+  distcp. Then it uses distcp diff to do the incremental copy. Finally when the
+  source and the target are the same, it updates the mount table in Router and
+  move the source to trash.
 
   This document aims to describe the design and usage of the Federation Balance.
 
@@ -42,12 +43,15 @@ Usage
 
 ### Basic Usage
 
-  Supposing we have a mount entry in Router:
+  The federation balance tool supports both normal federation cluster and
+  router-based federation cluster. Taking rbf for example. Supposing we have a
+  mount entry in Router:
 
     /foo/src --> hdfs://nn0:8020/foo/src
 
   Submit a federation balance job locally. The first parameter should be a mount
-   entry. The second parameter is the target path in the target cluster.
+  entry. The second parameter is the target path. The target path must includes
+  the target cluster.
 
     bash$ /bin/hadoop fedbalance submit /foo/src hdfs://nn1:8020/foo/dst
 
@@ -62,28 +66,35 @@ Usage
     bash$ /bin/hadoop fedbalance continue
 
   This will scan the journal to find all the unfinished jobs, recover and
-  continue to run them.
+  continue to execute them.
+  
+  If we want to balance in a normal federation cluster, use the command below.
+  
+    `bash$ /bin/hadoop fedbalance -router false submit hdfs://nn0:8020/foo/src hdfs://nn1:8020/foo/dst`
+    
+  The option `-router false` indicates this is not in router-based federation.
+  The source path must includes the source cluster.
 
 Command Options
 --------------------
-Command `submit` has 2 options:
+Command `submit` has 5 options:
 
 | Option key                     | Description                          |
 | ------------------------------ | ------------------------------------ |
-| -router | If true, the source path would be taken as a mount point and it will disable write by setting the mount point readonly. Otherwise the source path would be taken as the full path with source cluster and it will disable write by cancelling the `x` permission of the source path. |
-| -forceCloseOpen | If true, the DIFF_DISTCP stage will force close all open files when there is no diff between the source path and the dst path. Otherwise the DIFF_DISTCP will wait until there is no open files. |
+| -router | If `true` the command runs in router mode. The source path is taken as a mount point. It will disable write by setting the mount point readonly. Otherwise the command works in normal federation mode. The source path is taken as the full path. It will disable write by cancelling the `x` permission of the source path. The default value is `true`. |
+| -forceCloseOpen | If `true`, in DIFF_DISTCP stage it will force close all open files when there is no diff between the source path and the dst path. Otherwise the DIFF_DISTCP stage will wait until there is no open files. The default value is `false`. |
+| -map | Max number of concurrent maps to use for copy. |
+| -bandwidth | Specify bandwidth per map in MB. |
+| -moveToTrash | If `true` move the source path to trash after the job is done. Otherwise delete the source path directly. |
 
 Configuration Options
 --------------------
 
 | Configuration key              | Description                          |
 | ------------------------------ | ------------------------------------ |
-| hadoop.hdfs.procedure.work.thread.num | The worker threads number of the BalanceProcedureScheduler |
-| hadoop.hdfs.procedure.scheduler.journal.uri | The uri of the journal |
-| federation.balance.class | The class used for federation balance |
-| distcp.procedure.map.num | The map number of distcp job |
-| distcp.procedure.bandwidth.limit | The bandwidth limit of distcp job |
-| distcp.procedure.move.to.trash | Move source path to trash after all the data are sync to target |
+| hadoop.hdfs.procedure.work.thread.num | The worker threads number of the BalanceProcedureScheduler. Default is `10`. |
+| hadoop.hdfs.procedure.scheduler.journal.uri | The uri of the journal. |
+| federation.balance.class | The class used for federation balance. Default is `org.apache.hadoop.tools.DistCpProcedure.` |
 
 Architecture of Federation Balance
 ----------------------
@@ -115,24 +126,29 @@ Architecture of Federation Balance
 ### DistCpFedBalance
 
   DistCpFedBalance is implemented as a job of the state machine. All the distcp
-  balance logic are implemented here. A DistCpFedBalance job is consists of 3
+  balance logic are implemented here. A DistCpFedBalance job consists of 3
   procedures:
 
   * DistCpProcedure: This is the first procedure. It handles all the data copy
-    works. There are 3 phases:
+    works. There are 6 stages:
     * PRE_CHECK: Do the pre-check of the src and dst path.
-    * Init Distcp: Create a snapshot of the source path and distcp it to
+    * Init Distcp: Create a snapshot of the source path and distcp it to the
       target.
     * Diff Distcp: Submit distcp with `-diff` round by round to sync source and
-      target paths. If `-forceCloseOpen` is set, this stage finishes when there
-      is no diff between src and dst. Otherwise this stage finishes when there
-      is no diff and no open files.  
-    * DISABLE_WRITE: Disable write operations so the src won't be changed.
+      target paths. If `-forceCloseOpen` is set, this stage will finish when
+      there is no diff between src and dst. Otherwise this stage only finishes
+      when there is no diff and no open files.  
+    * DISABLE_WRITE: Disable write operations so the src won't be changed. When
+      working in router mode, it is done by making the mount point readonly.
+      Otherwise then it is done by cancelling the `x` permission of the source
+      path.
     * Final Distcp(optional): Force close all the open files and submit the
-      final distcp. 
-    * FINISH: Enable write and other cleanup works.
+      final distcp.
+    * FINISH: Cleanup works. If the 'x' permission is cancelled then restoring
+      the permission of the dst path.
     
-  * MountTableProcedure: This procedure updates the mount entry in Router. This
+  * MountTableProcedure: This procedure updates the mount entry in Router. The 
+    readonly is unset and the destination is updated of the mount point. This
     procedure is activated only when `-router` is true.
 
   * TrashProcedure: This procedure moves the source path to trash.
