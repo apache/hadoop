@@ -246,6 +246,9 @@ public final class TestAbfsClient {
       AbfsClient baseAbfsClientInstance,
       AbfsConfiguration abfsConfig)
       throws AzureBlobFileSystemException {
+    AuthType currentAuthType = abfsConfig.getAuthType(
+        abfsConfig.getAccountName());
+
     AbfsPerfTracker tracker = new AbfsPerfTracker("test",
         abfsConfig.getAccountName(),
         abfsConfig);
@@ -253,8 +256,7 @@ public final class TestAbfsClient {
     // Create test AbfsClient
     AbfsClient testClient = new AbfsClient(
         baseAbfsClientInstance.getBaseUrl(),
-        ((abfsConfig.getAuthType(abfsConfig.getAccountName())
-            == AuthType.SharedKey) ?
+        (currentAuthType == AuthType.SharedKey ?
             new SharedKeyCredentials(
                 abfsConfig.getAccountName().substring(0,
                     abfsConfig.getAccountName().indexOf(DOT)),
@@ -262,8 +264,8 @@ public final class TestAbfsClient {
             : null),
         abfsConfig,
         new ExponentialRetryPolicy(abfsConfig.getMaxIoRetries()),
-        ((abfsConfig.getAuthType(abfsConfig.getAccountName())
-            == AuthType.OAuth) ? abfsConfig.getTokenProvider() : null),
+        (currentAuthType == AuthType.OAuth ? abfsConfig.getTokenProvider()
+            : null),
         tracker);
 
     return testClient;
