@@ -22,12 +22,14 @@ import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.UUID;
 
 import org.junit.Assert;
 import org.junit.Test;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_SAS_TOKEN_RENEW_PERIOD_FOR_STREAMS_IN_SECONDS;
 import static java.time.temporal.ChronoUnit.SECONDS;
+import static java.time.temporal.ChronoUnit.DAYS;
 
 /**
  * Test CachedSASToken.
@@ -158,5 +160,37 @@ public final class TestCachedSASToken {
     cachedSasToken.update(token5);
     cachedToken = cachedSasToken.get();
     Assert.assertNull(cachedToken);
+  }
+
+  public static CachedSASToken getTestCachedSASTokenInstance() {
+    String expiryPostADay = OffsetDateTime.now(ZoneOffset.UTC)
+        .plus(1, DAYS)
+        .format(DateTimeFormatter.ISO_DATE_TIME);
+    String version = "2020-20-20";
+
+    StringBuilder sb = new StringBuilder();
+    sb.append("skoid=");
+    sb.append(UUID.randomUUID().toString());
+    sb.append("&sktid=");
+    sb.append(UUID.randomUUID().toString());
+    sb.append("&skt=");
+    sb.append(OffsetDateTime.now(ZoneOffset.UTC)
+        .minus(1, DAYS)
+        .format(DateTimeFormatter.ISO_DATE_TIME));
+    sb.append("&ske=");
+    sb.append(expiryPostADay);
+    sb.append("&sks=b");
+    sb.append("&skv=");
+    sb.append(version);
+    sb.append("&sp=rw");
+    sb.append("&sr=b");
+    sb.append("&se=");
+    sb.append(expiryPostADay);
+    sb.append("&sv=2");
+    sb.append(version);
+
+    CachedSASToken cachedSASToken = new CachedSASToken();
+    cachedSASToken.update(sb.toString());
+    return cachedSASToken;
   }
 }

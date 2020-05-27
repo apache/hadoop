@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
+
+import static org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus.READ_FAILED;
 
 class ReadBuffer {
 
@@ -39,6 +42,8 @@ class ReadBuffer {
   private boolean isFirstByteConsumed = false;
   private boolean isLastByteConsumed = false;
   private boolean isAnyByteConsumed = false;
+
+  private IOException errException = null;
 
   public AbfsInputStream getStream() {
     return stream;
@@ -88,12 +93,23 @@ class ReadBuffer {
     this.bufferindex = bufferindex;
   }
 
+  public IOException getErrException() {
+    return errException;
+  }
+
+  public void setErrException(final IOException errException) {
+    this.errException = errException;
+  }
+
   public ReadBufferStatus getStatus() {
     return status;
   }
 
   public void setStatus(ReadBufferStatus status) {
     this.status = status;
+    if (status == READ_FAILED) {
+      bufferindex = -1;
+    }
   }
 
   public CountDownLatch getLatch() {
