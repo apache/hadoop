@@ -24,6 +24,10 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 
 import com.google.common.base.Preconditions;
+import com.google.common.annotations.VisibleForTesting;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.CanUnbuffer;
 import org.apache.hadoop.fs.FSExceptionMessages;
@@ -41,6 +45,7 @@ import static org.apache.hadoop.util.StringUtils.toLowerCase;
  */
 public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         StreamCapabilities {
+  private static final Logger LOG = LoggerFactory.getLogger(AbfsInputStream.class);
 
   private final AbfsClient client;
   private final Statistics statistics;
@@ -239,6 +244,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     final AbfsRestOperation op;
     AbfsPerfTracker tracker = client.getAbfsPerfTracker();
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker, "readRemote", "read")) {
+      LOG.trace("Trigger client.read for path={} position={} offset={} length={}", path, position, offset, length);
       op = client.read(path, position, b, offset, length, tolerateOobAppends ? "*" : eTag, cachedSasToken.get());
       cachedSasToken.update(op.getSasToken());
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
@@ -431,4 +437,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   byte[] getBuffer() {
     return buffer;
   }
+
+  @VisibleForTesting
+  protected void setCachedSasToken(final CachedSASToken cachedSasToken) {
+    this.cachedSasToken = cachedSasToken;
+  }
+
 }
