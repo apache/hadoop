@@ -325,29 +325,89 @@ public class AbfsConfiguration{
   }
 
   /**
-   * Returns the account-specific Class if it exists, then looks for an
-   * account-agnostic value, and finally tries the default value.
+   * Returns account-specific token provider class if it exists, else checks if
+   * an account-agnostic setting is present for token provider class if AuthType
+   * matches with authType passed.
+   * @param authType AuthType effective on the account
    * @param name Account-agnostic configuration key
    * @param defaultValue Class returned if none is configured
    * @param xface Interface shared by all possible values
+   * @param <U> Interface class type
    * @return Highest-precedence Class object that was found
    */
-  public <U> Class<? extends U> getClass(String name, Class<? extends U> defaultValue, Class<U> xface) {
+  public <U> Class<? extends U> getTokenProviderClass(AuthType authType,
+      String name,
+      Class<? extends U> defaultValue,
+      Class<U> xface) {
+    Class<?> tokenProviderClass = getAccountSpecificClass(name, defaultValue,
+        xface);
+
+    // If there is none set specific for account
+    // fall back to generic setting if Auth Type matches
+    if ((tokenProviderClass == null)
+        && (authType == getAccountAgnosticEnum(
+        FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey))) {
+      tokenProviderClass = getAccountAgnosticClass(name, defaultValue, xface);
+    }
+
+    return (tokenProviderClass == null)
+        ? null
+        : tokenProviderClass.asSubclass(xface);
+  }
+
+  /**
+   * Returns the account-specific class if it exists, else returns default value.
+   * @param name Account-agnostic configuration key
+   * @param defaultValue Class returned if none is configured
+   * @param xface Interface shared by all possible values
+   * @param <U> Interface class type
+   * @return Account specific Class object that was found
+   */
+  public <U> Class<? extends U> getAccountSpecificClass(String name,
+      Class<? extends U> defaultValue,
+      Class<U> xface) {
     return rawConfig.getClass(accountConf(name),
-        rawConfig.getClass(name, defaultValue, xface),
+        defaultValue,
         xface);
   }
 
   /**
-   * Returns the account-specific password in string form if it exists, then
+   * Returns account-agnostic Class if it exists, else returns the default value.
+   * @param name Account-agnostic configuration key
+   * @param defaultValue Class returned if none is configured
+   * @param xface Interface shared by all possible values
+   * @param <U> Interface class type
+   * @return Account-Agnostic Class object that was found
+   */
+  public <U> Class<? extends U> getAccountAgnosticClass(String name,
+      Class<? extends U> defaultValue,
+      Class<U> xface) {
+    return rawConfig.getClass(name, defaultValue, xface);
+  }
+
+  /**
+   * Returns the account-specific enum value if it exists, then
    * looks for an account-agnostic value.
    * @param name Account-agnostic configuration key
    * @param defaultValue Value returned if none is configured
-   * @return value in String form if one exists, else null
+   * @param <T> Enum type
+   * @return enum value if one exists, else null
    */
   public <T extends Enum<T>> T getEnum(String name, T defaultValue) {
     return rawConfig.getEnum(accountConf(name),
         rawConfig.getEnum(name, defaultValue));
+  }
+
+  /**
+   * Returns the account-agnostic enum value if it exists, else
+   * return default.
+   * @param name Account-agnostic configuration key
+   * @param defaultValue Value returned if none is configured
+   * @param <T> Enum type
+   * @return enum value if one exists, else null
+   */
+  public <T extends Enum<T>> T getAccountAgnosticEnum(String name, T defaultValue) {
+    return rawConfig.getEnum(name, defaultValue);
   }
 
   /**
@@ -560,8 +620,10 @@ public class AbfsConfiguration{
     if (authType == AuthType.OAuth) {
       try {
         Class<? extends AccessTokenProvider> tokenProviderClass =
-                getClass(FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME, null,
-                        AccessTokenProvider.class);
+            getTokenProviderClass(authType,
+            FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME, null,
+            AccessTokenProvider.class);
+
         AccessTokenProvider tokenProvider = null;
         if (tokenProviderClass == ClientCredsTokenProvider.class) {
           String authEndpoint = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT);
@@ -604,14 +666,17 @@ public class AbfsConfiguration{
       } catch(IllegalArgumentException e) {
         throw e;
       } catch (Exception e) {
-        throw new TokenAccessProviderException("Unable to load key provider class.", e);
+        throw new TokenAccessProviderException("Unable to load OAuth token provider class.", e);
       }
 
     } else if (authType == AuthType.Custom) {
       try {
         String configKey = FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME;
-        Class<? extends CustomTokenProviderAdaptee> customTokenProviderClass =
-                getClass(configKey, null, CustomTokenProviderAdaptee.class);
+
+        Class<? extends CustomTokenProviderAdaptee> customTokenProviderClass
+            = getTokenProviderClass(authType, configKey, null,
+            CustomTokenProviderAdaptee.class);
+
         if (customTokenProviderClass == null) {
           throw new IllegalArgumentException(
                   String.format("The configuration value for \"%s\" is invalid.", configKey));
@@ -647,7 +712,9 @@ public class AbfsConfiguration{
     try {
       String configKey = FS_AZURE_SAS_TOKEN_PROVIDER_TYPE;
       Class<? extends SASTokenProvider> sasTokenProviderClass =
-          getClass(configKey, null, SASTokenProvider.class);
+          getTokenProviderClass(authType, configKey, null,
+              SASTokenProvider.class);
+
       Preconditions.checkArgument(sasTokenProviderClass != null,
           String.format("The configuration value for \"%s\" is invalid.", configKey));
 
