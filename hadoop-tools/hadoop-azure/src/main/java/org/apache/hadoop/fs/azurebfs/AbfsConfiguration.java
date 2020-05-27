@@ -350,7 +350,9 @@ public class AbfsConfiguration{
       tokenProviderClass = getAccountAgnosticClass(name, defaultValue, xface);
     }
 
-    return tokenProviderClass.asSubclass(xface);
+    return (tokenProviderClass == null)
+        ? null
+        : tokenProviderClass.asSubclass(xface);
   }
 
   /**
