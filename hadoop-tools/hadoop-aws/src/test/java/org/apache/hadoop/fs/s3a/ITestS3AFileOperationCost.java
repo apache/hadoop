@@ -69,7 +69,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
   @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
-        {"raw", false},
+//        {"raw", false},
         {"guarded", true}
     });
   }
@@ -161,6 +161,65 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
       verifyOperationCount(0, 1);
     } else {
       if(fs.allowAuthoritative(dir)) {
+        verifyOperationCount(0, 0);
+      } else {
+        verifyOperationCount(0, 1);
+      }
+    }
+  }
+
+  @Test
+  public void testCostOfListFilesOnFile() throws Throwable {
+    describe("Performing listFiles() on a file");
+    Path file = path(getMethodName() + ".txt");
+    S3AFileSystem fs = getFileSystem();
+    touch(fs, file);
+    resetMetricDiffs();
+    fs.listFiles(file, true);
+    if (!fs.hasMetadataStore()) {
+      metadataRequests.assertDiffEquals(1);
+    } else {
+      if (fs.allowAuthoritative(file)) {
+        listRequests.assertDiffEquals(0);
+      } else {
+        listRequests.assertDiffEquals(1);
+      }
+    }
+  }
+
+  @Test
+  public void testCostOfListFilesOnEmptyDir() throws Throwable {
+    describe("Performing listFiles() on an empty dir");
+    Path dir = path(getMethodName());
+    S3AFileSystem fs = getFileSystem();
+    fs.mkdirs(dir);
+    resetMetricDiffs();
+    fs.listFiles(dir, true);
+    if (!fs.hasMetadataStore()) {
+      verifyOperationCount(2, 1);
+    } else {
+      if (fs.allowAuthoritative(dir)) {
+        verifyOperationCount(0, 0);
+      } else {
+        verifyOperationCount(0, 1);
+      }
+    }
+  }
+
+  @Test
+  public void testCostOfListFilesOnNonEmptyDir() throws Throwable {
+    describe("Performing listFiles() on a non empty dir");
+    Path dir = path(getMethodName());
+    S3AFileSystem fs = getFileSystem();
+    fs.mkdirs(dir);
+    Path file = new Path(dir, "file.txt");
+    touch(fs, file);
+    resetMetricDiffs();
+    fs.listFiles(dir, true);
+    if (!fs.hasMetadataStore()) {
+      verifyOperationCount(0, 1);
+    } else {
+      if (fs.allowAuthoritative(dir)) {
         verifyOperationCount(0, 0);
       } else {
         verifyOperationCount(0, 1);
