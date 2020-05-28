@@ -708,12 +708,12 @@ public class Balancer {
     System.out.println("Time Stamp               Iteration#  Bytes Already Moved  Bytes Left To Move  Bytes Being Moved");
     
     List<NameNodeConnector> connectors = Collections.emptyList();
-    boolean done = false;
-    for(int iteration = 0; !done; iteration++) {
-      try {
-        connectors = NameNodeConnector.newNameNodeConnectors(namenodes, nsIds,
-            Balancer.class.getSimpleName(), BALANCER_ID_PATH, conf,
-            p.getMaxIdleIteration());
+    try {
+      connectors = NameNodeConnector.newNameNodeConnectors(namenodes, nsIds,
+          Balancer.class.getSimpleName(), BALANCER_ID_PATH, conf,
+          p.getMaxIdleIteration());
+      boolean done = false;
+      for(int iteration = 0; !done; iteration++) {
         done = true;
         Collections.shuffle(connectors);
         for(NameNodeConnector nnc : connectors) {
@@ -741,10 +741,10 @@ public class Balancer {
         if (!done) {
           Thread.sleep(sleeptime);
         }
-      } finally {
-        for(NameNodeConnector nnc : connectors) {
-          IOUtils.cleanupWithLogger(LOG, nnc);
-        }
+      }
+    } finally {
+      for(NameNodeConnector nnc : connectors) {
+        IOUtils.cleanupWithLogger(LOG, nnc);
       }
     }
     return ExitStatus.SUCCESS.getExitCode();
