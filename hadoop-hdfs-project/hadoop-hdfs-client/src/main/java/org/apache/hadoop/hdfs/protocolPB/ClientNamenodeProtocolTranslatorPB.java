@@ -609,7 +609,8 @@ public class ClientNamenodeProtocolTranslatorPB implements
       for (Rename option : options) {
         if (option == Rename.OVERWRITE) {
           overwrite = true;
-        } else if (option == Rename.TO_TRASH) {
+        }
+        if (option == Rename.TO_TRASH) {
           toTrash = true;
         }
       }

@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.placement;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
 
 /**
  * Queue Mapping class to hold the queue mapping information.
@@ -62,6 +63,12 @@ public class QueueMapping {
 
     public QueueMappingBuilder parentQueue(String mappingParentQueue) {
       this.parentQueue = mappingParentQueue;
+      return this;
+    }
+
+    public QueueMappingBuilder queuePath(QueuePath path) {
+      this.queue = path.getLeafQueue();
+      this.parentQueue = path.getParentQueue();
       return this;
     }
 
@@ -122,6 +129,16 @@ public class QueueMapping {
 
   public String getSource() {
     return source;
+  }
+
+  public String getFullPath() {
+    return (parentQueue != null ? parentQueue + DOT + queue : queue);
+  }
+
+  public QueuePath getQueuePath() {
+    //This is to make sure the parsing is the same everywhere, but the
+    //whole parsing part should be moved to QueuePathConstructor
+    return QueuePlacementRuleUtils.extractQueuePath(getFullPath());
   }
 
   @Override

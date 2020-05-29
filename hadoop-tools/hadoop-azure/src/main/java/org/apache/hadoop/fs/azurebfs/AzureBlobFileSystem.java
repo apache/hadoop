@@ -188,7 +188,7 @@ public class AzureBlobFileSystem extends FileSystem {
     Path qualifiedPath = makeQualified(f);
 
     try {
-      OutputStream outputStream = abfsStore.createFile(qualifiedPath, overwrite,
+      OutputStream outputStream = abfsStore.createFile(qualifiedPath, statistics, overwrite,
           permission == null ? FsPermission.getFileDefault() : permission, FsPermission.getUMask(getConf()));
       return new FSDataOutputStream(outputStream, statistics);
     } catch(AzureBlobFileSystemException ex) {
@@ -250,7 +250,7 @@ public class AzureBlobFileSystem extends FileSystem {
     Path qualifiedPath = makeQualified(f);
 
     try {
-      OutputStream outputStream = abfsStore.openFileForWrite(qualifiedPath, false);
+      OutputStream outputStream = abfsStore.openFileForWrite(qualifiedPath, statistics, false);
       return new FSDataOutputStream(outputStream, statistics);
     } catch(AzureBlobFileSystemException ex) {
       checkException(f, ex);
@@ -642,15 +642,17 @@ public class AzureBlobFileSystem extends FileSystem {
       throw new IllegalArgumentException("A valid name and value must be specified.");
     }
 
+    Path qualifiedPath = makeQualified(path);
+
     try {
-      Hashtable<String, String> properties = abfsStore.getPathStatus(path);
+      Hashtable<String, String> properties = abfsStore.getPathStatus(qualifiedPath);
       String xAttrName = ensureValidAttributeName(name);
       boolean xAttrExists = properties.containsKey(xAttrName);
       XAttrSetFlag.validate(name, xAttrExists, flag);
 
       String xAttrValue = abfsStore.decodeAttribute(value);
       properties.put(xAttrName, xAttrValue);
-      abfsStore.setPathProperties(path, properties);
+      abfsStore.setPathProperties(qualifiedPath, properties);
     } catch (AzureBlobFileSystemException ex) {
       checkException(path, ex);
     }
@@ -675,9 +677,11 @@ public class AzureBlobFileSystem extends FileSystem {
       throw new IllegalArgumentException("A valid name must be specified.");
     }
 
+    Path qualifiedPath = makeQualified(path);
+
     byte[] value = null;
     try {
-      Hashtable<String, String> properties = abfsStore.getPathStatus(path);
+      Hashtable<String, String> properties = abfsStore.getPathStatus(qualifiedPath);
       String xAttrName = ensureValidAttributeName(name);
       if (properties.containsKey(xAttrName)) {
         String xAttrValue = properties.get(xAttrName);

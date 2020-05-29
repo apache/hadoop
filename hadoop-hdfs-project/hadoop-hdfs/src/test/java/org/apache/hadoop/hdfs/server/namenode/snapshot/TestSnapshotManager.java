@@ -92,4 +92,18 @@ public class TestSnapshotManager {
           StringUtils.toLowerCase(se.getMessage()).contains("rollover"));
     }
   }
+
+  /**
+   *  Snapshot is identified by INODE CURRENT_STATE_ID.
+   *  So maximum allowable snapshotID should be less than CURRENT_STATE_ID
+   */
+  @Test
+  public void testValidateSnapshotIDWidth() {
+    FSDirectory fsdir = mock(FSDirectory.class);
+    SnapshotManager snapshotManager = new SnapshotManager(new Configuration(),
+        fsdir);
+    Assert.assertTrue(snapshotManager.
+        getMaxSnapshotID() < Snapshot.CURRENT_STATE_ID);
+  }
+
 }

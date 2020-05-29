@@ -24,6 +24,10 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 
 import com.google.common.base.Preconditions;
+import com.google.common.annotations.VisibleForTesting;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.CanUnbuffer;
 import org.apache.hadoop.fs.FSExceptionMessages;
@@ -32,6 +36,7 @@ import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.utils.CachedSASToken;
 
 import static org.apache.hadoop.util.StringUtils.toLowerCase;
 
@@ -40,6 +45,7 @@ import static org.apache.hadoop.util.StringUtils.toLowerCase;
  */
 public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         StreamCapabilities {
+  private static final Logger LOG = LoggerFactory.getLogger(AbfsInputStream.class);
 
   private final AbfsClient client;
   private final Statistics statistics;
@@ -51,6 +57,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private final boolean tolerateOobAppends; // whether tolerate Oob Appends
   private final boolean readAheadEnabled; // whether enable readAhead;
 
+  // SAS tokens can be re-used until they expire
+  private CachedSASToken cachedSasToken;
   private byte[] buffer = null;            // will be initialized on first use
 
   private long fCursor = 0;  // cursor of buffer within file - offset of next byte to read from remote server
@@ -61,23 +69,23 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private boolean closed = false;
 
   public AbfsInputStream(
-      final AbfsClient client,
-      final Statistics statistics,
-      final String path,
-      final long contentLength,
-      final int bufferSize,
-      final int readAheadQueueDepth,
-      final boolean tolerateOobAppends,
-      final String eTag) {
+          final AbfsClient client,
+          final Statistics statistics,
+          final String path,
+          final long contentLength,
+          final AbfsInputStreamContext abfsInputStreamContext,
+          final String eTag) {
     this.client = client;
     this.statistics = statistics;
     this.path = path;
     this.contentLength = contentLength;
-    this.bufferSize = bufferSize;
-    this.readAheadQueueDepth = (readAheadQueueDepth >= 0) ? readAheadQueueDepth : Runtime.getRuntime().availableProcessors();
-    this.tolerateOobAppends = tolerateOobAppends;
+    this.bufferSize = abfsInputStreamContext.getReadBufferSize();
+    this.readAheadQueueDepth = abfsInputStreamContext.getReadAheadQueueDepth();
+    this.tolerateOobAppends = abfsInputStreamContext.isTolerateOobAppends();
     this.eTag = eTag;
     this.readAheadEnabled = true;
+    this.cachedSasToken = new CachedSASToken(
+        abfsInputStreamContext.getSasTokenRenewPeriodForStreamsInSeconds());
   }
 
   public String getPath() {
@@ -101,6 +109,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     int currentLen = len;
     int lastReadBytes;
     int totalReadBytes = 0;
+    incrementReadOps();
     do {
       lastReadBytes = readOneBlock(b, currentOff, currentLen);
       if (lastReadBytes > 0) {
@@ -201,6 +210,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       // try reading from buffers first
       receivedBytes = ReadBufferManager.getBufferManager().getBlock(this, position, length, b);
       if (receivedBytes > 0) {
+        incrementReadOps();
         return receivedBytes;
       }
 
@@ -234,8 +244,11 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     final AbfsRestOperation op;
     AbfsPerfTracker tracker = client.getAbfsPerfTracker();
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker, "readRemote", "read")) {
-      op = client.read(path, position, b, offset, length, tolerateOobAppends ? "*" : eTag);
+      LOG.trace("Trigger client.read for path={} position={} offset={} length={}", path, position, offset, length);
+      op = client.read(path, position, b, offset, length, tolerateOobAppends ? "*" : eTag, cachedSasToken.get());
+      cachedSasToken.update(op.getSasToken());
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
+      incrementReadOps();
     } catch (AzureBlobFileSystemException ex) {
       if (ex instanceof AbfsRestOperationException) {
         AbfsRestOperationException ere = (AbfsRestOperationException) ex;
@@ -250,6 +263,15 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       throw new IOException("Unexpected Content-Length");
     }
     return (int) bytesRead;
+  }
+
+  /**
+   * Increment Read Operations.
+   */
+  private void incrementReadOps() {
+    if (statistics != null) {
+      statistics.incrementReadOps(1);
+    }
   }
 
   /**
@@ -415,4 +437,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   byte[] getBuffer() {
     return buffer;
   }
+
+  @VisibleForTesting
+  protected void setCachedSasToken(final CachedSASToken cachedSasToken) {
+    this.cachedSasToken = cachedSasToken;
+  }
+
 }

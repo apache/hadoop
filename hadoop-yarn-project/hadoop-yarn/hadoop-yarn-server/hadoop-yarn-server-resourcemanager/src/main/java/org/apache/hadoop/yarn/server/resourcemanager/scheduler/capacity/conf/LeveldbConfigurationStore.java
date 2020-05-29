@@ -19,20 +19,16 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.yarn.server.resourcemanager.DBManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.proto.YarnServerCommonProtos;
 import org.apache.hadoop.yarn.server.records.Version;
-import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.fusesource.leveldbjni.JniDBFactory;
-import org.fusesource.leveldbjni.internal.NativeDB;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBComparator;
 import org.iq80.leveldb.DBException;
@@ -52,8 +48,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
 
 import static org.fusesource.leveldbjni.JniDBFactory.bytes;
 
@@ -70,31 +64,35 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
   private static final String VERSION_KEY = "version";
   private static final String CONF_VERSION_NAME = "conf-version-store";
   private static final String CONF_VERSION_KEY = "conf-version";
-
   private DB db;
-  private DB versiondb;
+  private DBManager dbManager;
+  private DBManager versionDbManager;
+  private DB versionDb;
   private long maxLogs;
   private Configuration conf;
+  private Configuration initSchedConf;
   @VisibleForTesting
   protected static final Version CURRENT_VERSION_INFO = Version
       .newInstance(0, 1);
-  private Timer compactionTimer;
-  private long compactionIntervalMsec;
 
   @Override
   public void initialize(Configuration config, Configuration schedConf,
       RMContext rmContext) throws IOException {
     this.conf = config;
+    this.initSchedConf = schedConf;
+    this.dbManager = new DBManager();
+    this.versionDbManager = new DBManager();
     try {
-      initDatabase(schedConf);
+      initDatabase();
       this.maxLogs = config.getLong(
           YarnConfiguration.RM_SCHEDCONF_MAX_LOGS,
           YarnConfiguration.DEFAULT_RM_SCHEDCONF_LEVELDB_MAX_LOGS);
-      this.compactionIntervalMsec = config.getLong(
+      long compactionIntervalMsec = config.getLong(
           YarnConfiguration.RM_SCHEDCONF_LEVELDB_COMPACTION_INTERVAL_SECS,
           YarnConfiguration
               .DEFAULT_RM_SCHEDCONF_LEVELDB_COMPACTION_INTERVAL_SECS) * 1000;
-      startCompactionTimer();
+      dbManager.startCompactionTimer(compactionIntervalMsec,
+          this.getClass().getSimpleName());
     } catch (Exception e) {
       throw new IOException(e);
     }
@@ -107,7 +105,15 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
     fs.delete(getStorageDir(DB_NAME), true);
   }
 
-  private void initDatabase(Configuration config) throws Exception {
+  private void initDatabase() throws Exception {
+    Path confVersion = createStorageDir(CONF_VERSION_NAME);
+    Options confOptions = new Options();
+    confOptions.createIfMissing(false);
+    File confVersionFile = new File(confVersion.toString());
+
+    versionDb = versionDbManager.initDatabase(confVersionFile, confOptions,
+        this::initVersionDb);
+
     Path storeRoot = createStorageDir(DB_NAME);
     Options options = new Options();
     options.createIfMissing(false);
@@ -143,56 +149,22 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
         return key;
       }
     });
+    LOG.info("Using conf database at {}", storeRoot);
+    File dbFile = new File(storeRoot.toString());
+    db = dbManager.initDatabase(dbFile, options, this::initDb);
+  }
 
-    Path confVersion = createStorageDir(CONF_VERSION_NAME);
-    Options confOptions = new Options();
-    confOptions.createIfMissing(false);
-    LOG.info("Using conf version at " + confVersion);
-    File confVersionFile = new File(confVersion.toString());
-    try {
-      versiondb = JniDBFactory.factory.open(confVersionFile, confOptions);
-    } catch (NativeDB.DBException e) {
-      if (e.isNotFound() || e.getMessage().contains(" does not exist ")) {
-        LOG.info("Creating conf version at " + confVersionFile);
-        confOptions.createIfMissing(true);
-        try {
-          versiondb = JniDBFactory.factory.open(confVersionFile, confOptions);
-          versiondb.put(bytes(CONF_VERSION_KEY), bytes(String.valueOf(0)));
-        } catch (DBException dbErr) {
-          throw new IOException(dbErr.getMessage(), dbErr);
-        }
-      } else {
-        throw e;
-      }
+  private void initVersionDb(DB database) {
+    database.put(bytes(CONF_VERSION_KEY), bytes(String.valueOf(0)));
+  }
+
+  private void initDb(DB database) {
+    WriteBatch initBatch = database.createWriteBatch();
+    for (Map.Entry<String, String> kv : initSchedConf) {
+      initBatch.put(bytes(kv.getKey()), bytes(kv.getValue()));
     }
-
-
-    LOG.info("Using conf database at " + storeRoot);
-    File dbfile = new File(storeRoot.toString());
-    try {
-      db = JniDBFactory.factory.open(dbfile, options);
-    } catch (NativeDB.DBException e) {
-      if (e.isNotFound() || e.getMessage().contains(" does not exist ")) {
-        LOG.info("Creating conf database at " + dbfile);
-        options.createIfMissing(true);
-        try {
-          db = JniDBFactory.factory.open(dbfile, options);
-          // Write the initial scheduler configuration
-          WriteBatch initBatch = db.createWriteBatch();
-          for (Map.Entry<String, String> kv : config) {
-            initBatch.put(bytes(kv.getKey()), bytes(kv.getValue()));
-          }
-          db.write(initBatch);
-          long configVersion = getConfigVersion() + 1L;
-          versiondb.put(bytes(CONF_VERSION_KEY),
-              bytes(String.valueOf(configVersion)));
-        } catch (DBException dbErr) {
-          throw new IOException(dbErr.getMessage(), dbErr);
-        }
-      } else {
-        throw e;
-      }
-    }
+    database.write(initBatch);
+    increaseConfigVersion();
   }
 
   private Path createStorageDir(String storageName) throws IOException {
@@ -213,12 +185,8 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
 
   @Override
   public void close() throws IOException {
-    if (db != null) {
-      db.close();
-    }
-    if (versiondb != null) {
-      versiondb.close();
-    }
+    dbManager.close();
+    versionDbManager.close();
   }
 
   @Override
@@ -235,7 +203,7 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
 
   @Override
   public void confirmMutation(LogMutation pendingMutation,
-      boolean isValid) throws IOException {
+      boolean isValid) {
     WriteBatch updateBatch = db.createWriteBatch();
     if (isValid) {
       for (Map.Entry<String, String> changes :
@@ -246,9 +214,7 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
           updateBatch.put(bytes(changes.getKey()), bytes(changes.getValue()));
         }
       }
-      long configVersion = getConfigVersion() + 1L;
-      versiondb.put(bytes(CONF_VERSION_KEY),
-          bytes(String.valueOf(configVersion)));
+      increaseConfigVersion();
     }
     db.write(updateBatch);
   }
@@ -263,11 +229,16 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
     }
   }
 
+  // Because of type erasure casting to LinkedList<LogMutation> will be
+  // unchecked. A way around that would be to iterate over the logMutations
+  // which is overkill in this case.
+  @SuppressWarnings("unchecked")
   private LinkedList<LogMutation> deserLogMutations(byte[] mutations) throws
       IOException {
     if (mutations == null) {
       return new LinkedList<>();
     }
+
     try (ObjectInput input = new ObjectInputStream(
         new ByteArrayInputStream(mutations))) {
       return (LinkedList<LogMutation>) input.readObject();
@@ -293,9 +264,15 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
     return config;
   }
 
+  private void increaseConfigVersion() {
+    long configVersion = getConfigVersion() + 1L;
+    versionDb.put(bytes(CONF_VERSION_KEY),
+        bytes(String.valueOf(configVersion)));
+  }
+
   @Override
   public long getConfigVersion() {
-    String version = new String(versiondb.get(bytes(CONF_VERSION_KEY)),
+    String version = new String(versionDb.get(bytes(CONF_VERSION_KEY)),
         StandardCharsets.UTF_8);
     return Long.parseLong(version);
   }
@@ -305,31 +282,9 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
     return null; // unimplemented
   }
 
-  // TODO below was taken from LeveldbRMStateStore, it can probably be
-  // refactored
-  private void startCompactionTimer() {
-    if (compactionIntervalMsec > 0) {
-      compactionTimer = new Timer(
-          this.getClass().getSimpleName() + " compaction timer", true);
-      compactionTimer.schedule(new CompactionTimerTask(),
-          compactionIntervalMsec, compactionIntervalMsec);
-    }
-  }
-
-  // TODO: following is taken from LeveldbRMStateStore
   @Override
   public Version getConfStoreVersion() throws Exception {
-    Version version = null;
-    try {
-      byte[] data = db.get(bytes(VERSION_KEY));
-      if (data != null) {
-        version = new VersionPBImpl(YarnServerCommonProtos.VersionProto
-            .parseFrom(data));
-      }
-    } catch (DBException e) {
-      throw new IOException(e);
-    }
-    return version;
+    return dbManager.loadVersion(VERSION_KEY);
   }
 
   @VisibleForTesting
@@ -345,37 +300,20 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
 
   @Override
   public void storeVersion() throws Exception {
-    storeVersion(CURRENT_VERSION_INFO);
-  }
-
-  @VisibleForTesting
-  protected void storeVersion(Version version) throws Exception {
-    byte[] data = ((VersionPBImpl) version).getProto()
-        .toByteArray();
     try {
-      db.put(bytes(VERSION_KEY), data);
+      storeVersion(CURRENT_VERSION_INFO);
     } catch (DBException e) {
       throw new IOException(e);
     }
   }
 
+  @VisibleForTesting
+  protected void storeVersion(Version version) {
+    dbManager.storeVersion(VERSION_KEY, version);
+  }
+
   @Override
   public Version getCurrentVersion() {
     return CURRENT_VERSION_INFO;
-  }
-
-  private class CompactionTimerTask extends TimerTask {
-    @Override
-    public void run() {
-      long start = Time.monotonicNow();
-      LOG.info("Starting full compaction cycle");
-      try {
-        db.compactRange(null, null);
-      } catch (DBException e) {
-        LOG.error("Error compacting database", e);
-      }
-      long duration = Time.monotonicNow() - start;
-      LOG.info("Full compaction cycle completed in " + duration + " msec");
-    }
   }
 }

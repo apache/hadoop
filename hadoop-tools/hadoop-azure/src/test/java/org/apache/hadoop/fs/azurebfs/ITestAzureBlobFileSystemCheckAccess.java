@@ -273,6 +273,8 @@ public class ITestAzureBlobFileSystemCheckAccess
         isHNSEnabled);
     Assume.assumeTrue(FS_AZURE_ENABLE_CHECK_ACCESS + " is false",
         isCheckAccessEnabled);
+
+    Assume.assumeNotNull(getRawConfiguration().get(FS_AZURE_BLOB_FS_CLIENT_ID));
   }
 
   private void assertAccessible(Path testFilePath, FsAction fsAction)

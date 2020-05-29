@@ -20,8 +20,14 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
 
 import java.io.StringReader;
 
@@ -79,6 +85,8 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     int numApplications;
     String queueName;
     String state;
+    boolean isAbsoluteResource;
+    boolean autoCreateChildQueueEnabled;
   }
 
   private class LeafQueueInfo extends QueueInfo {
@@ -131,6 +139,9 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     final String B = CapacitySchedulerConfiguration.ROOT + ".b";
     config.setCapacity(B, 89.5f);
 
+    final String C = CapacitySchedulerConfiguration.ROOT + ".c";
+    config.setCapacity(C, "[memory=1024]");
+
     // Define 2nd-level queues
     final String A1 = A + ".a1";
     final String A2 = A + ".a2";
@@ -155,11 +166,17 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     config.setCapacity(B3, 0.5f);
     config.setUserLimitFactor(B3, 100.0f);
 
-    config.setQueues(A1, new String[] {"a1a", "a1b"});
+    config.setQueues(A1, new String[] {"a1a", "a1b", "a1c"});
     final String A1A = A1 + ".a1a";
-    config.setCapacity(A1A, 85);
+    config.setCapacity(A1A, 65);
     final String A1B = A1 + ".a1b";
     config.setCapacity(A1B, 15);
+    final String A1C = A1 + ".a1c";
+    config.setCapacity(A1C, 20);
+
+    config.setAutoCreateChildQueueEnabled(A1C, true);
+    config.setInt(PREFIX + A1C + DOT + AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX
+        + DOT + CAPACITY, 50);
   }
 
   @Before
@@ -290,6 +307,10 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
         WebServicesTestUtils.getXmlInt(qElem, "numApplications");
     qi.queueName = WebServicesTestUtils.getXmlString(qElem, "queueName");
     qi.state = WebServicesTestUtils.getXmlString(qElem, "state");
+    qi.autoCreateChildQueueEnabled = WebServicesTestUtils.getXmlBoolean(qElem,
+        "autoCreateChildQueueEnabled");
+    qi.isAbsoluteResource = WebServicesTestUtils.getXmlBoolean(qElem,
+        "isAbsoluteResource");
     verifySubQueueGeneric(q, qi, parentAbsCapacity, parentAbsMaxCapacity);
     if (hasSubQueues) {
       for (int j = 0; j < children.getLength(); j++) {
@@ -304,6 +325,14 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
           }
         }
       }
+    } else if (qi.autoCreateChildQueueEnabled) {
+      assertEquals("queueName doesn't match", "a1c", qi.queueName);
+      String capacityStr = WebServicesTestUtils.getPropertyValue(qElem,
+          "leafQueueTemplate", AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX
+          + DOT + CAPACITY);
+      int capacity = Integer.parseInt(capacityStr);
+      assertEquals(AUTO_CREATED_LEAF_QUEUE_TEMPLATE_PREFIX + DOT
+          + CAPACITY + " doesn't match", 50, capacity);
     } else {
       LeafQueueInfo lqi = (LeafQueueInfo) qi;
       lqi.numActiveApplications =
@@ -384,10 +413,10 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
   private void verifySubQueue(JSONObject info, String q,
       float parentAbsCapacity, float parentAbsMaxCapacity)
       throws JSONException, Exception {
-    int numExpectedElements = 24;
+    int numExpectedElements = 27;
     boolean isParentQueue = true;
     if (!info.has("queues")) {
-      numExpectedElements = 42;
+      numExpectedElements = 45;
       isParentQueue = false;
     }
     assertEquals("incorrect number of elements", numExpectedElements, info.length());
@@ -405,7 +434,10 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
 
     verifySubQueueGeneric(q, qi, parentAbsCapacity, parentAbsMaxCapacity);
 
-    if (isParentQueue) {
+    // Separate Condition for Managed Parent Queue
+    if (qi.queueName.equals("a1c")) {
+      assertTrue(info.getBoolean("autoCreateChildQueueEnabled"));
+    } else if (isParentQueue) {
       JSONArray arr = info.getJSONObject("queues").getJSONArray("queue");
       // test subqueues
       for (int i = 0; i < arr.length(); i++) {
@@ -423,6 +455,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
 
       assertEquals("0", info.getString("queuePriority"));
       assertEquals("utilization", info.getString("orderingPolicyInfo"));
+      assertFalse(info.getBoolean("autoCreateChildQueueEnabled"));
     } else {
       Assert.assertEquals("\"type\" field is incorrect",
           "capacitySchedulerLeafQueueInfo", info.getString("type"));
@@ -471,6 +504,14 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
         + " expected: " + q, qshortName.matches(info.queueName));
     assertTrue("state doesn't match",
         (csConf.getState(q).toString()).matches(info.state));
+    if (q.equals("c")) {
+      assertTrue("c queue is not configured in Absolute resource",
+          info.isAbsoluteResource);
+    } else {
+      assertFalse(info.queueName
+          + " queue is not configured in Absolute resource",
+          info.isAbsoluteResource);
+    }
 
   }
 

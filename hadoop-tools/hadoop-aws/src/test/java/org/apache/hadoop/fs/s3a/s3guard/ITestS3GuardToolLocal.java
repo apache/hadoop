@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.s3a.s3guard;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
@@ -31,17 +30,23 @@ import java.util.List;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.StringUtils;
 
-import org.junit.Assume;
 import org.junit.Test;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.Tristate;
+import org.apache.hadoop.fs.s3a.UnknownStoreException;
 
+import static org.apache.hadoop.fs.s3a.Constants.S3A_BUCKET_PROBE;
+import static org.apache.hadoop.fs.s3a.Constants.S3A_BUCKET_PROBE_DEFAULT;
+import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
+import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_METASTORE_LOCAL;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getLandsatCSVFile;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.*;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardToolTestHelper.exec;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -58,12 +63,20 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
       "-force", "-verbose"};
 
   @Override
+  protected Configuration createConfiguration() {
+    Configuration conf = super.createConfiguration();
+    removeBaseAndBucketOverrides(conf,
+        S3_METADATA_STORE_IMPL, S3A_BUCKET_PROBE);
+    conf.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_LOCAL);
+    conf.setInt(S3A_BUCKET_PROBE, S3A_BUCKET_PROBE_DEFAULT);
+    return conf;
+  }
+
+  @Override
   public void setup() throws Exception {
     super.setup();
-    MetadataStore ms = getMetadataStore();
-    Assume.assumeTrue("Test only applies when a local store is used for S3Guard;"
-            + "Store is " + (ms == null ? "none" : ms.toString()),
-        ms instanceof LocalMetadataStore);
+    assertTrue("metadata store impl should be LocalMetadataStore.",
+        getMetadataStore() instanceof LocalMetadataStore);
   }
 
   @Test
@@ -97,7 +110,6 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
         .getListing().size());
     assertEquals("Expected 2 items: empty directory and a parent directory", 2,
         ms.listChildren(parent).getListing().size());
-    assertTrue(children.isAuthoritative());
   }
 
   @Test
@@ -165,18 +177,10 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
 
   @Test
   public void testInfoBucketAndRegionNoFS() throws Throwable {
-    intercept(FileNotFoundException.class,
+    intercept(UnknownStoreException.class,
         () -> run(BucketInfo.NAME, "-meta",
             LOCAL_METADATA, "-region",
             "any-region", S3A_THIS_BUCKET_DOES_NOT_EXIST));
-  }
-
-  @Test
-  public void testInitNegativeRead() throws Throwable {
-    runToFailure(INVALID_ARGUMENT,
-        Init.NAME, "-meta", LOCAL_METADATA, "-region",
-        "eu-west-1",
-        READ_FLAG, "-10");
   }
 
   @Test

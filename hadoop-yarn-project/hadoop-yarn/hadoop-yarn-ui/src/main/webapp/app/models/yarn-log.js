@@ -19,9 +19,10 @@
 import DS from 'ember-data';
 
 export default DS.Model.extend({
-  fileName: DS.attr('string'),
-  fileSize: DS.attr('string'),
-  lastModifiedTime: DS.attr('string'),
-  containerId: DS.attr('string'),
-  nodeId: DS.attr('string')
+  fileName: DS.attr('string', {defaultValue: ''}),
+  fileSize: DS.attr('string', {defaultValue: ''}),
+  lastModifiedTime: DS.attr('string', {defaultValue: ''}),
+  containerId: DS.attr('string', {defaultValue: ''}),
+  nodeId: DS.attr('string', {defaultValue: ''}),
+  redirectedUrl: DS.attr('string', {defaultValue: ''})
 });

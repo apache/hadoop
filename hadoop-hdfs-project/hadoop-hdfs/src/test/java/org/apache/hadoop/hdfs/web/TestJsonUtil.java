@@ -306,7 +306,13 @@ public class TestJsonUtil {
   @Test
   public void testToJsonFromContentSummary() {
     String jsonString =
-        "{\"ContentSummary\":{\"directoryCount\":33333,\"ecPolicy\":\"RS-6-3-1024k\",\"fileCount\":22222,\"length\":11111,\"quota\":44444,\"spaceConsumed\":55555,\"spaceQuota\":66666,\"typeQuota\":{}}}";
+        "{\"ContentSummary\":{\"directoryCount\":33333,\"ecPolicy\":"
+            + "\"RS-6-3-1024k\",\"fileCount\":22222,\"length\":11111,"
+            + "\"quota\":44444,\"snapshotDirectoryCount\":1,"
+            + "\"snapshotFileCount\":2,\"snapshotLength\":10,"
+            + "\"snapshotSpaceConsumed\":30,\"spaceConsumed\":55555,"
+            + "\"spaceQuota\":66666,\"typeQuota\":{}}}";
+
     long length = 11111;
     long fileCount = 22222;
     long directoryCount = 33333;
@@ -314,15 +320,22 @@ public class TestJsonUtil {
     long spaceConsumed = 55555;
     long spaceQuota = 66666;
     String ecPolicy = "RS-6-3-1024k";
+    long snapshotLength = 10;
+    long snapshotFileCount = 2;
+    long snapshotDirectoryCount = 1;
+    long snapshotSpaceConsumed = 30;
 
-    ContentSummary contentSummary = new ContentSummary.Builder().length(length).
-        fileCount(fileCount).directoryCount(directoryCount).quota(quota).
-        spaceConsumed(spaceConsumed).spaceQuota(spaceQuota).
-        erasureCodingPolicy(ecPolicy).build();
+    ContentSummary contentSummary = new ContentSummary.Builder().length(length)
+        .fileCount(fileCount).directoryCount(directoryCount).quota(quota)
+        .spaceConsumed(spaceConsumed).spaceQuota(spaceQuota)
+        .erasureCodingPolicy(ecPolicy).snapshotLength(snapshotLength)
+        .snapshotFileCount(snapshotFileCount)
+        .snapshotDirectoryCount(snapshotDirectoryCount)
+        .snapshotSpaceConsumed(snapshotSpaceConsumed).build();
 
     Assert.assertEquals(jsonString, JsonUtil.toJsonString(contentSummary));
   }
-  
+
   @Test
   public void testToJsonFromXAttrs() throws IOException {
     String jsonString = 

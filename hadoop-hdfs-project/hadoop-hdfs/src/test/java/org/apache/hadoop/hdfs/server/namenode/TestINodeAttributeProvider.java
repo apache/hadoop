@@ -81,6 +81,19 @@ public class TestINodeAttributeProvider {
         }
         CALLED.add("checkPermission|" + ancestorAccess + "|" + parentAccess + "|" + access);
       }
+
+      @Override
+      public void checkPermissionWithContext(
+          AuthorizationContext authzContext) throws AccessControlException {
+        if (authzContext.getAncestorIndex() > 1
+            && authzContext.getInodes()[1].getLocalName().equals("user")
+            && authzContext.getInodes()[2].getLocalName().equals("acl")) {
+          this.ace.checkPermissionWithContext(authzContext);
+        }
+        CALLED.add("checkPermission|" + authzContext.getAncestorAccess()
+            + "|" + authzContext.getParentAccess() + "|" + authzContext
+            .getAccess());
+      }
     }
 
     @Override

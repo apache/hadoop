@@ -38,9 +38,17 @@ export default RESTAbstractAdapter.extend({
     var containerId = splits[0];
     var logFile = splits[1];
     var url = this._buildURL();
-    url = url + '/containerlogs/' + containerId + '/' + logFile;
+    url = url + '/containerlogs/' + containerId + '/' + logFile + '?manual_redirection=true';
     Ember.Logger.info('The URL for getting the log: ' + url);
     return url;
+  },
+
+  handleResponse(status, headers, payload, requestData) {
+    if (headers['location'] !== undefined && headers['location'] !== null) {
+      return { redirectedUrl: headers.location, data: "" }
+    } else {
+      return { data: payload }
+    }
   },
 
   /**

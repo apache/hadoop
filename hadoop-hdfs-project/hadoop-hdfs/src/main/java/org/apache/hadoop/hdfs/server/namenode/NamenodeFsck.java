@@ -38,6 +38,7 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockUnderConstructionFeature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -565,6 +566,8 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     long fileLen = file.getLen();
     LocatedBlocks blocks = null;
     final FSNamesystem fsn = namenode.getNamesystem();
+    final String operationName = "fsckGetBlockLocations";
+    FSPermissionChecker.setOperationType(operationName);
     fsn.readLock();
     try {
       blocks = FSDirStatAndListingOp.getBlockLocations(
@@ -574,7 +577,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
     } catch (FileNotFoundException fnfe) {
       blocks = null;
     } finally {
-      fsn.readUnlock("fsckGetBlockLocations");
+      fsn.readUnlock(operationName);
     }
     return blocks;
   }
@@ -869,16 +872,20 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       String blkName = block.toString();
       BlockInfo storedBlock = blockManager.getStoredBlock(
           block.getLocalBlock());
-      DatanodeStorageInfo[] storages = storedBlock
-          .getUnderConstructionFeature().getExpectedStorageLocations();
-      report.append('\n')
-          .append("Under Construction Block:\n")
-          .append(blockNumber).append(". ").append(blkName)
-          .append(" len=").append(block.getNumBytes())
-          .append(" Expected_repl=" + storages.length);
-      String info=getReplicaInfo(storedBlock);
-      if (!info.isEmpty()){
-        report.append(" ").append(info);
+      BlockUnderConstructionFeature uc =
+          storedBlock.getUnderConstructionFeature();
+      if (uc != null) {
+        // BlockUnderConstructionFeature can be null, in case the block was
+        // in committed state, and the IBR came just after the check.
+        DatanodeStorageInfo[] storages = uc.getExpectedStorageLocations();
+        report.append('\n').append("Under Construction Block:\n")
+            .append(blockNumber).append(". ").append(blkName).append(" len=")
+            .append(block.getNumBytes())
+            .append(" Expected_repl=" + storages.length);
+        String info = getReplicaInfo(storedBlock);
+        if (!info.isEmpty()) {
+          report.append(" ").append(info);
+        }
       }
     }
 

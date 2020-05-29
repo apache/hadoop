@@ -1165,7 +1165,7 @@ Compares S3 with MetadataStore, and returns a failure status if any
 rules or invariants are violated. Only works with DynamoDB metadata stores.
 
 ```bash
-hadoop s3guard fsck [-check | -internal] (s3a://BUCKET | s3a://PATH_PREFIX)
+hadoop s3guard fsck [-check | -internal] [-fix] (s3a://BUCKET | s3a://PATH_PREFIX)
 ```
 
 `-check` operation checks the metadata store from the S3 perspective, but
@@ -1174,6 +1174,12 @@ The consistency issues will be logged in ERROR loglevel.
 
 `-internal` operation checks the internal consistency of the metadata store,
 but does not fix any issues.
+
+`-fix` operation fixes consistency issues between the metadatastore and the S3
+bucket. This parameter is optional, and can be used together with check or
+internal parameters, but not alone.
+The following fix is implemented:
+- Remove orphan entries from DDB
 
 The errors found will be logged at the ERROR log level.
 
@@ -1229,6 +1235,35 @@ that S3Guard tracks recent changes to file metadata to implement consistency.
 Deleting the metadata store table will simply result in a period of eventual
 consistency for any file modifications that were made right before the table
 was deleted.
+
+### Enabling a log message whenever S3Guard is *disabled*
+
+When dealing with support calls related to the S3A connector, "is S3Guard on?"
+is the usual opening question. This can be determined by looking at the application logs for
+messages about S3Guard starting -the absence of S3Guard can only be inferred by the absence
+of such messages.
+
+There is a another strategy: have the S3A Connector log whenever *S3Guard is not enabled*
+
+This can be done in the configuration option `fs.s3a.s3guard.disabled.warn.level`
+
+```xml
+<property>
+ <name>fs.s3a.s3guard.disabled.warn.level</name>
+ <value>silent</value>
+ <description>
+   Level to print a message when S3Guard is disabled.
+   Values: 
+   "warn": log at WARN level
+   "inform": log at INFO level
+   "silent": log at DEBUG level
+   "fail": raise an exception
+ </description>
+</property>
+```
+
+The `fail` option is clearly more than logging; it exists as an extreme debugging
+tool. Use with care.
 
 ### Failure Semantics
 

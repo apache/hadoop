@@ -17,16 +17,21 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
+import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileContextTestHelper;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.viewfs.ConfigUtil;
+import org.apache.hadoop.fs.viewfs.ViewFileSystemOverloadScheme.ChildFsGetter;
 import org.apache.hadoop.util.Shell;
 import org.eclipse.jetty.util.log.Log;
+import org.junit.Assert;
 
 
 /**
@@ -130,6 +135,86 @@ public class ViewFsTestSetup {
     ConfigUtil.addLink(conf, firstComponent, linkTarget);
     Log.getLog().info("Added link for " + info + " "
         + firstComponent + "->" + linkTarget);    
+  }
+
+  /**
+   * Adds the given mount links to the given Hadoop compatible file system path.
+   * Mount link mappings are in sources, targets at their respective index
+   * locations.
+   */
+  static void addMountLinksToFile(String mountTable, String[] sources,
+      String[] targets, Path mountTableConfPath, Configuration conf)
+      throws IOException, URISyntaxException {
+    ChildFsGetter cfs = new ViewFileSystemOverloadScheme.ChildFsGetter(
+        mountTableConfPath.toUri().getScheme());
+    try (FileSystem fs = cfs.getNewInstance(mountTableConfPath.toUri(),
+        conf)) {
+      try (FSDataOutputStream out = fs.create(mountTableConfPath)) {
+        String prefix =
+            new StringBuilder(Constants.CONFIG_VIEWFS_PREFIX).append(".")
+                .append((mountTable == null
+                    ? Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE
+                    : mountTable))
+                .append(".").toString();
+        out.writeBytes("<configuration>");
+        for (int i = 0; i < sources.length; i++) {
+          String src = sources[i];
+          String target = targets[i];
+          boolean isNfly = src.startsWith(Constants.CONFIG_VIEWFS_LINK_NFLY);
+          out.writeBytes("<property><name>");
+          if (isNfly) {
+            String[] srcParts = src.split("[.]");
+            Assert.assertEquals("Invalid NFlyLink format", 3, srcParts.length);
+            String actualSrc = srcParts[srcParts.length - 1];
+            String params = srcParts[srcParts.length - 2];
+            out.writeBytes(prefix + Constants.CONFIG_VIEWFS_LINK_NFLY + "."
+                + params + "." + actualSrc);
+          } else if (Constants.CONFIG_VIEWFS_LINK_FALLBACK.equals(src)) {
+            out.writeBytes(prefix + Constants.CONFIG_VIEWFS_LINK_FALLBACK);
+          } else if (Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH.equals(src)) {
+            out.writeBytes(prefix + Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH);
+          } else {
+            out.writeBytes(prefix + Constants.CONFIG_VIEWFS_LINK + "." + src);
+          }
+          out.writeBytes("</name>");
+          out.writeBytes("<value>");
+          out.writeBytes(target);
+          out.writeBytes("</value></property>");
+          out.flush();
+        }
+        out.writeBytes(("</configuration>"));
+        out.flush();
+      }
+    }
+  }
+
+  /**
+   * Adds the given mount links to the configuration. Mount link mappings are
+   * in sources, targets at their respective index locations.
+   */
+  static void addMountLinksToConf(String mountTable, String[] sources,
+      String[] targets, Configuration config) throws URISyntaxException {
+    for (int i = 0; i < sources.length; i++) {
+      String src = sources[i];
+      String target = targets[i];
+      String mountTableName = mountTable == null ?
+          Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE : mountTable;
+      boolean isNfly = src.startsWith(Constants.CONFIG_VIEWFS_LINK_NFLY);
+      if (isNfly) {
+        String[] srcParts = src.split("[.]");
+        Assert.assertEquals("Invalid NFlyLink format", 3, srcParts.length);
+        String actualSrc = srcParts[srcParts.length - 1];
+        String params = srcParts[srcParts.length - 2];
+        ConfigUtil.addLinkNfly(config, mountTableName, actualSrc, params,
+            target);
+      } else if (src.equals(Constants.CONFIG_VIEWFS_LINK_FALLBACK)) {
+        ConfigUtil.addLinkFallback(config, mountTableName, new URI(target));
+      } else if (src.equals(Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH)) {
+        ConfigUtil.addLinkMergeSlash(config, mountTableName, new URI(target));
+      } else {
+        ConfigUtil.addLink(config, mountTableName, src, new URI(target));
+      }
+    }
   }
 
 }

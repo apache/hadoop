@@ -48,6 +48,14 @@
   ordering of the filters.</description>
 </property>
 
+  <property>
+    <name>hadoop.http.idle_timeout.ms</name>
+    <value>1000</value>
+    <description>
+      NN/JN/DN Server connection timeout in milliseconds.
+    </description>
+  </property>
+
 <!--- security properties -->
 
 <property>
@@ -2974,6 +2982,7 @@
   <description>
     The supported SSL protocols. The parameter will only be used from
     DatanodeHttpServer.
+    Starting from Hadoop 3.3.0, TLSv1.3 is supported with Java 11 Runtime.
   </description>
 </property>
 

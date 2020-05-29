@@ -813,6 +813,8 @@ public class DistributedFileSystem extends FileSystem
   @Override
   public Collection<BlockStoragePolicy> getAllStoragePolicies()
       throws IOException {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_STORAGE_POLICIES);
     return Arrays.asList(dfs.getStoragePolicies());
   }
 
@@ -834,9 +836,7 @@ public class DistributedFileSystem extends FileSystem
    */
   @Deprecated
   public BlockStoragePolicy[] getStoragePolicies() throws IOException {
-    statistics.incrementReadOps(1);
-    storageStatistics.incrementOpCounter(OpType.GET_STORAGE_POLICIES);
-    return dfs.getStoragePolicies();
+    return getAllStoragePolicies().toArray(new BlockStoragePolicy[0]);
   }
 
   /**
@@ -2123,6 +2123,9 @@ public class DistributedFileSystem extends FileSystem
    */
   public SnapshottableDirectoryStatus[] getSnapshottableDirListing()
       throws IOException {
+    statistics.incrementReadOps(1);
+    storageStatistics
+        .incrementOpCounter(OpType.GET_SNAPSHOTTABLE_DIRECTORY_LIST);
     return dfs.getSnapshottableDirListing();
   }
 
@@ -2295,6 +2298,8 @@ public class DistributedFileSystem extends FileSystem
    */
   public SnapshotDiffReport getSnapshotDiffReport(final Path snapshotDir,
       final String fromSnapshot, final String toSnapshot) throws IOException {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_SNAPSHOT_DIFF);
     Path absF = fixRelativePart(snapshotDir);
     return new FileSystemLinkResolver<SnapshotDiffReport>() {
       @Override
@@ -3243,6 +3248,8 @@ public class DistributedFileSystem extends FileSystem
    */
   @Override
   public Path getTrashRoot(Path path) {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_TRASH_ROOT);
     try {
       if ((path == null) || !dfs.isHDFSEncryptionEnabled()) {
         return super.getTrashRoot(path);
@@ -3549,7 +3556,8 @@ public class DistributedFileSystem extends FileSystem
 
   public RemoteIterator<OpenFileEntry> listOpenFiles(
       EnumSet<OpenFilesType> openFilesTypes, String path) throws IOException {
-    return dfs.listOpenFiles(openFilesTypes, path);
+    Path absF = fixRelativePart(new Path(path));
+    return dfs.listOpenFiles(openFilesTypes, getPathName(absF));
   }
 
 

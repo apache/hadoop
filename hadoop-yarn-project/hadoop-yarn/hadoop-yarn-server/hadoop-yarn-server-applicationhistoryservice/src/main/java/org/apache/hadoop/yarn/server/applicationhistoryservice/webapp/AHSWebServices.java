@@ -210,7 +210,7 @@ public class AHSWebServices extends WebServices {
    *    The container ID
    * @param nmId
    *    The Node Manager NodeId
-   * @param redirected_from_node
+   * @param redirectedFromNode
    *    Whether this is a redirected request from NM
    * @return
    *    The log file's name and current file size
@@ -224,14 +224,16 @@ public class AHSWebServices extends WebServices {
       @PathParam(YarnWebServiceParams.CONTAINER_ID) String containerIdStr,
       @QueryParam(YarnWebServiceParams.NM_ID) String nmId,
       @QueryParam(YarnWebServiceParams.REDIRECTED_FROM_NODE)
-      @DefaultValue("false") boolean redirected_from_node) {
+      @DefaultValue("false") boolean redirectedFromNode,
+      @QueryParam(YarnWebServiceParams.MANUAL_REDIRECTION)
+      @DefaultValue("false") boolean manualRedirection) {
     initForReadableEndpoints(res);
 
     WrappedLogMetaRequest.Builder logMetaRequestBuilder =
         LogServlet.createRequestFromContainerId(containerIdStr);
 
     return logServlet.getContainerLogsInfo(req, logMetaRequestBuilder, nmId,
-        redirected_from_node, null);
+        redirectedFromNode, null, manualRedirection);
   }
 
   /**
@@ -251,7 +253,7 @@ public class AHSWebServices extends WebServices {
    *    the size of the log file
    * @param nmId
    *    The Node Manager NodeId
-   * @param redirected_from_node
+   * @param redirectedFromNode
    *    Whether this is the redirect request from NM
    * @return
    *    The contents of the container's log file
@@ -269,9 +271,11 @@ public class AHSWebServices extends WebServices {
       @QueryParam(YarnWebServiceParams.RESPONSE_CONTENT_SIZE) String size,
       @QueryParam(YarnWebServiceParams.NM_ID) String nmId,
       @QueryParam(YarnWebServiceParams.REDIRECTED_FROM_NODE)
-      boolean redirected_from_node) {
+      boolean redirectedFromNode,
+      @QueryParam(YarnWebServiceParams.MANUAL_REDIRECTION)
+      @DefaultValue("false") boolean manualRedirection) {
     return getLogs(req, res, containerIdStr, filename, format,
-        size, nmId, redirected_from_node);
+        size, nmId, redirectedFromNode, manualRedirection);
   }
 
   //TODO: YARN-4993: Refactory ContainersLogsBlock, AggregatedLogsBlock and
@@ -290,10 +294,12 @@ public class AHSWebServices extends WebServices {
       @QueryParam(YarnWebServiceParams.RESPONSE_CONTENT_SIZE) String size,
       @QueryParam(YarnWebServiceParams.NM_ID) String nmId,
       @QueryParam(YarnWebServiceParams.REDIRECTED_FROM_NODE)
-      @DefaultValue("false") boolean redirected_from_node) {
+      @DefaultValue("false") boolean redirectedFromNode,
+      @QueryParam(YarnWebServiceParams.MANUAL_REDIRECTION)
+      @DefaultValue("false") boolean manualRedirection) {
     initForReadableEndpoints(res);
     return logServlet.getLogFile(req, containerIdStr, filename, format, size,
-        nmId, redirected_from_node, null);
+        nmId, redirectedFromNode, null, manualRedirection);
   }
 
   @VisibleForTesting

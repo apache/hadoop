@@ -176,6 +176,7 @@ import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletionIg
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.fixBucketRegion;
+import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.logDnsLookup;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**
@@ -469,6 +470,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * S3AFileSystem initialization. When set to 1 or 2, bucket existence check
    * will be performed which is potentially slow.
    * If 3 or higher: warn and use the v2 check.
+   * Also logging DNS address of the s3 endpoint if the bucket probe value is
+   * greater than 0 else skipping it for increased performance.
    * @throws UnknownStoreException the bucket is absent
    * @throws IOException any other problem talking to S3
    */
@@ -483,9 +486,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       LOG.debug("skipping check for bucket existence");
       break;
     case 1:
+      logDnsLookup(getConf());
       verifyBucketExists();
       break;
     case 2:
+      logDnsLookup(getConf());
       verifyBucketExistsV2();
       break;
     default:
@@ -974,11 +979,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   @InterfaceAudience.Private
   public String maybeAddTrailingSlash(String key) {
-    if (!key.isEmpty() && !key.endsWith("/")) {
-      return key + '/';
-    } else {
-      return key;
-    }
+    return S3AUtils.maybeAddTrailingSlash(key);
   }
 
   /**
@@ -4287,39 +4288,66 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     RemoteIterator<? extends LocatedFileStatus> iterator =
         once("listLocatedStatus", path.toString(),
           () -> {
-            // lookup dir triggers existence check
-            final S3AFileStatus fileStatus =
-                (S3AFileStatus) getFileStatus(path);
-            if (fileStatus.isFile()) {
-              // simple case: File
-              LOG.debug("Path is a file");
-              return new Listing.SingleStatusRemoteIterator(
-                  filter.accept(path) ? toLocatedFileStatus(fileStatus) : null);
-            } else {
-              // directory: trigger a lookup
-              final String key = maybeAddTrailingSlash(pathToKey(path));
-              final Listing.FileStatusAcceptor acceptor =
-                  new Listing.AcceptAllButSelfAndS3nDirs(path);
-              boolean allowAuthoritative = allowAuthoritative(f);
-              DirListingMetadata meta =
-                  S3Guard.listChildrenWithTtl(metadataStore, path,
-                      ttlTimeProvider, allowAuthoritative);
-              final RemoteIterator<S3AFileStatus> cachedFileStatusIterator =
-                  listing.createProvidedFileStatusIterator(
-                      S3Guard.dirMetaToStatuses(meta), filter, acceptor);
-              return (allowAuthoritative && meta != null
-                  && meta.isAuthoritative())
-                  ? listing.createLocatedFileStatusIterator(
-                  cachedFileStatusIterator)
-                  : listing.createLocatedFileStatusIterator(
-                      listing.createFileStatusListingIterator(path,
-                          createListObjectsRequest(key, "/"),
-                          filter,
-                          acceptor,
-                          cachedFileStatusIterator));
+            // Assuming the path to be a directory,
+            // trigger a list call directly.
+            final RemoteIterator<S3ALocatedFileStatus>
+                    locatedFileStatusIteratorForDir =
+                    getLocatedFileStatusIteratorForDir(path, filter);
+
+            // If no listing is present then path might be a file.
+            if (!locatedFileStatusIteratorForDir.hasNext()) {
+              final S3AFileStatus fileStatus =
+                      (S3AFileStatus) getFileStatus(path);
+              if (fileStatus.isFile()) {
+                // simple case: File
+                LOG.debug("Path is a file");
+                return new Listing.SingleStatusRemoteIterator(
+                        filter.accept(path)
+                                ? toLocatedFileStatus(fileStatus)
+                                : null);
+              }
             }
+            // Either empty or non-empty directory.
+            return locatedFileStatusIteratorForDir;
           });
     return toLocatedFileStatusIterator(iterator);
+  }
+
+  /**
+   * Generate list located status for a directory.
+   * Also performing tombstone reconciliation for guarded directories.
+   * @param dir directory to check.
+   * @param filter a path filter.
+   * @return an iterator that traverses statuses of the given dir.
+   * @throws IOException in case of failure.
+   */
+  private RemoteIterator<S3ALocatedFileStatus> getLocatedFileStatusIteratorForDir(
+          Path dir, PathFilter filter) throws IOException {
+    final String key = maybeAddTrailingSlash(pathToKey(dir));
+    final Listing.FileStatusAcceptor acceptor =
+        new Listing.AcceptAllButSelfAndS3nDirs(dir);
+    boolean allowAuthoritative = allowAuthoritative(dir);
+    DirListingMetadata meta =
+        S3Guard.listChildrenWithTtl(metadataStore, dir,
+            ttlTimeProvider, allowAuthoritative);
+    Set<Path> tombstones = meta != null
+            ? meta.listTombstones()
+            : null;
+    final RemoteIterator<S3AFileStatus> cachedFileStatusIterator =
+        listing.createProvidedFileStatusIterator(
+            S3Guard.dirMetaToStatuses(meta), filter, acceptor);
+    return (allowAuthoritative && meta != null
+        && meta.isAuthoritative())
+        ? listing.createLocatedFileStatusIterator(
+        cachedFileStatusIterator)
+        : listing.createTombstoneReconcilingIterator(
+            listing.createLocatedFileStatusIterator(
+            listing.createFileStatusListingIterator(dir,
+                createListObjectsRequest(key, "/"),
+                filter,
+                acceptor,
+                cachedFileStatusIterator)),
+            tombstones);
   }
 
   /**

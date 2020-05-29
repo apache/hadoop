@@ -30,7 +30,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
 public class TestDFSRename {
@@ -173,6 +175,25 @@ public class TestDFSRename {
       if (cluster != null) {
         cluster.shutdown();
       }
+    }
+  }
+
+  @Test
+  public void testRename2Options() throws Exception {
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(
+        new HdfsConfiguration()).build()) {
+      cluster.waitActive();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      Path path = new Path("/test");
+      dfs.mkdirs(path);
+      GenericTestUtils.LogCapturer auditLog =
+          GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.auditLog);
+      dfs.rename(path, new Path("/dir1"),
+          new Rename[] {Rename.OVERWRITE, Rename.TO_TRASH});
+      String auditOut = auditLog.getOutput();
+      assertTrue("Rename should have both OVERWRITE and TO_TRASH "
+              + "flags at namenode but had only " + auditOut,
+          auditOut.contains("options=[OVERWRITE, TO_TRASH]"));
     }
   }
 }

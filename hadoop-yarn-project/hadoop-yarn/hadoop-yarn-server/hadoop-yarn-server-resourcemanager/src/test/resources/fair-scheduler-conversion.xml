@@ -45,6 +45,7 @@
                 <schedulingPolicy>drf</schedulingPolicy>
                 <aclSubmitApps>joe </aclSubmitApps>
                 <aclAdministerApps>joe </aclAdministerApps>
+                <maxAMShare>0.16</maxAMShare>
             </queue>
         </queue>
         <queue name="admins" type="parent">

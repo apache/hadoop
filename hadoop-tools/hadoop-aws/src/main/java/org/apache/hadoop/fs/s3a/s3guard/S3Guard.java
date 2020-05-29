@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
@@ -52,12 +53,14 @@ import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.Retries.RetryTranslated;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_AUTHORITATIVE_PATH;
 import static org.apache.hadoop.fs.s3a.S3AUtils.createUploadFileStatus;
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.authoritativeEmptyDirectoryMarker;
+import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_BAD_CONFIGURATION;
 
 /**
  * Logic for integrating MetadataStore with S3A.
@@ -974,13 +977,43 @@ public final class S3Guard {
   }
 
   public static Collection<String> getAuthoritativePaths(S3AFileSystem fs) {
+    return getAuthoritativePaths(
+        fs.getUri(),
+        fs.getConf(),
+        p -> fs.maybeAddTrailingSlash(fs.qualify(p).toString()));
+  }
+
+  /**
+   * Get the authoritative paths of a filesystem.
+   *
+   * @param uri FS URI
+   * @param conf configuration
+   * @param qualifyToDir a qualification operation
+   * @return list of URIs valid for this FS.
+   */
+  @VisibleForTesting
+  static Collection<String> getAuthoritativePaths(
+      final URI uri,
+      final Configuration conf,
+      final Function<Path, String> qualifyToDir) {
     String[] rawAuthoritativePaths =
-        fs.getConf().getTrimmedStrings(AUTHORITATIVE_PATH, DEFAULT_AUTHORITATIVE_PATH);
+        conf.getTrimmedStrings(AUTHORITATIVE_PATH, DEFAULT_AUTHORITATIVE_PATH);
     Collection<String> authoritativePaths = new ArrayList<>();
     if (rawAuthoritativePaths.length > 0) {
       for (int i = 0; i < rawAuthoritativePaths.length; i++) {
-        Path qualified = fs.qualify(new Path(rawAuthoritativePaths[i]));
-        authoritativePaths.add(fs.maybeAddTrailingSlash(qualified.toString()));
+        Path path = new Path(rawAuthoritativePaths[i]);
+        URI pathURI = path.toUri();
+        if (pathURI.getAuthority() != null &&
+            !pathURI.getAuthority().equals(uri.getAuthority())) {
+          // skip on auth
+          continue;
+        }
+        if (pathURI.getScheme() != null &&
+            !pathURI.getScheme().equals(uri.getScheme())) {
+          // skip on auth
+          continue;
+        }
+        authoritativePaths.add(qualifyToDir.apply(path));
       }
     }
     return authoritativePaths;
@@ -1010,12 +1043,22 @@ public final class S3Guard {
     return false;
   }
 
+  /**
+   * Format string to use when warning that S3Guard is disabled.
+   */
+  @VisibleForTesting
   public static final String DISABLED_LOG_MSG =
-      "S3Guard is disabled on this bucket: {}";
+      "S3Guard is disabled on this bucket: %s";
 
+  /**
+   * Error string use in exception raised on an unknown log level.
+   */
   public static final String UNKNOWN_WARN_LEVEL =
-      "Unknown S3Guard disabled warn level: ";
+      "Unknown " + S3GUARD_DISABLED_WARN_LEVEL + " value: ";
 
+  /**
+   * Warning levels to use when reporting S3Guard as disabled.
+   */
   public enum DisabledWarnLevel {
     SILENT,
     INFORM,
@@ -1023,9 +1066,18 @@ public final class S3Guard {
     FAIL
   }
 
+  /**
+   * Log that S3Guard is disabled -optionally raise an exception.
+   * @param logger Log to log to
+   * @param warnLevelStr string value of warn action.
+   * @param bucket bucket to use in log/error messages
+   * @throws ExitUtil.ExitException if s3guard was disabled
+   *                                and the log level is "fail"
+   * @throws IllegalArgumentException unknown warning level.
+   */
   public static void logS3GuardDisabled(Logger logger, String warnLevelStr,
       String bucket)
-      throws UnsupportedOperationException, IllegalArgumentException {
+      throws ExitUtil.ExitException, IllegalArgumentException {
     final DisabledWarnLevel warnLevel;
     try {
       warnLevel = DisabledWarnLevel.valueOf(warnLevelStr.toUpperCase(Locale.US));
@@ -1033,19 +1085,20 @@ public final class S3Guard {
       throw new IllegalArgumentException(UNKNOWN_WARN_LEVEL + warnLevelStr, e);
     }
 
+    String text = String.format(DISABLED_LOG_MSG, bucket);
     switch (warnLevel) {
     case SILENT:
-      logger.debug(DISABLED_LOG_MSG, bucket);
+      logger.debug(text);
       break;
     case INFORM:
-      logger.info(DISABLED_LOG_MSG, bucket);
+      logger.info(text);
       break;
     case WARN:
-      logger.warn(DISABLED_LOG_MSG, bucket);
+      logger.warn(text);
       break;
     case FAIL:
-      logger.error(DISABLED_LOG_MSG, bucket);
-      throw new UnsupportedOperationException(DISABLED_LOG_MSG + bucket);
+      logger.error(text);
+      throw new ExitUtil.ExitException(EXIT_BAD_CONFIGURATION, text);
     default:
       throw new IllegalArgumentException(UNKNOWN_WARN_LEVEL + warnLevelStr);
     }

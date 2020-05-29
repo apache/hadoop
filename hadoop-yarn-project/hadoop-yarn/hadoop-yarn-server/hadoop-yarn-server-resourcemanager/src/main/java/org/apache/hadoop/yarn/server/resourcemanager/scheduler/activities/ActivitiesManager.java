@@ -22,6 +22,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.commons.collections.CollectionUtils;
@@ -385,6 +386,15 @@ public class ActivitiesManager extends AbstractService {
       String diagnostic, ActivityLevel level, Long allocationRequestId) {
     if (shouldRecordThisNode(nodeId)) {
       NodeAllocation nodeAllocation = getCurrentNodeAllocation(nodeId);
+
+      ResourceScheduler scheduler = this.rmContext.getScheduler();
+      //Sorry about this :( Making sure CS short queue references are normalized
+      if (scheduler instanceof CapacityScheduler) {
+        CapacityScheduler cs = (CapacityScheduler)this.rmContext.getScheduler();
+        parentName = cs.normalizeQueueName(parentName);
+        childName  = cs.normalizeQueueName(childName);
+      }
+
       nodeAllocation.addAllocationActivity(parentName, childName, priority,
           state, diagnostic, level, nodeId, allocationRequestId);
     }

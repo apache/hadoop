@@ -30,9 +30,7 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -128,7 +126,7 @@ public class TestApplicationLimits {
     when(csContext.getContainerTokenSecretManager()).thenReturn(
         containerTokenSecretManager);
 
-    Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
+    CSQueueStore queues = new CSQueueStore();
     root = CapacitySchedulerQueueManager
         .parseQueue(csContext, csConf, null, "root",
             queues, queues,
@@ -295,8 +293,8 @@ public class TestApplicationLimits {
     Resource clusterResource = 
       Resources.createResource(100 * 16 * GB, 100 * 16);
     when(csContext.getClusterResource()).thenReturn(clusterResource);
-    
-    Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
+
+    CSQueueStore queues = new CSQueueStore();
     CSQueue root = 
         CapacitySchedulerQueueManager.parseQueue(csContext, csConf, null,
             "root", queues, queues, TestUtils.spyHook);
@@ -368,7 +366,7 @@ public class TestApplicationLimits {
     csConf.setFloat(PREFIX + queue.getQueuePath()
         + ".maximum-am-resource-percent", 0.5f);
     // Re-create queues to get new configs.
-    queues = new HashMap<String, CSQueue>();
+    queues = new CSQueueStore();
     root = CapacitySchedulerQueueManager.parseQueue(
         csContext, csConf, null, "root",
         queues, queues, TestUtils.spyHook);
@@ -392,7 +390,7 @@ public class TestApplicationLimits {
     csConf.setInt(PREFIX + queue.getQueuePath() + ".maximum-applications",
         9999);
     // Re-create queues to get new configs.
-    queues = new HashMap<String, CSQueue>();
+    queues = new CSQueueStore();
     root = CapacitySchedulerQueueManager.parseQueue(
         csContext, csConf, null, "root",
         queues, queues, TestUtils.spyHook);
@@ -603,8 +601,8 @@ public class TestApplicationLimits {
     // Say cluster has 100 nodes of 16G each
     Resource clusterResource = Resources.createResource(100 * 16 * GB);
     when(csContext.getClusterResource()).thenReturn(clusterResource);
-    
-    Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
+
+    CSQueueStore queues = new CSQueueStore();
     CSQueue rootQueue = CapacitySchedulerQueueManager.parseQueue(csContext,
         csConf, null, "root", queues, queues, TestUtils.spyHook);
     rootQueue.updateClusterResource(clusterResource,

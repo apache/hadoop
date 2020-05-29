@@ -21,10 +21,12 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 
+import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.assertEquals;
@@ -56,6 +58,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
+import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset.SimulatedStorage;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
@@ -104,6 +107,8 @@ public class TestBPOfferService {
   private long firstLeaseId = 0;
   private long secondLeaseId = 0;
   private long nextFullBlockReportLeaseId = 1L;
+  private int fullBlockReportCount = 0;
+  private int incrBlockReportCount = 0;
 
   static {
     GenericTestUtils.setLogLevel(DataNode.LOG, Level.ALL);
@@ -226,6 +231,14 @@ public class TestBPOfferService {
     }
   }
 
+  private void setBlockReportCount(int count) {
+    fullBlockReportCount = count;
+  }
+
+  private void setIncreaseBlockReportCount(int count) {
+    incrBlockReportCount += count;
+  }
+
   /**
    * Test that the BPOS can register to talk to two different NNs,
    * sends block reports to both, etc.
@@ -259,6 +272,91 @@ public class TestBPOfferService {
     } finally {
       bpos.stop();
       bpos.join();
+    }
+  }
+
+  /**
+   * HDFS-15113: Test and verify missing block when re-register.
+   */
+  @Test
+  public void testMissBlocksWhenReregister() throws Exception {
+    BPOfferService bpos = setupBPOSForNNs(mockNN1, mockNN2);
+    bpos.start();
+    int totalTestBlocks = 4000;
+    Thread addNewBlockThread = null;
+    final AtomicInteger count = new AtomicInteger(0);
+
+    try {
+      waitForBothActors(bpos);
+      waitForInitialization(bpos);
+      DataNodeFaultInjector.set(new DataNodeFaultInjector() {
+        public void blockUtilSendFullBlockReport() {
+          try {
+            GenericTestUtils.waitFor(() -> {
+              if(count.get() > 2000) {
+                return true;
+              }
+              return false;
+            }, 100, 1000);
+          } catch (Exception e) {
+            e.printStackTrace();
+          }
+        }
+      });
+
+      countBlockReportItems(FAKE_BLOCK, mockNN1);
+      addNewBlockThread = new Thread(() -> {
+        for (int i = 0; i < totalTestBlocks; i++) {
+          SimulatedFSDataset fsDataset = (SimulatedFSDataset) mockFSDataset;
+          SimulatedStorage simulatedStorage = fsDataset.getStorages().get(0);
+          String storageId = simulatedStorage.getStorageUuid();
+          ExtendedBlock b = new ExtendedBlock(bpos.getBlockPoolId(), i, 0, i);
+          try {
+            fsDataset.createRbw(StorageType.DEFAULT, storageId, b, false);
+            bpos.notifyNamenodeReceivingBlock(b, storageId);
+            fsDataset.finalizeBlock(b, false);
+            count.addAndGet(1);
+            Thread.sleep(1);
+          } catch (Exception e) {
+            e.printStackTrace();
+          }
+        }
+      });
+      addNewBlockThread.start();
+
+      // Make sure that generate blocks for DataNode and IBR not empty now.
+      GenericTestUtils.waitFor(() -> {
+        if(count.get() > 0) {
+          return true;
+        }
+        return false;
+      }, 100, 1000);
+
+      // Trigger re-register using DataNode Command.
+      datanodeCommands[0] = new DatanodeCommand[]{RegisterCommand.REGISTER};
+      bpos.triggerHeartbeatForTests();
+
+      try {
+        GenericTestUtils.waitFor(() -> {
+          if(fullBlockReportCount == totalTestBlocks ||
+              incrBlockReportCount == totalTestBlocks) {
+            return true;
+          }
+          return false;
+        }, 1000, 15000);
+      } catch (Exception e) {}
+
+      // Verify FBR/IBR count is equal to generate number.
+      assertTrue(fullBlockReportCount == totalTestBlocks ||
+          incrBlockReportCount == totalTestBlocks);
+    } finally {
+      addNewBlockThread.join();
+      bpos.stop();
+      bpos.join();
+
+      DataNodeFaultInjector.set(new DataNodeFaultInjector() {
+        public void blockUtilSendFullBlockReport() {}
+      });
     }
   }
 
@@ -611,6 +709,42 @@ public class TestBPOfferService {
     } else {
       secondCallTime = Time.now();
     }
+  }
+
+  /**
+   * Record blocks counts of block report and total adding blocks count of IBR
+   * which assume no deleting blocks here.
+   */
+  private void countBlockReportItems(final ExtendedBlock fakeBlock,
+      final DatanodeProtocolClientSideTranslatorPB mockNN) throws Exception {
+    final String fakeBlockPoolId = fakeBlock.getBlockPoolId();
+    final ArgumentCaptor<StorageBlockReport[]> captor =
+        ArgumentCaptor.forClass(StorageBlockReport[].class);
+
+    // Record blocks count about the last time block report.
+    Mockito.doAnswer((Answer<Object>) invocation -> {
+      Object[] arguments = invocation.getArguments();
+      StorageBlockReport[] list = (StorageBlockReport[])arguments[2];
+      setBlockReportCount(list[0].getBlocks().getNumberOfBlocks());
+      return null;
+    }).when(mockNN).blockReport(
+        Mockito.any(),
+        Mockito.eq(fakeBlockPoolId),
+        captor.capture(),
+        Mockito.any()
+    );
+
+    // Record total adding blocks count and assume no deleting blocks here.
+    Mockito.doAnswer((Answer<Object>) invocation -> {
+      Object[] arguments = invocation.getArguments();
+      StorageReceivedDeletedBlocks[] list =
+          (StorageReceivedDeletedBlocks[])arguments[2];
+      setIncreaseBlockReportCount(list[0].getBlocks().length);
+      return null;
+    }).when(mockNN).blockReceivedAndDeleted(
+        Mockito.any(),
+        Mockito.eq(fakeBlockPoolId),
+        Mockito.any());
   }
   
   private class BPOfferServiceSynchronousCallAnswer implements Answer<Void> {
@@ -1073,6 +1207,9 @@ public class TestBPOfferService {
       assertTrue("Process command nums is not expected.",
           getLongCounter("NumProcessedCommands", mrb) > 0);
       assertEquals(0, getLongCounter("SumOfActorCommandQueueLength", mrb));
+      // Check new metric result about processedCommandsOp.
+      // One command send back to DataNode here is #FinalizeCommand.
+      assertCounter("ProcessedCommandsOpNumOps", 1L, mrb);
     } finally {
       if (cluster != null) {
         cluster.shutdown();

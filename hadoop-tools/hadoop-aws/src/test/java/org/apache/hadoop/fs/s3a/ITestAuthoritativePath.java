@@ -234,6 +234,28 @@ public class ITestAuthoritativePath extends AbstractS3ATestBase {
   }
 
   @Test
+  public void testAuthPathWithOtherBucket() throws Exception {
+    Path authPath;
+    Path nonAuthPath;
+    S3AFileSystem fs = null;
+    String landsat = "s3a://landsat-pds/data";
+    String decoy2 = "/decoy2";
+
+    try {
+      authPath = new Path(testRoot, "testMultiAuthPath-first");
+      nonAuthPath = new Path(testRoot, "nonAuth-1");
+      fs = createMultiPathAuthFS(authPath.toString(), landsat, decoy2);
+      assertTrue("No S3Guard store for partially authoritative FS",
+          fs.hasMetadataStore());
+
+      runTestInsidePath(fs, authPath);
+      runTestOutsidePath(fs, nonAuthPath);
+    } finally {
+      cleanUpFS(fs);
+    }
+  }
+
+  @Test
   public void testMultiAuthPath() throws Exception {
     Path authPath;
     Path nonAuthPath;

@@ -136,6 +136,17 @@ public class ConfigUtil {
   }
 
   /**
+   * Add nfly link to configuration for the given mount table.
+   */
+  public static void addLinkNfly(Configuration conf, String mountTableName,
+      String src, String settings, final String targets) {
+    conf.set(
+        getConfigViewFsPrefix(mountTableName) + "."
+            + Constants.CONFIG_VIEWFS_LINK_NFLY + "." + settings + "." + src,
+        targets);
+  }
+
+  /**
    *
    * @param conf
    * @param mountTableName
@@ -149,9 +160,7 @@ public class ConfigUtil {
     settings = settings == null
         ? "minReplication=2,repairOnRead=true"
         : settings;
-
-    conf.set(getConfigViewFsPrefix(mountTableName) + "." +
-            Constants.CONFIG_VIEWFS_LINK_NFLY + "." + settings + "." + src,
+    addLinkNfly(conf, mountTableName, src, settings,
         StringUtils.uriToString(targets));
   }
 

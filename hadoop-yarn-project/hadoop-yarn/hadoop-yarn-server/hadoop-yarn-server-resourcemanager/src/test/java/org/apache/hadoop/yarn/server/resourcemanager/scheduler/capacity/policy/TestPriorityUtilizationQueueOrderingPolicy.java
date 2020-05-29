@@ -45,7 +45,7 @@ public class TestPriorityUtilizationQueueOrderingPolicy {
     List<CSQueue> list = new ArrayList<>();
     for (int i = 0; i < queueNames.length; i++) {
       CSQueue q = mock(CSQueue.class);
-      when(q.getQueueName()).thenReturn(queueNames[i]);
+      when(q.getQueuePath()).thenReturn(queueNames[i]);
 
       QueueCapacities qc = new QueueCapacities(false);
       qc.setAbsoluteCapacity(partition, absCapacities[i]);
@@ -68,7 +68,7 @@ public class TestPriorityUtilizationQueueOrderingPolicy {
     int i = 0;
     while (iter.hasNext()) {
       CSQueue q = iter.next();
-      Assert.assertEquals(expectedOrder[i], q.getQueueName());
+      Assert.assertEquals(expectedOrder[i], q.getQueuePath());
       i++;
     }
 

@@ -3409,7 +3409,7 @@ tOffset hdfsGetUsed(hdfsFS fs)
     }
     fss = (jobject)jVal.l;
     jthr = invokeMethod(env, &jVal, INSTANCE, fss, JC_FS_STATUS,
-            HADOOP_FSSTATUS,"getUsed", "()J");
+            "getUsed", "()J");
     destroyLocalReference(env, fss);
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,

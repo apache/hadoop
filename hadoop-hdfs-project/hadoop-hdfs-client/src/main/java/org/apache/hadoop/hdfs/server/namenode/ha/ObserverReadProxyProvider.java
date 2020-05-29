@@ -471,7 +471,7 @@ public class ObserverReadProxyProvider<T>
               Exception unwrapped = re.unwrapRemoteException(
                   ObserverRetryOnActiveException.class);
               if (unwrapped instanceof ObserverRetryOnActiveException) {
-                LOG.info("Encountered ObserverRetryOnActiveException from {}." +
+                LOG.debug("Encountered ObserverRetryOnActiveException from {}." +
                     " Retry active namenode directly.", current.proxyInfo);
                 break;
               }

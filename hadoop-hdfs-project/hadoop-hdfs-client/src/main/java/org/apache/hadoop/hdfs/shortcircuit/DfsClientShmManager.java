@@ -497,4 +497,14 @@ public class DfsClientShmManager implements Closeable {
   public DomainSocketWatcher getDomainSocketWatcher() {
     return domainSocketWatcher;
   }
+
+  @VisibleForTesting
+  public int getShmNum() {
+    int segments = 0;
+    for (EndpointShmManager endpointShmManager : datanodes.values()) {
+      segments +=
+          endpointShmManager.notFull.size() + endpointShmManager.full.size();
+    }
+    return segments;
+  }
 }

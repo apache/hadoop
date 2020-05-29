@@ -63,32 +63,27 @@ public final class BufferPool {
 
   private File createDir(String dirPath) throws IOException {
     File dir = new File(dirPath);
-    if (null != dir) {
-      if (!dir.exists()) {
-        LOG.debug("Buffer dir: [{}] does not exists. create it first.",
-            dirPath);
-        if (dir.mkdirs()) {
-          if (!dir.setWritable(true) || !dir.setReadable(true)
-              || !dir.setExecutable(true)) {
-            LOG.warn("Set the buffer dir: [{}]'s permission [writable,"
-                + "readable, executable] failed.", dir.getAbsolutePath());
-          }
-          LOG.debug("Buffer dir: [{}] is created successfully.",
-              dir.getAbsolutePath());
-        } else {
-          // Once again, check if it has been created successfully.
-          // Prevent problems created by multiple processes at the same time.
-          if (!dir.exists()) {
-            throw new IOException("buffer dir:" + dir.getAbsolutePath()
-                + " is created unsuccessfully");
-          }
+    if (!dir.exists()) {
+      LOG.debug("Buffer dir: [{}] does not exists. create it first.",
+          dirPath);
+      if (dir.mkdirs()) {
+        if (!dir.setWritable(true) || !dir.setReadable(true)
+            || !dir.setExecutable(true)) {
+          LOG.warn("Set the buffer dir: [{}]'s permission [writable,"
+              + "readable, executable] failed.", dir.getAbsolutePath());
         }
+        LOG.debug("Buffer dir: [{}] is created successfully.",
+            dir.getAbsolutePath());
       } else {
-        LOG.debug("buffer dir: {} already exists.", dirPath);
+        // Once again, check if it has been created successfully.
+        // Prevent problems created by multiple processes at the same time.
+        if (!dir.exists()) {
+          throw new IOException("buffer dir:" + dir.getAbsolutePath()
+              + " is created unsuccessfully");
+        }
       }
     } else {
-      throw new IOException("creating buffer dir: " + dir.getAbsolutePath()
-          + "unsuccessfully.");
+      LOG.debug("buffer dir: {} already exists.", dirPath);
     }
 
     return dir;

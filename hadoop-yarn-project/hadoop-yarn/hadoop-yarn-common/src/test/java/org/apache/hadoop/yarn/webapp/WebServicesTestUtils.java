@@ -94,6 +94,24 @@ public class WebServicesTestUtils {
     return val;
   }
 
+  public static String getPropertyValue(Element element, String elementName,
+      String propertyName) {
+    NodeList id = element.getElementsByTagName(elementName);
+    Element line = (Element) id.item(0);
+    if (line == null) {
+      return null;
+    }
+    NodeList properties = line.getChildNodes();
+    for (int i = 0; i < properties.getLength(); i++) {
+      Element property = (Element) properties.item(i);
+      if (getXmlString(property, "name").equals(propertyName)) {
+        return getXmlString(property, "value");
+      }
+    }
+    return null;
+  }
+
+
   public static String getXmlAttrString(Element element, String name) {
     Attr at = element.getAttributeNode(name);
     if (at != null) {
