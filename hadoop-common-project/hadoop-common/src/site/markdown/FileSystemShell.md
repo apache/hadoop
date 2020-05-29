@@ -122,25 +122,12 @@ Options
 copyFromLocal
 -------------
 
-Usage: `hadoop fs -copyFromLocal <localsrc> URI`
-
-Similar to the `fs -put` command, except that the source is restricted to a local file reference.
-
-Options:
-
-* `-p` : Preserves access and modification times, ownership and the permissions.
-(assuming the permissions can be propagated across filesystems)
-* `-f` : Overwrites the destination if it already exists.
-* `-l` : Allow DataNode to lazily persist the file to disk, Forces a replication
- factor of 1. This flag will result in reduced durability. Use with care.
-* `-d` : Skip creation of temporary file with the suffix `._COPYING_`.
+Identical to the -put command.
 
 copyToLocal
 -----------
 
-Usage: `hadoop fs -copyToLocal [-ignorecrc] [-crc] URI <localdst> `
-
-Similar to get command, except that the destination is restricted to a local file reference.
+Identical to the -get command.
 
 count
 -----
