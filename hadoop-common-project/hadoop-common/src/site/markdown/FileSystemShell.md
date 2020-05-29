@@ -535,7 +535,7 @@ Returns 0 on success and -1 on error.
 put
 ---
 
-Usage: `hadoop fs -put  [-f] [-p] [-l] [-d] [ - | <localsrc1>  .. ]. <dst>`
+Usage: `hadoop fs -put  [-f] [-p] [-l] [-d] [-t <thread count>] [ - | <localsrc1>  .. ]. <dst>`
 
 Copy single src, or multiple srcs from local file system to the destination file system.
 Also reads input from stdin and writes to destination file system if the source is set to "-"
@@ -547,6 +547,8 @@ Options:
 * `-p` : Preserves access and modification times, ownership and the permissions.
 (assuming the permissions can be propagated across filesystems)
 * `-f` : Overwrites the destination if it already exists.
+* `-t <thread count>` : Number of threads to be used, default is 1. Useful
+ when uploading a directory containing more than 1 file.
 * `-l` : Allow DataNode to lazily persist the file to disk, Forces a replication
  factor of 1. This flag will result in reduced durability. Use with care.
 * `-d` : Skip creation of temporary file with the suffix `._COPYING_`.
