@@ -20,14 +20,12 @@ Federation Balance Guide
  - [Overview](#Overview)
  - [Usage](#Usage)
      - [Basic Usage](#Basic_Usage)
+     - [RBF Mode And Normal Federation Mode](#RBF_Mode_And_Normal_Federation_Mode)     
      - [Command Options](#Command_Options)
      - [Configuration Options](#Configuration_Options)
  - [Architecture of Federation Balance](#Architecture_of_Federation_Balance)
      - [Balance Procedure Scheduler](#Balance_Procedure_Scheduler)
-     - [DistCpFedBalance](#DistCpFedBalance)
-     - [RBF Mode And Normal Federation Mode](#RBF_Mode_And_Normal_Federation_Mode)
-     - [Disable Write](#Disable_Write)
-     - [Close Open Files](#Close_Open_Files)     
+     - [DistCpFedBalance](#DistCpFedBalance)     
 ---
 
 Overview
@@ -78,6 +76,26 @@ Usage
     
   The option `-router false` indicates this is not in router-based federation.
   The source path must includes the source cluster.
+
+### RBF Mode And Normal Federation Mode
+
+  The federation balance tool has 2 modes: 
+  
+  * the router-based federation mode(rbf mode).
+  * the normal federation mode.
+  
+  By default the command runs in the rbf mode. You can specify the rbf mode
+  explicitly by using the option `-router true`. The option `-router false`
+  specifies the normal federation mode.
+  
+  In the rbf mode the first parameter is taken as the mount point. It disables
+  write by setting the mount point readonly.
+  
+  In the normal federation mode the first parameter is taken as the full path of
+  the source. The first parameter must include the source cluster. It disables
+  write by cancelling the execute permission of the source path.
+  
+  Details about disabling write see [DistCpFedBalance](#DistCpFedBalance).
 
 ### Command Options
 
@@ -144,11 +162,11 @@ Architecture of Federation Balance
       when there is no diff and no open files.  
     * DISABLE_WRITE: Disable write operations so the src won't be changed. When
       working in router mode, it is done by making the mount point readonly.
-      Otherwise then it is done by cancelling the `ex` permission of the source
+      Otherwise it is done by cancelling the execute permission of the source
       path.
     * FINAL_DISTCP: Force close all the open files and submit the final distcp.
-    * FINISH: Cleanup works. If the 'x' permission is cancelled then restoring
-      the permission of the dst path.
+    * FINISH: Cleanup works. If the execute permission is cancelled then
+      restoring the permission of the dst path.
     
   * MountTableProcedure: This procedure updates the mount entry in Router. The 
     readonly is unset and the destination is updated of the mount point. This
@@ -157,42 +175,3 @@ Architecture of Federation Balance
   * TrashProcedure: This procedure moves the source path to trash.
 
   After all 3 procedures finish, the balance job is done.
-  
-### RBF Mode And Normal Federation Mode
-
-  The federation balance tool has 2 modes: 
-  
-  * the router-based federation mode(rbf mode).
-  * the normal federation mode.
-  
-  By default the command runs in the rbf mode. You can specify the rbf mode
-  explicitly by using the option `-router true`. The option `-router false`
-  specifies the normal federation mode.
-  
-  In the rbf mode the first parameter is taken as the mount point. It disables
-  write by setting the mount point readonly.
-  
-  In the normal federation mode the first parameter is taken as the full path of
-  the source. The first parameter must include the source cluster. It disables
-  write by cancelling the execute permission of the source path.
-
-### Disable Write
-
-  When we are balancing data from the source to the target, there is a race
-  between switching users to the target path and user's writing of the source
-  path. So we need to disable write for a while for the balance tool to do the
-  final sync and router switch. In the rbf mode the balance tool disables write
-  by setting the mount point to readonly. The mount point is then updated to the
-  new destination and recovered to be writable in the MountTableProcedure.
-
-  In the normal federation mode the tool needs to disable write to complete the
-  final sync. This is done by cancelling the execute permission of the source
-  path. 
-
-### Close Open Files
-
-  In stage DIFF_DISTCP there will finally be no diff between the source path and
-  the target path. But there may still be some open files in the source path.
-  If the `-forceCloseOpen true` is set then the tool forces closing all the open
-  files and goes to the next stage. Otherwise the tool waits until there is no
-  open files.
