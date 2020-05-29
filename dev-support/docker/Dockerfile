@@ -189,7 +189,7 @@ ENV MAVEN_OPTS -Xms256m -Xmx1536m
 # YETUS CUT HERE
 ###
 
-# Hugo static website generator (for new hadoop site and Ozone docs)
+# Hugo static website generator for new hadoop site
 RUN curl -L -o hugo.deb https://github.com/gohugoio/hugo/releases/download/v0.58.3/hugo_0.58.3_Linux-64bit.deb \
     && dpkg --install hugo.deb \
     && rm hugo.deb
