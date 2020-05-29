@@ -36,10 +36,19 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
 
   <distributionManagement>
     <repository>
-      <id>nu-maven</id>
-      <name>nu-maven</name>
-      <url>s3p://nu-maven/releases/</url>
+      <id>${distMgmtStagingId}</id>
+      <name>${distMgmtStagingName}</name>
+      <url>${distMgmtStagingUrl}</url>
     </repository>
+    <snapshotRepository>
+      <id>${distMgmtSnapshotsId}</id>
+      <name>${distMgmtSnapshotsName}</name>
+      <url>${distMgmtSnapshotsUrl}</url>
+    </snapshotRepository>
+    <site>
+      <id>apache.website</id>
+      <url>scpexe://people.apache.org/www/hadoop.apache.org/docs/r${project.version}</url>
+    </site>
   </distributionManagement>
 
   <repositories>
@@ -132,13 +141,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
   </modules>
 
   <build>
-        <extensions>
-            <extension>
-                <groupId>s3-wagon-private</groupId>
-                <artifactId>s3-wagon-private</artifactId>
-                <version>1.3.1</version>
-            </extension>
-        </extensions>
     <pluginManagement>
       <plugins>
         <plugin>
