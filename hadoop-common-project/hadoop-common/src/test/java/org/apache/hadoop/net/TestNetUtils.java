@@ -109,8 +109,8 @@ public class TestNetUtils {
               0), 20000);
       socket.close();
       fail("Should not have connected");
-    } catch (UnknownHostException ce) {
-      System.err.println("Got exception: " + ce);
+    } catch (UnknownHostException uhe) {
+      LOG.info("Got exception: ", uhe);
     }
   }
 
