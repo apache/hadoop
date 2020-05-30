@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 # we need to declare this globally as an array, which can only
 # be done outside of a function
 declare -a HADOOP_SUBCMD_USAGE
