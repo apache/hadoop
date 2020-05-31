@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -27,6 +28,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsConstants;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 
 /******************************************************************************
@@ -225,6 +227,33 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
       return result;
     }
 
+  }
+
+  /**
+   * This is an admin only API to give access to its child raw file system, if
+   * the path is link. If the given path is an internal directory(path is from
+   * mount paths tree), it will initialize the file system of given path uri
+   * directly. If path cannot be resolved to any internal directory or link, it
+   * will throw NotInMountpointException. Please note, this API will not return
+   * chrooted file system. Instead, this API will get actual raw file system
+   * instances.
+   *
+   * @param path - fs uri path
+   * @param conf - configuration
+   * @throws IOException
+   */
+  public FileSystem getRawFileSystem(Path path, Configuration conf)
+      throws IOException {
+    InodeTree.ResolveResult<FileSystem> res;
+    try {
+      res = fsState.resolve(getUriPath(path), true);
+      return res.isInternalDir() ? fsGetter().get(path.toUri(), conf)
+          : ((ChRootedFileSystem) res.targetFileSystem).getMyFs();
+    } catch (FileNotFoundException e) {
+      // No link configured with passed path.
+      throw new NotInMountpointException(path,
+          "No link found for the given path.") ;
+    }
   }
 
 }
