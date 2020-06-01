@@ -179,13 +179,20 @@ public class FileSystemMultipartUploader extends AbstractMultipartUploader {
 
     checkPath(filePath);
     return FutureIOSupport.eval(() ->
-        innerComplete(filePath, handleMap, uploadId));
+        innerComplete(uploadId, filePath, handleMap));
   }
 
-  public PathHandle innerComplete(
-      Path filePath,
-      Map<Integer, PartHandle> handleMap,
-      UploadHandle multipartUploadId) throws IOException {
+  /**
+   * The upload complete operation.
+   * @param multipartUploadId the ID of the upload
+   * @param filePath path
+   * @param handleMap map of handles
+   * @return the path handle
+   * @throws IOException failure
+   */
+  private PathHandle innerComplete(
+      UploadHandle multipartUploadId, Path filePath,
+      Map<Integer, PartHandle> handleMap) throws IOException {
 
     checkPath(filePath);
 

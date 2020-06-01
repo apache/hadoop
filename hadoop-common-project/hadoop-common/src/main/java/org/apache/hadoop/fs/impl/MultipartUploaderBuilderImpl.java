@@ -91,7 +91,7 @@ public abstract class MultipartUploaderBuilderImpl
    */
   protected MultipartUploaderBuilderImpl(@Nonnull FileSystem fileSystem,
       @Nonnull Path p) {
-    super(checkNotNull(p));
+    super(fileSystem.makeQualified(checkNotNull(p)));
     checkNotNull(fileSystem);
     fs = fileSystem;
     bufferSize = fs.getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,

@@ -131,7 +131,7 @@ public abstract class AbstractMultipartUploader implements MultipartUploader {
    * be vulnerable to eventually consistent listings of current uploads
    * -some may be missed.
    * @param path path to abort uploads under.
-   * @return a future of the number of entries found; 1 if aborting is unsupported.
+   * @return a future of the number of entries found; -1 if aborting is unsupported.
    * @throws IOException IO failure
    */
   public CompletableFuture<Integer> abortUploadsUnderPath(Path path)

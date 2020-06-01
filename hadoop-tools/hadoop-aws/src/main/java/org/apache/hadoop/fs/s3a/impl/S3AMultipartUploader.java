@@ -98,7 +98,7 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
       final WriteOperations writeOperations,
       final StoreContext context,
       final S3AMultipartUploaderStatistics statistics) {
-    super(builder.getPath());
+    super(context.makeQualified(builder.getPath()));
     this.builder = builder;
     this.writeOperations = writeOperations;
     this.context = context;
@@ -132,8 +132,9 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
   @Override
   public CompletableFuture<UploadHandle> startUpload(Path filePath)
       throws IOException {
-    checkPath(filePath);
-    String key = context.pathToKey(filePath);
+    Path dest = context.makeQualified(filePath);
+    checkPath(dest);
+    String key = context.pathToKey(dest);
     return context.submit(new CompletableFuture<>(),
         () -> {
           String uploadId = writeOperations.initiateMultiPartUpload(key);
@@ -150,11 +151,12 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
       InputStream inputStream,
       long lengthInBytes)
       throws IOException {
-    checkPutArguments(filePath, inputStream, partNumber, uploadId,
+    Path dest = context.makeQualified(filePath);
+    checkPutArguments(dest, inputStream, partNumber, uploadId,
         lengthInBytes);
     byte[] uploadIdBytes = uploadId.toByteArray();
     checkUploadId(uploadIdBytes);
-    String key = context.pathToKey(filePath);
+    String key = context.pathToKey(dest);
     String uploadIdString = new String(uploadIdBytes, 0, uploadIdBytes.length,
         Charsets.UTF_8);
     return context.submit(new CompletableFuture<>(),
@@ -180,7 +182,8 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
       Path filePath,
       Map<Integer, PartHandle> handleMap)
       throws IOException {
-    checkPath(filePath);
+    Path dest = context.makeQualified(filePath);
+    checkPath(dest);
     byte[] uploadIdBytes = uploadHandle.toByteArray();
     checkUploadId(uploadIdBytes);
     checkPartHandles(handleMap);
@@ -188,7 +191,7 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
         new ArrayList<>(handleMap.entrySet());
     handles.sort(Comparator.comparingInt(Map.Entry::getKey));
     int count = handles.size();
-    String key = context.pathToKey(filePath);
+    String key = context.pathToKey(dest);
 
     String uploadIdStr = new String(uploadIdBytes, 0, uploadIdBytes.length,
         Charsets.UTF_8);
@@ -233,7 +236,8 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
       UploadHandle uploadId,
       Path filePath)
       throws IOException {
-    checkPath(filePath);
+    Path dest = context.makeQualified(filePath);
+    checkPath(dest);
     final byte[] uploadIdBytes = uploadId.toByteArray();
     checkUploadId(uploadIdBytes);
     String uploadIdString = new String(uploadIdBytes, 0, uploadIdBytes.length,
@@ -241,7 +245,7 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
     return context.submit(new CompletableFuture<>(),
         () -> {
           writeOperations.abortMultipartCommit(
-              context.pathToKey(filePath),
+              context.pathToKey(dest),
               uploadIdString);
           statistics.uploadAborted();
           return null;

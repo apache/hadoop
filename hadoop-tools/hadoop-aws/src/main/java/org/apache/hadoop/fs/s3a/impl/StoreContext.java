@@ -52,9 +52,10 @@ import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
  * their own.
  *
  * <i>Warning:</i> this really is private and unstable. Do not use
- * outside the org.apache.hadoop.fs.s3a package.
+ * outside the org.apache.hadoop.fs.s3a package, or in extension points
+ * such as DelegationTokens.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate("S3A Filesystem and extensions")
 @InterfaceStability.Unstable
 public class StoreContext {
 
@@ -117,8 +118,7 @@ public class StoreContext {
 
   /**
    * Instantiate.
-   * No attempt to use a builder here as outside tests
-   * this should only be created in the S3AFileSystem.
+   * @deprecated as public method: use {@link StoreContextBuilder}.
    */
   public StoreContext(
       final URI fsURI,
@@ -227,6 +227,16 @@ public class StoreContext {
    */
   public String pathToKey(Path path) {
     return contextAccessors.pathToKey(path);
+  }
+
+  /**
+   * Qualify a path.
+   *
+   * @param path path to qualify/normalize
+   * @return possibly new path.
+   */
+  public Path makeQualified(Path path) {
+    return contextAccessors.makeQualified(path);
   }
 
   /**
