@@ -1181,9 +1181,9 @@ public class TestLeafQueue {
     qb.finishApplication(app_0.getApplicationId(), user_0);
     qb.finishApplication(app_2.getApplicationId(), user_1);
     qb.releaseResource(clusterResource, app_0, Resource.newInstance(4*GB, 1),
-        null, null);
+        "", null);
     qb.releaseResource(clusterResource, app_2, Resource.newInstance(4*GB, 1),
-        null, null);
+        "", null);
 
     qb.setUserLimit(50);
     qb.setUserLimitFactor(1);
