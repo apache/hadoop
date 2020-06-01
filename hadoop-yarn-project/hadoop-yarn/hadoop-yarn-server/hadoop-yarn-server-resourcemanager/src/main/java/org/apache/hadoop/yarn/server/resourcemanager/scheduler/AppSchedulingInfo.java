@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
@@ -89,10 +90,12 @@ public class AppSchedulingInfo {
   private final ReentrantReadWriteLock.WriteLock writeLock;
 
   public final ContainerUpdateContext updateContext;
+  
+  private final RMContext rmContext;
 
   public AppSchedulingInfo(ApplicationAttemptId appAttemptId,
       String user, Queue queue, AbstractUsersManager abstractUsersManager,
-      long epoch, ResourceUsage appResourceUsage) {
+      long epoch, ResourceUsage appResourceUsage, RMContext rmContext) {
     this.applicationAttemptId = appAttemptId;
     this.applicationId = appAttemptId.getApplicationId();
     this.queue = queue;
@@ -106,6 +109,7 @@ public class AppSchedulingInfo {
     updateContext = new ContainerUpdateContext(this);
     readLock = lock.readLock();
     writeLock = lock.writeLock();
+    this.rmContext = rmContext;
   }
 
   public ApplicationId getApplicationId() {
@@ -437,7 +441,7 @@ public class AppSchedulingInfo {
 
   public List<ResourceRequest> allocate(NodeType type,
       SchedulerNode node, SchedulerRequestKey schedulerKey,
-      Container containerAllocated) {
+      RMContainer containerAllocated) {
     try {
       writeLock.lock();
 
@@ -593,7 +597,7 @@ public class AppSchedulingInfo {
   }
 
   private void updateMetricsForAllocatedContainer(NodeType type,
-      SchedulerNode node, Container containerAllocated) {
+      SchedulerNode node, RMContainer containerAllocated) {
     QueueMetrics metrics = queue.getMetrics();
     if (pending) {
       // once an allocation is done we assume the application is
@@ -604,14 +608,16 @@ public class AppSchedulingInfo {
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("allocate: applicationId=" + applicationId + " container="
-          + containerAllocated.getId() + " host=" + containerAllocated
-          .getNodeId().toString() + " user=" + user + " resource="
-          + containerAllocated.getResource() + " type="
-          + type);
+          + containerAllocated.getContainer().getId() + " host="
+          + containerAllocated.getContainer().getNodeId().toString() + " user="
+          + user + " resource="
+          + containerAllocated.getContainer().getResource() + " type=" + type);
     }
-    if(node != null) {
+    if (node != null) {
       metrics.allocateResources(node.getPartition(), user, 1,
-          containerAllocated.getResource(), true);
+          containerAllocated.getContainer().getResource(), false);
+      metrics.decrPendingResources(containerAllocated.getNodeLabelExpression(),
+          user, 1, containerAllocated.getContainer().getResource());
     }
     metrics.incrNodeTypeAggregations(user, type);
   }
@@ -656,5 +662,9 @@ public class AppSchedulingInfo {
     } finally {
       this.readLock.unlock();
     }
+  }
+  
+  public RMContext getRMContext() {
+    return this.rmContext;
   }
 }

@@ -549,8 +549,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
           List<ResourceRequest> requests = appSchedulingInfo.allocate(
               allocation.getAllocationLocalityType(),
               schedulerContainer.getSchedulerNode(),
-              schedulerContainer.getSchedulerRequestKey(),
-              schedulerContainer.getRmContainer().getContainer());
+              schedulerContainer.getSchedulerRequestKey(), rmContainer);
           ((RMContainerImpl) rmContainer).setResourceRequests(requests);
 
           attemptResourceUsage.incUsed(schedulerContainer.getNodePartition(),
