@@ -37,6 +37,7 @@ import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.net.ConnectException;
 import java.nio.channels.SocketChannel;
+import java.nio.channels.UnresolvedAddressException;
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
 import java.util.*;
@@ -532,6 +533,8 @@ public class NetUtils {
       }
     } catch (SocketTimeoutException ste) {
       throw new ConnectTimeoutException(ste.getMessage());
+    }  catch (UnresolvedAddressException uae) {
+      throw new UnknownHostException(uae.getMessage());
     }
 
     // There is a very rare case allowed by the TCP specification, such that
