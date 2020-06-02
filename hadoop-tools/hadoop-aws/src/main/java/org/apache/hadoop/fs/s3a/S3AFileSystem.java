@@ -104,8 +104,8 @@ import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
 import org.apache.hadoop.fs.s3a.impl.CopyOutcome;
 import org.apache.hadoop.fs.s3a.impl.DeleteOperation;
-import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport;
+import org.apache.hadoop.fs.s3a.impl.OpenFileHelper;
 import org.apache.hadoop.fs.s3a.impl.OperationCallbacks;
 import org.apache.hadoop.fs.s3a.impl.RenameOperation;
 import org.apache.hadoop.fs.s3a.impl.S3AMultipartUploaderBuilder;
@@ -114,7 +114,6 @@ import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
 import org.apache.hadoop.fs.s3a.impl.statistics.S3AMultipartUploaderStatisticsImpl;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
-import org.apache.hadoop.fs.s3a.select.InternalSelectConstants;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.DelegationTokenIssuer;
@@ -164,7 +163,6 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
-import static org.apache.hadoop.fs.impl.AbstractFSBuilderImpl.rejectUnknownMandatoryKeys;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.Invoker.*;
@@ -1091,14 +1089,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
     entryPoint(INVOCATION_OPEN);
     final Path path = qualify(file);
+
     S3AFileStatus fileStatus;
     Configuration opts = options.orElse(null);
     if (!providedStatus.isPresent()
         && opts != null
-        && opts.get(INPUT_OPTION_LENGTH) != null) {
+        && opts.get(OPEN_OPTION_LENGTH) != null) {
       // build a minimal S3A FileStatus From the input length alone.
       // this is all we actually need.
-      long length = opts.getLong(INPUT_OPTION_LENGTH, 0);
+      long length = opts.getLong(OPEN_OPTION_LENGTH, 0);
       LOG.debug("Fixing length of file to read {} as {}", path, length);
       fileStatus = new S3AFileStatus(
           length,
@@ -4735,56 +4734,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       final Path rawPath,
       final OpenFileParameters parameters) throws IOException {
     final Path path = qualify(rawPath);
-    Configuration options = parameters.getOptions();
-    Set<String> mandatoryKeys = parameters.getMandatoryKeys();
-    String sql = options.get(SelectConstants.SELECT_SQL, null);
-    boolean isSelect = sql != null;
-    // choice of keys depends on open type
-    if (isSelect) {
-      rejectUnknownMandatoryKeys(
-          mandatoryKeys,
-          InternalSelectConstants.SELECT_OPTIONS,
-          "for " + path + " in S3 Select operation");
-    } else {
-      rejectUnknownMandatoryKeys(
-          mandatoryKeys,
-          InternalConstants.STANDARD_OPENFILE_KEYS,
-          "for " + path + " in non-select file I/O");
-    }
-    FileStatus providedStatus = parameters.getStatus();
-    S3AFileStatus fileStatus;
-    if (providedStatus != null) {
-      Preconditions.checkArgument(path.equals(providedStatus.getPath()),
-          "FileStatus parameter is not for the path %s: %s",
-          path, providedStatus);
-      if (providedStatus instanceof S3AFileStatus) {
-        // can use this status to skip our own probes,
-        // including etag and version.
-        LOG.debug("File was opened with a supplied S3AFileStatus;"
-            + " skipping getFileStatus call in open() operation: {}",
-            providedStatus);
-        fileStatus = (S3AFileStatus) providedStatus;
-      } else if (providedStatus instanceof S3ALocatedFileStatus) {
-        LOG.debug("File was opened with a supplied S3ALocatedFileStatus;"
-            + " skipping getFileStatus call in open() operation: {}",
-            providedStatus);
-        fileStatus = ((S3ALocatedFileStatus) providedStatus).toS3AFileStatus();
-      } else {
-        // it is another type.
-        // build a status struct without etag or version.
-        LOG.debug("Converting file status {}", providedStatus);
-        fileStatus = new S3AFileStatus(providedStatus.getLen(),
-            providedStatus.getModificationTime(),
-            path,
-            getDefaultBlockSize(path),
-            username,
-            null, null);
-      }
-    } else {
-      fileStatus = null;
-    }
-    Optional<S3AFileStatus> ost = Optional.ofNullable(fileStatus);
+    Triple<Boolean, S3AFileStatus, String> statusT = new OpenFileHelper()
+        .prepareToOpenFile(
+            path, parameters, username,
+            getDefaultBlockSize(path));
+    boolean isSelect = statusT.getLeft();
+    String sql = statusT.getRight();
+    Optional<S3AFileStatus> ost = Optional.ofNullable(statusT.getMiddle());
     CompletableFuture<FSDataInputStream> result = new CompletableFuture<>();
+    Configuration options = parameters.getOptions();
     if (!isSelect) {
       // normal path.
       unboundedThreadPool.submit(() ->

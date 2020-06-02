@@ -68,6 +68,11 @@ This is relevant with those stores which return version/etag information,
 including the S3A and ABFS connectors -they MAY use this to guarantee that
 the file they opened is exactly the one returned in the listing.
 
+There is no requirement for `status.getPath()` to the resolved path of
+the file being opened. This is needed to support viewfs and other mount-point/
+wrapper filesystems. The sole path declaring the file to open is supplied
+in `openFile(path)`.
+
 ### Set optional or mandatory parameters
 
     FSDataInputStreamBuilder opt(String key, ...)

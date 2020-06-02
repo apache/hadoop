@@ -550,12 +550,12 @@ public final class Constants {
   public static final String INPUT_FADV_RANDOM = "random";
 
   /**
-   * What is the length of the file.
-   * This is used in open() to let the caller specify the length
-   * of the file.
+   * Declare the length of the file to open: {@value}.
+   * This is supported in openFile().
    */
   @InterfaceStability.Unstable
-  public static final String INPUT_OPTION_LENGTH = "fs.s3a.input.length";
+  public static final String OPEN_OPTION_LENGTH
+      = "fs.s3a.open.option.length";
 
   @InterfaceAudience.Private
   @InterfaceStability.Unstable

@@ -38,6 +38,9 @@ public class OpenFileParameters {
    */
   private Set<String> mandatoryKeys;
 
+  /** The optional keys. */
+  private Set<String> optionalKeys;
+
   /**
    * Options set during the build sequence.
    */
@@ -61,6 +64,11 @@ public class OpenFileParameters {
     return this;
   }
 
+  public OpenFileParameters withOptionalKeys(final Set<String> keys) {
+    this.optionalKeys = requireNonNull(keys);
+    return this;
+  }
+
   public OpenFileParameters withOptions(final Configuration opts) {
     this.options = requireNonNull(opts);
     return this;
@@ -78,6 +86,10 @@ public class OpenFileParameters {
 
   public Set<String> getMandatoryKeys() {
     return mandatoryKeys;
+  }
+
+  public Set<String> getOptionalKeys() {
+    return optionalKeys;
   }
 
   public Configuration getOptions() {

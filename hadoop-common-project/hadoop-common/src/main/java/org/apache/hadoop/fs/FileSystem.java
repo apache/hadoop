@@ -4643,6 +4643,7 @@ public abstract class FileSystem extends Configured
       Optional<Path> optionalPath = getOptionalPath();
       OpenFileParameters parameters = new OpenFileParameters()
           .withMandatoryKeys(getMandatoryKeys())
+          .withOptionalKeys(getOptionalKeys())
           .withOptions(getOptions())
           .withBufferSize(getBufferSize())
           .withStatus(super.getStatus());  // explicit to avoid IDE warnings

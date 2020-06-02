@@ -2926,6 +2926,7 @@ public class FileContext implements PathCapabilities {
       final Path absF = fixRelativePart(getPath());
       OpenFileParameters parameters = new OpenFileParameters()
           .withMandatoryKeys(getMandatoryKeys())
+          .withOptionalKeys(getOptionalKeys())
           .withOptions(getOptions())
           .withBufferSize(getBufferSize())
           .withStatus(getStatus());

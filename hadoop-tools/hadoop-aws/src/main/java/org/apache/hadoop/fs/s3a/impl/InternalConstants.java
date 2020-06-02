@@ -83,6 +83,7 @@ public final class InternalConstants {
       Collections.unmodifiableSet(
           new HashSet<>(
               Arrays.asList(Constants.INPUT_FADVISE,
+                  Constants.OPEN_OPTION_LENGTH,
                   Constants.READAHEAD_RANGE)));
 
   /** 404 error code. */
