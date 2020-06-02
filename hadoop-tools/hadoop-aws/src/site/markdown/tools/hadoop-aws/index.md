@@ -19,21 +19,21 @@
 **NOTE:  Hadoop's `s3:` and `s3n:` connectors have been removed.
 Please use `s3a:` as the connector to data hosted in S3 with Apache Hadoop.**
 
-**Consult the [s3n documentation](./s3n.html) for migration instructions.**
+**Consult the [s3n documentation](./s3n.md) for migration instructions.**
 
 
 See also:
 
-* [Encryption](./encryption.html)
-* [Performance](./performance.html)
-* [S3Guard](./s3guard.html)
-* [Troubleshooting](./troubleshooting_s3a.html)
-* [Committing work to S3 with the "S3A Committers"](./committers.html)
-* [S3A Committers Architecture](./committer_architecture.html)
-* [Working with IAM Assumed Roles](./assumed_roles.html)
-* [S3A Delegation Token Support](./delegation_tokens.html)
-* [S3A Delegation Token Architecture](delegation_token_architecture.html).
-* [Testing](./testing.html)
+* [Encryption](./encryption.md)
+* [Performance](./performance.md)
+* [S3Guard](./s3guard.md)
+* [Troubleshooting](./troubleshooting_s3a.md)
+* [Committing work to S3 with the "S3A Committers"](./committers.md)
+* [S3A Committers Architecture](./committer_architecture.md)
+* [Working with IAM Assumed Roles](./assumed_roles.md)
+* [S3A Delegation Token Support](./delegation_tokens.md)
+* [S3A Delegation Token Architecture](delegation_token_architecture.md).
+* [Testing](./testing.md)
 
 ## <a name="overview"></a> Overview
 
@@ -86,7 +86,7 @@ the Hadoop project itself.
 1. Apache's Hadoop's original `s3://` client. This is no longer included in Hadoop.
 1. Amazon EMR's `s3://` client. This is from the Amazon EMR team, who actively
 maintain it.
-1. Apache's Hadoop's [`s3n:` filesystem client](./s3n.html).
+1. Apache's Hadoop's [`s3n:` filesystem client](./s3n.md).
    This connector is no longer available: users must migrate to the newer `s3a:` client.
 
 
@@ -351,7 +351,7 @@ returning a set of session credentials if all three are defined.
 1. The `fs.s3a.access.key` and `fs.s3a.secret.key` are looked for in the Hadoop
 XML configuration//Hadoop credential providers, returning a set of long-lived
 credentials if they are defined.
-1. The [AWS environment variables](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#cli-environment),
+1. The [AWS environment variables](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.#cli-environment),
 are then looked for: these will return session or full credentials depending
 on which values are set.
 1. An attempt is made to query the Amazon EC2 Instance Metadata Service to
