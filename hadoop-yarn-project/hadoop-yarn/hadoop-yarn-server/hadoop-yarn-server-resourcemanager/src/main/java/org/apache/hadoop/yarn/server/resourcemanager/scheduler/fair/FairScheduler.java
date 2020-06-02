@@ -22,6 +22,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.SettableFuture;
+import java.io.Serializable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
@@ -1083,7 +1084,7 @@ public class FairScheduler extends
 
   /** Sort nodes by available resource */
   protected static class NodeAvailableResourceComparator
-      implements Comparator<FSSchedulerNode> {
+      implements Comparator<FSSchedulerNode>, Serializable {
 
     @Override
     public int compare(FSSchedulerNode n1, FSSchedulerNode n2) {
