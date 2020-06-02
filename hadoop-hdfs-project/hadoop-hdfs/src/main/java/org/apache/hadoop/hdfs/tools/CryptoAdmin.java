@@ -182,7 +182,7 @@ public class CryptoAdmin extends Configured implements Tool {
       try {
         final TableListing listing = new TableListing.Builder()
           .addField("").addField("", true)
-          .wrapWidth(AdminHelper.MAX_LINE_WIDTH).hideHeaders().build();
+          .hideHeaders().build();
         final RemoteIterator<EncryptionZone> it = admin.listEncryptionZones();
         while (it.hasNext()) {
           EncryptionZone ez = it.next();
