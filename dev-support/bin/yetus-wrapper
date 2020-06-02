@@ -161,6 +161,7 @@ if [[ -n "${GPGBIN}" ]]; then
     yetus_error "ERROR: yetus-dl: unable to fetch ${BASEURL}/${TARBALL}.gz.asc"
     exit 1
   fi
+  gpg-agent --verbose --homedir "${HADOOP_PATCHPROCESS}/.gpg" --daemon
   if ! "${GPGBIN}" --verbose --homedir "${HADOOP_PATCHPROCESS}/.gpg" --import "${HADOOP_PATCHPROCESS}/KEYS_YETUS" ; then
     yetus_error "ERROR: yetus-dl: gpg unable to import ${HADOOP_PATCHPROCESS}/KEYS_YETUS"
     exit 1
