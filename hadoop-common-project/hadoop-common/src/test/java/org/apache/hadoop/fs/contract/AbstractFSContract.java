@@ -70,7 +70,7 @@ public abstract class AbstractFSContract extends Configured {
   }
 
   /**
-   * Any teardown logic can go here
+   * Any teardown logic can go here.
    * @throws IOException IO problems
    */
   public void teardown() throws IOException {
