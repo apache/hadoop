@@ -296,25 +296,30 @@ public class FairScheduler extends
     }
   }
 
-  private Comparator<FSSchedulerNode> initNodeComparator(FairSchedulerConfiguration config) {
+  private Comparator<FSSchedulerNode> initNodeComparator(
+      FairSchedulerConfiguration config) {
     Class<?> nodeComparatorClass = config.getNodeComparatorClass();
     if (!Comparator.class.isAssignableFrom(nodeComparatorClass)) {
-      throw new YarnRuntimeException("Class: " + nodeComparatorClass.getCanonicalName()
-          + " not instance of " + Comparator.class.getCanonicalName() + "<FSSchedulerNode>");
+      throw new YarnRuntimeException("Class: " +
+          nodeComparatorClass.getCanonicalName() + " not instance of " +
+          Comparator.class.getCanonicalName() + "<FSSchedulerNode>");
     }
 
     try {
       try {
-        Constructor constructor = nodeComparatorClass.getDeclaredConstructor(FairScheduler.class);
+        Constructor constructor =
+            nodeComparatorClass.getDeclaredConstructor(FairScheduler.class);
         constructor.setAccessible(true);
         return (Comparator<FSSchedulerNode>) constructor.newInstance(this);
       } catch (NoSuchMethodException e) {
         // constructor doesn't exist, use default
         return (Comparator<FSSchedulerNode>) nodeComparatorClass.newInstance();
       }
-    } catch (ClassCastException | InstantiationException | IllegalAccessException | InvocationTargetException e) {
+    } catch (ClassCastException | InstantiationException |
+        IllegalAccessException | InvocationTargetException e) {
       throw new YarnRuntimeException(
-          "Could not create instance of class: " + nodeComparatorClass.getCanonicalName(), e);
+          "Could not create instance of class: " +
+              nodeComparatorClass.getCanonicalName(), e);
     }
   }
 
@@ -1082,7 +1087,8 @@ public class FairScheduler extends
 
     @Override
     public int compare(FSSchedulerNode n1, FSSchedulerNode n2) {
-      return RESOURCE_CALCULATOR.compare(null, // unused by DefaultResourceCalculator
+      // clusterResource unused by DefaultResourceCalculator
+      return RESOURCE_CALCULATOR.compare(null,
           n2.getUnallocatedResource(),
           n1.getUnallocatedResource());
     }
