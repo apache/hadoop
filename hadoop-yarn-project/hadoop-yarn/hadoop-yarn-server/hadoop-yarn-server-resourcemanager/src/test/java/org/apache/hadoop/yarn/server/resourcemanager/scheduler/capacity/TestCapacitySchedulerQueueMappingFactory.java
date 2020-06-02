@@ -206,7 +206,7 @@ public class TestCapacitySchedulerQueueMappingFactory {
 
       ApplicationPlacementContext ctx2 = r.getPlacementForApp(asc, "user2");
       assertEquals("Queue", "user2", ctx2.getQueue());
-      assertEquals("Queue", "c", ctx2.getParentQueue());
+      assertEquals("Queue", "root.c", ctx2.getParentQueue());
     } finally {
       if(mockRM != null) {
         mockRM.close();
@@ -398,7 +398,7 @@ public class TestCapacitySchedulerQueueMappingFactory {
     // u:user2:%primary_group
     QueueMapping userQueueMapping2 = QueueMappingBuilder.create()
                                           .type(QueueMapping.MappingType.USER)
-                                          .source("user2")
+                                          .source("a1")
                                           .queue("%primary_group")
                                           .build();
 
@@ -430,8 +430,8 @@ public class TestCapacitySchedulerQueueMappingFactory {
       ApplicationPlacementContext ctx = r.getPlacementForApp(asc, "user1");
       assertEquals("Queue", "b1", ctx.getQueue());
 
-      ApplicationPlacementContext ctx1 = r.getPlacementForApp(asc, "user2");
-      assertEquals("Queue", "user2group", ctx1.getQueue());
+      ApplicationPlacementContext ctx1 = r.getPlacementForApp(asc, "a1");
+      assertEquals("Queue", "a1group", ctx1.getQueue());
     } finally {
       if (mockRM != null) {
         mockRM.close();
@@ -467,14 +467,14 @@ public class TestCapacitySchedulerQueueMappingFactory {
     // u:user2:%primary_group
     QueueMapping userQueueMapping2 = QueueMappingBuilder.create()
                                           .type(QueueMapping.MappingType.USER)
-                                          .source("user2")
+                                          .source("a1")
                                           .queue("%primary_group")
                                           .build();
 
     // u:b4:%secondary_group
     QueueMapping userQueueMapping3 = QueueMappingBuilder.create()
                                           .type(QueueMapping.MappingType.USER)
-                                          .source("b4")
+                                          .source("e")
                                           .queue("%secondary_group")
                                           .build();
 
@@ -507,11 +507,11 @@ public class TestCapacitySchedulerQueueMappingFactory {
       ApplicationPlacementContext ctx = r.getPlacementForApp(asc, "user1");
       assertEquals("Queue", "b1", ctx.getQueue());
 
-      ApplicationPlacementContext ctx1 = r.getPlacementForApp(asc, "user2");
-      assertEquals("Queue", "user2group", ctx1.getQueue());
+      ApplicationPlacementContext ctx1 = r.getPlacementForApp(asc, "a1");
+      assertEquals("Queue", "a1group", ctx1.getQueue());
 
-      ApplicationPlacementContext ctx2 = r.getPlacementForApp(asc, "b4");
-      assertEquals("Queue", "b4subgroup1", ctx2.getQueue());
+      ApplicationPlacementContext ctx2 = r.getPlacementForApp(asc, "e");
+      assertEquals("Queue", "esubgroup1", ctx2.getQueue());
     } finally {
       if (mockRM != null) {
         mockRM.close();
