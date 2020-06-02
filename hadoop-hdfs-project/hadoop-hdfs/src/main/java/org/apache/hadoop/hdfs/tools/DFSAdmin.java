@@ -130,11 +130,7 @@ public class DFSAdmin extends FsShell {
     @Override
     public void run(PathData pathData) throws IOException {
       FileSystem fs = pathData.fs;
-      if (!(fs instanceof DistributedFileSystem)) {
-        throw new IllegalArgumentException("FileSystem " + fs.getUri()
-            + " is not an HDFS file system");
-      }
-      this.dfs = (DistributedFileSystem) fs;
+      this.dfs = AdminHelper.checkAndGetDFS(fs, getConf());
       run(pathData.path);
     }
   }
@@ -485,12 +481,7 @@ public class DFSAdmin extends FsShell {
   }
   
   protected DistributedFileSystem getDFS() throws IOException {
-    FileSystem fs = getFS();
-    if (!(fs instanceof DistributedFileSystem)) {
-      throw new IllegalArgumentException("FileSystem " + fs.getUri() + 
-      " is not an HDFS file system");
-    }
-    return (DistributedFileSystem)fs;
+    return AdminHelper.getDFS(getConf());
   }
   
   /**
