@@ -68,11 +68,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterScalingInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DecommissionCandidateNodeInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DecommissionCandidates;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewNMCandidates;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInstanceType;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
@@ -82,7 +77,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeStatusEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterScalingInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewNMCandidates;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInstanceType;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInstanceTypeList;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DecommissionCandidateNodeInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DecommissionCandidates;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -206,6 +206,9 @@ public class TestRMWebServicesNodesScaling extends JerseyTestBase {
       csConf.setInt("yarn.scheduler.minimum-allocation-vcores", 1);
       csConf.setInt("yarn.scheduler.maximum-allocation-mb", 102400);
       csConf.setInt("yarn.scheduler.maximum-allocation-vcores", 100);
+
+      csConf.setRootAutoscalerMinimumCapacity("100");
+      csConf.setRootAutoscalerMaximumCapacity("500");
       return csConf;
     }
   }
@@ -303,7 +306,7 @@ public class TestRMWebServicesNodesScaling extends JerseyTestBase {
         .entity(niTypeListStr, MediaType.APPLICATION_JSON)
         .accept("application/json").post(ClientResponse.class);
     json = response.getEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 5, json.length());
+    assertEquals("incorrect number of elements", 6, json.length());
 
     // Case 3. No memory-mb resource type specified is ok
     r = resource();
@@ -312,7 +315,7 @@ public class TestRMWebServicesNodesScaling extends JerseyTestBase {
         .entity(niTypeListStr, MediaType.APPLICATION_JSON)
         .accept("application/json").post(ClientResponse.class);
     json = response.getEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 5, json.length());
+    assertEquals("incorrect number of elements", 6, json.length());
 
     // Case 4. No node instance types specified fails
     r = resource();
@@ -332,7 +335,7 @@ public class TestRMWebServicesNodesScaling extends JerseyTestBase {
         .accept("application/json").post(ClientResponse.class);
     assertEquals(400, response.getStatusInfo().getStatusCode());
 
-    // Case 6. Invalid downscaling node cout query param
+    // Case 6. Invalid downscaling node count query param
     r = resource();
     response = r.path("ws").path("v1").path("cluster")
         .path("scaling")
@@ -348,6 +351,44 @@ public class TestRMWebServicesNodesScaling extends JerseyTestBase {
     assertEquals(400, response.getStatusInfo().getStatusCode());
 
     rm.stop();
+  }
+
+  @Test
+  public void testAutoScalingInfoJson() throws Exception {
+    rm.start();
+    ResourceScheduler scheduler = rm.getRMContext().getScheduler();
+    MockNM[] nms = new MockNM[3];
+    MockNM nm1 = rm.registerNode("127.0.0.1:1234", 10 * GB, 4);
+    MockNM nm2 = rm.registerNode("127.0.0.2:1234", 10 * GB, 4);
+    MockNM nm3 = rm.registerNode("127.0.0.3:1234", 10 * GB, 4);
+    nms[0] = nm1;
+    nms[1] = nm2;
+    nms[2] = nm3;
+    waitforNMRegistered(scheduler, 3, 5);
+    WebResource r = resource();
+    NodeInstanceTypeList niTypeList = new NodeInstanceTypeList();
+    niTypeList.getInstanceTypes().addAll(fakeInstanceTypes(1));
+    String niTypeListStr = toJson(niTypeList, NodeInstanceTypeList.class);
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+            .path("scaling")
+            .queryParam(RMWSConsts.UPSCALING_FACTOR_IN_NODE_RESOURCE_TYPES_KEY,
+                    ResourceInformation.MEMORY_URI)
+            .header(RMWSConsts.SCALING_CUSTOM_HEADER_KEY,
+                    RMWSConsts.SCALING_CUSTOM_HEADER_VERSION_V1)
+            .entity(niTypeListStr, MediaType.APPLICATION_JSON)
+            .accept("application/json").post(ClientResponse.class);
+
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+            response.getType().toString());
+
+    JSONObject json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 6, json.length());
+
+    JSONObject autoScalerInfo = json.getJSONObject("autoScalerInfo");
+    String minCapacity = autoScalerInfo.getString("minCapacity");
+    String maxCapacity = autoScalerInfo.getString("maxCapacity");
+    assertEquals("100",minCapacity);
+    assertEquals("500",maxCapacity);
   }
 
   @Test
@@ -381,7 +422,7 @@ public class TestRMWebServicesNodesScaling extends JerseyTestBase {
         response.getType().toString());
 
     JSONObject json = response.getEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 5, json.length());
+    assertEquals("incorrect number of elements", 6, json.length());
     JSONObject newCandidates = json.getJSONObject("newNMCandidates");
 
     // 0 nodes needs for upscaling
@@ -526,7 +567,7 @@ public class TestRMWebServicesNodesScaling extends JerseyTestBase {
         response.getType().toString());
 
     json = response.getEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 5, json.length());
+    assertEquals("incorrect number of elements", 6, json.length());
     newCandidates = json.getJSONObject("newNMCandidates");
     JSONArray newNodesArray = newCandidates.getJSONArray("candidates");
     assertEquals(1, newNodesArray.length());
@@ -540,7 +581,6 @@ public class TestRMWebServicesNodesScaling extends JerseyTestBase {
         json.getJSONObject("decommissionCandidates");
     assertTrue("Should be empty of downscalign",
         !decommissionCandidates.has("candidates"));
-
     rm.stop();
   }
 

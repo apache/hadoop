@@ -117,6 +117,12 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public static final String MAXIMUM_CAPACITY = "maximum-capacity";
 
   @Private
+  public static final String AUTOSCALER_MINIMUM_CAPACITY =  "autoscaler.minimum-capacity";
+
+  @Private
+  public static final String AUTOSCALER_MAXIMUM_CAPACITY =  "autoscaler.maximum-capacity";
+
+  @Private
   public static final String USER_LIMIT = "minimum-user-limit-percent";
 
   @Private
@@ -658,6 +664,22 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         ? MAXIMUM_CAPACITY_VALUE
         : maxCapacity;
     return maxCapacity;
+  }
+
+  public String getRootAutoscalerMinimumCapacity() {
+    return get(getQueuePrefix(ROOT) + AUTOSCALER_MINIMUM_CAPACITY, "");
+  }
+
+  public String getRootAutoscalerMaximumCapacity() {
+    return get(getQueuePrefix(ROOT) + AUTOSCALER_MAXIMUM_CAPACITY, "");
+  }
+
+  public void setRootAutoscalerMinimumCapacity(String minCapacity) {
+    this.set(getQueuePrefix(ROOT) + AUTOSCALER_MINIMUM_CAPACITY, minCapacity);
+  }
+
+  public void setRootAutoscalerMaximumCapacity(String maxCapacity) {
+    this.set(getQueuePrefix(ROOT) + AUTOSCALER_MAXIMUM_CAPACITY, maxCapacity);
   }
 
   public void setMaximumCapacity(String queue, float maxCapacity) {

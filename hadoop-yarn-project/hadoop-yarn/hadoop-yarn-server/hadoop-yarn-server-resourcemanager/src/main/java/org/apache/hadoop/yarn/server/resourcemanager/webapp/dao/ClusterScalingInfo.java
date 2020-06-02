@@ -67,6 +67,9 @@ public class ClusterScalingInfo {
   public String consideredResourceTypes;
 
   @XmlElement
+  public AutoScalerInfo autoScalerInfo;
+
+  @XmlElement
   public NodeInstanceTypeList nodeInstanceTypeList;
 
   @XmlElement
@@ -121,6 +124,7 @@ public class ClusterScalingInfo {
     recommendUpscaling(pendingAppCount, pendingContainersCount,
         metrics.getContainerAskToCount(), consideredResourceTypes, nodeInstanceTypeList,
         newNMCandidates);
+    this.autoScalerInfo = new AutoScalerInfo(rs);
   }
 
   public static class DownscalingNodeComparator implements Comparator<RMNode> {
@@ -426,6 +430,10 @@ public class ClusterScalingInfo {
 
   public String getApiVersion() {
     return apiVersion;
+  }
+
+  public AutoScalerInfo getAutoScalerInfo() {
+    return autoScalerInfo;
   }
 
   public NewNMCandidates getNewNMCandidates() {
