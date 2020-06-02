@@ -351,7 +351,7 @@ returning a set of session credentials if all three are defined.
 1. The `fs.s3a.access.key` and `fs.s3a.secret.key` are looked for in the Hadoop
 XML configuration//Hadoop credential providers, returning a set of long-lived
 credentials if they are defined.
-1. The [AWS environment variables](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.#cli-environment),
+1. The [AWS environment variables](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#cli-environment),
 are then looked for: these will return session or full credentials depending
 on which values are set.
 1. An attempt is made to query the Amazon EC2 Instance Metadata Service to
