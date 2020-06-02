@@ -252,7 +252,7 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
     } catch (FileNotFoundException e) {
       // No link configured with passed path.
       throw new NotInMountpointException(path,
-          "No link found for the given path.") ;
+          "No link found for the given path.");
     }
   }
 
