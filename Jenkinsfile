@@ -134,7 +134,7 @@ pipeline {
                         YETUS_ARGS+=("--plugins=all")
 
                         # use Hadoop's bundled shelldocs
-                        YETUS_ARGS+=("--shelldocs=/testptch/hadoop/dev-support/bin/shelldocs")
+                        YETUS_ARGS+=("--shelldocs=${WORKSPACE}/${SOURCEDIR}/dev-support/bin/shelldocs")
 
                         # don't let these tests cause -1s because we aren't really paying that
                         # much attention to them
