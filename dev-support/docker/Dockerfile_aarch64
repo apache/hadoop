@@ -82,6 +82,15 @@ RUN apt-get -q update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+#######
+# Boost 1.76 (1.65 ships with Bionic)
+#######
+WORKDIR /root/boost-library
+RUN curl -L https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download > boost_1_72_0.tar.bz2 \
+    && tar --bzip2 -xf boost_1_72_0.tar.bz2
+WORKDIR /root/boost-library/boost_1_72_0
+RUN ./bootstrap.sh --prefix=/usr/ \
+    && ./b2 --without-python install
 
 #######
 # OpenJDK 8

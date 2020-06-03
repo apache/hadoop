@@ -21,8 +21,10 @@
 #include "common/sasl_authenticator.h"
 #include "common/async_stream.h"
 #include "connection/datanodeconnection.h"
+
 #include <memory>
 
+#include <boost/system/error_code.hpp>
 
 namespace hdfs {
 
@@ -45,13 +47,13 @@ public:
   template <class Handler> void Handshake(const Handler &next);
 
   void async_read_some(const MutableBuffer &buf,
-          std::function<void (const asio::error_code & error,
+          std::function<void (const boost::system::error_code & error,
                                  std::size_t bytes_transferred) > handler) override {
     stream_->async_read_some(buf, handler);
   }
 
   void async_write_some(const ConstBuffer &buf,
-            std::function<void (const asio::error_code & error,
+            std::function<void (const boost::system::error_code & error,
                                  std::size_t bytes_transferred) > handler) override {
     stream_->async_write_some(buf, handler);
   }
