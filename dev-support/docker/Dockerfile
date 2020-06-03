@@ -202,6 +202,8 @@ RUN curl -L -s -S \
 ###
 ENV MAVEN_OPTS -Xms256m -Xmx1536m
 
+# Skip gpg verification when downlonading Yetus via yetus-wrapper
+ENV HADOOP_SKIP_YETUS_VERIFICATION true
 
 ###
 # Everything past this point is either not needed for testing or breaks Yetus.
