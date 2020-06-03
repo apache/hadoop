@@ -2360,6 +2360,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
     if (mbeanName != null) {
       MBeans.unregister(mbeanName);
+      mbeanName = null;
     }
     
     if (asyncDiskService != null) {
