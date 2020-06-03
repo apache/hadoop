@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -98,9 +99,12 @@ public class TestViewfsFileStatus {
     }
   }
 
+  /**
+   * Tests the ACL returned from getFileStatus for directories and files.
+   * @throws IOException
+   */
   @Test
-  public void testListStatusACL()
-      throws IOException, URISyntaxException {
+  public void testListStatusACL() throws IOException {
     String testfilename = "testFileACL";
     String childDirectoryName = "testDirectoryACL";
     TEST_DIR.mkdirs();
@@ -110,7 +114,7 @@ public class TestViewfsFileStatus {
     try (FileOutputStream fos =  new FileOutputStream(infile)) {
       fos.write(content);
     }
-    assertEquals((long)content.length, infile.length());
+    assertEquals(content.length, infile.length());
     File childDir = new File(TEST_DIR, childDirectoryName);
     childDir.mkdirs();
 
@@ -131,6 +135,22 @@ public class TestViewfsFileStatus {
           assertEquals(fileStat.getPermission(), status.getPermission());
         } else {
           assertEquals(dirStat.getPermission(), status.getPermission());
+        }
+      }
+
+      localFs.setPermission(new Path(infile.getPath()),
+          FsPermission.valueOf("-rwxr--r--"));
+      localFs.setPermission(new Path(childDir.getPath()),
+          FsPermission.valueOf("-r--rwxr--"));
+
+      statuses = vfs.listStatus(new Path("/"));
+      for (FileStatus status : statuses) {
+        if (status.getPath().getName().equals("file")) {
+          assertEquals(FsPermission.valueOf("-rwxr--r--"),
+              status.getPermission());
+        } else {
+          assertEquals(FsPermission.valueOf("-r--rwxr--"),
+              status.getPermission());
         }
       }
     }

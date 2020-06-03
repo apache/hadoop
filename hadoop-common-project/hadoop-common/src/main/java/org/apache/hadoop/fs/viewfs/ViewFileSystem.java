@@ -1200,14 +1200,9 @@ public class ViewFileSystem extends FileSystem {
         INode<FileSystem> inode = iEntry.getValue();
         if (inode.isLink()) {
           INodeLink<FileSystem> link = (INodeLink<FileSystem>) inode;
-          // For MERGE or NFLY links, the first target link is considered
-          // for fetching the FileStatus with an assumption that the permission
-          // and the owner will be the same for all the target directories.
-          Path linkedPath = new Path(link.targetDirLinkList[0].toString());
-          ChRootedFileSystem linkedFs = (ChRootedFileSystem)
-              link.getTargetFileSystem();
           try {
-            FileStatus status = linkedFs.getMyFs().getFileStatus(linkedPath);
+            FileStatus status = link.getTargetFileSystem()
+                .getFileStatus(new Path("/"));
             result[i++] = new FileStatus(status.getLen(), false,
               status.getReplication(), status.getBlockSize(),
               status.getModificationTime(), status.getAccessTime(),
