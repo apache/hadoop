@@ -1367,7 +1367,10 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
 
   @Override
   public void shutdown() {
-    if (mbeanName != null) MBeans.unregister(mbeanName);
+    if (mbeanName != null) {
+      MBeans.unregister(mbeanName);
+      mbeanName = null;
+    }
   }
 
   @Override
