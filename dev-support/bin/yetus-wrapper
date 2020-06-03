@@ -144,7 +144,7 @@ else
   exit 1
 fi
 
-if [[ -n "${GPGBIN}" ]]; then
+if [[ -n "${GPGBIN}" && ! "${HADOOP_SKIP_YETUS_VERIFICATION}" = true ]]; then
   if ! mkdir -p .gpg; then
     yetus_error "ERROR: yetus-dl: Unable to create ${HADOOP_PATCHPROCESS}/.gpg"
     exit 1
