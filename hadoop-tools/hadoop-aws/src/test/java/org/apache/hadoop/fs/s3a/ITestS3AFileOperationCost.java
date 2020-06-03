@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -33,6 +34,7 @@ import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.net.URI;
@@ -41,8 +43,12 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
+import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADVISE;
+import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADV_SEQUENTIAL;
+import static org.apache.hadoop.fs.s3a.Constants.OPEN_OPTION_LENGTH;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
@@ -687,5 +693,100 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     // plus 1 list to match the glob pattern
     // no additional operations from symlink resolution
     verifyOperationCount(2, 2);
+  }
+
+  /**
+   * Test when openFile() performs GET requests when file status
+   * and length options are passed down.
+   * Note that the input streams only update the FS statistics
+   * in close(), so metrics cannot be verified until all operations
+   * on a stream are complete.
+   * This is slightly less than ideal.
+   */
+  @Test
+  public void testOpenFileCost() throws Throwable {
+    describe("Test cost of openFile with/without status; raw only");
+    S3AFileSystem fs = getFileSystem();
+    assume("Unguarded FS only", !fs.hasMetadataStore());
+    Path testFile = path("testOpenFileCost");
+
+    writeTextFile(fs, testFile, "openfile", true);
+    FileStatus st = fs.getFileStatus(testFile);
+
+    // now read that file back in using the openFile call.
+    // with a new FileStatus and a different path.
+    // this verifies that any FileStatus class/subclass is used
+    // as a source of the file length.
+    long len = st.getLen();
+    FileStatus st2 = new FileStatus(
+        len, false,
+        st.getReplication(),
+        st.getBlockSize(),
+        st.getModificationTime(),
+        st.getAccessTime(),
+        st.getPermission(),
+        st.getOwner(),
+        st.getGroup(),
+        new Path("gopher:///"));
+    resetMetricDiffs();
+    // measure GET requests issued.
+    MetricDiff getRequests = new MetricDiff(fs, STREAM_OPENED);
+
+    final CompletableFuture<FSDataInputStream> future =
+        fs.openFile(testFile)
+            .withFileStatus(st)
+            .build();
+    FSDataInputStream in = future.get();
+    verifyOperationCount(0, 0);
+    getRequests.assertDiffEquals(0);
+
+    long readLen = readStream(in);
+    assertEquals("bytes read from file", len, readLen);
+    verifyOperationCount(0, 0);
+    getRequests.assertDiffEquals(1);
+    getRequests.reset();
+    resetMetricDiffs();
+
+    // do a second read with the length declared as short.
+    // we now expect the bytes read to be shorter.
+    MetricDiff bytesDiscarded =
+        new MetricDiff(fs, STREAM_CLOSE_BYTES_READ);
+    int offset = 2;
+    long shortLen = len - offset;
+    CompletableFuture<FSDataInputStream> f2 = fs.openFile(testFile)
+        .must(INPUT_FADVISE, INPUT_FADV_SEQUENTIAL)
+        .must(OPEN_OPTION_LENGTH, shortLen)
+        .build();
+    verifyOperationCount(0, 0);
+    getRequests.assertDiffEquals(0);
+    FSDataInputStream in2 = f2.get();
+    long r2 = readStream(in2);
+    verifyOperationCount(0, 0);
+    getRequests.assertDiffEquals(1);
+    assertEquals("bytes read from file", shortLen, r2);
+    // the read has been ranged
+    bytesDiscarded.assertDiffEquals(0);
+
+    // final read past EOF
+    getRequests.reset();
+
+    long longLen = len + 10;
+    FSDataInputStream in3 = fs.openFile(testFile)
+        .must(INPUT_FADVISE, INPUT_FADV_SEQUENTIAL)
+        .must(OPEN_OPTION_LENGTH, longLen)
+        .build()
+        .get();
+    byte[] out = new byte[(int) longLen];
+    intercept(EOFException.class,
+        () -> in3.readFully(0, out));
+    in3.seek(longLen - 1);
+    assertEquals("read past real EOF on " + in3,
+        -1, in3.read());
+    in3.close();
+    // two GET calls were made, one for readFully,
+    // the second on the read() past the EOF
+    // the operation has got as far as S3
+    getRequests.assertDiffEquals(2);
+
   }
 }

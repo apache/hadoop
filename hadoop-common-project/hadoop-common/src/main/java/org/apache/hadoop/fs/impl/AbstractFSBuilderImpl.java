@@ -199,6 +199,14 @@ public abstract class
     return getThisBuilder();
   }
 
+  @Override
+  public B opt(@Nonnull final String key, final long value) {
+    mandatoryKeys.remove(key);
+    optionalKeys.add(key);
+    options.setLong(key, value);
+    return getThisBuilder();
+  }
+
   /**
    * Set optional float parameter for the Builder.
    *
@@ -274,6 +282,14 @@ public abstract class
     mandatoryKeys.add(key);
     optionalKeys.remove(key);
     options.setInt(key, value);
+    return getThisBuilder();
+  }
+
+  @Override
+  public B must(@Nonnull final String key, final long value) {
+    mandatoryKeys.add(key);
+    optionalKeys.remove(key);
+    options.setLong(key, value);
     return getThisBuilder();
   }
 
