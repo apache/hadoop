@@ -29,7 +29,7 @@ public interface S3AMultipartUploaderStatistics extends Closeable {
 
   void uploadStarted();
 
-  void partPut();
+  void partPut(long lengthInBytes);
 
   void uploadCompleted();
 

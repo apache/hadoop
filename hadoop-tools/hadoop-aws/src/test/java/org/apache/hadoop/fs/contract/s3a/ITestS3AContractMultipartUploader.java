@@ -18,15 +18,12 @@
 
 package org.apache.hadoop.fs.contract.s3a;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractMultipartUploaderTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.DEFAULT_SCALE_TESTS_ENABLED;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.KEY_HUGE_PARTITION_SIZE;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.KEY_SCALE_TESTS_ENABLED;
@@ -39,15 +36,13 @@ import static org.apache.hadoop.fs.s3a.scale.AbstractSTestS3AHugeFiles.DEFAULT_H
 
 /**
  * Test MultipartUploader with S3A.
+ * <p></p>
  * Although not an S3A Scale test subclass, it uses the -Dscale option
  * to enable it, and partition size option to control the size of
  * parts uploaded.
  */
 public class ITestS3AContractMultipartUploader extends
     AbstractContractMultipartUploaderTest {
-
-  private static final Logger LOG =
-      LoggerFactory.getLogger(ITestS3AContractMultipartUploader.class);
 
   private int partitionSize;
 
@@ -135,11 +130,11 @@ public class ITestS3AContractMultipartUploader extends
    * S3 has no concept of directories, so this test does not apply.
    */
   public void testDirectoryInTheWay() throws Exception {
-    // no-op
+    skip("unsupported");
   }
 
   @Override
   public void testMultipartUploadReverseOrder() throws Exception {
-    ContractTestUtils.skip("skipped for speed");
+    skip("skipped for speed");
   }
 }

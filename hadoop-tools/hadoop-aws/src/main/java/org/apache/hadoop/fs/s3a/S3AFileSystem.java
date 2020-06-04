@@ -96,7 +96,6 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Globber;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
-import org.apache.hadoop.fs.MultipartUploaderBuilder;
 import org.apache.hadoop.fs.s3a.auth.SignerManager;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationOperations;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenProvider;
@@ -113,6 +112,7 @@ import org.apache.hadoop.fs.s3a.impl.S3AMultipartUploaderBuilder;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
+import org.apache.hadoop.fs.s3a.impl.statistics.S3AMultipartUploaderStatisticsImpl;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.select.InternalSelectConstants;
 import org.apache.hadoop.io.IOUtils;
@@ -4709,13 +4709,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   @Override
-  public MultipartUploaderBuilder createMultipartUploader(final Path basePath)
+  public S3AMultipartUploaderBuilder createMultipartUploader(
+      final Path basePath)
       throws IOException {
+    StoreContext ctx = createStoreContext();
     return new S3AMultipartUploaderBuilder(this,
         getWriteOperationHelper(),
-        createStoreContext(),
+        ctx,
         basePath,
-        getInstrumentation().newMultipartUploaderStatistics());
+        new S3AMultipartUploaderStatisticsImpl(ctx::incrementStatistic));
   }
 
   /**

@@ -40,6 +40,7 @@ import com.amazonaws.services.s3.transfer.model.UploadResult;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 
 /**
@@ -203,6 +204,8 @@ public interface WriteOperations {
    * @param sourceFile optional source file.
    * @param offset offset in file to start reading.
    * @return the request.
+   * @throws IllegalArgumentException if the parameters are invalid -including
+   * @throws PathIOException if the part number is out of range.
    */
   UploadPartRequest newUploadPartRequest(
       String destKey,
@@ -211,7 +214,7 @@ public interface WriteOperations {
       int size,
       InputStream uploadStream,
       File sourceFile,
-      Long offset);
+      Long offset) throws PathIOException;
 
   /**
    * PUT an object directly (i.e. not via the transfer manager).

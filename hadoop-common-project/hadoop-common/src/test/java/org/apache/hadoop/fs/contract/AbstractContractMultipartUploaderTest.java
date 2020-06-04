@@ -57,6 +57,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Tests of multipart uploads.
+ * <p></p>
  * <i>Note</i>: some of the tests get a random uploader between
  * the two which are available. If tests fail intermittently,
  * it may be because different uploaders are being selected.
@@ -72,6 +73,8 @@ public abstract class AbstractContractMultipartUploaderTest extends
    * Enough to be non empty, not big enough to cause delays on uploads.
    */
   protected static final int SMALL_FILE = 100;
+
+  protected static final int CONSISTENCY_INTERVAL = 1000;
 
   private MultipartUploader uploader0;
   private MultipartUploader uploader1;
@@ -807,7 +810,8 @@ public abstract class AbstractContractMultipartUploaderTest extends
     // and await the visible length to match
     eventually(timeToBecomeConsistentMillis(),
         () -> verifyFileLength(file, size2),
-        new LambdaTestUtils.ProportionalRetryInterval(1000,
+        new LambdaTestUtils.ProportionalRetryInterval(
+            CONSISTENCY_INTERVAL,
             timeToBecomeConsistentMillis()));
 
     verifyContents(file, digest2, size2);

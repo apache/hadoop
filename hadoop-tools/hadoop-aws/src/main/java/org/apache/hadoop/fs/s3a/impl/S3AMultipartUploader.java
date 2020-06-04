@@ -42,7 +42,6 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.Triple;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.BBPartHandle;
@@ -50,6 +49,7 @@ import org.apache.hadoop.fs.BBUploadHandle;
 import org.apache.hadoop.fs.PartHandle;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathHandle;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.UploadHandle;
 import org.apache.hadoop.fs.impl.AbstractMultipartUploader;
 import org.apache.hadoop.fs.s3a.WriteOperations;
@@ -130,7 +130,8 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
   }
 
   @Override
-  public CompletableFuture<UploadHandle> startUpload(Path filePath)
+  public CompletableFuture<UploadHandle> startUpload(
+      final Path filePath)
       throws IOException {
     Path dest = context.makeQualified(filePath);
     checkPath(dest);
@@ -145,11 +146,12 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
   }
 
   @Override
-  public CompletableFuture<PartHandle> putPart(UploadHandle uploadId,
-      int partNumber,
-      Path filePath,
-      InputStream inputStream,
-      long lengthInBytes)
+  public CompletableFuture<PartHandle> putPart(
+      final UploadHandle uploadId,
+      final int partNumber,
+      final Path filePath,
+      final InputStream inputStream,
+      final long lengthInBytes)
       throws IOException {
     Path dest = context.makeQualified(filePath);
     checkPutArguments(dest, inputStream, partNumber, uploadId,
@@ -165,11 +167,13 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
               uploadIdString, partNumber, (int) lengthInBytes, inputStream,
               null, 0L);
           UploadPartResult result = writeOperations.uploadPart(request);
-          statistics.partPut();
+          statistics.partPut(lengthInBytes);
           String eTag = result.getETag();
           return BBPartHandle.from(
               ByteBuffer.wrap(
                   buildPartHandlePayload(
+                      filePath.toUri().toString(),
+                      uploadIdString,
                       result.getPartNumber(),
                       eTag,
                       lengthInBytes)));
@@ -178,9 +182,9 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
 
   @Override
   public CompletableFuture<PathHandle> complete(
-      UploadHandle uploadHandle,
-      Path filePath,
-      Map<Integer, PartHandle> handleMap)
+      final UploadHandle uploadHandle,
+      final Path filePath,
+      final Map<Integer, PartHandle> handleMap)
       throws IOException {
     Path dest = context.makeQualified(filePath);
     checkPath(dest);
@@ -203,11 +207,12 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
     Set<Integer> ids = new HashSet<>(count);
 
     for (Map.Entry<Integer, PartHandle> handle : handles) {
-      byte[] payload = handle.getValue().toByteArray();
-      Triple<Integer, Long, String> result = parsePartHandlePayload(payload);
-      ids.add(result.getLeft());
-      totalLength += result.getMiddle();
-      eTags.add(new PartETag(handle.getKey(), result.getRight()));
+      PartHandlePayload payload = parsePartHandlePayload(
+          handle.getValue().toByteArray());
+      payload.validate(uploadIdStr, filePath);
+      ids.add(payload.getPartNumber());
+      totalLength += payload.getLen();
+      eTags.add(new PartETag(handle.getKey(), payload.getEtag()));
     }
     Preconditions.checkArgument(ids.size() == count,
         "Duplicate PartHandles");
@@ -233,8 +238,8 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
 
   @Override
   public CompletableFuture<Void> abort(
-      UploadHandle uploadId,
-      Path filePath)
+      final UploadHandle uploadId,
+      final Path filePath)
       throws IOException {
     Path dest = context.makeQualified(filePath);
     checkPath(dest);
@@ -272,30 +277,22 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
    * Build the payload for marshalling.
    *
    * @param partNumber part number from response
-   * @param eTag upload etag
+   * @param etag upload etag
    * @param len length
    * @return a byte array to marshall.
    * @throws IOException error writing the payload
    */
   @VisibleForTesting
   static byte[] buildPartHandlePayload(
-      int partNumber,
-      String eTag,
-      long len)
+      final String path,
+      final String uploadId,
+      final int partNumber,
+      final String etag,
+      final long len)
       throws IOException {
-    Preconditions.checkArgument(StringUtils.isNotEmpty(eTag),
-        "Empty etag");
-    Preconditions.checkArgument(len >= 0,
-        "Invalid length");
 
-    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-    try (DataOutputStream output = new DataOutputStream(bytes)) {
-      output.writeUTF(HEADER);
-      output.writeInt(partNumber);
-      output.writeLong(len);
-      output.writeUTF(eTag);
-    }
-    return bytes.toByteArray();
+    return new PartHandlePayload(path, uploadId, partNumber, len, etag)
+        .toBytes();
   }
 
   /**
@@ -305,7 +302,8 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
    * @throws IOException error reading the payload
    */
   @VisibleForTesting
-  static Triple<Integer, Long, String> parsePartHandlePayload(byte[] data)
+  static PartHandlePayload parsePartHandlePayload(
+      final byte[] data)
       throws IOException {
 
     try (DataInputStream input =
@@ -314,14 +312,109 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
       if (!HEADER.equals(header)) {
         throw new IOException("Wrong header string: \"" + header + "\"");
       }
+      final String path = input.readUTF();
+      final String uploadId = input.readUTF();
       final int partNumber = input.readInt();
       final long len = input.readLong();
       final String etag = input.readUTF();
       if (len < 0) {
         throw new IOException("Negative length");
       }
-      return Triple.of(partNumber, len, etag);
+      return new PartHandlePayload(path, uploadId, partNumber, len, etag);
     }
   }
+
+  /**
+   * Payload of a part handle; serializes
+   * the fields using DataInputStream and DataOutputStream.
+   */
+  @VisibleForTesting
+  static final class PartHandlePayload {
+
+    private final String path;
+
+    private final String uploadId;
+
+    private final int partNumber;
+
+    private final long len;
+
+    private final String etag;
+
+    private PartHandlePayload(
+        final String path,
+        final String uploadId,
+        final int partNumber,
+        final long len,
+        final String etag) {
+      Preconditions.checkArgument(StringUtils.isNotEmpty(etag),
+          "Empty etag");
+      Preconditions.checkArgument(StringUtils.isNotEmpty(path),
+          "Empty path");
+      Preconditions.checkArgument(StringUtils.isNotEmpty(uploadId),
+          "Empty uploadId");
+      Preconditions.checkArgument(len >= 0,
+          "Invalid length");
+
+      this.path = path;
+      this.uploadId = uploadId;
+      this.partNumber = partNumber;
+      this.len = len;
+      this.etag = etag;
+    }
+
+    public String getPath() {
+      return path;
+    }
+
+    public int getPartNumber() {
+      return partNumber;
+    }
+
+    public long getLen() {
+      return len;
+    }
+
+    public String getEtag() {
+      return etag;
+    }
+
+    public String getUploadId() {
+      return uploadId;
+    }
+
+    public byte[] toBytes()
+        throws IOException {
+      Preconditions.checkArgument(StringUtils.isNotEmpty(etag),
+          "Empty etag");
+      Preconditions.checkArgument(len >= 0,
+          "Invalid length");
+
+      ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+      try (DataOutputStream output = new DataOutputStream(bytes)) {
+        output.writeUTF(HEADER);
+        output.writeUTF(path);
+        output.writeUTF(uploadId);
+        output.writeInt(partNumber);
+        output.writeLong(len);
+        output.writeUTF(etag);
+      }
+      return bytes.toByteArray();
+    }
+
+    public void validate(String uploadIdStr, Path filePath)
+        throws PathIOException {
+      String destUri = filePath.toUri().toString();
+      if (!destUri.equals(path)) {
+        throw new PathIOException(destUri,
+            "Multipart part path mismatch: " + path);
+      }
+      if (!uploadIdStr.equals(uploadId)) {
+        throw new PathIOException(destUri,
+            "Multipart part ID mismatch: " + uploadId);
+      }
+    }
+  }
+
 
 }
