@@ -19,7 +19,7 @@
   "author": "",
   "license": "Apache",
   "devDependencies": {
-    "bower": "1.7.7",
+    "bower": "1.8.8",
     "bower-shrinkwrap-resolver-ext": "0.1.0",
     "broccoli-asset-rev": "2.4.2",
     "broccoli-funnel": "1.0.1",

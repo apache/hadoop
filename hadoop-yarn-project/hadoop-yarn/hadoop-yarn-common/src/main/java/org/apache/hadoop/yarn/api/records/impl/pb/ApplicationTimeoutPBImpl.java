@@ -23,7 +23,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationTimeoutProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationTimeoutProtoOrBuilder;
 
-import com.google.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 /**
  * PB implementation for ApplicationTimeout class.

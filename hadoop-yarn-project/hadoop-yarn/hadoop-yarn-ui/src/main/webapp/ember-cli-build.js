@@ -51,7 +51,7 @@ module.exports = function(defaults) {
   app.import('bower_components/bootstrap/dist/css/bootstrap-theme.css');
   app.import('bower_components/bootstrap/dist/js/bootstrap.min.js');
   app.import('bower_components/alasql/dist/alasql.js');
-  app.import('bower_components/abdmob/x2js/xml2json.js');
+  app.import('bower_components/x2js/xml2json.js');
 
   // Use `app.import` to add additional libraries to the generated
   // output files.

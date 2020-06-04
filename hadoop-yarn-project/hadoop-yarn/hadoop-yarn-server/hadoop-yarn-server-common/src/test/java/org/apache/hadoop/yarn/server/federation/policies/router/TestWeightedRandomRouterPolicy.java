@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
@@ -47,10 +48,21 @@ public class TestWeightedRandomRouterPolicy extends BaseRouterPoliciesTest {
   public void setUp() throws Exception {
     setPolicy(new WeightedRandomRouterPolicy());
     setPolicyInfo(new WeightedPolicyInfo());
+
+    configureWeights(20);
+
+    FederationPoliciesTestUtil.initializePolicyContext(getPolicy(),
+        getPolicyInfo(), getActiveSubclusters());
+  }
+
+  public void configureWeights(float numSubClusters) {
+    // Set random seed to remove random failures
+    FederationPolicyUtils.setRand(5);
+    setRand(5);
+
     Map<SubClusterIdInfo, Float> routerWeights = new HashMap<>();
     Map<SubClusterIdInfo, Float> amrmWeights = new HashMap<>();
 
-    float numSubClusters = 20;
     // simulate N subclusters each with a 5% chance of being inactive
     for (int i = 0; i < numSubClusters; i++) {
       SubClusterIdInfo sc = new SubClusterIdInfo("sc" + i);
@@ -74,10 +86,6 @@ public class TestWeightedRandomRouterPolicy extends BaseRouterPoliciesTest {
     }
     getPolicyInfo().setRouterPolicyWeights(routerWeights);
     getPolicyInfo().setAMRMPolicyWeights(amrmWeights);
-
-    FederationPoliciesTestUtil.initializePolicyContext(getPolicy(),
-        getPolicyInfo(), getActiveSubclusters());
-
   }
 
   @Test

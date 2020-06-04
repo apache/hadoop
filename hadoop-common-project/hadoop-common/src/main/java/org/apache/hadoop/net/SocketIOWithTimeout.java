@@ -326,34 +326,36 @@ abstract class SocketIOWithTimeout {
       
       SelectionKey key = null;
       int ret = 0;
+      long timeoutLeft = timeout;
       
       try {
         while (true) {
           long start = (timeout == 0) ? 0 : Time.now();
 
           key = channel.register(info.selector, ops);
-          ret = info.selector.select(timeout);
+          ret = info.selector.select(timeoutLeft);
           
           if (ret != 0) {
             return ret;
           }
           
-          if (Thread.currentThread().isInterrupted()) {
-            throw new InterruptedIOException("Interrupted while waiting for "
-                + "IO on channel " + channel + ". " + timeout
-                + " millis timeout left.");
-          }
-
           /* Sometimes select() returns 0 much before timeout for 
            * unknown reasons. So select again if required.
            */
           if (timeout > 0) {
-            timeout -= Time.now() - start;
-            if (timeout <= 0) {
-              return 0;
-            }
+            timeoutLeft -= Time.now() - start;
+            timeoutLeft = Math.max(0, timeoutLeft);
           }
           
+          if (Thread.currentThread().isInterrupted()) {
+            throw new InterruptedIOException("Interrupted while waiting for "
+                + "IO on channel " + channel + ". Total timeout mills is "
+                + timeout + ", " + timeoutLeft + " millis timeout left.");
+          }
+
+          if (timeoutLeft == 0) {
+            return 0;
+          }
         }
       } finally {
         if (key != null) {

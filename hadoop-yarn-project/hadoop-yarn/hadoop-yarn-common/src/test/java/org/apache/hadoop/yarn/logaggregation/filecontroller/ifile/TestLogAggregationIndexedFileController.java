@@ -469,4 +469,32 @@ public class TestLogAggregationIndexedFileController
   private String logMessage(ContainerId containerId, String logType) {
     return "Hello " + containerId + " in " + logType + "!";
   }
+
+  @Test
+  public void testGetRollOverLogMaxSize() {
+    String fileControllerName = "testController";
+    String remoteDirConf = String.format(
+        YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_FMT,
+        fileControllerName);
+    Configuration conf = new Configuration();
+    LogAggregationIndexedFileController fileFormat
+        = new LogAggregationIndexedFileController();
+    long defaultRolloverSize = 10L * 1024 * 1024 * 1024;
+
+    // test local filesystem
+    fileFormat.initialize(conf, fileControllerName);
+    assertThat(fileFormat.getRollOverLogMaxSize(conf))
+        .isEqualTo(defaultRolloverSize);
+
+    // test file system supporting append
+    conf.set(remoteDirConf, "webhdfs://localhost/path");
+    fileFormat.initialize(conf, fileControllerName);
+    assertThat(fileFormat.getRollOverLogMaxSize(conf))
+        .isEqualTo(defaultRolloverSize);
+
+    // test file system not supporting append
+    conf.set(remoteDirConf, "s3a://test/path");
+    fileFormat.initialize(conf, fileControllerName);
+    assertThat(fileFormat.getRollOverLogMaxSize(conf)).isZero();
+  }
 }

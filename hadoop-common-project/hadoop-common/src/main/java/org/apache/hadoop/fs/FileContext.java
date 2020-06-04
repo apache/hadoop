@@ -47,7 +47,7 @@ import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.impl.FutureDataInputStreamBuilderImpl;
 import org.apache.hadoop.fs.impl.FsLinkResolution;
-import org.apache.hadoop.fs.impl.PathCapabilitiesSupport;
+import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -483,7 +483,7 @@ public class FileContext implements PathCapabilities {
    */
   public static FileContext getFileContext(final Configuration aConf)
       throws UnsupportedFileSystemException {
-    final URI defaultFsUri = URI.create(aConf.get(FS_DEFAULT_NAME_KEY,
+    final URI defaultFsUri = URI.create(aConf.getTrimmed(FS_DEFAULT_NAME_KEY,
         FS_DEFAULT_NAME_DEFAULT));
     if (   defaultFsUri.getScheme() != null
         && !defaultFsUri.getScheme().trim().isEmpty()) {
@@ -2924,16 +2924,18 @@ public class FileContext implements PathCapabilities {
     @Override
     public CompletableFuture<FSDataInputStream> build() throws IOException {
       final Path absF = fixRelativePart(getPath());
+      OpenFileParameters parameters = new OpenFileParameters()
+          .withMandatoryKeys(getMandatoryKeys())
+          .withOptions(getOptions())
+          .withBufferSize(getBufferSize())
+          .withStatus(getStatus());
       return new FSLinkResolver<CompletableFuture<FSDataInputStream>>() {
         @Override
         public CompletableFuture<FSDataInputStream> next(
             final AbstractFileSystem fs,
             final Path p)
             throws IOException {
-          return fs.openFileWithOptions(p,
-              getMandatoryKeys(),
-              getOptions(),
-              getBufferSize());
+          return fs.openFileWithOptions(p, parameters);
         }
       }.resolve(FileContext.this, absF);
     }

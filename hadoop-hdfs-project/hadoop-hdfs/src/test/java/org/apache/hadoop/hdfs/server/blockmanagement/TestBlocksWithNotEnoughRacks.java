@@ -570,7 +570,8 @@ public class TestBlocksWithNotEnoughRacks {
       BlockInfo storedBlock = bm.getStoredBlock(b.getLocalBlock());
 
       // The block should be replicated OK - so Reconstruction Work will be null
-      BlockReconstructionWork work = bm.scheduleReconstruction(storedBlock, 2);
+      BlockReconstructionWork work = scheduleReconstruction(
+          cluster.getNamesystem(), storedBlock, 2);
       assertNull(work);
       // Set the upgradeDomain to "3" for the 3 nodes hosting the block.
       // Then alternately set the remaining 3 nodes to have an upgradeDomain
@@ -586,7 +587,8 @@ public class TestBlocksWithNotEnoughRacks {
         }
       }
       // Now reconWork is non-null and 2 extra targets are needed
-      work = bm.scheduleReconstruction(storedBlock, 2);
+      work = scheduleReconstruction(
+          cluster.getNamesystem(), storedBlock, 2);
       assertEquals(2, work.getAdditionalReplRequired());
 
       // Add the block to the replication queue and ensure it is replicated
@@ -595,6 +597,16 @@ public class TestBlocksWithNotEnoughRacks {
       DFSTestUtil.waitForReplication(cluster, b, 1, replicationFactor, 0, 3);
     } finally {
       cluster.shutdown();
+    }
+  }
+
+  static BlockReconstructionWork scheduleReconstruction(
+      FSNamesystem fsn, BlockInfo block, int priority) {
+    fsn.writeLock();
+    try {
+      return fsn.getBlockManager().scheduleReconstruction(block, priority);
+    } finally {
+      fsn.writeUnlock();
     }
   }
 

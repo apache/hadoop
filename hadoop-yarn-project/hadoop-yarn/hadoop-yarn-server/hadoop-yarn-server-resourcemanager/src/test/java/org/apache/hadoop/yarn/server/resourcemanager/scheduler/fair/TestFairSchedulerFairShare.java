@@ -21,9 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 import static org.junit.Assert.assertEquals;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.Collection;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -33,6 +31,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptS
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
+    .allocationfile.AllocationFileQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
+    .allocationfile.AllocationFileWriter;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
 import org.junit.Before;
@@ -57,34 +60,33 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
     conf = null;
   }
 
-  private void createClusterWithQueuesAndOneNode(int mem, String policy)
-      throws IOException {
-    createClusterWithQueuesAndOneNode(mem, 0, policy);
+  private void createClusterWithQueuesAndOneNode(int mem) {
+    createClusterWithQueuesAndOneNode(mem, 0, "fair");
   }
 
   private void createClusterWithQueuesAndOneNode(int mem, int vCores,
-      String policy) throws IOException {
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"root\" >");
-    out.println("   <queue name=\"parentA\" >");
-    out.println("       <weight>8</weight>");
-    out.println("       <queue name=\"childA1\" />");
-    out.println("       <queue name=\"childA2\" />");
-    out.println("       <queue name=\"childA3\" />");
-    out.println("       <queue name=\"childA4\" />");
-    out.println("   </queue>");
-    out.println("   <queue name=\"parentB\" >");
-    out.println("       <weight>1</weight>");
-    out.println("       <queue name=\"childB1\" />");
-    out.println("       <queue name=\"childB2\" />");
-    out.println("   </queue>");
-    out.println("</queue>");
-    out.println("<defaultQueueSchedulingPolicy>" + policy
-        + "</defaultQueueSchedulingPolicy>");
-    out.println("</allocations>");
-    out.close();
+      String policy) {
+    AllocationFileWriter allocationFileWriter = AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("root")
+            .subQueue(new AllocationFileQueue.Builder("parentA")
+                .weight(8)
+                .subQueue(new AllocationFileQueue.Builder("childA1").build())
+                .subQueue(new AllocationFileQueue.Builder("childA2").build())
+                .subQueue(new AllocationFileQueue.Builder("childA3").build())
+                .subQueue(new AllocationFileQueue.Builder("childA4").build())
+                .build())
+            .subQueue(new AllocationFileQueue.Builder("parentB")
+                .weight(1)
+                .subQueue(new AllocationFileQueue.Builder("childB1").build())
+                .subQueue(new AllocationFileQueue.Builder("childB2").build())
+                .build())
+            .build());
+    if (policy.equals("fair")) {
+      allocationFileWriter.fairDefaultQueueSchedulingPolicy();
+    } else if (policy.equals("drf")) {
+      allocationFileWriter.drfDefaultQueueSchedulingPolicy();
+    }
+    allocationFileWriter.writeToFile(ALLOC_FILE);
 
     resourceManager = new MockRM(conf);
     resourceManager.start();
@@ -97,9 +99,9 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
   }
 
   @Test
-  public void testFairShareNoAppsRunning() throws IOException {
+  public void testFairShareNoAppsRunning() {
     int nodeCapacity = 16 * 1024;
-    createClusterWithQueuesAndOneNode(nodeCapacity, "fair");
+    createClusterWithQueuesAndOneNode(nodeCapacity);
 
     scheduler.update();
     // No apps are running in the cluster,verify if fair share is zero
@@ -121,9 +123,9 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
   }
 
   @Test
-  public void testFairShareOneAppRunning() throws IOException {
+  public void testFairShareOneAppRunning() {
     int nodeCapacity = 16 * 1024;
-    createClusterWithQueuesAndOneNode(nodeCapacity, "fair");
+    createClusterWithQueuesAndOneNode(nodeCapacity);
 
     // Run a app in a childA1. Verify whether fair share is 100% in childA1,
     // since it is the only active queue.
@@ -149,10 +151,9 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
   }
 
   @Test
-  public void testFairShareMultipleActiveQueuesUnderSameParent()
-      throws IOException {
+  public void testFairShareMultipleActiveQueuesUnderSameParent() {
     int nodeCapacity = 16 * 1024;
-    createClusterWithQueuesAndOneNode(nodeCapacity, "fair");
+    createClusterWithQueuesAndOneNode(nodeCapacity);
 
     // Run apps in childA1,childA2,childA3
     createSchedulingRequest(2 * 1024, "root.parentA.childA1", "user1");
@@ -179,7 +180,7 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
   public void testFairShareMultipleActiveQueuesUnderDifferentParent()
       throws IOException {
     int nodeCapacity = 16 * 1024;
-    createClusterWithQueuesAndOneNode(nodeCapacity, "fair");
+    createClusterWithQueuesAndOneNode(nodeCapacity);
 
     // Run apps in childA1,childA2 which are under parentA
     createSchedulingRequest(2 * 1024, "root.parentA.childA1", "user1");
@@ -218,9 +219,9 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
   }
 
   @Test
-  public void testFairShareResetsToZeroWhenAppsComplete() throws IOException {
+  public void testFairShareResetsToZeroWhenAppsComplete() {
     int nodeCapacity = 16 * 1024;
-    createClusterWithQueuesAndOneNode(nodeCapacity, "fair");
+    createClusterWithQueuesAndOneNode(nodeCapacity);
 
     // Run apps in childA1,childA2 which are under parentA
     ApplicationAttemptId app1 = createSchedulingRequest(2 * 1024,
@@ -268,8 +269,7 @@ public class TestFairSchedulerFairShare extends FairSchedulerTestBase {
   }
 
   @Test
-  public void testFairShareWithDRFMultipleActiveQueuesUnderDifferentParent()
-      throws IOException {
+  public void testFairShareWithDRFMultipleActiveQueuesUnderDifferentParent() {
     int nodeMem = 16 * 1024;
     int nodeVCores = 10;
     createClusterWithQueuesAndOneNode(nodeMem, nodeVCores, "drf");

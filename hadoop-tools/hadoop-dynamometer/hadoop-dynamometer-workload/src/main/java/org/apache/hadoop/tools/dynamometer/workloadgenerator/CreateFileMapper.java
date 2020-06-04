@@ -48,7 +48,8 @@ import org.apache.hadoop.mapreduce.Mapper;
  * </ul>
  */
 public class CreateFileMapper
-    extends WorkloadMapper<NullWritable, NullWritable> {
+    extends WorkloadMapper<NullWritable, NullWritable, NullWritable,
+    NullWritable> {
 
   public static final String NUM_MAPPERS_KEY = "createfile.num-mappers";
   public static final String DURATION_MIN_KEY = "createfile.duration-min";

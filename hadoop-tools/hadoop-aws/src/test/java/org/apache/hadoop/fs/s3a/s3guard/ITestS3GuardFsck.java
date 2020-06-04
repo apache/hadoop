@@ -21,8 +21,10 @@ package org.apache.hadoop.fs.s3a.s3guard;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Before;
@@ -62,8 +64,8 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
     super.setup();
     S3AFileSystem fs = getFileSystem();
     // These test will fail if no ms
-    assumeTrue("FS needs to have a metadatastore.",
-        fs.hasMetadataStore());
+    assumeTrue("FS needs to have a DynamoDB metadatastore.",
+        fs.getMetadataStore() instanceof DynamoDBMetadataStore);
     assumeTrue("Metadatastore should persist authoritative bit",
         metadataStorePersistsAuthoritativeBit(fs.getMetadataStore()));
 
@@ -271,8 +273,8 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
       final DirListingMetadata dlmIc = metadataStore.listChildren(cwdIncorrect);
       dlmC.setAuthoritative(true);
       dlmIc.setAuthoritative(true);
-      metadataStore.put(dlmC, null);
-      metadataStore.put(dlmIc, null);
+      metadataStore.put(dlmC, Collections.emptyList(), null);
+      metadataStore.put(dlmIc, Collections.emptyList(), null);
 
       // add a file raw so the listing will be different.
       touchRawAndWaitRaw(fileIc2);
@@ -435,10 +437,139 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
 
       assertComparePairsSize(comparePairs, 1);
 
-      // check fil1 that there's the violation
+      // check if the violation is there
       checkForViolationInPairs(file, comparePairs,
           S3GuardFsck.Violation.TOMBSTONED_IN_MS_NOT_DELETED_IN_S3);
-      // check the child that there's no NO_ETAG violation
+    } finally {
+      cleanup(file, cwd);
+    }
+  }
+
+  @Test
+  public void checkDdbInternalConsistency() throws Exception {
+    final S3GuardFsck s3GuardFsck = new S3GuardFsck(rawFs, metadataStore);
+    final DynamoDBMetadataStore ms =
+        (DynamoDBMetadataStore) guardedFs.getMetadataStore();
+    s3GuardFsck.checkDdbInternalConsistency(
+        new Path("s3a://" + guardedFs.getBucket() + "/"));
+  }
+
+  @Test
+  public void testDdbInternalNoLastUpdatedField() throws Exception {
+    final Path cwd = path("/" + getMethodName() + "-" + UUID.randomUUID());
+    final Path file = new Path(cwd, "file");
+    try {
+      final S3AFileStatus s3AFileStatus = new S3AFileStatus(100, 100, file, 100,
+          "test", "etag", "version");
+      final PathMetadata pathMetadata = new PathMetadata(s3AFileStatus);
+      pathMetadata.setLastUpdated(0);
+      metadataStore.put(pathMetadata);
+
+      final S3GuardFsck s3GuardFsck = new S3GuardFsck(rawFs, metadataStore);
+      final List<S3GuardFsck.ComparePair> comparePairs =
+          s3GuardFsck.checkDdbInternalConsistency(cwd);
+
+      assertComparePairsSize(comparePairs, 1);
+
+      // check if the violation is there
+      checkForViolationInPairs(file, comparePairs,
+          S3GuardFsck.Violation.NO_LASTUPDATED_FIELD);
+    } finally {
+      cleanup(file, cwd);
+    }
+  }
+
+  @Test
+  public void testDdbInternalOrphanEntry() throws Exception {
+    final Path cwd = path("/" + getMethodName() + "-" + UUID.randomUUID());
+    final Path parentDir = new Path(cwd, "directory");
+    final Path file = new Path(parentDir, "file");
+    try {
+      final S3AFileStatus s3AFileStatus = new S3AFileStatus(100, 100, file, 100,
+          "test", "etag", "version");
+      final PathMetadata pathMetadata = new PathMetadata(s3AFileStatus);
+      pathMetadata.setLastUpdated(1000);
+      metadataStore.put(pathMetadata);
+      metadataStore.forgetMetadata(parentDir);
+
+      final S3GuardFsck s3GuardFsck = new S3GuardFsck(rawFs, metadataStore);
+      final List<S3GuardFsck.ComparePair> comparePairs =
+          s3GuardFsck.checkDdbInternalConsistency(cwd);
+
+      // check if the violation is there
+      assertComparePairsSize(comparePairs, 1);
+      checkForViolationInPairs(file, comparePairs,
+          S3GuardFsck.Violation.ORPHAN_DDB_ENTRY);
+
+      // fix the violation
+      s3GuardFsck.fixViolations(
+          comparePairs.stream().filter(cP -> cP.getViolations()
+              .contains(S3GuardFsck.Violation.ORPHAN_DDB_ENTRY))
+              .collect(Collectors.toList())
+      );
+
+      // assert that the violation is fixed
+      final List<S3GuardFsck.ComparePair> fixedComparePairs =
+          s3GuardFsck.checkDdbInternalConsistency(cwd);
+      checkNoViolationInPairs(file, fixedComparePairs,
+          S3GuardFsck.Violation.ORPHAN_DDB_ENTRY);
+    } finally {
+      cleanup(file, cwd);
+    }
+  }
+
+  @Test
+  public void testDdbInternalParentIsAFile() throws Exception {
+    final Path cwd = path("/" + getMethodName() + "-" + UUID.randomUUID());
+    final Path parentDir = new Path(cwd, "directory");
+    final Path file = new Path(parentDir, "file");
+    try {
+      final S3AFileStatus s3AFileStatus = new S3AFileStatus(100, 100, file, 100,
+          "test", "etag", "version");
+      final PathMetadata pathMetadata = new PathMetadata(s3AFileStatus);
+      pathMetadata.setLastUpdated(1000);
+      metadataStore.put(pathMetadata);
+
+      final S3AFileStatus dirAsFile = MetadataStoreTestBase
+          .basicFileStatus(parentDir, 1, false, 1);
+      final PathMetadata dirAsFilePm = new PathMetadata(dirAsFile);
+      dirAsFilePm.setLastUpdated(100);
+      metadataStore.put(dirAsFilePm);
+
+      final S3GuardFsck s3GuardFsck = new S3GuardFsck(rawFs, metadataStore);
+      final List<S3GuardFsck.ComparePair> comparePairs =
+          s3GuardFsck.checkDdbInternalConsistency(cwd);
+
+      // check if the violation is there
+      assertComparePairsSize(comparePairs, 1);
+      checkForViolationInPairs(file, comparePairs,
+          S3GuardFsck.Violation.PARENT_IS_A_FILE);
+    } finally {
+      cleanup(file, cwd);
+    }
+  }
+
+  @Test
+  public void testDdbInternalParentTombstoned() throws Exception {
+    final Path cwd = path("/" + getMethodName() + "-" + UUID.randomUUID());
+    final Path parentDir = new Path(cwd, "directory");
+    final Path file = new Path(parentDir, "file");
+    try {
+      final S3AFileStatus s3AFileStatus = new S3AFileStatus(100, 100, file, 100,
+          "test", "etag", "version");
+      final PathMetadata pathMetadata = new PathMetadata(s3AFileStatus);
+      pathMetadata.setLastUpdated(1000);
+      metadataStore.put(pathMetadata);
+      metadataStore.delete(parentDir, null);
+
+      final S3GuardFsck s3GuardFsck = new S3GuardFsck(rawFs, metadataStore);
+      final List<S3GuardFsck.ComparePair> comparePairs =
+          s3GuardFsck.checkDdbInternalConsistency(cwd);
+
+      // check if the violation is there
+      assertComparePairsSize(comparePairs, 1);
+      checkForViolationInPairs(file, comparePairs,
+          S3GuardFsck.Violation.PARENT_TOMBSTONED);
     } finally {
       cleanup(file, cwd);
     }
@@ -479,14 +610,27 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
         .contains(violation);
   }
 
-  private void checkNoViolationInPairs(Path file2,
+  /**
+   * Check that there is no violation in the pair provided.
+   *
+   * @param file the path to filter to in the comparePairs list.
+   * @param comparePairs the list to validate.
+   * @param violation the violation that should not be in the list.
+   */
+  private void checkNoViolationInPairs(Path file,
       List<S3GuardFsck.ComparePair> comparePairs,
       S3GuardFsck.Violation violation) {
-    final S3GuardFsck.ComparePair file2Pair = comparePairs.stream()
-        .filter(p -> p.getPath().equals(file2))
+
+    if (comparePairs.size() == 0) {
+      LOG.info("Compare pairs is empty, so there's no violation. (As expected.)");
+      return;
+    }
+
+    final S3GuardFsck.ComparePair comparePair = comparePairs.stream()
+        .filter(p -> p.getPath().equals(file))
         .findFirst().get();
-    assertNotNull("The pair should not be null.", file2Pair);
-    Assertions.assertThat(file2Pair.getViolations())
+    assertNotNull("The pair should not be null.", comparePair);
+    Assertions.assertThat(comparePair.getViolations())
         .describedAs("Violations in the pair")
         .doesNotContain(violation);
   }

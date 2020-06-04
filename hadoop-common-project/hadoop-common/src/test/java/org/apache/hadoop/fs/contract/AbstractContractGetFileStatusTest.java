@@ -280,6 +280,14 @@ public abstract class AbstractContractGetFileStatusTest extends
   }
 
   @Test
+  public void testListStatusIteratorNoDir() throws Throwable {
+    describe("test the listStatusIterator call on a path which is not " +
+        "present");
+    intercept(FileNotFoundException.class,
+        () -> getFileSystem().listStatusIterator(path("missing")));
+  }
+
+  @Test
   public void testLocatedStatusNoDir() throws Throwable {
     describe("test the LocatedStatus call on a path which is not present");
     intercept(FileNotFoundException.class,

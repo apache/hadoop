@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -156,7 +157,6 @@ public class TestLazyWriter extends LazyPersistTestCase {
     for (int i = 0; i < NUM_PATHS; ++i) {
       makeTestFile(paths[i + NUM_PATHS], BLOCK_SIZE, true);
       triggerBlockReport();
-      Thread.sleep(3000);
       ensureFileReplicasOnStorageType(paths[i + NUM_PATHS], RAM_DISK);
       ensureFileReplicasOnStorageType(paths[indexes.get(i)], DEFAULT);
       for (int j = i + 1; j < NUM_PATHS; ++j) {
@@ -183,13 +183,13 @@ public class TestLazyWriter extends LazyPersistTestCase {
       throws Exception {
     getClusterBuilder().build();
     final String METHOD_NAME = GenericTestUtils.getMethodName();
-    FsDatasetTestUtil.stopLazyWriter(cluster.getDataNodes().get(0));
+    final DataNode dn = cluster.getDataNodes().get(0);
+    FsDatasetTestUtil.stopLazyWriter(dn);
 
     Path path = new Path("/" + METHOD_NAME + ".dat");
     makeTestFile(path, BLOCK_SIZE, true);
     LocatedBlocks locatedBlocks =
         ensureFileReplicasOnStorageType(path, RAM_DISK);
-
     // Delete before persist
     client.delete(path.toString(), false);
     Assert.assertFalse(fs.exists(path));

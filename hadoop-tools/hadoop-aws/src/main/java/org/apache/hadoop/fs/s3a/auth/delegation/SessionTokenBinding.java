@@ -226,7 +226,7 @@ public class SessionTokenBinding extends AbstractDelegationTokenBinding {
         "Session Token Binding",
         new MarshalledCredentialProvider(
             SESSION_TOKEN,
-            getFileSystem().getUri(),
+            getStoreContext().getFsURI(),
             getConfig(),
             marshalledCredentials,
             MarshalledCredentials.CredentialTypeRequired.SessionOnly));

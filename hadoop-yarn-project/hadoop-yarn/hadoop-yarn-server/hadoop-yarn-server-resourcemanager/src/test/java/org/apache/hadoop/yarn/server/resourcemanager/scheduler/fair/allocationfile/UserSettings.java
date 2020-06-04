@@ -23,7 +23,7 @@ import java.io.StringWriter;
  * Value class that stores user settings and can render data in XML format,
  * see {@link #render()}.
  */
-class UserSettings {
+public class UserSettings {
   private final String username;
   private final Integer maxRunningApps;
 
@@ -36,8 +36,7 @@ class UserSettings {
     StringWriter sw = new StringWriter();
     PrintWriter pw = new PrintWriter(sw);
     addStartTag(pw);
-    AllocationFileWriter.addIfPresent(pw, "maxRunningApps",
-        () -> AllocationFileWriter.createNumberSupplier(maxRunningApps));
+    AllocationFileWriter.addIfPresent(pw, "maxRunningApps", maxRunningApps);
     addEndTag(pw);
     pw.close();
 
@@ -56,12 +55,10 @@ class UserSettings {
    * Builder class for {@link UserSettings}
    */
   public static class Builder {
-    private final AllocationFileWriter allocationFileWriter;
     private final String username;
     private Integer maxRunningApps;
 
-    Builder(AllocationFileWriter allocationFileWriter, String username) {
-      this.allocationFileWriter = allocationFileWriter;
+    public Builder(String username) {
       this.username = username;
     }
 
@@ -70,11 +67,8 @@ class UserSettings {
       return this;
     }
 
-    public AllocationFileWriter build() {
-      UserSettings userSettings = new UserSettings(this);
-      allocationFileWriter.setUserSettings(userSettings);
-
-      return allocationFileWriter;
+    public UserSettings build() {
+      return new UserSettings(this);
     }
   }
 }

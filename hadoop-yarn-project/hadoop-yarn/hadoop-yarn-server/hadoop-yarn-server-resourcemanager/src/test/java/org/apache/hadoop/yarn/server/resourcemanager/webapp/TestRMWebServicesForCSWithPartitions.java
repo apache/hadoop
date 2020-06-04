@@ -50,6 +50,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -98,6 +100,7 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
   private static final String LABEL_LX = "Lx";
   private static final ImmutableSet<String> CLUSTER_LABELS =
       ImmutableSet.of(LABEL_LX, LABEL_LY, DEFAULT_PARTITION);
+  private static final String DOT = ".";
   private static MockRM rm;
   static private CapacitySchedulerConfiguration csConf;
   static private YarnConfiguration conf;
@@ -277,7 +280,14 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
     nm2.registerNode();
 
     try {
-      RMApp app1 = rm.submitApp(1024, "app1", "user1", null, QUEUE_B, LABEL_LX);
+      RMApp app1 = MockRMAppSubmitter.submit(rm,
+          MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
+              .withAppName("app1")
+              .withUser("user1")
+              .withAcls(null)
+              .withQueue(QUEUE_B)
+              .withAmLabel(LABEL_LX)
+              .build());
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
       am1.allocate(Arrays.asList(
           ResourceRequest.newBuilder().priority(Priority.UNDEFINED)
@@ -301,7 +311,8 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
       verifyNumberOfAllocations(schedulerActivitiesJson, 1);
       // verify queue Qb
       Predicate<JSONObject> findQueueBPred =
-          (obj) -> obj.optString(FN_SCHEDULER_ACT_NAME).equals(QUEUE_B);
+          (obj) -> obj.optString(FN_SCHEDULER_ACT_NAME)
+              .equals(CapacitySchedulerConfiguration.ROOT + DOT + QUEUE_B);
       List<JSONObject> queueBObj = ActivitiesTestUtils.findInAllocations(
           getFirstSubNodeFromJson(schedulerActivitiesJson,
               FN_SCHEDULER_ACT_ROOT, FN_ACT_ALLOCATIONS), findQueueBPred);
@@ -313,7 +324,8 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
           queueBObj.get(0).optString(FN_ACT_DIAGNOSTIC));
       // verify queue Qa
       Predicate<JSONObject> findQueueAPred =
-          (obj) -> obj.optString(FN_SCHEDULER_ACT_NAME).equals(QUEUE_A);
+          (obj) -> obj.optString(FN_SCHEDULER_ACT_NAME)
+              .equals(CapacitySchedulerConfiguration.ROOT + DOT + QUEUE_A);
       List<JSONObject> queueAObj = ActivitiesTestUtils.findInAllocations(
           getFirstSubNodeFromJson(schedulerActivitiesJson,
               FN_SCHEDULER_ACT_ROOT, FN_ACT_ALLOCATIONS), findQueueAPred);
@@ -325,7 +337,8 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
           queueAObj.get(0).optString(FN_ACT_DIAGNOSTIC));
       // verify queue Qc
       Predicate<JSONObject> findQueueCPred =
-          (obj) -> obj.optString(FN_SCHEDULER_ACT_NAME).equals(QUEUE_C);
+          (obj) -> obj.optString(FN_SCHEDULER_ACT_NAME)
+              .equals(CapacitySchedulerConfiguration.ROOT + DOT + QUEUE_C);
       List<JSONObject> queueCObj = ActivitiesTestUtils.findInAllocations(
           getFirstSubNodeFromJson(schedulerActivitiesJson,
               FN_SCHEDULER_ACT_ROOT, FN_ACT_ALLOCATIONS), findQueueCPred);
@@ -563,7 +576,7 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
     JSONObject info = json.getJSONObject("scheduler");
     assertEquals("incorrect number of elements", 1, info.length());
     info = info.getJSONObject("schedulerInfo");
-    assertEquals("incorrect number of elements", 8, info.length());
+    assertEquals("incorrect number of elements", 12, info.length());
     JSONObject capacitiesJsonObject = info.getJSONObject(CAPACITIES);
     JSONArray partitionsCapsArray =
         capacitiesJsonObject.getJSONArray(QUEUE_CAPACITIES_BY_PARTITION);

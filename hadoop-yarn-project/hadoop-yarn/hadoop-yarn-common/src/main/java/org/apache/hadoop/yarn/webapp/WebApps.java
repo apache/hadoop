@@ -42,6 +42,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.http.RestCsrfPreventionFilter;
 import org.apache.hadoop.security.http.XFrameOptionsFilter;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.eclipse.jetty.webapp.WebAppContext;
@@ -104,6 +105,7 @@ public class WebApps {
     private String xfsConfigPrefix;
     private final HashSet<ServletStruct> servlets = new HashSet<ServletStruct>();
     private final HashMap<String, Object> attributes = new HashMap<String, Object>();
+    private ApplicationClientProtocol appClientProtocol;
 
     Builder(String name, Class<T> api, T application, String wsName) {
       this.name = name;
@@ -229,6 +231,12 @@ public class WebApps {
 
     public Builder<T> inDevMode() {
       devMode = true;
+      return this;
+    }
+
+    public Builder<T> withAppClientProtocol(
+        ApplicationClientProtocol appClientProto) {
+      this.appClientProtocol = appClientProto;
       return this;
     }
 
@@ -401,7 +409,6 @@ public class WebApps {
 
         webapp.setConf(conf);
         webapp.setHttpServer(server);
-
       } catch (ClassNotFoundException e) {
         throw new WebAppException("Error starting http server", e);
       } catch (IOException e) {
@@ -412,6 +419,9 @@ public class WebApps {
         protected void configure() {
           if (api != null) {
             bind(api).toInstance(application);
+          }
+          if (appClientProtocol != null) {
+            bind(ApplicationClientProtocol.class).toInstance(appClientProtocol);
           }
         }
       });

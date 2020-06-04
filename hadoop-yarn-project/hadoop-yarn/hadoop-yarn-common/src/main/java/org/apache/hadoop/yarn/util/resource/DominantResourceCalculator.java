@@ -432,10 +432,14 @@ public class DominantResourceCalculator extends ResourceCalculator {
 
   @Override
   public Resource divideAndCeil(Resource numerator, float denominator) {
-    return Resources.createResource(
-        divideAndCeil(numerator.getMemorySize(), denominator),
-        divideAndCeil(numerator.getVirtualCores(), denominator)
-        );
+    Resource ret = Resource.newInstance(numerator);
+    int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
+    for (int i = 0; i < maxLength; i++) {
+      ResourceInformation resourceInformation = ret.getResourceInformation(i);
+      resourceInformation
+          .setValue(divideAndCeil(resourceInformation.getValue(), denominator));
+    }
+    return ret;
   }
 
   @Override

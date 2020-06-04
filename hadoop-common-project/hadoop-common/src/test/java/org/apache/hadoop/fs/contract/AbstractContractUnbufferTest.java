@@ -18,12 +18,13 @@
 
 package org.apache.hadoop.fs.contract;
 
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.Path;
-
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.Arrays;
+
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.Path;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
@@ -34,21 +35,22 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 public abstract class AbstractContractUnbufferTest extends AbstractFSContractTestBase {
 
   private Path file;
+  private byte[] fileBytes;
 
   @Override
   public void setup() throws Exception {
     super.setup();
     skipIfUnsupported(SUPPORTS_UNBUFFER);
     file = path("unbufferFile");
-    createFile(getFileSystem(), file, true,
-            dataset(TEST_FILE_LEN, 0, 255));
+    fileBytes = dataset(TEST_FILE_LEN, 0, 255);
+    createFile(getFileSystem(), file, true, fileBytes);
   }
 
   @Test
   public void testUnbufferAfterRead() throws IOException {
     describe("unbuffer a file after a single read");
     try (FSDataInputStream stream = getFileSystem().open(file)) {
-      assertEquals(128, stream.read(new byte[128]));
+      validateFullFileContents(stream);
       unbuffer(stream);
     }
   }
@@ -58,15 +60,14 @@ public abstract class AbstractContractUnbufferTest extends AbstractFSContractTes
     describe("unbuffer a file before a read");
     try (FSDataInputStream stream = getFileSystem().open(file)) {
       unbuffer(stream);
-      assertEquals(128, stream.read(new byte[128]));
+      validateFullFileContents(stream);
     }
   }
 
   @Test
   public void testUnbufferEmptyFile() throws IOException {
     Path emptyFile = path("emptyUnbufferFile");
-    createFile(getFileSystem(), emptyFile, true,
-            dataset(TEST_FILE_LEN, 0, 255));
+    getFileSystem().create(emptyFile, true).close();
     describe("unbuffer an empty file");
     try (FSDataInputStream stream = getFileSystem().open(emptyFile)) {
       unbuffer(stream);
@@ -79,13 +80,15 @@ public abstract class AbstractContractUnbufferTest extends AbstractFSContractTes
     FSDataInputStream stream = null;
     try {
       stream = getFileSystem().open(file);
-      assertEquals(128, stream.read(new byte[128]));
+      validateFullFileContents(stream);
     } finally {
       if (stream != null) {
         stream.close();
       }
     }
-    unbuffer(stream);
+    if (stream != null) {
+      unbuffer(stream);
+    }
   }
 
   @Test
@@ -94,32 +97,58 @@ public abstract class AbstractContractUnbufferTest extends AbstractFSContractTes
     try (FSDataInputStream stream = getFileSystem().open(file)) {
       unbuffer(stream);
       unbuffer(stream);
-      assertEquals(128, stream.read(new byte[128]));
+      validateFullFileContents(stream);
       unbuffer(stream);
       unbuffer(stream);
     }
   }
 
-   @Test
+  @Test
   public void testUnbufferMultipleReads() throws IOException {
     describe("unbuffer a file multiple times");
     try (FSDataInputStream stream = getFileSystem().open(file)) {
       unbuffer(stream);
-      assertEquals(128, stream.read(new byte[128]));
+      validateFileContents(stream, TEST_FILE_LEN / 8, 0);
       unbuffer(stream);
-      assertEquals(128, stream.read(new byte[128]));
-      assertEquals(128, stream.read(new byte[128]));
+      validateFileContents(stream, TEST_FILE_LEN / 8, TEST_FILE_LEN / 8);
+      validateFileContents(stream, TEST_FILE_LEN / 4, TEST_FILE_LEN / 4);
       unbuffer(stream);
-      assertEquals(128, stream.read(new byte[128]));
-      assertEquals(128, stream.read(new byte[128]));
-      assertEquals(128, stream.read(new byte[128]));
+      validateFileContents(stream, TEST_FILE_LEN / 2, TEST_FILE_LEN / 2);
       unbuffer(stream);
+      assertEquals("stream should be at end of file", TEST_FILE_LEN,
+              stream.getPos());
     }
   }
 
   private void unbuffer(FSDataInputStream stream) throws IOException {
     long pos = stream.getPos();
     stream.unbuffer();
-    assertEquals(pos, stream.getPos());
+    assertEquals("unbuffer unexpectedly changed the stream position", pos,
+            stream.getPos());
+  }
+
+  protected void validateFullFileContents(FSDataInputStream stream)
+          throws IOException {
+    validateFileContents(stream, TEST_FILE_LEN, 0);
+  }
+
+  protected void validateFileContents(FSDataInputStream stream, int length,
+                                      int startIndex)
+          throws IOException {
+    byte[] streamData = new byte[length];
+    assertEquals("failed to read expected number of bytes from "
+            + "stream", length, stream.read(streamData));
+    byte[] validateFileBytes;
+    if (startIndex == 0 && length == fileBytes.length) {
+      validateFileBytes = fileBytes;
+    } else {
+      validateFileBytes = Arrays.copyOfRange(fileBytes, startIndex,
+              startIndex + length);
+    }
+    assertArrayEquals("invalid file contents", validateFileBytes, streamData);
+  }
+
+  protected Path getFile() {
+    return file;
   }
 }

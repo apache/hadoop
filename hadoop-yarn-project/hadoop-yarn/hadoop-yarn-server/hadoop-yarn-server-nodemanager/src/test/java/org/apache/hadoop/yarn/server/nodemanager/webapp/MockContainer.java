@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ResourceMappings;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceSet;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 
 import java.io.IOException;
@@ -276,6 +277,16 @@ public class MockContainer implements Container {
 
   @Override
   public List<LocalizationStatus> getLocalizationStatuses() {
+    return null;
+  }
+
+  @Override
+  public void setContainerRuntimeData(Object containerRuntimeData) {
+  }
+
+  @Override
+  public <T> T getContainerRuntimeData(Class<T> runtimeClazz)
+      throws ContainerExecutionException {
     return null;
   }
 }

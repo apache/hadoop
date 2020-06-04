@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.WebApps.Builder;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+import org.apache.hadoop.yarn.webapp.util.WebServiceClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,8 +68,10 @@ public class Router extends CompositeService {
   private Configuration conf;
   private AtomicBoolean isStopping = new AtomicBoolean(false);
   private JvmPauseMonitor pauseMonitor;
-  private RouterClientRMService clientRMProxyService;
-  private RouterRMAdminService rmAdminProxyService;
+  @VisibleForTesting
+  protected RouterClientRMService clientRMProxyService;
+  @VisibleForTesting
+  protected RouterRMAdminService rmAdminProxyService;
   private WebApp webApp;
   @VisibleForTesting
   protected String webAppAddress;
@@ -108,6 +111,7 @@ public class Router extends CompositeService {
     addService(pauseMonitor);
     jm.setPauseMonitor(pauseMonitor);
 
+    WebServiceClient.initialize(config);
     super.serviceInit(conf);
   }
 
@@ -132,6 +136,7 @@ public class Router extends CompositeService {
     }
     super.serviceStop();
     DefaultMetricsSystem.shutdown();
+    WebServiceClient.destroy();
   }
 
   protected void shutDown() {

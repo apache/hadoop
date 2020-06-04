@@ -75,6 +75,7 @@ public abstract class AbstractS3AMockTest {
     conf.setBoolean(CommitConstants.MAGIC_COMMITTER_ENABLED, true);
     // use minimum multipart size for faster triggering
     conf.setLong(Constants.MULTIPART_SIZE, MULTIPART_MIN_SIZE);
+    conf.setInt(Constants.S3A_BUCKET_PROBE, 1);
     return conf;
   }
 

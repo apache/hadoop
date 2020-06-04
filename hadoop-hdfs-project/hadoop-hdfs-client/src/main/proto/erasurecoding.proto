@@ -89,6 +89,14 @@ message UnsetErasureCodingPolicyRequestProto {
 message UnsetErasureCodingPolicyResponseProto {
 }
 
+message GetECTopologyResultForPoliciesRequestProto {
+  repeated string policies = 1;
+}
+
+message GetECTopologyResultForPoliciesResponseProto {
+  required ECTopologyVerifierResultProto response = 1;
+}
+
 /**
  * Block erasure coding reconstruction info
  */

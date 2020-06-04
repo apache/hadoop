@@ -155,12 +155,14 @@ public class MockResolver
     return Collections.unmodifiableList(new ArrayList<>(namenodes));
   }
 
+  @SuppressWarnings("checkstyle:ParameterNumber")
   private static class MockNamenodeContext
       implements FederationNamenodeContext {
 
     private String namenodeId;
     private String nameserviceId;
 
+    private String webScheme;
     private String webAddress;
     private String rpcAddress;
     private String serviceAddress;
@@ -170,11 +172,12 @@ public class MockResolver
     private long dateModified;
 
     MockNamenodeContext(
-        String rpc, String service, String lifeline, String web,
+        String rpc, String service, String lifeline, String scheme, String web,
         String ns, String nn, FederationNamenodeServiceState state) {
       this.rpcAddress = rpc;
       this.serviceAddress = service;
       this.lifelineAddress = lifeline;
+      this.webScheme = scheme;
       this.webAddress = web;
       this.namenodeId = nn;
       this.nameserviceId = ns;
@@ -200,6 +203,11 @@ public class MockResolver
     @Override
     public String getLifelineAddress() {
       return lifelineAddress;
+    }
+
+    @Override
+    public String getWebScheme() {
+      return webScheme;
     }
 
     @Override
@@ -242,8 +250,9 @@ public class MockResolver
 
     MockNamenodeContext context = new MockNamenodeContext(
         report.getRpcAddress(), report.getServiceAddress(),
-        report.getLifelineAddress(), report.getWebAddress(),
-        report.getNameserviceId(), report.getNamenodeId(), report.getState());
+        report.getLifelineAddress(), report.getWebScheme(),
+        report.getWebAddress(), report.getNameserviceId(),
+        report.getNamenodeId(), report.getState());
 
     String nsId = report.getNameserviceId();
     String bpId = report.getBlockPoolId();
@@ -318,16 +327,30 @@ public class MockResolver
 
   @Override
   public List<String> getMountPoints(String path) throws IOException {
-    // Mounts only supported under root level
-    if (!path.equals("/")) {
-      return null;
-    }
     List<String> mounts = new ArrayList<>();
-    for (String mount : this.locations.keySet()) {
-      if (mount.length() > 1) {
-        // Remove leading slash, this is the behavior of the mount tree,
-        // return only names.
-        mounts.add(mount.replace("/", ""));
+    // for root path search, returning all downstream root level mapping
+    if (path.equals("/")) {
+      // Mounts only supported under root level
+      for (String mount : this.locations.keySet()) {
+        if (mount.length() > 1) {
+          // Remove leading slash, this is the behavior of the mount tree,
+          // return only names.
+          mounts.add(mount.replace("/", ""));
+        }
+      }
+    } else {
+      // a simplified version of MountTableResolver implementation
+      for (String key : this.locations.keySet()) {
+        if (key.startsWith(path)) {
+          String child = key.substring(path.length());
+          if (child.length() > 0) {
+            // only take children so remove parent path and /
+            mounts.add(key.substring(path.length()+1));
+          }
+        }
+      }
+      if (mounts.size() == 0) {
+        mounts = null;
       }
     }
     return mounts;

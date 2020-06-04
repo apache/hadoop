@@ -26,7 +26,7 @@ import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProtoOrBuilder;
 import org.apache.hadoop.yarn.api.records.Token;
 
-import com.google.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 @Private
 @Unstable

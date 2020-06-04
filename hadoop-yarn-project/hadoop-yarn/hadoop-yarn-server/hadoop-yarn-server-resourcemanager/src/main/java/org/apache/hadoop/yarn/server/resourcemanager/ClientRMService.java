@@ -610,6 +610,8 @@ public class ClientRMService extends AbstractService implements
       throw RPCUtil.getRemoteException(ie);
     }
 
+    checkTags(submissionContext.getApplicationTags());
+
     if (timelineServiceV2Enabled) {
       // Sanity check for flow run
       String value = null;
@@ -752,6 +754,31 @@ public class ClientRMService extends AbstractService implements
     return response;
   }
 
+  private void checkTags(Set<String> tags) throws YarnException {
+    int appMaxTags = getConfig().getInt(
+        YarnConfiguration.RM_APPLICATION_MAX_TAGS,
+        YarnConfiguration.DEFAULT_RM_APPLICATION_MAX_TAGS);
+    int appMaxTagLength = getConfig().getInt(
+        YarnConfiguration.RM_APPLICATION_MAX_TAG_LENGTH,
+        YarnConfiguration.DEFAULT_RM_APPLICATION_MAX_TAG_LENGTH);
+    if (tags.size() > appMaxTags) {
+      throw RPCUtil.getRemoteException(new IllegalArgumentException(
+          "Too many applicationTags, a maximum of only " + appMaxTags
+              + " are allowed!"));
+    }
+    for (String tag : tags) {
+      if (tag.length() > appMaxTagLength) {
+        throw RPCUtil.getRemoteException(
+            new IllegalArgumentException("Tag " + tag + " is too long, "
+                + "maximum allowed length of a tag is " + appMaxTagLength));
+      }
+      if (!org.apache.commons.lang3.StringUtils.isAsciiPrintable(tag)) {
+        throw RPCUtil.getRemoteException(new IllegalArgumentException(
+            "A tag can only have ASCII " + "characters! Invalid tag - " + tag));
+      }
+    }
+  }
+
   @SuppressWarnings("unchecked")
   @Override
   public KillApplicationResponse forceKillApplication(
@@ -865,6 +892,7 @@ public class ClientRMService extends AbstractService implements
     Range<Long> start = request.getStartRange();
     Range<Long> finish = request.getFinishRange();
     ApplicationsRequestScope scope = request.getScope();
+    String name = request.getName();
 
     final Map<ApplicationId, RMApp> apps = rmContext.getRMApps();
     Iterator<RMApp> appsIter = apps.values().iterator();
@@ -940,6 +968,10 @@ public class ClientRMService extends AbstractService implements
       // Given RM is configured to display apps per user, skip apps to which
       // this caller doesn't have access to view.
       if (filterAppsByUser && !allowAccess) {
+        continue;
+      }
+
+      if (name != null && !name.equals(application.getName())) {
         continue;
       }
 

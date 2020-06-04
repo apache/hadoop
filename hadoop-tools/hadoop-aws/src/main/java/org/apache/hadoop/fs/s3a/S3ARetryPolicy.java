@@ -188,6 +188,7 @@ public class S3ARetryPolicy implements RetryPolicy {
     policyMap.put(AccessDeniedException.class, fail);
     policyMap.put(NoAuthWithAWSException.class, fail);
     policyMap.put(FileNotFoundException.class, fail);
+    policyMap.put(UnknownStoreException.class, fail);
     policyMap.put(InvalidRequestException.class, fail);
 
     // metadata stores should do retries internally when it makes sense

@@ -33,6 +33,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -280,5 +281,58 @@ public class TestNamenodeResolver {
     stateStore.refreshCaches(true);
     verifyFirstRegistration(NAMESERVICES[0], NAMENODES[1], 3,
         FederationNamenodeServiceState.STANDBY);
+  }
+
+  @Test
+  public void testCacheUpdateOnNamenodeStateUpdate() throws IOException {
+    // Create a namenode initially registering in standby state.
+    assertTrue(namenodeResolver.registerNamenode(
+        createNamenodeReport(NAMESERVICES[0], NAMENODES[0],
+            HAServiceState.STANDBY)));
+    stateStore.refreshCaches(true);
+    // Check whether the namenpde state is reported correct as standby.
+    FederationNamenodeContext namenode =
+        namenodeResolver.getNamenodesForNameserviceId(NAMESERVICES[0]).get(0);
+    assertEquals(FederationNamenodeServiceState.STANDBY, namenode.getState());
+    String rpcAddr = namenode.getRpcAddress();
+    InetSocketAddress inetAddr = getInetSocketAddress(rpcAddr);
+
+    // If the namenode state changes and it serves request,
+    // RouterRpcClient calls updateActiveNamenode to update the state to active,
+    // Check whether correct updated state is returned post update.
+    namenodeResolver.updateActiveNamenode(NAMESERVICES[0], inetAddr);
+    FederationNamenodeContext namenode1 =
+        namenodeResolver.getNamenodesForNameserviceId(NAMESERVICES[0]).get(0);
+    assertEquals("The namenode state should be ACTIVE post update.",
+        FederationNamenodeServiceState.ACTIVE, namenode1.getState());
+  }
+
+  @Test
+  public void testCacheUpdateOnNamenodeStateUpdateWithIp()
+      throws IOException {
+    final String rpcAddress = "127.0.0.1:10000";
+    assertTrue(namenodeResolver.registerNamenode(
+        createNamenodeReport(NAMESERVICES[0], NAMENODES[0], rpcAddress,
+            HAServiceState.STANDBY)));
+    stateStore.refreshCaches(true);
+
+    InetSocketAddress inetAddr = getInetSocketAddress(rpcAddress);
+    namenodeResolver.updateActiveNamenode(NAMESERVICES[0], inetAddr);
+    FederationNamenodeContext namenode =
+        namenodeResolver.getNamenodesForNameserviceId(NAMESERVICES[0]).get(0);
+    assertEquals("The namenode state should be ACTIVE post update.",
+        FederationNamenodeServiceState.ACTIVE, namenode.getState());
+  }
+
+  /**
+   * Creates InetSocketAddress from the given RPC address.
+   * @param rpcAddr RPC address (host:port).
+   * @return InetSocketAddress corresponding to the specified RPC address.
+   */
+  private static InetSocketAddress getInetSocketAddress(String rpcAddr) {
+    String[] rpcAddrArr = rpcAddr.split(":");
+    int port = Integer.parseInt(rpcAddrArr[1]);
+    String hostname = rpcAddrArr[0];
+    return new InetSocketAddress(hostname, port);
   }
 }

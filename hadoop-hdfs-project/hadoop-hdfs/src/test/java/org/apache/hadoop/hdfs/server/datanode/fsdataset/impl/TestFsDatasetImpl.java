@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 
+import java.io.FileInputStream;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import org.apache.commons.io.FileUtils;
@@ -113,6 +115,7 @@ public class TestFsDatasetImpl {
   Logger LOG = LoggerFactory.getLogger(TestFsDatasetImpl.class);
   private static final String BASE_DIR =
       new FileSystemTestHelper().getTestRootDir();
+  private String replicaCacheRootDir = BASE_DIR + Path.SEPARATOR + "cache";
   private static final int NUM_INIT_VOLUMES = 2;
   private static final String CLUSTER_ID = "cluser-id";
   private static final String[] BLOCK_POOL_IDS = {"bpid-0", "bpid-1"};
@@ -172,6 +175,8 @@ public class TestFsDatasetImpl {
     storage = mock(DataStorage.class);
     this.conf = new Configuration();
     this.conf.setLong(DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, 0);
+    this.conf.set(DFSConfigKeys.DFS_DATANODE_REPLICA_CACHE_ROOT_DIR_KEY,
+        replicaCacheRootDir);
 
     when(datanode.getConf()).thenReturn(conf);
     final DNConf dnConf = new DNConf(datanode);
@@ -950,4 +955,72 @@ public class TestFsDatasetImpl {
     }
   }
 
+  @Test(timeout=30000)
+  public void testDataDirWithPercent() throws IOException {
+    String baseDir = new FileSystemTestHelper().getTestRootDir();
+    File dataDir = new File(baseDir, "invalidFormatString-%z");
+    dataDir.mkdirs();
+    FsVolumeImpl volumeFixed = new FsVolumeImplBuilder()
+        .setConf(new HdfsConfiguration())
+        .setDataset(dataset)
+        .setStorageID("storage-id")
+        .setStorageDirectory(
+            new StorageDirectory(StorageLocation.parse(dataDir.getPath())))
+        .build();
+  }
+
+  @Test
+  public void testReplicaCacheFileToOtherPlace() throws IOException {
+    final String bpid = "bpid-0";
+    for (int i = 0; i < 5; i++) {
+      ExtendedBlock eb = new ExtendedBlock(bpid, i);
+      dataset.createRbw(StorageType.DEFAULT, null, eb, false);
+    }
+    List<File> cacheFiles = new ArrayList<>();
+    for (FsVolumeSpi vol: dataset.getFsVolumeReferences()) {
+      BlockPoolSlice bpSlice = ((FsVolumeImpl)vol).getBlockPoolSlice(bpid);
+      File cacheFile = new File(replicaCacheRootDir + Path.SEPARATOR +
+          bpSlice.getDirectory().getCanonicalPath() + Path.SEPARATOR +
+          DataStorage.STORAGE_DIR_CURRENT + Path.SEPARATOR + "replicas");
+      cacheFiles.add(cacheFile);
+    }
+    dataset.shutdownBlockPool(bpid);
+    for (File f : cacheFiles) {
+      assertTrue(f.exists());
+    }
+  }
+
+  @Test
+  public void testGetMetadataLengthOfFinalizedReplica() throws IOException {
+    FsVolumeImpl fsv1 = Mockito.mock(FsVolumeImpl.class);
+    File blockDir = new File(BASE_DIR,"testFinalizedReplica/block");
+    if (!blockDir.exists()) {
+      assertTrue(blockDir.mkdirs());
+    }
+    long blockID = 1;
+    long genStamp = 2;
+    File metaFile = new File(blockDir,Block.BLOCK_FILE_PREFIX +
+        blockID + "_" + genStamp + Block.METADATA_EXTENSION);
+
+    // create meta file on disk
+    OutputStream os = new FileOutputStream(metaFile);
+    os.write("TEST_META_SIZE".getBytes());
+    os.close();
+    long fileLength = metaFile.length();
+
+    ReplicaInfo replica = new FinalizedReplica(
+        blockID, 2, genStamp, fsv1, blockDir);
+
+    long metaLength = replica.getMetadataLength();
+    assertEquals(fileLength, metaLength);
+
+    // Delete the meta file on disks, make sure we still can get the length
+    // from cached meta size.
+    metaFile.delete();
+    metaLength = replica.getMetadataLength();
+    assertEquals(fileLength, metaLength);
+    if (!blockDir.exists()) {
+      assertTrue(blockDir.delete());
+    }
+  }
 }

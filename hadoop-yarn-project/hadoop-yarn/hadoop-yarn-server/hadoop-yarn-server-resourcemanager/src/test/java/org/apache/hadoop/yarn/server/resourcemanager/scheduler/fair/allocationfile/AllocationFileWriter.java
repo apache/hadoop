@@ -16,12 +16,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocationfile;
 
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Supplier;
 
 /**
  * This class is capable of serializing allocation file data to a file
@@ -29,6 +27,10 @@ import java.util.function.Supplier;
  * See {@link #writeToFile(String)} method for the implementation.
  */
 public final class AllocationFileWriter {
+  private static final String DRF = "drf";
+  private static final String FAIR = "fair";
+  private static final String FIFO = "fifo";
+
   private Integer queueMaxAppsDefault;
   private String queueMaxResourcesDefault;
   private Integer userMaxAppsDefault;
@@ -39,6 +41,10 @@ public final class AllocationFileWriter {
   private String defaultQueueSchedulingPolicy;
   private List<AllocationFileQueue> queues = new ArrayList<>();
   private UserSettings userSettings;
+  private boolean useLegacyTagNameForQueues = false;
+  private String reservationAgent;
+  private String reservationPolicy;
+  private AllocationFileQueuePlacementPolicy queuePlacementPolicy;
 
   private AllocationFileWriter() {
   }
@@ -47,8 +53,9 @@ public final class AllocationFileWriter {
     return new AllocationFileWriter();
   }
 
-  public AllocationFileSimpleQueueBuilder queue(String queueName) {
-    return new AllocationFileSimpleQueueBuilder(this, queueName);
+  public AllocationFileWriter addQueue(AllocationFileQueue queue) {
+    queues.add(queue);
+    return this;
   }
 
   public AllocationFileWriter queueMaxAppsDefault(int value) {
@@ -71,6 +78,11 @@ public final class AllocationFileWriter {
     return this;
   }
 
+  public AllocationFileWriter disableQueueMaxAMShareDefault() {
+    this.queueMaxAMShareDefault = -1.0d;
+    return this;
+  }
+
   public AllocationFileWriter defaultMinSharePreemptionTimeout(int value) {
     this.defaultMinSharePreemptionTimeout = value;
     return this;
@@ -87,26 +99,57 @@ public final class AllocationFileWriter {
     return this;
   }
 
-  public AllocationFileWriter defaultQueueSchedulingPolicy(String value) {
-    this.defaultQueueSchedulingPolicy = value;
+  public AllocationFileWriter drfDefaultQueueSchedulingPolicy() {
+    this.defaultQueueSchedulingPolicy = DRF;
     return this;
   }
 
-  public UserSettings.Builder userSettings(String username) {
-    return new UserSettings.Builder(this, username);
+  public AllocationFileWriter fairDefaultQueueSchedulingPolicy() {
+    this.defaultQueueSchedulingPolicy = FAIR;
+    return this;
   }
 
-  void addQueue(AllocationFileQueue queue) {
-    this.queues.add(queue);
+  public AllocationFileWriter fifoDefaultQueueSchedulingPolicy() {
+    this.defaultQueueSchedulingPolicy = FIFO;
+    return this;
   }
 
-  void setUserSettings(UserSettings userSettings) {
-    this.userSettings = userSettings;
+  public AllocationFileWriter useLegacyTagNameForQueues() {
+    this.useLegacyTagNameForQueues = true;
+    return this;
   }
 
-  static void printQueues(PrintWriter pw, List<AllocationFileQueue> queues) {
+  public AllocationFileWriter reservationAgent(String value) {
+    this.reservationAgent = value;
+    return this;
+  }
+
+  public AllocationFileWriter reservationPolicy(String value) {
+    this.reservationPolicy = value;
+    return this;
+  }
+
+  public AllocationFileWriter userSettings(UserSettings settings) {
+    this.userSettings = settings;
+    return this;
+  }
+
+  public AllocationFileWriter queuePlacementPolicy(
+      AllocationFileQueuePlacementPolicy policy) {
+    this.queuePlacementPolicy = policy;
+    return this;
+  }
+
+  static void printQueues(PrintWriter pw, List<AllocationFileQueue> queues,
+      boolean useLegacyTagName) {
     for (AllocationFileQueue queue : queues) {
-      pw.println(queue.render());
+      final String queueStr;
+      if (useLegacyTagName) {
+        queueStr = queue.renderWithLegacyTag();
+      } else {
+        queueStr = queue.render();
+      }
+      pw.println(queueStr);
     }
   }
 
@@ -114,22 +157,18 @@ public final class AllocationFileWriter {
     pw.println(userSettings.render());
   }
 
-  static void addIfPresent(PrintWriter pw, String tag,
-      Supplier<String> supplier) {
-    if (supplier.get() != null) {
-      pw.println("<" + tag + ">" + supplier.get() + "</" + tag + ">");
-    }
+  private void printQueuePlacementPolicy(PrintWriter pw) {
+    pw.println(queuePlacementPolicy.render());
   }
 
-  static String createNumberSupplier(Object number) {
-    if (number != null) {
-      return number.toString();
+  static void addIfPresent(PrintWriter pw, String tag, Object obj) {
+    if (obj != null) {
+      pw.println("<" + tag + ">" + obj.toString() + "</" + tag + ">");
     }
-    return null;
   }
 
   private void writeHeader(PrintWriter pw) {
-    pw.println("<?xml version=\"1.0\"?>");
+    pw.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
     pw.println("<allocations>");
   }
 
@@ -140,34 +179,37 @@ public final class AllocationFileWriter {
   public void writeToFile(String filename) {
     PrintWriter pw;
     try {
-      pw = new PrintWriter(new FileWriter(filename));
+      pw = new PrintWriter(filename, "UTF-8");
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
     writeHeader(pw);
     if (!queues.isEmpty()) {
-      printQueues(pw, queues);
+      printQueues(pw, queues, useLegacyTagNameForQueues);
     }
     if (userSettings != null) {
       printUserSettings(pw);
     }
 
-    addIfPresent(pw, "queueMaxAppsDefault",
-        () -> createNumberSupplier(queueMaxAppsDefault));
-    addIfPresent(pw, "queueMaxResourcesDefault",
-        () -> queueMaxResourcesDefault);
-    addIfPresent(pw, "userMaxAppsDefault",
-        () -> createNumberSupplier(userMaxAppsDefault));
-    addIfPresent(pw, "queueMaxAMShareDefault",
-        () -> createNumberSupplier(queueMaxAMShareDefault));
+    if (queuePlacementPolicy != null) {
+      printQueuePlacementPolicy(pw);
+    }
+
+    addIfPresent(pw, "queueMaxAppsDefault", queueMaxAppsDefault);
+    addIfPresent(pw, "queueMaxResourcesDefault", queueMaxResourcesDefault);
+    addIfPresent(pw, "userMaxAppsDefault", userMaxAppsDefault);
+    addIfPresent(pw, "queueMaxAMShareDefault", queueMaxAMShareDefault);
     addIfPresent(pw, "defaultMinSharePreemptionTimeout",
-        () -> createNumberSupplier(defaultMinSharePreemptionTimeout));
+        defaultMinSharePreemptionTimeout);
     addIfPresent(pw, "defaultFairSharePreemptionTimeout",
-        () -> createNumberSupplier(defaultFairSharePreemptionTimeout));
+        defaultFairSharePreemptionTimeout);
     addIfPresent(pw, "defaultFairSharePreemptionThreshold",
-        () -> createNumberSupplier(defaultFairSharePreemptionThreshold));
+        defaultFairSharePreemptionThreshold);
     addIfPresent(pw, "defaultQueueSchedulingPolicy",
-        () -> defaultQueueSchedulingPolicy);
+        defaultQueueSchedulingPolicy);
+    addIfPresent(pw, "reservation-agent", reservationAgent);
+    addIfPresent(pw, "reservation-policy", reservationPolicy);
+
     writeFooter(pw);
     pw.close();
   }

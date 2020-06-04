@@ -20,6 +20,9 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import java.io.File;
 import java.io.IOException;
@@ -53,6 +56,8 @@ import com.google.common.collect.Sets;
  */
 @RunWith(MockitoJUnitRunner.class)
 public class TestFSQueueConverter {
+  private static final float MAX_AM_SHARE_DEFAULT = 0.16f;
+  private static final int MAX_APPS_DEFAULT = 15;
   private static final Resource CLUSTER_RESOURCE =
       Resource.newInstance(16384, 16);
   private final static Set<String> ALL_QUEUES =
@@ -74,10 +79,13 @@ public class TestFSQueueConverter {
   }
 
   private FSQueueConverter converter;
-  private Configuration config;
+  private Configuration yarnConfig;
   private Configuration csConfig;
   private FairScheduler fs;
   private FSQueue rootQueue;
+  private ConversionOptions conversionOptions;
+  private DryRunResultHolder dryRunResultHolder;
+  private FSQueueConverterBuilder builder;
 
   @Mock
   private FSConfigToCSConfigRuleHandler ruleHandler;
@@ -87,14 +95,18 @@ public class TestFSQueueConverter {
 
   @Before
   public void setup() {
-    config = new Configuration(false);
-    config.set(FairSchedulerConfiguration.ALLOCATION_FILE, FAIR_SCHEDULER_XML);
-    config.setBoolean(FairSchedulerConfiguration.MIGRATION_MODE, true);
+    yarnConfig = new Configuration(false);
+    yarnConfig.set(FairSchedulerConfiguration.ALLOCATION_FILE,
+        FAIR_SCHEDULER_XML);
+    yarnConfig.setBoolean(FairSchedulerConfiguration.MIGRATION_MODE, true);
     csConfig = new Configuration(false);
+    dryRunResultHolder = new DryRunResultHolder();
+    conversionOptions =
+        new ConversionOptions(dryRunResultHolder, false);
 
     fs = createFairScheduler();
+    createBuilder();
 
-    createConverter();
     rootQueue = fs.getQueueManager().getRootQueue();
   }
 
@@ -112,24 +124,28 @@ public class TestFSQueueConverter {
 
     FairScheduler fairScheduler = new FairScheduler();
     fairScheduler.setRMContext(ctx);
-    fairScheduler.init(config);
+    fairScheduler.init(yarnConfig);
 
     return fairScheduler;
   }
 
-  private void createConverter() {
-    converter = new FSQueueConverter(ruleHandler,
-        csConfig,
-        false,
-        false,
-        false,
-        CLUSTER_RESOURCE,
-        0.16f,
-        15);
+  private void createBuilder() {
+    builder = FSQueueConverterBuilder.create()
+        .withRuleHandler(ruleHandler)
+        .withCapacitySchedulerConfig(csConfig)
+        .withPreemptionEnabled(false)
+        .withSizeBasedWeight(false)
+        .withAutoCreateChildQueues(false)
+        .withClusterResource(CLUSTER_RESOURCE)
+        .withQueueMaxAMShareDefault(MAX_AM_SHARE_DEFAULT)
+        .withQueueMaxAppsDefault(MAX_APPS_DEFAULT)
+        .withConversionOptions(conversionOptions);
   }
 
   @Test
   public void testConvertQueueHierarchy() {
+    converter = builder.build();
+
     converter.convertQueueHierarchy(rootQueue);
 
     // root children
@@ -158,24 +174,9 @@ public class TestFSQueueConverter {
   }
 
   @Test
-  public void testConvertQueueHierarchyWithSameLeafQueues() throws Exception {
-    expectedException.expect(ConversionException.class);
-    expectedException.expectMessage("Leaf queues must be unique");
-
-    String absolutePath =
-        new File("src/test/resources/fair-scheduler-sameleafqueue.xml")
-          .getAbsolutePath();
-    config.set(FairSchedulerConfiguration.ALLOCATION_FILE,
-        FILE_PREFIX + absolutePath);
-    fs.close();
-    fs = createFairScheduler();
-    rootQueue = fs.getQueueManager().getRootQueue();
-
-    converter.convertQueueHierarchy(rootQueue);
-  }
-
-  @Test
   public void testQueueMaxAMShare() {
+    converter = builder.build();
+
     converter.convertQueueHierarchy(rootQueue);
 
     // root.admins.bob
@@ -195,6 +196,8 @@ public class TestFSQueueConverter {
 
   @Test
   public void testQueueMaxRunningApps() {
+    converter = builder.build();
+
     converter.convertQueueHierarchy(rootQueue);
 
     assertEquals("root.admins.alice max apps", 2,
@@ -208,6 +211,8 @@ public class TestFSQueueConverter {
 
   @Test
   public void testQueueMaxAllocations() {
+    converter = builder.build();
+
     converter.convertQueueHierarchy(rootQueue);
 
     // root.admins vcores + mb
@@ -231,14 +236,7 @@ public class TestFSQueueConverter {
 
   @Test
   public void testQueuePreemptionDisabled() {
-    converter = new FSQueueConverter(ruleHandler,
-        csConfig,
-        true,
-        false,
-        false,
-        CLUSTER_RESOURCE,
-        0.16f,
-        15);
+    converter = builder.withPreemptionEnabled(true).build();
 
     converter.convertQueueHierarchy(rootQueue);
 
@@ -256,6 +254,8 @@ public class TestFSQueueConverter {
 
   @Test
   public void testQueuePreemptionDisabledWhenGlobalPreemptionDisabled() {
+    converter = builder.build();
+
     converter.convertQueueHierarchy(rootQueue);
 
     assertNoValueForQueues(ALL_QUEUES, ".disable_preemption", csConfig);
@@ -263,6 +263,8 @@ public class TestFSQueueConverter {
 
   @Test
   public void testChildCapacity() {
+    converter = builder.build();
+
     converter.convertQueueHierarchy(rootQueue);
 
     // root
@@ -270,7 +272,7 @@ public class TestFSQueueConverter {
         csConfig.get(PREFIX + "root.default.capacity"));
     assertEquals("root.admins capacity", "33.333",
         csConfig.get(PREFIX + "root.admins.capacity"));
-    assertEquals("root.users capacity", "66.667",
+    assertEquals("root.users capacity", "33.334",
         csConfig.get(PREFIX + "root.users.capacity"));
 
     // root.users
@@ -288,51 +290,65 @@ public class TestFSQueueConverter {
 
   @Test
   public void testQueueMaximumCapacity() {
+    converter = builder.build();
+
     converter.convertQueueHierarchy(rootQueue);
 
-    assertEquals("root.users.joe maximum capacity", "[memory=8192, vcores=8]",
-        csConfig.get(PREFIX + "root.users.joe.maximum-capacity"));
-    assertEquals("root.admins.bob maximum capacity", "[memory=8192, vcores=2]",
-        csConfig.get(PREFIX + "root.admins.bob.maximum-capacity"));
-    assertEquals("root.admins.alice maximum capacity",
-        "[memory=16384, vcores=4]",
-        csConfig.get(PREFIX + "root.admins.alice.maximum-capacity"));
+    assertValueForQueues(ALL_QUEUES, ".maximum-capacity", csConfig, "100");
+    verify(ruleHandler, times(3)).handleMaxResources();
+  }
 
-    Set<String> remaining = Sets.difference(ALL_QUEUES,
-        Sets.newHashSet("root.users.joe",
-            "root.admins.bob",
-            "root.admins.alice"));
-    assertNoValueForQueues(remaining, ".maximum-capacity", csConfig);
+  @Test
+  public void testQueueMinimumCapacity() {
+    converter = builder.build();
+
+    converter.convertQueueHierarchy(rootQueue);
+
+    verify(ruleHandler, times(2)).handleMinResources();
   }
 
   @Test
   public void testQueueAutoCreateChildQueue() {
-    config.setBoolean(FairSchedulerConfiguration.ALLOW_UNDECLARED_POOLS, true);
-    converter = new FSQueueConverter(ruleHandler,
-        csConfig,
-        false,
-        false,
-        true,
-        CLUSTER_RESOURCE,
-        0.16f,
-        15);
+    converter = builder
+        .withCapacitySchedulerConfig(csConfig)
+        .withAutoCreateChildQueues(true)
+        .build();
 
     converter.convertQueueHierarchy(rootQueue);
 
-    assertTrueForQueues(ALL_QUEUES, ".auto-create-child-queue.enabled",
+    Set<String> parentQueues = Sets.newHashSet(
+        "root.admins",
+        "root.users");
+
+    Set<String> leafQueues = Sets.newHashSet(
+        "root.default",
+        "root.admins.alice",
+        "root.admins.bob",
+        "root.users.joe",
+        "root.users.john");
+
+    assertTrueForQueues(parentQueues, ".auto-create-child-queue.enabled",
+        csConfig);
+    assertNoValueForQueues(leafQueues, ".auto-create-child-queue.enabled",
+        csConfig);
+  }
+
+  @Test
+  public void testQueueWithNoAutoCreateChildQueue() {
+    converter = builder
+        .withCapacitySchedulerConfig(csConfig)
+        .withAutoCreateChildQueues(false)
+        .build();
+
+    converter.convertQueueHierarchy(rootQueue);
+
+    assertNoValueForQueues(ALL_QUEUES, ".auto-create-child-queue.enabled",
         csConfig);
   }
 
   @Test
   public void testQueueSizeBasedWeightEnabled() {
-    converter = new FSQueueConverter(ruleHandler,
-        csConfig,
-        false,
-        true,
-        false,
-        CLUSTER_RESOURCE,
-        0.16f,
-        15);
+    converter = builder.withSizeBasedWeight(true).build();
 
     converter.convertQueueHierarchy(rootQueue);
 
@@ -342,6 +358,8 @@ public class TestFSQueueConverter {
 
   @Test
   public void testQueueSizeBasedWeightDisabled() {
+    converter = builder.build();
+
     converter.convertQueueHierarchy(rootQueue);
 
     assertNoValueForQueues(ALL_QUEUES,
@@ -350,10 +368,11 @@ public class TestFSQueueConverter {
 
   @Test
   public void testQueueOrderingPolicy() throws Exception {
+    converter = builder.build();
     String absolutePath =
         new File("src/test/resources/fair-scheduler-orderingpolicy.xml")
           .getAbsolutePath();
-    config.set(FairSchedulerConfiguration.ALLOCATION_FILE,
+    yarnConfig.set(FairSchedulerConfiguration.ALLOCATION_FILE,
         FILE_PREFIX + absolutePath);
     fs.close();
     fs = createFairScheduler();
@@ -362,30 +381,48 @@ public class TestFSQueueConverter {
     converter.convertQueueHierarchy(rootQueue);
 
     // root
-    assertEquals("root ordering policy", "fair",
+    assertEquals("root ordering policy", null,
         csConfig.get(PREFIX + "root.ordering-policy"));
     assertEquals("root.default ordering policy", "fair",
         csConfig.get(PREFIX + "root.default.ordering-policy"));
-    assertEquals("root.admins ordering policy", "fair",
+    assertEquals("root.admins ordering policy", null,
         csConfig.get(PREFIX + "root.admins.ordering-policy"));
-    assertEquals("root.users ordering policy", "fair",
+    assertEquals("root.users ordering policy", null,
         csConfig.get(PREFIX + "root.users.ordering-policy"));
 
     // root.users
     assertEquals("root.users.joe ordering policy", "fair",
         csConfig.get(PREFIX + "root.users.joe.ordering-policy"));
-    assertEquals("root.users.john ordering policy", "FIFO",
+    assertEquals("root.users.john ordering policy", "fifo",
         csConfig.get(PREFIX + "root.users.john.ordering-policy"));
 
     // root.admins
-    assertEquals("root.admins.alice ordering policy", "FIFO",
+    assertEquals("root.admins.alice ordering policy", "fifo",
         csConfig.get(PREFIX + "root.admins.alice.ordering-policy"));
     assertEquals("root.admins.bob ordering policy", "fair",
         csConfig.get(PREFIX + "root.admins.bob.ordering-policy"));
   }
 
   @Test
+  public void testQueueUnsupportedMixedOrderingPolicy() throws IOException {
+    converter = builder.withDrfUsed(true).build();
+    String absolutePath =
+        new File("src/test/resources/fair-scheduler-orderingpolicy-mixed.xml")
+          .getAbsolutePath();
+    yarnConfig.set(FairSchedulerConfiguration.ALLOCATION_FILE,
+        FILE_PREFIX + absolutePath);
+    fs.close();
+    fs = createFairScheduler();
+    rootQueue = fs.getQueueManager().getRootQueue();
+
+    converter.convertQueueHierarchy(rootQueue);
+
+    verify(ruleHandler, times(5)).handleFairAsDrf(anyString());
+  }
+
+  @Test
   public void testQueueMaxChildCapacityNotSupported() {
+    converter = builder.build();
     expectedException.expect(UnsupportedPropertyException.class);
     expectedException.expectMessage("test");
 
@@ -397,12 +434,14 @@ public class TestFSQueueConverter {
 
   @Test
   public void testReservationSystemNotSupported() {
+    converter = builder.build();
     expectedException.expect(UnsupportedPropertyException.class);
     expectedException.expectMessage("maxCapacity");
 
     Mockito.doThrow(new UnsupportedPropertyException("maxCapacity"))
       .when(ruleHandler).handleMaxChildCapacity();
-    config.setBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE, true);
+    yarnConfig.setBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE,
+        true);
 
     converter.convertQueueHierarchy(rootQueue);
   }
@@ -413,6 +452,15 @@ public class TestFSQueueConverter {
       String key = PREFIX + queue + postfix;
       assertNull("Key " + key + " has value, but it should be null",
           config.get(key));
+    }
+  }
+
+  private void assertValueForQueues(Set<String> queues, String postfix,
+      Configuration config, String expectedValue) {
+    for (String queue : queues) {
+      String key = PREFIX + queue + postfix;
+      assertEquals("Key " + key + " has different value",
+          expectedValue, config.get(key));
     }
   }
 

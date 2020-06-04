@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .SchedulerDynamicEditException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common
@@ -67,6 +68,22 @@ public class AbstractAutoCreatedLeafQueue extends LeafQueue {
      setEntitlement(NO_LABEL, entitlement);
   }
 
+  @Override
+  protected Resource getMinimumAbsoluteResource(String queuePath,
+      String label) {
+    return super.getMinimumAbsoluteResource(csContext.getConfiguration()
+        .getAutoCreatedQueueTemplateConfPrefix(this.getParent().getQueuePath()),
+        label);
+  }
+
+  @Override
+  protected Resource getMaximumAbsoluteResource(String queuePath,
+      String label) {
+    return super.getMaximumAbsoluteResource(csContext.getConfiguration()
+        .getAutoCreatedQueueTemplateConfPrefix(this.getParent().getQueuePath()),
+        label);
+  }
+
   /**
    * This methods to change capacity for a queue and adjusts its
    * absoluteCapacity
@@ -93,7 +110,7 @@ public class AbstractAutoCreatedLeafQueue extends LeafQueue {
       // this might be revised later
       setMaxCapacity(nodeLabel, entitlement.getMaxCapacity());
       LOG.debug("successfully changed to {} for queue {}", capacity, this
-            .getQueueName());
+            .getQueuePath());
 
       //update queue used capacity etc
       CSQueueUtils.updateQueueStatistics(resourceCalculator,

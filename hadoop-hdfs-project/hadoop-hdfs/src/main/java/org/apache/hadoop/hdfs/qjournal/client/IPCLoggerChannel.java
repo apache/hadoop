@@ -28,6 +28,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -55,7 +56,6 @@ import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.StopWatch;
-import org.apache.hadoop.util.concurrent.HadoopThreadPoolExecutor;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -275,12 +275,15 @@ public class IPCLoggerChannel implements AsyncLogger {
     int numThreads =
         conf.getInt(DFSConfigKeys.DFS_QJOURNAL_PARALLEL_READ_NUM_THREADS_KEY,
             DFSConfigKeys.DFS_QJOURNAL_PARALLEL_READ_NUM_THREADS_DEFAULT);
-    return new HadoopThreadPoolExecutor(1, numThreads, 60L,
-        TimeUnit.SECONDS, new LinkedBlockingQueue<>(),
+    ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(numThreads,
+        numThreads, 60L, TimeUnit.SECONDS,
+        new LinkedBlockingQueue<>(),
         new ThreadFactoryBuilder().setDaemon(true)
             .setNameFormat("Logger channel (from parallel executor) to " + addr)
             .setUncaughtExceptionHandler(UncaughtExceptionHandlers.systemExit())
             .build());
+    threadPoolExecutor.allowCoreThreadTimeOut(true);
+    return threadPoolExecutor;
   }
   
   @Override

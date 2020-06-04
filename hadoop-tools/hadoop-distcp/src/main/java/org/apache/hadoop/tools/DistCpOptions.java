@@ -172,7 +172,8 @@ public final class DistCpOptions {
     CHECKSUMTYPE,   // C
     ACL,            // A
     XATTR,          // X
-    TIMES;          // T
+    TIMES,          // T
+    ERASURECODINGPOLICY; // E
 
     public static FileAttribute getAttribute(char symbol) {
       for (FileAttribute attribute : values()) {

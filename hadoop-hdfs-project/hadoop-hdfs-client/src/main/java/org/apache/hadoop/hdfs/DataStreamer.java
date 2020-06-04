@@ -1184,7 +1184,7 @@ class DataStreamer extends Daemon {
 
             one.releaseBuffer(byteArrayManager);
           }
-        } catch (Exception e) {
+        } catch (Throwable e) {
           if (!responderClosed) {
             lastException.set(e);
             errorState.setInternalError();
@@ -1788,7 +1788,7 @@ class DataStreamer extends Daemon {
         restartingNodes.clear();
       } catch (IOException ie) {
         if (!errorState.isRestartingNode()) {
-          LOG.info("Exception in createBlockOutputStream " + this, ie);
+          LOG.warn("Exception in createBlockOutputStream " + this, ie);
         }
         if (ie instanceof InvalidEncryptionKeyException &&
             refetchEncryptionKey > 0) {

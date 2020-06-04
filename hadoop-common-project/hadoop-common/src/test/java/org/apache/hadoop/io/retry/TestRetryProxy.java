@@ -377,4 +377,23 @@ public class TestRetryProxy {
       assertEquals(RetryDecision.FAIL, caughtRetryAction.action);
     }
   }
+
+  @Test
+  public void testWrappedAccessControlException() throws Exception {
+    RetryPolicy policy = mock(RetryPolicy.class);
+    RetryPolicy realPolicy = RetryPolicies.failoverOnNetworkException(5);
+    setupMockPolicy(policy, realPolicy);
+
+    UnreliableInterface unreliable = (UnreliableInterface) RetryProxy.create(
+        UnreliableInterface.class, unreliableImpl, policy);
+
+    try {
+      unreliable.failsWithWrappedAccessControlException();
+      fail("Should fail");
+    } catch (IOException expected) {
+      verify(policy, times(1)).shouldRetry(any(Exception.class), anyInt(),
+          anyInt(), anyBoolean());
+      assertEquals(RetryDecision.FAIL, caughtRetryAction.action);
+    }
+  }
 }

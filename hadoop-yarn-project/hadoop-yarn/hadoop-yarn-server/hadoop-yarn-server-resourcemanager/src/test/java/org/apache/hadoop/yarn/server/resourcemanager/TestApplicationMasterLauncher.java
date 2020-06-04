@@ -230,7 +230,7 @@ public class TestApplicationMasterLauncher {
     rm.start();
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 5120);
 
-    RMApp app = rm.submitApp(2000);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(2000, rm);
 
     // kick the scheduling
     nm1.nodeHeartbeat(true);
@@ -289,7 +289,7 @@ public class TestApplicationMasterLauncher {
     MockRM rm = new MockRM();
     rm.start();
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 5120);
-    RMApp app = rm.submitApp(2000);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(2000, rm);
     // kick the scheduling
     nm1.nodeHeartbeat(true);
     RMAppAttempt attempt = app.getCurrentAppAttempt();
@@ -365,7 +365,7 @@ public class TestApplicationMasterLauncher {
     rm.start();
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 5120);
 
-    RMApp app = rm.submitApp(2000);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(2000, rm);
 
     // kick the scheduling
     nm1.nodeHeartbeat(true);
@@ -385,7 +385,7 @@ public class TestApplicationMasterLauncher {
     MockRM rm = new MockRM();
     rm.start();
     MockNM nm1 = rm.registerNode("h1:1234", 5000);
-    RMApp app = rm.submitApp(2000);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(2000, rm);
     // kick the scheduling
     nm1.nodeHeartbeat(true);
     RMAppAttempt attempt = app.getCurrentAppAttempt();
@@ -458,7 +458,7 @@ public class TestApplicationMasterLauncher {
     MockRM rm = new MockRM(conf);
     rm.start();
     MockNM nm1 = rm.registerNode("h1:1234", 5000);
-    RMApp app = rm.submitApp(2000);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(2000, rm);
     /// kick the scheduling
     nm1.nodeHeartbeat(true);
     RMAppAttempt attempt = app.getCurrentAppAttempt();

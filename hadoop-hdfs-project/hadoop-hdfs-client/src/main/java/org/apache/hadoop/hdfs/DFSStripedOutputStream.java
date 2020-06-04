@@ -283,6 +283,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
   private ExecutorService flushAllExecutor;
   private CompletionService<Void> flushAllExecutorCompletionService;
   private int blockGroupIndex;
+  private long datanodeRestartTimeout;
 
   /** Construct a new output stream for creating a file. */
   DFSStripedOutputStream(DFSClient dfsClient, String src, HdfsFileStatus stat,
@@ -322,6 +323,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
       streamers.add(streamer);
     }
     currentPackets = new DFSPacket[streamers.size()];
+    datanodeRestartTimeout = dfsClient.getConf().getDatanodeRestartTimeout();
     setCurrentStreamer(0);
   }
 
@@ -404,11 +406,19 @@ public class DFSStripedOutputStream extends DFSOutputStream
       LOG.debug("newly failed streamers: " + newFailed);
     }
     if (failCount > (numAllBlocks - numDataBlocks)) {
+      closeAllStreamers();
       throw new IOException("Failed: the number of failed blocks = "
           + failCount + " > the number of parity blocks = "
           + (numAllBlocks - numDataBlocks));
     }
     return newFailed;
+  }
+
+  private void closeAllStreamers() {
+    // The write has failed, Close all the streamers.
+    for (StripedDataStreamer streamer : streamers) {
+      streamer.close(true);
+    }
   }
 
   private void handleCurrentStreamerFailure(String err, Exception e)
@@ -572,7 +582,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
         // if this is the end of the block group, end each internal block
         if (shouldEndBlockGroup()) {
           flushAllInternals();
-          checkStreamerFailures();
+          checkStreamerFailures(false);
           for (int i = 0; i < numAllBlocks; i++) {
             final StripedDataStreamer s = setCurrentStreamer(i);
             if (s.isHealthy()) {
@@ -583,7 +593,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
           }
         } else {
           // check failure state for all the streamers. Bump GS if necessary
-          checkStreamerFailures();
+          checkStreamerFailures(true);
         }
       }
       setCurrentStreamer(next);
@@ -629,6 +639,11 @@ public class DFSStripedOutputStream extends DFSOutputStream
             "streamer: " + streamer);
         streamer.setExternalError();
         healthySet.add(streamer);
+      } else if (!streamer.streamerClosed()
+          && streamer.getErrorState().hasDatanodeError()
+          && streamer.getErrorState().doWaitForRestart()) {
+        healthySet.add(streamer);
+        failedStreamers.remove(streamer);
       }
     }
     return healthySet;
@@ -639,15 +654,18 @@ public class DFSStripedOutputStream extends DFSOutputStream
    * written a full stripe (i.e., enqueue all packets for a full stripe), or
    * when we're closing the outputstream.
    */
-  private void checkStreamerFailures() throws IOException {
+  private void checkStreamerFailures(boolean isNeedFlushAllPackets)
+      throws IOException {
     Set<StripedDataStreamer> newFailed = checkStreamers();
     if (newFailed.size() == 0) {
       return;
     }
 
-    // for healthy streamers, wait till all of them have fetched the new block
-    // and flushed out all the enqueued packets.
-    flushAllInternals();
+    if (isNeedFlushAllPackets) {
+      // for healthy streamers, wait till all of them have fetched the new block
+      // and flushed out all the enqueued packets.
+      flushAllInternals();
+    }
     // recheck failed streamers again after the flush
     newFailed = checkStreamers();
     while (newFailed.size() > 0) {
@@ -667,6 +685,8 @@ public class DFSStripedOutputStream extends DFSOutputStream
       newFailed = waitCreatingStreamers(healthySet);
       if (newFailed.size() + failedStreamers.size() >
           numAllBlocks - numDataBlocks) {
+        // The write has failed, Close all the streamers.
+        closeAllStreamers();
         throw new IOException(
             "Data streamers failed while creating new block streams: "
                 + newFailed + ". There are not enough healthy streamers.");
@@ -687,6 +707,14 @@ public class DFSStripedOutputStream extends DFSOutputStream
       }
       for (int i = 0; i < numAllBlocks; i++) {
         coordinator.offerStreamerUpdateResult(i, newFailed.size() == 0);
+      }
+      //wait for get notify to failed stream
+      if (newFailed.size() != 0) {
+        try {
+          Thread.sleep(datanodeRestartTimeout);
+        } catch (InterruptedException e) {
+          // Do nothing
+        }
       }
     }
   }
@@ -1166,32 +1194,32 @@ public class DFSStripedOutputStream extends DFSOutputStream
 
   @Override
   protected synchronized void closeImpl() throws IOException {
-    if (isClosed()) {
-      exceptionLastSeen.check(true);
-
-      // Writing to at least {dataUnits} replicas can be considered as success,
-      // and the rest of data can be recovered.
-      final int minReplication = ecPolicy.getNumDataUnits();
-      int goodStreamers = 0;
-      final MultipleIOException.Builder b = new MultipleIOException.Builder();
-      for (final StripedDataStreamer si : streamers) {
-        try {
-          si.getLastException().check(true);
-          goodStreamers++;
-        } catch (IOException e) {
-          b.add(e);
-        }
-      }
-      if (goodStreamers < minReplication) {
-        final IOException ioe = b.build();
-        if (ioe != null) {
-          throw ioe;
-        }
-      }
-      return;
-    }
-
     try {
+      if (isClosed()) {
+        exceptionLastSeen.check(true);
+
+        // Writing to at least {dataUnits} replicas can be considered as
+        //  success, and the rest of data can be recovered.
+        final int minReplication = ecPolicy.getNumDataUnits();
+        int goodStreamers = 0;
+        final MultipleIOException.Builder b = new MultipleIOException.Builder();
+        for (final StripedDataStreamer si : streamers) {
+          try {
+            si.getLastException().check(true);
+            goodStreamers++;
+          } catch (IOException e) {
+            b.add(e);
+          }
+        }
+        if (goodStreamers < minReplication) {
+          final IOException ioe = b.build();
+          if (ioe != null) {
+            throw ioe;
+          }
+        }
+        return;
+      }
+
       try {
         // flush from all upper layers
         flushBuffer();
@@ -1204,7 +1232,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
         // flush all the data packets
         flushAllInternals();
         // check failures
-        checkStreamerFailures();
+        checkStreamerFailures(false);
 
         for (int i = 0; i < numAllBlocks; i++) {
           final StripedDataStreamer s = setCurrentStreamer(i);

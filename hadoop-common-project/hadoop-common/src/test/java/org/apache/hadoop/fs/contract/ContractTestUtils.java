@@ -418,8 +418,9 @@ public class ContractTestUtils extends Assert {
   public static void rename(FileSystem fileSystem, Path src, Path dst)
       throws IOException {
     rejectRootOperation(src, false);
-    assertTrue(fileSystem.rename(src, dst));
-    assertPathDoesNotExist(fileSystem, "renamed", src);
+    assertTrue("rename(" + src + ", " + dst + ") failed",
+        fileSystem.rename(src, dst));
+    assertPathDoesNotExist(fileSystem, "renamed source dir", src);
   }
 
   /**

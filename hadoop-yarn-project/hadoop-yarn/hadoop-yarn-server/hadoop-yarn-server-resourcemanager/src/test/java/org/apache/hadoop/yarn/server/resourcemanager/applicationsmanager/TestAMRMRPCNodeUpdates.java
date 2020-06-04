@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager;
 import java.security.PrivilegedExceptionAction;
 import java.util.List;
 
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
@@ -112,7 +113,7 @@ public class TestAMRMRPCNodeUpdates {
     MockNM nm2 = rm.registerNode("127.0.0.2:1234", 10000);
     rm.drainEvents();
 
-    RMApp app1 = rm.submitApp(2000);
+    RMApp app1 = MockRMAppSubmitter.submitWithMemory(2000, rm);
 
     // Trigger the scheduling so the AM gets 'launched' on nm1
     nm1.nodeHeartbeat(true);
@@ -148,7 +149,7 @@ public class TestAMRMRPCNodeUpdates {
     MockNM nm4 = rm.registerNode("127.0.0.4:1234", 10000);
     rm.drainEvents();
 
-    RMApp app1 = rm.submitApp(2000);
+    RMApp app1 = MockRMAppSubmitter.submitWithMemory(2000, rm);
 
     // Trigger the scheduling so the AM gets 'launched' on nm1
     nm1.nodeHeartbeat(true);
@@ -208,7 +209,7 @@ public class TestAMRMRPCNodeUpdates {
     Assert.assertEquals(NodeUpdateType.NODE_UNUSABLE, nr.getNodeUpdateType());
         
     // registering another AM gives it the complete failed list
-    RMApp app2 = rm.submitApp(2000);
+    RMApp app2 = MockRMAppSubmitter.submitWithMemory(2000, rm);
     // Trigger nm2 heartbeat so that AM gets launched on it
     nm2.nodeHeartbeat(true);
     RMAppAttempt attempt2 = app2.getCurrentAppAttempt();

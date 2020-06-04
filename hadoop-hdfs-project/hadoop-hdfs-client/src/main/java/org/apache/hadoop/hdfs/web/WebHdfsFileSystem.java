@@ -1331,6 +1331,8 @@ public class WebHdfsFileSystem extends FileSystem
 
   @Override
   public void satisfyStoragePolicy(final Path p) throws IOException {
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.SATISFY_STORAGE_POLICY);
     final HttpOpParam.Op op = PutOpParam.Op.SATISFYSTORAGEPOLICY;
     new FsPathRunner(op, p).run();
   }
@@ -1420,6 +1422,7 @@ public class WebHdfsFileSystem extends FileSystem
 
   public SnapshotDiffReport getSnapshotDiffReport(final Path snapshotDir,
       final String fromSnapshot, final String toSnapshot) throws IOException {
+    statistics.incrementReadOps(1);
     storageStatistics.incrementOpCounter(OpType.GET_SNAPSHOT_DIFF);
     final HttpOpParam.Op op = GetOpParam.Op.GETSNAPSHOTDIFF;
     return new FsPathResponseRunner<SnapshotDiffReport>(op, snapshotDir,
@@ -1434,6 +1437,7 @@ public class WebHdfsFileSystem extends FileSystem
 
   public SnapshottableDirectoryStatus[] getSnapshottableDirectoryList()
       throws IOException {
+    statistics.incrementReadOps(1);
     storageStatistics
         .incrementOpCounter(OpType.GET_SNAPSHOTTABLE_DIRECTORY_LIST);
     final HttpOpParam.Op op = GetOpParam.Op.GETSNAPSHOTTABLEDIRECTORYLIST;
@@ -1995,6 +1999,8 @@ public class WebHdfsFileSystem extends FileSystem
   @Override
   public Collection<BlockStoragePolicy> getAllStoragePolicies()
       throws IOException {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_STORAGE_POLICIES);
     final HttpOpParam.Op op = GetOpParam.Op.GETALLSTORAGEPOLICY;
     return new FsPathResponseRunner<Collection<BlockStoragePolicy>>(op, null) {
       @Override
@@ -2007,6 +2013,8 @@ public class WebHdfsFileSystem extends FileSystem
 
   @Override
   public BlockStoragePolicy getStoragePolicy(Path src) throws IOException {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_STORAGE_POLICY);
     final HttpOpParam.Op op = GetOpParam.Op.GETSTORAGEPOLICY;
     return new FsPathResponseRunner<BlockStoragePolicy>(op, src) {
       @Override

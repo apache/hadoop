@@ -201,7 +201,7 @@ public class DistributedOpportunisticContainerAllocator
     // * Rack local candidates selected in loop == 1
     // * From loop == 2 onwards, we revert to off switch allocations.
     int loopIndex = OFF_SWITCH_LOOP;
-    if (enrichedAsk.getNodeLocations().size() > 0) {
+    if (enrichedAsk.getNodeMap().size() > 0) {
       loopIndex = NODE_LOCAL_LOOP;
     }
     while (numAllocated < toAllocate) {
@@ -218,7 +218,7 @@ public class DistributedOpportunisticContainerAllocator
         }
         String location = ResourceRequest.ANY;
         if (loopIndex == NODE_LOCAL_LOOP) {
-          if (enrichedAsk.getNodeLocations().contains(rNodeHost)) {
+          if (enrichedAsk.getNodeMap().containsKey(rNodeHost)) {
             location = rNodeHost;
           } else {
             continue;
@@ -229,7 +229,8 @@ public class DistributedOpportunisticContainerAllocator
           continue;
         }
         if (loopIndex == RACK_LOCAL_LOOP) {
-          if (enrichedAsk.getRackLocations().contains(rNode.getRackName())) {
+          if (enrichedAsk.getRackMap().containsKey(
+              rNode.getRackName())) {
             location = rNode.getRackName();
           } else {
             continue;
@@ -248,7 +249,7 @@ public class DistributedOpportunisticContainerAllocator
         }
       }
       if (loopIndex == NODE_LOCAL_LOOP &&
-          enrichedAsk.getRackLocations().size() > 0) {
+          enrichedAsk.getRackMap().size() > 0) {
         loopIndex = RACK_LOCAL_LOOP;
       } else {
         loopIndex++;
@@ -318,7 +319,7 @@ public class DistributedOpportunisticContainerAllocator
     String partition = getRequestPartition(enrichedRR);
     for (RemoteNode rNode : allNodes.values()) {
       if (StringUtils.equals(partition, getRemoteNodePartition(rNode)) &&
-          enrichedRR.getRackLocations().contains(rNode.getRackName())) {
+          enrichedRR.getRackMap().containsKey(rNode.getRackName())) {
         String rHost = rNode.getNodeId().getHost();
         if (blackList.contains(rHost)) {
           continue;
@@ -341,7 +342,7 @@ public class DistributedOpportunisticContainerAllocator
       EnrichedResourceRequest enrichedRR, List<RemoteNode> retList,
       int numContainers) {
     String partition = getRequestPartition(enrichedRR);
-    for (String nodeName : enrichedRR.getNodeLocations()) {
+    for (String nodeName : enrichedRR.getNodeMap().keySet()) {
       RemoteNode remoteNode = allNodes.get(nodeName);
       if (remoteNode != null &&
           StringUtils.equals(partition, getRemoteNodePartition(remoteNode))) {

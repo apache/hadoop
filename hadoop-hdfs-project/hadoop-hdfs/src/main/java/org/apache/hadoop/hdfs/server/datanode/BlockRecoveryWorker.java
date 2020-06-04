@@ -467,7 +467,7 @@ public class BlockRecoveryWorker {
       // notify Namenode the new size and locations
       final DatanodeID[] newLocs = new DatanodeID[totalBlkNum];
       final String[] newStorages = new String[totalBlkNum];
-      for (int i = 0; i < totalBlkNum; i++) {
+      for (int i = 0; i < blockIndices.length; i++) {
         newLocs[blockIndices[i]] = DatanodeID.EMPTY_DATANODE_ID;
         newStorages[blockIndices[i]] = "";
       }
@@ -600,17 +600,22 @@ public class BlockRecoveryWorker {
     Daemon d = new Daemon(datanode.threadGroup, new Runnable() {
       @Override
       public void run() {
-        for(RecoveringBlock b : blocks) {
-          try {
-            logRecoverBlock(who, b);
-            if (b.isStriped()) {
-              new RecoveryTaskStriped((RecoveringStripedBlock) b).recover();
-            } else {
-              new RecoveryTaskContiguous(b).recover();
+        datanode.metrics.incrDataNodeBlockRecoveryWorkerCount();
+        try {
+          for (RecoveringBlock b : blocks) {
+            try {
+              logRecoverBlock(who, b);
+              if (b.isStriped()) {
+                new RecoveryTaskStriped((RecoveringStripedBlock) b).recover();
+              } else {
+                new RecoveryTaskContiguous(b).recover();
+              }
+            } catch (IOException e) {
+              LOG.warn("recover Block: {} FAILED: {}", b, e);
             }
-          } catch (IOException e) {
-            LOG.warn("recoverBlocks FAILED: " + b, e);
           }
+        } finally {
+          datanode.metrics.decrDataNodeBlockRecoveryWorkerCount();
         }
       }
     });

@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -52,6 +53,8 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntr
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -89,6 +92,7 @@ public class TestRouterMountTable {
         .admin()
         .rpc()
         .build();
+    conf.setInt(RBFConfigKeys.DFS_ROUTER_ADMIN_MAX_COMPONENT_LENGTH_KEY, 20);
     cluster.addRouterOverrides(conf);
     cluster.startCluster();
     cluster.startRouters();
@@ -186,6 +190,55 @@ public class TestRouterMountTable {
     mountTable.loadCache(true);
 
     return addResponse.getStatus();
+  }
+
+  /**
+   * Update a mount table entry to the mount table through the admin API.
+   * @param entry Mount table entry to update.
+   * @return If it was successfully update.
+   * @throws IOException Problems adding entries.
+   */
+  private boolean updateMountTable(final MountTable entry) throws IOException {
+    RouterClient client = routerContext.getAdminClient();
+    MountTableManager mountTableManager = client.getMountTableManager();
+    UpdateMountTableEntryRequest updateRequest =
+        UpdateMountTableEntryRequest.newInstance(entry);
+    UpdateMountTableEntryResponse updateResponse =
+        mountTableManager.updateMountTableEntry(updateRequest);
+
+    // Reload the Router cache
+    mountTable.loadCache(true);
+
+    return updateResponse.getStatus();
+  }
+
+  /**
+   * Verify that the maximum number of bytes in each component of a
+   * destination path.
+   */
+  @Test
+  public void testMountPointLimit() throws Exception {
+    // Add mount table entry
+    MountTable addEntry = MountTable.newInstance("/testdir-shortlength",
+        Collections.singletonMap("ns0", "/testdir-shortlength"));
+    assertTrue(addMountTable(addEntry));
+
+    final MountTable longAddEntry = MountTable.newInstance(
+        "/testdir-verylonglength",
+        Collections.singletonMap("ns0", "/testdir-verylonglength"));
+    LambdaTestUtils.intercept(IOException.class,
+        "The maximum path component name limit of testdir-verylonglength in "
+            + "directory /testdir-verylonglength is exceeded",
+        () -> addMountTable(longAddEntry));
+
+    final MountTable updateEntry = MountTable.newInstance(
+        "/testdir-shortlength",
+        Collections.singletonMap("ns0", "/testdir-shortlength-change-to-long"));
+    LambdaTestUtils.intercept(IOException.class,
+        "The maximum path component name limit of " +
+            "testdir-shortlength-change-to-long in directory " +
+            "/testdir-shortlength-change-to-long is exceeded",
+        () -> updateMountTable(updateEntry));
   }
 
   /**
@@ -661,6 +714,22 @@ public class TestRouterMountTable {
     } finally {
       nnFs0.delete(new Path("/testrename1"), true);
       nnFs0.delete(new Path("/testrename2"), true);
+    }
+  }
+
+  @Test
+  public void testListStatusMountPoint() throws Exception {
+    try {
+      MountTable addEntry = MountTable.newInstance("/mount/testLsMountEntry",
+          Collections.singletonMap("ns0", "/testLsMountEntryDest"));
+      assertTrue(addMountTable(addEntry));
+      nnFs0.mkdirs(new Path("/testLsMountEntryDest"));
+      DistributedFileSystem routerDfs = (DistributedFileSystem) routerFs;
+      Path mountPath = new Path("/mount/testLsMountEntry");
+      routerDfs.setErasureCodingPolicy(mountPath, "RS-6-3-1024k");
+      assertTrue(routerDfs.listStatus(new Path("/mount"))[0].isErasureCoded());
+    } finally {
+      nnFs0.delete(new Path("/testLsMountEntryDest"), true);
     }
   }
 }

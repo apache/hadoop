@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.security.ssl;
 
+import static org.apache.hadoop.security.ssl.KeyStoreTestUtil.TRUST_STORE_PASSWORD_DEFAULT;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
@@ -407,7 +408,7 @@ public class TestSSLFactory {
     String keystore = new File(KEYSTORES_DIR, "keystore.jks").getAbsolutePath();
     String truststore = new File(KEYSTORES_DIR, "truststore.jks")
       .getAbsolutePath();
-    String trustPassword = "trustP";
+    String trustPassword = TRUST_STORE_PASSWORD_DEFAULT;
 
     // Create keys, certs, keystore, and truststore.
     KeyPair keyPair = KeyStoreTestUtil.generateKeyPair("RSA");
@@ -433,7 +434,7 @@ public class TestSSLFactory {
     if (mode == SSLFactory.Mode.SERVER) {
       sslConfFileName = "ssl-server.xml";
       sslConf = KeyStoreTestUtil.createServerSSLConfig(keystore, confPassword,
-        confKeyPassword, truststore);
+        confKeyPassword, truststore, trustPassword);
       if (useCredProvider) {
         File testDir = GenericTestUtils.getTestDir();
         final Path jksPath = new Path(testDir.toString(), "test.jks");
@@ -444,7 +445,7 @@ public class TestSSLFactory {
     } else {
       sslConfFileName = "ssl-client.xml";
       sslConf = KeyStoreTestUtil.createClientSSLConfig(keystore, confPassword,
-        confKeyPassword, truststore);
+        confKeyPassword, truststore, trustPassword);
     }
     KeyStoreTestUtil.saveConfig(new File(sslConfsDir, sslConfFileName), sslConf);
 

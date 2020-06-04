@@ -449,22 +449,12 @@ class FSDirStatAndListingOp {
     int childrenNum = node.isDirectory() ?
         node.asDirectory().getChildrenNum(snapshot) : 0;
 
-    EnumSet<HdfsFileStatus.Flags> flags =
-        EnumSet.noneOf(HdfsFileStatus.Flags.class);
     INodeAttributes nodeAttrs = fsd.getAttributes(iip);
     boolean hasAcl = nodeAttrs.getAclFeature() != null;
-    if (hasAcl) {
-      flags.add(HdfsFileStatus.Flags.HAS_ACL);
-    }
-    if (isEncrypted) {
-      flags.add(HdfsFileStatus.Flags.HAS_CRYPT);
-    }
-    if (isErasureCoded) {
-      flags.add(HdfsFileStatus.Flags.HAS_EC);
-    }
-    if(isSnapShottable){
-      flags.add(HdfsFileStatus.Flags.SNAPSHOT_ENABLED);
-    }
+
+    EnumSet<HdfsFileStatus.Flags> flags =
+        DFSUtil.getFlags(isEncrypted, isErasureCoded, isSnapShottable, hasAcl);
+
     return createFileStatus(
         size,
         node.isDirectory(),

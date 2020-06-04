@@ -18,36 +18,53 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import com.google.common.collect.Lists;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerExecContext;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReacquisitionContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReapContext;
 import org.apache.hadoop.yarn.server.nodemanager.util.NodeManagerHardwareUtils;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeWindows;
 import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 @SuppressWarnings("deprecation")
 public class TestContainerExecutor {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestContainerExecutor.class);
   
   private ContainerExecutor containerExecutor = new DefaultContainerExecutor();
 
@@ -212,5 +229,75 @@ public class TestContainerExecutor {
     when(container.getUser()).thenReturn(System.getProperty("user.name"));
     containerExecutor.cleanupBeforeRelaunch(container);
     Assert.assertTrue(!Files.exists(linkName));
+  }
+
+  /**
+   * The timeout for waiting the exit code file is configured as 4 seconds,
+   * and the tests create it after 3 seconds. The CE should successfully
+   * reacquire the container.
+   * @throws Exception
+   */
+  @Test
+  public void testAcquireWithExitCodeTimeout() throws Exception {
+    ApplicationId appId = ApplicationId.newInstance(12345, 67890);
+    ApplicationAttemptId attemptId =
+        ApplicationAttemptId.newInstance(appId, 54321);
+    ContainerId cid = ContainerId.newContainerId(attemptId, 9876);
+
+    ContainerExecutor mockCE = spy(containerExecutor);
+
+    File root = new File(System.getProperty("test.build.data", "/tmp"));
+    File testDir = new File(root, TestContainerExecutor.class.getName())
+        .getAbsoluteFile();
+    File pidFile = new File(testDir, "pid");
+    Path pidPath = new Path(pidFile.toString());
+
+    doReturn(pidPath).when(mockCE).getPidFilePath(cid);
+    doReturn(false).when(mockCE).isContainerAlive(any());
+    doReturn(true).when(mockCE).isContainerActive(cid);
+
+    Configuration conf = new YarnConfiguration();
+    conf.setInt(YarnConfiguration.NM_CONTAINER_EXECUTOR_EXIT_FILE_TIMEOUT,
+        4000);
+    mockCE.setConf(conf);
+
+    String exitCodeFileString =
+        ContainerLaunch.getExitCodeFile(pidFile.toString());
+    File exitCodeFile = new File(exitCodeFileString);
+
+    Timer timer = new Timer();
+
+    try {
+      int writtenExitCode = 10;
+
+      FileUtils.writeStringToFile(pidFile, "2992",
+          Charset.defaultCharset(), false);
+
+      TimerTask task = new java.util.TimerTask() {
+        @Override
+        public void run() {
+          try {
+            FileUtils.writeStringToFile(exitCodeFile,
+                Integer.toString(writtenExitCode),
+                Charset.defaultCharset(), false);
+          } catch (IOException ioe) {
+            LOG.warn("Could not write pid file");
+          }
+        }
+      };
+      timer.schedule(task, 3000);
+
+      int returnCode = mockCE.reacquireContainer(
+          new ContainerReacquisitionContext.Builder()
+              .setUser("foouser")
+              .setContainerId(cid)
+              .build());
+      assertEquals(writtenExitCode, returnCode);
+    } finally {
+      timer.cancel();
+      if (testDir.exists()) {
+        FileUtils.deleteQuietly(testDir);
+      }
+    }
   }
 }

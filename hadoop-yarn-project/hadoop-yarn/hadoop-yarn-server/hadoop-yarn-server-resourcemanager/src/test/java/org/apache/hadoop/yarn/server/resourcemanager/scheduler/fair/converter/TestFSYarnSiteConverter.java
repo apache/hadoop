@@ -20,6 +20,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
+import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -50,7 +52,7 @@ public class TestFSYarnSiteConverter {
     yarnConfig.setInt(
         FairSchedulerConfiguration.CONTINUOUS_SCHEDULING_SLEEP_MS, 666);
 
-    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig);
+    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false);
 
     assertTrue("Cont. scheduling", yarnConvertedConfig.getBoolean(
         CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_ENABLE, false));
@@ -61,21 +63,6 @@ public class TestFSYarnSiteConverter {
   }
 
   @Test
-  public void testSiteMinimumAllocationIncrementConversion() {
-    yarnConfig.setInt("yarn.resource-types.memory-mb.increment-allocation", 11);
-    yarnConfig.setInt("yarn.resource-types.vcores.increment-allocation", 5);
-
-    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig);
-
-    assertEquals("Memory alloc increment", 11,
-        yarnConvertedConfig.getInt("yarn.scheduler.minimum-allocation-mb",
-            -1));
-    assertEquals("Vcore increment", 5,
-        yarnConvertedConfig.getInt("yarn.scheduler.minimum-allocation-vcores",
-            -1));
-  }
-
-  @Test
   public void testSitePreemptionConversion() {
     yarnConfig.setBoolean(FairSchedulerConfiguration.PREEMPTION, true);
     yarnConfig.setInt(FairSchedulerConfiguration.WAIT_TIME_BEFORE_KILL, 123);
@@ -83,7 +70,7 @@ public class TestFSYarnSiteConverter {
         FairSchedulerConfiguration.WAIT_TIME_BEFORE_NEXT_STARVATION_CHECK_MS,
           321);
 
-    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig);
+    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false);
 
     assertTrue("Preemption enabled",
         yarnConvertedConfig.getBoolean(
@@ -103,7 +90,7 @@ public class TestFSYarnSiteConverter {
   public void testSiteAssignMultipleConversion() {
     yarnConfig.setBoolean(FairSchedulerConfiguration.ASSIGN_MULTIPLE, true);
 
-    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig);
+    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false);
 
     assertTrue("Assign multiple",
         yarnConvertedConfig.getBoolean(
@@ -115,7 +102,7 @@ public class TestFSYarnSiteConverter {
   public void testSiteMaxAssignConversion() {
     yarnConfig.setInt(FairSchedulerConfiguration.MAX_ASSIGN, 111);
 
-    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig);
+    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false);
 
     assertEquals("Max assign", 111,
         yarnConvertedConfig.getInt(
@@ -129,7 +116,7 @@ public class TestFSYarnSiteConverter {
     yarnConfig.set(FairSchedulerConfiguration.LOCALITY_THRESHOLD_RACK,
         "321.321");
 
-    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig);
+    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false);
 
     assertEquals("Locality threshold node", "123.123",
         yarnConvertedConfig.get(
@@ -137,5 +124,24 @@ public class TestFSYarnSiteConverter {
     assertEquals("Locality threshold rack", "321.321",
         yarnConvertedConfig.get(
             CapacitySchedulerConfiguration.RACK_LOCALITY_ADDITIONAL_DELAY));
+  }
+
+  @Test
+  public void testSiteDrfEnabledConversion() {
+    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, true);
+
+    assertEquals("Resource calculator type", DominantResourceCalculator.class,
+        yarnConvertedConfig.getClass(
+            CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS, null));
+  }
+
+  @Test
+  public void testSiteDrfDisabledConversion() {
+    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false);
+
+    assertEquals("Resource calculator type", DefaultResourceCalculator.class,
+        yarnConvertedConfig.getClass(
+            CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,
+            CapacitySchedulerConfiguration.DEFAULT_RESOURCE_CALCULATOR_CLASS));
   }
 }

@@ -26,6 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -37,6 +38,7 @@ import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerExecContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -60,6 +62,7 @@ public class DelegatingLinuxContainerRuntime implements LinuxContainerRuntime {
       LoggerFactory.getLogger(DelegatingLinuxContainerRuntime.class);
   private DefaultLinuxContainerRuntime defaultLinuxContainerRuntime;
   private DockerLinuxContainerRuntime dockerLinuxContainerRuntime;
+  private RuncContainerRuntime runcContainerRuntime;
   private JavaSandboxLinuxContainerRuntime javaSandboxLinuxContainerRuntime;
   private Set<String> allowedRuntimes = new HashSet<>();
   private List<LinuxContainerRuntime> pluggableRuntimes = new ArrayList<>();
@@ -93,6 +96,12 @@ public class DelegatingLinuxContainerRuntime implements LinuxContainerRuntime {
       dockerLinuxContainerRuntime.initialize(conf, nmContext);
     }
     if (isRuntimeAllowed(
+        LinuxContainerRuntimeConstants.RuntimeType.RUNC.name())) {
+      runcContainerRuntime = new RuncContainerRuntime(
+          PrivilegedOperationExecutor.getInstance(conf));
+      runcContainerRuntime.initialize(conf, nmContext);
+    }
+    if (isRuntimeAllowed(
         LinuxContainerRuntimeConstants.RuntimeType.DEFAULT.name())) {
       defaultLinuxContainerRuntime = new DefaultLinuxContainerRuntime(
           PrivilegedOperationExecutor.getInstance(conf));
@@ -116,6 +125,9 @@ public class DelegatingLinuxContainerRuntime implements LinuxContainerRuntime {
     } else if (dockerLinuxContainerRuntime != null &&
         dockerLinuxContainerRuntime.isRuntimeRequested(environment)) {
       runtime = dockerLinuxContainerRuntime;
+    } else if (runcContainerRuntime != null &&
+        runcContainerRuntime.isRuntimeRequested(environment)) {
+      runtime = runcContainerRuntime;
     } else {
       LinuxContainerRuntime pluggableRuntime = pickPluggableRuntime(
           environment);
@@ -244,4 +256,59 @@ public class DelegatingLinuxContainerRuntime implements LinuxContainerRuntime {
     LinuxContainerRuntime runtime = pickContainerRuntime(container);
     return runtime.execContainer(ctx);
   }
+
+
+  @Override
+  public Map<String, LocalResource> getLocalResources(Container container)
+      throws IOException {
+    try {
+      LinuxContainerRuntime runtime = pickContainerRuntime(container);
+      return runtime.getLocalResources(container);
+    } catch (ContainerExecutionException e) {
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void start() {
+    if (isRuntimeAllowed(
+        LinuxContainerRuntimeConstants.RuntimeType.JAVASANDBOX.name())) {
+      javaSandboxLinuxContainerRuntime.start();
+    }
+    if (isRuntimeAllowed(
+        LinuxContainerRuntimeConstants.RuntimeType.DOCKER.name())) {
+      dockerLinuxContainerRuntime.start();
+    }
+    if (isRuntimeAllowed(
+        LinuxContainerRuntimeConstants.RuntimeType.RUNC.name())) {
+      runcContainerRuntime.start();
+    }
+    if (isRuntimeAllowed(
+        LinuxContainerRuntimeConstants.RuntimeType.DEFAULT.name())) {
+      defaultLinuxContainerRuntime.start();
+    }
+
+  }
+
+  @Override
+  public void stop() {
+    if (isRuntimeAllowed(
+        LinuxContainerRuntimeConstants.RuntimeType.JAVASANDBOX.name())) {
+      javaSandboxLinuxContainerRuntime.stop();
+    }
+    if (isRuntimeAllowed(
+        LinuxContainerRuntimeConstants.RuntimeType.DOCKER.name())) {
+      dockerLinuxContainerRuntime.stop();
+    }
+    if (isRuntimeAllowed(
+        LinuxContainerRuntimeConstants.RuntimeType.RUNC.name())) {
+      runcContainerRuntime.stop();
+    }
+    if (isRuntimeAllowed(
+        LinuxContainerRuntimeConstants.RuntimeType.DEFAULT.name())) {
+      defaultLinuxContainerRuntime.stop();
+    }
+
+  }
+
 }

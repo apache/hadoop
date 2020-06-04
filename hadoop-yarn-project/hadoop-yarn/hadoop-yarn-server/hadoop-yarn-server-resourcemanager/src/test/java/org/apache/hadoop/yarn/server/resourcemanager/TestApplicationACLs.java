@@ -23,9 +23,7 @@ import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.any;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
@@ -35,6 +33,16 @@ import java.util.Map;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
+
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
+    .allocationfile.AllocationFileQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
+    .allocationfile.AllocationFileQueuePlacementPolicy;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
+    .allocationfile.AllocationFileQueuePlacementRule;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
+    .allocationfile.AllocationFileWriter;
 import org.junit.After;
 import org.junit.Assert;
 import org.slf4j.Logger;
@@ -181,26 +189,25 @@ public class TestApplicationACLs extends ParameterizedSchedulerTestBase {
   }
 
   @Override
-  protected void configureFairScheduler(YarnConfiguration conf)
-      throws IOException {
+  protected void configureFairScheduler(YarnConfiguration configuration) {
     final String testDir = new File(System.getProperty("test.build.data",
         "/tmp")).getAbsolutePath();
     final String allocFile = new File(testDir, "test-queues.xml")
         .getAbsolutePath();
-    PrintWriter out = new PrintWriter(new FileWriter(allocFile));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"root\" >");
-    out.println("  <queue name=\"default\">");
-    out.println("  </queue>");
-    out.println("</queue>");
-    out.println("<queuePlacementPolicy>");
-    out.println("  <rule name=\"specified\" create=\"false\" />");
-    out.println("  <rule name=\"reject\" />");
-    out.println("</queuePlacementPolicy>");
-    out.println("</allocations>");
-    out.close();
-    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, allocFile);
+
+    AllocationFileWriter.create()
+        .addQueue(new AllocationFileQueue.Builder("root")
+            .subQueue(new AllocationFileQueue.Builder("default").build())
+            .build())
+        .queuePlacementPolicy(new AllocationFileQueuePlacementPolicy()
+            .addRule(new AllocationFileQueuePlacementRule(
+                AllocationFileQueuePlacementRule.RuleName.SPECIFIED)
+                .create(false))
+            .addRule(new AllocationFileQueuePlacementRule(
+                AllocationFileQueuePlacementRule.RuleName.REJECT)))
+        .writeToFile(allocFile);
+
+    configuration.set(FairSchedulerConfiguration.ALLOCATION_FILE, allocFile);
   }
 
   @Test

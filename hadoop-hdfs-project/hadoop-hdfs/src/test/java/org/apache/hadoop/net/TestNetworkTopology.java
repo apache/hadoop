@@ -241,10 +241,16 @@ public class TestNetworkTopology {
     cluster.setRandomSeed(0xDEADBEEF);
     cluster.sortByDistance(dataNodes[8], dtestNodes, dtestNodes.length - 2);
     assertTrue(dtestNodes[0] == dataNodes[8]);
-    assertTrue(dtestNodes[1] == dataNodes[11]);
-    assertTrue(dtestNodes[2] == dataNodes[12]);
-    assertTrue(dtestNodes[3] == dataNodes[9]);
-    assertTrue(dtestNodes[4] == dataNodes[10]);
+    assertTrue(dtestNodes[1] != dtestNodes[2]);
+    assertTrue(dtestNodes[1] == dataNodes[11]
+        || dtestNodes[1] == dataNodes[12]);
+    assertTrue(dtestNodes[2] == dataNodes[11]
+        || dtestNodes[2] == dataNodes[12]);
+    assertTrue(dtestNodes[3] != dtestNodes[4]);
+    assertTrue(dtestNodes[3] == dataNodes[9]
+        || dtestNodes[3] == dataNodes[10]);
+    assertTrue(dtestNodes[4] == dataNodes[9]
+        || dtestNodes[4] == dataNodes[10]);
 
     // array contains local node
     testNodes[0] = dataNodes[1];
@@ -331,10 +337,14 @@ public class TestNetworkTopology {
     testNodes[2] = dataNodes[8];
     Node rackClient = new NodeBase("/d3/r1/25.25.25");
     cluster.setRandomSeed(0xDEADBEEF);
-    cluster.sortByDistance(rackClient, testNodes, testNodes.length);
+    cluster.sortByDistanceUsingNetworkLocation(rackClient, testNodes,
+        testNodes.length);
     assertTrue(testNodes[0] == dataNodes[8]);
-    assertTrue(testNodes[1] == dataNodes[5]);
-    assertTrue(testNodes[2] == dataNodes[0]);
+    assertTrue(testNodes[1] != testNodes[2]);
+    assertTrue(testNodes[1] == dataNodes[0]
+        || testNodes[1] == dataNodes[5]);
+    assertTrue(testNodes[2] == dataNodes[0]
+        || testNodes[2] == dataNodes[5]);
 
     //Reader is not a datanode , but is in one of the datanode's data center.
     testNodes[0] = dataNodes[8];
@@ -342,10 +352,14 @@ public class TestNetworkTopology {
     testNodes[2] = dataNodes[0];
     Node dcClient = new NodeBase("/d1/r2/25.25.25");
     cluster.setRandomSeed(0xDEADBEEF);
-    cluster.sortByDistance(dcClient, testNodes, testNodes.length);
+    cluster.sortByDistanceUsingNetworkLocation(dcClient, testNodes,
+        testNodes.length);
     assertTrue(testNodes[0] == dataNodes[0]);
-    assertTrue(testNodes[1] == dataNodes[5]);
-    assertTrue(testNodes[2] == dataNodes[8]);
+    assertTrue(testNodes[1] != testNodes[2]);
+    assertTrue(testNodes[1] == dataNodes[5]
+        || testNodes[1] == dataNodes[8]);
+    assertTrue(testNodes[2] == dataNodes[5]
+        || testNodes[2] == dataNodes[8]);
 
   }
   
@@ -599,5 +613,23 @@ public class TestNetworkTopology {
       assertTrue(dataNodes[i] + " should have been chosen.",
           frequency.get(dataNodes[i]) > 0);
     }
+  }
+
+  @Test
+  public void testCountNumOfAvailableNodes() {
+    int numNodes = cluster.countNumOfAvailableNodes(NodeBase.ROOT, null);
+    assertEquals(20, numNodes);
+
+    // Excluding a single node
+    Collection<Node> excludedNodes = new HashSet<Node>();
+    excludedNodes.add(dataNodes[0]);
+    numNodes = cluster.countNumOfAvailableNodes(NodeBase.ROOT, excludedNodes);
+    assertEquals(19, numNodes);
+
+    // Excluding a full rack
+    Node d4r1 = cluster.getNode("/d4/r1");
+    excludedNodes.add(d4r1);
+    numNodes = cluster.countNumOfAvailableNodes(NodeBase.ROOT, excludedNodes);
+    assertEquals(12, numNodes);
   }
 }

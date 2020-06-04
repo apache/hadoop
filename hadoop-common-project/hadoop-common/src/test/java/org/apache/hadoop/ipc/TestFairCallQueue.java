@@ -104,6 +104,9 @@ public class TestFairCallQueue {
     assertThat(fairCallQueue.remainingCapacity()).isEqualTo(1025);
     fairCallQueue = new FairCallQueue<Schedulable>(7, 1025, "ns", conf);
     assertThat(fairCallQueue.remainingCapacity()).isEqualTo(1025);
+    fairCallQueue = new FairCallQueue<Schedulable>(7, 1025, "ns",
+        new int[]{7, 6, 5, 4, 3, 2, 1}, conf);
+    assertThat(fairCallQueue.remainingCapacity()).isEqualTo(1025);
   }
 
   @Test
@@ -155,6 +158,61 @@ public class TestFairCallQueue {
     //----------
     assertNull(fcq.poll());
     assertNull(fcq.poll());
+  }
+
+  @Test
+  public void testQueueCapacity() {
+    int numQueues = 2;
+    int capacity = 4;
+    Configuration conf = new Configuration();
+    List<Schedulable> calls = new ArrayList<>();
+
+    // default weights i.e. all queues share capacity
+    fcq = new FairCallQueue<Schedulable>(numQueues, 4, "ns", conf);
+    FairCallQueue<Schedulable> fcq1 = new FairCallQueue<Schedulable>(
+        numQueues, capacity, "ns", new int[]{1, 3}, conf);
+
+    for (int i=0; i < capacity; i++) {
+      Schedulable call = mockCall("u", i%2);
+      calls.add(call);
+      fcq.add(call);
+      fcq1.add(call);
+    }
+
+    final AtomicInteger currentIndex = new AtomicInteger();
+    fcq.setMultiplexer(new RpcMultiplexer(){
+      @Override
+      public int getAndAdvanceCurrentIndex() {
+        return currentIndex.get();
+      }
+    });
+    fcq1.setMultiplexer(new RpcMultiplexer(){
+      @Override
+      public int getAndAdvanceCurrentIndex() {
+        return currentIndex.get();
+      }
+    });
+
+    // either queue will have two calls
+    //    v
+    // 0  1
+    // 2  3
+    currentIndex.set(1);
+    assertSame(calls.get(1), fcq.poll());
+    assertSame(calls.get(3), fcq.poll());
+    assertSame(calls.get(0), fcq.poll());
+    assertSame(calls.get(2), fcq.poll());
+
+    // queues with different number of calls
+    //    v
+    // 0  1
+    //    2
+    //    3
+    currentIndex.set(1);
+    assertSame(calls.get(1), fcq1.poll());
+    assertSame(calls.get(2), fcq1.poll());
+    assertSame(calls.get(3), fcq1.poll());
+    assertSame(calls.get(0), fcq1.poll());
   }
 
   @SuppressWarnings("unchecked")

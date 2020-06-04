@@ -24,7 +24,7 @@ import java.net.URI;
 import com.google.common.base.Preconditions;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
 
@@ -53,21 +53,26 @@ public abstract class AbstractDTService
 
   /**
    * URI of the filesystem.
-   * Valid after {@link #bindToFileSystem(URI, S3AFileSystem)}.
+   * Valid after {@link #bindToFileSystem(URI, StoreContext, DelegationOperations)}.
    */
   private URI canonicalUri;
 
   /**
-   * The owning filesystem.
-   * Valid after {@link #bindToFileSystem(URI, S3AFileSystem)}.
-   */
-  private S3AFileSystem fileSystem;
-
-  /**
    * Owner of the filesystem.
-   * Valid after {@link #bindToFileSystem(URI, S3AFileSystem)}.
+   * Valid after {@link #bindToFileSystem(URI, StoreContext, DelegationOperations)}.
    */
   private UserGroupInformation owner;
+
+  /**
+   * Store Context for callbacks into the FS.
+   * Valid after {@link #bindToFileSystem(URI, StoreContext, DelegationOperations)}.
+   */
+  private StoreContext storeContext;
+
+  /**
+   * Callbacks for DT-related operations.
+   */
+  private DelegationOperations policyProvider;
 
   /**
    * Protected constructor.
@@ -88,18 +93,21 @@ public abstract class AbstractDTService
    * is not live for actual use and will not yet have interacted with
    * AWS services.
    * @param uri the canonical URI of the FS.
-   * @param fs owning FS.
+   * @param context store context
+   * @param delegationOperations delegation operations
    * @throws IOException failure.
    */
   public void bindToFileSystem(
       final URI uri,
-      final S3AFileSystem fs) throws IOException {
+      final StoreContext context,
+      final DelegationOperations delegationOperations) throws IOException {
     requireServiceState(STATE.NOTINITED);
     Preconditions.checkState(canonicalUri == null,
         "bindToFileSystem called twice");
     this.canonicalUri = requireNonNull(uri);
-    this.fileSystem = requireNonNull(fs);
-    this.owner = fs.getOwner();
+    this.storeContext = requireNonNull(context);
+    this.owner = context.getOwner();
+    this.policyProvider = delegationOperations;
   }
 
   /**
@@ -112,19 +120,19 @@ public abstract class AbstractDTService
   }
 
   /**
-   * Get the owner of the FS.
-   * @return the owner fs
-   */
-  protected S3AFileSystem getFileSystem() {
-    return fileSystem;
-  }
-
-  /**
    * Get the owner of this Service.
    * @return owner; non-null after binding to an FS.
    */
   public UserGroupInformation getOwner() {
     return owner;
+  }
+
+  protected StoreContext getStoreContext() {
+    return storeContext;
+  }
+
+  protected DelegationOperations getPolicyProvider() {
+    return policyProvider;
   }
 
   /**

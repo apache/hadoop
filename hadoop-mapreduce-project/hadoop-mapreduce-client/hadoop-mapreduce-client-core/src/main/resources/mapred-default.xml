@@ -1267,6 +1267,29 @@
 </property>
 
 <property>
+  <name>mapreduce.shuffle.pathcache.max-weight</name>
+  <value>10485760</value>
+  <description>The maximum total weight of entries the cache may contain.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.shuffle.pathcache.expire-after-access-minutes</name>
+  <value>5</value>
+  <description>The length of time after an entry is last accessed that it
+    should be automatically removed.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.shuffle.pathcache.concurrency-level</name>
+  <value>16</value>
+  <description>Uses the concurrency level to create a fixed number of hashtable
+    segments, each governed by its own write lock.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.job.reduce.shuffle.consumer.plugin.class</name>
   <value>org.apache.hadoop.mapreduce.task.reduce.Shuffle</value>
   <description>

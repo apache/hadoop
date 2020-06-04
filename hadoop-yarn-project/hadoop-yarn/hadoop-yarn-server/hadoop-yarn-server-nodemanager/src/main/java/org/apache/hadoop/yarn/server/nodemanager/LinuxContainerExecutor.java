@@ -31,6 +31,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ConfigurationException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -70,6 +71,7 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.*;
@@ -341,6 +343,18 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     }
 
     resourcesHandler.init(this);
+  }
+
+  @Override
+  public void start() {
+    super.start();
+    linuxContainerRuntime.start();
+  }
+
+  @Override
+  public void stop() {
+    super.stop();
+    linuxContainerRuntime.stop();
   }
 
   @Override
@@ -1041,5 +1055,11 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   public String getExposedPorts(Container container)
       throws ContainerExecutionException {
     return linuxContainerRuntime.getExposedPorts(container);
+  }
+
+  @Override
+  public Map<String, LocalResource> getLocalResources(Container container)
+      throws IOException {
+    return linuxContainerRuntime.getLocalResources(container);
   }
 }

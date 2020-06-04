@@ -19,11 +19,14 @@
 package org.apache.hadoop.yarn.logaggregation;
 
 import java.util.Set;
+
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 
 public class ContainerLogsRequest {
   private ApplicationId appId;
+  private ApplicationAttemptId appAttemptId;
   private String containerId;
   private String nodeId;
   private String nodeHttpAddress;
@@ -38,6 +41,7 @@ public class ContainerLogsRequest {
 
   public ContainerLogsRequest(ContainerLogsRequest request) {
     this.setAppId(request.getAppId());
+    this.setAppAttemptId(request.getAppAttemptId());
     this.setAppFinished(request.isAppFinished());
     this.setAppOwner(request.getAppOwner());
     this.setNodeId(request.getNodeId());
@@ -50,10 +54,11 @@ public class ContainerLogsRequest {
   }
 
   public ContainerLogsRequest(ApplicationId applicationId,
-      boolean isAppFinished, String owner,
+      ApplicationAttemptId appAttemptId, boolean isAppFinished, String owner,
       String address, String httpAddress, String container, String localDir,
       Set<String> logs, long bytes, ContainerState containerState) {
     this.setAppId(applicationId);
+    this.setAppAttemptId(appAttemptId);
     this.setAppFinished(isAppFinished);
     this.setAppOwner(owner);
     this.setNodeId(address);
@@ -71,6 +76,14 @@ public class ContainerLogsRequest {
 
   public void setAppId(ApplicationId appId) {
     this.appId = appId;
+  }
+
+  public ApplicationAttemptId getAppAttemptId() {
+    return this.appAttemptId;
+  }
+
+  public void setAppAttemptId(ApplicationAttemptId appAttemptId) {
+    this.appAttemptId = appAttemptId;
   }
 
   public String getContainerId() {

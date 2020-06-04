@@ -64,7 +64,7 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.timeline.NameValuePair;
 import org.apache.hadoop.yarn.server.timeline.TimelineDataManager;
 import org.apache.hadoop.yarn.server.timeline.TimelineReader.Field;
-import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -412,7 +412,7 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
           }
           if (eventInfo.containsKey(
               ApplicationMetricsConstants.STATE_EVENT_INFO)) {
-            if (!isFinalState(state)) {
+            if (!Apps.isApplicationFinalState(state)) {
               state = YarnApplicationState.valueOf(eventInfo.get(
                   ApplicationMetricsConstants.STATE_EVENT_INFO).toString());
             }
@@ -473,12 +473,6 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
       result = Long.parseLong(infoValue.toString());
     }
     return result;
-  }
-
-  private static boolean isFinalState(YarnApplicationState state) {
-    return state == YarnApplicationState.FINISHED
-        || state == YarnApplicationState.FAILED
-        || state == YarnApplicationState.KILLED;
   }
 
   private static ApplicationAttemptReport convertToApplicationAttemptReport(

@@ -26,10 +26,11 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -56,6 +57,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
+import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
@@ -64,10 +66,10 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemExc
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.FileSystemOperationUnhandledException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriAuthorityException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
-import org.apache.hadoop.fs.azurebfs.extensions.AbfsAuthorizationException;
-import org.apache.hadoop.fs.azurebfs.extensions.AbfsAuthorizer;
 import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
+import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -78,6 +80,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
 
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
 /**
@@ -94,7 +97,7 @@ public class AzureBlobFileSystem extends FileSystem {
 
   private boolean delegationTokenEnabled = false;
   private AbfsDelegationTokenManager delegationTokenManager;
-  private AbfsAuthorizer authorizer;
+  private AbfsCounters instrumentation;
 
   @Override
   public void initialize(URI uri, Configuration configuration)
@@ -107,8 +110,10 @@ public class AzureBlobFileSystem extends FileSystem {
 
     this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
     this.abfsStore = new AzureBlobFileSystemStore(uri, this.isSecureScheme(), configuration);
-    final AbfsConfiguration abfsConfiguration = abfsStore.getAbfsConfiguration();
+    LOG.trace("AzureBlobFileSystemStore init complete");
 
+    final AbfsConfiguration abfsConfiguration = abfsStore.getAbfsConfiguration();
+    instrumentation = new AbfsInstrumentation(uri);
     this.setWorkingDirectory(this.getHomeDirectory());
 
     if (abfsConfiguration.getCreateRemoteFileSystemDuringInitialization()) {
@@ -121,6 +126,7 @@ public class AzureBlobFileSystem extends FileSystem {
       }
     }
 
+    LOG.trace("Initiate check for delegation token manager");
     if (UserGroupInformation.isSecurityEnabled()) {
       this.delegationTokenEnabled = abfsConfiguration.isDelegationTokenManagerEnabled();
 
@@ -134,9 +140,7 @@ public class AzureBlobFileSystem extends FileSystem {
 
     AbfsClientThrottlingIntercept.initializeSingleton(abfsConfiguration.isAutoThrottlingEnabled());
 
-    // Initialize ABFS authorizer
-    //
-    this.authorizer = abfsConfiguration.getAbfsAuthorizer();
+    LOG.debug("Initializing AzureBlobFileSystem for {} complete", uri);
   }
 
   @Override
@@ -146,6 +150,11 @@ public class AzureBlobFileSystem extends FileSystem {
     sb.append("uri=").append(uri);
     sb.append(", user='").append(abfsStore.getUser()).append('\'');
     sb.append(", primaryUserGroup='").append(abfsStore.getPrimaryGroup()).append('\'');
+    if (instrumentation != null) {
+      sb.append(", Statistics: {").append(instrumentation.formString("{", "=",
+          "}", true));
+      sb.append("}");
+    }
     sb.append('}');
     return sb.toString();
   }
@@ -162,9 +171,8 @@ public class AzureBlobFileSystem extends FileSystem {
   @Override
   public FSDataInputStream open(final Path path, final int bufferSize) throws IOException {
     LOG.debug("AzureBlobFileSystem.open path: {} bufferSize: {}", path, bufferSize);
-
+    statIncrement(CALL_OPEN);
     Path qualifiedPath = makeQualified(path);
-    performAbfsAuthCheck(FsAction.READ, qualifiedPath);
 
     try {
       InputStream inputStream = abfsStore.openFileForRead(qualifiedPath, statistics);
@@ -184,14 +192,15 @@ public class AzureBlobFileSystem extends FileSystem {
         overwrite,
         blockSize);
 
+    statIncrement(CALL_CREATE);
     trailingPeriodCheck(f);
 
     Path qualifiedPath = makeQualified(f);
-    performAbfsAuthCheck(FsAction.WRITE, qualifiedPath);
 
     try {
-      OutputStream outputStream = abfsStore.createFile(qualifiedPath, overwrite,
+      OutputStream outputStream = abfsStore.createFile(qualifiedPath, statistics, overwrite,
           permission == null ? FsPermission.getFileDefault() : permission, FsPermission.getUMask(getConf()));
+      statIncrement(FILES_CREATED);
       return new FSDataOutputStream(outputStream, statistics);
     } catch(AzureBlobFileSystemException ex) {
       checkException(f, ex);
@@ -205,6 +214,7 @@ public class AzureBlobFileSystem extends FileSystem {
       final boolean overwrite, final int bufferSize, final short replication, final long blockSize,
       final Progressable progress) throws IOException {
 
+    statIncrement(CALL_CREATE_NON_RECURSIVE);
     final Path parent = f.getParent();
     final FileStatus parentFileStatus = tryGetFileStatus(parent);
 
@@ -248,12 +258,11 @@ public class AzureBlobFileSystem extends FileSystem {
         "AzureBlobFileSystem.append path: {} bufferSize: {}",
         f.toString(),
         bufferSize);
-
+    statIncrement(CALL_APPEND);
     Path qualifiedPath = makeQualified(f);
-    performAbfsAuthCheck(FsAction.WRITE, qualifiedPath);
 
     try {
-      OutputStream outputStream = abfsStore.openFileForWrite(qualifiedPath, false);
+      OutputStream outputStream = abfsStore.openFileForWrite(qualifiedPath, statistics, false);
       return new FSDataOutputStream(outputStream, statistics);
     } catch(AzureBlobFileSystemException ex) {
       checkException(f, ex);
@@ -264,7 +273,7 @@ public class AzureBlobFileSystem extends FileSystem {
   public boolean rename(final Path src, final Path dst) throws IOException {
     LOG.debug(
         "AzureBlobFileSystem.rename src: {} dst: {}", src.toString(), dst.toString());
-
+    statIncrement(CALL_RENAME);
     trailingPeriodCheck(dst);
 
     Path parentFolder = src.getParent();
@@ -309,7 +318,6 @@ public class AzureBlobFileSystem extends FileSystem {
       }
 
       qualifiedDstPath = makeQualified(adjustedDst);
-      performAbfsAuthCheck(FsAction.READ_WRITE, qualifiedSrcPath, qualifiedDstPath);
 
       abfsStore.rename(qualifiedSrcPath, qualifiedDstPath);
       return true;
@@ -332,9 +340,8 @@ public class AzureBlobFileSystem extends FileSystem {
   public boolean delete(final Path f, final boolean recursive) throws IOException {
     LOG.debug(
         "AzureBlobFileSystem.delete path: {} recursive: {}", f.toString(), recursive);
-
+    statIncrement(CALL_DELETE);
     Path qualifiedPath = makeQualified(f);
-    performAbfsAuthCheck(FsAction.WRITE, qualifiedPath);
 
     if (f.isRoot()) {
       if (!recursive) {
@@ -358,9 +365,8 @@ public class AzureBlobFileSystem extends FileSystem {
   public FileStatus[] listStatus(final Path f) throws IOException {
     LOG.debug(
         "AzureBlobFileSystem.listStatus path: {}", f.toString());
-
+    statIncrement(CALL_LIST_STATUS);
     Path qualifiedPath = makeQualified(f);
-    performAbfsAuthCheck(FsAction.READ, qualifiedPath);
 
     try {
       FileStatus[] result = abfsStore.listStatus(qualifiedPath);
@@ -369,6 +375,24 @@ public class AzureBlobFileSystem extends FileSystem {
       checkException(f, ex);
       return null;
     }
+  }
+
+  /**
+   * Increment of an Abfs statistic.
+   *
+   * @param statistic AbfsStatistic that needs increment.
+   */
+  private void statIncrement(AbfsStatistic statistic) {
+    incrementStatistic(statistic);
+  }
+
+  /**
+   * Method for incrementing AbfsStatistic by a long value.
+   *
+   * @param statistic the Statistic to be incremented.
+   */
+  private void incrementStatistic(AbfsStatistic statistic) {
+    instrumentation.incrementCounter(statistic, 1);
   }
 
   /**
@@ -400,7 +424,7 @@ public class AzureBlobFileSystem extends FileSystem {
   public boolean mkdirs(final Path f, final FsPermission permission) throws IOException {
     LOG.debug(
         "AzureBlobFileSystem.mkdirs path: {} permissions: {}", f, permission);
-
+    statIncrement(CALL_MKDIRS);
     trailingPeriodCheck(f);
 
     final Path parentFolder = f.getParent();
@@ -410,11 +434,11 @@ public class AzureBlobFileSystem extends FileSystem {
     }
 
     Path qualifiedPath = makeQualified(f);
-    performAbfsAuthCheck(FsAction.WRITE, qualifiedPath);
 
     try {
       abfsStore.createDirectory(qualifiedPath, permission == null ? FsPermission.getDirDefault() : permission,
           FsPermission.getUMask(getConf()));
+      statIncrement(DIRECTORIES_CREATED);
       return true;
     } catch (AzureBlobFileSystemException ex) {
       checkException(f, ex, AzureServiceErrorCode.PATH_ALREADY_EXISTS);
@@ -432,14 +456,14 @@ public class AzureBlobFileSystem extends FileSystem {
     LOG.debug("AzureBlobFileSystem.close");
     IOUtils.cleanupWithLogger(LOG, abfsStore, delegationTokenManager);
     this.isClosed = true;
+    LOG.debug("Closing Abfs: " + toString());
   }
 
   @Override
   public FileStatus getFileStatus(final Path f) throws IOException {
     LOG.debug("AzureBlobFileSystem.getFileStatus path: {}", f);
-
+    statIncrement(CALL_GET_FILE_STATUS);
     Path qualifiedPath = makeQualified(f);
-    performAbfsAuthCheck(FsAction.READ, qualifiedPath);
 
     try {
       return abfsStore.getFileStatus(qualifiedPath);
@@ -575,6 +599,11 @@ public class AzureBlobFileSystem extends FileSystem {
           @Override
           public Void call() throws Exception {
             delete(fs.getPath(), fs.isDirectory());
+            if (fs.isDirectory()) {
+              statIncrement(DIRECTORIES_DELETED);
+            } else {
+              statIncrement(FILES_DELETED);
+            }
             return null;
           }
         });
@@ -621,7 +650,6 @@ public class AzureBlobFileSystem extends FileSystem {
     }
 
     Path qualifiedPath = makeQualified(path);
-    performAbfsAuthCheck(FsAction.WRITE, qualifiedPath);
 
     try {
       abfsStore.setOwner(qualifiedPath,
@@ -630,6 +658,81 @@ public class AzureBlobFileSystem extends FileSystem {
     } catch (AzureBlobFileSystemException ex) {
       checkException(path, ex);
     }
+  }
+
+  /**
+   * Set the value of an attribute for a path.
+   *
+   * @param path The path on which to set the attribute
+   * @param name The attribute to set
+   * @param value The byte value of the attribute to set (encoded in latin-1)
+   * @param flag The mode in which to set the attribute
+   * @throws IOException If there was an issue setting the attribute on Azure
+   * @throws IllegalArgumentException If name is null or empty or if value is null
+   */
+  @Override
+  public void setXAttr(final Path path, final String name, final byte[] value, final EnumSet<XAttrSetFlag> flag)
+      throws IOException {
+    LOG.debug("AzureBlobFileSystem.setXAttr path: {}", path);
+
+    if (name == null || name.isEmpty() || value == null) {
+      throw new IllegalArgumentException("A valid name and value must be specified.");
+    }
+
+    Path qualifiedPath = makeQualified(path);
+
+    try {
+      Hashtable<String, String> properties = abfsStore.getPathStatus(qualifiedPath);
+      String xAttrName = ensureValidAttributeName(name);
+      boolean xAttrExists = properties.containsKey(xAttrName);
+      XAttrSetFlag.validate(name, xAttrExists, flag);
+
+      String xAttrValue = abfsStore.decodeAttribute(value);
+      properties.put(xAttrName, xAttrValue);
+      abfsStore.setPathProperties(qualifiedPath, properties);
+    } catch (AzureBlobFileSystemException ex) {
+      checkException(path, ex);
+    }
+  }
+
+  /**
+   * Get the value of an attribute for a path.
+   *
+   * @param path The path on which to get the attribute
+   * @param name The attribute to get
+   * @return The bytes of the attribute's value (encoded in latin-1)
+   *         or null if the attribute does not exist
+   * @throws IOException If there was an issue getting the attribute from Azure
+   * @throws IllegalArgumentException If name is null or empty
+   */
+  @Override
+  public byte[] getXAttr(final Path path, final String name)
+      throws IOException {
+    LOG.debug("AzureBlobFileSystem.getXAttr path: {}", path);
+
+    if (name == null || name.isEmpty()) {
+      throw new IllegalArgumentException("A valid name must be specified.");
+    }
+
+    Path qualifiedPath = makeQualified(path);
+
+    byte[] value = null;
+    try {
+      Hashtable<String, String> properties = abfsStore.getPathStatus(qualifiedPath);
+      String xAttrName = ensureValidAttributeName(name);
+      if (properties.containsKey(xAttrName)) {
+        String xAttrValue = properties.get(xAttrName);
+        value = abfsStore.encodeAttribute(xAttrValue);
+      }
+    } catch (AzureBlobFileSystemException ex) {
+      checkException(path, ex);
+    }
+    return value;
+  }
+
+  private static String ensureValidAttributeName(String attribute) {
+    // to avoid HTTP 400 Bad Request, InvalidPropertyName
+    return attribute.replace('.', '_');
   }
 
   /**
@@ -652,7 +755,6 @@ public class AzureBlobFileSystem extends FileSystem {
     }
 
     Path qualifiedPath = makeQualified(path);
-    performAbfsAuthCheck(FsAction.WRITE, qualifiedPath);
 
     try {
       abfsStore.setPermission(qualifiedPath,
@@ -688,7 +790,6 @@ public class AzureBlobFileSystem extends FileSystem {
     }
 
     Path qualifiedPath = makeQualified(path);
-    performAbfsAuthCheck(FsAction.WRITE, qualifiedPath);
 
     try {
       abfsStore.modifyAclEntries(qualifiedPath,
@@ -722,7 +823,6 @@ public class AzureBlobFileSystem extends FileSystem {
     }
 
     Path qualifiedPath = makeQualified(path);
-    performAbfsAuthCheck(FsAction.WRITE, qualifiedPath);
 
     try {
       abfsStore.removeAclEntries(qualifiedPath, aclSpec);
@@ -748,7 +848,6 @@ public class AzureBlobFileSystem extends FileSystem {
     }
 
     Path qualifiedPath = makeQualified(path);
-    performAbfsAuthCheck(FsAction.WRITE, qualifiedPath);
 
     try {
       abfsStore.removeDefaultAcl(qualifiedPath);
@@ -776,7 +875,6 @@ public class AzureBlobFileSystem extends FileSystem {
     }
 
     Path qualifiedPath = makeQualified(path);
-    performAbfsAuthCheck(FsAction.WRITE, qualifiedPath);
 
     try {
       abfsStore.removeAcl(qualifiedPath);
@@ -811,7 +909,6 @@ public class AzureBlobFileSystem extends FileSystem {
     }
 
     Path qualifiedPath = makeQualified(path);
-    performAbfsAuthCheck(FsAction.WRITE, qualifiedPath);
 
     try {
       abfsStore.setAcl(qualifiedPath, aclSpec);
@@ -838,7 +935,6 @@ public class AzureBlobFileSystem extends FileSystem {
     }
 
     Path qualifiedPath = makeQualified(path);
-    performAbfsAuthCheck(FsAction.READ, qualifiedPath);
 
     try {
       return abfsStore.getAclStatus(qualifiedPath);
@@ -861,9 +957,27 @@ public class AzureBlobFileSystem extends FileSystem {
    * @throws IOException                   see specific implementation
    */
   @Override
-  public void access(final Path path, FsAction mode) throws IOException {
-    // TODO: make it no-op to unblock hive permission issue for now.
-    // Will add a long term fix similar to the implementation in AdlFileSystem.
+  public void access(final Path path, final FsAction mode) throws IOException {
+    LOG.debug("AzureBlobFileSystem.access path : {}, mode : {}", path, mode);
+    Path qualifiedPath = makeQualified(path);
+    try {
+      this.abfsStore.access(qualifiedPath, mode);
+    } catch (AzureBlobFileSystemException ex) {
+      checkCheckAccessException(path, ex);
+    }
+  }
+
+  /**
+   * Incrementing exists() calls from superclass for statistic collection.
+   *
+   * @param f source path.
+   * @return true if the path exists.
+   * @throws IOException
+   */
+  @Override
+  public boolean exists(Path f) throws IOException {
+    statIncrement(CALL_EXIST);
+    return super.exists(f);
   }
 
   private FileStatus tryGetFileStatus(final Path f) {
@@ -871,6 +985,7 @@ public class AzureBlobFileSystem extends FileSystem {
       return getFileStatus(f);
     } catch (IOException ex) {
       LOG.debug("File not found {}", f);
+      statIncrement(ERROR_IGNORED);
       return null;
     }
   }
@@ -887,6 +1002,7 @@ public class AzureBlobFileSystem extends FileSystem {
         // there is not way to get the storage error code
         // workaround here is to check its status code.
       } catch (FileNotFoundException e) {
+        statIncrement(ERROR_IGNORED);
         return false;
       }
     }
@@ -976,6 +1092,18 @@ public class AzureBlobFileSystem extends FileSystem {
     }
   }
 
+  private void checkCheckAccessException(final Path path,
+      final AzureBlobFileSystemException exception) throws IOException {
+    if (exception instanceof AbfsRestOperationException) {
+      AbfsRestOperationException ere = (AbfsRestOperationException) exception;
+      if (ere.getStatusCode() == HttpURLConnection.HTTP_FORBIDDEN) {
+        throw (IOException) new AccessControlException(ere.getMessage())
+            .initCause(exception);
+      }
+    }
+    checkException(path, exception);
+  }
+
   /**
    * Given a path and exception, choose which IOException subclass
    * to create.
@@ -1007,6 +1135,8 @@ public class AzureBlobFileSystem extends FileSystem {
       } else {
         throw ere;
       }
+    } else if (exception instanceof SASTokenProviderException) {
+      throw exception;
     } else {
       if (path == null) {
         throw exception;
@@ -1046,6 +1176,7 @@ public class AzureBlobFileSystem extends FileSystem {
    */
   @Override
   public synchronized Token<?> getDelegationToken(final String renewer) throws IOException {
+    statIncrement(CALL_GET_DELEGATION_TOKEN);
     return this.delegationTokenEnabled ? this.delegationTokenManager.getDelegationToken(renewer)
         : super.getDelegationToken(renewer);
   }
@@ -1108,30 +1239,9 @@ public class AzureBlobFileSystem extends FileSystem {
     return abfsStore.getIsNamespaceEnabled();
   }
 
-  /**
-   * Use ABFS authorizer to check if user is authorized to perform specific
-   * {@link FsAction} on specified {@link Path}s.
-   *
-   * @param action The {@link FsAction} being requested on the provided {@link Path}s.
-   * @param paths The absolute paths of the storage being accessed.
-   * @throws AbfsAuthorizationException on authorization failure.
-   * @throws IOException network problems or similar.
-   * @throws IllegalArgumentException if the required parameters are not provided.
-   */
-  private void performAbfsAuthCheck(FsAction action, Path... paths)
-      throws AbfsAuthorizationException, IOException {
-    if (authorizer == null) {
-      LOG.debug("ABFS authorizer is not initialized. No authorization check will be performed.");
-    } else {
-      Preconditions.checkArgument(paths.length > 0, "no paths supplied for authorization check");
-
-      LOG.debug("Auth check for action: {} on paths: {}", action.toString(), Arrays.toString(paths));
-      if (!authorizer.isAuthorized(action, paths)) {
-        throw new AbfsAuthorizationException(
-            "User is not authorized for action " + action.toString()
-            + " on paths: " + Arrays.toString(paths));
-      }
-    }
+  @VisibleForTesting
+  Map<String, Long> getInstrumentationMap() {
+    return instrumentation.toMap();
   }
 
   @Override

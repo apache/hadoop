@@ -133,7 +133,7 @@
 {/eq}
 {/nn}
 
-<div class="page-header"><h1>Overview {#nnstat}<small>'{HostAndPort}' ({State})</small>{/nnstat}</h1></div>
+<div class="page-header"><h1>Overview {#nnstat}<small>'{HostAndPort}' (<span class="dfshealth-namenode-icon dfshealth-namenode-{State}">{State}</span>)</small>{/nnstat}</h1></div>
 
 <table class="table table-bordered table-striped">
 {#HAInfo}
@@ -329,6 +329,8 @@
       <th>Http Address</th>
       <th>Last contact</th>
       <th>Last Block Report</th>
+      <th>Used</th>
+      <th>Non DFS Used</th>
       <th style="width:180px; text-align:center">Capacity</th>
       <th>Blocks</th>
       <th>Block pool used</th>
@@ -342,6 +344,8 @@
     <td ng-value="{state}-{name}"><a href='{dnWebAddress}'>{dnWebAddress}</a></td>
     <td ng-value="{lastContact}">{lastContact}s</td>
     <td ng-value="{lastBlockReport}">{lastBlockReport}m</td>
+    <td ng-value="{used}">{used|fmt_bytes}</td>
+    <td ng-value="{nonDfsUsedSpace}">{nonDfsUsedSpace|fmt_bytes}</td>
     <td ng-value="{usedPercentage}">
       <div>
         <div style="display:inline-block; float: left; padding-right: 10px; width:80px">{capacity|fmt_bytes}</div>
@@ -367,6 +371,8 @@
     <td></td>
     <td></td>
     <td></td>
+    <td></td>
+    <td></td>>
   </tr>
   {/DeadNodes}
 </table>

@@ -110,7 +110,8 @@ public class RoleTokenBinding extends SessionTokenBinding {
     return new AWSCredentialProviderList(
         "Role Token Binding",
         new MarshalledCredentialProvider(
-            COMPONENT, getFileSystem().getUri(),
+            COMPONENT,
+            getStoreContext().getFsURI(),
             getConfig(),
             marshalledCredentials,
             MarshalledCredentials.CredentialTypeRequired.SessionOnly));

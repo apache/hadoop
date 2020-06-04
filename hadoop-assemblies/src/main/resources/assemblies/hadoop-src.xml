@@ -56,9 +56,7 @@
         <exclude>**/build/**</exclude>
         <exclude>**/file:/**</exclude>
         <exclude>**/SecurityAuth.audit*</exclude>
-        <exclude>hadoop-ozone/**</exclude>
-        <exclude>hadoop-hdds/**</exclude>
-        <exclude>hadoop-submarine/**</exclude>
+        <exclude>patchprocess/**</exclude>
       </excludes>
     </fileSet>
   </fileSets>

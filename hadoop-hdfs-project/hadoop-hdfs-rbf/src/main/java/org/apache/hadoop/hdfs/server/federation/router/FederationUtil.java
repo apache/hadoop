@@ -24,9 +24,10 @@ import java.io.InputStreamReader;
 import java.lang.reflect.Constructor;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.EnumSet;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
@@ -97,13 +98,14 @@ public final class FederationUtil {
       JSONObject json = new JSONObject(jmxOutput);
       ret = json.getJSONArray("beans");
     } catch (IOException e) {
-      LOG.error("Cannot read JMX bean {} from server {}: {}",
-          beanQuery, webAddress, e.getMessage());
+      LOG.error("Cannot read JMX bean {} from server {}",
+          beanQuery, webAddress, e);
     } catch (JSONException e) {
+      // We shouldn't need more details if the JSON parsing fails.
       LOG.error("Cannot parse JMX output for {} from server {}: {}",
           beanQuery, webAddress, e.getMessage());
     } catch (Exception e) {
-      LOG.error("Cannot parse JMX output for {} from server {}: {}",
+      LOG.error("Cannot parse JMX output for {} from server {}",
           beanQuery, webAddress, e);
     } finally {
       if (reader != null) {
@@ -223,25 +225,6 @@ public final class FederationUtil {
   }
 
   /**
-   * Check if the given path is the child of parent path.
-   * @param path Path to be check.
-   * @param parent Parent path.
-   * @return True if parent path is parent entry for given path.
-   */
-  public static boolean isParentEntry(final String path, final String parent) {
-    if (!path.startsWith(parent)) {
-      return false;
-    }
-
-    if (path.equals(parent)) {
-      return true;
-    }
-
-    return path.charAt(parent.length()) == Path.SEPARATOR_CHAR
-        || parent.equals(Path.SEPARATOR);
-  }
-
-  /**
    * Add the the number of children for an existing HdfsFileStatus object.
    * @param dirStatus HdfsfileStatus object.
    * @param children number of children to be added.
@@ -249,6 +232,11 @@ public final class FederationUtil {
    */
   public static HdfsFileStatus updateMountPointStatus(HdfsFileStatus dirStatus,
       int children) {
+    // Get flags to set in new FileStatus.
+    EnumSet<HdfsFileStatus.Flags> flags =
+        DFSUtil.getFlags(dirStatus.isEncrypted(), dirStatus.isErasureCoded(),
+            dirStatus.isSnapshotEnabled(), dirStatus.hasAcl());
+    EnumSet.noneOf(HdfsFileStatus.Flags.class);
     return new HdfsFileStatus.Builder().atime(dirStatus.getAccessTime())
         .blocksize(dirStatus.getBlockSize()).children(children)
         .ecPolicy(dirStatus.getErasureCodingPolicy())
@@ -258,6 +246,6 @@ public final class FederationUtil {
         .owner(dirStatus.getOwner()).path(dirStatus.getLocalNameInBytes())
         .perm(dirStatus.getPermission()).replication(dirStatus.getReplication())
         .storagePolicy(dirStatus.getStoragePolicy())
-        .symlink(dirStatus.getSymlinkInBytes()).build();
+        .symlink(dirStatus.getSymlinkInBytes()).flags(flags).build();
   }
 }

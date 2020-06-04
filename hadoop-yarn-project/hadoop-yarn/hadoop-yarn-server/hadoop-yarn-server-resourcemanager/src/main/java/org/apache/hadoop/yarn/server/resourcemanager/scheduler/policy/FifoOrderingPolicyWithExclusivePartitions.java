@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 
 
@@ -134,6 +135,12 @@ public class FifoOrderingPolicyWithExclusivePartitions<S extends SchedulableEnti
   @Override
   public String getInfo() {
     return "FifoOrderingPolicyWithExclusivePartitions";
+  }
+
+  @Override
+  public String getConfigName() {
+    return CapacitySchedulerConfiguration
+        .FIFO_WITH_PARTITIONS_APP_ORDERING_POLICY;
   }
 
   private OrderingPolicy<S> getPartitionOrderingPolicy(String partition) {

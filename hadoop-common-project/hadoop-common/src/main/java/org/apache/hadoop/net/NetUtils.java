@@ -37,6 +37,7 @@ import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.net.ConnectException;
 import java.nio.channels.SocketChannel;
+import java.nio.channels.UnresolvedAddressException;
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
 import java.util.*;
@@ -534,6 +535,8 @@ public class NetUtils {
       }
     } catch (SocketTimeoutException ste) {
       throw new ConnectTimeoutException(ste.getMessage());
+    }  catch (UnresolvedAddressException uae) {
+      throw new UnknownHostException(uae.getMessage());
     }
 
     // There is a very rare case allowed by the TCP specification, such that
@@ -636,6 +639,22 @@ public class NetUtils {
     } catch (UnknownHostException e) {
       return null;
     }
+  }
+
+  /**
+   * Attempt to normalize the given string to "host:port"
+   * if it like "ip:port".
+   *
+   * @param ipPort maybe lik ip:port or host:port.
+   * @return host:port
+   */
+  public static String normalizeIP2HostName(String ipPort) {
+    if (null == ipPort || !ipPortPattern.matcher(ipPort).matches()) {
+      return ipPort;
+    }
+
+    InetSocketAddress address = createSocketAddr(ipPort);
+    return getHostPortString(address);
   }
 
   /**

@@ -28,7 +28,6 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
-import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.auth.RoleModel;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.SecretManager;
@@ -55,7 +54,8 @@ import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DURAT
  *  instance which created it --which itself follows the lifecycle of the FS.
  *
  *  One big difference is that
- *  {@link #bindToFileSystem(URI, S3AFileSystem)} will be called
+ *  {@link AbstractDTService#bindToFileSystem(URI, org.apache.hadoop.fs.s3a.impl.StoreContext, DelegationOperations)}
+ *  will be called
  *  before the {@link #init(Configuration)} operation, this is where
  *  the owning FS is passed in.
  *

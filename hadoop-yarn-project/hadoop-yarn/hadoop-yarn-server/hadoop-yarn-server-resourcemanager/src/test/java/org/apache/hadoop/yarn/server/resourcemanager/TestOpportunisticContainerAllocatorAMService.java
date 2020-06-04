@@ -191,8 +191,15 @@ public class TestOpportunisticContainerAllocatorAMService {
     OpportunisticContainerAllocatorAMService amservice =
         (OpportunisticContainerAllocatorAMService) rm
             .getApplicationMasterService();
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "default");
-
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm2);
     ResourceScheduler scheduler = rm.getResourceScheduler();
 
@@ -343,8 +350,15 @@ public class TestOpportunisticContainerAllocatorAMService {
     OpportunisticContainerAllocatorAMService amservice =
         (OpportunisticContainerAllocatorAMService) rm
             .getApplicationMasterService();
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "default");
-
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm2);
     ResourceScheduler scheduler = rm.getResourceScheduler();
 
@@ -453,8 +467,15 @@ public class TestOpportunisticContainerAllocatorAMService {
     OpportunisticContainerAllocatorAMService amservice =
         (OpportunisticContainerAllocatorAMService) rm
             .getApplicationMasterService();
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "default");
-
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm2);
     ResourceScheduler scheduler = rm.getResourceScheduler();
 
@@ -550,7 +571,15 @@ public class TestOpportunisticContainerAllocatorAMService {
     OpportunisticContainerAllocatorAMService amservice =
         (OpportunisticContainerAllocatorAMService) rm
             .getApplicationMasterService();
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "default");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
     ResourceScheduler scheduler = rm.getResourceScheduler();
     RMNode rmNode1 = rm.getRMContext().getRMNodes().get(nm1.getNodeId());
@@ -717,7 +746,13 @@ public class TestOpportunisticContainerAllocatorAMService {
     OpportunisticContainerAllocatorAMService amservice =
         (OpportunisticContainerAllocatorAMService) rm
             .getApplicationMasterService();
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "default");
+    RMApp app1 = MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .build());
     ApplicationAttemptId attemptId =
         app1.getCurrentAppAttempt().getAppAttemptId();
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm2);
@@ -787,7 +822,13 @@ public class TestOpportunisticContainerAllocatorAMService {
     MockNM nm = new MockNM("h:1234", 4096, rm.getResourceTrackerService());
     nm.registerNode();
 
-    RMApp app = rm.submitApp(1 * GB, "app", "user", null, "default");
+    RMApp app = MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .build());
     ApplicationAttemptId attemptId0 =
         app.getCurrentAppAttempt().getAppAttemptId();
     MockAM am = MockRM.launchAndRegisterAM(app, rm, nm);
@@ -824,7 +865,15 @@ public class TestOpportunisticContainerAllocatorAMService {
     OpportunisticContainerAllocatorAMService amservice =
         (OpportunisticContainerAllocatorAMService) rm
             .getApplicationMasterService();
-    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "default");
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     ApplicationAttemptId attemptId =
         app1.getCurrentAppAttempt().getAppAttemptId();
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm2);
@@ -877,7 +926,13 @@ public class TestOpportunisticContainerAllocatorAMService {
     nm.registerNode();
     nm.nodeHeartbeat(oppContainersStatus, true);
 
-    RMApp app = rm.submitApp(1 * GB, "app", "user", null, "default");
+    RMApp app = MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .build());
     ApplicationAttemptId attemptId =
         app.getCurrentAppAttempt().getAppAttemptId();
     MockAM am = MockRM.launchAndRegisterAM(app, rm, nm);

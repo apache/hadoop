@@ -224,28 +224,31 @@ public class NativeIO {
      * JNI wrapper of persist memory operations.
      */
     public static class Pmem {
-      // check whether the address is a Pmem address or DIMM address
+      // Check whether the address is a Pmem address or DIMM address
       public static boolean isPmem(long address, long length) {
         return NativeIO.POSIX.isPmemCheck(address, length);
       }
 
-      // create a pmem file and memory map it
-      public static PmemMappedRegion mapBlock(String path, long length) {
-        return NativeIO.POSIX.pmemCreateMapFile(path, length);
+      // Map a file in persistent memory, if the given file exists,
+      // directly map it. If not, create the named file on persistent memory
+      // and then map it.
+      public static PmemMappedRegion mapBlock(
+          String path, long length, boolean isFileExist) {
+        return NativeIO.POSIX.pmemMapFile(path, length, isFileExist);
       }
 
-      // unmap a pmem file
+      // Unmap a pmem file
       public static boolean unmapBlock(long address, long length) {
         return NativeIO.POSIX.pmemUnMap(address, length);
       }
 
-      // copy data from disk file(src) to pmem file(dest), without flush
+      // Copy data from disk file(src) to pmem file(dest), without flush
       public static void memCopy(byte[] src, long dest, boolean isPmem,
           long length) {
         NativeIO.POSIX.pmemCopy(src, dest, isPmem, length);
       }
 
-      // flush the memory content to persistent storage
+      // Flush the memory content to persistent storage
       public static void memSync(PmemMappedRegion region) {
         if (region.isPmem()) {
           NativeIO.POSIX.pmemDrain();
@@ -261,8 +264,8 @@ public class NativeIO {
 
     private static native String getPmdkLibPath();
     private static native boolean isPmemCheck(long address, long length);
-    private static native PmemMappedRegion pmemCreateMapFile(String path,
-        long length);
+    private static native PmemMappedRegion pmemMapFile(String path,
+        long length, boolean isFileExist);
     private static native boolean pmemUnMap(long address, long length);
     private static native void pmemCopy(byte[] src, long dest, boolean isPmem,
         long length);

@@ -579,6 +579,11 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
     fatalError(errorMessage);
   }
 
+  @VisibleForTesting
+  public boolean getWantToBeInElection() {
+    return wantToBeInElection;
+  }
+
   /**
    * We failed to become active. Re-join the election, but
    * sleep for a few seconds after terminating our existing

@@ -22,12 +22,17 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
+
 /**
  * Responsible to keep all the Azure Blob File System related configurations.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public final class FileSystemConfigurations {
+
+  public static final String DEFAULT_FS_AZURE_ACCOUNT_IS_HNS_ENABLED = "";
+
   public static final String USER_HOME_DIRECTORY_PREFIX = "/user";
 
   // Retry parameter defaults.
@@ -35,6 +40,7 @@ public final class FileSystemConfigurations {
   public static final int DEFAULT_MAX_BACKOFF_INTERVAL = 30 * 1000;  // 30s
   public static final int DEFAULT_BACKOFF_INTERVAL = 3 * 1000;  // 3s
   public static final int DEFAULT_MAX_RETRY_ATTEMPTS = 30;
+  public static final int DEFAULT_CUSTOM_TOKEN_FETCH_RETRY_COUNT = 3;
 
   private static final int ONE_KB = 1024;
   private static final int ONE_MB = ONE_KB * ONE_KB;
@@ -46,6 +52,7 @@ public final class FileSystemConfigurations {
   public static final int MAX_BUFFER_SIZE = 100 * ONE_MB;  // 100 MB
   public static final long MAX_AZURE_BLOCK_SIZE = 256 * 1024 * 1024L; // changing default abfs blocksize to 256MB
   public static final String AZURE_BLOCK_LOCATION_HOST_DEFAULT = "localhost";
+  public static final int DEFAULT_AZURE_LIST_MAX_RESULTS = 500;
 
   public static final int MAX_CONCURRENT_READ_THREADS = 12;
   public static final int MAX_CONCURRENT_WRITE_THREADS = 8;
@@ -67,6 +74,15 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_ENABLE_HTTPS = true;
 
   public static final boolean DEFAULT_USE_UPN = false;
+  public static final boolean DEFAULT_ENABLE_CHECK_ACCESS = false;
+  public static final boolean DEFAULT_ABFS_LATENCY_TRACK = false;
+  public static final long DEFAULT_SAS_TOKEN_RENEW_PERIOD_FOR_STREAMS_IN_SECONDS = 120;
+
+  public static final String DEFAULT_FS_AZURE_USER_AGENT_PREFIX = EMPTY_STRING;
+  public static final String DEFAULT_VALUE_UNKNOWN = "UNKNOWN";
+
+  public static final boolean DEFAULT_DELETE_CONSIDERED_IDEMPOTENT = true;
+  public static final int DEFAULT_CLOCK_SKEW_WITH_SERVER_IN_MS = 5 * 60 * 1000; // 5 mins
 
   private FileSystemConfigurations() {}
 }

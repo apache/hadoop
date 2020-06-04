@@ -25,10 +25,12 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import java.util.Set;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -950,10 +952,19 @@ public class ViewFs extends AbstractFileSystem {
       return -1;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * Note: listStatus on root("/") considers listing from fallbackLink if
+     * available. If the same directory name is present in configured mount
+     * path as well as in fallback link, then only the configured mount path
+     * will be listed in the returned result.
+     */
     @Override
     public FileStatus[] listStatus(final Path f) throws AccessControlException,
         IOException {
       checkPathIsSlash(f);
+      FileStatus[] fallbackStatuses = listStatusForFallbackLink();
       FileStatus[] result = new FileStatus[theInternalDir.getChildren().size()];
       int i = 0;
       for (Entry<String, INode<AbstractFileSystem>> iEntry :
@@ -979,7 +990,45 @@ public class ViewFs extends AbstractFileSystem {
                 myUri, null));
         }
       }
-      return result;
+      if (fallbackStatuses.length > 0) {
+        return consolidateFileStatuses(fallbackStatuses, result);
+      } else {
+        return result;
+      }
+    }
+
+    private FileStatus[] consolidateFileStatuses(FileStatus[] fallbackStatuses,
+        FileStatus[] mountPointStatuses) {
+      ArrayList<FileStatus> result = new ArrayList<>();
+      Set<String> pathSet = new HashSet<>();
+      for (FileStatus status : mountPointStatuses) {
+        result.add(status);
+        pathSet.add(status.getPath().getName());
+      }
+      for (FileStatus status : fallbackStatuses) {
+        if (!pathSet.contains(status.getPath().getName())) {
+          result.add(status);
+        }
+      }
+      return result.toArray(new FileStatus[0]);
+    }
+
+    private FileStatus[] listStatusForFallbackLink() throws IOException {
+      if (theInternalDir.isRoot() &&
+          theInternalDir.getFallbackLink() != null) {
+        AbstractFileSystem linkedFs =
+            theInternalDir.getFallbackLink().getTargetFileSystem();
+        // Fallback link is only applicable for root
+        FileStatus[] statuses = linkedFs.listStatus(new Path("/"));
+        for (FileStatus status : statuses) {
+          // Fix the path back to viewfs scheme
+          status.setPath(
+              new Path(myUri.toString(), status.getPath().getName()));
+        }
+        return statuses;
+      } else {
+        return new FileStatus[0];
+      }
     }
 
     @Override

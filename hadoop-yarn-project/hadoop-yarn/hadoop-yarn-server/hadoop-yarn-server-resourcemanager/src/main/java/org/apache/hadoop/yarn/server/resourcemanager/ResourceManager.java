@@ -21,10 +21,6 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import com.google.common.annotations.VisibleForTesting;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigArgumentHandler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigArgumentHandler.CliOption;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigConverter;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
@@ -232,13 +228,6 @@ public class ResourceManager extends CompositeService
   private Configuration conf;
 
   private UserGroupInformation rmLoginUGI;
-  private static FSConfigToCSConfigArgumentHandler
-      fsConfigConversionArgumentHandler;
-
-  static {
-    FSConfigToCSConfigConverter converter = initFSConfigConverter();
-    initFSArgumentHandler(converter);
-  }
 
   public ResourceManager() {
     super("ResourceManager");
@@ -624,12 +613,20 @@ public class ResourceManager extends CompositeService
   // sanity check for configurations
   protected static void validateConfigs(Configuration conf) {
     // validate max-attempts
-    int globalMaxAppAttempts =
-        conf.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+    int rmMaxAppAttempts = conf.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
         YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
+    if (rmMaxAppAttempts <= 0) {
+      throw new YarnRuntimeException("Invalid rm am max attempts configuration"
+          + ", " + YarnConfiguration.RM_AM_MAX_ATTEMPTS
+          + "=" + rmMaxAppAttempts + ", it should be a positive integer.");
+    }
+    int globalMaxAppAttempts = conf.getInt(
+        YarnConfiguration.GLOBAL_RM_AM_MAX_ATTEMPTS,
+        conf.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+            YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS));
     if (globalMaxAppAttempts <= 0) {
       throw new YarnRuntimeException("Invalid global max attempts configuration"
-          + ", " + YarnConfiguration.RM_AM_MAX_ATTEMPTS
+          + ", " + YarnConfiguration.GLOBAL_RM_AM_MAX_ATTEMPTS
           + "=" + globalMaxAppAttempts + ", it should be a positive integer.");
     }
 
@@ -1576,22 +1573,6 @@ public class ResourceManager extends CompositeService
         } else if (argv[0].equals("-remove-application-from-state-store")
             && argv.length == 2) {
           removeApplication(conf, argv[1]);
-        } else if (argv[0].equals("-convert-fs-configuration")) {
-          String[] args = Arrays.copyOfRange(argv, 1, argv.length);
-          try {
-            int exitCode =
-                fsConfigConversionArgumentHandler.parseAndConvert(args);
-            if (exitCode != 0) {
-              LOG.error(FATAL,
-                  "Error while starting FS configuration conversion, " +
-                      "see previous error messages for details!");
-              System.exit(exitCode);
-            }
-          } catch (Throwable t) {
-            LOG.error(FATAL,
-                "Error while starting FS configuration conversion!", t);
-            System.exit(-1);
-          }
         } else {
           printUsage(System.err);
         }
@@ -1744,12 +1725,6 @@ public class ResourceManager extends CompositeService
     out.println("                            "
         + "[-format-conf-store]" + "\n");
 
-    out.println("[-convert-fs-configuration ");
-    out.println(FSConfigToCSConfigConverter.WARNING_TEXT);
-    for (CliOption cliOption : CliOption.values()) {
-      out.println("   " + cliOption.getAsArgumentString());
-    }
-    out.println("]");
   }
 
   protected RMAppLifetimeMonitor createRMAppLifetimeMonitor() {
@@ -1767,17 +1742,4 @@ public class ResourceManager extends CompositeService
   public boolean isSecurityEnabled() {
     return UserGroupInformation.isSecurityEnabled();
   }
-
-  @VisibleForTesting
-  static void initFSArgumentHandler(FSConfigToCSConfigConverter converter) {
-    ResourceManager.fsConfigConversionArgumentHandler =
-        new FSConfigToCSConfigArgumentHandler(converter);
-  }
-
-  private static FSConfigToCSConfigConverter initFSConfigConverter() {
-    FSConfigToCSConfigRuleHandler ruleHandler =
-        new FSConfigToCSConfigRuleHandler();
-    return new FSConfigToCSConfigConverter(ruleHandler);
-  }
-
 }

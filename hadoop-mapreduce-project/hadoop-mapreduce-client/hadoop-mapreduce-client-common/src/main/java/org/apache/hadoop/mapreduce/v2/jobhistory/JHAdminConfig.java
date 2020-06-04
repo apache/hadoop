@@ -256,6 +256,13 @@ public class JHAdminConfig {
       "xframe-options";
 
   /**
+   * CORS settings.
+   */
+  public static final String MR_HISTORY_ENABLE_CORS_FILTER = MR_HISTORY_PREFIX +
+      "webapp.cross-origin.enabled";
+  public static final boolean DEFAULT_MR_HISTORY_ENABLE_CORS_FILTER = false;
+
+  /**
    * Settings for .jhist file format.
    */
   public static final String MR_HS_JHIST_FORMAT =

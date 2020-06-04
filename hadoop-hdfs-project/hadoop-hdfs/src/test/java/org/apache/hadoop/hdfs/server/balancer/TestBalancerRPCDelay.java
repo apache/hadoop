@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.balancer;
 
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -25,8 +28,29 @@ import org.junit.Test;
  */
 public class TestBalancerRPCDelay {
 
+  private TestBalancer testBalancer;
+
+  @Before
+  public void setup() {
+    testBalancer = new TestBalancer();
+    testBalancer.setup();
+  }
+
+  @After
+  public void teardown() throws Exception {
+    if (testBalancer != null) {
+      testBalancer.shutdown();
+    }
+  }
+
   @Test(timeout=100000)
-  public void testBalancerRPCDelay() throws Exception {
-    new TestBalancer().testBalancerRPCDelay();
+  public void testBalancerRPCDelayQps3() throws Exception {
+    testBalancer.testBalancerRPCDelay(3);
+  }
+
+  @Test(timeout=100000)
+  public void testBalancerRPCDelayQpsDefault() throws Exception {
+    testBalancer.testBalancerRPCDelay(
+        DFSConfigKeys.DFS_NAMENODE_GETBLOCKS_MAX_QPS_DEFAULT);
   }
 }

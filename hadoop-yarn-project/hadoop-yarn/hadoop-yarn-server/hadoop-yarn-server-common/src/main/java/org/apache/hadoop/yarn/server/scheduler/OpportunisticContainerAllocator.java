@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.scheduler;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.Time;
@@ -48,7 +47,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -205,20 +203,36 @@ public abstract class OpportunisticContainerAllocator {
 
   private final BaseContainerTokenSecretManager tokenSecretManager;
 
-  static class Allocation {
+  /**
+   * This class encapsulates container and resourceName for an allocation.
+   */
+  public static class Allocation {
     private final Container container;
     private final String resourceName;
 
-    Allocation(Container container, String resourceName) {
+    /**
+     * Creates an instance of Allocation.
+     * @param container allocated container.
+     * @param resourceName location where it got allocated.
+     */
+    public Allocation(Container container, String resourceName) {
       this.container = container;
       this.resourceName = resourceName;
     }
 
-    Container getContainer() {
+    /**
+     * Get container of the allocation.
+     * @return container of the allocation.
+     */
+    public Container getContainer() {
       return container;
     }
 
-    String getResourceName() {
+    /**
+     * Get resource name of the allocation.
+     * @return resource name of the allocation.
+     */
+    public String getResourceName() {
       return resourceName;
     }
   }
@@ -273,12 +287,12 @@ public abstract class OpportunisticContainerAllocator {
       }
     }
 
-    public Set<String> getNodeLocations() {
-      return nodeLocations.keySet();
+    public Map<String, AtomicInteger> getNodeMap() {
+      return nodeLocations;
     }
 
-    public Set<String> getRackLocations() {
-      return rackLocations.keySet();
+    public Map<String, AtomicInteger> getRackMap() {
+      return rackLocations;
     }
   }
 
@@ -304,8 +318,8 @@ public abstract class OpportunisticContainerAllocator {
     this.maxAllocationsPerAMHeartbeat = maxAllocationsPerAMHeartbeat;
   }
 
-  @VisibleForTesting
-  void setMaxAllocationsPerAMHeartbeat(int maxAllocationsPerAMHeartbeat) {
+  public void setMaxAllocationsPerAMHeartbeat(
+      int maxAllocationsPerAMHeartbeat) {
     this.maxAllocationsPerAMHeartbeat = maxAllocationsPerAMHeartbeat;
   }
 

@@ -84,4 +84,9 @@ service RouterAdminProtocolService {
    * Get the destination of a file/directory in the federation.
    */
   rpc getDestination(GetDestinationRequestProto) returns (GetDestinationResponseProto);
+
+  /**
+   * Refresh superuser proxy groups mappings on Router.
+   */
+  rpc refreshSuperUserGroupsConfiguration(RefreshSuperUserGroupsConfigurationRequestProto) returns (RefreshSuperUserGroupsConfigurationResponseProto);
 }

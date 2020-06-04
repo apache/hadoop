@@ -33,6 +33,10 @@ import java.io.OutputStreamWriter;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
+import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.concurrent.CountDownLatch;
@@ -120,6 +124,20 @@ public class TestAggregatedLogFormat {
       if(e.toString().contains("NumberFormatException")) {
         Assert.fail("Aggregated logs are corrupted.");
       }
+    }
+
+    //Append some corrupted text to the end of the aggregated file.
+    URI logUri = URI.create("file:///" + remoteAppLogFile.toUri().toString());
+    Files.write(Paths.get(logUri),
+        "corrupt_text".getBytes(), StandardOpenOption.APPEND);
+    try {
+      // Trying to read a corrupted log file created above should cause
+      // log reading to fail below with an IOException.
+      logReader = new LogReader(conf, remoteAppLogFile);
+      Assert.fail("Expect IOException from reading corrupt aggregated logs.");
+    } catch (IOException ioe) {
+      DataInputStream dIS = logReader.next(rLogKey);
+      Assert.assertNull("Input stream not available for reading", dIS);
     }
   }
 

@@ -300,6 +300,11 @@
   }
 
   function browse_directory(dir) {
+    if (dir.match('^/+$')) {
+      $('#parentDir').prop('disabled', true);
+    } else {
+      $('#parentDir').prop('disabled', false);
+    }
     var HELPERS = {
       'helper_date_tostring' : function (chunk, ctx, bodies, params) {
         var value = dust.helpers.tap(params.value, chunk, ctx);
@@ -375,6 +380,12 @@
       });
     }).fail(network_error_handler(url));
   }
+
+  $('#parentDir').click(function () {
+    var current = current_directory;
+    var parent = current.replace(/\/+[^/]+\/*$/,"") || '/';
+    browse_directory(parent);
+  });
 
 
   function init() {

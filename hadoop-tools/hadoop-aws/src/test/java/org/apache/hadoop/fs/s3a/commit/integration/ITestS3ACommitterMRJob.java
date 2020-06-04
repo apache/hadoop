@@ -628,16 +628,18 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
       S3AFileSystem fs = getRemoteFS();
       // log the contents
       lsR(fs, destPath, true);
-      intercept(FileNotFoundException.class, () -> {
+      // and look for the magic directory
+      // HADOOP-16632 shows how partitioned/speculative tasks can leave
+      // data here and it is not an error. So just log and continue
+      try {
         final FileStatus st = fs.getFileStatus(magicDir);
-        StringBuilder result = new StringBuilder("Found magic dir which should"
-            + " have been deleted at ").append(st).append('\n');
-        result.append(" [");
+        LOG.warn("Found magic dir which should"
+            + " have been deleted at {}", st);
         applyLocatedFiles(fs.listFiles(magicDir, true),
-            (status) -> result.append(" ").append(status.getPath()).append('\n'));
-        result.append("]");
-        return result.toString();
-      });
+            (status) -> LOG.warn("{}", status));
+      } catch (FileNotFoundException ignored) {
+        // expected
+      }
     }
   }
 

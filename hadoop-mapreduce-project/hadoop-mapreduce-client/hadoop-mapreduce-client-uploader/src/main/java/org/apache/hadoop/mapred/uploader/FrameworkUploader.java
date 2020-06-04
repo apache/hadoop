@@ -175,7 +175,6 @@ public class FrameworkUploader implements Runnable {
   @VisibleForTesting
   void beginUpload() throws IOException, UploaderException {
     if (targetStream == null) {
-      validateTargetPath();
       int lastIndex = target.indexOf('#');
       targetPath =
           new Path(
@@ -298,20 +297,24 @@ public class FrameworkUploader implements Runnable {
       fileSystem.setReplication(targetPath, finalReplication);
       LOG.info("Set replication to " +
           finalReplication + " for path: " + targetPath);
-      long startTime = System.currentTimeMillis();
-      long endTime = startTime;
-      long currentReplication = 0;
-      while(endTime - startTime < timeout * 1000 &&
-           currentReplication < acceptableReplication) {
-        Thread.sleep(1000);
-        endTime = System.currentTimeMillis();
-        currentReplication = getSmallestReplicatedBlockCount();
-      }
-      if (endTime - startTime >= timeout * 1000) {
-        LOG.error(String.format(
-            "Timed out after %d seconds while waiting for acceptable" +
-                " replication of %d (current replication is %d)",
-            timeout, acceptableReplication, currentReplication));
+      if (timeout == 0) {
+        LOG.info("Timeout is set to 0. Skipping replication check.");
+      } else {
+        long startTime = System.currentTimeMillis();
+        long endTime = startTime;
+        long currentReplication = 0;
+        while(endTime - startTime < timeout * 1000 &&
+             currentReplication < acceptableReplication) {
+          Thread.sleep(1000);
+          endTime = System.currentTimeMillis();
+          currentReplication = getSmallestReplicatedBlockCount();
+        }
+        if (endTime - startTime >= timeout * 1000) {
+          LOG.error(String.format(
+              "Timed out after %d seconds while waiting for acceptable" +
+                  " replication of %d (current replication is %d)",
+              timeout, acceptableReplication, currentReplication));
+        }
       }
     } else {
       LOG.info("Cannot set replication to " +
@@ -476,13 +479,6 @@ public class FrameworkUploader implements Runnable {
     return false;
   }
 
-  private void validateTargetPath() throws UploaderException {
-    if (!target.startsWith("hdfs:/") &&
-        !target.startsWith("file:/")) {
-      throw new UploaderException("Target path is not hdfs or local " + target);
-    }
-  }
-
   @VisibleForTesting
   boolean parseArguments(String[] args) throws IOException {
     Options opts = new Options();
@@ -570,7 +566,7 @@ public class FrameworkUploader implements Runnable {
         path.startsWith("file://");
 
     if (fs == null) {
-      fs = conf.get(FS_DEFAULT_NAME_KEY);
+      fs = conf.getTrimmed(FS_DEFAULT_NAME_KEY);
       if (fs == null && !isFullPath) {
         LOG.error("No filesystem specified in either fs or target.");
         printHelp(opts);

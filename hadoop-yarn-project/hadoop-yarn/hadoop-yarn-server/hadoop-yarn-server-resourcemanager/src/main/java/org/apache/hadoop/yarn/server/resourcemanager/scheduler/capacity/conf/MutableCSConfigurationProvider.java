@@ -42,6 +42,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ORDERING_POLICY;
+
 /**
  * CS configuration provider which implements
  * {@link MutableConfigurationProvider} for modifying capacity scheduler
@@ -126,17 +128,36 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
   }
 
   @Override
-  public void logAndApplyMutation(UserGroupInformation user,
+  public LogMutation logAndApplyMutation(UserGroupInformation user,
       SchedConfUpdateInfo confUpdate) throws Exception {
     oldConf = new Configuration(schedConf);
-    Map<String, String> kvUpdate = constructKeyValueConfUpdate(confUpdate);
+    CapacitySchedulerConfiguration proposedConf =
+            new CapacitySchedulerConfiguration(schedConf, false);
+    Map<String, String> kvUpdate
+            = constructKeyValueConfUpdate(proposedConf, confUpdate);
     LogMutation log = new LogMutation(kvUpdate, user.getShortUserName());
     confStore.logMutation(log);
+    applyMutation(proposedConf, kvUpdate);
+    schedConf = proposedConf;
+    return log;
+  }
+
+  public Configuration applyChanges(Configuration oldConfiguration,
+                           SchedConfUpdateInfo confUpdate) throws IOException {
+    CapacitySchedulerConfiguration proposedConf =
+            new CapacitySchedulerConfiguration(oldConfiguration, false);
+    Map<String, String> kvUpdate
+            = constructKeyValueConfUpdate(proposedConf, confUpdate);
+    applyMutation(proposedConf, kvUpdate);
+    return proposedConf;
+  }
+
+  private void applyMutation(Configuration conf, Map<String, String> kvUpdate) {
     for (Map.Entry<String, String> kv : kvUpdate.entrySet()) {
       if (kv.getValue() == null) {
-        schedConf.unset(kv.getKey());
+        conf.unset(kv.getKey());
       } else {
-        schedConf.set(kv.getKey(), kv.getValue());
+        conf.set(kv.getKey(), kv.getValue());
       }
     }
   }
@@ -182,10 +203,11 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
   }
 
   @Override
-  public void confirmPendingMutation(boolean isValid) throws Exception {
+  public void confirmPendingMutation(LogMutation pendingMutation,
+      boolean isValid) throws Exception {
     formatLock.readLock().lock();
     try {
-      confStore.confirmMutation(isValid);
+      confStore.confirmMutation(pendingMutation, isValid);
       if (!isValid) {
         schedConf = oldConf;
       }
@@ -213,9 +235,9 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
   }
 
   private Map<String, String> constructKeyValueConfUpdate(
+      CapacitySchedulerConfiguration proposedConf,
       SchedConfUpdateInfo mutationInfo) throws IOException {
-    CapacitySchedulerConfiguration proposedConf =
-        new CapacitySchedulerConfiguration(schedConf, false);
+
     Map<String, String> confUpdate = new HashMap<>();
     for (String queueToRemove : mutationInfo.getRemoveQueueInfo()) {
       removeQueue(queueToRemove, proposedConf, confUpdate);
@@ -259,6 +281,13 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
             + CapacitySchedulerConfiguration.QUEUES;
         if (siblingQueues.size() == 0) {
           confUpdate.put(queuesConfig, null);
+          // Unset Ordering Policy of Leaf Queue converted from
+          // Parent Queue after removeQueue
+          String queueOrderingPolicy = CapacitySchedulerConfiguration.PREFIX
+              + parentQueuePath + CapacitySchedulerConfiguration.DOT
+              + ORDERING_POLICY;
+          proposedConf.unset(queueOrderingPolicy);
+          confUpdate.put(queueOrderingPolicy, null);
         } else {
           confUpdate.put(queuesConfig, Joiner.on(',').join(siblingQueues));
         }
@@ -306,6 +335,14 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
           proposedConf.set(keyPrefix + kv.getKey(), kv.getValue());
         }
         confUpdate.put(keyPrefix + kv.getKey(), kv.getValue());
+      }
+      // Unset Ordering Policy of Parent Queue converted from
+      // Leaf Queue after addQueue
+      String queueOrderingPolicy = CapacitySchedulerConfiguration.PREFIX
+          + parentQueue + CapacitySchedulerConfiguration.DOT + ORDERING_POLICY;
+      if (siblingQueues.size() == 1) {
+        proposedConf.unset(queueOrderingPolicy);
+        confUpdate.put(queueOrderingPolicy, null);
       }
     }
   }

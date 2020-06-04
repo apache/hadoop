@@ -91,6 +91,13 @@ public class FairSchedulerConfiguration extends Configuration {
    */
   public static final String MIGRATION_MODE = CONF_PREFIX + "migration.mode";
 
+  /**
+   * Disables checking whether a placement rule is terminal or not. Only
+   * used during migration mode. This property should NOT be used by end users!
+   */
+  public static final String NO_TERMINAL_RULE_CHECK = CONF_PREFIX +
+      "no-terminal-rule.check";
+
   public static final String ALLOCATION_FILE = CONF_PREFIX + "allocation.file";
   protected static final String DEFAULT_ALLOCATION_FILE = "fair-scheduler.xml";
   
@@ -168,6 +175,10 @@ public class FairSchedulerConfiguration extends Configuration {
   /** Whether preemption is enabled. */
   public static final String  PREEMPTION = CONF_PREFIX + "preemption";
   public static final boolean DEFAULT_PREEMPTION = false;
+
+  protected static final String AM_PREEMPTION_PREFIX =
+          CONF_PREFIX + "am.preemption.";
+  protected static final boolean DEFAULT_AM_PREEMPTION = true;
 
   protected static final String PREEMPTION_THRESHOLD =
       CONF_PREFIX + "preemption.cluster-utilization-threshold";
@@ -393,6 +404,10 @@ public class FairSchedulerConfiguration extends Configuration {
 
   public boolean getPreemptionEnabled() {
     return getBoolean(PREEMPTION, DEFAULT_PREEMPTION);
+  }
+
+  public boolean getAMPreemptionEnabled(String queueName) {
+    return getBoolean(AM_PREEMPTION_PREFIX + queueName, DEFAULT_AM_PREEMPTION);
   }
 
   public float getPreemptionUtilizationThreshold() {

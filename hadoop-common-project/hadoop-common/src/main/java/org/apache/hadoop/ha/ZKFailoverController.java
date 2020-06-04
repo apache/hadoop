@@ -157,7 +157,10 @@ public abstract class ZKFailoverController {
     return localTarget;
   }
 
-  HAServiceState getServiceState() { return serviceState; }
+  @VisibleForTesting
+  public HAServiceState getServiceState() {
+    return serviceState;
+  }
 
   public int run(final String[] args) throws Exception {
     if (!localTarget.isAutoFailoverEnabled()) {
@@ -315,9 +318,10 @@ public abstract class ZKFailoverController {
     healthMonitor.addServiceStateCallback(new ServiceStateCallBacks());
     healthMonitor.start();
   }
-  
+
   protected void initRPC() throws IOException {
     InetSocketAddress bindAddr = getRpcAddressToBindTo();
+    LOG.info("ZKFC RpcServer binding to {}", bindAddr);
     rpcServer = new ZKFCRpcServer(conf, bindAddr, this, getPolicyProvider());
   }
 
@@ -799,7 +803,9 @@ public abstract class ZKFailoverController {
     
         switch (lastHealthState) {
         case SERVICE_HEALTHY:
-          elector.joinElection(targetToData(localTarget));
+          if(serviceState != HAServiceState.OBSERVER) {
+            elector.joinElection(targetToData(localTarget));
+          }
           if (quitElectionOnBadState) {
             quitElectionOnBadState = false;
           }
@@ -909,7 +915,7 @@ public abstract class ZKFailoverController {
   }
   
   @VisibleForTesting
-  ActiveStandbyElector getElectorForTests() {
+  public ActiveStandbyElector getElectorForTests() {
     return elector;
   }
   

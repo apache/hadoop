@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlTransient;
 
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
@@ -57,6 +58,9 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
   protected long maxApplicationLifetime;
   protected long defaultApplicationLifetime;
 
+  @XmlTransient
+  protected String orderingPolicyDisplayName;
+
   CapacitySchedulerLeafQueueInfo() {
   };
 
@@ -75,7 +79,8 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
     usedAMResource = new ResourceInfo(q.getQueueResourceUsage().getAMUsed());
     preemptionDisabled = q.getPreemptionDisabled();
     intraQueuePreemptionDisabled = q.getIntraQueuePreemptionDisabled();
-    orderingPolicyInfo = q.getOrderingPolicy().getInfo();
+    orderingPolicyDisplayName = q.getOrderingPolicy().getInfo();
+    orderingPolicyInfo = q.getOrderingPolicy().getConfigName();
     defaultNodeLabelExpression = q.getDefaultNodeLabelExpression();
     defaultPriority = q.getDefaultApplicationPriority().getPriority();
     ArrayList<UserInfo> usersList = users.getUsersList();
@@ -162,6 +167,10 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
 
   public boolean getIntraQueuePreemptionDisabled() {
     return intraQueuePreemptionDisabled;
+  }
+
+  public String getOrderingPolicyDisplayName() {
+    return orderingPolicyDisplayName;
   }
   
   public String getDefaultNodeLabelExpression() {

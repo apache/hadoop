@@ -285,6 +285,47 @@ header.bs-docs-nav, header.bs-docs-nav .navbar-brand {
     padding-right: 5pt;
 }
 
+.dfshealth-namenode-icon:before {
+    font-size: 10pt;
+    padding-right: 1pt;
+    font-family: 'Glyphicons Halflings';
+    font-style: normal;
+    font-weight: normal;
+    line-height: 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.dfshealth-namenode-active:before {
+    color: #5fa341;
+    content: "\e013";
+}
+
+.dfshealth-namenode-observer:before {
+    color: #CCCC00;
+    content: "\e013";
+}
+
+.dfshealth-namenode-unavailable:before {
+    color: #c7254e;
+    content: "\e101";
+}
+
+.dfshealth-namenode-standby:before {
+    color: #2e6da6;
+    content: "\e017";
+}
+
+.dfshealth-namenode-safemode:before {
+    color: #bc5f04;
+    content: "\e090";
+}
+
+.dfshealth-namenode-disabled:before {
+    color: #eea236;
+    content: "\e136";
+}
+
 .explorer-entry .explorer-browse-links { cursor: pointer; }
 .explorer-entry .glyphicon-trash { cursor: pointer; }
 

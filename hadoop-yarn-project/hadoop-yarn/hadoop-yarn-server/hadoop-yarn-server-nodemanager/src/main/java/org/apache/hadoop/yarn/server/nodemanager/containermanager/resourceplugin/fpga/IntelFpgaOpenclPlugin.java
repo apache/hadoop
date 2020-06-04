@@ -22,8 +22,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.fpga.FpgaResourceAllocator;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.fpga.FpgaResourceAllocator.FpgaDevice;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -138,8 +136,8 @@ public class IntelFpgaOpenclPlugin implements AbstractFpgaVendorPlugin {
   }
 
   @Override
-  public List<FpgaResourceAllocator.FpgaDevice> discover(int timeout) {
-    List<FpgaResourceAllocator.FpgaDevice> list = new LinkedList<>();
+  public List<FpgaDevice> discover(int timeout) {
+    List<FpgaDevice> list = new LinkedList<>();
     String output;
     output = getDiagnoseInfo(timeout);
     if (null == output) {
@@ -240,8 +238,10 @@ public class IntelFpgaOpenclPlugin implements AbstractFpgaVendorPlugin {
           .findFirst();
 
       if (aocxPath.isPresent()) {
-        ipFilePath = aocxPath.get().toUri().toString();
-        LOG.debug("Found: {}", ipFilePath);
+        ipFilePath = aocxPath.get().toString();
+        LOG.info("Found: {}", ipFilePath);
+      } else {
+        LOG.warn("Requested IP file not found");
       }
     } else {
       LOG.warn("Localized resource is null!");
@@ -251,8 +251,7 @@ public class IntelFpgaOpenclPlugin implements AbstractFpgaVendorPlugin {
   }
 
   private boolean matchesIpid(Path p, String id) {
-    return p.getName().toLowerCase().equals(id.toLowerCase())
-        && p.getName().endsWith(".aocx");
+    return p.getName().toLowerCase().equals(id.toLowerCase() + ".aocx");
   }
 
   /**

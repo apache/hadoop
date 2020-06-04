@@ -222,6 +222,9 @@ class IncrementalBlockReportManager {
         // blocks back onto our queue, but only in the case where we
         // didn't put something newer in the meantime.
         putMissing(reports);
+        LOG.warn("Failed to call blockReceivedAndDeleted: {}, nnId: {}"
+            + ", duration(ms): {}", Arrays.toString(reports),
+            nnRpcLatencySuffix, monotonicNow() - startTime);
       }
     }
   }

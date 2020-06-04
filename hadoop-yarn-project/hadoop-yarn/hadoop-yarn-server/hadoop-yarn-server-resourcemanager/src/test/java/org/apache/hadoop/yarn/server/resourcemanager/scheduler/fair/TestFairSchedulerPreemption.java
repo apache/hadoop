@@ -26,6 +26,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocationfile.AllocationFileQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocationfile.AllocationFileWriter;
 import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.junit.After;
@@ -38,9 +40,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -107,7 +107,7 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     }
   }
 
-  private void writeAllocFile() throws IOException {
+  private void writeAllocFile() {
     /*
      * Queue hierarchy:
      * root
@@ -115,78 +115,71 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
      *      |--- child-1
      *      |--- child-2
      * |--- preemptable-sibling
-     * |--- nonpreemptible
+     * |--- nonpreemptable
      *      |--- child-1
      *      |--- child-2
      */
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-
-    out.println("<queue name=\"preemptable\">");
-    writePreemptionParams(out);
-
-    // Child-1
-    out.println("<queue name=\"child-1\">");
-    writeResourceParams(out);
-    out.println("</queue>");
-
-    // Child-2
-    out.println("<queue name=\"child-2\">");
-    writeResourceParams(out);
-    out.println("</queue>");
-
-    out.println("</queue>"); // end of preemptable queue
-
-    out.println("<queue name=\"preemptable-sibling\">");
-    writePreemptionParams(out);
-    out.println("</queue>");
-
-    // Queue with preemption disallowed
-    out.println("<queue name=\"nonpreemptable\">");
-    out.println("<allowPreemptionFrom>false" +
-        "</allowPreemptionFrom>");
-    writePreemptionParams(out);
-
-    // Child-1
-    out.println("<queue name=\"child-1\">");
-    writeResourceParams(out);
-    out.println("</queue>");
-
-    // Child-2
-    out.println("<queue name=\"child-2\">");
-    writeResourceParams(out);
-    out.println("</queue>");
-
-    out.println("</queue>"); // end of nonpreemptable queue
+    AllocationFileWriter allocationFileWriter;
+    if (fairsharePreemption) {
+      allocationFileWriter = AllocationFileWriter.create()
+          .addQueue(new AllocationFileQueue.Builder("root")
+              .subQueue(new AllocationFileQueue.Builder("preemptable")
+                  .fairSharePreemptionThreshold(1)
+                  .fairSharePreemptionTimeout(0)
+                  .subQueue(new AllocationFileQueue.Builder("child-1")
+                      .build())
+                  .subQueue(new AllocationFileQueue.Builder("child-2")
+                      .build())
+                  .build())
+              .subQueue(new AllocationFileQueue.Builder("preemptable-sibling")
+                  .fairSharePreemptionThreshold(1)
+                  .fairSharePreemptionTimeout(0)
+                  .build())
+              .subQueue(new AllocationFileQueue.Builder("nonpreemptable")
+                  .allowPreemptionFrom(false)
+                  .fairSharePreemptionThreshold(1)
+                  .fairSharePreemptionTimeout(0)
+                  .subQueue(new AllocationFileQueue.Builder("child-1")
+                      .build())
+                  .subQueue(new AllocationFileQueue.Builder("child-2")
+                      .build())
+                  .build())
+              .build());
+    } else {
+      allocationFileWriter = AllocationFileWriter.create()
+          .addQueue(new AllocationFileQueue.Builder("root")
+              .subQueue(new AllocationFileQueue.Builder("preemptable")
+                  .minSharePreemptionTimeout(0)
+                  .subQueue(new AllocationFileQueue.Builder("child-1")
+                      .minResources("4096mb,4vcores")
+                      .build())
+                  .subQueue(new AllocationFileQueue.Builder("child-2")
+                      .minResources("4096mb,4vcores")
+                      .build())
+                  .build())
+              .subQueue(new AllocationFileQueue.Builder("preemptable-sibling")
+                  .minSharePreemptionTimeout(0)
+                  .build())
+              .subQueue(new AllocationFileQueue.Builder("nonpreemptable")
+                  .allowPreemptionFrom(false)
+                  .minSharePreemptionTimeout(0)
+                  .subQueue(new AllocationFileQueue.Builder("child-1")
+                      .minResources("4096mb,4vcores")
+                      .build())
+                  .subQueue(new AllocationFileQueue.Builder("child-2")
+                      .minResources("4096mb,4vcores")
+                      .build())
+                  .build())
+              .build());
+    }
 
     if (drf) {
-      out.println("<defaultQueueSchedulingPolicy>drf" +
-          "</defaultQueueSchedulingPolicy>");
+      allocationFileWriter.drfDefaultQueueSchedulingPolicy();
     }
-    out.println("</allocations>");
-    out.close();
+    allocationFileWriter.writeToFile(ALLOC_FILE.getAbsolutePath());
 
     assertTrue("Allocation file does not exist, not running the test",
         ALLOC_FILE.exists());
-  }
-
-  private void writePreemptionParams(PrintWriter out) {
-    if (fairsharePreemption) {
-      out.println("<fairSharePreemptionThreshold>1" +
-          "</fairSharePreemptionThreshold>");
-      out.println("<fairSharePreemptionTimeout>0" +
-          "</fairSharePreemptionTimeout>");
-    } else {
-      out.println("<minSharePreemptionTimeout>0" +
-          "</minSharePreemptionTimeout>");
-    }
-  }
-
-  private void writeResourceParams(PrintWriter out) {
-    if (!fairsharePreemption) {
-      out.println("<minResources>4096mb,4vcores</minResources>");
-    }
   }
 
   private void setupCluster() throws IOException {
@@ -419,6 +412,18 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     starvingApp = scheduler.getSchedulerApp(appAttemptId);
 
     verifyPreemption(1, 5);
+  }
+
+  @Test
+  public void testDisableAMPreemption() {
+    takeAllResources("root.preemptable.child-1");
+    setNumAMContainersPerNode(2);
+    RMContainer container = greedyApp.getLiveContainers().stream()
+            .filter(rmContainer -> rmContainer.isAMContainer())
+            .findFirst()
+            .get();
+    greedyApp.setEnableAMPreemption(false);
+    assertFalse(greedyApp.canContainerBePreempted(container, null));
   }
 
   @Test

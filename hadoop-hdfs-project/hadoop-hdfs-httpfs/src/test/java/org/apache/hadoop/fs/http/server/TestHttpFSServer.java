@@ -17,11 +17,23 @@
  */
 package org.apache.hadoop.fs.http.server;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.lib.service.FileSystemAccess;
 import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
@@ -42,6 +54,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.Writer;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.text.MessageFormat;
@@ -54,8 +67,11 @@ import java.util.Map;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.XAttrCodec;
+import org.apache.hadoop.fs.http.client.HttpFSUtils;
+import org.apache.hadoop.fs.http.client.HttpFSFileSystem.Operation;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.DataParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.NoRedirectParam;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -64,6 +80,7 @@ import org.apache.hadoop.fs.permission.AclEntryType;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
+import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.lib.server.Service;
 import org.apache.hadoop.lib.server.ServiceException;
 import org.apache.hadoop.lib.service.Groups;
@@ -73,6 +90,7 @@ import org.apache.hadoop.security.authentication.util.Signer;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.HFSTestCase;
 import org.apache.hadoop.test.HadoopUsersConfTestHelper;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.test.TestDir;
 import org.apache.hadoop.test.TestDirHelper;
 import org.apache.hadoop.test.TestHdfs;
@@ -176,6 +194,8 @@ public class TestHttpFSServer extends HFSTestCase {
     Configuration conf = new Configuration(hdfsConf);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY, true);
+    conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.EXTERNAL.toString());
     File hdfsSite = new File(hadoopConfDir, "hdfs-site.xml");
     OutputStream os = new FileOutputStream(hdfsSite);
     conf.writeXml(os);
@@ -1548,7 +1568,7 @@ public class TestHttpFSServer extends HFSTestCase {
         new InputStreamReader(conn.getInputStream()));
     String location = (String)json.get("Location");
     Assert.assertTrue(location.contains(DataParam.NAME));
-    Assert.assertTrue(location.contains(NoRedirectParam.NAME));
+    Assert.assertFalse(location.contains(NoRedirectParam.NAME));
     Assert.assertTrue(location.contains("CREATE"));
     Assert.assertTrue("Wrong location: " + location,
         location.startsWith(TestJettyHelper.getJettyURL().toString()));
@@ -1635,5 +1655,260 @@ public class TestHttpFSServer extends HFSTestCase {
         checksum.get("bytes"));
     Assert.assertEquals(28L, checksum.get("length"));
     Assert.assertEquals("MD5-of-0MD5-of-512CRC32C", checksum.get("algorithm"));
+  }
+
+  private void verifyGetServerDefaults(DistributedFileSystem dfs)
+      throws Exception {
+    // Send a request
+    HttpURLConnection conn =
+        sendRequestToHttpFSServer("/", "GETSERVERDEFAULTS", "");
+    // Should return HTTP_OK
+    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    // Verify the response
+    BufferedReader reader =
+        new BufferedReader(new InputStreamReader(conn.getInputStream()));
+    // The response should be a one-line JSON string.
+    String dirLst = reader.readLine();
+    FsServerDefaults dfsDirLst = dfs.getServerDefaults();
+    Assert.assertNotNull(dfsDirLst);
+    Assert.assertEquals(dirLst, JsonUtil.toJsonString(dfsDirLst));
+  }
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testGetServerDefaults() throws Exception {
+    createHttpFSServer(false, false);
+    String pathStr1 = "/";
+    Path path1 = new Path(pathStr1);
+    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem
+        .get(path1.toUri(), TestHdfsHelper.getHdfsConf());
+    verifyGetServerDefaults(dfs);
+  }
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testAccess() throws Exception {
+    createHttpFSServer(false, false);
+    final String dir = "/xattrTest";
+    Path path1 = new Path(dir);
+
+    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem
+        .get(path1.toUri(), TestHdfsHelper.getHdfsConf());
+    dfs.mkdirs(new Path(dir));
+
+    HttpURLConnection conn =
+        sendRequestToHttpFSServer(dir, "CHECKACCESS", "fsaction=r--");
+    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    HttpURLConnection conn1 =
+        sendRequestToHttpFSServer(dir, "CHECKACCESS", "fsaction=-w-");
+    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn1.getResponseCode());
+  }
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testECPolicy() throws Exception {
+    createHttpFSServer(false, false);
+    final ErasureCodingPolicy ecPolicy = SystemErasureCodingPolicies
+        .getByID(SystemErasureCodingPolicies.RS_3_2_POLICY_ID);
+    final String ecPolicyName = ecPolicy.getName();
+    // Create an EC dir and write a test file in it
+    final Path ecDir = new Path("/ec");
+
+    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem
+        .get(ecDir.toUri(), TestHdfsHelper.getHdfsConf());
+    Path ecFile = new Path(ecDir, "ec_file.txt");
+    dfs.mkdirs(ecDir);
+    dfs.enableErasureCodingPolicy(ecPolicyName);
+    dfs.setErasureCodingPolicy(ecDir, ecPolicyName);
+    // Create a EC file
+    DFSTestUtil.createFile(dfs, ecFile, 1024, (short) 1, 0);
+
+    // Verify that ecPolicy is set in getFileStatus response for ecFile
+    String getFileStatusResponse =
+        getStatus(ecFile.toString(), "GETFILESTATUS");
+    JSONParser parser = new JSONParser();
+    JSONObject jsonObject = (JSONObject) parser.parse(getFileStatusResponse);
+    JSONObject details = (JSONObject) jsonObject.get("FileStatus");
+    String ecpolicyForECfile = (String) details.get("ecPolicy");
+    assertEquals("EC policy for ecFile should match the set EC policy",
+        ecpolicyForECfile, ecPolicyName);
+
+    // Verify httpFs getFileStatus with WEBHDFS REST API
+    WebHdfsFileSystem httpfsWebHdfs = (WebHdfsFileSystem) FileSystem.get(
+        new URI("webhdfs://"
+            + TestJettyHelper.getJettyURL().toURI().getAuthority()),
+        TestHdfsHelper.getHdfsConf());
+    HdfsFileStatus httpfsFileStatus =
+        (HdfsFileStatus) httpfsWebHdfs.getFileStatus(ecFile);
+    assertNotNull(httpfsFileStatus.getErasureCodingPolicy());
+  }
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testErasureCodingPolicy() throws Exception {
+    createHttpFSServer(false, false);
+    final String dir = "/ecPolicy";
+    Path path1 = new Path(dir);
+    final ErasureCodingPolicy ecPolicy = SystemErasureCodingPolicies
+        .getByID(SystemErasureCodingPolicies.RS_3_2_POLICY_ID);
+    final String ecPolicyName = ecPolicy.getName();
+    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem
+        .get(path1.toUri(), TestHdfsHelper.getHdfsConf());
+    dfs.mkdirs(new Path(dir));
+    dfs.enableErasureCodingPolicy(ecPolicyName);
+
+    HttpURLConnection conn =
+        putCmdWithReturn(dir, "SETECPOLICY", "ecpolicy=" + ecPolicyName);
+    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+
+    HttpURLConnection conn1 = sendRequestToHttpFSServer(dir, "GETECPOLICY", "");
+    // Should return HTTP_OK
+    Assert.assertEquals(conn1.getResponseCode(), HttpURLConnection.HTTP_OK);
+    // Verify the response
+    BufferedReader reader =
+        new BufferedReader(new InputStreamReader(conn1.getInputStream()));
+    // The response should be a one-line JSON string.
+    String dirLst = reader.readLine();
+    ErasureCodingPolicy dfsDirLst = dfs.getErasureCodingPolicy(path1);
+    Assert.assertNotNull(dfsDirLst);
+    Assert.assertEquals(dirLst, JsonUtil.toJsonString(dfsDirLst));
+
+    String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
+    URL url = new URL(TestJettyHelper.getJettyURL(),
+        MessageFormat.format("/webhdfs/v1{0}?user.name={1}&op={2}&{3}", dir,
+            user, "UNSETECPOLICY", ""));
+    HttpURLConnection conn2 = (HttpURLConnection) url.openConnection();
+    conn2.setRequestMethod("POST");
+    conn2.connect();
+    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn2.getResponseCode());
+
+    // response should be null
+    dfsDirLst = dfs.getErasureCodingPolicy(path1);
+    Assert.assertNull(dfsDirLst);
+
+    // test put opeartion with path as "/"
+    final String dir1 = "/";
+    HttpURLConnection conn3 =
+        putCmdWithReturn(dir1, "SETECPOLICY", "ecpolicy=" + ecPolicyName);
+    // Should return HTTP_OK
+    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn3.getResponseCode());
+
+    // test post operation with path as "/"
+    final String dir2 = "/";
+    URL url1 = new URL(TestJettyHelper.getJettyURL(),
+        MessageFormat.format("/webhdfs/v1{0}?user.name={1}&op={2}&{3}", dir2,
+            user, "UNSETECPOLICY", ""));
+    HttpURLConnection conn4 = (HttpURLConnection) url1.openConnection();
+    conn4.setRequestMethod("POST");
+    conn4.connect();
+    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn4.getResponseCode());
+  }
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testStoragePolicySatisfier() throws Exception {
+    createHttpFSServer(false, false);
+    final String dir = "/parent";
+    Path path1 = new Path(dir);
+    String file = "/parent/file";
+    Path filePath = new Path(file);
+    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem
+        .get(path1.toUri(), TestHdfsHelper.getHdfsConf());
+    dfs.mkdirs(path1);
+    dfs.create(filePath).close();
+    dfs.setStoragePolicy(filePath, HdfsConstants.COLD_STORAGE_POLICY_NAME);
+    BlockStoragePolicy storagePolicy =
+        (BlockStoragePolicy) dfs.getStoragePolicy(filePath);
+    assertEquals(HdfsConstants.COLD_STORAGE_POLICY_NAME,
+        storagePolicy.getName());
+    HttpURLConnection conn = putCmdWithReturn(dir, "SATISFYSTORAGEPOLICY", "");
+    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    Map<String, byte[]> xAttrs = dfs.getXAttrs(path1);
+    assertTrue(
+        xAttrs.containsKey(HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY));
+  }
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testNoRedirectWithData() throws Exception {
+    createHttpFSServer(false, false);
+
+    final String path = "/file";
+    final String username = HadoopUsersConfTestHelper.getHadoopUsers()[0];
+    // file creation which should not redirect
+    URL url = new URL(TestJettyHelper.getJettyURL(),
+        MessageFormat.format(
+            "/webhdfs/v1{0}?user.name={1}&op=CREATE&data=true&noredirect=true",
+            path, username));
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod(HttpMethod.PUT);
+    conn.setRequestProperty("Content-Type", MediaType.APPLICATION_OCTET_STREAM);
+    conn.setDoOutput(true);
+    conn.connect();
+    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    JSONObject json = (JSONObject) new JSONParser()
+        .parse(new InputStreamReader(conn.getInputStream()));
+
+    // get the location to write
+    String location = (String) json.get("Location");
+    Assert.assertTrue(location.contains(DataParam.NAME));
+    Assert.assertTrue(location.contains("CREATE"));
+    url = new URL(location);
+    conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod(HttpMethod.PUT);
+    conn.setRequestProperty("Content-Type", MediaType.APPLICATION_OCTET_STREAM);
+    conn.setDoOutput(true);
+    conn.connect();
+    final String writeStr = "write some content";
+    OutputStream os = conn.getOutputStream();
+    os.write(writeStr.getBytes());
+    os.close();
+    // Verify that file got created
+    Assert.assertEquals(HttpURLConnection.HTTP_CREATED, conn.getResponseCode());
+    json = (JSONObject) new JSONParser()
+        .parse(new InputStreamReader(conn.getInputStream()));
+    location = (String) json.get("Location");
+    Assert.assertEquals(TestJettyHelper.getJettyURL() + "/webhdfs/v1" + path,
+        location);
+  }
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testContentType() throws Exception {
+    createHttpFSServer(false, false);
+    FileSystem fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
+    Path dir = new Path("/tmp");
+    Path file = new Path(dir, "foo");
+    fs.mkdirs(dir);
+    fs.create(file);
+
+    String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
+    URL url = new URL(TestJettyHelper.getJettyURL(), MessageFormat.format(
+        "/webhdfs/v1/tmp/foo?user.name={0}&op=open&offset=1&length=2", user));
+
+    // test jsonParse with non-json type.
+    final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod(Operation.OPEN.getMethod());
+    conn.connect();
+
+    LambdaTestUtils.intercept(IOException.class,
+        "Content-Type \"text/html;charset=iso-8859-1\" "
+            + "is incompatible with \"application/json\"",
+        () -> HttpFSUtils.jsonParse(conn));
+    conn.disconnect();
   }
 }

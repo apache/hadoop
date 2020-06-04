@@ -221,6 +221,15 @@ public class TestBlockManagerSafeMode {
     }, 100, 10000);
   }
 
+  @Test
+  public void testCheckSafeMode8() throws Exception {
+    bmSafeMode.activate(0);
+    setBlockSafe(0);
+    setSafeModeStatus(BMSafeModeStatus.PENDING_THRESHOLD);
+    bmSafeMode.checkSafeMode();
+    assertEquals(BMSafeModeStatus.OFF, getSafeModeStatus());
+  }
+
   /**
    * Test that the block safe increases up to block threshold.
    *

@@ -136,7 +136,7 @@ public class GpuDiscoverer extends Configured {
     return lastDiscoveredGpuInformation;
   }
 
-  private boolean isAutoDiscoveryEnabled() {
+  boolean isAutoDiscoveryEnabled() {
     String allowedDevicesStr = getConf().get(
         YarnConfiguration.NM_GPU_ALLOWED_DEVICES,
         YarnConfiguration.AUTOMATICALLY_DISCOVER_GPU_DEVICES);

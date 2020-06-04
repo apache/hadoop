@@ -21,6 +21,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.router.MountTableRefresherService;
+import org.apache.hadoop.hdfs.server.federation.router.RouterQuotaManager;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreDriver;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.slf4j.Logger;
@@ -48,13 +49,22 @@ public abstract class MountTableStore extends CachedRecordStore<MountTable>
   private static final Logger LOG =
       LoggerFactory.getLogger(MountTableStore.class);
   private MountTableRefresherService refreshService;
-
+  /** Router quota manager to update quota usage in mount table. */
+  private RouterQuotaManager quotaManager;
   public MountTableStore(StateStoreDriver driver) {
     super(MountTable.class, driver);
   }
 
   public void setRefreshService(MountTableRefresherService refreshService) {
     this.refreshService = refreshService;
+  }
+
+  public void setQuotaManager(RouterQuotaManager quotaManager) {
+    this.quotaManager = quotaManager;
+  }
+
+  public RouterQuotaManager getQuotaManager() {
+    return quotaManager;
   }
 
   /**

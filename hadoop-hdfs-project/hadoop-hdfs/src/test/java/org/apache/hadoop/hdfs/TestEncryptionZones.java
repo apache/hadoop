@@ -1051,6 +1051,8 @@ public class TestEncryptionZones {
     noCodecConf.set(confKey, "");
     fs.dfs = new DFSClient(null, mcp, noCodecConf, null);
     mockCreate(mcp, suite, CryptoProtocolVersion.ENCRYPTION_ZONES);
+    Mockito.when(mcp.complete(anyString(), anyString(), any(), anyLong()))
+        .thenReturn(true);
     try {
       fs.create(new Path("/mock"));
       fail("Created with no configured codecs!");

@@ -1836,7 +1836,15 @@ public abstract class FSEditLogOp {
     }
   }
 
-  /** Similar with {@link SetGenstampV1Op} */
+  /**
+   * This operation does not actually update gen stamp immediately,
+   * the new gen stamp is recorded as impending gen stamp.
+   * The global generation stamp on Standby Node is updated when
+   * the block with the next generation stamp is actually received.
+   * We keep logging this operation for backward compatibility.
+   * The impending gen stamp will take effect when the standby
+   * transition to become an active.
+   */
   static class SetGenstampV2Op extends FSEditLogOp {
     long genStampV2;
 
@@ -3429,6 +3437,8 @@ public abstract class FSEditLogOp {
   static class CreateSnapshotOp extends FSEditLogOp {
     String snapshotRoot;
     String snapshotName;
+    /** Modification time of the edit set by Time.now(). */
+    long mtime;
     
     public CreateSnapshotOp() {
       super(OP_CREATE_SNAPSHOT);
@@ -3442,22 +3452,32 @@ public abstract class FSEditLogOp {
     void resetSubFields() {
       snapshotRoot = null;
       snapshotName = null;
+      mtime = 0L;
     }
 
+    /* set the name of the snapshot. */
     CreateSnapshotOp setSnapshotName(String snapName) {
       this.snapshotName = snapName;
       return this;
     }
 
+    /* set the directory path where the snapshot is taken. */
     public CreateSnapshotOp setSnapshotRoot(String snapRoot) {
       snapshotRoot = snapRoot;
       return this;
     }
-    
+
+    /* The snapshot creation time set by Time.now(). */
+    CreateSnapshotOp setSnapshotMTime(long mTime) {
+      this.mtime = mTime;
+      return this;
+    }
+
     @Override
     void readFields(DataInputStream in, int logVersion) throws IOException {
       snapshotRoot = FSImageSerialization.readString(in);
       snapshotName = FSImageSerialization.readString(in);
+      mtime = FSImageSerialization.readLong(in);
       
       // read RPC ids if necessary
       readRpcIds(in, logVersion);
@@ -3467,6 +3487,7 @@ public abstract class FSEditLogOp {
     public void writeFields(DataOutputStream out) throws IOException {
       FSImageSerialization.writeString(snapshotRoot, out);
       FSImageSerialization.writeString(snapshotName, out);
+      FSImageSerialization.writeLong(mtime, out);
       writeRpcIds(rpcClientId, rpcCallId, out);
     }
 
@@ -3474,6 +3495,7 @@ public abstract class FSEditLogOp {
     protected void toXml(ContentHandler contentHandler) throws SAXException {
       XMLUtils.addSaxString(contentHandler, "SNAPSHOTROOT", snapshotRoot);
       XMLUtils.addSaxString(contentHandler, "SNAPSHOTNAME", snapshotName);
+      XMLUtils.addSaxString(contentHandler, "MTIME", Long.toString(mtime));
       appendRpcIdsToXml(contentHandler, rpcClientId, rpcCallId);
     }
 
@@ -3481,6 +3503,7 @@ public abstract class FSEditLogOp {
     void fromXml(Stanza st) throws InvalidXmlException {
       snapshotRoot = st.getValue("SNAPSHOTROOT");
       snapshotName = st.getValue("SNAPSHOTNAME");
+      this.mtime = Long.parseLong(st.getValue("MTIME"));
       
       readRpcIdsFromXml(st);
     }
@@ -3491,7 +3514,8 @@ public abstract class FSEditLogOp {
       builder.append("CreateSnapshotOp [snapshotRoot=")
           .append(snapshotRoot)
           .append(", snapshotName=")
-          .append(snapshotName);
+          .append(snapshotName)
+          .append(", mtime=").append(mtime);
       appendRpcIdsToString(builder, rpcClientId, rpcCallId);
       builder.append("]");
       return builder.toString();
@@ -3505,6 +3529,8 @@ public abstract class FSEditLogOp {
   static class DeleteSnapshotOp extends FSEditLogOp {
     String snapshotRoot;
     String snapshotName;
+    /** Modification time of the edit set by Time.now(). */
+    long mtime;
     
     DeleteSnapshotOp() {
       super(OP_DELETE_SNAPSHOT);
@@ -3518,22 +3544,32 @@ public abstract class FSEditLogOp {
     void resetSubFields() {
       snapshotRoot = null;
       snapshotName = null;
+      mtime = 0L;
     }
-    
+
+    /* set the name of the snapshot. */
     DeleteSnapshotOp setSnapshotName(String snapName) {
       this.snapshotName = snapName;
       return this;
     }
 
+    /* set the directory path where the snapshot is taken. */
     DeleteSnapshotOp setSnapshotRoot(String snapRoot) {
       snapshotRoot = snapRoot;
       return this;
     }
-    
+
+    /* The snapshot deletion time set by Time.now(). */
+    DeleteSnapshotOp setSnapshotMTime(long mTime) {
+      this.mtime = mTime;
+      return this;
+    }
+
     @Override
     void readFields(DataInputStream in, int logVersion) throws IOException {
       snapshotRoot = FSImageSerialization.readString(in);
       snapshotName = FSImageSerialization.readString(in);
+      mtime = FSImageSerialization.readLong(in);
       
       // read RPC ids if necessary
       readRpcIds(in, logVersion);
@@ -3543,6 +3579,7 @@ public abstract class FSEditLogOp {
     public void writeFields(DataOutputStream out) throws IOException {
       FSImageSerialization.writeString(snapshotRoot, out);
       FSImageSerialization.writeString(snapshotName, out);
+      FSImageSerialization.writeLong(mtime, out);
       writeRpcIds(rpcClientId, rpcCallId, out);
     }
 
@@ -3550,6 +3587,7 @@ public abstract class FSEditLogOp {
     protected void toXml(ContentHandler contentHandler) throws SAXException {
       XMLUtils.addSaxString(contentHandler, "SNAPSHOTROOT", snapshotRoot);
       XMLUtils.addSaxString(contentHandler, "SNAPSHOTNAME", snapshotName);
+      XMLUtils.addSaxString(contentHandler, "MTIME", Long.toString(mtime));
       appendRpcIdsToXml(contentHandler, rpcClientId, rpcCallId);
     }
 
@@ -3557,6 +3595,7 @@ public abstract class FSEditLogOp {
     void fromXml(Stanza st) throws InvalidXmlException {
       snapshotRoot = st.getValue("SNAPSHOTROOT");
       snapshotName = st.getValue("SNAPSHOTNAME");
+      this.mtime = Long.parseLong(st.getValue("MTIME"));
       
       readRpcIdsFromXml(st);
     }
@@ -3567,7 +3606,8 @@ public abstract class FSEditLogOp {
       builder.append("DeleteSnapshotOp [snapshotRoot=")
           .append(snapshotRoot)
           .append(", snapshotName=")
-          .append(snapshotName);
+          .append(snapshotName)
+          .append(", mtime=").append(mtime);
       appendRpcIdsToString(builder, rpcClientId, rpcCallId);
       builder.append("]");
       return builder.toString();
@@ -3582,6 +3622,9 @@ public abstract class FSEditLogOp {
     String snapshotRoot;
     String snapshotOldName;
     String snapshotNewName;
+    /** Modification time of the edit set by Time.now(). */
+    long mtime;
+
     
     RenameSnapshotOp() {
       super(OP_RENAME_SNAPSHOT);
@@ -3596,13 +3639,16 @@ public abstract class FSEditLogOp {
       snapshotRoot = null;
       snapshotOldName = null;
       snapshotNewName = null;
+      mtime = 0L;
     }
-    
+
+    /* set the old name of the snapshot. */
     RenameSnapshotOp setSnapshotOldName(String snapshotOldName) {
       this.snapshotOldName = snapshotOldName;
       return this;
     }
 
+    /* set the new name of the snapshot. */
     RenameSnapshotOp setSnapshotNewName(String snapshotNewName) {
       this.snapshotNewName = snapshotNewName;
       return this;
@@ -3613,11 +3659,18 @@ public abstract class FSEditLogOp {
       return this;
     }
     
+    /* The snapshot rename time set by Time.now(). */
+    RenameSnapshotOp setSnapshotMTime(long mTime) {
+      this.mtime = mTime;
+      return this;
+    }
+
     @Override
     void readFields(DataInputStream in, int logVersion) throws IOException {
       snapshotRoot = FSImageSerialization.readString(in);
       snapshotOldName = FSImageSerialization.readString(in);
       snapshotNewName = FSImageSerialization.readString(in);
+      mtime = FSImageSerialization.readLong(in);
       
       // read RPC ids if necessary
       readRpcIds(in, logVersion);
@@ -3628,6 +3681,7 @@ public abstract class FSEditLogOp {
       FSImageSerialization.writeString(snapshotRoot, out);
       FSImageSerialization.writeString(snapshotOldName, out);
       FSImageSerialization.writeString(snapshotNewName, out);
+      FSImageSerialization.writeLong(mtime, out);
       
       writeRpcIds(rpcClientId, rpcCallId, out);
     }
@@ -3637,6 +3691,7 @@ public abstract class FSEditLogOp {
       XMLUtils.addSaxString(contentHandler, "SNAPSHOTROOT", snapshotRoot);
       XMLUtils.addSaxString(contentHandler, "SNAPSHOTOLDNAME", snapshotOldName);
       XMLUtils.addSaxString(contentHandler, "SNAPSHOTNEWNAME", snapshotNewName);
+      XMLUtils.addSaxString(contentHandler, "MTIME", Long.toString(mtime));
       appendRpcIdsToXml(contentHandler, rpcClientId, rpcCallId);
     }
 
@@ -3645,6 +3700,7 @@ public abstract class FSEditLogOp {
       snapshotRoot = st.getValue("SNAPSHOTROOT");
       snapshotOldName = st.getValue("SNAPSHOTOLDNAME");
       snapshotNewName = st.getValue("SNAPSHOTNEWNAME");
+      this.mtime = Long.parseLong(st.getValue("MTIME"));
       
       readRpcIdsFromXml(st);
     }
@@ -3657,7 +3713,9 @@ public abstract class FSEditLogOp {
           .append(", snapshotOldName=")
           .append(snapshotOldName)
           .append(", snapshotNewName=")
-          .append(snapshotNewName);
+          .append(snapshotNewName)
+          .append(", mtime=")
+          .append(mtime);
       appendRpcIdsToString(builder, rpcClientId, rpcCallId);
       builder.append("]");
       return builder.toString();

@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
@@ -66,7 +67,7 @@ public class TestGroupsCaching {
 
   public static class FakeGroupMapping extends ShellBasedUnixGroupsMapping {
     // any to n mapping
-    private static Set<String> allGroups = new HashSet<String>();
+    private static Set<String> allGroups = new LinkedHashSet<String>();
     private static Set<String> blackList = new HashSet<String>();
     private static int requestCount = 0;
     private static long getGroupsDelayMs = 0;

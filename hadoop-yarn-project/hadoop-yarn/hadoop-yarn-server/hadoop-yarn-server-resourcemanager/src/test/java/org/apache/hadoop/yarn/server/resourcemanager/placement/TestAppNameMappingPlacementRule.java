@@ -20,18 +20,21 @@ package org.apache.hadoop.yarn.server.resourcemanager.placement;
 
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.GroupMappingServiceProvider;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesLogger;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SimpleGroupsMapping;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.util.Arrays;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class TestAppNameMappingPlacementRule {
   private static final String APP_NAME = "DistributedShell";
@@ -55,6 +58,12 @@ public class TestAppNameMappingPlacementRule {
       boolean overwrite) throws YarnException {
     AppNameMappingPlacementRule rule = new AppNameMappingPlacementRule(
         overwrite, Arrays.asList(queueMapping));
+
+    CapacitySchedulerQueueManager qm =
+        mock(CapacitySchedulerQueueManager.class);
+    when(qm.isAmbiguous(Mockito.isA(String.class))).thenReturn(false);
+    rule.queueManager = qm;
+
     ApplicationSubmissionContext asc = Records.newRecord(
         ApplicationSubmissionContext.class);
     if (inputQueue.equals("%application")) {

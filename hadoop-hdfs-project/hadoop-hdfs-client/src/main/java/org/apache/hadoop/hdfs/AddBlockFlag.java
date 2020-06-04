@@ -51,7 +51,15 @@ public enum AddBlockFlag {
    *
    * @see CreateFlag#IGNORE_CLIENT_LOCALITY
    */
-  IGNORE_CLIENT_LOCALITY((short) 0x02);
+  IGNORE_CLIENT_LOCALITY((short) 0x02),
+
+  /**
+   * Advise that a block replica NOT be written to the local rack DataNode where
+   * 'local' means the same host as the client is being run on.
+   *
+   * @see CreateFlag#NO_LOCAL_WRITE
+   */
+  NO_LOCAL_RACK((short) 0x03);
 
   private final short mode;
 

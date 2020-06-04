@@ -302,7 +302,8 @@ public class JobHistoryUtils {
     FileContext fc = getDefaultFileContext();
     if (fc == null ||
         fc.getDefaultFileSystem().getUri().toString().equals(
-            conf.get(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, "")) ||
+            conf.getTrimmed(
+                CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, "")) ||
         path.toUri().getAuthority() != null ||
         path.toUri().getScheme()!= null) {
       return sourcePath;
