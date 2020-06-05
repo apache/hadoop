@@ -2016,10 +2016,8 @@ public class BlockManager implements BlockStatsMXBean {
       // Exclude all nodes which already exists as targets for the block
       List<DatanodeStorageInfo> targets =
           pendingReconstruction.getTargets(rw.getBlock());
-      if (targets != null) {
-        for (DatanodeStorageInfo dn : targets) {
-          excludedNodes.add(dn.getDatanodeDescriptor());
-        }
+      for (DatanodeStorageInfo dn : targets) {
+        excludedNodes.add(dn.getDatanodeDescriptor());
       }
 
       // choose replication targets: NOT HOLDING THE GLOBAL LOCK
@@ -2507,7 +2505,7 @@ public class BlockManager implements BlockStatsMXBean {
    * and put them back into the neededReconstruction queue
    */
   void processPendingReconstructions() {
-    BlockInfo[] timedOutItems = pendingReconstruction.getTimedOutBlocks();
+    BlockInfo[] timedOutItems = pendingReconstruction.clearTimedOutBlocks();
     if (timedOutItems != null) {
       namesystem.writeLock();
       try {
@@ -4588,7 +4586,7 @@ public class BlockManager implements BlockStatsMXBean {
     PendingBlockInfo remove = pendingReconstruction.remove(block);
     if (remove != null) {
       DatanodeStorageInfo.decrementBlocksScheduled(remove.getTargets()
-          .toArray(new DatanodeStorageInfo[remove.getTargets().size()]));
+          .toArray(new DatanodeStorageInfo[0]));
     }
     neededReconstruction.remove(block, LowRedundancyBlocks.LEVEL);
     postponedMisreplicatedBlocks.remove(block);
