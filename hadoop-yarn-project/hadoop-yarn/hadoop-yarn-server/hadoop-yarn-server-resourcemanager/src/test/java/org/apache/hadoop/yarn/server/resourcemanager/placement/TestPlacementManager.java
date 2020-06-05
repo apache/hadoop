@@ -95,8 +95,12 @@ public class TestPlacementManager {
 
     Assert.assertNull("Placement should be null",
         pm.placeApplication(asc, USER2));
-    QueueMappingEntity queueMappingEntity = new QueueMappingEntity(APP_NAME,
-        USER1, PARENT_QUEUE);
+    QueueMapping queueMappingEntity = QueueMapping.QueueMappingBuilder.create()
+      .type(MappingType.APPLICATION)
+      .source(APP_NAME)
+      .queue(USER1)
+      .parentQueue(PARENT_QUEUE)
+      .build();
 
     AppNameMappingPlacementRule anRule = new AppNameMappingPlacementRule(false,
         Arrays.asList(queueMappingEntity));
