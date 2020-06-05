@@ -75,7 +75,7 @@ If users want some of their existing cluster (`hdfs://mycluster`) data to mount 
 </property>
 ```
 
-Let's consider the following operations to understand to where these operations will be delegated based on mount links.
+Let's consider the following operations to understand where these operations will be delegated based on mount links.
 
   *Op1:* Create a file with the the path `hdfs://mycluster/user/fileA`, then physically this file will be created at `hdfs://mycluster/user/fileA`. This delegation happened based on the first configuration parameter in above configurations. Here `/user` mapped to `hdfs://mycluster/user/`.
 
@@ -121,7 +121,7 @@ The following picture shows how the different schemes can be used in ViewFileSys
 
 ### Central Mount Table Configurations
 
-To enabled central mount table configuration, we need to configure `fs.viewfs.mounttable.path` in `core-site.xml` with the value as the Hadoop compatible file system directory/file path, where the `mount-table-<versionNumber>.xml` file copied. Here versionNumber is an integer number and need to increase the version number and upload new file in same directory.
+To enable central mount table configuration, we need to configure `fs.viewfs.mounttable.path` in `core-site.xml` with the value as the Hadoop compatible file system directory/file path, where the `mount-table-<versionNumber>.xml` file copied. Here versionNumber is an integer number and need to increase the version number and upload new file in same directory.
 
 The ViewFileSystemOverloadScheme always loads the highest version number `mount-table-<versionNumber>.xml`. Please don't replace the file with same name. Always increment the version number to take new file picked by newly initializing clients. Why we don't recommend to replace the files is that, some client might have already opened the connections to old mount-table files already and in middle of loading configuration files, and replacing files can make them fail.
 

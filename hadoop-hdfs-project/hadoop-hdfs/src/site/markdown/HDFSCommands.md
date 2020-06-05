@@ -730,5 +730,5 @@ Mount link:
 
 If user wants to talk to `hdfs://MyCluster2/`, then they can pass -fs option (`-fs hdfs://MyCluster1/user`)
 Since /user was mapped to a cluster `hdfs://MyCluster2/user`, dfsadmin resolve the passed (`-fs hdfs://MyCluster1/user`) to target fs (`hdfs://MyCluster2/user`).
-This was users can get the access all hdfs child file systems in ViewFsOverloadScheme.
+This way users can get the access to all hdfs child file systems in ViewFsOverloadScheme.
 If there is no `-fs` option provided, then it will try to connect to the configured fs.defaultFS cluster if a cluster running with the fs.defaultFS uri.
