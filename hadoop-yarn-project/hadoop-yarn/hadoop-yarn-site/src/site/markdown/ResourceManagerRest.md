@@ -338,6 +338,9 @@ The capacity scheduler supports hierarchical queues. This one request will print
 | numActiveApplications | int | The number of active applications in this queue |
 | numPendingApplications | int | The number of pending applications in this queue |
 | numContainers | int | The number of containers being used |
+| allocatedContainers | int | The number of allocated containers in this queue |
+| reservedContainers | int | The number of reserved containers in this queue |
+| pendingContainers | int | The number of pending containers in this queue |
 | maxApplications | int | The maximum number of applications this queue can have |
 | maxApplicationsPerUser | int | The maximum number of applications per user this queue can have |
 | maxActiveApplications | int | The maximum number of active applications this queue can have |
