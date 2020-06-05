@@ -918,8 +918,10 @@ public class ViewFs extends AbstractFileSystem {
         INodeLink<AbstractFileSystem> inodelink = 
           (INodeLink<AbstractFileSystem>) inode;
         try {
-          FileStatus status = inodelink.getTargetFileSystem()
-              .getFileStatus(new Path("/"));
+          String linkedPath = inodelink.getTargetFileSystem()
+              .getUri().getPath();
+          FileStatus status = ((ChRootedFs)inodelink.getTargetFileSystem())
+              .getMyFs().getFileStatus(new Path(linkedPath));
           result = new FileStatus(status.getLen(), false,
             status.getReplication(), status.getBlockSize(),
             status.getModificationTime(), status.getAccessTime(),
@@ -989,8 +991,9 @@ public class ViewFs extends AbstractFileSystem {
             (INodeLink<AbstractFileSystem>) inode;
 
           try {
-            FileStatus status = link.getTargetFileSystem()
-                .getFileStatus(new Path("/"));
+            String linkedPath = link.getTargetFileSystem().getUri().getPath();
+            FileStatus status = ((ChRootedFs)link.getTargetFileSystem())
+                .getMyFs().getFileStatus(new Path(linkedPath));
             result[i++] = new FileStatus(status.getLen(), false,
               status.getReplication(), status.getBlockSize(),
               status.getModificationTime(), status.getAccessTime(),
