@@ -717,6 +717,41 @@ public class TestFSConfigToCSConfigConverter {
         any(Boolean.class));
   }
 
+  @Test
+  public void testConversionWhenAsyncSchedulingIsEnabled()
+          throws Exception {
+    boolean schedulingEnabledValue =  testConversionWithAsyncSchedulingOption(true);
+    assertTrue("Asynchronous scheduling should be true", schedulingEnabledValue);
+  }
+
+  @Test
+  public void testConversionWhenAsyncSchedulingIsDisabled() throws Exception {
+    boolean schedulingEnabledValue =  testConversionWithAsyncSchedulingOption(false);
+    assertEquals("Asynchronous scheduling should be the default value",
+            CapacitySchedulerConfiguration.DEFAULT_SCHEDULE_ASYNCHRONOUSLY_ENABLE,
+            schedulingEnabledValue);
+  }
+
+  private boolean testConversionWithAsyncSchedulingOption(boolean enabled) throws Exception {
+    FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()
+            .withClusterResource(CLUSTER_RESOURCE_STRING)
+            .withFairSchedulerXmlConfig(FAIR_SCHEDULER_XML)
+            .build();
+
+    ConversionOptions conversionOptions = createDefaultConversionOptions();
+    conversionOptions.setEnableAsyncScheduler(enabled);
+
+    converter = new FSConfigToCSConfigConverter(ruleHandler,
+            conversionOptions);
+
+    converter.convert(params);
+
+    Configuration convertedConfig = converter.getYarnSiteConfig();
+
+    return convertedConfig.getBoolean(CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_ENABLE,
+            CapacitySchedulerConfiguration.DEFAULT_SCHEDULE_ASYNCHRONOUSLY_ENABLE);
+  }
+
   private Configuration getConvertedCSConfig(String dir) throws IOException {
     File capacityFile = new File(dir, "capacity-scheduler.xml");
     ByteArrayInputStream input =
