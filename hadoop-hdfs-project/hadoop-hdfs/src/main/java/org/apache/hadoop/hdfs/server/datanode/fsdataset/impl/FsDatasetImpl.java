@@ -574,7 +574,11 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           // Unlike updating the volumeMap in addVolume(), this operation does
           // not scan disks.
           for (String bpid : volumeMap.getBlockPoolList()) {
-            List<ReplicaInfo> blocks = new ArrayList<>();
+            List<ReplicaInfo> blocks = blkToInvalidate.get(bpid);
+            if (blocks == null) {
+              blocks = new ArrayList<>();
+              blkToInvalidate.put(bpid, blocks);
+            }
             for (Iterator<ReplicaInfo> it = volumeMap.replicas(bpid).iterator();
                  it.hasNext(); ) {
               ReplicaInfo block = it.next();
@@ -585,9 +589,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
                 it.remove();
               }
             }
-            blkToInvalidate.put(bpid, blocks);
           }
-
           storageToRemove.add(sd.getStorageUuid());
           storageLocationsToRemove.remove(absRoot);
         }
