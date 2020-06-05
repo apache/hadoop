@@ -1402,7 +1402,7 @@ public abstract class AbstractFileSystem implements PathCapabilities {
    * Helper method that throws an {@link UnsupportedOperationException} for the
    * current {@link FileSystem} method being called.
    */
-  protected void methodNotSupported() {
+  protected final void methodNotSupported() {
     // The order of the stacktrace elements is (from top to bottom):
     //   - java.lang.Thread.getStackTrace
     //   - org.apache.hadoop.fs.FileSystem.methodNotSupported

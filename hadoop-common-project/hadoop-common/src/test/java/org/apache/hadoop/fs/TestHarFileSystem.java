@@ -248,6 +248,9 @@ public class TestHarFileSystem {
     CompletableFuture<FSDataInputStream> openFileWithOptions(
         Path path,
         OpenFileParameters parameters) throws IOException;
+
+    MultipartUploaderBuilder createMultipartUploader(Path basePath)
+        throws IOException;
   }
 
   @Test
