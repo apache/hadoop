@@ -57,7 +57,23 @@ public enum AbfsStatistic {
   FILES_DELETED("files_deleted",
       "Total number of files deleted from the object store."),
   ERROR_IGNORED("error_ignored",
-      "Errors caught and ignored.");
+      "Errors caught and ignored."),
+
+  //Network statistics.
+  CONNECTIONS_MADE("connections_made",
+      "Total number of times connection was made with Data store."),
+  SEND_REQUESTS("send_requests",
+      "Total number of times http requests was sent to the data store."),
+  GET_RESPONSE("get_response",
+      "Total number of times response was recorded after sending requests."),
+  BYTES_SEND("bytes_send",
+      "Total bytes sent through http requests."),
+  BYTES_RECEIVED("bytes_received",
+      "Total bytes received in response to the requests sent."),
+  READ_THROTTLES("read_throttles",
+      "Total number of times read operation is throttled."),
+  WRITE_THROTTLES("write_throttles",
+      "Total number of times write operation is throttled.");
 
   private String statName;
   private String statDescription;

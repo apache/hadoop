@@ -27,6 +27,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
@@ -66,6 +67,7 @@ public class AbfsRestOperation {
   private int retryCount = 0;
 
   private AbfsHttpOperation result;
+  private AbfsCounters statistics;
 
   public AbfsHttpOperation getResult() {
     return result;
@@ -131,6 +133,7 @@ public class AbfsRestOperation {
     this.hasRequestBody = (AbfsHttpConstants.HTTP_METHOD_PUT.equals(method)
             || AbfsHttpConstants.HTTP_METHOD_PATCH.equals(method));
     this.sasToken = sasToken;
+    this.statistics = client.getStatistics();
   }
 
   /**
@@ -160,6 +163,7 @@ public class AbfsRestOperation {
     this.buffer = buffer;
     this.bufferOffset = bufferOffset;
     this.bufferLength = bufferLength;
+    this.statistics = client.getStatistics();
   }
 
   /**
@@ -205,6 +209,7 @@ public class AbfsRestOperation {
     try {
       // initialize the HTTP request and open the connection
       httpOperation = new AbfsHttpOperation(url, method, requestHeaders);
+      incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
 
       switch(client.getAuthType()) {
         case Custom:
@@ -229,14 +234,19 @@ public class AbfsRestOperation {
       // dump the headers
       AbfsIoUtils.dumpHeadersToDebugLog("Request Headers",
           httpOperation.getConnection().getRequestProperties());
-      AbfsClientThrottlingIntercept.sendingRequest(operationType);
+      AbfsClientThrottlingIntercept.sendingRequest(operationType, statistics);
 
       if (hasRequestBody) {
         // HttpUrlConnection requires
         httpOperation.sendRequest(buffer, bufferOffset, bufferLength);
+        incrementCounter(AbfsStatistic.SEND_REQUESTS, 1);
+        incrementCounter(AbfsStatistic.BYTES_SEND, bufferLength);
       }
 
       httpOperation.processResponse(buffer, bufferOffset, bufferLength);
+      incrementCounter(AbfsStatistic.GET_RESPONSE, 1);
+      incrementCounter(AbfsStatistic.BYTES_RECEIVED,
+          httpOperation.getBytesReceived());
     } catch (IOException ex) {
       if (ex instanceof UnknownHostException) {
         LOG.warn(String.format("Unknown host name: %s. Retrying to resolve the host name...", httpOperation.getUrl().getHost()));
@@ -275,5 +285,17 @@ public class AbfsRestOperation {
     result = httpOperation;
 
     return true;
+  }
+
+  /**
+   * Incrementing Abfs counters with a long value.
+   *
+   * @param statistic the Abfs statistic that needs to be incremented.
+   * @param value     the value to be incremented by.
+   */
+  private void incrementCounter(AbfsStatistic statistic, long value) {
+    if (statistics != null) {
+      statistics.incrementCounter(statistic, value);
+    }
   }
 }

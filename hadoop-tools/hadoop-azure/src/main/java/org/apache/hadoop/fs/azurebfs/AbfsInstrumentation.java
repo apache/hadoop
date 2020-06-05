@@ -78,7 +78,14 @@ public class AbfsInstrumentation implements AbfsCounters {
       DIRECTORIES_DELETED,
       FILES_CREATED,
       FILES_DELETED,
-      ERROR_IGNORED
+      ERROR_IGNORED,
+      CONNECTIONS_MADE,
+      SEND_REQUESTS,
+      GET_RESPONSE,
+      BYTES_SEND,
+      BYTES_RECEIVED,
+      READ_THROTTLES,
+      WRITE_THROTTLES
   };
 
   public AbfsInstrumentation(URI uri) {

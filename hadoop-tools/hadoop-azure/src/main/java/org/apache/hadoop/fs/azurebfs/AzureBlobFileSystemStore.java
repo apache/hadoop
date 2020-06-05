@@ -82,6 +82,7 @@ import org.apache.hadoop.fs.azurebfs.oauth2.IdentityTransformer;
 import org.apache.hadoop.fs.azurebfs.oauth2.IdentityTransformerInterface;
 import org.apache.hadoop.fs.azurebfs.services.AbfsAclHelper;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamContext;
@@ -143,7 +144,8 @@ public class AzureBlobFileSystemStore implements Closeable {
   private final IdentityTransformerInterface identityTransformer;
   private final AbfsPerfTracker abfsPerfTracker;
 
-  public AzureBlobFileSystemStore(URI uri, boolean isSecureScheme, Configuration configuration)
+  public AzureBlobFileSystemStore(URI uri, boolean isSecureScheme,
+      Configuration configuration, AbfsCounters instrumentation)
           throws IOException {
     this.uri = uri;
     String[] authorityParts = authorityParts(uri);
@@ -182,7 +184,7 @@ public class AzureBlobFileSystemStore implements Closeable {
     boolean usingOauth = (authType == AuthType.OAuth);
     boolean useHttps = (usingOauth || abfsConfiguration.isHttpsAlwaysUsed()) ? true : isSecureScheme;
     this.abfsPerfTracker = new AbfsPerfTracker(fileSystemName, accountName, this.abfsConfiguration);
-    initializeClient(uri, fileSystemName, accountName, useHttps);
+    initializeClient(uri, fileSystemName, accountName, useHttps, instrumentation);
     final Class<? extends IdentityTransformerInterface> identityTransformerClass =
         configuration.getClass(FS_AZURE_IDENTITY_TRANSFORM_CLASS, IdentityTransformer.class,
             IdentityTransformerInterface.class);
@@ -1170,7 +1172,8 @@ public class AzureBlobFileSystemStore implements Closeable {
     return isKeyForDirectorySet(key, azureAtomicRenameDirSet);
   }
 
-  private void initializeClient(URI uri, String fileSystemName, String accountName, boolean isSecure)
+  private void initializeClient(URI uri, String fileSystemName,
+      String accountName, boolean isSecure, AbfsCounters instrumentation)
       throws IOException {
     if (this.client != null) {
       return;
@@ -1214,11 +1217,11 @@ public class AzureBlobFileSystemStore implements Closeable {
     if (tokenProvider != null) {
       this.client = new AbfsClient(baseUrl, creds, abfsConfiguration,
           new ExponentialRetryPolicy(abfsConfiguration.getMaxIoRetries()),
-          tokenProvider, abfsPerfTracker);
+          tokenProvider, abfsPerfTracker, instrumentation);
     } else {
       this.client = new AbfsClient(baseUrl, creds, abfsConfiguration,
           new ExponentialRetryPolicy(abfsConfiguration.getMaxIoRetries()),
-          sasTokenProvider, abfsPerfTracker);
+          sasTokenProvider, abfsPerfTracker, instrumentation);
     }
     LOG.trace("AbfsClient init complete");
   }

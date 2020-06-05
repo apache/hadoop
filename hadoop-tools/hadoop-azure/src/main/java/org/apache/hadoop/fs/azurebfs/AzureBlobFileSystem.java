@@ -109,11 +109,12 @@ public class AzureBlobFileSystem extends FileSystem {
     LOG.debug("Initializing AzureBlobFileSystem for {}", uri);
 
     this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
-    this.abfsStore = new AzureBlobFileSystemStore(uri, this.isSecureScheme(), configuration);
+    instrumentation = new AbfsInstrumentation(uri);
+    this.abfsStore = new AzureBlobFileSystemStore(uri, this.isSecureScheme(),
+        configuration, instrumentation);
     LOG.trace("AzureBlobFileSystemStore init complete");
 
     final AbfsConfiguration abfsConfiguration = abfsStore.getAbfsConfiguration();
-    instrumentation = new AbfsInstrumentation(uri);
     this.setWorkingDirectory(this.getHomeDirectory());
 
     if (abfsConfiguration.getCreateRemoteFileSystemDuringInitialization()) {
