@@ -263,4 +263,24 @@ public class TestViewFileSystemOverloadSchemeWithDFSAdmin {
     assertOutMsg("Disallowing snapshot on / succeeded", 1);
     assertEquals(0, ret);
   }
+
+  /**
+   * Tests setBalancerBandwidth with ViewFSOverloadScheme.
+   */
+  @Test
+  public void testSetBalancerBandwidth() throws Exception {
+    final Path hdfsTargetPath = new Path(defaultFSURI + HDFS_USER_FOLDER);
+    addMountLinks(defaultFSURI.getAuthority(),
+        new String[] {HDFS_USER_FOLDER, LOCAL_FOLDER },
+        new String[] {hdfsTargetPath.toUri().toString(),
+            localTargetDir.toURI().toString() },
+        conf);
+    final DFSAdmin dfsAdmin = new DFSAdmin(conf);
+    redirectStream();
+    int ret = ToolRunner.run(dfsAdmin,
+        new String[] {"-fs", defaultFSURI.toString(), "-setBalancerBandwidth",
+            "1000"});
+    assertOutMsg("Balancer bandwidth is set to 1000", 0);
+    assertEquals(0, ret);
+  }
 }
