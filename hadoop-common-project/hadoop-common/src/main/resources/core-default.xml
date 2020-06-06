@@ -953,6 +953,116 @@
 </property>
 
 <property>
+  <name>fs.viewfs.overload.scheme.target.hdfs.impl</name>
+  <value>org.apache.hadoop.hdfs.DistributedFileSystem</value>
+  <description>The DistributedFileSystem for view file system overload scheme
+   when child file system and ViewFSOverloadScheme's scheme are hdfs.
+   </description>
+</property>
+
+<property>
+  <name>fs.viewfs.overload.scheme.target.s3a.impl</name>
+  <value>org.apache.hadoop.fs.s3a.S3AFileSystem</value>
+  <description>The S3AFileSystem for view file system overload scheme when
+   child file system and ViewFSOverloadScheme's scheme are s3a.</description>
+</property>
+
+<property>
+  <name>fs.viewfs.overload.scheme.target.o3fs.impl</name>
+  <value>org.apache.hadoop.fs.ozone.OzoneFileSystem</value>
+  <description>The OzoneFileSystem for view file system overload scheme when
+   child file system and ViewFSOverloadScheme's scheme are o3fs.</description>
+</property>
+
+<property>
+  <name>fs.viewfs.overload.scheme.target.ftp.impl</name>
+  <value>org.apache.hadoop.fs.ftp.FTPFileSystem</value>
+  <description>The FTPFileSystem for view file system overload scheme when
+   child file system and ViewFSOverloadScheme's scheme are ftp.
+   </description>
+</property>
+
+<property>
+  <name>fs.viewfs.overload.scheme.target.webhdfs.impl</name>
+  <value>org.apache.hadoop.hdfs.web.WebHdfsFileSystem</value>
+  <description>The WebHdfsFileSystem for view file system overload scheme when
+   child file system and ViewFSOverloadScheme's scheme are webhdfs.
+  </description>
+</property>
+
+<property>
+  <name>fs.viewfs.overload.scheme.target.swebhdfs.impl</name>
+  <value>org.apache.hadoop.hdfs.web.SWebHdfsFileSystem</value>
+  <description>The SWebHdfsFileSystem for view file system overload scheme when
+   child file system and ViewFSOverloadScheme's scheme are swebhdfs.
+  </description>
+</property>
+
+<property>
+  <name>fs.viewfs.overload.scheme.target.file.impl</name>
+  <value>org.apache.hadoop.fs.LocalFileSystem</value>
+  <description>The LocalFileSystem for view file system overload scheme when
+   child file system and ViewFSOverloadScheme's scheme are file.
+  </description>
+</property>
+
+<property>
+  <name>fs.viewfs.overload.scheme.target.abfs.impl</name>
+  <value>org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem</value>
+  <description>The AzureBlobFileSystem for view file system overload scheme
+   when child file system and ViewFSOverloadScheme's scheme are abfs.
+  </description>
+</property>
+
+<property>
+  <name>fs.viewfs.overload.scheme.target.abfss.impl</name>
+  <value>org.apache.hadoop.fs.azurebfs.SecureAzureBlobFileSystem</value>
+  <description>The SecureAzureBlobFileSystem for view file system overload
+   scheme when child file system and ViewFSOverloadScheme's scheme are abfss.
+  </description>
+</property>
+
+<property>
+  <name>fs.viewfs.overload.scheme.target.wasb.impl</name>
+  <value>org.apache.hadoop.fs.azure.NativeAzureFileSystem</value>
+  <description>The NativeAzureFileSystem for view file system overload scheme
+   when child file system and ViewFSOverloadScheme's scheme are wasb.
+  </description>
+</property>
+
+<property>
+  <name>fs.viewfs.overload.scheme.target.swift.impl</name>
+  <value>org.apache.hadoop.fs.swift.snative.SwiftNativeFileSystem</value>
+  <description>The SwiftNativeFileSystem for view file system overload scheme
+   when child file system and ViewFSOverloadScheme's scheme are swift.
+  </description>
+</property>
+
+<property>
+  <name>fs.viewfs.overload.scheme.target.oss.impl</name>
+  <value>org.apache.hadoop.fs.aliyun.oss.AliyunOSSFileSystem</value>
+  <description>The AliyunOSSFileSystem for view file system overload scheme
+   when child file system and ViewFSOverloadScheme's scheme are oss.
+  </description>
+</property>
+
+<property>
+  <name>fs.viewfs.overload.scheme.target.http.impl</name>
+  <value>org.apache.hadoop.fs.http.HttpFileSystem</value>
+  <description>The HttpFileSystem for view file system overload scheme
+   when child file system and ViewFSOverloadScheme's scheme are http.
+  </description>
+</property>
+
+<property>
+  <name>fs.viewfs.overload.scheme.target.https.impl</name>
+  <value>org.apache.hadoop.fs.http.HttpsFileSystem</value>
+  <description>The HttpsFileSystem for view file system overload scheme
+   when child file system and ViewFSOverloadScheme's scheme are https.
+  </description>
+</property>
+
+<property>
   <name>fs.AbstractFileSystem.ftp.impl</name>
   <value>org.apache.hadoop.fs.ftp.FtpFs</value>
   <description>The FileSystem for Ftp: uris.</description>
