@@ -382,13 +382,17 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
    * Note: Above links created because to make fs initialization success.
    * Otherwise will not proceed if no mount links.
    *
-   * Don't set fs.viewfs.overload.scheme.target.hdfs.impl property.
+   * Unset fs.viewfs.overload.scheme.target.hdfs.impl property.
    * So, OverloadScheme target fs initialization will fail.
    */
   @Test(expected = UnsupportedFileSystemException.class, timeout = 30000)
   public void testInvalidOverloadSchemeTargetFS() throws Exception {
     final Path hdfsTargetPath = new Path(defaultFSURI + HDFS_USER_FOLDER);
+    String mountTableIfSet = conf.get(Constants.CONFIG_VIEWFS_MOUNTTABLE_PATH);
     conf = new Configuration();
+    if (mountTableIfSet != null) {
+      conf.set(Constants.CONFIG_VIEWFS_MOUNTTABLE_PATH, mountTableIfSet);
+    }
     addMountLinks(defaultFSURI.getAuthority(),
         new String[] {HDFS_USER_FOLDER, LOCAL_FOLDER,
             Constants.CONFIG_VIEWFS_LINK_FALLBACK },
@@ -400,6 +404,9 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
         defaultFSURI.toString());
     conf.set(String.format(FS_IMPL_PATTERN_KEY, HDFS_SCHEME),
         ViewFileSystemOverloadScheme.class.getName());
+    conf.unset(String.format(
+        FsConstants.FS_VIEWFS_OVERLOAD_SCHEME_TARGET_FS_IMPL_PATTERN,
+        HDFS_SCHEME));
 
     try (FileSystem fs = FileSystem.get(conf)) {
       fs.createNewFile(new Path("/onRootWhenFallBack"));
