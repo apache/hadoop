@@ -479,9 +479,9 @@ public class DFSAdmin extends FsShell {
   public DFSAdmin(Configuration conf) {
     super(conf);
   }
-  
+
   protected DistributedFileSystem getDFS() throws IOException {
-    return AdminHelper.getDFS(getConf());
+    return AdminHelper.checkAndGetDFS(getFS(), getConf());
   }
   
   /**
@@ -1036,14 +1036,7 @@ public class DFSAdmin extends FsShell {
       System.err.println("Bandwidth should be a non-negative integer");
       return exitCode;
     }
-
-    FileSystem fs = getFS();
-    if (!(fs instanceof DistributedFileSystem)) {
-      System.err.println("FileSystem is " + fs.getUri());
-      return exitCode;
-    }
-
-    DistributedFileSystem dfs = (DistributedFileSystem) fs;
+    DistributedFileSystem dfs = getDFS();
     try{
       dfs.setBalancerBandwidth(bandwidth);
       System.out.println("Balancer bandwidth is set to " + bandwidth);
