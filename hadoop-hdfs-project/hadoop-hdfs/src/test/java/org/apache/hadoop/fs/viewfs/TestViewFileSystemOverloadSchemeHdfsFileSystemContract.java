@@ -76,9 +76,9 @@ public class TestViewFileSystemOverloadSchemeHdfsFileSystemContract
     URI defaultFSURI =
         URI.create(conf.get(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY));
     ConfigUtil.addLink(conf, defaultFSURI.getAuthority(), "/user",
-        new URI(defaultFSURI.toString() + "/user"));
+        defaultFSURI);
     ConfigUtil.addLink(conf, defaultFSURI.getAuthority(), "/append",
-        new URI(defaultFSURI.toString() + "/append"));
+        defaultFSURI);
     ConfigUtil.addLink(conf, defaultFSURI.getAuthority(),
         "/FileSystemContractBaseTest/",
         new URI(defaultFSURI.toString() + "/FileSystemContractBaseTest/"));
