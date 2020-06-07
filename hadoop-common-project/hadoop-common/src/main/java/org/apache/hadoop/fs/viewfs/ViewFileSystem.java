@@ -1202,19 +1202,18 @@ public class ViewFileSystem extends FileSystem {
           INodeLink<FileSystem> link = (INodeLink<FileSystem>) inode;
           try {
             String linkedPath = link.getTargetFileSystem().getUri().getPath();
-            if("".equals(linkedPath)) {
+            if ("".equals(linkedPath)) {
               linkedPath = "/";
             }
             FileStatus status =
-                ((ChRootedFileSystem)link.getTargetFileSystem())
-                .getMyFs().getFileStatus(new Path(linkedPath));
-            result[i++] = new FileStatus(status.getLen(), false,
-              status.getReplication(), status.getBlockSize(),
-              status.getModificationTime(), status.getAccessTime(),
-              status.getPermission(), status.getOwner(), status.getGroup(),
-              link.getTargetLink(),
-              new Path(inode.fullPath).makeQualified(
-                  myUri, null));
+                ((ChRootedFileSystem) link.getTargetFileSystem()).getMyFs()
+                    .getFileStatus(new Path(linkedPath));
+            result[i++] = new FileStatus(status.getLen(), status.isDirectory(),
+                status.getReplication(), status.getBlockSize(),
+                status.getModificationTime(), status.getAccessTime(),
+                status.getPermission(), status.getOwner(), status.getGroup(),
+                link.getTargetLink(),
+                new Path(inode.fullPath).makeQualified(myUri, null));
           } catch (FileNotFoundException ex) {
             result[i++] = new FileStatus(0, false, 0, 0,
               creationTime, creationTime, PERMISSION_555,
