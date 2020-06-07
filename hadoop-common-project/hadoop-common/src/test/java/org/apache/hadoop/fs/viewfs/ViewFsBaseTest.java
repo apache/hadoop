@@ -486,9 +486,8 @@ abstract public class ViewFsBaseTest {
     fs = fileContextTestHelper.containsPath(fcView, "/user", dirPaths);
       Assert.assertNotNull(fs);
       Assert.assertTrue("A mount should appear as symlink", fs.isSymlink());
-      Assert.assertTrue(
-          "A mount link should appear as directory if target is directory",
-          fs.isDirectory());
+      // When target is a dir, mount link also should appear as dir
+      Assert.assertTrue("A mount should appear as dir", fs.isDirectory());
     fs = fileContextTestHelper.containsPath(fcView, "/data", dirPaths);
       Assert.assertNotNull(fs);
       Assert.assertTrue("A mount should appear as symlink", fs.isSymlink());
@@ -501,10 +500,8 @@ abstract public class ViewFsBaseTest {
     fs = fileContextTestHelper.containsPath(fcView, "/linkToAFile", dirPaths);
       Assert.assertNotNull(fs);
       Assert.assertTrue("A mount should appear as symlink", fs.isSymlink());
-      Assert.assertFalse(
-          "A mount should appear as non dir if target link is a file",
-          fs.isDirectory());
-      
+      // When target is a file, mount link also should appear as non dir
+      Assert.assertFalse("A mount should appear as file", fs.isDirectory());
       
       // list on internal dir
       dirPaths = fcView.util().listStatus(new Path("/internalDir"));
