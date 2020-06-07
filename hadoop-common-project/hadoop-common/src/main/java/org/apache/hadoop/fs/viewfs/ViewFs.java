@@ -992,6 +992,9 @@ public class ViewFs extends AbstractFileSystem {
 
           try {
             String linkedPath = link.getTargetFileSystem().getUri().getPath();
+            if ("".equals(linkedPath)) {
+              linkedPath = "/";
+            }
             FileStatus status = ((ChRootedFs)link.getTargetFileSystem())
                 .getMyFs().getFileStatus(new Path(linkedPath));
             result[i++] = new FileStatus(status.getLen(), false,
