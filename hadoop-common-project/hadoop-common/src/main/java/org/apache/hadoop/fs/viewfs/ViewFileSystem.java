@@ -1182,7 +1182,7 @@ public class ViewFileSystem extends FileSystem {
         } else {
           result[i++] = new FileStatus(0, true, 0, 0,
             creationTime, creationTime, PERMISSION_555,
-            ugi.getShortUserName(), ugi.getGroupNames()[0],
+            ugi.getShortUserName(), ugi.getPrimaryGroupName(),
             new Path(inode.fullPath).makeQualified(
                 myUri, null));
         }
