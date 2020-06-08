@@ -55,6 +55,7 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.FileContextTestHelper.fileType;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
@@ -68,6 +69,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -1003,4 +1005,24 @@ abstract public class ViewFsBaseTest {
       return mockFs;
     }
   }
+
+  @Test
+  public void testListStatusWithNoGroups() throws Exception {
+    final UserGroupInformation userUgi = UserGroupInformation
+        .createUserForTesting("user@HADOOP.COM", new String[] {});
+    userUgi.doAs(new PrivilegedExceptionAction<Object>() {
+      @Override
+      public Object run() throws Exception {
+        String clusterName = Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE;
+        URI viewFsUri =
+            new URI(FsConstants.VIEWFS_SCHEME, clusterName, "/", null, null);
+        FileSystem vfs = FileSystem.get(viewFsUri, conf);
+        LambdaTestUtils.intercept(IOException.class,
+            "There is no primary group for UGI", () -> vfs
+                .listStatus(new Path(viewFsUri.toString() + "internalDir")));
+        return null;
+      }
+    });
+  }
+
 }
