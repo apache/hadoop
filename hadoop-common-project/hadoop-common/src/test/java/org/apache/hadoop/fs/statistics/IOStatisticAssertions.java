@@ -52,17 +52,18 @@ public final class IOStatisticAssertions {
    * @param value expected value.
    * @return the value (which always equals the expected value)
    */
-  public static long verifyStatisticValue(
+  public static long verifyStatisticCounterValue(
       final IOStatistics stats,
       final String key,
       final long value) {
-    final Long statistic = stats.getStatistic(key);
+    final IOStatisticEntry statistic = stats.getStatistic(key);
     assertThat(statistic)
         .describedAs("Statistics %s and key %s with expected value %s", stats,
             key, value)
         .isNotNull()
+        .extracting(f -> f.singleValue(IOStatisticEntry.IOSTATISTIC_COUNTER))
         .isEqualTo(value);
-    return statistic;
+    return statistic.singleValue(IOStatisticEntry.IOSTATISTIC_COUNTER);
   }
 
   /**

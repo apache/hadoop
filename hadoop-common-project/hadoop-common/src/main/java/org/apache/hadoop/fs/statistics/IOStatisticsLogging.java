@@ -55,12 +55,12 @@ public final class IOStatisticsLogging {
     if (statistics != null) {
       int count = 0;
       StringBuilder sb = new StringBuilder("(");
-      for (Map.Entry<String, Long> entry : statistics) {
+      for (Map.Entry<String, IOStatisticEntry> entry : statistics) {
         if (count > 0) {
           sb.append(' ');
         }
         count++;
-        sb.append(entrytoString(entry));
+        sb.append(entrytoString(entry.getKey(), entry.getValue()));
       }
       sb.append(")");
       return sb.toString();

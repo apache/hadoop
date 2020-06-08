@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
+import org.apache.hadoop.fs.statistics.IOStatisticEntry;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 
 /**
@@ -41,7 +42,7 @@ final class EmptyIOStatistics implements IOStatistics {
   }
 
   @Override
-  public Long getStatistic(final String key) {
+  public IOStatisticEntry getStatistic(final String key) {
     return null;
   }
 
@@ -51,7 +52,7 @@ final class EmptyIOStatistics implements IOStatistics {
   }
 
   @Override
-  public Iterator<Map.Entry<String, Long>> iterator() {
+  public Iterator<Map.Entry<String, IOStatisticEntry>> iterator() {
     return new EmptyIterator();
   }
 
@@ -64,7 +65,7 @@ final class EmptyIOStatistics implements IOStatistics {
    * The empty iterator has no entries.
    */
   private static class EmptyIterator implements
-      Iterator<Map.Entry<String, Long>> {
+      Iterator<Map.Entry<String, IOStatisticEntry>> {
 
     @Override
     public boolean hasNext() {
@@ -73,7 +74,7 @@ final class EmptyIOStatistics implements IOStatistics {
 
     @SuppressWarnings("NewExceptionWithoutArguments")
     @Override
-    public Map.Entry<String, Long> next() {
+    public Map.Entry<String, IOStatisticEntry> next() {
       throw new NoSuchElementException();
     }
   }

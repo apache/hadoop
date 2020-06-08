@@ -21,21 +21,10 @@ package org.apache.hadoop.fs.contract.localfs;
 import java.util.Arrays;
 import java.util.List;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractContractStreamIOStatisticsTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.apache.hadoop.fs.statistics.IOStatistics;
 
-import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.extractStatistics;
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticValue;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_BYTES;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_EXCEPTIONS;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_SEEK_OPERATIONS;

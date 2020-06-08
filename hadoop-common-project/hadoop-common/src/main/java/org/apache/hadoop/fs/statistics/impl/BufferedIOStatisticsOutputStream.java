@@ -30,9 +30,12 @@ import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStat
  * An extension of {@code BufferedOutputStream} which implements
  * {@link IOStatisticsSource} and forwards requests for the
  * {@link IOStatistics} to the wrapped stream.
+ * This should be used when any output stream needs buffering while
+ * allowing the inner stream to be a source of statistics.
  */
-public class BufferedIOStatisticsOutputStream extends BufferedOutputStream implements
-    IOStatisticsSource {
+public class BufferedIOStatisticsOutputStream
+    extends BufferedOutputStream
+    implements IOStatisticsSource {
 
   public BufferedIOStatisticsOutputStream(final OutputStream out) {
     super(out);

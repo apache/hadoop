@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import com.google.common.base.Preconditions;
 
+import org.apache.hadoop.fs.statistics.IOStatisticEntry;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.dynamicIOStatistics;
@@ -35,7 +36,6 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.dynamicIO
 final class CounterIOStatisticsImpl extends WrappedIOStatistics
     implements CounterIOStatistics {
 
-
   private final Map<String, AtomicLong> counters = new HashMap<>();
 
   /**
@@ -45,11 +45,10 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
   CounterIOStatisticsImpl(String[] keys) {
     super(null);
     DynamicIOStatisticsBuilder builder = dynamicIOStatistics();
-    for (int i = 0; i < keys.length; i++) {
+    for (String key : keys) {
       AtomicLong counter = new AtomicLong();
-      String key = keys[i];
       counters.put(key, counter);
-      builder.add(key, counter);
+      builder.withAtomicLong(key, counter);
     }
     setSource(builder.build());
   }
@@ -91,11 +90,13 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
   public void copy(final IOStatistics source) {
     counters.entrySet().forEach(e -> {
       String key = e.getKey();
-      Long statisticValue = source.getStatistic(key);
+      IOStatisticEntry statisticValue = source.getStatistic(key);
       Preconditions.checkState(statisticValue != null,
           "No statistic %s in IOStatistic source %s",
           key, source);
-      e.getValue().set(statisticValue);
+      e.getValue().set(statisticValue.singleValue(
+          IOStatisticEntry.IOSTATISTIC_COUNTER
+      ));
     });
   }
 
@@ -109,13 +110,16 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
   public void add(final IOStatistics source) {
     counters.entrySet().forEach(e -> {
       String key = e.getKey();
-      Long statisticValue = source.getStatistic(key);
+      IOStatisticEntry statisticValue = source.getStatistic(key);
       Preconditions.checkState(statisticValue != null,
           "No statistic %s in IOStatistic source %s",
           key, source);
-      e.getValue().addAndGet(statisticValue);
+      long v = statisticValue.singleValue(
+          IOStatisticEntry.IOSTATISTIC_COUNTER);
+      e.getValue().addAndGet(v);
     });
   }
+
   /**
    * Subtract the counter values from a statistics source.
    * The source must have all keys in this instance;
@@ -126,11 +130,13 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
   public void subtract(final IOStatistics source) {
     counters.entrySet().forEach(e -> {
       String key = e.getKey();
-      Long statisticValue = source.getStatistic(key);
+      IOStatisticEntry statisticValue = source.getStatistic(key);
       Preconditions.checkState(statisticValue != null,
           "No statistic %s in IOStatistic source %s",
           key, source);
-      e.getValue().addAndGet(-statisticValue);
+      long v = statisticValue.singleValue(
+          IOStatisticEntry.IOSTATISTIC_COUNTER);
+      e.getValue().addAndGet(-v);
     });
   }
 }

@@ -22,11 +22,14 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.Function;
 import java.util.function.ToLongFunction;
 
+import org.apache.hadoop.fs.statistics.IOStatisticEntry;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 
+import static org.apache.hadoop.fs.statistics.IOStatisticEntry.entry;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.snapshotStatistics;
 
 /**
@@ -45,18 +48,29 @@ final class DynamicIOStatistics implements IOStatistics {
    * Use a concurrent hash map for the ability to add across
    * threads.
    */
-  private final Map<String, ToLongFunction<String>> evaluators
+  private final Map<String, Function<String, IOStatisticEntry>> evaluators
       = new TreeMap<>();
 
   DynamicIOStatistics() {
   }
 
   /**
-   * add a mapping of a key to an evaluator.
+   * add a mapping of a key to a long function.
    * @param key the key
    * @param eval the evaluator
    */
-  void add(String key, ToLongFunction<String> eval) {
+  void addLongFunction(String key, ToLongFunction<String> eval) {
+    addFunction(key, k ->
+        entry(IOStatisticEntry.IOSTATISTIC_COUNTER,
+            eval.applyAsLong(k)));
+  }
+
+  /**
+   * add a mapping of a key to a long function.
+   * @param key the key
+   * @param eval the evaluator
+   */
+  void addFunction(String key, Function<String, IOStatisticEntry> eval) {
     evaluators.put(key, eval);
   }
 
@@ -67,10 +81,10 @@ final class DynamicIOStatistics implements IOStatistics {
    * @return the latest value of that statistic, if found, else null.
    */
   @Override
-  public Long getStatistic(final String key) {
-    ToLongFunction<String> fn = evaluators.get(key);
+  public IOStatisticEntry getStatistic(final String key) {
+    Function<String, IOStatisticEntry> fn = evaluators.get(key);
     return fn != null
-        ? fn.applyAsLong(key)
+        ? fn.apply(key)
         : null;
   }
 
@@ -84,7 +98,8 @@ final class DynamicIOStatistics implements IOStatistics {
    * @return the iterator.
    */
   @Override
-  public Iterator<Map.Entry<String, Long>> iterator() {
+  public Iterator<Map.Entry<String, IOStatisticEntry>> iterator() {
+
     return snapshotStatistics(this).iterator();
   }
 

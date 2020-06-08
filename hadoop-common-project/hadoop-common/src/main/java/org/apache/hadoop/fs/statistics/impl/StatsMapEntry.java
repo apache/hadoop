@@ -20,10 +20,15 @@ package org.apache.hadoop.fs.statistics.impl;
 
 import java.util.Map;
 
+import org.apache.hadoop.fs.statistics.IOStatisticEntry;
+
+import static org.apache.hadoop.fs.statistics.IOStatisticEntry.entry;
+
 /**
  * A map entry for implementations to use if they need to.
  */
-public final class StatsMapEntry implements Map.Entry<String, Long> {
+public final class StatsMapEntry
+    implements Map.Entry<String, IOStatisticEntry> {
 
   /**
    * Key.
@@ -33,14 +38,14 @@ public final class StatsMapEntry implements Map.Entry<String, Long> {
   /**
    * Value.
    */
-  private Long value;
+  private IOStatisticEntry value;
 
   /**
    * Constructor.
    * @param key key
    * @param value value
    */
-  StatsMapEntry(final String key, final Long value) {
+  StatsMapEntry(final String key, final IOStatisticEntry value) {
     this.key = key;
     this.value = value;
   }
@@ -49,13 +54,12 @@ public final class StatsMapEntry implements Map.Entry<String, Long> {
     return key;
   }
 
-  public Long getValue() {
+  public IOStatisticEntry getValue() {
     return value;
   }
 
-  @SuppressWarnings("NestedAssignment")
   @Override
-  public Long setValue(final Long val) {
+  public IOStatisticEntry setValue(final IOStatisticEntry val) {
     this.value = val;
     return val;
   }
@@ -63,5 +67,16 @@ public final class StatsMapEntry implements Map.Entry<String, Long> {
   @Override
   public String toString() {
     return String.format("(%s, %s)", key, value);
+  }
+
+
+  /**
+   * Counter value.
+   * @param key key
+   * @param value value
+   */
+  public static StatsMapEntry counter(final String key, final long value) {
+    return new StatsMapEntry(key,
+        entry(IOStatisticEntry.IOSTATISTIC_COUNTER, value));
   }
 }

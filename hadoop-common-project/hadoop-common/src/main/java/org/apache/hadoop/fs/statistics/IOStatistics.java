@@ -81,14 +81,15 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-public interface IOStatistics extends Iterable<Map.Entry<String, Long>> {
+public interface IOStatistics
+    extends Iterable<Map.Entry<String, IOStatisticEntry>> {
 
   /**
    * Get the value of a statistic.
    *
    * @return The value of the statistic, or null if not tracked.
    */
-  Long getStatistic(String key);
+  IOStatisticEntry getStatistic(String key);
 
   /**
    * Return true if a statistic is being tracked.

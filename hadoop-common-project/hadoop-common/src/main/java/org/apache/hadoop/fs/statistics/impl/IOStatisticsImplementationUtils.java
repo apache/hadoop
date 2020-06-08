@@ -24,6 +24,7 @@ import com.google.common.annotations.VisibleForTesting;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.statistics.IOStatisticEntry;
 
 /**
  * Constants used in the implementation.
@@ -46,7 +47,8 @@ public class IOStatisticsImplementationUtils {
    * @param entry entry to evaluate
    * @return formatted string
    */
-  public static String entrytoString(final Map.Entry<String, Long> entry) {
+  public static String entrytoString(
+      final Map.Entry<String, IOStatisticEntry> entry) {
     return entrytoString(entry.getKey(), entry.getValue());
   }
 
@@ -57,7 +59,8 @@ public class IOStatisticsImplementationUtils {
    * @param value stat value
    * @return formatted string
    */
-  public static String entrytoString(final String name, final Long value) {
+  public static String entrytoString(
+      final String name, final IOStatisticEntry value) {
     return String.format(
         ENTRY_PATTERN,
         name,
