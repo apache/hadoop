@@ -51,7 +51,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * Java Keystores as the underlying credential store.
  *
  * The password for the keystore is taken from the HADOOP_CREDSTORE_PASSWORD
- * environment variable with a default of 'none'.
+ * environment variable with a default of 'nopass'.
  *
  * It is expected that for access to credential protected resource to copy the
  * creds from the original provider into the job's Credentials object, which is
@@ -67,7 +67,7 @@ public abstract class AbstractJavaKeyStoreProvider extends CredentialProvider {
   public static final String CREDENTIAL_PASSWORD_FILE_KEY =
       CommonConfigurationKeysPublic.
           HADOOP_SECURITY_CREDENTIAL_PASSWORD_FILE_KEY;
-  public static final String CREDENTIAL_PASSWORD_DEFAULT = "none";
+  public static final String CREDENTIAL_PASSWORD_DEFAULT = "nopass";
 
   private Path path;
   private final URI uri;

@@ -78,7 +78,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * ENTER at the end, else it won't be valid for the Java KeyStore.
  * <p>
  * If the environment variable, nor the property are not set, the password used
- * is 'none'.
+ * is 'nopass'.
  * <p>
  * It is expected for encrypted InputFormats and OutputFormats to copy the keys
  * from the original provider into the job's Credentials object, which is
@@ -98,7 +98,7 @@ public class JavaKeyStoreProvider extends KeyProvider {
 
   public static final String KEYSTORE_PASSWORD_ENV_VAR =
       "HADOOP_KEYSTORE_PASSWORD";
-  public static final char[] KEYSTORE_PASSWORD_DEFAULT = "none".toCharArray();
+  public static final char[] KEYSTORE_PASSWORD_DEFAULT = "nopass".toCharArray();
 
   private final URI uri;
   private final Path path;
