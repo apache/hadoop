@@ -473,6 +473,32 @@ public abstract class ChecksumFs extends FilterFs {
     }
   }
 
+  @Override
+  public void renameInternal(Path src, Path dst, boolean overwrite)
+      throws AccessControlException, FileAlreadyExistsException,
+      FileNotFoundException, ParentNotDirectoryException,
+      UnresolvedLinkException, IOException {
+    Options.Rename renameOpt = Options.Rename.NONE;
+    if (overwrite) {
+      renameOpt = Options.Rename.OVERWRITE;
+    }
+
+    if (isDirectory(src)) {
+      getMyFs().rename(src, dst, renameOpt);
+    } else {
+      getMyFs().rename(src, dst, renameOpt);
+
+      Path checkFile = getChecksumFile(src);
+      if (exists(checkFile)) { //try to rename checksum
+        if (isDirectory(dst)) {
+          getMyFs().rename(checkFile, dst, renameOpt);
+        } else {
+          getMyFs().rename(checkFile, getChecksumFile(dst), renameOpt);
+        }
+      }
+    }
+  }
+
   /**
    * Implement the delete(Path, boolean) in checksum
    * file system.
