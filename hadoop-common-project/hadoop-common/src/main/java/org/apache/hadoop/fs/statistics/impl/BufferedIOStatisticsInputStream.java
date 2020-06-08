@@ -18,50 +18,35 @@
 
 package org.apache.hadoop.fs.statistics.impl;
 
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
+import java.io.BufferedInputStream;
+import java.io.InputStream;
 
-import org.apache.hadoop.fs.statistics.IOStatisticEntry;
 import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+
+import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
 
 /**
- * Wrap IOStatistics source with another (dynamic) wrapper.
+ * An extension of {@code BufferedInputStream} which implements
+ * {@link IOStatisticsSource} and forwards requests for the
+ * {@link IOStatistics} to the wrapped stream.
+ * This should be used when any input stream needs buffering while
+ * allowing the inner stream to be a source of statistics.
  */
-public class WrappedIOStatistics implements IOStatistics {
+public class BufferedIOStatisticsInputStream
+    extends BufferedInputStream
+    implements IOStatisticsSource {
 
-  private IOStatistics source;
-
-  public WrappedIOStatistics(final IOStatistics source) {
-    this.source = source;
+  public BufferedIOStatisticsInputStream(final InputStream in) {
+    super(in);
   }
 
-
-  protected IOStatistics getSource() {
-    return source;
-  }
-
-  protected void setSource(final IOStatistics source) {
-    this.source = source;
+  public BufferedIOStatisticsInputStream(final InputStream in, final int size) {
+    super(in, size);
   }
 
   @Override
-  public IOStatisticEntry getStatistic(final String key) {
-    return source.getStatistic(key);
-  }
-
-  @Override
-  public boolean isTracked(final String key) {
-    return source.isTracked(key);
-  }
-
-  @Override
-  public Set<String> keys() {
-    return source.keys();
-  }
-
-  @Override
-  public Iterator<Map.Entry<String, IOStatisticEntry>> iterator() {
-    return source.iterator();
+  public IOStatistics getIOStatistics() {
+    return retrieveIOStatistics(in);
   }
 }

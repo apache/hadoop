@@ -30,7 +30,7 @@ import org.apache.hadoop.test.AbstractHadoopTestBase;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticIsTracked;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticIsUnknown;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticIsUntracked;
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticValue;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.iostatisticsToString;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.emptyStatistics;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -46,7 +46,7 @@ public class TestEmptyIOStatistics extends AbstractHadoopTestBase {
 
   @Test
   public void testIterator() throws Throwable {
-    Iterator<Map.Entry<String, Long>> iterator = empty.iterator();
+    Iterator<Map.Entry<String, IOStatisticEntry>> iterator = empty.iterator();
 
     assertThat(iterator.hasNext())
         .describedAs("iterator.hasNext()")
@@ -74,7 +74,7 @@ public class TestEmptyIOStatistics extends AbstractHadoopTestBase {
     // expect an exception to be raised when
     // an assertion is made about the value of an unknown statistics
     assertThatThrownBy(() ->
-        verifyStatisticValue(empty, "anything", 0))
+        verifyStatisticCounterValue(empty, "anything", 0))
         .isInstanceOf(AssertionError.class);
   }
 

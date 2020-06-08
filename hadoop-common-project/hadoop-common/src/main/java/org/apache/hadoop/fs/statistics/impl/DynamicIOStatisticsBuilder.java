@@ -20,15 +20,17 @@ package org.apache.hadoop.fs.statistics.impl;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 import java.util.function.ToLongFunction;
 
+import org.apache.hadoop.fs.statistics.IOStatisticEntry;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 
 import static com.google.common.base.Preconditions.checkState;
 
 /**
- * Builder of Dynamic IO Statistics.
+ * Builder of Dynamic IO Statistics which serve up up longs.
  * Instantiate through
  * {@link IOStatisticsBinding#dynamicIOStatistics()}.
  */
@@ -46,9 +48,21 @@ public class DynamicIOStatisticsBuilder {
    * @param eval evaluator for the statistic
    * @return the builder.
    */
-  public DynamicIOStatisticsBuilder add(String key,
+  public DynamicIOStatisticsBuilder withFunction(String key,
+      Function<String, IOStatisticEntry> eval) {
+    activeInstance().addFunction(key, eval);
+    return this;
+  }
+
+  /**
+   * Add a new evaluator to the statistics being built up.
+   * @param key key of this statistic
+   * @param eval evaluator for the statistic
+   * @return the builder.
+   */
+  public DynamicIOStatisticsBuilder withLongFunction(String key,
       ToLongFunction<String> eval) {
-    activeInstance().add(key, eval);
+    activeInstance().addLongFunction(key, eval);
     return this;
   }
 
@@ -59,9 +73,9 @@ public class DynamicIOStatisticsBuilder {
    * @param source atomic long counter
    * @return the builder.
    */
-  public DynamicIOStatisticsBuilder add(String key,
+  public DynamicIOStatisticsBuilder withAtomicLong(String key,
       AtomicLong source) {
-    add(key, s -> source.get());
+    withLongFunction(key, s -> source.get());
     return this;
   }
 
@@ -72,9 +86,9 @@ public class DynamicIOStatisticsBuilder {
    * @param source atomic int counter
    * @return the builder.
    */
-  public DynamicIOStatisticsBuilder add(String key,
+  public DynamicIOStatisticsBuilder withAtomicInteger(String key,
       AtomicInteger source) {
-    add(key, s -> source.get());
+    withLongFunction(key, s -> source.get());
     return this;
   }
 
@@ -85,9 +99,9 @@ public class DynamicIOStatisticsBuilder {
    * @param source mutable long counter
    * @return the builder.
    */
-  public DynamicIOStatisticsBuilder add(String key,
+  public DynamicIOStatisticsBuilder withMutableCounter(String key,
       MutableCounterLong source) {
-    add(key, s -> source.value());
+    withLongFunction(key, s -> source.value());
     return this;
   }
 

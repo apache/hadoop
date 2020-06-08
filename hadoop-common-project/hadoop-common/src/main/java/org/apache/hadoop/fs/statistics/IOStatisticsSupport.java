@@ -64,4 +64,5 @@ public final class IOStatisticsSupport {
         ? ((IOStatisticsSource) source).getIOStatistics()
         : null; // null source or interface not implemented
   }
+
 }

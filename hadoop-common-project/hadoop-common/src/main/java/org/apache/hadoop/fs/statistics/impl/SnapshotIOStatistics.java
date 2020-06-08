@@ -24,10 +24,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-import com.google.common.base.Preconditions;
-
+import org.apache.hadoop.fs.statistics.IOStatisticEntry;
 import org.apache.hadoop.fs.statistics.IOStatistics;
-import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 
 /**
  * Snapshot of statistics from a different source.
@@ -45,7 +43,7 @@ class SnapshotIOStatistics implements IOStatistics, Serializable {
    * Treemaps sort their insertions so the iterator is ordered.
    * They are also serializable.
    */
-  private final TreeMap<String, Long> entries
+  private final TreeMap<String, IOStatisticEntry> entries
       = new TreeMap<>();
 
   /**
@@ -63,7 +61,7 @@ class SnapshotIOStatistics implements IOStatistics, Serializable {
   }
 
   @Override
-  public Long getStatistic(final String key) {
+  public IOStatisticEntry getStatistic(final String key) {
     return entries.get(key);
   }
 
@@ -73,7 +71,7 @@ class SnapshotIOStatistics implements IOStatistics, Serializable {
   }
 
   @Override
-  public Iterator<Map.Entry<String, Long>> iterator() {
+  public Iterator<Map.Entry<String, IOStatisticEntry>> iterator() {
     return entries.entrySet().iterator();
   }
 
@@ -97,26 +95,5 @@ class SnapshotIOStatistics implements IOStatistics, Serializable {
     }
   }
 
-  /**
-   * Build a diff of two statistics, using the left
-   * instance as the list of entries to build and value
-   * from which the diff is subtracted.
-   * All matching values must be in the right instance.
-   * @param left left value
-   * @param right right value
-   */
-   void subtract(IOStatistics left, IOStatistics right) {
-    entries.clear();
-    // MUST NOT use iterator() because IOStatistics implementations
-    // may create a snapshot when iterator() is invoked;
-    // enumerating keys and querying values avoids stack
-    // overflows
-    for (String key : left.keys()) {
-      Long rs = right.getStatistic(key);
-      Preconditions.checkArgument(rs != null,
-          "diff source lacks statistic %s", key);
-      entries.put(key, left.getStatistic(key) - rs);
-    }
-  }
 
 }

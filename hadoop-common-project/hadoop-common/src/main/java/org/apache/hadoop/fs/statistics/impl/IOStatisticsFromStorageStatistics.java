@@ -26,7 +26,10 @@ import java.util.TreeSet;
 import com.google.common.base.Preconditions;
 
 import org.apache.hadoop.fs.StorageStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticEntry;
 import org.apache.hadoop.fs.statistics.IOStatistics;
+
+import static org.apache.hadoop.fs.statistics.IOStatisticEntry.entry;
 
 /**
  * This provides an IOStatistics instance from a {@link StorageStatistics}
@@ -65,8 +68,9 @@ final class IOStatisticsFromStorageStatistics
   }
 
   @Override
-  public Long getStatistic(final String key) {
-    return storageStatistics.getLong(key);
+  public IOStatisticEntry getStatistic(final String key) {
+    return entry(IOStatisticEntry.IOSTATISTIC_COUNTER,
+        storageStatistics.getLong(key));
   }
 
   @Override
@@ -75,7 +79,7 @@ final class IOStatisticsFromStorageStatistics
   }
 
   @Override
-  public Iterator<Map.Entry<String, Long>> iterator() {
+  public Iterator<Map.Entry<String, IOStatisticEntry>> iterator() {
     return new MapEntryIterator(storageStatistics.getLongStatistics());
   }
 
@@ -89,7 +93,7 @@ final class IOStatisticsFromStorageStatistics
    * and converts to an IOStatistics-compatible type.
    */
   private static final class MapEntryIterator
-      implements Iterator<Map.Entry<String, Long>> {
+      implements Iterator<Map.Entry<String, IOStatisticEntry>> {
 
     /**
      * The iterator over the storage statistics.
@@ -107,9 +111,9 @@ final class IOStatisticsFromStorageStatistics
     }
 
     @Override
-    public Map.Entry<String, Long> next() {
+    public Map.Entry<String, IOStatisticEntry> next() {
       final StorageStatistics.LongStatistic entry = iterator.next();
-      return new StatsMapEntry(entry.getName(), entry.getValue());
+      return StatsMapEntry.counter(entry.getName(), entry.getValue());
     }
 
   }

@@ -29,7 +29,6 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.fs.statistics.impl.IOStatisticsImplementationUtils;
 import org.apache.hadoop.fs.statistics.impl.SourceWrappedStatistics;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
@@ -38,7 +37,7 @@ import org.apache.hadoop.test.AbstractHadoopTestBase;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticIsTracked;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticIsUnknown;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticIsUntracked;
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticValue;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsImplementationUtils.NULL_SOURCE;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringify;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.iostatisticsToString;
@@ -88,10 +87,10 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
   @Before
   public void setUp() throws Exception {
     statistics = dynamicIOStatistics()
-        .add(ALONG, aLong)
-        .add(AINT, aInt)
-        .add(COUNT, counter)
-        .add(EVAL, x -> evalLong)
+        .withAtomicLong(ALONG, aLong)
+        .withAtomicInteger(AINT, aInt)
+        .withMutableCounter(COUNT, counter)
+        .withLongFunction(EVAL, x -> evalLong)
         .build();
     statsSource = new SourceWrappedStatistics(statistics);
   }
@@ -101,9 +100,9 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
    */
   @Test
   public void testEval() throws Throwable {
-    verifyStatisticValue(statistics, EVAL, 0);
+    verifyStatisticCounterValue(statistics, EVAL, 0);
     evalLong = 10;
-    verifyStatisticValue(statistics, EVAL, 10);
+    verifyStatisticCounterValue(statistics, EVAL, 10);
   }
 
   /**
@@ -111,9 +110,9 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
    */
   @Test
   public void testAlong() throws Throwable {
-    verifyStatisticValue(statistics, ALONG, 0);
+    verifyStatisticCounterValue(statistics, ALONG, 0);
     aLong.addAndGet(1);
-    verifyStatisticValue(statistics, ALONG, 1);
+    verifyStatisticCounterValue(statistics, ALONG, 1);
   }
 
   /**
@@ -121,9 +120,9 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
    */
   @Test
   public void testAint() throws Throwable {
-    verifyStatisticValue(statistics, AINT, 0);
+    verifyStatisticCounterValue(statistics, AINT, 0);
     aInt.addAndGet(1);
-    verifyStatisticValue(statistics, AINT, 1);
+    verifyStatisticCounterValue(statistics, AINT, 1);
   }
 
   /**
@@ -131,9 +130,9 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
    */
   @Test
   public void testCounter() throws Throwable {
-    verifyStatisticValue(statistics, COUNT, 0);
+    verifyStatisticCounterValue(statistics, COUNT, 0);
     counter.incr();
-    verifyStatisticValue(statistics, COUNT, 1);
+    verifyStatisticCounterValue(statistics, COUNT, 1);
   }
 
   /**
@@ -164,13 +163,14 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
     // set the counters all to 1
     incrementAllCounters();
     // take the snapshot
-    final Iterator<Map.Entry<String, Long>> it = statistics.iterator();
+    final Iterator<Map.Entry<String, IOStatisticEntry>> it = statistics.iterator();
     // reset the counters
     incrementAllCounters();
     // now assert that all the iterator values are of value 1
     while (it.hasNext()) {
-      Map.Entry<String, Long> next = it.next();
-      assertThat(next.getValue())
+      Map.Entry<String, IOStatisticEntry> next = it.next();
+      assertThat(
+          next.getValue().singleValue(IOStatisticEntry.IOSTATISTIC_COUNTER))
           .describedAs("Value of entry %s", next)
           .isEqualTo(1);
     }
@@ -196,7 +196,7 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
     // expect an exception to be raised when
     // an assertion is made about the value of an unknown statistics
     assertThatThrownBy(() ->
-        verifyStatisticValue(statistics, "anything", 0))
+        verifyStatisticCounterValue(statistics, "anything", 0))
         .isInstanceOf(AssertionError.class);
   }
 
@@ -212,8 +212,9 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
     assertThat(deser)
         .extracting(s -> s.getKey())
         .containsExactlyInAnyOrder(KEYS);
-    for (Map.Entry<String, Long> e: deser) {
-      assertThat(e.getValue())
+    for (Map.Entry<String, IOStatisticEntry> e: deser) {
+      assertThat(e.getValue()
+          .singleValue(IOStatisticEntry.IOSTATISTIC_COUNTER))
           .describedAs("Value of entry %s", e)
           .isEqualTo(1);
     }
@@ -228,14 +229,14 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
 
   @Test
   public void testDemandStringification() throws Throwable {
+    String counterPattern = "(along=(type=counter, (%d))";
     // this is not yet evaluated
     Object demand = demandStringify(statistics);
     // nor is this.
     Object demandSource = demandStringify(statsSource);
 
     // show it evaluates
-    String formatted1 = String.format(IOStatisticsImplementationUtils.ENTRY_PATTERN,
-        ALONG, aLong.get());
+    String formatted1 = String.format(counterPattern, aLong.get());
     assertThat(demand
         .toString())
         .contains(formatted1);
@@ -247,8 +248,7 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
     incrementAllCounters();
     incrementAllCounters();
     // there are new values to expect
-    String formatted2 = String.format(IOStatisticsImplementationUtils.ENTRY_PATTERN,
-        ALONG, aLong.get());
+    String formatted2 = String.format(counterPattern, aLong.get());
     assertThat(demand
         .toString())
         .doesNotContain(formatted1)
