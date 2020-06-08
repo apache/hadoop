@@ -60,6 +60,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ShutdownHookManager;
 
 import com.google.common.base.Preconditions;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.htrace.core.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -499,10 +500,9 @@ public class FileContext {
     return getFileContext(FsConstants.LOCAL_FS_URI, aConf);
   }
 
-  /* This method is needed for tests. */
+  @VisibleForTesting
   @InterfaceAudience.Private
-  @InterfaceStability.Unstable /* return type will change to AFS once
-                                  HADOOP-6223 is completed */
+  @InterfaceStability.Unstable
   public AbstractFileSystem getDefaultFileSystem() {
     return defaultFS;
   }
