@@ -451,7 +451,7 @@ public class S3ADelegationTokens extends AbstractDTService {
   /**
    * Get a null/possibly empty list of extra delegation token issuers.
    * These will be asked for tokens when
-   * {@link DelegationTokenIssuer#collectDelegationTokens()} recursively
+   * {@link DelegationTokenIssuer#getAdditionalTokenIssuers()} recursively
    * collects all DTs a filesystem can offer.
    * @return a null or empty array. Default implementation: null
    * @throws IOException failure
