@@ -36,8 +36,10 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -180,7 +182,16 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       RMAppAttempt attempt = app.getCurrentAppAttempt();
       if (attempt != null) {
         trackingUrl = attempt.getTrackingUrl();
-        host = attempt.getHost();
+        Container masterContainer = attempt.getMasterContainer();
+        if (masterContainer != null) {
+          NodeId nodeId = masterContainer.getNodeId();
+          if (nodeId != null) {
+            String amHost = nodeId.getHost();
+            if (amHost != null) {
+              host = amHost;
+            }
+          }
+        }
       }
       RMAppMetrics metrics = app.getRMAppMetrics();
       SummaryBuilder summary = new SummaryBuilder()
