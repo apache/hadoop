@@ -114,6 +114,7 @@ import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.select.InternalSelectConstants;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.token.DelegationTokenIssuer;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.LambdaUtils;
@@ -3370,6 +3371,25 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     if (delegationTokens.isPresent()) {
       return delegationTokens.get().getBoundOrNewDT(encryptionSecrets,
           (renewer != null ? new Text(renewer) : new Text()));
+    } else {
+      // Delegation token support is not set up
+      LOG.debug("Token support is not enabled");
+      return null;
+    }
+  }
+
+  /**
+   * Ask any DT plugin for any extra token issuers.
+   * These do not get told of the encryption secrets and can
+   * return any type of token.
+   * This allows DT plugins to issue extra tokens for
+   * ancillary services.
+   */
+  @Override
+  public DelegationTokenIssuer[] getAdditionalTokenIssuers()
+      throws IOException {
+    if (delegationTokens.isPresent()) {
+      return delegationTokens.get().getAdditionalTokenIssuers();
     } else {
       // Delegation token support is not set up
       LOG.debug("Token support is not enabled");
