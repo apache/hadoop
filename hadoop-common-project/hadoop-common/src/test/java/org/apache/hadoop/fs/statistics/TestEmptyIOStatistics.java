@@ -105,14 +105,14 @@ public class TestEmptyIOStatistics extends AbstractHadoopTestBase {
 
   @Test
   public void testStringifyNullSource() throws Throwable {
-    assertThat(IOStatisticsLogging.sourceToString(null))
+    assertThat(IOStatisticsLogging.ioStatisticsSourceToString(null))
         .isEmpty();
   }
 
   @Test
   public void testStringifyNullStats() throws Throwable {
     assertThat(
-        IOStatisticsLogging.sourceToString(
+        IOStatisticsLogging.ioStatisticsSourceToString(
             IOStatisticsBinding.wrap(null)))
         .isEmpty();
   }

@@ -85,9 +85,9 @@ public interface IOStatistics
     extends Iterable<Map.Entry<String, IOStatisticEntry>> {
 
   /**
-   * Get the value of a statistic.
+   * Get the entry of a statistic.
    *
-   * @return The value of the statistic, or null if not tracked.
+   * @return The entry of the statistic, or null if not tracked.
    */
   IOStatisticEntry getStatistic(String key);
 

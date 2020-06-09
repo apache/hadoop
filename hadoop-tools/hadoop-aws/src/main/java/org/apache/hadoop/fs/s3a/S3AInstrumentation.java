@@ -733,7 +733,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     @Override
     public Long getStatistic(final String name) {
       return statsCounters.getStatistic(name)
-          .singleValue(IOStatisticEntry.IOSTATISTIC_COUNTER);
+          .scalar(IOStatisticEntry.IOSTATISTIC_COUNTER);
     }
 
     /**

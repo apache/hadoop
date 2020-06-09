@@ -29,18 +29,18 @@ import org.apache.hadoop.fs.statistics.IOStatisticEntry;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 
-import static org.apache.hadoop.fs.statistics.IOStatisticEntry.entry;
+import static org.apache.hadoop.fs.statistics.IOStatisticEntry.statsEntry;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.snapshotStatistics;
 
 /**
  * These statistics are dynamically evaluated by the supplied
  * String -&gt; Long functions.
- *
+ * <p></p>
  * This allows statistic sources to supply a list of callbacks used to
  * generate the statistics on demand; similar to some of the Coda Hale metrics.
- *
+ * <p></p>
  * The evaluation actually takes place during the iteration's {@code next()}
- * call; the returned a value is fixed.
+ * call.
  */
 final class DynamicIOStatistics implements IOStatistics {
 
@@ -61,7 +61,7 @@ final class DynamicIOStatistics implements IOStatistics {
    */
   void addLongFunction(String key, ToLongFunction<String> eval) {
     addFunction(key, k ->
-        entry(IOStatisticEntry.IOSTATISTIC_COUNTER,
+        statsEntry(IOStatisticEntry.IOSTATISTIC_COUNTER,
             eval.applyAsLong(k)));
   }
 
@@ -99,7 +99,6 @@ final class DynamicIOStatistics implements IOStatistics {
    */
   @Override
   public Iterator<Map.Entry<String, IOStatisticEntry>> iterator() {
-
     return snapshotStatistics(this).iterator();
   }
 

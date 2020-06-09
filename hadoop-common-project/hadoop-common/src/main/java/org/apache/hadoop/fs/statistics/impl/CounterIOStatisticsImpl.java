@@ -31,7 +31,8 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.dynamicIOStatistics;
 
 /**
- * Implement statistics as a map of atomic longs.
+ * Implement counter statistics as a map of AtomicLong counters
+ * created in the constructor.
  */
 final class CounterIOStatisticsImpl extends WrappedIOStatistics
     implements CounterIOStatistics {
@@ -80,12 +81,6 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
     counters.values().forEach(a -> a.set(0));
   }
 
-  /**
-   * Update the counter values from a statistics source.
-   * The source must have all keys in this instance;
-   * extra keys are ignored.
-   * @param source source of statistics.
-   */
   @Override
   public void copy(final IOStatistics source) {
     counters.entrySet().forEach(e -> {
@@ -94,18 +89,12 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
       Preconditions.checkState(statisticValue != null,
           "No statistic %s in IOStatistic source %s",
           key, source);
-      e.getValue().set(statisticValue.singleValue(
+      e.getValue().set(statisticValue.scalar(
           IOStatisticEntry.IOSTATISTIC_COUNTER
       ));
     });
   }
 
-  /**
-   * Add the counter values from a statistics source.
-   * The source must have all keys in this instance;
-   * extra keys are ignored.
-   * @param source source of statistics.
-   */
   @Override
   public void add(final IOStatistics source) {
     counters.entrySet().forEach(e -> {
@@ -114,18 +103,12 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
       Preconditions.checkState(statisticValue != null,
           "No statistic %s in IOStatistic source %s",
           key, source);
-      long v = statisticValue.singleValue(
+      long v = statisticValue.scalar(
           IOStatisticEntry.IOSTATISTIC_COUNTER);
       e.getValue().addAndGet(v);
     });
   }
 
-  /**
-   * Subtract the counter values from a statistics source.
-   * The source must have all keys in this instance;
-   * extra keys are ignored.
-   * @param source source of statistics.
-   */
   @Override
   public void subtract(final IOStatistics source) {
     counters.entrySet().forEach(e -> {
@@ -134,7 +117,7 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
       Preconditions.checkState(statisticValue != null,
           "No statistic %s in IOStatistic source %s",
           key, source);
-      long v = statisticValue.singleValue(
+      long v = statisticValue.scalar(
           IOStatisticEntry.IOSTATISTIC_COUNTER);
       e.getValue().addAndGet(-v);
     });

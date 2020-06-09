@@ -70,13 +70,14 @@ public final class IOStatisticsLogging {
   }
 
   /**
-   * Extract the statistics from a source.
+   * Extract the statistics from a source object -or ""
+   * if it is not a source of statistics
    * <p>
    * Exceptions are caught and downgraded to debug logging.
    * @param source source of statistics.
    * @return a string for logging.
    */
-  public static String sourceToString(@Nullable IOStatisticsSource source) {
+  public static String ioStatisticsSourceToString(@Nullable Object source) {
     try {
       return iostatisticsToString(retrieveIOStatistics(source));
     } catch (RuntimeException e) {
@@ -117,6 +118,7 @@ public final class IOStatisticsLogging {
 
   /**
    * On demand stringifier.
+   * <p>
    * Whenever this object's toString() method is called, it
    * retrieves the latest statistics instance and re-evaluates it.
    */
@@ -131,7 +133,7 @@ public final class IOStatisticsLogging {
     @Override
     public String toString() {
       return source != null
-          ? sourceToString(source)
+          ? ioStatisticsSourceToString(source)
           : IOStatisticsImplementationUtils.NULL_SOURCE;
     }
   }

@@ -58,6 +58,9 @@ public interface CounterIOStatistics extends IOStatistics {
 
   /**
    * Add the counter values from a statistics source.
+   * <p></p>
+   * All entries must be counters.
+   * <p></p>
    * The source must have all keys in this instance;
    * extra keys are ignored.
    * @param source source of statistics.
@@ -66,6 +69,9 @@ public interface CounterIOStatistics extends IOStatistics {
 
   /**
    * Subtract the counter values from a statistics source.
+   * <p></p>
+   * All entries must be counters.
+   * <p></p>
    * The source must have all keys in this instance;
    * extra keys are ignored.
    * @param source source of statistics.
