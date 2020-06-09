@@ -52,9 +52,11 @@ import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.ExecutionTypeRequest;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
@@ -72,6 +74,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublis
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.MockRMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
@@ -840,6 +843,17 @@ public class TestAppManager{
     when(app.getSubmitTime()).thenReturn(1000L);
     when(app.getLaunchTime()).thenReturn(2000L);
     when(app.getApplicationTags()).thenReturn(Sets.newHashSet("tag2", "tag1"));
+
+    RMAppAttempt mockRMAppAttempt = mock(RMAppAttempt.class);
+    Container mockContainer = mock(Container.class);
+    NodeId mockNodeId = mock(NodeId.class);
+    String host = "127.0.0.1";
+
+    when(mockNodeId.getHost()).thenReturn(host);
+    when(mockContainer.getNodeId()).thenReturn(mockNodeId);
+    when(mockRMAppAttempt.getMasterContainer()).thenReturn(mockContainer);
+    when(app.getCurrentAppAttempt()).thenReturn(mockRMAppAttempt);
+
     Map<String, Long> resourceSecondsMap = new HashMap<>();
     resourceSecondsMap.put(ResourceInformation.MEMORY_MB.getName(), 16384L);
     resourceSecondsMap.put(ResourceInformation.VCORES.getName(), 64L);
@@ -861,6 +875,7 @@ public class TestAppManager{
     Assert.assertTrue(msg.contains("Multiline" + escaped +"AppName"));
     Assert.assertTrue(msg.contains("Multiline" + escaped +"UserName"));
     Assert.assertTrue(msg.contains("Multiline" + escaped +"QueueName"));
+    Assert.assertTrue(msg.contains("appMasterHost=" + host));
     Assert.assertTrue(msg.contains("submitTime=1000"));
     Assert.assertTrue(msg.contains("launchTime=2000"));
     Assert.assertTrue(msg.contains("memorySeconds=16384"));
