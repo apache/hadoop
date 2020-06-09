@@ -22,7 +22,7 @@ import java.util.Map;
 
 import org.apache.hadoop.fs.statistics.IOStatisticEntry;
 
-import static org.apache.hadoop.fs.statistics.IOStatisticEntry.entry;
+import static org.apache.hadoop.fs.statistics.IOStatisticEntry.statsEntry;
 
 /**
  * A map entry for implementations to use if they need to.
@@ -77,6 +77,6 @@ public final class StatsMapEntry
    */
   public static StatsMapEntry counter(final String key, final long value) {
     return new StatsMapEntry(key,
-        entry(IOStatisticEntry.IOSTATISTIC_COUNTER, value));
+        statsEntry(IOStatisticEntry.IOSTATISTIC_COUNTER, value));
   }
 }

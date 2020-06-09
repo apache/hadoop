@@ -19,10 +19,14 @@
 package org.apache.hadoop.fs.statistics;
 
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.Objects;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 import static org.apache.commons.lang3.StringUtils.join;
 
 /**
@@ -40,13 +44,15 @@ import static org.apache.commons.lang3.StringUtils.join;
  * <p></p>
  * This isn't perfect, as we'd really want a union of types,
  * so doubles could be passed round too.
- * The length of the array can be queried with the {@link #length()}
+ * The length of the array can be queried with the {@link #arity()}
  * method; the {@code _1(), _2()} and {@code _3()} methods return
  * the first, second and third entries in the array
  * respectively.
  * <p></p>
  * In this context, <i>arity</i> is the number of elements in the array.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
 public final class IOStatisticEntry implements Serializable {
 
   /**
@@ -58,15 +64,15 @@ public final class IOStatisticEntry implements Serializable {
    */
   public static final int IOSTATISTIC_COUNTER = 0;
 
+
   /**
-   * Counter type: {@value}.
+   * Min value type: {@value}.
    * <p></p>
-   * Arity 2: (mean, sample-count)
+   * Arity 1: (min)
    * <p></p>
-   * Aggregation:
-   * {@code (l._1() * l._2() + r._1() * r._2()) / (l._2() + r._2())}
+   * Aggregation {@code min(l._1(), r._1()}
    */
-  public static final int IOSTATISTIC_MEAN = 1;
+  public static final int IOSTATISTIC_MIN = 1;
 
   /**
    * Max value type: {@value}.
@@ -78,29 +84,42 @@ public final class IOStatisticEntry implements Serializable {
   public static final int IOSTATISTIC_MAX = 2;
 
   /**
-   * Min value type: {@value}.
+   * Counter type: {@value}.
    * <p></p>
-   * Arity 1: (min)
+   * Arity 2: (mean, sample-count)
    * <p></p>
-   * Aggregation {@code min(l._1(), r._1()}
+   * Aggregation:
+   * {@code (l._1() * l._2() + r._1() * r._2()) / (l._2() + r._2())}
    */
-  public static final int IOSTATISTIC_MIN = 3;
+  public static final int IOSTATISTIC_MEAN = 3;
 
   /**
-   * Names of the originally defined types.
+   * Names of the known types.
    */
-  private static final String[] TYPE_NAMES = new String[]{
+  private static final String[] TYPE_NAMES = {
       "counter",
-      "mean",
+      "min",
       "max",
-      "min"
+      "mean"};
+
+  /**
+   * Arity of the known types.
+   */
+  private static final int[] TYPE_ARITY = {1, 1, 1, 2};
+
+  /**
+   * Names of the known types.
+   */
+  private static final String[] TYPE_FORMATS = {
+      "counter",
+      "min",
+      "max",
+      "mean"
   };
 
   /**
-   * Arity of the defined types.
+   * Serialization number.
    */
-  private static final int[] TYPE_ARITY = new int[]{1, 2, 1, 1};
-
   private static final long serialVersionUID = 5925626116768440629L;
 
   /**
@@ -109,81 +128,149 @@ public final class IOStatisticEntry implements Serializable {
   private int type;
 
   /**
-   * value array.
+   * data array.
    */
-  private long[] values;
+  private long[] data;
 
   /**
-   * Instantiate from an array of values.
+   * Instantiate from an array of long values.
    * This includes a verification that the
    * length of the array matches that expected of the given
    * type (if it is known)
    * @param type type of entry
-   * @param values values
+   * @param data values
    */
-  public IOStatisticEntry(final int type, final long[] values) {
-    Preconditions.checkArgument(type >= 0,
+  public IOStatisticEntry(final int type, final long[] data) {
+    checkArgument(type >= 0,
         "type out of range %d", type);
     this.type = type;
-    this.values = Objects.requireNonNull(values);
-    int len = values.length;
-    Preconditions.checkArgument(len > 0,
-        "entry value array is empty");
+    this.data = Objects.requireNonNull(data);
+    int len = data.length;
+    checkArgument(len > 0,
+        "entry data array is empty");
     if (type < TYPE_ARITY.length) {
-      Preconditions.checkArgument(len == TYPE_ARITY[type],
-          "arity value of %d does not match required value: %d",
+      checkArgument(len == TYPE_ARITY[type],
+          "arity value of %s does not match required value: %s",
           len, TYPE_ARITY[type]);
     }
   }
 
+  /**
+   * Empty constructor.
+   * This is for serialization rather than general use.
+   * Until the type and values are set, the entry is not
+   * valid.
+   */
   public IOStatisticEntry() {
+    type = -1;
+    data = new long[0];
   }
 
-  public int getType() {
+  /**
+   * Get the type of the entry.
+   * @return the type
+   */
+  public int type() {
     return type;
   }
 
-  public long[] getValues() {
-    return values;
+
+  /**
+   * Get the length of the value array, i.e arity of the instance.
+   * @return the length of the data.
+   */
+  public int arity() {
+    return data.length;
   }
 
-  public int length() {
-    return values.length;
+  /**
+   * Get the array of values.
+   * This is a mutable list, not a copy.
+   * @return the current list of values.
+   */
+  public long[] getData() {
+    return data;
   }
 
+
+  /**
+   * Require the type value of the instance to
+   * be of the specified value.
+   * @param r required tyoe.
+   * @throws IllegalStateException if the requirement is not met.
+   */
   public void requireType(int r) {
-    Preconditions.checkState(type == r,
+    checkState(type == r,
         "Required type=%d actual type=%d",
         r, type);
   }
 
-  public void requireLength(int r) {
-    Preconditions.checkState(length() == r,
+  /**
+   * Required the arity to match that expected.
+   * @param r required arity.
+   * @throws IllegalStateException if the requirement is not met.
+   */
+  public void requireArity(int r) {
+    checkState(arity() == r,
         "Required length=%d actual length=%d",
-        r, length());
-  }
-
-  public long _1() {
-    return values[0];
-  }
-
-  public long _2() {
-    return values[1];
-  }
-
-  public long _3() {
-    return values[2];
+        r, arity());
   }
 
   /**
-   * Get the first value in the array, verifying
+   * Requre the type and arity of the two entries to match
+   * @param that the other entry.
+   * @throws IllegalStateException if the requirement is not met.
+   */
+  public void requireCompatible(IOStatisticEntry that) {
+    that.requireTypeAndArity(type, arity());
+  }
+
+  /**
+   * Require the specific type and arity.
+   * @param t type
+   * @param a arity
+   */
+  public void requireTypeAndArity(final int t, final int a) {
+    requireType(t);
+    requireArity(a);
+  }
+
+  /**
+   * First entry in the tuple.
+   * @return a tuple element value
+   * @throws IndexOutOfBoundsException if the array is too short.
+   */
+  public long _1() {
+    return data[0];
+  }
+
+  /**
+   * Second entry in the tuple.
+   * @return a tuple element value
+   * @throws IndexOutOfBoundsException if the array is too short.
+   */
+  public long _2() {
+    return data[1];
+  }
+
+  /**
+   * Third entry in the tuple.
+   * @return a tuple element value
+   * @throws IndexOutOfBoundsException if the array is too short.
+   */
+  public long _3() {
+    return data[2];
+  }
+
+  /**
+   * Get the single tuple value, verifying
    * that the type is as expected.
-   * @param type required type
+   * @param requiredType required type
    * @return the value
    */
-  public long singleValue(int type) {
-    requireLength(1);
-    requireType(type);
+  public long scalar(int requiredType) {
+    requireArity(1);
+    requireType(requiredType);
     return _1();
   }
 
@@ -201,20 +288,29 @@ public final class IOStatisticEntry implements Serializable {
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder();
-    sb.append("(type=").append(typeAsString());
-    sb.append(", (").append(join(values, ','));
+    sb.append("(").append(typeAsString());
+    sb.append(", (").append(join(data, ','));
     sb.append(')');
     return sb.toString();
   }
 
+  @Override
+  public boolean equals(final Object o) {
+    if (this == o) { return true; }
+    if (o == null || getClass() != o.getClass()) { return false; }
+    IOStatisticEntry that = (IOStatisticEntry) o;
+    return type == that.type &&
+        Arrays.equals(data, that.data);
+  }
+
   /**
-   * Entry of arity 1.
+   * Entry with data varags.
    * @param t type
-   * @param v value
+   * @param d data
    * @return new entry
    */
-  public static IOStatisticEntry entry(int t, long...v) {
-    return new IOStatisticEntry(t, v);
+  public static IOStatisticEntry statsEntry(int t, long...d) {
+    return new IOStatisticEntry(t, d);
   }
 
 }

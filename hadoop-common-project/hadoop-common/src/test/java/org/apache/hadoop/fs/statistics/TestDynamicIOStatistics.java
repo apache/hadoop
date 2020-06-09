@@ -170,7 +170,7 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
     while (it.hasNext()) {
       Map.Entry<String, IOStatisticEntry> next = it.next();
       assertThat(
-          next.getValue().singleValue(IOStatisticEntry.IOSTATISTIC_COUNTER))
+          next.getValue().scalar(IOStatisticEntry.IOSTATISTIC_COUNTER))
           .describedAs("Value of entry %s", next)
           .isEqualTo(1);
     }
@@ -214,7 +214,7 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
         .containsExactlyInAnyOrder(KEYS);
     for (Map.Entry<String, IOStatisticEntry> e: deser) {
       assertThat(e.getValue()
-          .singleValue(IOStatisticEntry.IOSTATISTIC_COUNTER))
+          .scalar(IOStatisticEntry.IOSTATISTIC_COUNTER))
           .describedAs("Value of entry %s", e)
           .isEqualTo(1);
     }

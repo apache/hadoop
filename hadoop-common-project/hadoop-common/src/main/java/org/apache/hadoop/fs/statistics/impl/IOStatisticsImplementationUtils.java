@@ -26,13 +26,19 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.statistics.IOStatisticEntry;
 
+import static org.apache.hadoop.fs.statistics.IOStatisticEntry.IOSTATISTIC_COUNTER;
+import static org.apache.hadoop.fs.statistics.IOStatisticEntry.IOSTATISTIC_MAX;
+import static org.apache.hadoop.fs.statistics.IOStatisticEntry.IOSTATISTIC_MEAN;
+import static org.apache.hadoop.fs.statistics.IOStatisticEntry.IOSTATISTIC_MIN;
+import static org.apache.hadoop.fs.statistics.IOStatisticEntry.statsEntry;
+
 /**
- * Constants used in the implementation.
+ * Utility operations for implementing the classes within this package.
  *
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class IOStatisticsImplementationUtils {
+public final class IOStatisticsImplementationUtils {
 
   /** Pattern used for each entry. */
   public static final String ENTRY_PATTERN = "(%s=%s)";
@@ -66,4 +72,65 @@ public class IOStatisticsImplementationUtils {
         name,
         value);
   }
+
+  public static IOStatisticEntry add(IOStatisticEntry left,
+      IOStatisticEntry right) {
+    left.requireCompatible(right);
+    left.requireTypeAndArity(IOSTATISTIC_COUNTER, 1);
+    return statsEntry(IOSTATISTIC_COUNTER,
+        left._1() + right._1());
+  }
+
+  public static IOStatisticEntry max(IOStatisticEntry left,
+      IOStatisticEntry right) {
+    left.requireCompatible(right);
+    left.requireTypeAndArity(IOSTATISTIC_MAX, 1);
+    return statsEntry(IOSTATISTIC_MAX,
+        Math.max(left._1(), right._1()));
+  }
+
+  public static IOStatisticEntry min(IOStatisticEntry left,
+      IOStatisticEntry right) {
+    left.requireCompatible(right);
+    left.requireTypeAndArity(IOSTATISTIC_MIN, 1);
+    return statsEntry(IOSTATISTIC_MIN,
+        Math.min(left._1(), right._1()));
+  }
+
+  public static IOStatisticEntry arithmeticMean(
+      IOStatisticEntry left,
+      IOStatisticEntry right) {
+    left.requireCompatible(right);
+    left.requireTypeAndArity(IOSTATISTIC_MEAN, 2);
+    long lSamples = left._2();
+    long lSum = left._1() * lSamples;
+    long rSamples = right._2();
+    double rSum = right._1() * rSamples;
+    long totalSamples = lSamples + rSamples;
+    return statsEntry(IOSTATISTIC_MEAN,
+        Math.round((lSum + rSum) / totalSamples),
+        totalSamples);
+  }
+
+  public static IOStatisticEntry aggregate(
+      IOStatisticEntry left,
+      IOStatisticEntry right) {
+    left.requireCompatible(right);
+    switch (left.type()) {
+    case IOSTATISTIC_COUNTER:
+      return add(left, right);
+    case IOSTATISTIC_MIN:
+      return min(left, right);
+    case IOSTATISTIC_MAX:
+      return max(left, right);
+    case IOSTATISTIC_MEAN:
+      return arithmeticMean(left, right);
+    default:
+      // unknown value.
+      // rather than fail, just return the left value.
+      return left;
+    }
+
+  }
+
 }

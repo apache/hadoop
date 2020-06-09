@@ -57,10 +57,55 @@ The `IOStatistics` implementations provide
 * An iterator over all such keys and their latest values.
 * A way to explitly request the value of specific statistic.
 
+A single statistic is reprsented by an `IOStatisticEntry` instance.
+This supports multiple types of statistics, each as a type (integer)
+and an array of values -which are viewed as a _tuple_ whose _arity_
+is the length of the array.
+
+
+
 ## package `org.apache.hadoop.fs.statistics`
 
 This package contains the public statistics APIs intended
 for use by applications.
+
+<!--  ============================================================= -->
+<!--  Class: IOStatisticEntry -->
+<!--  ============================================================= -->
+
+
+### class `org.apache.hadoop.fs.statistics.IOStatisticEntry`
+
+```java
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
+public final class IOStatisticEntry implements Serializable {
+...
+}
+```
+
+This represents the evaluated value of a statistic.
+It is more than just a simple scala value
+
+1. Serializable.
+1. Extensible: new statistic types MAY be added.
+1. non-scalar: a statistic may require more than one long value to represent it.
+1. Aggregatable: two `IOStatisticEntry` instances of the same type
+   can be aggregated. For some types (e.g the mean), this requires more
+   than one element of data to 
+1. Forwards compatible to the extent that adding a new statistics type
+   MUST NOT break any existing applications, even if any new and unknown
+   types cannot be aggregated.
+
+| Type ID | Name | Data | Function |
+|---------|------|------|----------|
+| 0 | counter | `(count)` | a counter which can be aggregated through addition |
+| 1 | min | `(value)` | a minimum recorded value |
+| 2 | max | `(value)` | a maximum recorded value |
+| 3 | mean | `(mean, sample_count)` | an arithmentic mean and the number of samples used |
+
+Please consult the javadocs for its full set of methods.
+
 
 <!--  ============================================================= -->
 <!--  Interface: IOStatisticsSource -->
@@ -99,19 +144,21 @@ IOStatistics information.
 
 ### class `org.apache.hadoop.fs.statistics.IOStatistics`
 
-These are low-cost per-instance statistics provided by any Hadoop I/O class instance.
+These are per-instance statistics provided by an object which
+implements `IOStatisticsSource`.
 
 ```java
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-public interface IOStatistics extends Iterable<Map.Entry<String, Long>> {
+public interface IOStatistics
+    extends Iterable<Map.Entry<String, IOStatisticEntry>> {
 
   /**
-   * Get the value of a statistic.
+   * Get the entry of a statistic.
    *
-   * @return The value of the statistic, or null if not tracked.
+   * @return The entry of the statistic, or null if not tracked.
    */
-  Long getStatistic(String key);
+  IOStatisticEntry getStatistic(String key);
 
   /**
    * Return true if a statistic is being tracked.
@@ -182,8 +229,6 @@ are collected and reported.
 That mechanism supports collecting limited read/write statistics for different
 worker threads sharing the same FS instance, but as the collection is thread local,
 it invariably under-reports IO performed in other threads on behalf of a worker thread.
-
-
 
 
 ## Helper Classes

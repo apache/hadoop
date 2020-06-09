@@ -55,7 +55,7 @@ class SnapshotIOStatistics implements IOStatistics, Serializable {
   }
 
   /**
-   * Empty constructor.
+   * Empty constructor for deserialization.
    */
   SnapshotIOStatistics() {
   }

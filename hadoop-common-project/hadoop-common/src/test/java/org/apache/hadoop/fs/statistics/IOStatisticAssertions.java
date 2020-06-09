@@ -28,6 +28,7 @@ import java.io.Serializable;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import static org.apache.hadoop.fs.statistics.IOStatisticEntry.IOSTATISTIC_COUNTER;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -46,6 +47,23 @@ public final class IOStatisticAssertions {
   }
 
   /**
+   * Get a required counter statistic
+   * @param stats statistics source
+   * @param key statistic key
+   * @return the value
+   */
+  public static long extractCounterStatistic(
+      final IOStatistics stats,
+      final String key) {
+    final IOStatisticEntry statistic = stats.getStatistic(key);
+    assertThat(statistic)
+        .describedAs("Statistics %s and key %s", stats,
+            key)
+        .isNotNull();
+    return statistic.scalar(IOSTATISTIC_COUNTER);
+  }
+
+  /**
    * Assert that a given statistic has an expected value.
    * @param stats statistics source
    * @param key statistic key
@@ -61,9 +79,9 @@ public final class IOStatisticAssertions {
         .describedAs("Statistics %s and key %s with expected value %s", stats,
             key, value)
         .isNotNull()
-        .extracting(f -> f.singleValue(IOStatisticEntry.IOSTATISTIC_COUNTER))
+        .extracting(f -> f.scalar(IOSTATISTIC_COUNTER))
         .isEqualTo(value);
-    return statistic.singleValue(IOStatisticEntry.IOSTATISTIC_COUNTER);
+    return statistic.scalar(IOSTATISTIC_COUNTER);
   }
 
   /**
