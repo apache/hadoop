@@ -4200,7 +4200,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // fallback to file existence check as the path
       // can be a file or empty directory.
       if (!listFilesAssumingDir.hasNext()) {
-        final S3AFileStatus fileStatus = (S3AFileStatus) getFileStatus(path);
+        final S3AFileStatus fileStatus = innerGetFileStatus(path,
+                false,
+                StatusProbeEnum.HEAD_OR_DIR_MARKER);
         if (fileStatus.isFile()) {
           return new Listing.SingleStatusRemoteIterator(
                   toLocatedFileStatus(fileStatus));

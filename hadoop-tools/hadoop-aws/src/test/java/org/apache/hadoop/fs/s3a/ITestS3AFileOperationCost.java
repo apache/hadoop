@@ -69,7 +69,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
   @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
-//        {"raw", false},
+        {"raw", false},
         {"guarded", true}
     });
   }
