@@ -55,6 +55,7 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.FileContextTestHelper.fileType;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
@@ -1002,5 +1003,28 @@ abstract public class ViewFsBaseTest {
       }
       return mockFs;
     }
+  }
+
+  @Test
+  public void testListStatusWithNoGroups() throws Exception {
+    final UserGroupInformation userUgi = UserGroupInformation
+        .createUserForTesting("user@HADOOP.COM", new String[] {});
+    userUgi.doAs(new PrivilegedExceptionAction<Object>() {
+      @Override
+      public Object run() throws Exception {
+        String clusterName = Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE;
+        URI viewFsUri =
+            new URI(FsConstants.VIEWFS_SCHEME, clusterName, "/", null, null);
+        FileSystem vfs = FileSystem.get(viewFsUri, conf);
+        try {
+          vfs.listStatus(new Path(viewFsUri.toString() + "internalDir"));
+          Assert.fail("Exception should be thrown.");
+        } catch (IOException e) {
+          GenericTestUtils
+              .assertExceptionContains("There is no primary group for UGI", e);
+        }
+        return null;
+      }
+    });
   }
 }
