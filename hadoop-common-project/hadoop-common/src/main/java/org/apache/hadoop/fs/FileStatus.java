@@ -170,6 +170,12 @@ public class FileStatus implements Writable, Comparable<Object>,
     this.symlink = symlink;
     this.path = path;
     this.attr = attr;
+
+    // The variables isdir and symlink indicate the type:
+    // 1. isdir implies directory, in which case symlink must be null.
+    // 2. !isdir implies a file or symlink, symlink != null implies a
+    //    symlink, otherwise it's a file.
+    assert (isdir && symlink == null) || !isdir;
   }
 
   /**

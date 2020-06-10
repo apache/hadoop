@@ -992,17 +992,15 @@ public class ViewFs extends AbstractFileSystem {
 
           try {
             String linkedPath = link.getTargetFileSystem().getUri().getPath();
-            if ("".equals(linkedPath)) {
-              linkedPath = "/";
-            }
-            FileStatus status = ((ChRootedFs) link.getTargetFileSystem())
+            FileStatus status = ((ChRootedFs)link.getTargetFileSystem())
                 .getMyFs().getFileStatus(new Path(linkedPath));
-            result[i++] = new FileStatus(status.getLen(), status.isDirectory(),
-                status.getReplication(), status.getBlockSize(),
-                status.getModificationTime(), status.getAccessTime(),
-                status.getPermission(), status.getOwner(), status.getGroup(),
-                link.getTargetLink(),
-                new Path(inode.fullPath).makeQualified(myUri, null));
+            result[i++] = new FileStatus(status.getLen(), false,
+              status.getReplication(), status.getBlockSize(),
+              status.getModificationTime(), status.getAccessTime(),
+              status.getPermission(), status.getOwner(), status.getGroup(),
+              link.getTargetLink(),
+              new Path(inode.fullPath).makeQualified(
+                  myUri, null));
           } catch (FileNotFoundException ex) {
             result[i++] = new FileStatus(0, false, 0, 0,
               creationTime, creationTime, PERMISSION_555,
