@@ -486,6 +486,14 @@ public class ViewFileSystem extends FileSystem {
         : new ViewFsFileStatus(orig, qualified);
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * If the given path is a symlink(mount link), the path will be resolved to a
+   * target path and it will get the resolved path's FileStatus object. It will
+   * not be represented as a symlink and isDirectory API returns true if the
+   * resolved path is a directory, false otherwise.
+   */
   @Override
   public FileStatus getFileStatus(final Path f) throws AccessControlException,
       FileNotFoundException, IOException {
@@ -503,6 +511,25 @@ public class ViewFileSystem extends FileSystem {
     res.targetFileSystem.access(res.remainingPath, mode);
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * Note: listStatus on root("/") considers listing from fallbackLink if
+   * available. If the same directory name is present in configured mount path
+   * as well as in fallback link, then only the configured mount path will be
+   * listed in the returned result.
+   *
+   * If any of the the immediate children of the given path f is a symlink(mount
+   * link), the returned FileStatus object of that children would be represented
+   * as a symlink. It will not be resolved to the target path and will not get
+   * the target path FileStatus object. The target path will be available via
+   * getSymlink on that children's FileStatus object. Since it represents as
+   * symlink, isDirectory on that children's FileStatus will return false.
+   *
+   * If you want to get the FileStatus of target path for that children, you may
+   * want to use GetFileStatus API with that children's symlink path. Please see
+   * {@link ViewFileSystem#getFileStatus(Path f)}
+   */
   @Override
   public FileStatus[] listStatus(final Path f) throws AccessControlException,
       FileNotFoundException, IOException {
@@ -1135,20 +1162,11 @@ public class ViewFileSystem extends FileSystem {
       checkPathIsSlash(f);
       return new FileStatus(0, true, 0, 0, creationTime, creationTime,
           PERMISSION_555, ugi.getShortUserName(), ugi.getPrimaryGroupName(),
-
           new Path(theInternalDir.fullPath).makeQualified(
               myUri, ROOT_PATH));
     }
     
 
-    /**
-     * {@inheritDoc}
-     *
-     * Note: listStatus on root("/") considers listing from fallbackLink if
-     * available. If the same directory name is present in configured mount
-     * path as well as in fallback link, then only the configured mount path
-     * will be listed in the returned result.
-     */
     @Override
     public FileStatus[] listStatus(Path f) throws AccessControlException,
         FileNotFoundException, IOException {
