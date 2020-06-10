@@ -1599,11 +1599,14 @@ public class CapacityScheduler extends
     }
 
     // Do not schedule if there are any reservations to fulfill on the node
-    if (node.getReservedContainer() != null) {
+    // node.getReservedContainer() is saved to the reservedContainer variable
+    // to ensure that a NPE described in YARN-10295 won't occur
+    reservedContainer = node.getReservedContainer();
+    if (reservedContainer != null) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Skipping scheduling since node " + node.getNodeID()
-            + " is reserved by application " + node.getReservedContainer()
-            .getContainerId().getApplicationAttemptId());
+                + " is reserved by application " + reservedContainer
+                .getContainerId().getApplicationAttemptId());
       }
       return null;
     }
