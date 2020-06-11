@@ -48,7 +48,8 @@ public final class ViewFileSystemUtil {
    * @return true if the fileSystem is ViewFileSystem
    */
   public static boolean isViewFileSystem(final FileSystem fileSystem) {
-    return fileSystem.getScheme().equals(FsConstants.VIEWFS_SCHEME);
+    return fileSystem.getScheme().equals(FsConstants.VIEWFS_SCHEME)
+        || fileSystem instanceof ViewFileSystemOverloadScheme;
   }
 
   /**
