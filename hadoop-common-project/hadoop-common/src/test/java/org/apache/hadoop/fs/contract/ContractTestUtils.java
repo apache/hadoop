@@ -34,11 +34,7 @@ import org.junit.AssumptionViolatedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.EOFException;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -119,7 +115,7 @@ public class ContractTestUtils extends Assert {
                                   boolean delete) throws IOException {
     fs.mkdirs(path.getParent());
 
-    writeDataset(fs, path, src, len, blocksize, overwrite);
+    writeDataset(fs, path, src, len, blocksize, overwrite, true);
 
     byte[] dest = readDataset(fs, path, len);
 
@@ -202,25 +198,22 @@ public class ContractTestUtils extends Assert {
    * in the file without ever having to seek()
    * @param fs filesystem
    * @param path path to read from
-   * @param len length of data to read
+   * @param len expected length of data to read
    * @return the bytes
    * @throws IOException IO problems
    */
   public static byte[] readDataset(FileSystem fs, Path path, int len)
       throws IOException {
-    byte[] dest = new byte[len];
-    int offset =0;
-    int nread = 0;
+    ByteArrayOutputStream dest = new ByteArrayOutputStream(len);
+    byte[] buffer = new byte[4096];
     try (FSDataInputStream in = fs.open(path)) {
-      while (nread < len) {
-        int nbytes = in.read(dest, offset + nread, len - nread);
-        if (nbytes < 0) {
-          throw new EOFException("End of file reached before reading fully.");
-        }
-        nread += nbytes;
+      int nbytes = in.read(buffer);
+      while (nbytes > 0) {
+        dest.write(buffer, 0, nbytes);
+        nbytes = in.read(buffer);
       }
     }
-    return dest;
+    return dest.toByteArray();
   }
 
   /**

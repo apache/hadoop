@@ -138,7 +138,7 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
   protected void validateEncryptionForFilesize(int len) throws IOException {
     describe("Create an encrypted file of size " + len);
     String src = createFilename(len);
-    Path path = writeThenReadFile(src, len);
+    Path path = writeThenReadFile(src, len, true);
     assertEncrypted(path);
     rm(getFileSystem(), path, false, false);
   }

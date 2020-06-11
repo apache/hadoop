@@ -425,6 +425,17 @@ public final class S3ATestUtils {
   }
 
   /**
+   * Skip a test if client encryption kms key id is not set.
+   * @param configuration configuration to probe
+   */
+  public static void skipIfKmsKeyIdIsNotSet(Configuration configuration) {
+    if (configuration.get(
+            Constants.CLIENT_SIDE_ENCRYPTION_KMS_KEY_ID) == null) {
+      skip("AWS KMS key id is not set");
+    }
+  }
+
+  /**
    * Create a test path, using the value of
    * {@link S3ATestConstants#TEST_UNIQUE_FORK_ID} if it is set.
    * @param defVal default value

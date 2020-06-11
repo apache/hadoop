@@ -449,7 +449,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
 
       initMultipartUploads(conf);
-
+      serverSideEncryptionAlgorithm = S3AEncryptionMethods.getMethod(
+          conf.getTrimmed(SERVER_SIDE_ENCRYPTION_ALGORITHM));
+      if (S3AEncryptionMethods.SSE_C.equals(serverSideEncryptionAlgorithm) &&
+          StringUtils.isBlank(getServerSideEncryptionKey(getConf()))) {
+        throw new IOException(Constants.SSE_C_NO_KEY_ERROR);
+      }
       pageSize = intOption(getConf(), BULK_DELETE_PAGE_SIZE,
           BULK_DELETE_PAGE_SIZE_DEFAULT, 0);
     } catch (AmazonClientException e) {

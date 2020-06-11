@@ -397,6 +397,16 @@ public final class Constants {
   public static final String SERVER_SIDE_ENCRYPTION_ALGORITHM =
       "fs.s3a.server-side-encryption-algorithm";
 
+  // s3 client-side encryption
+  public static final String CLIENT_SIDE_ENCRYPTION_METHOD =
+      "fs.s3a.client-side-encryption-method";
+
+  public static final String CLIENT_SIDE_ENCRYPTION_KMS_KEY_ID =
+      "fs.s3a.client-side-encryption.kms.key-id";
+
+  public static final String CLIENT_SIDE_ENCRYPTION_MATERIALS_PROVIDER =
+          "fs.s3a.client-side-encryption.materials-provider";
+
   /**
    * The standard encryption algorithm AWS supports.
    * Different implementations may support others (or none).

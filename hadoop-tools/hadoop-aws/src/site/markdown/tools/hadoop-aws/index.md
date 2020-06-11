@@ -239,8 +239,108 @@ If you do any of these: change your credentials immediately!
 Except when interacting with public S3 buckets, the S3A client
 needs the credentials needed to interact with buckets.
 
-The client supports multiple authentication mechanisms and can be configured as to
-which mechanisms to use, and their order of use. Custom implementations
+    <property>
+      <name>fs.s3n.maxRetries</name>
+      <value>4</value>
+      <description>The maximum number of retries for reading or writing files to
+        S3, before we signal failure to the application.
+      </description>
+    </property>
+
+    <property>
+      <name>fs.s3n.sleepTimeSeconds</name>
+      <value>10</value>
+      <description>The number of seconds to sleep between each S3 retry.
+      </description>
+    </property>
+
+    <property>
+      <name>fs.s3n.block.size</name>
+      <value>67108864</value>
+      <description>Block size to use when reading files using the native S3
+      filesystem (s3n: URIs).</description>
+    </property>
+
+    <property>
+      <name>fs.s3n.multipart.uploads.enabled</name>
+      <value>false</value>
+      <description>Setting this property to true enables multiple uploads to
+      native S3 filesystem. When uploading a file, it is split into blocks
+      if the size is larger than fs.s3n.multipart.uploads.block.size.
+      </description>
+    </property>
+
+    <property>
+      <name>fs.s3n.multipart.uploads.block.size</name>
+      <value>67108864</value>
+      <description>The block size for multipart uploads to native S3 filesystem.
+      Default size is 64MB.
+      </description>
+    </property>
+
+    <property>
+      <name>fs.s3n.multipart.copy.block.size</name>
+      <value>5368709120</value>
+      <description>The block size for multipart copy in native S3 filesystem.
+      Default size is 5GB.
+      </description>
+    </property>
+
+    <property>
+      <name>fs.s3n.server-side-encryption-algorithm</name>
+      <value></value>
+      <description>Specify a server-side encryption algorithm for S3.
+      Unset by default, and the only other currently allowable value is AES256.
+      </description>
+    </property>
+
+## S3A
+
+
+The S3A filesystem client, prefix `s3a://`, is the S3 client undergoing
+active development and maintenance.
+While this means that there is a bit of instability
+of configuration options and behavior, it also means
+that the code is getting better in terms of reliability, performance,
+monitoring and other features.
+
+### Features
+
+* Directly reads and writes S3 objects.
+* Compatible with standard S3 clients.
+* Can read data created with S3N.
+* Can write data back that is readable by S3N. (Note: excluding encryption).
+* Supports partitioned uploads for many-GB objects.
+* Instrumented with Hadoop metrics.
+* Performance optimized operations, including `seek()` and `readFully()`.
+* Uses Amazon's Java S3 SDK with support for latest S3 features and authentication
+schemes.
+* Supports authentication via: environment variables, Hadoop configuration
+properties, the Hadoop key management store and IAM roles.
+* Supports S3 "Server Side Encryption" for both reading and writing.
+* Supports proxies
+* Test suites includes distcp and suites in downstream projects.
+* Available since Hadoop 2.6; considered production ready in Hadoop 2.7.
+* Actively maintained.
+* Supports per-bucket configuration.
+
+S3A is now the recommended client for working with S3 objects. It is also the
+one where patches for functionality and performance are very welcome.
+
+### Dependencies
+
+* `hadoop-aws` jar.
+* `aws-java-sdk-s3` jar.
+* `aws-java-sdk-core` jar.
+* `aws-java-sdk-kms` jar.
+* `joda-time` jar; use version 2.8.1 or later.
+* `httpclient` jar.
+* Jackson `jackson-core`, `jackson-annotations`, `jackson-databind` jars.
+
+### S3A Authentication methods
+
+S3A supports multiple authentication mechanisms, and can be configured as to
+which mechanisms to use, and the order to use them. Custom implementations
 of `com.amazonaws.auth.AWSCredentialsProvider` may also be used.
 
 *Important*: The S3A connector no longer supports username and secrets
@@ -944,14 +1044,14 @@ options are covered in [Testing](./testing.md).
   </description>
 </property>
 
-<property>
-    <name>fs.s3a.server-side-encryption.key</name>
-    <description>Specific encryption key to use if fs.s3a.server-side-encryption-algorithm
-    has been set to 'SSE-KMS' or 'SSE-C'. In the case of SSE-C, the value of this property
-    should be the Base64 encoded key. If you are using SSE-KMS and leave this property empty,
-    you'll be using your default's S3 KMS key, otherwise you should set this property to
-    the specific KMS key id.</description>
-</property>
+    <property>
+        <name>fs.s3a.server-side-encryption-key</name>
+        <description>Specific encryption key to use if fs.s3a.server-side-encryption-algorithm
+        has been set to 'SSE-KMS' or 'SSE-C'. In the case of SSE-C, the value of this property
+        should be the Base64 encoded key. If you are using SSE-KMS and leave this property empty,
+        you'll be using your default's S3 KMS key, otherwise you should set this property to
+        the specific KMS key id.</description>
+    </property>
 
 <property>
   <name>fs.s3a.buffer.dir</name>
@@ -1915,19 +2015,170 @@ The S3A connector can provide the HTTP etag header to the caller as the
 checksum of the uploaded file. Doing so will break distcp operations
 between hdfs and s3a.
 
-For this reason, the etag-as-checksum feature is disabled by default.
+    <property>
+      <name>fs.s3a.experimental.input.fadvise</name>
+      <value>random</value>
+      <description>Policy for reading files.
+       Values: 'random', 'sequential' or 'normal'
+       </description>
+    </property>
 
-```xml
-<property>
-  <name>fs.s3a.etag.checksum.enabled</name>
-  <value>false</value>
-  <description>
-    Should calls to getFileChecksum() return the etag value of the remote
-    object.
-    WARNING: if enabled, distcp operations between HDFS and S3 will fail unless
-    -skipcrccheck is set.
-  </description>
-</property>
+[HDFS-2744](https://issues.apache.org/jira/browse/HDFS-2744),
+*Extend FSDataInputStream to allow fadvise* proposes adding a public API
+to set fadvise policies on input streams. Once implemented,
+this will become the supported mechanism used for configuring the input IO policy.
+
+## Troubleshooting S3A
+
+Common problems working with S3A are
+
+1. Classpath
+1. Authentication
+1. S3 Inconsistency side-effects
+
+Classpath is usually the first problem. For the S3x filesystem clients,
+you need the Hadoop-specific filesystem clients, third party S3 client libraries
+compatible with the Hadoop code, and any dependent libraries compatible with
+Hadoop and the specific JVM.
+
+The classpath must be set up for the process talking to S3: if this is code
+running in the Hadoop cluster, the JARs must be on that classpath. That
+includes `distcp`.
+
+
+### `ClassNotFoundException: org.apache.hadoop.fs.s3a.S3AFileSystem`
+
+(or `org.apache.hadoop.fs.s3native.NativeS3FileSystem`).
+
+These are the Hadoop classes, found in the `hadoop-aws` JAR. An exception
+reporting one of these classes is missing means that this JAR is not on
+the classpath.
+
+### `ClassNotFoundException: com.amazonaws.services.s3.AmazonS3Client`
+
+(or other `com.amazonaws` class.)
+
+This means that one or more of the `aws-*-sdk` JARs are missing. Add them.
+
+### Missing method in `com.amazonaws` class
+
+This can be triggered by incompatibilities between the AWS SDK on the classpath
+and the version which Hadoop was compiled with.
+
+The AWS SDK JARs change their signature enough between releases that the only
+way to safely update the AWS SDK version is to recompile Hadoop against the later
+version.
+
+There's nothing the Hadoop team can do here: if you get this problem, then sorry,
+but you are on your own. The Hadoop developer team did look at using reflection
+to bind to the SDK, but there were too many changes between versions for this
+to work reliably. All it did was postpone version compatibility problems until
+the specific codepaths were executed at runtime —this was actually a backward
+step in terms of fast detection of compatibility problems.
+
+### Missing method in a Jackson class
+
+This is usually caused by version mismatches between Jackson JARs on the
+classpath. All Jackson JARs on the classpath *must* be of the same version.
+
+
+### Authentication failure
+
+If Hadoop cannot authenticate with the S3 service endpoint,
+the client retries a number of times before eventually failing.
+When it finally gives up, it will report a message about signature mismatch:
+
+```
+com.amazonaws.services.s3.model.AmazonS3Exception:
+ The request signature we calculated does not match the signature you provided.
+ Check your key and signing method.
+  (Service: Amazon S3; Status Code: 403; Error Code: SignatureDoesNotMatch,
+```
+
+The likely cause is that you either have the wrong credentials or somehow
+the credentials were not readable on the host attempting to read or write
+the S3 Bucket.
+
+Enabling debug logging for the package `org.apache.hadoop.fs.s3a`
+can help provide more information.
+
+The most common cause is that you have the wrong credentials for any of the current
+authentication mechanism(s) —or somehow
+the credentials were not readable on the host attempting to read or write
+the S3 Bucket. However, there are a couple of system configuration problems
+(JVM version, system clock) which also need to be checked.
+
+Most common: there's an error in the configuration properties.
+
+
+1. Make sure that the name of the bucket is the correct one.
+That is: check the URL.
+
+1. Make sure the property names are correct. For S3A, they are
+`fs.s3a.access.key` and `fs.s3a.secret.key` —you cannot just copy the S3N
+properties and replace `s3n` with `s3a`.
+
+1. Make sure the properties are visible to the process attempting to
+talk to the object store. Placing them in `core-site.xml` is the standard
+mechanism.
+
+1. If using session authentication, the session may have expired.
+Generate a new session token and secret.
+
+1. If using environement variable-based authentication, make sure that the
+relevant variables are set in the environment in which the process is running.
+
+The standard first step is: try to use the AWS command line tools with the same
+credentials, through a command such as:
+
+    hdfs fs -ls s3a://my-bucket/
+
+Note the trailing "/" here; without that the shell thinks you are trying to list
+your home directory under the bucket, which will only exist if explicitly created.
+
+
+Attempting to list a bucket using inline credentials is a
+means of verifying that the key and secret can access a bucket;
+
+    hdfs fs -ls s3a://key:secret@my-bucket/
+
+Do escape any `+` or `/` symbols in the secret, as discussed below, and never
+share the URL, logs generated using it, or use such an inline authentication
+mechanism in production.
+
+Finally, if you set the environment variables, you can take advantage of S3A's
+support of environment-variable authentication by attempting the same ls operation.
+That is: unset the `fs.s3a` secrets and rely on the environment variables.
+
+#### Authentication failure due to clock skew
+
+The timestamp is used in signing to S3, so as to
+defend against replay attacks. If the system clock is too far behind *or ahead*
+of Amazon's, requests will be rejected.
+
+This can surface as the situation where
+read requests are allowed, but operations which write to the bucket are denied.
+
+Check the system clock.
+
+#### Authentication failure when using URLs with embedded secrets
+
+If using the (strongly discouraged) mechanism of including the
+AWS Key and secret in a URL, then both "+" and "/" symbols need
+to encoded in the URL. As many AWS secrets include these characters,
+encoding problems are not uncommon.
+
+| symbol | encoded  value|
+|-----------|-------------|
+| `+` | `%2B` |
+| `/` | `%2F` |
+
+
+As an example, a URL for `bucket` with AWS ID `user1` and secret `a+b/c` would
+be represented as
+
+```
+s3a://user1:a%2Bb%2Fc@bucket/
 ```
 
 If enabled, `distcp` between two S3 buckets can use the checksum to compare

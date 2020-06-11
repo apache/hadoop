@@ -114,7 +114,8 @@ public class ITestS3AContractRename extends AbstractContractRenameTest {
     Path srcDir = path(sourceSubdir);
     Path srcFilePath = new Path(srcDir, "source-256.txt");
     byte[] srcDataset = dataset(256, 'a', 'z');
-    writeDataset(fs, srcFilePath, srcDataset, srcDataset.length, 1024, false);
+    writeDataset(fs, srcFilePath, srcDataset, srcDataset.length, 1024,
+            false);
     Path destDir = path("dest");
 
     Path destFilePath = new Path(destDir, "dest-512.txt");

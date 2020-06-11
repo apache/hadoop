@@ -123,7 +123,8 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
    * @return the full path to the file
    * @throws IOException any IO problem
    */
-  protected Path writeThenReadFile(String name, int len) throws IOException {
+  protected Path writeThenReadFile(String name, int len, boolean assertLength)
+          throws IOException {
     Path path = path(name);
     writeThenReadFile(path, len);
     return path;
@@ -138,7 +139,8 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
    */
   protected void writeThenReadFile(Path path, int len) throws IOException {
     byte[] data = dataset(len, 'a', 'z');
-    writeDataset(getFileSystem(), path, data, data.length, 1024 * 1024, true);
+    writeDataset(getFileSystem(), path, data, data.length, 1024 * 1024,
+            true, assertLength);
     ContractTestUtils.verifyFileContents(getFileSystem(), path, data);
   }
 

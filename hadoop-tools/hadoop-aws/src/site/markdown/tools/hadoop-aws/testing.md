@@ -144,6 +144,14 @@ Example:
     <value>sts.amazonaws.com</value>
   </property>
 
+  <!--
+  <property>
+    <name>fs.s3a.client-side-encryption.kms.key-id</name>
+    <description>KMS Key Id for client-side encryption.</description>
+    <value>ffffffff-ffff-ffff-ffff-ffffffffffff</value>
+  </property>
+  -->
+
 </configuration>
 ```
 
@@ -174,6 +182,24 @@ Buckets can be configured with [default encryption](https://docs.aws.amazon.com/
 on the AWS side. Some S3AFileSystem tests are skipped when default encryption is
 enabled due to unpredictability in how [ETags](https://docs.aws.amazon.com/AmazonS3/latest/API/RESTCommonResponseHeaders.html)
 are generated.
+
+### Amazon S3 Client-Side Encryption
+
+Two options for client-side encryption are supported: KMS and CUSTOM
+
+IMPORTANT: With OracleJDK you need to install "Java Cryptography Extension (JCE) Unlimited Strength Jurisdiction Policy Files"
+http://www.oracle.com/technetwork/java/javase/downloads/jce-7-download-432124.html or http://www.oracle.com/technetwork/java/javase/downloads/jce8-download-2133166.html
+
+To enable KMS tests - file `auth-keys.xml` must contains following option:
+
+```xml
+<property>
+  <name>fs.s3a.client-side-encryption.kms.key-id</name>
+  <value>ffffffff-ffff-ffff-ffff-ffffffffffff</value>
+</property>
+```
+
+Tests for custom (symmetric/asymmetric) encryption don't depend on any specific settings.
 
 ## <a name="running"></a> Running the Tests
 
