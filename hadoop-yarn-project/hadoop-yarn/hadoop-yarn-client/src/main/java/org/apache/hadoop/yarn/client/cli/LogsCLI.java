@@ -100,6 +100,7 @@ public class LogsCLI extends Configured implements Tool {
   private static final String APP_OWNER_OPTION = "appOwner";
   private static final String AM_CONTAINER_OPTION = "am";
   private static final String PER_CONTAINER_LOG_FILES_OPTION = "log_files";
+  private static final String PER_CONTAINER_LOG_FILES_OLD_OPTION = "logFiles";
   private static final String PER_CONTAINER_LOG_FILES_REGEX_OPTION
       = "log_files_pattern";
   private static final String LIST_NODES_OPTION = "list_nodes";
@@ -202,6 +203,12 @@ public class LogsCLI extends Configured implements Tool {
       }
       if (commandLine.hasOption(PER_CONTAINER_LOG_FILES_OPTION)) {
         logFiles = commandLine.getOptionValues(PER_CONTAINER_LOG_FILES_OPTION);
+      } else {
+        // For backward compatibility, we need to check for the old form of this
+        // command line option as well.  New form takes precedent.
+        if (commandLine.hasOption(PER_CONTAINER_LOG_FILES_OLD_OPTION)) {
+          logFiles = commandLine.getOptionValues(PER_CONTAINER_LOG_FILES_OLD_OPTION);
+        }
       }
       if (commandLine.hasOption(PER_CONTAINER_LOG_FILES_REGEX_OPTION)) {
         logFilesRegex = commandLine.getOptionValues(
@@ -937,6 +944,12 @@ public class LogsCLI extends Configured implements Tool {
     logFileOpt.setArgs(Option.UNLIMITED_VALUES);
     logFileOpt.setArgName("Log File Name");
     opts.addOption(logFileOpt);
+    Option oldLogFileOpt = new Option(PER_CONTAINER_LOG_FILES_OLD_OPTION, true,
+        "Deprecated name for log_files, please use log_files option instead");
+    oldLogFileOpt.setValueSeparator(',');
+    oldLogFileOpt.setArgs(Option.UNLIMITED_VALUES);
+    oldLogFileOpt.setArgName("Log File Name");
+    opts.addOption(oldLogFileOpt);
     Option logFileRegexOpt = new Option(PER_CONTAINER_LOG_FILES_REGEX_OPTION,
         true, "Specify comma-separated value "
         + "to get matched log files by using java regex. Use \".*\" to "
