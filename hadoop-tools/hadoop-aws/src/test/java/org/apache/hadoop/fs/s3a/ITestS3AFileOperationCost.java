@@ -228,6 +228,17 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
   }
 
   @Test
+  public void testCostOfListFilesOnNonExistingDir() throws Throwable {
+    describe("Performing listFiles() on a non existing dir");
+    Path dir = path(getMethodName());
+    S3AFileSystem fs = getFileSystem();
+    resetMetricDiffs();
+    intercept(FileNotFoundException.class,
+            () -> fs.listFiles(dir, true));
+    verifyOperationCount(2, 1);
+  }
+
+  @Test
   public void testCostOfGetFileStatusOnFile() throws Throwable {
     describe("performing getFileStatus on a file");
     Path simpleFile = path("simple.txt");
