@@ -148,21 +148,26 @@ public class TestViewFileSystemOverloadSchemeWithFSCommands {
             localTargetDir.toURI().toString() },
         conf);
     FsShell fsShell = new FsShell(conf);
-    redirectStream();
-    int ret = ToolRunner.run(fsShell, new String[] {"-fs",
-        defaultFSURI.toString(), "-df", "-h", defaultFSURI.toString() + "/" });
-    assertEquals(0, ret);
-    final List<String> errList = Lists.newArrayList();
-    scanIntoList(out, errList);
-    assertEquals(3, errList.size());
-    for (int i = 1; i < errList.size(); i++) {
-      String[] lineSplits = errList.get(i).split("\\s+");
-      String mount = lineSplits[lineSplits.length - 1];
-      mounts.remove(mount);
+    try {
+      redirectStream();
+      int ret =
+          ToolRunner.run(fsShell, new String[] {"-fs", defaultFSURI.toString(),
+              "-df", "-h", defaultFSURI.toString() + "/" });
+      assertEquals(0, ret);
+      final List<String> errList = Lists.newArrayList();
+      scanIntoList(out, errList);
+      assertEquals(3, errList.size());
+      for (int i = 1; i < errList.size(); i++) {
+        String[] lineSplits = errList.get(i).split("\\s+");
+        String mount = lineSplits[lineSplits.length - 1];
+        mounts.remove(mount);
+      }
+      String msg =
+          "DF was not calculated on all mounts. The left out mounts are: "
+              + mounts;
+      assertEquals(msg, 0, mounts.size());
+    } finally {
+      fsShell.close();
     }
-    String msg =
-        "DF was not calculated on all mounts. The left out mounts are: "
-            + mounts;
-    assertEquals(msg, 0, mounts.size());
   }
 }
