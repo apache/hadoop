@@ -137,9 +137,20 @@ public class DFSck extends Configured implements Tool {
     super(conf);
     this.ugi = UserGroupInformation.getCurrentUser();
     this.out = out;
+    int httpTimeOut = getHttpTimeOut(conf);
     this.connectionFactory = URLConnectionFactory
-        .newDefaultURLConnectionFactory(conf);
+            .newDefaultURLConnectionFactory(httpTimeOut, httpTimeOut, conf);
     this.isSpnegoEnabled = UserGroupInformation.isSecurityEnabled();
+  }
+
+  /**
+   *  try to get httpTimeOut parameter from conf
+   */
+  private int getHttpTimeOut(Configuration conf) {
+    int httpTimeOut = conf.getInt(
+            DFSConfigKeys.DFS_FSCK_HTTP_TIMEOUT_KEY,
+            DFSConfigKeys.DFS_FSCK_HTTP_TIMEOUT_KEY_DEFAULT);
+    return httpTimeOut <= 0 ? DFSConfigKeys.DFS_FSCK_HTTP_TIMEOUT_KEY_DEFAULT : httpTimeOut;
   }
 
   /**
