@@ -1493,6 +1493,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final boolean DFS_PROTECTED_SUBDIRECTORIES_ENABLE_DEFAULT =
       false;
 
+  public static final String DFS_FSCK_HTTP_TIMEOUT_KEY = "dfs.fsck.http.timeout.ms";
+  public static final String DFS_FSCK_HTTP_TIMEOUT_KEY_DEFAULT = 60000;
+
   // dfs.client.retry confs are moved to HdfsClientConfigKeys.Retry
   @Deprecated
   public static final String  DFS_CLIENT_RETRY_POLICY_ENABLED_KEY
