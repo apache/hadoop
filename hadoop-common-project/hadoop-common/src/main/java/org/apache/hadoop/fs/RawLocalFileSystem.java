@@ -101,7 +101,7 @@ public class RawLocalFileSystem extends FileSystem {
   public void initialize(URI uri, Configuration conf) throws IOException {
     super.initialize(uri, conf);
     setConf(conf);
-    defaultBlockSize = getDefaultBlockSize(new Path("."));
+    defaultBlockSize = getDefaultBlockSize(new Path(uri));
   }
   
   /*******************************************************
