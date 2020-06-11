@@ -69,6 +69,10 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
   private JobHistoryServer historyServer;
   private JobHistoryServerWrapper historyServerWrapper;
   private static final String TIMELINE_AUX_SERVICE_NAME = "timeline_collector";
+  public static final String MR_HISTORY_MINICLUSTER_ENABLED =
+      JHAdminConfig.MR_HISTORY_PREFIX + "minicluster.enabled";
+  public static final String MR_HISTORY_MINICLUSTER_LAUNCH_TIMEOUT_MS =
+      JHAdminConfig.MR_HISTORY_PREFIX + "minicluster.launch.timeout.ms";
 
   public MiniMRYarnCluster(String testName) {
     this(testName, 1);
@@ -117,9 +121,7 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
 
   @Override
   public void serviceInit(Configuration conf) throws Exception {
-    if (conf.getBoolean(
-        JHAdminConfig.MR_HISTORY_MINICLUSTER_ENABLED,
-        JHAdminConfig.DEFAULT_MR_HISTORY_MINICLUSTER_ENABLED)) {
+    if (conf.getBoolean(MR_HISTORY_MINICLUSTER_ENABLED, true)) {
       historyServerWrapper = new JobHistoryServerWrapper();
       addService(historyServerWrapper);
     }
@@ -241,7 +243,6 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
     public JobHistoryServerWrapper() {
       super(JobHistoryServerWrapper.class.getName());
     }
-    private volatile boolean jhsStarted = false;
 
     @Override
     public synchronized void serviceStart() throws Exception {
@@ -263,15 +264,15 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
         new Thread() {
           public void run() {
             historyServer.start();
-            jhsStarted = true;
           };
         }.start();
 
         final int launchTimeout = getConfig().getInt(
-            JHAdminConfig.MR_HISTORY_MINICLUSTER_LAUNCH_TIMEOUT_MS,
-            JHAdminConfig.DEFAULT_MR_HISTORY_MINICLUSTER_LAUNCH_TIMEOUT_MS);
-        GenericTestUtils.waitFor(() -> jhsStarted, 1500, launchTimeout);
-
+            MR_HISTORY_MINICLUSTER_LAUNCH_TIMEOUT_MS, 60_000);
+        GenericTestUtils.waitFor(
+            () -> historyServer.getServiceState() == STATE.STARTED
+                || historyServer.getServiceState() == STATE.STOPPED,
+            100, launchTimeout);
         if (historyServer.getServiceState() != STATE.STARTED) {
           throw new IOException("HistoryServer failed to start");
         }

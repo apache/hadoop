@@ -1946,18 +1946,6 @@
 </property>
 
 <property>
-  <name>mapreduce.jobhistory.minicluster.enabled</name>
-  <value>true</value>
-  <description>Whether to launch jobhistory server inminicluster.</description>
-</property>
-
-<property>
-  <name>mapreduce.jobhistory.minicluster.launch.timeout.ms</name>
-  <value>60000</value>
-  <description>Timeout to launch jobhistory server inminicluster.</description>
-</property>
-
-<property>
   <name>mapreduce.jobhistory.minicluster.fixed.ports</name>
   <value>false</value>
   <description>Whether to use fixed ports with the minicluster</description>

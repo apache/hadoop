@@ -25,7 +25,6 @@ import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.v2.MiniMRYarnCluster;
-import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 
 /**
  * A Unit-test to test bringup and shutdown of Mini Map-Reduce Cluster.
@@ -47,13 +46,15 @@ public class TestMiniMRBringup {
     MiniMRYarnCluster mr = null;
     try {
       final Configuration conf = new Configuration();
-      conf.setBoolean(JHAdminConfig.MR_HISTORY_MINICLUSTER_ENABLED, false);
+      conf.setBoolean(MiniMRYarnCluster.MR_HISTORY_MINICLUSTER_ENABLED, false);
       mr = new MiniMRYarnCluster("testMiniMRYarnClusterWithoutJHS");
       mr.init(conf);
       Assert.assertEquals(null, mr.getHistoryServer());
       mr.start();
     } finally {
-      if (mr != null) { mr.stop(); }
+      if (mr != null) {
+        mr.stop();
+      }
     }
   }
 }

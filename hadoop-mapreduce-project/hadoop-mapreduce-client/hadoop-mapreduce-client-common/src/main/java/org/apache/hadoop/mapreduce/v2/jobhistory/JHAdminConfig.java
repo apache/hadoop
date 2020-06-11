@@ -217,19 +217,6 @@ public class JHAdminConfig {
   public static final String MR_HS_LEVELDB_STATE_STORE_PATH =
       MR_HISTORY_PREFIX + "recovery.store.leveldb.path";
 
-  /** Whether to launch jobhistory server in minicluster. */
-  public static final String MR_HISTORY_MINICLUSTER_ENABLED = MR_HISTORY_PREFIX
-       + "minicluster.enabled";
-
-  public static final boolean DEFAULT_MR_HISTORY_MINICLUSTER_ENABLED = true;
-
-  /** Timeout to launch jobhistory server in minicluster. */
-  public static final String MR_HISTORY_MINICLUSTER_LAUNCH_TIMEOUT_MS =
-      MR_HISTORY_PREFIX + "minicluster.launch.timeout.ms";
-
-  public static final int DEFAULT_MR_HISTORY_MINICLUSTER_LAUNCH_TIMEOUT_MS =
-      60_000;
-
   /** Whether to use fixed ports with the minicluster. */
   public static final String MR_HISTORY_MINICLUSTER_FIXED_PORTS = MR_HISTORY_PREFIX
        + "minicluster.fixed.ports";
