@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.management.ManagementFactory;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
@@ -282,7 +283,8 @@ public class RunJar {
 
     final File workDir;
     try {
-      workDir = File.createTempFile("hadoop-unjar", "", tmpDir);
+      String suffix = ManagementFactory.getRuntimeMXBean().getName().split("@")[0];
+      workDir = File.createTempFile("hadoop-unjar", suffix, tmpDir);
     } catch (IOException ioe) {
       // If user has insufficient perms to write to tmpDir, default
       // "Permission denied" message doesn't specify a filename.
