@@ -52,7 +52,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.StopWatch;
@@ -235,13 +235,13 @@ public class IPCLoggerChannel implements AsyncLogger {
         true);
     
     RPC.setProtocolEngine(confCopy,
-        QJournalProtocolPB.class, ProtobufRpcEngine.class);
+        QJournalProtocolPB.class, ProtobufRpcEngine2.class);
     return SecurityUtil.doAsLoginUser(
         new PrivilegedExceptionAction<QJournalProtocol>() {
           @Override
           public QJournalProtocol run() throws IOException {
             RPC.setProtocolEngine(confCopy,
-                QJournalProtocolPB.class, ProtobufRpcEngine.class);
+                QJournalProtocolPB.class, ProtobufRpcEngine2.class);
             QJournalProtocolPB pbproxy = RPC.getProxy(
                 QJournalProtocolPB.class,
                 RPC.getProtocolVersion(QJournalProtocolPB.class),

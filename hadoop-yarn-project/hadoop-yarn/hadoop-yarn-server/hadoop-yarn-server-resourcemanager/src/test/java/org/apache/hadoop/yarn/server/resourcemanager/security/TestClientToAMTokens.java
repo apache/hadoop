@@ -23,7 +23,7 @@ import org.apache.hadoop.thirdparty.protobuf.RpcController;
 import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.ProtocolInfo;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
@@ -160,7 +160,7 @@ public class TestClientToAMTokens extends ParameterizedSchedulerTestBase {
       Configuration conf = getConfig();
       // Set RPC engine to protobuf RPC engine
       RPC.setProtocolEngine(conf, CustomProtocol.class,
-          ProtobufRpcEngine.class);
+          ProtobufRpcEngine2.class);
       UserGroupInformation.setConfiguration(conf);
 
       BlockingService service = TestRpcServiceProtos.CustomProto
@@ -194,7 +194,7 @@ public class TestClientToAMTokens extends ParameterizedSchedulerTestBase {
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
       "kerberos");
     // Set RPC engine to protobuf RPC engine
-    RPC.setProtocolEngine(conf, CustomProtocol.class, ProtobufRpcEngine.class);
+    RPC.setProtocolEngine(conf, CustomProtocol.class, ProtobufRpcEngine2.class);
     UserGroupInformation.setConfiguration(conf);
 
     ContainerManagementProtocol containerManager =

@@ -88,7 +88,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RPC.Server;
 import org.apache.hadoop.ipc.RemoteException;
@@ -172,7 +172,7 @@ public class MockNamenode {
    */
   private void setupRPCServer(final Configuration conf) throws IOException {
     RPC.setProtocolEngine(
-        conf, ClientNamenodeProtocolPB.class, ProtobufRpcEngine.class);
+        conf, ClientNamenodeProtocolPB.class, ProtobufRpcEngine2.class);
     ClientNamenodeProtocolServerSideTranslatorPB
         clientNNProtoXlator =
             new ClientNamenodeProtocolServerSideTranslatorPB(mockNn);

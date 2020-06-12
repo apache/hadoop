@@ -390,7 +390,12 @@
         <executions>
           <execution>
             <id>src-compile-protoc</id>
-            <configuration><skip>false</skip></configuration>
+            <configuration>
+              <skip>false</skip>
+              <excludes>
+                <exclude>ProtobufRpcEngine.proto</exclude>
+              </excludes>
+            </configuration>
           </execution>
           <execution>
             <id>src-test-compile-protoc</id>
@@ -406,6 +411,9 @@
             <id>replace-generated-sources</id>
             <configuration>
               <skip>false</skip>
+              <excludes>
+                <exclude>**/ProtobufRpcEngineProtos.java</exclude>
+              </excludes>
             </configuration>
           </execution>
           <execution>
@@ -418,6 +426,14 @@
             <id>replace-sources</id>
             <configuration>
               <skip>false</skip>
+              <!--These classes have direct Protobuf references for backward compatibility reasons-->
+              <excludes>
+                <exclude>**/ProtobufHelper.java</exclude>
+                <exclude>**/RpcWritable.java</exclude>
+                <exclude>**/ProtobufRpcEngineCallback.java</exclude>
+                <exclude>**/ProtobufRpcEngine.java</exclude>
+                <exclude>**/ProtobufRpcEngineProtos.java</exclude>
+              </excludes>
             </configuration>
           </execution>
           <execution>
@@ -1010,7 +1026,79 @@
         </plugins>
       </build>
     </profile>
-
+    <!-- profile to use already generated protobuf code using 2.5.0 for aarch64-->
+    <profile>
+      <id>aarch64</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+        <os>
+          <arch>aarch64</arch>
+        </os>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>add-source-legacy-protobuf</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>add-source</goal>
+                </goals>
+                <configuration>
+                  <sources>
+                    <source>${basedir}/src/main/arm-java</source>
+                  </sources>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <!-- profile to generate protobuf code using 2.5.0-->
+    <profile>
+      <id>x86_64</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+        <os>
+          <arch>!aarch64</arch>
+        </os>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.xolstice.maven.plugins</groupId>
+            <artifactId>protobuf-maven-plugin</artifactId>
+            <executions>
+               <execution>
+                <id>src-compile-protoc-legacy</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>compile</goal>
+                </goals>
+                <configuration>
+                  <skip>false</skip>
+                  <!--Generating with old protobuf version for backward compatibility-->
+                  <protocArtifact>
+                    com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}
+                  </protocArtifact>
+                  <includeDependenciesInDescriptorSet>false</includeDependenciesInDescriptorSet>
+                  <protoSourceRoot>${basedir}/src/main/proto</protoSourceRoot>
+                  <outputDirectory>${project.build.directory}/generated-sources/java</outputDirectory>
+                  <clearOutputDirectory>false</clearOutputDirectory>
+                  <includes>
+                    <include>ProtobufRpcEngine.proto</include>
+                  </includes>
+                </configuration>
+              </execution>
+             </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
   </profiles>
 </project>
 

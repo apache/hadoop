@@ -18,17 +18,12 @@
 
 package org.apache.hadoop.ipc;
 
-import com.google.protobuf.Message;
+import org.apache.hadoop.thirdparty.protobuf.Message;
 
-/**
- *  This engine uses Protobuf 2.5.0. Recommended to upgrade to Protobuf 3.x
- *  from hadoop-thirdparty and use ProtobufRpcEngineCallback2.
- */
-@Deprecated
-public interface ProtobufRpcEngineCallback {
+public interface ProtobufRpcEngineCallback2 {
 
-  void setResponse(Message message);
+  public void setResponse(Message message);
 
-  void error(Throwable t);
+  public void error(Throwable t);
 
 }
