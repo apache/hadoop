@@ -283,7 +283,7 @@ public class RunJar {
 
     final File workDir;
     try {
-      String suffix = ManagementFactory.getRuntimeMXBean().getName().split("@")[0];
+      String suffix = "-" + ManagementFactory.getRuntimeMXBean().getName().split("@")[0];
       workDir = File.createTempFile("hadoop-unjar", suffix, tmpDir);
     } catch (IOException ioe) {
       // If user has insufficient perms to write to tmpDir, default
