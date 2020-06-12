@@ -18,73 +18,57 @@
 
 package org.apache.hadoop.fs.statistics.impl;
 
-import java.util.Iterator;
-import java.util.Map;
+import java.util.Set;
 
+import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.MeanStatistic;
 import org.apache.hadoop.fs.statistics.StatisticsMap;
 
 /**
- * These statistics are dynamically evaluated by the supplied
- * String -&gt; Long functions.
- * <p></p>
- * This allows statistic sources to supply a list of callbacks used to
- * generate the statistics on demand; similar to some of the Coda Hale metrics.
- * <p></p>
- * The evaluation actually takes place during the iteration's {@code next()}
- * call.
+ * The base implementation returns an empty map for
+ * all the accessors.
+ *
  */
-final class DynamicIOStatistics
-    extends AbstractIOStatisticsImpl {
+public abstract class AbstractIOStatisticsImpl implements IOStatistics {
 
-  /**
-   * Counter evaluators.
-   */
-  private final EvaluatingStatisticsMap<Long> counters
-      = new EvaluatingStatisticsMap<>();
-
-  private final EvaluatingStatisticsMap<Long> gauges
-      = new EvaluatingStatisticsMap<>();
-
-  private final EvaluatingStatisticsMap<Long> minumums
-      = new EvaluatingStatisticsMap<>();
-
-  private final EvaluatingStatisticsMap<Long> maximums
-      = new EvaluatingStatisticsMap<>();
-
-  private final EvaluatingStatisticsMap<MeanStatistic> meanStatistics
-      = new EvaluatingStatisticsMap<>();
-
-  DynamicIOStatistics() {
+  @Override
+  public Long getStatistic(final String key) {
+    return counters().get(key);
   }
 
   @Override
+  public boolean isTracked(final String key) {
+    return counters().containsKey(key);
+  }
+
+  @Override
+  public Set<String> keys() {
+    return counters().keySet();
+  }
+
+
+  @Override
   public StatisticsMap<Long> counters() {
-    return counters;
+    return EmptyStatisticsMap.of();
   }
 
   @Override
   public StatisticsMap<Long> gauges() {
-    return gauges;
+    return EmptyStatisticsMap.of();
   }
 
   @Override
   public StatisticsMap<Long> minumums() {
-    return minumums;
+    return EmptyStatisticsMap.of();
   }
 
   @Override
   public StatisticsMap<Long> maximums() {
-    return maximums;
+    return EmptyStatisticsMap.of();
   }
 
   @Override
   public StatisticsMap<MeanStatistic> meanStatistics() {
-    return meanStatistics;
-  }
-
-  @Override
-  public Iterator<Map.Entry<String, Long>> iterator() {
-    return null;
+    return EmptyStatisticsMap.of();
   }
 }

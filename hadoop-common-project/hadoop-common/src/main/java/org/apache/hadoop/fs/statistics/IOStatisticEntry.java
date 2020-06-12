@@ -303,14 +303,4 @@ public final class IOStatisticEntry implements Serializable {
         Arrays.equals(data, that.data);
   }
 
-  /**
-   * Entry with data varags.
-   * @param t type
-   * @param d data
-   * @return new entry
-   */
-  public static IOStatisticEntry statsEntry(int t, long...d) {
-    return new IOStatisticEntry(t, d);
-  }
-
 }

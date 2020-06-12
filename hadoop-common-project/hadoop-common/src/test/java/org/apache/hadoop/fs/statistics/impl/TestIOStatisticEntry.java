@@ -23,8 +23,6 @@ import org.junit.Test;
 import org.apache.hadoop.fs.statistics.IOStatisticEntry;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
-import static org.apache.hadoop.fs.statistics.IOStatisticEntry.*;
-import static org.apache.hadoop.fs.statistics.IOStatisticEntry.statsEntry;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsImplementationUtils.aggregate;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -41,15 +39,23 @@ public class TestIOStatisticEntry extends AbstractHadoopTestBase {
    */
   public static final int X = 10;
 
-  private final IOStatisticEntry counter1 = statsEntry(IOSTATISTIC_COUNTER, 1);
-  private final IOStatisticEntry counter2 = statsEntry(IOSTATISTIC_COUNTER, 2);
-  private final IOStatisticEntry min1 = statsEntry(IOSTATISTIC_MIN, 1);
-  private final IOStatisticEntry min2 = statsEntry(IOSTATISTIC_MIN, 2);
-  private final IOStatisticEntry max1 = statsEntry(IOSTATISTIC_MAX, 1);
-  private final IOStatisticEntry max2 = statsEntry(IOSTATISTIC_MAX, 2);
-  private final IOStatisticEntry mean1 = statsEntry(IOSTATISTIC_MEAN, 1, 1);
-  private final IOStatisticEntry mean12 = statsEntry(IOSTATISTIC_MEAN, 1, 2);
-  private final IOStatisticEntry mean2 = statsEntry(IOSTATISTIC_MEAN, 2, 10);
+  private final IOStatisticEntry counter1 = (Long) (long) 1;
+
+  private final IOStatisticEntry counter2 = (Long) (long) 2;
+
+  private final IOStatisticEntry min1 = (Long) (long) 1;
+
+  private final IOStatisticEntry min2 = (Long) (long) 2;
+
+  private final IOStatisticEntry max1 = (Long) (long) 1;
+
+  private final IOStatisticEntry max2 = (Long) (long) 2;
+
+  private final IOStatisticEntry mean1 = (Long) (long) 1;
+
+  private final IOStatisticEntry mean12 = (Long) (long) 2;
+
+  private final IOStatisticEntry mean2 = (Long) (long) 10;
 
   @Test
   public void testCounterAdd() throws Throwable {
@@ -78,7 +84,7 @@ public class TestIOStatisticEntry extends AbstractHadoopTestBase {
   @Test
   public void testMeanAggregateRounding() throws Throwable {
     assertThat(aggregate(mean1, mean2))
-        .isEqualTo(statsEntry(IOSTATISTIC_MEAN, 2, 11));
+        .isEqualTo((long) 11);
   }
 
   /**
@@ -87,15 +93,15 @@ public class TestIOStatisticEntry extends AbstractHadoopTestBase {
    */
   @Test
   public void testUnknownTypeAggregation() throws Throwable {
-    IOStatisticEntry e1 = statsEntry(X, 1);
-    IOStatisticEntry e2 = statsEntry(X, 2);
+    IOStatisticEntry e1 = (Long) (long) 1;
+    IOStatisticEntry e2 = (Long) (long) 2;
     assertThat(aggregate(e1, e2))
         .isEqualTo(e1);
   }
 
   @Test
   public void testAccessors() throws Throwable {
-    IOStatisticEntry e1 = statsEntry(X, 1, 2, 3, 4);
+    IOStatisticEntry e1 = (Long) (long) 4;
     assertThat(e1)
         .extracting(IOStatisticEntry::_1)
         .isEqualTo(1L);
@@ -129,15 +135,12 @@ public class TestIOStatisticEntry extends AbstractHadoopTestBase {
 
   @Test
   public void testWrongArity() throws Throwable {
-    intercept(IllegalArgumentException.class, () ->
-        statsEntry(IOSTATISTIC_COUNTER, 1, 1));
-    intercept(IllegalArgumentException.class, () ->
-        statsEntry(IOSTATISTIC_MEAN, 1));
+    intercept(IllegalArgumentException.class, () -> (long) 1);
+    intercept(IllegalArgumentException.class, () -> (long) 1);
   }
 
   @Test
   public void testNoData() throws Throwable {
-    intercept(IllegalArgumentException.class, () ->
-        statsEntry(X));
+    intercept(IllegalArgumentException.class, () -> (long) 0);
   }
 }

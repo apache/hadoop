@@ -30,7 +30,6 @@ import static org.apache.hadoop.fs.statistics.IOStatisticEntry.IOSTATISTIC_COUNT
 import static org.apache.hadoop.fs.statistics.IOStatisticEntry.IOSTATISTIC_MAX;
 import static org.apache.hadoop.fs.statistics.IOStatisticEntry.IOSTATISTIC_MEAN;
 import static org.apache.hadoop.fs.statistics.IOStatisticEntry.IOSTATISTIC_MIN;
-import static org.apache.hadoop.fs.statistics.IOStatisticEntry.statsEntry;
 
 /**
  * Utility operations for implementing the classes within this package.
@@ -77,24 +76,21 @@ public final class IOStatisticsImplementationUtils {
       IOStatisticEntry right) {
     left.requireCompatible(right);
     left.requireTypeAndArity(IOSTATISTIC_COUNTER, 1);
-    return statsEntry(IOSTATISTIC_COUNTER,
-        left._1() + right._1());
+    return left._1() + right._1();
   }
 
   public static IOStatisticEntry max(IOStatisticEntry left,
       IOStatisticEntry right) {
     left.requireCompatible(right);
     left.requireTypeAndArity(IOSTATISTIC_MAX, 1);
-    return statsEntry(IOSTATISTIC_MAX,
-        Math.max(left._1(), right._1()));
+    return Math.max(left._1(), right._1());
   }
 
   public static IOStatisticEntry min(IOStatisticEntry left,
       IOStatisticEntry right) {
     left.requireCompatible(right);
     left.requireTypeAndArity(IOSTATISTIC_MIN, 1);
-    return statsEntry(IOSTATISTIC_MIN,
-        Math.min(left._1(), right._1()));
+    return Math.min(left._1(), right._1());
   }
 
   public static IOStatisticEntry arithmeticMean(
@@ -107,9 +103,7 @@ public final class IOStatisticsImplementationUtils {
     long rSamples = right._2();
     double rSum = right._1() * rSamples;
     long totalSamples = lSamples + rSamples;
-    return statsEntry(IOSTATISTIC_MEAN,
-        Math.round((lSum + rSum) / totalSamples),
-        totalSamples);
+    return totalSamples;
   }
 
   public static IOStatisticEntry aggregate(

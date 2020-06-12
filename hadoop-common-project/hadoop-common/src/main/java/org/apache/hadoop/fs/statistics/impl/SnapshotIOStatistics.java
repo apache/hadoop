@@ -61,7 +61,7 @@ class SnapshotIOStatistics implements IOStatistics, Serializable {
   }
 
   @Override
-  public IOStatisticEntry getStatistic(final String key) {
+  public Long getStatistic(final String key) {
     return entries.get(key);
   }
 
@@ -94,6 +94,5 @@ class SnapshotIOStatistics implements IOStatistics, Serializable {
       entries.put(key, source.getStatistic(key));
     }
   }
-
 
 }

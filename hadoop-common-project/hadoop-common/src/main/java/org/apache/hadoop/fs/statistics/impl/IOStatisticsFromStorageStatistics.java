@@ -29,8 +29,6 @@ import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticEntry;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 
-import static org.apache.hadoop.fs.statistics.IOStatisticEntry.statsEntry;
-
 /**
  * This provides an IOStatistics instance from a {@link StorageStatistics}
  * instance.
@@ -68,9 +66,8 @@ final class IOStatisticsFromStorageStatistics
   }
 
   @Override
-  public IOStatisticEntry getStatistic(final String key) {
-    return statsEntry(IOStatisticEntry.IOSTATISTIC_COUNTER,
-        storageStatistics.getLong(key));
+  public Long getStatistic(final String key) {
+    return storageStatistics.getLong(key);
   }
 
   @Override

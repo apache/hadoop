@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.statistics;
 
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -81,15 +82,14 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-public interface IOStatistics
-    extends Iterable<Map.Entry<String, IOStatisticEntry>> {
+public interface IOStatistics {
 
   /**
    * Get the entry of a statistic.
    *
    * @return The entry of the statistic, or null if not tracked.
    */
-  IOStatisticEntry getStatistic(String key);
+  Long getStatistic(String key);
 
   /**
    * Return true if a statistic is being tracked.
@@ -105,5 +105,12 @@ public interface IOStatistics
    * @return the set of keys.
    */
   Set<String> keys();
+
+  Iterator<Map.Entry<String, Long>> iterator();
+  StatisticsMap<Long> counters();
+  StatisticsMap<Long> gauges();
+  StatisticsMap<Long> minumums();
+  StatisticsMap<Long> maximums();
+  StatisticsMap<MeanStatistic> meanStatistics();
 
 }

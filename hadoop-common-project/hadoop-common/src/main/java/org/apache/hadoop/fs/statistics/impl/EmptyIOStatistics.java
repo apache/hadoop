@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
  * An empty IO Statistics implementation for classes which always
  * want to return a non-null set of statistics.
  */
-final class EmptyIOStatistics implements IOStatistics {
+final class EmptyIOStatistics extends AbstractIOStatisticsImpl {
 
   /**
    * The sole instance of this class.
@@ -42,7 +42,7 @@ final class EmptyIOStatistics implements IOStatistics {
   }
 
   @Override
-  public IOStatisticEntry getStatistic(final String key) {
+  public Long getStatistic(final String key) {
     return null;
   }
 
@@ -52,7 +52,7 @@ final class EmptyIOStatistics implements IOStatistics {
   }
 
   @Override
-  public Iterator<Map.Entry<String, IOStatisticEntry>> iterator() {
+  public Iterator<Map.Entry<String, Long>> iterator() {
     return new EmptyIterator();
   }
 
@@ -65,7 +65,7 @@ final class EmptyIOStatistics implements IOStatistics {
    * The empty iterator has no entries.
    */
   private static class EmptyIterator implements
-      Iterator<Map.Entry<String, IOStatisticEntry>> {
+      Iterator<Map.Entry<String, Long>> {
 
     @Override
     public boolean hasNext() {

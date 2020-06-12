@@ -22,8 +22,9 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.hadoop.fs.statistics.IOStatisticEntry;
 import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.MeanStatistic;
+import org.apache.hadoop.fs.statistics.StatisticsMap;
 
 /**
  * Wrap IOStatistics source with another (dynamic) wrapper.
@@ -46,22 +47,47 @@ public class WrappedIOStatistics implements IOStatistics {
   }
 
   @Override
-  public IOStatisticEntry getStatistic(final String key) {
-    return source.getStatistic(key);
+  public Long getStatistic(final String key) {
+    return getSource().getStatistic(key);
   }
 
   @Override
   public boolean isTracked(final String key) {
-    return source.isTracked(key);
+    return getSource().isTracked(key);
   }
 
   @Override
   public Set<String> keys() {
-    return source.keys();
+    return getSource().keys();
   }
 
   @Override
-  public Iterator<Map.Entry<String, IOStatisticEntry>> iterator() {
-    return source.iterator();
+  public Iterator<Map.Entry<String, Long>> iterator() {
+    return getSource().iterator();
+  }
+
+  @Override
+  public StatisticsMap<Long> counters() {
+    return getSource().counters();
+  }
+
+  @Override
+  public StatisticsMap<Long> gauges() {
+    return getSource().gauges();
+  }
+
+  @Override
+  public StatisticsMap<Long> minumums() {
+    return getSource().minumums();
+  }
+
+  @Override
+  public StatisticsMap<Long> maximums() {
+    return getSource().maximums();
+  }
+
+  @Override
+  public StatisticsMap<MeanStatistic> meanStatistics() {
+    return getSource().meanStatistics();
   }
 }
