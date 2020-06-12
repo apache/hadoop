@@ -34,7 +34,7 @@ import org.apache.hadoop.fs.statistics.StatisticsMap;
  * @param <E> map element type.
  */
 @SuppressWarnings("NewExceptionWithoutArguments")
-public class StatisticsMapSnapshot<E extends Serializable> implements
+public final class StatisticsMapSnapshot<E extends Serializable> implements
     StatisticsMap<E>, Serializable {
 
   private static final long serialVersionUID = 1360985530415418415L;
