@@ -28,19 +28,19 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
  */
 public interface CounterIOStatistics extends IOStatistics {
 
-  long increment(String key, long value);
-
   /**
    * Increment the counter by one.
    * No-op if the counter is unknown.
    * @param key statistics key
    * @return old value or 0
    */
-  default long increment(String key) {
-    return increment(key, 1);
+  default long incrementCounter(String key) {
+    return incrementCounter(key, 1);
   }
 
-  void set(String key, long value);
+  long incrementCounter(String key, long value);
+
+  void setCounter(String key, long value);
 
   /**
    * Reset all counters.
@@ -57,15 +57,13 @@ public interface CounterIOStatistics extends IOStatistics {
   void copy(IOStatistics source);
 
   /**
-   * Add the counter values from a statistics source.
-   * <p></p>
-   * All entries must be counters.
+   * Aggregate all entries from a statistics source.
    * <p></p>
    * The source must have all keys in this instance;
    * extra keys are ignored.
    * @param source source of statistics.
    */
-  void add(IOStatistics source);
+  void aggregate(IOStatistics source);
 
   /**
    * Subtract the counter values from a statistics source.

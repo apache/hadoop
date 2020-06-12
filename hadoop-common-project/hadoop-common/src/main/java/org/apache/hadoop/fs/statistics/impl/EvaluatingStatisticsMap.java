@@ -31,11 +31,12 @@ import org.apache.hadoop.fs.statistics.StatisticsMap;
 /**
  * This map evaluates on demand; it is the primary
  * mechanism by which statistics are collected.
+ * The values set is from a snapshot of the evaluated elements;
+ * so is the entrySet.
  * @param <E> statistics type
  */
 final class EvaluatingStatisticsMap<E extends Serializable> implements
     StatisticsMap<E> {
-
 
   /**
    * Functions to invoke when evaluating keys
@@ -43,17 +44,14 @@ final class EvaluatingStatisticsMap<E extends Serializable> implements
   private final Map<String, Function<String, E>> evaluators
       = new TreeMap<>();
 
-  @Override
-  public E get(final Object key) {
-    Function<String, E> fn = evaluators.get(key);
-    return fn != null
-        ? fn.apply((String) key)
-        : null;
+  private final Function<E, E> copyFn;
+
+  EvaluatingStatisticsMap() {
+    this(StatisticsMapSnapshot::passthrough);
   }
 
-  @Override
-  public Set<Entry<String, E>> entrySet() {
-    return null;
+  EvaluatingStatisticsMap(final Function<E, E> copyFn) {
+    this.copyFn = copyFn;
   }
 
   /**
@@ -63,16 +61,6 @@ final class EvaluatingStatisticsMap<E extends Serializable> implements
    */
   void addFunction(String key, Function<String, E> eval) {
     evaluators.put(key, eval);
-  }
-
-  @Override
-  public boolean containsKey(final Object key) {
-    return evaluators.containsKey(key);
-  }
-
-  @Override
-  public boolean containsValue(final Object value) {
-    throw new UnsupportedOperationException();
   }
 
   @Override
@@ -86,7 +74,30 @@ final class EvaluatingStatisticsMap<E extends Serializable> implements
   }
 
   @Override
+  public boolean containsKey(final Object key) {
+    return evaluators.containsKey(key);
+  }
+
+  @Override
+  public boolean containsValue(final Object value) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public E get(final Object key) {
+    Function<String, E> fn = evaluators.get(key);
+    return fn != null
+        ? fn.apply((String) key)
+        : null;
+  }
+
+  @Override
   public E put(final String key, final E value) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public E remove(final Object key) {
     throw new UnsupportedOperationException();
   }
 
@@ -94,11 +105,6 @@ final class EvaluatingStatisticsMap<E extends Serializable> implements
   public void putAll(final Map<? extends String, ? extends E> m) {
     throw new UnsupportedOperationException();
 
-  }
-
-  @Override
-  public E remove(final Object key) {
-    throw new UnsupportedOperationException();
   }
 
   @Override
@@ -117,7 +123,15 @@ final class EvaluatingStatisticsMap<E extends Serializable> implements
    */
   @Override
   public Collection<E> values() {
-    return new StatisticsMapSnapshot<>(this).values();
+    return snapshot().values();
+  }
 
+  public StatisticsMapSnapshot<E> snapshot() {
+    return new StatisticsMapSnapshot<>(this, copyFn);
+  }
+
+  @Override
+  public Set<Entry<String, E>> entrySet() {
+    return snapshot().entrySet();
   }
 }

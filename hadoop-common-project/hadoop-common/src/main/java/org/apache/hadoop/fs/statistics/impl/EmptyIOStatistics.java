@@ -18,13 +18,6 @@
 
 package org.apache.hadoop.fs.statistics.impl;
 
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Set;
-
-import org.apache.hadoop.fs.statistics.IOStatisticEntry;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 
 /**
@@ -39,44 +32,6 @@ final class EmptyIOStatistics extends AbstractIOStatisticsImpl {
   private static final EmptyIOStatistics INSTANCE = new EmptyIOStatistics();
 
   private EmptyIOStatistics() {
-  }
-
-  @Override
-  public Long getStatistic(final String key) {
-    return null;
-  }
-
-  @Override
-  public boolean isTracked(final String key) {
-    return false;
-  }
-
-  @Override
-  public Iterator<Map.Entry<String, Long>> iterator() {
-    return new EmptyIterator();
-  }
-
-  @Override
-  public Set<String> keys() {
-    return Collections.emptySet();
-  }
-
-  /**
-   * The empty iterator has no entries.
-   */
-  private static class EmptyIterator implements
-      Iterator<Map.Entry<String, Long>> {
-
-    @Override
-    public boolean hasNext() {
-      return false;
-    }
-
-    @SuppressWarnings("NewExceptionWithoutArguments")
-    @Override
-    public Map.Entry<String, IOStatisticEntry> next() {
-      throw new NoSuchElementException();
-    }
   }
 
   /**

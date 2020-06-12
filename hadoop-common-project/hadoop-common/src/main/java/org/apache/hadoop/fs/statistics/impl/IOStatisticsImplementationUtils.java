@@ -24,12 +24,6 @@ import com.google.common.annotations.VisibleForTesting;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.statistics.IOStatisticEntry;
-
-import static org.apache.hadoop.fs.statistics.IOStatisticEntry.IOSTATISTIC_COUNTER;
-import static org.apache.hadoop.fs.statistics.IOStatisticEntry.IOSTATISTIC_MAX;
-import static org.apache.hadoop.fs.statistics.IOStatisticEntry.IOSTATISTIC_MEAN;
-import static org.apache.hadoop.fs.statistics.IOStatisticEntry.IOSTATISTIC_MIN;
 
 /**
  * Utility operations for implementing the classes within this package.
@@ -53,7 +47,7 @@ public final class IOStatisticsImplementationUtils {
    * @return formatted string
    */
   public static String entrytoString(
-      final Map.Entry<String, IOStatisticEntry> entry) {
+      final Map.Entry<String, Long> entry) {
     return entrytoString(entry.getKey(), entry.getValue());
   }
 
@@ -65,66 +59,12 @@ public final class IOStatisticsImplementationUtils {
    * @return formatted string
    */
   public static String entrytoString(
-      final String name, final IOStatisticEntry value) {
+      final String name, final Long value) {
     return String.format(
         ENTRY_PATTERN,
         name,
         value);
   }
 
-  public static IOStatisticEntry add(IOStatisticEntry left,
-      IOStatisticEntry right) {
-    left.requireCompatible(right);
-    left.requireTypeAndArity(IOSTATISTIC_COUNTER, 1);
-    return left._1() + right._1();
-  }
-
-  public static IOStatisticEntry max(IOStatisticEntry left,
-      IOStatisticEntry right) {
-    left.requireCompatible(right);
-    left.requireTypeAndArity(IOSTATISTIC_MAX, 1);
-    return Math.max(left._1(), right._1());
-  }
-
-  public static IOStatisticEntry min(IOStatisticEntry left,
-      IOStatisticEntry right) {
-    left.requireCompatible(right);
-    left.requireTypeAndArity(IOSTATISTIC_MIN, 1);
-    return Math.min(left._1(), right._1());
-  }
-
-  public static IOStatisticEntry arithmeticMean(
-      IOStatisticEntry left,
-      IOStatisticEntry right) {
-    left.requireCompatible(right);
-    left.requireTypeAndArity(IOSTATISTIC_MEAN, 2);
-    long lSamples = left._2();
-    long lSum = left._1() * lSamples;
-    long rSamples = right._2();
-    double rSum = right._1() * rSamples;
-    long totalSamples = lSamples + rSamples;
-    return totalSamples;
-  }
-
-  public static IOStatisticEntry aggregate(
-      IOStatisticEntry left,
-      IOStatisticEntry right) {
-    left.requireCompatible(right);
-    switch (left.type()) {
-    case IOSTATISTIC_COUNTER:
-      return add(left, right);
-    case IOSTATISTIC_MIN:
-      return min(left, right);
-    case IOSTATISTIC_MAX:
-      return max(left, right);
-    case IOSTATISTIC_MEAN:
-      return arithmeticMean(left, right);
-    default:
-      // unknown value.
-      // rather than fail, just return the left value.
-      return left;
-    }
-
-  }
 
 }

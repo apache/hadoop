@@ -36,7 +36,6 @@ import org.apache.hadoop.fs.s3a.impl.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.s3a.impl.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.fs.s3a.impl.statistics.StatisticsFromAwsSdk;
 import org.apache.hadoop.fs.s3a.s3guard.MetastoreInstrumentation;
-import org.apache.hadoop.fs.statistics.IOStatisticEntry;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import org.apache.hadoop.fs.statistics.IOStatisticsSupport;
@@ -730,17 +729,16 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     }
 
     private long increment(String name) {
-      return statsCounters.increment(name);
+      return statsCounters.incrementCounter(name);
     }
 
     private long increment(String name, long value) {
-      return statsCounters.increment(name, value);
+      return statsCounters.incrementCounter(name, value);
     }
 
     @Override
     public Long getStatistic(final String name) {
-      return statsCounters.getStatistic(name)
-          .scalar(IOStatisticEntry.IOSTATISTIC_COUNTER);
+      return statsCounters.counters().get(name);
     }
 
     /**
@@ -1356,11 +1354,11 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       DynamicIOStatisticsBuilder builder = dynamicIOStatistics();
 
       builder
-          .withAtomicLong(StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS,
+          .withAtomicLongCounter(StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS,
               blocksSubmitted)
-          .withAtomicLong(StreamStatisticNames.STREAM_WRITE_BYTES,
+          .withAtomicLongCounter(StreamStatisticNames.STREAM_WRITE_BYTES,
               bytesWritten)
-          .withAtomicLong(StreamStatisticNames.STREAM_WRITE_EXCEPTIONS,
+          .withAtomicLongCounter(StreamStatisticNames.STREAM_WRITE_EXCEPTIONS,
               blockUploadsFailed);
       return builder.build();
     }

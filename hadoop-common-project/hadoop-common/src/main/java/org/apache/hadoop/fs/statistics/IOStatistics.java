@@ -18,10 +18,6 @@
 
 package org.apache.hadoop.fs.statistics;
 
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -84,33 +80,14 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Unstable
 public interface IOStatistics {
 
-  /**
-   * Get the entry of a statistic.
-   *
-   * @return The entry of the statistic, or null if not tracked.
-   */
-  Long getStatistic(String key);
-
-  /**
-   * Return true if a statistic is being tracked.
-   *
-   * @return True only if the statistic is being tracked.
-   */
-  boolean isTracked(String key);
-
-  /**
-   * Get the set of keys.
-   * No guarantees are made about the mutability/immutability
-   * of this set.
-   * @return the set of keys.
-   */
-  Set<String> keys();
-
-  Iterator<Map.Entry<String, Long>> iterator();
   StatisticsMap<Long> counters();
+
   StatisticsMap<Long> gauges();
+
   StatisticsMap<Long> minumums();
+
   StatisticsMap<Long> maximums();
+
   StatisticsMap<MeanStatistic> meanStatistics();
 
 }

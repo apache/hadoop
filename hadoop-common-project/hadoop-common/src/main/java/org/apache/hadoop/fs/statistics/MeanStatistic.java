@@ -23,7 +23,7 @@ import java.util.Objects;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-public final class MeanStatistic implements Serializable {
+public final class MeanStatistic implements Serializable, Cloneable {
 
   private static final long serialVersionUID = 567888327998615425L;
 
@@ -69,18 +69,13 @@ public final class MeanStatistic implements Serializable {
     long totalSamples = samples + rSamples;
     checkArgument(totalSamples > 0, "total number of samples is %s",
         totalSamples);
-    double sum =lSum + rSum;
+    double sum = lSum + rSum;
     return new MeanStatistic(sum / totalSamples, totalSamples);
   }
 
   @Override
-  public String toString() {
-    final StringBuilder sb = new StringBuilder(
-        "MeanStatistic{");
-    sb.append("mean=").append(mean);
-    sb.append(", samples=").append(samples);
-    sb.append('}');
-    return sb.toString();
+  public int hashCode() {
+    return Objects.hash(mean, samples);
   }
 
   @Override
@@ -93,7 +88,21 @@ public final class MeanStatistic implements Serializable {
   }
 
   @Override
-  public int hashCode() {
-    return Objects.hash(mean, samples);
+  public MeanStatistic clone() {
+    return new MeanStatistic(mean, samples);
+  }
+
+  @Override
+  public String toString() {
+    final StringBuilder sb = new StringBuilder(
+        "MeanStatistic{");
+    sb.append("mean=").append(mean);
+    sb.append(", samples=").append(samples);
+    sb.append('}');
+    return sb.toString();
+  }
+
+  public MeanStatistic copy() {
+    return new MeanStatistic(mean, samples);
   }
 }

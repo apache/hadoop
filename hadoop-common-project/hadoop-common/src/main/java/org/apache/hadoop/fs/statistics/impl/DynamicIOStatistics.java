@@ -18,15 +18,12 @@
 
 package org.apache.hadoop.fs.statistics.impl;
 
-import java.util.Iterator;
-import java.util.Map;
-
 import org.apache.hadoop.fs.statistics.MeanStatistic;
 import org.apache.hadoop.fs.statistics.StatisticsMap;
 
 /**
  * These statistics are dynamically evaluated by the supplied
- * String -&gt; Long functions.
+ * String -&gt; type functions.
  * <p></p>
  * This allows statistic sources to supply a list of callbacks used to
  * generate the statistics on demand; similar to some of the Coda Hale metrics.
@@ -53,28 +50,28 @@ final class DynamicIOStatistics
       = new EvaluatingStatisticsMap<>();
 
   private final EvaluatingStatisticsMap<MeanStatistic> meanStatistics
-      = new EvaluatingStatisticsMap<>();
+      = new EvaluatingStatisticsMap<>(MeanStatistic::copy);
 
   DynamicIOStatistics() {
   }
 
   @Override
-  public StatisticsMap<Long> counters() {
+  public EvaluatingStatisticsMap<Long> counters() {
     return counters;
   }
 
   @Override
-  public StatisticsMap<Long> gauges() {
+  public EvaluatingStatisticsMap<Long> gauges() {
     return gauges;
   }
 
   @Override
-  public StatisticsMap<Long> minumums() {
+  public EvaluatingStatisticsMap<Long> minumums() {
     return minumums;
   }
 
   @Override
-  public StatisticsMap<Long> maximums() {
+  public EvaluatingStatisticsMap<Long> maximums() {
     return maximums;
   }
 
@@ -83,8 +80,4 @@ final class DynamicIOStatistics
     return meanStatistics;
   }
 
-  @Override
-  public Iterator<Map.Entry<String, Long>> iterator() {
-    return null;
-  }
 }

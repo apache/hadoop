@@ -23,7 +23,6 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 import org.apache.hadoop.fs.statistics.StatisticsMap;
@@ -40,6 +39,11 @@ class EmptyStatisticsMap<E extends Serializable> implements StatisticsMap<E> {
   private static final EmptyStatisticsMap INSTANCE = new EmptyStatisticsMap();
 
   private static final long serialVersionUID = -4377604814347870386L;
+
+  @SuppressWarnings("unchecked")
+  public static <V extends Serializable> StatisticsMap<V> of() {
+    return (StatisticsMap<V>) INSTANCE;
+  }
 
   @Override
   public int size() {
@@ -100,10 +104,5 @@ class EmptyStatisticsMap<E extends Serializable> implements StatisticsMap<E> {
   @Override
   public Set<Entry<String, E>> entrySet() {
     return ImmutableSet.of();
-  }
-
-  @SuppressWarnings("unchecked")
-  public static <V extends Serializable> StatisticsMap<V> of() {
-    return (StatisticsMap<V>) INSTANCE;
   }
 }

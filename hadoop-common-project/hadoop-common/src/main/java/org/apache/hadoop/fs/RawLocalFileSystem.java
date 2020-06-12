@@ -175,11 +175,11 @@ public class RawLocalFileSystem extends FileSystem {
         if (value >= 0) {
           this.position++;
           statistics.incrementBytesRead(1);
-          ioStatistics.increment(STREAM_READ_BYTES, 1);
+          ioStatistics.incrementCounter(STREAM_READ_BYTES, 1);
         }
         return value;
       } catch (IOException e) {                 // unexpected exception
-        ioStatistics.increment(STREAM_READ_EXCEPTIONS, 1);
+        ioStatistics.incrementCounter(STREAM_READ_EXCEPTIONS, 1);
         throw new FSError(e);                   // assume native fs error
       }
     }
@@ -193,11 +193,11 @@ public class RawLocalFileSystem extends FileSystem {
         if (value > 0) {
           this.position += value;
           statistics.incrementBytesRead(value);
-          ioStatistics.increment(STREAM_READ_BYTES, value);
+          ioStatistics.incrementCounter(STREAM_READ_BYTES, value);
         }
         return value;
       } catch (IOException e) {                 // unexpected exception
-        ioStatistics.increment(STREAM_READ_EXCEPTIONS, 1);
+        ioStatistics.incrementCounter(STREAM_READ_EXCEPTIONS, 1);
         throw new FSError(e);                   // assume native fs error
       }
     }
@@ -216,22 +216,22 @@ public class RawLocalFileSystem extends FileSystem {
         int value = fis.getChannel().read(bb, position);
         if (value > 0) {
           statistics.incrementBytesRead(value);
-          ioStatistics.increment(STREAM_READ_BYTES, value);
+          ioStatistics.incrementCounter(STREAM_READ_BYTES, value);
         }
         return value;
       } catch (IOException e) {
-        ioStatistics.increment(STREAM_READ_EXCEPTIONS, 1);
+        ioStatistics.incrementCounter(STREAM_READ_EXCEPTIONS, 1);
         throw new FSError(e);
       }
     }
     
     @Override
     public long skip(long n) throws IOException {
-      ioStatistics.increment(STREAM_READ_SKIP_OPERATIONS, 1);
+      ioStatistics.incrementCounter(STREAM_READ_SKIP_OPERATIONS, 1);
       long value = fis.skip(n);
       if (value > 0) {
         this.position += value;
-        ioStatistics.increment(STREAM_READ_SKIP_BYTES, value);
+        ioStatistics.incrementCounter(STREAM_READ_SKIP_BYTES, value);
       }
       return value;
     }
@@ -319,9 +319,9 @@ public class RawLocalFileSystem extends FileSystem {
     public void write(byte[] b, int off, int len) throws IOException {
       try {
         fos.write(b, off, len);
-        ioStatistics.increment(STREAM_WRITE_BYTES, len);
+        ioStatistics.incrementCounter(STREAM_WRITE_BYTES, len);
       } catch (IOException e) {                // unexpected exception
-        ioStatistics.increment(STREAM_WRITE_EXCEPTIONS, 1);
+        ioStatistics.incrementCounter(STREAM_WRITE_EXCEPTIONS, 1);
         throw new FSError(e);                  // assume native fs error
       }
     }
@@ -330,9 +330,9 @@ public class RawLocalFileSystem extends FileSystem {
     public void write(int b) throws IOException {
       try {
         fos.write(b);
-        ioStatistics.increment(STREAM_WRITE_BYTES, 1);
+        ioStatistics.incrementCounter(STREAM_WRITE_BYTES, 1);
       } catch (IOException e) {              // unexpected exception
-        ioStatistics.increment(STREAM_WRITE_EXCEPTIONS, 1);
+        ioStatistics.incrementCounter(STREAM_WRITE_EXCEPTIONS, 1);
         throw new FSError(e);                // assume native fs error
       }
     }

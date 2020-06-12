@@ -46,30 +46,6 @@ public final class IOStatisticsLogging {
   }
 
   /**
-   * Convert IOStatistics to a string form.
-   * @param statistics A statistics instance.
-   * @return string value or the empty string if null
-   */
-  public static String iostatisticsToString(
-      @Nullable final IOStatistics statistics) {
-    if (statistics != null) {
-      int count = 0;
-      StringBuilder sb = new StringBuilder("(");
-      for (Map.Entry<String, IOStatisticEntry> entry : statistics) {
-        if (count > 0) {
-          sb.append(' ');
-        }
-        count++;
-        sb.append(entrytoString(entry.getKey(), entry.getValue()));
-      }
-      sb.append(")");
-      return sb.toString();
-    } else {
-      return "";
-    }
-  }
-
-  /**
    * Extract the statistics from a source object -or ""
    * if it is not a source of statistics
    * <p>
@@ -87,6 +63,30 @@ public final class IOStatisticsLogging {
   }
 
   /**
+   * Convert IOStatistics to a string form.
+   * @param statistics A statistics instance.
+   * @return string value or the empty string if null
+   */
+  public static String iostatisticsToString(
+      @Nullable final IOStatistics statistics) {
+    if (statistics != null) {
+      int count = 0;
+      StringBuilder sb = new StringBuilder("(");
+      for (Map.Entry<String, Long> entry : statistics.counters().entrySet()) {
+        if (count > 0) {
+          sb.append(' ');
+        }
+        count++;
+        sb.append(entrytoString(entry.getKey(), entry.getValue()));
+      }
+      sb.append(")");
+      return sb.toString();
+    } else {
+      return "";
+    }
+  }
+
+  /**
    * On demand stringifier.
    * <p>
    * Whenever this object's toString() method is called, it evaluates the
@@ -96,9 +96,9 @@ public final class IOStatisticsLogging {
    * @param source source of statistics.
    * @return an object whose toString() operation returns the current values.
    */
-   public static Object demandStringify(
-       @Nullable IOStatisticsSource source) {
-     return new SourceToString(source);
+  public static Object demandStringify(
+      @Nullable IOStatisticsSource source) {
+    return new SourceToString(source);
   }
 
   /**
@@ -112,8 +112,8 @@ public final class IOStatisticsLogging {
    * @param statistics statistics to scan.
    * @return an object whose toString() operation returns the current values.
    */
-   public static Object demandStringify(@Nullable IOStatistics statistics) {
-     return new StatisticsToString(statistics);
+  public static Object demandStringify(@Nullable IOStatistics statistics) {
+    return new StatisticsToString(statistics);
   }
 
   /**

@@ -18,10 +18,6 @@
 
 package org.apache.hadoop.fs.statistics.impl;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.ObjectStreamException;
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.Map;
@@ -30,8 +26,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 
 import org.apache.hadoop.fs.statistics.StatisticsMap;
-
-import static com.google.common.base.Preconditions.checkState;
 
 /**
  * Complete implementation of {@link StatisticsMap}.
@@ -43,7 +37,7 @@ import static com.google.common.base.Preconditions.checkState;
 public final class StatisticsMapImpl<E extends Serializable>
     implements StatisticsMap<E> {
 
-  private volatile Map<String, E> inner = new ConcurrentHashMap<>();
+  private final Map<String, E> inner = new ConcurrentHashMap<>();
 
   @Override
   public int size() {
@@ -106,11 +100,6 @@ public final class StatisticsMapImpl<E extends Serializable>
   }
 
   @Override
-  public int hashCode() {
-    return inner.hashCode();
-  }
-
-  @Override
   public E putIfAbsent(final String key, final E value) {
     return inner.putIfAbsent(key, value);
   }
@@ -137,46 +126,10 @@ public final class StatisticsMapImpl<E extends Serializable>
     return inner.merge(key, value, remappingFunction);
   }
 
-  /**
-   * Wire format is size followed by each entry in order.
-   * @param out destination
-   * @throws IOException write failure
-   */
-  private void writeObject(ObjectOutputStream out) throws IOException {
-    out.writeInt(inner.size());
-    for (Entry<String, E> entry : inner.entrySet()) {
-      out.writeObject(entry.getKey());
-      out.writeObject(entry.getValue());
-    }
+  @Override
+  public int hashCode() {
+    return inner.hashCode();
   }
 
-  /**
-   * Read in the object.
-   * For safety, the size must be > 0.
-   * There's still the risk that something significantly malicious will
-   * create a mismatch between map size and the value list...that should
-   * fail either in this read (list too short) or in the next object.
-   * @param in
-   * @throws IOException
-   * @throws ClassNotFoundException
-   */
-  private void readObject(ObjectInputStream in)
-      throws IOException, ClassNotFoundException {
-    inner.clear();
-    int size = in.readInt();
-    checkState(size > 0, "invalid map size: %s", size);
-    for (int i = 0; i < size; i++) {
-      inner.put((String) in.readObject(),
-          (E) in.readObject());
-    }
-  }
-
-  /**
-   * Read without data. Just clear the inner map.
-   * @throws ObjectStreamException never thrown.
-   */
-  private void readObjectNoData() throws ObjectStreamException {
-    inner.clear();
-  }
 
 }

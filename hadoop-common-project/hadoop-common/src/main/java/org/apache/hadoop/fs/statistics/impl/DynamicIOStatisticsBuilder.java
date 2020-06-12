@@ -23,7 +23,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.function.ToLongFunction;
 
-import org.apache.hadoop.fs.statistics.IOStatisticEntry;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 
@@ -48,22 +47,20 @@ public class DynamicIOStatisticsBuilder {
    * @param eval evaluator for the statistic
    * @return the builder.
    */
-  public DynamicIOStatisticsBuilder withFunction(String key,
-      Function<String, IOStatisticEntry> eval) {
-    activeInstance().addFunction(key, eval);
+  public DynamicIOStatisticsBuilder withFunctionCounter(String key,
+      Function<String, Long> eval) {
+    activeInstance().counters().addFunction(key, eval);
     return this;
   }
 
   /**
-   * Add a new evaluator to the statistics being built up.
-   * @param key key of this statistic
-   * @param eval evaluator for the statistic
-   * @return the builder.
+   * Get the statistics instance.
+   * @return the instance to build/return
+   * @throws IllegalStateException if the builder has already been built.
    */
-  public DynamicIOStatisticsBuilder withLongFunction(String key,
-      ToLongFunction<String> eval) {
-    activeInstance().addLongFunction(key, eval);
-    return this;
+  private DynamicIOStatistics activeInstance() {
+    checkState(instance != null, "Already built");
+    return instance;
   }
 
   /**
@@ -73,9 +70,9 @@ public class DynamicIOStatisticsBuilder {
    * @param source atomic long counter
    * @return the builder.
    */
-  public DynamicIOStatisticsBuilder withAtomicLong(String key,
+  public DynamicIOStatisticsBuilder withAtomicLongCounter(String key,
       AtomicLong source) {
-    withLongFunction(key, s -> source.get());
+    activeInstance().counters().addFunction(key, s -> source.get());
     return this;
   }
 
@@ -86,9 +83,21 @@ public class DynamicIOStatisticsBuilder {
    * @param source atomic int counter
    * @return the builder.
    */
-  public DynamicIOStatisticsBuilder withAtomicInteger(String key,
+  public DynamicIOStatisticsBuilder withAtomicIntegerCounter(String key,
       AtomicInteger source) {
-    withLongFunction(key, s -> source.get());
+    withLongFunctionCounter(key, s -> source.get());
+    return this;
+  }
+
+  /**
+   * Add a new evaluator to the statistics being built up.
+   * @param key key of this statistic
+   * @param eval evaluator for the statistic
+   * @return the builder.
+   */
+  public DynamicIOStatisticsBuilder withLongFunctionCounter(String key,
+      ToLongFunction<String> eval) {
+    activeInstance().counters().addFunction(key, k -> eval.applyAsLong(k));
     return this;
   }
 
@@ -101,7 +110,7 @@ public class DynamicIOStatisticsBuilder {
    */
   public DynamicIOStatisticsBuilder withMutableCounter(String key,
       MutableCounterLong source) {
-    withLongFunction(key, s -> source.value());
+    withLongFunctionCounter(key, s -> source.value());
     return this;
   }
 
@@ -115,15 +124,5 @@ public class DynamicIOStatisticsBuilder {
     // stop the builder from working any more.
     instance = null;
     return stats;
-  }
-
-  /**
-   * Get the statistics instance.
-   * @return the instance to build/return
-   * @throws IllegalStateException if the builder has already been built.
-   */
-  private DynamicIOStatistics activeInstance() {
-    checkState(instance != null, "Already built");
-    return instance;
   }
 }

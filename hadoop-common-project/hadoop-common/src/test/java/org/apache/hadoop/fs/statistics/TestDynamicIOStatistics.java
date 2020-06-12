@@ -87,10 +87,10 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
   @Before
   public void setUp() throws Exception {
     statistics = dynamicIOStatistics()
-        .withAtomicLong(ALONG, aLong)
-        .withAtomicInteger(AINT, aInt)
+        .withAtomicLongCounter(ALONG, aLong)
+        .withAtomicIntegerCounter(AINT, aInt)
         .withMutableCounter(COUNT, counter)
-        .withLongFunction(EVAL, x -> evalLong)
+        .withLongFunctionCounter(EVAL, x -> evalLong)
         .build();
     statsSource = new SourceWrappedStatistics(statistics);
   }
@@ -140,7 +140,7 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
    */
   @Test
   public void testKeys() throws Throwable {
-    Assertions.assertThat(statistics.keys())
+    Assertions.assertThat(statistics.counters().keySet())
         .describedAs("statistic keys of %s", statistics)
         .containsExactlyInAnyOrder(KEYS);
   }
@@ -149,8 +149,7 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
   public void testIteratorHasAllKeys() throws Throwable {
     // go through the statistics iterator and assert that it contains exactly
     // the values.
-    assertThat(statistics)
-        .extracting(s -> s.getKey())
+    assertThat(statistics.counters().keySet())
         .containsExactlyInAnyOrder(KEYS);
   }
 
@@ -163,14 +162,13 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
     // set the counters all to 1
     incrementAllCounters();
     // take the snapshot
-    final Iterator<Map.Entry<String, IOStatisticEntry>> it = statistics.iterator();
+    final Iterator<Map.Entry<String, Long>> it = statistics.counters().entrySet().iterator();
     // reset the counters
     incrementAllCounters();
     // now assert that all the iterator values are of value 1
     while (it.hasNext()) {
-      Map.Entry<String, IOStatisticEntry> next = it.next();
-      assertThat(
-          next.getValue().scalar(IOStatisticEntry.IOSTATISTIC_COUNTER))
+      Map.Entry<String, Long> next = it.next();
+      assertThat(next.getValue())
           .describedAs("Value of entry %s", next)
           .isEqualTo(1);
     }
@@ -209,12 +207,10 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
     IOStatistics stat = IOStatisticsSupport.snapshot(statistics);
     incrementAllCounters();
     IOStatistics deser = IOStatisticAssertions.roundTrip(stat);
-    assertThat(deser)
-        .extracting(s -> s.getKey())
+    assertThat(deser.counters().keySet())
         .containsExactlyInAnyOrder(KEYS);
-    for (Map.Entry<String, IOStatisticEntry> e: deser) {
-      assertThat(e.getValue()
-          .scalar(IOStatisticEntry.IOSTATISTIC_COUNTER))
+    for (Map.Entry<String, Long> e: deser.counters().entrySet()) {
+      assertThat(e.getValue())
           .describedAs("Value of entry %s", e)
           .isEqualTo(1);
     }

@@ -35,9 +35,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 public final class StoreStatisticNames {
 
 
-  private StoreStatisticNames() {
-  }
-
   /** {@value}. */
   public static final String OP_APPEND = "op_append";
 
@@ -141,12 +138,15 @@ public final class StoreStatisticNames {
 
   /** Requests made of a store: {@value}. */
   public static final String STORE_IO_REQUEST
-    =  "store_io_request";
+      = "store_io_request";
 
   /**
    * IO retried: {@value}.
    */
   public static final String STORE_IO_RETRY
       = "store_io_retry";
+
+  private StoreStatisticNames() {
+  }
 
 }

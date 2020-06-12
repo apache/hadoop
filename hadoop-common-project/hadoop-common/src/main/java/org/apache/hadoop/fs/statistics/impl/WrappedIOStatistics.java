@@ -18,10 +18,6 @@
 
 package org.apache.hadoop.fs.statistics.impl;
 
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
-
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.MeanStatistic;
 import org.apache.hadoop.fs.statistics.StatisticsMap;
@@ -37,6 +33,10 @@ public class WrappedIOStatistics implements IOStatistics {
     this.source = source;
   }
 
+  @Override
+  public StatisticsMap<Long> counters() {
+    return getSource().counters();
+  }
 
   protected IOStatistics getSource() {
     return source;
@@ -44,31 +44,6 @@ public class WrappedIOStatistics implements IOStatistics {
 
   protected void setSource(final IOStatistics source) {
     this.source = source;
-  }
-
-  @Override
-  public Long getStatistic(final String key) {
-    return getSource().getStatistic(key);
-  }
-
-  @Override
-  public boolean isTracked(final String key) {
-    return getSource().isTracked(key);
-  }
-
-  @Override
-  public Set<String> keys() {
-    return getSource().keys();
-  }
-
-  @Override
-  public Iterator<Map.Entry<String, Long>> iterator() {
-    return getSource().iterator();
-  }
-
-  @Override
-  public StatisticsMap<Long> counters() {
-    return getSource().counters();
   }
 
   @Override

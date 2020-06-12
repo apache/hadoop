@@ -22,11 +22,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
-
 import com.google.common.base.Preconditions;
 
-import org.apache.hadoop.fs.statistics.IOStatisticEntry;
 import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.StatisticsMap;
 
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.dynamicIOStatistics;
 
@@ -37,7 +36,7 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.dynamicIO
 final class CounterIOStatisticsImpl extends WrappedIOStatistics
     implements CounterIOStatistics {
 
-  private final Map<String, AtomicLong> counters = new HashMap<>();
+  private final Map<String, AtomicLong> atomicCounters = new HashMap<>();
 
   /**
    * Constructor.
@@ -48,15 +47,15 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
     DynamicIOStatisticsBuilder builder = dynamicIOStatistics();
     for (String key : keys) {
       AtomicLong counter = new AtomicLong();
-      counters.put(key, counter);
-      builder.withAtomicLong(key, counter);
+      atomicCounters.put(key, counter);
+      builder.withAtomicLongCounter(key, counter);
     }
     setSource(builder.build());
   }
 
   @Override
-  public long increment(final String key, final long value) {
-    AtomicLong counter = counters.get(key);
+  public long incrementCounter(final String key, final long value) {
+    AtomicLong counter = atomicCounters.get(key);
     if (counter != null) {
       return counter.getAndAdd(value);
     } else {
@@ -65,8 +64,8 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
   }
 
   @Override
-  public void set(final String key, final long value) {
-    AtomicLong counter = counters.get(key);
+  public void setCounter(final String key, final long value) {
+    AtomicLong counter = atomicCounters.get(key);
     if (counter != null) {
       counter.set(value);
     }
@@ -78,48 +77,36 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
    */
   @Override
   public void resetCounters() {
-    counters.values().forEach(a -> a.set(0));
+    atomicCounters.values().forEach(a -> a.set(0));
   }
 
   @Override
   public void copy(final IOStatistics source) {
-    counters.entrySet().forEach(e -> {
-      String key = e.getKey();
-      IOStatisticEntry statisticValue = source.getStatistic(key);
-      Preconditions.checkState(statisticValue != null,
-          "No statistic %s in IOStatistic source %s",
-          key, source);
-      e.getValue().set(statisticValue.scalar(
-          IOStatisticEntry.IOSTATISTIC_COUNTER
-      ));
+    StatisticsMap<Long> sourceCounters = source.counters();
+    atomicCounters.entrySet().forEach(e -> {
+      e.getValue().set(getCounterValue(source, e.getKey()));
     });
   }
 
   @Override
-  public void add(final IOStatistics source) {
-    counters.entrySet().forEach(e -> {
-      String key = e.getKey();
-      IOStatisticEntry statisticValue = source.getStatistic(key);
-      Preconditions.checkState(statisticValue != null,
-          "No statistic %s in IOStatistic source %s",
-          key, source);
-      long v = statisticValue.scalar(
-          IOStatisticEntry.IOSTATISTIC_COUNTER);
-      e.getValue().addAndGet(v);
+  public void aggregate(final IOStatistics source) {
+    atomicCounters.entrySet().forEach(e -> {
+      e.getValue().addAndGet(getCounterValue(source, e.getKey()));
     });
   }
 
   @Override
   public void subtract(final IOStatistics source) {
-    counters.entrySet().forEach(e -> {
-      String key = e.getKey();
-      IOStatisticEntry statisticValue = source.getStatistic(key);
-      Preconditions.checkState(statisticValue != null,
-          "No statistic %s in IOStatistic source %s",
-          key, source);
-      long v = statisticValue.scalar(
-          IOStatisticEntry.IOSTATISTIC_COUNTER);
-      e.getValue().addAndGet(-v);
+    atomicCounters.entrySet().forEach(e -> {
+      e.getValue().addAndGet(-getCounterValue(source, e.getKey()));
     });
+  }
+
+  private Long getCounterValue(final IOStatistics source, final String key) {
+    Long statisticValue = source.counters().get(key);
+    Preconditions.checkState(statisticValue != null,
+        "No statistic %s in IOStatistic source %s",
+        key, source);
+    return statisticValue;
   }
 }

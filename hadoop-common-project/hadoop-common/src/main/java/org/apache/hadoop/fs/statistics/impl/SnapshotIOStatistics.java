@@ -19,13 +19,10 @@
 package org.apache.hadoop.fs.statistics.impl;
 
 import java.io.Serializable;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
 
-import org.apache.hadoop.fs.statistics.IOStatisticEntry;
 import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.MeanStatistic;
+import org.apache.hadoop.fs.statistics.StatisticsMap;
 
 /**
  * Snapshot of statistics from a different source.
@@ -39,12 +36,15 @@ class SnapshotIOStatistics implements IOStatistics, Serializable {
 
   private static final long serialVersionUID = -1762522703841538084L;
 
-  /**
-   * Treemaps sort their insertions so the iterator is ordered.
-   * They are also serializable.
-   */
-  private final TreeMap<String, IOStatisticEntry> entries
-      = new TreeMap<>();
+  private StatisticsMapSnapshot<Long> counters;
+
+  private StatisticsMapSnapshot<Long> gauges;
+
+  private StatisticsMapSnapshot<Long> minumums;
+
+  private StatisticsMapSnapshot<Long> maximums;
+
+  private StatisticsMapSnapshot<MeanStatistic> meanStatistics;
 
   /**
    * Construct from a source statistics instance.
@@ -55,44 +55,47 @@ class SnapshotIOStatistics implements IOStatistics, Serializable {
   }
 
   /**
+   * Take a snapshot.
+   * @param source statistics source.
+   */
+  private void snapshot(IOStatistics source) {
+    counters = new StatisticsMapSnapshot<>(source.counters());
+    gauges = new StatisticsMapSnapshot<>(source.gauges());
+    minumums = new StatisticsMapSnapshot<>(source.minumums());
+    maximums = new StatisticsMapSnapshot<>(source.maximums());
+    meanStatistics = new StatisticsMapSnapshot<>(source.meanStatistics(),
+        MeanStatistic::copy);
+  }
+
+  /**
    * Empty constructor for deserialization.
    */
   SnapshotIOStatistics() {
   }
 
   @Override
-  public Long getStatistic(final String key) {
-    return entries.get(key);
+  public StatisticsMap<Long> counters() {
+    return counters;
   }
 
   @Override
-  public boolean isTracked(final String key) {
-    return false;
+  public StatisticsMap<Long> gauges() {
+    return gauges;
   }
 
   @Override
-  public Iterator<Map.Entry<String, IOStatisticEntry>> iterator() {
-    return entries.entrySet().iterator();
+  public StatisticsMap<Long> minumums() {
+    return minumums;
   }
 
   @Override
-  public Set<String> keys() {
-    return entries.keySet();
+  public StatisticsMap<Long> maximums() {
+    return maximums;
   }
 
-  /**
-   * Take a snapshot.
-   * @param source statistics source.
-   */
-  private void snapshot(IOStatistics source) {
-    entries.clear();
-    // MUST NOT use iterator() because IOStatistics implementations
-    // may create a snapshot when iterator() is invoked;
-    // enumerating keys and querying values avoids stack
-    // overflows
-    for (String key : source.keys()) {
-      entries.put(key, source.getStatistic(key));
-    }
+  @Override
+  public StatisticsMap<MeanStatistic> meanStatistics() {
+    return meanStatistics;
   }
 
 }

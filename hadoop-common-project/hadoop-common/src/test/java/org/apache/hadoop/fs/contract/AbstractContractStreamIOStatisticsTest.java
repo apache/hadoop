@@ -63,7 +63,7 @@ public abstract class AbstractContractStreamIOStatisticsTest
     try (FSDataOutputStream out = fs.create(path, true)) {
       IOStatistics statistics = extractStatistics(out);
       final List<String> keys = outputStreamStatisticKeys();
-      Assertions.assertThat(statistics.keys())
+      Assertions.assertThat(statistics.counters().keySet())
           .describedAs("statistic keys of %s", statistics)
           .containsAll(keys);
       Assertions.assertThat(keys)
@@ -157,7 +157,7 @@ public abstract class AbstractContractStreamIOStatisticsTest
     try (FSDataInputStream in = fs.open(path)) {
       IOStatistics statistics = extractStatistics(in);
       final List<String> keys = inputStreamStatisticKeys();
-      Assertions.assertThat(statistics.keys())
+      Assertions.assertThat(statistics.counters().keySet())
           .describedAs("statistic keys of %s", statistics)
           .containsAll(keys);
       Assertions.assertThat(keys)

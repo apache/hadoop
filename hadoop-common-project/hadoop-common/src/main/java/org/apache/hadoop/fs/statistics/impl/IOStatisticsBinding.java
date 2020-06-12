@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.statistics.impl;
 
 import java.io.Serializable;
+import java.util.Iterator;
 
 import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.statistics.IOStatistics;
@@ -45,14 +46,6 @@ public final class IOStatisticsBinding {
   }
 
   /**
-   * Create a builder for dynamic IO Statistics.
-   * @return a builder to be completed.
-   */
-  public static DynamicIOStatisticsBuilder dynamicIOStatistics() {
-    return new DynamicIOStatisticsBuilder();
-  }
-
-  /**
    * Create  IOStatistics from a storage statistics instance.
    * This will be updated as the storage statistics change.
    * @param storageStatistics source data.
@@ -60,7 +53,23 @@ public final class IOStatisticsBinding {
    */
   public static IOStatistics fromStorageStatistics(
       StorageStatistics storageStatistics) {
-    return new IOStatisticsFromStorageStatistics(storageStatistics);
+    DynamicIOStatisticsBuilder builder = dynamicIOStatistics();
+    Iterator<StorageStatistics.LongStatistic> it = storageStatistics
+        .getLongStatistics();
+    while (it.hasNext()) {
+      StorageStatistics.LongStatistic next = it.next();
+      builder.withFunctionCounter(next.getName(),
+          k -> storageStatistics.getLong(k));
+    }
+    return builder.build();
+  }
+
+  /**
+   * Create a builder for dynamic IO Statistics.
+   * @return a builder to be completed.
+   */
+  public static DynamicIOStatisticsBuilder dynamicIOStatistics() {
+    return new DynamicIOStatisticsBuilder();
   }
 
   /**
@@ -89,7 +98,7 @@ public final class IOStatisticsBinding {
    * @param keys key to use for the counter statistics.
    * @return a new instance.
    */
-  public static CounterIOStatistics counterIOStatistics(String...keys) {
+  public static CounterIOStatistics counterIOStatistics(String... keys) {
     return new CounterIOStatisticsImpl(keys);
   }
 }

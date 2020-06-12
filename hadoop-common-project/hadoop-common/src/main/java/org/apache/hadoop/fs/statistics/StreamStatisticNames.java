@@ -38,9 +38,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Unstable
 public final class StreamStatisticNames {
 
-  private StreamStatisticNames() {
-  }
-
   /** {@value}. */
   public static final String STREAM_READ_ABORTED = "stream_aborted";
 
@@ -161,5 +158,8 @@ public final class StreamStatisticNames {
   /** {@value}. */
   public static final String STREAM_WRITE_QUEUE_DURATION
       = "stream_write_queue_duration";
+
+  private StreamStatisticNames() {
+  }
 
 }

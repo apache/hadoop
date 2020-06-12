@@ -28,7 +28,6 @@ import java.io.Serializable;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import static org.apache.hadoop.fs.statistics.IOStatisticEntry.IOSTATISTIC_COUNTER;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -55,12 +54,12 @@ public final class IOStatisticAssertions {
   public static long extractCounterStatistic(
       final IOStatistics stats,
       final String key) {
-    final IOStatisticEntry statistic = stats.getStatistic(key);
+    final Long statistic = stats.counters().get(key);
     assertThat(statistic)
         .describedAs("Statistics %s and key %s", stats,
             key)
         .isNotNull();
-    return statistic.scalar(IOSTATISTIC_COUNTER);
+    return statistic;
   }
 
   /**
@@ -74,14 +73,13 @@ public final class IOStatisticAssertions {
       final IOStatistics stats,
       final String key,
       final long value) {
-    final IOStatisticEntry statistic = stats.getStatistic(key);
+    final Long statistic = extractCounterStatistic(stats,
+        key);
     assertThat(statistic)
         .describedAs("Statistics %s and key %s with expected value %s", stats,
             key, value)
-        .isNotNull()
-        .extracting(f -> f.scalar(IOSTATISTIC_COUNTER))
         .isEqualTo(value);
-    return statistic.scalar(IOSTATISTIC_COUNTER);
+    return statistic;
   }
 
   /**
@@ -92,7 +90,7 @@ public final class IOStatisticAssertions {
   public static void assertStatisticIsUnknown(
       final IOStatistics stats,
       final String key) {
-    assertThat(stats.getStatistic(key))
+    assertThat(stats.counters().get(key))
         .describedAs("Statistics %s and key %s", stats,
             key)
         .isNull();
@@ -106,7 +104,7 @@ public final class IOStatisticAssertions {
   public static void assertStatisticIsTracked(
       final IOStatistics stats,
       final String key) {
-    assertThat(stats.isTracked(key))
+    assertThat(stats.counters().containsKey(key))
         .describedAs("Statistic %s is not tracked in %s", key, stats)
         .isTrue();
   }
@@ -119,7 +117,7 @@ public final class IOStatisticAssertions {
   public static void assertStatisticIsUntracked(
       final IOStatistics stats,
       final String key) {
-    assertThat(stats.isTracked(key))
+    assertThat(stats.counters().containsKey(key))
         .describedAs("Statistic %s is tracked in %s", key, stats)
         .isFalse();
   }

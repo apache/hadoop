@@ -18,10 +18,6 @@
 
 package org.apache.hadoop.fs.statistics;
 
-import java.util.Iterator;
-import java.util.Map;
-import java.util.NoSuchElementException;
-
 import org.junit.Test;
 
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
@@ -33,7 +29,6 @@ import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatis
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.iostatisticsToString;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.emptyStatistics;
-import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -43,16 +38,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 public class TestEmptyIOStatistics extends AbstractHadoopTestBase {
 
   private final IOStatistics empty = emptyStatistics();
-
-  @Test
-  public void testIterator() throws Throwable {
-    Iterator<Map.Entry<String, IOStatisticEntry>> iterator = empty.iterator();
-
-    assertThat(iterator.hasNext())
-        .describedAs("iterator.hasNext()")
-        .isFalse();
-    intercept(NoSuchElementException.class, iterator::next);
-  }
 
   @Test
   public void testUnknownStatistic() throws Throwable {
@@ -81,11 +66,11 @@ public class TestEmptyIOStatistics extends AbstractHadoopTestBase {
   @Test
   public void testEmptySnapshot() throws Throwable {
     final IOStatistics stat = IOStatisticsSupport.snapshot(empty);
-    assertThat(stat.keys())
+    assertThat(stat.counters().keySet())
         .describedAs("keys of snapshot")
         .isEmpty();
     IOStatistics deser = IOStatisticAssertions.roundTrip(stat);
-    assertThat(deser.keys())
+    assertThat(deser.counters().keySet())
         .describedAs("keys of deserialized snapshot")
         .isEmpty();
   }

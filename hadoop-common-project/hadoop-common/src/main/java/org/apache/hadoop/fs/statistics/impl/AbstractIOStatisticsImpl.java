@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.statistics.impl;
 
-import java.util.Set;
-
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.MeanStatistic;
 import org.apache.hadoop.fs.statistics.StatisticsMap;
@@ -30,21 +28,6 @@ import org.apache.hadoop.fs.statistics.StatisticsMap;
  *
  */
 public abstract class AbstractIOStatisticsImpl implements IOStatistics {
-
-  @Override
-  public Long getStatistic(final String key) {
-    return counters().get(key);
-  }
-
-  @Override
-  public boolean isTracked(final String key) {
-    return counters().containsKey(key);
-  }
-
-  @Override
-  public Set<String> keys() {
-    return counters().keySet();
-  }
 
 
   @Override
