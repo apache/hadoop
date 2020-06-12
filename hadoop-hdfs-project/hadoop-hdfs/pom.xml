@@ -349,6 +349,9 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
             <id>replace-sources</id>
             <configuration>
               <skip>false</skip>
+              <excludes>
+                <exclude>**/DFSUtil.java</exclude>
+              </excludes>
             </configuration>
           </execution>
           <execution>

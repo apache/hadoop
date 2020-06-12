@@ -94,8 +94,9 @@ public class TestProtoBufRpc extends TestRpcBase {
     conf.setInt(CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH, 1024);
     conf.setBoolean(CommonConfigurationKeys.IPC_SERVER_LOG_SLOW_RPC, true);
     // Set RPC engine to protobuf RPC engine
-    RPC.setProtocolEngine(conf, TestRpcService.class, ProtobufRpcEngine.class);
-    RPC.setProtocolEngine(conf, TestRpcService2.class, ProtobufRpcEngine.class);
+    RPC.setProtocolEngine(conf, TestRpcService.class, ProtobufRpcEngine2.class);
+    RPC.setProtocolEngine(conf, TestRpcService2.class,
+        ProtobufRpcEngine2.class);
 
     // Create server side implementation
     PBServerImpl serverImpl = new PBServerImpl();

@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.proto.ZKFCProtocolProtos.ZKFCProtocolService;
 import org.apache.hadoop.ha.protocolPB.ZKFCProtocolPB;
 import org.apache.hadoop.ha.protocolPB.ZKFCProtocolServerSideTranslatorPB;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RPC.Server;
 import org.apache.hadoop.security.AccessControlException;
@@ -50,7 +50,7 @@ public class ZKFCRpcServer implements ZKFCProtocol {
     this.zkfc = zkfc;
     
     RPC.setProtocolEngine(conf, ZKFCProtocolPB.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     ZKFCProtocolServerSideTranslatorPB translator =
         new ZKFCProtocolServerSideTranslatorPB(this);
     BlockingService service = ZKFCProtocolService

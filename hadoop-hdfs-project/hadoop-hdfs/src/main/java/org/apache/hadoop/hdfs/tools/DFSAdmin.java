@@ -87,7 +87,7 @@ import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage;
 import org.apache.hadoop.io.MultipleIOException;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RefreshCallQueueProtocol;
 import org.apache.hadoop.ipc.RefreshResponse;
@@ -2045,7 +2045,7 @@ public class DFSAdmin extends FsShell {
     InetSocketAddress address = NetUtils.createSocketAddr(hostport);
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
 
-    RPC.setProtocolEngine(conf, xface, ProtobufRpcEngine.class);
+    RPC.setProtocolEngine(conf, xface, ProtobufRpcEngine2.class);
     GenericRefreshProtocolPB proxy = (GenericRefreshProtocolPB)
       RPC.getProxy(xface, RPC.getProtocolVersion(xface), address,
         ugi, conf, NetUtils.getDefaultSocketFactory(conf), 0);
