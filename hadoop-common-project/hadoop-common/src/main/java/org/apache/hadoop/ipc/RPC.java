@@ -1043,7 +1043,7 @@ public class RPC {
     
     private void initProtocolMetaInfo(Configuration conf) {
       RPC.setProtocolEngine(conf, ProtocolMetaInfoPB.class,
-          ProtobufRpcEngine.class);
+          ProtobufRpcEngine2.class);
       ProtocolMetaInfoServerSideTranslatorPB xlator = 
           new ProtocolMetaInfoServerSideTranslatorPB(this);
       BlockingService protocolInfoBlockingService = ProtocolInfoService
@@ -1067,7 +1067,7 @@ public class RPC {
     @Override
     public Writable call(RPC.RpcKind rpcKind, String protocol,
         Writable rpcRequest, long receiveTime) throws Exception {
-      return getRpcInvoker(rpcKind).call(this, protocol, rpcRequest,
+      return getServerRpcInvoker(rpcKind).call(this, protocol, rpcRequest,
           receiveTime);
     }
   }

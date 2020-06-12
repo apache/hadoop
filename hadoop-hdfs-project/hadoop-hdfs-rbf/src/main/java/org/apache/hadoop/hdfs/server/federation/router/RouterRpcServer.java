@@ -133,7 +133,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RPC.Server;
 import org.apache.hadoop.ipc.RemoteException;
@@ -256,7 +256,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
         readerQueueSize);
 
     RPC.setProtocolEngine(this.conf, ClientNamenodeProtocolPB.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
 
     ClientNamenodeProtocolServerSideTranslatorPB
         clientProtocolServerTranslator =

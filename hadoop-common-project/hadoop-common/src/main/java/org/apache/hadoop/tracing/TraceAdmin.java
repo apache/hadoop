@@ -28,7 +28,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -179,7 +179,7 @@ public class TraceAdmin extends Configured implements Tool {
           servicePrincipal);
     }
     RPC.setProtocolEngine(getConf(), TraceAdminProtocolPB.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     InetSocketAddress address = NetUtils.createSocketAddr(hostPort);
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     Class<?> xface = TraceAdminProtocolPB.class;
