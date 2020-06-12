@@ -466,6 +466,43 @@ public class TestLogsCLI {
         logMessage(containerId3, "stdout1234")));
     sysOutStream.reset();
 
+    // Check backward compatibility for -logFiles
+    exitCode = cli.run(new String[] {"-applicationId", appId.toString(),
+        "-logFiles", "stdout"});
+    assertTrue("Failed with -logFiles", exitCode == 0);
+    assertFalse("Failed with -logFiles", sysOutStream.toString().contains(
+        logMessage(containerId1, "syslog")));
+    assertFalse("Failed with -logFiles", sysOutStream.toString().contains(
+        logMessage(containerId2, "syslog")));
+    assertFalse("Failed with -logFiles", sysOutStream.toString().contains(
+        logMessage(containerId3, "syslog")));
+    assertTrue("Failed with -logFiles", sysOutStream.toString().contains(
+        logMessage(containerId3, "stdout")));
+    assertFalse("Failed with -logFiles", sysOutStream.toString().contains(
+        logMessage(containerId3, "stdout1234")));
+    sysOutStream.reset();
+
+    // Check -log_files supercedes -logFiles
+    exitCode = cli.run(new String[] {"-applicationId", appId.toString(),
+        "-log_files", "stdout", "-logFiles", "syslog"});
+    assertTrue("Failed with -logFiles and -log_files", exitCode == 0);
+    assertFalse("Failed with -logFiles and -log_files",
+        sysOutStream.toString().contains(
+        logMessage(containerId1, "syslog")));
+    assertFalse("Failed with -logFiles and -log_files",
+        sysOutStream.toString().contains(
+        logMessage(containerId2, "syslog")));
+    assertFalse("Failed with -logFiles and -log_files",
+        sysOutStream.toString().contains(
+        logMessage(containerId3, "syslog")));
+    assertTrue("Failed with -logFiles and -log_files",
+        sysOutStream.toString().contains(
+        logMessage(containerId3, "stdout")));
+    assertFalse("Failed with -logFiles and -log_files",
+        sysOutStream.toString().contains(
+        logMessage(containerId3, "stdout1234")));
+    sysOutStream.reset();
+
     exitCode = cli.run(new String[] {"-applicationId", appId.toString(),
         "-log_files_pattern", "std*"});
     assertTrue(exitCode == 0);
