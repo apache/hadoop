@@ -1721,31 +1721,13 @@ public class CapacityScheduler extends
    */
   private CSAssignment allocateContainersOnMultiNodes(
       CandidateNodeSet<FiCaSchedulerNode> candidates) {
-    // When this time look at multiple nodes, try schedule if the
-    // partition has any available resource or killable resource
-    if (getRootQueue().getQueueCapacities().getUsedCapacity(
-        candidates.getPartition()) >= 1.0f
-        && preemptionManager.getKillableResource(
-        CapacitySchedulerConfiguration.ROOT, candidates.getPartition())
-        == Resources.none()) {
-      // Try to allocate from reserved containers
-      for (FiCaSchedulerNode node : candidates.getAllNodes().values()) {
-        RMContainer reservedContainer = node.getReservedContainer();
-        if (reservedContainer != null) {
-          allocateFromReservedContainer(node, false, reservedContainer);
-        }
+    // Try to allocate from reserved containers
+    for (FiCaSchedulerNode node : candidates.getAllNodes().values()) {
+      RMContainer reservedContainer = node.getReservedContainer();
+      if (reservedContainer != null) {
+        allocateFromReservedContainer(node, false, reservedContainer);
       }
-      LOG.debug("This partition '{}' doesn't have available or "
-          + "killable resource", candidates.getPartition());
-      ActivitiesLogger.QUEUE.recordQueueActivity(activitiesManager, null,
-          "", getRootQueue().getQueuePath(), ActivityState.REJECTED,
-          ActivityDiagnosticConstant.
-              INIT_CHECK_PARTITION_RESOURCE_INSUFFICIENT);
-      ActivitiesLogger.NODE
-          .finishSkippedNodeAllocation(activitiesManager, null);
-      return null;
     }
-
     return allocateOrReserveNewContainers(candidates, false);
   }
 

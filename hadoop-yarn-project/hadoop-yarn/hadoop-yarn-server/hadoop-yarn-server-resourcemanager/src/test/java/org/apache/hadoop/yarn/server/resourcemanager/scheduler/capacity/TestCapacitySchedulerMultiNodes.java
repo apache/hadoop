@@ -258,13 +258,6 @@ public class TestCapacitySchedulerMultiNodes extends CapacitySchedulerTestBase {
     Assert.assertNull(cs.getNode(nm1.getNodeId()).getReservedContainer());
     Assert.assertEquals(1, schedulerApp1.getLiveContainers().size());
     Assert.assertEquals(0, schedulerApp1.getReservedContainers().size());
-    Assert.assertEquals(1, schedulerApp2.getLiveContainers().size());
-
-    // Trigger scheduling to allocate a container on nm1 for app2.
-    cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
-    Assert.assertNull(cs.getNode(nm1.getNodeId()).getReservedContainer());
-    Assert.assertEquals(1, schedulerApp1.getLiveContainers().size());
-    Assert.assertEquals(0, schedulerApp1.getReservedContainers().size());
     Assert.assertEquals(2, schedulerApp2.getLiveContainers().size());
     Assert.assertEquals(7 * GB,
         cs.getNode(nm1.getNodeId()).getAllocatedResource().getMemorySize());
