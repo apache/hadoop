@@ -103,7 +103,8 @@ public final class TestAbfsOutputStream {
 
     out.hsync();
 
-    verify(client, times(2)).append(acString.capture(), acLong.capture(), acByteArray.capture(), acBufferOffset.capture(), acBufferLength.capture(), acSASToken.capture(), acAppendBlobAppend.capture());
+    verify(client, times(2)).append(acString.capture(), acLong.capture(), acByteArray.capture(), acBufferOffset.capture(), acBufferLength.capture(),
+                                    acSASToken.capture(), acAppendBlobAppend.capture());
     assertThat(Arrays.asList(PATH, PATH)).describedAs("Path of the requests").isEqualTo(acString.getAllValues());
     assertThat(Arrays.asList(Long.valueOf(0), Long.valueOf(WRITE_SIZE))).describedAs("Write Position").isEqualTo(acLong.getAllValues());
     assertThat(Arrays.asList(0, 0)).describedAs("Buffer Offset").isEqualTo(acBufferOffset.getAllValues());
@@ -146,12 +147,14 @@ public final class TestAbfsOutputStream {
     ArgumentCaptor<Boolean> acAppendBlobAppend = ArgumentCaptor.forClass(Boolean.class);
     ArgumentCaptor<String> acSASToken = ArgumentCaptor.forClass(String.class);
 
-    verify(client, times(2)).append(acString.capture(), acLong.capture(), acByteArray.capture(), acBufferOffset.capture(), acBufferLength.capture(), acSASToken.capture(), acAppendBlobAppend.capture());
+    verify(client, times(2)).append(acString.capture(), acLong.capture(), acByteArray.capture(), acBufferOffset.capture(), acBufferLength.capture(),
+                                    acSASToken.capture(), acAppendBlobAppend.capture());
     assertThat(Arrays.asList(PATH, PATH)).describedAs("Path").isEqualTo(acString.getAllValues());
     assertThat(new HashSet<Long>(Arrays.asList(Long.valueOf(0), Long.valueOf(BUFFER_SIZE)))).describedAs("Position").isEqualTo(new HashSet<Long>(
                acLong.getAllValues()));
     assertThat(Arrays.asList(0, 0)).describedAs("Buffer Offset").isEqualTo(acBufferOffset.getAllValues());
-    assertThat(new HashSet<Integer>(Arrays.asList(BUFFER_SIZE, 5*WRITE_SIZE-BUFFER_SIZE))).describedAs("Buffer Length").isEqualTo(new HashSet<Integer>(acBufferLength.getAllValues()));
+    assertThat(new HashSet<Integer>(Arrays.asList(BUFFER_SIZE, 5*WRITE_SIZE-BUFFER_SIZE))).describedAs("Buffer Length").isEqualTo(new HashSet<Integer>(
+               acBufferLength.getAllValues()));
 
     ArgumentCaptor<String> acFlushString = ArgumentCaptor.forClass(String.class);
     ArgumentCaptor<Long> acFlushLong = ArgumentCaptor.forClass(Long.class);
@@ -159,7 +162,8 @@ public final class TestAbfsOutputStream {
     ArgumentCaptor<Boolean> acFlushClose = ArgumentCaptor.forClass(Boolean.class);
     ArgumentCaptor<String> acFlushSASToken = ArgumentCaptor.forClass(String.class);
 
-    verify(client, times(1)).flush(acFlushString.capture(), acFlushLong.capture(), acFlushRetainUnCommittedData.capture(), acFlushClose.capture(), acFlushSASToken.capture());
+    verify(client, times(1)).flush(acFlushString.capture(), acFlushLong.capture(), acFlushRetainUnCommittedData.capture(), acFlushClose.capture(),
+                                   acFlushSASToken.capture());
     assertThat(Arrays.asList(PATH)).describedAs("path").isEqualTo(acFlushString.getAllValues());
     assertThat(Arrays.asList(Long.valueOf(5*WRITE_SIZE))).describedAs("position").isEqualTo(acFlushLong.getAllValues());
     assertThat(Arrays.asList(false)).describedAs("RetainUnCommittedData flag").isEqualTo(acFlushRetainUnCommittedData.getAllValues());
@@ -204,7 +208,8 @@ public final class TestAbfsOutputStream {
     ArgumentCaptor<Boolean> acAppendBlobAppend = ArgumentCaptor.forClass(Boolean.class);
     ArgumentCaptor<String> acSASToken = ArgumentCaptor.forClass(String.class);
 
-    verify(client, times(2)).append(acString.capture(), acLong.capture(), acByteArray.capture(), acBufferOffset.capture(), acBufferLength.capture(), acSASToken.capture(), acAppendBlobAppend.capture());
+    verify(client, times(2)).append(acString.capture(), acLong.capture(), acByteArray.capture(), acBufferOffset.capture(), acBufferLength.capture(),
+                                    acSASToken.capture(), acAppendBlobAppend.capture());
     assertThat(Arrays.asList(PATH, PATH)).describedAs("path").isEqualTo(acString.getAllValues());
     assertThat(new HashSet<Long>(Arrays.asList(Long.valueOf(0), Long.valueOf(BUFFER_SIZE)))).describedAs("Position").isEqualTo(new HashSet<Long>(
                acLong.getAllValues()));
@@ -217,7 +222,8 @@ public final class TestAbfsOutputStream {
     ArgumentCaptor<Boolean> acFlushClose = ArgumentCaptor.forClass(Boolean.class);
     ArgumentCaptor<String> acFlushSASToken = ArgumentCaptor.forClass(String.class);
 
-    verify(client, times(1)).flush(acFlushString.capture(), acFlushLong.capture(), acFlushRetainUnCommittedData.capture(), acFlushClose.capture(), acFlushSASToken.capture());
+    verify(client, times(1)).flush(acFlushString.capture(), acFlushLong.capture(), acFlushRetainUnCommittedData.capture(), acFlushClose.capture(),
+                                   acFlushSASToken.capture());
     assertThat(Arrays.asList(PATH)).describedAs("path").isEqualTo(acFlushString.getAllValues());
     assertThat(Arrays.asList(Long.valueOf(2*BUFFER_SIZE))).describedAs("position").isEqualTo(acFlushLong.getAllValues());
     assertThat(Arrays.asList(false)).describedAs("RetainUnCommittedData flag").isEqualTo(acFlushRetainUnCommittedData.getAllValues());
@@ -263,7 +269,8 @@ public final class TestAbfsOutputStream {
     ArgumentCaptor<Boolean> acAppendBlobAppend = ArgumentCaptor.forClass(Boolean.class);
     ArgumentCaptor<String> acSASToken = ArgumentCaptor.forClass(String.class);
 
-    verify(client, times(2)).append(acString.capture(), acLong.capture(), acByteArray.capture(), acBufferOffset.capture(), acBufferLength.capture(), acSASToken.capture(), acAppendBlobAppend.capture());
+    verify(client, times(2)).append(acString.capture(), acLong.capture(), acByteArray.capture(), acBufferOffset.capture(), acBufferLength.capture(),
+                                    acSASToken.capture(), acAppendBlobAppend.capture());
     assertThat(Arrays.asList(PATH, PATH)).describedAs("File Path").isEqualTo(acString.getAllValues());
     assertThat(new HashSet<Long>(Arrays.asList(Long.valueOf(0), Long.valueOf(BUFFER_SIZE)))).describedAs("Position in file").isEqualTo(
                new HashSet<Long>(acLong.getAllValues()));
@@ -307,7 +314,8 @@ public final class TestAbfsOutputStream {
     ArgumentCaptor<Boolean> acAppendBlobAppend = ArgumentCaptor.forClass(Boolean.class);
     ArgumentCaptor<String> acSASToken = ArgumentCaptor.forClass(String.class);
 
-    verify(client, times(2)).append(acString.capture(), acLong.capture(), acByteArray.capture(), acBufferOffset.capture(), acBufferLength.capture(), acSASToken.capture(), acAppendBlobAppend.capture());
+    verify(client, times(2)).append(acString.capture(), acLong.capture(), acByteArray.capture(), acBufferOffset.capture(), acBufferLength.capture(),
+                                    acSASToken.capture(), acAppendBlobAppend.capture());
     assertThat(Arrays.asList(PATH, PATH)).describedAs("File Path").isEqualTo(acString.getAllValues());
     assertThat(Arrays.asList(Long.valueOf(0), Long.valueOf(BUFFER_SIZE))).describedAs("File Position").isEqualTo(acLong.getAllValues());
     assertThat(Arrays.asList(0, 0)).describedAs("Buffer Offset").isEqualTo(acBufferOffset.getAllValues());
@@ -351,7 +359,8 @@ public final class TestAbfsOutputStream {
     ArgumentCaptor<Boolean> acAppendBlobAppend = ArgumentCaptor.forClass(Boolean.class);
     ArgumentCaptor<String> acSASToken = ArgumentCaptor.forClass(String.class);
 
-    verify(client, times(2)).append(acString.capture(), acLong.capture(), acByteArray.capture(), acBufferOffset.capture(), acBufferLength.capture(), acSASToken.capture(), acAppendBlobAppend.capture());
+    verify(client, times(2)).append(acString.capture(), acLong.capture(), acByteArray.capture(), acBufferOffset.capture(), acBufferLength.capture(),
+                                    acSASToken.capture(), acAppendBlobAppend.capture());
     assertThat(Arrays.asList(PATH, PATH)).describedAs("File Path").isEqualTo(acString.getAllValues());
     assertThat(new HashSet<Long>(Arrays.asList(Long.valueOf(0), Long.valueOf(BUFFER_SIZE)))).describedAs("File Position").isEqualTo(
                new HashSet<Long>(acLong.getAllValues()));
@@ -364,7 +373,8 @@ public final class TestAbfsOutputStream {
     ArgumentCaptor<Boolean> acFlushClose = ArgumentCaptor.forClass(Boolean.class);
     ArgumentCaptor<String> acFlushSASToken = ArgumentCaptor.forClass(String.class);
 
-    verify(client, times(1)).flush(acFlushString.capture(), acFlushLong.capture(), acFlushRetainUnCommittedData.capture(), acFlushClose.capture(), acFlushSASToken.capture());
+    verify(client, times(1)).flush(acFlushString.capture(), acFlushLong.capture(), acFlushRetainUnCommittedData.capture(), acFlushClose.capture(),
+                                   acFlushSASToken.capture());
     assertThat(Arrays.asList(PATH)).describedAs("path").isEqualTo(acFlushString.getAllValues());
     assertThat(Arrays.asList(Long.valueOf(2*BUFFER_SIZE))).describedAs("position").isEqualTo(acFlushLong.getAllValues());
     assertThat(Arrays.asList(false)).describedAs("RetainUnCommittedData flag").isEqualTo(acFlushRetainUnCommittedData.getAllValues());
@@ -408,7 +418,8 @@ public final class TestAbfsOutputStream {
     ArgumentCaptor<Boolean> acAppendBlobAppend = ArgumentCaptor.forClass(Boolean.class);
     ArgumentCaptor<String> acSASToken = ArgumentCaptor.forClass(String.class);
 
-    verify(client, times(2)).append(acString.capture(), acLong.capture(), acByteArray.capture(), acBufferOffset.capture(), acBufferLength.capture(), acSASToken.capture(), acAppendBlobAppend.capture());
+    verify(client, times(2)).append(acString.capture(), acLong.capture(), acByteArray.capture(), acBufferOffset.capture(), acBufferLength.capture(),
+                                    acSASToken.capture(), acAppendBlobAppend.capture());
     assertThat(Arrays.asList(PATH, PATH)).describedAs("path").isEqualTo(acString.getAllValues());
     assertThat(new HashSet<Long>(Arrays.asList(Long.valueOf(0), Long.valueOf(BUFFER_SIZE)))).describedAs("Position").isEqualTo(
                new HashSet<Long>(acLong.getAllValues()));

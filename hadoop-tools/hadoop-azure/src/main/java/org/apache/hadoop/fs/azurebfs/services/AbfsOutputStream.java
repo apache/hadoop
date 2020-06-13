@@ -476,8 +476,9 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
       // keep polling until there is no data
     }
     // for AppendBLob, jobs are not submitted to completion service
-    if (isAppendBlob)
+    if (isAppendBlob) {
       completed = true;
+    }
 
     if (!completed) {
       try {

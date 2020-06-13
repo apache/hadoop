@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLDecoder;
 import java.net.UnknownHostException;
 import java.util.List;
 import java.util.LinkedHashMap;
@@ -36,11 +35,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationExcep
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
-import org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams;
 import org.apache.hadoop.fs.azurebfs.oauth2.AzureADAuthenticator.HttpException;
-
-import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_ACTION;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_POSITION;
 
 /**
  * The AbfsRestOperation for Rest AbfsClient.
@@ -73,7 +68,6 @@ public class AbfsRestOperation {
   private int bufferLength;
   private int retryCount = 0;
   private boolean isAppendBlobAppend;
-  private String appendPos;
 
   private AbfsHttpOperation result;
   private AbfsCounters abfsCounters;
@@ -144,7 +138,6 @@ public class AbfsRestOperation {
     this.sasToken = sasToken;
     this.abfsCounters = client.getAbfsCounters();
     this.isAppendBlobAppend = false;
-    this.appendPos = "0";
   }
 
   /**
@@ -177,16 +170,6 @@ public class AbfsRestOperation {
     this.bufferLength = bufferLength;
     this.abfsCounters = client.getAbfsCounters();
     this.isAppendBlobAppend = isAppendBlobAppend;
-    String query = url.getQuery();
-    String[] pairs = query.split("&");
-    Map<String, String> query_pairs = new LinkedHashMap<String, String>();
-    for (String pair : pairs) {
-        int idx = pair.indexOf("=");
-        query_pairs.put(pair.substring(0, idx), pair.substring(idx + 1));
-    }
-    if (query_pairs.get(QUERY_PARAM_ACTION) !=null) {
-      this.appendPos = query_pairs.get(QUERY_PARAM_POSITION);
-    }
   }
 
   /**

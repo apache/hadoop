@@ -474,8 +474,9 @@ public class AzureBlobFileSystemStore implements Closeable {
 
   private AbfsOutputStreamContext populateAbfsOutputStreamContext(boolean isAppendBlob) {
     int bufferSize = abfsConfiguration.getWriteBufferSize();
-    if (isAppendBlob && bufferSize > FileSystemConfigurations.APPENDBLOB_MAX_WRITE_BUFFER_SIZE)
+    if (isAppendBlob && bufferSize > FileSystemConfigurations.APPENDBLOB_MAX_WRITE_BUFFER_SIZE) {
       bufferSize = FileSystemConfigurations.APPENDBLOB_MAX_WRITE_BUFFER_SIZE;
+    }
     return new AbfsOutputStreamContext(abfsConfiguration.getSasTokenRenewPeriodForStreamsInSeconds())
             .withWriteBufferSize(bufferSize)
             .enableFlush(abfsConfiguration.isFlushEnabled())
