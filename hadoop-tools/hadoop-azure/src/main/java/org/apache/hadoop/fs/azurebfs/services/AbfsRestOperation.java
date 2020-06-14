@@ -240,11 +240,11 @@ public class AbfsRestOperation {
         // HttpUrlConnection requires
         httpOperation.sendRequest(buffer, bufferOffset, bufferLength);
         incrementCounter(AbfsStatistic.SEND_REQUESTS, 1);
-        incrementCounter(AbfsStatistic.BYTES_SEND, bufferLength);
+        incrementCounter(AbfsStatistic.BYTES_SENT, bufferLength);
       }
 
       httpOperation.processResponse(buffer, bufferOffset, bufferLength);
-      incrementCounter(AbfsStatistic.GET_RESPONSE, 1);
+      incrementCounter(AbfsStatistic.GET_RESPONSES, 1);
       incrementCounter(AbfsStatistic.BYTES_RECEIVED,
           httpOperation.getBytesReceived());
     } catch (IOException ex) {

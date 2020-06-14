@@ -81,8 +81,8 @@ public class AbfsInstrumentation implements AbfsCounters {
       ERROR_IGNORED,
       CONNECTIONS_MADE,
       SEND_REQUESTS,
-      GET_RESPONSE,
-      BYTES_SEND,
+      GET_RESPONSES,
+      BYTES_SENT,
       BYTES_RECEIVED,
       READ_THROTTLES,
       WRITE_THROTTLES

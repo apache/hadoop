@@ -54,6 +54,7 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
     Map<String, Long> metricMap;
     Path sendRequestPath = path(getMethodName());
     String testNetworkStatsString = "http_send";
+    long connectionsMade, requestsSent, bytesSent;
 
     /*
      * Creating AbfsOutputStream will result in 1 connection made and 1 send
@@ -75,23 +76,23 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
        * Testing the network stats with 1 write operation.
        *
        * connections_made : 3(getFileSystem()) + 1(AbfsOutputStream) + 2(flush).
+       *
        * send_requests : 1(getFileSystem()) + 1(AbfsOutputStream) + 2(flush).
-       * bytes_send : bytes wrote in AbfsOutputStream.
+       *
+       * bytes_sent : bytes wrote in AbfsOutputStream.
        */
-      assertAbfsStatistics(AbfsStatistic.CONNECTIONS_MADE, 6, metricMap);
-      assertAbfsStatistics(AbfsStatistic.SEND_REQUESTS, 4, metricMap);
-      assertAbfsStatistics(AbfsStatistic.BYTES_SEND,
+      connectionsMade = assertAbfsStatistics(AbfsStatistic.CONNECTIONS_MADE,
+          6, metricMap);
+      requestsSent = assertAbfsStatistics(AbfsStatistic.SEND_REQUESTS, 4,
+          metricMap);
+      bytesSent = assertAbfsStatistics(AbfsStatistic.BYTES_SENT,
           testNetworkStatsString.getBytes().length, metricMap);
 
     }
 
-    /*
-     * Re-initializing the FS for the next test.
-     *
-     * 2 connections are made during initialize. Hence, initial value of
-     * connections_made = 2.
-     */
-    fs.initialize(fs.getUri(), fs.getConf());
+    // To close the AbfsOutputStream 1 connection is made and 1 request is sent.
+    connectionsMade++;
+    requestsSent++;
 
     try (AbfsOutputStream out = createAbfsOutputStreamWithFlushEnabled(fs,
         sendRequestPath)) {
@@ -114,18 +115,22 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
       /*
        * Testing the network stats with Large amount of bytes sent.
        *
-       * connections made : 2(initialize) + 1(AbfsOutputStream) +
+       * connections made : connections_made(Last assertion) + 1
+       * (AbfsOutputStream) + LARGE_OPERATIONS * 2(flush).
+       *
+       * send requests : requests_sent(Last assertion) + 1(AbfsOutputStream) +
        * LARGE_OPERATIONS * 2(flush).
-       * send requests : 1(AbfsOutputStream) + LARGE_OPERATIONS * 2(flush).
-       * bytes send : LARGE_OPERATIONS * (bytes wrote each time).
+       *
+       * bytes sent : bytes_sent(Last assertion) + LARGE_OPERATIONS * (bytes
+       * wrote each time).
        *
        */
       assertAbfsStatistics(AbfsStatistic.CONNECTIONS_MADE,
-          3 + LARGE_OPERATIONS * 2, metricMap);
+          connectionsMade + 1 + LARGE_OPERATIONS * 2, metricMap);
       assertAbfsStatistics(AbfsStatistic.SEND_REQUESTS,
-          1 + LARGE_OPERATIONS * 2, metricMap);
-      assertAbfsStatistics(AbfsStatistic.BYTES_SEND,
-          LARGE_OPERATIONS * (testNetworkStatsString.getBytes().length),
+          requestsSent + 1 + LARGE_OPERATIONS * 2, metricMap);
+      assertAbfsStatistics(AbfsStatistic.BYTES_SENT,
+          bytesSent + LARGE_OPERATIONS * (testNetworkStatsString.getBytes().length),
           metricMap);
 
     }
@@ -144,6 +149,7 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
     Path getResponsePath = path(getMethodName());
     Map<String, Long> metricMap;
     String testResponseString = "some response";
+    long getResponses, bytesReceived;
 
     FSDataOutputStream out = null;
     FSDataInputStream in = null;
@@ -173,23 +179,24 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
       /*
        * Testing values of statistics after writing and reading a buffer.
        *
-       * get_response - 6(above operations) + 1(open()) + 1 (read()).
-       * bytes_received - bytes send in the file.
+       * get_responses - 6(above operations) + 1(open()) + 1 (read()).
+       *
+       * bytes_received - This should be equal to bytes sent earlier.
        */
-      assertAbfsStatistics(AbfsStatistic.GET_RESPONSE, 8, metricMap);
+      getResponses = assertAbfsStatistics(AbfsStatistic.GET_RESPONSES, 8,
+          metricMap);
       // Testing that bytes received is equal to bytes sent.
-      long bytesSend = metricMap.get(AbfsStatistic.BYTES_SEND.getStatName());
-      assertAbfsStatistics(AbfsStatistic.BYTES_RECEIVED, bytesSend, metricMap);
+      long bytesSend = metricMap.get(AbfsStatistic.BYTES_SENT.getStatName());
+      bytesReceived = assertAbfsStatistics(AbfsStatistic.BYTES_RECEIVED,
+          bytesSend,
+          metricMap);
 
     } finally {
       IOUtils.cleanupWithLogger(LOG, out, in);
     }
 
-    /*
-     * Re-initializing FS.
-     * get_response required : 2.
-     */
-    fs.initialize(fs.getUri(), fs.getConf());
+    // To close the streams 1 response is gotten.
+    getResponses++;
 
     try {
 
@@ -223,19 +230,20 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
       /*
        * Testing the statistics values after writing and reading a large buffer.
        *
-       * get_response : 2(initializing) + 1(OutputStream) +
-       * 2 * LARGE_OPERATIONS(Writing and flushing LARGE_OPERATIONS times) + 1
-       * (open()) + 1(read()).
+       * get_response : get_responses(Last assertion) + 1
+       * (OutputStream) + 2 * LARGE_OPERATIONS(Writing and flushing
+       * LARGE_OPERATIONS times) + 1(open()) + 1(read()).
        *
-       * bytes_received : LARGE_OPERATIONS * bytes wrote each time
-       * (bytes_received is equal to bytes wrote in the File).
+       * bytes_received : bytes_received(Last assertion) + LARGE_OPERATIONS *
+       * bytes wrote each time (bytes_received is equal to bytes wrote in the
+       * File).
        *
        */
       assertAbfsStatistics(AbfsStatistic.BYTES_RECEIVED,
-          LARGE_OPERATIONS * (testResponseString.getBytes().length),
+          bytesReceived + LARGE_OPERATIONS * (testResponseString.getBytes().length),
           metricMap);
-      assertAbfsStatistics(AbfsStatistic.GET_RESPONSE,
-          5 + 2 * LARGE_OPERATIONS, metricMap);
+      assertAbfsStatistics(AbfsStatistic.GET_RESPONSES,
+          getResponses + 3 + 2 * LARGE_OPERATIONS, metricMap);
 
     } finally {
       IOUtils.cleanupWithLogger(LOG, out, in);

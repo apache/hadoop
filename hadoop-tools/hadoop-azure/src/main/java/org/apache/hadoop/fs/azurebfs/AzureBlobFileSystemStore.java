@@ -145,8 +145,8 @@ public class AzureBlobFileSystemStore implements Closeable {
   private final AbfsPerfTracker abfsPerfTracker;
 
   public AzureBlobFileSystemStore(URI uri, boolean isSecureScheme,
-      Configuration configuration, AbfsCounters instrumentation)
-          throws IOException {
+                                  Configuration configuration,
+                                  AbfsCounters instrumentation) throws IOException {
     this.uri = uri;
     String[] authorityParts = authorityParts(uri);
     final String fileSystemName = authorityParts[0];
