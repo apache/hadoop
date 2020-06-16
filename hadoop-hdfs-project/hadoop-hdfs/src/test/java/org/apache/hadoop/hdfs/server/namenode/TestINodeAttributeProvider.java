@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.AccessControlException;
@@ -80,6 +81,7 @@ public class TestINodeAttributeProvider {
               ancestorAccess, parentAccess, access, subAccess, ignoreEmptyDir);
         }
         CALLED.add("checkPermission|" + ancestorAccess + "|" + parentAccess + "|" + access);
+        CALLED.add("checkPermission|" + path);
       }
 
       @Override
@@ -93,6 +95,7 @@ public class TestINodeAttributeProvider {
         CALLED.add("checkPermission|" + authzContext.getAncestorAccess()
             + "|" + authzContext.getParentAccess() + "|" + authzContext
             .getAccess());
+        CALLED.add("checkPermission|" + authzContext.getPath());
       }
     }
 
@@ -109,7 +112,12 @@ public class TestINodeAttributeProvider {
     @Override
     public INodeAttributes getAttributes(String[] pathElements,
         final INodeAttributes inode) {
+      String fullPath = String.join("/", pathElements);
+      if (!fullPath.startsWith("/")) {
+        fullPath = "/" + fullPath;
+      }
       CALLED.add("getAttributes");
+      CALLED.add("getAttributes|"+fullPath);
       final boolean useDefault = useDefault(pathElements);
       final boolean useNullAcl = useNullAclFeature(pathElements);
       return new INodeAttributes() {
@@ -484,5 +492,112 @@ public class TestINodeAttributeProvider {
         return null;
       }
     });
+  }
+
+  @Test
+  // HDFS-15372 - Attribute provider should not see the snapshot path as it
+  // should be resolved into the original path name before it hits the provider.
+  public void testAttrProviderSeesResolvedSnapahotPaths() throws Exception {
+    FileSystem fs = FileSystem.get(miniDFS.getConfiguration(0));
+    DistributedFileSystem hdfs = miniDFS.getFileSystem();
+    final Path userPath = new Path("/user");
+    final Path authz = new Path("/user/authz");
+    final Path authzChild = new Path("/user/authz/child2");
+
+    fs.mkdirs(userPath);
+    fs.setPermission(userPath, new FsPermission(HDFS_PERMISSION));
+    fs.mkdirs(authz);
+    hdfs.allowSnapshot(userPath);
+    fs.setPermission(authz, new FsPermission(HDFS_PERMISSION));
+    fs.mkdirs(authzChild);
+    fs.setPermission(authzChild, new FsPermission(HDFS_PERMISSION));
+    fs.createSnapshot(userPath, "snapshot_1");
+    UserGroupInformation ugi = UserGroupInformation.createUserForTesting("u1",
+        new String[]{"g1"});
+    ugi.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        FileSystem fs = FileSystem.get(miniDFS.getConfiguration(0));
+        final Path snapChild =
+            new Path("/user/.snapshot/snapshot_1/authz/child2");
+        // Run various methods on the path to access the attributes etc.
+        fs.getAclStatus(snapChild);
+        fs.getContentSummary(snapChild);
+        fs.getFileStatus(snapChild);
+        Assert.assertFalse(CALLED.contains("getAttributes|" +
+            snapChild.toString()));
+        Assert.assertTrue(CALLED.contains("getAttributes|/user/authz/child2"));
+        // The snapshot path should be seen by the permission checker, but when
+        // it checks access, the paths will be resolved so the attributeProvider
+        // only sees the resolved path.
+        Assert.assertTrue(
+            CALLED.contains("checkPermission|" + snapChild.toString()));
+        CALLED.clear();
+        fs.getAclStatus(new Path("/"));
+        Assert.assertTrue(CALLED.contains("checkPermission|/"));
+        Assert.assertTrue(CALLED.contains("getAttributes|/"));
+
+        CALLED.clear();
+        fs.getFileStatus(new Path("/user"));
+        Assert.assertTrue(CALLED.contains("checkPermission|/user"));
+        Assert.assertTrue(CALLED.contains("getAttributes|/user"));
+
+        CALLED.clear();
+        fs.getFileStatus(new Path("/user/.snapshot"));
+        Assert.assertTrue(CALLED.contains("checkPermission|/user/.snapshot"));
+        // attribute provider never sees the .snapshot path directly.
+        Assert.assertFalse(CALLED.contains("getAttributes|/user/.snapshot"));
+
+        CALLED.clear();
+        fs.getFileStatus(new Path("/user/.snapshot/snapshot_1"));
+        Assert.assertTrue(
+            CALLED.contains("checkPermission|/user/.snapshot/snapshot_1"));
+        Assert.assertTrue(
+            CALLED.contains("getAttributes|/user/.snapshot/snapshot_1"));
+
+        CALLED.clear();
+        fs.getFileStatus(new Path("/user/.snapshot/snapshot_1/authz"));
+        Assert.assertTrue(CALLED
+            .contains("checkPermission|/user/.snapshot/snapshot_1/authz"));
+        Assert.assertTrue(CALLED.contains("getAttributes|/user/authz"));
+
+        CALLED.clear();
+        fs.getFileStatus(new Path("/user/authz"));
+        Assert.assertTrue(CALLED.contains("checkPermission|/user/authz"));
+        Assert.assertTrue(CALLED.contains("getAttributes|/user/authz"));
+        return null;
+      }
+    });
+    // Delete the files / folders covered by the snapshot, then re-check they
+    // are all readable correctly.
+    fs.delete(authz, true);
+    ugi.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        FileSystem fs = FileSystem.get(miniDFS.getConfiguration(0));
+
+        CALLED.clear();
+        fs.getFileStatus(new Path("/user/.snapshot"));
+        Assert.assertTrue(CALLED.contains("checkPermission|/user/.snapshot"));
+        // attribute provider never sees the .snapshot path directly.
+        Assert.assertFalse(CALLED.contains("getAttributes|/user/.snapshot"));
+
+        CALLED.clear();
+        fs.getFileStatus(new Path("/user/.snapshot/snapshot_1"));
+        Assert.assertTrue(
+            CALLED.contains("checkPermission|/user/.snapshot/snapshot_1"));
+        Assert.assertTrue(
+            CALLED.contains("getAttributes|/user/.snapshot/snapshot_1"));
+
+        CALLED.clear();
+        fs.getFileStatus(new Path("/user/.snapshot/snapshot_1/authz"));
+        Assert.assertTrue(CALLED
+            .contains("checkPermission|/user/.snapshot/snapshot_1/authz"));
+        Assert.assertTrue(CALLED.contains("getAttributes|/user/authz"));
+
+        return null;
+      }
+    });
+
   }
 }
