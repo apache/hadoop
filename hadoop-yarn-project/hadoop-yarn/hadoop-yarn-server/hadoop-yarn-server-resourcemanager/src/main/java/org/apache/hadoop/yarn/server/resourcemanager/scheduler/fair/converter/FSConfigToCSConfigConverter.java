@@ -270,7 +270,8 @@ public class FSConfigToCSConfigConverter {
     FSYarnSiteConverter siteConverter =
         new FSYarnSiteConverter();
     siteConverter.convertSiteProperties(inputYarnSiteConfig,
-        convertedYarnSiteConfig, drfUsed);
+        convertedYarnSiteConfig, drfUsed,
+        conversionOptions.isEnableAsyncScheduler());
 
     // See docs: "allow-undeclared-pools" and "user-as-default-queue" are
     // ignored if we have placement rules
