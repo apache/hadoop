@@ -47,13 +47,13 @@ public class TestAppNameMappingPlacementRule {
         SimpleGroupsMapping.class, GroupMappingServiceProvider.class);
   }
 
-  private void verifyQueueMapping(QueueMappingEntity queueMapping,
+  private void verifyQueueMapping(QueueMapping queueMapping,
       String user, String expectedQueue) throws YarnException {
     verifyQueueMapping(queueMapping, user,
         queueMapping.getQueue(), expectedQueue, false);
   }
 
-  private void verifyQueueMapping(QueueMappingEntity queueMapping,
+  private void verifyQueueMapping(QueueMapping queueMapping,
       String user, String inputQueue, String expectedQueue,
       boolean overwrite) throws YarnException {
     AppNameMappingPlacementRule rule = new AppNameMappingPlacementRule(
@@ -81,23 +81,31 @@ public class TestAppNameMappingPlacementRule {
         ctx != null ? ctx.getQueue() : inputQueue);
   }
 
+  public QueueMapping queueMappingBuilder(String source, String queue) {
+    return QueueMapping.QueueMappingBuilder.create()
+        .type(QueueMapping.MappingType.APPLICATION)
+        .source(source)
+        .queue(queue)
+        .build();
+  }
+
   @Test
   public void testMapping() throws YarnException {
     // simple base case for mapping user to queue
-    verifyQueueMapping(new QueueMappingEntity(APP_NAME,
+    verifyQueueMapping(queueMappingBuilder(APP_NAME,
         "q1"), "user_1", "q1");
-    verifyQueueMapping(new QueueMappingEntity("%application", "q2"), "user_1",
+    verifyQueueMapping(queueMappingBuilder("%application", "q2"), "user_1",
         "q2");
-    verifyQueueMapping(new QueueMappingEntity("%application", "%application"),
+    verifyQueueMapping(queueMappingBuilder("%application", "%application"),
         "user_1", APP_NAME);
 
     // specify overwritten, and see if user specified a queue, and it will be
     // overridden
-    verifyQueueMapping(new QueueMappingEntity(APP_NAME,
+    verifyQueueMapping(queueMappingBuilder(APP_NAME,
         "q1"), "1", "q2", "q1", true);
 
     // if overwritten not specified, it should be which user specified
-    verifyQueueMapping(new QueueMappingEntity(APP_NAME,
+    verifyQueueMapping(queueMappingBuilder(APP_NAME,
             "q1"), "1", "q2", "q2", false);
   }
 }

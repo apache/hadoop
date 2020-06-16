@@ -82,6 +82,7 @@ public class QueueMapping {
     this.source = builder.source;
     this.queue = builder.queue;
     this.parentQueue = builder.parentQueue;
+    this.fullPath = (parentQueue != null) ? (parentQueue + DOT + queue) : queue;
   }
 
   /**
@@ -89,8 +90,9 @@ public class QueueMapping {
    *
    */
   public enum MappingType {
-
-    USER("u"), GROUP("g");
+    USER("u"),
+    GROUP("g"),
+    APPLICATION("a");
 
     private final String type;
 
@@ -108,6 +110,7 @@ public class QueueMapping {
   private String source;
   private String queue;
   private String parentQueue;
+  private String fullPath;
 
   private final static String DELIMITER = ":";
 
@@ -132,7 +135,7 @@ public class QueueMapping {
   }
 
   public String getFullPath() {
-    return (parentQueue != null ? parentQueue + DOT + queue : queue);
+    return fullPath;
   }
 
   public QueuePath getQueuePath() {
@@ -197,4 +200,10 @@ public class QueueMapping {
     return type.toString() + DELIMITER + source + DELIMITER
         + (parentQueue != null ? parentQueue + "." + queue : queue);
   }
+
+  public String toTypelessString() {
+    return source + DELIMITER
+        + (parentQueue != null ? parentQueue + "." + queue : queue);
+  }
+
 }

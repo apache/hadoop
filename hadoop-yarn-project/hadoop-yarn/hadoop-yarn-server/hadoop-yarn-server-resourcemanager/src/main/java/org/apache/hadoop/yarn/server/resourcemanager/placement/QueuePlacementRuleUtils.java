@@ -65,8 +65,8 @@ public final class QueuePlacementRuleUtils {
     }
   }
 
-  public static QueueMappingEntity validateAndGetAutoCreatedQueueMapping(
-      CapacitySchedulerQueueManager queueManager, QueueMappingEntity mapping,
+  public static QueueMapping validateAndGetAutoCreatedQueueMapping(
+      CapacitySchedulerQueueManager queueManager, QueueMapping mapping,
       QueuePath queuePath) throws IOException {
     if (queuePath.hasParentQueue()) {
       //if parent queue is specified,
@@ -74,16 +74,19 @@ public final class QueuePlacementRuleUtils {
       validateQueueMappingUnderParentQueue(queueManager.getQueue(
           queuePath.getParentQueue()), queuePath.getParentQueue(),
           queuePath.getFullPath());
-      return new QueueMappingEntity(mapping.getSource(),
-          queuePath.getFullPath(), queuePath.getParentQueue());
+      return QueueMapping.QueueMappingBuilder.create()
+          .type(mapping.getType())
+          .source(mapping.getSource())
+          .queuePath(queuePath)
+          .build();
     }
 
     return null;
   }
 
-  public static QueueMappingEntity validateAndGetQueueMapping(
+  public static QueueMapping validateAndGetQueueMapping(
       CapacitySchedulerQueueManager queueManager, CSQueue queue,
-      QueueMappingEntity mapping, QueuePath queuePath) throws IOException {
+      QueueMapping mapping, QueuePath queuePath) throws IOException {
     if (!(queue instanceof LeafQueue)) {
       throw new IOException(
           "mapping contains invalid or non-leaf queue : " +
@@ -93,7 +96,7 @@ public final class QueuePlacementRuleUtils {
     if (queue instanceof AutoCreatedLeafQueue && queue
         .getParent() instanceof ManagedParentQueue) {
 
-      QueueMappingEntity newMapping = validateAndGetAutoCreatedQueueMapping(
+      QueueMapping newMapping = validateAndGetAutoCreatedQueueMapping(
           queueManager, mapping, queuePath);
       if (newMapping == null) {
         throw new IOException(
@@ -105,7 +108,7 @@ public final class QueuePlacementRuleUtils {
     return mapping;
   }
 
-  public static boolean isStaticQueueMapping(QueueMappingEntity mapping) {
+  public static boolean isStaticQueueMapping(QueueMapping mapping) {
     return !mapping.getQueue().contains(CURRENT_USER_MAPPING) && !mapping
         .getQueue().contains(PRIMARY_GROUP_MAPPING)
         && !mapping.getQueue().contains(SECONDARY_GROUP_MAPPING);
@@ -126,13 +129,13 @@ public final class QueuePlacementRuleUtils {
   }
 
   public static ApplicationPlacementContext getPlacementContext(
-      QueueMappingEntity mapping, CapacitySchedulerQueueManager queueManager)
+      QueueMapping mapping, CapacitySchedulerQueueManager queueManager)
       throws IOException {
     return getPlacementContext(mapping, mapping.getQueue(), queueManager);
   }
 
   public static ApplicationPlacementContext getPlacementContext(
-      QueueMappingEntity mapping, String leafQueueName,
+      QueueMapping mapping, String leafQueueName,
       CapacitySchedulerQueueManager queueManager) throws IOException {
 
     //leafQueue name no longer identifies a queue uniquely checking ambiguity

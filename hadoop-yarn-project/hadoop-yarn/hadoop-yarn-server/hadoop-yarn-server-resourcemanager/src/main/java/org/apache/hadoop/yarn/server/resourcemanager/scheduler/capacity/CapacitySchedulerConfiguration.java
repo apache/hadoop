@@ -42,7 +42,6 @@ import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.QueueMappingBuilder;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMappingEntity;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AppPriorityACLConfigurationParser.AppPriorityACLKeyType;
@@ -1034,12 +1033,12 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     setBoolean(ENABLE_QUEUE_MAPPING_OVERRIDE, overrideWithQueueMappings);
   }
 
-  public List<QueueMappingEntity> getQueueMappingEntity(
+  public List<QueueMapping> getQueueMappingEntity(
       String queueMappingSuffix) {
     String queueMappingName = buildQueueMappingRuleProperty(queueMappingSuffix);
 
-    List<QueueMappingEntity> mappings =
-        new ArrayList<QueueMappingEntity>();
+    List<QueueMapping> mappings =
+        new ArrayList<QueueMapping>();
     Collection<String> mappingsString =
         getTrimmedStringCollection(queueMappingName);
     for (String mappingValue : mappingsString) {
@@ -1053,10 +1052,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
       //Mappings should be consistent, and have the parent path parsed
       // from the beginning
-      QueueMappingEntity m = new QueueMappingEntity(
-          mapping[0],
-          QueuePlacementRuleUtils.extractQueuePath(mapping[1]));
-
+      QueueMapping m = QueueMapping.QueueMappingBuilder.create()
+          .type(QueueMapping.MappingType.APPLICATION)
+          .source(mapping[0])
+          .queuePath(QueuePlacementRuleUtils.extractQueuePath(mapping[1]))
+          .build();
       mappings.add(m);
     }
 
@@ -1071,15 +1071,15 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   @VisibleForTesting
-  public void setQueueMappingEntities(List<QueueMappingEntity> queueMappings,
+  public void setQueueMappingEntities(List<QueueMapping> queueMappings,
       String queueMappingSuffix) {
     if (queueMappings == null) {
       return;
     }
 
     List<String> queueMappingStrs = new ArrayList<>();
-    for (QueueMappingEntity mapping : queueMappings) {
-      queueMappingStrs.add(mapping.toString());
+    for (QueueMapping mapping : queueMappings) {
+      queueMappingStrs.add(mapping.toTypelessString());
     }
 
     String mappingRuleProp = buildQueueMappingRuleProperty(queueMappingSuffix);

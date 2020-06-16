@@ -48,7 +48,7 @@ public class AppNameMappingPlacementRule extends PlacementRule {
   private static final String QUEUE_MAPPING_NAME = "app-name";
 
   private boolean overrideWithQueueMappings = false;
-  private List<QueueMappingEntity> mappings = null;
+  private List<QueueMapping> mappings = null;
   protected CapacitySchedulerQueueManager queueManager;
 
   public AppNameMappingPlacementRule() {
@@ -56,7 +56,7 @@ public class AppNameMappingPlacementRule extends PlacementRule {
   }
 
   public AppNameMappingPlacementRule(boolean overrideWithQueueMappings,
-      List<QueueMappingEntity> newMappings) {
+      List<QueueMapping> newMappings) {
     this.overrideWithQueueMappings = overrideWithQueueMappings;
     this.mappings = newMappings;
   }
@@ -76,16 +76,16 @@ public class AppNameMappingPlacementRule extends PlacementRule {
     LOG.info(
         "Initialized App Name queue mappings, override: " + overrideWithQueueMappings);
 
-    List<QueueMappingEntity> queueMappings =
+    List<QueueMapping> queueMappings =
         conf.getQueueMappingEntity(QUEUE_MAPPING_NAME);
 
     // Get new user mappings
-    List<QueueMappingEntity> newMappings = new ArrayList<>();
+    List<QueueMapping> newMappings = new ArrayList<>();
 
     queueManager = schedulerContext.getCapacitySchedulerQueueManager();
 
     // check if mappings refer to valid queues
-    for (QueueMappingEntity mapping : queueMappings) {
+    for (QueueMapping mapping : queueMappings) {
       QueuePath queuePath = mapping.getQueuePath();
 
       if (isStaticQueueMapping(mapping)) {
@@ -109,7 +109,7 @@ public class AppNameMappingPlacementRule extends PlacementRule {
           //validate if parent queue is specified,
           // then it should exist and
           // be an instance of AutoCreateEnabledParentQueue
-          QueueMappingEntity newMapping =
+          QueueMapping newMapping =
               validateAndGetAutoCreatedQueueMapping(queueManager, mapping,
                   queuePath);
           if (newMapping == null) {
@@ -123,7 +123,7 @@ public class AppNameMappingPlacementRule extends PlacementRule {
           //   if its an instance of leaf queue
           //   if its an instance of auto created leaf queue,
           // then extract parent queue name and update queue mapping
-          QueueMappingEntity newMapping = validateAndGetQueueMapping(
+          QueueMapping newMapping = validateAndGetQueueMapping(
               queueManager, queue, mapping, queuePath);
           newMappings.add(newMapping);
         }
@@ -134,7 +134,7 @@ public class AppNameMappingPlacementRule extends PlacementRule {
         // if parent queue is specified, then
         //  parent queue exists and an instance of AutoCreateEnabledParentQueue
         //
-        QueueMappingEntity newMapping = validateAndGetAutoCreatedQueueMapping(
+        QueueMapping newMapping = validateAndGetAutoCreatedQueueMapping(
             queueManager, mapping, queuePath);
         if (newMapping != null) {
           newMappings.add(newMapping);
@@ -160,7 +160,7 @@ public class AppNameMappingPlacementRule extends PlacementRule {
 
   private ApplicationPlacementContext getAppPlacementContext(String user,
       String applicationName) throws IOException {
-    for (QueueMappingEntity mapping : mappings) {
+    for (QueueMapping mapping : mappings) {
       if (mapping.getSource().equals(CURRENT_APP_MAPPING)) {
         if (mapping.getQueue().equals(CURRENT_APP_MAPPING)) {
           return getPlacementContext(mapping, applicationName, queueManager);
