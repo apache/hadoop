@@ -127,12 +127,14 @@ public class RawLocalFileSystem extends FileSystem {
     /**
      * Minimal set of counters.
      */
-    private final CounterIOStatistics ioStatistics = counterIOStatistics(
-        STREAM_READ_BYTES,
-        STREAM_READ_EXCEPTIONS,
-        STREAM_READ_SEEK_OPERATIONS,
-        STREAM_READ_SKIP_OPERATIONS,
-        STREAM_READ_SKIP_BYTES);
+    private final CounterIOStatistics ioStatistics = counterIOStatistics()
+        .withCounters(
+            STREAM_READ_BYTES,
+            STREAM_READ_EXCEPTIONS,
+            STREAM_READ_SEEK_OPERATIONS,
+            STREAM_READ_SKIP_OPERATIONS,
+            STREAM_READ_SKIP_BYTES)
+        .build();
 
     public LocalFSFileInputStream(Path f) throws IOException {
       fis = new FileInputStream(pathToFile(f));
@@ -276,9 +278,11 @@ public class RawLocalFileSystem extends FileSystem {
     /**
      * Minimal set of counters.
      */
-    private final CounterIOStatistics ioStatistics = counterIOStatistics(
-        STREAM_WRITE_BYTES,
-        STREAM_WRITE_EXCEPTIONS);
+    private final CounterIOStatistics ioStatistics = counterIOStatistics()
+        .withCounters(
+            STREAM_WRITE_BYTES,
+            STREAM_WRITE_EXCEPTIONS)
+        .build();
 
     private LocalFSFileOutputStream(Path f, boolean append,
         FsPermission permission) throws IOException {

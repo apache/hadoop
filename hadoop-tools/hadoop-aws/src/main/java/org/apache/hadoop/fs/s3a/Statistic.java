@@ -175,6 +175,9 @@ public enum Statistic {
   STREAM_SEEK_OPERATIONS(
       StreamStatisticNames.STREAM_READ_SEEK_OPERATIONS,
       "Number of seek operations during stream IO."),
+  STREAM_READ_SEEK_POLICY_CHANGED(
+      StreamStatisticNames.STREAM_READ_SEEK_POLICY_CHANGED,
+      "Count of times the seek policy was dynamically changed"),
   STREAM_CLOSE_BYTES_READ(
       StreamStatisticNames.STREAM_READ_CLOSE_BYTES_READ,
       "Count of bytes read when closing streams during seek operations."),
@@ -201,7 +204,7 @@ public enum Statistic {
       StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS_PENDING,
       "Gauge of block/partitions uploads queued to be written"),
   STREAM_WRITE_BLOCK_UPLOADS_DATA_PENDING(
-      "stream_write_block_uploads_data_pending",
+      StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS_DATA_PENDING,
       "Gauge of block/partitions data uploads queued to be written"),
   STREAM_WRITE_TOTAL_TIME("stream_write_total_time",
       "Count of total time taken for uploads to complete"),

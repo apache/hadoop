@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.statistics.impl;
 
 import org.apache.hadoop.fs.statistics.MeanStatistic;
-import org.apache.hadoop.fs.statistics.StatisticsMap;
 
 /**
  * These statistics are dynamically evaluated by the supplied
@@ -38,19 +37,19 @@ final class DynamicIOStatistics
    * Counter evaluators.
    */
   private final EvaluatingStatisticsMap<Long> counters
-      = new EvaluatingStatisticsMap<>();
+      = new EvaluatingStatisticsMap<>("counters");
 
   private final EvaluatingStatisticsMap<Long> gauges
-      = new EvaluatingStatisticsMap<>();
+      = new EvaluatingStatisticsMap<>("gauges");
 
   private final EvaluatingStatisticsMap<Long> minumums
-      = new EvaluatingStatisticsMap<>();
+      = new EvaluatingStatisticsMap<>("minumums");
 
   private final EvaluatingStatisticsMap<Long> maximums
-      = new EvaluatingStatisticsMap<>();
+      = new EvaluatingStatisticsMap<>("maximums");
 
   private final EvaluatingStatisticsMap<MeanStatistic> meanStatistics
-      = new EvaluatingStatisticsMap<>(MeanStatistic::copy);
+      = new EvaluatingStatisticsMap<>("meanStatistics", MeanStatistic::copy);
 
   DynamicIOStatistics() {
   }
@@ -76,7 +75,7 @@ final class DynamicIOStatistics
   }
 
   @Override
-  public StatisticsMap<MeanStatistic> meanStatistics() {
+  public EvaluatingStatisticsMap<MeanStatistic> meanStatistics() {
     return meanStatistics;
   }
 

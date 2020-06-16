@@ -19,14 +19,15 @@
 package org.apache.hadoop.fs.statistics.impl;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
-
-import com.google.common.base.Preconditions;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.fs.statistics.IOStatistics;
-import org.apache.hadoop.fs.statistics.StatisticsMap;
+import org.apache.hadoop.fs.statistics.MeanStatistic;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.dynamicIOStatistics;
 
 /**
@@ -36,28 +37,97 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.dynamicIO
 final class CounterIOStatisticsImpl extends WrappedIOStatistics
     implements CounterIOStatistics {
 
-  private final Map<String, AtomicLong> atomicCounters = new HashMap<>();
+  private final Map<String, AtomicLong> counterMap = new HashMap<>();
+
+  private final Map<String, AtomicLong> gaugeMap = new HashMap<>();
+
+  private final Map<String, AtomicLong> minimumMap = new HashMap<>();
+
+  private final Map<String, AtomicLong> maximumMap = new HashMap<>();
+
+  private final Map<String, AtomicReference<MeanStatistic>> meanStatisticMap
+      = new HashMap<>();
 
   /**
-   * Constructor.
-   * @param keys keys to use for the counter statistics.
+   * Constructor invoked via the builder.
+   * @param counters keys to use for the counter statistics.
+   * @param gauges names of gauges
+   * @param minimums names of minimums
+   * @param maximums names of maximums
+   * @param meanStatistics names of mean statistics.
    */
-  CounterIOStatisticsImpl(String[] keys) {
+  CounterIOStatisticsImpl(
+      final List<String> counters,
+      final List<String> gauges,
+      final List<String> minimums,
+      final List<String> maximums,
+      final List<String> meanStatistics) {
     super(null);
     DynamicIOStatisticsBuilder builder = dynamicIOStatistics();
-    for (String key : keys) {
-      AtomicLong counter = new AtomicLong();
-      atomicCounters.put(key, counter);
-      builder.withAtomicLongCounter(key, counter);
+    if (counters != null) {
+      for (String key : counters) {
+        AtomicLong counter = new AtomicLong();
+        counterMap.put(key, counter);
+        builder.withAtomicLongCounter(key, counter);
+      }
+    }
+    if (gauges != null) {
+      for (String key : gauges) {
+        AtomicLong gauge = new AtomicLong();
+        gaugeMap.put(key, gauge);
+        builder.withAtomicLongGauge(key, gauge);
+      }
+    }
+    if (maximums != null) {
+      for (String key : maximums) {
+        AtomicLong maximum = new AtomicLong();
+        maximumMap.put(key, maximum);
+        builder.withAtomicLongMaximum(key, maximum);
+      }
+    }
+    if (minimums != null) {
+      for (String key : minimums) {
+        AtomicLong minimum = new AtomicLong();
+        minimumMap.put(key, minimum);
+        builder.withAtomicLongMinimum(key, minimum);
+      }
+    }
+    if (meanStatistics != null) {
+      for (String key : meanStatistics) {
+        AtomicReference<MeanStatistic> msr = new AtomicReference<>();
+        meanStatisticMap.put(key, msr);
+        builder.withMeanStatisticFunction(key, k -> {
+          AtomicReference<MeanStatistic> r
+              = meanStatisticMap.get(key);
+          return r != null ? r.get() : null;
+        });
+      }
     }
     setSource(builder.build());
   }
 
-  @Override
-  public long incrementCounter(final String key, final long value) {
-    AtomicLong counter = atomicCounters.get(key);
-    if (counter != null) {
-      return counter.getAndAdd(value);
+  /**
+   * Set an atomic long to a value.
+   * @param aLong atomic long; may be null
+   * @param value value to set to
+   */
+  private void setAtomicLong(final AtomicLong aLong, final long value) {
+    if (aLong != null) {
+      aLong.set(value);
+    }
+  }
+
+  /**
+   * increment an atomic long and return its value;
+   * null long is no-op returning 0
+   * @param aLong atomic long; may be null
+   * @param increment amount to increment; -ve for a decrement
+   * @return final value or 0
+   */
+  private long incAtomicLong(final AtomicLong aLong,
+      final long increment) {
+    if (aLong != null) {
+      return aLong.getAndAdd(increment);
     } else {
       return 0;
     }
@@ -65,48 +135,184 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
 
   @Override
   public void setCounter(final String key, final long value) {
-    AtomicLong counter = atomicCounters.get(key);
-    if (counter != null) {
-      counter.set(value);
+    setAtomicLong(counterMap.get(key), value);
+  }
+
+  @Override
+  public long incrementCounter(final String key, final long value) {
+    return incAtomicLong(counterMap.get(key), value);
+  }
+
+  @Override
+  public void setMaximum(final String key, final long value) {
+    setAtomicLong(maximumMap.get(key), value);
+  }
+
+  @Override
+  public long incrementMaximum(final String key, final long value) {
+    return incAtomicLong(maximumMap.get(key), value);
+  }
+
+  @Override
+  public void setMinimum(final String key, final long value) {
+    setAtomicLong(minimumMap.get(key), value);
+  }
+
+  @Override
+  public long incrementMinimum(final String key, final long value) {
+    return incAtomicLong(minimumMap.get(key), value);
+  }
+
+  @Override
+  public void setGauge(final String key, final long value) {
+    setAtomicLong(gaugeMap.get(key), value);
+  }
+
+  @Override
+  public long incrementGauge(final String key, final long value) {
+    return incAtomicLong(gaugeMap.get(key), value);
+  }
+
+  @Override
+  public void setMeanStatistic(final String key, final MeanStatistic value) {
+    final AtomicReference<MeanStatistic> ref = meanStatisticMap.get(key);
+    if (ref != null) {
+      ref.set(value);
     }
   }
 
+
   /**
-   * Reset all counters.
+   * Reset all statistics.
    * Unsynchronized.
    */
   @Override
-  public void resetCounters() {
-    atomicCounters.values().forEach(a -> a.set(0));
+  public void reset() {
+    counterMap.values().forEach(a -> a.set(0));
+    gaugeMap.values().forEach(a -> a.set(0));
+    minimumMap.values().forEach(a -> a.set(0));
+    maximumMap.values().forEach(a -> a.set(0));
+    meanStatisticMap.values().forEach(a -> a.set(new MeanStatistic()));
   }
 
   @Override
   public void copy(final IOStatistics source) {
-    StatisticsMap<Long> sourceCounters = source.counters();
-    atomicCounters.entrySet().forEach(e -> {
-      e.getValue().set(getCounterValue(source, e.getKey()));
+    counterMap.entrySet().forEach(e -> {
+      e.getValue().set(lookup(source.counters(), e.getKey()));
+    });
+    gaugeMap.entrySet().forEach(e -> {
+      e.getValue().set(lookup(source.gauges(), e.getKey()));
+    });
+    maximumMap.entrySet().forEach(e -> {
+      e.getValue().set(lookup(source.maximums(), e.getKey()));
+    });
+    minimumMap.entrySet().forEach(e -> {
+      e.getValue().set(lookup(source.minumums(), e.getKey()));
+    });
+    meanStatisticMap.entrySet().forEach(e -> {
+      String key = e.getKey();
+      MeanStatistic statisticValue = source.meanStatistics().get(key);
+      checkNotNull(statisticValue,
+          "No statistic %s", key);
+      e.getValue().set(statisticValue);
     });
   }
 
   @Override
-  public void aggregate(final IOStatistics source) {
-    atomicCounters.entrySet().forEach(e -> {
-      e.getValue().addAndGet(getCounterValue(source, e.getKey()));
+  public void aggregateAllStatistics(final IOStatistics source) {
+    counterMap.entrySet().forEach(e -> {
+      e.getValue().addAndGet(lookup(source.counters(), e.getKey()));
     });
   }
 
   @Override
-  public void subtract(final IOStatistics source) {
-    atomicCounters.entrySet().forEach(e -> {
-      e.getValue().addAndGet(-getCounterValue(source, e.getKey()));
+  public void subtractCounters(final IOStatistics source) {
+    counterMap.entrySet().forEach(e -> {
+      e.getValue().addAndGet(-lookup(source.counters(), e.getKey()));
     });
   }
 
-  private Long getCounterValue(final IOStatistics source, final String key) {
-    Long statisticValue = source.counters().get(key);
-    Preconditions.checkState(statisticValue != null,
-        "No statistic %s in IOStatistic source %s",
-        key, source);
-    return statisticValue;
+  /**
+   * Get a reference to the map type providing the
+   * value for a specific key, raising an exception if
+   * there is no entry for that key
+   * @param <T> type of map/return type.
+   * @param map map to look up
+   * @param key statistic name
+   * @return the value
+   * @throws NullPointerException if there is no entry of that name
+   */
+  private static <T> T lookup(final Map<String, T> map, String key) {
+    T val = map.get(key);
+    checkNotNull(val, "unknown statistic %s", key);
+    return val;
   }
+  
+  /**
+   * Get a reference to the atomic instance providing the
+   * value for a specific counter. This is useful if
+   * the value is passed around.
+   * @param key statistic name
+   * @return the reference
+   * @throws NullPointerException if there is no entry of that name
+   */
+  @Override
+  public AtomicLong getCounterReference(String key) {
+      return lookup(counterMap, key);
+  } 
+    
+  /**
+   * Get a reference to the atomic instance providing the
+   * value for a specific maximum. This is useful if
+   * the value is passed around.
+   * @param key statistic name
+   * @return the reference
+   * @throws NullPointerException if there is no entry of that name
+   */
+  @Override
+  public AtomicLong getMaximumReference(String key) {
+      return lookup(maximumMap, key);
+  } 
+    
+  /**
+   * Get a reference to the atomic instance providing the
+   * value for a specific minimum. This is useful if
+   * the value is passed around.
+   * @param key statistic name
+   * @return the reference
+   * @throws NullPointerException if there is no entry of that name
+   */
+  @Override
+  public AtomicLong getMinimumReference(String key) {
+      return lookup(minimumMap, key);
+  } 
+    
+  /**
+   * Get a reference to the atomic instance providing the
+   * value for a specific gauge. This is useful if
+   * the value is passed around.
+   * @param key statistic name
+   * @return the reference
+   * @throws NullPointerException if there is no entry of that name
+   */
+  @Override
+  public AtomicLong getGaugeReference(String key) {
+      return lookup(gaugeMap, key);
+  }
+
+  /**
+   * Get a reference to the atomic instance providing the
+   * value for a specific meanStatistic. This is useful if
+   * the value is passed around.
+   * @param key statistic name
+   * @return the reference
+   * @throws NullPointerException if there is no entry of that name
+   */
+  @Override
+  public AtomicReference<MeanStatistic> getMeanStatisticReference(String key) {
+      return lookup(meanStatisticMap, key);
+  }
+  
+  
+
 }

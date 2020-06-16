@@ -27,7 +27,6 @@ import java.util.function.Function;
 
 import org.apache.hadoop.fs.statistics.StatisticsMap;
 
-
 /**
  * This map evaluates on demand; it is the primary
  * mechanism by which statistics are collected.
@@ -46,11 +45,18 @@ final class EvaluatingStatisticsMap<E extends Serializable> implements
 
   private final Function<E, E> copyFn;
 
-  EvaluatingStatisticsMap() {
-    this(StatisticsMapSnapshot::passthrough);
+  /**
+   * Name for use in getter/error messages.
+   */
+  private final String name;
+
+  EvaluatingStatisticsMap(final String name) {
+    this(name, StatisticsMapSnapshot::passthrough);
   }
 
-  EvaluatingStatisticsMap(final Function<E, E> copyFn) {
+  EvaluatingStatisticsMap(final String name,
+      final Function<E, E> copyFn) {
+    this.name = name;
     this.copyFn = copyFn;
   }
 
@@ -133,5 +139,9 @@ final class EvaluatingStatisticsMap<E extends Serializable> implements
   @Override
   public Set<Entry<String, E>> entrySet() {
     return snapshot().entrySet();
+  }
+
+  String getName() {
+    return name;
   }
 }

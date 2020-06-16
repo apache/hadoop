@@ -158,5 +158,17 @@ public interface S3AInputStreamStatistics extends AutoCloseable,
 
   long getInputPolicy();
 
-  Long getStatistic(String name);
+  /**
+   * Get the value of a counter.
+   * @param name counter name
+   * @return the value or null if no matching counter was found.
+   */
+  Long lookupCounterValue(String name);
+
+  /**
+   * Get the value of a gauge.
+   * @param name gauge name
+   * @return the value or null if no matching gauge was found.
+   */
+  Long lookupGaugeValue(String name);
 }

@@ -58,7 +58,7 @@ public final class IOStatisticsBinding {
         .getLongStatistics();
     while (it.hasNext()) {
       StorageStatistics.LongStatistic next = it.next();
-      builder.withFunctionCounter(next.getName(),
+      builder.withLongFunctionCounter(next.getName(),
           k -> storageStatistics.getLong(k));
     }
     return builder.build();
@@ -91,14 +91,15 @@ public final class IOStatisticsBinding {
   }
 
   /**
-   * Create an IOStatistics instance from a varargs list of counter keys.
+   * Create a builder from an IOStatistics instance
+   * which creates the appropriate counters, gauges etc in maps
+   * of atomic references.
    * This is the simplest way to build an IOStatistics instance as all
    * the details are handled internally.
    *
-   * @param keys key to use for the counter statistics.
-   * @return a new instance.
+   * @return a builder instance.
    */
-  public static CounterIOStatistics counterIOStatistics(String... keys) {
-    return new CounterIOStatisticsImpl(keys);
+  public static CounterIOStatisticsBuilder counterIOStatistics() {
+    return new CounterIOStatisticsBuilderImpl();
   }
 }

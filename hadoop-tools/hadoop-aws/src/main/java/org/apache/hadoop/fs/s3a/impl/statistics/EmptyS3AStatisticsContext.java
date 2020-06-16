@@ -260,7 +260,12 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     }
 
     @Override
-    public Long getStatistic(final String name) {
+    public Long lookupCounterValue(final String name) {
+      return 0L;
+    }
+
+    @Override
+    public Long lookupGaugeValue(final String name) {
       return 0L;
     }
 
@@ -399,6 +404,16 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     @Override
     public long getBytesWritten() {
       return 0;
+    }
+
+    @Override
+    public Long lookupCounterValue(final String name) {
+      return 0L;
+    }
+
+    @Override
+    public Long lookupGaugeValue(final String name) {
+      return 0L;
     }
 
     @Override

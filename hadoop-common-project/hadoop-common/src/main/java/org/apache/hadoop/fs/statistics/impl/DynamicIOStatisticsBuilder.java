@@ -24,6 +24,7 @@ import java.util.function.Function;
 import java.util.function.ToLongFunction;
 
 import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.MeanStatistic;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -42,16 +43,17 @@ public class DynamicIOStatisticsBuilder {
   private DynamicIOStatistics instance = new DynamicIOStatistics();
 
   /**
-   * Add a new evaluator to the statistics being built up.
-   * @param key key of this statistic
-   * @param eval evaluator for the statistic
-   * @return the builder.
+   * Build the IOStatistics instance.
+   * @return an instance.
+   * @throws IllegalStateException if the builder has already been built.
    */
-  public DynamicIOStatisticsBuilder withFunctionCounter(String key,
-      Function<String, Long> eval) {
-    activeInstance().counters().addFunction(key, eval);
-    return this;
+  public IOStatistics build() {
+    final DynamicIOStatistics stats = activeInstance();
+    // stop the builder from working any more.
+    instance = null;
+    return stats;
   }
+
 
   /**
    * Get the statistics instance.
@@ -64,7 +66,19 @@ public class DynamicIOStatisticsBuilder {
   }
 
   /**
-   * Add a statistic to dynamically return the
+   * Add a new evaluator to the counter statistics.
+   * @param key key of this statistic
+   * @param eval evaluator for the statistic
+   * @return the builder.
+   */
+  public DynamicIOStatisticsBuilder withLongFunctionCounter(String key,
+      ToLongFunction<String> eval) {
+    activeInstance().counters().addFunction(key, k -> eval.applyAsLong(k));
+    return this;
+  }
+
+  /**
+   * Add a counter statistic to dynamically return the
    * latest value of the source.
    * @param key key of this statistic
    * @param source atomic long counter
@@ -72,12 +86,12 @@ public class DynamicIOStatisticsBuilder {
    */
   public DynamicIOStatisticsBuilder withAtomicLongCounter(String key,
       AtomicLong source) {
-    activeInstance().counters().addFunction(key, s -> source.get());
+    withLongFunctionCounter(key, s -> source.get());
     return this;
   }
 
   /**
-   * Add a statistic to dynamically return the
+   * Add a counter statistic to dynamically return the
    * latest value of the source.
    * @param key key of this statistic
    * @param source atomic int counter
@@ -90,19 +104,7 @@ public class DynamicIOStatisticsBuilder {
   }
 
   /**
-   * Add a new evaluator to the statistics being built up.
-   * @param key key of this statistic
-   * @param eval evaluator for the statistic
-   * @return the builder.
-   */
-  public DynamicIOStatisticsBuilder withLongFunctionCounter(String key,
-      ToLongFunction<String> eval) {
-    activeInstance().counters().addFunction(key, k -> eval.applyAsLong(k));
-    return this;
-  }
-
-  /**
-   * Build a dynamic statistic from a
+   * Build a dynamic counter statistic from a
    * {@link MutableCounterLong}.
    * @param key key of this statistic
    * @param source mutable long counter
@@ -115,14 +117,132 @@ public class DynamicIOStatisticsBuilder {
   }
 
   /**
-   * Build the IOStatistics instance.
-   * @return an instance.
-   * @throws IllegalStateException if the builder has already been built.
+   * Add a new evaluator to the gauge statistics.
+   * @param key key of this statistic
+   * @param eval evaluator for the statistic
+   * @return the builder.
    */
-  public IOStatistics build() {
-    final DynamicIOStatistics stats = activeInstance();
-    // stop the builder from working any more.
-    instance = null;
-    return stats;
+  public DynamicIOStatisticsBuilder withLongFunctionGauge(String key,
+      ToLongFunction<String> eval) {
+    activeInstance().gauges().addFunction(key, k -> eval.applyAsLong(k));
+    return this;
   }
+
+  /**
+   * Add a gauge statistic to dynamically return the
+   * latest value of the source.
+   * @param key key of this statistic
+   * @param source atomic long gauge
+   * @return the builder.
+   */
+  public DynamicIOStatisticsBuilder withAtomicLongGauge(String key,
+      AtomicLong source) {
+    withLongFunctionGauge(key, s -> source.get());
+    return this;
+  }
+
+  /**
+   * Add a gauge statistic to dynamically return the
+   * latest value of the source.
+   * @param key key of this statistic
+   * @param source atomic int gauge
+   * @return the builder.
+   */
+  public DynamicIOStatisticsBuilder withAtomicIntegerGauge(String key,
+      AtomicInteger source) {
+    withLongFunctionGauge(key, s -> source.get());
+    return this;
+  }
+
+  /**
+   * Add a new evaluator to the minumum statistics.
+   * @param key key of this statistic
+   * @param eval evaluator for the statistic
+   * @return the builder.
+   */
+  public DynamicIOStatisticsBuilder withLongFunctionMinumum(String key,
+      ToLongFunction<String> eval) {
+    activeInstance().minumums().addFunction(key, k -> eval.applyAsLong(k));
+    return this;
+  }
+
+  /**
+   * Add a minumum statistic to dynamically return the
+   * latest value of the source.
+   * @param key key of this statistic
+   * @param source atomic long minumum
+   * @return the builder.
+   */
+  public DynamicIOStatisticsBuilder withAtomicLongMinimum(String key,
+      AtomicLong source) {
+    withLongFunctionMinumum(key, s -> source.get());
+    return this;
+  }
+
+  /**
+   * Add a minumum statistic to dynamically return the
+   * latest value of the source.
+   * @param key key of this statistic
+   * @param source atomic int minumum
+   * @return the builder.
+   */
+  public DynamicIOStatisticsBuilder withAtomicIntegerMinumum(String key,
+      AtomicInteger source) {
+    withLongFunctionMinumum(key, s -> source.get());
+    return this;
+  }
+
+
+  /**
+   * Add a new evaluator to the maximum statistics.
+   * @param key key of this statistic
+   * @param eval evaluator for the statistic
+   * @return the builder.
+   */
+  public DynamicIOStatisticsBuilder withLongFunctionMaximum(String key,
+      ToLongFunction<String> eval) {
+    activeInstance().maximums().addFunction(key, k -> eval.applyAsLong(k));
+    return this;
+  }
+
+  /**
+   * Add a maximum statistic to dynamically return the
+   * latest value of the source.
+   * @param key key of this statistic
+   * @param source atomic long maximum
+   * @return the builder.
+   */
+  public DynamicIOStatisticsBuilder withAtomicLongMaximum(String key,
+      AtomicLong source) {
+    withLongFunctionMaximum(key, s -> source.get());
+    return this;
+  }
+
+  /**
+   * Add a maximum statistic to dynamically return the
+   * latest value of the source.
+   * @param key key of this statistic
+   * @param source atomic int maximum
+   * @return the builder.
+   */
+  public DynamicIOStatisticsBuilder withAtomicIntegerMaximum(String key,
+      AtomicInteger source) {
+    withLongFunctionMaximum(key, s -> source.get());
+    return this;
+  }
+
+  /**
+   * Add a new evaluator to the mean statistics.
+   * This is a function which must return the mean and the sample count.
+   * @param key key of this statistic
+   * @param eval evaluator for the statistic
+   * @return the builder.
+   */
+  public DynamicIOStatisticsBuilder withMeanStatisticFunction(String key,
+      Function<String, MeanStatistic> eval) {
+    activeInstance().meanStatistics().addFunction(key, k -> eval.apply(k));
+    return this;
+  }
+
+
 }

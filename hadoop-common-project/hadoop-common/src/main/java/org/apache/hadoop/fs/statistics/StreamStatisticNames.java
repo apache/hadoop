@@ -96,6 +96,10 @@ public final class StreamStatisticNames {
       = "stream_read_seek_forward_operations";
 
   /** {@value}. */
+  public static final String STREAM_READ_SEEK_POLICY_CHANGED =
+      "stream_read_seek_policy_changed";
+
+  /** {@value}. */
   public static final String STREAM_READ_SEEK_OPERATIONS =
       "stream_read_seek_operations";
 

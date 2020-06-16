@@ -23,6 +23,11 @@ import java.util.Objects;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+/**
+ * A mean statistic.
+ * The sample size is required so that means can be aggregated.
+ * If a statistic has 0 samples then it is considered to be empty.
+ */
 public final class MeanStatistic implements Serializable, Cloneable {
 
   private static final long serialVersionUID = 567888327998615425L;
@@ -31,46 +36,84 @@ public final class MeanStatistic implements Serializable, Cloneable {
 
   private long samples;
 
+  /**
+   * Constructor.
+   * If the sample count is 0, the mean is set to 0.
+   * @param mean mean value
+   * @param samples sample count.
+   */
   public MeanStatistic(final double mean, final long samples) {
-    setMean(mean);
-    setSamples(samples);
+    if (samples != 0) {
+      checkArgument(mean >= 0);
+      checkArgument(samples > 0);
+      this.mean = mean;
+      this.samples = samples;
+    }
   }
 
+  /**
+   * Create from another statistic.
+   * @param that source
+   */
+  public MeanStatistic(MeanStatistic that) {
+    this(that.mean, that.samples);
+  }
+
+  /**
+   * Create an empty statistic.
+   */
   public MeanStatistic() {
   }
 
+  /**
+   * Get the mean value.
+   * @return the mean
+   */
   public double getMean() {
     return mean;
   }
 
-  public void setMean(final double mean) {
-    checkArgument(mean >= 0);
-    this.mean = mean;
-  }
-
+  /**
+   * Get the sample count.
+   * @return the sample count; 0 means empty
+   */
   public long getSamples() {
     return samples;
   }
 
-  public void setSamples(final long samples) {
-    checkArgument(samples > 0);
-    this.samples = samples;
+  /**
+   * Is a statistic empty?
+   * @return true if the sample count is 0
+   */
+  public boolean isEmpty() {
+    return samples == 0;
   }
 
   /**
    * Add another mean statistic to create a new statistic.
+   * When adding two statistics, if either is empty then
+   * a copy of the non-empty statistic is returned.
+   * If both are empty then a new empty statistic is returned.
+   *
    * @param other other value
    * @return the aggregate mean
    */
   public MeanStatistic add(final MeanStatistic other) {
-    double lSum = mean * samples;
+    if (isEmpty()) {
+      new MeanStatistic(other);
+    }
+    if (other.isEmpty()) {
+      new MeanStatistic(other);
+    }
     long rSamples = other.samples;
     double rSum = other.mean * rSamples;
     long totalSamples = samples + rSamples;
-    checkArgument(totalSamples > 0, "total number of samples is %s",
-        totalSamples);
-    double sum = lSum + rSum;
-    return new MeanStatistic(sum / totalSamples, totalSamples);
+    if (totalSamples == 0) {
+      return new MeanStatistic(0, 0);
+    } else {
+      double sum = mean * samples + rSum;
+      return new MeanStatistic(sum / totalSamples, totalSamples);
+    }
   }
 
   @Override
@@ -89,7 +132,7 @@ public final class MeanStatistic implements Serializable, Cloneable {
 
   @Override
   public MeanStatistic clone() {
-    return new MeanStatistic(mean, samples);
+    return new MeanStatistic(this);
   }
 
   @Override
@@ -103,6 +146,6 @@ public final class MeanStatistic implements Serializable, Cloneable {
   }
 
   public MeanStatistic copy() {
-    return new MeanStatistic(mean, samples);
+    return new MeanStatistic(this);
   }
 }
