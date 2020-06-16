@@ -46,6 +46,20 @@ public class INodesInPath {
         Arrays.equals(HdfsServerConstants.DOT_SNAPSHOT_DIR_BYTES, pathComponent);
   }
 
+  /**
+   * Returns true if the given path component starts with the same byte stream
+   * as {@link HdfsConstants#DOT_SNAPSHOT_DIR}, indicating the component
+   * starts with a DotSnapshot directory.
+   * @param pathComponent Bytes representing the pathComponent
+   * @return True is the component starts with
+   *         {@link HdfsConstants#DOT_SNAPSHOT_DIR} and false otherwise.
+   */
+  private static boolean isDotSnapshotDirPrefix(byte[] pathComponent) {
+    return pathComponent != null &&
+        isDotSnapshotDir(Arrays.copyOf(
+            pathComponent, HdfsServerConstants.DOT_SNAPSHOT_DIR_BYTES.length));
+  }
+
   private static INode[] getINodes(final INode inode) {
     int depth = 0, index;
     INode tmp = inode;
@@ -133,6 +147,27 @@ public class INodesInPath {
   static INodesInPath resolve(final INodeDirectory startingDir,
       final byte[][] components) {
     return resolve(startingDir, components, false);
+  }
+
+  /**
+   * Retrieves the existing INodes from a path, starting at the root directory.
+   * The root directory is located by following the parent link in the inode
+   * recursively until the final root inode is found.
+   * The inodes returned will depend upon the output of inode.getFullPathName().
+   * For a snapshot path, like /data/.snapshot/snap1, it will be resolved to:
+   *     [null, data, .snapshot/snap1]
+   * For a file in the snapshot, as inode.getFullPathName resolves the snapshot
+   * information, the returned inodes for a path like /data/.snapshot/snap1/d1
+   * would be:
+   *     [null, data, d1]
+   * @param inode the {@link INode} to be resolved
+   * @return INodesInPath
+   */
+  static INodesInPath resolveFromRoot(INode inode) {
+    INode[] inodes = getINodes(inode);
+    byte[][] paths = INode.getPathComponents(inode.getFullPathName());
+    INodeDirectory rootDir = inodes[0].asDirectory();
+    return resolve(rootDir, paths);
   }
 
   static INodesInPath resolve(final INodeDirectory startingDir,
@@ -460,6 +495,13 @@ public class INodesInPath {
    */
   boolean isDotSnapshotDir() {
     return isDotSnapshotDir(getLastLocalName());
+  }
+
+  /**
+   * @return Return true if .snapshot is the prefix of the last path component.
+   */
+  boolean isDotSnapshotDirPrefix() {
+    return isDotSnapshotDirPrefix(getLastLocalName());
   }
 
   /**
