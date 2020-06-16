@@ -22,7 +22,7 @@ import org.apache.hadoop.fs.StorageStatistics.CommonStatisticNames;
 
 /**
  * Statistic which are collected in Abfs.
- * Available as metrics in {@link AbfsInstrumentation}.
+ * Available as metrics in {@link AbfsCountersImpl}.
  */
 public enum AbfsStatistic {
 

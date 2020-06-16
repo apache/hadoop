@@ -105,7 +105,7 @@ public final class AbfsClientThrottlingIntercept {
    * maximize throughput.
    */
   static void sendingRequest(AbfsRestOperationType operationType,
-      AbfsCounters statistics) {
+      AbfsCounters abfsCounters) {
     if (!isAutoThrottlingEnabled) {
       return;
     }
@@ -113,14 +113,14 @@ public final class AbfsClientThrottlingIntercept {
     switch (operationType) {
       case ReadFile:
         if (singleton.readThrottler.suspendIfNecessary()
-            && statistics != null) {
-          statistics.incrementCounter(AbfsStatistic.READ_THROTTLES, 1);
+            && abfsCounters != null) {
+          abfsCounters.incrementCounter(AbfsStatistic.READ_THROTTLES, 1);
         }
         break;
       case Append:
         if (singleton.writeThrottler.suspendIfNecessary()
-            && statistics != null) {
-          statistics.incrementCounter(AbfsStatistic.WRITE_THROTTLES, 1);
+            && abfsCounters != null) {
+          abfsCounters.incrementCounter(AbfsStatistic.WRITE_THROTTLES, 1);
         }
         break;
       default:

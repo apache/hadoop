@@ -195,7 +195,7 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
       IOUtils.cleanupWithLogger(LOG, out, in);
     }
 
-    // To close the streams 1 response is gotten.
+    // To close the streams 1 response is received.
     getResponses++;
 
     try {

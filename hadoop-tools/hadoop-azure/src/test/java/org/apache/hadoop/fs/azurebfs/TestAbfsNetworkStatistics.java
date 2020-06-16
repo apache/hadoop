@@ -42,7 +42,7 @@ public class TestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
         + "throttle statistics in Abfs");
 
     AbfsCounters statistics =
-        new AbfsInstrumentation(getFileSystem().getUri());
+        new AbfsCountersImpl(getFileSystem().getUri());
 
     /*
      * Calling the throttle methods to check correct summation and values of

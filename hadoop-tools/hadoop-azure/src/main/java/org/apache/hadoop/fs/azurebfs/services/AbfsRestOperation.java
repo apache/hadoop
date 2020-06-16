@@ -67,7 +67,7 @@ public class AbfsRestOperation {
   private int retryCount = 0;
 
   private AbfsHttpOperation result;
-  private AbfsCounters statistics;
+  private AbfsCounters abfsCounters;
 
   public AbfsHttpOperation getResult() {
     return result;
@@ -133,7 +133,7 @@ public class AbfsRestOperation {
     this.hasRequestBody = (AbfsHttpConstants.HTTP_METHOD_PUT.equals(method)
             || AbfsHttpConstants.HTTP_METHOD_PATCH.equals(method));
     this.sasToken = sasToken;
-    this.statistics = client.getStatistics();
+    this.abfsCounters = client.getAbfsCounters();
   }
 
   /**
@@ -163,7 +163,7 @@ public class AbfsRestOperation {
     this.buffer = buffer;
     this.bufferOffset = bufferOffset;
     this.bufferLength = bufferLength;
-    this.statistics = client.getStatistics();
+    this.abfsCounters = client.getAbfsCounters();
   }
 
   /**
@@ -234,7 +234,7 @@ public class AbfsRestOperation {
       // dump the headers
       AbfsIoUtils.dumpHeadersToDebugLog("Request Headers",
           httpOperation.getConnection().getRequestProperties());
-      AbfsClientThrottlingIntercept.sendingRequest(operationType, statistics);
+      AbfsClientThrottlingIntercept.sendingRequest(operationType, abfsCounters);
 
       if (hasRequestBody) {
         // HttpUrlConnection requires
@@ -294,8 +294,8 @@ public class AbfsRestOperation {
    * @param value     the value to be incremented by.
    */
   private void incrementCounter(AbfsStatistic statistic, long value) {
-    if (statistics != null) {
-      statistics.incrementCounter(statistic, value);
+    if (abfsCounters != null) {
+      abfsCounters.incrementCounter(statistic, value);
     }
   }
 }

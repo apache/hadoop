@@ -146,7 +146,7 @@ public class AzureBlobFileSystemStore implements Closeable {
 
   public AzureBlobFileSystemStore(URI uri, boolean isSecureScheme,
                                   Configuration configuration,
-                                  AbfsCounters instrumentation) throws IOException {
+                                  AbfsCounters abfsCounters) throws IOException {
     this.uri = uri;
     String[] authorityParts = authorityParts(uri);
     final String fileSystemName = authorityParts[0];
@@ -184,7 +184,7 @@ public class AzureBlobFileSystemStore implements Closeable {
     boolean usingOauth = (authType == AuthType.OAuth);
     boolean useHttps = (usingOauth || abfsConfiguration.isHttpsAlwaysUsed()) ? true : isSecureScheme;
     this.abfsPerfTracker = new AbfsPerfTracker(fileSystemName, accountName, this.abfsConfiguration);
-    initializeClient(uri, fileSystemName, accountName, useHttps, instrumentation);
+    initializeClient(uri, fileSystemName, accountName, useHttps, abfsCounters);
     final Class<? extends IdentityTransformerInterface> identityTransformerClass =
         configuration.getClass(FS_AZURE_IDENTITY_TRANSFORM_CLASS, IdentityTransformer.class,
             IdentityTransformerInterface.class);
@@ -1173,7 +1173,7 @@ public class AzureBlobFileSystemStore implements Closeable {
   }
 
   private void initializeClient(URI uri, String fileSystemName,
-      String accountName, boolean isSecure, AbfsCounters instrumentation)
+      String accountName, boolean isSecure, AbfsCounters abfsCounters)
       throws IOException {
     if (this.client != null) {
       return;
@@ -1217,11 +1217,11 @@ public class AzureBlobFileSystemStore implements Closeable {
     if (tokenProvider != null) {
       this.client = new AbfsClient(baseUrl, creds, abfsConfiguration,
           new ExponentialRetryPolicy(abfsConfiguration.getMaxIoRetries()),
-          tokenProvider, abfsPerfTracker, instrumentation);
+          tokenProvider, abfsPerfTracker, abfsCounters);
     } else {
       this.client = new AbfsClient(baseUrl, creds, abfsConfiguration,
           new ExponentialRetryPolicy(abfsConfiguration.getMaxIoRetries()),
-          sasTokenProvider, abfsPerfTracker, instrumentation);
+          sasTokenProvider, abfsPerfTracker, abfsCounters);
     }
     LOG.trace("AbfsClient init complete");
   }
