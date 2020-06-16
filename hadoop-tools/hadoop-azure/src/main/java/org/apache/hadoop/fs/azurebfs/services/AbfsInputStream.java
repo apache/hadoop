@@ -69,7 +69,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private boolean closed = false;
 
   /** Stream statistics. */
-  private final AbfsInputStreamStatisticsImpl streamStatistics;
+  private final AbfsInputStreamStatistics streamStatistics;
 
   public AbfsInputStream(
           final AbfsClient client,
@@ -89,7 +89,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.readAheadEnabled = true;
     this.cachedSasToken = new CachedSASToken(
         abfsInputStreamContext.getSasTokenRenewPeriodForStreamsInSeconds());
-    this.streamStatistics = new AbfsInputStreamStatisticsImpl();
+    this.streamStatistics = abfsInputStreamContext.getStreamStatistics();
   }
 
   public String getPath() {
@@ -121,7 +121,9 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     int currentLen = len;
     int lastReadBytes;
     int totalReadBytes = 0;
-    streamStatistics.readOperationStarted(off, len);
+    if (streamStatistics != null) {
+      streamStatistics.readOperationStarted(off, len);
+    }
     incrementReadOps();
     do {
       lastReadBytes = readOneBlock(b, currentOff, currentLen);
@@ -199,7 +201,9 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     if (statistics != null) {
       statistics.incrementBytesRead(bytesToRead);
     }
-    streamStatistics.bytesRead(bytesToRead);
+    if (streamStatistics != null) {
+      streamStatistics.bytesRead(bytesToRead);
+    }
     return bytesToRead;
   }
 
@@ -232,7 +236,9 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       if (receivedBytes > 0) {
         incrementReadOps();
         LOG.debug("Received data from read ahead, not doing remote read");
-        streamStatistics.bytesReadFromBuffer(receivedBytes);
+        if (streamStatistics != null) {
+          streamStatistics.bytesReadFromBuffer(receivedBytes);
+        }
         return receivedBytes;
       }
 
@@ -270,10 +276,11 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       LOG.trace("Trigger client.read for path={} position={} offset={} length={}", path, position, offset, length);
       op = client.read(path, position, b, offset, length, tolerateOobAppends ? "*" : eTag, cachedSasToken.get());
       cachedSasToken.update(op.getSasToken());
-      streamStatistics.remoteReadOperation();
-      LOG.debug(
-          "issuing HTTP GET request params position = {} b.length = {} offset = {} length = {}",
-          position, b.length, offset, length);
+      if (streamStatistics != null) {
+        streamStatistics.remoteReadOperation();
+      }
+      LOG.debug("issuing HTTP GET request params position = {} b.length = {} "
+          + "offset = {} length = {}", position, b.length, offset, length);
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
       incrementReadOps();
     } catch (AzureBlobFileSystemException ex) {
@@ -321,11 +328,15 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       throw new EOFException(FSExceptionMessages.CANNOT_SEEK_PAST_EOF);
     }
 
-    streamStatistics.seek(n, fCursor);
+    if (streamStatistics != null) {
+      streamStatistics.seek(n, fCursor);
+    }
 
     if (n>=fCursor-limit && n<=fCursor) { // within buffer
       bCursor = (int) (n-(fCursor-limit));
-      streamStatistics.seekInBuffer();
+      if (streamStatistics != null) {
+        streamStatistics.seekInBuffer();
+      }
       return;
     }
 
@@ -477,7 +488,13 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.cachedSasToken = cachedSasToken;
   }
 
-  public AbfsInputStreamStatisticsImpl getStreamStatistics() {
+  /**
+   * Getter for AbfsInputStreamStatistics.
+   *
+   * @return an instance of AbfsInputStreamStatistics.
+   */
+  @VisibleForTesting
+  public AbfsInputStreamStatistics getStreamStatistics() {
     return streamStatistics;
   }
 
