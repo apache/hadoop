@@ -93,10 +93,10 @@ public class NNStorageRetentionManager {
   }
 
   void purgeCheckpoints(NameNodeFile nnf) throws IOException {
-    purgeCheckpoinsAfter(nnf, -1);
+    purgeCheckpointsAfter(nnf, -1);
   }
 
-  void purgeCheckpoinsAfter(NameNodeFile nnf, long fromTxId)
+  void purgeCheckpointsAfter(NameNodeFile nnf, long fromTxId)
       throws IOException {
     FSImageTransactionalStorageInspector inspector =
         new FSImageTransactionalStorageInspector(EnumSet.of(nnf));
