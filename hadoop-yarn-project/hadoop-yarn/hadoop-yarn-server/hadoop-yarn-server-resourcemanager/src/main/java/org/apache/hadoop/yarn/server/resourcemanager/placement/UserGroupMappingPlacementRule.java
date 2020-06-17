@@ -388,7 +388,6 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
       //at this point mapping.getQueueName() return only the queue name, since
       //the config parsing have been changed making QueueMapping more consistent
 
-      QueuePath queuePath = mapping.getQueuePath();
       if (isStaticQueueMapping(mapping)) {
         //Try getting queue by its full path name, if it exists it is a static
         //leaf queue indeed, without any auto creation magic
@@ -409,7 +408,7 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
           // then it should exist and
           // be an instance of AutoCreateEnabledParentQueue
           QueueMapping newMapping = validateAndGetAutoCreatedQueueMapping(
-              queueManager, mapping, queuePath);
+              queueManager, mapping);
           if (newMapping == null) {
             throw new IOException(
                 "mapping contains invalid or non-leaf queue " + mapping
@@ -422,7 +421,7 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
           //   if its an instance of auto created leaf queue,
           // then extract parent queue name and update queue mapping
           QueueMapping newMapping = validateAndGetQueueMapping(queueManager,
-              queue, mapping, queuePath);
+              queue, mapping);
           newMappings.add(newMapping);
         }
       } else{
@@ -433,7 +432,7 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
         //  parent queue exists and an instance of AutoCreateEnabledParentQueue
         //
         QueueMapping newMapping = validateAndGetAutoCreatedQueueMapping(
-            queueManager, mapping, queuePath);
+            queueManager, mapping);
         if (newMapping != null) {
           newMappings.add(newMapping);
         } else{
@@ -455,7 +454,7 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
 
   private static QueueMapping validateAndGetQueueMapping(
       CapacitySchedulerQueueManager queueManager, CSQueue queue,
-      QueueMapping mapping, QueuePath queuePath) throws IOException {
+      QueueMapping mapping) throws IOException {
     if (!(queue instanceof LeafQueue)) {
       throw new IOException(
           "mapping contains invalid or non-leaf queue : " +
@@ -466,7 +465,7 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
         .getParent() instanceof ManagedParentQueue) {
 
       QueueMapping newMapping = validateAndGetAutoCreatedQueueMapping(
-          queueManager, mapping, queuePath);
+          queueManager, mapping);
       if (newMapping == null) {
         throw new IOException(
             "mapping contains invalid or non-leaf queue "
@@ -482,29 +481,29 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
   }
 
   private static QueueMapping validateAndGetAutoCreatedQueueMapping(
-      CapacitySchedulerQueueManager queueManager, QueueMapping mapping,
-      QueuePath queuePath) throws IOException {
-    if (queuePath.hasParentQueue()
-        && (queuePath.getParentQueue().equals(PRIMARY_GROUP_MAPPING)
-            || queuePath.getParentQueue().equals(SECONDARY_GROUP_MAPPING))) {
+      CapacitySchedulerQueueManager queueManager, QueueMapping mapping)
+      throws IOException {
+    if (mapping.hasParentQueue()
+        && (mapping.getParentQueue().equals(PRIMARY_GROUP_MAPPING)
+            || mapping.getParentQueue().equals(SECONDARY_GROUP_MAPPING))) {
       // dynamic parent queue
       return QueueMappingBuilder.create()
           .type(mapping.getType())
           .source(mapping.getSource())
-          .queue(queuePath.getLeafQueue())
-          .parentQueue(queuePath.getParentQueue())
+          .queue(mapping.getQueue())
+          .parentQueue(mapping.getParentQueue())
           .build();
-    } else if (queuePath.hasParentQueue()) {
+    } else if (mapping.hasParentQueue()) {
       //if parent queue is specified,
       // then it should exist and be an instance of ManagedParentQueue
       QueuePlacementRuleUtils.validateQueueMappingUnderParentQueue(
-              queueManager.getQueue(queuePath.getParentQueue()),
-          queuePath.getParentQueue(), queuePath.getLeafQueue());
+              queueManager.getQueue(mapping.getParentQueue()),
+          mapping.getParentQueue(), mapping.getQueue());
       return QueueMappingBuilder.create()
           .type(mapping.getType())
           .source(mapping.getSource())
-          .queue(queuePath.getLeafQueue())
-          .parentQueue(queuePath.getParentQueue())
+          .queue(mapping.getQueue())
+          .parentQueue(mapping.getParentQueue())
           .build();
     }
 
