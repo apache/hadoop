@@ -29,12 +29,12 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsUriQueryBuilder;
  * Test Delegation SAS generator.
  */
 public class DelegationSASGenerator extends SASGenerator {
-  private String skoid;
-  private String sktid;
-  private String skt;
-  private String ske;
+  private final String skoid;
+  private final String sktid;
+  private final String skt;
+  private final String ske;
   private final String sks = "b";
-  private String skv;
+  private final String skv;
 
   public DelegationSASGenerator(byte[] userDelegationKey, String skoid, String sktid, String skt, String ske, String skv) {
     super(userDelegationKey);
@@ -48,20 +48,18 @@ public class DelegationSASGenerator extends SASGenerator {
   public String getDelegationSAS(String accountName, String containerName, String path, String operation,
                                  String saoid, String suoid, String scid) {
 
-    final String sv = AuthenticationVersion.Dec19.toString();
-    final String st = ISO_8601_FORMATTER.format(Instant.now().minusSeconds(FIVE_MINUTES));
-    final String se = ISO_8601_FORMATTER.format(Instant.now().plusSeconds(ONE_DAY));
+    final String sv = AuthenticationVersion.Feb20.toString();
+    final String st = ISO_8601_FORMATTER.format(Instant.now().minus(FIVE_MINUTES));
+    final String se = ISO_8601_FORMATTER.format(Instant.now().plus(ONE_DAY));
     String sr = "b";
     String sdd = null;
-    String sp = null;
+    String sp;
 
     switch (operation) {
-      case SASTokenProvider.CHECK_ACCESS_OPERATION:
-        sp = "e";
-        break;
-      case SASTokenProvider.WRITE_OPERATION:
       case SASTokenProvider.CREATE_FILE_OPERATION:
       case SASTokenProvider.CREATE_DIRECTORY_OPERATION:
+      case SASTokenProvider.WRITE_OPERATION:
+      case SASTokenProvider.SET_PROPERTIES_OPERATION:
         sp = "w";
         break;
       case SASTokenProvider.DELETE_OPERATION:
@@ -72,6 +70,7 @@ public class DelegationSASGenerator extends SASGenerator {
         sr = "d";
         sdd = Integer.toString(StringUtils.countMatches(path, "/"));
         break;
+      case SASTokenProvider.CHECK_ACCESS_OPERATION:
       case SASTokenProvider.GET_ACL_OPERATION:
       case SASTokenProvider.GET_STATUS_OPERATION:
         sp = "e";
@@ -79,6 +78,7 @@ public class DelegationSASGenerator extends SASGenerator {
       case SASTokenProvider.LIST_OPERATION:
         sp = "l";
         break;
+      case SASTokenProvider.GET_PROPERTIES_OPERATION:
       case SASTokenProvider.READ_OPERATION:
         sp = "r";
         break;
@@ -87,13 +87,11 @@ public class DelegationSASGenerator extends SASGenerator {
         sp = "m";
         break;
       case SASTokenProvider.SET_ACL_OPERATION:
+      case SASTokenProvider.SET_PERMISSION_OPERATION:
         sp = "p";
         break;
       case SASTokenProvider.SET_OWNER_OPERATION:
         sp = "o";
-        break;
-      case SASTokenProvider.SET_PERMISSION_OPERATION:
-        sp = "p";
         break;
       default:
         throw new IllegalArgumentException(operation);
@@ -146,7 +144,7 @@ public class DelegationSASGenerator extends SASGenerator {
     sb.append(accountName);
     sb.append("/");
     sb.append(containerName);
-    if (path != null && sr != "c") {
+    if (path != null && !sr.equals("c")) {
       sb.append(path);
     }
     sb.append("\n");

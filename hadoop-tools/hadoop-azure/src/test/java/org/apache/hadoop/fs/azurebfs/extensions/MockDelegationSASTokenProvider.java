@@ -55,8 +55,8 @@ public class MockDelegationSASTokenProvider implements SASTokenProvider {
     String appSecret = configuration.get(TestConfigurationKeys.FS_AZURE_TEST_APP_SECRET);
     String sktid = configuration.get(TestConfigurationKeys.FS_AZURE_TEST_APP_SERVICE_PRINCIPAL_TENANT_ID);
     String skoid = configuration.get(TestConfigurationKeys.FS_AZURE_TEST_APP_SERVICE_PRINCIPAL_OBJECT_ID);
-    String skt = SASGenerator.ISO_8601_FORMATTER.format(Instant.now().minusSeconds(SASGenerator.FIVE_MINUTES));
-    String ske = SASGenerator.ISO_8601_FORMATTER.format(Instant.now().plusSeconds(SASGenerator.ONE_DAY));
+    String skt = SASGenerator.ISO_8601_FORMATTER.format(Instant.now().minus(SASGenerator.FIVE_MINUTES));
+    String ske = SASGenerator.ISO_8601_FORMATTER.format(Instant.now().plus(SASGenerator.ONE_DAY));
     String skv = SASGenerator.AuthenticationVersion.Dec19.toString();
 
     byte[] key = getUserDelegationKey(accountName, appID, appSecret, sktid, skt, ske, skv);
