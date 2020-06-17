@@ -454,32 +454,8 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
   private DatanodeInfo chooseDatanode(final Router router,
       final String path, final HttpOpParam.Op op, final long openOffset,
       final String excludeDatanodes) throws IOException {
-    // We need to get the DNs as a privileged user
-    final RouterRpcServer rpcServer = getRPCServer(router);
-    UserGroupInformation loginUser = UserGroupInformation.getLoginUser();
-    RouterRpcServer.setCurrentUser(loginUser);
-
-    DatanodeInfo[] dns = null;
-    try {
-      dns = rpcServer.getDatanodeReport(DatanodeReportType.LIVE);
-    } catch (IOException e) {
-      LOG.error("Cannot get the datanodes from the RPC server", e);
-    } finally {
-      // Reset ugi to remote user for remaining operations.
-      RouterRpcServer.resetCurrentUser();
-    }
-
-    HashSet<Node> excludes = new HashSet<Node>();
-    if (excludeDatanodes != null) {
-      Collection<String> collection =
-          getTrimmedStringCollection(excludeDatanodes);
-      for (DatanodeInfo dn : dns) {
-        if (collection.contains(dn.getName())) {
-          excludes.add(dn);
-        }
-      }
-    }
-
+    DatanodeInfo[] dns = null;    
+    
     if (op == GetOpParam.Op.OPEN ||
         op == PostOpParam.Op.APPEND ||
         op == GetOpParam.Op.GETFILECHECKSUM) {
@@ -502,12 +478,27 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
         final LocatedBlocks locations = cp.getBlockLocations(path, offset, 1);
         final int count = locations.locatedBlockCount();
         if (count > 0) {
+          if (excludeDatanodes != null) {
+            Collection<String> collection =
+                getTrimmedStringCollection(excludeDatanodes);
+            dns = getDatanodeReport(router);
+            for (DatanodeInfo dn : dns) {
+              if (collection.contains(dn.getName())) {
+                excludes.add(dn);
+              }
+            }
+          }
+          
           LocatedBlock location0 = locations.get(0);
           return bestNode(location0.getLocations(), excludes);
         }
       }
     }
 
+    if (dns == null) {
+      dns = getDatanodeReport(router);
+    }
+    
     return getRandomDatanode(dns, excludes);
   }
 
@@ -563,5 +554,29 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
     final Credentials c = RouterSecurityManager.createCredentials(router, ugi,
         renewer != null? renewer: ugi.getShortUserName());
     return c;
+  }
+  
+    /**
+   * Get the datanode report from all namespaces that are registered
+   * and active in the federation.
+   * @param router Router from which to get the report.
+   * @return List of datanodes.
+   * @throws IOException If it cannot get the RPC Server.
+   */
+  private static DatanodeInfo[] getDatanodeReport(
+      final Router router) throws IOException {
+    // We need to get the DNs as a privileged user
+    final RouterRpcServer rpcServer = getRPCServer(router);
+    UserGroupInformation loginUser = UserGroupInformation.getLoginUser();
+    RouterRpcServer.setCurrentUser(loginUser);
+
+    try {
+      return rpcServer.getDatanodeReport(DatanodeReportType.LIVE);
+    } catch (IOException e) {
+      LOG.error("Cannot get the datanodes from the RPC server", e);
+    } finally {
+      // Reset ugi to remote user for remaining operations.
+      RouterRpcServer.resetCurrentUser();
+    }
   }
 }
