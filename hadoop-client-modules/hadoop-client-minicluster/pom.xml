@@ -811,11 +811,21 @@
                         <exclude>*/**</exclude>
                       </excludes>
                     </filter>
-                    <!-- Jetty 9.4.x: jetty-client and jetty-xml are depended by org.eclipse.jetty.websocket:websocket-client.
-                         But we are only excluding jetty-client not jetty-xml because HttpServer2 implicitly uses the shaded package name.
-                    -->
+                    <!-- Jetty 9.4.x: jetty-client and jetty-xml are depended by org.eclipse.jetty.websocket:websocket-client.-->
                     <filter>
                       <artifact>org.eclipse.jetty:jetty-client</artifact>
+                      <excludes>
+                        <exclude>*/**</exclude>
+                      </excludes>
+                    </filter>
+                    <filter>
+                      <artifact>org.eclipse.jetty:jetty-xml</artifact>
+                      <excludes>
+                        <exclude>*/**</exclude>
+                      </excludes>
+                    </filter>
+                    <filter>
+                      <artifact>org.eclipse.jetty:jetty-http</artifact>
                       <excludes>
                         <exclude>*/**</exclude>
                       </excludes>
