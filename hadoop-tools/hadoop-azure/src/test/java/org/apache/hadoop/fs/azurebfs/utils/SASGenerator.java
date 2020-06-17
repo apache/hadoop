@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs.utils;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.format.DateTimeFormatter;
 import java.time.ZoneId;
 import java.util.Locale;
@@ -35,7 +36,8 @@ public abstract class SASGenerator {
 
   public enum AuthenticationVersion {
     Nov18("2018-11-09"),
-    Dec19("2019-12-12");
+    Dec19("2019-12-12"),
+    Feb20("2020-02-10");
 
     private final String ver;
 
@@ -50,8 +52,8 @@ public abstract class SASGenerator {
   }
 
   protected static final Logger LOG = LoggerFactory.getLogger(SASGenerator.class);
-  public static final int FIVE_MINUTES = 5 * 60;
-  public static final int ONE_DAY = 24 * 60 * 60;
+  public static final Duration FIVE_MINUTES = Duration.ofMinutes(5);
+  public static final Duration ONE_DAY = Duration.ofDays(1);
   public static final DateTimeFormatter ISO_8601_FORMATTER =
       DateTimeFormatter
           .ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ROOT)

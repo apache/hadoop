@@ -40,8 +40,8 @@ public class ServiceSASGenerator extends SASGenerator {
     String sp = "rcwdl";
     String sv = AuthenticationVersion.Nov18.toString();
     String sr = "c";
-    String st = ISO_8601_FORMATTER.format(Instant.now().minusSeconds(FIVE_MINUTES));
-    String se = ISO_8601_FORMATTER.format(Instant.now().plusSeconds(ONE_DAY));
+    String st = ISO_8601_FORMATTER.format(Instant.now().minus(FIVE_MINUTES));
+    String se = ISO_8601_FORMATTER.format(Instant.now().plus(ONE_DAY));
 
     String signature = computeSignatureForSAS(sp, st, se, sv, "c",
         accountName, containerName, null);
@@ -71,7 +71,7 @@ public class ServiceSASGenerator extends SASGenerator {
     sb.append(accountName);
     sb.append("/");
     sb.append(containerName);
-    if (path != null && sr != "c") {
+    if (path != null && !sr.equals("c")) {
       //sb.append("/");
       sb.append(path);
     }
