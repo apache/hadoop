@@ -455,7 +455,8 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
       final String path, final HttpOpParam.Op op, final long openOffset,
       final String excludeDatanodes) throws IOException {
     DatanodeInfo[] dns = null;    
-    
+    HashSet<Node> excludes = new HashSet<Node>();
+
     if (op == GetOpParam.Op.OPEN ||
         op == PostOpParam.Op.APPEND ||
         op == GetOpParam.Op.GETFILECHECKSUM) {
