@@ -1060,7 +1060,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
       QueueMapping m = QueueMapping.QueueMappingBuilder.create()
           .type(QueueMapping.MappingType.APPLICATION)
           .source(mapping[0])
-          .queuePath(QueuePlacementRuleUtils.extractQueuePath(mapping[1]))
+          .parsePathString(mapping[1])
           .build();
       mappings.add(m);
     }
@@ -1136,7 +1136,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         m = QueueMappingBuilder.create()
                 .type(mappingType)
                 .source(mapping[1])
-                .queuePath(QueuePlacementRuleUtils.extractQueuePath(mapping[2]))
+                .parsePathString(mapping[2])
                 .build();
       } catch (Throwable t) {
         throw new IllegalArgumentException(

@@ -86,8 +86,6 @@ public class AppNameMappingPlacementRule extends PlacementRule {
 
     // check if mappings refer to valid queues
     for (QueueMapping mapping : queueMappings) {
-      QueuePath queuePath = mapping.getQueuePath();
-
       if (isStaticQueueMapping(mapping)) {
         //at this point mapping.getQueueName() return only the queue name, since
         //the config parsing have been changed making QueueMapping more
@@ -98,7 +96,7 @@ public class AppNameMappingPlacementRule extends PlacementRule {
           //Try getting queue by its full path name, if it exists it is a static
           //leaf queue indeed, without any auto creation magic
 
-          if (queueManager.isAmbiguous(queuePath.getFullPath())) {
+          if (queueManager.isAmbiguous(mapping.getFullPath())) {
             throw new IOException(
               "mapping contains ambiguous leaf queue reference " + mapping
                 .getFullPath());
@@ -110,8 +108,7 @@ public class AppNameMappingPlacementRule extends PlacementRule {
           // then it should exist and
           // be an instance of AutoCreateEnabledParentQueue
           QueueMapping newMapping =
-              validateAndGetAutoCreatedQueueMapping(queueManager, mapping,
-                  queuePath);
+              validateAndGetAutoCreatedQueueMapping(queueManager, mapping);
           if (newMapping == null) {
             throw new IOException(
                 "mapping contains invalid or non-leaf queue " + mapping
@@ -124,7 +121,7 @@ public class AppNameMappingPlacementRule extends PlacementRule {
           //   if its an instance of auto created leaf queue,
           // then extract parent queue name and update queue mapping
           QueueMapping newMapping = validateAndGetQueueMapping(
-              queueManager, queue, mapping, queuePath);
+              queueManager, queue, mapping);
           newMappings.add(newMapping);
         }
       } else {
@@ -135,7 +132,7 @@ public class AppNameMappingPlacementRule extends PlacementRule {
         //  parent queue exists and an instance of AutoCreateEnabledParentQueue
         //
         QueueMapping newMapping = validateAndGetAutoCreatedQueueMapping(
-            queueManager, mapping, queuePath);
+            queueManager, mapping);
         if (newMapping != null) {
           newMappings.add(newMapping);
         } else{

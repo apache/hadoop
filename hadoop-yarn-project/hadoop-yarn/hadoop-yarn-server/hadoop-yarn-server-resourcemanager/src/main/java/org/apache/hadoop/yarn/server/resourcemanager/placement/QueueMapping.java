@@ -66,10 +66,20 @@ public class QueueMapping {
       return this;
     }
 
-    public QueueMappingBuilder queuePath(QueuePath path) {
-      this.queue = path.getLeafQueue();
-      this.parentQueue = path.getParentQueue();
-      return this;
+    public QueueMappingBuilder parsePathString(String queuePath) {
+      int parentQueueNameEndIndex = queuePath.lastIndexOf(DOT);
+
+      if (parentQueueNameEndIndex > -1) {
+        final String parentQueue =
+            queuePath.substring(0, parentQueueNameEndIndex).trim();
+        final String leafQueue =
+            queuePath.substring(parentQueueNameEndIndex + 1).trim();
+        return this
+            .parentQueue(parentQueue)
+            .queue(leafQueue);
+      }
+
+      return this.queue(queuePath);
     }
 
     public QueueMapping build() {
@@ -136,12 +146,6 @@ public class QueueMapping {
 
   public String getFullPath() {
     return fullPath;
-  }
-
-  public QueuePath getQueuePath() {
-    //This is to make sure the parsing is the same everywhere, but the
-    //whole parsing part should be moved to QueuePathConstructor
-    return QueuePlacementRuleUtils.extractQueuePath(getFullPath());
   }
 
   @Override
