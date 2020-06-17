@@ -15,18 +15,7 @@
 Federation Balance Guide
 =====================
 
----
-
- - [Overview](#Overview)
- - [Usage](#Usage)
-     - [Basic Usage](#Basic_Usage)
-     - [RBF Mode And Normal Federation Mode](#RBF_Mode_And_Normal_Federation_Mode)     
-     - [Command Options](#Command_Options)
-     - [Configuration Options](#Configuration_Options)
- - [Architecture of Federation Balance](#Architecture_of_Federation_Balance)
-     - [Balance Procedure Scheduler](#Balance_Procedure_Scheduler)
-     - [DistCpFedBalance](#DistCpFedBalance)     
----
+<!-- MACRO{toc|fromDepth=0|toDepth=3} -->
 
 Overview
 --------
@@ -49,18 +38,21 @@ Usage
   router-based federation cluster. Taking rbf for example. Supposing we have a
   mount entry in Router:
 
-    /foo/src --> hdfs://nn0:8020/foo/src
+    Source       Destination
+    /foo/src     hdfs://nn0:8020/foo/src
 
   The command below runs a federation balance job. The first parameter is the
   mount entry. The second one is the target path which must include the target
-  cluster.
+  cluster. The option `-router` indicates this is in router-based federation
+  mode.
 
-    bash$ /bin/hadoop fedbalance submit /foo/src hdfs://nn1:8020/foo/dst
+    bash$ /bin/hadoop fedbalance -router submit /foo/src hdfs://nn1:8020/foo/dst
 
   It copies data from hdfs://nn0:8020/foo/src to hdfs://nn1:8020/foo/dst
   incrementally and finally updates the mount entry to:
 
-    /foo/src --> hdfs://nn1:8020/foo/dst
+    Source       Destination
+    /foo/src     hdfs://nn1:8020/foo/dst
 
   If the hadoop shell process exits unexpectedly, we can use the command below
   to continue the unfinished job:
@@ -71,29 +63,27 @@ Usage
   continue to execute them.
   
   If we want to balance in a normal federation cluster, use the command below.
-  
-    bash$ /bin/hadoop fedbalance -router false submit hdfs://nn0:8020/foo/src hdfs://nn1:8020/foo/dst
+
+    bash$ /bin/hadoop fedbalance submit hdfs://nn0:8020/foo/src hdfs://nn1:8020/foo/dst
     
-  The option `-router false` indicates this is not in router-based federation.
-  The source path must includes the source cluster.
+  In normal federation mode the source path must includes the source cluster.
 
 ### RBF Mode And Normal Federation Mode
 
   The federation balance tool has 2 modes: 
   
-  * the router-based federation mode(rbf mode).
+  * the router-based federation mode (RBF mode).
   * the normal federation mode.
   
-  By default the command runs in the rbf mode. You can specify the rbf mode
-  explicitly by using the option `-router true`. The option `-router false`
-  specifies the normal federation mode.
+  By default the command runs in the normal federation mode. You can specify the
+  rbf mode by using the option `-router`.
   
   In the rbf mode the first parameter is taken as the mount point. It disables
   write by setting the mount point readonly.
   
   In the normal federation mode the first parameter is taken as the full path of
   the source. The first parameter must include the source cluster. It disables
-  write by cancelling the execute permission of the source path.
+  write by cancelling all the permissions of the source path.
   
   Details about disabling write see [DistCpFedBalance](#DistCpFedBalance).
 
@@ -101,27 +91,28 @@ Usage
 
 Command `submit` has 5 options:
 
-| Option key                     | Description                          |
-| ------------------------------ | ------------------------------------ |
-| -router | This option specifies the mode of the command. `True` indicates the router-based federation mode. `False` indicates the normal federation mode. |
-| -forceCloseOpen | If `true`, the DIFF_DISTCP stage forces close all open files when there is no diff. Otherwise it waits until there is no open files. The default value is `false`. |
-| -map | Max number of concurrent maps to use for copy. |
-| -bandwidth | Specify bandwidth per map in MB. |
-| -moveToTrash | If `true` move the source path to trash after the job is done. Otherwise delete the source path directly. |
+| Option key                     | Description                          | Default |
+| ------------------------------ | ------------------------------------ | ------- |
+| -router | Run in router-based federation mode. | Normal federation mode. |
+| -forceCloseOpen | Force close all open files when there is no diff in the DIFF_DISTCP stage. | Wait until there is no open files. |
+| -map | Max number of concurrent maps to use for copy. | 10 |
+| -bandwidth | Specify bandwidth per map in MB. | 10 |
+| -delay | Specify the delayed duration(millie seconds) when the job needs to retry. | 1000 |
+| -moveToTrash | This options has 3 values: `trash` (move the source path to trash), `delete` (delete the source path directly) and `skip` (skip both trash and deletion). By default the server side trash interval is used. If the trash is disabled in the server side, the default trash interval 60 minutes is used. | trash |
 
 ### Configuration Options
 --------------------
 
-| Configuration key              | Description                          |
-| ------------------------------ | ------------------------------------ |
-| hadoop.hdfs.procedure.work.thread.num | The worker threads number of the BalanceProcedureScheduler. Default is `10`. |
-| hadoop.hdfs.procedure.scheduler.journal.uri | The uri of the journal. |
-| federation.balance.class | The class used for federation balance. Default is `org.apache.hadoop.tools.DistCpProcedure.` |
+| Configuration key              | Description                          | Default |
+| ------------------------------ | ------------------------------------ | ------- |
+| hadoop.hdfs.procedure.work.thread.num | The worker threads number of the BalanceProcedureScheduler. | 10 |
+| hadoop.hdfs.procedure.scheduler.journal.uri | The uri of the journal. | |
+| federation.balance.class | The class used for federation balance. | org.apache.hadoop.tools.DistCpProcedure |
 
 Architecture of Federation Balance
 ----------------------
 
-  The components of the Federation Balance may be classified into the following
+  The components of the Federation Balance can be classified into the following
   categories:
 
   * Balance Procedure Scheduler
@@ -162,15 +153,15 @@ Architecture of Federation Balance
       when there is no diff and no open files.  
     * DISABLE_WRITE: Disable write operations so the src won't be changed. When
       working in router mode, it is done by making the mount point readonly.
-      Otherwise it is done by cancelling the execute permission of the source
-      path.
+      In normal federation mode it is done by cancelling all the permissions of
+      the source path.
     * FINAL_DISTCP: Force close all the open files and submit the final distcp.
-    * FINISH: Cleanup works. If the execute permission is cancelled then
-      restoring the permission of the dst path.
+    * FINISH: Do the cleanup works. In normal federation mode the finish stage
+      also restores the permission of the dst path.
     
   * MountTableProcedure: This procedure updates the mount entry in Router. The 
     readonly is unset and the destination is updated of the mount point. This
-    procedure is activated only when `-router` is true.
+    procedure is activated only when option `-router`.
 
   * TrashProcedure: This procedure moves the source path to trash.
 
