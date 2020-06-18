@@ -21,7 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.placement;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
+import java.util.Objects;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.security.Groups;
@@ -260,9 +260,9 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
         ApplicationPlacementContext mappedQueue = getPlacementForUser(user);
         if (mappedQueue != null) {
           // We have a mapping, should we use it?
-          if (queueName.equals(YarnConfiguration.DEFAULT_QUEUE_NAME)
+          if (Objects.equals(queueName,YarnConfiguration.DEFAULT_QUEUE_NAME)
               //queueName will be same as mapped queue name in case of recovery
-              || queueName.equals(mappedQueue.getQueue())
+              || Objects.equals(queueName,mappedQueue.getQueue())
               || overrideWithQueueMappings) {
             LOG.info("Application {} user {} mapping [{}] to [{}] override {}",
                 applicationId, user, queueName, mappedQueue.getQueue(),
