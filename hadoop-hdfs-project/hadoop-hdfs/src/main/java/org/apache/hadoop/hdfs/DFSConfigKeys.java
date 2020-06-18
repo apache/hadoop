@@ -243,6 +243,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.namenode.read.considerLoad";
   public static final boolean DFS_NAMENODE_READ_CONSIDERLOAD_DEFAULT =
       false;
+  public static final String DFS_NAMENODE_READ_CONSIDERSTORAGETYPE_KEY =
+      "dfs.namenode.read.considerStorageType";
+  public static final boolean DFS_NAMENODE_READ_CONSIDERSTORAGETYPE_DEFAULT =
+      false;
   public static final String  DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_FACTOR =
       "dfs.namenode.redundancy.considerLoad.factor";
   public static final double
@@ -304,6 +308,13 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       = "dfs.namenode.blockreport.max.lock.hold.time";
   public static final long
       DFS_NAMENODE_BLOCKREPORT_MAX_LOCK_HOLD_TIME_DEFAULT = 4;
+
+  public static final String
+      DFS_NAMENODE_CORRUPT_BLOCK_DELETE_IMMEDIATELY_ENABLED =
+      "dfs.namenode.corrupt.block.delete.immediately.enabled";
+  public static final boolean
+      DFS_NAMENODE_CORRUPT_BLOCK_DELETE_IMMEDIATELY_ENABLED_DEFAULT = true;
+
   @Deprecated
   public static final String  DFS_WEBHDFS_USER_PATTERN_KEY =
       HdfsClientConfigKeys.DFS_WEBHDFS_USER_PATTERN_KEY;
@@ -320,6 +331,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_PERMISSIONS_SUPERUSERGROUP_KEY =
       HdfsClientConfigKeys.DeprecatedKeys.DFS_PERMISSIONS_SUPERUSERGROUP_KEY;
   public static final String  DFS_PERMISSIONS_SUPERUSERGROUP_DEFAULT = "supergroup";
+  public static final String DFS_PERMISSIONS_ALLOW_OWNER_SET_QUOTA_KEY
+      = "dfs.permissions.allow.owner.set.quota";
+  public static final boolean DFS_PERMISSIONS_ALLOW_OWNER_SET_QUOTA_DEFAULT
+      = false;
   public static final String  DFS_NAMENODE_ACLS_ENABLED_KEY = "dfs.namenode.acls.enabled";
   public static final boolean DFS_NAMENODE_ACLS_ENABLED_DEFAULT = true;
   public static final String DFS_NAMENODE_POSIX_ACL_INHERITANCE_ENABLED_KEY =
@@ -431,6 +446,11 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.datanode.pmem.cache.recovery";
   public static final boolean DFS_DATANODE_PMEM_CACHE_RECOVERY_DEFAULT =
       true;
+
+  public static final String DFS_DATANODE_PROCESS_COMMANDS_THRESHOLD_KEY =
+      "dfs.datanode.processcommands.threshold";
+  public static final long DFS_DATANODE_PROCESS_COMMANDS_THRESHOLD_DEFAULT =
+      TimeUnit.SECONDS.toMillis(2);
 
   public static final String DFS_NAMENODE_DATANODE_REGISTRATION_IP_HOSTNAME_CHECK_KEY = "dfs.namenode.datanode.registration.ip-hostname-check";
   public static final boolean DFS_NAMENODE_DATANODE_REGISTRATION_IP_HOSTNAME_CHECK_DEFAULT = true;
@@ -734,6 +754,11 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.storage.policy.satisfier.retry.max.attempts";
   public static final int DFS_STORAGE_POLICY_SATISFIER_MAX_RETRY_ATTEMPTS_DEFAULT =
       3;
+  public static final String DFS_STORAGE_DEFAULT_POLICY =
+      "dfs.storage.default.policy";
+  public static final HdfsConstants.StoragePolicy
+      DFS_STORAGE_DEFAULT_POLICY_DEFAULT = HdfsConstants.StoragePolicy.HOT;
+
   public static final String DFS_SPS_MAX_OUTSTANDING_PATHS_KEY =
       "dfs.storage.policy.satisfier.max.outstanding.paths";
   public static final int DFS_SPS_MAX_OUTSTANDING_PATHS_DEFAULT = 10000;
@@ -826,6 +851,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int     DFS_DATANODE_SCAN_PERIOD_HOURS_DEFAULT = 21 * 24;  // 3 weeks.
   public static final String  DFS_BLOCK_SCANNER_VOLUME_BYTES_PER_SECOND = "dfs.block.scanner.volume.bytes.per.second";
   public static final long    DFS_BLOCK_SCANNER_VOLUME_BYTES_PER_SECOND_DEFAULT = 1048576L;
+  public static final String  DFS_BLOCK_SCANNER_SKIP_RECENT_ACCESSED =
+      "dfs.block.scanner.skip.recent.accessed";
+  public static final boolean DFS_BLOCK_SCANNER_SKIP_RECENT_ACCESSED_DEFAULT =
+      false;
   public static final String  DFS_DATANODE_TRANSFERTO_ALLOWED_KEY = "dfs.datanode.transferTo.allowed";
   public static final boolean DFS_DATANODE_TRANSFERTO_ALLOWED_DEFAULT = true;
   public static final String  DFS_HEARTBEAT_INTERVAL_KEY = "dfs.heartbeat.interval";
@@ -1071,6 +1100,13 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final float   DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT =
       0.6f;
   public static final String
+      DFS_NAMENODE_AVAILABLE_SPACE_RACK_FAULT_TOLERANT_BLOCK_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY =
+      "dfs.namenode.available-space-rack-fault-tolerant-block-placement-policy"
+          + ".balanced-space-preference-fraction";
+  public static final float
+      DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_RACK_FAULT_TOLERANT_PLACEMENT_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_DEFAULT =
+      0.6f;
+  public static final String
       DFS_NAMENODE_AVAILABLE_SPACE_BLOCK_PLACEMENT_POLICY_BALANCE_LOCAL_NODE_KEY =
       "dfs.namenode.available-space-block-placement-policy.balance-local-node";
   public static final boolean
@@ -1103,6 +1139,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
 
   public static final String  DFS_STORAGE_POLICY_ENABLED_KEY = "dfs.storage.policy.enabled";
   public static final boolean DFS_STORAGE_POLICY_ENABLED_DEFAULT = true;
+  public static final String DFS_STORAGE_POLICY_PERMISSIONS_SUPERUSER_ONLY_KEY =
+      "dfs.storage.policy.permissions.superuser-only";
+  public static final boolean
+      DFS_STORAGE_POLICY_PERMISSIONS_SUPERUSER_ONLY_DEFAULT = false;
 
   public static final String  DFS_QUOTA_BY_STORAGETYPE_ENABLED_KEY = "dfs.quota.by.storage.type.enabled";
   public static final boolean DFS_QUOTA_BY_STORAGETYPE_ENABLED_DEFAULT = true;
@@ -1140,6 +1180,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.ha.nn.not-become-active-in-safemode";
   public static final boolean DFS_HA_NN_NOT_BECOME_ACTIVE_IN_SAFEMODE_DEFAULT =
       false;
+  public static final String DFS_HA_ALLOW_STALE_READ_KEY =
+      "dfs.ha.allow.stale.reads";
+  public static final boolean DFS_HA_ALLOW_STALE_READ_DEFAULT = false;
 
   // Security-related configs
   public static final String DFS_ENCRYPT_DATA_TRANSFER_KEY = "dfs.encrypt.data.transfer";
@@ -1439,6 +1482,16 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY =
       "dfs.namenode.state.context.enabled";
   public static final boolean DFS_NAMENODE_STATE_CONTEXT_ENABLED_DEFAULT = false;
+
+  /**
+   * whether to protect the subdirectories of directories which
+   * set on fs.protected.directories.
+   */
+  public static final String DFS_PROTECTED_SUBDIRECTORIES_ENABLE =
+      "dfs.protected.subdirectories.enable";
+  // Default value for DFS_PROTECTED_SUBDIRECTORIES_ENABLE.
+  public static final boolean DFS_PROTECTED_SUBDIRECTORIES_ENABLE_DEFAULT =
+      false;
 
   // dfs.client.retry confs are moved to HdfsClientConfigKeys.Retry
   @Deprecated

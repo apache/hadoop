@@ -154,7 +154,7 @@ public class TestRMWebServicesSchedulerActivities
       verifyStateOfAllocations(allocation,
           FN_ACT_FINAL_ALLOCATION_STATE, "ALLOCATED");
       verifyQueueOrder(allocation,
-          "root-a-b-b2-b3-b1");
+          "root-root.a-root.b-root.b.b2-root.b.b3-root.b.b1");
     } finally {
       rm.stop();
     }
@@ -378,7 +378,7 @@ public class TestRMWebServicesSchedulerActivities
       JSONObject allocations = getFirstSubNodeFromJson(json,
           FN_SCHEDULER_ACT_ROOT, FN_ACT_ALLOCATIONS);
       verifyQueueOrder(allocations,
-          "root-a-b-b3-b1");
+          "root-root.a-root.b-root.b.b3-root.b.b1");
       verifyStateOfAllocations(allocations, FN_ACT_FINAL_ALLOCATION_STATE,
           "RESERVED");
 
@@ -407,7 +407,7 @@ public class TestRMWebServicesSchedulerActivities
 
       JSONObject allocation = getFirstSubNodeFromJson(json,
           FN_SCHEDULER_ACT_ROOT, FN_ACT_ALLOCATIONS);
-      verifyQueueOrder(allocation, "b1");
+      verifyQueueOrder(allocation, "root.b.b1");
       verifyStateOfAllocations(allocation, FN_ACT_FINAL_ALLOCATION_STATE,
           "RESERVED");
 
@@ -444,7 +444,7 @@ public class TestRMWebServicesSchedulerActivities
 
       allocations = getFirstSubNodeFromJson(json,
           FN_SCHEDULER_ACT_ROOT, FN_ACT_ALLOCATIONS);
-      verifyQueueOrder(allocations, "b1");
+      verifyQueueOrder(allocations, "root.b.b1");
       verifyStateOfAllocations(allocations, FN_ACT_FINAL_ALLOCATION_STATE,
           "ALLOCATED_FROM_RESERVED");
     } finally {
@@ -504,7 +504,7 @@ public class TestRMWebServicesSchedulerActivities
       // Increase number of nodes to 6 since request node has been added
       verifyNumberOfNodes(allocation, 6);
 
-      verifyQueueOrder(allocation, "root-b-b1");
+      verifyQueueOrder(allocation, "root-root.b-root.b.b1");
     } finally {
       rm.stop();
     }
@@ -1562,7 +1562,7 @@ public class TestRMWebServicesSchedulerActivities
       verifyNumberOfAllocations(schedulerActivitiesJson, 1);
       // verify at queue level
       Predicate<JSONObject> findA1AQueuePred =
-          (obj) -> obj.optString(FN_SCHEDULER_ACT_NAME).equals("a1a");
+          (obj) -> obj.optString(FN_SCHEDULER_ACT_NAME).equals("root.a.a1.a1a");
       List<JSONObject> a1aQueueObj = ActivitiesTestUtils.findInAllocations(
           getFirstSubNodeFromJson(schedulerActivitiesJson,
               FN_SCHEDULER_ACT_ROOT, FN_ACT_ALLOCATIONS), findA1AQueuePred);

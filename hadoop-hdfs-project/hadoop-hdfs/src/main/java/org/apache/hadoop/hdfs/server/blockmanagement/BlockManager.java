@@ -459,6 +459,11 @@ public class BlockManager implements BlockStatsMXBean {
    * from ENTERING_MAINTENANCE to IN_MAINTENANCE.
    */
   private final short minReplicationToBeInMaintenance;
+  /**
+   * Whether to delete corrupt replica immediately irrespective of other
+   * replicas available on stale storages.
+   */
+  private final boolean deleteCorruptReplicaImmediately;
 
   /** Storages accessible from multiple DNs. */
   private final ProvidedStorageMap providedStorageMap;
@@ -488,7 +493,7 @@ public class BlockManager implements BlockStatsMXBean {
       conf, datanodeManager.getFSClusterStats(),
       datanodeManager.getNetworkTopology(),
       datanodeManager.getHost2DatanodeMap());
-    storagePolicySuite = BlockStoragePolicySuite.createDefaultSuite();
+    storagePolicySuite = BlockStoragePolicySuite.createDefaultSuite(conf);
     pendingReconstruction = new PendingReconstructionBlocks(conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY,
         DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_DEFAULT)
@@ -614,6 +619,10 @@ public class BlockManager implements BlockStatsMXBean {
         DFSConfigKeys.DFS_NAMENODE_BLOCKREPORT_QUEUE_SIZE_KEY,
         DFSConfigKeys.DFS_NAMENODE_BLOCKREPORT_QUEUE_SIZE_DEFAULT);
     blockReportThread = new BlockReportProcessingThread(queueSize);
+
+    this.deleteCorruptReplicaImmediately =
+        conf.getBoolean(DFS_NAMENODE_CORRUPT_BLOCK_DELETE_IMMEDIATELY_ENABLED,
+            DFS_NAMENODE_CORRUPT_BLOCK_DELETE_IMMEDIATELY_ENABLED_DEFAULT);
 
     LOG.info("defaultReplication         = {}", defaultReplication);
     LOG.info("maxReplication             = {}", maxReplication);
@@ -1149,12 +1158,19 @@ public class BlockManager implements BlockStatsMXBean {
   /**
    * If IBR is not sent from expected locations yet, add the datanodes to
    * pendingReconstruction in order to keep RedundancyMonitor from scheduling
-   * the block.
+   * the block. In case of erasure coding blocks, adds only in case there
+   * isn't any missing node.
    */
   public void addExpectedReplicasToPending(BlockInfo blk) {
-    if (!blk.isStriped()) {
-      DatanodeStorageInfo[] expectedStorages =
-          blk.getUnderConstructionFeature().getExpectedStorageLocations();
+    boolean addForStriped = false;
+    DatanodeStorageInfo[] expectedStorages =
+        blk.getUnderConstructionFeature().getExpectedStorageLocations();
+    if (blk.isStriped()) {
+      BlockInfoStriped blkStriped = (BlockInfoStriped) blk;
+      addForStriped =
+          blkStriped.getRealTotalBlockNum() == expectedStorages.length;
+    }
+    if (!blk.isStriped() || addForStriped) {
       if (expectedStorages.length - blk.numNodes() > 0) {
         ArrayList<DatanodeStorageInfo> pendingNodes = new ArrayList<>();
         for (DatanodeStorageInfo storage : expectedStorages) {
@@ -1271,7 +1287,14 @@ public class BlockManager implements BlockStatsMXBean {
     neededReconstruction.remove(lastBlock, replicas.liveReplicas(),
         replicas.readOnlyReplicas(),
         replicas.outOfServiceReplicas(), getExpectedRedundancyNum(lastBlock));
-    pendingReconstruction.remove(lastBlock);
+    PendingBlockInfo remove = pendingReconstruction.remove(lastBlock);
+    if (remove != null) {
+      List<DatanodeStorageInfo> locations = remove.getTargets();
+      DatanodeStorageInfo[] removedBlockTargets =
+          new DatanodeStorageInfo[locations.size()];
+      locations.toArray(removedBlockTargets);
+      DatanodeStorageInfo.decrementBlocksScheduled(removedBlockTargets);
+    }
 
     // remove this block from the list of pending blocks to be deleted. 
     for (DatanodeStorageInfo storage : targets) {
@@ -1870,7 +1893,7 @@ public class BlockManager implements BlockStatsMXBean {
     }
 
     // Check how many copies we have of the block
-    if (nr.replicasOnStaleNodes() > 0) {
+    if (nr.replicasOnStaleNodes() > 0 && !deleteCorruptReplicaImmediately) {
       blockLog.debug("BLOCK* invalidateBlocks: postponing " +
           "invalidation of {} on {} because {} replica(s) are located on " +
           "nodes with potentially out-of-date block reports", b, dn,
@@ -2003,6 +2026,15 @@ public class BlockManager implements BlockStatsMXBean {
       // Exclude all of the containing nodes from being targets.
       // This list includes decommissioning or corrupt nodes.
       final Set<Node> excludedNodes = new HashSet<>(rw.getContainingNodes());
+
+      // Exclude all nodes which already exists as targets for the block
+      List<DatanodeStorageInfo> targets =
+          pendingReconstruction.getTargets(rw.getBlock());
+      if (targets != null) {
+        for (DatanodeStorageInfo dn : targets) {
+          excludedNodes.add(dn.getDatanodeDescriptor());
+        }
+      }
 
       // choose replication targets: NOT HOLDING THE GLOBAL LOCK
       final BlockPlacementPolicy placementPolicy =

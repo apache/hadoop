@@ -81,6 +81,19 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   private long sendRequestTimeMs;
   private long recvResponseTimeMs;
 
+  public static AbfsHttpOperation getAbfsHttpOperationWithFixedResult(final URL url,
+      final String method, final int httpStatus) {
+       return new AbfsHttpOperation(url, method, httpStatus);
+  }
+
+  private AbfsHttpOperation(final URL url, final String method,
+      final int httpStatus) {
+    this.isTraceEnabled = LOG.isTraceEnabled();
+    this.url = url;
+    this.method = method;
+    this.statusCode = httpStatus;
+  }
+
   protected  HttpURLConnection getConnection() {
     return connection;
   }

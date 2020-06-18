@@ -29,9 +29,9 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.MappingType;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.QueueMappingBuilder;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
@@ -65,11 +65,16 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
     this(false, null, null);
   }
 
-  public UserGroupMappingPlacementRule(boolean overrideWithQueueMappings,
+  @VisibleForTesting
+  UserGroupMappingPlacementRule(boolean overrideWithQueueMappings,
       List<QueueMapping> newMappings, Groups groups) {
     this.mappings = newMappings;
     this.overrideWithQueueMappings = overrideWithQueueMappings;
     this.groups = groups;
+  }
+
+  private String getPrimaryGroup(String user) throws IOException {
+    return groups.getGroups(user).get(0);
   }
 
   private String getSecondaryGroup(String user) throws IOException {
@@ -95,82 +100,98 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
   private ApplicationPlacementContext getPlacementForUser(String user)
       throws IOException {
     for (QueueMapping mapping : mappings) {
-      if (mapping.getType() == MappingType.USER) {
+      if (mapping.getType().equals(MappingType.USER)) {
         if (mapping.getSource().equals(CURRENT_USER_MAPPING)) {
           if (mapping.getParentQueue() != null
               && mapping.getParentQueue().equals(PRIMARY_GROUP_MAPPING)
               && mapping.getQueue().equals(CURRENT_USER_MAPPING)) {
-            if (this.queueManager
-                .getQueue(groups.getGroups(user).get(0)) != null) {
-              QueueMapping queueMapping = 
-                                QueueMappingBuilder.create()
-                                    .type(mapping.getType())
-                                    .source(mapping.getSource()).queue(user)
-                                    .parentQueue(groups.getGroups(user).get(0))
-                                    .build();
-              validateQueueMapping(queueMapping);
-              return getPlacementContext(queueMapping, user);
-            } else {
-              return null;
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Creating placement context for user {} using " +
+                  "primary group current user mapping", user);
             }
+            return getContextForGroupParent(user, mapping,
+                getPrimaryGroup(user));
           } else if (mapping.getParentQueue() != null
               && mapping.getParentQueue().equals(SECONDARY_GROUP_MAPPING)
               && mapping.getQueue().equals(CURRENT_USER_MAPPING)) {
-            String secondaryGroup = getSecondaryGroup(user);
-            if (secondaryGroup != null) {
-              QueueMapping queueMapping = 
-                                QueueMappingBuilder.create()
-                                    .type(mapping.getType())
-                                    .source(mapping.getSource())
-                                    .queue(user)
-                                    .parentQueue(secondaryGroup)
-                                    .build();
-              validateQueueMapping(queueMapping);
-              return getPlacementContext(queueMapping, user);
-            } else {
-              return null;
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Creating placement context for user {} using " +
+                  "secondary group current user mapping", user);
             }
+            return getContextForGroupParent(user, mapping,
+                getSecondaryGroup(user));
           } else if (mapping.getQueue().equals(CURRENT_USER_MAPPING)) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Creating placement context for user {} using " +
+                  "current user mapping", user);
+            }
             return getPlacementContext(mapping, user);
           } else if (mapping.getQueue().equals(PRIMARY_GROUP_MAPPING)) {
-            if (this.queueManager
-                .getQueue(groups.getGroups(user).get(0)) != null) {
-              return getPlacementContext(mapping,
-                  groups.getGroups(user).get(0));
-            } else {
-              return null;
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Creating placement context for user {} using " +
+                  "primary group mapping", user);
             }
+            return getPlacementContext(mapping, getPrimaryGroup(user));
           } else if (mapping.getQueue().equals(SECONDARY_GROUP_MAPPING)) {
-            String secondaryGroup = getSecondaryGroup(user);
-            if (secondaryGroup != null) {
-              return getPlacementContext(mapping, secondaryGroup);
-            } else {
-              return null;
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Creating placement context for user {} using " +
+                  "secondary group mapping", user);
             }
+            return getPlacementContext(mapping, getSecondaryGroup(user));
           } else {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Creating placement context for user {} using " +
+                  "static user static mapping", user);
+            }
             return getPlacementContext(mapping);
           }
         }
+
         if (user.equals(mapping.getSource())) {
           if (mapping.getQueue().equals(PRIMARY_GROUP_MAPPING)) {
-            return getPlacementContext(mapping, groups.getGroups(user).get(0));
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Creating placement context for user {} using " +
+                  "static user primary group mapping", user);
+            }
+            return getPlacementContext(mapping, getPrimaryGroup(user));
           } else if (mapping.getQueue().equals(SECONDARY_GROUP_MAPPING)) {
             String secondaryGroup = getSecondaryGroup(user);
             if (secondaryGroup != null) {
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("Creating placement context for user {} using " +
+                    "static user secondary group mapping", user);
+              }
               return getPlacementContext(mapping, secondaryGroup);
             } else {
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("Wanted to create placement context for user {}" +
+                    " using static user secondary group mapping," +
+                    " but user has no secondary group!", user);
+              }
               return null;
             }
           } else {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Creating placement context for user {} using " +
+                  "static user static mapping", user);
+            }
             return getPlacementContext(mapping);
           }
         }
       }
-      if (mapping.getType() == MappingType.GROUP) {
+      if (mapping.getType().equals(MappingType.GROUP)) {
         for (String userGroups : groups.getGroups(user)) {
           if (userGroups.equals(mapping.getSource())) {
             if (mapping.getQueue().equals(CURRENT_USER_MAPPING)) {
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("Creating placement context for user {} using " +
+                    "static group current user mapping", user);
+              }
               return getPlacementContext(mapping, user);
+            }
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Creating placement context for user {} using " +
+                  "static group static mapping", user);
             }
             return getPlacementContext(mapping);
           }
@@ -178,6 +199,54 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
       }
     }
     return null;
+  }
+
+  /**
+   * This convenience method allows to change the parent path or a leafName in
+   * a mapping object, by creating a new one, using the builder and copying the
+   * rest of the parameters.
+   * @param mapping The mapping to be changed
+   * @param parentPath The new parentPath of the mapping
+   * @param leafName The new leafQueueName of the mapping
+   * @return The updated NEW mapping
+   */
+  private QueueMapping alterMapping(
+      QueueMapping mapping, String parentPath, String leafName) {
+    return QueueMappingBuilder.create()
+            .type(mapping.getType())
+            .source(mapping.getSource())
+            .queue(leafName)
+            .parentQueue(parentPath)
+            .build();
+  }
+
+  // invoked for mappings:
+  //    u:%user:%primary_group.%user
+  //    u:%user:%secondary_group.%user
+  private ApplicationPlacementContext getContextForGroupParent(
+      String user,
+      QueueMapping mapping,
+      String group) throws IOException {
+
+    CSQueue groupQueue = this.queueManager.getQueue(group);
+    if (groupQueue != null) {
+      // replace the group string
+      QueueMapping resolvedGroupMapping = alterMapping(
+          mapping,
+          groupQueue.getQueuePath(),
+          user);
+      validateQueueMapping(resolvedGroupMapping);
+      return getPlacementContext(resolvedGroupMapping, user);
+    } else {
+      if (queueManager.isAmbiguous(group)) {
+        LOG.info("Queue mapping rule expect group queue to exist with name {}" +
+            " but the reference is ambiguous!", group);
+      } else {
+        LOG.info("Queue mapping rule expect group queue to exist with name {}" +
+            " but it does not exist!", group);
+      }
+      return null;
+    }
   }
 
   @Override
@@ -204,25 +273,89 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
       } catch (IOException ioex) {
         String message = "Failed to submit application " + applicationId +
             " submitted by user " + user + " reason: " + ioex.getMessage();
-        throw new YarnException(message);
+        throw new YarnException(message, ioex);
       }
     }
     return null;
   }
 
   private ApplicationPlacementContext getPlacementContext(
-      QueueMapping mapping) {
+      QueueMapping mapping) throws IOException {
     return getPlacementContext(mapping, mapping.getQueue());
   }
 
   private ApplicationPlacementContext getPlacementContext(QueueMapping mapping,
-      String leafQueueName) {
-    if (!StringUtils.isEmpty(mapping.getParentQueue())) {
-      return new ApplicationPlacementContext(leafQueueName,
-          mapping.getParentQueue());
-    } else{
-      return new ApplicationPlacementContext(leafQueueName);
+      String leafQueueName) throws IOException {
+    //leafQueue name no longer identifies a queue uniquely checking ambiguity
+    if (!mapping.hasParentQueue() && queueManager.isAmbiguous(leafQueueName)) {
+      throw new IOException("mapping contains ambiguous leaf queue reference " +
+          leafQueueName);
     }
+
+    if (!StringUtils.isEmpty(mapping.getParentQueue())) {
+      return getPlacementContextWithParent(mapping, leafQueueName);
+    } else {
+      return getPlacementContextNoParent(leafQueueName);
+    }
+  }
+
+  private ApplicationPlacementContext getPlacementContextWithParent(
+      QueueMapping mapping,
+      String leafQueueName) {
+    CSQueue parent = queueManager.getQueue(mapping.getParentQueue());
+    //we don't find the specified parent, so the placement rule is invalid
+    //for this case
+    if (parent == null) {
+      if (queueManager.isAmbiguous(mapping.getParentQueue())) {
+        LOG.warn("Placement rule specified a parent queue {}, but it is" +
+            "ambiguous.", mapping.getParentQueue());
+      } else {
+        LOG.warn("Placement rule specified a parent queue {}, but it does" +
+            "not exist.", mapping.getParentQueue());
+      }
+      return null;
+    }
+
+    String parentPath = parent.getQueuePath();
+
+    //if we have a parent which is not a managed parent, we check if the leaf
+    //queue exists under this parent
+    if (!(parent instanceof ManagedParentQueue)) {
+      CSQueue queue = queueManager.getQueue(parentPath + "." + leafQueueName);
+      //if the queue doesn't exit we return null
+      if (queue == null) {
+          LOG.warn("Placement rule specified a parent queue {}, but it is" +
+              " not a managed parent queue, and no queue exists with name {} " +
+              "under it.", mapping.getParentQueue(), leafQueueName);
+        return null;
+      }
+    }
+    //at this point we either have a managed parent or the queue actually
+    //exists so we have a placement context, returning it
+    return new ApplicationPlacementContext(leafQueueName, parentPath);
+  }
+
+  private ApplicationPlacementContext getPlacementContextNoParent(
+      String leafQueueName) {
+    //in this case we don't have a parent specified so we expect the queue to
+    //exist, otherwise the mapping will not be valid for this case
+    CSQueue queue = queueManager.getQueue(leafQueueName);
+    if (queue == null) {
+      if (queueManager.isAmbiguous(leafQueueName)) {
+        LOG.warn("Queue {} specified in placement rule is ambiguous",
+            leafQueueName);
+      } else {
+        LOG.warn("Queue {} specified in placement rule does not exist",
+            leafQueueName);
+      }
+      return null;
+    }
+
+    //getting parent path to make sure if the leaf name would become ambiguous
+    //the placement context stays valid.
+    CSQueue parent = queueManager.getQueue(leafQueueName).getParent();
+    return new ApplicationPlacementContext(
+        leafQueueName, parent.getQueuePath());
   }
 
   @VisibleForTesting
@@ -250,44 +383,43 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
 
     // check if mappings refer to valid queues
     for (QueueMapping mapping : queueMappings) {
+      //at this point mapping.getQueueName() return only the queue name, since
+      //the config parsing have been changed making QueueMapping more consistent
 
-      QueuePath queuePath = QueuePlacementRuleUtils
-              .extractQueuePath(mapping.getQueue());
       if (isStaticQueueMapping(mapping)) {
-        //Try getting queue by its leaf queue name
-        // without splitting into parent/leaf queues
-        CSQueue queue = queueManager.getQueue(mapping.getQueue());
+        //Try getting queue by its full path name, if it exists it is a static
+        //leaf queue indeed, without any auto creation magic
+        CSQueue queue = queueManager.getQueue(mapping.getFullPath());
         if (ifQueueDoesNotExist(queue)) {
-          //Try getting the queue by extracting leaf and parent queue names
-          //Assuming its a potential auto created leaf queue
-          queue = queueManager.getQueue(queuePath.getLeafQueue());
-
-          if (ifQueueDoesNotExist(queue)) {
-            //if leaf queue does not exist,
-            // this could be a potential auto created leaf queue
-            //validate if parent queue is specified,
-            // then it should exist and
-            // be an instance of AutoCreateEnabledParentQueue
-            QueueMapping newMapping = validateAndGetAutoCreatedQueueMapping(
-                queueManager, mapping, queuePath);
-            if (newMapping == null) {
-              throw new IOException(
-                  "mapping contains invalid or non-leaf queue " + mapping
-                      .getQueue());
-            }
-            newMappings.add(newMapping);
-          } else{
-            QueueMapping newMapping = validateAndGetQueueMapping(queueManager,
-                queue, mapping, queuePath);
-            newMappings.add(newMapping);
+          //We might not be able to find the queue, because the reference was
+          // ambiguous this should only happen if the queue was referenced by
+          // leaf name only
+          if (queueManager.isAmbiguous(mapping.getFullPath())) {
+            throw new IOException(
+              "mapping contains ambiguous leaf queue reference " + mapping
+                .getFullPath());
           }
-        } else{
+
+          //if leaf queue does not exist,
+          // this could be a potential auto created leaf queue
+          //validate if parent queue is specified,
+          // then it should exist and
+          // be an instance of AutoCreateEnabledParentQueue
+          QueueMapping newMapping = validateAndGetAutoCreatedQueueMapping(
+              queueManager, mapping);
+          if (newMapping == null) {
+            throw new IOException(
+                "mapping contains invalid or non-leaf queue " + mapping
+                    .getQueue());
+          }
+          newMappings.add(newMapping);
+        } else {
           // if queue exists, validate
           //   if its an instance of leaf queue
           //   if its an instance of auto created leaf queue,
           // then extract parent queue name and update queue mapping
           QueueMapping newMapping = validateAndGetQueueMapping(queueManager,
-              queue, mapping, queuePath);
+              queue, mapping);
           newMappings.add(newMapping);
         }
       } else{
@@ -298,7 +430,7 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
         //  parent queue exists and an instance of AutoCreateEnabledParentQueue
         //
         QueueMapping newMapping = validateAndGetAutoCreatedQueueMapping(
-            queueManager, mapping, queuePath);
+            queueManager, mapping);
         if (newMapping != null) {
           newMappings.add(newMapping);
         } else{
@@ -320,20 +452,22 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
 
   private static QueueMapping validateAndGetQueueMapping(
       CapacitySchedulerQueueManager queueManager, CSQueue queue,
-      QueueMapping mapping, QueuePath queuePath) throws IOException {
+      QueueMapping mapping) throws IOException {
     if (!(queue instanceof LeafQueue)) {
       throw new IOException(
-          "mapping contains invalid or non-leaf queue : " + mapping.getQueue());
+          "mapping contains invalid or non-leaf queue : " +
+          mapping.getFullPath());
     }
 
     if (queue instanceof AutoCreatedLeafQueue && queue
         .getParent() instanceof ManagedParentQueue) {
 
       QueueMapping newMapping = validateAndGetAutoCreatedQueueMapping(
-          queueManager, mapping, queuePath);
+          queueManager, mapping);
       if (newMapping == null) {
         throw new IOException(
-            "mapping contains invalid or non-leaf queue " + mapping.getQueue());
+            "mapping contains invalid or non-leaf queue "
+            + mapping.getFullPath());
       }
       return newMapping;
     }
@@ -345,29 +479,29 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
   }
 
   private static QueueMapping validateAndGetAutoCreatedQueueMapping(
-      CapacitySchedulerQueueManager queueManager, QueueMapping mapping,
-      QueuePath queuePath) throws IOException {
-    if (queuePath.hasParentQueue()
-        && (queuePath.getParentQueue().equals(PRIMARY_GROUP_MAPPING)
-            || queuePath.getParentQueue().equals(SECONDARY_GROUP_MAPPING))) {
+      CapacitySchedulerQueueManager queueManager, QueueMapping mapping)
+      throws IOException {
+    if (mapping.hasParentQueue()
+        && (mapping.getParentQueue().equals(PRIMARY_GROUP_MAPPING)
+            || mapping.getParentQueue().equals(SECONDARY_GROUP_MAPPING))) {
       // dynamic parent queue
       return QueueMappingBuilder.create()
           .type(mapping.getType())
           .source(mapping.getSource())
-          .queue(queuePath.getLeafQueue())
-          .parentQueue(queuePath.getParentQueue())
+          .queue(mapping.getQueue())
+          .parentQueue(mapping.getParentQueue())
           .build();
-    } else if (queuePath.hasParentQueue()) {
+    } else if (mapping.hasParentQueue()) {
       //if parent queue is specified,
       // then it should exist and be an instance of ManagedParentQueue
       QueuePlacementRuleUtils.validateQueueMappingUnderParentQueue(
-              queueManager.getQueue(queuePath.getParentQueue()),
-          queuePath.getParentQueue(), queuePath.getLeafQueue());
+              queueManager.getQueue(mapping.getParentQueue()),
+          mapping.getParentQueue(), mapping.getQueue());
       return QueueMappingBuilder.create()
           .type(mapping.getType())
           .source(mapping.getSource())
-          .queue(queuePath.getLeafQueue())
-          .parentQueue(queuePath.getParentQueue())
+          .queue(mapping.getQueue())
+          .parentQueue(mapping.getParentQueue())
           .build();
     }
 
@@ -386,22 +520,33 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
   private void validateQueueMapping(QueueMapping queueMapping)
       throws IOException {
     String parentQueueName = queueMapping.getParentQueue();
-    String leafQueueName = queueMapping.getQueue();
-    CSQueue parentQueue = queueManager.getQueue(parentQueueName);
-    CSQueue leafQueue = queueManager.getQueue(leafQueueName);
+    String leafQueueFullName = queueMapping.getFullPath();
+    CSQueue parentQueue = queueManager.getQueueByFullName(parentQueueName);
+    CSQueue leafQueue = queueManager.getQueue(leafQueueFullName);
 
     if (leafQueue == null || (!(leafQueue instanceof LeafQueue))) {
-      throw new IOException("mapping contains invalid or non-leaf queue : "
-          + leafQueueName);
+      //this might be confusing, but a mapping is not guaranteed to provide the
+      //parent queue's name, which can result in ambiguous queue references
+      //if no parent queueName is provided mapping.getFullPath() is the same
+      //as mapping.getQueue()
+      if (leafQueue == null && queueManager.isAmbiguous(leafQueueFullName)) {
+        throw new IOException("mapping contains ambiguous leaf queue name: "
+            + leafQueueFullName);
+      } else if (parentQueue == null ||
+          (!(parentQueue instanceof ManagedParentQueue))) {
+        throw new IOException("mapping contains invalid or non-leaf queue " +
+            " and no managed parent is found: "
+            + leafQueueFullName);
+      }
     } else if (parentQueue == null || (!(parentQueue instanceof ParentQueue))) {
       throw new IOException(
           "mapping contains invalid parent queue [" + parentQueueName + "]");
-    } else if (!parentQueue.getQueueName()
-        .equals(leafQueue.getParent().getQueueName())) {
+    } else if (!parentQueue.getQueuePath()
+        .equals(leafQueue.getParent().getQueuePath())) {
       throw new IOException("mapping contains invalid parent queue "
           + "which does not match existing leaf queue's parent : ["
-          + parentQueue.getQueueName() + "] does not match [ "
-          + leafQueue.getParent().getQueueName() + "]");
+          + parentQueue.getQueuePath() + "] does not match [ "
+          + leafQueue.getParent().getQueuePath() + "]");
     }
   }
 

@@ -2527,7 +2527,7 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
 
   private int getNumAppsInQueue(String name, List<CSQueue> queues) {
     for (CSQueue queue : queues) {
-      if (queue.getQueueName().equals(name)) {
+      if (queue.getQueueShortName().equals(name)) {
         return queue.getNumApplications();
       }
     }
@@ -5058,12 +5058,12 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
 
     // test delete leaf queue when there is application running.
     Map<String, CSQueue> queues =
-        cs.getCapacitySchedulerQueueManager().getQueues();
+        cs.getCapacitySchedulerQueueManager().getShortNameQueues();
     String b1QTobeDeleted = "b1";
     LeafQueue csB1Queue = Mockito.spy((LeafQueue) queues.get(b1QTobeDeleted));
     when(csB1Queue.getState()).thenReturn(QueueState.DRAINING)
         .thenReturn(QueueState.STOPPED);
-    queues.put(b1QTobeDeleted, csB1Queue);
+    cs.getCapacitySchedulerQueueManager().addQueue(b1QTobeDeleted, csB1Queue);
     conf = new CapacitySchedulerConfiguration();
     setupQueueConfigurationWithOutB1(conf);
     try {
@@ -5100,23 +5100,23 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
 
     // set the configurations such that it fails once but should be successfull
     // next time
-    queues = cs.getCapacitySchedulerQueueManager().getQueues();
+    queues = cs.getCapacitySchedulerQueueManager().getShortNameQueues();
     CSQueue bQueue = Mockito.spy((ParentQueue) queues.get("b"));
     when(bQueue.getState()).thenReturn(QueueState.DRAINING)
         .thenReturn(QueueState.STOPPED);
-    queues.put("b", bQueue);
+    cs.getCapacitySchedulerQueueManager().addQueue("b", bQueue);
 
     bQueue = Mockito.spy((LeafQueue) queues.get("b1"));
     when(bQueue.getState()).thenReturn(QueueState.STOPPED);
-    queues.put("b1", bQueue);
+    cs.getCapacitySchedulerQueueManager().addQueue("b1", bQueue);
 
     bQueue = Mockito.spy((LeafQueue) queues.get("b2"));
     when(bQueue.getState()).thenReturn(QueueState.STOPPED);
-    queues.put("b2", bQueue);
+    cs.getCapacitySchedulerQueueManager().addQueue("b2", bQueue);
 
     bQueue = Mockito.spy((LeafQueue) queues.get("b3"));
     when(bQueue.getState()).thenReturn(QueueState.STOPPED);
-    queues.put("b3", bQueue);
+    cs.getCapacitySchedulerQueueManager().addQueue("b3", bQueue);
 
     // test delete Parent queue when there is application running.
     conf = new CapacitySchedulerConfiguration();
@@ -5175,20 +5175,20 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
 
     // test delete all leaf queues when there is no application running.
     Map<String, CSQueue> queues =
-        cs.getCapacitySchedulerQueueManager().getQueues();
+        cs.getCapacitySchedulerQueueManager().getShortNameQueues();
 
     CSQueue bQueue = Mockito.spy((LeafQueue) queues.get("b1"));
     when(bQueue.getState()).thenReturn(QueueState.RUNNING)
         .thenReturn(QueueState.STOPPED);
-    queues.put("b1", bQueue);
+    cs.getCapacitySchedulerQueueManager().addQueue("b1", bQueue);
 
     bQueue = Mockito.spy((LeafQueue) queues.get("b2"));
     when(bQueue.getState()).thenReturn(QueueState.STOPPED);
-    queues.put("b2", bQueue);
+    cs.getCapacitySchedulerQueueManager().addQueue("b2", bQueue);
 
     bQueue = Mockito.spy((LeafQueue) queues.get("b3"));
     when(bQueue.getState()).thenReturn(QueueState.STOPPED);
-    queues.put("b3", bQueue);
+    cs.getCapacitySchedulerQueueManager().addQueue("b3", bQueue);
 
     conf = new CapacitySchedulerConfiguration();
     setupQueueConfWithOutChildrenOfB(conf);

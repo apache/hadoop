@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.placement;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
 
 /**
  * Queue Mapping class to hold the queue mapping information.
@@ -65,6 +66,22 @@ public class QueueMapping {
       return this;
     }
 
+    public QueueMappingBuilder parsePathString(String queuePath) {
+      int parentQueueNameEndIndex = queuePath.lastIndexOf(DOT);
+
+      if (parentQueueNameEndIndex > -1) {
+        final String parentQueue =
+            queuePath.substring(0, parentQueueNameEndIndex).trim();
+        final String leafQueue =
+            queuePath.substring(parentQueueNameEndIndex + 1).trim();
+        return this
+            .parentQueue(parentQueue)
+            .queue(leafQueue);
+      }
+
+      return this.queue(queuePath);
+    }
+
     public QueueMapping build() {
       return new QueueMapping(this);
     }
@@ -75,6 +92,7 @@ public class QueueMapping {
     this.source = builder.source;
     this.queue = builder.queue;
     this.parentQueue = builder.parentQueue;
+    this.fullPath = (parentQueue != null) ? (parentQueue + DOT + queue) : queue;
   }
 
   /**
@@ -82,8 +100,9 @@ public class QueueMapping {
    *
    */
   public enum MappingType {
-
-    USER("u"), GROUP("g");
+    USER("u"),
+    GROUP("g"),
+    APPLICATION("a");
 
     private final String type;
 
@@ -101,6 +120,7 @@ public class QueueMapping {
   private String source;
   private String queue;
   private String parentQueue;
+  private String fullPath;
 
   private final static String DELIMITER = ":";
 
@@ -122,6 +142,10 @@ public class QueueMapping {
 
   public String getSource() {
     return source;
+  }
+
+  public String getFullPath() {
+    return fullPath;
   }
 
   @Override
@@ -180,4 +204,10 @@ public class QueueMapping {
     return type.toString() + DELIMITER + source + DELIMITER
         + (parentQueue != null ? parentQueue + "." + queue : queue);
   }
+
+  public String toTypelessString() {
+    return source + DELIMITER
+        + (parentQueue != null ? parentQueue + "." + queue : queue);
+  }
+
 }

@@ -18,9 +18,9 @@
 package org.apache.hadoop.fs.viewfs;
 
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
-import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE_DEFAULT;
+import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -35,9 +35,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
-import java.util.Map.Entry;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -97,15 +97,27 @@ public class ViewFileSystem extends FileSystem {
   }
 
   /**
+   * Gets file system creator instance.
+   */
+  protected FsGetter fsGetter() {
+    return new FsGetter();
+  }
+
+  /**
    * Caching children filesystems. HADOOP-15565.
    */
   static class InnerCache {
     private Map<Key, FileSystem> map = new HashMap<>();
+    private FsGetter fsCreator;
+
+    InnerCache(FsGetter fsCreator) {
+      this.fsCreator = fsCreator;
+    }
 
     FileSystem get(URI uri, Configuration config) throws IOException {
       Key key = new Key(uri);
       if (map.get(key) == null) {
-        FileSystem fs = FileSystem.newInstance(uri, config);
+        FileSystem fs = fsCreator.getNewInstance(uri, config);
         map.put(key, fs);
         return fs;
       } else {
@@ -193,7 +205,7 @@ public class ViewFileSystem extends FileSystem {
 
   final long creationTime; // of the the mount table
   final UserGroupInformation ugi; // the user/group of user who created mtable
-  URI myUri;
+  private URI myUri;
   private Path workingDir;
   Configuration config;
   InodeTree<FileSystem> fsState;  // the fs state; ie the mount table
@@ -255,13 +267,13 @@ public class ViewFileSystem extends FileSystem {
     config = conf;
     enableInnerCache = config.getBoolean(CONFIG_VIEWFS_ENABLE_INNER_CACHE,
         CONFIG_VIEWFS_ENABLE_INNER_CACHE_DEFAULT);
-    final InnerCache innerCache = new InnerCache();
+    FsGetter fsGetter = fsGetter();
+    final InnerCache innerCache = new InnerCache(fsGetter);
     // Now build  client side view (i.e. client side mount table) from config.
     final String authority = theUri.getAuthority();
     try {
-      myUri = new URI(FsConstants.VIEWFS_SCHEME, authority, "/", null, null);
+      myUri = new URI(getScheme(), authority, "/", null, null);
       fsState = new InodeTree<FileSystem>(conf, authority) {
-
         @Override
         protected FileSystem getTargetFileSystem(final URI uri)
           throws URISyntaxException, IOException {
@@ -269,7 +281,7 @@ public class ViewFileSystem extends FileSystem {
             if (enableInnerCache) {
               fs = innerCache.get(uri, config);
             } else {
-              fs = FileSystem.get(uri, config);
+              fs = fsGetter.get(uri, config);
             }
             return new ChRootedFileSystem(fs, uri);
         }
@@ -283,7 +295,8 @@ public class ViewFileSystem extends FileSystem {
         @Override
         protected FileSystem getTargetFileSystem(final String settings,
             final URI[] uris) throws URISyntaxException, IOException {
-          return NflyFSystem.createFileSystem(uris, config, settings);
+          return NflyFSystem.createFileSystem(uris, config, settings,
+              fsGetter);
         }
       };
       workingDir = this.getHomeDirectory();
@@ -475,6 +488,14 @@ public class ViewFileSystem extends FileSystem {
         : new ViewFsFileStatus(orig, qualified);
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * If the given path is a symlink(mount link), the path will be resolved to a
+   * target path and it will get the resolved path's FileStatus object. It will
+   * not be represented as a symlink and isDirectory API returns true if the
+   * resolved path is a directory, false otherwise.
+   */
   @Override
   public FileStatus getFileStatus(final Path f) throws AccessControlException,
       FileNotFoundException, IOException {
@@ -492,6 +513,25 @@ public class ViewFileSystem extends FileSystem {
     res.targetFileSystem.access(res.remainingPath, mode);
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * Note: listStatus on root("/") considers listing from fallbackLink if
+   * available. If the same directory name is present in configured mount path
+   * as well as in fallback link, then only the configured mount path will be
+   * listed in the returned result.
+   *
+   * If any of the the immediate children of the given path f is a symlink(mount
+   * link), the returned FileStatus object of that children would be represented
+   * as a symlink. It will not be resolved to the target path and will not get
+   * the target path FileStatus object. The target path will be available via
+   * getSymlink on that children's FileStatus object. Since it represents as
+   * symlink, isDirectory on that children's FileStatus will return false.
+   *
+   * If you want to get the FileStatus of target path for that children, you may
+   * want to use GetFileStatus API with that children's symlink path. Please see
+   * {@link ViewFileSystem#getFileStatus(Path f)}
+   */
   @Override
   public FileStatus[] listStatus(final Path f) throws AccessControlException,
       FileNotFoundException, IOException {
@@ -1161,7 +1201,6 @@ public class ViewFileSystem extends FileSystem {
       checkPathIsSlash(f);
       return new FileStatus(0, true, 0, 0, creationTime, creationTime,
           PERMISSION_555, ugi.getShortUserName(), ugi.getPrimaryGroupName(),
-
           new Path(theInternalDir.fullPath).makeQualified(
               myUri, ROOT_PATH));
     }
@@ -1171,6 +1210,7 @@ public class ViewFileSystem extends FileSystem {
     public FileStatus[] listStatus(Path f) throws AccessControlException,
         FileNotFoundException, IOException {
       checkPathIsSlash(f);
+      FileStatus[] fallbackStatuses = listStatusForFallbackLink();
       FileStatus[] result = new FileStatus[theInternalDir.getChildren().size()];
       int i = 0;
       for (Entry<String, INode<FileSystem>> iEntry :
@@ -1178,22 +1218,76 @@ public class ViewFileSystem extends FileSystem {
         INode<FileSystem> inode = iEntry.getValue();
         if (inode.isLink()) {
           INodeLink<FileSystem> link = (INodeLink<FileSystem>) inode;
-
-          result[i++] = new FileStatus(0, false, 0, 0,
-            creationTime, creationTime, PERMISSION_555,
-            ugi.getShortUserName(), ugi.getPrimaryGroupName(),
-            link.getTargetLink(),
-            new Path(inode.fullPath).makeQualified(
-                myUri, null));
+          try {
+            String linkedPath = link.getTargetFileSystem().getUri().getPath();
+            if("".equals(linkedPath)) {
+              linkedPath = "/";
+            }
+            FileStatus status =
+                ((ChRootedFileSystem)link.getTargetFileSystem())
+                .getMyFs().getFileStatus(new Path(linkedPath));
+            result[i++] = new FileStatus(status.getLen(), false,
+              status.getReplication(), status.getBlockSize(),
+              status.getModificationTime(), status.getAccessTime(),
+              status.getPermission(), status.getOwner(), status.getGroup(),
+              link.getTargetLink(),
+              new Path(inode.fullPath).makeQualified(
+                  myUri, null));
+          } catch (FileNotFoundException ex) {
+            result[i++] = new FileStatus(0, false, 0, 0,
+              creationTime, creationTime, PERMISSION_555,
+              ugi.getShortUserName(), ugi.getPrimaryGroupName(),
+              link.getTargetLink(),
+              new Path(inode.fullPath).makeQualified(
+                  myUri, null));
+          }
         } else {
           result[i++] = new FileStatus(0, true, 0, 0,
             creationTime, creationTime, PERMISSION_555,
-            ugi.getShortUserName(), ugi.getGroupNames()[0],
+            ugi.getShortUserName(), ugi.getPrimaryGroupName(),
             new Path(inode.fullPath).makeQualified(
                 myUri, null));
         }
       }
-      return result;
+      if (fallbackStatuses.length > 0) {
+        return consolidateFileStatuses(fallbackStatuses, result);
+      } else {
+        return result;
+      }
+    }
+
+    private FileStatus[] consolidateFileStatuses(FileStatus[] fallbackStatuses,
+        FileStatus[] mountPointStatuses) {
+      ArrayList<FileStatus> result = new ArrayList<>();
+      Set<String> pathSet = new HashSet<>();
+      for (FileStatus status : mountPointStatuses) {
+        result.add(status);
+        pathSet.add(status.getPath().getName());
+      }
+      for (FileStatus status : fallbackStatuses) {
+        if (!pathSet.contains(status.getPath().getName())) {
+          result.add(status);
+        }
+      }
+      return result.toArray(new FileStatus[0]);
+    }
+
+    private FileStatus[] listStatusForFallbackLink() throws IOException {
+      if (theInternalDir.isRoot() &&
+          theInternalDir.getFallbackLink() != null) {
+        FileSystem linkedFs =
+            theInternalDir.getFallbackLink().getTargetFileSystem();
+        // Fallback link is only applicable for root
+        FileStatus[] statuses = linkedFs.listStatus(new Path("/"));
+        for (FileStatus status : statuses) {
+          // Fix the path back to viewfs scheme
+          status.setPath(
+              new Path(myUri.toString(), status.getPath().getName()));
+        }
+        return statuses;
+      } else {
+        return new FileStatus[0];
+      }
     }
 
     @Override

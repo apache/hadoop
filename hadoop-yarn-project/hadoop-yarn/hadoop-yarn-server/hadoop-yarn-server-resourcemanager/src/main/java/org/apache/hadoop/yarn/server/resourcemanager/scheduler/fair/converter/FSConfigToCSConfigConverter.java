@@ -17,6 +17,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSQueueConverter.QUEUE_MAX_AM_SHARE_DISABLED;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -264,22 +265,13 @@ public class FSConfigToCSConfigConverter {
     convertedYarnSiteConfig.writeXml(yarnSiteOutputStream);
   }
 
-  @VisibleForTesting
-  void setYarnSiteOutputStream(OutputStream out) {
-    this.yarnSiteOutputStream = out;
-  }
-
-  @VisibleForTesting
-  void setCapacitySchedulerConfigOutputStream(OutputStream out) {
-    this.capacitySchedulerOutputStream = out;
-  }
-
   private void convertYarnSiteXml(Configuration inputYarnSiteConfig,
       boolean havePlacementPolicies) {
     FSYarnSiteConverter siteConverter =
         new FSYarnSiteConverter();
     siteConverter.convertSiteProperties(inputYarnSiteConfig,
-        convertedYarnSiteConfig, drfUsed);
+        convertedYarnSiteConfig, drfUsed,
+        conversionOptions.isEnableAsyncScheduler());
 
     // See docs: "allow-undeclared-pools" and "user-as-default-queue" are
     // ignored if we have placement rules
@@ -339,10 +331,17 @@ public class FSConfigToCSConfigConverter {
   }
 
   private void emitDefaultMaxAMShare() {
-    capacitySchedulerConfig.set(
-        CapacitySchedulerConfiguration.
-          MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT,
-        String.valueOf(queueMaxAMShareDefault));
+    if (queueMaxAMShareDefault == QUEUE_MAX_AM_SHARE_DISABLED) {
+      capacitySchedulerConfig.setFloat(
+          CapacitySchedulerConfiguration.
+            MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT,
+            1.0f);
+    } else {
+      capacitySchedulerConfig.setFloat(
+          CapacitySchedulerConfiguration.
+            MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT,
+          queueMaxAMShareDefault);
+    }
   }
 
   private void emitACLs(FairScheduler fs) {
@@ -394,11 +393,8 @@ public class FSConfigToCSConfigConverter {
 
     String defaultPolicy = allocConf.getDefaultSchedulingPolicy().getName();
 
-    if (DominantResourceFairnessPolicy.NAME.equals(defaultPolicy)) {
-      return true;
-    } else {
-      return isDrfUsedOnQueueLevel(rootQueue);
-    }
+    return DominantResourceFairnessPolicy.NAME.equals(defaultPolicy) ||
+        isDrfUsedOnQueueLevel(rootQueue);
   }
 
   private boolean isDrfUsedOnQueueLevel(FSQueue queue) {
@@ -438,6 +434,11 @@ public class FSConfigToCSConfigConverter {
   @VisibleForTesting
   Configuration getYarnSiteConfig() {
     return convertedYarnSiteConfig;
+  }
+
+  @VisibleForTesting
+  Configuration getCapacitySchedulerConfig() {
+    return capacitySchedulerConfig;
   }
 
   @VisibleForTesting

@@ -188,7 +188,7 @@ import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.ReadaheadPool;
 import org.apache.hadoop.io.nativeio.NativeIO;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.util.MBeans;
@@ -1015,7 +1015,7 @@ public class DataNode extends ReconfigurableBase
     
     // Add all the RPC protocols that the Datanode implements    
     RPC.setProtocolEngine(getConf(), ClientDatanodeProtocolPB.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     ClientDatanodeProtocolServerSideTranslatorPB clientDatanodeProtocolXlator = 
           new ClientDatanodeProtocolServerSideTranslatorPB(this);
     BlockingService service = ClientDatanodeProtocolService
@@ -1082,7 +1082,7 @@ public class DataNode extends ReconfigurableBase
     }
 
     // Is the user a member of the super group?
-    List<String> groups = Arrays.asList(callerUgi.getGroupNames());
+    List<String> groups = callerUgi.getGroups();
     if (groups.contains(supergroup)) {
       return;
     }
@@ -2146,6 +2146,8 @@ public class DataNode extends ReconfigurableBase
     }
     if (metrics != null) {
       metrics.setDataNodeActiveXceiversCount(0);
+      metrics.setDataNodePacketResponderCount(0);
+      metrics.setDataNodeBlockRecoveryWorkerCount(0);
     }
 
    // IPC server needs to be shutdown late in the process, otherwise
@@ -2244,7 +2246,20 @@ public class DataNode extends ReconfigurableBase
   /** Number of concurrent xceivers per node. */
   @Override // DataNodeMXBean
   public int getXceiverCount() {
-    return threadGroup == null ? 0 : threadGroup.activeCount();
+    if (metrics == null) {
+      return 0;
+    }
+    return metrics.getDataNodeActiveXceiverCount();
+  }
+
+  @Override // DataNodeMXBean
+  public int getActiveTransferThreadCount() {
+    if (metrics == null) {
+      return 0;
+    }
+    return metrics.getDataNodeActiveXceiverCount()
+        + metrics.getDataNodePacketResponderCount()
+        + metrics.getDataNodeBlockRecoveryWorkerCount();
   }
 
   @Override // DataNodeMXBean
@@ -3431,7 +3446,7 @@ public class DataNode extends ReconfigurableBase
       unhealthyVolumes = volumeChecker.checkAllVolumes(data);
       lastDiskErrorCheck = Time.monotonicNow();
     } catch (InterruptedException e) {
-      LOG.error("Interruped while running disk check", e);
+      LOG.error("Interrupted while running disk check", e);
       throw new IOException("Interrupted while running disk check", e);
     }
 

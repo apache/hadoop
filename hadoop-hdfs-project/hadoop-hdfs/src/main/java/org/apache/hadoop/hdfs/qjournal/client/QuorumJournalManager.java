@@ -73,9 +73,9 @@ public class QuorumJournalManager implements JournalManager {
   static final Logger LOG = LoggerFactory.getLogger(QuorumJournalManager.class);
 
   // This config is not publicly exposed
-  static final String QJM_RPC_MAX_TXNS_KEY =
+  public static final String QJM_RPC_MAX_TXNS_KEY =
       "dfs.ha.tail-edits.qjm.rpc.max-txns";
-  static final int QJM_RPC_MAX_TXNS_DEFAULT = 5000;
+  public static final int QJM_RPC_MAX_TXNS_DEFAULT = 5000;
 
   // Maximum number of transactions to fetch at a time when using the
   // RPC edit fetch mechanism

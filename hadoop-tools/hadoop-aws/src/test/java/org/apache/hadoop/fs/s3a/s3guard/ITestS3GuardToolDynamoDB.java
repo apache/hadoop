@@ -354,6 +354,40 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
         "s3a://" + getFileSystem().getBucket()));
   }
 
+  @Test
+  public void testCLIFsckDDbFixOnlyFails() throws Exception {
+    describe("This test serves the purpose to run fsck with the correct " +
+        "parameters, so there will be no exception thrown.");
+    final int result = run(S3GuardTool.Fsck.NAME,
+        "-" + Fsck.FIX_FLAG,
+        "s3a://" + getFileSystem().getBucket());
+    LOG.info("The return value of the run: {}", result);
+    assertEquals(ERROR, result);
+  }
+
+  /**
+   * Test that the fix flag is accepted by the fsck.
+   *
+   * Note that we don't have an assert at the end of this test because
+   * there maybe some errors found during the check and the returned value
+   * will be ERROR and not SUCCESS. So if we assert on SUCCESS, then the test
+   * could (likely) to be flaky.
+   * If the FIX_FLAG parameter is not accepted here an exception will be thrown
+   * so the test will break.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testCLIFsckDDbFixAndInternalSucceed() throws Exception {
+    describe("This test serves the purpose to run fsck with the correct " +
+        "parameters, so there will be no exception thrown.");
+    final int result = run(S3GuardTool.Fsck.NAME,
+        "-" + Fsck.FIX_FLAG,
+        "-" + Fsck.DDB_MS_CONSISTENCY_FLAG,
+        "s3a://" + getFileSystem().getBucket());
+    LOG.info("The return value of the run: {}", result);
+  }
+
   /**
    * Test that when init, the CMK option can not live without SSE enabled.
    */

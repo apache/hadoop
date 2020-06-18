@@ -138,7 +138,8 @@ public class DatanodeAdminManager {
     try {
       cls = conf.getClass(
           DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_MONITOR_CLASS,
-          DatanodeAdminDefaultMonitor.class);
+          Class.forName(DFSConfigKeys
+                  .DFS_NAMENODE_DECOMMISSION_MONITOR_CLASS_DEFAULT));
       monitor =
           (DatanodeAdminMonitorInterface)ReflectionUtils.newInstance(cls, conf);
       monitor.setBlockManager(blockManager);

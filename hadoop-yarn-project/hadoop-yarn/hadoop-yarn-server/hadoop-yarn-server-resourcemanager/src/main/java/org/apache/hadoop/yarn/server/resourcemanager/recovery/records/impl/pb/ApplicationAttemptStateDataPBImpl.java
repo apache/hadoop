@@ -454,4 +454,16 @@ public class ApplicationAttemptStateDataPBImpl extends
           .convertMapToStringLongMapProtoList(preemptedResourceSecondsMap));
     }
   }
+
+  @Override
+  public int getTotalAllocatedContainers() {
+    ApplicationAttemptStateDataProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getTotalAllocatedContainers();
+  }
+
+  @Override
+  public void setTotalAllocatedContainers(int totalAllocatedContainers) {
+    maybeInitBuilder();
+    builder.setTotalAllocatedContainers(totalAllocatedContainers);
+  }
 }

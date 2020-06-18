@@ -566,7 +566,7 @@ public class FrameworkUploader implements Runnable {
         path.startsWith("file://");
 
     if (fs == null) {
-      fs = conf.get(FS_DEFAULT_NAME_KEY);
+      fs = conf.getTrimmed(FS_DEFAULT_NAME_KEY);
       if (fs == null && !isFullPath) {
         LOG.error("No filesystem specified in either fs or target.");
         printHelp(opts);

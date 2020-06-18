@@ -22,6 +22,7 @@ public class ConversionOptions {
   private DryRunResultHolder dryRunResultHolder;
   private boolean dryRun;
   private boolean noTerminalRuleCheck;
+  private boolean enableAsyncScheduler;
 
   public ConversionOptions(DryRunResultHolder dryRunResultHolder,
       boolean dryRun) {
@@ -39,6 +40,14 @@ public class ConversionOptions {
 
   public boolean isNoRuleTerminalCheck() {
     return noTerminalRuleCheck;
+  }
+
+  public void setEnableAsyncScheduler(boolean enableAsyncScheduler) {
+    this.enableAsyncScheduler = enableAsyncScheduler;
+  }
+
+  public boolean isEnableAsyncScheduler() {
+    return enableAsyncScheduler;
   }
 
   public void handleWarning(String msg, Logger log) {

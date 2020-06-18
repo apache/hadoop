@@ -32,22 +32,23 @@ import org.apache.hadoop.security.AccessControlException;
 @InterfaceStability.Unstable
 public interface SASTokenProvider {
 
-  String CONCAT_SOURCE_OPERATION = "concat-source";
-  String CONCAT_TARGET_OPERATION = "concat-target";
-  String CREATEFILE_OPERATION = "create";
+  String CHECK_ACCESS_OPERATION = "check-access";
+  String CREATE_DIRECTORY_OPERATION = "create-directory";
+  String CREATE_FILE_OPERATION = "create-file";
   String DELETE_OPERATION = "delete";
-  String EXECUTE_OPERATION = "execute";
-  String GETACL_OPERATION = "getaclstatus";
-  String GETFILESTATUS_OPERATION = "getfilestatus";
-  String LISTSTATUS_OPERATION = "liststatus";
-  String MKDIR_OPERATION = "mkdir";
+  String DELETE_RECURSIVE_OPERATION = "delete-recursive";
+  String GET_ACL_OPERATION = "get-acl";
+  String GET_STATUS_OPERATION = "get-status";
+  String GET_PROPERTIES_OPERATION = "get-properties";
+  String LIST_OPERATION = "list";
   String READ_OPERATION = "read";
   String RENAME_SOURCE_OPERATION = "rename-source";
   String RENAME_DESTINATION_OPERATION = "rename-destination";
-  String SETACL_OPERATION = "setacl";
-  String SETOWNER_OPERATION = "setowner";
-  String SETPERMISSION_OPERATION = "setpermission";
-  String APPEND_OPERATION = "write";
+  String SET_ACL_OPERATION = "set-acl";
+  String SET_OWNER_OPERATION = "set-owner";
+  String SET_PERMISSION_OPERATION = "set-permission";
+  String SET_PROPERTIES_OPERATION = "set-properties";
+  String WRITE_OPERATION = "write";
 
   /**
    * Initialize authorizer for Azure Blob File System.

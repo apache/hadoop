@@ -28,7 +28,6 @@ import com.google.common.base.Preconditions;
 import com.qcloud.cos.auth.AnonymousCOSCredentials;
 import com.qcloud.cos.auth.COSCredentials;
 import com.qcloud.cos.auth.COSCredentialsProvider;
-import com.qcloud.cos.exception.CosClientException;
 import com.qcloud.cos.utils.StringUtils;
 
 import org.slf4j.Logger;
@@ -37,10 +36,10 @@ import org.slf4j.LoggerFactory;
 /**
  * a list of cos credentials provider.
  */
-public class COSCredentialProviderList implements
+public class COSCredentialsProviderList implements
     COSCredentialsProvider, AutoCloseable {
   private static final Logger LOG =
-      LoggerFactory.getLogger(COSCredentialProviderList.class);
+      LoggerFactory.getLogger(COSCredentialsProviderList.class);
 
   private static final String NO_COS_CREDENTIAL_PROVIDERS =
       "No COS Credential Providers";
@@ -48,17 +47,17 @@ public class COSCredentialProviderList implements
       "Credentials requested after provider list was closed";
 
   private final List<COSCredentialsProvider> providers =
-      new ArrayList<>(1);
+      new ArrayList<COSCredentialsProvider>(1);
   private boolean reuseLastProvider = true;
   private COSCredentialsProvider lastProvider;
 
   private final AtomicInteger refCount = new AtomicInteger(1);
   private final AtomicBoolean isClosed = new AtomicBoolean(false);
 
-  public COSCredentialProviderList() {
+  public COSCredentialsProviderList() {
   }
 
-  public COSCredentialProviderList(
+  public COSCredentialsProviderList(
       Collection<COSCredentialsProvider> providers) {
     this.providers.addAll(providers);
   }
@@ -77,7 +76,7 @@ public class COSCredentialProviderList implements
     }
   }
 
-  public COSCredentialProviderList share() {
+  public COSCredentialsProviderList share() {
     Preconditions.checkState(!this.closed(), "Provider list is closed");
     this.refCount.incrementAndGet();
     return this;
@@ -100,21 +99,29 @@ public class COSCredentialProviderList implements
     }
 
     for (COSCredentialsProvider provider : this.providers) {
-      try {
-        COSCredentials credentials = provider.getCredentials();
-        if (!StringUtils.isNullOrEmpty(credentials.getCOSAccessKeyId())
-            && !StringUtils.isNullOrEmpty(credentials.getCOSSecretKey())
-            || credentials instanceof AnonymousCOSCredentials) {
-          this.lastProvider = provider;
-          return credentials;
-        }
-      } catch (CosClientException e) {
-        LOG.warn("No credentials provided by {}: {}", provider, e.toString());
+      COSCredentials credentials = provider.getCredentials();
+      if (null != credentials
+           && !StringUtils.isNullOrEmpty(credentials.getCOSAccessKeyId())
+           && !StringUtils.isNullOrEmpty(credentials.getCOSSecretKey())
+           || credentials instanceof AnonymousCOSCredentials) {
+        this.lastProvider = provider;
+        return credentials;
       }
     }
 
     throw new NoAuthWithCOSException(
         "No COS Credentials provided by " + this.providers.toString());
+  }
+
+  @Override
+  public void refresh() {
+    if (this.closed()) {
+      return;
+    }
+
+    for (COSCredentialsProvider cosCredentialsProvider : this.providers) {
+      cosCredentialsProvider.refresh();
+    }
   }
 
   @Override
@@ -135,5 +142,4 @@ public class COSCredentialProviderList implements
       }
     }
   }
-
 }

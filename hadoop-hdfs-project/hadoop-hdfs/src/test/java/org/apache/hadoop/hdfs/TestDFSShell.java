@@ -1468,6 +1468,9 @@ public class TestDFSShell {
 
     runCmd(shell, "-chgrp", "hadoop-core@apache.org/100", file);
     confirmOwner(null, "hadoop-core@apache.org/100", fs, path);
+
+    runCmd(shell, "-chown", "MYCOMPANY+user.name:hadoop", file);
+    confirmOwner("MYCOMPANY+user.name", "hadoop", fs, path);
   }
 
   /**

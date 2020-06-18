@@ -126,6 +126,7 @@ omitted.
 |:---- |:---- |:---- |:--- |
 | backoff.enable | General | Whether or not to enable client backoff when a queue is full. | false |
 | callqueue.impl | General | The fully qualified name of a class to use as the implementation of a call queue. Use `org.apache.hadoop.ipc.FairCallQueue` for the Fair Call Queue. | `java.util.concurrent.LinkedBlockingQueue` (FIFO queue) |
+| callqueue.capacity.weights | General | The capacity allocation weights among all subqueues. A postive int array whose length is equal to the `scheduler.priority.levels` is expected where each int is the relative weight out of total capacity. i.e. if a queue with capacity weight `w`, its queue capacity is `capacity * w/sum(weights)` |
 | scheduler.impl | General | The fully qualified name of a class to use as the implementation of the scheduler. Use `org.apache.hadoop.ipc.DecayRpcScheduler` in conjunction with the Fair Call Queue. | `org.apache.hadoop.ipc.DefaultRpcScheduler` (no-op scheduler) <br/> If using FairCallQueue, defaults to `org.apache.hadoop.ipc.DecayRpcScheduler` |
 | scheduler.priority.levels | RpcScheduler, CallQueue | How many priority levels to use within the scheduler and call queue. | 4 |
 | faircallqueue.multiplexer.weights | WeightedRoundRobinMultiplexer | How much weight to give to each priority queue. This should be a comma-separated list of length equal to the number of priority levels. | Weights descend by a factor of 2 (e.g., for 4 levels: `8,4,2,1`) |
@@ -150,6 +151,10 @@ processed.
     <property>
          <name>ipc.8020.callqueue.impl</name>
          <value>org.apache.hadoop.ipc.FairCallQueue</value>
+    </property>
+    <property>
+         <name>ipc.8020.callqueue.capacity.weights</name>
+         <value>7,3</value>
     </property>
     <property>
          <name>ipc.8020.scheduler.impl</name>

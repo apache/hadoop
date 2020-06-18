@@ -48,7 +48,7 @@ import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.ipc.AlignmentContext;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.ProxyCombiner;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RefreshCallQueueProtocol;
@@ -305,7 +305,7 @@ public class NameNodeProxies {
   private static <T> T createNameNodeProxy(InetSocketAddress address,
       Configuration conf, UserGroupInformation ugi, Class<T> xface,
       int rpcTimeout, AlignmentContext alignmentContext) throws IOException {
-    RPC.setProtocolEngine(conf, xface, ProtobufRpcEngine.class);
+    RPC.setProtocolEngine(conf, xface, ProtobufRpcEngine2.class);
     return RPC.getProtocolProxy(xface,
         RPC.getProtocolVersion(xface), address, ugi, conf,
         NetUtils.getDefaultSocketFactory(conf), rpcTimeout, null, null,

@@ -15,39 +15,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.hdfs.procedure;
 
-package org.apache.hadoop.yarn.server.resourcemanager.placement;
+import org.apache.hadoop.conf.Configurable;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
+import java.io.IOException;
 
-public class QueuePath {
+/**
+ * The Journal of the state machine. It handles the job persistence and recover.
+ */
+public interface BalanceJournal extends Configurable {
 
-  private String parentQueue;
-  private String leafQueue;
+  /**
+   * Save journal of this job.
+   */
+  void saveJob(BalanceJob job) throws IOException;
 
-  public QueuePath(final String leafQueue) {
-    this.leafQueue = leafQueue;
-  }
+  /**
+   * Recover the job from journal.
+   */
+  void recoverJob(BalanceJob job) throws IOException;
 
-  public QueuePath(final String parentQueue, final String leafQueue) {
-    this.parentQueue = parentQueue;
-    this.leafQueue = leafQueue;
-  }
+  /**
+   * List all unfinished jobs.
+   */
+  BalanceJob[] listAllJobs() throws IOException;
 
-  public String getParentQueue() {
-    return parentQueue;
-  }
-
-  public String getLeafQueue() {
-    return leafQueue;
-  }
-
-  public boolean hasParentQueue() {
-    return parentQueue != null;
-  }
-
-  @Override
-  public String toString() {
-    return parentQueue + DOT + leafQueue;
-  }
+  /**
+   * Clear all the journals of this job.
+   */
+  void clear(BalanceJob job) throws IOException;
 }

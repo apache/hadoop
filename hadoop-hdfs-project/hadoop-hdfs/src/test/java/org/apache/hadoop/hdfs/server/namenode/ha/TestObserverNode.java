@@ -33,8 +33,8 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
-
 import java.util.concurrent.TimeUnit;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -42,6 +42,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.ServiceFailedException;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -52,6 +53,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.TestFsck;
 import org.apache.hadoop.hdfs.tools.GetGroups;
@@ -88,7 +90,7 @@ public class TestObserverNode {
     // Observer and immediately try to read from it.
     conf.setTimeDuration(
         OBSERVER_PROBE_RETRY_PERIOD_KEY, 0, TimeUnit.MILLISECONDS);
-    qjmhaCluster = HATestUtil.setUpObserverCluster(conf, 1, 0, true);
+    qjmhaCluster = HATestUtil.setUpObserverCluster(conf, 1, 1, true);
     dfsCluster = qjmhaCluster.getDfsCluster();
   }
 
@@ -468,6 +470,25 @@ public class TestObserverNode {
       dfsCluster.transitionToObserver(2);
     }
   }
+
+  @Test
+  public void testFsckDelete() throws Exception {
+    setObserverRead(true);
+    DFSTestUtil.createFile(dfs, testPath, 512, (short) 1, 0);
+    DFSTestUtil.waitForReplication(dfs, testPath, (short) 1, 5000);
+    ExtendedBlock block = DFSTestUtil.getFirstBlock(dfs, testPath);
+    int dnToCorrupt = DFSTestUtil.firstDnWithBlock(dfsCluster, block);
+    FSNamesystem ns = dfsCluster.getNameNode(0).getNamesystem();
+    // corrupt Replicas are detected on restarting datanode
+    dfsCluster.corruptReplica(dnToCorrupt, block);
+    dfsCluster.restartDataNode(dnToCorrupt);
+    DFSTestUtil.waitCorruptReplicas(dfs, ns, testPath, block, 1);
+    final String result = TestFsck.runFsck(conf, 1, true, "/", "-delete");
+    // filesystem should be in corrupt state
+    LOG.info("result=" + result);
+    assertTrue(result.contains("The filesystem under path '/' is CORRUPT"));
+  }
+
 
   private void assertSentTo(int nnIdx) throws IOException {
     assertTrue("Request was not sent to the expected namenode " + nnIdx,

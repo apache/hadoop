@@ -28,7 +28,7 @@ import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.protocolPB.HAServiceProtocolPB;
 import org.apache.hadoop.ha.protocolPB.HAServiceProtocolServerSideTranslatorPB;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.HAServiceProtocolService;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
@@ -119,7 +119,7 @@ class DummyHAService extends HAServiceTarget {
 
     try {
       RPC.setProtocolEngine(conf,
-          HAServiceProtocolPB.class, ProtobufRpcEngine.class);
+          HAServiceProtocolPB.class, ProtobufRpcEngine2.class);
       HAServiceProtocolServerSideTranslatorPB haServiceProtocolXlator =
           new HAServiceProtocolServerSideTranslatorPB(new MockHAProtocolImpl());
       BlockingService haPbService = HAServiceProtocolService

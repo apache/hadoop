@@ -109,6 +109,9 @@ public class FSConfigToCSConfigArgumentHandler {
     SKIP_VERIFICATION("skip verification", "s",
         "skip-verification",
         "Skips the verification of the converted configuration", false),
+    ENABLE_ASYNC_SCHEDULER("enable asynchronous scheduler", "a", "enable-async-scheduler",
+      "Enables the Asynchronous scheduler which decouples the CapacityScheduler" +
+        " scheduling from Node Heartbeats.", false),
     HELP("help", "h", "help", "Displays the list of options", false);
 
     private final String name;
@@ -220,6 +223,8 @@ public class FSConfigToCSConfigArgumentHandler {
     conversionOptions.setDryRun(dryRun);
     conversionOptions.setNoTerminalRuleCheck(
         cliParser.hasOption(CliOption.NO_TERMINAL_RULE_CHECK.shortSwitch));
+    conversionOptions.setEnableAsyncScheduler(
+      cliParser.hasOption(CliOption.ENABLE_ASYNC_SCHEDULER.shortSwitch));
 
     checkOptionPresent(cliParser, CliOption.YARN_SITE);
     checkOutputDefined(cliParser, dryRun);

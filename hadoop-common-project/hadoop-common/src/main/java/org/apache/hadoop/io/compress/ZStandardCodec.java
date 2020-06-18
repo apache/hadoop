@@ -230,7 +230,7 @@ public class ZStandardCodec implements
    */
   @Override
   public String getDefaultExtension() {
-    return ".zst";
+    return CodecConstants.ZSTANDARD_CODEC_EXTENSION;
   }
 
   @Override

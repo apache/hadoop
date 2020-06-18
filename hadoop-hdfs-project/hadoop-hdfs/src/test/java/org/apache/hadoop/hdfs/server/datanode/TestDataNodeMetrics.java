@@ -27,6 +27,7 @@ import static org.junit.Assert.*;
 import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.management.ManagementFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -37,6 +38,7 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 
 import net.jcip.annotations.NotThreadSafe;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -156,6 +158,50 @@ public class TestDataNodeMetrics {
       assertQuantileGauges("FsyncNanos" + sec, dnMetrics);
     } finally {
       if (cluster != null) {cluster.shutdown();}
+    }
+  }
+
+  /**
+   * HDFS-15242: This function ensures that writing causes some metrics
+   * of FSDatasetImpl to increment.
+   */
+  @Test
+  public void testFsDatasetMetrics() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    try {
+      cluster.waitActive();
+      String bpid = cluster.getNameNode().getNamesystem().getBlockPoolId();
+      List<DataNode> datanodes = cluster.getDataNodes();
+      DataNode datanode = datanodes.get(0);
+
+      // Verify both of metrics set to 0 when initialize.
+      MetricsRecordBuilder rb = getMetrics(datanode.getMetrics().name());
+      assertCounter("CreateRbwOpNumOps", 0L, rb);
+      assertCounter("CreateTemporaryOpNumOps", 0L, rb);
+      assertCounter("FinalizeBlockOpNumOps", 0L, rb);
+
+      // Write into a file to trigger DN metrics.
+      DistributedFileSystem fs = cluster.getFileSystem();
+      Path testFile = new Path("/testBlockMetrics.txt");
+      FSDataOutputStream fout = fs.create(testFile);
+      fout.write(new byte[1]);
+      fout.hsync();
+      fout.close();
+
+      // Create temporary block file to trigger DN metrics.
+      final ExtendedBlock block = new ExtendedBlock(bpid, 1, 1, 2001);
+      datanode.data.createTemporary(StorageType.DEFAULT, null, block, false);
+
+      // Verify both of metrics value has updated after do some operations.
+      rb = getMetrics(datanode.getMetrics().name());
+      assertCounter("CreateRbwOpNumOps", 1L, rb);
+      assertCounter("CreateTemporaryOpNumOps", 1L, rb);
+      assertCounter("FinalizeBlockOpNumOps", 1L, rb);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
 
@@ -367,6 +413,57 @@ public class TestDataNodeMetrics {
       dataNodeActiveXceiversCount = MetricsAsserts.getIntGauge(
               "DataNodeActiveXceiversCount", rbNew);
       assertTrue(dataNodeActiveXceiversCount >= 0);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test
+  public void testDataNodeMXBeanActiveThreadCount() throws Exception {
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    FileSystem fs = cluster.getFileSystem();
+    Path p = new Path("/testfile");
+
+    try {
+      List<DataNode> datanodes = cluster.getDataNodes();
+      assertEquals(1, datanodes.size());
+      DataNode datanode = datanodes.get(0);
+
+      // create a xceiver thread for write
+      FSDataOutputStream os = fs.create(p);
+      for (int i = 0; i < 1024; i++) {
+        os.write("testdatastr".getBytes());
+      }
+      os.hsync();
+      // create a xceiver thread for read
+      InputStream is = fs.open(p);
+      is.read(new byte[16], 0, 4);
+
+      int threadCount = datanode.threadGroup.activeCount();
+      assertTrue(threadCount > 0);
+      Thread[] threads = new Thread[threadCount];
+      datanode.threadGroup.enumerate(threads);
+      int xceiverCount = 0;
+      int responderCount = 0;
+      int recoveryWorkerCount = 0;
+      for (Thread t : threads) {
+        if (t.getName().contains("DataXceiver for client")) {
+          xceiverCount++;
+        } else if (t.getName().contains("PacketResponder")) {
+          responderCount++;
+        }
+      }
+      assertEquals(2, xceiverCount);
+      assertEquals(1, responderCount);
+      assertEquals(0, recoveryWorkerCount); //not easy to produce
+      assertEquals(xceiverCount, datanode.getXceiverCount());
+      assertEquals(xceiverCount + responderCount + recoveryWorkerCount,
+          datanode.getActiveTransferThreadCount());
+
+      is.close();
     } finally {
       if (cluster != null) {
         cluster.shutdown();

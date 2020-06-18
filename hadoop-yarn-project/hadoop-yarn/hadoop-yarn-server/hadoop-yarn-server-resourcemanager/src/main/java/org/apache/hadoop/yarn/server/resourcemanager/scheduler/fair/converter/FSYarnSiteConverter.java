@@ -38,11 +38,10 @@ public class FSYarnSiteConverter {
 
   @SuppressWarnings({"deprecation", "checkstyle:linelength"})
   public void convertSiteProperties(Configuration conf,
-      Configuration yarnSiteConfig, boolean drfUsed) {
+      Configuration yarnSiteConfig, boolean drfUsed, boolean enableAsyncScheduler) {
     yarnSiteConfig.set(YarnConfiguration.RM_SCHEDULER,
         CapacityScheduler.class.getCanonicalName());
 
-    // TODO: deprecated property, check if necessary
     if (conf.getBoolean(
         FairSchedulerConfiguration.CONTINUOUS_SCHEDULING_ENABLED,
         FairSchedulerConfiguration.DEFAULT_CONTINUOUS_SCHEDULING_ENABLED)) {
@@ -53,20 +52,6 @@ public class FSYarnSiteConverter {
           FairSchedulerConfiguration.DEFAULT_CONTINUOUS_SCHEDULING_SLEEP_MS);
       yarnSiteConfig.setInt(PREFIX +
           "schedule-asynchronously.scheduling-interval-ms", interval);
-    }
-
-    String mbIncrementAllocation =
-        conf.get("yarn.resource-types.memory-mb.increment-allocation");
-    if (mbIncrementAllocation != null) {
-      yarnSiteConfig.set("yarn.scheduler.minimum-allocation-mb",
-          mbIncrementAllocation);
-    }
-
-    String vcoreIncrementAllocation =
-        conf.get("yarn.resource-types.vcores.increment-allocation");
-    if (vcoreIncrementAllocation != null) {
-      yarnSiteConfig.set("yarn.scheduler.minimum-allocation-vcores",
-          vcoreIncrementAllocation);
     }
 
     if (conf.getBoolean(FairSchedulerConfiguration.PREEMPTION,
@@ -145,6 +130,10 @@ public class FSYarnSiteConverter {
       yarnSiteConfig.set(
           CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,
           DominantResourceCalculator.class.getCanonicalName());
+    }
+
+    if (enableAsyncScheduler) {
+      yarnSiteConfig.setBoolean(CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_ENABLE, true);
     }
   }
 

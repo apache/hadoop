@@ -20,18 +20,21 @@ package org.apache.hadoop.yarn.server.resourcemanager.placement;
 
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.GroupMappingServiceProvider;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesLogger;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SimpleGroupsMapping;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.util.Arrays;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class TestAppNameMappingPlacementRule {
   private static final String APP_NAME = "DistributedShell";
@@ -44,17 +47,23 @@ public class TestAppNameMappingPlacementRule {
         SimpleGroupsMapping.class, GroupMappingServiceProvider.class);
   }
 
-  private void verifyQueueMapping(QueueMappingEntity queueMapping,
+  private void verifyQueueMapping(QueueMapping queueMapping,
       String user, String expectedQueue) throws YarnException {
     verifyQueueMapping(queueMapping, user,
         queueMapping.getQueue(), expectedQueue, false);
   }
 
-  private void verifyQueueMapping(QueueMappingEntity queueMapping,
+  private void verifyQueueMapping(QueueMapping queueMapping,
       String user, String inputQueue, String expectedQueue,
       boolean overwrite) throws YarnException {
     AppNameMappingPlacementRule rule = new AppNameMappingPlacementRule(
         overwrite, Arrays.asList(queueMapping));
+
+    CapacitySchedulerQueueManager qm =
+        mock(CapacitySchedulerQueueManager.class);
+    when(qm.isAmbiguous(Mockito.isA(String.class))).thenReturn(false);
+    rule.queueManager = qm;
+
     ApplicationSubmissionContext asc = Records.newRecord(
         ApplicationSubmissionContext.class);
     if (inputQueue.equals("%application")) {
@@ -72,23 +81,31 @@ public class TestAppNameMappingPlacementRule {
         ctx != null ? ctx.getQueue() : inputQueue);
   }
 
+  public QueueMapping queueMappingBuilder(String source, String queue) {
+    return QueueMapping.QueueMappingBuilder.create()
+        .type(QueueMapping.MappingType.APPLICATION)
+        .source(source)
+        .queue(queue)
+        .build();
+  }
+
   @Test
   public void testMapping() throws YarnException {
     // simple base case for mapping user to queue
-    verifyQueueMapping(new QueueMappingEntity(APP_NAME,
+    verifyQueueMapping(queueMappingBuilder(APP_NAME,
         "q1"), "user_1", "q1");
-    verifyQueueMapping(new QueueMappingEntity("%application", "q2"), "user_1",
+    verifyQueueMapping(queueMappingBuilder("%application", "q2"), "user_1",
         "q2");
-    verifyQueueMapping(new QueueMappingEntity("%application", "%application"),
+    verifyQueueMapping(queueMappingBuilder("%application", "%application"),
         "user_1", APP_NAME);
 
     // specify overwritten, and see if user specified a queue, and it will be
     // overridden
-    verifyQueueMapping(new QueueMappingEntity(APP_NAME,
+    verifyQueueMapping(queueMappingBuilder(APP_NAME,
         "q1"), "1", "q2", "q1", true);
 
     // if overwritten not specified, it should be which user specified
-    verifyQueueMapping(new QueueMappingEntity(APP_NAME,
+    verifyQueueMapping(queueMappingBuilder(APP_NAME,
             "q1"), "1", "q2", "q2", false);
   }
 }

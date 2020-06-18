@@ -18,11 +18,11 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.3.0-SNAPSHOT</version>
+    <version>3.4.0-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-client-minicluster</artifactId>
-  <version>3.3.0-SNAPSHOT</version>
+  <version>3.4.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <description>Apache Hadoop Minicluster for Clients</description>
@@ -811,11 +811,21 @@
                         <exclude>*/**</exclude>
                       </excludes>
                     </filter>
-                    <!-- Jetty 9.4.x: jetty-client and jetty-xml are depended by org.eclipse.jetty.websocket:websocket-client.
-                         But we are only excluding jetty-client not jetty-xml because HttpServer2 implicitly uses the shaded package name.
-                    -->
+                    <!-- Jetty 9.4.x: jetty-client and jetty-xml are depended by org.eclipse.jetty.websocket:websocket-client.-->
                     <filter>
                       <artifact>org.eclipse.jetty:jetty-client</artifact>
+                      <excludes>
+                        <exclude>*/**</exclude>
+                      </excludes>
+                    </filter>
+                    <filter>
+                      <artifact>org.eclipse.jetty:jetty-xml</artifact>
+                      <excludes>
+                        <exclude>*/**</exclude>
+                      </excludes>
+                    </filter>
+                    <filter>
+                      <artifact>org.eclipse.jetty:jetty-http</artifact>
                       <excludes>
                         <exclude>*/**</exclude>
                       </excludes>

@@ -25,7 +25,7 @@ import org.apache.hadoop.security.AccessControlException;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.utils.Base64;
-import org.apache.hadoop.fs.azurebfs.utils.SASGenerator;
+import org.apache.hadoop.fs.azurebfs.utils.ServiceSASGenerator;
 
 /**
  * A mock SAS token provider implementation
@@ -33,7 +33,7 @@ import org.apache.hadoop.fs.azurebfs.utils.SASGenerator;
 public class MockSASTokenProvider implements SASTokenProvider {
 
   private byte[] accountKey;
-  private SASGenerator generator;
+  private ServiceSASGenerator generator;
   private boolean skipAuthorizationForTestSetup = false;
 
   // For testing we use a container SAS for all operations.
@@ -49,7 +49,7 @@ public class MockSASTokenProvider implements SASTokenProvider {
     } catch (Exception ex) {
       throw new IOException(ex);
     }
-    generator = new SASGenerator(accountKey);
+    generator = new ServiceSASGenerator(accountKey);
   }
 
   /**

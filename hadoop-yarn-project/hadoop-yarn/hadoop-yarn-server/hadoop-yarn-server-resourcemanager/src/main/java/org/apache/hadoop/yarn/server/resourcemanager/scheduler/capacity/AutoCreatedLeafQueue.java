@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
 
@@ -56,7 +57,7 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
       ManagedParentQueue managedParentQueue = (ManagedParentQueue) parent;
 
       super.reinitialize(newlyParsedQueue, clusterResource, managedParentQueue
-          .getLeafQueueConfigs(newlyParsedQueue.getQueueName()));
+          .getLeafQueueConfigs(newlyParsedQueue.getQueueShortName()));
 
       //Reset capacities to 0 since reinitialize above
       // queueCapacities to initialize to configured capacity which might
@@ -73,6 +74,9 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
 
     writeLock.lock();
     try {
+
+      this.getParent().updateClusterResource(this.csContext.getClusterResource(),
+          new ResourceLimits(this.csContext.getClusterResource()));
 
       // TODO:
       // reinitialize only capacities for now since 0 capacity updates
@@ -100,7 +104,7 @@ public class AutoCreatedLeafQueue extends AbstractAutoCreatedLeafQueue {
     }
   }
 
-  private void mergeCapacities(QueueCapacities capacities) {
+  public void mergeCapacities(QueueCapacities capacities) {
     for ( String nodeLabel : capacities.getExistingNodeLabels()) {
       queueCapacities.setCapacity(nodeLabel,
           capacities.getCapacity(nodeLabel));

@@ -210,7 +210,7 @@ public class TestFSNamesystemLock {
     assertTrue(pattern.matcher(logs.getOutput()).find());
     // only keep the "yyyy-MM-dd" part of date
     String startTimeStr =
-        "held at " + Time.formatTime(timer.monotonicNow()).substring(0, 10);
+        "held at " + Time.formatTime(timer.now()).substring(0, 10);
     assertTrue(logs.getOutput().contains(startTimeStr));
     assertTrue(logs.getOutput().contains(
         "Number of suppressed write-lock reports: 2"));
@@ -301,7 +301,7 @@ public class TestFSNamesystemLock {
     assertTrue(tLongPattern.matcher(logs.getOutput()).find());
     // only keep the "yyyy-MM-dd" part of date
     String startTimeStr =
-        "held at " + Time.formatTime(timer.monotonicNow()).substring(0, 10);
+        "held at " + Time.formatTime(timer.now()).substring(0, 10);
     assertTrue(logs.getOutput().contains(startTimeStr));
     assertTrue(logs.getOutput().contains(
         "Number of suppressed read-lock reports: 3"));

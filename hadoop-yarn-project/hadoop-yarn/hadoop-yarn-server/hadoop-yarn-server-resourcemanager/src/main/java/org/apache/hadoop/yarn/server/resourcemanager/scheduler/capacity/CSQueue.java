@@ -73,10 +73,16 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
   public void setParent(CSQueue newParentQueue);
 
   /**
-   * Get the queue name.
+   * Get the queue's internal reference name.
    * @return the queue name
    */
   public String getQueueName();
+
+  /**
+   * Get the queue's legacy name.
+   * @return the queue name
+   */
+  String getQueueShortName();
 
   /**
    * Get the full name of the queue, including the heirarchy.

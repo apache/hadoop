@@ -813,6 +813,8 @@ public class DistributedFileSystem extends FileSystem
   @Override
   public Collection<BlockStoragePolicy> getAllStoragePolicies()
       throws IOException {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_STORAGE_POLICIES);
     return Arrays.asList(dfs.getStoragePolicies());
   }
 
@@ -834,9 +836,7 @@ public class DistributedFileSystem extends FileSystem
    */
   @Deprecated
   public BlockStoragePolicy[] getStoragePolicies() throws IOException {
-    statistics.incrementReadOps(1);
-    storageStatistics.incrementOpCounter(OpType.GET_STORAGE_POLICIES);
-    return dfs.getStoragePolicies();
+    return getAllStoragePolicies().toArray(new BlockStoragePolicy[0]);
   }
 
   /**
@@ -1143,10 +1143,21 @@ public class DistributedFileSystem extends FileSystem
   /**
    * List all the entries of a directory
    *
-   * Note that this operation is not atomic for a large directory.
-   * The entries of a directory may be fetched from NameNode multiple times.
-   * It only guarantees that  each name occurs once if a directory
-   * undergoes changes between the calls.
+   * Note that this operation is not atomic for a large directory. The entries
+   * of a directory may be fetched from NameNode multiple times. It only
+   * guarantees that each name occurs once if a directory undergoes changes
+   * between the calls.
+   *
+   * If any of the the immediate children of the given path f is a symlink, the
+   * returned FileStatus object of that children would be represented as a
+   * symlink. It will not be resolved to the target path and will not get the
+   * target path FileStatus object. The target path will be available via
+   * getSymlink on that children's FileStatus object. Since it represents as
+   * symlink, isDirectory on that children's FileStatus will return false.
+   *
+   * If you want to get the FileStatus of target path for that children, you may
+   * want to use GetFileStatus API with that children's symlink path. Please see
+   * {@link DistributedFileSystem#getFileStatus(Path f)}
    */
   @Override
   public FileStatus[] listStatus(Path p) throws IOException {
@@ -1712,6 +1723,12 @@ public class DistributedFileSystem extends FileSystem
 
   /**
    * Returns the stat information about the file.
+   *
+   * If the given path is a symlink, the path will be resolved to a target path
+   * and it will get the resolved path's FileStatus object. It will not be
+   * represented as a symlink and isDirectory API returns true if the resolved
+   * path is a directory, false otherwise.
+   *
    * @throws FileNotFoundException if the file does not exist.
    */
   @Override
@@ -2123,6 +2140,9 @@ public class DistributedFileSystem extends FileSystem
    */
   public SnapshottableDirectoryStatus[] getSnapshottableDirListing()
       throws IOException {
+    statistics.incrementReadOps(1);
+    storageStatistics
+        .incrementOpCounter(OpType.GET_SNAPSHOTTABLE_DIRECTORY_LIST);
     return dfs.getSnapshottableDirListing();
   }
 
@@ -2295,6 +2315,8 @@ public class DistributedFileSystem extends FileSystem
    */
   public SnapshotDiffReport getSnapshotDiffReport(final Path snapshotDir,
       final String fromSnapshot, final String toSnapshot) throws IOException {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_SNAPSHOT_DIFF);
     Path absF = fixRelativePart(snapshotDir);
     return new FileSystemLinkResolver<SnapshotDiffReport>() {
       @Override
@@ -3243,6 +3265,8 @@ public class DistributedFileSystem extends FileSystem
    */
   @Override
   public Path getTrashRoot(Path path) {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_TRASH_ROOT);
     try {
       if ((path == null) || !dfs.isHDFSEncryptionEnabled()) {
         return super.getTrashRoot(path);
@@ -3549,7 +3573,8 @@ public class DistributedFileSystem extends FileSystem
 
   public RemoteIterator<OpenFileEntry> listOpenFiles(
       EnumSet<OpenFilesType> openFilesTypes, String path) throws IOException {
-    return dfs.listOpenFiles(openFilesTypes, path);
+    Path absF = fixRelativePart(new Path(path));
+    return dfs.listOpenFiles(openFilesTypes, getPathName(absF));
   }
 
 

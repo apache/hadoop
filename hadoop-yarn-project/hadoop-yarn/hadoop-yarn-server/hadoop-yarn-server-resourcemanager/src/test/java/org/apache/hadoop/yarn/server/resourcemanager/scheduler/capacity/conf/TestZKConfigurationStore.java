@@ -41,8 +41,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.YarnConfigurationStore.LogMutation;
 import org.apache.hadoop.yarn.webapp.dao.QueueConfigInfo;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.data.ACL;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -50,9 +48,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectOutputStream;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
@@ -114,18 +113,11 @@ public class TestZKConfigurationStore extends
     confStore.initialize(conf, schedConf, rmContext);
 
     Version otherVersion = Version.newInstance(1, 1);
-    String znodeParentPath = conf.get(YarnConfiguration.
-            RM_SCHEDCONF_STORE_ZK_PARENT_PATH,
-        YarnConfiguration.DEFAULT_RM_SCHEDCONF_STORE_ZK_PARENT_PATH);
-    String zkVersionPath = ZKCuratorManager.getNodePath(znodeParentPath,
-        "VERSION");
-    String fencingNodePath = ZKCuratorManager.getNodePath(znodeParentPath,
-        "FENCING");
+    String zkVersionPath = getZkPath("VERSION");
     byte[] versionData =
         ((VersionPBImpl) otherVersion).getProto().toByteArray();
-    List<ACL> zkAcl = ZKCuratorManager.getZKAcls(conf);
-    ((ZKConfigurationStore) confStore).zkManager.safeCreate(zkVersionPath,
-        versionData, zkAcl, CreateMode.PERSISTENT, zkAcl, fencingNodePath);
+    ((ZKConfigurationStore) confStore).safeCreateZkData(zkVersionPath,
+        versionData);
 
     assertEquals("The configuration store should have stored the new" +
         "version.", otherVersion, confStore.getConfStoreVersion());
@@ -141,20 +133,58 @@ public class TestZKConfigurationStore extends
     assertNull(confStore.retrieve());
   }
 
+  @Test(expected = IllegalStateException.class)
+  public void testGetConfigurationVersionOnSerializedNullData()
+      throws Exception {
+    confStore.initialize(conf, schedConf, rmContext);
+    String confVersionPath = getZkPath("CONF_VERSION");
+    ((ZKConfigurationStore) confStore).setZkData(confVersionPath, null);
+    confStore.getConfigVersion();
+  }
+
+  /**
+   * The correct behavior of logMutation should be, that even though an
+   * Exception is thrown during serialization, the log data must not be
+   * overridden.
+   *
+   * @throws Exception
+   */
+  @Test(expected = ClassCastException.class)
+  public void testLogMutationAfterSerializationError() throws Exception {
+    byte[] data = null;
+    String logs = "NOT_LINKED_LIST";
+    confStore.initialize(conf, schedConf, rmContext);
+
+    try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
+         ObjectOutputStream oos = new ObjectOutputStream(baos)) {
+      oos.writeObject(logs);
+      oos.flush();
+      baos.flush();
+      data = baos.toByteArray();
+    }
+
+    String logsPath = getZkPath("LOGS");
+    ((ZKConfigurationStore)confStore).setZkData(logsPath, data);
+
+    Map<String, String> update = new HashMap<>();
+    update.put("valid_key", "valid_value");
+
+    confStore.logMutation(new LogMutation(update, TEST_USER));
+
+    assertEquals(data, ((ZKConfigurationStore)confStore).getZkData(logsPath));
+  }
+
   @Test
   public void testDisableAuditLogs() throws Exception {
     conf.setLong(YarnConfiguration.RM_SCHEDCONF_MAX_LOGS, 0);
     confStore.initialize(conf, schedConf, rmContext);
-    String znodeParentPath = conf.get(YarnConfiguration.
-        RM_SCHEDCONF_STORE_ZK_PARENT_PATH,
-        YarnConfiguration.DEFAULT_RM_SCHEDCONF_STORE_ZK_PARENT_PATH);
-    String logsPath = ZKCuratorManager.getNodePath(znodeParentPath, "LOGS");
+    String logsPath = getZkPath("LOGS");
     byte[] data = null;
-    ((ZKConfigurationStore) confStore).zkManager.setData(logsPath, data, -1);
+    ((ZKConfigurationStore) confStore).setZkData(logsPath, data);
 
     prepareLogMutation("key1", "val1");
 
-    data = ((ZKConfigurationStore) confStore).zkManager.getData(logsPath);
+    data = ((ZKConfigurationStore) confStore).getZkData(logsPath);
     assertNull("Failed to Disable Audit Logs", data);
   }
 
@@ -374,6 +404,13 @@ public class TestZKConfigurationStore extends
   @Override
   public YarnConfigurationStore createConfStore() {
     return new ZKConfigurationStore();
+  }
+
+  private String getZkPath(String nodeName) {
+    String znodeParentPath = conf.get(YarnConfiguration.
+            RM_SCHEDCONF_STORE_ZK_PARENT_PATH,
+        YarnConfiguration.DEFAULT_RM_SCHEDCONF_STORE_ZK_PARENT_PATH);
+    return ZKCuratorManager.getNodePath(znodeParentPath, nodeName);
   }
 
   @Override

@@ -146,17 +146,6 @@ public abstract class MockAsm extends MockApps {
     public int getMaxAppAttempts() {
       throw new UnsupportedOperationException("Not supported yet.");
     }
-
-    @Override
-    public boolean isLogAggregationEnabled() {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public boolean isLogAggregationFinished() {
-      throw new UnsupportedOperationException("Not supported yet.");
-    }
-
     @Override
     public ApplicationReport createAndGetApplicationReport(
         String clientUserName,boolean allowAccess) {
@@ -209,7 +198,7 @@ public abstract class MockAsm extends MockApps {
     @Override
     public RMAppMetrics getRMAppMetrics() {
       return new RMAppMetrics(Resource.newInstance(0, 0), 0, 0, new HashMap<>(),
-          new HashMap<>());
+          new HashMap<>(), 0);
     }
 
     @Override

@@ -544,7 +544,7 @@ class BPServiceActor implements Runnable {
         dn.getFSDataset().getCacheCapacity(),
         dn.getFSDataset().getCacheUsed(),
         dn.getXmitsInProgress(),
-        dn.getXceiverCount(),
+        dn.getActiveTransferThreadCount(),
         numFailedVolumes,
         volumeFailureSummary,
         requestBlockReportLease,
@@ -702,15 +702,7 @@ class BPServiceActor implements Runnable {
             if (state == HAServiceState.ACTIVE) {
               handleRollingUpgradeStatus(resp);
             }
-
-            long startProcessCommands = monotonicNow();
             commandProcessingThread.enqueue(resp.getCommands());
-            long endProcessCommands = monotonicNow();
-            if (endProcessCommands - startProcessCommands > 2000) {
-              LOG.info("Took " + (endProcessCommands - startProcessCommands)
-                  + "ms to process " + resp.getCommands().length
-                  + " commands from NN");
-            }
           }
         }
         if (!dn.areIBRDisabledForTests() &&
@@ -922,14 +914,17 @@ class BPServiceActor implements Runnable {
       // re-retrieve namespace info to make sure that, if the NN
       // was restarted, we still match its version (HDFS-2120)
       NamespaceInfo nsInfo = retrieveNamespaceInfo();
-      // and re-register
-      register(nsInfo);
-      scheduler.scheduleHeartbeat();
       // HDFS-9917,Standby NN IBR can be very huge if standby namenode is down
       // for sometime.
       if (state == HAServiceState.STANDBY || state == HAServiceState.OBSERVER) {
         ibrManager.clearIBRs();
       }
+      // HDFS-15113, register and trigger FBR after clean IBR to avoid missing
+      // some blocks report to Standby util next FBR.
+      // and re-register
+      register(nsInfo);
+      scheduler.scheduleHeartbeat();
+      DataNodeFaultInjector.get().blockUtilSendFullBlockReport();
     }
   }
 
@@ -1350,6 +1345,7 @@ class BPServiceActor implements Runnable {
      */
     private boolean processCommand(DatanodeCommand[] cmds) {
       if (cmds != null) {
+        long startProcessCommands = monotonicNow();
         for (DatanodeCommand cmd : cmds) {
           try {
             if (!bpos.processCommandFromActor(cmd, actor)) {
@@ -1367,6 +1363,14 @@ class BPServiceActor implements Runnable {
           } catch (IOException ioe) {
             LOG.warn("Error processing datanode Command", ioe);
           }
+        }
+        long processCommandsMs = monotonicNow() - startProcessCommands;
+        if (cmds.length > 0) {
+          dn.getMetrics().addNumProcessedCommands(processCommandsMs);
+        }
+        if (processCommandsMs > dnConf.getProcessCommandsThresholdMs()) {
+          LOG.info("Took {} ms to process {} commands from NN",
+              processCommandsMs, cmds.length);
         }
       }
       return true;

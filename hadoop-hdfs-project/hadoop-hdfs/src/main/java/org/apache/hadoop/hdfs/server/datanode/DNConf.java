@@ -35,6 +35,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_OUTLIERS_REPORT_
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PMEM_CACHE_DIRS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PMEM_CACHE_RECOVERY_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PMEM_CACHE_RECOVERY_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PROCESS_COMMANDS_THRESHOLD_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PROCESS_COMMANDS_THRESHOLD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_OVERWRITE_DOWNSTREAM_DERIVED_QOP_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_OVERWRITE_DOWNSTREAM_DERIVED_QOP_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
@@ -118,6 +120,8 @@ public class DNConf {
   
   final long xceiverStopTimeout;
   final long restartReplicaExpiry;
+
+  private final long processCommandsThresholdMs;
 
   final long maxLockedMemory;
   private final String[] pmemDirs;
@@ -292,6 +296,12 @@ public class DNConf {
     this.pmemCacheRecoveryEnabled = getConf().getBoolean(
         DFS_DATANODE_PMEM_CACHE_RECOVERY_KEY,
         DFS_DATANODE_PMEM_CACHE_RECOVERY_DEFAULT);
+
+    this.processCommandsThresholdMs = getConf().getTimeDuration(
+        DFS_DATANODE_PROCESS_COMMANDS_THRESHOLD_KEY,
+        DFS_DATANODE_PROCESS_COMMANDS_THRESHOLD_DEFAULT,
+        TimeUnit.MILLISECONDS
+    );
   }
 
   // We get minimumNameNodeVersion via a method so it can be mocked out in tests.
@@ -444,5 +454,9 @@ public class DNConf {
 
   public boolean getPmemCacheRecoveryEnabled() {
     return pmemCacheRecoveryEnabled;
+  }
+
+  public long getProcessCommandsThresholdMs() {
+    return processCommandsThresholdMs;
   }
 }

@@ -1279,7 +1279,8 @@ abstract public class ViewFileSystemBaseTest {
 
   @Test
   public void testViewFileSystemInnerCache() throws Exception {
-    ViewFileSystem.InnerCache cache = new ViewFileSystem.InnerCache();
+    ViewFileSystem.InnerCache cache =
+        new ViewFileSystem.InnerCache(new FsGetter());
     FileSystem fs = cache.get(fsTarget.getUri(), conf);
 
     // InnerCache caches filesystem.

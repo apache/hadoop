@@ -19,7 +19,8 @@
 import DS from 'ember-data';
 
 export default DS.Model.extend({
-  logs: DS.attr('string'),
-  containerID: DS.attr('string'),
-  logFileName: DS.attr('string')
+  logs: DS.attr('string', {defaultValue: ''}),
+  containerID: DS.attr('string', {defaultValue: ''}),
+  logFileName: DS.attr('string', {defaultValue: ''}),
+  redirectedUrl: DS.attr('string', {defaultValue: ''}),
 });

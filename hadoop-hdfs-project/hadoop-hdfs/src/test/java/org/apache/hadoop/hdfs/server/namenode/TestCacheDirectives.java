@@ -630,10 +630,12 @@ public class TestCacheDirectives {
       String groupName = "partygroup";
       FsPermission mode = new FsPermission((short)0777);
       long limit = 747;
+      long maxExpiry = 1234567890;
       dfs.addCachePool(new CachePoolInfo(pool)
           .setGroupName(groupName)
           .setMode(mode)
-          .setLimit(limit));
+          .setLimit(limit)
+          .setMaxRelativeExpiryMs(maxExpiry));
       RemoteIterator<CachePoolEntry> pit = dfs.listCachePools();
       assertTrue("No cache pools found", pit.hasNext());
       CachePoolInfo info = pit.next().getInfo();
@@ -641,6 +643,7 @@ public class TestCacheDirectives {
       assertEquals(groupName, info.getGroupName());
       assertEquals(mode, info.getMode());
       assertEquals(limit, (long)info.getLimit());
+      assertEquals(maxExpiry, (long)info.getMaxRelativeExpiryMs());
       assertFalse("Unexpected # of cache pools found", pit.hasNext());
     
       // Create some cache entries
@@ -701,6 +704,7 @@ public class TestCacheDirectives {
       assertEquals(groupName, info.getGroupName());
       assertEquals(mode, info.getMode());
       assertEquals(limit, (long)info.getLimit());
+      assertEquals(maxExpiry, (long)info.getMaxRelativeExpiryMs());
       assertFalse("Unexpected # of cache pools found", pit.hasNext());
     
       dit = dfs.listCacheDirectives(null);
