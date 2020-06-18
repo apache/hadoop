@@ -15,16 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.procedure;
+package org.apache.hadoop.tools.fedbalance;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
- * This class contains constants for configuration keys and default values
- * used in hdfs procedure.
+ * Federation balance configuration properties.
  */
 @InterfaceAudience.Private
-public final class BalanceProcedureConfigKeys {
+public final class FedBalanceConfigs {
+  /* The class used for federation balance */
+  public static final String FEDERATION_BALANCE_CLASS =
+      "federation.balance.class";
+  public static final String LAST_SNAPSHOT_NAME = "DISTCP-BALANCE-CURRENT";
+  public static final String CURRENT_SNAPSHOT_NAME = "DISTCP-BALANCE-NEXT";
+  /* Specify the behaviour of trash. */
+  public enum TrashOption {
+    TRASH, DELETE, SKIP
+  }
+
   /* The worker threads number of the BalanceProcedureScheduler */
   public static final String WORK_THREAD_NUM =
       "hadoop.hdfs.procedure.work.thread.num";
@@ -37,5 +46,5 @@ public final class BalanceProcedureConfigKeys {
   public static final String JOURNAL_CLASS =
       "hadoop.hdfs.procedure.journal.class";
 
-  private BalanceProcedureConfigKeys() {}
+  private FedBalanceConfigs(){}
 }

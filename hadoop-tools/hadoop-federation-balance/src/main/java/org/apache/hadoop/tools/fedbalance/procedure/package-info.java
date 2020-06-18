@@ -23,7 +23,7 @@
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 
-package org.apache.hadoop.hdfs.procedure;
+package org.apache.hadoop.tools.fedbalance.procedure;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;

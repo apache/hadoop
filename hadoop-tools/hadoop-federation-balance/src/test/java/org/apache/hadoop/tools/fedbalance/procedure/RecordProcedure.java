@@ -15,52 +15,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.procedure;
+package org.apache.hadoop.tools.fedbalance.procedure;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * This simulates a procedure needs many retries. This is used for test.
+ * This procedure records all the finished procedures. This is used for test.
  */
-public class RetryProcedure extends BalanceProcedure {
+public class RecordProcedure extends BalanceProcedure<RecordProcedure> {
 
-  private int retryTime = 1;
-  private int totalRetry = 0;
+  private static List<RecordProcedure> finish = new ArrayList<>();
 
-  public RetryProcedure() {}
+  public RecordProcedure() {}
 
-  public RetryProcedure(String name, long delay, int retryTime) {
+  public RecordProcedure(String name, long delay) {
     super(name, delay);
-    this.retryTime = retryTime;
   }
 
   @Override
   public boolean execute() throws RetryException {
-    if (retryTime > 0) {
-      retryTime--;
-      totalRetry++;
-      throw new RetryException();
-    }
+    finish.add(this);
     return true;
   }
 
-  public int getTotalRetry() {
-    return totalRetry;
-  }
-
-  @Override
-  public void write(DataOutput out) throws IOException {
-    super.write(out);
-    out.writeInt(retryTime);
-    out.writeInt(totalRetry);
-  }
-
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    super.readFields(in);
-    retryTime = in.readInt();
-    totalRetry = in.readInt();
+  public static List<RecordProcedure> getFinishList() {
+    return finish;
   }
 }

@@ -15,34 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.procedure;
 
-import org.apache.hadoop.conf.Configurable;
-
-import java.io.IOException;
 
 /**
- * The Journal of the state machine. It handles the job persistence and recover.
+ * FedBalance is a tool for balancing data across federation clusters.
  */
-public interface BalanceJournal extends Configurable {
-
-  /**
-   * Save journal of this job.
-   */
-  void saveJob(BalanceJob job) throws IOException;
-
-  /**
-   * Recover the job from journal.
-   */
-  void recoverJob(BalanceJob job) throws IOException;
-
-  /**
-   * List all unfinished jobs.
-   */
-  BalanceJob[] listAllJobs() throws IOException;
-
-  /**
-   * Clear all the journals of this job.
-   */
-  void clear(BalanceJob job) throws IOException;
-}
+@InterfaceAudience.Public
+package org.apache.hadoop.tools.fedbalance;
+import org.apache.hadoop.classification.InterfaceAudience;

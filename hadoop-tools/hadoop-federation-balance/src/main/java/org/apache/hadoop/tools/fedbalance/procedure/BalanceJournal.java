@@ -15,31 +15,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.procedure;
+package org.apache.hadoop.tools.fedbalance.procedure;
 
-import java.util.ArrayList;
-import java.util.List;
+import org.apache.hadoop.conf.Configurable;
+
+import java.io.IOException;
 
 /**
- * This procedure records all the finished procedures. This is used for test.
+ * The Journal of the state machine. It handles the job persistence and recover.
  */
-public class RecordProcedure extends BalanceProcedure<RecordProcedure> {
+public interface BalanceJournal extends Configurable {
 
-  private static List<RecordProcedure> finish = new ArrayList<>();
+  /**
+   * Save journal of this job.
+   */
+  void saveJob(BalanceJob job) throws IOException;
 
-  public RecordProcedure() {}
+  /**
+   * Recover the job from journal.
+   */
+  void recoverJob(BalanceJob job) throws IOException;
 
-  public RecordProcedure(String name, long delay) {
-    super(name, delay);
-  }
+  /**
+   * List all unfinished jobs.
+   */
+  BalanceJob[] listAllJobs() throws IOException;
 
-  @Override
-  public boolean execute() throws RetryException {
-    finish.add(this);
-    return true;
-  }
-
-  public static List<RecordProcedure> getFinishList() {
-    return finish;
-  }
+  /**
+   * Clear all the journals of this job.
+   */
+  void clear(BalanceJob job) throws IOException;
 }
