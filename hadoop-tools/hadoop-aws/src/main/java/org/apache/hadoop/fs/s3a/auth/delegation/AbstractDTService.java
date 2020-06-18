@@ -49,7 +49,7 @@ import static java.util.Objects.requireNonNull;
  * initalize() operation, it is not ready for use through all the start process.
  */
 public abstract class AbstractDTService
-    extends AbstractService {
+    extends AbstractService implements DTService {
 
   /**
    * URI of the filesystem.
@@ -82,21 +82,7 @@ public abstract class AbstractDTService
     super(name);
   }
 
-  /**
-   * Bind to the filesystem.
-   * Subclasses can use this to perform their own binding operations -
-   * but they must always call their superclass implementation.
-   * This <i>Must</i> be called before calling {@code init()}.
-   *
-   * <b>Important:</b>
-   * This binding will happen during FileSystem.initialize(); the FS
-   * is not live for actual use and will not yet have interacted with
-   * AWS services.
-   * @param uri the canonical URI of the FS.
-   * @param context store context
-   * @param delegationOperations delegation operations
-   * @throws IOException failure.
-   */
+  @Override
   public void bindToFileSystem(
       final URI uri,
       final StoreContext context,
@@ -110,19 +96,12 @@ public abstract class AbstractDTService
     this.policyProvider = delegationOperations;
   }
 
-  /**
-   * Get the canonical URI of the filesystem, which is what is
-   * used to identify the tokens.
-   * @return the URI.
-   */
+  @Override
   public URI getCanonicalUri() {
     return canonicalUri;
   }
 
-  /**
-   * Get the owner of this Service.
-   * @return owner; non-null after binding to an FS.
-   */
+  @Override
   public UserGroupInformation getOwner() {
     return owner;
   }

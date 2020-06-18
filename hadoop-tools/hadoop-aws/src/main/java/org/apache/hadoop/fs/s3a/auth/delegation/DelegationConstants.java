@@ -160,6 +160,11 @@ public final class DelegationConstants {
    */
   public static final String STS_STANDARD = "sts.amazonaws.com";
 
+  /**
+   * A list of secondary token bindings: {@value}.
+   */
+  public static final String DELEGATION_SECONDARY_BINDINGS =
+      "fs.s3a.delegation.token.secondary.bindings";
   private DelegationConstants() {
   }
 }

@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a.auth.delegation;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
@@ -70,7 +71,8 @@ import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DURAT
  * URIs processed must be the canonical URIs for the service.
  */
 @InterfaceAudience.Private
-public class S3ADelegationTokens extends AbstractDTService {
+public class S3ADelegationTokens extends AbstractDTService implements
+    TokenIssueCallbacks {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       S3ADelegationTokens.class);
@@ -116,7 +118,7 @@ public class S3ADelegationTokens extends AbstractDTService {
   /**
    * Dynamically loaded token binding; lifecycle matches this object.
    */
-  private AbstractDelegationTokenBinding tokenBinding;
+  private DelegationTokenBinding tokenBinding;
 
   /**
    * List of cred providers; unset until {@link #bindToDelegationToken(Token)}.
@@ -144,6 +146,12 @@ public class S3ADelegationTokens extends AbstractDTService {
    * logging.
    */
   private String tokenBindingName = "";
+
+  /**
+   * Usually empty list of secondary DT bindings.
+   */
+  private final List<SecondaryDTBinding> secondaryTokens =
+      new ArrayList<>(0);
 
   /**
    * Instantiate.
@@ -177,10 +185,10 @@ public class S3ADelegationTokens extends AbstractDTService {
     super.serviceInit(conf);
     checkState(hasDelegationTokenBinding(conf),
         E_DELEGATION_TOKENS_DISABLED);
-    Class<? extends AbstractDelegationTokenBinding> binding = conf.getClass(
+    Class<? extends DelegationTokenBinding> binding = conf.getClass(
         DelegationConstants.DELEGATION_TOKEN_BINDING,
         SessionTokenBinding.class,
-        AbstractDelegationTokenBinding.class);
+        DelegationTokenBinding.class);
     tokenBinding = binding.newInstance();
     tokenBinding.bindToFileSystem(getCanonicalUri(),
         getStoreContext(),
@@ -189,6 +197,26 @@ public class S3ADelegationTokens extends AbstractDTService {
     tokenBindingName = tokenBinding.getKind().toString();
     LOG.debug("Filesystem {} is using delegation tokens of kind {}",
         getCanonicalUri(), tokenBindingName);
+    List<DelegationTokenBinding> secondaryBindings = conf.getInstances(
+        DelegationConstants.DELEGATION_SECONDARY_BINDINGS,
+        DelegationTokenBinding.class);
+
+    // look for and instantiate any secondary bindings.
+    if (!secondaryBindings.isEmpty()) {
+      LOG.info("Instantiating {} secondary tokens",secondaryBindings.size());
+      for (DelegationTokenBinding sb : secondaryBindings) {
+        Text kind = sb.getKind();
+        String name = getCanonicalServiceName();
+        Text secondaryService = getTokenServiceForKind(name,
+            kind.toString());
+        SecondaryDTBinding b2 = new SecondaryDTBinding(
+            secondaryService, sb);
+        sb.bindToFileSystem(getCanonicalUri(),
+            getStoreContext(),
+            getPolicyProvider());
+        secondaryBindings.add(b2);
+      }
+    }
   }
 
   /**
@@ -247,7 +275,7 @@ public class S3ADelegationTokens extends AbstractDTService {
     checkState(!isBoundToDT(),
         "Already Bound to a delegation token");
     LOG.debug("No delegation tokens present: using direct authentication");
-    credentialProviders = Optional.of(tokenBinding.deployUnbonded());
+    credentialProviders = Optional.of(tokenBinding.deployUnbonded()); // todo: aggregate
   }
 
   /**
@@ -276,6 +304,7 @@ public class S3ADelegationTokens extends AbstractDTService {
    */
   private void bindToAnyDelegationToken() throws IOException {
     checkState(!credentialProviders.isPresent(), E_ALREADY_DEPLOYED);
+    // TODO: if there is a token from the first one, there is one from the others.
     Token<AbstractS3ATokenIdentifier> token = selectTokenFromFSOwner();
     if (token != null) {
       bindToDelegationToken(token);
@@ -326,7 +355,7 @@ public class S3ADelegationTokens extends AbstractDTService {
   public void bindToDelegationToken(
       final Token<AbstractS3ATokenIdentifier> token)
       throws IOException {
-    checkState(!credentialProviders.isPresent(), E_ALREADY_DEPLOYED);
+    checkState(!credentialProviders.isPresent(), E_ALREADY_DEPLOYED); // TODO: remove check
     boundDT = Optional.of(token);
     AbstractS3ATokenIdentifier dti = extractIdentifier(token);
     LOG.info("Using delegation token {}", dti);
@@ -432,17 +461,14 @@ public class S3ADelegationTokens extends AbstractDTService {
           = tokenBinding.createDelegationToken(rolePolicy, encryptionSecrets, renewer);
       if (token != null) {
         token.setService(service);
-        noteTokenCreated(token);
+        tokenCreated(token);
       }
       return token;
     }
   }
 
-  /**
-   * Note that a token has been created; increment counters and statistics.
-   * @param token token created
-   */
-  private void noteTokenCreated(final Token<AbstractS3ATokenIdentifier> token) {
+  @Override
+  public void tokenCreated(final Token<AbstractS3ATokenIdentifier> token) {
     LOG.info("Created S3A Delegation Token: {}", token);
     creationCount.incrementAndGet();
     stats.tokenIssued();
@@ -562,6 +588,17 @@ public class S3ADelegationTokens extends AbstractDTService {
   @VisibleForTesting
   static Text getTokenService(final String fsURI) {
     return new Text(fsURI);
+  }
+  /**
+   * Get the service identifier of a filesystem URI.
+   * This must be unique for (S3a, the FS URI)
+   * @param fsURI filesystem URI as a string
+   * @param kind token service kind.
+   * @return identifier to use.
+   */
+  @VisibleForTesting
+  static Text getTokenServiceForKind(final String fsURI, String kind) {
+    return new Text(fsURI+"-["+ kind + "]");
   }
 
   /**
