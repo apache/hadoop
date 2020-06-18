@@ -61,6 +61,7 @@ public class NodesBlock extends HtmlBlock {
     setTitle("Nodes");
 
     TBODY<TABLE<Hamlet>> tbody = html.table("#nodes").thead().tr()
+        .th(".subCluster", "SubCluster")
         .th(".nodelabels", "Node Labels")
         .th(".rack", "Rack")
         .th(".state", "Node State")
@@ -81,6 +82,7 @@ public class NodesBlock extends HtmlBlock {
       int usedMemory = (int) info.getUsedMemory();
       int availableMemory = (int) info.getAvailableMemory();
       TR<TBODY<TABLE<Hamlet>>> row = tbody.tr();
+      row.td().__(info.getClusterId());
       row.td().__(StringUtils.join(",", info.getNodeLabels())).__();
       row.td().__(info.getRack()).__();
       row.td().__(info.getState()).__();
