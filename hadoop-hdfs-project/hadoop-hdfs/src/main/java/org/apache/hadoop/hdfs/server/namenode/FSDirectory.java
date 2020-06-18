@@ -73,6 +73,7 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -2021,20 +2022,7 @@ public class FSDirectory implements Closeable {
       // first empty component for the root.  however file status
       // related calls are expected to strip out the root component according
       // to TestINodeAttributeProvider.
-      // Due to HDFS-15372 the attribute provider should received the resolved
-      // snapshot path. Ie, rather than seeing /d/.snapshot/sn/data it should
-      // see /d/data. However, for the path /d/.snapshot/sn it should see this
-      // full path. Node.getPathComponents always resolves the path to the
-      // original location, so we need to check if ".snapshot/sn" is the last
-      // path to ensure the provider receives the correct components.
-      byte[][] components;
-      if (iip.isSnapshot() && !iip.isDotSnapshotDirPrefix()) {
-        // For snapshot paths, node.getPathComponents unless the last component
-        // is like ".snapshot/sn"
-        components = node.getPathComponents();
-      } else {
-        components = iip.getPathComponents();
-      }
+      byte[][] components = iip.getPathComponents();
       components = Arrays.copyOfRange(components, 1, components.length);
       nodeAttrs = ap.getAttributes(components, nodeAttrs);
     }
