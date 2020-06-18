@@ -107,6 +107,10 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
     }
     String mountTableConfigPath =
         conf.get(Constants.CONFIG_VIEWFS_MOUNTTABLE_PATH);
+    /* The default value to false in ViewFSOverloadScheme */
+    conf.setBoolean(Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS,
+        conf.getBoolean(Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS,
+            false));
     if (null != mountTableConfigPath) {
       MountTableConfigLoader loader = new HCFSMountTableConfigLoader();
       loader.load(mountTableConfigPath, conf);
