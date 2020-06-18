@@ -49,8 +49,8 @@ public class TestMiniMRBringup {
       conf.setBoolean(MiniMRYarnCluster.MR_HISTORY_MINICLUSTER_ENABLED, false);
       mr = new MiniMRYarnCluster("testMiniMRYarnClusterWithoutJHS");
       mr.init(conf);
-      Assert.assertEquals(null, mr.getHistoryServer());
       mr.start();
+      Assert.assertEquals(null, mr.getHistoryServer());
     } finally {
       if (mr != null) {
         mr.stop();
