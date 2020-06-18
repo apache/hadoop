@@ -239,7 +239,7 @@ public class DataNodeTestUtils {
     try (FsDatasetSpi.FsVolumeReferences volumes = dn.getFSDataset()
         .getFsVolumeReferences()) {
       for (FsVolumeSpi vol : volumes) {
-        if (vol.getBaseURI().equals(basePath.toURI())) {
+        if (new File(vol.getBaseURI()).equals(basePath)) {
           return (FsVolumeImpl) vol;
         }
       }
