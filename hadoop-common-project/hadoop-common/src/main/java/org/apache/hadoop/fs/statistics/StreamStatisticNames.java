@@ -35,7 +35,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  *   </li>
  * </ul>
  */
-@InterfaceStability.Unstable
+@InterfaceStability.Evolving
 public final class StreamStatisticNames {
 
   /** {@value}. */

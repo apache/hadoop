@@ -18,9 +18,10 @@
 
 package org.apache.hadoop.fs.statistics.impl;
 
+import java.util.Map;
+
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.MeanStatistic;
-import org.apache.hadoop.fs.statistics.StatisticsMap;
 
 /**
  * Wrap IOStatistics source with another (dynamic) wrapper.
@@ -34,7 +35,7 @@ public class WrappedIOStatistics implements IOStatistics {
   }
 
   @Override
-  public StatisticsMap<Long> counters() {
+  public Map<String, Long> counters() {
     return getSource().counters();
   }
 
@@ -47,22 +48,22 @@ public class WrappedIOStatistics implements IOStatistics {
   }
 
   @Override
-  public StatisticsMap<Long> gauges() {
+  public Map<String, Long> gauges() {
     return getSource().gauges();
   }
 
   @Override
-  public StatisticsMap<Long> minumums() {
-    return getSource().minumums();
+  public Map<String, Long> minimums() {
+    return getSource().minimums();
   }
 
   @Override
-  public StatisticsMap<Long> maximums() {
+  public Map<String, Long> maximums() {
     return getSource().maximums();
   }
 
   @Override
-  public StatisticsMap<MeanStatistic> meanStatistics() {
+  public Map<String, MeanStatistic> meanStatistics() {
     return getSource().meanStatistics();
   }
 }

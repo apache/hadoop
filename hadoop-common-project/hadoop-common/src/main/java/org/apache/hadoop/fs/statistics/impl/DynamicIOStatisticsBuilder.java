@@ -73,7 +73,7 @@ public class DynamicIOStatisticsBuilder {
    */
   public DynamicIOStatisticsBuilder withLongFunctionCounter(String key,
       ToLongFunction<String> eval) {
-    activeInstance().counters().addFunction(key, k -> eval.applyAsLong(k));
+    activeInstance().addCounterFunction(key, eval::applyAsLong);
     return this;
   }
 
@@ -124,7 +124,7 @@ public class DynamicIOStatisticsBuilder {
    */
   public DynamicIOStatisticsBuilder withLongFunctionGauge(String key,
       ToLongFunction<String> eval) {
-    activeInstance().gauges().addFunction(key, k -> eval.applyAsLong(k));
+    activeInstance().addGaugeFunction(key, eval::applyAsLong);
     return this;
   }
 
@@ -162,7 +162,7 @@ public class DynamicIOStatisticsBuilder {
    */
   public DynamicIOStatisticsBuilder withLongFunctionMinumum(String key,
       ToLongFunction<String> eval) {
-    activeInstance().minumums().addFunction(key, k -> eval.applyAsLong(k));
+    activeInstance().addMinimumFunction(key, eval::applyAsLong);
     return this;
   }
 
@@ -201,7 +201,7 @@ public class DynamicIOStatisticsBuilder {
    */
   public DynamicIOStatisticsBuilder withLongFunctionMaximum(String key,
       ToLongFunction<String> eval) {
-    activeInstance().maximums().addFunction(key, k -> eval.applyAsLong(k));
+    activeInstance().addMaximumFunction(key, eval::applyAsLong);
     return this;
   }
 
@@ -240,7 +240,7 @@ public class DynamicIOStatisticsBuilder {
    */
   public DynamicIOStatisticsBuilder withMeanStatisticFunction(String key,
       Function<String, MeanStatistic> eval) {
-    activeInstance().meanStatistics().addFunction(key, k -> eval.apply(k));
+    activeInstance().addMeanStatisticFunction(key, eval);
     return this;
   }
 

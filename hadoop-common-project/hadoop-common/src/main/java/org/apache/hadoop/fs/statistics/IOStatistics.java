@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.statistics;
 
+import java.util.Map;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -27,67 +29,41 @@ import org.apache.hadoop.classification.InterfaceStability;
  * These are low-cost per-instance statistics provided by any Hadoop
  * I/O class instance.
  * <p>
- * The statistics MUST BE for the specific instance of the source;
- * possibly including aggregate statistics from other objects
- * created by that stores.
- * For example, the statistics of a filesystem instance must be unique
- * to that instant and not shared with any other.
- * However, those statistics may also collect and aggregate statistics
- * generated in the use of input and output streams created by that
- * file system instance.
- *
- * <p>
- * The iterator is a possibly empty iterator over all monitored statistics.
- * <ol>
- *   <li>
- *     The set of statistic keys SHOULD remain unchanged, and MUST NOT
- *     remove keys.
- *   </li>
- *   <li>
- *     The statistics SHOULD be dynamic: every call to {@code iterator()}
- *     MAY return a current/recent set of statistics.
- *   </li>
- *   <li>
- *     The values MAY change across invocations of {@code iterator()}.
- *   </li>
- *   <li>
- *     The update MAY be in the iterable() call, or MAY be in the actual
- *     Iterable.next() operation.
- *   </li>
- *   <li>
- *     The returned Map.Entry instances MUST return the same value on
- *     repeated getValue() calls.
- *   </li>
- *   <li>
- *     Queries of statistics SHOULD Be fast and Nonblocking to the extent
- *     that if invoked during a long operation, they will prioritize
- *     returning fast over most timely values.
- *   </li>
- *   <li>
- *     The statistics MAY lag; especially for statistics collected in separate
- *     operations (e.g stream IO statistics as provided by a filesystem
- *     instance).
- *   </li>
- *   <li>
- *     Thread safety: an instance of IOStatistics can be shared across threads;
- *     a call to {@code iterator()} is thread safe.
- *     The actual Iterable returned MUST NOT be shared across threads.
- *   </li>
- *
- * </ol>
+ * Consult the filesystem specification document for the requirements
+ * of an implementation of this interface.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public interface IOStatistics {
 
-  StatisticsMap<Long> counters();
+  /**
+   * Map of counters.
+   * @return the current map of counters.
+   */
+  Map<String, Long> counters();
 
-  StatisticsMap<Long> gauges();
+  /**
+   * Map of gauges.
+   * @return the current map of gauges.
+   */
+  Map<String, Long> gauges();
 
-  StatisticsMap<Long> minumums();
+  /**
+   * Map of minumums.
+   * @return the current map of minumums.
+   */
+  Map<String, Long> minimums();
 
-  StatisticsMap<Long> maximums();
+  /**
+   * Map of maximums.
+   * @return the current map of maximums.
+   */
+  Map<String, Long> maximums();
 
-  StatisticsMap<MeanStatistic> meanStatistics();
+  /**
+   * Map of meanStatistics.
+   * @return the current map of MeanStatistic statistics.
+   */
+  Map<String, MeanStatistic> meanStatistics();
 
 }

@@ -26,16 +26,15 @@ import java.util.TreeMap;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import org.apache.hadoop.fs.statistics.StatisticsMap;
 
 /**
- * Take a snapshot of the source map.
+ * Take a snapshot of a single source map.
  * Important. Entries are copied using the copy function.
  * @param <E> map element type.
  */
 @SuppressWarnings("NewExceptionWithoutArguments")
 public final class StatisticsMapSnapshot<E extends Serializable> implements
-    StatisticsMap<E>, Serializable {
+    Map<String, E>, Serializable {
 
   private static final long serialVersionUID = 1360985530415418415L;
 
@@ -56,7 +55,7 @@ public final class StatisticsMapSnapshot<E extends Serializable> implements
    * a simple passthrough
    * @param source source map
    */
-  public StatisticsMapSnapshot(StatisticsMap<E> source) {
+  public StatisticsMapSnapshot(Map<String, E> source) {
     this(source, StatisticsMapSnapshot::passthrough);
   }
 
@@ -66,13 +65,13 @@ public final class StatisticsMapSnapshot<E extends Serializable> implements
    * @param copy function to copy a source entry.
    */
   public StatisticsMapSnapshot(
-      StatisticsMap<E> source,
+      Map<String, E> source,
       Function<E, E> copy) {
-    for (Map.Entry<String, E> entry : source.entrySet()) {
-      // we have to clone the values so that they aren't
-      // bound to the original values
-      put(entry.getKey(), copy.apply(entry.getValue()));
-    }
+    // we have to clone the values so that they aren't
+    // bound to the original values
+    source.entrySet()
+        .forEach(entry ->
+            inner.put(entry.getKey(), copy.apply(entry.getValue())));
   }
 
   /**

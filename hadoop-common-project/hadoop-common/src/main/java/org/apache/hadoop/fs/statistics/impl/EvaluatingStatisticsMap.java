@@ -24,21 +24,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
-import org.apache.hadoop.fs.statistics.StatisticsMap;
-
-/**
- * This map evaluates on demand; it is the primary
- * mechanism by which statistics are collected.
- * The values set is from a snapshot of the evaluated elements;
- * so is the entrySet.
- * @param <E> statistics type
- */
 final class EvaluatingStatisticsMap<E extends Serializable> implements
-    StatisticsMap<E> {
+    Map<String, E> {
 
   /**
-   * Functions to invoke when evaluating keys
+   * Functions to invoke when evaluating keys.
    */
   private final Map<String, Function<String, E>> evaluators
       = new TreeMap<>();
@@ -61,7 +53,7 @@ final class EvaluatingStatisticsMap<E extends Serializable> implements
   }
 
   /**
-   * add a mapping of a key to a long function.
+   * add a mapping of a key to a function.
    * @param key the key
    * @param eval the evaluator
    */
@@ -136,12 +128,56 @@ final class EvaluatingStatisticsMap<E extends Serializable> implements
     return new StatisticsMapSnapshot<>(this, copyFn);
   }
 
+  /**
+   * Creating the entry set forces an evaluation of the functions.
+   * The evaluation may be parallelized.
+   * @return an evaluated set of values
+   */
   @Override
   public Set<Entry<String, E>> entrySet() {
-    return snapshot().entrySet();
+    Set<Entry<String, Function<String, E>>> evalEntries =
+        evaluators.entrySet();
+    Set<Entry<String, E>> r = evalEntries.parallelStream().map((e) ->
+        new EntryImpl<>(e.getKey(), e.getValue().apply(e.getKey())))
+        .collect(Collectors.toSet());
+    return r;
   }
 
   String getName() {
     return name;
   }
+
+  /**
+   * Simple entry.
+   * @param <E> entry type
+   */
+  private static final class EntryImpl<E> implements Entry<String, E> {
+
+    private String key;
+
+    private E value;
+
+    private EntryImpl(final String key, final E value) {
+      this.key = key;
+      this.value = value;
+    }
+
+    @Override
+    public String getKey() {
+      return key;
+    }
+
+    @Override
+    public E getValue() {
+      return value;
+    }
+
+    @Override
+    public E setValue(final E value) {
+      this.value = value;
+      return value;
+    }
+  }
+
+
 }

@@ -187,6 +187,9 @@ public enum Statistic {
   STREAM_WRITE_FAILURES(
       StreamStatisticNames.STREAM_WRITE_EXCEPTIONS,
       "Count of stream write failures reported"),
+  STREAM_WRITE_EXCEPTIONS_COMPLETING_UPLOADS(
+      "stream_write_exceptions_completing_uploads",
+      "failures when finalizing a multipart upload"),
   STREAM_WRITE_BLOCK_UPLOADS(
       StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS,
       "Count of block/partition uploads completed"),

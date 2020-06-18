@@ -127,6 +127,7 @@ public abstract class AbstractContractStreamIOStatisticsTest
       final long len = bytes.length;
       out.write(bytes);
       out.flush();
+      LOG.info("stats {}", demandStatsString);
       IOStatistics statistics = extractStatistics(out);
       verifyStatisticCounterValue(statistics, STREAM_WRITE_BYTES,
           writesInBlocks ? 0 : len);
@@ -136,6 +137,7 @@ public abstract class AbstractContractStreamIOStatisticsTest
           writesInBlocks ? 0 : len * 2);
       // close the stream
       out.close();
+      LOG.info("stats {}", demandStatsString);
       // statistics are still valid after the close
       // always call the output stream to check that behavior
       statistics = extractStatistics(out);

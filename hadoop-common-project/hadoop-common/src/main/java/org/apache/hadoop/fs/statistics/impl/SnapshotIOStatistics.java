@@ -19,10 +19,12 @@
 package org.apache.hadoop.fs.statistics.impl;
 
 import java.io.Serializable;
+import java.util.Map;
 
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.MeanStatistic;
-import org.apache.hadoop.fs.statistics.StatisticsMap;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Snapshot of statistics from a different source.
@@ -31,8 +33,7 @@ import org.apache.hadoop.fs.statistics.StatisticsMap;
  * to propagate data (Spark, Flink...) can send the statistics
  * back.
  */
-class SnapshotIOStatistics implements IOStatistics, Serializable {
-
+final class SnapshotIOStatistics implements IOStatistics, Serializable {
 
   private static final long serialVersionUID = -1762522703841538084L;
 
@@ -47,54 +48,47 @@ class SnapshotIOStatistics implements IOStatistics, Serializable {
   private StatisticsMapSnapshot<MeanStatistic> meanStatistics;
 
   /**
-   * Construct from a source statistics instance.
-   * @param source source stats.
+   * Construct.
    */
-  SnapshotIOStatistics(final IOStatistics source) {
-    snapshot(source);
+  SnapshotIOStatistics() {
   }
 
   /**
    * Take a snapshot.
    * @param source statistics source.
    */
-  private void snapshot(IOStatistics source) {
+  public void snapshot(IOStatistics source) {
+    checkNotNull(source);
     counters = new StatisticsMapSnapshot<>(source.counters());
     gauges = new StatisticsMapSnapshot<>(source.gauges());
-    minumums = new StatisticsMapSnapshot<>(source.minumums());
+    minumums = new StatisticsMapSnapshot<>(source.minimums());
     maximums = new StatisticsMapSnapshot<>(source.maximums());
     meanStatistics = new StatisticsMapSnapshot<>(source.meanStatistics(),
         MeanStatistic::copy);
   }
 
-  /**
-   * Empty constructor for deserialization.
-   */
-  SnapshotIOStatistics() {
-  }
-
   @Override
-  public StatisticsMap<Long> counters() {
+  public Map<String, Long> counters() {
     return counters;
   }
 
   @Override
-  public StatisticsMap<Long> gauges() {
+  public Map<String, Long> gauges() {
     return gauges;
   }
 
   @Override
-  public StatisticsMap<Long> minumums() {
+  public Map<String, Long> minimums() {
     return minumums;
   }
 
   @Override
-  public StatisticsMap<Long> maximums() {
+  public Map<String, Long> maximums() {
     return maximums;
   }
 
   @Override
-  public StatisticsMap<MeanStatistic> meanStatistics() {
+  public Map<String, MeanStatistic> meanStatistics() {
     return meanStatistics;
   }
 

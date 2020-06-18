@@ -31,9 +31,8 @@ import org.apache.hadoop.classification.InterfaceStability;
  *   <li>the value of the constants are lowercase of the constant names.</li>
  * </ul>
  */
-@InterfaceStability.Unstable
+@InterfaceStability.Evolving
 public final class StoreStatisticNames {
-
 
   /** {@value}. */
   public static final String OP_APPEND = "op_append";

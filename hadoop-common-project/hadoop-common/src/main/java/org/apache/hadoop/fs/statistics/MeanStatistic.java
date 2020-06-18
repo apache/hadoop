@@ -32,8 +32,15 @@ public final class MeanStatistic implements Serializable, Cloneable {
 
   private static final long serialVersionUID = 567888327998615425L;
 
+  /**
+   * Arithmetic mean.
+   */
   private double mean;
 
+  /**
+   * Number of samples used to calculate
+   * the mean.
+   */
   private long samples;
 
   /**
@@ -96,7 +103,7 @@ public final class MeanStatistic implements Serializable, Cloneable {
    * If both are empty then a new empty statistic is returned.
    *
    * @param other other value
-   * @return the aggregate mean
+   * @return a new MeanStatistic instance containing the aggregate mean
    */
   public MeanStatistic add(final MeanStatistic other) {
     if (isEmpty()) {
@@ -116,11 +123,26 @@ public final class MeanStatistic implements Serializable, Cloneable {
     }
   }
 
+  /**
+   * The hash code is derived from the mean
+   * and sample count: if either is changed
+   * the statistic cannot be used as a key
+   * for hash tables/maps
+   * @return a hash value
+   */
   @Override
   public int hashCode() {
     return Objects.hash(mean, samples);
   }
 
+  /**
+   * Two objects are equal if their sample
+   * count is equal and {@code Double.compare()}
+   * of the mean values considers them equivalent.
+   * @param o other instance
+   * @return true if the two instances are considered
+   *              equivalent.
+   */
   @Override
   public boolean equals(final Object o) {
     if (this == o) { return true; }
@@ -132,9 +154,17 @@ public final class MeanStatistic implements Serializable, Cloneable {
 
   @Override
   public MeanStatistic clone() {
-    return new MeanStatistic(this);
+    return copy();
   }
 
+  /**
+   * Create a copy of this instance.
+   * @return copy.
+   *
+   */
+  public MeanStatistic copy() {
+    return new MeanStatistic(this);
+  }
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder(
@@ -145,7 +175,4 @@ public final class MeanStatistic implements Serializable, Cloneable {
     return sb.toString();
   }
 
-  public MeanStatistic copy() {
-    return new MeanStatistic(this);
-  }
 }

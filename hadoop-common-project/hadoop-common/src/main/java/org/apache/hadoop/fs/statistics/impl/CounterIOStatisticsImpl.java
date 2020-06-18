@@ -207,7 +207,7 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
       e.getValue().set(lookup(source.maximums(), e.getKey()));
     });
     minimumMap.entrySet().forEach(e -> {
-      e.getValue().set(lookup(source.minumums(), e.getKey()));
+      e.getValue().set(lookup(source.minimums(), e.getKey()));
     });
     meanStatisticMap.entrySet().forEach(e -> {
       String key = e.getKey();
@@ -220,9 +220,38 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
 
   @Override
   public void aggregateAllStatistics(final IOStatistics source) {
+    // counters: addition
     counterMap.entrySet().forEach(e -> {
       e.getValue().addAndGet(lookup(source.counters(), e.getKey()));
     });
+    // gauge: add positive values only
+    gaugeMap.entrySet().forEach(e -> {
+      long sourceGauge = lookup(source.gauges(), e.getKey());
+      if (sourceGauge > 0) {
+        e.getValue().addAndGet(sourceGauge);
+      }
+    });
+    // min: min of current and source
+    minimumMap.entrySet().forEach(e -> {
+      AtomicLong dest = e.getValue();
+      long sourceValue = lookup(source.minimums(), e.getKey());
+      dest.set(Math.min(dest.get(), sourceValue));
+    });
+    // max: max of current and source
+    maximumMap.entrySet().forEach(e -> {
+      AtomicLong dest = e.getValue();
+      long sourceValue = lookup(source.maximums(), e.getKey());
+      dest.set(Math.max(dest.get(), sourceValue));
+    });
+    // the most complex, as a new mean is calculated
+    meanStatisticMap.entrySet().forEach(e -> {
+      AtomicReference<MeanStatistic> dest = e.getValue();
+      MeanStatistic current = dest.get();
+      MeanStatistic sourceValue = lookup(source.meanStatistics(), e.getKey());
+      dest.set(current.add(sourceValue));
+    });
+
+
   }
 
   @Override

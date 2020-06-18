@@ -37,11 +37,9 @@ import org.apache.hadoop.fs.s3a.impl.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.s3a.impl.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.fs.s3a.impl.statistics.StatisticsFromAwsSdk;
 import org.apache.hadoop.fs.s3a.s3guard.MetastoreInstrumentation;
-import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 import org.apache.hadoop.fs.statistics.impl.CounterIOStatistics;
-import org.apache.hadoop.fs.statistics.impl.DynamicIOStatisticsBuilder;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricStringBuilder;
 import org.apache.hadoop.metrics2.MetricsCollector;
@@ -68,7 +66,6 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_OPENED;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.counterIOStatistics;
-import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.dynamicIOStatistics;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 
 /**
@@ -1076,7 +1073,9 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     incrementCounter(STREAM_WRITE_TOTAL_DATA, source.bytesUploaded);
     incrementCounter(STREAM_WRITE_BLOCK_UPLOADS,
         source.blockUploadsCompleted);
-    incrementCounter(STREAM_WRITE_FAILURES, source.blockUploadsFailed);
+    incrementCounter(STREAM_WRITE_FAILURES,
+        source.lookupCounterValue(
+            StreamStatisticNames.STREAM_WRITE_EXCEPTIONS));
   }
 
   /**
@@ -1090,18 +1089,15 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       extends AbstractS3AStatisticsSource
       implements BlockOutputStreamStatistics {
 
-    private final AtomicLong blocksSubmitted;
     private final AtomicLong blocksInQueue = new AtomicLong(0);
     private final AtomicLong blocksActive = new AtomicLong(0);
     private final AtomicLong blockUploadsCompleted = new AtomicLong(0);
-    private final AtomicLong blockUploadsFailed;
     private final AtomicLong bytesPendingUpload = new AtomicLong(0);
 
     private final AtomicLong bytesWritten;
     private final AtomicLong bytesUploaded;
     private final AtomicLong transferDuration = new AtomicLong(0);
     private final AtomicLong queueDuration = new AtomicLong(0);
-    private final AtomicLong exceptionsInMultipartFinalize = new AtomicLong(0);
     private final AtomicInteger blocksAllocated = new AtomicInteger(0);
     private final AtomicInteger blocksReleased = new AtomicInteger(0);
 
@@ -1119,22 +1115,21 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               STREAM_WRITE_TOTAL_TIME.getSymbol(),
               STREAM_WRITE_QUEUE_DURATION.getSymbol(),
               STREAM_WRITE_TOTAL_DATA.getSymbol(),
-              STREAM_WRITE_FAILURES.getSymbol())
+              STREAM_WRITE_FAILURES.getSymbol(),
+              STREAM_WRITE_EXCEPTIONS_COMPLETING_UPLOADS.getSymbol()
+              )
           .withGauges(
               STREAM_WRITE_BLOCK_UPLOADS_PENDING.getSymbol(),
               STREAM_WRITE_BLOCK_UPLOADS_DATA_PENDING.getSymbol(),
-              STREAM_WRITE_TOTAL_DATA.getSymbol(),
-              STREAM_WRITE_FAILURES.getSymbol())
+              STREAM_WRITE_TOTAL_DATA.getSymbol())
           .build();
       setIOStatistics(st);
+      // these are extracted to avoid lookups on heavily used counters.
       bytesUploaded = st.getCounterReference(
           STREAM_WRITE_TOTAL_DATA.getSymbol());
       bytesWritten = st.getCounterReference(
           StreamStatisticNames.STREAM_WRITE_BYTES);
-      blockUploadsFailed = st.getCounterReference(
-          StreamStatisticNames.STREAM_WRITE_EXCEPTIONS);
-      blocksSubmitted = st.getCounterReference(
-          StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS);
+
 
       // gauges
 
@@ -1175,7 +1170,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
      */
     @Override
     public void blockUploadQueued(int blockSize) {
-      blocksSubmitted.incrementAndGet();
+      incCounter(StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS);
+
       blocksInQueue.incrementAndGet();
       bytesPendingUpload.addAndGet(blockSize);
       incAllGauges(STREAM_WRITE_BLOCK_UPLOADS_PENDING, 1);
@@ -1206,7 +1202,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
      */
     @Override
     public void blockUploadFailed(long duration, int blockSize) {
-      blockUploadsFailed.incrementAndGet();
+      incCounter(StreamStatisticNames.STREAM_WRITE_EXCEPTIONS);
     }
 
     /** Intermediate report of bytes uploaded. */
@@ -1224,7 +1220,9 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     @Override
     public void exceptionInMultipartComplete(int count) {
       if (count > 0) {
-        exceptionsInMultipartFinalize.addAndGet(count);
+        incCounter(
+            STREAM_WRITE_EXCEPTIONS_COMPLETING_UPLOADS.getSymbol(),
+            count);
       }
     }
 
@@ -1233,7 +1231,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
      */
     @Override
     public void exceptionInMultipartAbort() {
-      exceptionsInMultipartFinalize.incrementAndGet();
+      incCounter(
+          STREAM_WRITE_EXCEPTIONS_COMPLETING_UPLOADS.getSymbol());
     }
 
     /**
@@ -1275,8 +1274,9 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     }
 
     long averageQueueTime() {
-      return blocksSubmitted.get() > 0 ?
-          (queueDuration.get() / blocksSubmitted.get()) : 0;
+      long l = getCounterValue(StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS);
+      return l > 0 ?
+          (queueDuration.get() / l) : 0;
     }
 
     double effectiveBandwidth() {
@@ -1331,11 +1331,10 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     public String toString() {
       final StringBuilder sb = new StringBuilder(
           "OutputStreamStatistics{");
-      sb.append("blocksSubmitted=").append(blocksSubmitted);
+      sb.append(getIOStatistics().toString());
       sb.append(", blocksInQueue=").append(blocksInQueue);
       sb.append(", blocksActive=").append(blocksActive);
       sb.append(", blockUploadsCompleted=").append(blockUploadsCompleted);
-      sb.append(", blockUploadsFailed=").append(blockUploadsFailed);
       sb.append(", bytesPendingUpload=").append(bytesPendingUpload);
       sb.append(", bytesUploaded=").append(bytesUploaded);
       sb.append(", bytesWritten=").append(bytesWritten);
@@ -1343,8 +1342,6 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       sb.append(", blocksReleased=").append(blocksReleased);
       sb.append(", blocksActivelyAllocated=")
           .append(getBlocksActivelyAllocated());
-      sb.append(", exceptionsInMultipartFinalize=")
-          .append(exceptionsInMultipartFinalize);
       sb.append(", transferDuration=").append(transferDuration).append(" ms");
       sb.append(", queueDuration=").append(queueDuration).append(" ms");
       sb.append(", averageQueueTime=").append(averageQueueTime()).append(" ms");

@@ -51,16 +51,40 @@ implement it -or return `null` if they do not.
 instance of `IOStatistics` enumerating the statistics of that specific
 instance.
 
-The `IOStatistics` implementations provide
+The `IOStatistics` Interface exports five kinds of statistic:
 
-* A way to enumerate all keys/statistics monitored.
-* An iterator over all such keys and their latest values.
-* A way to explitly request the value of specific statistic.
 
-A single statistic is reprsented by an `IOStatisticEntry` instance.
-This supports multiple types of statistics, each as a type (integer)
-and an array of values -which are viewed as a _tuple_ whose _arity_
-is the length of the array.
+| Category | Type | Description |
+|------|------|-------------|
+| `counter`        | `long`          | a counter which may increase in value and is always >= 0 |
+| `gauge`          | `long`          | an arbitrary value which can down as well as up; possibly negative |
+| `minimum`        | `long`          | an minimum value; possibly negative |
+| `maximum`        | `long`          | a maximum value; possibly negative |
+| `meanStatistic` | `MeanStatistic` | an arithmetic mean and sample size |
+
+For are simple `long` values, with the variations how they are likely to
+change and how they are aggregated.
+`MeanStatistic` is a tuple of `(mean, sample-count)` to support aggregation.
+
+#### Aggregation of statistic values
+
+For the different statistic category, the result of `aggregate(x, y)` is
+
+| Category         | Aggregation |
+|------------------|-------------|
+| `counter`        | `x + y`     |
+| `gauge`          | `min(0, x) + min(0, y)` |
+| `minimum`        | `min(x, y)` |
+| `maximum`        | `max(x, y)` |
+| `meanStatistic` | calculation of the mean of `x` and `y` ) |
+
+Because the `MeanStatistic` type contains the mean and the sample, the new mean is
+calculated by a straightforward formula:
+
+```
+ samples' = x.samples + y.samples
+ mean' = (x.mean * x.samples) + (y.mean * y.samples) / samples'
+```
 
 
 
@@ -70,42 +94,93 @@ This package contains the public statistics APIs intended
 for use by applications.
 
 <!--  ============================================================= -->
-<!--  Class: IOStatisticEntry -->
+<!--  Class: MeanStatistic -->
 <!--  ============================================================= -->
 
 
-### class `org.apache.hadoop.fs.statistics.IOStatisticEntry`
-
 ```java
-@InterfaceAudience.Public
-@InterfaceStability.Unstable
-public final class IOStatisticEntry implements Serializable {
-...
+public final class MeanStatistic implements Serializable, Cloneable {
+  /**
+   * Arithmetic mean.
+   */
+  private double mean;
+
+  /**
+   * Number of samples used to calculate
+   * the mean.
+   */
+  private long samples;
+
+  /**
+   * Get the mean value.
+   * @return the mean
+   */
+  public double getMean() {
+    return mean;
+  }
+
+  /**
+   * Get the sample count.
+   * @return the sample count; 0 means empty
+   */
+  public long getSamples() {
+    return samples;
+  }
+
+  /**
+   * Is a statistic empty?
+   * @return true if the sample count is 0
+   */
+  public boolean isEmpty() {
+    return samples == 0;
+  }
+   /**
+   * Add another mean statistic to create a new statistic.
+   * When adding two statistics, if either is empty then
+   * a copy of the non-empty statistic is returned.
+   * If both are empty then a new empty statistic is returned.
+   *
+   * @param other other value
+   * @return the aggregate mean
+   */
+  public MeanStatistic add(final MeanStatistic other) {
+    /* Implementation elided. */
+  }
+  @Override
+  public int hashCode() {
+    return Objects.hash(mean, samples);
+  }
+
+  @Override
+  public boolean equals(final Object o) {
+    if (this == o) { return true; }
+    if (o == null || getClass() != o.getClass()) { return false; }
+    MeanStatistic that = (MeanStatistic) o;
+    return Double.compare(that.mean, mean) == 0 &&
+        samples == that.samples;
+  }
+
+  @Override
+  public MeanStatistic clone() {
+    return new MeanStatistic(this);
+  }
+
+  @Override
+  public String toString() {
+    final StringBuilder sb = new StringBuilder(
+        "MeanStatistic{");
+    sb.append("mean=").append(mean);
+    sb.append(", samples=").append(samples);
+    sb.append('}');
+    return sb.toString();
+  }
+
+  public MeanStatistic copy() {
+    return new MeanStatistic(this);
+  }
+
 }
 ```
-
-This represents the evaluated value of a statistic.
-It is more than just a simple scala value
-
-1. Serializable.
-1. Extensible: new statistic types MAY be added.
-1. non-scalar: a statistic may require more than one long value to represent it.
-1. Aggregatable: two `IOStatisticEntry` instances of the same type
-   can be aggregated. For some types (e.g the mean), this requires more
-   than one element of data to 
-1. Forwards compatible to the extent that adding a new statistics type
-   MUST NOT break any existing applications, even if any new and unknown
-   types cannot be aggregated.
-
-| Type ID | Name | Data | Function |
-|---------|------|------|----------|
-| 0 | counter | `(count)` | a counter which can be aggregated through addition |
-| 1 | min | `(value)` | a minimum recorded value |
-| 2 | max | `(value)` | a maximum recorded value |
-| 3 | mean | `(mean, sample_count)` | an arithmentic mean and the number of samples used |
-
-Please consult the javadocs for its full set of methods.
-
 
 <!--  ============================================================= -->
 <!--  Interface: IOStatisticsSource -->
@@ -138,6 +213,33 @@ public interface IOStatisticsSource {
 This is the interface which an object instance MUST implement if they are a source of
 IOStatistics information.
 
+#### Invariants
+
+The result of `getIOStatistics()` must be one of
+
+* `null`
+* an immutable `IOStatistics` for which each map of entries is
+an empty map.
+* an instance of an `IOStatistics` whose statistics MUST BE unique to that
+instance of the class implementing `IOStatisticsSource`.
+
+Less formally: if the statistics maps returned are non-empty, all the statistics
+must be collected from the current instance, and not from all instances, the way
+some of the `FileSystem` statistics are collected.
+
+The `IOStatistics` instance MAY include aggregate statistics
+collected from other objects created by that stores.l
+
+For example, the statistics of a filesystem instance must be unique
+to that instant and not shared with any other.
+However, those statistics may also collect and aggregate statistics
+generated in the use of input and output streams created by that
+file system instance.
+
+The result of `getIOStatistics()`, if non-null, MAY be a different instance
+on every invocation.
+
+
 <!--  ============================================================= -->
 <!--  Interface: IOStatistics -->
 <!--  ============================================================= -->
@@ -150,58 +252,96 @@ implements `IOStatisticsSource`.
 ```java
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-public interface IOStatistics
-    extends Iterable<Map.Entry<String, IOStatisticEntry>> {
+public interface IOStatistics {
 
   /**
-   * Get the entry of a statistic.
-   *
-   * @return The entry of the statistic, or null if not tracked.
+   * Map of counters.
+   * @return the current map of counters.
    */
-  IOStatisticEntry getStatistic(String key);
+  Map<String, Long> counters();
 
   /**
-   * Return true if a statistic is being tracked.
-   *
-   * @return True only if the statistic is being tracked.
+   * Map of gauges.
+   * @return the current map of gauges.
    */
-  boolean isTracked(String key);
+  Map<String, Long> gauges();
 
   /**
-   * Get the set of keys.
-   * No guarantees are made about the mutability/immutability
-   * of this set.
-   * @return the set of keys.
+   * Map of minumums.
+   * @return the current map of minumums.
    */
-  Set<String> keys();
+  Map<String, Long> minumums();
+
+  /**
+   * Map of maximums.
+   * @return the current map of maximums.
+   */
+  Map<String, Long> maximums();
+
+  /**
+   * Map of meanStatistics.
+   * @return the current map of MeanStatistic statistics.
+   */
+  Map<String, MeanStatistic> meanStatistics();
 
 }
 ```
 
+### Stastic Naming
 
-The statistics MUST BE for the specific instance of the source;
-possibly including aggregate statistics from other objects
-created by that stores.
-For example, the statistics of a filesystem instance must be unique
-to that instant and not shared with any other.
-However, those statistics may also collect and aggregate statistics
-generated in the use of input and output streams created by that
-file system instance.
+The naming policy of statistics is designed to be readable, shareable
+and ideally consistent across `IOStatisticSource` implementations.
 
-The iterator is a possibly empty iterator over all monitored statistics.
+* Characters in key names MUST match the regular expression
+  `[a-z|0-9|_]` with the exception of the first character, which
+  MUST be in the range `[a-z]`. Thus the full regular expression
+  for a valid statistic name is:
 
-* The set of statistic keys SHOULD remain unchanged, and MUST NOT
-remove keys.
+        [a-z][a-z|0-9|_]+
 
-*  The statistics SHOULD be dynamic: every call to `iterator()`
- MAY return a current/recent set of statistics.
+* Where possible, the names of statistics SHOULD be those defined
+  with common names.
 
-* The values MAY change across invocations of `iterator()`.
+        org.apache.hadoop.fs.statistics.StreamStatisticNames
+        org.apache.hadoop.fs.statistics.StoreStatisticNames
+    
+   Note 1.: these are evolving; for clients to safely reference their
+   statistics by name they SHOULD be copied to the application.
+   (i.e. for an application compiled hadoop 3.4.2 to link against hadoop 3.4.1,
+   copy the strings).
+   
+   Note 2: keys defined in these classes SHALL NOT be removed
+   from subsequent Hadoop releases.
 
-* The update MAY be in the `iterable()` call, or MAY be in the actual
- `iterable.next()` operation.
+* A common metric name MUST be used for its defined statistic and
+  MUST use the defined unit of measurement.
 
-* The returned Map.Entry instances MUST return the same value on
+* A statistic name in one of the maps SHOULD NOT be re-used in another map.
+  This aids diagnostics of logged statistics.
+  
+### Statistic Maps
+
+For each map of statistics returned:
+
+* The operations to add/remove entries are unsupported: the map returned
+  It MAY be mutable by the source of statistics.
+
+* The map MAY be emoty.
+
+* The map keys each represent a measured statistic.
+
+* The set of keys in a map SHOULD remain unchanged, and MUST NOT remove keys.
+
+*  The statistics SHOULD be dynamic: every lookup of an entry SHOULD
+   return the latest value.
+
+* The values MAY change across invocations of `Map.values()` and `Map.entries()`
+
+* The update MAY be in the `iterable()` calls of the iterators returned,
+  or MAY be in the actual `iterable.next()` operation. That is: there is
+  no guarantee as to when the evaluation takes place.
+
+* The returned `Map.Entry` instances MUST return the same value on
  repeated `getValue()` calls.
 
 * Queries of statistics SHOULD Be fast and Nonblocking to the extent
@@ -213,12 +353,18 @@ remove keys.
  instance).
 
 
+* Statistics which represent time SHOULD use milliseconds as their unit.
+
+* Statistics which represent time and use a different unit MUST document
+  the unit used.
+   
 ### Thread Model
 
-1. An instance of IOStatistics can be shared across threads;
- a call to `iterator()` is thread safe.
+1. An instance of `IOStatistics` can be shared across threads;
 
-1. The actual `Iterable` returned MUST NOT be shared across threads.
+1. Read access to the supplied statistics maps must be thread safe.
+
+1. Iterators returned from the maps MUST NOT be shared across threads.
 
 1. The statistics collected MUST include all operations which took place across all threads performing work for the monitored object.
 
@@ -226,10 +372,20 @@ remove keys.
 
 This is different from the `FileSystem.Statistics` behavior where per-thread statistics
 are collected and reported.
+
 That mechanism supports collecting limited read/write statistics for different
 worker threads sharing the same FS instance, but as the collection is thread local,
 it invariably under-reports IO performed in other threads on behalf of a worker thread.
 
+
+## Statisic Snapshot
+
+A snapshot of the current statistic values MAY be obtained by calling
+
+# TODO: what is the method name ? 
+
+This snapshot is serializable through Java serialization and through
+Jackson to/from JSON.
 
 ## Helper Classes
 
@@ -257,7 +413,7 @@ LOG.info("IOStatistics : {}", latest);
 /* do some work. */
 LOG.info("IOStatistics : {}", latest);
 
-``` 
+```
 
 ## Package `org.apache.hadoop.fs.statistics.impl`
 

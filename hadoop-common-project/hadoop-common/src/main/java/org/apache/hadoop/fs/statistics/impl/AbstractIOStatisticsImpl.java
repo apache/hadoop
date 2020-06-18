@@ -19,8 +19,6 @@
 package org.apache.hadoop.fs.statistics.impl;
 
 import org.apache.hadoop.fs.statistics.IOStatistics;
-import org.apache.hadoop.fs.statistics.MeanStatistic;
-import org.apache.hadoop.fs.statistics.StatisticsMap;
 
 /**
  * The base implementation returns an empty map for
@@ -30,28 +28,4 @@ import org.apache.hadoop.fs.statistics.StatisticsMap;
 public abstract class AbstractIOStatisticsImpl implements IOStatistics {
 
 
-  @Override
-  public StatisticsMap<Long> counters() {
-    return EmptyStatisticsMap.of();
-  }
-
-  @Override
-  public StatisticsMap<Long> gauges() {
-    return EmptyStatisticsMap.of();
-  }
-
-  @Override
-  public StatisticsMap<Long> minumums() {
-    return EmptyStatisticsMap.of();
-  }
-
-  @Override
-  public StatisticsMap<Long> maximums() {
-    return EmptyStatisticsMap.of();
-  }
-
-  @Override
-  public StatisticsMap<MeanStatistic> meanStatistics() {
-    return EmptyStatisticsMap.of();
-  }
 }

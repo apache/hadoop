@@ -164,7 +164,7 @@ class S3ABlockOutputStream extends OutputStream implements
     this.blockSize = (int) blockSize;
     this.statistics = statistics;
     // test instantiations may not provide statistics;
-    iostatistics = statistics != null
+    this.iostatistics = statistics != null
         ? statistics.getIOStatistics()
         : emptyStatistics();
     this.writeOperationHelper = writeOperationHelper;

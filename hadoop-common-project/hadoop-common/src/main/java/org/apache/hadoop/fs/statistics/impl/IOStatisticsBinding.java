@@ -37,12 +37,15 @@ public final class IOStatisticsBinding {
    * Take a snapshot of the current statistics state.
    * This is not an atomic option.
    * The instance can be serialized.
-   * @param statistics statistics
+   * @param source statistics
    * @return a snapshot of the current values.
    */
   public static <X extends IOStatistics & Serializable> X snapshotStatistics(
-      IOStatistics statistics) {
-    return (X) new SnapshotIOStatistics(statistics);
+      IOStatistics source) {
+    SnapshotIOStatistics stats = new SnapshotIOStatistics(
+    );
+    stats.snapshot(source);
+    return (X) stats;
   }
 
   /**

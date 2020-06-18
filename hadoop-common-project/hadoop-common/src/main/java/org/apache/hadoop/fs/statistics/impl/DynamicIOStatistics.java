@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.fs.statistics.impl;
 
+import java.util.Collections;
+import java.util.Map;
+import java.util.function.Function;
+
 import org.apache.hadoop.fs.statistics.MeanStatistic;
 
 /**
@@ -42,8 +46,8 @@ final class DynamicIOStatistics
   private final EvaluatingStatisticsMap<Long> gauges
       = new EvaluatingStatisticsMap<>("gauges");
 
-  private final EvaluatingStatisticsMap<Long> minumums
-      = new EvaluatingStatisticsMap<>("minumums");
+  private final EvaluatingStatisticsMap<Long> minimums
+      = new EvaluatingStatisticsMap<>("minimums");
 
   private final EvaluatingStatisticsMap<Long> maximums
       = new EvaluatingStatisticsMap<>("maximums");
@@ -55,28 +59,74 @@ final class DynamicIOStatistics
   }
 
   @Override
-  public EvaluatingStatisticsMap<Long> counters() {
-    return counters;
+  public Map<String, Long> counters() {
+    return Collections.unmodifiableMap(counters);
   }
 
   @Override
-  public EvaluatingStatisticsMap<Long> gauges() {
-    return gauges;
+  public Map<String, Long> gauges() {
+    return Collections.unmodifiableMap(gauges);
   }
 
   @Override
-  public EvaluatingStatisticsMap<Long> minumums() {
-    return minumums;
+  public Map<String, Long> minimums() {
+    return Collections.unmodifiableMap(minimums);
   }
 
   @Override
-  public EvaluatingStatisticsMap<Long> maximums() {
-    return maximums;
+  public Map<String, Long> maximums() {
+    return Collections.unmodifiableMap(maximums);
   }
 
   @Override
-  public EvaluatingStatisticsMap<MeanStatistic> meanStatistics() {
-    return meanStatistics;
+  public Map<String, MeanStatistic> meanStatistics() {
+    return Collections.unmodifiableMap(meanStatistics);
+  }
+
+  /**
+   * add a mapping of a key to a counter function.
+   * @param key the key
+   * @param eval the evaluator
+   */
+  void addCounterFunction(String key, Function<String, Long> eval) {
+    counters.addFunction(key, eval);
+  }
+
+  /**
+   * add a mapping of a key to a gauge function.
+   * @param key the key
+   * @param eval the evaluator
+   */
+  void addGaugeFunction(String key, Function<String, Long> eval) {
+    gauges.addFunction(key, eval);
+  }
+
+  /**
+   * add a mapping of a key to a minimum function.
+   * @param key the key
+   * @param eval the evaluator
+   */
+  void addMinimumFunction(String key, Function<String, Long> eval) {
+    minimums.addFunction(key, eval);
+  }
+
+  /**
+   * add a mapping of a key to a maximum function.
+   * @param key the key
+   * @param eval the evaluator
+   */
+  void addMaximumFunction(String key, Function<String, Long> eval) {
+    maximums.addFunction(key, eval);
+  }
+
+  /**
+   * add a mapping of a key to a meanStatistic function.
+   * @param key the key
+   * @param eval the evaluator
+   */
+  void addMeanStatisticFunction(String key,
+      Function<String, MeanStatistic> eval) {
+    meanStatistics.addFunction(key, eval);
   }
 
 }
