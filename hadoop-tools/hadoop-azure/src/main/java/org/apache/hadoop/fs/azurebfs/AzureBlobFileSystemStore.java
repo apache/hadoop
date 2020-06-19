@@ -73,6 +73,7 @@ import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.IdentityTransformer;
 import org.apache.hadoop.fs.azurebfs.services.AbfsAclHelper;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamContext;
@@ -132,8 +133,9 @@ public class AzureBlobFileSystemStore {
   private final UserGroupInformation userGroupInformation;
   private final IdentityTransformer identityTransformer;
 
-  public AzureBlobFileSystemStore(URI uri, boolean isSecureScheme, Configuration configuration)
-          throws IOException {
+  public AzureBlobFileSystemStore(URI uri, boolean isSecureScheme,
+                                  Configuration configuration,
+                                  AbfsCounters abfsCounters) throws IOException {
     this.uri = uri;
     String[] authorityParts = authorityParts(uri);
     final String fileSystemName = authorityParts[0];
@@ -163,7 +165,7 @@ public class AzureBlobFileSystemStore {
     this.authType = abfsConfiguration.getAuthType(accountName);
     boolean usingOauth = (authType == AuthType.OAuth);
     boolean useHttps = (usingOauth || abfsConfiguration.isHttpsAlwaysUsed()) ? true : isSecureScheme;
-    initializeClient(uri, fileSystemName, accountName, useHttps);
+    initializeClient(uri, fileSystemName, accountName, useHttps, abfsCounters);
     this.identityTransformer = new IdentityTransformer(abfsConfiguration.getRawConfiguration());
   }
 
@@ -927,7 +929,8 @@ public class AzureBlobFileSystemStore {
     return isKeyForDirectorySet(key, azureAtomicRenameDirSet);
   }
 
-  private void initializeClient(URI uri, String fileSystemName, String accountName, boolean isSecure) throws AzureBlobFileSystemException {
+  private void initializeClient(URI uri, String fileSystemName,
+      String accountName, boolean isSecure, AbfsCounters abfsCounters) throws AzureBlobFileSystemException {
     if (this.client != null) {
       return;
     }
@@ -960,7 +963,7 @@ public class AzureBlobFileSystemStore {
 
     this.client = new AbfsClient(baseUrl, creds, abfsConfiguration,
         new ExponentialRetryPolicy(abfsConfiguration.getMaxIoRetries()),
-        tokenProvider);
+        tokenProvider, abfsCounters);
   }
 
   private String getOctalNotation(FsPermission fsPermission) {

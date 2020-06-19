@@ -41,7 +41,7 @@ import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
 /**
  * Instrumentation of Abfs counters.
  */
-public class AbfsInstrumentation implements AbfsCounters {
+public class AbfsCountersImpl implements AbfsCounters {
 
   /**
    * Single context for all the Abfs counters to separate them from other
@@ -78,10 +78,17 @@ public class AbfsInstrumentation implements AbfsCounters {
       DIRECTORIES_DELETED,
       FILES_CREATED,
       FILES_DELETED,
-      ERROR_IGNORED
+      ERROR_IGNORED,
+      CONNECTIONS_MADE,
+      SEND_REQUESTS,
+      GET_RESPONSES,
+      BYTES_SENT,
+      BYTES_RECEIVED,
+      READ_THROTTLES,
+      WRITE_THROTTLES
   };
 
-  public AbfsInstrumentation(URI uri) {
+  public AbfsCountersImpl(URI uri) {
     UUID fileSystemInstanceId = UUID.randomUUID();
     registry.tag(REGISTRY_ID,
         "A unique identifier for the instance",

@@ -376,9 +376,10 @@ public abstract class AbstractAbfsIntegrationTest extends
    * @param metricMap map of (String, Long) with statistics name as key and
    *                  statistics value as map value.
    */
-  protected void assertAbfsStatistics(AbfsStatistic statistic,
+  protected long assertAbfsStatistics(AbfsStatistic statistic,
       long expectedValue, Map<String, Long> metricMap) {
     assertEquals("Mismatch in " + statistic.getStatName(), expectedValue,
         (long) metricMap.get(statistic.getStatName()));
+    return expectedValue;
   }
 }

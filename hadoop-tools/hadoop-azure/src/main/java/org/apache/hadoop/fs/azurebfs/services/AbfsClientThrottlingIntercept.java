@@ -23,6 +23,7 @@ import java.net.HttpURLConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 
 /**
@@ -103,17 +104,24 @@ public final class AbfsClientThrottlingIntercept {
    * uses this to suspend the request, if necessary, to minimize errors and
    * maximize throughput.
    */
-  static void sendingRequest(AbfsRestOperationType operationType) {
+  static void sendingRequest(AbfsRestOperationType operationType,
+      AbfsCounters abfsCounters) {
     if (!isAutoThrottlingEnabled) {
       return;
     }
 
     switch (operationType) {
       case ReadFile:
-        singleton.readThrottler.suspendIfNecessary();
+        if (singleton.readThrottler.suspendIfNecessary()
+            && abfsCounters != null) {
+          abfsCounters.incrementCounter(AbfsStatistic.READ_THROTTLES, 1);
+        }
         break;
       case Append:
-        singleton.writeThrottler.suspendIfNecessary();
+        if (singleton.writeThrottler.suspendIfNecessary()
+            && abfsCounters != null) {
+          abfsCounters.incrementCounter(AbfsStatistic.WRITE_THROTTLES, 1);
+        }
         break;
       default:
         break;

@@ -114,16 +114,19 @@ class AbfsClientThrottlingAnalyzer {
 
   /**
    * Suspends the current storage operation, as necessary, to reduce throughput.
+   * @return true if Thread sleeps(Throttling occurs) else false.
    */
-  public void suspendIfNecessary() {
+  public boolean suspendIfNecessary() {
     int duration = sleepDuration;
     if (duration > 0) {
       try {
         Thread.sleep(duration);
+        return true;
       } catch (InterruptedException ie) {
         Thread.currentThread().interrupt();
       }
     }
+    return false;
   }
 
   @VisibleForTesting

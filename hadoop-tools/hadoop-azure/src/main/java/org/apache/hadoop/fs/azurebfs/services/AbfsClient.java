@@ -59,12 +59,14 @@ public class AbfsClient {
   private final String userAgent;
 
   private final AccessTokenProvider tokenProvider;
+  private final AbfsCounters abfsCounters;
 
 
   public AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
                     final AbfsConfiguration abfsConfiguration,
                     final ExponentialRetryPolicy exponentialRetryPolicy,
-                    final AccessTokenProvider tokenProvider) {
+                    final AccessTokenProvider tokenProvider,
+                    final AbfsCounters abfsCounters) {
     this.baseUrl = baseUrl;
     this.sharedKeyCredentials = sharedKeyCredentials;
     String baseUrlString = baseUrl.toString();
@@ -85,6 +87,7 @@ public class AbfsClient {
 
     this.userAgent = initializeUserAgent(abfsConfiguration, sslProviderName);
     this.tokenProvider = tokenProvider;
+    this.abfsCounters = abfsCounters;
   }
 
   public String getFileSystem() {
@@ -607,5 +610,13 @@ public class AbfsClient {
   @VisibleForTesting
   URL getBaseUrl() {
     return baseUrl;
+  }
+
+  /**
+   * Getter for abfsCounters from AbfsClient.
+   * @return AbfsCounters instance.
+   */
+  protected AbfsCounters getAbfsCounters() {
+    return abfsCounters;
   }
 }
