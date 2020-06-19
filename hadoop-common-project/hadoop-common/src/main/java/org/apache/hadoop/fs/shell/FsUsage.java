@@ -128,7 +128,8 @@ class FsUsage extends FsCommand {
 
     @Override
     protected void processPath(PathData item) throws IOException {
-      if (ViewFileSystemUtil.isViewFileSystem(item.fs)) {
+      if (ViewFileSystemUtil.isViewFileSystem(item.fs)
+          || ViewFileSystemUtil.isViewFileSystemOverloadScheme(item.fs)) {
         ViewFileSystem viewFileSystem = (ViewFileSystem) item.fs;
         Map<ViewFileSystem.MountPoint, FsStatus>  fsStatusMap =
             ViewFileSystemUtil.getStatus(viewFileSystem, item.path);

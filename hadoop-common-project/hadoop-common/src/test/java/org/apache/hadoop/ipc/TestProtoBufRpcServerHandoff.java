@@ -52,7 +52,7 @@ public class TestProtoBufRpcServerHandoff {
         TestProtobufRpcHandoffProto.newReflectiveBlockingService(serverImpl);
 
     RPC.setProtocolEngine(conf, TestProtoBufRpcServerHandoffProtocol.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     RPC.Server server = new RPC.Builder(conf)
         .setProtocol(TestProtoBufRpcServerHandoffProtocol.class)
         .setInstance(blockingService)
@@ -144,8 +144,8 @@ public class TestProtoBufRpcServerHandoff {
          TestProtos.SleepRequestProto2 request) throws
         ServiceException {
       final long startTime = System.currentTimeMillis();
-      final ProtobufRpcEngineCallback callback =
-          ProtobufRpcEngine.Server.registerForDeferredResponse();
+      final ProtobufRpcEngineCallback2 callback =
+          ProtobufRpcEngine2.Server.registerForDeferredResponse();
       final long sleepTime = request.getSleepTime();
       new Thread() {
         @Override

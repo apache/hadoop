@@ -30,7 +30,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.ipc.ProtobufHelper;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RpcClientUtil;
@@ -57,7 +57,7 @@ public class DatanodeLifelineProtocolClientSideTranslatorPB implements
   public DatanodeLifelineProtocolClientSideTranslatorPB(
       InetSocketAddress nameNodeAddr, Configuration conf) throws IOException {
     RPC.setProtocolEngine(conf, DatanodeLifelineProtocolPB.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     rpcProxy = createNamenode(nameNodeAddr, conf, ugi);
   }

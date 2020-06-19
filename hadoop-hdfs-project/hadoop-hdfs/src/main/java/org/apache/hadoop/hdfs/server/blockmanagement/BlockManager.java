@@ -1158,12 +1158,19 @@ public class BlockManager implements BlockStatsMXBean {
   /**
    * If IBR is not sent from expected locations yet, add the datanodes to
    * pendingReconstruction in order to keep RedundancyMonitor from scheduling
-   * the block.
+   * the block. In case of erasure coding blocks, adds only in case there
+   * isn't any missing node.
    */
   public void addExpectedReplicasToPending(BlockInfo blk) {
-    if (!blk.isStriped()) {
-      DatanodeStorageInfo[] expectedStorages =
-          blk.getUnderConstructionFeature().getExpectedStorageLocations();
+    boolean addForStriped = false;
+    DatanodeStorageInfo[] expectedStorages =
+        blk.getUnderConstructionFeature().getExpectedStorageLocations();
+    if (blk.isStriped()) {
+      BlockInfoStriped blkStriped = (BlockInfoStriped) blk;
+      addForStriped =
+          blkStriped.getRealTotalBlockNum() == expectedStorages.length;
+    }
+    if (!blk.isStriped() || addForStriped) {
       if (expectedStorages.length - blk.numNodes() > 0) {
         ArrayList<DatanodeStorageInfo> pendingNodes = new ArrayList<>();
         for (DatanodeStorageInfo storage : expectedStorages) {
@@ -1280,7 +1287,14 @@ public class BlockManager implements BlockStatsMXBean {
     neededReconstruction.remove(lastBlock, replicas.liveReplicas(),
         replicas.readOnlyReplicas(),
         replicas.outOfServiceReplicas(), getExpectedRedundancyNum(lastBlock));
-    pendingReconstruction.remove(lastBlock);
+    PendingBlockInfo remove = pendingReconstruction.remove(lastBlock);
+    if (remove != null) {
+      List<DatanodeStorageInfo> locations = remove.getTargets();
+      DatanodeStorageInfo[] removedBlockTargets =
+          new DatanodeStorageInfo[locations.size()];
+      locations.toArray(removedBlockTargets);
+      DatanodeStorageInfo.decrementBlocksScheduled(removedBlockTargets);
+    }
 
     // remove this block from the list of pending blocks to be deleted. 
     for (DatanodeStorageInfo storage : targets) {

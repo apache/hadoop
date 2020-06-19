@@ -29,7 +29,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.MappingType;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.QueueMappingBuilder;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMappingEntity;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SimpleGroupsMapping;
@@ -84,17 +83,20 @@ public class TestCapacitySchedulerQueueMappingFactory {
     existingMappingsForUG.addAll(queueMappingsForUG);
     conf.setQueueMappings(existingMappingsForUG);
 
-    List<QueueMappingEntity> existingMappingsForAN =
+    List<QueueMapping> existingMappingsForAN =
         conf.getQueueMappingEntity(QUEUE_MAPPING_NAME);
 
     //set queue mapping
-    List<QueueMappingEntity> queueMappingsForAN =
+    List<QueueMapping> queueMappingsForAN =
         new ArrayList<>();
     for (int i = 0; i < sourceIds.length; i++) {
       //Set C as parent queue name for auto queue creation
-      QueueMappingEntity queueMapping =
-          new QueueMappingEntity(USER + sourceIds[i],
-              getQueueMapping(parentQueue, USER + sourceIds[i]));
+      QueueMapping queueMapping = QueueMapping.QueueMappingBuilder.create()
+          .type(MappingType.APPLICATION)
+          .source(USER + sourceIds[i])
+          .queue(getQueueMapping(parentQueue, USER + sourceIds[i]))
+          .build();
+
       queueMappingsForAN.add(queueMapping);
     }
 

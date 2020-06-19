@@ -38,7 +38,7 @@ public class FSYarnSiteConverter {
 
   @SuppressWarnings({"deprecation", "checkstyle:linelength"})
   public void convertSiteProperties(Configuration conf,
-      Configuration yarnSiteConfig, boolean drfUsed) {
+      Configuration yarnSiteConfig, boolean drfUsed, boolean enableAsyncScheduler) {
     yarnSiteConfig.set(YarnConfiguration.RM_SCHEDULER,
         CapacityScheduler.class.getCanonicalName());
 
@@ -130,6 +130,10 @@ public class FSYarnSiteConverter {
       yarnSiteConfig.set(
           CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,
           DominantResourceCalculator.class.getCanonicalName());
+    }
+
+    if (enableAsyncScheduler) {
+      yarnSiteConfig.setBoolean(CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_ENABLE, true);
     }
   }
 

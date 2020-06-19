@@ -351,6 +351,14 @@ public class ViewFs extends AbstractFileSystem {
     return res.targetFileSystem.getFileChecksum(res.remainingPath);
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * If the given path is a symlink(mount link), the path will be resolved to a
+   * target path and it will get the resolved path's FileStatus object. It will
+   * not be represented as a symlink and isDirectory API returns true if the
+   * resolved path is a directory, false otherwise.
+   */
   @Override
   public FileStatus getFileStatus(final Path f) throws AccessControlException,
       FileNotFoundException, UnresolvedLinkException, IOException {
@@ -436,6 +444,22 @@ public class ViewFs extends AbstractFileSystem {
     };
   }
   
+  /**
+   * {@inheritDoc}
+   *
+   * If any of the the immediate children of the given path f is a symlink(mount
+   * link), the returned FileStatus object of that children would be represented
+   * as a symlink. It will not be resolved to the target path and will not get
+   * the target path FileStatus object. The target path will be available via
+   * getSymlink on that children's FileStatus object. Since it represents as
+   * symlink, isDirectory on that children's FileStatus will return false.
+   *
+   * If you want to get the FileStatus of target path for that children, you may
+   * want to use GetFileStatus API with that children's symlink path. Please see
+   * {@link ViewFs#getFileStatus(Path f)}
+   *
+   * Note: In ViewFs, the mount links are represented as symlinks.
+   */
   @Override
   public FileStatus[] listStatus(final Path f) throws AccessControlException,
       FileNotFoundException, UnresolvedLinkException, IOException {
@@ -917,11 +941,25 @@ public class ViewFs extends AbstractFileSystem {
       if (inode.isLink()) {
         INodeLink<AbstractFileSystem> inodelink = 
           (INodeLink<AbstractFileSystem>) inode;
-        result = new FileStatus(0, false, 0, 0, creationTime, creationTime,
+        try {
+          String linkedPath = inodelink.getTargetFileSystem()
+              .getUri().getPath();
+          FileStatus status = ((ChRootedFs)inodelink.getTargetFileSystem())
+              .getMyFs().getFileStatus(new Path(linkedPath));
+          result = new FileStatus(status.getLen(), false,
+            status.getReplication(), status.getBlockSize(),
+            status.getModificationTime(), status.getAccessTime(),
+            status.getPermission(), status.getOwner(), status.getGroup(),
+            inodelink.getTargetLink(),
+            new Path(inode.fullPath).makeQualified(
+                myUri, null));
+        } catch (FileNotFoundException ex) {
+          result = new FileStatus(0, false, 0, 0, creationTime, creationTime,
             PERMISSION_555, ugi.getShortUserName(), ugi.getPrimaryGroupName(),
             inodelink.getTargetLink(),
             new Path(inode.fullPath).makeQualified(
                 myUri, null));
+        }
       } else {
         result = new FileStatus(0, true, 0, 0, creationTime, creationTime,
           PERMISSION_555, ugi.getShortUserName(), ugi.getPrimaryGroupName(),
@@ -976,12 +1014,25 @@ public class ViewFs extends AbstractFileSystem {
           INodeLink<AbstractFileSystem> link = 
             (INodeLink<AbstractFileSystem>) inode;
 
-          result[i++] = new FileStatus(0, false, 0, 0,
-            creationTime, creationTime,
-            PERMISSION_555, ugi.getShortUserName(), ugi.getPrimaryGroupName(),
-            link.getTargetLink(),
-            new Path(inode.fullPath).makeQualified(
-                myUri, null));
+          try {
+            String linkedPath = link.getTargetFileSystem().getUri().getPath();
+            FileStatus status = ((ChRootedFs)link.getTargetFileSystem())
+                .getMyFs().getFileStatus(new Path(linkedPath));
+            result[i++] = new FileStatus(status.getLen(), false,
+              status.getReplication(), status.getBlockSize(),
+              status.getModificationTime(), status.getAccessTime(),
+              status.getPermission(), status.getOwner(), status.getGroup(),
+              link.getTargetLink(),
+              new Path(inode.fullPath).makeQualified(
+                  myUri, null));
+          } catch (FileNotFoundException ex) {
+            result[i++] = new FileStatus(0, false, 0, 0,
+              creationTime, creationTime, PERMISSION_555,
+              ugi.getShortUserName(), ugi.getPrimaryGroupName(),
+              link.getTargetLink(),
+              new Path(inode.fullPath).makeQualified(
+                  myUri, null));
+          }
         } else {
           result[i++] = new FileStatus(0, true, 0, 0,
             creationTime, creationTime,

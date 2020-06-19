@@ -361,6 +361,12 @@ resume its work, it's a good idea to provision some sort of cron job to purge su
 
     Delegation tokens for the cluster to which you are submitting the job (including all mounted volumes for that cluster’s mount table), and for input and output paths to your map-reduce job (including all volumes mounted via mount tables for the specified input and output paths) are all handled automatically. In addition, there is a way to add additional delegation tokens to the base cluster configuration for special circumstances.
 
+Don't want to change scheme or difficult to copy mount-table configurations to all clients?
+-------------------------------------------------------------------------------------------
+
+Please refer to the [View File System Overload Scheme Guide](./ViewFsOverloadScheme.html)
+
+
 Appendix: A Mount Table Configuration Example
 ---------------------------------------------
 

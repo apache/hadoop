@@ -48,7 +48,7 @@ public class AppNameMappingPlacementRule extends PlacementRule {
   private static final String QUEUE_MAPPING_NAME = "app-name";
 
   private boolean overrideWithQueueMappings = false;
-  private List<QueueMappingEntity> mappings = null;
+  private List<QueueMapping> mappings = null;
   protected CapacitySchedulerQueueManager queueManager;
 
   public AppNameMappingPlacementRule() {
@@ -56,7 +56,7 @@ public class AppNameMappingPlacementRule extends PlacementRule {
   }
 
   public AppNameMappingPlacementRule(boolean overrideWithQueueMappings,
-      List<QueueMappingEntity> newMappings) {
+      List<QueueMapping> newMappings) {
     this.overrideWithQueueMappings = overrideWithQueueMappings;
     this.mappings = newMappings;
   }
@@ -76,18 +76,16 @@ public class AppNameMappingPlacementRule extends PlacementRule {
     LOG.info(
         "Initialized App Name queue mappings, override: " + overrideWithQueueMappings);
 
-    List<QueueMappingEntity> queueMappings =
+    List<QueueMapping> queueMappings =
         conf.getQueueMappingEntity(QUEUE_MAPPING_NAME);
 
     // Get new user mappings
-    List<QueueMappingEntity> newMappings = new ArrayList<>();
+    List<QueueMapping> newMappings = new ArrayList<>();
 
     queueManager = schedulerContext.getCapacitySchedulerQueueManager();
 
     // check if mappings refer to valid queues
-    for (QueueMappingEntity mapping : queueMappings) {
-      QueuePath queuePath = mapping.getQueuePath();
-
+    for (QueueMapping mapping : queueMappings) {
       if (isStaticQueueMapping(mapping)) {
         //at this point mapping.getQueueName() return only the queue name, since
         //the config parsing have been changed making QueueMapping more
@@ -98,7 +96,7 @@ public class AppNameMappingPlacementRule extends PlacementRule {
           //Try getting queue by its full path name, if it exists it is a static
           //leaf queue indeed, without any auto creation magic
 
-          if (queueManager.isAmbiguous(queuePath.getFullPath())) {
+          if (queueManager.isAmbiguous(mapping.getFullPath())) {
             throw new IOException(
               "mapping contains ambiguous leaf queue reference " + mapping
                 .getFullPath());
@@ -109,9 +107,8 @@ public class AppNameMappingPlacementRule extends PlacementRule {
           //validate if parent queue is specified,
           // then it should exist and
           // be an instance of AutoCreateEnabledParentQueue
-          QueueMappingEntity newMapping =
-              validateAndGetAutoCreatedQueueMapping(queueManager, mapping,
-                  queuePath);
+          QueueMapping newMapping =
+              validateAndGetAutoCreatedQueueMapping(queueManager, mapping);
           if (newMapping == null) {
             throw new IOException(
                 "mapping contains invalid or non-leaf queue " + mapping
@@ -123,8 +120,8 @@ public class AppNameMappingPlacementRule extends PlacementRule {
           //   if its an instance of leaf queue
           //   if its an instance of auto created leaf queue,
           // then extract parent queue name and update queue mapping
-          QueueMappingEntity newMapping = validateAndGetQueueMapping(
-              queueManager, queue, mapping, queuePath);
+          QueueMapping newMapping = validateAndGetQueueMapping(
+              queueManager, queue, mapping);
           newMappings.add(newMapping);
         }
       } else {
@@ -134,8 +131,8 @@ public class AppNameMappingPlacementRule extends PlacementRule {
         // if parent queue is specified, then
         //  parent queue exists and an instance of AutoCreateEnabledParentQueue
         //
-        QueueMappingEntity newMapping = validateAndGetAutoCreatedQueueMapping(
-            queueManager, mapping, queuePath);
+        QueueMapping newMapping = validateAndGetAutoCreatedQueueMapping(
+            queueManager, mapping);
         if (newMapping != null) {
           newMappings.add(newMapping);
         } else{
@@ -160,7 +157,7 @@ public class AppNameMappingPlacementRule extends PlacementRule {
 
   private ApplicationPlacementContext getAppPlacementContext(String user,
       String applicationName) throws IOException {
-    for (QueueMappingEntity mapping : mappings) {
+    for (QueueMapping mapping : mappings) {
       if (mapping.getSource().equals(CURRENT_APP_MAPPING)) {
         if (mapping.getQueue().equals(CURRENT_APP_MAPPING)) {
           return getPlacementContext(mapping, applicationName, queueManager);
