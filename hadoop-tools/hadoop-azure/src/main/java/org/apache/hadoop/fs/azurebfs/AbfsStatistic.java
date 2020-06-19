@@ -73,7 +73,7 @@ public enum AbfsStatistic {
   READ_THROTTLES("read_throttles",
       "Total number of times a read operation is throttled."),
   WRITE_THROTTLES("write_throttles",
-      "Total number of time a write operation is throttled.");
+      "Total number of times a write operation is throttled.");
 
   private String statName;
   private String statDescription;
