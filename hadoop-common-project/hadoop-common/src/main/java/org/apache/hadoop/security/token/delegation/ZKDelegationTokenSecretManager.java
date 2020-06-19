@@ -80,7 +80,7 @@ import com.google.common.base.Preconditions;
 public abstract class ZKDelegationTokenSecretManager<TokenIdent extends AbstractDelegationTokenIdentifier>
     extends AbstractDelegationTokenSecretManager<TokenIdent> {
 
-  private static final String ZK_CONF_PREFIX = "zk-dt-secret-manager.";
+  public static final String ZK_CONF_PREFIX = "zk-dt-secret-manager.";
   public static final String ZK_DTSM_ZK_NUM_RETRIES = ZK_CONF_PREFIX
       + "zkNumRetries";
   public static final String ZK_DTSM_ZK_SESSION_TIMEOUT = ZK_CONF_PREFIX
@@ -483,7 +483,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     }
   }
 
-  protected void processTokenAddOrUpdate(byte[] data) throws IOException {
+  protected TokenIdent processTokenAddOrUpdate(byte[] data) throws IOException {
     ByteArrayInputStream bin = new ByteArrayInputStream(data);
     DataInputStream din = new DataInputStream(bin);
     TokenIdent ident = createIdentifier();
@@ -496,7 +496,9 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       DelegationTokenInformation tokenInfo =
           new DelegationTokenInformation(renewDate, password);
       currentTokens.put(ident, tokenInfo);
+      return ident;
     }
+    return null;
   }
 
   private void processTokenRemoved(ChildData data) throws IOException {

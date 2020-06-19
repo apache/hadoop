@@ -47,7 +47,7 @@ public class ZKDelegationTokenSecretManagerImpl extends
     ZKDelegationTokenSecretManager<AbstractDelegationTokenIdentifier> {
 
   public static final String ZK_DTSM_ROUTER_TOKEN_SYNC_INTERVAL =
-      "zk-dt-secret-manager.router.token.sync.interval";
+      ZK_CONF_PREFIX + "router.token.sync.interval";
   public static final int ZK_DTSM_ROUTER_TOKEN_SYNC_INTERVAL_DEFAULT = 5;
 
   private static final Logger LOG =
@@ -58,7 +58,7 @@ public class ZKDelegationTokenSecretManagerImpl extends
   private final ScheduledExecutorService scheduler =
       Executors.newSingleThreadScheduledExecutor();
 
-  // Local cache of delegation tokens, used for depracating tokens from
+  // Local cache of delegation tokens, used for deprecating tokens from
   // currentTokenMap
   private final Set<AbstractDelegationTokenIdentifier> localTokenCache =
       new HashSet<>();
@@ -182,11 +182,8 @@ public class ZKDelegationTokenSecretManagerImpl extends
         throw new IOException(ex);
       }
       // Store data to currentTokenMap
-      processTokenAddOrUpdate(data);
+      AbstractDelegationTokenIdentifier ident = processTokenAddOrUpdate(data);
       // Store data to localTokenCache for sync
-      AbstractDelegationTokenIdentifier ident = createIdentifier();
-      DataInputStream din = new DataInputStream(new ByteArrayInputStream(data));
-      ident.readFields(din);
       localTokenCache.add(ident);
     }
     if (!initial) {
