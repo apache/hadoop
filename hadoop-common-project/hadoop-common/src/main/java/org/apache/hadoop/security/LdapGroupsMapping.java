@@ -518,11 +518,11 @@ public class LdapGroupsMapping
     if (!results.hasMoreElements()) {
       LOG.debug("doGetGroups({}) returned no groups because the " +
           "user is not found.", user);
-      return new ArrayList<>();
+      return Collections.emptyList();
     }
     SearchResult result = results.nextElement();
 
-    List<String> groups = null;
+    List<String> groups = Collections.emptyList();
     if (useOneQuery) {
       try {
         /**
@@ -548,7 +548,7 @@ public class LdapGroupsMapping
                 "the second LDAP query using the user's DN.", e);
       }
     }
-    if (groups == null || groups.isEmpty() || goUpHierarchy > 0) {
+    if (groups.isEmpty() || goUpHierarchy > 0) {
       groups = lookupGroup(result, c, goUpHierarchy);
     }
     LOG.debug("doGetGroups({}) returned {}", user, groups);

@@ -19,6 +19,7 @@ package org.apache.hadoop.security;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -69,8 +70,8 @@ public class CompositeGroupsMapping
   public synchronized List<String> getGroups(String user) throws IOException {
     Set<String> groupSet = new TreeSet<String>();
 
-    List<String> groups = null;
     for (GroupMappingServiceProvider provider : providersList) {
+      List<String> groups = Collections.emptyList();
       try {
         groups = provider.getGroups(user);
       } catch (Exception e) {
@@ -78,17 +79,15 @@ public class CompositeGroupsMapping
             user, provider.getClass().getSimpleName(), e.toString());
         LOG.debug("Stacktrace: ", e);
       }        
-      if (groups != null && ! groups.isEmpty()) {
+      if (!groups.isEmpty()) {
         groupSet.addAll(groups);
         if (!combined) break;
       }
     }
 
-    List<String> results = new ArrayList<String>(groupSet.size());
-    results.addAll(groupSet);
-    return results;
+    return new ArrayList<>(groupSet);
   }
-  
+
   /**
    * Caches groups, no need to do that for this provider
    */
