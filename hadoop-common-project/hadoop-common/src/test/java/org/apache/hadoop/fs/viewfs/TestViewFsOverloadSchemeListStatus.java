@@ -30,21 +30,17 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.io.DataInputBuffer;
-import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mockito;
 
 import static org.junit.Assert.*;
 
 /**
- * ViewFsOverloadScheme ListStatus
+ * ViewFsOverloadScheme ListStatus.
  */
 public class TestViewFsOverloadSchemeListStatus {
 
@@ -64,7 +60,8 @@ public class TestViewFsOverloadSchemeListStatus {
    * Tests the ACL and isDirectory returned from listStatus for directories and
    * files.
    */
-  @Test public void testListStatusACL() throws IOException, URISyntaxException {
+  @Test
+  public void testListStatusACL() throws IOException, URISyntaxException {
     String testfilename = "testFileACL";
     String childDirectoryName = "testDirectoryACL";
     TEST_DIR.mkdirs();
@@ -81,24 +78,24 @@ public class TestViewFsOverloadSchemeListStatus {
     Configuration conf = new Configuration();
     ConfigUtil.addLink(conf, "/file", infile.toURI());
     ConfigUtil.addLink(conf, "/dir", childDir.toURI());
-    String FILE_SCHEME = "file";
-    conf.set(String.format("fs.%s.impl", FILE_SCHEME),
+    String fileScheme = "file";
+    conf.set(String.format("fs.%s.impl", fileScheme),
         ViewFileSystemOverloadScheme.class.getName());
     conf.set(String
         .format(FsConstants.FS_VIEWFS_OVERLOAD_SCHEME_TARGET_FS_IMPL_PATTERN,
-            FILE_SCHEME), LocalFileSystem.class.getName());
-    String FILE_URI_STR = "file:///";
-    try (FileSystem vfs = FileSystem.get(new URI(FILE_URI_STR), conf)) {
+            fileScheme), LocalFileSystem.class.getName());
+    String fileUriStr = "file:///";
+    try (FileSystem vfs = FileSystem.get(new URI(fileUriStr), conf)) {
       assertEquals(ViewFileSystemOverloadScheme.class, vfs.getClass());
       FileStatus[] statuses = vfs.listStatus(new Path("/"));
 
       FileSystem localFs = ((ViewFileSystemOverloadScheme) vfs)
-          .getRawFileSystem(new Path(FILE_URI_STR), conf);
+          .getRawFileSystem(new Path(fileUriStr), conf);
       FileStatus fileStat = localFs.getFileStatus(new Path(infile.getPath()));
       FileStatus dirStat = localFs.getFileStatus(new Path(childDir.getPath()));
 
       for (FileStatus status : statuses) {
-        if (status.getPath().getName().equals(FILE_SCHEME)) {
+        if (status.getPath().getName().equals(fileScheme)) {
           assertEquals(fileStat.getPermission(), status.getPermission());
         } else {
           assertEquals(dirStat.getPermission(), status.getPermission());
@@ -112,7 +109,7 @@ public class TestViewFsOverloadSchemeListStatus {
 
       statuses = vfs.listStatus(new Path("/"));
       for (FileStatus status : statuses) {
-        if (status.getPath().getName().equals(FILE_SCHEME)) {
+        if (status.getPath().getName().equals(fileScheme)) {
           assertEquals(FsPermission.valueOf("-rwxr--r--"),
               status.getPermission());
           assertEquals(false, status.isDirectory());
@@ -125,7 +122,8 @@ public class TestViewFsOverloadSchemeListStatus {
     }
   }
 
-  @AfterClass public static void cleanup() throws IOException {
+  @AfterClass
+  public static void cleanup() throws IOException {
     FileUtil.fullyDelete(TEST_DIR);
   }
 

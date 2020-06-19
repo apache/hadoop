@@ -213,8 +213,6 @@ public class ViewFileSystem extends FileSystem {
   InodeTree<FileSystem> fsState;  // the fs state; ie the mount table
   Path homeDir = null;
   private boolean enableInnerCache = false;
-  private static boolean showMountLinksAsSymlinks = true;
-
   private InnerCache cache;
   // Default to rename within same mountpoint
   private RenameStrategy renameStrategy = RenameStrategy.SAME_MOUNTPOINT;
@@ -271,9 +269,6 @@ public class ViewFileSystem extends FileSystem {
     config = conf;
     enableInnerCache = config.getBoolean(CONFIG_VIEWFS_ENABLE_INNER_CACHE,
         CONFIG_VIEWFS_ENABLE_INNER_CACHE_DEFAULT);
-    showMountLinksAsSymlinks = config
-        .getBoolean(CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS,
-            CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS_DEFAULT);
     FsGetter fsGetter = fsGetter();
     final InnerCache innerCache = new InnerCache(fsGetter);
     // Now build  client side view (i.e. client side mount table) from config.
@@ -1121,6 +1116,7 @@ public class ViewFileSystem extends FileSystem {
     final long creationTime; // of the the mount table
     final UserGroupInformation ugi; // the user/group of user who created mtable
     final URI myUri;
+    final boolean showMountLinksAsSymlinks;
     
     public InternalDirOfViewFs(final InodeTree.INodeDir<FileSystem> dir,
         final long cTime, final UserGroupInformation ugi, URI uri,
@@ -1134,6 +1130,9 @@ public class ViewFileSystem extends FileSystem {
       theInternalDir = dir;
       creationTime = cTime;
       this.ugi = ugi;
+      showMountLinksAsSymlinks = config
+          .getBoolean(CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS,
+              CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS_DEFAULT);
     }
 
     static private void checkPathIsSlash(final Path f) throws IOException {
@@ -1240,9 +1239,9 @@ public class ViewFileSystem extends FileSystem {
           }
 
           //  We will represent as non-symlinks. Here it will show target
-          //  directories properties like permissions, isDirectory etc on mount
-          //  path. The path will be a mount link path and isDirectory is true
-          // if target is dir, otherwise false.
+          //  directory/file properties like permissions, isDirectory etc on
+          //  mount path. The path will be a mount link path and isDirectory is
+          //  true if target is dir, otherwise false.
           String linkedPath = link.getTargetFileSystem().getUri().getPath();
           if ("".equals(linkedPath)) {
             linkedPath = "/";
@@ -1257,10 +1256,9 @@ public class ViewFileSystem extends FileSystem {
                 status.getPermission(), status.getOwner(), status.getGroup(),
                 null, path);
           } catch (FileNotFoundException ex) {
-            LOG.warn(
-                "Cannot get one of the children's(" + path + ")  target path("
-                    + link.getTargetFileSystem().getUri() + linkedPath
-                    + ") file status.", ex);
+            LOG.warn("Cannot get one of the children's(" + path
+                + ")  target path(" + link.getTargetFileSystem().getUri()
+                + ") file status.", ex);
             throw ex;
           }
         } else {

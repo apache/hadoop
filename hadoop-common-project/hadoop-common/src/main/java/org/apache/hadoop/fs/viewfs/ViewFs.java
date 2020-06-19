@@ -1007,8 +1007,7 @@ public class ViewFs extends AbstractFileSystem {
      * will be listed in the returned result.
      */
     @Override
-    public FileStatus[] listStatus(final Path f) throws AccessControlException,
-        IOException {
+    public FileStatus[] listStatus(final Path f) throws IOException {
       checkPathIsSlash(f);
       FileStatus[] fallbackStatuses = listStatusForFallbackLink();
       FileStatus[] result = new FileStatus[theInternalDir.getChildren().size()];
@@ -1034,9 +1033,9 @@ public class ViewFs extends AbstractFileSystem {
           }
 
           //  We will represent as non-symlinks. Here it will show target
-          //  directories properties like permissions, isDirectory etc on mount
-          //  path. The path will be a mount link path and isDirectory is true
-          // if target is dir, otherwise false.
+          //  directory/file properties like permissions, isDirectory etc on
+          //  mount path. The path will be a mount link path and isDirectory is
+          //  true if target is dir, otherwise false.
           String linkedPath = link.getTargetFileSystem().getUri().getPath();
           if ("".equals(linkedPath)) {
             linkedPath = "/";
@@ -1050,13 +1049,12 @@ public class ViewFs extends AbstractFileSystem {
                 status.getModificationTime(), status.getAccessTime(),
                 status.getPermission(), status.getOwner(), status.getGroup(),
                 null, path);
-          } catch (FileNotFoundException ex){
-            LOG.warn(
-                "Cannot get one of the children's(" + path + ")  target path("
-                    + link.getTargetFileSystem().getUri() + linkedPath
-                    + ") file status.", ex);
-              throw ex;
-            }
+          } catch (FileNotFoundException ex) {
+            LOG.warn("Cannot get one of the children's(" + path
+                + ")  target path(" + link.getTargetFileSystem().getUri()
+                + ") file status.", ex);
+            throw ex;
+          }
         } else {
           result[i++] = new FileStatus(0, true, 0, 0,
             creationTime, creationTime,
