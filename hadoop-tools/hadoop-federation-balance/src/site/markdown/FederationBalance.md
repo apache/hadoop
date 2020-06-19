@@ -103,10 +103,12 @@ Command `submit` has 5 options:
 ### Configuration Options
 --------------------
 
+Set configuration options at fedbalance-site.xml.
+
 | Configuration key              | Description                          | Default |
 | ------------------------------ | ------------------------------------ | ------- |
 | hadoop.hdfs.procedure.work.thread.num | The worker threads number of the BalanceProcedureScheduler. | 10 |
-| hadoop.hdfs.procedure.scheduler.journal.uri | The uri of the journal. | |
+| hadoop.hdfs.procedure.scheduler.journal.uri | The uri of the journal. | hdfs://localhost:8020/tmp/procedure |
 | federation.balance.class | The class used for federation balance. | org.apache.hadoop.tools.DistCpProcedure |
 
 Architecture of Federation Balance
