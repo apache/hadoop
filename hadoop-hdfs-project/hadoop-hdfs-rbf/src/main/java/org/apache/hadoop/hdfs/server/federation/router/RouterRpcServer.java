@@ -918,6 +918,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
       if (dns == null) {
         LOG.debug("Get null DN report from cache");
         dns = getCachedDatanodeReportImpl(type);
+        this.dnCache.put(type, dns);
       }
       return dns;
     } catch (ExecutionException e) {
