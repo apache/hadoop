@@ -45,7 +45,7 @@ public class ITestAbfsStatistics extends AbstractAbfsIntegrationTest {
     describe("Testing the initial values of Abfs counters");
 
     AbfsCounters abfsCounters =
-        new AbfsInstrumentation(getFileSystem().getUri());
+        new AbfsCountersImpl(getFileSystem().getUri());
     Map<String, Long> metricMap = abfsCounters.toMap();
 
     for (Map.Entry<String, Long> entry : metricMap.entrySet()) {
