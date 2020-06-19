@@ -83,7 +83,7 @@ RUN apt-get -q update \
     && rm -rf /var/lib/apt/lists/*
 
 #######
-# Boost 1.76 (1.65 ships with Bionic)
+# Boost 1.72 (1.65 ships with Bionic)
 #######
 WORKDIR /root/boost-library
 RUN curl -L https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download > boost_1_72_0.tar.bz2 \

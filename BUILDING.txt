@@ -6,7 +6,7 @@ Requirements:
 * Unix System
 * JDK 1.8
 * Maven 3.3 or later
-* Boost 1.76
+* Boost 1.72 (if compiling native code)
 * Protocol Buffers 3.7.1 (if compiling native code)
 * CMake 3.1 or newer (if compiling native code)
 * Zlib devel (if compiling native code)
@@ -475,7 +475,7 @@ Requirements:
 * Windows System
 * JDK 1.8
 * Maven 3.0 or later
-* Boost 1.76
+* Boost 1.72
 * Protocol Buffers 3.7.1
 * CMake 3.1 or newer
 * Visual Studio 2010 Professional or Higher
