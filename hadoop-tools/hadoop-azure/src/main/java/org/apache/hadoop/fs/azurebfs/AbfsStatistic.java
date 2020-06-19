@@ -61,7 +61,7 @@ public enum AbfsStatistic {
 
   //Network statistics.
   CONNECTIONS_MADE("connections_made",
-      "Total number of times connection was made with the data store."),
+      "Total number of times a connection was made with the data store."),
   SEND_REQUESTS("send_requests",
       "Total number of times http requests were sent to the data store."),
   GET_RESPONSES("get_responses",
@@ -71,9 +71,9 @@ public enum AbfsStatistic {
   BYTES_RECEIVED("bytes_received",
       "Total bytes received."),
   READ_THROTTLES("read_throttles",
-      "Total number of times read operation is throttled."),
+      "Total number of times a read operation is throttled."),
   WRITE_THROTTLES("write_throttles",
-      "Total number of timesITestAzureBlobFileSystemMainOperation write operation is throttled.");
+      "Total number of time a write operation is throttled.");
 
   private String statName;
   private String statDescription;
