@@ -1116,7 +1116,7 @@ public class ViewFileSystem extends FileSystem {
     final long creationTime; // of the the mount table
     final UserGroupInformation ugi; // the user/group of user who created mtable
     final URI myUri;
-    final boolean showMountLinksAsSymlinks;
+    private final boolean showMountLinksAsSymlinks;
     
     public InternalDirOfViewFs(final InodeTree.INodeDir<FileSystem> dir,
         final long cTime, final UserGroupInformation ugi, URI uri,
@@ -1262,10 +1262,10 @@ public class ViewFileSystem extends FileSystem {
             throw ex;
           }
         } else {
-          result[i++] = new FileStatus(0, true, 0, 0,
-            creationTime, creationTime, PERMISSION_555,
-            ugi.getShortUserName(), ugi.getPrimaryGroupName(),
-              path);
+          result[i++] =
+              new FileStatus(0, true, 0, 0, creationTime, creationTime,
+                  PERMISSION_555, ugi.getShortUserName(),
+                  ugi.getPrimaryGroupName(), path);
         }
       }
       if (fallbackStatuses.length > 0) {

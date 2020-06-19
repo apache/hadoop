@@ -148,11 +148,11 @@ public class TestViewfsFileStatus {
         if (status.getPath().getName().equals("file")) {
           assertEquals(FsPermission.valueOf("-rwxr--r--"),
               status.getPermission());
-          assertEquals(false, status.isDirectory());
+          assertFalse(status.isDirectory());
         } else {
           assertEquals(FsPermission.valueOf("-r--rwxr--"),
               status.getPermission());
-          assertEquals(true, status.isDirectory());
+          assertTrue(status.isDirectory());
         }
       }
     }

@@ -1056,11 +1056,10 @@ public class ViewFs extends AbstractFileSystem {
             throw ex;
           }
         } else {
-          result[i++] = new FileStatus(0, true, 0, 0,
-            creationTime, creationTime,
-            PERMISSION_555, ugi.getShortUserName(), ugi.getGroupNames()[0],
-            new Path(inode.fullPath).makeQualified(
-                myUri, null));
+          result[i++] =
+              new FileStatus(0, true, 0, 0, creationTime, creationTime,
+                  PERMISSION_555, ugi.getShortUserName(),
+                  ugi.getGroupNames()[0], path);
         }
       }
       if (fallbackStatuses.length > 0) {

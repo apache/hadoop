@@ -47,12 +47,14 @@ public class TestViewFsOverloadSchemeListStatus {
   private static final File TEST_DIR =
       GenericTestUtils.getTestDir(TestViewfsFileStatus.class.getSimpleName());
 
-  @Before public void setUp() {
+  @Before
+  public void setUp() {
     FileUtil.fullyDelete(TEST_DIR);
     assertTrue(TEST_DIR.mkdirs());
   }
 
-  @After public void tearDown() throws IOException {
+  @After
+  public void tearDown() throws IOException {
     FileUtil.fullyDelete(TEST_DIR);
   }
 
@@ -112,11 +114,11 @@ public class TestViewFsOverloadSchemeListStatus {
         if (status.getPath().getName().equals(fileScheme)) {
           assertEquals(FsPermission.valueOf("-rwxr--r--"),
               status.getPermission());
-          assertEquals(false, status.isDirectory());
+          assertFalse(status.isDirectory());
         } else {
           assertEquals(FsPermission.valueOf("-r--rwxr--"),
               status.getPermission());
-          assertEquals(true, status.isDirectory());
+          assertTrue(status.isDirectory());
         }
       }
     }
