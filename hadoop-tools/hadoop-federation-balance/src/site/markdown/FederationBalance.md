@@ -23,9 +23,10 @@ Overview
   Federation Balance is a tool balancing data across different federation
   namespaces. It uses [DistCp](../hadoop-distcp/DistCp.html) to copy data from
   the source path to the target path. First it creates a snapshot at the source
-  path and submits the initial distcp. Then it uses distcp diff to do the
-  incremental copy. Finally when the source and the target are the same, it
-  updates the mount table in Router and moves the source to trash.
+  path and submits the initial distcp. Second it uses distcp diff to do the
+  incremental copy until the source and the target are the same. Then If it's
+  working in RBF mode it updates the mount table in Router. Finally it moves the
+  source to trash.
 
   This document aims to describe the usage and design of the Federation Balance.
 
@@ -39,20 +40,20 @@ Usage
   mount entry in Router:
 
     Source       Destination
-    /foo/src     hdfs://nn0:8020/foo/src
+    /foo/src     hdfs://namespace-0/foo/src
 
   The command below runs a federation balance job. The first parameter is the
   mount entry. The second one is the target path which must include the target
   cluster. The option `-router` indicates this is in router-based federation
   mode.
 
-    bash$ /bin/hadoop fedbalance -router submit /foo/src hdfs://nn1:8020/foo/dst
+    bash$ /bin/hadoop fedbalance -router submit /foo/src hdfs://namespace-1/foo/dst
 
-  It copies data from hdfs://nn0:8020/foo/src to hdfs://nn1:8020/foo/dst
+  It copies data from hdfs://namespace-0/foo/src to hdfs://namespace-1/foo/dst
   incrementally and finally updates the mount entry to:
 
     Source       Destination
-    /foo/src     hdfs://nn1:8020/foo/dst
+    /foo/src     hdfs://namespace-1/foo/dst
 
   If the hadoop shell process exits unexpectedly, we can use the command below
   to continue the unfinished job:
@@ -61,31 +62,31 @@ Usage
 
   This will scan the journal to find all the unfinished jobs, recover and
   continue to execute them.
-  
+
   If we want to balance in a normal federation cluster, use the command below.
 
-    bash$ /bin/hadoop fedbalance submit hdfs://nn0:8020/foo/src hdfs://nn1:8020/foo/dst
-    
-  In normal federation mode the source path must includes the source cluster.
+    bash$ /bin/hadoop fedbalance submit hdfs://namespace-0/foo/src hdfs://namespace-1/foo/dst
+
+  In normal federation mode the source path must includes the path schema.
 
 ### RBF Mode And Normal Federation Mode
 
-  The federation balance tool has 2 modes: 
-  
+  The federation balance tool has 2 modes:
+
   * the router-based federation mode (RBF mode).
   * the normal federation mode.
-  
+
   By default the command runs in the normal federation mode. You can specify the
   rbf mode by using the option `-router`.
-  
+
   In the rbf mode the first parameter is taken as the mount point. It disables
   write by setting the mount point readonly.
-  
+
   In the normal federation mode the first parameter is taken as the full path of
   the source. The first parameter must include the source cluster. It disables
   write by cancelling all the permissions of the source path.
-  
-  Details about disabling write see [DistCpFedBalance](#DistCpFedBalance).
+
+  Details about disabling write see [FedBalance](#FedBalance).
 
 ### Command Options
 
@@ -107,9 +108,8 @@ Set configuration options at fedbalance-site.xml.
 
 | Configuration key              | Description                          | Default |
 | ------------------------------ | ------------------------------------ | ------- |
-| hadoop.hdfs.procedure.work.thread.num | The worker threads number of the BalanceProcedureScheduler. | 10 |
-| hadoop.hdfs.procedure.scheduler.journal.uri | The uri of the journal. | hdfs://localhost:8020/tmp/procedure |
-| federation.balance.class | The class used for federation balance. | org.apache.hadoop.tools.DistCpProcedure |
+| hdfs.fedbalance.procedure.work.thread.num | The worker threads number of the BalanceProcedureScheduler. | 10 |
+| hdfs.fedbalance.procedure.scheduler.journal.uri | The uri of the journal. | hdfs://localhost:8020/tmp/procedure |
 
 Architecture of Federation Balance
 ----------------------
@@ -118,7 +118,7 @@ Architecture of Federation Balance
   categories:
 
   * Balance Procedure Scheduler
-  * DistCpFedBalance
+  * FedBalance
 
 ### Balance Procedure Scheduler
 
@@ -138,11 +138,10 @@ Architecture of Federation Balance
     and add them to the recoverQueue. The recover thread will recover them from
     the journal and add them back to the pendingQueue.
 
-### DistCpFedBalance
+### FedBalance
 
-  DistCpFedBalance is implemented as a job of the state machine. All the distcp
-  balance logic are implemented here. A DistCpFedBalance job consists of 3
-  procedures:
+  FedBalance is implemented as a job of the state machine. All the distcp
+  balance logic are implemented here. A FedBalance job consists of 3 procedures:
 
   * DistCpProcedure: This is the first procedure. It handles all the data copy
     works. There are 6 stages:
@@ -152,7 +151,7 @@ Architecture of Federation Balance
     * DIFF_DISTCP: Submit distcp with `-diff` round by round to sync source and
       target paths. If `-forceCloseOpen` is set, this stage will finish when
       there is no diff between src and dst. Otherwise this stage only finishes
-      when there is no diff and no open files.  
+      when there is no diff and no open files.
     * DISABLE_WRITE: Disable write operations so the src won't be changed. When
       working in router mode, it is done by making the mount point readonly.
       In normal federation mode it is done by cancelling all the permissions of
@@ -160,8 +159,8 @@ Architecture of Federation Balance
     * FINAL_DISTCP: Force close all the open files and submit the final distcp.
     * FINISH: Do the cleanup works. In normal federation mode the finish stage
       also restores the permission of the dst path.
-    
-  * MountTableProcedure: This procedure updates the mount entry in Router. The 
+
+  * MountTableProcedure: This procedure updates the mount entry in Router. The
     readonly is unset and the destination is updated of the mount point. This
     procedure is activated only when option `-router`.
 
