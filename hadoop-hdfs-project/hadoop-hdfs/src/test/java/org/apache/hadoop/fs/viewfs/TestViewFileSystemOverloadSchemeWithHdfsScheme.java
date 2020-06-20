@@ -191,8 +191,17 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
         new String[] {hdfsTargetPath.toUri().toString(),
             localTargetDir.toURI().toString() },
         conf);
+    try (DistributedFileSystem dfs = new DistributedFileSystem()) {
+      dfs.initialize(defaultFSURI, conf);
+      dfs.mkdirs(hdfsTargetPath);
+    }
 
+    try (RawLocalFileSystem lfs = new RawLocalFileSystem()) {
+      lfs.initialize(localTargetDir.toURI(), conf);
+      lfs.mkdirs(new Path(localTargetDir.toURI()));
+    }
     try (FileSystem fs = FileSystem.get(conf)) {
+      fs.mkdirs(hdfsTargetPath);
       FileStatus[] ls = fs.listStatus(new Path("/"));
       Assert.assertEquals(2, ls.length);
       String lsPath1 =

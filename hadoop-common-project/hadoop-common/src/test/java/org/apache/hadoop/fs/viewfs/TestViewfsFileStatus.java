@@ -121,7 +121,7 @@ public class TestViewfsFileStatus {
     Configuration conf = new Configuration();
     ConfigUtil.addLink(conf, "/file", infile.toURI());
     ConfigUtil.addLink(conf, "/dir", childDir.toURI());
-
+    conf.setBoolean(Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS, false);
     try (FileSystem vfs = FileSystem.get(FsConstants.VIEWFS_URI, conf)) {
       assertEquals(ViewFileSystem.class, vfs.getClass());
       FileStatus[] statuses = vfs.listStatus(new Path("/"));
@@ -148,9 +148,11 @@ public class TestViewfsFileStatus {
         if (status.getPath().getName().equals("file")) {
           assertEquals(FsPermission.valueOf("-rwxr--r--"),
               status.getPermission());
+          assertFalse(status.isDirectory());
         } else {
           assertEquals(FsPermission.valueOf("-r--rwxr--"),
               status.getPermission());
+          assertTrue(status.isDirectory());
         }
       }
     }
