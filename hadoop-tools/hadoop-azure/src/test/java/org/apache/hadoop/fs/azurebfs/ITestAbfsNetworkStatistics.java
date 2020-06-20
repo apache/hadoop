@@ -81,10 +81,17 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
        *
        * bytes_sent : bytes wrote in AbfsOutputStream.
        */
-      connectionsMade = assertAbfsStatistics(AbfsStatistic.CONNECTIONS_MADE,
-          6, metricMap);
-      requestsSent = assertAbfsStatistics(AbfsStatistic.SEND_REQUESTS, 4,
-          metricMap);
+      if (fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(sendRequestPath).toString())) {
+        connectionsMade = assertAbfsStatistics(AbfsStatistic.CONNECTIONS_MADE,
+            5, metricMap);
+        requestsSent = assertAbfsStatistics(AbfsStatistic.SEND_REQUESTS, 3,
+            metricMap);
+      } else {
+        connectionsMade = assertAbfsStatistics(AbfsStatistic.CONNECTIONS_MADE,
+            6, metricMap);
+        requestsSent = assertAbfsStatistics(AbfsStatistic.SEND_REQUESTS, 4,
+            metricMap);
+      }
       bytesSent = assertAbfsStatistics(AbfsStatistic.BYTES_SENT,
           testNetworkStatsString.getBytes().length, metricMap);
 
@@ -125,10 +132,17 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
        * wrote each time).
        *
        */
-      assertAbfsStatistics(AbfsStatistic.CONNECTIONS_MADE,
-          connectionsMade + 1 + LARGE_OPERATIONS * 2, metricMap);
-      assertAbfsStatistics(AbfsStatistic.SEND_REQUESTS,
-          requestsSent + 1 + LARGE_OPERATIONS * 2, metricMap);
+      if (fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(sendRequestPath).toString())) {
+        assertAbfsStatistics(AbfsStatistic.CONNECTIONS_MADE,
+            connectionsMade + 1 + LARGE_OPERATIONS, metricMap);
+        assertAbfsStatistics(AbfsStatistic.SEND_REQUESTS,
+            requestsSent + 1 + LARGE_OPERATIONS, metricMap);
+      } else {
+        assertAbfsStatistics(AbfsStatistic.CONNECTIONS_MADE,
+            connectionsMade + 1 + LARGE_OPERATIONS * 2, metricMap);
+        assertAbfsStatistics(AbfsStatistic.SEND_REQUESTS,
+            requestsSent + 1 + LARGE_OPERATIONS * 2, metricMap);
+      }
       assertAbfsStatistics(AbfsStatistic.BYTES_SENT,
           bytesSent + LARGE_OPERATIONS * (testNetworkStatsString.getBytes().length),
           metricMap);
@@ -183,8 +197,14 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
        *
        * bytes_received - This should be equal to bytes sent earlier.
        */
-      getResponses = assertAbfsStatistics(AbfsStatistic.GET_RESPONSES, 8,
-          metricMap);
+      if (fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(getResponsePath).toString())) {
+        //for appendBlob hflush is a no-op
+        getResponses = assertAbfsStatistics(AbfsStatistic.GET_RESPONSES, 7,
+            metricMap);
+      } else {
+        getResponses = assertAbfsStatistics(AbfsStatistic.GET_RESPONSES, 8,
+            metricMap);
+      }
       // Testing that bytes received is equal to bytes sent.
       long bytesSend = metricMap.get(AbfsStatistic.BYTES_SENT.getStatName());
       bytesReceived = assertAbfsStatistics(AbfsStatistic.BYTES_RECEIVED,
@@ -242,8 +262,13 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
       assertAbfsStatistics(AbfsStatistic.BYTES_RECEIVED,
           bytesReceived + LARGE_OPERATIONS * (testResponseString.getBytes().length),
           metricMap);
-      assertAbfsStatistics(AbfsStatistic.GET_RESPONSES,
-          getResponses + 3 + 2 * LARGE_OPERATIONS, metricMap);
+      if (fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(getResponsePath).toString())) {
+        assertAbfsStatistics(AbfsStatistic.GET_RESPONSES,
+            getResponses + 3 + LARGE_OPERATIONS, metricMap);
+      } else {
+        assertAbfsStatistics(AbfsStatistic.GET_RESPONSES,
+            getResponses + 3 + 2 * LARGE_OPERATIONS, metricMap);
+      }
 
     } finally {
       IOUtils.cleanupWithLogger(LOG, out, in);
