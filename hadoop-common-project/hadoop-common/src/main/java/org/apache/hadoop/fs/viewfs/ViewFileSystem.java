@@ -529,10 +529,18 @@ public class ViewFileSystem extends FileSystem {
    * the target path FileStatus object. The target path will be available via
    * getSymlink on that children's FileStatus object. Since it represents as
    * symlink, isDirectory on that children's FileStatus will return false.
+   * This behavior can be changed by setting an advanced configuration
+   * fs.viewfs.mount.links.as.symlinks to false. In this case, mount points will
+   * be represented as non-symlinks and all the file/directory attributes like
+   * permissions, isDirectory etc will be assigned from it's resolved target
+   * directory/file.
    *
    * If you want to get the FileStatus of target path for that children, you may
    * want to use GetFileStatus API with that children's symlink path. Please see
    * {@link ViewFileSystem#getFileStatus(Path f)}
+   *
+   * Note: In ViewFileSystem, by default the mount links are represented as
+   * symlinks.
    */
   @Override
   public FileStatus[] listStatus(final Path f) throws AccessControlException,

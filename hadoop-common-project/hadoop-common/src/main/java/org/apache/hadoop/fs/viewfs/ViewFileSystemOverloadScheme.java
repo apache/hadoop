@@ -59,9 +59,9 @@ import org.apache.hadoop.fs.UnsupportedFileSystemException;
  * data to mount with other hdfs and object store clusters(hdfs://NN1,
  * o3fs://bucket1.volume1/, s3a://bucket1/)
  *
- * fs.viewfs.mounttable.Cluster./user = hdfs://NN1/user
- * fs.viewfs.mounttable.Cluster./data = o3fs://bucket1.volume1/data
- * fs.viewfs.mounttable.Cluster./backup = s3a://bucket1/backup/
+ * fs.viewfs.mounttable.Cluster.link./user = hdfs://NN1/user
+ * fs.viewfs.mounttable.Cluster.link./data = o3fs://bucket1.volume1/data
+ * fs.viewfs.mounttable.Cluster.link./backup = s3a://bucket1/backup/
  *
  * Op1: Create file hdfs://Cluster/user/fileA will go to hdfs://NN1/user/fileA
  * Op2: Create file hdfs://Cluster/data/datafile will go to
@@ -75,15 +75,19 @@ import org.apache.hadoop.fs.UnsupportedFileSystemException;
  * data to mount with other hdfs and object store clusters
  * (hdfs://NN1, o3fs://bucket1.volume1/)
  *
- * fs.viewfs.mounttable.bucketA./user = hdfs://NN1/user
- * fs.viewfs.mounttable.bucketA./data = o3fs://bucket1.volume1/data
- * fs.viewfs.mounttable.bucketA./salesDB = s3a://bucketA/salesDB/
+ * fs.viewfs.mounttable.bucketA.link./user = hdfs://NN1/user
+ * fs.viewfs.mounttable.bucketA.link./data = o3fs://bucket1.volume1/data
+ * fs.viewfs.mounttable.bucketA.link./salesDB = s3a://bucketA/salesDB/
  *
  * Op1: Create file s3a://bucketA/user/fileA will go to hdfs://NN1/user/fileA
  * Op2: Create file s3a://bucketA/data/datafile will go to
  *      o3fs://bucket1.volume1/data/datafile
  * Op3: Create file s3a://bucketA/salesDB/dbfile will go to
  *      s3a://bucketA/salesDB/dbfile
+ *
+ * Note: In ViewFileSystemOverloadScheme, by default the mount links will be
+ * represented as non-symlinks. If you want to change this behavior, please see
+ * {@link ViewFileSystem#listStatus(Path)}
  *****************************************************************************/
 @InterfaceAudience.LimitedPrivate({ "MapReduce", "HBase", "Hive" })
 @InterfaceStability.Evolving
