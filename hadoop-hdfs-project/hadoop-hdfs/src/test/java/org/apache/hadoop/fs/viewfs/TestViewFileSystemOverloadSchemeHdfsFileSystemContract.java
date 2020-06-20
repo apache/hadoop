@@ -116,6 +116,11 @@ public class TestViewFileSystemOverloadSchemeHdfsFileSystemContract
     assumeTrue(rootDirTestEnabled());
     Path dir = path("/");
     Path child = path("/FileSystemContractBaseTest");
+    try (FileSystem dfs = ((ViewFileSystemOverloadScheme) fs).getRawFileSystem(
+        new Path(conf.get(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY), "/"),
+        conf)) {
+      dfs.mkdirs(child);
+    }
     assertListStatusFinds(dir, child);
   }
 

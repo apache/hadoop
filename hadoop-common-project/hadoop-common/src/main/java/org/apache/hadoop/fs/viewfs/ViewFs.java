@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS;
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS_DEFAULT;
 import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
 
 import java.io.FileNotFoundException;
@@ -67,7 +69,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Time;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * ViewFs (extends the AbstractFileSystem interface) implements a client-side
@@ -154,6 +157,7 @@ import org.apache.hadoop.util.Time;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving /*Evolving for a release,to be changed to Stable */
 public class ViewFs extends AbstractFileSystem {
+  static final Logger LOG = LoggerFactory.getLogger(ViewFs.class);
   final long creationTime; // of the the mount table
   final UserGroupInformation ugi; // the user/group of user who created mtable
   final Configuration config;
@@ -161,6 +165,7 @@ public class ViewFs extends AbstractFileSystem {
   Path homeDir = null;
   private ViewFileSystem.RenameStrategy renameStrategy =
       ViewFileSystem.RenameStrategy.SAME_MOUNTPOINT;
+  private static boolean showMountLinksAsSymlinks = true;
 
   static AccessControlException readOnlyMountTable(final String operation,
       final String p) {
@@ -209,6 +214,9 @@ public class ViewFs extends AbstractFileSystem {
     creationTime = Time.now();
     ugi = UserGroupInformation.getCurrentUser();
     config = conf;
+    showMountLinksAsSymlinks = config
+        .getBoolean(CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS,
+            CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS_DEFAULT);
     // Now build  client side view (i.e. client side mount table) from config.
     String authority = theUri.getAuthority();
     fsState = new InodeTree<AbstractFileSystem>(conf, authority) {
@@ -453,12 +461,17 @@ public class ViewFs extends AbstractFileSystem {
    * the target path FileStatus object. The target path will be available via
    * getSymlink on that children's FileStatus object. Since it represents as
    * symlink, isDirectory on that children's FileStatus will return false.
+   * This behavior can be changed by setting an advanced configuration
+   * fs.viewfs.mount.links.as.symlinks to false. In this case, mount points will
+   * be represented as non-symlinks and all the file/directory attributes like
+   * permissions, isDirectory etc will be assigned from it's resolved target
+   * directory/file.
    *
    * If you want to get the FileStatus of target path for that children, you may
    * want to use GetFileStatus API with that children's symlink path. Please see
    * {@link ViewFs#getFileStatus(Path f)}
    *
-   * Note: In ViewFs, the mount links are represented as symlinks.
+   * Note: In ViewFs, by default the mount links are represented as symlinks.
    */
   @Override
   public FileStatus[] listStatus(final Path f) throws AccessControlException,
@@ -999,8 +1012,7 @@ public class ViewFs extends AbstractFileSystem {
      * will be listed in the returned result.
      */
     @Override
-    public FileStatus[] listStatus(final Path f) throws AccessControlException,
-        IOException {
+    public FileStatus[] listStatus(final Path f) throws IOException {
       checkPathIsSlash(f);
       FileStatus[] fallbackStatuses = listStatusForFallbackLink();
       FileStatus[] result = new FileStatus[theInternalDir.getChildren().size()];
@@ -1008,37 +1020,51 @@ public class ViewFs extends AbstractFileSystem {
       for (Entry<String, INode<AbstractFileSystem>> iEntry :
           theInternalDir.getChildren().entrySet()) {
         INode<AbstractFileSystem> inode = iEntry.getValue();
-
-        
+        Path path = new Path(inode.fullPath).makeQualified(myUri, null);
         if (inode.isLink()) {
           INodeLink<AbstractFileSystem> link = 
             (INodeLink<AbstractFileSystem>) inode;
 
+          if (showMountLinksAsSymlinks) {
+            // To maintain backward compatibility, with default option(showing
+            // mount links as symlinks), we will represent target link as
+            // symlink and rest other properties are belongs to mount link only.
+            result[i++] =
+                new FileStatus(0, false, 0, 0, creationTime, creationTime,
+                    PERMISSION_555, ugi.getShortUserName(),
+                    ugi.getPrimaryGroupName(), link.getTargetLink(),
+                    path);
+            continue;
+          }
+
+          //  We will represent as non-symlinks. Here it will show target
+          //  directory/file properties like permissions, isDirectory etc on
+          //  mount path. The path will be a mount link path and isDirectory is
+          //  true if target is dir, otherwise false.
+          String linkedPath = link.getTargetFileSystem().getUri().getPath();
+          if ("".equals(linkedPath)) {
+            linkedPath = "/";
+          }
           try {
-            String linkedPath = link.getTargetFileSystem().getUri().getPath();
-            FileStatus status = ((ChRootedFs)link.getTargetFileSystem())
-                .getMyFs().getFileStatus(new Path(linkedPath));
-            result[i++] = new FileStatus(status.getLen(), false,
-              status.getReplication(), status.getBlockSize(),
-              status.getModificationTime(), status.getAccessTime(),
-              status.getPermission(), status.getOwner(), status.getGroup(),
-              link.getTargetLink(),
-              new Path(inode.fullPath).makeQualified(
-                  myUri, null));
+            FileStatus status =
+                ((ChRootedFs) link.getTargetFileSystem()).getMyFs()
+                    .getFileStatus(new Path(linkedPath));
+            result[i++] = new FileStatus(status.getLen(), status.isDirectory(),
+                status.getReplication(), status.getBlockSize(),
+                status.getModificationTime(), status.getAccessTime(),
+                status.getPermission(), status.getOwner(), status.getGroup(),
+                null, path);
           } catch (FileNotFoundException ex) {
-            result[i++] = new FileStatus(0, false, 0, 0,
-              creationTime, creationTime, PERMISSION_555,
-              ugi.getShortUserName(), ugi.getPrimaryGroupName(),
-              link.getTargetLink(),
-              new Path(inode.fullPath).makeQualified(
-                  myUri, null));
+            LOG.warn("Cannot get one of the children's(" + path
+                + ")  target path(" + link.getTargetFileSystem().getUri()
+                + ") file status.", ex);
+            throw ex;
           }
         } else {
-          result[i++] = new FileStatus(0, true, 0, 0,
-            creationTime, creationTime,
-            PERMISSION_555, ugi.getShortUserName(), ugi.getGroupNames()[0],
-            new Path(inode.fullPath).makeQualified(
-                myUri, null));
+          result[i++] =
+              new FileStatus(0, true, 0, 0, creationTime, creationTime,
+                  PERMISSION_555, ugi.getShortUserName(),
+                  ugi.getGroupNames()[0], path);
         }
       }
       if (fallbackStatuses.length > 0) {

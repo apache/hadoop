@@ -90,4 +90,12 @@ public interface Constants {
   String CONFIG_VIEWFS_ENABLE_INNER_CACHE = "fs.viewfs.enable.inner.cache";
 
   boolean CONFIG_VIEWFS_ENABLE_INNER_CACHE_DEFAULT = true;
+
+  /**
+   * Enable ViewFileSystem to show mountlinks as symlinks.
+   */
+  String CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS =
+      "fs.viewfs.mount.links.as.symlinks";
+
+  boolean CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS_DEFAULT = true;
 }
