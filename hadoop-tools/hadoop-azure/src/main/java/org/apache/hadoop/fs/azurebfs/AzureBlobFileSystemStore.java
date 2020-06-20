@@ -216,7 +216,7 @@ public class AzureBlobFileSystemStore implements Closeable {
    * blob instead of block blob.
    */
   public boolean isAppendBlobKey(String key) {
-    return isKeyForPrefixSet(key, appendBlobDirSet);
+    return isKeyForDirectorySet(key, appendBlobDirSet);
   }
 
   /**
@@ -1352,28 +1352,6 @@ public class AzureBlobFileSystemStore implements Closeable {
     }
 
     return properties;
-  }
-
-  private boolean isKeyForPrefixSet(String key, Set<String> dirSet) {
-
-    for (String dir : dirSet) {
-      if (dir.isEmpty() || key.startsWith(dir)) {
-        return true;
-      }
-
-      try {
-        URI uri = new URI(dir);
-        if (null == uri.getAuthority()) {
-          if (key.startsWith(dir + "/")){
-            return true;
-          }
-        }
-      } catch (URISyntaxException e) {
-        LOG.info("URI syntax error creating URI for {}", dir);
-      }
-    }
-
-    return false;
   }
 
   private boolean isKeyForDirectorySet(String key, Set<String> dirSet) {

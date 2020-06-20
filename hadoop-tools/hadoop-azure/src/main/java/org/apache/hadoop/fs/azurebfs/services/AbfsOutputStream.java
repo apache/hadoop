@@ -314,7 +314,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     flushWrittenBytesToServiceAsync();
   }
 
-  private synchronized void writeCurrentBufferToService() throws IOException {
+  private void writeAppendBlobCurrentBufferToService() throws IOException {
     if (bufferIndex == 0) {
       return;
     }
@@ -328,34 +328,51 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     final long offset = position;
     position += bytesLength;
 
-    if (this.isAppendBlob) {
-      try {
-        AbfsPerfTracker tracker = client.getAbfsPerfTracker();
-        try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
-                "writeCurrentBufferToService", "append")) {
-          AbfsRestOperation op = client.append(path, offset, bytes, 0,
-              bytesLength, cachedSasToken.get(), this.isAppendBlob);
-          cachedSasToken.update(op.getSasToken());
-          outputStreamStatistics.uploadSuccessful(bytesLength);
-          perfInfo.registerResult(op.getResult());
-          byteBufferPool.putBuffer(ByteBuffer.wrap(bytes));
-          perfInfo.registerSuccess(true);
-        }
-        return;
-      } catch (Exception ex) {
-        if (ex instanceof AbfsRestOperationException) {
-          if (((AbfsRestOperationException) ex).getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
-            throw new FileNotFoundException(ex.getMessage());
-          }
-        }
-        if (ex instanceof AzureBlobFileSystemException) {
-          ex = (AzureBlobFileSystemException) ex;
-        }
-        lastError = new IOException(ex);
-        throw lastError;
+    try {
+      AbfsPerfTracker tracker = client.getAbfsPerfTracker();
+      try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
+              "writeCurrentBufferToService", "append")) {
+        AbfsRestOperation op = client.append(path, offset, bytes, 0,
+            bytesLength, cachedSasToken.get(), this.isAppendBlob);
+        cachedSasToken.update(op.getSasToken());
+        outputStreamStatistics.uploadSuccessful(bytesLength);
+        perfInfo.registerResult(op.getResult());
+        byteBufferPool.putBuffer(ByteBuffer.wrap(bytes));
+        perfInfo.registerSuccess(true);
       }
+      return;
+    } catch (Exception ex) {
+      if (ex instanceof AbfsRestOperationException) {
+        if (((AbfsRestOperationException) ex).getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
+          throw new FileNotFoundException(ex.getMessage());
+        }
+      }
+      if (ex instanceof AzureBlobFileSystemException) {
+        ex = (AzureBlobFileSystemException) ex;
+      }
+      lastError = new IOException(ex);
+      throw lastError;
+    }
+  }
+
+  private synchronized void writeCurrentBufferToService() throws IOException {
+    if (this.isAppendBlob) {
+      writeAppendBlobCurrentBufferToService();
+      return;
     }
 
+    if (bufferIndex == 0) {
+      return;
+    }
+    outputStreamStatistics.writeCurrentBuffer();
+
+    final byte[] bytes = buffer;
+    final int bytesLength = bufferIndex;
+    outputStreamStatistics.bytesToUpload(bytesLength);
+    buffer = byteBufferPool.getBuffer(false, bufferSize).array();
+    bufferIndex = 0;
+    final long offset = position;
+    position += bytesLength;
 
     if (threadExecutor.getQueue().size() >= maxConcurrentRequestCount * 2) {
       long start = System.currentTimeMillis();
@@ -424,8 +441,8 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   private synchronized void flushWrittenBytesToServiceInternal(final long offset,
       final boolean retainUncommitedData, final boolean isClose) throws IOException {
 
-    // flush is not called for appendblob as is not needed
-    if (this.isAppendBlob) {
+    // flush is called for appendblob only on close
+    if (this.isAppendBlob && !isClose) {
       return;
     }
 
