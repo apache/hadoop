@@ -57,6 +57,7 @@ import java.net.URL;
 import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -110,6 +111,11 @@ public class TestRouterUserMappings {
 
     @Override
     public void cacheGroupsAdd(List<String> groups) throws IOException {
+    }
+
+    @Override
+    public Set<String> getGroupsSet(String user) throws IOException {
+      return null;
     }
   }
 

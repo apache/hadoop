@@ -27,7 +27,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
+import com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -90,6 +92,14 @@ public class TestHSAdminServer {
 
     @Override
     public void cacheGroupsAdd(List<String> groups) throws IOException {
+    }
+
+    @Override
+    public Set<String> getGroupsSet(String user) throws IOException {
+      Set<String> result =
+          ImmutableSet.of(user + (10 * i + 1) , user + (10 * i +2));
+      i++;
+      return result;
     }
   }
 

@@ -1563,11 +1563,11 @@ public class UserGroupInformation {
   }
 
   public String getPrimaryGroupName() throws IOException {
-    List<String> groups = getGroups();
+    Collection<String> groups = getGroupsSet();
     if (groups.isEmpty()) {
       throw new IOException("There is no primary group for UGI " + this);
     }
-    return groups.get(0);
+    return groups.iterator().next();
   }
 
   /**
@@ -1680,20 +1680,22 @@ public class UserGroupInformation {
   }
 
   /**
-   * Get the group names for this user. {@link #getGroups()} is less
+   * Get the group names for this user. {@link #getGroupsSet()} is less
    * expensive alternative when checking for a contained element.
    * @return the list of users with the primary group first. If the command
    *    fails, it returns an empty list.
    */
   public String[] getGroupNames() {
-    List<String> groups = getGroups();
+    Collection<String> groups = getGroupsSet();
     return groups.toArray(new String[groups.size()]);
   }
 
   /**
-   * Get the group names for this user.
+   * Get the group names for this user. {@link #getGroupsSet()} is less
+   * expensive alternative when checking for a contained element.
    * @return the list of users with the primary group first. If the command
    *    fails, it returns an empty list.
+   * Use {@link #getGroupsSet()}
    */
   public List<String> getGroups() {
     ensureInitialized();
@@ -1702,6 +1704,21 @@ public class UserGroupInformation {
     } catch (IOException ie) {
       LOG.debug("Failed to get groups for user {}", getShortUserName(), ie);
       return Collections.emptyList();
+    }
+  }
+
+  /**
+   * Get the groups names for the user as a Set.
+   * @return the set of users with the primary group first. If the command
+   *     fails, it returns an empty set.
+   */
+  public Set<String> getGroupsSet() {
+    ensureInitialized();
+    try {
+      return groups.getGroupsSet(getShortUserName());
+    } catch (IOException ie) {
+      LOG.debug("Failed to get groups for user {}", getShortUserName(), ie);
+      return Collections.emptySet();
     }
   }
 

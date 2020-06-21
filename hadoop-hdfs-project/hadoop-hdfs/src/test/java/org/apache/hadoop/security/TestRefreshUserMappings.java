@@ -35,6 +35,7 @@ import java.net.URL;
 import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -83,6 +84,11 @@ public class TestRefreshUserMappings {
   
     @Override
     public void cacheGroupsAdd(List<String> groups) throws IOException {
+    }
+
+    @Override
+    public Set<String> getGroupsSet(String user) throws IOException {
+      return null;
     }
   }
   

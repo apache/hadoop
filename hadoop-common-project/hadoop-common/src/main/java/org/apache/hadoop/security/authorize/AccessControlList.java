@@ -20,10 +20,7 @@ package org.apache.hadoop.security.authorize;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -231,8 +228,9 @@ public class AccessControlList implements Writable {
     if (allAllowed || users.contains(ugi.getShortUserName())) {
       return true;
     } else if (!groups.isEmpty()) {
-      for (String group : ugi.getGroups()) {
-        if (groups.contains(group)) {
+      Set<String> ugiGroups = ugi.getGroupsSet();
+      for (String group : groups) {
+        if (ugiGroups.contains(group)) {
           return true;
         }
       }
