@@ -17,11 +17,10 @@
  */
 package org.apache.hadoop.fs.azure;
 
-import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.io.OutputStream;
 
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Test;
 
 public class TestSyncableDataOutputStream {
@@ -31,11 +30,13 @@ public class TestSyncableDataOutputStream {
     MockOutputStream out = new MockOutputStream();
     SyncableDataOutputStream sdos = new SyncableDataOutputStream(out);
     out.flushThrowIOE = true;
-    try {
-      sdos.close();
-      fail("Expecting IOE");
-    } catch (IOException e) {
-    }
+    LambdaTestUtils.intercept(IOException.class, "An IOE from flush", () -> sdos.close());
+    MockOutputStream out2 = new MockOutputStream();
+    out2.flushThrowIOE = true;
+    LambdaTestUtils.intercept(IOException.class, "An IOE from flush", () -> {
+      try (SyncableDataOutputStream sdos2 = new SyncableDataOutputStream(out2)) {
+      }
+    });
   }
 
   private static class MockOutputStream extends OutputStream {

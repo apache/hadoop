@@ -22,11 +22,11 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
  * Support the Syncable interface on top of a DataOutputStream.
