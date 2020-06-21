@@ -41,7 +41,7 @@ public class TestSyncableDataOutputStream {
 
   private static class MockOutputStream extends OutputStream {
 
-    boolean flushThrowIOE = false;
+    private boolean flushThrowIOE = false;
     private IOException lastException = null;
 
     @Override
