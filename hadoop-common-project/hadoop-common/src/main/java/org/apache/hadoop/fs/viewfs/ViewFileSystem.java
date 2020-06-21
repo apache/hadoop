@@ -291,7 +291,8 @@ public class ViewFileSystem extends FileSystem {
         @Override
         protected FileSystem getTargetFileSystem(final INodeDir<FileSystem> dir)
           throws URISyntaxException {
-          return new InternalDirOfViewFs(dir, creationTime, ugi, myUri, config);
+          return new InternalDirOfViewFs(dir, creationTime, ugi, myUri,
+              config, this);
         }
 
         @Override
@@ -1125,10 +1126,12 @@ public class ViewFileSystem extends FileSystem {
     final UserGroupInformation ugi; // the user/group of user who created mtable
     final URI myUri;
     private final boolean showMountLinksAsSymlinks;
-    
+    InodeTree<FileSystem> fsState;
+
     public InternalDirOfViewFs(final InodeTree.INodeDir<FileSystem> dir,
         final long cTime, final UserGroupInformation ugi, URI uri,
-        Configuration config) throws URISyntaxException {
+        Configuration config, InodeTree<FileSystem> fsState)
+        throws URISyntaxException {
       myUri = uri;
       try {
         initialize(myUri, config);
@@ -1141,6 +1144,7 @@ public class ViewFileSystem extends FileSystem {
       showMountLinksAsSymlinks = config
           .getBoolean(CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS,
               CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS_DEFAULT);
+      this.fsState = fsState;
     }
 
     static private void checkPathIsSlash(final Path f) throws IOException {
@@ -1316,6 +1320,39 @@ public class ViewFileSystem extends FileSystem {
         return new FileStatus[0];
       }
     }
+
+    @Override
+    public ContentSummary getContentSummary(Path f) throws IOException {
+      FileStatus status = getFileStatus(f);
+      if (status.isFile()) {
+        // f is a file
+        long length = status.getLen();
+        return new ContentSummary.Builder().length(length).
+            fileCount(1).directoryCount(0).spaceConsumed(length).build();
+      }
+      // f is a directory
+      long[] summary = {0, 0, 1};
+      for (FileStatus s : listStatus(f)) {
+        long length = s.getLen();
+        ContentSummary c;
+        if (s.isDirectory()) {
+          Path targetPath = Path.getPathWithoutSchemeAndAuthority(s.getPath());
+          InodeTree.ResolveResult<FileSystem> res =
+              fsState.resolve(targetPath.toString(), true);
+          c = res.targetFileSystem.getContentSummary(res.remainingPath);
+        } else {
+          c = new ContentSummary.Builder().length(length).
+              fileCount(1).directoryCount(0).spaceConsumed(length).build();
+        }
+        summary[0] += c.getLength();
+        summary[1] += c.getFileCount();
+        summary[2] += c.getDirectoryCount();
+      }
+      return new ContentSummary.Builder().length(summary[0]).
+          fileCount(summary[1]).directoryCount(summary[2]).
+          spaceConsumed(summary[0]).build();
+    }
+
 
     @Override
     public boolean mkdirs(Path dir, FsPermission permission)
