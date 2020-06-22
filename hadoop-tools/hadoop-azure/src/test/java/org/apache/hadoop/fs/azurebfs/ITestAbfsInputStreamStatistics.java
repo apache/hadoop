@@ -26,8 +26,10 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
+import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamContext;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamStatisticsImpl;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
+import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.io.IOUtils;
 
 public class ITestAbfsInputStreamStatistics
@@ -36,6 +38,7 @@ public class ITestAbfsInputStreamStatistics
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestAbfsInputStreamStatistics.class);
   private static final int ONE_MB = 1024 * 1024;
+  private static final int ONE_KB = 1024;
   private byte[] defBuffer = new byte[ONE_MB];
 
   public ITestAbfsInputStreamStatistics() throws Exception {
@@ -119,6 +122,9 @@ public class ITestAbfsInputStreamStatistics
 
       AbfsInputStreamStatisticsImpl stats =
           (AbfsInputStreamStatisticsImpl) in.getStreamStatistics();
+
+      LOG.info("STATISTICS: {}", stats.toString());
+
       /*
        * seekOps - Since we are doing backward and forward seek OPERATIONS
        * times, total seeks would be 2 * OPERATIONS.
@@ -156,6 +162,9 @@ public class ITestAbfsInputStreamStatistics
       assertEquals("Mismatch in seekInBuffer value", 2 * OPERATIONS,
           stats.getSeekInBuffer());
 
+      in.close();
+      // Verifying whether stats are readable after stream is closed.
+      LOG.info("STATISTICS after closing: {}", stats.toString());
     } finally {
       IOUtils.cleanupWithLogger(LOG, out, in);
     }
@@ -196,6 +205,8 @@ public class ITestAbfsInputStreamStatistics
       AbfsInputStreamStatisticsImpl stats =
           (AbfsInputStreamStatisticsImpl) in.getStreamStatistics();
 
+      LOG.info("STATISTICS: {}", stats.toString());
+
       /*
        * bytesRead - Since each time a single byte is read, total
        * bytes read would be equal to OPERATIONS.
@@ -214,6 +225,61 @@ public class ITestAbfsInputStreamStatistics
       assertEquals("Mismatch in remoteReadOps value", 1,
           stats.getRemoteReadOperations());
 
+      in.close();
+      // Verifying if stats are still readable after stream is closed.
+      LOG.info("STATISTICS after closing: {}", stats.toString());
+    } finally {
+      IOUtils.cleanupWithLogger(LOG, out, in);
+    }
+  }
+
+  /**
+   * Testing AbfsInputStream works with null Statistics.
+   */
+  @Test
+  public void testWithNullStreamStatistics() throws IOException {
+    describe("Testing AbfsInputStream operations with statistics as null");
+
+    AzureBlobFileSystem fs = getFileSystem();
+    Path nullStatFilePath = path(getMethodName());
+    byte[] oneKbBuff = new byte[ONE_KB];
+
+    // Creating an AbfsInputStreamContext instance with null StreamStatistics.
+    AbfsInputStreamContext abfsInputStreamContext =
+        new AbfsInputStreamContext(
+            getConfiguration().getSasTokenRenewPeriodForStreamsInSeconds())
+            .withReadBufferSize(getConfiguration().getReadBufferSize())
+            .withReadAheadQueueDepth(getConfiguration().getReadAheadQueueDepth())
+            .withStreamStatistics(null)
+            .build();
+
+    AbfsOutputStream out = null;
+    AbfsInputStream in = null;
+
+    try {
+      out = createAbfsOutputStreamWithFlushEnabled(fs, nullStatFilePath);
+
+      // Writing a 1KB buffer in the file.
+      out.write(oneKbBuff);
+      out.hflush();
+
+      // AbfsRestOperation Instance required for eTag.
+      AbfsRestOperation abfsRestOperation = fs.getAbfsClient().getPathStatus(
+          "/test/" + getMethodName(), false);
+
+      // AbfsInputStream with no StreamStatistics.
+      in = new AbfsInputStream(fs.getAbfsClient(), null,
+          "/test/" + getMethodName(), ONE_KB,
+          abfsInputStreamContext,
+          abfsRestOperation.getResult().getResponseHeader("ETag"));
+
+      // Verifying that AbfsInputStream Operations works with null statistics.
+      assertNotEquals("AbfsInputStream read() with null statistics should "
+          + "work", -1, in.read());
+      in.seek(ONE_KB);
+
+      // Verifying toString() with no StreamStatistics.
+      LOG.info("AbfsInputStream: {}", in.toString());
     } finally {
       IOUtils.cleanupWithLogger(LOG, out, in);
     }
