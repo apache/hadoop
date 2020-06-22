@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import org.apache.hadoop.test.LambdaTestUtils;
+
 import org.junit.Test;
 
 public class TestSyncableDataOutputStream {
