@@ -146,6 +146,7 @@ public abstract class AbstractCSQueue implements CSQueue {
 
   volatile Priority priority = Priority.newInstance(0);
   private Map<String, Float> userWeights = new HashMap<String, Float>();
+  private int maxParallelApps;
 
   public AbstractCSQueue(CapacitySchedulerContext cs,
       String queueName, CSQueue parent, CSQueue old) throws IOException {
@@ -389,6 +390,11 @@ public abstract class AbstractCSQueue implements CSQueue {
       // Setup queue's maximumAllocation respecting the global setting
       // and queue setting
       setupMaximumAllocation(configuration);
+
+      // Max parallel apps
+      int queueMaxParallelApps =
+          configuration.getMaxParallelAppsForQueue(getQueuePath());
+      setMaxParallelApps(queueMaxParallelApps);
 
       // initialized the queue state based on previous state, configured state
       // and its parent state.
@@ -1421,4 +1427,14 @@ public abstract class AbstractCSQueue implements CSQueue {
   public boolean getDefaultAppLifetimeWasSpecifiedInConfig() {
     return defaultAppLifetimeWasSpecifiedInConfig;
   }
+
+  public void setMaxParallelApps(int maxParallelApps) {
+    this.maxParallelApps = maxParallelApps;
+  }
+
+  public int getMaxParallelApps() {
+    return maxParallelApps;
+  }
+
+  abstract int getNumRunnableApps();
 }
