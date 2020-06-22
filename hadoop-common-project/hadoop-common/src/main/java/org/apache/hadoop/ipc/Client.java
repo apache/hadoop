@@ -86,7 +86,6 @@ import static org.apache.hadoop.ipc.RpcConstants.PING_CALL_ID;
 public class Client implements AutoCloseable {
   
   public static final Logger LOG = LoggerFactory.getLogger(Client.class);
-  private static final int STOP_SLEEP_TIME_MS = 10;
 
   /** A counter for generating call IDs. */
   private static final AtomicInteger callIdCounter = new AtomicInteger();
@@ -1376,7 +1375,7 @@ public class Client implements AutoCloseable {
     // wait until all connections are closed
     while (!connections.isEmpty()) {
       try {
-        Thread.sleep(STOP_SLEEP_TIME_MS);
+        Thread.sleep(100);
       } catch (InterruptedException e) {
       }
     }
