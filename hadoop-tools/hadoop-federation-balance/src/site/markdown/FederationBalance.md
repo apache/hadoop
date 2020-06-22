@@ -108,8 +108,8 @@ Set configuration options at fedbalance-site.xml.
 
 | Configuration key              | Description                          | Default |
 | ------------------------------ | ------------------------------------ | ------- |
-| hdfs.fedbalance.procedure.work.thread.num | The worker threads number of the BalanceProcedureScheduler. | 10 |
-| hdfs.fedbalance.procedure.scheduler.journal.uri | The uri of the journal. | hdfs://localhost:8020/tmp/procedure |
+| hdfs.fedbalance.procedure.work.thread.num | The worker threads number of the BalanceProcedureScheduler. BalanceProcedureScheduler is responsible for scheduling a balance job, including submit, run, delay and recover. | 10 |
+| hdfs.fedbalance.procedure.scheduler.journal.uri | The uri of the journal, the journal file is used for handling the job persistence and recover. | hdfs://localhost:8020/tmp/procedure |
 
 Architecture of Federation Balance
 ----------------------
