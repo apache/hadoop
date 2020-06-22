@@ -1828,7 +1828,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   public String[] getGroupsForUser(String user) throws IOException {
     return routerProto.getGroupsForUser(user);
   }
-        
+
   /**
    * Deals with loading datanode report into the cache and refresh.
    */
