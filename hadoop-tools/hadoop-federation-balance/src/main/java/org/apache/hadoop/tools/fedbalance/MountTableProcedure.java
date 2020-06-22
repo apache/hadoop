@@ -43,9 +43,9 @@ import java.util.List;
 /**
  * Update mount table.
  * Old mount table:
- *   /a/b/c -> {ns:src path:/a/b/c}
+ *   /a/b/c -&gt; {ns:src path:/a/b/c}
  * New mount table:
- *   /a/b/c -> {ns:dst path:/a/b/c}
+ *   /a/b/c -&gt; {ns:dst path:/a/b/c}
  */
 public class MountTableProcedure extends BalanceProcedure {
 
