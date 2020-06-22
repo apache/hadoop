@@ -103,8 +103,9 @@ public abstract class AbstractMultipartUploader implements MultipartUploader {
 
   /**
    * Check all the arguments to the
-   * {@link MultipartUploader#putPart(UploadHandle, int, Path, InputStream, long)} operation.
-   * @param filePath Target path for upload (same as {@link #startUpload(Path)}).
+   * {@link MultipartUploader#putPart(UploadHandle, int, Path, InputStream, long)}
+   * operation.
+   * @param filePath Target path for upload (as {@link #startUpload(Path)}).
    * @param inputStream Data for this part. Implementations MUST close this
    * stream after reading in the data.
    * @param partNumber Index of the part relative to others.
@@ -124,15 +125,11 @@ public abstract class AbstractMultipartUploader implements MultipartUploader {
     checkArgument(lengthInBytes >= 0, "Invalid part length: %d", lengthInBytes);
   }
 
-
   /**
-   * Best effort attempt to aborts multipart uploads under a path.
-   * Not all implementations support this, and those which do may
-   * be vulnerable to eventually consistent listings of current uploads
-   * -some may be missed.
+   * {@inheritDoc}.
    * @param path path to abort uploads under.
-   * @return a future of the number of entries found; -1 if aborting is unsupported.
-   * @throws IOException IO failure
+   * @return a future to -1.
+   * @throws IOException
    */
   public CompletableFuture<Integer> abortUploadsUnderPath(Path path)
       throws IOException {

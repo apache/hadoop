@@ -34,7 +34,7 @@ public class InternalOperations {
 
   @SuppressWarnings("deprecation") // rename w/ OVERWRITE
   public void rename(FileSystem fs, final Path src, final Path dst,
-    final Options.Rename...options) throws IOException {
+      final Options.Rename...options) throws IOException {
     fs.rename(src, dst, options);
   }
 }

@@ -133,16 +133,17 @@ public class FileSystemMultipartUploader extends AbstractMultipartUploader {
     Path partPath =
         mergePaths(collectorPath, mergePaths(new Path(Path.SEPARATOR),
             new Path(partNumber + ".part")));
-    final FSDataOutputStreamBuilder builder = fs.createFile(partPath);
+    final FSDataOutputStreamBuilder fileBuilder = fs.createFile(partPath);
     if (checksumOpt != null) {
-      builder.checksumOpt(checksumOpt);
+      fileBuilder.checksumOpt(checksumOpt);
     }
     if (permission != null) {
-      builder.permission(permission);
+      fileBuilder.permission(permission);
     }
     try (FSDataOutputStream fsDataOutputStream =
-             builder.blockSize(blockSize).build()) {
-      IOUtils.copy(inputStream, fsDataOutputStream, this.builder.getBufferSize());
+             fileBuilder.blockSize(blockSize).build()) {
+      IOUtils.copy(inputStream, fsDataOutputStream,
+          this.builder.getBufferSize());
     } finally {
       cleanupWithLogger(LOG, inputStream);
     }

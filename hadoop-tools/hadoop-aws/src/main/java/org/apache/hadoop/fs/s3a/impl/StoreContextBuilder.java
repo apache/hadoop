@@ -31,6 +31,9 @@ import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.security.UserGroupInformation;
 
+/**
+ * Builder for the store context.
+ */
 public class StoreContextBuilder {
 
   private URI fsURI;
@@ -72,91 +75,115 @@ public class StoreContextBuilder {
     return this;
   }
 
-  public StoreContextBuilder setBucket(final String bucket) {
-    this.bucket = bucket;
+  public StoreContextBuilder setBucket(final String b) {
+    this.bucket = b;
     return this;
   }
 
-  public StoreContextBuilder setConfiguration(final Configuration configuration) {
-    this.configuration = configuration;
+  public StoreContextBuilder setConfiguration(final Configuration conf) {
+    this.configuration = conf;
     return this;
   }
 
-  public StoreContextBuilder setUsername(final String username) {
-    this.username = username;
+  public StoreContextBuilder setUsername(final String user) {
+    this.username = user;
     return this;
   }
 
-  public StoreContextBuilder setOwner(final UserGroupInformation owner) {
-    this.owner = owner;
+  public StoreContextBuilder setOwner(final UserGroupInformation ugi) {
+    this.owner = ugi;
     return this;
   }
 
-  public StoreContextBuilder setExecutor(final ListeningExecutorService executor) {
-    this.executor = executor;
+  public StoreContextBuilder setExecutor(
+      final ListeningExecutorService ex) {
+    this.executor = ex;
     return this;
   }
 
-  public StoreContextBuilder setExecutorCapacity(final int executorCapacity) {
-    this.executorCapacity = executorCapacity;
+  public StoreContextBuilder setExecutorCapacity(
+      final int capacity) {
+    this.executorCapacity = capacity;
     return this;
   }
 
-  public StoreContextBuilder setInvoker(final Invoker invoker) {
-    this.invoker = invoker;
+  public StoreContextBuilder setInvoker(final Invoker invoke) {
+    this.invoker = invoke;
     return this;
   }
 
-  public StoreContextBuilder setInstrumentation(final S3AInstrumentation instrumentation) {
-    this.instrumentation = instrumentation;
+  public StoreContextBuilder setInstrumentation(
+      final S3AInstrumentation instr) {
+    this.instrumentation = instr;
     return this;
   }
 
-  public StoreContextBuilder setStorageStatistics(final S3AStorageStatistics storageStatistics) {
-    this.storageStatistics = storageStatistics;
+  public StoreContextBuilder setStorageStatistics(
+      final S3AStorageStatistics sstats) {
+    this.storageStatistics = sstats;
     return this;
   }
 
-  public StoreContextBuilder setInputPolicy(final S3AInputPolicy inputPolicy) {
-    this.inputPolicy = inputPolicy;
+  public StoreContextBuilder setInputPolicy(
+      final S3AInputPolicy policy) {
+    this.inputPolicy = policy;
     return this;
   }
 
-  public StoreContextBuilder setChangeDetectionPolicy(final ChangeDetectionPolicy changeDetectionPolicy) {
-    this.changeDetectionPolicy = changeDetectionPolicy;
+  public StoreContextBuilder setChangeDetectionPolicy(
+      final ChangeDetectionPolicy policy) {
+    this.changeDetectionPolicy = policy;
     return this;
   }
 
-  public StoreContextBuilder setMultiObjectDeleteEnabled(final boolean multiObjectDeleteEnabled) {
-    this.multiObjectDeleteEnabled = multiObjectDeleteEnabled;
+  public StoreContextBuilder setMultiObjectDeleteEnabled(
+      final boolean enabled) {
+    this.multiObjectDeleteEnabled = enabled;
     return this;
   }
 
-  public StoreContextBuilder setMetadataStore(final MetadataStore metadataStore) {
-    this.metadataStore = metadataStore;
+  public StoreContextBuilder setMetadataStore(
+      final MetadataStore store) {
+    this.metadataStore = store;
     return this;
   }
 
-  public StoreContextBuilder setUseListV1(final boolean useListV1) {
-    this.useListV1 = useListV1;
+  public StoreContextBuilder setUseListV1(
+      final boolean useV1) {
+    this.useListV1 = useV1;
     return this;
   }
 
-  public StoreContextBuilder setContextAccessors(final ContextAccessors contextAccessors) {
-    this.contextAccessors = contextAccessors;
+  public StoreContextBuilder setContextAccessors(
+      final ContextAccessors accessors) {
+    this.contextAccessors = accessors;
     return this;
   }
 
-  public StoreContextBuilder setTimeProvider(final ITtlTimeProvider timeProvider) {
-    this.timeProvider = timeProvider;
+  public StoreContextBuilder setTimeProvider(
+      final ITtlTimeProvider provider) {
+    this.timeProvider = provider;
     return this;
   }
 
   @SuppressWarnings("deprecation")
   public StoreContext build() {
-    return new StoreContext(fsURI, bucket, configuration, username, owner,
-        executor, executorCapacity, invoker, instrumentation, storageStatistics,
-        inputPolicy, changeDetectionPolicy, multiObjectDeleteEnabled,
-        metadataStore, useListV1, contextAccessors, timeProvider);
+    return new StoreContext(fsURI,
+        bucket,
+        configuration,
+        username,
+        owner,
+        executor,
+        executorCapacity,
+        invoker,
+        instrumentation,
+        storageStatistics,
+        inputPolicy,
+        changeDetectionPolicy,
+        multiObjectDeleteEnabled,
+        metadataStore,
+        useListV1,
+        contextAccessors,
+        timeProvider);
   }
 }

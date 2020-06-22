@@ -920,7 +920,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
         // part of its bulk operation.
         boolean oldWasDir = oldEntry.getFileStatus().isDirectory();
         boolean newIsDir = entry.getFileStatus().isDirectory();
-        if ((oldWasDir && ! newIsDir)
+        if ((oldWasDir && !newIsDir)
             || (!oldWasDir && newIsDir)) {
           LOG.warn("Overwriting a S3Guard file created in the operation: {}",
               oldEntry);

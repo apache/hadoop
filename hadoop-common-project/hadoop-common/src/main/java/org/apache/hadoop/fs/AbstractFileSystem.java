@@ -79,11 +79,11 @@ public abstract class AbstractFileSystem implements PathCapabilities {
 
   /** Recording statistics per a file system class. */
   private static final Map<URI, Statistics> 
-      STATISTICS_TABLE = new HashMap<>();
+      STATISTICS_TABLE = new HashMap<URI, Statistics>();
   
   /** Cache of constructors for each file system class. */
   private static final Map<Class<?>, Constructor<?>> CONSTRUCTOR_CACHE = 
-    new ConcurrentHashMap<>();
+    new ConcurrentHashMap<Class<?>, Constructor<?>>();
   
   private static final Class<?>[] URI_CONFIG_ARGS = 
     new Class[]{URI.class, Configuration.class};

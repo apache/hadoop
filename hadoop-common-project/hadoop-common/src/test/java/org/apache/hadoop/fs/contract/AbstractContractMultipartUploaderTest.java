@@ -94,22 +94,22 @@ public abstract class AbstractContractMultipartUploaderTest extends
 
   @Override
   public void teardown() throws Exception {
-      MultipartUploader uploader = getUploader(1);
-      if (uploader != null) {
-        if (activeUpload != null) {
-            abortUploadQuietly(activeUpload, activeUploadPath);
-        }
-        try {
-          // round off with an abort of all uploads
-          Path teardown = getContract().getTestPath();
-          LOG.info("Teardown: aborting outstanding uploads under {}", teardown);
-          CompletableFuture<Integer> f
-              = uploader.abortUploadsUnderPath(teardown);
-          f.get();
-        } catch (Exception e) {
-          LOG.warn("Exeception in teardown", e);
-        }
+    MultipartUploader uploader = getUploader(1);
+    if (uploader != null) {
+      if (activeUpload != null) {
+          abortUploadQuietly(activeUpload, activeUploadPath);
       }
+      try {
+        // round off with an abort of all uploads
+        Path teardown = getContract().getTestPath();
+        LOG.info("Teardown: aborting outstanding uploads under {}", teardown);
+        CompletableFuture<Integer> f
+            = uploader.abortUploadsUnderPath(teardown);
+        f.get();
+      } catch (Exception e) {
+        LOG.warn("Exeception in teardown", e);
+      }
+    }
 
     cleanupWithLogger(LOG, uploader0, uploader1);
     super.teardown();

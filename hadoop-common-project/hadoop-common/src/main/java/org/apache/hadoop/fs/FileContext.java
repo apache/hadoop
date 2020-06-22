@@ -2963,7 +2963,8 @@ public class FileContext implements PathCapabilities {
    * @return server default configuration values for path
    * @throws IOException an I/O error occurred
    */
-  public FsServerDefaults getServerDefaults(final Path path) throws IOException {
+  public FsServerDefaults getServerDefaults(final Path path)
+      throws IOException {
     return FsLinkResolution.resolve(this,
         fixRelativePart(path),
         (fs, p) -> fs.getServerDefaults(p));

@@ -256,8 +256,7 @@ public enum Statistic {
       "Multipart Upload Completed"),
   MULTIPART_UPLOAD_STARTED(
       "multipart_upload_started",
-      "Multipart Upload Started"),
-  ;
+      "Multipart Upload Started");
 
   private static final Map<String, Statistic> SYMBOL_MAP =
       new HashMap<>(Statistic.values().length);
