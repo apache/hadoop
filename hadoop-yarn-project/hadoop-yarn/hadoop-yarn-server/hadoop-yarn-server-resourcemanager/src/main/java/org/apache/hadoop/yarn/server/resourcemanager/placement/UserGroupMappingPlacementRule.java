@@ -141,7 +141,7 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
           } else {
             if (LOG.isDebugEnabled()) {
               LOG.debug("Creating placement context for user {} using " +
-                  "static user static mapping", user);
+                  "current user static mapping", user);
             }
             return getPlacementContext(mapping);
           }
@@ -173,7 +173,7 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
           } else {
             if (LOG.isDebugEnabled()) {
               LOG.debug("Creating placement context for user {} using " +
-                  "static user static mapping", user);
+                  "current user static mapping", user);
             }
             return getPlacementContext(mapping);
           }
