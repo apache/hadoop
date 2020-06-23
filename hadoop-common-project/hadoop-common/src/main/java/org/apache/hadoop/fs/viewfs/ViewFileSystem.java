@@ -290,8 +290,9 @@ public class ViewFileSystem extends FileSystem {
 
         @Override
         protected FileSystem getTargetFileSystem(final INodeDir<FileSystem> dir)
-            throws URISyntaxException, IOException {
-          return new InternalDirOfViewFs(dir, creationTime, ugi, myUri, config, this);
+            throws URISyntaxException {
+          return new InternalDirOfViewFs(dir, creationTime, ugi, myUri, config,
+              this);
         }
 
         @Override
@@ -1285,16 +1286,9 @@ public class ViewFileSystem extends FileSystem {
         internalDirStatusesMergedWithFallBack =
             merge(fallbackStatuses, internalDirStatusesMergedWithFallBack);
       }
-
-      // we don't use target file status as we show the mount link as symlink.
-      if (showMountLinksAsSymlinks) {
-        return merge(internalDirStatusesMergedWithFallBack,
-            linkStatuses.toArray(new FileStatus[linkStatuses.size()]));
-      } else {
-        // we use target file status as we show the mount link as non-symlink.
-        return merge(linkStatuses.toArray(new FileStatus[linkStatuses.size()]),
-            internalDirStatusesMergedWithFallBack);
-      }
+      // Links will always have precedence than internalDir or fallback paths.
+      return merge(linkStatuses.toArray(new FileStatus[linkStatuses.size()]),
+          internalDirStatusesMergedWithFallBack);
     }
 
     private FileStatus[] merge(FileStatus[] toStatuses,
@@ -1310,7 +1304,7 @@ public class ViewFileSystem extends FileSystem {
           result.add(status);
         }
       }
-      return result.toArray(new FileStatus[0]);
+      return result.toArray(new FileStatus[result.size()]);
     }
 
     private FileStatus[] listStatusForFallbackLink() throws IOException {

@@ -18,6 +18,7 @@
 package org.apache.hadoop.fs.viewfs;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -361,7 +362,9 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
     }
   }
 
-  /**=============================Example.======================================
+  /**
+   * Tests ListStatus on non-link parent with fallback configured.
+   * =============================Example.======================================
    * ===== Fallback path tree =============== Mount Path Tree ==================
    * ===========================================================================
    * *             /            *****               /          *****************
@@ -431,7 +434,9 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
     }
   }
 
-  /**=============================Example.======================================
+  /**
+   * Tests ListStatus on link parent with fallback configured.
+   * =============================Example.======================================
    * ===== Fallback path tree =============== Mount Path Tree ==================
    * ===========================================================================
    * *             /            *****               /                 **********
@@ -501,7 +506,9 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
     }
   }
 
-  /**=============================Example.=======================================
+  /**
+   * Tests ListStatus on root with fallback configured.
+   * =============================Example.=======================================
    * ===== Fallback path tree =============== Mount Path Tree ==================
    * ===========================================================================
    * *          /       /          *****               /                     ***
@@ -561,6 +568,42 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
       assertEquals(afterFallback.size(), 1);
       assertEquals("/user2 dir from fallback should be listed.",
           afterFallback.iterator().next().getName(), "user2");
+    }
+  }
+
+  @Test
+  public void testLSOnLinkParentWhereMountLinkMatchesWithAFileUnderFallback()
+      throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS, true);
+    ConfigUtil.addLink(conf, "/user1/hive/warehouse/part-0",
+        new Path(targetTestRoot.toString()).toUri());
+    // Create a file path in fallback matching to the path of mount link.
+    Path file1 =
+        new Path(targetTestRoot, "fallbackDir/user1/hive/warehouse/part-0");
+    fsTarget.createNewFile(file1);
+    Path dir2 = new Path(targetTestRoot, "fallbackDir/user1/hive/warehouse1");
+    fsTarget.mkdirs(dir2);
+    URI viewFsUri = new URI(FsConstants.VIEWFS_SCHEME,
+        Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE, "/", null, null);
+
+    ConfigUtil
+        .addLinkFallback(conf, new Path(targetTestRoot, "fallbackDir").toUri());
+
+    try (FileSystem vfs = FileSystem.get(viewFsUri, conf)) {
+      for (FileStatus stat : vfs.listStatus(
+          new Path(viewFsUri.toString(), "/user1/hive/warehouse/"))) {
+        if (file1.getName().equals(stat.getPath().getName())) {
+          // Link represents as symlink.
+          assertFalse(stat.isFile());
+          assertFalse(stat.isDirectory());
+          assertTrue(stat.isSymlink());
+          Path fileUnderDir = new Path(stat.getPath(), "check");
+          assertTrue(vfs.mkdirs(fileUnderDir)); // Creating dir under target
+          assertTrue(fsTarget
+              .exists(new Path(targetTestRoot, fileUnderDir.getName())));
+        }
+      }
     }
   }
 }
