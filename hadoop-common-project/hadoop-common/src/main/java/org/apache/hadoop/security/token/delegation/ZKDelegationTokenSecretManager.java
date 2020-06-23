@@ -53,6 +53,7 @@ import org.apache.hadoop.security.authentication.util.JaasConfiguration;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenManager;
 import org.apache.hadoop.util.curator.ZKCuratorManager;
+import static org.apache.hadoop.util.Time.now;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NoNodeException;
@@ -77,7 +78,7 @@ import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 public abstract class ZKDelegationTokenSecretManager<TokenIdent extends AbstractDelegationTokenIdentifier>
     extends AbstractDelegationTokenSecretManager<TokenIdent> {
 
-  private static final String ZK_CONF_PREFIX = "zk-dt-secret-manager.";
+  public static final String ZK_CONF_PREFIX = "zk-dt-secret-manager.";
   public static final String ZK_DTSM_ZK_NUM_RETRIES = ZK_CONF_PREFIX
       + "zkNumRetries";
   public static final String ZK_DTSM_ZK_SESSION_TIMEOUT = ZK_CONF_PREFIX
@@ -100,6 +101,9 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       + "kerberos.server.principal";
   public static final String ZK_DTSM_TOKEN_SEQNUM_BATCH_SIZE = ZK_CONF_PREFIX
       + "token.seqnum.batch.size";
+  public static final String ZK_DTSM_TOKEN_WATCHER_ENABLED = ZK_CONF_PREFIX
+      + "token.watcher.enabled";
+  public static final boolean ZK_DTSM_TOKEN_WATCHER_ENABLED_DEFAULT = true;
 
   public static final int ZK_DTSM_ZK_NUM_RETRIES_DEFAULT = 3;
   public static final int ZK_DTSM_ZK_SESSION_TIMEOUT_DEFAULT = 10000;
@@ -118,7 +122,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   private static final String ZK_DTSM_NAMESPACE = "ZKDTSMRoot";
   private static final String ZK_DTSM_SEQNUM_ROOT = "/ZKDTSMSeqNumRoot";
   private static final String ZK_DTSM_KEYID_ROOT = "/ZKDTSMKeyIdRoot";
-  private static final String ZK_DTSM_TOKENS_ROOT = "/ZKDTSMTokensRoot";
+  protected static final String ZK_DTSM_TOKENS_ROOT = "/ZKDTSMTokensRoot";
   private static final String ZK_DTSM_MASTER_KEY_ROOT = "/ZKDTSMMasterKeyRoot";
 
   private static final String DELEGATION_KEY_PREFIX = "DK_";
@@ -132,7 +136,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   }
 
   private final boolean isExternalClient;
-  private final CuratorFramework zkClient;
+  protected final CuratorFramework zkClient;
   private SharedCount delTokSeqCounter;
   private SharedCount keyIdSeqCounter;
   private CuratorCacheBridge keyCache;
@@ -140,6 +144,8 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   private final int seqNumBatchSize;
   private int currentSeqNum;
   private int currentMaxSeqNum;
+
+  private final boolean isTokenWatcherEnabled;
 
   public ZKDelegationTokenSecretManager(Configuration conf) {
     super(conf.getLong(DelegationTokenManager.UPDATE_INTERVAL,
@@ -152,6 +158,8 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
             DelegationTokenManager.REMOVAL_SCAN_INTERVAL_DEFAULT) * 1000);
     seqNumBatchSize = conf.getInt(ZK_DTSM_TOKEN_SEQNUM_BATCH_SIZE,
         ZK_DTSM_TOKEN_SEQNUM_BATCH_SIZE_DEFAULT);
+    isTokenWatcherEnabled = conf.getBoolean(ZK_DTSM_TOKEN_WATCHER_ENABLED,
+        ZK_DTSM_TOKEN_WATCHER_ENABLED_DEFAULT);
     if (CURATOR_TL.get() != null) {
       zkClient =
           CURATOR_TL.get().usingNamespace(
@@ -253,8 +261,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       // If namespace parents are implicitly created, they won't have ACLs.
       // So, let's explicitly create them.
       CuratorFramework nullNsFw = zkClient.usingNamespace(null);
-      EnsurePath ensureNs =
-        nullNsFw.newNamespaceAwareEnsurePath("/" + zkClient.getNamespace());
+      EnsurePath ensureNs = nullNsFw.newNamespaceAwareEnsurePath("/" + zkClient.getNamespace());
       try {
         ensureNs.ensure(nullNsFw.getZookeeperClient());
       } catch (Exception e) {
@@ -270,8 +277,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       // by calling the incrSharedCount
       currentSeqNum = incrSharedCount(delTokSeqCounter, seqNumBatchSize);
       currentMaxSeqNum = currentSeqNum + seqNumBatchSize;
-      LOG.info("Fetched initial range of seq num, from {} to {} ",
-          currentSeqNum+1, currentMaxSeqNum);
+      LOG.info("Fetched initial range of seq num, from {} to {} ", currentSeqNum + 1, currentMaxSeqNum);
     } catch (Exception e) {
       throw new IOException("Could not start Sequence Counter", e);
     }
@@ -290,60 +296,49 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       throw new RuntimeException("Could not create ZK paths");
     }
     try {
-      keyCache = CuratorCache.bridgeBuilder(zkClient, ZK_DTSM_MASTER_KEY_ROOT)
-          .build();
-      CuratorCacheListener keyCacheListener = CuratorCacheListener.builder()
-          .forCreatesAndChanges((oldNode, node) -> {
-            try {
-              processKeyAddOrUpdate(node.getData());
-            } catch (IOException e) {
-              LOG.error("Error while processing Curator keyCacheListener "
-                  + "NODE_CREATED / NODE_CHANGED event");
-              throw new UncheckedIOException(e);
-            }
-          })
-          .forDeletes(childData -> processKeyRemoved(childData.getPath()))
-          .build();
+      keyCache = CuratorCache.bridgeBuilder(zkClient, ZK_DTSM_MASTER_KEY_ROOT).build();
+      CuratorCacheListener keyCacheListener = CuratorCacheListener.builder().forCreatesAndChanges((oldNode, node) -> {
+        try {
+          processKeyAddOrUpdate(node.getData());
+        } catch (IOException e) {
+          LOG.error("Error while processing Curator keyCacheListener " + "NODE_CREATED / NODE_CHANGED event");
+          throw new UncheckedIOException(e);
+        }
+      }).forDeletes(childData -> processKeyRemoved(childData.getPath())).build();
       keyCache.listenable().addListener(keyCacheListener);
       keyCache.start();
       loadFromZKCache(false);
     } catch (Exception e) {
-      throw new IOException("Could not start Curator keyCacheListener for keys",
-          e);
+      throw new IOException("Could not start Curator keyCacheListener for keys", e);
     }
-    try {
-      tokenCache = CuratorCache.bridgeBuilder(zkClient, ZK_DTSM_TOKENS_ROOT)
-          .build();
-      CuratorCacheListener tokenCacheListener = CuratorCacheListener.builder()
-          .forCreatesAndChanges((oldNode, node) -> {
-            try {
-              processTokenAddOrUpdate(node.getData());
-            } catch (IOException e) {
-              LOG.error("Error while processing Curator tokenCacheListener "
-                  + "NODE_CREATED / NODE_CHANGED event");
-              throw new UncheckedIOException(e);
-            }
-          })
-          .forDeletes(childData -> {
-            try {
-              processTokenRemoved(childData);
-            } catch (IOException e) {
-              LOG.error("Error while processing Curator tokenCacheListener "
-                  + "NODE_DELETED event");
-              throw new UncheckedIOException(e);
-            }
-          })
-          .build();
-      tokenCache.listenable().addListener(tokenCacheListener);
-      tokenCache.start();
-      loadFromZKCache(true);
-    } catch (Exception e) {
-      throw new IOException(
-          "Could not start Curator tokenCacheListener for tokens", e);
+    if (isTokenWatcherEnabled) {
+      LOG.info("TokenCache is enabled");
+      try {
+        tokenCache = CuratorCache.bridgeBuilder(zkClient, ZK_DTSM_TOKENS_ROOT).build();
+        CuratorCacheListener tokenCacheListener = CuratorCacheListener.builder().forCreatesAndChanges((oldNode, node) -> {
+              try {
+                processTokenAddOrUpdate(node.getData());
+              } catch (IOException e) {
+                LOG.error("Error while processing Curator tokenCacheListener " + "NODE_CREATED / NODE_CHANGED event");
+                throw new UncheckedIOException(e);
+              }
+            }).forDeletes(childData -> {
+              try {
+                processTokenRemoved(childData);
+              } catch (IOException e) {
+                LOG.error("Error while processing Curator tokenCacheListener " + "NODE_DELETED event");
+                throw new UncheckedIOException(e);
+              }
+            }).build();
+        tokenCache.listenable().addListener(tokenCacheListener);
+        tokenCache.start();
+        loadFromZKCache(true);
+      } catch (Exception e) {
+        throw new IOException("Could not start Curator tokenCacheListener for tokens", e);
+      } 
     }
     super.startThreads();
-  }
-
+  }  
   /**
    * Load the CuratorCache into the in-memory map. Possible caches to be
    * loaded are keyCache and tokenCache.
@@ -386,9 +381,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     DataInputStream din = new DataInputStream(bin);
     DelegationKey key = new DelegationKey();
     key.readFields(din);
-    synchronized (this) {
-      allKeys.put(key.getKeyId(), key);
-    }
+    allKeys.put(key.getKeyId(), key);
   }
 
   private void processKeyRemoved(String path) {
@@ -398,14 +391,12 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       int j = tokSeg.indexOf('_');
       if (j > 0) {
         int keyId = Integer.parseInt(tokSeg.substring(j + 1));
-        synchronized (this) {
-          allKeys.remove(keyId);
-        }
+        allKeys.remove(keyId);
       }
     }
   }
 
-  private void processTokenAddOrUpdate(byte[] data) throws IOException {
+  protected TokenIdent processTokenAddOrUpdate(byte[] data) throws IOException {
     ByteArrayInputStream bin = new ByteArrayInputStream(data);
     DataInputStream din = new DataInputStream(bin);
     TokenIdent ident = createIdentifier();
@@ -417,12 +408,10 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     if (numRead > -1) {
       DelegationTokenInformation tokenInfo =
           new DelegationTokenInformation(renewDate, password);
-      synchronized (this) {
-        currentTokens.put(ident, tokenInfo);
-        // The cancel task might be waiting
-        notifyAll();
-      }
+      currentTokens.put(ident, tokenInfo);
+      return ident;
     }
+    return null;
   }
 
   private void processTokenRemoved(ChildData data) throws IOException {
@@ -430,11 +419,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     DataInputStream din = new DataInputStream(bin);
     TokenIdent ident = createIdentifier();
     ident.readFields(din);
-    synchronized (this) {
-      currentTokens.remove(ident);
-      // The cancel task might be waiting
-      notifyAll();
-    }
+    currentTokens.remove(ident);
   }
 
   @Override
@@ -621,7 +606,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
    *
    * @param ident Identifier of the token
    */
-  private synchronized void syncLocalCacheWithZk(TokenIdent ident) {
+  protected void syncLocalCacheWithZk(TokenIdent ident) {
     try {
       DelegationTokenInformation tokenInfo = getTokenInfoFromZK(ident);
       if (tokenInfo != null && !currentTokens.containsKey(ident)) {
@@ -635,16 +620,21 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     }
   }
 
-  private DelegationTokenInformation getTokenInfoFromZK(TokenIdent ident)
+  protected DelegationTokenInformation getTokenInfoFromZK(TokenIdent ident)
       throws IOException {
     return getTokenInfoFromZK(ident, false);
   }
 
-  private DelegationTokenInformation getTokenInfoFromZK(TokenIdent ident,
+  protected DelegationTokenInformation getTokenInfoFromZK(TokenIdent ident,
       boolean quiet) throws IOException {
     String nodePath =
         getNodePath(ZK_DTSM_TOKENS_ROOT,
             DELEGATION_TOKEN_PREFIX + ident.getSequenceNumber());
+    return getTokenInfoFromZK(nodePath, quiet);
+  }
+
+  protected DelegationTokenInformation getTokenInfoFromZK(String nodePath,
+      boolean quiet) throws IOException {
     try {
       byte[] data = zkClient.getData().forPath(nodePath);
       if ((data == null) || (data.length == 0)) {
@@ -779,15 +769,30 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   @Override
   protected void removeStoredToken(TokenIdent ident)
       throws IOException {
+    removeStoredToken(ident, false);
+  }
+
+  protected void removeStoredToken(TokenIdent ident,
+      boolean checkAgainstZkBeforeDeletion) throws IOException {
     String nodeRemovePath =
         getNodePath(ZK_DTSM_TOKENS_ROOT, DELEGATION_TOKEN_PREFIX
             + ident.getSequenceNumber());
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Removing ZKDTSMDelegationToken_"
-          + ident.getSequenceNumber());
-    }
     try {
-      if (zkClient.checkExists().forPath(nodeRemovePath) != null) {
+      DelegationTokenInformation dtInfo = getTokenInfoFromZK(ident, true);
+      if (dtInfo != null) {
+        // For the case there is no sync or watch miss, it is possible that the
+        // local storage has expired tokens which have been renewed by peer
+        // so double check again to avoid accidental delete
+        if (checkAgainstZkBeforeDeletion
+            && dtInfo.getRenewDate() > now()) {
+          LOG.info("Node already renewed by peer " + nodeRemovePath +
+              " so this token should not be deleted");
+          return;
+        }
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Removing ZKDTSMDelegationToken_"
+              + ident.getSequenceNumber());
+        }
         while(zkClient.checkExists().forPath(nodeRemovePath) != null){
           try {
             zkClient.delete().guaranteed().forPath(nodeRemovePath);
@@ -810,7 +815,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
   }
 
   @Override
-  public synchronized TokenIdent cancelToken(Token<TokenIdent> token,
+  public TokenIdent cancelToken(Token<TokenIdent> token,
       String canceller) throws IOException {
     ByteArrayInputStream buf = new ByteArrayInputStream(token.getIdentifier());
     DataInputStream in = new DataInputStream(buf);
@@ -821,7 +826,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     return super.cancelToken(token, canceller);
   }
 
-  private void addOrUpdateToken(TokenIdent ident,
+  protected void addOrUpdateToken(TokenIdent ident,
       DelegationTokenInformation info, boolean isUpdate) throws Exception {
     String nodeCreatePath =
         getNodePath(ZK_DTSM_TOKENS_ROOT, DELEGATION_TOKEN_PREFIX
@@ -846,6 +851,10 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
             .forPath(nodeCreatePath, tokenOs.toByteArray());
       }
     }
+  }
+
+  public boolean isTokenWatcherEnabled() {
+    return isTokenWatcherEnabled;
   }
 
   /**
