@@ -76,8 +76,6 @@ public class TestFSConfigToCSConfigRuleHandler {
     ruleHandler.handleQueueAutoCreate("test");
     ruleHandler.handleReservationSystem();
     ruleHandler.handleSpecifiedNotFirstRule();
-    ruleHandler.handleUserMaxApps();
-    ruleHandler.handleUserMaxAppsDefault();
   }
 
   @Test
@@ -106,8 +104,6 @@ public class TestFSConfigToCSConfigRuleHandler {
     ruleHandler.handleQueueAutoCreate("test");
     ruleHandler.handleReservationSystem();
     ruleHandler.handleSpecifiedNotFirstRule();
-    ruleHandler.handleUserMaxApps();
-    ruleHandler.handleUserMaxAppsDefault();
   }
 
   @Test
@@ -140,8 +136,6 @@ public class TestFSConfigToCSConfigRuleHandler {
     expectAbort(() -> ruleHandler.handleQueueAutoCreate("test"));
     expectAbort(() -> ruleHandler.handleReservationSystem());
     expectAbort(() -> ruleHandler.handleSpecifiedNotFirstRule());
-    expectAbort(() -> ruleHandler.handleUserMaxApps());
-    expectAbort(() -> ruleHandler.handleUserMaxAppsDefault());
     expectAbort(() -> ruleHandler.handleFairAsDrf("test"));
   }
 

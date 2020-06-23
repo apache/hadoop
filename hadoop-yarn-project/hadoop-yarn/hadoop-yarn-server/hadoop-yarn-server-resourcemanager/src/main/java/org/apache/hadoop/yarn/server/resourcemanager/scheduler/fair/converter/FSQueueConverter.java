@@ -43,7 +43,7 @@ import org.apache.hadoop.yarn.util.resource.Resources;
  */
 public class FSQueueConverter {
   public static final float QUEUE_MAX_AM_SHARE_DISABLED = -1.0f;
-  private static final int MAX_RUNNING_APPS_UNSET = Integer.MIN_VALUE;
+  private static final int MAX_RUNNING_APPS_UNSET = Integer.MAX_VALUE;
   private static final String FAIR_POLICY = "fair";
   private static final String FIFO_POLICY = "fifo";
 
@@ -79,7 +79,7 @@ public class FSQueueConverter {
 
     emitChildQueues(queueName, children);
     emitMaxAMShare(queueName, queue);
-    emitMaxRunningApps(queueName, queue);
+    emitMaxParallelApps(queueName, queue);
     emitMaxAllocations(queueName, queue);
     emitPreemptionDisabled(queueName, queue);
 
@@ -138,14 +138,14 @@ public class FSQueueConverter {
 
   /**
    * &lt;maxRunningApps&gt;
-   * ==> yarn.scheduler.capacity.&lt;queue-name&gt;.maximum-applications.
+   * ==> yarn.scheduler.capacity.&lt;queue-name&gt;.max-parallel-apps.
    * @param queueName
    * @param queue
    */
-  private void emitMaxRunningApps(String queueName, FSQueue queue) {
+  private void emitMaxParallelApps(String queueName, FSQueue queue) {
     if (queue.getMaxRunningApps() != MAX_RUNNING_APPS_UNSET
         && queue.getMaxRunningApps() != queueMaxAppsDefault) {
-      capacitySchedulerConfig.set(PREFIX + queueName + ".maximum-applications",
+      capacitySchedulerConfig.set(PREFIX + queueName + ".max-parallel-apps",
           String.valueOf(queue.getMaxRunningApps()));
     }
   }
