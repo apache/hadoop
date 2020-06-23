@@ -374,7 +374,7 @@ abstract class InodeTree<T> {
       throws UnsupportedFileSystemException, URISyntaxException, IOException;
 
   protected abstract T getTargetFileSystem(INodeDir<T> dir)
-      throws URISyntaxException;
+      throws URISyntaxException, IOException;
 
   protected abstract T getTargetFileSystem(String settings, URI[] mergeFsURIs)
       throws UnsupportedFileSystemException, URISyntaxException, IOException;
@@ -393,7 +393,7 @@ abstract class InodeTree<T> {
     return rootFallbackLink != null;
   }
 
-  private INodeLink<T> getRootFallbackLink() {
+  protected INodeLink<T> getRootFallbackLink() {
     Preconditions.checkState(root.isInternalDir());
     return rootFallbackLink;
   }

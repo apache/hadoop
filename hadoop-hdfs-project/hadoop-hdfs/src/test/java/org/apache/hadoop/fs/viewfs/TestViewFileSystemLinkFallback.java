@@ -18,6 +18,7 @@
 package org.apache.hadoop.fs.viewfs;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -36,6 +37,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
@@ -343,8 +345,8 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
         afterFallback.add(stat.getPath());
       }
       afterFallback.removeAll(beforeFallback);
-      assertTrue("The same directory name in fallback link should be shaded",
-          afterFallback.size() == 1);
+      assertEquals("The same directory name in fallback link should be shaded",
+          1, afterFallback.size());
       Path[] fallbackArray = new Path[afterFallback.size()];
       // Only user1 should be listed as fallback link
       Path expected = new Path(viewFsUri.toString(), "user1");
@@ -357,6 +359,251 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
       FileStatus status = fsTarget.getFileStatus(new Path(dir2, "child"));
       assertTrue(status.isDirectory());
       assertTrue(vfs.getFileStatus(childDir).isDirectory());
+    }
+  }
+
+  /**
+   * Tests ListStatus on non-link parent with fallback configured.
+   * =============================Example.======================================
+   * ===== Fallback path tree =============== Mount Path Tree ==================
+   * ===========================================================================
+   * *             /            *****               /          *****************
+   * *            /             *****              /           *****************
+   * *          user1           *****          user1           *****************
+   * *           /              *****          /               *****************
+   * *         hive             *****        hive              *****************
+   * *       /      \           *****       /                  *****************
+   * * warehouse    warehouse1  *****  warehouse               *****************
+   * * (-rwxr--r--)             ***** (-r-xr--r--)             *****************
+   * *     /                    *****    /                     *****************
+   * * partition-0              ***** partition-0              *****************
+   * ===========================================================================
+   * ===========================================================================
+   * ***         ls /user1/hive                                        *********
+   * ***         viewfs://default/user1/hive/warehouse (-rwxr--r--)    *********
+   * ***         viewfs://default/user1/hive/warehouse1                *********
+   * ===========================================================================
+   */
+  @Test
+  public void testListingWithFallbackLinkWithSameMountDirectoryTree()
+      throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS, false);
+    ConfigUtil.addLink(conf, "/user1/hive/warehouse/partition-0",
+        new Path(targetTestRoot.toString()).toUri());
+    // Creating multiple directories path under the fallback directory.
+    // "/user1/hive/warehouse/partition-0" directory already exists as
+    // configured mount point.
+    Path dir1 = new Path(targetTestRoot,
+        "fallbackDir/user1/hive/warehouse/partition-0");
+    Path dir2 = new Path(targetTestRoot, "fallbackDir/user1/hive/warehouse1");
+    fsTarget.mkdirs(dir1);
+    fsTarget.mkdirs(dir2);
+    fsTarget.setPermission(new Path(targetTestRoot, "fallbackDir/user1/hive/"),
+        FsPermission.valueOf("-rwxr--r--"));
+    URI viewFsUri = new URI(FsConstants.VIEWFS_SCHEME,
+        Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE, "/", null, null);
+
+    HashSet<Path> beforeFallback = new HashSet<>();
+    try (FileSystem vfs = FileSystem.get(viewFsUri, conf)) {
+      for (FileStatus stat : vfs
+          .listStatus(new Path(viewFsUri.toString(), "/user1/hive/"))) {
+        beforeFallback.add(stat.getPath());
+      }
+    }
+    ConfigUtil
+        .addLinkFallback(conf, new Path(targetTestRoot, "fallbackDir").toUri());
+
+    try (FileSystem vfs = FileSystem.get(viewFsUri, conf)) {
+      HashSet<Path> afterFallback = new HashSet<>();
+      for (FileStatus stat : vfs
+          .listStatus(new Path(viewFsUri.toString(), "/user1/hive/"))) {
+        afterFallback.add(stat.getPath());
+        if (dir1.getName().equals(stat.getPath().getName())) {
+          // make sure fallback dir listed out with correct permissions, but not
+          // with link permissions.
+          assertEquals(FsPermission.valueOf("-rwxr--r--"),
+              stat.getPermission());
+        }
+      }
+      //
+      //viewfs://default/user1/hive/warehouse
+      afterFallback.removeAll(beforeFallback);
+      assertEquals("The same directory name in fallback link should be shaded",
+          1, afterFallback.size());
+    }
+  }
+
+  /**
+   * Tests ListStatus on link parent with fallback configured.
+   * =============================Example.======================================
+   * ===== Fallback path tree =============== Mount Path Tree ==================
+   * ===========================================================================
+   * *             /            *****               /                 **********
+   * *            /             *****              /                  **********
+   * *          user1           *****          user1                  **********
+   * *           /              *****          /                      **********
+   * *         hive             *****        hive                     **********
+   * *       /      \           *****       /                         **********
+   * * warehouse    warehouse1  *****  warehouse                      **********
+   * * (-rwxr--r--)             ***** (-r-xr--r--)                    **********
+   * *     /                    *****    /                            **********
+   * * partition-0              ***** partition-0 ---> targetTestRoot **********
+   * *                          ***** (-r-xr--r--)      (-rwxr--rw-)  **********
+   * ===========================================================================
+   * ===========================================================================
+   * ***       ls /user1/hive/warehouse                                       **
+   * ***       viewfs://default/user1/hive/warehouse/partition-0 (-rwxr--rw-) **
+   * ===========================================================================
+   */
+  @Test
+  public void testLSOnLinkParentWithFallbackLinkWithSameMountDirectoryTree()
+      throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS, false);
+    ConfigUtil.addLink(conf, "/user1/hive/warehouse/partition-0",
+        new Path(targetTestRoot.toString()).toUri());
+    // Creating multiple directories path under the fallback directory.
+    // "/user1/hive/warehouse/partition-0" directory already exists as
+    // configured mount point.
+    Path dir1 = new Path(targetTestRoot,
+        "fallbackDir/user1/hive/warehouse/partition-0");
+    Path dir2 = new Path(targetTestRoot, "fallbackDir/user1/hive/warehouse1");
+    fsTarget.mkdirs(dir1);
+    fsTarget.mkdirs(dir2);
+    fsTarget.setPermission(new Path(targetTestRoot,
+            "fallbackDir/user1/hive/warehouse/partition-0"),
+        FsPermission.valueOf("-rwxr--r--"));
+    fsTarget.setPermission(targetTestRoot, FsPermission.valueOf("-rwxr--rw-"));
+    URI viewFsUri = new URI(FsConstants.VIEWFS_SCHEME,
+        Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE, "/", null, null);
+
+    HashSet<Path> beforeFallback = new HashSet<>();
+    try (FileSystem vfs = FileSystem.get(viewFsUri, conf)) {
+      for (FileStatus stat : vfs.listStatus(
+          new Path(viewFsUri.toString(), "/user1/hive/warehouse/"))) {
+        beforeFallback.add(stat.getPath());
+      }
+    }
+    ConfigUtil
+        .addLinkFallback(conf, new Path(targetTestRoot, "fallbackDir").toUri());
+
+    try (FileSystem vfs = FileSystem.get(viewFsUri, conf)) {
+      HashSet<Path> afterFallback = new HashSet<>();
+      for (FileStatus stat : vfs.listStatus(
+          new Path(viewFsUri.toString(), "/user1/hive/warehouse/"))) {
+        afterFallback.add(stat.getPath());
+        if (dir1.getName().equals(stat.getPath().getName())) {
+          // make sure fallback dir listed out with correct permissions, but not
+          // with link permissions.
+          assertEquals(FsPermission.valueOf("-rwxr--rw-"),
+              stat.getPermission());
+        }
+      }
+      afterFallback.removeAll(beforeFallback);
+      assertEquals("Just to make sure paths are same.", 0,
+          afterFallback.size());
+    }
+  }
+
+  /**
+   * Tests ListStatus on root with fallback configured.
+   * =============================Example.=======================================
+   * ===== Fallback path tree =============== Mount Path Tree ==================
+   * ===========================================================================
+   * *          /       /          *****               /                     ***
+   * *         /       /           *****              /                      ***
+   * *      user1    user2         *****           user1 ---> targetTestRoot ***
+   * *(-r-xr--r--)   (-r-xr--r--)  *****                      (-rwxr--rw-)   ***
+   * ===========================================================================
+   * ===========================================================================
+   * ***       ls /user1/hive/warehouse                                       **
+   * ***       viewfs://default/user1(-rwxr--rw-)                             **
+   * ***       viewfs://default/user2(-r-xr--r--)                             **
+   * ===========================================================================
+   */
+  @Test
+  public void testLSOnRootWithFallbackLinkWithSameMountDirectories()
+      throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS, false);
+    ConfigUtil
+        .addLink(conf, "/user1", new Path(targetTestRoot.toString()).toUri());
+    // Creating multiple directories path under the fallback directory.
+    // "/user1" directory already exists as configured mount point.
+    Path dir1 = new Path(targetTestRoot, "fallbackDir/user1");
+    Path dir2 = new Path(targetTestRoot, "fallbackDir/user2");
+    fsTarget.mkdirs(dir1);
+    fsTarget.mkdirs(dir2, FsPermission.valueOf("-rwxr--r--"));
+    fsTarget.setPermission(targetTestRoot, FsPermission.valueOf("-rwxr--rw-"));
+    URI viewFsUri = new URI(FsConstants.VIEWFS_SCHEME,
+        Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE, "/", null, null);
+
+    HashSet<Path> beforeFallback = new HashSet<>();
+    try (FileSystem vfs = FileSystem.get(viewFsUri, conf)) {
+      for (FileStatus stat : vfs
+          .listStatus(new Path(viewFsUri.toString(), "/"))) {
+        beforeFallback.add(stat.getPath());
+      }
+    }
+    ConfigUtil
+        .addLinkFallback(conf, new Path(targetTestRoot, "fallbackDir").toUri());
+
+    try (FileSystem vfs = FileSystem.get(viewFsUri, conf)) {
+      HashSet<Path> afterFallback = new HashSet<>();
+      for (FileStatus stat : vfs
+          .listStatus(new Path(viewFsUri.toString(), "/"))) {
+        afterFallback.add(stat.getPath());
+        if (dir1.getName().equals(stat.getPath().getName())) {
+          // make sure fallback dir listed out with correct permissions, but not
+          // with link permissions.
+          assertEquals(FsPermission.valueOf("-rwxr--rw-"),
+              stat.getPermission());
+        } else {
+          assertEquals("Path is: " + stat.getPath(),
+              FsPermission.valueOf("-rwxr--r--"), stat.getPermission());
+        }
+      }
+      afterFallback.removeAll(beforeFallback);
+      assertEquals(1, afterFallback.size());
+      assertEquals("/user2 dir from fallback should be listed.", "user2",
+          afterFallback.iterator().next().getName());
+    }
+  }
+
+  @Test
+  public void testLSOnLinkParentWhereMountLinkMatchesWithAFileUnderFallback()
+      throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS, true);
+    ConfigUtil.addLink(conf, "/user1/hive/warehouse/part-0",
+        new Path(targetTestRoot.toString()).toUri());
+    // Create a file path in fallback matching to the path of mount link.
+    Path file1 =
+        new Path(targetTestRoot, "fallbackDir/user1/hive/warehouse/part-0");
+    fsTarget.createNewFile(file1);
+    Path dir2 = new Path(targetTestRoot, "fallbackDir/user1/hive/warehouse1");
+    fsTarget.mkdirs(dir2);
+    URI viewFsUri = new URI(FsConstants.VIEWFS_SCHEME,
+        Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE, "/", null, null);
+
+    ConfigUtil
+        .addLinkFallback(conf, new Path(targetTestRoot, "fallbackDir").toUri());
+
+    try (FileSystem vfs = FileSystem.get(viewFsUri, conf)) {
+      for (FileStatus stat : vfs.listStatus(
+          new Path(viewFsUri.toString(), "/user1/hive/warehouse/"))) {
+        if (file1.getName().equals(stat.getPath().getName())) {
+          // Link represents as symlink.
+          assertFalse(stat.isFile());
+          assertFalse(stat.isDirectory());
+          assertTrue(stat.isSymlink());
+          Path fileUnderDir = new Path(stat.getPath(), "check");
+          assertTrue(vfs.mkdirs(fileUnderDir)); // Creating dir under target
+          assertTrue(fsTarget
+              .exists(new Path(targetTestRoot, fileUnderDir.getName())));
+        }
+      }
     }
   }
 }
