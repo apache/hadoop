@@ -4244,8 +4244,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     boolean allowAuthoritative = allowAuthoritative(path);
     if (recursive) {
       final PathMetadata pm = metadataStore.get(path, true);
-      // shouldn't need to check pm.isDeleted() because that will have
-      // been caught by getFileStatus above.
+      if (pm != null) {
+        if (pm.isDeleted()) {
+          OffsetDateTime deletedAt = OffsetDateTime.ofInstant(
+                  Instant.ofEpochMilli(pm.getFileStatus().getModificationTime()),
+                  ZoneOffset.UTC);
+          throw new FileNotFoundException("Path " + path + " is recorded as " +
+                  "deleted by S3Guard at " + deletedAt);
+        }
+      }
       MetadataStoreListFilesIterator metadataStoreListFilesIterator =
           new MetadataStoreListFilesIterator(metadataStore, pm,
               allowAuthoritative);
