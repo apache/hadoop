@@ -3392,7 +3392,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   public DelegationTokenIssuer[] getAdditionalTokenIssuers()
       throws IOException {
     if (delegationTokens.isPresent()) {
-      return delegationTokens.get().getAdditionalTokenIssuers();
+      return delegationTokens.get()
+          .getAdditionalTokenIssuers(encryptionSecrets);
     } else {
       // Delegation token support is not set up
       LOG.debug("Token support is not enabled");

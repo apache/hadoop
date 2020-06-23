@@ -166,6 +166,12 @@ public final class DelegationConstants {
   public static final String DELEGATION_SECONDARY_BINDINGS =
       "fs.s3a.delegation.token.secondary.bindings";
 
+  /**
+   * Session Token binding classname: {@value}.
+   */
+  public static final String DELEGATION_TOKEN_INJECTING_BINDING =
+      "org.apache.hadoop.fs.s3a.auth.delegation.InjectingTokenBinding";
+
   /** Name of injecting token: {@value}. */
   public static final String INJECTING_TOKEN_NAME =
       TOKEN_NAME_PREFIX + "Injecting";
@@ -190,6 +196,13 @@ public final class DelegationConstants {
    */
   public static final String INJECTING_ISSUE_TOKENS =
       "fs.s3a.delegation.injecting.issue.tokens";
+
+  /**
+   * Should the injecting credential provider
+   * issue tokens: {@value}.
+   */
+  public static final boolean INJECTING_ISSUE_TOKENS_DEFAULT =
+      true;
 
   private DelegationConstants() {
   }

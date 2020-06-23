@@ -19,10 +19,13 @@
 package org.apache.hadoop.fs.s3a.auth.delegation;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.Optional;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.auth.RoleModel;
+import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
@@ -45,8 +48,7 @@ class SecondaryDelegationToken extends AbstractDTService implements
   /**
    * Active Delegation token.
    */
-  private Optional<Token<AbstractS3ATokenIdentifier>> boundDT
-      = Optional.empty();
+  private Token<AbstractS3ATokenIdentifier> boundDT;
 
   /**
    * The DT decoded when this instance is created by bonding
@@ -65,6 +67,11 @@ class SecondaryDelegationToken extends AbstractDTService implements
    */
   private final String canonicalServiceName;
 
+  /**
+   * Instantiate.
+   * @param service service identifier
+   * @param tokenBinding inner token binding.
+   */
   SecondaryDelegationToken(
       final Text service,
       final DelegationTokenBinding tokenBinding) {
@@ -72,6 +79,34 @@ class SecondaryDelegationToken extends AbstractDTService implements
     this.service = service;
     this.tokenBinding = tokenBinding;
     this.canonicalServiceName = service.toString();
+  }
+
+
+  @Override
+  protected void serviceInit(final Configuration conf) throws Exception {
+    super.serviceInit(conf);
+    tokenBinding.init(conf);
+  }
+
+  @Override
+  protected void serviceStart() throws Exception {
+    super.serviceStart();
+    tokenBinding.start();
+  }
+
+  @Override
+  protected void serviceStop() throws Exception {
+    super.serviceStop();
+    tokenBinding.stop();
+  }
+
+  /**
+   * Get the service text used to register/locate the token.
+   *
+   * @return service for this token.
+   */
+  public Text getService() {
+    return service;
   }
 
   @Override
@@ -143,6 +178,14 @@ class SecondaryDelegationToken extends AbstractDTService implements
   }
 
   @Override
+  public void bindToFileSystem(final URI uri,
+      final StoreContext context,
+      final DelegationOperations delegationOperations) throws IOException {
+    super.bindToFileSystem(uri, context, delegationOperations);
+    tokenBinding.bindToFileSystem(uri, context, delegationOperations);
+  }
+
+  @Override
   public void initalizeBindingData(final ExtensionBindingData binding) {
     tokenBinding.initalizeBindingData(binding);
   }
@@ -151,9 +194,8 @@ class SecondaryDelegationToken extends AbstractDTService implements
    * Return any DT from the inner token binding.
    * This does not dynamically create tokens;
    */
-  public Token<?> getDelegationToken() throws IOException {
-    return boundDT.orElse(null);
-
+  public Token<AbstractS3ATokenIdentifier> getBoundDT() throws IOException {
+    return boundDT;
   }
 
   /**
@@ -162,12 +204,11 @@ class SecondaryDelegationToken extends AbstractDTService implements
    * @param encryptionSecrets encryption secrets.
    * @param callbacks callbacks to the DT support.
    * @return the issuer.
-   * @throws IOException failure to create.
    */
   public S3ATokenIssuer createTokenIssuer(
       final Optional<RoleModel.Policy> policy,
       final EncryptionSecrets encryptionSecrets,
-      final TokenIssueCallbacks callbacks) throws IOException {
+      final TokenIssueCallbacks callbacks) {
     return new S3ATokenIssuer(this, policy, encryptionSecrets, service,
         callbacks);
   }
@@ -175,15 +216,19 @@ class SecondaryDelegationToken extends AbstractDTService implements
   /**
    * Look up a token from the credentials, verify it is of the correct
    * kind.
+   * This updates the {@link #boundDT} field.
    * @param credentials credentials to look up.
    * @return the token or null if no suitable token was found
    * @throws DelegationTokenIOException wrong token kind found
    */
-  public Token<AbstractS3ATokenIdentifier> lookupToken(
+  public Token<AbstractS3ATokenIdentifier> bindToToken(
       final Credentials credentials) throws DelegationTokenIOException {
-    return S3ADelegationTokens.lookupToken(credentials,
+    Token<AbstractS3ATokenIdentifier> token
+        = S3ADelegationTokens.lookupToken(credentials,
         service,
         getKind());
+    boundDT = token;
+    return token;
   }
 
 }

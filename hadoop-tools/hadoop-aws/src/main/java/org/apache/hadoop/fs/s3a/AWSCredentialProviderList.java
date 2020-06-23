@@ -223,7 +223,7 @@ public class AWSCredentialProviderList implements AWSCredentialsProvider,
    * @return providers
    */
   @VisibleForTesting
-  List<AWSCredentialsProvider> getProviders() {
+  public List<AWSCredentialsProvider> getProviders() {
     return providers;
   }
 

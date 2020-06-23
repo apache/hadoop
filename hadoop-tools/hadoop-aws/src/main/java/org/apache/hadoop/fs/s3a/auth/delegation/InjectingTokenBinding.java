@@ -27,18 +27,20 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.auth.RoleModel;
 import org.apache.hadoop.io.Text;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.buildAWSProviderList;
-import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.INJECTING_CREDENTIALS_PROVIDER;
-import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.INJECTING_TOKEN_KIND;
+import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.*;
 
 /**
  * Token binding for fault injection; can be configured to
  * issue/not issue tokens.
- * The tokens it sends over are simple.
+ * <p></p>
+ * The tokens it sends over contain a counter but not any
+ * AWS credentials.
  */
 public final class InjectingTokenBinding
     extends AbstractDelegationTokenBinding {
@@ -63,12 +65,18 @@ public final class InjectingTokenBinding
       final EncryptionSecrets encryptionSecrets,
       final Text renewer) throws IOException {
     requireServiceStarted();
-    return new InjectingTokenIdentifier(
-        getCanonicalUri(),
-        getOwnerText(),
-        renewer,
-        encryptionSecrets,
-        ISSUE_COUNT.incrementAndGet());
+    if (getConfig().getBoolean(INJECTING_ISSUE_TOKENS,
+        INJECTING_ISSUE_TOKENS_DEFAULT)) {
+
+      return new InjectingTokenIdentifier(
+          getCanonicalUri(),
+          getOwnerText(),
+          renewer,
+          encryptionSecrets,
+          ISSUE_COUNT.incrementAndGet());
+    } else {
+      return null;
+    }
   }
 
   @Override
@@ -107,5 +115,24 @@ public final class InjectingTokenBinding
    */
   public static long getIssueCount() {
     return ISSUE_COUNT.get();
+  }
+
+  /**
+   * Add this as a secondary token.
+   * @param conf config to patcn
+   * @param issueTokens should tokens be issued?
+   * @param credentialProviders optional list of extra credential providers
+   */
+  public static void addAsSecondaryToken(Configuration conf,
+      boolean issueTokens,
+      String  credentialProviders) {
+    conf.set(DELEGATION_SECONDARY_BINDINGS,
+        DELEGATION_TOKEN_INJECTING_BINDING);
+    conf.setBoolean(INJECTING_ISSUE_TOKENS,
+        INJECTING_ISSUE_TOKENS_DEFAULT);
+    conf.set(INJECTING_CREDENTIALS_PROVIDER,
+        credentialProviders != null ? credentialProviders : "");
+
+
   }
 }
