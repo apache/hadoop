@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileChecksum;
+import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.FsServerDefaults;
@@ -236,7 +237,8 @@ public class ViewFs extends AbstractFileSystem {
       @Override
       protected AbstractFileSystem getTargetFileSystem(
           final INodeDir<AbstractFileSystem> dir) throws URISyntaxException {
-        return new InternalDirOfViewFs(dir, creationTime, ugi, getUri());
+        return new InternalDirOfViewFs(dir, creationTime, ugi, getUri(), this,
+            config);
       }
 
       @Override
@@ -454,6 +456,11 @@ public class ViewFs extends AbstractFileSystem {
   
   /**
    * {@inheritDoc}
+   *
+   * Note: listStatus considers listing from fallbackLink if available. If the
+   * same directory path is present in configured mount path as well as in
+   * fallback fs, then only the fallback path will be listed in the returned
+   * result except for link.
    *
    * If any of the the immediate children of the given path f is a symlink(mount
    * link), the returned FileStatus object of that children would be represented
@@ -880,15 +887,20 @@ public class ViewFs extends AbstractFileSystem {
     final long creationTime; // of the the mount table
     final UserGroupInformation ugi; // the user/group of user who created mtable
     final URI myUri; // the URI of the outer ViewFs
-    
+    private InodeTree<AbstractFileSystem> fsState;
+    private Configuration conf;
+
     public InternalDirOfViewFs(final InodeTree.INodeDir<AbstractFileSystem> dir,
-        final long cTime, final UserGroupInformation ugi, final URI uri)
+        final long cTime, final UserGroupInformation ugi, final URI uri,
+        InodeTree fsState, Configuration conf)
       throws URISyntaxException {
       super(FsConstants.VIEWFS_URI, FsConstants.VIEWFS_SCHEME, false, -1);
       theInternalDir = dir;
       creationTime = cTime;
       this.ugi = ugi;
       myUri = uri;
+      this.fsState = fsState;
+      this.conf = conf;
     }
 
     static private void checkPathIsSlash(final Path f) throws IOException {
@@ -1015,7 +1027,8 @@ public class ViewFs extends AbstractFileSystem {
     public FileStatus[] listStatus(final Path f) throws IOException {
       checkPathIsSlash(f);
       FileStatus[] fallbackStatuses = listStatusForFallbackLink();
-      FileStatus[] result = new FileStatus[theInternalDir.getChildren().size()];
+      Set<FileStatus> linkStatuses = new HashSet<>();
+      Set<FileStatus> internalDirStatuses = new HashSet<>();
       int i = 0;
       for (Entry<String, INode<AbstractFileSystem>> iEntry :
           theInternalDir.getChildren().entrySet()) {
@@ -1029,11 +1042,10 @@ public class ViewFs extends AbstractFileSystem {
             // To maintain backward compatibility, with default option(showing
             // mount links as symlinks), we will represent target link as
             // symlink and rest other properties are belongs to mount link only.
-            result[i++] =
+            linkStatuses.add(
                 new FileStatus(0, false, 0, 0, creationTime, creationTime,
                     PERMISSION_555, ugi.getShortUserName(),
-                    ugi.getPrimaryGroupName(), link.getTargetLink(),
-                    path);
+                    ugi.getPrimaryGroupName(), link.getTargetLink(), path));
             continue;
           }
 
@@ -1049,11 +1061,12 @@ public class ViewFs extends AbstractFileSystem {
             FileStatus status =
                 ((ChRootedFs) link.getTargetFileSystem()).getMyFs()
                     .getFileStatus(new Path(linkedPath));
-            result[i++] = new FileStatus(status.getLen(), status.isDirectory(),
-                status.getReplication(), status.getBlockSize(),
-                status.getModificationTime(), status.getAccessTime(),
-                status.getPermission(), status.getOwner(), status.getGroup(),
-                null, path);
+            linkStatuses.add(
+                new FileStatus(status.getLen(), status.isDirectory(),
+                    status.getReplication(), status.getBlockSize(),
+                    status.getModificationTime(), status.getAccessTime(),
+                    status.getPermission(), status.getOwner(),
+                    status.getGroup(), null, path));
           } catch (FileNotFoundException ex) {
             LOG.warn("Cannot get one of the children's(" + path
                 + ")  target path(" + link.getTargetFileSystem().getUri()
@@ -1061,51 +1074,62 @@ public class ViewFs extends AbstractFileSystem {
             throw ex;
           }
         } else {
-          result[i++] =
+          internalDirStatuses.add(
               new FileStatus(0, true, 0, 0, creationTime, creationTime,
                   PERMISSION_555, ugi.getShortUserName(),
-                  ugi.getGroupNames()[0], path);
+                  ugi.getPrimaryGroupName(), path));
         }
       }
+
+      FileStatus[] internalDirStatusesMergedWithFallBack = internalDirStatuses
+          .toArray(new FileStatus[internalDirStatuses.size()]);
       if (fallbackStatuses.length > 0) {
-        return consolidateFileStatuses(fallbackStatuses, result);
-      } else {
-        return result;
+        internalDirStatusesMergedWithFallBack =
+            merge(fallbackStatuses, internalDirStatusesMergedWithFallBack);
       }
+
+      // Links will always have precedence than internalDir or fallback paths.
+      return merge(linkStatuses.toArray(new FileStatus[linkStatuses.size()]),
+          internalDirStatusesMergedWithFallBack);
     }
 
-    private FileStatus[] consolidateFileStatuses(FileStatus[] fallbackStatuses,
-        FileStatus[] mountPointStatuses) {
+    private FileStatus[] merge(FileStatus[] toStatuses,
+        FileStatus[] fromStatuses) {
       ArrayList<FileStatus> result = new ArrayList<>();
       Set<String> pathSet = new HashSet<>();
-      for (FileStatus status : mountPointStatuses) {
+      for (FileStatus status : toStatuses) {
         result.add(status);
         pathSet.add(status.getPath().getName());
       }
-      for (FileStatus status : fallbackStatuses) {
+      for (FileStatus status : fromStatuses) {
         if (!pathSet.contains(status.getPath().getName())) {
           result.add(status);
         }
       }
-      return result.toArray(new FileStatus[0]);
+      return result.toArray(new FileStatus[result.size()]);
     }
 
     private FileStatus[] listStatusForFallbackLink() throws IOException {
-      if (theInternalDir.isRoot() &&
-          theInternalDir.getFallbackLink() != null) {
-        AbstractFileSystem linkedFs =
-            theInternalDir.getFallbackLink().getTargetFileSystem();
-        // Fallback link is only applicable for root
-        FileStatus[] statuses = linkedFs.listStatus(new Path("/"));
-        for (FileStatus status : statuses) {
-          // Fix the path back to viewfs scheme
-          status.setPath(
-              new Path(myUri.toString(), status.getPath().getName()));
+      if (fsState.getRootFallbackLink() != null) {
+        AbstractFileSystem linkedFallbackFs =
+            fsState.getRootFallbackLink().getTargetFileSystem();
+        Path p = Path.getPathWithoutSchemeAndAuthority(
+            new Path(theInternalDir.fullPath));
+        if (theInternalDir.isRoot() || FileContext
+            .getFileContext(linkedFallbackFs, conf).util().exists(p)) {
+          // Fallback link is only applicable for root
+          FileStatus[] statuses = linkedFallbackFs.listStatus(p);
+          for (FileStatus status : statuses) {
+            // Fix the path back to viewfs scheme
+            Path pathFromConfiguredFallbackRoot =
+                new Path(p, status.getPath().getName());
+            status.setPath(
+                new Path(myUri.toString(), pathFromConfiguredFallbackRoot));
+          }
+          return statuses;
         }
-        return statuses;
-      } else {
-        return new FileStatus[0];
       }
+      return new FileStatus[0];
     }
 
     @Override
