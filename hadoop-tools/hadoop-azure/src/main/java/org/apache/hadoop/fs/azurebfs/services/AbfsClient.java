@@ -93,7 +93,7 @@ public class AbfsClient implements Closeable {
 
     if (this.baseUrl.toString().startsWith(HTTPS_SCHEME)) {
       try {
-        LOG.trace("Initializing DelegatingSSLSocketFactory with {} SSL "
+        LOG.trace("test Initializing DelegatingSSLSocketFactory with {} SSL "
                 + "Channel Mode", this.abfsConfiguration.getPreferredSSLFactoryOption());
         DelegatingSSLSocketFactory.initializeDefaultFactory(this.abfsConfiguration.getPreferredSSLFactoryOption());
         sslProviderName = DelegatingSSLSocketFactory.getDefaultFactory().getProviderName();
