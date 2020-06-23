@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.auth.delegation;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Optional;
 
@@ -59,14 +60,15 @@ public interface DelegationTokenBinding extends DTService {
    * filesystem has been deployed unbonded.
    * @param policy minimum policy to use, if known.
    * @param encryptionSecrets encryption secrets for the token.
-   * @param renewer the principal permitted to renew the token.
+   * @param renewer the principal permitted to renew the token. May be null
    * @return the token or null if the back end does not want to issue one.
    * @throws IOException if one cannot be created
    */
   Token<AbstractS3ATokenIdentifier> createDelegationToken(
       Optional<RoleModel.Policy> policy,
       EncryptionSecrets encryptionSecrets,
-      Text renewer) throws IOException;
+      @Nullable Text renewer)
+      throws IOException;
 
   /**
    * Create a token identifier with all the information needed
@@ -87,7 +89,7 @@ public interface DelegationTokenBinding extends DTService {
   AbstractS3ATokenIdentifier createTokenIdentifier(
       Optional<RoleModel.Policy> policy,
       EncryptionSecrets encryptionSecrets,
-      Text renewer) throws IOException;
+      @Nullable Text renewer) throws IOException;
 
   /**
    * Perform any actions when deploying unbonded, and return a list
@@ -119,6 +121,13 @@ public interface DelegationTokenBinding extends DTService {
   AbstractS3ATokenIdentifier createEmptyIdentifier();
 
   /**
+   * Initialize the binding data. This will be done before
+   * serviceStart.
+   * @param binding binding data
+   */
+  void initalizeBindingData(ExtensionBindingData binding);
+
+  /**
    * Return a description.
    * This is logged during after service start and binding:
    * it should be as informative as possible.
@@ -132,4 +141,5 @@ public interface DelegationTokenBinding extends DTService {
    * @return a string for the S3 logs or "" for "nothing to add"
    */
   String getUserAgentField();
+
 }

@@ -20,14 +20,13 @@ package org.apache.hadoop.fs.s3a.auth.delegation;
 
 import java.io.IOException;
 import java.net.URI;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.auth.RoleModel;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.SecretManager;
@@ -74,16 +73,20 @@ import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DURAT
  *  with retries as they see fit.
  */
 public abstract class AbstractDelegationTokenBinding extends AbstractDTService
-    implements
-    DelegationTokenBinding {
+    implements DelegationTokenBinding {
+
+  private static final Logger LOG = LoggerFactory.getLogger(
+      AbstractDelegationTokenBinding.class);
 
   /** Token kind: must match that of the token identifiers issued. */
   private final Text kind;
 
   private SecretManager<AbstractS3ATokenIdentifier> secretManager;
 
-  private static final Logger LOG = LoggerFactory.getLogger(
-      AbstractDelegationTokenBinding.class);
+  /**
+   * Extra Binding data.
+   */
+  private ExtensionBindingData bindingData;
 
   /**
    * Constructor.
@@ -163,6 +166,11 @@ public abstract class AbstractDelegationTokenBinding extends AbstractDTService
         + " token kind = " + getKind();
   }
 
+  @Override
+  public void initalizeBindingData(ExtensionBindingData binding) {
+    this.bindingData = binding;
+  }
+
   /**
    * Service startup: create the secret manager.
    * @throws Exception failure.
@@ -194,13 +202,21 @@ public abstract class AbstractDelegationTokenBinding extends AbstractDTService
   }
 
   /**
+   * Was this DT binding deployed as a secondary instance.
+   * @return true if it is.
+   */
+  protected boolean isSecondaryBinding() {
+    return bindingData.isSecondaryBinding();
+  }
+
+  /**
    * Get the password to use in secret managers.
    * This is a constant; its just recalculated every time to stop findbugs
    * highlighting security risks of shared mutable byte arrays.
    * @return a password.
    */
   protected static byte[] getSecretManagerPasssword() {
-    return "non-password".getBytes(Charset.forName("UTF-8"));
+    return "non-password".getBytes(StandardCharsets.UTF_8);
   }
 
   /**

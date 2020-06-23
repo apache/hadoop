@@ -24,6 +24,7 @@ import java.util.Optional;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.auth.RoleModel;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 
 /**
@@ -33,7 +34,7 @@ import org.apache.hadoop.security.token.Token;
  * separately with a different suffix to the S3A URI. This is to make
  * their service Text values different from that of the primary.
  */
-class SecondaryDTBinding extends AbstractDTService implements
+class SecondaryDelegationToken extends AbstractDTService implements
     DelegationTokenBinding {
 
   /**
@@ -51,8 +52,7 @@ class SecondaryDTBinding extends AbstractDTService implements
    * The DT decoded when this instance is created by bonding
    * to an existing DT.
    */
-  private Optional<AbstractS3ATokenIdentifier> decodedIdentifier
-      = Optional.empty();
+  private AbstractS3ATokenIdentifier decodedIdentifier;
 
   /**
    * Token binding; lifecycle matches this object.
@@ -65,14 +65,13 @@ class SecondaryDTBinding extends AbstractDTService implements
    */
   private final String canonicalServiceName;
 
-  SecondaryDTBinding(
+  SecondaryDelegationToken(
       final Text service,
       final DelegationTokenBinding tokenBinding) {
     super(tokenBinding.getName());
     this.service = service;
     this.tokenBinding = tokenBinding;
     this.canonicalServiceName = service.toString();
-
   }
 
   @Override
@@ -113,9 +112,14 @@ class SecondaryDTBinding extends AbstractDTService implements
     return tokenBinding.deployUnbonded();
   }
 
+  public AWSCredentialProviderList lookupToken() throws IOException {
+    return tokenBinding.deployUnbonded();
+  }
+
   @Override
   public AWSCredentialProviderList bindToTokenIdentifier(
       final AbstractS3ATokenIdentifier retrievedIdentifier) throws IOException {
+    decodedIdentifier = retrievedIdentifier;
     return tokenBinding.bindToTokenIdentifier(retrievedIdentifier);
   }
 
@@ -138,12 +142,18 @@ class SecondaryDTBinding extends AbstractDTService implements
     return canonicalServiceName;
   }
 
+  @Override
+  public void initalizeBindingData(final ExtensionBindingData binding) {
+    tokenBinding.initalizeBindingData(binding);
+  }
+
   /**
    * Return any DT from the inner token binding.
    * This does not dynamically create tokens;
    */
   public Token<?> getDelegationToken() throws IOException {
     return boundDT.orElse(null);
+
   }
 
   /**
@@ -161,4 +171,19 @@ class SecondaryDTBinding extends AbstractDTService implements
     return new S3ATokenIssuer(this, policy, encryptionSecrets, service,
         callbacks);
   }
+
+  /**
+   * Look up a token from the credentials, verify it is of the correct
+   * kind.
+   * @param credentials credentials to look up.
+   * @return the token or null if no suitable token was found
+   * @throws DelegationTokenIOException wrong token kind found
+   */
+  public Token<AbstractS3ATokenIdentifier> lookupToken(
+      final Credentials credentials) throws DelegationTokenIOException {
+    return S3ADelegationTokens.lookupToken(credentials,
+        service,
+        getKind());
+  }
+
 }

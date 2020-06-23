@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.auth.delegation;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Optional;
 
@@ -47,6 +48,7 @@ public class S3ATokenIssuer implements DelegationTokenIssuer {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       S3ATokenIssuer.class);
+
   private final Optional<RoleModel.Policy> policy;
 
   private final EncryptionSecrets encryptionSecret;
@@ -57,6 +59,14 @@ public class S3ATokenIssuer implements DelegationTokenIssuer {
 
   private final DelegationTokenBinding tokenBinding;
 
+  /**
+   * Instantiate.
+   * @param tokenBinding DT binding for the source of tokens.
+   * @param policy role policy.
+   * @param encryptionSecret encryption secrets to put in the token.
+   * @param serviceName canonical service name.
+   * @param callbacks issuing callbacks
+   */
   public S3ATokenIssuer(
       final DelegationTokenBinding tokenBinding,
       final Optional<RoleModel.Policy> policy,
@@ -75,15 +85,22 @@ public class S3ATokenIssuer implements DelegationTokenIssuer {
     return serviceName.toString();
   }
 
+  /**
+   * Issue a a token via a call to
+   * {@link DelegationTokenBinding#createDelegationToken(Optional, EncryptionSecrets, Text)}.
+   * @param renewer renewer, may be null
+   * @return the token
+   * @throws IOException failure[
+   */
   @Override
-  public Token<?> getDelegationToken(final String renewer)
+  public Token<?> getDelegationToken(@Nullable final String renewer)
       throws IOException {
 
     try (DurationInfo ignored = new DurationInfo(LOG, DURATION_LOG_AT_INFO,
             "Creating New Delegation Token", tokenBinding.getKind())) {
+      Text t = renewer != null ? new Text(renewer) : null;
       Token<AbstractS3ATokenIdentifier> token
-          = tokenBinding.createDelegationToken(policy, encryptionSecret,
-          new Text(renewer));
+          = tokenBinding.createDelegationToken(policy, encryptionSecret, t);
       token.setService(serviceName);
       callbacks.tokenCreated(token);
       return token;

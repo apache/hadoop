@@ -37,7 +37,6 @@ import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.FULL_
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.SESSION_TOKEN_KIND;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 
 /**
  * Unit tests related to S3A DT support.
@@ -172,6 +171,25 @@ public class TestS3ADelegationTokenSupport {
     assertEquals("credentials in " + ids,
         id.getMarshalledCredentials(),
         result.getMarshalledCredentials());
+    assertEquals("renewer in " + ids, renewer, result.getRenewer());
+  }
+  @Test
+  public void testInjectingTokenIdentifierRoundTrip() throws Throwable {
+    Text renewer = new Text("bob");
+    int issueNumber = 6502;
+    InjectingTokenIdentifier id = new InjectingTokenIdentifier(
+        landsatUri,
+        new Text(),
+        renewer,
+        new EncryptionSecrets(),
+        issueNumber);
+
+    InjectingTokenIdentifier result = S3ATestUtils.roundTrip(id, null);
+    String ids = id.toString();
+    assertEquals("URI in " + ids, id.getUri(), result.getUri());
+    assertEquals("issue number in " + ids,
+        issueNumber,
+        result.getIssueNumber());
     assertEquals("renewer in " + ids, renewer, result.getRenewer());
   }
 

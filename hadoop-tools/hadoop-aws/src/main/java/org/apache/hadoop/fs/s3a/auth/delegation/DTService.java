@@ -25,6 +25,9 @@ import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.Service;
 
+/**
+ * Interface for any S3A DT Service.
+ */
 public interface DTService extends Service {
 
   /**

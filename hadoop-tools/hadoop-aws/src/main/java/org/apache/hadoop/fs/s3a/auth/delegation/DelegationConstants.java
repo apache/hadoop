@@ -165,6 +165,32 @@ public final class DelegationConstants {
    */
   public static final String DELEGATION_SECONDARY_BINDINGS =
       "fs.s3a.delegation.token.secondary.bindings";
+
+  /** Name of injecting token: {@value}. */
+  public static final String INJECTING_TOKEN_NAME =
+      TOKEN_NAME_PREFIX + "Injecting";
+
+  /**
+   *  Kind of the injecting token;
+   *  value is {@link #INJECTING_TOKEN_NAME}.
+   */
+  public static final Text INJECTING_TOKEN_KIND =
+      new Text(INJECTING_TOKEN_NAME);
+
+  /**
+   * Providers the injecting credential provider
+   * returns when deployed bonded/unbonded: {@value}.
+   */
+  public static final String INJECTING_CREDENTIALS_PROVIDER =
+      "fs.s3a.delegation.injecting.credentials.provider";
+
+  /**
+   * Should the injecting credential provider
+   * issue tokens: {@value}.
+   */
+  public static final String INJECTING_ISSUE_TOKENS =
+      "fs.s3a.delegation.injecting.issue.tokens";
+
   private DelegationConstants() {
   }
 }

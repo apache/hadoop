@@ -20,10 +20,15 @@ package org.apache.hadoop.fs.s3a.auth.delegation;
 
 import org.apache.hadoop.security.token.Token;
 
+/**
+ * Callbacks used by the {@link S3ATokenIssuer} to notify
+ * the {@link S3ADelegationTokens} instance that a token
+ * has been issued.
+ */
 public interface TokenIssueCallbacks {
 
   /**
-   * Note that a token has been created; increment counters and statistics.
+   * A token has been created; increment counters and statistics.
    * @param token token created
    */
   void tokenCreated(Token<AbstractS3ATokenIdentifier> token);
