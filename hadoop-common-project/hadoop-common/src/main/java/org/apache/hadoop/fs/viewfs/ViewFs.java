@@ -457,6 +457,11 @@ public class ViewFs extends AbstractFileSystem {
   /**
    * {@inheritDoc}
    *
+   * Note: listStatus considers listing from fallbackLink if available. If the
+   * same directory path is present in configured mount path as well as in
+   * fallback fs, then only the fallback path will be listed in the returned
+   * result except for link.
+   *
    * If any of the the immediate children of the given path f is a symlink(mount
    * link), the returned FileStatus object of that children would be represented
    * as a symlink. It will not be resolved to the target path and will not get

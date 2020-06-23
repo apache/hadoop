@@ -519,10 +519,10 @@ public class ViewFileSystem extends FileSystem {
   /**
    * {@inheritDoc}
    *
-   * Note: listStatus on root("/") considers listing from fallbackLink if
-   * available. If the same directory name is present in configured mount path
-   * as well as in fallback link, then only the configured mount path will be
-   * listed in the returned result.
+   * Note: listStatus considers listing from fallbackLink if available. If the
+   * same directory path is present in configured mount path as well as in
+   * fallback fs, then only the fallback path will be listed in the returned
+   * result except for link.
    *
    * If any of the the immediate children of the given path f is a symlink(mount
    * link), the returned FileStatus object of that children would be represented
@@ -1314,7 +1314,6 @@ public class ViewFileSystem extends FileSystem {
         Path p = Path.getPathWithoutSchemeAndAuthority(
             new Path(theInternalDir.fullPath));
         if (theInternalDir.isRoot() || linkedFallbackFs.exists(p)) {
-          // Fallback link is only applicable for root
           FileStatus[] statuses = linkedFallbackFs.listStatus(p);
           for (FileStatus status : statuses) {
             // Fix the path back to viewfs scheme

@@ -345,8 +345,8 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
         afterFallback.add(stat.getPath());
       }
       afterFallback.removeAll(beforeFallback);
-      assertTrue("The same directory name in fallback link should be shaded",
-          afterFallback.size() == 1);
+      assertEquals("The same directory name in fallback link should be shaded",
+          1, afterFallback.size());
       Path[] fallbackArray = new Path[afterFallback.size()];
       // Only user1 should be listed as fallback link
       Path expected = new Path(viewFsUri.toString(), "user1");
@@ -429,8 +429,8 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
       //
       //viewfs://default/user1/hive/warehouse
       afterFallback.removeAll(beforeFallback);
-      assertTrue("The same directory name in fallback link should be shaded",
-          afterFallback.size() == 1);
+      assertEquals("The same directory name in fallback link should be shaded",
+          1, afterFallback.size());
     }
   }
 
@@ -501,8 +501,8 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
         }
       }
       afterFallback.removeAll(beforeFallback);
-      assertEquals("Just to make sure paths are same.", afterFallback.size(),
-          0);
+      assertEquals("Just to make sure paths are same.", 0,
+          afterFallback.size());
     }
   }
 
@@ -565,9 +565,9 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
         }
       }
       afterFallback.removeAll(beforeFallback);
-      assertEquals(afterFallback.size(), 1);
-      assertEquals("/user2 dir from fallback should be listed.",
-          afterFallback.iterator().next().getName(), "user2");
+      assertEquals(1, afterFallback.size());
+      assertEquals("/user2 dir from fallback should be listed.", "user2",
+          afterFallback.iterator().next().getName());
     }
   }
 
