@@ -161,6 +161,8 @@ pipeline {
 
                         # custom javadoc goal
                         YETUS_ARGS+=("--mvn-javadoc=process-sources javadoc:javadoc-no-fork")
+
+                        "${TESTPATCHBIN}" "${YETUS_ARGS[@]}"
                         '''
                 }
             }
