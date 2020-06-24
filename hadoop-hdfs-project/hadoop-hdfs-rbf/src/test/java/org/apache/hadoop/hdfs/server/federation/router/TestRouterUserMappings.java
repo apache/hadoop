@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import com.google.common.collect.Sets;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
@@ -115,7 +116,12 @@ public class TestRouterUserMappings {
 
     @Override
     public Set<String> getGroupsSet(String user) throws IOException {
-      return null;
+      LOG.info("Getting groups in MockUnixGroupsMapping");
+      String g1 = user + (10 * i + 1);
+      String g2 = user + (10 * i + 2);
+      Set<String> s = Sets.newHashSet(g1, g2);
+      i++;
+      return s;
     }
   }
 

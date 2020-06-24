@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
+import com.google.common.collect.Sets;
 import org.apache.hadoop.security.GroupMappingServiceProvider;
 import org.apache.hadoop.test.HadoopUsersConfTestHelper;
 
@@ -51,6 +52,15 @@ public class DummyGroupMapping implements GroupMappingServiceProvider {
 
   @Override
   public Set<String> getGroupsSet(String user) throws IOException {
-    return null;
+    if (user.equals("root")) {
+      return Sets.newHashSet("admin");
+    }
+    else if (user.equals("nobody")) {
+      return Sets.newHashSet("nobody");
+    } else {
+      String[] groups = HadoopUsersConfTestHelper.getHadoopUserGroups(user);
+      return (groups != null) ? Sets.newHashSet(groups) :
+          Collections.emptySet();
+    }
   }
 }

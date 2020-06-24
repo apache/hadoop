@@ -383,14 +383,11 @@ public class Groups {
 
       backgroundRefreshQueued.incrementAndGet();
       ListenableFuture<Set<String>> listenableFuture =
-          executorService.submit(new Callable<Set<String>>() {
-            @Override
-            public Set<String> call() throws Exception {
-              backgroundRefreshQueued.decrementAndGet();
-              backgroundRefreshRunning.incrementAndGet();
-              Set<String> results = load(key);
-              return results;
-            }
+          executorService.submit(() -> {
+            backgroundRefreshQueued.decrementAndGet();
+            backgroundRefreshRunning.incrementAndGet();
+            Set<String> results = load(key);
+            return results;
           });
       Futures.addCallback(listenableFuture, new FutureCallback<Set<String>>() {
         @Override

@@ -43,7 +43,7 @@ public class NullGroupsMapping implements GroupMappingServiceProvider {
    */
   @Override
   public Set<String> getGroupsSet(String user) throws IOException {
-    return null;
+    return Collections.emptySet();
   }
 
   /**
