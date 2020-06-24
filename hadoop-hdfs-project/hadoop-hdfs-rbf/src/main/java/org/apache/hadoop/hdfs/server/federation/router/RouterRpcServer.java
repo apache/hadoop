@@ -930,8 +930,8 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     }
   }
 
-  private DatanodeInfo[] getCachedDatanodeReportImpl
-      (final DatanodeReportType type) throws IOException {
+  private DatanodeInfo[] getCachedDatanodeReportImpl(
+      final DatanodeReportType type) throws IOException {
     // We need to get the DNs as a privileged user
     UserGroupInformation loginUser = UserGroupInformation.getLoginUser();
     RouterRpcServer.setCurrentUser(loginUser);
