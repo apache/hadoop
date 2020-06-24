@@ -46,9 +46,7 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.cache.CacheBuilder;
@@ -911,7 +909,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * @return List of datanodes.
    * @throws IOException If it cannot get the report.
    */
-  public DatanodeInfo[] getCachedDatanodeReport(DatanodeReportType type)
+  DatanodeInfo[] getCachedDatanodeReport(DatanodeReportType type)
       throws IOException {
     try {
       DatanodeInfo[] dns = this.dnCache.get(type);
@@ -933,7 +931,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   }
 
   private DatanodeInfo[] getCachedDatanodeReportImpl
-      (final DatanodeReportType type) throws IOException{
+      (final DatanodeReportType type) throws IOException {
     // We need to get the DNs as a privileged user
     UserGroupInformation loginUser = UserGroupInformation.getLoginUser();
     RouterRpcServer.setCurrentUser(loginUser);
@@ -1843,19 +1841,8 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
           .setDaemon(true)
           .build();
 
-      // Only use 1 thread to refresh cache.
-      // With coreThreadCount == maxThreadCount we effectively
-      // create a fixed size thread pool. As allowCoreThreadTimeOut
-      // has been set, all threads will die after 60 seconds of non use.
-      ThreadPoolExecutor parentExecutor = new ThreadPoolExecutor(
-          1,
-          1,
-          60,
-          TimeUnit.SECONDS,
-          new LinkedBlockingQueue<Runnable>(),
-          threadFactory);
-      parentExecutor.allowCoreThreadTimeOut(true);
-      executorService = MoreExecutors.listeningDecorator(parentExecutor);
+      executorService = MoreExecutors.listeningDecorator(
+          Executors.newSingleThreadExecutor(threadFactory));
     }
 
     @Override
@@ -1872,14 +1859,12 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     public ListenableFuture<DatanodeInfo[]> reload(
         final DatanodeReportType type, DatanodeInfo[] oldValue)
         throws Exception {
-      ListenableFuture<DatanodeInfo[]> listenableFuture =
-          executorService.submit(new Callable<DatanodeInfo[]>() {
-            @Override
-            public DatanodeInfo[] call() throws Exception {
-              return load(type);
-            }
-          });
-      return listenableFuture;
+      return executorService.submit(new Callable<DatanodeInfo[]>() {
+        @Override
+        public DatanodeInfo[] call() throws Exception {
+          return load(type);
+        }
+      });
     }
   }
 }
