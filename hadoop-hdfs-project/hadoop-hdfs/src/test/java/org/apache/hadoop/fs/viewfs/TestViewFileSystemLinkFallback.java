@@ -41,7 +41,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
-import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -670,6 +669,7 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
     ConfigUtil.addLinkFallback(conf, fallbackTarget.toUri());
 
     try (FileSystem vfs = FileSystem.get(viewFsDefaultClusterUri, conf)) {
+      // user2 does not exist in fallback
       Path p = new Path("/user2");
       Path test = Path.mergePaths(fallbackTarget, p);
       assertFalse(fsTarget.exists(test));
@@ -680,11 +680,10 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
 
   /**
    * Tests that when the parent dirs does not exist in fallback but the parent
-   * dir is same as mount internal directory, then we cannot create parent
-   * structure (mount internal directory tree structure) in fallback as that
-   * directories already in mount paths.
+   * dir is same as mount internal directory, then we create parent structure
+   * (mount internal directory tree structure) in fallback.
    */
-  @Test(expected = AccessControlException.class)
+  @Test
   public void testMkdirsWithFallbackLinkWithMountPathMatchingDirExist()
       throws Exception {
     Configuration conf = new Configuration();
@@ -696,11 +695,39 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
     ConfigUtil.addLinkFallback(conf, fallbackTarget.toUri());
 
     try (FileSystem vfs = FileSystem.get(viewFsDefaultClusterUri, conf)) {
-      //user2 does not exist in fallback
-      Path p = new Path("/user1/test");
-      Path test = Path.mergePaths(fallbackTarget, p);
+      //user1 does not exist in fallback
+      Path immediateLevelToInternalDir = new Path("/user1/test");
+      Path test = Path.mergePaths(fallbackTarget, immediateLevelToInternalDir);
       assertFalse(fsTarget.exists(test));
-      vfs.mkdirs(p);
+      assertTrue(vfs.mkdirs(immediateLevelToInternalDir));
+      assertTrue(fsTarget.exists(test));
+    }
+  }
+
+  /**
+   * Tests that when the parent dirs does not exist in fallback but the
+   * immediate parent dir is not same as mount internal directory, then we
+   * create parent structure (mount internal directory tree structure) in
+   * fallback.
+   */
+  @Test
+  public void testMkdirsOfDeepTreeWithFallbackLinkAndMountPathMatchingDirExist()
+      throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS, false);
+    ConfigUtil.addLink(conf, "/user1/hive",
+        new Path(targetTestRoot.toString() + "/").toUri());
+    Path fallbackTarget = new Path(targetTestRoot, "fallbackDir");
+    fsTarget.mkdirs(fallbackTarget);
+    ConfigUtil.addLinkFallback(conf, fallbackTarget.toUri());
+
+    try (FileSystem vfs = FileSystem.get(viewFsDefaultClusterUri, conf)) {
+      //user1 does not exist in fallback
+      Path multipleLevelToInternalDir = new Path("/user1/test/test");
+      Path test = Path.mergePaths(fallbackTarget, multipleLevelToInternalDir);
+      assertFalse(fsTarget.exists(test));
+      assertTrue(vfs.mkdirs(multipleLevelToInternalDir));
+      assertTrue(fsTarget.exists(test));
     }
   }
 }
