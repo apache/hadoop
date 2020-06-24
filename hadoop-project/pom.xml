@@ -1402,7 +1402,7 @@
       <dependency>
         <groupId>com.microsoft.azure</groupId>
         <artifactId>azure-storage</artifactId>
-        <version>7.0.0</version>
+        <version>7.0.1</version>
      </dependency>
 
       <!--Wildfly openssl dependency is introduced by HADOOP-15669-->
