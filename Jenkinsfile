@@ -159,8 +159,8 @@ pipeline {
                         YETUS_ARGS+=("--multijdkdirs=/usr/lib/jvm/java-11-openjdk-amd64")
                         YETUS_ARGS+=("--multijdktests=compile")
 
-                        # custom javadoc goal
-                        YETUS_ARGS+=("--mvn-javadoc=process-sources javadoc:javadoc-no-fork")
+                        # custom javadoc goals
+                        YETUS_ARGS+=("--mvn-javadoc-goals=process-sources,javadoc:javadoc-no-fork")
 
                         "${TESTPATCHBIN}" "${YETUS_ARGS[@]}"
                         '''
