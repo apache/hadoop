@@ -70,11 +70,10 @@ public class S3ADtFetcher implements DtFetcher {
       url = getServiceName().toString() + "://" + url;
     }
     FileSystem fs = FileSystem.get(URI.create(url), conf);
-    Token<?> token = fs.getDelegationToken(renewer);
-    if (token == null) {
+    Token<?>[] tokens = fs.addDelegationTokens(renewer, creds);
+    if (tokens.length == 0) {
       throw new DelegationTokenIOException(FETCH_FAILED + ": " + url);
     }
-    creds.addToken(token.getService(), token);
-    return token;
+    return tokens[0];
   }
 }

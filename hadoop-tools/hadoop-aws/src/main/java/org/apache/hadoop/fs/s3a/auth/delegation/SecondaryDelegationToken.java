@@ -142,6 +142,35 @@ class SecondaryDelegationToken extends AbstractDTService implements
         renewer);
   }
 
+  /**
+   * Get any bound DT or create a new one.
+   * @return a delegation token.
+   * @param callbacks callbacks on token issue
+   * @param policy policy for new tokens
+   * @param encryptionSecrets encryption secrets for any new token.
+   * @param renewer the token renewer.
+   * @throws IOException if one cannot be created
+   */
+  public Token<AbstractS3ATokenIdentifier> getBoundOrNewDT(
+      final TokenIssueCallbacks callbacks,
+      final Optional<RoleModel.Policy> policy,
+      final EncryptionSecrets encryptionSecrets,
+      final Text renewer)
+      throws IOException {
+    if (boundDT != null) {
+      // the FS was created on startup with a token, so return it.
+      return boundDT;
+    } else {
+      // not bound to a token, so create a new one.
+      // issued DTs are not cached so that long-lived filesystems can
+      // reliably issue session/role tokens.
+      Token<AbstractS3ATokenIdentifier> token = createDelegationToken(
+          policy, encryptionSecrets, renewer);
+      callbacks.tokenCreated(token);
+      return token;
+    }
+  }
+
   @Override
   public AWSCredentialProviderList deployUnbonded() throws IOException {
     return tokenBinding.deployUnbonded();

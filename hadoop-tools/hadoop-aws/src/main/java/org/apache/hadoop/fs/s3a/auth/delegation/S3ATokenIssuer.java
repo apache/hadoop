@@ -57,7 +57,7 @@ public class S3ATokenIssuer implements DelegationTokenIssuer {
 
   private final TokenIssueCallbacks callbacks;
 
-  private final DelegationTokenBinding tokenBinding;
+  private final SecondaryDelegationToken tokenBinding;
 
   /**
    * Instantiate.
@@ -68,7 +68,7 @@ public class S3ATokenIssuer implements DelegationTokenIssuer {
    * @param callbacks issuing callbacks
    */
   public S3ATokenIssuer(
-      final DelegationTokenBinding tokenBinding,
+      final SecondaryDelegationToken tokenBinding,
       final Optional<RoleModel.Policy> policy,
       final EncryptionSecrets encryptionSecret,
       final Text serviceName,
@@ -100,9 +100,8 @@ public class S3ATokenIssuer implements DelegationTokenIssuer {
             "Creating New Delegation Token", tokenBinding.getKind())) {
       Text t = renewer != null ? new Text(renewer) : null;
       Token<AbstractS3ATokenIdentifier> token
-          = tokenBinding.createDelegationToken(policy, encryptionSecret, t);
+          = tokenBinding.getBoundOrNewDT(callbacks, policy, encryptionSecret, t);
       token.setService(serviceName);
-      callbacks.tokenCreated(token);
       return token;
     }
   }

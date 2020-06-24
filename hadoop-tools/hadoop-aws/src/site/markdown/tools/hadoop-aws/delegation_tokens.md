@@ -191,7 +191,6 @@ Once Kerberos enabled, the process for acquiring tokens is as follows:
 
 1. Enable Delegation token support by setting `fs.s3a.delegation.token.binding`
 to the classname of the token binding to use.
-to use.
 1. Add any other binding-specific settings (STS endpoint, IAM role, etc.)
 1. Make sure the settings are the same in the service as well as the client.
 1. In the client, switch to using a [Hadoop Credential Provider](hadoop-project-dist/hadoop-common/CredentialProviderAPI.html)
@@ -474,6 +473,37 @@ the error message `The requested DurationSeconds exceeds the MaxSessionDuration 
 is returned if the requested duration of a Role Delegation Token is greater
 than that available for the role.
 
+
+## <a name="secondary"></a> Secondary Delegation Tokens
+
+The S3A connector also supports "secondary delegation tokens".
+That is: more than one delegation token binding is supported.
+When tokens for a filesystem are collected during application launch,
+the tokens of all bindings are collected. The entire set of delegation
+tokens are included in the job, for retrieval and use by
+in the deployed application.
+
+
+| **Key** | **Meaning** | **Default** |
+| --- | --- | --- |
+| `fs.s3a.delegation.token.secondary.bindings` | list of classnames of secondary token
+ providers | "" | 
+
+Each _Secondary Delegation Token Provider_ is simply an S3A Delegation Token Provider, with
+the following restrictions:
+
+* Secondary token bindings are only loaded if there is a primary token binding declared in
+  `fs.s3a.delegation.token.binding`.
+* If the primary token binding issues a token, so MUST the secondary.
+* No duplicate bindings are permitted in the set of token bindings.
+  (i.e. no duplicate token "kind").
+* All secondary tokens are loaded and instantiated in order.
+* The AWS credential providers offered by a secondary token binding are all appended
+to the list provided by the primary token binding.
+* Only the encryption secrets of the primary delegation token are used to configure
+  encryption in delegate filesystem instances. 
+
+Declaring secondary token bindings is a very esoteric deployment, not widely used.
 
 ## <a name="testing"></a> Testing Delegation Token Support
 
