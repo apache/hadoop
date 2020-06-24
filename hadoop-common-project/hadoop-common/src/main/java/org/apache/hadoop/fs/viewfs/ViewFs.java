@@ -1139,6 +1139,46 @@ public class ViewFs extends AbstractFileSystem {
       if (theInternalDir.isRoot() && dir == null) {
         throw new FileAlreadyExistsException("/ already exits");
       }
+
+      if (this.fsState.getRootFallbackLink() != null) {
+        AbstractFileSystem linkedFallbackFs =
+            this.fsState.getRootFallbackLink().getTargetFileSystem();
+        Path p = Path.getPathWithoutSchemeAndAuthority(
+            new Path(theInternalDir.fullPath));
+        boolean isExist = false;
+        try {
+          isExist = FileContext.getFileContext(linkedFallbackFs, conf).util()
+              .exists(p);
+        } catch (IOException e) {
+          if (LOG.isDebugEnabled()) {
+            StringBuilder msg = new StringBuilder("The parent ")
+                .append(" does not exist at fallback : ");
+            LOG.debug(msg.toString(), p, linkedFallbackFs.getUri());
+          }
+        }
+        String child = (InodeTree.SlashPath.equals(dir)) ?
+            InodeTree.SlashPath.toString() :
+            dir.getName();
+        Path dirToCreate = new Path(p, child);
+        if (isExist) {
+          try {
+            linkedFallbackFs.mkdir(dirToCreate, permission, createParent);
+          } catch (IOException e) {
+            if (LOG.isDebugEnabled()) {
+              StringBuilder msg = new StringBuilder("Failed to create {}")
+                  .append(" at fallback fs : {}");
+              LOG.debug(msg.toString(), p, linkedFallbackFs.getUri());
+            }
+          }
+        } else {
+          StringBuilder msg = new StringBuilder(
+              "Trying to create directory on parent {}  of mount ")
+              .append("link. This mount path does not exit at fallback")
+              .append("fs : {}. So, cannot create directory: ");
+          LOG.info(msg.toString(), p, linkedFallbackFs.getUri(), dirToCreate);
+        }
+      }
+
       throw readOnlyMountTable("mkdir", dir);
     }
 

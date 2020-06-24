@@ -1339,6 +1339,52 @@ public class ViewFileSystem extends FileSystem {
           dir.toString().substring(1))) {
         return true; // this is the stupid semantics of FileSystem
       }
+
+      if (this.fsState.getRootFallbackLink() != null) {
+        FileSystem linkedFallbackFs =
+            this.fsState.getRootFallbackLink().getTargetFileSystem();
+        Path p = Path.getPathWithoutSchemeAndAuthority(
+            new Path(theInternalDir.fullPath));
+        boolean isExist = false;
+        try {
+          isExist = linkedFallbackFs.exists(p);
+        } catch (IOException e) {
+          if (LOG.isDebugEnabled()) {
+            StringBuilder msg = new StringBuilder("The parent ").append(p)
+                .append(" does not exist at fallback :")
+                .append(linkedFallbackFs.getUri());
+            LOG.debug(msg.toString(), e);
+          }
+        }
+        String child = (InodeTree.SlashPath.equals(dir)) ?
+            InodeTree.SlashPath.toString() :
+            dir.getName();
+        Path dirToCreate = new Path(p, child);
+        if (isExist) {
+          try {
+            return linkedFallbackFs
+                .mkdirs(dirToCreate, permission);
+          } catch (IOException e) {
+            if (LOG.isDebugEnabled()) {
+              StringBuilder msg =
+                  new StringBuilder("Failed to create ").append(p)
+                      .append(" at fallback : ")
+                      .append(linkedFallbackFs.getUri());
+              LOG.debug(msg.toString(), e);
+            }
+            return false;
+          }
+        } else {
+          StringBuilder msg =
+              new StringBuilder("Trying to create directory on parent ")
+                  .append(p).append(" of mount link. This mount path does ")
+                  .append("not exit at fallback fs: ")
+                  .append(linkedFallbackFs.getUri())
+                  .append("So, cannot create directory: ").append(dirToCreate);
+          LOG.info(msg);
+        }
+      }
+
       throw readOnlyMountTable("mkdirs",  dir);
     }
 
