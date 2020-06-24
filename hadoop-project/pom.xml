@@ -1131,7 +1131,7 @@
       <dependency>
         <groupId>com.microsoft.azure</groupId>
         <artifactId>azure-storage</artifactId>
-        <version>7.0.0</version>
+        <version>7.0.1</version>
       </dependency>
 
       <!--Wildfly openssl dependency is introduced by HADOOP-15669-->
@@ -1189,11 +1189,6 @@
        <version>1.46</version>
        <scope>test</scope>
      </dependency>
-      <dependency>
-        <groupId>com.microsoft.azure</groupId>
-        <artifactId>azure-storage</artifactId>
-        <version>5.4.0</version>
-    </dependency>
       
      <dependency>
         <groupId>joda-time</groupId>
