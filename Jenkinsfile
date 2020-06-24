@@ -35,7 +35,7 @@ pipeline {
         DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile"
         YETUS='yetus'
         // Branch or tag name.  Yetus release tags are 'rel/X.Y.Z'
-        YETUS_VERSION='rel/0.12.0'
+        YETUS_VERSION='YETUS-972'
     }
 
     parameters {
@@ -51,7 +51,7 @@ pipeline {
                     checkout([
                         $class: 'GitSCM',
                         branches: [[name: "${env.YETUS_VERSION}"]],
-                        userRemoteConfigs: [[ url: 'https://github.com/apache/yetus.git']]]
+                        userRemoteConfigs: [[ url: 'https://github.com/aajisaka/yetus.git']]]
                     )
                 }
             }
@@ -159,7 +159,8 @@ pipeline {
                         YETUS_ARGS+=("--multijdkdirs=/usr/lib/jvm/java-11-openjdk-amd64")
                         YETUS_ARGS+=("--multijdktests=compile")
 
-                        "${TESTPATCHBIN}" "${YETUS_ARGS[@]}"
+                        # custom javadoc goal
+                        YETUS_ARGS+=("--mvn-javadoc=process-sources javadoc:javadoc-no-fork")
                         '''
                 }
             }
