@@ -90,7 +90,6 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
         assertArrayEquals("buffer read from stream", r, b);
       }
     }
-
   }
 
   @Test
@@ -234,7 +233,6 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
         <= buffer.length);
 
     boolean isAppendBlob = true;
-
     if (!fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(testFilePath).toString())) {
       isAppendBlob = false;
     }

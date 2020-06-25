@@ -418,6 +418,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
             throw new FileNotFoundException(ex.getMessage());
           }
         }
+
         if (ex.getCause() instanceof AzureBlobFileSystemException) {
           ex = (AzureBlobFileSystemException) ex.getCause();
         }
@@ -427,7 +428,6 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     }
     flushWrittenBytesToServiceInternal(position, false, isClose);
   }
-
 
   private synchronized void flushWrittenBytesToServiceAsync() throws IOException {
     shrinkWriteOperationQueue();
@@ -440,7 +440,6 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
 
   private synchronized void flushWrittenBytesToServiceInternal(final long offset,
       final boolean retainUncommitedData, final boolean isClose) throws IOException {
-
     // flush is called for appendblob only on close
     if (this.isAppendBlob && !isClose) {
       return;
@@ -487,7 +486,6 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   }
 
   private void waitForTaskToComplete() throws IOException {
-
     boolean completed;
     for (completed = false; completionService.poll() != null; completed = true) {
       // keep polling until there is no data

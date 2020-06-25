@@ -149,6 +149,7 @@ public class AzureBlobFileSystemStore implements Closeable {
    * The set of directories where we should store files as append blobs.
    */
   private Set<String> appendBlobDirSet;
+
   public AzureBlobFileSystemStore(URI uri, boolean isSecureScheme,
                                   Configuration configuration,
                                   AbfsCounters abfsCounters) throws IOException {
@@ -200,8 +201,8 @@ public class AzureBlobFileSystemStore implements Closeable {
       throw new IOException(e);
     }
     LOG.trace("IdentityTransformer init complete");
-    // Extract the directories that should contain append blobs
 
+    // Extract the directories that should contain append blobs
     String appendBlobDirs = abfsConfiguration.getAppendBlobDirs();
     if (appendBlobDirs.trim().isEmpty()) {
       this.appendBlobDirSet = new HashSet<String>();
@@ -1355,7 +1356,6 @@ public class AzureBlobFileSystemStore implements Closeable {
   }
 
   private boolean isKeyForDirectorySet(String key, Set<String> dirSet) {
-
     for (String dir : dirSet) {
       if (dir.isEmpty() || key.startsWith(dir + AbfsHttpConstants.FORWARD_SLASH)) {
         return true;

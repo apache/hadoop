@@ -82,6 +82,7 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
        * bytes_sent : bytes wrote in AbfsOutputStream.
        */
       if (fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(sendRequestPath).toString())) {
+        // no network calls are made for hflush in case of appendblob
         connectionsMade = assertAbfsStatistics(AbfsStatistic.CONNECTIONS_MADE,
             5, metricMap);
         requestsSent = assertAbfsStatistics(AbfsStatistic.SEND_REQUESTS, 3,
@@ -133,6 +134,7 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
        *
        */
       if (fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(sendRequestPath).toString())) {
+        // no network calls are made for hflush in case of appendblob
         assertAbfsStatistics(AbfsStatistic.CONNECTIONS_MADE,
             connectionsMade + 1 + LARGE_OPERATIONS, metricMap);
         assertAbfsStatistics(AbfsStatistic.SEND_REQUESTS,
@@ -263,6 +265,7 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
           bytesReceived + LARGE_OPERATIONS * (testResponseString.getBytes().length),
           metricMap);
       if (fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(getResponsePath).toString())) {
+        // no network calls are made for hflush in case of appendblob
         assertAbfsStatistics(AbfsStatistic.GET_RESPONSES,
             getResponses + 3 + LARGE_OPERATIONS, metricMap);
       } else {

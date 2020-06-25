@@ -189,7 +189,6 @@ public class AbfsRestOperation {
       try {
         LOG.debug("Retrying REST operation {}. RetryCount = {}",
             operationType, retryCount);
-
         Thread.sleep(client.getRetryPolicy().getRetryInterval(retryCount));
       } catch (InterruptedException ex) {
         Thread.currentThread().interrupt();
@@ -197,8 +196,12 @@ public class AbfsRestOperation {
     }
 
     if (result.getStatusCode() >= HttpURLConnection.HTTP_BAD_REQUEST) {
+      // For AppendBlob its possible that the append succeeded in the backend but the request failed. However a retry would fail
+      // with an InvalidQueryParameterValue(as the current offset would be unacceptable).
+      // Hence, we pass/succeed the appendblob append call
+      // in case we are doing a retry and we get the InvalidQueryParameterValue error code.
       if (this.isAppendBlobAppend && retryCount > 0 && result.getStorageErrorCode().equals("InvalidQueryParameterValue")) {
-        //Do length check once available.
+        //TODO: Do length check to confirm the write has occured at the offset of request. (once available from backend)
         return;
       }
       throw new AbfsRestOperationException(result.getStatusCode(), result.getStorageErrorCode(),
