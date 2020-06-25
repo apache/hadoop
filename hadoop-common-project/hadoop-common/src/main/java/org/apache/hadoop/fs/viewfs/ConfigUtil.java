@@ -213,9 +213,10 @@ public class ConfigUtil {
   }
 
   /**
-   * Get the name of the default mount table to use. If {@link Constants#CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE_NAME_KEY}
-   * is specified, it's value is returned. Otherwise, {@link Constants#CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE}
-   * is returned.
+   * Get the name of the default mount table to use. If
+   * {@link Constants#CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE_NAME_KEY} is specified,
+   * it's value is returned. Otherwise,
+   * {@link Constants#CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE} is returned.
    *
    * @param conf Configuration to use.
    * @return the name of the default mount table to use.

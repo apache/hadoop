@@ -150,6 +150,39 @@ DFSAdmin commands with View File System Overload Scheme
 
 Please refer to the [HDFSCommands Guide](./HDFSCommands.html#dfsadmin_with_ViewFsOverloadScheme)
 
+Accessing paths without authority
+-------------------------------------------------------
+
+Accessing paths like `hdfs:///foo/bar`, `hdfs:/foo/bar` or `viewfs:/foo/bar`, where the authority (cluster name or hostname) of the path is not specified, is very common.
+This is especially true when the same code is expected to run on multiple clusters with different names or HDFS Namenodes.
+
+When `ViewFileSystemOverloadScheme` is used (as described above), and if (a) the scheme of the path being accessed is different from the scheme of the path specified as `fs.defaultFS`
+and (b) if the path doesn't have an authority specified, accessing the path can result in an error like `Empty Mount table in config for viewfs://default/`.
+For example, when the following configuration is used but a path like `viewfs:/foo/bar` or `viewfs:///foo/bar` is accessed, such an error arises.
+```xml
+<property>
+  <name>fs.hdfs.impl</name>
+  <value>org.apache.hadoop.fs.viewfs.ViewFileSystemOverloadScheme</value>
+</property>
+
+<property>
+  <name>fs.defaultFS</name>
+  <value>hdfs://cluster/</value>
+</property>
+```
+
+#### Solution
+To avoid the above problem, the configuration `fs.viewfs.mounttable.default.name.key` has to be set to the name of the cluster, i.e, the following should be added to `core-site.xml`
+```xml
+<property>
+  <name>fs.viewfs.mounttable.default.name.key</name>
+  <value>cluster</value>
+</property>
+```
+The string in this configuration `cluster` should match the name of the authority in the value of `fs.defaultFS`. Further, the configuration should have a mount table
+configured correctly as in the above examples, i.e., the configurations `fs.viewfs.mounttable.*cluster*.link.<mountLinkPath>` should be set (note the same string
+`cluster` is used in these configurations).
+
 Appendix: A Mount Table Configuration with XInclude
 ---------------------------------------------------
 
