@@ -286,9 +286,9 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
       // compare only the final components of the paths as
       // full paths have different schemes (hdfs:/ vs. viewfs:/).
       List<String> expectedPaths = Arrays.stream(expectedStatus)
-          .map(s -> s.getPath().getName()).collect(Collectors.toList());
+          .map(s -> s.getPath().getName()).sorted().collect(Collectors.toList());
       List<String> paths = Arrays.stream(status)
-          .map(s -> s.getPath().getName()).collect(Collectors.toList());
+          .map(s -> s.getPath().getName()).sorted().collect(Collectors.toList());
       assertEquals(expectedPaths, paths);
     }
   }
