@@ -234,8 +234,8 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     S3AFileSystem fs = getFileSystem();
     resetMetricDiffs();
     intercept(FileNotFoundException.class,
-            () -> fs.listFiles(dir, true));
-    verifyOperationCount(2, 1);
+          () -> fs.listFiles(dir, true));
+    verifyOperationCount(2, 2);
   }
 
   @Test

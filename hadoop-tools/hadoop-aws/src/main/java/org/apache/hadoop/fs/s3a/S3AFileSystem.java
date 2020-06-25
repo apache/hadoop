@@ -4200,9 +4200,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // fallback to file existence check as the path
       // can be a file or empty directory.
       if (!listFilesAssumingDir.hasNext()) {
-        final S3AFileStatus fileStatus = innerGetFileStatus(path,
-                false,
-                StatusProbeEnum.HEAD_OR_DIR_MARKER);
+        final S3AFileStatus fileStatus = (S3AFileStatus) getFileStatus(path);
         if (fileStatus.isFile()) {
           return new Listing.SingleStatusRemoteIterator(
                   toLocatedFileStatus(fileStatus));
@@ -4246,9 +4244,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       final PathMetadata pm = metadataStore.get(path, true);
       if (pm != null) {
         if (pm.isDeleted()) {
-          OffsetDateTime deletedAt = OffsetDateTime.ofInstant(
-                  Instant.ofEpochMilli(pm.getFileStatus().getModificationTime()),
-                  ZoneOffset.UTC);
+          OffsetDateTime deletedAt = OffsetDateTime
+                  .ofInstant(Instant.ofEpochMilli(
+                          pm.getFileStatus().getModificationTime()),
+                          ZoneOffset.UTC);
           throw new FileNotFoundException("Path " + path + " is recorded as " +
                   "deleted by S3Guard at " + deletedAt);
         }
@@ -4258,7 +4257,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               allowAuthoritative);
       tombstones = metadataStoreListFilesIterator.listTombstones();
       // if all of the below is true
-      //  - authoritative access is allowed for this metadatastore for this directory,
+      //  - authoritative access is allowed for this metadatastore
+      //  for this directory,
       //  - all the directory listings are authoritative on the client
       //  - the caller does not force non-authoritative access
       // return the listing without any further s3 access
