@@ -97,7 +97,7 @@ public class TestHSAdminServer {
     @Override
     public Set<String> getGroupsSet(String user) throws IOException {
       Set<String> result =
-          ImmutableSet.of(user + (10 * i + 1) , user + (10 * i +2));
+          ImmutableSet.of(user + (10 * i + 1), user + (10 * i +2));
       i++;
       return result;
     }

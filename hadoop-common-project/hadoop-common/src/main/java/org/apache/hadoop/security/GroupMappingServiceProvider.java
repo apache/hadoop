@@ -61,5 +61,5 @@ public interface GroupMappingServiceProvider {
    * @return set of group memberships of user
    * @throws IOException
    */
-  public Set<String> getGroupsSet(String user) throws IOException;
+  Set<String> getGroupsSet(String user) throws IOException;
 }

@@ -29,6 +29,6 @@ public interface Groups {
 
   public List<String> getGroups(String user) throws IOException;
 
-  public Set<String> getGroupsSet(String user) throws IOException;
+  Set<String> getGroupsSet(String user) throws IOException;
 
 }

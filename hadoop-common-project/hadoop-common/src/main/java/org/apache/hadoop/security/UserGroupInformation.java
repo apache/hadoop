@@ -1563,11 +1563,11 @@ public class UserGroupInformation {
   }
 
   public String getPrimaryGroupName() throws IOException {
-    Collection<String> groups = getGroupsSet();
-    if (groups.isEmpty()) {
+    Set<String> groupsSet = getGroupsSet();
+    if (groupsSet.isEmpty()) {
       throw new IOException("There is no primary group for UGI " + this);
     }
-    return groups.iterator().next();
+    return groupsSet.iterator().next();
   }
 
   /**
@@ -1686,8 +1686,8 @@ public class UserGroupInformation {
    *    fails, it returns an empty list.
    */
   public String[] getGroupNames() {
-    Collection<String> groups = getGroupsSet();
-    return groups.toArray(new String[groups.size()]);
+    Collection<String> groupsSet = getGroupsSet();
+    return groupsSet.toArray(new String[groupsSet.size()]);
   }
 
   /**

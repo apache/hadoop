@@ -54,8 +54,7 @@ public class DummyGroupMapping implements GroupMappingServiceProvider {
   public Set<String> getGroupsSet(String user) throws IOException {
     if (user.equals("root")) {
       return Sets.newHashSet("admin");
-    }
-    else if (user.equals("nobody")) {
+    } else if (user.equals("nobody")) {
       return Sets.newHashSet("nobody");
     } else {
       String[] groups = HadoopUsersConfTestHelper.getHadoopUserGroups(user);

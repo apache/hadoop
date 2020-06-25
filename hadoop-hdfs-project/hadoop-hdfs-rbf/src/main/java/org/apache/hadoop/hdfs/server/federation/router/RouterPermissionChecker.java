@@ -18,8 +18,6 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

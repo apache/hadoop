@@ -120,9 +120,11 @@ public class CompositeGroupsMapping
             user, provider.getClass().getSimpleName(), e.toString());
         LOG.debug("Stacktrace: ", e);
       }
-      if (groups != null && ! groups.isEmpty()) {
+      if (groups != null && !groups.isEmpty()) {
         groupSet.addAll(groups);
-        if (!combined) break;
+        if (!combined) {
+          break;
+        }
       }
     }
     return groupSet;
