@@ -41,12 +41,17 @@ public interface Constants {
    * then the hadoop default value (/user) is used.
    */
   public static final String CONFIG_VIEWFS_HOMEDIR = "homedir";
-  
+
+  /**
+   * Config key to specify the name of the default mount table.
+   */
+  public static final String CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE_NAME_KEY = "fs.viewfs.mounttable.default.name.key";
+
   /**
    * Config variable name for the default mount table.
    */
   public static final String CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE = "default";
-  
+
   /**
    * Config variable full prefix for the default mount table.
    */
