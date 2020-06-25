@@ -1008,10 +1008,11 @@ abstract public class ViewFsBaseTest {
   public void testListStatusWithNoGroups() throws Exception {
     final UserGroupInformation userUgi = UserGroupInformation
         .createUserForTesting("user@HADOOP.COM", new String[] {});
+    final String clusterName = "mycluster";
+    conf.set(Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE_NAME_KEY, clusterName);
     userUgi.doAs(new PrivilegedExceptionAction<Object>() {
       @Override
       public Object run() throws Exception {
-        String clusterName = Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE;
         URI viewFsUri =
             new URI(FsConstants.VIEWFS_SCHEME, clusterName, "/", null, null);
         FileSystem vfs = FileSystem.get(viewFsUri, conf);
