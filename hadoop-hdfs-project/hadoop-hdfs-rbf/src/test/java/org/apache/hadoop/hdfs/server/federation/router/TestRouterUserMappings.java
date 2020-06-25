@@ -57,6 +57,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -203,6 +204,10 @@ public class TestRouterUserMappings {
     final List<String> groupNames2 = new ArrayList<>();
     groupNames2.add("gr3");
     groupNames2.add("gr4");
+    final Set<String> groupNamesSet1 = new LinkedHashSet<>();
+    groupNamesSet1.addAll(groupNames1);
+    final Set<String> groupNamesSet2 = new LinkedHashSet<>();
+    groupNamesSet2.addAll(groupNames2);
 
     //keys in conf
     String userKeyGroups = DefaultImpersonationProvider.getTestProvider().
@@ -234,6 +239,8 @@ public class TestRouterUserMappings {
     // set groups for users
     when(ugi1.getGroups()).thenReturn(groupNames1);
     when(ugi2.getGroups()).thenReturn(groupNames2);
+    when(ugi1.getGroupsSet()).thenReturn(groupNamesSet1);
+    when(ugi2.getGroupsSet()).thenReturn(groupNamesSet2);
 
     // check before refresh
     LambdaTestUtils.intercept(AuthorizationException.class,

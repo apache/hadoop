@@ -70,6 +70,7 @@ import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
 import javax.security.auth.spi.LoginModule;
 
+import org.apache.commons.compress.utils.Lists;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -1483,8 +1484,8 @@ public class UserGroupInformation {
    * map that has the translation of usernames to groups.
    */
   private static class TestingGroups extends Groups {
-    private final Map<String, List<String>> userToGroupsMapping = 
-      new HashMap<String,List<String>>();
+    private final Map<String, Set<String>> userToGroupsMapping =
+        new HashMap<>();
     private Groups underlyingImplementation;
     
     private TestingGroups(Groups underlyingImplementation) {
@@ -1494,17 +1495,22 @@ public class UserGroupInformation {
     
     @Override
     public List<String> getGroups(String user) throws IOException {
-      List<String> result = userToGroupsMapping.get(user);
-      
-      if (result == null) {
-        result = underlyingImplementation.getGroups(user);
-      }
+      return new ArrayList<>(getGroupsSet(user));
+    }
 
+    @Override
+    public Set<String> getGroupsSet(String user) throws IOException {
+      Set<String> result = userToGroupsMapping.get(user);
+      if (result == null) {
+        result = underlyingImplementation.getGroupsSet(user);
+      }
       return result;
     }
 
     private void setUserGroups(String user, String[] groups) {
-      userToGroupsMapping.put(user, Arrays.asList(groups));
+      Set<String> groupsSet = new LinkedHashSet<>();
+      Collections.addAll(groupsSet, groups);
+      userToGroupsMapping.put(user, groupsSet);
     }
   }
 

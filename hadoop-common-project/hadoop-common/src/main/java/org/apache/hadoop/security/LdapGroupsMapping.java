@@ -519,7 +519,7 @@ public class LdapGroupsMapping
     }
     SearchResult result = results.nextElement();
 
-    Set<String> groups = null;
+    Set<String> groups = Collections.emptySet();
     if (useOneQuery) {
       try {
         /**
@@ -698,7 +698,7 @@ public class LdapGroupsMapping
   }
 
   @Override
-  public Set<String> getGroupsSet(String user) throws IOException {
+  public Set<String> getGroupsSet(String user) {
     /*
      * Normal garbage collection takes care of removing Context instances when
      * they are no longer in use. Connections used by Context instances being
