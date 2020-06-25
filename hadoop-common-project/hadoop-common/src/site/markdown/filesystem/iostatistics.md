@@ -12,7 +12,7 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 
-# Introduction to the IOStatistics API
+# Statistic collection with the IOStatistics API
 
 ```java
 @InterfaceAudience.Public
@@ -56,15 +56,15 @@ The `IOStatistics` Interface exports five kinds of statistic:
 
 | Category | Type | Description |
 |------|------|-------------|
-| `counter`        | `long`          | a counter which may increase in value and is always >= 0 |
-| `gauge`          | `long`          | an arbitrary value which can down as well as up; possibly negative |
-| `minimum`        | `long`          | an minimum value; possibly negative |
-| `maximum`        | `long`          | a maximum value; possibly negative |
-| `meanStatistic` | `MeanStatistic` | an arithmetic mean and sample size |
+| `counter`        | `long`          | a counter which may increase in value; SHOULD BE >= 0 |
+| `gauge`          | `long`          | an arbitrary value which can down as well as up; SHOULD BE >= 0|
+| `minimum`        | `long`          | an minimum value; MAY BE negative |
+| `maximum`        | `long`          | a maximum value;  MAY BE negative |
+| `meanStatistic` | `MeanStatistic` | an arithmetic mean and sample size; mean MAY BE negative|
 
 For are simple `long` values, with the variations how they are likely to
 change and how they are aggregated.
-`MeanStatistic` is a tuple of `(mean, sample-count)` to support aggregation.
+
 
 #### Aggregation of statistic values
 
@@ -72,19 +72,14 @@ For the different statistic category, the result of `aggregate(x, y)` is
 
 | Category         | Aggregation |
 |------------------|-------------|
-| `counter`        | `x + y`     |
+| `counter`        | `min(0, x) + min(0, y)`     |
 | `gauge`          | `min(0, x) + min(0, y)` |
 | `minimum`        | `min(x, y)` |
 | `maximum`        | `max(x, y)` |
 | `meanStatistic` | calculation of the mean of `x` and `y` ) |
 
-Because the `MeanStatistic` type contains the mean and the sample, the new mean is
-calculated by a straightforward formula:
 
-```
- samples' = x.samples + y.samples
- mean' = (x.mean * x.samples) + (y.mean * y.samples) / samples'
-```
+#### Class `MeanStatistic`
 
 
 
@@ -97,6 +92,27 @@ for use by applications.
 <!--  Class: MeanStatistic -->
 <!--  ============================================================= -->
 
+`MeanStatistic` is a tuple of `(mean, samples)` to support aggregation.
+
+A `MeanStatistic`  with a sample of `0` is considered an empty statistic.
+
+All `MeanStatistic` instances where `sample = 0` are considered equal,
+irrespective of the `mean` value.
+
+Algorithm to calculate the mean :
+
+```python
+if x.samples = 0:
+    y
+else if y.samples = 0 :
+    x
+else:
+    samples' = x.samples + y.samples
+    mean' = (x.mean * x.samples) + (y.mean * y.samples) / samples'
+    (samples', mean')
+```
+
+Implicitly, this means that if both samples are empty, then the aggregate value is also empty.
 
 ```java
 public final class MeanStatistic implements Serializable, Cloneable {
@@ -156,6 +172,9 @@ public final class MeanStatistic implements Serializable, Cloneable {
     if (this == o) { return true; }
     if (o == null || getClass() != o.getClass()) { return false; }
     MeanStatistic that = (MeanStatistic) o;
+    if (this.isEmpty()) {
+      return that.isEmpty();
+    }
     return Double.compare(that.mean, mean) == 0 &&
         samples == that.samples;
   }
@@ -163,16 +182,6 @@ public final class MeanStatistic implements Serializable, Cloneable {
   @Override
   public MeanStatistic clone() {
     return new MeanStatistic(this);
-  }
-
-  @Override
-  public String toString() {
-    final StringBuilder sb = new StringBuilder(
-        "MeanStatistic{");
-    sb.append("mean=").append(mean);
-    sb.append(", samples=").append(samples);
-    sb.append('}');
-    return sb.toString();
   }
 
   public MeanStatistic copy() {
@@ -287,7 +296,7 @@ public interface IOStatistics {
 }
 ```
 
-### Stastic Naming
+### Statistic Naming
 
 The naming policy of statistics is designed to be readable, shareable
 and ideally consistent across `IOStatisticSource` implementations.
@@ -313,8 +322,8 @@ and ideally consistent across `IOStatisticSource` implementations.
    Note 2: keys defined in these classes SHALL NOT be removed
    from subsequent Hadoop releases.
 
-* A common metric name MUST be used for its defined statistic and
-  MUST use the defined unit of measurement.
+* A common statistic name MUST NOT be used to report any other statistic and
+  MUST use the pre-defined unit of measurement.
 
 * A statistic name in one of the maps SHOULD NOT be re-used in another map.
   This aids diagnostics of logged statistics.
@@ -332,8 +341,8 @@ For each map of statistics returned:
 
 * The set of keys in a map SHOULD remain unchanged, and MUST NOT remove keys.
 
-*  The statistics SHOULD be dynamic: every lookup of an entry SHOULD
-   return the latest value.
+* The statistics SHOULD be dynamic: every lookup of an entry SHOULD
+  return the latest value.
 
 * The values MAY change across invocations of `Map.values()` and `Map.entries()`
 
@@ -344,7 +353,7 @@ For each map of statistics returned:
 * The returned `Map.Entry` instances MUST return the same value on
  repeated `getValue()` calls.
 
-* Queries of statistics SHOULD Be fast and Nonblocking to the extent
+* Queries of statistics SHOULD Be fast and non-blocking to the extent
  that if invoked during a long operation, they will prioritize
  returning fast over most timely values.
 
@@ -352,12 +361,11 @@ For each map of statistics returned:
  operations (e.g stream IO statistics as provided by a filesystem
  instance).
 
-
 * Statistics which represent time SHOULD use milliseconds as their unit.
 
 * Statistics which represent time and use a different unit MUST document
   the unit used.
-   
+
 ### Thread Model
 
 1. An instance of `IOStatistics` can be shared across threads;
@@ -366,7 +374,8 @@ For each map of statistics returned:
 
 1. Iterators returned from the maps MUST NOT be shared across threads.
 
-1. The statistics collected MUST include all operations which took place across all threads performing work for the monitored object.
+1. The statistics collected MUST include all operations which took
+   place across all threads performing work for the monitored object.
 
 1. The statistics reported MUST NOT be local to the active thread.
 
@@ -419,10 +428,11 @@ LOG.info("IOStatistics : {}", latest);
 
 This contains implementation classes to support providing statistics to applications.
 
-These MUST NOT be used by applications. If a feature is needed from this package then
-the provisioning of a public implementation should be raised via the Hadoop development
+These MUST NOT BE used by applications. If a feature is needed from this package then
+the provisioning of a public implementation MAY BE raised via the Hadoop development
 channels.
 
 These MAY be used by those implementations of the Hadoop `FileSystem`, `AbstractFileSystem`
-and related classes which are not in the hadoop source tree. Implementors MUST BR
-that all this code is unstable and may change across minor point releases of Hadoop.
+and related classes which are not in the hadoop source tree. Implementors need to
+be aware that the implementation this code is unstable and may change across
+minor point releases of Hadoop.

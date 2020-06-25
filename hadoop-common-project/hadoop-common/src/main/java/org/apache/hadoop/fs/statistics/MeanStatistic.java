@@ -148,6 +148,9 @@ public final class MeanStatistic implements Serializable, Cloneable {
     if (this == o) { return true; }
     if (o == null || getClass() != o.getClass()) { return false; }
     MeanStatistic that = (MeanStatistic) o;
+    if (this.isEmpty()) {
+      return that.isEmpty();
+    }
     return Double.compare(that.mean, mean) == 0 &&
         samples == that.samples;
   }
