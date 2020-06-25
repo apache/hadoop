@@ -485,24 +485,14 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
         && (mapping.getParentQueue().equals(PRIMARY_GROUP_MAPPING)
             || mapping.getParentQueue().equals(SECONDARY_GROUP_MAPPING))) {
       // dynamic parent queue
-      return QueueMappingBuilder.create()
-          .type(mapping.getType())
-          .source(mapping.getSource())
-          .queue(mapping.getQueue())
-          .parentQueue(mapping.getParentQueue())
-          .build();
+      return mapping;
     } else if (mapping.hasParentQueue()) {
       //if parent queue is specified,
       // then it should exist and be an instance of ManagedParentQueue
       QueuePlacementRuleUtils.validateQueueMappingUnderParentQueue(
               queueManager.getQueue(mapping.getParentQueue()),
           mapping.getParentQueue(), mapping.getQueue());
-      return QueueMappingBuilder.create()
-          .type(mapping.getType())
-          .source(mapping.getSource())
-          .queue(mapping.getQueue())
-          .parentQueue(mapping.getParentQueue())
-          .build();
+      return mapping;
     }
 
     return null;
