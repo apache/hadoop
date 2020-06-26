@@ -249,8 +249,7 @@ public class TestViewFsLinkFallback {
     // user1/hive does not exists in fallback.
     assertFalse(fsTarget.exists(test.getParent()));
 
-    vfs.mkdir(multipleLevelToInternalDir,
-        FsPermission.getDirDefault(),false);
+    vfs.mkdir(multipleLevelToInternalDir, FsPermission.getDirDefault(), false);
     assertTrue(fsTarget.exists(test));
 
   }
