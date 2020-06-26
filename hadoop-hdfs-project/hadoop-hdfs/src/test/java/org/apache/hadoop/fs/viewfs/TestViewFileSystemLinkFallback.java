@@ -736,7 +736,8 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
    * Tests that mkdirs should return false when there is a problem with
    * fallbackfs.
    */
-  @Test public void testMkdirsShouldReturnFalseWhenFallbackFSNotAvailable()
+  @Test
+  public void testMkdirsShouldReturnFalseWhenFallbackFSNotAvailable()
       throws Exception {
     Configuration conf = new Configuration();
     conf.setBoolean(Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS, false);

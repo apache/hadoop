@@ -228,7 +228,7 @@ public class TestViewFsLinkFallback {
    * Tests that mkdir with createParent false should still create parent in
    * fallback when the same mount dir exist.
    */
-  @ Test
+  @Test
   public void testMkdirShouldCreateParentDirInFallbackWhenMountDirExist()
       throws Exception {
     Configuration conf = new Configuration();
