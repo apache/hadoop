@@ -1134,8 +1134,7 @@ public class ViewFs extends AbstractFileSystem {
 
     @Override
     public void mkdir(final Path dir, final FsPermission permission,
-        final boolean createParent) throws AccessControlException,
-        FileAlreadyExistsException {
+        final boolean createParent) throws IOException {
       if (theInternalDir.isRoot() && dir == null) {
         throw new FileAlreadyExistsException("/ already exits");
       }
@@ -1143,20 +1142,24 @@ public class ViewFs extends AbstractFileSystem {
       if (this.fsState.getRootFallbackLink() != null) {
         AbstractFileSystem linkedFallbackFs =
             this.fsState.getRootFallbackLink().getTargetFileSystem();
-        Path p = Path.getPathWithoutSchemeAndAuthority(
+        Path parent = Path.getPathWithoutSchemeAndAuthority(
             new Path(theInternalDir.fullPath));
-        String child = (InodeTree.SlashPath.equals(dir)) ?
+        String leafChild = (InodeTree.SlashPath.equals(dir)) ?
             InodeTree.SlashPath.toString() :
             dir.getName();
-        Path dirToCreate = new Path(p, child);
+        Path dirToCreate = new Path(parent, leafChild);
         try {
-          linkedFallbackFs.mkdir(dirToCreate, permission, createParent);
+          // We are here because, the parent dir already exist in the mount
+          // table internal tree. So, let's create parent always in fallback.
+          linkedFallbackFs.mkdir(dirToCreate, permission, true);
+          return;
         } catch (IOException e) {
           if (LOG.isDebugEnabled()) {
             StringBuilder msg = new StringBuilder("Failed to create {}")
                 .append(" at fallback fs : {}");
             LOG.debug(msg.toString(), dirToCreate, linkedFallbackFs.getUri());
           }
+          throw e;
         }
       }
 

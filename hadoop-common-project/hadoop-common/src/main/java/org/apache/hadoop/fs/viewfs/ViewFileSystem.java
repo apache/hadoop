@@ -1343,12 +1343,12 @@ public class ViewFileSystem extends FileSystem {
       if (this.fsState.getRootFallbackLink() != null) {
         FileSystem linkedFallbackFs =
             this.fsState.getRootFallbackLink().getTargetFileSystem();
-        Path p = Path.getPathWithoutSchemeAndAuthority(
+        Path parent = Path.getPathWithoutSchemeAndAuthority(
             new Path(theInternalDir.fullPath));
-        String child = (InodeTree.SlashPath.equals(dir)) ?
+        String leafChild = (InodeTree.SlashPath.equals(dir)) ?
             InodeTree.SlashPath.toString() :
             dir.getName();
-        Path dirToCreate = new Path(p, child);
+        Path dirToCreate = new Path(parent, leafChild);
 
         try {
           return linkedFallbackFs.mkdirs(dirToCreate, permission);

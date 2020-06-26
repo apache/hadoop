@@ -19,6 +19,7 @@ package org.apache.hadoop.fs.viewfs;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -689,7 +690,7 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
     Configuration conf = new Configuration();
     conf.setBoolean(Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS, false);
     ConfigUtil.addLink(conf, "/user1/hive",
-        new Path(targetTestRoot.toString() + "/").toUri());
+        new Path(targetTestRoot.toString()).toUri());
     Path fallbackTarget = new Path(targetTestRoot, "fallbackDir");
     fsTarget.mkdirs(fallbackTarget);
     ConfigUtil.addLinkFallback(conf, fallbackTarget.toUri());
@@ -716,7 +717,7 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
     Configuration conf = new Configuration();
     conf.setBoolean(Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS, false);
     ConfigUtil.addLink(conf, "/user1/hive",
-        new Path(targetTestRoot.toString() + "/").toUri());
+        new Path(targetTestRoot.toString()).toUri());
     Path fallbackTarget = new Path(targetTestRoot, "fallbackDir");
     fsTarget.mkdirs(fallbackTarget);
     ConfigUtil.addLinkFallback(conf, fallbackTarget.toUri());
@@ -727,6 +728,39 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
       Path test = Path.mergePaths(fallbackTarget, multipleLevelToInternalDir);
       assertFalse(fsTarget.exists(test));
       assertTrue(vfs.mkdirs(multipleLevelToInternalDir));
+      assertTrue(fsTarget.exists(test));
+    }
+  }
+
+  /**
+   * Tests that mkdirs should return false when there is a problem with
+   * fallbackfs.
+   */
+  @Test public void testMkdirsShouldReturnFalseWhenFallbackFSNotAvailable()
+      throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS, false);
+    ConfigUtil.addLink(conf, "/user1/test",
+        new Path(targetTestRoot.toString()).toUri());
+    Path fallbackTarget = new Path(targetTestRoot, "fallbackDir");
+    fsTarget.mkdirs(fallbackTarget);
+    ConfigUtil.addLinkFallback(conf, fallbackTarget.toUri());
+    try (FileSystem vfs = FileSystem.get(viewFsDefaultClusterUri, conf)) {
+      //user1/test1 does not exist in fallback
+      Path nextLevelToInternalDir = new Path("/user1/test1");
+      Path test = Path.mergePaths(fallbackTarget, nextLevelToInternalDir);
+      assertFalse(fsTarget.exists(test));
+      // user1 exists in viewFS mount.
+      assertNotNull(vfs.getFileStatus(new Path("/user1")));
+      // user1 does not exists in fallback.
+      assertFalse(fsTarget.exists(test.getParent()));
+      cluster.shutdownNameNodes(); // Stopping fallback server
+      // /user1/test1 does not exist in mount internal dir tree, it would
+      // attempt to create in fallback.
+      assertFalse(vfs.mkdirs(nextLevelToInternalDir));
+      cluster.restartNameNodes();
+      // should return true succeed when fallback fs is back to normal.
+      assertTrue(vfs.mkdirs(nextLevelToInternalDir));
       assertTrue(fsTarget.exists(test));
     }
   }
