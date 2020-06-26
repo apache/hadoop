@@ -264,12 +264,12 @@ public class ITestAbfsInputStreamStatistics
       out.hflush();
 
       // AbfsRestOperation Instance required for eTag.
-      AbfsRestOperation abfsRestOperation = fs.getAbfsClient().getPathStatus(
-          "/test/" + getMethodName(), false);
+      AbfsRestOperation abfsRestOperation =
+          fs.getAbfsClient().getPathStatus(nullStatFilePath.toUri().getPath(), false);
 
       // AbfsInputStream with no StreamStatistics.
       in = new AbfsInputStream(fs.getAbfsClient(), null,
-          "/test/" + getMethodName(), ONE_KB,
+          nullStatFilePath.toUri().getPath(), ONE_KB,
           abfsInputStreamContext,
           abfsRestOperation.getResult().getResponseHeader("ETag"));
 

@@ -202,6 +202,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       statistics.incrementBytesRead(bytesToRead);
     }
     if (streamStatistics != null) {
+      // Bytes read from the local buffer.
+      streamStatistics.bytesReadFromBuffer(bytesToRead);
       streamStatistics.bytesRead(bytesToRead);
     }
     return bytesToRead;
@@ -236,9 +238,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       if (receivedBytes > 0) {
         incrementReadOps();
         LOG.debug("Received data from read ahead, not doing remote read");
-        if (streamStatistics != null) {
-          streamStatistics.bytesReadFromBuffer(receivedBytes);
-        }
         return receivedBytes;
       }
 
