@@ -167,19 +167,6 @@ public class TestLogsCLI {
         "options parsing failed: Unrecognized option: -InvalidOpts"));
   }
 
-  @Test(timeout = 5000l)
-  public void testInvalidApplicationId() throws Exception {
-    YarnClient mockYarnClient = createMockYarnClient(
-        YarnApplicationState.FINISHED,
-        UserGroupInformation.getCurrentUser().getShortUserName());
-    LogsCLI cli = new LogsCLIForTest(mockYarnClient);
-    cli.setConf(conf);
-
-    int exitCode = cli.run( new String[] { "-applicationId", "not_an_app_id"});
-    assertTrue(exitCode == -1);
-    assertTrue(sysErrStream.toString().startsWith("Invalid ApplicationId specified"));
-  }
-
   @Test(timeout = 5000L)
   public void testInvalidAMContainerId() throws Exception {
     conf.setBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED, true);
