@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -46,6 +45,9 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.junit.Assert.*;
+
 
 /**
  * Tests ViewFileSystemOverloadScheme with configured mount links.
@@ -233,6 +235,64 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
     try (FileSystem fs = FileSystem.get(conf)) {
       fs.listStatus(new Path("/nonMount"));
       Assert.fail("It should fail as no mount link with /nonMount");
+    }
+  }
+
+  /**
+   * Create mount links as follows
+   * hdfs://localhost:xxx/HDFSUser --> hdfs://localhost:xxx/HDFSUser/
+   * hdfs://localhost:xxx/local --> file://TEST_ROOT_DIR/root/
+   * Check that "viewfs:/" paths without authority can work when the
+   * default mount table name is set correctly.
+   */
+  @Test
+  public void testAccessViewFsPathWithoutAuthority() throws Exception {
+    final Path hdfsTargetPath = new Path(defaultFSURI + HDFS_USER_FOLDER);
+    addMountLinks(defaultFSURI.getAuthority(),
+        new String[] {HDFS_USER_FOLDER, LOCAL_FOLDER },
+        new String[] {hdfsTargetPath.toUri().toString(),
+            localTargetDir.toURI().toString() },
+        conf);
+
+    // /HDFSUser/test
+    Path hdfsDir = new Path(HDFS_USER_FOLDER, "test");
+    // /local/test
+    Path localDir = new Path(LOCAL_FOLDER, "test");
+    FileStatus[] expectedStatus;
+
+    try (FileSystem fs = FileSystem.get(conf)) {
+      fs.mkdirs(hdfsDir); // /HDFSUser/test
+      fs.mkdirs(localDir); // /local/test
+      expectedStatus = fs.listStatus(new Path("/"));
+    }
+
+    // check for viewfs path without authority
+    Path viewFsRootPath = new Path("viewfs:/");
+    try {
+      viewFsRootPath.getFileSystem(conf);
+      Assert.fail(
+          "Mount table with authority default should not be initialized");
+    } catch (IOException e) {
+      assertTrue(e.getMessage().contains(
+          "Empty Mount table in config for viewfs://default/"));
+    }
+
+    // set the name of the default mount table here and
+    // subsequent calls should succeed.
+    conf.set(Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE_NAME_KEY,
+        defaultFSURI.getAuthority());
+
+    try (FileSystem fs = viewFsRootPath.getFileSystem(conf)) {
+      FileStatus[] status = fs.listStatus(viewFsRootPath);
+      // compare only the final components of the paths as
+      // full paths have different schemes (hdfs:/ vs. viewfs:/).
+      List<String> expectedPaths = Arrays.stream(expectedStatus)
+          .map(s -> s.getPath().getName()).sorted()
+          .collect(Collectors.toList());
+      List<String> paths = Arrays.stream(status)
+          .map(s -> s.getPath().getName()).sorted()
+          .collect(Collectors.toList());
+      assertEquals(expectedPaths, paths);
     }
   }
 

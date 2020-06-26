@@ -465,7 +465,7 @@ abstract class InodeTree<T> {
       FileAlreadyExistsException, IOException {
     String mountTableName = viewName;
     if (mountTableName == null) {
-      mountTableName = Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE;
+      mountTableName = ConfigUtil.getDefaultMountTableName(config);
     }
     homedirPrefix = ConfigUtil.getHomeDirValue(config, mountTableName);
 
