@@ -132,7 +132,9 @@ abstract public class ViewFsBaseTest {
     
     // Set up the defaultMT in the config with our mount point links
     conf = new Configuration();
-    conf.set(Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE_NAME_KEY, MOUNT_TABLE_NAME);
+    conf.set(
+        Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE_NAME_KEY,
+        MOUNT_TABLE_NAME);
     ConfigUtil.addLink(conf, "/targetRoot", targetTestRoot.toUri());
     ConfigUtil.addLink(conf, "/user",
         new Path(targetTestRoot,"user").toUri());
@@ -1014,8 +1016,8 @@ abstract public class ViewFsBaseTest {
     userUgi.doAs(new PrivilegedExceptionAction<Object>() {
       @Override
       public Object run() throws Exception {
-        URI viewFsUri =
-            new URI(FsConstants.VIEWFS_SCHEME, MOUNT_TABLE_NAME, "/", null, null);
+        URI viewFsUri = new URI(
+            FsConstants.VIEWFS_SCHEME, MOUNT_TABLE_NAME, "/", null, null);
         FileSystem vfs = FileSystem.get(viewFsUri, conf);
         LambdaTestUtils.intercept(IOException.class,
             "There is no primary group for UGI", () -> vfs

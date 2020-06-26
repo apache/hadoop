@@ -277,7 +277,8 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
           "Empty Mount table in config for viewfs://default/"));
     }
 
-    // set the name of the default mount table here and subsequent calls should succeed.
+    // set the name of the default mount table here and
+    // subsequent calls should succeed.
     conf.set(Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE_NAME_KEY,
         defaultFSURI.getAuthority());
 
