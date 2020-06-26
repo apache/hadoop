@@ -1542,14 +1542,16 @@ public class ContractTestUtils extends Assert {
     StreamCapabilities source = (StreamCapabilities) stream;
     if (shouldHaveCapabilities != null) {
       for (String shouldHaveCapability : shouldHaveCapabilities) {
-        assertTrue("Should have capability: " + shouldHaveCapability,
+        assertTrue("Should have capability: " + shouldHaveCapability
+                + " in " + source,
             source.hasCapability(shouldHaveCapability));
       }
     }
 
     if (shouldNotHaveCapabilities != null) {
       for (String shouldNotHaveCapability : shouldNotHaveCapabilities) {
-        assertFalse("Should not have capability: " + shouldNotHaveCapability,
+        assertFalse("Should not have capability: " + shouldNotHaveCapability
+                + " in " + source,
             source.hasCapability(shouldNotHaveCapability));
       }
     }
@@ -1569,7 +1571,8 @@ public class ContractTestUtils extends Assert {
 
     for (String shouldHaveCapability: capabilities) {
       assertTrue("Should have capability: " + shouldHaveCapability
-              + " under " + path,
+              + " under " + path
+              + " in " + source,
           source.hasPathCapability(path, shouldHaveCapability));
     }
   }

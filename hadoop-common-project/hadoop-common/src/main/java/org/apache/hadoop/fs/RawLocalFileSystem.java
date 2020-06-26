@@ -46,6 +46,7 @@ import java.util.StringTokenizer;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.impl.StoreImplementationUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
@@ -233,7 +234,8 @@ public class RawLocalFileSystem extends FileSystem {
   /*********************************************************
    * For create()'s FSOutputStream.
    *********************************************************/
-  class LocalFSFileOutputStream extends OutputStream {
+  class LocalFSFileOutputStream extends OutputStream
+      implements Syncable, StreamCapabilities {
     private FileOutputStream fos;
     
     private LocalFSFileOutputStream(Path f, boolean append,
@@ -287,6 +289,22 @@ public class RawLocalFileSystem extends FileSystem {
       } catch (IOException e) {              // unexpected exception
         throw new FSError(e);                // assume native fs error
       }
+    }
+
+    @Override
+    public void hflush() throws IOException {
+      flush();
+    }
+
+    @Override
+    public void hsync() throws IOException {
+      flush();
+      fos.getFD().sync();
+    }
+
+    @Override
+    public boolean hasCapability(String capability) {
+      return StoreImplementationUtils.supportsSyncable(capability);
     }
   }
 

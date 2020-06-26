@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.contract;
 
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
@@ -31,8 +32,10 @@ import org.junit.AssumptionViolatedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertCapabilities;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.getFileStatusEventually;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
@@ -454,15 +457,22 @@ public abstract class AbstractContractCreateTest extends
 
     try (FSDataOutputStream out = fs.create(path, true)) {
 
-      boolean doesHFlush = out.hasCapability(
-          StreamCapabilities.StreamCapability.HFLUSH.getValue());
+      boolean doesHFlush = out.hasCapability(StreamCapabilities.HFLUSH);
       if (doesHFlush) {
         out.hflush();
       }
-      assertEquals("hflush support", supportsFlush, doesHFlush);
-      boolean doesHSync = out.hasCapability(
-          StreamCapabilities.StreamCapability.HSYNC.getValue());
-      assertEquals("hsync support", supportsSync, doesHSync);
+      String[] hflushCapabilities = {
+          StreamCapabilities.HFLUSH,
+      };
+      String[] hsyncCapabilities = {
+          StreamCapabilities.HSYNC,
+      };
+      assertCapabilities(out,
+          supportsFlush ? hflushCapabilities : null,
+          supportsFlush ? null : hflushCapabilities);
+      assertCapabilities(out,
+          supportsSync ? hsyncCapabilities : null,
+          supportsSync ? null : hsyncCapabilities);
 
       try {
         out.hflush();

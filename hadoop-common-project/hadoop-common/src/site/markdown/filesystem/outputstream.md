@@ -782,11 +782,8 @@ local data as can be written to full checksummed blocks of data.
 That is, the flush operations are not guaranteed to write all the pending
 data until the file is finally closed.
 
-That is, `sync()`, `hsync()` and `hflush()` may not persist all data written
-to the stream.
-
-For anyone thinking "this is a violation of this specification" —they are correct.
-The local filesystem was intended for testing, rather than production use.
+For this reason, the local fileystem accessed via `file://` URLs
+does not support syncable.
 
 ### <a name="checksummed-fs-issues"></a> Checksummed output streams
 
