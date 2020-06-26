@@ -86,6 +86,7 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
     // and position is not guaranteed) and ensure there is queue with
     // the same name
     Iterator<String> it = groupsSet.iterator();
+    it.next();
     while (it.hasNext()) {
       String group = it.next();
       if (this.queueManager.getQueue(group) != null) {

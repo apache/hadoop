@@ -88,7 +88,7 @@ public class TestGroupsCaching {
       if (blackList.contains(user)) {
         return Collections.emptySet();
       }
-      return Collections.unmodifiableSet(allGroups);
+      return new LinkedHashSet<>(allGroups);
     }
 
     @Override
