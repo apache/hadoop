@@ -242,7 +242,7 @@ public class Groups {
     if (staticUserToGroupsMap != null) {
       Set<String> staticMapping = staticUserToGroupsMap.get(user);
       if (staticMapping != null) {
-        return Collections.unmodifiableSet(staticMapping);
+        return staticMapping;
       }
     }
 
@@ -417,7 +417,7 @@ public class Groups {
         LOG.warn("Potential performance problem: getGroups(user=" + user +") " +
           "took " + deltaMs + " milliseconds.");
       }
-      return Collections.unmodifiableSet(groups);
+      return groups;
     }
   }
 

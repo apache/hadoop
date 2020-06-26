@@ -303,12 +303,12 @@ public class LdapGroupsMapping
   }
 
   private DirContext ctx;
-  private Configuration conf;
+  private volatile Configuration conf;
 
-  private Iterator<String> ldapUrls;
+  private volatile Iterator<String> ldapUrls;
   private String currentLdapUrl;
 
-  private boolean useSsl;
+  private volatile boolean useSsl;
   private String keystore;
   private String keystorePass;
   private String truststore;
@@ -321,21 +321,21 @@ public class LdapGroupsMapping
   private Iterator<BindUserInfo> bindUsers;
   private BindUserInfo currentBindUser;
 
-  private String userbaseDN;
+  private volatile String userbaseDN;
   private String groupbaseDN;
   private String groupSearchFilter;
-  private String userSearchFilter;
-  private String memberOfAttr;
+  private volatile String userSearchFilter;
+  private volatile String memberOfAttr;
   private String groupMemberAttr;
-  private String groupNameAttr;
-  private int groupHierarchyLevels;
-  private String posixUidAttr;
-  private String posixGidAttr;
+  private volatile String groupNameAttr;
+  private volatile int groupHierarchyLevels;
+  private volatile String posixUidAttr;
+  private volatile String posixGidAttr;
   private boolean isPosix;
-  private boolean useOneQuery;
+  private volatile boolean useOneQuery;
   private int numAttempts;
-  private int numAttemptsBeforeFailover;
-  private String ldapCtxFactoryClassName;
+  private volatile int numAttemptsBeforeFailover;
+  private volatile String ldapCtxFactoryClassName;
 
   /**
    * Returns list of groups for a user.
@@ -349,38 +349,7 @@ public class LdapGroupsMapping
    */
   @Override
   public synchronized List<String> getGroups(String user) {
-    /*
-     * Normal garbage collection takes care of removing Context instances when
-     * they are no longer in use. Connections used by Context instances being
-     * garbage collected will be closed automatically. So in case connection is
-     * closed and gets CommunicationException, retry some times with new new
-     * DirContext/connection.
-     */
-
-    // Tracks the number of attempts made using the same LDAP server
-    int atemptsBeforeFailover = 1;
-
-    for (int attempt = 1; attempt <= numAttempts; attempt++,
-        atemptsBeforeFailover++) {
-      try {
-        return new ArrayList<>(doGetGroups(user, groupHierarchyLevels));
-      } catch (AuthenticationException e) {
-        switchBindUser(e);
-      } catch (NamingException e) {
-        LOG.warn("Failed to get groups for user {} (attempt={}/{}) using {}. " +
-            "Exception: ", user, attempt, numAttempts, currentLdapUrl, e);
-        LOG.trace("TRACE", e);
-
-        if (failover(atemptsBeforeFailover, numAttemptsBeforeFailover)) {
-          atemptsBeforeFailover = 0;
-        }
-      }
-
-      // Reset ctx so that new DirContext can be created with new connection
-      this.ctx = null;
-    }
-    
-    return Collections.emptyList();
+    return new ArrayList<>(getGroupsSet(user));
   }
 
   /**
