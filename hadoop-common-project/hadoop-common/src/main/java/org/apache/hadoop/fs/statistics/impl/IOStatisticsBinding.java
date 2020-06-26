@@ -42,8 +42,7 @@ public final class IOStatisticsBinding {
    */
   public static <X extends IOStatistics & Serializable> X snapshotStatistics(
       IOStatistics source) {
-    SnapshotIOStatistics stats = new SnapshotIOStatistics(
-    );
+    SnapshotIOStatistics stats = new SnapshotIOStatistics();
     stats.snapshot(source);
     return (X) stats;
   }

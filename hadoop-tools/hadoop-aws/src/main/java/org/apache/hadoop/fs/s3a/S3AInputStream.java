@@ -846,6 +846,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   @Override
   public boolean hasCapability(String capability) {
     switch (toLowerCase(capability)) {
+    case StreamCapabilities.IOSTATISTICS:
     case StreamCapabilities.READAHEAD:
     case StreamCapabilities.UNBUFFER:
       return true;

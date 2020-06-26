@@ -51,7 +51,7 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringify;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
-import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshot;
+import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
 
 /**
  * Scale test which creates a huge file.
@@ -226,7 +226,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     logFSState();
     bandwidth(timer, filesize);
     LOG.info("Statistics after stream closed: {}", streamStatistics);
-    IOStatistics iostats = snapshot(retrieveIOStatistics(getFileSystem()));
+    IOStatistics iostats = snapshotIOStatistics(retrieveIOStatistics(getFileSystem()));
     LOG.info("IOStatistics after upload: {}",
         demandStringify(iostats));
     long putRequestCount = storageStatistics.getLong(putRequests);

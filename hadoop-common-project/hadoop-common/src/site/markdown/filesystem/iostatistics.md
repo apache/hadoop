@@ -28,9 +28,9 @@ and provided private/unstable ways to query this, but as they were
 not common across implementations it was unsafe for applications
 to reference these values. Example: `S3AInputStream` and its statistics
 API. This is used in internal tests, but cannot be used downstream in
-applications such as 
+applications such as Apache Hive or Apache HBase.
 
-The new IOStatistics API is intended to 
+The IOStatistics API is intended to 
 
 1. Be instance specific:, rather than shared across multiple instances
    of a class, or thread local.
@@ -38,14 +38,14 @@ The new IOStatistics API is intended to
 1. Be easy to use in applications written in Java, Scala, and, via libhdfs, C/C++
 1. Have foundational interfaces and classes in the `hadoop-common` JAR.
 
-## Core model
+## Core Model
 
-Any Hadoop I/O class *may* implement `IOStatisticsSource` in order to
+Any class *may* implement `IOStatisticsSource` in order to
 provide statistics.
 
-Wrapper I/O Classes (e.g `FSDataInputStream`, `FSDataOutputStream` *should*
+Wrapper I/O Classes such as `FSDataInputStream` anc `FSDataOutputStream` *should*
 implement the interface and forward it to the wrapped class, if they also
-implement it -or return `null` if they do not.
+implement it -and return `null` if they do not.
 
 `IOStatisticsSource` implementations `getIOStatistics()` return an
 instance of `IOStatistics` enumerating the statistics of that specific
@@ -62,11 +62,11 @@ The `IOStatistics` Interface exports five kinds of statistic:
 | `maximum`        | `long`          | a maximum value;  MAY BE negative |
 | `meanStatistic` | `MeanStatistic` | an arithmetic mean and sample size; mean MAY BE negative|
 
-For are simple `long` values, with the variations how they are likely to
+Four are simple `long` values, with the variations how they are likely to
 change and how they are aggregated.
 
 
-#### Aggregation of statistic values
+#### Aggregation of Statistic Values
 
 For the different statistic category, the result of `aggregate(x, y)` is
 
@@ -80,8 +80,6 @@ For the different statistic category, the result of `aggregate(x, y)` is
 
 
 #### Class `MeanStatistic`
-
-
 
 ## package `org.apache.hadoop.fs.statistics`
 
@@ -233,17 +231,9 @@ an empty map.
 instance of the class implementing `IOStatisticsSource`.
 
 Less formally: if the statistics maps returned are non-empty, all the statistics
-must be collected from the current instance, and not from all instances, the way
+must be collected from the current instance, and not from any other instances, the way
 some of the `FileSystem` statistics are collected.
 
-The `IOStatistics` instance MAY include aggregate statistics
-collected from other objects created by that stores.l
-
-For example, the statistics of a filesystem instance must be unique
-to that instant and not shared with any other.
-However, those statistics may also collect and aggregate statistics
-generated in the use of input and output streams created by that
-file system instance.
 
 The result of `getIOStatistics()`, if non-null, MAY be a different instance
 on every invocation.
@@ -313,12 +303,12 @@ and ideally consistent across `IOStatisticSource` implementations.
 
         org.apache.hadoop.fs.statistics.StreamStatisticNames
         org.apache.hadoop.fs.statistics.StoreStatisticNames
-    
+
    Note 1.: these are evolving; for clients to safely reference their
    statistics by name they SHOULD be copied to the application.
    (i.e. for an application compiled hadoop 3.4.2 to link against hadoop 3.4.1,
    copy the strings).
-   
+ 
    Note 2: keys defined in these classes SHALL NOT be removed
    from subsequent Hadoop releases.
 
@@ -327,7 +317,7 @@ and ideally consistent across `IOStatisticSource` implementations.
 
 * A statistic name in one of the maps SHOULD NOT be re-used in another map.
   This aids diagnostics of logged statistics.
-  
+
 ### Statistic Maps
 
 For each map of statistics returned:
@@ -389,9 +379,13 @@ it invariably under-reports IO performed in other threads on behalf of a worker 
 
 ## Statisic Snapshot
 
-A snapshot of the current statistic values MAY be obtained by calling
+A snapshot of the current statistic values MAY be obtained by calling 
+`IOStatisticsSupport.snapshotIOStatistics()`
 
-# TODO: what is the method name ? 
+```java
+  public static <X extends IOStatistics & Serializable> X
+      snapshotIOStatistics(IOStatistics statistics)
+``` 
 
 This snapshot is serializable through Java serialization and through
 Jackson to/from JSON.

@@ -44,8 +44,9 @@ public final class IOStatisticsSupport {
    * @param statistics statistics
    * @return a snapshot of the current values.
    */
-  public static <X extends IOStatistics & Serializable> X snapshot(
-      IOStatistics statistics) {
+  public static <X extends IOStatistics & Serializable> X
+      snapshotIOStatistics(IOStatistics statistics) {
+
     return IOStatisticsBinding.snapshotStatistics(statistics);
   }
 

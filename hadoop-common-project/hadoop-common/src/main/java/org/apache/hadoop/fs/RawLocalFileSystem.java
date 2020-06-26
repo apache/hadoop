@@ -40,6 +40,7 @@ import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.FileTime;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.StringTokenizer;
 
@@ -120,7 +121,7 @@ public class RawLocalFileSystem extends FileSystem {
    * For open()'s FSInputStream.
    *******************************************************/
   class LocalFSFileInputStream extends FSInputStream implements HasFileDescriptor,
-      IOStatisticsSource {
+      IOStatisticsSource, StreamCapabilities {
     private FileInputStream fis;
     private long position;
 
@@ -244,6 +245,18 @@ public class RawLocalFileSystem extends FileSystem {
     }
 
     @Override
+    public boolean hasCapability(String capability) {
+      // a bit inefficient, but intended to make it easier to add
+      // new capabilities.
+      switch (capability.toLowerCase(Locale.ENGLISH)) {
+      case StreamCapabilities.IOSTATISTICS:
+        return true;
+      default:
+        return false;
+      }
+    }
+
+    @Override
     public IOStatistics getIOStatistics() {
       return ioStatistics;
     }
@@ -272,7 +285,7 @@ public class RawLocalFileSystem extends FileSystem {
    * For create()'s FSOutputStream.
    *********************************************************/
   class LocalFSFileOutputStream extends OutputStream implements
-      IOStatisticsSource {
+      IOStatisticsSource, StreamCapabilities {
     private FileOutputStream fos;
 
     /**
@@ -338,6 +351,18 @@ public class RawLocalFileSystem extends FileSystem {
       } catch (IOException e) {              // unexpected exception
         ioStatistics.incrementCounter(STREAM_WRITE_EXCEPTIONS, 1);
         throw new FSError(e);                // assume native fs error
+      }
+    }
+
+    @Override
+    public boolean hasCapability(String capability) {
+      // a bit inefficient, but intended to make it easier to add
+      // new capabilities.
+      switch (capability.toLowerCase(Locale.ENGLISH)) {
+      case StreamCapabilities.IOSTATISTICS:
+        return true;
+      default:
+        return false;
       }
     }
 

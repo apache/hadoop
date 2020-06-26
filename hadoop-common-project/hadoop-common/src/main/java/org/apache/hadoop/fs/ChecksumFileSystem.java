@@ -411,7 +411,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   /** This class provides an output stream for a checksummed file.
    * It generates checksums for data. */
   private static class ChecksumFSOutputSummer extends FSOutputSummer
-      implements IOStatisticsSource {
+      implements IOStatisticsSource, StreamCapabilities {
     private FSDataOutputStream datas;    
     private FSDataOutputStream sums;
     private static final float CHKSUM_AS_FRACTION = 0.01f;
@@ -475,6 +475,17 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     @Override
     public IOStatistics getIOStatistics() {
       return IOStatisticsSupport.retrieveIOStatistics(datas);
+    }
+
+    /**
+     * Probe the inner stream for a capability.
+     *
+     * @param capability string to query the stream support for.
+     * @return true if a capability is known to be supported.
+     */
+    @Override
+    public boolean hasCapability(final String capability) {
+      return datas.hasCapability(capability);
     }
   }
 

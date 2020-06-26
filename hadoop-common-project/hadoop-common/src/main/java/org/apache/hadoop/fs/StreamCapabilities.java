@@ -72,6 +72,11 @@ public interface StreamCapabilities {
   String PREADBYTEBUFFER = "in:preadbytebuffer";
 
   /**
+   * IOStatisticsSource API.
+   */
+  String IOSTATISTICS = "iostatistics";
+
+  /**
    * Capabilities that a stream can support and be queried for.
    */
   @Deprecated

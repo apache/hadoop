@@ -204,7 +204,7 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
   @Test
   public void testSerDeser() throws Throwable {
     incrementAllCounters();
-    IOStatistics stat = IOStatisticsSupport.snapshot(statistics);
+    IOStatistics stat = IOStatisticsSupport.snapshotIOStatistics(statistics);
     incrementAllCounters();
     IOStatistics deser = IOStatisticAssertions.roundTrip(stat);
     assertThat(deser.counters().keySet())

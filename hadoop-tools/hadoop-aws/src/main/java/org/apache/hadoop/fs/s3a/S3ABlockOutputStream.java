@@ -534,6 +534,10 @@ class S3ABlockOutputStream extends OutputStream implements
     case StreamCapabilities.HSYNC:
       return false;
 
+      // yes, we do statistics.
+    case StreamCapabilities.IOSTATISTICS:
+      return true;
+
     default:
       return false;
     }

@@ -65,7 +65,7 @@ public class TestEmptyIOStatistics extends AbstractHadoopTestBase {
 
   @Test
   public void testEmptySnapshot() throws Throwable {
-    final IOStatistics stat = IOStatisticsSupport.snapshot(empty);
+    final IOStatistics stat = IOStatisticsSupport.snapshotIOStatistics(empty);
     assertThat(stat.counters().keySet())
         .describedAs("keys of snapshot")
         .isEmpty();
