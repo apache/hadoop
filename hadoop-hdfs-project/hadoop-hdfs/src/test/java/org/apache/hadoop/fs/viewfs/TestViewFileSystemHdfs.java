@@ -299,14 +299,16 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
         new URI(uri2.getScheme(), uri2.getAuthority(), "/", null, null)
     };
 
+    String clusterName = "mycluster";
     final Configuration testConf = new Configuration(conf);
+    testConf.set(Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE_NAME_KEY,
+        clusterName);
     testConf.setInt(IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 1);
 
     final String testString = "Hello Nfly!";
     final Path nflyRoot = new Path("/nflyroot");
-
     ConfigUtil.addLinkNfly(testConf,
-        Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE,
+        clusterName,
         nflyRoot.toString(),
         "minReplication=2," + repairKey + "=true", testUris);
 
