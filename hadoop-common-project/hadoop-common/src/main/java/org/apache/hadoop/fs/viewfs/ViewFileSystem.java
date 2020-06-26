@@ -1300,6 +1300,31 @@ public class ViewFileSystem extends FileSystem {
           dir.toString().substring(1))) {
         return true; // this is the stupid semantics of FileSystem
       }
+
+      if (this.fsState.getRootFallbackLink() != null) {
+        FileSystem linkedFallbackFs =
+            this.fsState.getRootFallbackLink().getTargetFileSystem();
+        Path parent = Path.getPathWithoutSchemeAndAuthority(
+            new Path(theInternalDir.fullPath));
+        String leafChild = (InodeTree.SlashPath.equals(dir)) ?
+            InodeTree.SlashPath.toString() :
+            dir.getName();
+        Path dirToCreate = new Path(parent, leafChild);
+
+        try {
+          return linkedFallbackFs.mkdirs(dirToCreate, permission);
+        } catch (IOException e) {
+          if (LOG.isDebugEnabled()) {
+            StringBuilder msg =
+                new StringBuilder("Failed to create ").append(dirToCreate)
+                    .append(" at fallback : ")
+                    .append(linkedFallbackFs.getUri());
+            LOG.debug(msg.toString(), e);
+          }
+          return false;
+        }
+      }
+
       throw readOnlyMountTable("mkdirs",  dir);
     }
 
