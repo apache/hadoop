@@ -84,11 +84,6 @@ public abstract class AbstractDelegationTokenBinding extends AbstractDTService
   private SecretManager<AbstractS3ATokenIdentifier> secretManager;
 
   /**
-   * Extra Binding data.
-   */
-  private ExtensionBindingData bindingData;
-
-  /**
    * Constructor.
    *
    * @param name as passed to superclass for use in log messages.
@@ -166,11 +161,6 @@ public abstract class AbstractDelegationTokenBinding extends AbstractDTService
         + " token kind = " + getKind();
   }
 
-  @Override
-  public void initalizeBindingData(ExtensionBindingData binding) {
-    this.bindingData = binding;
-  }
-
   /**
    * Service startup: create the secret manager.
    * @throws Exception failure.
@@ -206,7 +196,7 @@ public abstract class AbstractDelegationTokenBinding extends AbstractDTService
    * @return true if it is.
    */
   protected boolean isSecondaryBinding() {
-    return bindingData.isSecondaryBinding();
+    return getBindingData().isSecondaryBinding();
   }
 
   /**

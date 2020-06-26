@@ -75,6 +75,11 @@ public abstract class AbstractDTService
   private DelegationOperations policyProvider;
 
   /**
+   * Extension binding information.
+   */
+  private ExtensionBindingData bindingData;
+
+  /**
    * Protected constructor.
    * @param name service name.
    */
@@ -82,7 +87,36 @@ public abstract class AbstractDTService
     super(name);
   }
 
-  @Override
+  /**
+   * Bind to the filesystem.
+   * <p></p>
+   * Subclasses can use this to perform their own binding operations -
+   * but they must always call their superclass implementation.
+   * This <i>Must</i> be called before calling {@code init()}.
+   * <p></p>
+   * <b>Important:</b>
+   * This binding will happen during FileSystem.initialize(); the FS
+   * is not live for actual use and will not yet have interacted with
+   * AWS services.
+   * @param binding binding data
+   * @throws IOException failure.
+   */
+  public void initializeTokenBinding(ExtensionBindingData binding)
+      throws IOException {
+    this.bindingData = binding;
+    bindToFileSystem(binding.getStoreContext().getFsURI(),
+        binding.getStoreContext(),
+        binding.getDelegationOperations());
+  }
+
+  /**
+   * This was the original binding method call; it is retained for
+   * compatibility with external implementations.
+   * @param uri the canonical URI of the FS.
+   * @param context store context
+   * @param delegationOperations delegation operations
+   * @throws IOException
+   */
   public void bindToFileSystem(
       final URI uri,
       final StoreContext context,
@@ -94,6 +128,11 @@ public abstract class AbstractDTService
     this.storeContext = requireNonNull(context);
     this.owner = context.getOwner();
     this.policyProvider = delegationOperations;
+  }
+
+
+  protected ExtensionBindingData getBindingData() {
+    return bindingData;
   }
 
   @Override

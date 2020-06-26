@@ -167,10 +167,29 @@ public final class DelegationConstants {
       "fs.s3a.delegation.token.secondary.bindings";
 
   /**
-   * Session Token binding classname: {@value}.
+   * Encrypting Token binding classname: {@value}.
+   * This only marshalls encryption secrets, and not any AWS credentials.
+   */
+  public static final String DELEGATION_TOKEN_ENCRYPTING_BINDING =
+      "org.apache.hadoop.fs.s3a.auth.delegation.providers.EncryptingTokenBinding";
+
+  /** Name of encrypting token: {@value}. */
+  public static final String ENCRYPTING_TOKEN_NAME =
+      TOKEN_NAME_PREFIX + "Encrypting";
+
+  /**
+   *  Kind of the encrypting token;
+   *  value is {@link #ENCRYPTING_TOKEN_NAME}.
+   */
+  public static final Text ENCRYPTING_TOKEN_KIND =
+      new Text(ENCRYPTING_TOKEN_NAME);
+
+  /**
+   * Injecting Token binding classname: {@value}.
+   * This is purely for testing.
    */
   public static final String DELEGATION_TOKEN_INJECTING_BINDING =
-      "org.apache.hadoop.fs.s3a.auth.delegation.InjectingTokenBinding";
+      "org.apache.hadoop.fs.s3a.auth.delegation.providers.InjectingTokenBinding";
 
   /** Name of injecting token: {@value}. */
   public static final String INJECTING_TOKEN_NAME =
@@ -203,6 +222,13 @@ public final class DelegationConstants {
    */
   public static final boolean INJECTING_ISSUE_TOKENS_DEFAULT =
       true;
+
+  /**
+   * Service name to use: {@value}.
+   * Default value, null/empty means work it out automatically
+   */
+  public static final String INJECTING_SERVICE_NAME =
+      "fs.s3a.delegation.injecting.service.name";
 
   private DelegationConstants() {
   }

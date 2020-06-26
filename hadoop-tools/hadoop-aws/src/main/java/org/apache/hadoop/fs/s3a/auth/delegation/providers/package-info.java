@@ -17,24 +17,21 @@
  */
 
 /**
- * Extensible delegation token support for the S3A connector.
+ * Package for implementations of S3A DT providers and identifiers.
  * <p></p>
- *
- * Goal: support multiple back-end token issue/renewal services, from
- * "pure client side" session tokens to full "Kerberos auth".
+ * New bindings should go here.
  * <p></p>
- *
- * It is intended for internal use only; any external implementation
- * of {@link org.apache.hadoop.fs.s3a.auth.delegation.AbstractDelegationTokenBinding}
- * must consider this API unstable and track changes as they happen.
- * <p></p>
- * Note: although "limited private" at the java level, the classnames
+ * Note: although InterfaceAudience.Private at the java level, the classnames
  * of providers are referenced in configuration files,
  * and MUST NOT be changed.
+ * <p></p>
+ * When adding new bindings, remember to add their Identifiers to
+ * {@code META-INF/services/org.apache.hadoop.security.token.TokenIdentifier}.
  */
-@InterfaceAudience.LimitedPrivate("authorization-subsystems")
+
+@InterfaceAudience.Private
 @InterfaceStability.Unstable
-package org.apache.hadoop.fs.s3a.auth.delegation;
+package org.apache.hadoop.fs.s3a.auth.delegation.providers;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;

@@ -44,6 +44,8 @@ import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.fs.s3a.auth.delegation.providers.InjectingTokenBinding;
+import org.apache.hadoop.fs.s3a.auth.delegation.providers.InjectingTokenIdentifier;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.security.Credentials;
@@ -272,7 +274,7 @@ public class ITestSecondaryTokensInFileystem extends AbstractDelegationIT {
         .describedAs("secondary token list")
         .hasSize(1);
     SecondaryDelegationToken binding2 = secondaryTokens.get(0);
-    Text b2service = binding2.getService();
+    Text b2service = binding2.getServiceName();
     Token<AbstractS3ATokenIdentifier> b2token = binding2
         .bindToToken(creds);
     InjectingTokenIdentifier b2tokenId = (InjectingTokenIdentifier)

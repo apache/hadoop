@@ -32,10 +32,11 @@ public interface DTService extends Service {
 
   /**
    * Bind to the filesystem.
+   * <p></p>
    * Subclasses can use this to perform their own binding operations -
    * but they must always call their superclass implementation.
    * This <i>Must</i> be called before calling {@code init()}.
-   *
+   * <p></p>
    * <b>Important:</b>
    * This binding will happen during FileSystem.initialize(); the FS
    * is not live for actual use and will not yet have interacted with
@@ -49,6 +50,23 @@ public interface DTService extends Service {
       URI uri,
       StoreContext context,
       DelegationOperations delegationOperations) throws IOException;
+
+   /**
+   * Bind to the filesystem.
+   * <p></p>
+   * Subclasses can use this to perform their own binding operations -
+   * but they must always call their superclass implementation.
+   * This <i>Must</i> be called before calling {@code init()}.
+   * <p></p>
+   * <b>Important:</b>
+   * This binding will happen during FileSystem.initialize(); the FS
+   * is not live for actual use and will not yet have interacted with
+   * AWS services.
+   * @param binding binding data
+   * @throws IOException failure.
+   */
+  void initializeTokenBinding(ExtensionBindingData binding)
+      throws IOException;
 
   /**
    * Get the canonical URI of the filesystem, which is what is

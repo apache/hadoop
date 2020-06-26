@@ -47,6 +47,26 @@ public interface DelegationTokenBinding extends DTService {
   Text getOwnerText();
 
   /**
+   * Given the filesystem name, build a canonical name.
+   * <p></p>
+   * This is only ever called for secondary bindings.
+   * <p></p>
+   * This MUST NOT return the fsURI unmodified; that is exclusively
+   * for the 1ary token.
+   * Implementations MAY return a URI which is identical across filesystem
+   * instances, e.g the endpoint of the authentication service. This will
+   * allow the same token to be used to authenticate arbitrary S3A URLs.
+   * If null is returned, the S3ADelegation token class will construct one
+   * via {@link S3ADelegationTokens#getTokenServiceForKind}.
+   * @param fsURI filesystem URI
+   * @return the string to be used to build the canonical name of this token service,
+   * or null/empty string.
+   */
+  default Text buildCanonicalNameForSecondaryBinding(String fsURI) {
+    return null;
+  }
+
+  /**
    * Predicate: will this binding issue a DT?
    * That is: should the filesystem declare that it is issuing
    * delegation tokens? If true
@@ -119,13 +139,6 @@ public interface DelegationTokenBinding extends DTService {
    * @return an empty identifier.
    */
   AbstractS3ATokenIdentifier createEmptyIdentifier();
-
-  /**
-   * Initialize the binding data. This will be done before
-   * serviceStart.
-   * @param binding binding data
-   */
-  void initalizeBindingData(ExtensionBindingData binding);
 
   /**
    * Return a description.

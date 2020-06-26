@@ -18,22 +18,20 @@
 
 package org.apache.hadoop.fs.s3a.auth.delegation;
 
+import org.apache.hadoop.fs.s3a.impl.StoreContext;
+
 /**
  * Class with nothing but binding configuration info.
  * This is passed down to the DTBinding implementation before
  * the service is started.
  * <p></p>
- * This is clearly overenginered for a single boolean, but given
+ * This is clearly over-engineered, but given
  * that previous changes have caused linkage problems with external
  * implementations, doing it this way avoids changing the
  * signatures of implementations if new information
  * is passed in, while the builder does the same for tests.
  */
-public class ExtensionBindingData {
-
-  private ExtensionBindingData(final boolean secondaryBinding) {
-    this.secondaryBinding = secondaryBinding;
-  }
+public final class ExtensionBindingData {
 
   /**
    * Flag to indicate this token binding was deployed as a secondary
@@ -45,8 +43,28 @@ public class ExtensionBindingData {
 
   public final boolean secondaryBinding;
 
+
+  private final StoreContext storeContext;
+
+  private final DelegationOperations delegationOperations;
+
+  private ExtensionBindingData(final Builder builder) {
+    this.secondaryBinding = builder.secondaryBinding;
+    this.delegationOperations = builder.delegationOperations;
+    this.storeContext = builder.storeContext;
+  }
+
+
   public boolean isSecondaryBinding() {
     return secondaryBinding;
+  }
+
+  public DelegationOperations getDelegationOperations() {
+    return delegationOperations;
+  }
+
+  public StoreContext getStoreContext() {
+    return storeContext;
   }
 
   /**
@@ -67,13 +85,29 @@ public class ExtensionBindingData {
 
     private boolean secondaryBinding;
 
-    public Builder setSecondaryBinding(final boolean sb) {
+    private StoreContext storeContext;
+
+    private DelegationOperations delegationOperations;
+
+
+    public Builder withSecondaryBinding(final boolean sb) {
       this.secondaryBinding = sb;
       return this;
     }
 
+
+    public Builder withStoreContext(final StoreContext context) {
+      this.storeContext = storeContext;
+      return this;
+    }
+
+    public Builder withDelegationOperations(final DelegationOperations operations) {
+      this.delegationOperations = operations;
+      return this;
+    }
+
     public ExtensionBindingData build() {
-      return new ExtensionBindingData(secondaryBinding);
+      return new ExtensionBindingData(this);
     }
   }
 

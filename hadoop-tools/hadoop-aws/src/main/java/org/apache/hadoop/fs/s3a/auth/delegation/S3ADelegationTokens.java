@@ -193,12 +193,11 @@ public class S3ADelegationTokens extends AbstractDTService implements
         SessionTokenBinding.class,
         DelegationTokenBinding.class);
     tokenBinding = binding.newInstance();
-    tokenBinding.bindToFileSystem(getCanonicalUri(),
-        getStoreContext(),
-        getPolicyProvider());
-    tokenBinding.initalizeBindingData(
+    tokenBinding.initializeTokenBinding(
         ExtensionBindingData.builder()
-            .setSecondaryBinding(false)
+            .withSecondaryBinding(false)
+            .withStoreContext(getStoreContext())
+            .withDelegationOperations(getPolicyProvider())
             .build());
     tokenBinding.init(conf);
     tokenBindingName = tokenBinding.getKind().toString();
@@ -212,25 +211,32 @@ public class S3ADelegationTokens extends AbstractDTService implements
 
     if (!secondary.isEmpty()) {
       LOG.info("Instantiating {} secondary tokens", secondary.size());
-      ExtensionBindingData bi = ExtensionBindingData.builder()
-          .setSecondaryBinding(true)
-          .build();
+
       for (DelegationTokenBinding sb : secondary) {
         Text kind = sb.getKind();
         String name = getCanonicalServiceName();
-        Text secondaryService = getTokenServiceForKind(name,
-            kind.toString());
         LOG.info("Secondary token kind {}", kind);
-        LOG.debug("Secondary token kind {} for service {} implemented by {}",
-            kind, secondaryService, sb);
-        SecondaryDelegationToken b2 = new SecondaryDelegationToken(
-            secondaryService, sb);
-        b2.bindToFileSystem(getCanonicalUri(),
-            getStoreContext(),
-            getPolicyProvider());
-        b2.initalizeBindingData(bi);
-        b2.init(conf);
 
+        SecondaryDelegationToken b2 = new SecondaryDelegationToken(sb);
+        // create a secondary binding structure
+        ExtensionBindingData bi = ExtensionBindingData.builder()
+            .withSecondaryBinding(true)
+            .withStoreContext(getStoreContext())
+            .withDelegationOperations(getPolicyProvider())
+            .build();
+        b2.initializeTokenBinding(bi);
+        b2.init(conf);
+        // ask the binding for its service name.
+        // This allows for 2ary services to be completely independent of
+        // any S3A URL.
+        Text serviceName = b2.buildCanonicalNameForSecondaryBinding(name);
+        if (serviceName == null || serviceName.getLength() == 0) {
+          // fall back
+          serviceName = getTokenServiceForKind(name, kind.toString());
+        }
+        b2.setServiceName(serviceName);
+        LOG.debug("Secondary token kind {} for service {} implemented by {}",
+            kind, serviceName, sb);
         secondaryBindings.add(b2);
       }
     }
@@ -361,11 +367,14 @@ public class S3ADelegationTokens extends AbstractDTService implements
     } else {
       deployUnbonded();
     }
+
     if (credentialProviders.get().size() == 0) {
       throw new DelegationTokenIOException("No AWS credential providers"
           + " created by Delegation Token Binding "
           + tokenBinding.getName());
     }
+    // TODO: now bind all secondary DTs.
+
   }
 
   /**
@@ -516,7 +525,7 @@ public class S3ADelegationTokens extends AbstractDTService implements
   }
 
   /**
-   * Create a delegation token for the user.
+   * Create a delegation token for the 1ary token.
    * This will only be called if a new DT is needed, that is: the
    * filesystem has been deployed unbonded.
    * @param encryptionSecrets encryption secrets for the token.

@@ -19,13 +19,11 @@
 package org.apache.hadoop.fs.s3a.auth.delegation;
 
 import java.io.IOException;
-import java.net.URI;
 import java.util.Optional;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.auth.RoleModel;
-import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
@@ -41,9 +39,14 @@ class SecondaryDelegationToken extends AbstractDTService implements
     DelegationTokenBinding {
 
   /**
+   * Binding Data.
+   */
+  private ExtensionBindingData bindingData;
+
+  /**
    * Text value of this token service.
    */
-  private final Text service;
+  private Text serviceName;
 
   /**
    * Active Delegation token.
@@ -65,22 +68,23 @@ class SecondaryDelegationToken extends AbstractDTService implements
    * Name of the token binding as extracted from token kind; used for
    * logging.
    */
-  private final String canonicalServiceName;
+  private String canonicalServiceName;
+
 
   /**
    * Instantiate.
-   * @param service service identifier
    * @param tokenBinding inner token binding.
    */
   SecondaryDelegationToken(
-      final Text service,
       final DelegationTokenBinding tokenBinding) {
     super(tokenBinding.getName());
-    this.service = service;
     this.tokenBinding = tokenBinding;
-    this.canonicalServiceName = service.toString();
   }
 
+  void setServiceName(final Text serviceName) {
+    this.serviceName = serviceName;
+    this.canonicalServiceName = serviceName.toString();
+  }
 
   @Override
   protected void serviceInit(final Configuration conf) throws Exception {
@@ -105,8 +109,8 @@ class SecondaryDelegationToken extends AbstractDTService implements
    *
    * @return service for this token.
    */
-  public Text getService() {
-    return service;
+  public Text getServiceName() {
+    return serviceName;
   }
 
   @Override
@@ -207,16 +211,16 @@ class SecondaryDelegationToken extends AbstractDTService implements
   }
 
   @Override
-  public void bindToFileSystem(final URI uri,
-      final StoreContext context,
-      final DelegationOperations delegationOperations) throws IOException {
-    super.bindToFileSystem(uri, context, delegationOperations);
-    tokenBinding.bindToFileSystem(uri, context, delegationOperations);
+  public void initializeTokenBinding(final ExtensionBindingData binding)
+      throws IOException {
+    super.initializeTokenBinding(binding);
+    this.bindingData = binding;
+    tokenBinding.initializeTokenBinding(binding);
   }
 
   @Override
-  public void initalizeBindingData(final ExtensionBindingData binding) {
-    tokenBinding.initalizeBindingData(binding);
+  public Text buildCanonicalNameForSecondaryBinding(final String fsURI) {
+    return tokenBinding.buildCanonicalNameForSecondaryBinding(fsURI);
   }
 
   /**
@@ -238,7 +242,7 @@ class SecondaryDelegationToken extends AbstractDTService implements
       final Optional<RoleModel.Policy> policy,
       final EncryptionSecrets encryptionSecrets,
       final TokenIssueCallbacks callbacks) {
-    return new S3ATokenIssuer(this, policy, encryptionSecrets, service,
+    return new S3ATokenIssuer(this, policy, encryptionSecrets, serviceName,
         callbacks);
   }
 
@@ -254,7 +258,7 @@ class SecondaryDelegationToken extends AbstractDTService implements
       final Credentials credentials) throws DelegationTokenIOException {
     Token<AbstractS3ATokenIdentifier> token
         = S3ADelegationTokens.lookupToken(credentials,
-        service,
+        serviceName,
         getKind());
     boundDT = token;
     return token;

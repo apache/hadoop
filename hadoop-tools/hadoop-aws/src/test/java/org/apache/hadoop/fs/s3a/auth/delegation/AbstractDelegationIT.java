@@ -205,10 +205,11 @@ public abstract class AbstractDelegationIT extends AbstractS3ATestBase {
       throws IOException {
     S3AFileSystem fs = getFileSystem();
     S3ADelegationTokens tokens = new S3ADelegationTokens();
-    tokens.bindToFileSystem(
-        fs.getCanonicalUri(),
-        fs.createStoreContext(),
-        fs.createDelegationOperations());
+    tokens.initializeTokenBinding(
+        ExtensionBindingData.builder()
+            .withStoreContext(fs.createStoreContext())
+            .withDelegationOperations(fs.createDelegationOperations())
+            .build());
     tokens.init(conf);
     return tokens;
   }

@@ -16,13 +16,16 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.auth.delegation;
+package org.apache.hadoop.fs.s3a.auth.delegation.providers;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.net.URI;
 
+import org.apache.hadoop.fs.s3a.auth.delegation.AbstractS3ATokenIdentifier;
+import org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants;
+import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.io.Text;
 
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.INJECTING_TOKEN_KIND;

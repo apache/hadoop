@@ -99,6 +99,7 @@ import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.s3a.auth.SignerManager;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationOperations;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenProvider;
+import org.apache.hadoop.fs.s3a.auth.delegation.ExtensionBindingData;
 import org.apache.hadoop.fs.s3a.impl.BulkDeleteRetryHandler;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
@@ -613,9 +614,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       LOG.debug("Using delegation tokens");
       S3ADelegationTokens tokens = new S3ADelegationTokens();
       this.delegationTokens = Optional.of(tokens);
-      tokens.bindToFileSystem(getCanonicalUri(),
-          createStoreContext(),
-          createDelegationOperations());
+      tokens.initializeTokenBinding(
+          ExtensionBindingData.builder()
+              .withSecondaryBinding(false)
+              .withStoreContext(createStoreContext())
+              .withDelegationOperations(createDelegationOperations())
+              .build());
       tokens.init(conf);
       tokens.start();
       // switch to the DT provider and bypass all other configured

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.auth.delegation;
+package org.apache.hadoop.fs.s3a.auth.delegation.providers;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -30,6 +30,9 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.auth.RoleModel;
+import org.apache.hadoop.fs.s3a.auth.delegation.AbstractDelegationTokenBinding;
+import org.apache.hadoop.fs.s3a.auth.delegation.AbstractS3ATokenIdentifier;
+import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.io.Text;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.buildAWSProviderList;
@@ -132,7 +135,13 @@ public final class InjectingTokenBinding
         INJECTING_ISSUE_TOKENS_DEFAULT);
     conf.set(INJECTING_CREDENTIALS_PROVIDER,
         credentialProviders != null ? credentialProviders : "");
+  }
 
-
+  @Override
+  public Text buildCanonicalNameForSecondaryBinding(final String fsURI) {
+    String name = getConfig().getTrimmed(INJECTING_SERVICE_NAME, null);
+    return name != null
+        ? new Text(name)
+        : null;
   }
 }
