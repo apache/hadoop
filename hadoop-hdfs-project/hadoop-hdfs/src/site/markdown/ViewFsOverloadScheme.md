@@ -151,7 +151,7 @@ DFSAdmin commands with View File System Overload Scheme
 Please refer to the [HDFSCommands Guide](./HDFSCommands.html#dfsadmin_with_ViewFsOverloadScheme)
 
 Accessing paths without authority
--------------------------------------------------------
+---------------------------------
 
 Accessing paths like `hdfs:///foo/bar`, `hdfs:/foo/bar` or `viewfs:/foo/bar`, where the authority (cluster name or hostname) of the path is not specified, is very common.
 This is especially true when the same code is expected to run on multiple clusters with different names or HDFS Namenodes.

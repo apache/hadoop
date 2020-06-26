@@ -97,6 +97,8 @@ import org.junit.Test;
  * </p>
  */
 abstract public class ViewFsBaseTest {
+  protected static final String MOUNT_TABLE_NAME = "mycluster";
+
   FileContext fcView; // the view file system - the mounts are here
   FileContext fcTarget; // the target file system - the mount will point here
   Path targetTestRoot;
@@ -130,6 +132,7 @@ abstract public class ViewFsBaseTest {
     
     // Set up the defaultMT in the config with our mount point links
     conf = new Configuration();
+    conf.set(Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE_NAME_KEY, MOUNT_TABLE_NAME);
     ConfigUtil.addLink(conf, "/targetRoot", targetTestRoot.toUri());
     ConfigUtil.addLink(conf, "/user",
         new Path(targetTestRoot,"user").toUri());
@@ -1008,13 +1011,11 @@ abstract public class ViewFsBaseTest {
   public void testListStatusWithNoGroups() throws Exception {
     final UserGroupInformation userUgi = UserGroupInformation
         .createUserForTesting("user@HADOOP.COM", new String[] {});
-    final String clusterName = "mycluster";
-    conf.set(Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE_NAME_KEY, clusterName);
     userUgi.doAs(new PrivilegedExceptionAction<Object>() {
       @Override
       public Object run() throws Exception {
         URI viewFsUri =
-            new URI(FsConstants.VIEWFS_SCHEME, clusterName, "/", null, null);
+            new URI(FsConstants.VIEWFS_SCHEME, MOUNT_TABLE_NAME, "/", null, null);
         FileSystem vfs = FileSystem.get(viewFsUri, conf);
         LambdaTestUtils.intercept(IOException.class,
             "There is no primary group for UGI", () -> vfs

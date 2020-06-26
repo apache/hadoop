@@ -301,7 +301,8 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
 
     String clusterName = "mycluster";
     final Configuration testConf = new Configuration(conf);
-    testConf.set(Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE_NAME_KEY, clusterName);
+    testConf.set(Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE_NAME_KEY,
+        clusterName);
     testConf.setInt(IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 1);
 
     final String testString = "Hello Nfly!";
