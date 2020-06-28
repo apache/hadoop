@@ -52,7 +52,7 @@ public class GroupsService extends BaseService implements Groups {
   }
 
   /**
-   * @deprecated use {@link #getGroupsSet(String)}
+   * @deprecated use {@link #getGroupsSet(String user)}
    */
   @Deprecated
   @Override

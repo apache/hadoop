@@ -69,6 +69,7 @@ import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
 import javax.security.auth.spi.LoginModule;
 
+import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -1699,8 +1700,9 @@ public class UserGroupInformation {
    * expensive alternative when checking for a contained element.
    * @return the list of users with the primary group first. If the command
    *    fails, it returns an empty list.
-   * Use {@link #getGroupsSet()}
+   * @deprecated Use {@link #getGroupsSet()} instead.
    */
+  @Deprecated
   public List<String> getGroups() {
     ensureInitialized();
     try {

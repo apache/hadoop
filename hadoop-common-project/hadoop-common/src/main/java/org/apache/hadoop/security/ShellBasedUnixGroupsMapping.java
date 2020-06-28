@@ -18,6 +18,7 @@
 package org.apache.hadoop.security;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -27,7 +28,6 @@ import java.util.concurrent.TimeUnit;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
-import org.apache.commons.compress.utils.Lists;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -97,7 +97,7 @@ public class ShellBasedUnixGroupsMapping extends Configured
    */
   @Override
   public List<String> getGroups(String userName) throws IOException {
-    return Lists.newArrayList(getUnixGroups(userName).iterator());
+    return new ArrayList(getUnixGroups(userName));
   }
 
   /**

@@ -167,8 +167,7 @@ public class Groups {
         CommonConfigurationKeys.HADOOP_USER_GROUP_STATIC_OVERRIDES_DEFAULT);
     Collection<String> mappings = StringUtils.getStringCollection(
         staticMapping, ";");
-    Map<String, Set<String>> staticUserToGroupsMap =
-        new HashMap<>();
+    Map<String, Set<String>> staticUserToGroupsMap = new HashMap<>();
     for (String users : mappings) {
       Collection<String> userToGroups = StringUtils.getStringCollection(users,
           "=");
@@ -209,7 +208,9 @@ public class Groups {
    * @param user User's name
    * @return the group memberships of the user as list
    * @throws IOException if user does not exist
+   * @deprecated Use {@link #getGroupsSet(String user)} instead.
    */
+  @Deprecated
   public List<String> getGroups(final String user) throws IOException {
     return Collections.unmodifiableList(new ArrayList<>(
         getGroupInternal(user)));
