@@ -22,9 +22,13 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.EnumSet;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -43,17 +47,18 @@ import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 
 /**
- * Tests the race condition that IBR and add block may result
+ * Tests the race condition that IBR and update block may result
  * in inconsistent block genstamp.
  */
-public class TestAddBlockTailing {
+public class TestUpdateBlockTailing {
   private static final int BLOCK_SIZE = 8192;
-  private static final String TEST_DIR = "/TestAddBlockTailing";
+  private static final String TEST_DIR = "/TestUpdateBlockTailing";
 
   private static MiniQJMHACluster qjmhaCluster;
   private static MiniDFSCluster dfsCluster;
@@ -85,6 +90,12 @@ public class TestAddBlockTailing {
     if (qjmhaCluster != null) {
       qjmhaCluster.shutdown();
     }
+  }
+
+  @Before
+  public void reset() throws Exception {
+    dfsCluster.transitionToStandby(1);
+    dfsCluster.transitionToActive(0);
   }
 
   @Test
@@ -160,5 +171,104 @@ public class TestAddBlockTailing {
         NameNodeAdapter.getGenerationStamp(fsn1));
 
     rpc1.delete(testFile, false);
+  }
+
+  @Test
+  public void testStandbyAppendBlock() throws Exception {
+    final String testFile = TEST_DIR +"/testStandbyAppendBlock";
+    final long fileLen = 1 << 16;
+    // Create a file
+    DFSTestUtil.createFile(dfs, new Path(testFile), fileLen, (short)1, 0);
+    // NN1 tails OP_SET_GENSTAMP_V2 and OP_ADD_BLOCK
+    fsn0.getEditLog().logSync();
+    fsn1.getEditLogTailer().doTailEdits();
+    assertEquals("Global Generation stamps on NN0 and "
+            + "NN1 should be equal",
+        NameNodeAdapter.getGenerationStamp(fsn0),
+        NameNodeAdapter.getGenerationStamp(fsn1));
+
+    // Append block without newBlock flag
+    try (FSDataOutputStream out = dfs.append(new Path(testFile))) {
+      final byte[] data = new byte[1 << 16];
+      ThreadLocalRandom.current().nextBytes(data);
+      out.write(data);
+    }
+
+    // NN1 tails OP_APPEND, OP_SET_GENSTAMP_V2, and OP_UPDATE_BLOCKS
+    fsn0.getEditLog().logSync();
+    fsn1.getEditLogTailer().doTailEdits();
+    assertEquals("Global Generation stamps on NN0 and "
+            + "NN1 should be equal",
+        NameNodeAdapter.getGenerationStamp(fsn0),
+        NameNodeAdapter.getGenerationStamp(fsn1));
+
+    // Remove the testFile
+    final ClientProtocol rpc0 = dfsCluster.getNameNode(0).getRpcServer();
+    rpc0.delete(testFile, false);
+  }
+
+  @Test
+  public void testStandbyAppendNewBlock() throws Exception {
+    final String testFile = TEST_DIR +"/testStandbyAppendNewBlock";
+    final long fileLen = 1 << 16;
+    // Create a file
+    DFSTestUtil.createFile(dfs, new Path(testFile), fileLen, (short)1, 0);
+    // NN1 tails OP_SET_GENSTAMP_V2 and OP_ADD_BLOCK
+    fsn0.getEditLog().logSync();
+    fsn1.getEditLogTailer().doTailEdits();
+    assertEquals("Global Generation stamps on NN0 and "
+            + "NN1 should be equal",
+        NameNodeAdapter.getGenerationStamp(fsn0),
+        NameNodeAdapter.getGenerationStamp(fsn1));
+
+    // Append block with newBlock flag
+    try (FSDataOutputStream out = dfs.append(new Path(testFile),
+        EnumSet.of(CreateFlag.APPEND, CreateFlag.NEW_BLOCK), 4096, null)) {
+      final byte[] data = new byte[1 << 16];
+      ThreadLocalRandom.current().nextBytes(data);
+      out.write(data);
+    }
+
+    // NN1 tails OP_APPEND, OP_SET_GENSTAMP_V2, and OP_ADD_BLOCK
+    fsn0.getEditLog().logSync();
+    fsn1.getEditLogTailer().doTailEdits();
+    assertEquals("Global Generation stamps on NN0 and "
+            + "NN1 should be equal",
+        NameNodeAdapter.getGenerationStamp(fsn0),
+        NameNodeAdapter.getGenerationStamp(fsn1));
+
+    // Remove the testFile
+    final ClientProtocol rpc0 = dfsCluster.getNameNode(0).getRpcServer();
+    rpc0.delete(testFile, false);
+  }
+
+  @Test
+  public void testStandbyTruncateBlock() throws Exception {
+    final String testFile = TEST_DIR +"/testStandbyTruncateBlock";
+    final long fileLen = 1 << 16;
+    // Create a file
+    DFSTestUtil.createFile(dfs, new Path(testFile), fileLen, (short)1, 0);
+    // NN1 tails OP_SET_GENSTAMP_V2 and OP_ADD_BLOCK
+    fsn0.getEditLog().logSync();
+    fsn1.getEditLogTailer().doTailEdits();
+    assertEquals("Global Generation stamps on NN0 and "
+            + "NN1 should be equal",
+        NameNodeAdapter.getGenerationStamp(fsn0),
+        NameNodeAdapter.getGenerationStamp(fsn1));
+
+    // Truncate block
+    dfs.truncate(new Path(testFile), fileLen/2);
+
+    // NN1 tails OP_SET_GENSTAMP_V2 and OP_TRUNCATE
+    fsn0.getEditLog().logSync();
+    fsn1.getEditLogTailer().doTailEdits();
+    assertEquals("Global Generation stamps on NN0 and "
+            + "NN1 should be equal",
+        NameNodeAdapter.getGenerationStamp(fsn0),
+        NameNodeAdapter.getGenerationStamp(fsn1));
+
+    // Remove the testFile
+    final ClientProtocol rpc0 = dfsCluster.getNameNode(0).getRpcServer();
+    rpc0.delete(testFile, false);
   }
 }

@@ -1150,8 +1150,12 @@ public class FSEditLogLoader {
       oldBlock.setNumBytes(newBlock.getNumBytes());
       boolean changeMade =
         oldBlock.getGenerationStamp() != newBlock.getGenerationStamp();
-      oldBlock.setGenerationStamp(newBlock.getGenerationStamp());
-      
+      final long newGenerationStamp = newBlock.getGenerationStamp();
+      oldBlock.setGenerationStamp(newGenerationStamp);
+      // Update global generation stamp in Standby NameNode
+      fsNamesys.getBlockManager().getBlockIdManager().
+          setGenerationStampIfGreater(newGenerationStamp);
+
       if (!oldBlock.isComplete() &&
           (!isLastBlock || op.shouldCompleteLastBlock())) {
         changeMade = true;
