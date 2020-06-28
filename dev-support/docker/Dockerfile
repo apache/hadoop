@@ -167,12 +167,13 @@ RUN pip2 install python-dateutil
 ###
 # Install node.js for web UI framework (4.2.6 ships with Xenial)
 ###
-RUN apt-get -y install nodejs && \
-    ln -s /usr/bin/nodejs /usr/bin/node && \
-    apt-get -y install npm && \
-    npm install npm@latest -g && \
-    npm install -g bower && \
-    npm install -g ember-cli
+RUN apt-get -q update \
+    && apt-get install -y --no-install-recommends nodejs npm \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -s /usr/bin/nodejs /usr/bin/node \
+    && npm install npm@latest -g \
+    && npm install -g jshint
 
 ###
 # Avoid out of memory errors in builds
