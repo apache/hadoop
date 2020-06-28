@@ -93,16 +93,15 @@ public class RuleBasedLdapGroupsMapping extends LdapGroupsMapping {
   public synchronized Set<String> getGroupsSet(String user) {
     Set<String> groups = super.getGroupsSet(user);
     switch (rule) {
-      case TO_UPPER:
-        return groups.stream().map(StringUtils::toUpperCase).collect(
-            Collectors.toCollection(LinkedHashSet::new));
-      case TO_LOWER:
-        return groups.stream().map(StringUtils::toLowerCase).collect(
-            Collectors.toCollection(LinkedHashSet::new));
-      case NONE:
-      default:
-        return groups;
+    case TO_UPPER:
+      return groups.stream().map(StringUtils::toUpperCase).collect(
+          Collectors.toCollection(LinkedHashSet::new));
+    case TO_LOWER:
+      return groups.stream().map(StringUtils::toLowerCase).collect(
+          Collectors.toCollection(LinkedHashSet::new));
+    case NONE:
+    default:
+      return groups;
     }
   }
-
 }
