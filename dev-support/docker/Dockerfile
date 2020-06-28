@@ -123,7 +123,7 @@ RUN pip2 install \
 RUN pip2 install python-dateutil==2.7.3
 
 ###
-# Install node.js 8.17.0 for web UI framework (4.2.6 ships with Xenial)
+# Install node.js 10.21.0 for web UI framework (4.2.6 ships with Xenial)
 ###
 RUN curl -L -s -S https://deb.nodesource.com/setup_10.x | bash - \
     && apt-get install -y --no-install-recommends nodejs=10.21.0-1nodesource1 \
