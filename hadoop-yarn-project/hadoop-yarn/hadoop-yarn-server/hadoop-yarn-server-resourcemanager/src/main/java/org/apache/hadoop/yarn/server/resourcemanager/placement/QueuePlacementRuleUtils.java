@@ -74,12 +74,7 @@ public final class QueuePlacementRuleUtils {
       validateQueueMappingUnderParentQueue(queueManager.getQueue(
           mapping.getParentQueue()), mapping.getParentQueue(),
           mapping.getFullPath());
-      return QueueMapping.QueueMappingBuilder.create()
-          .type(mapping.getType())
-          .source(mapping.getSource())
-          .parentQueue(mapping.getParentQueue())
-          .queue(mapping.getQueue())
-          .build();
+      return mapping;
     }
 
     return null;

@@ -59,15 +59,15 @@ public class TestZKDelegationTokenSecretManager {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestZKDelegationTokenSecretManager.class);
 
-  private static final int TEST_RETRIES = 2;
+  protected static final int TEST_RETRIES = 2;
 
-  private static final int RETRY_COUNT = 5;
+  protected static final int RETRY_COUNT = 5;
 
-  private static final int RETRY_WAIT = 1000;
+  protected static final int RETRY_WAIT = 1000;
 
-  private static final long DAY_IN_SECS = 86400;
+  protected static final long DAY_IN_SECS = 86400;
 
-  private TestingServer zkServer;
+  protected TestingServer zkServer;
 
   @Rule
   public Timeout globalTimeout = new Timeout(300000);
@@ -425,7 +425,7 @@ public class TestZKDelegationTokenSecretManager {
   // cancelled but.. that would mean having to make an RPC call for every
   // verification request.
   // Thus, the eventual consistency tradef-off should be acceptable here...
-  private void verifyTokenFail(DelegationTokenManager tm,
+  protected void verifyTokenFail(DelegationTokenManager tm,
       Token<DelegationTokenIdentifier> token) throws IOException,
       InterruptedException {
     verifyTokenFailWithRetry(tm, token, RETRY_COUNT);

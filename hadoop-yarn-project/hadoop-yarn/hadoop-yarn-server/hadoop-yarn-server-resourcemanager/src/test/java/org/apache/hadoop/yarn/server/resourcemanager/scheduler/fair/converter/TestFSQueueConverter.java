@@ -195,18 +195,18 @@ public class TestFSQueueConverter {
   }
 
   @Test
-  public void testQueueMaxRunningApps() {
+  public void testQueueMaxParallelApps() {
     converter = builder.build();
 
     converter.convertQueueHierarchy(rootQueue);
 
     assertEquals("root.admins.alice max apps", 2,
-        csConfig.getInt(PREFIX + "root.admins.alice.maximum-applications",
+        csConfig.getInt(PREFIX + "root.admins.alice.max-parallel-apps",
             -1));
 
     Set<String> remaining = Sets.difference(ALL_QUEUES,
         Sets.newHashSet("root.admins.alice"));
-    assertNoValueForQueues(remaining, ".maximum-applications", csConfig);
+    assertNoValueForQueues(remaining, ".max-parallel-apps", csConfig);
   }
 
   @Test

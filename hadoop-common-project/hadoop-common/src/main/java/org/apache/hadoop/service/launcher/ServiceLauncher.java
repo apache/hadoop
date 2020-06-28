@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -894,7 +895,7 @@ public class ServiceLauncher<S extends Service>
       List<String> args) {
     int size = args.size();
     if (size <= 1) {
-      return new ArrayList<>(0);
+      return Collections.emptyList();
     }
     List<String> coreArgs = args.subList(1, size);
 

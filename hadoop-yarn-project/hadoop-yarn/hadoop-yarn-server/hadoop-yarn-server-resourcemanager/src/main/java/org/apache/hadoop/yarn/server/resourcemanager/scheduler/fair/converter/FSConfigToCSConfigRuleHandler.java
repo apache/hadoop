@@ -170,14 +170,6 @@ public class FSConfigToCSConfigRuleHandler {
     }
   }
 
-  public void handleUserMaxApps() {
-    handle(USER_MAX_RUNNING_APPS, "<maxRunningApps>", null);
-  }
-
-  public void handleUserMaxAppsDefault() {
-    handle(USER_MAX_APPS_DEFAULT, "<userMaxAppsDefault>", null);
-  }
-
   public void handleDynamicMaxAssign() {
     handle(DYNAMIC_MAX_ASSIGN,
         FairSchedulerConfiguration.DYNAMIC_MAX_ASSIGN, null);

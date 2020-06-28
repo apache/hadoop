@@ -100,7 +100,7 @@ public final class TestAbfsClient {
   private String getUserAgentString(AbfsConfiguration config,
       boolean includeSSLProvider) throws MalformedURLException {
     AbfsClient client = new AbfsClient(new URL("https://azure.com"), null,
-        config, null, (AccessTokenProvider) null, null);
+        config, null, (AccessTokenProvider) null, null, null);
     String sslProviderName = null;
     if (includeSSLProvider) {
       sslProviderName = DelegatingSSLSocketFactory.getDefaultFactory()
@@ -267,7 +267,7 @@ public final class TestAbfsClient {
         (currentAuthType == AuthType.OAuth
             ? abfsConfig.getTokenProvider()
             : null),
-        tracker);
+        tracker, null);
 
     return testClient;
   }

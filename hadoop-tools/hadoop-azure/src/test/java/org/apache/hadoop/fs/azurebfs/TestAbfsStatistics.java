@@ -43,7 +43,7 @@ public class TestAbfsStatistics extends AbstractAbfsIntegrationTest {
     describe("Testing the counter values after Abfs is initialised");
 
     AbfsCounters instrumentation =
-        new AbfsInstrumentation(getFileSystem().getUri());
+        new AbfsCountersImpl(getFileSystem().getUri());
 
     //Testing summation of the counter values.
     for (int i = 0; i < LARGE_OPS; i++) {

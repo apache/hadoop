@@ -155,17 +155,7 @@ public class TestFSConfigToCSConfigConverter {
         .withOutputDirectory(FSConfigConverterTestCommons.OUTPUT_DIR);
   }
 
-  @Test
-  public void testDefaultMaxApplications() throws Exception {
-    converter.convert(config);
 
-    Configuration conf = converter.getCapacitySchedulerConfig();
-    int maxApps =
-        conf.getInt(
-            CapacitySchedulerConfiguration.MAXIMUM_SYSTEM_APPLICATIONS, -1);
-
-    assertEquals("Default max apps", 15, maxApps);
-  }
 
   @Test
   public void testDefaultMaxAMShare() throws Exception {
@@ -252,14 +242,52 @@ public class TestFSConfigToCSConfigConverter {
   }
 
   @Test
-  public void testDefaultMaxRunningApps() throws Exception {
+  public void testDefaultQueueMaxParallelApps() throws Exception {
     converter.convert(config);
 
     Configuration conf = converter.getCapacitySchedulerConfig();
 
-    // default setting
-    assertEquals("Default max apps", 15,
-        conf.getInt(PREFIX + "maximum-applications", -1));
+    assertEquals("Default max parallel apps", 15,
+        conf.getInt(PREFIX + "max-parallel-apps", -1));
+  }
+
+  @Test
+  public void testSpecificQueueMaxParallelApps() throws Exception {
+    converter.convert(config);
+
+    Configuration conf = converter.getCapacitySchedulerConfig();
+
+    assertEquals("root.admins.alice max parallel apps", 2,
+        conf.getInt(PREFIX + "root.admins.alice.max-parallel-apps", -1));
+  }
+
+  @Test
+  public void testDefaultUserMaxParallelApps() throws Exception {
+    converter.convert(config);
+
+    Configuration conf = converter.getCapacitySchedulerConfig();
+    int userMaxParallelApps =
+        conf.getInt(
+            PREFIX + "user.max-parallel-apps", -1);
+
+    assertEquals("Default user max parallel apps", 10,
+        userMaxParallelApps);
+  }
+
+  @Test
+  public void testSpecificUserMaxParallelApps() throws Exception {
+    converter.convert(config);
+
+    Configuration conf = converter.getCapacitySchedulerConfig();
+
+    assertEquals("Max parallel apps for alice", 30,
+        conf.getInt(PREFIX + "user.alice.max-parallel-apps", -1));
+    assertNull("Max parallel apps should be undefined for user bob",
+        conf.get(PREFIX + "user.bob.max-parallel-apps"));
+    assertNull("Max parallel apps should be undefined for user joe",
+        conf.get(PREFIX + "user.joe.max-parallel-apps"));
+    assertNull("Max parallel apps should be undefined for user john",
+        conf.get(PREFIX + "user.john.max-parallel-apps"));
   }
 
   @Test
@@ -281,28 +309,6 @@ public class TestFSConfigToCSConfigConverter {
     Mockito.doThrow(new UnsupportedPropertyException("maxCapacity"))
       .when(ruleHandler).handleMaxChildCapacity();
     config.setBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE, true);
-
-    converter.convert(config);
-  }
-
-  @Test
-  public void testUserMaxAppsNotSupported() throws Exception {
-    expectedException.expect(UnsupportedPropertyException.class);
-    expectedException.expectMessage("userMaxApps");
-
-    Mockito.doThrow(new UnsupportedPropertyException("userMaxApps"))
-      .when(ruleHandler).handleUserMaxApps();
-
-    converter.convert(config);
-  }
-
-  @Test
-  public void testUserMaxAppsDefaultNotSupported() throws Exception {
-    expectedException.expect(UnsupportedPropertyException.class);
-    expectedException.expectMessage("userMaxAppsDefault");
-
-    Mockito.doThrow(new UnsupportedPropertyException("userMaxAppsDefault"))
-      .when(ruleHandler).handleUserMaxAppsDefault();
 
     converter.convert(config);
   }

@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.viewfs;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE_DEFAULT;
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS;
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS_DEFAULT;
 import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
 
 import java.io.FileNotFoundException;
@@ -288,8 +290,9 @@ public class ViewFileSystem extends FileSystem {
 
         @Override
         protected FileSystem getTargetFileSystem(final INodeDir<FileSystem> dir)
-          throws URISyntaxException {
-          return new InternalDirOfViewFs(dir, creationTime, ugi, myUri, config);
+            throws URISyntaxException {
+          return new InternalDirOfViewFs(dir, creationTime, ugi, myUri, config,
+              this);
         }
 
         @Override
@@ -516,10 +519,10 @@ public class ViewFileSystem extends FileSystem {
   /**
    * {@inheritDoc}
    *
-   * Note: listStatus on root("/") considers listing from fallbackLink if
-   * available. If the same directory name is present in configured mount path
-   * as well as in fallback link, then only the configured mount path will be
-   * listed in the returned result.
+   * Note: listStatus considers listing from fallbackLink if available. If the
+   * same directory path is present in configured mount path as well as in
+   * fallback fs, then only the fallback path will be listed in the returned
+   * result except for link.
    *
    * If any of the the immediate children of the given path f is a symlink(mount
    * link), the returned FileStatus object of that children would be represented
@@ -527,10 +530,18 @@ public class ViewFileSystem extends FileSystem {
    * the target path FileStatus object. The target path will be available via
    * getSymlink on that children's FileStatus object. Since it represents as
    * symlink, isDirectory on that children's FileStatus will return false.
+   * This behavior can be changed by setting an advanced configuration
+   * fs.viewfs.mount.links.as.symlinks to false. In this case, mount points will
+   * be represented as non-symlinks and all the file/directory attributes like
+   * permissions, isDirectory etc will be assigned from it's resolved target
+   * directory/file.
    *
    * If you want to get the FileStatus of target path for that children, you may
    * want to use GetFileStatus API with that children's symlink path. Please see
    * {@link ViewFileSystem#getFileStatus(Path f)}
+   *
+   * Note: In ViewFileSystem, by default the mount links are represented as
+   * symlinks.
    */
   @Override
   public FileStatus[] listStatus(final Path f) throws AccessControlException,
@@ -1114,11 +1125,14 @@ public class ViewFileSystem extends FileSystem {
     final long creationTime; // of the the mount table
     final UserGroupInformation ugi; // the user/group of user who created mtable
     final URI myUri;
+    private final boolean showMountLinksAsSymlinks;
+    private InodeTree<FileSystem> fsState;
     
     public InternalDirOfViewFs(final InodeTree.INodeDir<FileSystem> dir,
         final long cTime, final UserGroupInformation ugi, URI uri,
-        Configuration config) throws URISyntaxException {
+        Configuration config, InodeTree fsState) throws URISyntaxException {
       myUri = uri;
+      this.fsState = fsState;
       try {
         initialize(myUri, config);
       } catch (IOException e) {
@@ -1127,6 +1141,9 @@ public class ViewFileSystem extends FileSystem {
       theInternalDir = dir;
       creationTime = cTime;
       this.ugi = ugi;
+      showMountLinksAsSymlinks = config
+          .getBoolean(CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS,
+              CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS_DEFAULT);
     }
 
     static private void checkPathIsSlash(final Path f) throws IOException {
@@ -1211,83 +1228,104 @@ public class ViewFileSystem extends FileSystem {
         FileNotFoundException, IOException {
       checkPathIsSlash(f);
       FileStatus[] fallbackStatuses = listStatusForFallbackLink();
-      FileStatus[] result = new FileStatus[theInternalDir.getChildren().size()];
+      Set<FileStatus> linkStatuses = new HashSet<>();
+      Set<FileStatus> internalDirStatuses = new HashSet<>();
       int i = 0;
       for (Entry<String, INode<FileSystem>> iEntry :
           theInternalDir.getChildren().entrySet()) {
         INode<FileSystem> inode = iEntry.getValue();
+        Path path = new Path(inode.fullPath).makeQualified(myUri, null);
         if (inode.isLink()) {
           INodeLink<FileSystem> link = (INodeLink<FileSystem>) inode;
+
+          if (showMountLinksAsSymlinks) {
+            // To maintain backward compatibility, with default option(showing
+            // mount links as symlinks), we will represent target link as
+            // symlink and rest other properties are belongs to mount link only.
+            linkStatuses.add(
+                new FileStatus(0, false, 0, 0, creationTime, creationTime,
+                    PERMISSION_555, ugi.getShortUserName(),
+                    ugi.getPrimaryGroupName(), link.getTargetLink(), path));
+            continue;
+          }
+
+          //  We will represent as non-symlinks. Here it will show target
+          //  directory/file properties like permissions, isDirectory etc on
+          //  mount path. The path will be a mount link path and isDirectory is
+          //  true if target is dir, otherwise false.
+          String linkedPath = link.getTargetFileSystem().getUri().getPath();
+          if ("".equals(linkedPath)) {
+            linkedPath = "/";
+          }
           try {
-            String linkedPath = link.getTargetFileSystem().getUri().getPath();
-            if("".equals(linkedPath)) {
-              linkedPath = "/";
-            }
             FileStatus status =
                 ((ChRootedFileSystem)link.getTargetFileSystem())
                 .getMyFs().getFileStatus(new Path(linkedPath));
-            result[i++] = new FileStatus(status.getLen(), false,
-              status.getReplication(), status.getBlockSize(),
-              status.getModificationTime(), status.getAccessTime(),
-              status.getPermission(), status.getOwner(), status.getGroup(),
-              link.getTargetLink(),
-              new Path(inode.fullPath).makeQualified(
-                  myUri, null));
+            linkStatuses.add(
+                new FileStatus(status.getLen(), status.isDirectory(),
+                    status.getReplication(), status.getBlockSize(),
+                    status.getModificationTime(), status.getAccessTime(),
+                    status.getPermission(), status.getOwner(),
+                    status.getGroup(), null, path));
           } catch (FileNotFoundException ex) {
-            result[i++] = new FileStatus(0, false, 0, 0,
-              creationTime, creationTime, PERMISSION_555,
-              ugi.getShortUserName(), ugi.getPrimaryGroupName(),
-              link.getTargetLink(),
-              new Path(inode.fullPath).makeQualified(
-                  myUri, null));
+            LOG.warn("Cannot get one of the children's(" + path
+                + ")  target path(" + link.getTargetFileSystem().getUri()
+                + ") file status.", ex);
+            throw ex;
           }
         } else {
-          result[i++] = new FileStatus(0, true, 0, 0,
-            creationTime, creationTime, PERMISSION_555,
-            ugi.getShortUserName(), ugi.getPrimaryGroupName(),
-            new Path(inode.fullPath).makeQualified(
-                myUri, null));
+          internalDirStatuses.add(
+              new FileStatus(0, true, 0, 0, creationTime, creationTime,
+                  PERMISSION_555, ugi.getShortUserName(),
+                  ugi.getPrimaryGroupName(), path));
         }
       }
+      FileStatus[] internalDirStatusesMergedWithFallBack = internalDirStatuses
+          .toArray(new FileStatus[internalDirStatuses.size()]);
       if (fallbackStatuses.length > 0) {
-        return consolidateFileStatuses(fallbackStatuses, result);
-      } else {
-        return result;
+        internalDirStatusesMergedWithFallBack =
+            merge(fallbackStatuses, internalDirStatusesMergedWithFallBack);
       }
+      // Links will always have precedence than internalDir or fallback paths.
+      return merge(linkStatuses.toArray(new FileStatus[linkStatuses.size()]),
+          internalDirStatusesMergedWithFallBack);
     }
 
-    private FileStatus[] consolidateFileStatuses(FileStatus[] fallbackStatuses,
-        FileStatus[] mountPointStatuses) {
+    private FileStatus[] merge(FileStatus[] toStatuses,
+        FileStatus[] fromStatuses) {
       ArrayList<FileStatus> result = new ArrayList<>();
       Set<String> pathSet = new HashSet<>();
-      for (FileStatus status : mountPointStatuses) {
+      for (FileStatus status : toStatuses) {
         result.add(status);
         pathSet.add(status.getPath().getName());
       }
-      for (FileStatus status : fallbackStatuses) {
+      for (FileStatus status : fromStatuses) {
         if (!pathSet.contains(status.getPath().getName())) {
           result.add(status);
         }
       }
-      return result.toArray(new FileStatus[0]);
+      return result.toArray(new FileStatus[result.size()]);
     }
 
     private FileStatus[] listStatusForFallbackLink() throws IOException {
-      if (theInternalDir.isRoot() &&
-          theInternalDir.getFallbackLink() != null) {
-        FileSystem linkedFs =
-            theInternalDir.getFallbackLink().getTargetFileSystem();
-        // Fallback link is only applicable for root
-        FileStatus[] statuses = linkedFs.listStatus(new Path("/"));
-        for (FileStatus status : statuses) {
-          // Fix the path back to viewfs scheme
-          status.setPath(
-              new Path(myUri.toString(), status.getPath().getName()));
+      if (this.fsState.getRootFallbackLink() != null) {
+        FileSystem linkedFallbackFs =
+            this.fsState.getRootFallbackLink().getTargetFileSystem();
+        Path p = Path.getPathWithoutSchemeAndAuthority(
+            new Path(theInternalDir.fullPath));
+        if (theInternalDir.isRoot() || linkedFallbackFs.exists(p)) {
+          FileStatus[] statuses = linkedFallbackFs.listStatus(p);
+          for (FileStatus status : statuses) {
+            // Fix the path back to viewfs scheme
+            Path pathFromConfiguredFallbackRoot =
+                new Path(p, status.getPath().getName());
+            status.setPath(
+                new Path(myUri.toString(), pathFromConfiguredFallbackRoot));
+          }
+          return statuses;
         }
-        return statuses;
-      } else {
-        return new FileStatus[0];
       }
+      return new FileStatus[0];
     }
 
     @Override
@@ -1301,6 +1339,31 @@ public class ViewFileSystem extends FileSystem {
           dir.toString().substring(1))) {
         return true; // this is the stupid semantics of FileSystem
       }
+
+      if (this.fsState.getRootFallbackLink() != null) {
+        FileSystem linkedFallbackFs =
+            this.fsState.getRootFallbackLink().getTargetFileSystem();
+        Path parent = Path.getPathWithoutSchemeAndAuthority(
+            new Path(theInternalDir.fullPath));
+        String leafChild = (InodeTree.SlashPath.equals(dir)) ?
+            InodeTree.SlashPath.toString() :
+            dir.getName();
+        Path dirToCreate = new Path(parent, leafChild);
+
+        try {
+          return linkedFallbackFs.mkdirs(dirToCreate, permission);
+        } catch (IOException e) {
+          if (LOG.isDebugEnabled()) {
+            StringBuilder msg =
+                new StringBuilder("Failed to create ").append(dirToCreate)
+                    .append(" at fallback : ")
+                    .append(linkedFallbackFs.getUri());
+            LOG.debug(msg.toString(), e);
+          }
+          return false;
+        }
+      }
+
       throw readOnlyMountTable("mkdirs",  dir);
     }
 

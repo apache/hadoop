@@ -73,11 +73,13 @@ public class AbfsClient implements Closeable {
   private final AuthType authType;
   private AccessTokenProvider tokenProvider;
   private SASTokenProvider sasTokenProvider;
+  private final AbfsCounters abfsCounters;
 
   private AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
                     final AbfsConfiguration abfsConfiguration,
                     final ExponentialRetryPolicy exponentialRetryPolicy,
-                    final AbfsPerfTracker abfsPerfTracker) {
+                    final AbfsPerfTracker abfsPerfTracker,
+                    final AbfsCounters abfsCounters) {
     this.baseUrl = baseUrl;
     this.sharedKeyCredentials = sharedKeyCredentials;
     String baseUrlString = baseUrl.toString();
@@ -104,14 +106,17 @@ public class AbfsClient implements Closeable {
 
     this.userAgent = initializeUserAgent(abfsConfiguration, sslProviderName);
     this.abfsPerfTracker = abfsPerfTracker;
+    this.abfsCounters = abfsCounters;
   }
 
   public AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
                     final AbfsConfiguration abfsConfiguration,
                     final ExponentialRetryPolicy exponentialRetryPolicy,
                     final AccessTokenProvider tokenProvider,
-                    final AbfsPerfTracker abfsPerfTracker) {
-    this(baseUrl, sharedKeyCredentials, abfsConfiguration, exponentialRetryPolicy, abfsPerfTracker);
+                    final AbfsPerfTracker abfsPerfTracker,
+                    final AbfsCounters abfsCounters) {
+    this(baseUrl, sharedKeyCredentials, abfsConfiguration,
+        exponentialRetryPolicy, abfsPerfTracker, abfsCounters);
     this.tokenProvider = tokenProvider;
   }
 
@@ -119,8 +124,10 @@ public class AbfsClient implements Closeable {
                     final AbfsConfiguration abfsConfiguration,
                     final ExponentialRetryPolicy exponentialRetryPolicy,
                     final SASTokenProvider sasTokenProvider,
-                    final AbfsPerfTracker abfsPerfTracker) {
-    this(baseUrl, sharedKeyCredentials, abfsConfiguration, exponentialRetryPolicy, abfsPerfTracker);
+                    final AbfsPerfTracker abfsPerfTracker,
+                    final AbfsCounters abfsCounters) {
+    this(baseUrl, sharedKeyCredentials, abfsConfiguration,
+        exponentialRetryPolicy, abfsPerfTracker, abfsCounters);
     this.sasTokenProvider = sasTokenProvider;
   }
 
@@ -891,5 +898,13 @@ public class AbfsClient implements Closeable {
   @VisibleForTesting
   public SASTokenProvider getSasTokenProvider() {
     return this.sasTokenProvider;
+  }
+
+  /**
+   * Getter for abfsCounters from AbfsClient.
+   * @return AbfsCounters instance.
+   */
+  protected AbfsCounters getAbfsCounters() {
+    return abfsCounters;
   }
 }

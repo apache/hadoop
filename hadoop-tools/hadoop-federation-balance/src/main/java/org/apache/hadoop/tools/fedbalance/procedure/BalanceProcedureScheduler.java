@@ -44,6 +44,7 @@ import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.WORK_THREAD_N
 import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.WORK_THREAD_NUM_DEFAULT;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.JOURNAL_CLASS;
 /**
+ * <pre>
  * The state machine framework consist of:
  *   Job:                The state machine. It implements the basic logic of the
  *                       state machine.
@@ -54,7 +55,7 @@ import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.JOURNAL_CLASS
  *   Journal:            It handles the job persistence and recover.
  *
  * Example:
- *   Job.Builder builder = new Job.Builder<>();
+ *   Job.Builder builder = new Job.Builder&lt;&gt;();
  *   builder.nextProcedure(new WaitProcedure("wait", 1000, 30 * 1000));
  *   Job job = builder.build();
  *
@@ -62,6 +63,7 @@ import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.JOURNAL_CLASS
  *   scheduler.init();
  *   scheduler.submit(job);
  *   scheduler.waitUntilDone(job);
+ * </pre>
  */
 public class BalanceProcedureScheduler {
   public static final Logger LOG =

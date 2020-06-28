@@ -93,6 +93,8 @@ public class ParentQueue extends AbstractCSQueue {
 
   private long lastSkipQueueDebugLoggingTimestamp = -1;
 
+  private int runnableApps;
+
   public ParentQueue(CapacitySchedulerContext cs,
       String queueName, CSQueue parent, CSQueue old) throws IOException {
     super(cs, queueName, parent, old);
@@ -1382,5 +1384,33 @@ public class ParentQueue extends AbstractCSQueue {
 
   public QueueOrderingPolicy getQueueOrderingPolicy() {
     return queueOrderingPolicy;
+  }
+
+  @Override
+  int getNumRunnableApps() {
+    readLock.lock();
+    try {
+      return runnableApps;
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  void incrementRunnableApps() {
+    writeLock.lock();
+    try {
+      runnableApps++;
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
+  void decrementRunnableApps() {
+    writeLock.lock();
+    try {
+      runnableApps--;
+    } finally {
+      writeLock.unlock();
+    }
   }
 }
