@@ -63,6 +63,12 @@ public class BlockStoragePolicySuite {
         new StorageType[]{StorageType.DISK},
         new StorageType[]{StorageType.DISK},
         true);    // Cannot be changed on regular files, but inherited.
+    final byte allNVDIMMId = HdfsConstants.ALLNVDIMM_STORAGE_POLICY_ID;
+    policies[allNVDIMMId] = new BlockStoragePolicy(allNVDIMMId,
+        HdfsConstants.ALLNVDIMM_STORAGE_POLICY_NAME,
+        new StorageType[]{StorageType.NVDIMM},
+        new StorageType[]{StorageType.DISK},
+        new StorageType[]{StorageType.DISK});
     final byte allssdId = HdfsConstants.StoragePolicy.ALL_SSD.value();
     policies[allssdId] = new BlockStoragePolicy(allssdId,
         HdfsConstants.StoragePolicy.ALL_SSD.name(),

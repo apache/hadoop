@@ -37,6 +37,8 @@ public final class HdfsConstants {
 
   public static final byte MEMORY_STORAGE_POLICY_ID = 15;
   public static final String MEMORY_STORAGE_POLICY_NAME = "LAZY_PERSIST";
+  public static final byte ALLNVDIMM_STORAGE_POLICY_ID = 14;
+  public static final String ALLNVDIMM_STORAGE_POLICY_NAME = "ALL_NVDIMM";
   public static final byte ALLSSD_STORAGE_POLICY_ID = 12;
   public static final String ALLSSD_STORAGE_POLICY_NAME = "ALL_SSD";
   public static final byte ONESSD_STORAGE_POLICY_ID = 10;

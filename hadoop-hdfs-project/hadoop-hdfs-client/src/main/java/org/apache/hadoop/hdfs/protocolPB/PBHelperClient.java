@@ -472,6 +472,8 @@ public class PBHelperClient {
       return StorageTypeProto.RAM_DISK;
     case PROVIDED:
       return StorageTypeProto.PROVIDED;
+    case NVDIMM:
+      return StorageTypeProto.NVDIMM;
     default:
       throw new IllegalStateException(
           "BUG: StorageType not found, type=" + type);
@@ -490,6 +492,8 @@ public class PBHelperClient {
       return StorageType.RAM_DISK;
     case PROVIDED:
       return StorageType.PROVIDED;
+    case NVDIMM:
+      return StorageType.NVDIMM;
     default:
       throw new IllegalStateException(
           "BUG: StorageTypeProto not found, type=" + type);

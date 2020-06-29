@@ -239,7 +239,8 @@ public class DFSAdmin extends FsShell {
         "\t\t- DISK\n" +
         "\t\t- SSD\n" +
         "\t\t- ARCHIVE\n" +
-        "\t\t- PROVIDED";
+        "\t\t- PROVIDED\n" +
+        "\t\t- NVDIMM";
 
 
     private StorageType type;
