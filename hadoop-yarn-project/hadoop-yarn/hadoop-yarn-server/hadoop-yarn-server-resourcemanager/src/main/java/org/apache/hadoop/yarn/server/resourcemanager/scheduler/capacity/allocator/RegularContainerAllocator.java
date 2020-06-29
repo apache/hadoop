@@ -76,12 +76,11 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       String nodePartition) {
     // If headroom + currentReservation < required, we cannot allocate this
     // require
-    Resource resourceCouldBeUnReserved = application.getCurrentReservation();
-    if (!application.getCSLeafQueue().getReservationContinueLooking()
-        || !nodePartition.equals(RMNodeLabelsManager.NO_LABEL)) {
-      // If we don't allow reservation continuous looking, OR we're looking at
-      // non-default node partition, we won't allow to unreserve before
-      // allocation.
+    Resource resourceCouldBeUnReserved =
+        application.getAppAttemptResourceUsage().getReserved(nodePartition);
+    if (!application.getCSLeafQueue().getReservationContinueLooking()) {
+      // If we don't allow reservation continuous looking,
+      // we won't allow to unreserve before allocation.
       resourceCouldBeUnReserved = Resources.none();
     }
     return Resources.greaterThanOrEqual(rc, clusterResource, Resources.add(
@@ -574,13 +573,10 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       // Allocate...
       // We will only do continuous reservation when this is not allocated from
       // reserved container
-      if (rmContainer == null && reservationsContinueLooking
-          && node.getLabels().isEmpty()) {
+      if (rmContainer == null && reservationsContinueLooking) {
         // when reservationsContinueLooking is set, we may need to unreserve
         // some containers to meet this queue, its parents', or the users'
         // resource limits.
-        // TODO, need change here when we want to support continuous reservation
-        // looking for labeled partitions.
         if (!shouldAllocOrReserveNewContainer || needToUnreserve) {
           if (!needToUnreserve) {
             // If we shouldn't allocate/reserve new container then we should
