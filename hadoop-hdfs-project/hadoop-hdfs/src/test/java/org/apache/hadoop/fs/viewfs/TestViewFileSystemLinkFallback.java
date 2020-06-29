@@ -33,6 +33,7 @@ import javax.security.auth.login.LoginException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
@@ -763,6 +764,156 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
       // should return true succeed when fallback fs is back to normal.
       assertTrue(vfs.mkdirs(nextLevelToInternalDir));
       assertTrue(fsTarget.exists(test));
+    }
+  }
+
+  /**
+   * Tests that the create file should be successful when the parent directory
+   * is same as the existent fallback directory. The new file should be created
+   * in fallback.
+   */
+  @Test
+  public void testCreateFileOnInternalMountDirWithSameDirTreeExistInFallback()
+      throws Exception {
+    Configuration conf = new Configuration();
+    ConfigUtil.addLink(conf, "/user1/hive/warehouse/partition-0",
+        new Path(targetTestRoot.toString()).toUri());
+    Path dir1 = new Path(targetTestRoot,
+        "fallbackDir/user1/hive/warehouse/partition-0");
+    fsTarget.mkdirs(dir1);
+    Path fallbackTarget = new Path(targetTestRoot, "fallbackDir");
+    ConfigUtil.addLinkFallback(conf, fallbackTarget.toUri());
+
+    try (FileSystem vfs = FileSystem.get(viewFsDefaultClusterUri, conf)) {
+      Path p = new Path("/user1/hive/warehouse/test.file");
+      Path test = Path.mergePaths(fallbackTarget, p);
+      assertFalse(fsTarget.exists(test));
+      assertTrue(fsTarget.exists(test.getParent()));
+      vfs.createNewFile(p);
+      assertTrue(fsTarget.exists(test));
+    }
+  }
+
+  /**
+   * Tests the making of a new directory which is not matching to any of
+   * internal directory.
+   */
+  @Test
+  public void testCreateNewFileWithOutMatchingToMountDirOrFallbackDirPath()
+      throws Exception {
+    Configuration conf = new Configuration();
+    ConfigUtil.addLink(conf, "/user1/hive/warehouse/partition-0",
+        new Path(targetTestRoot.toString()).toUri());
+    Path fallbackTarget = new Path(targetTestRoot, "fallbackDir");
+    fsTarget.mkdirs(fallbackTarget);
+    ConfigUtil.addLinkFallback(conf, fallbackTarget.toUri());
+    try (FileSystem vfs = FileSystem.get(viewFsDefaultClusterUri, conf)) {
+      Path p = new Path("/user2/test.file");
+      Path test = Path.mergePaths(fallbackTarget, p);
+      assertFalse(fsTarget.exists(test));
+      // user2 does not exist in fallback
+      assertFalse(fsTarget.exists(test.getParent()));
+      vfs.createNewFile(p);
+      // /user2/test.file should be created in fallback
+      assertTrue(fsTarget.exists(test));
+    }
+  }
+
+  /**
+   * Tests the making of a new file on root which is not matching to any of
+   * fallback files on root.
+   */
+  @Test
+  public void testCreateFileOnRootWithFallbackEnabled()
+      throws Exception {
+    Configuration conf = new Configuration();
+    Path fallbackTarget = new Path(targetTestRoot, "fallbackDir");
+    fsTarget.mkdirs(fallbackTarget);
+
+    ConfigUtil.addLink(conf, "/user1/hive/",
+        new Path(targetTestRoot.toString()).toUri());
+    ConfigUtil.addLinkFallback(conf, fallbackTarget.toUri());
+
+    try (FileSystem vfs = FileSystem.get(viewFsDefaultClusterUri, conf)) {
+      Path p = new Path("/test.file");
+      Path test = Path.mergePaths(fallbackTarget, p);
+      assertFalse(fsTarget.exists(test));
+      vfs.createNewFile(p);
+      // /test.file should be created in fallback
+      assertTrue(fsTarget.exists(test));
+    }
+  }
+
+  /**
+   * Tests the create of a file on root where the path is matching to an
+   * existing file on fallback's file on root.
+   */
+  @Test (expected = FileAlreadyExistsException.class)
+  public void testCreateFileOnRootWithFallbackWithFileAlreadyExist()
+      throws Exception {
+    Configuration conf = new Configuration();
+    Path fallbackTarget = new Path(targetTestRoot, "fallbackDir");
+    Path testFile = new Path(fallbackTarget, "test.file");
+    // pre-creating test file in fallback.
+    fsTarget.createNewFile(testFile);
+
+    ConfigUtil.addLink(conf, "/user1/hive/",
+        new Path(targetTestRoot.toString()).toUri());
+    ConfigUtil.addLinkFallback(conf, fallbackTarget.toUri());
+
+    try (FileSystem vfs = FileSystem.get(viewFsDefaultClusterUri, conf)) {
+      Path p = new Path("/test.file");
+      assertTrue(fsTarget.exists(testFile));
+      vfs.create(p, false).close();
+    }
+  }
+
+  /**
+   * Tests the creating of a file where the path is same as mount link path.
+   */
+  @Test(expected= FileAlreadyExistsException.class)
+  public void testCreateFileWhereThePathIsSameAsItsMountLinkPath()
+      throws Exception {
+    Configuration conf = new Configuration();
+    Path fallbackTarget = new Path(targetTestRoot, "fallbackDir");
+    fsTarget.mkdirs(fallbackTarget);
+
+    ConfigUtil.addLink(conf, "/user1/hive/",
+        new Path(targetTestRoot.toString()).toUri());
+    ConfigUtil.addLinkFallback(conf, fallbackTarget.toUri());
+
+    try (FileSystem vfs = FileSystem.get(viewFsDefaultClusterUri, conf)) {
+      Path p = new Path("/user1/hive");
+      assertFalse(fsTarget.exists(Path.mergePaths(fallbackTarget, p)));
+      vfs.create(p).close();
+    }
+  }
+
+  /**
+   * Tests the create of a file where he path is same as one of of the internal
+   * dir path should fail.
+   */
+  @Test
+  public void testCreateFileSameAsInternalDirPath()
+      throws Exception {
+    Configuration conf = new Configuration();
+    Path fallbackTarget = new Path(targetTestRoot, "fallbackDir");
+    fsTarget.mkdirs(fallbackTarget);
+    ConfigUtil.addLink(conf, "/user1/hive/",
+        new Path(targetTestRoot.toString()).toUri());
+    ConfigUtil.addLinkFallback(conf, fallbackTarget.toUri());
+
+    try (FileSystem vfs = FileSystem.get(viewFsDefaultClusterUri, conf)) {
+      Path p = new Path("/user1");
+      assertFalse(fsTarget.exists(Path.mergePaths(fallbackTarget, p)));
+      try {
+        vfs.createNewFile(p);
+        Assert.fail("Should fail to create file as this is an internal dir.");
+      } catch (NotInMountpointException e){
+        // This tree is part of internal tree. The above expetion will be thrown
+        // from getDefaultReplication, getDefaultBlockSize APIs which was called
+        // in create API.
+      }
     }
   }
 }

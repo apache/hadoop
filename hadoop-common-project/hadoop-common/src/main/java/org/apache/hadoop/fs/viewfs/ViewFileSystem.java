@@ -1180,7 +1180,41 @@ public class ViewFileSystem extends FileSystem {
     public FSDataOutputStream create(final Path f,
         final FsPermission permission, final boolean overwrite,
         final int bufferSize, final short replication, final long blockSize,
-        final Progressable progress) throws AccessControlException {
+        final Progressable progress) throws IOException {
+
+      if (f != null && theInternalDir.getChildren().containsKey(f.getName())) {
+        throw new FileAlreadyExistsException(
+            "A mount path(file/dir) already exist with the requested path: "
+                + theInternalDir.getChildren().get(f.getName()).fullPath);
+      }
+
+      // Just a sanity check. This should not happen.
+      if (InodeTree.SlashPath.equals(f)) {
+        throw new FileAlreadyExistsException(
+            "/ is not a file. The directory / already exist at: "
+                + theInternalDir.fullPath);
+      }
+
+      if (this.fsState.getRootFallbackLink() != null) {
+        FileSystem linkedFallbackFs =
+            this.fsState.getRootFallbackLink().getTargetFileSystem();
+        Path parent = Path.getPathWithoutSchemeAndAuthority(
+            new Path(theInternalDir.fullPath));
+        String leaf = f.getName();
+        Path fileToCreate = new Path(parent, leaf);
+
+        try {
+          return linkedFallbackFs
+              .create(fileToCreate, permission, overwrite, bufferSize,
+                  replication, blockSize, progress);
+        } catch (IOException e) {
+          StringBuilder msg =
+              new StringBuilder("Failed to create file:").append(fileToCreate)
+                  .append(" at fallback : ").append(linkedFallbackFs.getUri());
+          LOG.error(msg.toString(), e);
+          throw e;
+        }
+      }
       throw readOnlyMountTable("create", f);
     }
 
