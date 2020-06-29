@@ -165,14 +165,14 @@ RUN pip2 install \
 RUN pip2 install python-dateutil
 
 ###
-# Install node.js for web UI framework (4.2.6 ships with Xenial)
+# Install node.js 5.x for web UI framework
+# (instead of 4.2.6 shipped with Xenial)
 ###
-RUN apt-get -y install nodejs && \
-    ln -s /usr/bin/nodejs /usr/bin/node && \
-    apt-get -y install npm && \
-    npm install npm@latest -g && \
-    npm install -g bower && \
-    npm install -g ember-cli
+RUN curl -sL https://deb.nodesource.com/setup_5.x | bash - && \
+    apt-get install -y nodejs && \
+    npm install -g npm@5.10.0 && \
+    npm install -g bower@1.7.7 && \
+    npm install -g ember-cli@1.13.14
 
 ###
 # Avoid out of memory errors in builds
