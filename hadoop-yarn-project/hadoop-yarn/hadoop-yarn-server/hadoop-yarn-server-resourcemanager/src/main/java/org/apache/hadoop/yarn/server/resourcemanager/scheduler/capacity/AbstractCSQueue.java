@@ -1076,14 +1076,12 @@ public abstract class AbstractCSQueue implements CSQueue {
       if (Resources.greaterThanOrEqual(resourceCalculator, clusterResource,
           usedExceptKillable, currentLimitResource)) {
 
-        // if reservation continous looking enabled, check to see if could we
+        // if reservation continue looking enabled, check to see if could we
         // potentially use this node instead of a reserved node if the application
         // has reserved containers.
-        // TODO, now only consider reservation cases when the node has no label
-        if (this.reservationsContinueLooking && nodePartition.equals(
-            RMNodeLabelsManager.NO_LABEL) && Resources.greaterThan(
-            resourceCalculator, clusterResource, resourceCouldBeUnreserved,
-            Resources.none())) {
+        if (this.reservationsContinueLooking
+            && Resources.greaterThan(resourceCalculator, clusterResource,
+                resourceCouldBeUnreserved, Resources.none())) {
           // resource-without-reserved = used - reserved
           Resource newTotalWithoutReservedResource = Resources.subtract(
               usedExceptKillable, resourceCouldBeUnreserved);
