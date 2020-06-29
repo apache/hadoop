@@ -185,6 +185,36 @@ public final class DelegationConstants {
       new Text(ENCRYPTING_TOKEN_NAME);
 
   /**
+   * Service name to use for a secondary token name
+   * for the encrypting token binding: {@value}.
+   * <p></p>
+   * Default value, null/empty means work it out automatically
+   * based on the URI and token kind.
+   */
+  public static final String ENCRYPTING_SECONDARY_TOKEN_NAME =
+      "fs.s3a.delegation.encrypting.secondary.token.name";
+
+  /**
+   * Service name to use for a secondary token name
+   * for the full token binding: {@value}.
+   * <p></p>
+   * Default value, null/empty means work it out automatically
+   * based on the URI and token kind.
+   */
+  public static final String FULL_SECONDARY_TOKEN_NAME =
+      "fs.s3a.delegation.full.secondary.token.name";
+
+  /**
+   * Service name to use for a secondary token name
+   * for the session token binding: {@value}.
+   * <p></p>
+   * Default value, null/empty means work it out automatically
+   * based on the URI and token kind.
+   */
+  public static final String SESSION_SECONDARY_TOKEN_NAME =
+      "fs.s3a.delegation.session.secondary.token.name";
+
+  /**
    * Injecting Token binding classname: {@value}.
    * This is purely for testing.
    */
@@ -224,11 +254,14 @@ public final class DelegationConstants {
       true;
 
   /**
-   * Service name to use: {@value}.
+   * Service name to use for a secondary token name
+   * for the injecting token binding: {@value}.
+   * <p></p>
    * Default value, null/empty means work it out automatically
+   * based on the URI and token kind.
    */
-  public static final String INJECTING_SERVICE_NAME =
-      "fs.s3a.delegation.injecting.service.name";
+  public static final String INJECTING_SECONDARY_TOKEN_NAME =
+      "fs.s3a.delegation.injecting.secondary.token.name";
 
   private DelegationConstants() {
   }

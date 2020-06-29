@@ -22,9 +22,11 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -36,6 +38,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.auth.RoleModel;
@@ -86,6 +89,9 @@ public class S3ADelegationTokens extends AbstractDTService implements
 
   public static final String E_DELEGATION_TOKENS_DISABLED
       = "Delegation tokens are not enabled";
+
+  public static final String ERROR_DUPLICATE_TOKENS
+      = "Failed to initialize delegation tokens";
 
   /**
    * User who owns this FS; fixed at instantiation time, so that
@@ -181,6 +187,8 @@ public class S3ADelegationTokens extends AbstractDTService implements
    * and starts it.
    * Will raise an exception if delegation tokens are not enabled.
    * @param conf configuration
+   * @throws PathIOException if there are are multiple tokens with
+   * the same service name.
    * @throws Exception any failure to start up
    */
   @Override
@@ -209,6 +217,11 @@ public class S3ADelegationTokens extends AbstractDTService implements
         DelegationConstants.DELEGATION_SECONDARY_BINDINGS,
         DelegationTokenBinding.class);
 
+    // track the existing service names to reject any
+    // duplicate value.
+    Set<String> serviceNameSet = new HashSet<>();
+    // initial name is that of the service
+    serviceNameSet.add(getCanonicalServiceName());
     if (!secondary.isEmpty()) {
       LOG.info("Instantiating {} secondary tokens", secondary.size());
 
@@ -234,9 +247,16 @@ public class S3ADelegationTokens extends AbstractDTService implements
           // fall back
           serviceName = getTokenServiceForKind(name, kind.toString());
         }
+        String n = serviceName.toString();
+        if (!serviceNameSet.add(n)) {
+          throw new DelegationTokenIOException(
+              ERROR_DUPLICATE_TOKENS
+                  + ": duplicate service name " + n
+                  + " from secondary token binding " + b2);
+        }
         b2.setServiceName(serviceName);
         LOG.debug("Secondary token kind {} for service {} implemented by {}",
-            kind, serviceName, sb);
+            kind, n, sb);
         secondaryBindings.add(b2);
       }
     }
@@ -259,7 +279,7 @@ public class S3ADelegationTokens extends AbstractDTService implements
     }
 
     // now bind the primary and secondary token providers.
-    bindToAnyDelegationToken();
+    bindToAnyDelegationTokens();
     LOG.debug("S3A Delegation support token {} with {}",
         identifierToString(),
         tokenBinding.getDescription());
@@ -324,14 +344,6 @@ public class S3ADelegationTokens extends AbstractDTService implements
     LOG.debug("No delegation tokens present: using direct authentication");
     AWSCredentialProviderList providerList = tokenBinding.deployUnbonded();
     credentialProviders = Optional.of(providerList);
-    // aggregate secondary values.
-    // there's no attempt to clever here.
-    for (SecondaryDelegationToken b2 : secondaryBindings) {
-      AWSCredentialProviderList b2credProviders = b2.deployUnbonded();
-      LOG.debug("token provider for {} added {}",
-          b2, b2credProviders);
-      providerList.addAll(b2credProviders);
-    }
   }
 
   /**
@@ -358,22 +370,24 @@ public class S3ADelegationTokens extends AbstractDTService implements
    * prevents re-entrant calls.
    * @throws IOException selection/extraction/validation failure.
    */
-  private void bindToAnyDelegationToken() throws IOException {
+  private void bindToAnyDelegationTokens() throws IOException {
     checkState(!credentialProviders.isPresent(), E_ALREADY_DEPLOYED);
-    // TODO: if there is a token from the first one, there is one from the others.
     Token<AbstractS3ATokenIdentifier> token = selectTokenFromFSOwner();
     if (token != null) {
       bindToDelegationToken(token);
     } else {
       deployUnbonded();
     }
+    // now bind all secondary DTs.
+    AWSCredentialProviderList providerList = credentialProviders.get();
+    deployAllSecondaryTokenBindings(providerList);
 
-    if (credentialProviders.get().size() == 0) {
+    LOG.debug("Aggregate provider list {}", providerList);
+    if (providerList.size() == 0) {
       throw new DelegationTokenIOException("No AWS credential providers"
           + " created by Delegation Token Binding "
           + tokenBinding.getName());
     }
-    // TODO: now bind all secondary DTs.
 
   }
 
@@ -425,40 +439,60 @@ public class S3ADelegationTokens extends AbstractDTService implements
       AWSCredentialProviderList providerList =
           tokenBinding.bindToTokenIdentifier(dti);
       credentialProviders = Optional.of(providerList);
-
-      // now extract and process tokens of secondary values.
-      // because the 1ary has a token, all of these must also
-      // have one.
-      // Again, the list of providers is concatenated.
-      for (SecondaryDelegationToken b2 : secondaryBindings) {
-        Token<AbstractS3ATokenIdentifier> t2
-            = b2.bindToToken(user.getCredentials());
-        String name2 = b2.getCanonicalServiceName();
-        if (t2 == null) {
-          // no token was found
-          LOG.error("A primary token was found in the credentials {},"
-                  + " but the secondary token provider {} did not find one",
-              dti, b2);
-          throw new DelegationTokenIOException(
-              String.format("Secondary token provider of kind %s"
-                      + " could not find any delegation token for %s"
-                      + " in the credentials for user %s",
-                  b2.getKind(),
-                  name2,
-                  getOwner().getUserName()));
-        } else {
-
-          // extract and validate the secondary token
-          AbstractS3ATokenIdentifier dti2 = extractTokenIdentifier(name2, t2);
-          // bind the secondary service to the extracted identifier.
-          AWSCredentialProviderList p2 =
-              b2.bindToTokenIdentifier(dti2);
-          // append the new providers to the final list.
-          providerList.addAll(p2);
-        }
-      }
     }
 
+  }
+
+  /**
+   * Deploy the secondary tokens.
+   * <p></p>
+   * If the credentials have a token for the binding's canonical service
+   * name -bind to that token.
+   * Otherwise, deploy unbonded.
+   * @param providerList list of providers to append any new
+   * providers to.
+   * @return the number of tokens bound to.
+   * @throws IOException failure to bind.
+   */
+  public int deployAllSecondaryTokenBindings(
+      final AWSCredentialProviderList providerList)
+      throws IOException {
+    if (secondaryBindings.isEmpty()) {
+      // exit before printing any duration timing info.
+      return 0;
+    }
+    int tokenCount = 0;
+    // now and process tokens of secondary values.
+    try (DurationInfo ignored = new DurationInfo(LOG, DURATION_LOG_AT_INFO,
+        "Binding to Secondary Delegation Tokens")) {
+      for (SecondaryDelegationToken b2 : secondaryBindings) {
+        Text kind = b2.getKind();
+        String name2 = b2.getCanonicalServiceName();
+        LOG.debug("Binding to {} with service name {}",
+            kind, name2);
+        Token<AbstractS3ATokenIdentifier> t2
+            = b2.bindToToken(user.getCredentials());
+        AWSCredentialProviderList b2credProviders;
+
+        if (t2 != null) {
+          tokenCount++;
+          // extract and validate the secondary token
+          AbstractS3ATokenIdentifier dti2 = extractTokenIdentifier(name2, t2,
+              "secondary binding kind " + kind);
+          // bind the secondary service to the extracted identifier.
+          b2credProviders = b2.bindToTokenIdentifier(dti2);
+        } else {
+          // no token: deploy unbonded
+          b2credProviders = b2.deployUnbonded();
+          LOG.debug("token provider for {} added {}",
+              b2, b2credProviders);
+        }
+        // append the new providers to the final list.
+        LOG.debug("Adding provider list {} for {}", b2credProviders , name2);
+        providerList.addAll(b2credProviders);
+      }
+    }
+    return tokenCount;
   }
 
   /**
@@ -728,13 +762,15 @@ public class S3ADelegationTokens extends AbstractDTService implements
       final Token<? extends AbstractS3ATokenIdentifier> token)
       throws IOException {
 
-    return extractTokenIdentifier(getCanonicalUri().toString(), token);
+    return extractTokenIdentifier(getCanonicalUri().toString(), token,
+        "kind " + getTokenKind());
   }
 
   /**
    * From a token, get the S3A token identifier.
-   * @param token token to process
    * @param canonicalName name for exceptions.
+   * @param token token to process
+   * @param description description for diagnostics
    * @return the S3A token identifier
    * @throws IOException failure to validate/read data encoded in identifier.
    * @throws IllegalArgumentException if the token is null
@@ -742,16 +778,23 @@ public class S3ADelegationTokens extends AbstractDTService implements
   @VisibleForTesting
   static AbstractS3ATokenIdentifier extractTokenIdentifier(
       final String canonicalName,
-      final Token<? extends TokenIdentifier> token)
+      final Token<? extends TokenIdentifier> token,
+      final String description)
       throws IOException {
     checkArgument(token != null, "null token for %s", canonicalName);
     AbstractS3ATokenIdentifier identifier;
+    String diags = description.isEmpty()
+        ? ""
+        : (" (" + description + ")");
     // harden up decode beyond that Token does itself
     try {
       TokenIdentifier decoded = token.decodeIdentifier();
       if (decoded == null) {
-        throw new DelegationTokenIOException("Failed to unmarshall token for "
-            + canonicalName);
+        throw new DelegationTokenIOException("Failed to unmarshall token"
+            + " of kind " + token.getKind()
+            + " for "
+            + canonicalName
+            + diags);
       }
       if (!(decoded instanceof AbstractS3ATokenIdentifier)) {
         throw new DelegationTokenIOException("Token for "
@@ -765,7 +808,7 @@ public class S3ADelegationTokens extends AbstractDTService implements
       if (cause != null) {
         // its a wrapping around class instantiation.
         throw new DelegationTokenIOException("Decoding S3A token for "
-            + canonicalName + ": " + cause,
+            + canonicalName + diags + ": " + cause ,
             cause);
       } else {
         throw e;

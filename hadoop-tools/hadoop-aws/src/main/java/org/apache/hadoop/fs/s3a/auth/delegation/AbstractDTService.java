@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a.auth.delegation;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.Objects;
 
 import com.google.common.base.Preconditions;
 
@@ -103,9 +104,11 @@ public abstract class AbstractDTService
    */
   public void initializeTokenBinding(ExtensionBindingData binding)
       throws IOException {
-    this.bindingData = binding;
-    bindToFileSystem(binding.getStoreContext().getFsURI(),
-        binding.getStoreContext(),
+    this.bindingData = Objects.requireNonNull(binding, "unbound");
+    StoreContext storeContext = Objects.requireNonNull(
+        binding.getStoreContext());
+    bindToFileSystem(storeContext.getFsURI(),
+        storeContext,
         binding.getDelegationOperations());
   }
 

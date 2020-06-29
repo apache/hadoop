@@ -37,8 +37,16 @@ import org.apache.hadoop.security.token.Token;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_CREDENTIALS_PROVIDER;
+import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_SECONDARY_BINDINGS;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_BINDING;
+import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.ENCRYPTING_SECONDARY_TOKEN_NAME;
+import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.FULL_SECONDARY_TOKEN_NAME;
+import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.INJECTING_ISSUE_TOKENS;
+import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.INJECTING_SECONDARY_TOKEN_NAME;
+import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.SESSION_SECONDARY_TOKEN_NAME;
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.lookupS3ADelegationToken;
 
 /**
@@ -143,6 +151,24 @@ public abstract class AbstractDelegationIT extends AbstractS3ATestBase {
   }
 
   /**
+   * Clear all base and bucket options for delegation
+   * token testing.
+   * @param conf configuration to patch.
+   */
+  protected void resetAllDTConfigOptions(final Configuration conf) {
+    removeBaseAndBucketOverrides(conf,
+        DELEGATION_TOKEN_BINDING,
+        DELEGATION_SECONDARY_BINDINGS,
+        SERVER_SIDE_ENCRYPTION_ALGORITHM,
+        SERVER_SIDE_ENCRYPTION_KEY,
+        INJECTING_SECONDARY_TOKEN_NAME,
+        INJECTING_ISSUE_TOKENS,
+        FULL_SECONDARY_TOKEN_NAME,
+        SESSION_SECONDARY_TOKEN_NAME,
+        ENCRYPTING_SECONDARY_TOKEN_NAME);
+  }
+
+  /**
    * Patch the current config with the DT binding.
    * @param conf configuration to patch
    * @param binding binding to use
@@ -212,5 +238,9 @@ public abstract class AbstractDelegationIT extends AbstractS3ATestBase {
             .build());
     tokens.init(conf);
     return tokens;
+  }
+
+  public S3ADelegationTokens getFSDelegationTokenSupport(final S3AFileSystem fs) {
+    return fs.getDelegationTokens().get();
   }
 }

@@ -97,11 +97,12 @@ public final class ExtensionBindingData {
 
 
     public Builder withStoreContext(final StoreContext context) {
-      this.storeContext = storeContext;
+      this.storeContext = context;
       return this;
     }
 
-    public Builder withDelegationOperations(final DelegationOperations operations) {
+    public Builder withDelegationOperations(
+        final DelegationOperations operations) {
       this.delegationOperations = operations;
       return this;
     }

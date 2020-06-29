@@ -614,12 +614,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       LOG.debug("Using delegation tokens");
       S3ADelegationTokens tokens = new S3ADelegationTokens();
       this.delegationTokens = Optional.of(tokens);
-      tokens.initializeTokenBinding(
-          ExtensionBindingData.builder()
-              .withSecondaryBinding(false)
-              .withStoreContext(createStoreContext())
-              .withDelegationOperations(createDelegationOperations())
-              .build());
+      ExtensionBindingData bindingData = ExtensionBindingData.builder()
+          .withSecondaryBinding(false)
+          .withStoreContext(createStoreContext())
+          .withDelegationOperations(createDelegationOperations())
+          .build();
+      tokens.initializeTokenBinding(bindingData);
       tokens.init(conf);
       tokens.start();
       // switch to the DT provider and bypass all other configured

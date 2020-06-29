@@ -139,10 +139,7 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     // disable if assume role opts are off
     assumeSessionTestsEnabled(conf);
     disableFilesystemCaching(conf);
-    removeBaseAndBucketOverrides(conf,
-        DELEGATION_TOKEN_BINDING,
-        SERVER_SIDE_ENCRYPTION_ALGORITHM,
-        SERVER_SIDE_ENCRYPTION_KEY);
+    resetAllDTConfigOptions(conf);
     conf.set(HADOOP_SECURITY_AUTHENTICATION,
         UserGroupInformation.AuthenticationMethod.KERBEROS.name());
     enableDelegationTokens(conf, getDelegationBinding());
@@ -683,7 +680,7 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
         doAs(bobUser, () -> fs.getUsername()));
 
     UserGroupInformation fsOwner = doAs(bobUser,
-        () -> fs.getDelegationTokens().get().getOwner());
+        () -> getFSDelegationTokenSupport(fs).getOwner());
     assertEquals("username mismatch",
         aliceUser.getUserName(), fsOwner.getUserName());
 

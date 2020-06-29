@@ -22,11 +22,15 @@ import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.auth.RoleModel;
 import org.apache.hadoop.fs.s3a.auth.delegation.AbstractDelegationTokenBinding;
 import org.apache.hadoop.fs.s3a.auth.delegation.AbstractS3ATokenIdentifier;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
+import org.apache.hadoop.fs.s3a.auth.delegation.ExtensionBindingData;
 import org.apache.hadoop.io.Text;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.createAWSCredentialProviderSet;
@@ -41,6 +45,9 @@ import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.ENCRY
 public final class EncryptingTokenBinding
     extends AbstractDelegationTokenBinding {
 
+  private static final Logger LOG = LoggerFactory.getLogger(
+      EncryptingTokenBinding.class);
+
   /**
    * Wire name of this binding: {@value}.
    */
@@ -53,6 +60,16 @@ public final class EncryptingTokenBinding
 
   public EncryptingTokenBinding() {
     super(NAME, ENCRYPTING_TOKEN_KIND);
+  }
+
+  @Override
+  public void initializeTokenBinding(final ExtensionBindingData binding)
+      throws IOException {
+    super.initializeTokenBinding(binding);
+    if (binding.isSecondaryBinding()) {
+      LOG.warn("Encryption options are only extracted from the primary token"
+          + " of a filesystem");
+    }
   }
 
   @Override

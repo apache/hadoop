@@ -34,14 +34,23 @@ import org.apache.hadoop.fs.s3a.auth.RoleModel;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.io.Text;
 
+import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.FULL_SECONDARY_TOKEN_NAME;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.FULL_TOKEN_KIND;
 
 /**
- * Full credentials: they are simply passed as-is, rather than
- * converted to a session.
- * These aren't as secure; this class exists to (a) support deployments
+ * Full credentials: they are simply marshalled as-is along
+ * with all encryption settings.
+ * <p></p>
+ * These aren't as secure as session tokens.
+ * This class exists to (a) support deployments
  * where there is not STS service and (b) validate the design of
  * S3A DT support to support different managers.
+ * <p></p>
+ * When used as a secondary token, the canonical name of the
+ * token can be set in the option
+ * {@link DelegationConstants#FULL_SECONDARY_TOKEN_NAME};
+ * this allows credentials to be shared across all filesystems
+ * used in an application.
  */
 public class FullCredentialsTokenBinding extends
     AbstractDelegationTokenBinding {
@@ -176,4 +185,11 @@ public class FullCredentialsTokenBinding extends
     return new FullCredentialsTokenIdentifier();
   }
 
+  @Override
+  public Text buildCanonicalNameForSecondaryBinding(final String fsURI) {
+    String name = getConfig().getTrimmed(FULL_SECONDARY_TOKEN_NAME, null);
+    return name != null
+        ? new Text(name)
+        : null;
+  }
 }

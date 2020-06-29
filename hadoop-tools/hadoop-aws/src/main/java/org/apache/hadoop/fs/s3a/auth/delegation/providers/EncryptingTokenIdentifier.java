@@ -28,10 +28,10 @@ import org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.io.Text;
 
-import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.INJECTING_TOKEN_KIND;
+import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.ENCRYPTING_TOKEN_KIND;
 
 /**
- * A token identifier for the injecting binding.
+ * A token identifier for the encrypting binding.
  * This contains no credentials and cannot authenticate.
  */
 public final class EncryptingTokenIdentifier extends
@@ -41,10 +41,10 @@ public final class EncryptingTokenIdentifier extends
 
   /**
    * Constructor for service loader use.
-   * Created with the kind {@link DelegationConstants#INJECTING_TOKEN_KIND}.
+   * Created with the kind {@link DelegationConstants#ENCRYPTING_TOKEN_KIND}.
    */
   public EncryptingTokenIdentifier() {
-    super(INJECTING_TOKEN_KIND);
+    super(ENCRYPTING_TOKEN_KIND);
   }
 
   /**
@@ -61,7 +61,7 @@ public final class EncryptingTokenIdentifier extends
       final Text renewer,
       final EncryptionSecrets encryptionSecrets,
       final long issueNumber) {
-    super(INJECTING_TOKEN_KIND, uri, owner, renewer,
+    super(ENCRYPTING_TOKEN_KIND, uri, owner, renewer,
         createDefaultOriginMessage(), encryptionSecrets);
     this.issueNumber = issueNumber;
   }
@@ -90,7 +90,7 @@ public final class EncryptingTokenIdentifier extends
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder(
-        "InjectingTokenIdentifier{");
+        "EncryptingTokenIdentifier{");
     sb.append("counter=").append(issueNumber);
     sb.append('}');
     return sb.toString();

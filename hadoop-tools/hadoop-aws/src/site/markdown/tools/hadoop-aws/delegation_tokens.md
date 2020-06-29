@@ -24,7 +24,13 @@ obtain credentials to access S3 buckets and pass them pass these credentials to
 jobs/queries, so granting them access to the service with the same access
 permissions as the user.
 
-Three different token types are offered.
+Multiple token types are included in the `hadoop-aws` JAR.
+
+*Encrypting Tokens:* include only the encryption settings (including
+secret keys) needed to encrypt and decrypt data on a bucket.
+These permit encryption options, especially those secrets, to be passed from
+a client to a VM/Container whose IAM role has access permissions to the data
+-but needs to knows those encryption details.
 
 *Full Delegation Tokens:* include the full login values of `fs.s3a.access.key`
 and `fs.s3a.secret.key` in the token, so the recipient has access to
@@ -56,12 +62,22 @@ see [S3A Delegation Token Architecture](delegation_token_architecture.html).
 
 ## <a name="background"></a> Background: Hadoop Delegation Tokens.
 
-A Hadoop Delegation Token are is a byte array of data which is submitted to
+Hadoop Delegation Tokens allow applications executed within a Kerberos-secured
+Hadoop cluster to access data to which a user has permissions, _without_
+the user needing to pass their full Kerberos token to the application.
+
+Instead the (authenticated) user requests delegation tokens from the services
+which it wishes the to-be-launched application to access, and includes
+these with the other information used to launch the application. These
+tokens are then normally presented to the service as evidence they are
+performing work on behalf of the specific user.
+
+Implementation-wise, a Delegation Token is a byte array of data which is submitted to
 a Hadoop services as proof that the caller has the permissions to perform
 the operation which it is requesting —
 and which can be passed between applications to *delegate* those permission.
 
-Tokens are opaque to clients, clients who simply get a byte array
+Tokens are opaque to clients, clients simply get a byte array
 of data which they must to provide to a service when required.
 This normally contains encrypted data for use by the service.
 
