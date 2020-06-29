@@ -327,19 +327,16 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     bufferIndex = 0;
     final long offset = position;
     position += bytesLength;
-
-    try {
-      AbfsPerfTracker tracker = client.getAbfsPerfTracker();
-      try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
-              "writeCurrentBufferToService", "append")) {
-        AbfsRestOperation op = client.append(path, offset, bytes, 0,
-            bytesLength, cachedSasToken.get(), this.isAppendBlob);
-        cachedSasToken.update(op.getSasToken());
-        outputStreamStatistics.uploadSuccessful(bytesLength);
-        perfInfo.registerResult(op.getResult());
-        byteBufferPool.putBuffer(ByteBuffer.wrap(bytes));
-        perfInfo.registerSuccess(true);
-      }
+    AbfsPerfTracker tracker = client.getAbfsPerfTracker();
+    try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
+            "writeAppendBlobCurrentBufferToService", "append")) {
+      AbfsRestOperation op = client.append(path, offset, bytes, 0,
+          bytesLength, cachedSasToken.get(), this.isAppendBlob);
+      cachedSasToken.update(op.getSasToken());
+      outputStreamStatistics.uploadSuccessful(bytesLength);
+      perfInfo.registerResult(op.getResult());
+      byteBufferPool.putBuffer(ByteBuffer.wrap(bytes));
+      perfInfo.registerSuccess(true);
       return;
     } catch (Exception ex) {
       if (ex instanceof AbfsRestOperationException) {

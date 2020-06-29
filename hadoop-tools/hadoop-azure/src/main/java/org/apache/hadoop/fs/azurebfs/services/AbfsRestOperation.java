@@ -65,7 +65,6 @@ public class AbfsRestOperation {
   private int bufferOffset;
   private int bufferLength;
   private int retryCount = 0;
-  private boolean isAppendBlobAppend;
 
   private AbfsHttpOperation result;
   private AbfsCounters abfsCounters;
@@ -135,7 +134,6 @@ public class AbfsRestOperation {
             || AbfsHttpConstants.HTTP_METHOD_PATCH.equals(method));
     this.sasToken = sasToken;
     this.abfsCounters = client.getAbfsCounters();
-    this.isAppendBlobAppend = false;
   }
 
   /**
@@ -160,14 +158,12 @@ public class AbfsRestOperation {
                     byte[] buffer,
                     int bufferOffset,
                     int bufferLength,
-                    String sasToken,
-                    boolean isAppendBlobAppend) {
+                    String sasToken) {
     this(operationType, client, method, url, requestHeaders, sasToken);
     this.buffer = buffer;
     this.bufferOffset = bufferOffset;
     this.bufferLength = bufferLength;
     this.abfsCounters = client.getAbfsCounters();
-    this.isAppendBlobAppend = isAppendBlobAppend;
   }
 
   /**
@@ -196,14 +192,6 @@ public class AbfsRestOperation {
     }
 
     if (result.getStatusCode() >= HttpURLConnection.HTTP_BAD_REQUEST) {
-      // For AppendBlob its possible that the append succeeded in the backend but the request failed. However a retry would fail
-      // with an InvalidQueryParameterValue(as the current offset would be unacceptable).
-      // Hence, we pass/succeed the appendblob append call
-      // in case we are doing a retry and we get the InvalidQueryParameterValue error code.
-      if (this.isAppendBlobAppend && retryCount > 0 && result.getStorageErrorCode().equals("InvalidQueryParameterValue")) {
-        //TODO: Do length check to confirm the write has occured at the offset of request. (once available from backend)
-        return;
-      }
       throw new AbfsRestOperationException(result.getStatusCode(), result.getStorageErrorCode(),
           result.getStorageErrorMessage(), null, result);
     }

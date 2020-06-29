@@ -404,9 +404,45 @@ public class AbfsClient implements Closeable {
             this,
             HTTP_METHOD_PUT,
             url,
-            requestHeaders, buffer, offset, length, sasTokenForReuse, isAppendBlob);
-    op.execute();
+            requestHeaders, buffer, offset, length, sasTokenForReuse);
+    try {
+      op.execute();
+    } catch (AzureBlobFileSystemException e) {
+      if (isAppendBlob && appendSuccessCheckOp(op, path, (position + length))) {
+        final AbfsRestOperation successOp = new AbfsRestOperation(
+            AbfsRestOperationType.Append,
+                this,
+                HTTP_METHOD_PUT,
+                url,
+                requestHeaders, buffer, offset, length, sasTokenForReuse);
+        successOp.hardSetResult(HttpURLConnection.HTTP_OK);
+        return successOp;
+      }
+      throw e;
+    }
+
     return op;
+  }
+
+  // For AppendBlob its possible that the append succeeded in the backend but the request failed.
+  // However a retry would fail with an InvalidQueryParameterValue
+  // (as the current offset would be unacceptable).
+  // Hence, we pass/succeed the appendblob append call
+  // in case we are doing a retry after checking the length of the file
+  public boolean appendSuccessCheckOp(AbfsRestOperation op, final String path,
+                                       final long length) throws AzureBlobFileSystemException {
+    if ((op.isARetriedRequest())
+        && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_BAD_REQUEST)) {
+      final AbfsRestOperation destStatusOp = getPathStatus(path, false);
+      if (destStatusOp.getResult().getStatusCode() == HttpURLConnection.HTTP_OK) {
+        String fileLength = destStatusOp.getResult().getResponseHeader(
+            HttpHeaderConfigurations.CONTENT_LENGTH);
+        if (length <= Long.parseLong(fileLength)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   public AbfsRestOperation flush(final String path, final long position, boolean retainUncommittedData,
@@ -511,7 +547,7 @@ public class AbfsClient implements Closeable {
             requestHeaders,
             buffer,
             bufferOffset,
-            bufferLength, sasTokenForReuse, false);
+            bufferLength, sasTokenForReuse);
     op.execute();
 
     return op;
