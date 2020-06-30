@@ -23,8 +23,12 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -34,6 +38,8 @@ import javax.crypto.SecretKey;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Text;
+import static org.apache.hadoop.metrics2.util.Metrics2Util.NameValuePair;
+import static org.apache.hadoop.metrics2.util.Metrics2Util.TopN;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.HadoopKerberosName;
 import org.apache.hadoop.security.token.SecretManager;
@@ -726,4 +732,41 @@ extends AbstractDelegationTokenIdentifier>
     return token.decodeIdentifier();
   }
 
+  /**
+   * Return top token real owners list as well as the tokens count.
+   *
+   * @param n top number of users
+   * @return map of owners to counts
+   */
+  public List<NameValuePair> getTopTokenRealOwners(int n) {
+    Map<String, Integer> tokenOwnerMap = new HashMap<>();
+    for (TokenIdent id : currentTokens.keySet()) {
+      String realUser;
+      if (id.getRealUser() != null && !id.getRealUser().toString().isEmpty()) {
+        realUser = id.getRealUser().toString();
+      } else {
+        // if there is no real user -> this is a non proxy user
+        // the user itself is the real owner
+        realUser = id.getUser().getUserName();
+      }
+      tokenOwnerMap.put(realUser, tokenOwnerMap.getOrDefault(realUser, 0)+1);
+    }
+    n = Math.min(n, tokenOwnerMap.size());
+    if (n == 0) {
+      return new LinkedList<>();
+    }
+
+    TopN topN = new TopN(n);
+    for (Map.Entry<String, Integer> entry : tokenOwnerMap.entrySet()) {
+      topN.offer(new NameValuePair(
+          entry.getKey(), entry.getValue()));
+    }
+
+    List<NameValuePair> list = new LinkedList<>();
+    while (!topN.isEmpty()) {
+      list.add(topN.poll());
+    }
+    Collections.reverse(list);
+    return list;
+  }
 }
