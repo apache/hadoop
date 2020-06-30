@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -186,6 +189,17 @@ public class MockNM {
     if ( nodeLabels != null && nodeLabels.size() > 0) {
       req.setNodeLabels(nodeLabels);
     }
+
+    NodeStatus status = Records.newRecord(NodeStatus.class);
+    status.setResponseId(0);
+    status.setNodeId(nodeId);
+    status.setContainersStatuses(new ArrayList<>(containerStats.values()));
+    NodeHealthStatus healthStatus = Records.newRecord(NodeHealthStatus.class);
+    healthStatus.setHealthReport("");
+    healthStatus.setIsNodeHealthy(true);
+    healthStatus.setLastHealthReportTime(1);
+    status.setNodeHealthStatus(healthStatus);
+    req.setNodeStatus(status);
 
     RegisterNodeManagerResponse registrationResponse =
         resourceTracker.registerNodeManager(req);
@@ -362,6 +376,14 @@ public class MockNM {
 
     this.tokenSequenceNo = heartbeatResponse.getTokenSequenceNo();
     return heartbeatResponse;
+  }
+
+  public static NodeStatus createMockNodeStatus() {
+    NodeStatus mockNodeStatus = mock(NodeStatus.class);
+    NodeHealthStatus mockNodeHealthStatus = mock(NodeHealthStatus.class);
+    when(mockNodeStatus.getNodeHealthStatus()).thenReturn(mockNodeHealthStatus);
+    when(mockNodeHealthStatus.getIsNodeHealthy()).thenReturn(true);
+    return mockNodeStatus;
   }
 
   public long getMemory() {
