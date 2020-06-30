@@ -33,7 +33,6 @@ import org.apache.hadoop.util.AutoCloseableLock;
  * Maintains the replica map. 
  */
 class ReplicaMap {
-  private final ReadWriteLock rwLock;
   // Lock object to synchronize this instance.
   private final AutoCloseableLock readLock;
   private final AutoCloseableLock writeLock;
@@ -53,18 +52,22 @@ class ReplicaMap {
         }
       };
 
-  ReplicaMap(ReadWriteLock lock) {
-    if (lock == null) {
+  ReplicaMap(AutoCloseableLock readLock, AutoCloseableLock writeLock) {
+    if (readLock == null || writeLock == null) {
       throw new HadoopIllegalArgumentException(
           "Lock to synchronize on cannot be null");
     }
-    this.rwLock = lock;
-    this.readLock = new AutoCloseableLock(rwLock.readLock());
-    this.writeLock = new AutoCloseableLock(rwLock.writeLock());
+    this.readLock = readLock;
+    this.writeLock = writeLock;
+  }
+
+  ReplicaMap(ReadWriteLock lock) {
+    this(new AutoCloseableLock(lock.readLock()),
+        new AutoCloseableLock(lock.writeLock()));
   }
   
   String[] getBlockPoolList() {
-    try (AutoCloseableLock l = writeLock.acquire()) {
+    try (AutoCloseableLock l = readLock.acquire()) {
       return map.keySet().toArray(new String[map.keySet().size()]);   
     }
   }
@@ -109,7 +112,7 @@ class ReplicaMap {
    */
   ReplicaInfo get(String bpid, long blockId) {
     checkBlockPool(bpid);
-    try (AutoCloseableLock l = writeLock.acquire()) {
+    try (AutoCloseableLock l = readLock.acquire()) {
       FoldedTreeSet<ReplicaInfo> set = map.get(bpid);
       if (set == null) {
         return null;
@@ -235,7 +238,7 @@ class ReplicaMap {
    * @return the number of replicas in the map
    */
   int size(String bpid) {
-    try (AutoCloseableLock l = writeLock.acquire()) {
+    try (AutoCloseableLock l = readLock.acquire()) {
       FoldedTreeSet<ReplicaInfo> set = map.get(bpid);
       return set != null ? set.size() : 0;
     }
@@ -281,4 +284,14 @@ class ReplicaMap {
   AutoCloseableLock getLock() {
     return writeLock;
   }
+
+  /**
+   * Get the lock object used for synchronizing the ReplicasMap for read only
+   * operations.
+   * @return The read lock object
+   */
+  AutoCloseableLock getReadLock() {
+    return readLock;
+  }
+
 }

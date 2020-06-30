@@ -473,7 +473,7 @@ public class DirectoryScanner implements Runnable {
     blockPoolReport.sortBlocks();
 
     // Hold FSDataset lock to prevent further changes to the block map
-    try (AutoCloseableLock lock = dataset.acquireDatasetLock()) {
+    try (AutoCloseableLock lock = dataset.acquireDatasetReadLock()) {
       for (final String bpid : blockPoolReport.getBlockPoolIds()) {
         List<ScanInfo> blockpoolReport = blockPoolReport.getScanInfo(bpid);
 
