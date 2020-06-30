@@ -25,9 +25,7 @@ import java.io.PrintStream;
 import java.net.URI;
 import java.util.List;
 
-import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.AnonymousAWSCredentials;
 import org.assertj.core.api.Assertions;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -52,13 +50,11 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.DtUtilShell;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.service.ServiceStateException;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
 import static org.apache.hadoop.fs.s3a.Constants.ACCESS_KEY;
@@ -94,8 +90,16 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 @SuppressWarnings("StaticNonFinalField")
 public class ITestSecondaryTokensInFileystem extends AbstractDelegationIT {
 
+  /**
+   * How many secondary tokens are expected to be issued.
+   */
   public static final int EXPECTED_2ARY_TOKEN_COUNT = 2;
-  public static final int EXPECTED_TOTAL_TOKEN_COUNT = 3;
+
+  /**
+   * Total count of the tokens expected to be issued.
+   */
+  public static final int EXPECTED_TOTAL_TOKEN_COUNT =
+      1 + EXPECTED_2ARY_TOKEN_COUNT ;
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestSecondaryTokensInFileystem.class);
@@ -161,7 +165,7 @@ public class ITestSecondaryTokensInFileystem extends AbstractDelegationIT {
         "ITestSecondaryTokensInFileystem");
 
     InjectingTokenBinding.addAsSecondaryToken(conf, true,
-        DummyCredentialsProvider.NAME);
+        CountInvocationsProvider.NAME);
 
     conf.set(AWS_CREDENTIALS_PROVIDER, " ");
     // switch to SSE_S3.
@@ -270,7 +274,7 @@ public class ITestSecondaryTokensInFileystem extends AbstractDelegationIT {
     LOG.info("FS token is {}", token);
     Text service = delegationTokens.getService();
 
-    Token<? extends TokenIdentifier> retrieved = requireNonNull(
+    requireNonNull(
         creds.getToken(service),
         "retrieved token with key " + service + "; expected " + token);
 
@@ -293,26 +297,14 @@ public class ITestSecondaryTokensInFileystem extends AbstractDelegationIT {
   }
 
   /**
-   * Get the tail of a list.
-   * @param list non-empty source list
-   * @param <T> type of list
-   * @return tail value
-   */
-  public static <T> T tail(final List<T> list) {
-
-    int size = list.size();
-    checkArgument(size > 0);
-    return list.get(size - 1);
-  }
-
-  /**
    * The this verifies that when an S3A token service is brought up with
    * secondary tokens, then they are picked up and the token specific
    * binding service instantiated.
-   * This is how we verify that all is good.
    */
   @Test
-  public void testDTCredentialProviderFromCurrentUserCreds() throws Throwable {
+  public void testDTCredentialProviderFromCurrentUserCreds()
+      throws Throwable {
+
     describe("Add credentials to the current user, "
         + "then verify that they can be found when S3ADelegationTokens binds");
     Credentials cred = createDelegationTokens();
@@ -343,12 +335,12 @@ public class ITestSecondaryTokensInFileystem extends AbstractDelegationIT {
         .describedAs("providers from delegation token service")
         .hasSizeGreaterThan(1)
         .element(awsProviders.size() - 1)
-        .isInstanceOf(DummyCredentialsProvider.class);
+        .isInstanceOf(CountInvocationsProvider.class);
   }
 
   /**
-   * Assert that the number of tokens issues matches all which the
-   * FS is expected to.
+   * Assert that the number of tokens issued matches all which the
+   * FS is expected to issue.
    * @param cred credentials.
    */
   public void assertAllTokensIssued(final Credentials cred) {
@@ -412,7 +404,6 @@ public class ITestSecondaryTokensInFileystem extends AbstractDelegationIT {
     // matter how you pick up credentials.
     conf.set(DELEGATION_TOKEN_ENDPOINT, "http://localhost:8080/");
     bindProviderList(bucket, conf, CountInvocationsProvider.NAME);
-    long originalCount = CountInvocationsProvider.getInvocationCount();
 
     // create a new FS instance, which is expected to pick up the
     // existing token
@@ -462,7 +453,7 @@ public class ITestSecondaryTokensInFileystem extends AbstractDelegationIT {
     try (S3AFileSystem landsatFS =
              newS3AInstance(landsatCSVPath.toUri(), conf)) {
       S3ADelegationTokens dtSupport = getFSDelegationTokenSupport(fs);
-      assertFalse("Expected 1ary dt tp be unbound: " + dtSupport,
+      assertFalse("Expected 1ary dt to be unbound: " + dtSupport,
           dtSupport.isBoundToDT());
       landsatFS.getFileStatus(landsatCSVPath);
       assertNotNull("unbounded DT",
@@ -514,14 +505,14 @@ public class ITestSecondaryTokensInFileystem extends AbstractDelegationIT {
 
   @Test
   public void testDuplicateTokenKind() throws Throwable {
-    describe("Verify that duplicate token kinds are rejected");
+    describe("Verify that duplicate secondary token kinds are rejected");
 
     Configuration conf = new Configuration(getConfiguration());
     disableFilesystemCaching(conf);
     unsetHadoopCredentialProviders(conf);
 
     InjectingTokenBinding.addAsSecondaryToken(conf, true,
-        DummyCredentialsProvider.NAME);
+        CountInvocationsProvider.NAME);
     InjectingTokenBinding.addAsSecondaryToken(conf, true,
         null);
     try (S3AFileSystem delegatedFS = new S3AFileSystem()) {
@@ -529,7 +520,25 @@ public class ITestSecondaryTokensInFileystem extends AbstractDelegationIT {
           ERROR_DUPLICATE_TOKENS, () ->
               delegatedFS.initialize(getFileSystem().getUri(), conf));
     }
+  }
+  @Test
+  public void testDuplicateTokenKindOfFS() throws Throwable {
+    describe("Verify thata secondary DT using the token name of the FS URI"
+        + " is rejected");
 
+    Configuration conf = new Configuration(getConfiguration());
+    disableFilesystemCaching(conf);
+    unsetHadoopCredentialProviders(conf);
+    URI fsuri = getFileSystem().getUri();
+    conf.set(INJECTING_SECONDARY_TOKEN_NAME, fsuri.toString());
+
+    InjectingTokenBinding.addAsSecondaryToken(conf, true,
+        CountInvocationsProvider.NAME);
+    try (S3AFileSystem delegatedFS = new S3AFileSystem()) {
+      intercept(ServiceStateException.class,
+          ERROR_DUPLICATE_TOKENS, () ->
+        delegatedFS.initialize(fsuri, conf));
+    }
   }
 
   protected File createTempTokenFile() throws IOException {
@@ -545,10 +554,10 @@ public class ITestSecondaryTokensInFileystem extends AbstractDelegationIT {
     dt.setOut(new PrintStream(dtUtilContent));
     dtUtilContent.reset();
     int r = doAs(aliceUser,
-        () -> ToolRunner.run(getConfiguration(), dt, args));
+        () -> ToolRunner.run(getConfiguration(), dt, args(args)));
     String s = dtUtilContent.toString();
     LOG.info("\n{}", s);
-    assertEquals(expected, r);
+    assertEquals("result of dtutil", expected, r);
     return s;
   }
 
@@ -575,23 +584,18 @@ public class ITestSecondaryTokensInFileystem extends AbstractDelegationIT {
   }
 
   /**
-   * Our dummy credentials provider returns anonymous credentials.
+   * Test the {@code hdfs fetchdt} command works with S3A tokens.
    */
-  public static class DummyCredentialsProvider
-      implements AWSCredentialsProvider {
+  @Test
+  public void testHDFSFetchDTCommand() throws Throwable {
+    describe("Use the HDFS fetchdt CLI to fetch a token");
 
-    public static final String NAME = DummyCredentialsProvider.class.getName();
+    Credentials creds = fetchTokensThroughDtUtils(
+        aliceUser,
+        getTokenKind(),
+        createTempTokenFile());
+    assertAllTokensIssued(creds);
 
-    @Override
-    public AWSCredentials getCredentials() {
-      return new AnonymousAWSCredentials();
-    }
-
-    @Override
-    public void refresh() {
-
-    }
   }
-
 
 }

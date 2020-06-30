@@ -40,7 +40,6 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Rerun the session token tests with a role binding.
- * Some tests will fail as role bindings prevent certain operations.
  */
 public class ITestRoleDelegationTokens extends ITestSessionDelegationTokens {
 

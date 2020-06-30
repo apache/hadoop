@@ -593,56 +593,10 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
   @Test
   public void testHDFSFetchDTCommand() throws Throwable {
     describe("Use the HDFS fetchdt CLI to fetch a token");
-
-    ExitUtil.disableSystemExit();
-    S3AFileSystem fs = getFileSystem();
-    Configuration conf = fs.getConf();
-
-    URI fsUri = fs.getUri();
-    String fsurl = fsUri.toString();
-    File tokenfile = createTempTokenFile();
-
-    // this will create (& leak) a new FS instance as caching is disabled.
-    // but as teardown destroys all filesystems for this user, it
-    // gets cleaned up at the end of the test
-    String tokenFilePath = tokenfile.getAbsolutePath();
-
-
-    // create the tokens as Bob.
-    doAs(bobUser,
-        () -> DelegationTokenFetcher.main(conf,
-            args("--webservice", fsurl, tokenFilePath)));
-    assertTrue("token file was not created: " + tokenfile,
-        tokenfile.exists());
-
-    // print to stdout
-    String s = DelegationTokenFetcher.printTokensToString(conf,
-        new Path(tokenfile.toURI()),
-        false);
-    LOG.info("Tokens: {}", s);
-    DelegationTokenFetcher.main(conf,
-        args("--print", tokenFilePath));
-    DelegationTokenFetcher.main(conf,
-        args("--print", "--verbose", tokenFilePath));
-
-    // read in and retrieve token
-    Credentials creds = Credentials.readTokenStorageFile(tokenfile, conf);
-    AbstractS3ATokenIdentifier identifier = requireNonNull(
-        lookupToken(
-            creds,
-            fsUri,
-            getTokenKind()), "Token lookup");
-    assertEquals("encryption secrets",
-        fs.getEncryptionSecrets(),
-        identifier.getEncryptionSecrets());
-    assertEquals("Username of decoded token",
-        bobUser.getUserName(), identifier.getUser().getUserName());
-
-    // renew
-    DelegationTokenFetcher.main(conf, args("--renew", tokenFilePath));
-
-    // cancel
-    DelegationTokenFetcher.main(conf, args("--cancel", tokenFilePath));
+    fetchTokensThroughDtUtils(
+        bobUser,
+        getTokenKind(),
+        createTempTokenFile());
   }
 
   protected File createTempTokenFile() throws IOException {
@@ -650,15 +604,6 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
         cluster.getWorkDir());
     tokenfile.delete();
     return tokenfile;
-  }
-
-  /**
-   * Convert a vargs list to an array.
-   * @param args vararg list of arguments
-   * @return the generated array.
-   */
-  private String[] args(String...args) {
-    return args;
   }
 
   /**
@@ -692,17 +637,16 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
         aliceUser.getUserName(), user.getUserName());
   }
 
-
   protected String dtutil(int expected, String...args) throws Exception {
     final ByteArrayOutputStream dtUtilContent = new ByteArrayOutputStream();
     DtUtilShell dt = new DtUtilShell();
     dt.setOut(new PrintStream(dtUtilContent));
     dtUtilContent.reset();
     int r =  doAs(aliceUser,
-        () ->ToolRunner.run(getConfiguration(), dt, args));
+        () ->ToolRunner.run(getConfiguration(), dt, super.args(args)));
     String s = dtUtilContent.toString();
     LOG.info("\n{}", s);
-    assertEquals(expected, r);
+    assertEquals("result of dtutil", expected, r);
     return s;
   }
 

@@ -716,6 +716,8 @@ public class S3ADelegationTokens extends AbstractDTService implements
     sb.append("; token creation count=").append(getCreationCount());
     sb.append("; tokenManager=").append(tokenBinding);
     sb.append("; token=").append(identifierToString());
+    sb.append("; secondary token count =")
+        .append(secondaryBindings.size());
     sb.append('}');
     return sb.toString();
   }
@@ -741,6 +743,7 @@ public class S3ADelegationTokens extends AbstractDTService implements
 
   /**
    * Get the service identifier of a filesystem URI and token kind.
+   * <p></p>
    * This must be unique for across all tokens, including those
    * issued by the same FS.
    * @param fsURI filesystem URI as a string
@@ -749,7 +752,7 @@ public class S3ADelegationTokens extends AbstractDTService implements
    */
   @VisibleForTesting
   static Text getTokenServiceForKind(final String fsURI, String kind) {
-    return new Text(fsURI+"-["+ kind + "]");
+    return new Text(fsURI+";"+ kind);
   }
 
   /**
@@ -815,7 +818,6 @@ public class S3ADelegationTokens extends AbstractDTService implements
         throw e;
       }
     }
-
   }
 
   /**

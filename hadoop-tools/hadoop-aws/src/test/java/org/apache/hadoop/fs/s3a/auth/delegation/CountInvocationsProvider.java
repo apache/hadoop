@@ -33,7 +33,7 @@ public class CountInvocationsProvider
 
   public static final String NAME = CountInvocationsProvider.class.getName();
 
-  public static final AtomicLong COUNTER = new AtomicLong(0);
+  private static final AtomicLong COUNTER = new AtomicLong(0);
 
   @Override
   public AWSCredentials getCredentials() {

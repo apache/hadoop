@@ -39,8 +39,8 @@ import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.ENCRY
 /**
  * Token binding for passing encryption settings/secrets only.
  * <p></p>
- * The tokens it sends over contain a counter but not any
- * AWS credentials.
+ * The tokens it sends over contain a counter and encryption
+ * secrets but not any AWS credentials.
  */
 public final class EncryptingTokenBinding
     extends AbstractDelegationTokenBinding {

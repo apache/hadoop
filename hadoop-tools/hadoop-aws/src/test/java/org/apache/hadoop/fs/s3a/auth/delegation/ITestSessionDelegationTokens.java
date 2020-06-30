@@ -219,7 +219,6 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
     describe("Create a Delegation Token, round trip then reuse");
 
     final S3AFileSystem fs = getFileSystem();
-    final Configuration conf = fs.getConf();
     final Text renewer = new Text("yarn");
 
     assertNull("Current User has delegation token",
