@@ -17,19 +17,18 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import com.google.common.base.Function;
-import com.google.common.base.Joiner;
+
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.UnmodifiableIterator;
 
-import javax.annotation.Nullable;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 
@@ -101,14 +100,14 @@ public class HostSet implements Iterable<InetSocketAddress> {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder("HostSet(");
-    Joiner.on(",").appendTo(sb, Iterators.transform(iterator(),
-        new Function<InetSocketAddress, String>() {
-          @Override
-          public String apply(@Nullable InetSocketAddress addr) {
-            assert addr != null;
-            return addr.getAddress().getHostAddress() + ":" + addr.getPort();
-          }
-        }));
+    List<String> addresses = new ArrayList<>();
+    iterator().forEachRemaining(
+        addr -> {
+          assert addr != null;
+          addresses.add(addr.getAddress().getHostAddress()
+              + ":" + addr.getPort());
+        });
+    sb.append(String.join(",", addresses));
     return sb.append(")").toString();
   }
 }

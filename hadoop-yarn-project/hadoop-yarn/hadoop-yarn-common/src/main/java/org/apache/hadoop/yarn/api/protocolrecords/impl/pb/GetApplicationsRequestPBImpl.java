@@ -22,7 +22,7 @@ import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.Range;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -35,8 +35,6 @@ import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationStateProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationsRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationsRequestProtoOrBuilder;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
 import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 @Private
@@ -88,13 +86,10 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
     }
     if (applicationStates != null && !applicationStates.isEmpty()) {
       builder.clearApplicationStates();
-      builder.addAllApplicationStates(Iterables.transform(applicationStates,
-          new Function<YarnApplicationState, YarnApplicationStateProto>() {
-            @Override
-            public YarnApplicationStateProto apply(YarnApplicationState input) {
-              return ProtoUtils.convertToProtoFormat(input);
-            }
-          }));
+      builder.addAllApplicationStates(
+          applicationStates.stream().map(
+              input -> ProtoUtils.convertToProtoFormat(input)
+          ).collect(Collectors.toList()));
     }
     if (applicationTags != null && !applicationTags.isEmpty()) {
       builder.clearApplicationTags();
