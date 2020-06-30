@@ -144,10 +144,10 @@ ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
 RUN pip3 install pylint==2.6.0 python-dateutil==2.8.1
 
 ###
-# Install node.js 8.17.0 for web UI framework (4.2.6 ships with Xenial)
+# Install node.js 10.21.0 for web UI framework (4.2.6 ships with Xenial)
 ###
-RUN curl -L -s -S https://deb.nodesource.com/setup_8.x | bash - \
-    && apt-get install -y --no-install-recommends nodejs=8.17.0-1nodesource1 \
+RUN curl -L -s -S https://deb.nodesource.com/setup_10.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs=10.21.0-1nodesource1 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && npm install -g bower@1.8.8
