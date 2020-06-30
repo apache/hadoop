@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -218,8 +219,9 @@ public class TestRMNodeTransitions {
 
   @Test (timeout = 5000)
   public void testExpiredContainer() {
+    NodeStatus mockNodeStatus = createMockNodeStatus();
     // Start the node
-    node.handle(new RMNodeStartedEvent(null, null, null));
+    node.handle(new RMNodeStartedEvent(null, null, null, mockNodeStatus));
     verify(scheduler).handle(any(NodeAddedSchedulerEvent.class));
     
     // Expire a container
@@ -282,12 +284,13 @@ public class TestRMNodeTransitions {
 
   @Test (timeout = 5000)
   public void testContainerUpdate() throws InterruptedException{
+    NodeStatus mockNodeStatus = createMockNodeStatus();
     //Start the node
-    node.handle(new RMNodeStartedEvent(null, null, null));
+    node.handle(new RMNodeStartedEvent(null, null, null, mockNodeStatus));
     
     NodeId nodeId = BuilderUtils.newNodeId("localhost:1", 1);
     RMNodeImpl node2 = new RMNodeImpl(nodeId, rmContext, null, 0, 0, null, null, null);
-    node2.handle(new RMNodeStartedEvent(null, null, null));
+    node2.handle(new RMNodeStartedEvent(null, null, null, mockNodeStatus));
 
     ApplicationId app0 = BuilderUtils.newApplicationId(0, 0);
     ApplicationId app1 = BuilderUtils.newApplicationId(1, 1);
@@ -343,8 +346,9 @@ public class TestRMNodeTransitions {
 
   @Test (timeout = 5000)
   public void testStatusChange(){
+    NodeStatus mockNodeStatus = createMockNodeStatus();
     //Start the node
-    node.handle(new RMNodeStartedEvent(null, null, null));
+    node.handle(new RMNodeStartedEvent(null, null, null, mockNodeStatus));
     //Add info to the queue first
     node.setNextHeartBeat(false);
 
@@ -610,6 +614,33 @@ public class TestRMNodeTransitions {
   }
 
   @Test
+  public void testAddUnhealthyNode() {
+    ClusterMetrics cm = ClusterMetrics.getMetrics();
+    int initialUnhealthy = cm.getUnhealthyNMs();
+    int initialActive = cm.getNumActiveNMs();
+    int initialLost = cm.getNumLostNMs();
+    int initialDecommissioned = cm.getNumDecommisionedNMs();
+    int initialRebooted = cm.getNumRebootedNMs();
+
+    NodeHealthStatus status = NodeHealthStatus.newInstance(false, "sick",
+        System.currentTimeMillis());
+    NodeStatus nodeStatus = NodeStatus.newInstance(node.getNodeID(), 0,
+        new ArrayList<>(), null, status, null, null, null);
+    node.handle(new RMNodeStartedEvent(node.getNodeID(), null, null,
+        nodeStatus));
+
+    Assert.assertEquals("Unhealthy Nodes",
+        initialUnhealthy + 1, cm.getUnhealthyNMs());
+    Assert.assertEquals("Active Nodes", initialActive, cm.getNumActiveNMs());
+    Assert.assertEquals("Lost Nodes", initialLost, cm.getNumLostNMs());
+    Assert.assertEquals("Decommissioned Nodes",
+        initialDecommissioned, cm.getNumDecommisionedNMs());
+    Assert.assertEquals("Rebooted Nodes",
+        initialRebooted, cm.getNumRebootedNMs());
+    Assert.assertEquals(NodeState.UNHEALTHY, node.getState());
+  }
+
+  @Test
   public void testNMShutdown() {
     RMNodeImpl node = getRunningNode();
     node.handle(new RMNodeEvent(node.getNodeID(), RMNodeEventType.SHUTDOWN));
@@ -714,7 +745,9 @@ public class TestRMNodeTransitions {
     Resource capability = Resource.newInstance(4096, 4);
     RMNodeImpl node = new RMNodeImpl(nodeId, rmContext, null, 0, 0, null,
         capability, nmVersion);
-    node.handle(new RMNodeStartedEvent(node.getNodeID(), null, null));
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+    node.handle(new RMNodeStartedEvent(node.getNodeID(), null, null,
+        mockNodeStatus));
     Assert.assertEquals(NodeState.RUNNING, node.getState());
     return node;
   }
@@ -765,7 +798,10 @@ public class TestRMNodeTransitions {
     Resource capability = Resource.newInstance(4096, 4);
     RMNodeImpl node = new RMNodeImpl(nodeId, rmContext,null, 0, 0,
         null, capability, null);
-    node.handle(new RMNodeStartedEvent(node.getNodeID(), null, null));
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
+    node.handle(new RMNodeStartedEvent(node.getNodeID(), null, null,
+        mockNodeStatus));
     Assert.assertEquals(NodeState.RUNNING, node.getState());
     node.handle(new RMNodeEvent(node.getNodeID(), RMNodeEventType.REBOOTING));
     Assert.assertEquals(NodeState.REBOOTED, node.getState());
@@ -781,7 +817,9 @@ public class TestRMNodeTransitions {
     int initialUnhealthy = cm.getUnhealthyNMs();
     int initialDecommissioned = cm.getNumDecommisionedNMs();
     int initialRebooted = cm.getNumRebootedNMs();
-    node.handle(new RMNodeStartedEvent(node.getNodeID(), null, null));
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+    node.handle(new RMNodeStartedEvent(node.getNodeID(), null, null,
+        mockNodeStatus));
     Assert.assertEquals("Active Nodes", initialActive + 1, cm.getNumActiveNMs());
     Assert.assertEquals("Lost Nodes", initialLost, cm.getNumLostNMs());
     Assert.assertEquals("Unhealthy Nodes",
@@ -1080,8 +1118,9 @@ public class TestRMNodeTransitions {
 
   @Test
   public void testForHandlingDuplicatedCompltedContainers() {
+    NodeStatus mockNodeStatus = createMockNodeStatus();
     // Start the node
-    node.handle(new RMNodeStartedEvent(null, null, null));
+    node.handle(new RMNodeStartedEvent(null, null, null, mockNodeStatus));
     // Add info to the queue first
     node.setNextHeartBeat(false);
 

@@ -1679,6 +1679,13 @@
   </property>
 
   <property>
+    <description>Whether or not to run the node health script
+    before the NM starts up.</description>
+    <name>yarn.nodemanager.health-checker.run-before-startup</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>Frequency of running node health scripts.</description>
     <name>yarn.nodemanager.health-checker.interval-ms</name>
     <value>600000</value>

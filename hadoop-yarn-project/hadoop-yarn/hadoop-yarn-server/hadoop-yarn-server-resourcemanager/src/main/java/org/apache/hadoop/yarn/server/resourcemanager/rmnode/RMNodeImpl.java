@@ -36,6 +36,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import org.apache.commons.collections.keyvalue.DefaultMapEntry;
+import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -208,7 +209,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
                                            RMNodeEventType,
                                            RMNodeEvent>(NodeState.NEW)
       //Transitions from NEW state
-      .addTransition(NodeState.NEW, NodeState.RUNNING,
+      .addTransition(NodeState.NEW,
+          EnumSet.of(NodeState.RUNNING, NodeState.UNHEALTHY),
           RMNodeEventType.STARTED, new AddNodeTransition())
       .addTransition(NodeState.NEW, NodeState.NEW,
           RMNodeEventType.RESOURCE_UPDATE,
@@ -704,7 +706,6 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
   private void updateMetricsForRejoinedNode(NodeState previousNodeState) {
     ClusterMetrics metrics = ClusterMetrics.getMetrics();
-    metrics.incrNumActiveNodes();
 
     switch (previousNodeState) {
     case LOST:
@@ -847,10 +848,10 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   }
 
   public static class AddNodeTransition implements
-      SingleArcTransition<RMNodeImpl, RMNodeEvent> {
+      MultipleArcTransition<RMNodeImpl, RMNodeEvent, NodeState> {
 
     @Override
-    public void transition(RMNodeImpl rmNode, RMNodeEvent event) {
+    public NodeState transition(RMNodeImpl rmNode, RMNodeEvent event) {
       // Inform the scheduler
       RMNodeStartedEvent startEvent = (RMNodeStartedEvent) event;
       List<NMContainerStatus> containers = null;
@@ -868,8 +869,6 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         if (previousRMNode != null) {
           ClusterMetrics.getMetrics().decrDecommisionedNMs();
         }
-        // Increment activeNodes explicitly because this is a new node.
-        ClusterMetrics.getMetrics().incrNumActiveNodes();
         containers = startEvent.getNMContainerStatuses();
         if (containers != null && !containers.isEmpty()) {
           for (NMContainerStatus container : containers) {
@@ -886,17 +885,37 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         }
       }
 
-      rmNode.context.getDispatcher().getEventHandler()
-        .handle(new NodeAddedSchedulerEvent(rmNode, containers));
-      rmNode.context.getDispatcher().getEventHandler().handle(
-        new NodesListManagerEvent(
-            NodesListManagerEventType.NODE_USABLE, rmNode));
+      NodeState nodeState;
+      NodeStatus nodeStatus =
+          startEvent.getNodeStatus();
+
+      if (nodeStatus == null) {
+        nodeState = NodeState.RUNNING;
+        reportNodeRunning(rmNode, containers);
+      } else {
+        RMNodeStatusEvent rmNodeStatusEvent =
+            new RMNodeStatusEvent(nodeId, nodeStatus);
+
+        NodeHealthStatus nodeHealthStatus =
+            updateRMNodeFromStatusEvents(rmNode, rmNodeStatusEvent);
+
+        if (nodeHealthStatus.getIsNodeHealthy()) {
+          nodeState = NodeState.RUNNING;
+          reportNodeRunning(rmNode, containers);
+        } else {
+          nodeState = NodeState.UNHEALTHY;
+          reportNodeUnusable(rmNode, nodeState);
+        }
+      }
+
       List<LogAggregationReport> logAggregationReportsForApps =
           startEvent.getLogAggregationReportsForApps();
       if (logAggregationReportsForApps != null
           && !logAggregationReportsForApps.isEmpty()) {
         rmNode.handleLogAggregationStatus(logAggregationReportsForApps);
       }
+
+      return nodeState;
     }
   }
 
@@ -1108,6 +1127,22 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   }
 
   /**
+   * Report node is RUNNING.
+   * @param rmNode
+   * @param containers
+   */
+  public static void reportNodeRunning(RMNodeImpl rmNode,
+      List<NMContainerStatus> containers) {
+    rmNode.context.getDispatcher().getEventHandler()
+        .handle(new NodeAddedSchedulerEvent(rmNode, containers));
+    rmNode.context.getDispatcher().getEventHandler().handle(
+        new NodesListManagerEvent(
+            NodesListManagerEventType.NODE_USABLE, rmNode));
+    // Increment activeNodes explicitly because this is a new node.
+    ClusterMetrics.getMetrics().incrNumActiveNodes();
+  }
+
+  /**
    * Report node is UNUSABLE and update metrics.
    * @param rmNode
    * @param finalState
@@ -1299,6 +1334,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         // notifiers get update metadata because they will very likely query it
         // upon notification
         // Update metrics
+        ClusterMetrics.getMetrics().incrNumActiveNodes();
         rmNode.updateMetricsForRejoinedNode(NodeState.UNHEALTHY);
         return NodeState.RUNNING;
       }
