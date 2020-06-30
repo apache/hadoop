@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -57,6 +58,12 @@ public class TestTasks extends HadoopTestBase {
    * Thread pool for task execution.
    */
   private ExecutorService threadPool;
+
+  /**
+   * Task submitter bonded to the thread pool, or
+   * null for the 0-thread case.
+   */
+  Tasks.Submitter submitter;
   private final CounterTask failingTask
       = new CounterTask("failing committer", FAILPOINT, Item::commit);
 
@@ -117,6 +124,9 @@ public class TestTasks extends HadoopTestBase {
               .setDaemon(true)
               .setNameFormat(getMethodName() + "-pool-%d")
               .build());
+      submitter = new PoolSubmitter();
+    } else {
+      submitter = null;
     }
 
   }
@@ -129,12 +139,21 @@ public class TestTasks extends HadoopTestBase {
     }
   }
 
+  private class PoolSubmitter implements Tasks.Submitter {
+
+    @Override
+    public Future<?> submit(final Runnable task) {
+      return threadPool.submit(task);
+    }
+
+  }
+
   /**
    * create the builder.
    * @return pre-inited builder
    */
   private Tasks.Builder<Item> builder() {
-    return Tasks.foreach(items).executeWith(threadPool);
+    return Tasks.foreach(items).executeWith(submitter);
   }
 
   private void assertRun(Tasks.Builder<Item> builder,
