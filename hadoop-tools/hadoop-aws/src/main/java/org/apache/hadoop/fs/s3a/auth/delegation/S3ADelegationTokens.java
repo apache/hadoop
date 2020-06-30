@@ -488,7 +488,7 @@ public class S3ADelegationTokens extends AbstractDTService implements
               b2, b2credProviders);
         }
         // append the new providers to the final list.
-        LOG.debug("Adding provider list {} for {}", b2credProviders , name2);
+        LOG.debug("Adding provider list {} for {}", b2credProviders, name2);
         providerList.addAll(b2credProviders);
       }
     }
@@ -617,7 +617,8 @@ public class S3ADelegationTokens extends AbstractDTService implements
    * @throws IOException failure
    * @param encryptionSecrets
    */
-  public DelegationTokenIssuer[] getAdditionalTokenIssuers(final EncryptionSecrets encryptionSecrets)
+  public DelegationTokenIssuer[] getAdditionalTokenIssuers(
+      final EncryptionSecrets encryptionSecrets)
       throws IOException {
     if (secondaryBindings.isEmpty()) {
       return null;
@@ -629,7 +630,7 @@ public class S3ADelegationTokens extends AbstractDTService implements
               this))
           .collect(Collectors.toList());
       return issuers.toArray(new S3ATokenIssuer[0]);
-     }
+    }
   }
 
   /**
@@ -808,7 +809,7 @@ public class S3ADelegationTokens extends AbstractDTService implements
       if (cause != null) {
         // its a wrapping around class instantiation.
         throw new DelegationTokenIOException("Decoding S3A token for "
-            + canonicalName + diags + ": " + cause ,
+            + canonicalName + diags + ": " + cause,
             cause);
       } else {
         throw e;

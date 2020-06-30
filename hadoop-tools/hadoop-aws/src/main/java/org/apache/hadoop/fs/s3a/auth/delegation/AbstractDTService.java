@@ -105,10 +105,10 @@ public abstract class AbstractDTService
   public void initializeTokenBinding(ExtensionBindingData binding)
       throws IOException {
     this.bindingData = Objects.requireNonNull(binding, "unbound");
-    StoreContext storeContext = Objects.requireNonNull(
+    StoreContext context = Objects.requireNonNull(
         binding.getStoreContext());
-    bindToFileSystem(storeContext.getFsURI(),
-        storeContext,
+    bindToFileSystem(context.getFsURI(),
+        context,
         binding.getDelegationOperations());
   }
 

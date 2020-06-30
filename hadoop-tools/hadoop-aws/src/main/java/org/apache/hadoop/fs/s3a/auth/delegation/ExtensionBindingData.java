@@ -40,9 +40,7 @@ public final class ExtensionBindingData {
    * it is passed down so that if an implementation does need to care,
    * it knows.
    */
-
-  public final boolean secondaryBinding;
-
+  private final boolean secondaryBinding;
 
   private final StoreContext storeContext;
 
@@ -78,7 +76,7 @@ public final class ExtensionBindingData {
   /**
    * Builder for the binding information.
    */
-  public static class Builder {
+  public static final class Builder {
 
     private Builder() {
     }

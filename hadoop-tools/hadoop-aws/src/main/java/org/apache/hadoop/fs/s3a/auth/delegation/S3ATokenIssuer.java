@@ -99,8 +99,11 @@ public class S3ATokenIssuer implements DelegationTokenIssuer {
     try (DurationInfo ignored = new DurationInfo(LOG, DURATION_LOG_AT_INFO,
             "Creating New Delegation Token", tokenBinding.getKind())) {
       Text t = renewer != null ? new Text(renewer) : null;
-      Token<AbstractS3ATokenIdentifier> token
-          = tokenBinding.getBoundOrNewDT(callbacks, policy, encryptionSecret, t);
+      Token<AbstractS3ATokenIdentifier> token =
+          tokenBinding.getBoundOrNewDT(callbacks,
+              policy,
+              encryptionSecret,
+              t);
       token.setService(serviceName);
       return token;
     }

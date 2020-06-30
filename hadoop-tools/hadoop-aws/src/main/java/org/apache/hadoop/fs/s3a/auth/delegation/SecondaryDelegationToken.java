@@ -39,11 +39,6 @@ class SecondaryDelegationToken extends AbstractDTService implements
     DelegationTokenBinding {
 
   /**
-   * Binding Data.
-   */
-  private ExtensionBindingData bindingData;
-
-  /**
    * Text value of this token service.
    */
   private Text serviceName;
@@ -214,7 +209,6 @@ class SecondaryDelegationToken extends AbstractDTService implements
   public void initializeTokenBinding(final ExtensionBindingData binding)
       throws IOException {
     super.initializeTokenBinding(binding);
-    this.bindingData = binding;
     tokenBinding.initializeTokenBinding(binding);
   }
 
@@ -264,4 +258,7 @@ class SecondaryDelegationToken extends AbstractDTService implements
     return token;
   }
 
+  AbstractS3ATokenIdentifier getDecodedIdentifier() {
+    return decodedIdentifier;
+  }
 }

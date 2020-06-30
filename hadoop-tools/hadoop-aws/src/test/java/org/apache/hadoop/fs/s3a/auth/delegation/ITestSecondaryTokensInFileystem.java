@@ -219,7 +219,7 @@ public class ITestSecondaryTokensInFileystem extends AbstractDelegationIT {
    * filesystem getDelegationToken only returns the 1ary token.
    */
   @Test
-  public void testGetDTfromFileSystem() throws Throwable {
+  public void testGetPrimaryTokenfromFileSystem() throws Throwable {
     describe("Enable delegation tokens and request one");
     delegationTokens.start();
     S3AFileSystem fs = getFileSystem();
