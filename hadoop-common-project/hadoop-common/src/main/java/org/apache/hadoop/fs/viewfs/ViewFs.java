@@ -33,6 +33,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import java.util.Set;
+
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -919,6 +921,7 @@ public class ViewFs extends AbstractFileSystem {
         FileAlreadyExistsException, FileNotFoundException,
         ParentNotDirectoryException, UnsupportedFileSystemException,
         UnresolvedLinkException, IOException {
+      Preconditions.checkNotNull(f, "File cannot be null.");
       // Just a sanity check. This should not happen.
       if (InodeTree.SlashPath.equals(f)) {
         throw new FileAlreadyExistsException(
@@ -927,8 +930,7 @@ public class ViewFs extends AbstractFileSystem {
       }
 
       if (this.fsState.getRootFallbackLink() != null) {
-        if (f != null && theInternalDir.getChildren()
-            .containsKey(f.getName())) {
+        if (theInternalDir.getChildren().containsKey(f.getName())) {
           throw new FileAlreadyExistsException(
               "A mount path(file/dir) already exist with the requested path: "
                   + theInternalDir.getChildren().get(f.getName()).fullPath);
