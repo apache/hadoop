@@ -55,6 +55,7 @@ public final class AzureADAuthenticator {
   private static final String SCOPE = "https://storage.azure.com/.default";
   private static final int CONNECT_TIMEOUT = 30 * 1000;
   private static final int READ_TIMEOUT = 30 * 1000;
+  private static final int SIXTY_SECONDS = 60 * 1000;
 
   private AzureADAuthenticator() {
     // no operation
@@ -284,12 +285,13 @@ public final class AzureADAuthenticator {
       throws IOException {
     AzureADToken token = null;
     ExponentialRetryPolicy retryPolicy
-            = new ExponentialRetryPolicy(3, 0, 1000, 2);
+            = new ExponentialRetryPolicy(5, 0, SIXTY_SECONDS, 2);
 
     int httperror = 0;
     IOException ex = null;
     boolean succeeded = false;
     int retryCount = 0;
+    LOG.debug("First execution of REST operation getTokenSingleCall");
     do {
       httperror = 0;
       ex = null;
@@ -299,10 +301,23 @@ public final class AzureADAuthenticator {
         httperror = e.httpErrorCode;
         ex = e;
       } catch (IOException e) {
-        ex = e;
+        httperror = -1;
+        ex = new HttpException(httperror, "", String
+            .format("AzureADAuthenticator.getTokenCall threw %s : %s",
+                e.getClass().getTypeName(), e.getMessage()), authEndpoint, "",
+            "");
       }
       succeeded = ((httperror == 0) && (ex == null));
       retryCount++;
+      if (!succeeded) {
+        LOG.debug("Retrying getTokenSingleCall. RetryCount = {}", retryCount);
+        try {
+          Thread.sleep(retryPolicy.getRetryInterval(retryCount));
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+        }
+      }
+
     } while (!succeeded && retryPolicy.shouldRetry(retryCount, httperror));
     if (!succeeded) {
       throw ex;
