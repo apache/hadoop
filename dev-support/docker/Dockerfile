@@ -17,7 +17,7 @@
 
 # Dockerfile for installing the necessary dependencies for building Hadoop.
 # See BUILDING.tx
-
+#
 FROM ubuntu:bionic
 
 WORKDIR /root
