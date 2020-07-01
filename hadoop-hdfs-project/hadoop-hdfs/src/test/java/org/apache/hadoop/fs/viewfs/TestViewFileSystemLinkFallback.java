@@ -778,10 +778,9 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
     Configuration conf = new Configuration();
     ConfigUtil.addLink(conf, "/user1/hive/warehouse/partition-0",
         new Path(targetTestRoot.toString()).toUri());
-    Path dir1 = new Path(targetTestRoot,
-        "fallbackDir/user1/hive/warehouse/partition-0");
-    fsTarget.mkdirs(dir1);
     Path fallbackTarget = new Path(targetTestRoot, "fallbackDir");
+    Path dir1 = new Path(fallbackTarget, "user1/hive/warehouse/partition-0");
+    fsTarget.mkdirs(dir1);
     ConfigUtil.addLinkFallback(conf, fallbackTarget.toUri());
 
     try (FileSystem vfs = FileSystem.get(viewFsDefaultClusterUri, conf)) {
