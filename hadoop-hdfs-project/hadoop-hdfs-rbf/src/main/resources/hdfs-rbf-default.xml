@@ -657,4 +657,12 @@
     </description>
   </property>
 
+  <property>
+    <name>dfs.federation.router.top.num.token.realowners</name>
+    <value>10</value>
+    <description>
+      The number of top real owners by tokens count to report in the JMX metrics.
+    </description>
+  </property>
+
 </configuration>

@@ -22,12 +22,11 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.security.MessageDigest;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -38,8 +37,8 @@ import javax.crypto.SecretKey;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Text;
-import static org.apache.hadoop.metrics2.util.Metrics2Util.NameValuePair;
-import static org.apache.hadoop.metrics2.util.Metrics2Util.TopN;
+import org.apache.hadoop.metrics2.util.Metrics2Util.NameValuePair;
+import org.apache.hadoop.metrics2.util.Metrics2Util.TopN;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.HadoopKerberosName;
 import org.apache.hadoop.security.token.SecretManager;
@@ -70,7 +69,13 @@ extends AbstractDelegationTokenIdentifier>
    */
   protected final Map<TokenIdent, DelegationTokenInformation> currentTokens 
       = new ConcurrentHashMap<>();
-  
+
+  /**
+   * Map of token real owners to its token count. This is used to generate
+   * top users by owned tokens.
+   */
+  protected final Map<String, Long> tokenOwnerStats = new ConcurrentHashMap<>();
+
   /**
    * Sequence number to create DelegationTokenIdentifier.
    * Protected by this object lock.
@@ -298,6 +303,7 @@ extends AbstractDelegationTokenIdentifier>
   protected void storeToken(TokenIdent ident,
       DelegationTokenInformation tokenInfo) throws IOException {
     currentTokens.put(ident, tokenInfo);
+    addTokenForOwnerStats(ident);
     storeNewToken(ident, tokenInfo.getRenewDate());
   }
 
@@ -345,6 +351,7 @@ extends AbstractDelegationTokenIdentifier>
     if (getTokenInfo(identifier) == null) {
       currentTokens.put(identifier, new DelegationTokenInformation(renewDate,
           password, getTrackingIdIfEnabled(identifier)));
+      addTokenForOwnerStats(identifier);
     } else {
       throw new IOException("Same delegation token being added twice: "
           + formatTokenId(identifier));
@@ -584,6 +591,7 @@ extends AbstractDelegationTokenIdentifier>
     if (info == null) {
       throw new InvalidToken("Token not found " + formatTokenId(id));
     }
+    removeTokenForOwnerStats(id);
     removeStoredToken(id);
     return id;
   }
@@ -640,6 +648,7 @@ extends AbstractDelegationTokenIdentifier>
         long renewDate = entry.getValue().getRenewDate();
         if (renewDate < now) {
           expiredTokens.add(entry.getKey());
+          removeTokenForOwnerStats(entry.getKey());
           i.remove();
         }
       }
@@ -739,34 +748,79 @@ extends AbstractDelegationTokenIdentifier>
    * @return map of owners to counts
    */
   public List<NameValuePair> getTopTokenRealOwners(int n) {
-    Map<String, Integer> tokenOwnerMap = new HashMap<>();
-    for (TokenIdent id : currentTokens.keySet()) {
-      String realUser;
-      if (id.getRealUser() != null && !id.getRealUser().toString().isEmpty()) {
-        realUser = id.getRealUser().toString();
-      } else {
-        // if there is no real user -> this is a non proxy user
-        // the user itself is the real owner
-        realUser = id.getUser().getUserName();
-      }
-      tokenOwnerMap.put(realUser, tokenOwnerMap.getOrDefault(realUser, 0)+1);
-    }
-    n = Math.min(n, tokenOwnerMap.size());
+    n = Math.min(n, tokenOwnerStats.size());
     if (n == 0) {
-      return new LinkedList<>();
+      return new ArrayList<>();
     }
 
     TopN topN = new TopN(n);
-    for (Map.Entry<String, Integer> entry : tokenOwnerMap.entrySet()) {
+    for (Map.Entry<String, Long> entry : tokenOwnerStats.entrySet()) {
       topN.offer(new NameValuePair(
           entry.getKey(), entry.getValue()));
     }
 
-    List<NameValuePair> list = new LinkedList<>();
+    List<NameValuePair> list = new ArrayList<>();
     while (!topN.isEmpty()) {
       list.add(topN.poll());
     }
     Collections.reverse(list);
     return list;
+  }
+
+  /**
+   * Return the real owner for a token. If this is a token from a proxy user,
+   * the real/effective user will be returned.
+   *
+   * @param id
+   * @return real owner
+   */
+  public String getTokenRealOwner(TokenIdent id) {
+    String realUser;
+    if (id.getRealUser() != null && !id.getRealUser().toString().isEmpty()) {
+      realUser = id.getRealUser().toString();
+    } else {
+      // if there is no real user -> this is a non proxy user
+      // the user itself is the real owner
+      realUser = id.getUser().getUserName();
+    }
+    return realUser;
+  }
+
+  /**
+   * Add token stats to the owner to token count mapping.
+   *
+   * @param id
+   */
+  public void addTokenForOwnerStats(TokenIdent id) {
+    String realOwner = getTokenRealOwner(id);
+    tokenOwnerStats.put(realOwner,
+        tokenOwnerStats.getOrDefault(realOwner, 0l)+1);
+  }
+
+  /**
+   * Remove token stats to the owner to token count mapping.
+   *
+   * @param id
+   */
+  public void removeTokenForOwnerStats(TokenIdent id) {
+    String realOwner = getTokenRealOwner(id);
+    if (tokenOwnerStats.containsKey(realOwner)) {
+      // unlikely to be less than 1 but in case
+      if (tokenOwnerStats.get(realOwner) <= 1) {
+        tokenOwnerStats.remove(realOwner);
+      } else {
+        tokenOwnerStats.put(realOwner, tokenOwnerStats.get(realOwner)-1);
+      }
+    }
+  }
+
+  /**
+   * This method syncs token information from currentTokens to tokenOwnerStats.
+   * It is used when the currentTokens is initialized or refreshed.
+   */
+  public void syncTokenOwnerStats() {
+    for (TokenIdent id : currentTokens.keySet()) {
+      addTokenForOwnerStats(id);
+    }
   }
 }
