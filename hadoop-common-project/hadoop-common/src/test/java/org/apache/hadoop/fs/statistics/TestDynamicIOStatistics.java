@@ -38,7 +38,7 @@ import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatis
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticIsUnknown;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticIsUntracked;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
-import static org.apache.hadoop.fs.statistics.impl.IOStatisticsImplementationUtils.NULL_SOURCE;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.NULL_SOURCE;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringify;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.iostatisticsToString;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.dynamicIOStatistics;

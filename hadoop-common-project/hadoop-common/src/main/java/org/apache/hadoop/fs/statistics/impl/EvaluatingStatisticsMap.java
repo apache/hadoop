@@ -43,7 +43,7 @@ final class EvaluatingStatisticsMap<E extends Serializable> implements
   private final String name;
 
   EvaluatingStatisticsMap(final String name) {
-    this(name, StatisticsMapSnapshot::passthrough);
+    this(name, IOStatisticsBinding::passthroughFn);
   }
 
   EvaluatingStatisticsMap(final String name,
@@ -124,8 +124,8 @@ final class EvaluatingStatisticsMap<E extends Serializable> implements
     return snapshot().values();
   }
 
-  public StatisticsMapSnapshot<E> snapshot() {
-    return new StatisticsMapSnapshot<>(this, copyFn);
+  public TreeMap<String, E> snapshot() {
+    return IOStatisticsBinding.snapshotMap(this, copyFn);
   }
 
   /**

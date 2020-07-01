@@ -26,10 +26,10 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.statistics.impl.IOStatisticsImplementationUtils;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
-import static org.apache.hadoop.fs.statistics.impl.IOStatisticsImplementationUtils.entrytoString;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.entrytoString;
 
 /**
  * Utility operations convert IO Statistics sources/instances
@@ -134,7 +134,7 @@ public final class IOStatisticsLogging {
     public String toString() {
       return source != null
           ? ioStatisticsSourceToString(source)
-          : IOStatisticsImplementationUtils.NULL_SOURCE;
+          : IOStatisticsBinding.NULL_SOURCE;
     }
   }
 
@@ -162,7 +162,7 @@ public final class IOStatisticsLogging {
     public String toString() {
       return statistics != null
           ? iostatisticsToString(statistics)
-          : IOStatisticsImplementationUtils.NULL_SOURCE;
+          : IOStatisticsBinding.NULL_SOURCE;
     }
   }
 }

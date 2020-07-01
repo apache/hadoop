@@ -22,7 +22,6 @@ import java.io.Serializable;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 
 /**
  * Support for working with IOStatistics.
@@ -44,10 +43,12 @@ public final class IOStatisticsSupport {
    * @param statistics statistics
    * @return a snapshot of the current values.
    */
-  public static <X extends IOStatistics & Serializable> X
+  public static IOStatisticsSnapshot
       snapshotIOStatistics(IOStatistics statistics) {
 
-    return IOStatisticsBinding.snapshotStatistics(statistics);
+    IOStatisticsSnapshot stats = new IOStatisticsSnapshot(statistics);
+    stats.snapshot(statistics);
+    return stats;
   }
 
 

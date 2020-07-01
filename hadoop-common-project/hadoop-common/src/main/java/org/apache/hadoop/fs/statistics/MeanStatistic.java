@@ -24,8 +24,13 @@ import java.util.Objects;
 import static com.google.common.base.Preconditions.checkArgument;
 
 /**
- * A mean statistic.
- * The sample size is required so that means can be aggregated.
+ * A mean statistic represented as the sum and the sample count;
+ * the mean is calculated on demand.
+ * <p></p>
+ * It can be used to accrue values so as to dynamically update
+ * the mean. If so, know that there is no synchronization
+ * on the methods.
+ * <p></p>*
  * If a statistic has 0 samples then it is considered to be empty.
  */
 public final class MeanStatistic implements Serializable, Cloneable {
@@ -33,9 +38,9 @@ public final class MeanStatistic implements Serializable, Cloneable {
   private static final long serialVersionUID = 567888327998615425L;
 
   /**
-   * Arithmetic mean.
+   * sum of the values.
    */
-  private double mean;
+  private long sum;
 
   /**
    * Number of samples used to calculate
@@ -45,15 +50,14 @@ public final class MeanStatistic implements Serializable, Cloneable {
 
   /**
    * Constructor.
-   * If the sample count is 0, the mean is set to 0.
-   * @param mean mean value
+   * If the sample count is 0, the sum is set to 0.
+   * @param sum mean value
    * @param samples sample count.
    */
-  public MeanStatistic(final double mean, final long samples) {
+  public MeanStatistic(final long sum, final long samples) {
     if (samples != 0) {
-      checkArgument(mean >= 0);
       checkArgument(samples > 0);
-      this.mean = mean;
+      this.sum = sum;
       this.samples = samples;
     }
   }
@@ -63,7 +67,7 @@ public final class MeanStatistic implements Serializable, Cloneable {
    * @param that source
    */
   public MeanStatistic(MeanStatistic that) {
-    this(that.mean, that.samples);
+    this(that.sum, that.samples);
   }
 
   /**
@@ -73,11 +77,11 @@ public final class MeanStatistic implements Serializable, Cloneable {
   }
 
   /**
-   * Get the mean value.
-   * @return the mean
+   * Get the sum of samples.
+   * @return the sum
    */
-  public double getMean() {
-    return mean;
+  public long getSum() {
+    return sum;
   }
 
   /**
@@ -96,31 +100,51 @@ public final class MeanStatistic implements Serializable, Cloneable {
     return samples == 0;
   }
 
+
+  public void setSum(final long sum) {
+    this.sum = sum;
+  }
+
+  public void setSamples(final long samples) {
+    checkArgument(samples >= 0);
+    this.samples = samples;
+  }
+
   /**
-   * Add another mean statistic to create a new statistic.
-   * When adding two statistics, if either is empty then
-   * a copy of the non-empty statistic is returned.
-   * If both are empty then a new empty statistic is returned.
-   *
-   * @param other other value
-   * @return a new MeanStatistic instance containing the aggregate mean
+   * Get the arithmetic mean value.
+   * @return the mean
    */
-  public MeanStatistic add(final MeanStatistic other) {
-    if (isEmpty()) {
-      new MeanStatistic(other);
-    }
+  public double mean() {
+    return samples > 0
+        ? ((double)sum)/ samples
+        : 0.0;
+  }
+
+  /**
+   * Add another MeanStatistic.
+   * @param other other value
+   */
+  public void add(final MeanStatistic other) {
     if (other.isEmpty()) {
-      new MeanStatistic(other);
+      return;
     }
-    long rSamples = other.samples;
-    double rSum = other.mean * rSamples;
-    long totalSamples = samples + rSamples;
-    if (totalSamples == 0) {
-      return new MeanStatistic(0, 0);
-    } else {
-      double sum = mean * samples + rSum;
-      return new MeanStatistic(sum / totalSamples, totalSamples);
+    if (isEmpty()) {
+      samples = other.samples;
+      sum = other.sum;
+      return;
     }
+    samples += other.samples;
+    sum += other.sum;
+  }
+
+  /**
+   * Add a sample.
+   * Unsynchronized/nonatomic
+   * @param value value to add to the sum
+   */
+  public void addSample(int value) {
+    samples++;
+    sum += value;
   }
 
   /**
@@ -132,26 +156,15 @@ public final class MeanStatistic implements Serializable, Cloneable {
    */
   @Override
   public int hashCode() {
-    return Objects.hash(mean, samples);
+    return Objects.hash(sum, samples);
   }
 
-  /**
-   * Two objects are equal if their sample
-   * count is equal and {@code Double.compare()}
-   * of the mean values considers them equivalent.
-   * @param o other instance
-   * @return true if the two instances are considered
-   *              equivalent.
-   */
   @Override
   public boolean equals(final Object o) {
     if (this == o) { return true; }
     if (o == null || getClass() != o.getClass()) { return false; }
     MeanStatistic that = (MeanStatistic) o;
-    if (this.isEmpty()) {
-      return that.isEmpty();
-    }
-    return Double.compare(that.mean, mean) == 0 &&
+    return sum == that.sum &&
         samples == that.samples;
   }
 
@@ -168,12 +181,14 @@ public final class MeanStatistic implements Serializable, Cloneable {
   public MeanStatistic copy() {
     return new MeanStatistic(this);
   }
+
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder(
         "MeanStatistic{");
-    sb.append("mean=").append(mean);
+    sb.append("sum=").append(sum);
     sb.append(", samples=").append(samples);
+    sb.append(", mean=").append(mean());
     sb.append('}');
     return sb.toString();
   }
