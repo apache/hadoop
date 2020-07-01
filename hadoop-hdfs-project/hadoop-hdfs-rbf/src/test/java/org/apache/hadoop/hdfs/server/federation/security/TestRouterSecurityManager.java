@@ -128,6 +128,7 @@ public class TestRouterSecurityManager {
 
   @Test
   public void testDelgationTokenTopOwners() throws Exception {
+    UserGroupInformation.reset();
     List<NameValuePair> topOwners;
 
     UserGroupInformation user = UserGroupInformation

@@ -124,7 +124,7 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   private MountTableStore mountTableStore;
   /** Router state store. */
   private RouterStore routerStore;
-  /** The number of top token owners reported in metrics */
+  /** The number of top token owners reported in metrics. */
   private int topTokenRealOwners;
 
   public RBFMetrics(Router router) throws IOException {
