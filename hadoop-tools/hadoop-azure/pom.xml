@@ -324,7 +324,6 @@
                   <goal>test</goal>
                 </goals>
                 <configuration>
-                  <forkCount>1</forkCount>
                   <forkCount>${testsThreadCount}</forkCount>
                   <reuseForks>false</reuseForks>
                   <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
@@ -390,7 +389,6 @@
                   <goal>verify</goal>
                 </goals>
                 <configuration>
-                  <forkCount>1</forkCount>
                   <forkCount>${testsThreadCount}</forkCount>
                   <reuseForks>false</reuseForks>
                   <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
@@ -637,7 +635,6 @@
                   <goal>test</goal>
                 </goals>
                 <configuration>
-                  <forkCount>1</forkCount>
                   <forkCount>${testsThreadCount}</forkCount>
                   <reuseForks>false</reuseForks>
                   <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
