@@ -1182,12 +1182,6 @@ public class ViewFileSystem extends FileSystem {
         final int bufferSize, final short replication, final long blockSize,
         final Progressable progress) throws IOException {
 
-      if (f != null && theInternalDir.getChildren().containsKey(f.getName())) {
-        throw new FileAlreadyExistsException(
-            "A mount path(file/dir) already exist with the requested path: "
-                + theInternalDir.getChildren().get(f.getName()).fullPath);
-      }
-
       // Just a sanity check. This should not happen.
       if (InodeTree.SlashPath.equals(f)) {
         throw new FileAlreadyExistsException(
@@ -1196,6 +1190,14 @@ public class ViewFileSystem extends FileSystem {
       }
 
       if (this.fsState.getRootFallbackLink() != null) {
+
+        if (f != null && theInternalDir.getChildren()
+            .containsKey(f.getName())) {
+          throw new FileAlreadyExistsException(
+              "A mount path(file/dir) already exist with the requested path: "
+                  + theInternalDir.getChildren().get(f.getName()).fullPath);
+        }
+
         FileSystem linkedFallbackFs =
             this.fsState.getRootFallbackLink().getTargetFileSystem();
         Path parent = Path.getPathWithoutSchemeAndAuthority(
