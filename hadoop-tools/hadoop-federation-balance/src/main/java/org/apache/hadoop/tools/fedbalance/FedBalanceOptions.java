@@ -23,23 +23,23 @@ import org.apache.commons.cli.Options;
 /**
  * Command line options of FedBalance.
  */
-public final class DistCpBalanceOptions {
+public final class FedBalanceOptions {
 
   /**
    * The private construct protects this class from being instantiated.
    */
-  private DistCpBalanceOptions() {}
+  private FedBalanceOptions() {}
 
   /**
    * Run in router-based federation mode.
    */
   final static Option ROUTER = new Option("router", false,
-      "If `true` the command runs in router mode. The source path is "
-          + "taken as a mount point. It will disable write by setting the mount"
-          + " point readonly. Otherwise the command works in normal federation"
-          + " mode. The source path is taken as the full path. It will disable"
-          + " write by cancelling all permissions of the source path. The"
-          + " default value is `true`.");
+      "If this option is set then the command runs in router mode."
+          + " The source path is taken as a mount point. It will disable write"
+          + " by setting the mount point readonly. Otherwise the command works"
+          + " in normal federation mode. The source path is taken as the full"
+          + " path. It will disable write by cancelling all permissions of the"
+          + " source path.");
 
   /**
    * If true, in DIFF_DISTCP stage it will force close all open files when
