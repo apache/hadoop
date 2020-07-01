@@ -25,10 +25,17 @@ import java.util.List;
 import org.apache.hadoop.security.GroupMappingServiceProvider;
 
 public class SimpleGroupsMapping implements GroupMappingServiceProvider {
-  
+
   @Override
   public List<String> getGroups(String user) {
-    return Arrays.asList(user + "group", user + "subgroup1", user + "subgroup2");
+    if ("admins".equals(user)) {
+      return Arrays.asList("root");
+    } else if ("nosecondarygroupuser".equals(user)) {
+      return Arrays.asList("primarygrouponly");
+    } else {
+      return Arrays.asList(
+          user + "group", user + "subgroup1", user + "subgroup2");
+    }
   }
 
   @Override
