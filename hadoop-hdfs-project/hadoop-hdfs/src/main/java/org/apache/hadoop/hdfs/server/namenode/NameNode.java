@@ -41,6 +41,7 @@ import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
@@ -922,11 +923,13 @@ public class NameNode extends ReconfigurableBase implements
     // This may be called from the transitionToActive code path, in which
     // case the current user is the administrator, not the NN. The trash
     // emptier needs to run as the NN. See HDFS-3972.
-    FileSystem fs = SecurityUtil.doAsLoginUser(
-        new PrivilegedExceptionAction<FileSystem>() {
+    DistributedFileSystem fs = SecurityUtil
+        .doAsLoginUser(new PrivilegedExceptionAction<DistributedFileSystem>() {
           @Override
-          public FileSystem run() throws IOException {
-            return FileSystem.get(conf);
+          public DistributedFileSystem run() throws IOException {
+            DistributedFileSystem dfs = new DistributedFileSystem();
+            dfs.initialize(FileSystem.getDefaultUri(conf), conf);
+            return dfs;
           }
         });
     this.emptier = new Thread(new Trash(fs, conf).getEmptier(), "Trash Emptier");
