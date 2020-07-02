@@ -777,11 +777,6 @@ public class TestRMAdminCLI {
           "Usage: yarn rmadmin [-getServiceState <serviceId>]", dataErr, 0);
       testError(new String[] { "-help", "-checkHealth" },
           "Usage: yarn rmadmin [-checkHealth <serviceId>]", dataErr, 0);
-      testError(new String[] { "-help", "-failover" },
-          "Usage: yarn rmadmin " +
-              "[-failover [--forcefence] [--forceactive] " +
-              "<serviceId> <serviceId>]",
-          dataErr, 0);
 
       testError(new String[] { "-help", "-badParameter" },
           "Usage: yarn rmadmin", dataErr, 0);
@@ -1064,7 +1059,7 @@ public class TestRMAdminCLI {
     ByteArrayOutputStream errOutBytes = new ByteArrayOutputStream();
     rmAdminCLIWithHAEnabled.setErrOut(new PrintStream(errOutBytes));
     try {
-      String[] args = { "-failover" };
+      String[] args = {"-transitionToActive"};
       assertEquals(-1, rmAdminCLIWithHAEnabled.run(args));
       String errOut = new String(errOutBytes.toByteArray(), Charsets.UTF_8);
       errOutBytes.reset();
@@ -1074,4 +1069,34 @@ public class TestRMAdminCLI {
     }
   }
 
+  @Test
+  public void testNoUnsupportedHACommandsInHelp() throws Exception {
+    ByteArrayOutputStream dataErr = new ByteArrayOutputStream();
+    System.setErr(new PrintStream(dataErr));
+    String[] args = {};
+    assertEquals(-1, rmAdminCLIWithHAEnabled.run(args));
+    String errOut = dataErr.toString();
+    assertFalse(errOut.contains("-transitionToObserver"));
+    dataErr.reset();
+    String[] args1 = {"-transitionToObserver"};
+    assertEquals(-1, rmAdminCLIWithHAEnabled.run(args1));
+    errOut = dataErr.toString();
+    assertTrue(errOut.contains("transitionToObserver: Unknown command"));
+    dataErr.reset();
+    args1[0] = "-failover";
+    assertEquals(-1, rmAdminCLIWithHAEnabled.run(args1));
+    errOut = dataErr.toString();
+    assertTrue(errOut.contains("failover: Unknown command"));
+    dataErr.reset();
+    String[] args2 = {"-help", "-transitionToObserver"};
+    assertEquals(0, rmAdminCLIWithHAEnabled.run(args2));
+    errOut = dataErr.toString();
+    assertFalse(errOut.contains("-transitionToObserver"));
+    dataErr.reset();
+    args2[1] = "-failover";
+    assertEquals(0, rmAdminCLIWithHAEnabled.run(args2));
+    errOut = dataErr.toString();
+    assertFalse(errOut.contains("-failover"));
+    dataErr.reset();
+  }
 }

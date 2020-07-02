@@ -47,6 +47,7 @@
 #define hdfsTell libhdfs_hdfsTell
 #define hdfsRead libhdfs_hdfsRead
 #define hdfsPread libhdfs_hdfsPread
+#define hdfsPreadFully libhdfs_hdfsPreadFully
 #define hdfsWrite libhdfs_hdfsWrite
 #define hdfsFlush libhdfs_hdfsFlush
 #define hdfsHFlush libhdfs_hdfsHFlush

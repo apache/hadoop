@@ -104,7 +104,7 @@ public class ClientRMProxy<T> extends RMProxy<T>  {
     } else {
       String message = "Unsupported protocol found when creating the proxy " +
           "connection to ResourceManager: " +
-          ((protocol != null) ? protocol.getClass().getName() : "null");
+          ((protocol != null) ? protocol.getName() : "null");
       LOG.error(message);
       throw new IllegalStateException(message);
     }

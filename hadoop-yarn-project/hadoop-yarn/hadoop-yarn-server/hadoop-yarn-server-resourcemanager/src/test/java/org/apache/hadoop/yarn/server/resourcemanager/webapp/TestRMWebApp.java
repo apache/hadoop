@@ -21,12 +21,14 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 import static org.apache.hadoop.yarn.server.resourcemanager.MockNodes.newResource;
 import static org.apache.hadoop.yarn.webapp.Params.TITLE;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
@@ -62,6 +64,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSec
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
+import org.apache.hadoop.yarn.server.webapp.WebPageUtils;
 import org.apache.hadoop.yarn.util.StringHelper;
 import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
@@ -157,6 +160,40 @@ public class TestRMWebApp {
     instance.render();
     WebAppTests.flushOutput(injector);
 
+  }
+
+  @Test
+  public void testRMAppColumnIndices() {
+
+    // Find the columns to check
+    List<Integer> colsId = new LinkedList<Integer>();
+    List<Integer> colsTime = new LinkedList<Integer>();
+    List<Integer> colsProgress = new LinkedList<Integer>();
+    for (int i = 0; i < RMAppsBlock.COLUMNS.length; i++) {
+      ColumnHeader col = RMAppsBlock.COLUMNS[i];
+      if (col.getCData().contains("ID")) {
+        colsId.add(i);
+      } else if (col.getCData().contains("Time")) {
+        colsTime.add(i);
+      } else if (col.getCData().contains("Progress")) {
+        colsProgress.add(i);
+      }
+    }
+
+    // Verify that the table JS header matches the columns
+    String tableInit = WebPageUtils.appsTableInit(true);
+    for (String tableLine : tableInit.split("\\n")) {
+      if (tableLine.contains("parseHadoopID")) {
+        assertTrue(tableLine + " should have id " + colsId,
+            tableLine.contains(colsId.toString()));
+      } else if (tableLine.contains("renderHadoopDate")) {
+        assertTrue(tableLine + " should have dates " + colsTime,
+            tableLine.contains(colsTime.toString()));
+      } else if (tableLine.contains("parseHadoopProgress")) {
+        assertTrue(tableLine + " should have progress " + colsProgress,
+            tableLine.contains(colsProgress.toString()));
+      }
+    }
   }
 
   public static RMContext mockRMContext(int numApps, int racks, int numNodes,

@@ -40,7 +40,7 @@ import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.util.DirectBufferPool;
 
 import static org.apache.hadoop.fs.s3a.S3ADataBlocks.DataBlock.DestState.*;
-import static org.apache.hadoop.fs.s3a.S3AUtils.closeAll;
+import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**
  * Set of classes to support output streaming into blocks which are then
@@ -155,7 +155,7 @@ final class S3ADataBlocks {
      */
     @Override
     public void close() throws IOException {
-      closeAll(LOG, uploadStream);
+      cleanupWithLogger(LOG, uploadStream);
     }
   }
 

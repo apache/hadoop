@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.tools;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_BIND_HOST_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -30,6 +31,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ha.ClientBaseWithFixes;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
+import org.apache.hadoop.ha.HAServiceProtocol.RequestSource;
+import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.ha.HealthMonitor;
 import org.apache.hadoop.ha.TestNodeFencer.AlwaysSucceedFencer;
 import org.apache.hadoop.ha.ZKFCTestUtil;
@@ -41,8 +44,11 @@ import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
 import org.apache.hadoop.hdfs.server.namenode.MockNameNodeResourceChecker;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.net.ServerSocketUtil;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestingThread;
 import org.junit.After;
@@ -52,6 +58,8 @@ import org.junit.Test;
 import com.google.common.base.Supplier;
 
 public class TestDFSZKFailoverController extends ClientBaseWithFixes {
+  private static final String LOCALHOST_SERVER_ADDRESS = "127.0.0.1";
+  private static final String WILDCARD_ADDRESS = "0.0.0.0";
   private Configuration conf;
   private MiniDFSCluster cluster;
   private TestContext ctx;
@@ -201,7 +209,46 @@ public class TestDFSZKFailoverController extends ClientBaseWithFixes {
     waitForHAState(0, HAServiceState.ACTIVE);
     waitForHAState(1, HAServiceState.STANDBY);
   }
-  
+
+  @Test(timeout=30000)
+  public void testWithoutBindAddressSet() throws Exception {
+    DFSZKFailoverController zkfc = DFSZKFailoverController.create(
+        conf);
+
+    assertEquals("Bind address not expected to be wildcard by default.",
+        zkfc.getRpcAddressToBindTo().getHostString(),
+        LOCALHOST_SERVER_ADDRESS);
+  }
+
+  @Test(timeout=30000)
+  public void testWithBindAddressSet() throws Exception {
+    conf.set(DFS_NAMENODE_SERVICE_RPC_BIND_HOST_KEY, WILDCARD_ADDRESS);
+    DFSZKFailoverController zkfc = DFSZKFailoverController.create(
+        conf);
+    String addr = zkfc.getRpcAddressToBindTo().getHostString();
+
+    assertEquals("Bind address " + addr + " is not wildcard.",
+        addr, WILDCARD_ADDRESS);
+  }
+
+  /**
+   * Tests that a Namenode in Observer state rejects any state transition
+   * request from ZKFC, as a result of namenode's participation in the ZK
+   * election before getting transition to Observer state, since Observer
+   * Namenode isn't supposed to participate in ZKFC elections.
+   */
+  @Test
+  public void testObserverRejectZkfcCall() throws Exception {
+    NamenodeProtocols nn1 = cluster.getNameNode(1).getRpcServer();
+    nn1.transitionToObserver(
+        new StateChangeRequestInfo(RequestSource.REQUEST_BY_USER_FORCED));
+    waitForHAState(1, HAServiceState.OBSERVER);
+    LambdaTestUtils.intercept(AccessControlException.class,
+        "denied since the namenode is in Observer state.",
+        () -> nn1.transitionToStandby(
+            new StateChangeRequestInfo(RequestSource.REQUEST_BY_ZKFC)));
+  }
+
   @Test(timeout=30000)
   public void testManualFailoverWithDFSHAAdmin() throws Exception {
     DFSHAAdmin tool = new DFSHAAdmin();
@@ -230,6 +277,32 @@ public class TestDFSZKFailoverController extends ClientBaseWithFixes {
     waitForHAState(1, HAServiceState.STANDBY);
   }
 
+  @Test(timeout=30000)
+  public void testElectionOnObserver() throws Exception{
+    InputStream inOriginial = System.in;
+    try {
+      DFSHAAdmin tool = new DFSHAAdmin();
+      tool.setConf(conf);
+
+      // Transition nn2 to Observer
+      System.setIn(new ByteArrayInputStream("yes\n".getBytes()));
+      int result = tool.run(
+          new String[]{"-transitionToObserver", "-forcemanual", "nn2"});
+      assertEquals("State transition returned: " + result, 0, result);
+      waitForHAState(1, HAServiceState.OBSERVER);
+      waitForZKFCState(thr2.zkfc, HAServiceState.OBSERVER);
+
+      // Call recheckElectability
+      thr2.zkfc.getLocalTarget().getZKFCProxy(conf, 15000).cedeActive(-1);
+
+      // This namenode is in observer state, it shouldn't join election
+      assertEquals(false,
+          thr2.zkfc.getElectorForTests().getWantToBeInElection());
+    } finally {
+      System.setIn(inOriginial);
+    }
+  }
+
   private void waitForHAState(int nnidx, final HAServiceState state)
       throws TimeoutException, InterruptedException {
     final NameNode nn = cluster.getNameNode(nnidx);
@@ -244,6 +317,14 @@ public class TestDFSZKFailoverController extends ClientBaseWithFixes {
         }
       }
     }, 50, 15000);
+  }
+
+  private void waitForZKFCState(DFSZKFailoverController zkfc,
+      final HAServiceState state)
+      throws TimeoutException, InterruptedException{
+    GenericTestUtils.waitFor(
+        () -> zkfc.getServiceState() == state,
+        50, 15000);
   }
 
   /**

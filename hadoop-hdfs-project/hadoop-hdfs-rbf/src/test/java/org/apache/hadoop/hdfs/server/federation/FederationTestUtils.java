@@ -138,9 +138,17 @@ public final class FederationTestUtils {
   public static NamenodeStatusReport createNamenodeReport(String ns, String nn,
       HAServiceState state) {
     Random rand = new Random();
-    NamenodeStatusReport report = new NamenodeStatusReport(ns, nn,
-        "localhost:" + rand.nextInt(10000), "localhost:" + rand.nextInt(10000),
-        "localhost:" + rand.nextInt(10000), "testwebaddress-" + ns + nn);
+    return createNamenodeReport(ns, nn, "localhost:"
+        + rand.nextInt(10000), state);
+  }
+
+  public static NamenodeStatusReport createNamenodeReport(String ns, String nn,
+      String rpcAddress, HAServiceState state) {
+    Random rand = new Random();
+    NamenodeStatusReport report = new NamenodeStatusReport(ns, nn, rpcAddress,
+        "localhost:" + rand.nextInt(10000),
+        "localhost:" + rand.nextInt(10000), "http",
+        "testwebaddress-" + ns + nn);
     if (state == null) {
       // Unavailable, no additional info
       return report;
@@ -473,7 +481,10 @@ public final class FederationTestUtils {
 
   /**
    * Add a mount table entry in some name services and wait until it is
-   * available.
+   * available. If there are multiple routers,
+   * {@link #createMountTableEntry(List, String, DestinationOrder, Collection)}
+   * should be used instead because the method does not refresh
+   * the mount tables of the other routers.
    * @param router Router to change.
    * @param mountPoint Name of the mount point.
    * @param order Order of the mount table entry.

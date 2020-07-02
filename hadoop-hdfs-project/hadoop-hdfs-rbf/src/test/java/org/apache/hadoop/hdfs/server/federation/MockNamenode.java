@@ -46,6 +46,7 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.HAServiceStatus;
@@ -58,11 +59,13 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfoWithStorage;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ClientNamenodeProtocol;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeProtocolService;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.NamenodeProtocolService;
@@ -80,11 +83,14 @@ import org.apache.hadoop.hdfs.server.federation.router.Router;
 import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RPC.Server;
 import org.apache.hadoop.ipc.RemoteException;
@@ -99,7 +105,7 @@ import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.protobuf.BlockingService;
+import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 
 
 /**
@@ -119,6 +125,8 @@ public class MockNamenode {
   private String nsId;
   /** HA state of the Namenode. */
   private HAServiceState haState = HAServiceState.STANDBY;
+  /** Datanodes registered in this Namenode. */
+  private List<DatanodeInfo> dns = new ArrayList<>();
 
   /** RPC server of the Namenode that redirects calls to the mock. */
   private Server rpcServer;
@@ -166,7 +174,7 @@ public class MockNamenode {
    */
   private void setupRPCServer(final Configuration conf) throws IOException {
     RPC.setProtocolEngine(
-        conf, ClientNamenodeProtocolPB.class, ProtobufRpcEngine.class);
+        conf, ClientNamenodeProtocolPB.class, ProtobufRpcEngine2.class);
     ClientNamenodeProtocolServerSideTranslatorPB
         clientNNProtoXlator =
             new ClientNamenodeProtocolServerSideTranslatorPB(mockNn);
@@ -292,6 +300,14 @@ public class MockNamenode {
    */
   public void transitionToStandby() {
     this.haState = HAServiceState.STANDBY;
+  }
+
+  /**
+   * Get the datanodes that this NN will return.
+   * @return The datanodes that this NN will return.
+   */
+  public List<DatanodeInfo> getDatanodes() {
+    return this.dns;
   }
 
   /**
@@ -452,6 +468,33 @@ public class MockNamenode {
     });
   }
 
+  /**
+   * Add datanode related operations.
+   * @throws IOException If it cannot be setup.
+   */
+  public void addDatanodeMock() throws IOException {
+    when(mockNn.getDatanodeReport(any(DatanodeReportType.class))).thenAnswer(
+        invocation -> {
+          LOG.info("{} getDatanodeReport()", nsId, invocation.getArgument(0));
+          return dns.toArray();
+        });
+    when(mockNn.getDatanodeStorageReport(any(DatanodeReportType.class)))
+        .thenAnswer(invocation -> {
+          LOG.info("{} getDatanodeStorageReport()",
+              nsId, invocation.getArgument(0));
+          DatanodeStorageReport[] ret = new DatanodeStorageReport[dns.size()];
+          for (int i = 0; i < dns.size(); i++) {
+            DatanodeInfo dn = dns.get(i);
+            DatanodeStorage storage = new DatanodeStorage(dn.getName());
+            StorageReport[] storageReports = new StorageReport[] {
+                new StorageReport(storage, false, 0L, 0L, 0L, 0L, 0L)
+            };
+            ret[i] = new DatanodeStorageReport(dn, storageReports);
+          }
+          return ret;
+        });
+  }
+
   private static String getSrc(InvocationOnMock invocation) {
     return (String) invocation.getArguments()[0];
   }
@@ -496,7 +539,10 @@ public class MockNamenode {
     DatanodeID nodeId = new DatanodeID("localhost", "localhost", "dn0",
         1111, 1112, 1113, 1114);
     DatanodeInfo dnInfo = new DatanodeDescriptor(nodeId);
-    when(lb.getLocations()).thenReturn(new DatanodeInfo[] {dnInfo});
+    DatanodeInfoWithStorage datanodeInfoWithStorage =
+        new DatanodeInfoWithStorage(dnInfo, "storageID", StorageType.DEFAULT);
+    when(lb.getLocations())
+        .thenReturn(new DatanodeInfoWithStorage[] {datanodeInfoWithStorage});
     ExtendedBlock eb = mock(ExtendedBlock.class);
     when(eb.getBlockPoolId()).thenReturn(nsId);
     when(lb.getBlock()).thenReturn(eb);
@@ -539,8 +585,10 @@ public class MockNamenode {
         String nsId = nn.getNameserviceId();
         String rpcAddress = "localhost:" + nn.getRPCPort();
         String httpAddress = "localhost:" + nn.getHTTPPort();
+        String scheme = "http";
         NamenodeStatusReport report = new NamenodeStatusReport(
-            nsId, null, rpcAddress, rpcAddress, rpcAddress, httpAddress);
+            nsId, null, rpcAddress, rpcAddress,
+            rpcAddress, scheme, httpAddress);
         if (unavailableSubclusters.contains(nsId)) {
           LOG.info("Register {} as UNAVAILABLE", nsId);
           report.setRegistrationValid(false);

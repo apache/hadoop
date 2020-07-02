@@ -379,13 +379,15 @@ public class ValueQueue <E> {
           if (numToFill > 0) {
             refiller.fillQueueForKey(keyName, ekvs, numToFill);
           }
-          // Asynch task to fill > lowWatermark
-          if (i <= (int) (lowWatermark * numValues)) {
-            submitRefillTask(keyName, keyQueue);
-          }
-          return ekvs;
+
+          break;
+        } else {
+          ekvs.add(val);
         }
-        ekvs.add(val);
+      }
+      // Schedule a refill task in case queue has gone below the watermark
+      if (keyQueue.size() < (int) (lowWatermark * numValues)) {
+        submitRefillTask(keyName, keyQueue);
       }
     } catch (Exception e) {
       throw new IOException("Exception while contacting value generator ", e);

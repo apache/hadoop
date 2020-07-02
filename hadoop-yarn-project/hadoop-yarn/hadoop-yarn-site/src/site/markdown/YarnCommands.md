@@ -193,6 +193,8 @@ Usage: `yarn resourcemanager [-format-state-store]`
 |:---- |:---- |
 | -format-state-store | Formats the RMStateStore. This will clear the RMStateStore and is useful if past applications are no longer needed. This should be run only when the ResourceManager is not running. |
 | -remove-application-from-state-store \<appId\> | Remove the application from RMStateStore. This should be run only when the ResourceManager is not running. |
+| -format-conf-store | Formats the YarnConfigurationStore. This will clear the persisted scheduler configuration under YarnConfigurationStore. This should be run only when the ResourceManager is not running. |
+| -convert-fs-configuration [-y&#124;yarnsiteconfig] [-f&#124;fsconfig] [-r&#124;rulesconfig] [-o&#124;output-directory] [-p&#124;print] [-c&#124;cluster-resource] | WARNING: This feature is experimental and not intended for production use! Development is still in progress so the converter should not be considered complete! <br/> Converts the specified Fair Scheduler configuration to Capacity Scheduler configuration. Requires two mandatory input files. First, the yarn-site.xml with the following format: [-y&#124;yarnsiteconfig [\<Path to the yarn-site.xml file\>]. Secondly, the fair-scheduler.xml with the following format: [-f&#124;fsconfig [\<Path to the fair-scheduler.xml file\>]. This config is not mandatory if there is a reference in yarn-site.xml to the fair-scheduler.xml with the property 'yarn.scheduler.fair.allocation.file'. If both are defined, the -f option has precedence. The output directory of the config files should be specified as well, with: \[-o&#124;output-directory\ \<directory\>]. An optional rules config file could be also specified with the following format: [-r&#124;rulesconfig \<Path to the conversion rules file\>]. The rule config file's format is a property file. There's an additional \[-p&#124;print\] parameter, which is optional. If defined, the configuration will be emitted to the console instead. In its normal operation, the output files (yarn-site.xml and capacity-scheduler.xml) of this command is generated to the specified output directory. The cluster resource parameter (\[-c&#124;cluster-resource\] \<resource\>\]) needs to be specified if any queue has a maxResources setting with value as percentage. The format of the resource string is the same as in fair-scheduler.xml.) ] |
 
 Start the ResourceManager
 
@@ -218,7 +220,6 @@ Usage:
      -updateNodeResource [NodeID] [MemSize] [vCores] ([OvercommitTimeout]) or -updateNodeResource [NodeID] [ResourceTypes] ([OvercommitTimeout])
      -transitionToActive [--forceactive] <serviceId>
      -transitionToStandby <serviceId>
-     -failover [--forcefence] [--forceactive] <serviceId> <serviceId>
      -getServiceState <serviceId>
      -getAllServiceState
      -checkHealth <serviceId>
@@ -244,7 +245,6 @@ Usage:
 | -updateNodeResource [NodeID] [ResourceTypes] \([OvercommitTimeout]\) | Update resource types on specific node. Resource Types is comma-delimited key value pairs of any resources availale at Resource Manager. For example, memory-mb=1024Mi,vcores=1,resource1=2G,resource2=4m|
 | -transitionToActive [--forceactive] [--forcemanual] \<serviceId\> | Transitions the service into Active state. Try to make the target active without checking that there is no active node if the --forceactive option is used. This command can not be used if automatic failover is enabled. Though you can override this by --forcemanual option, you need caution. This command can not be used if automatic failover is enabled.|
 | -transitionToStandby [--forcemanual] \<serviceId\> | Transitions the service into Standby state. This command can not be used if automatic failover is enabled. Though you can override this by --forcemanual option, you need caution. |
-| -failover [--forceactive] \<serviceId1\> \<serviceId2\> | Initiate a failover from serviceId1 to serviceId2. Try to failover to the target service even if it is not ready if the --forceactive option is used. This command can not be used if automatic failover is enabled. |
 | -getServiceState \<serviceId\> | Returns the state of the service. |
 | -getAllServiceState | Returns the state of all the services. |
 | -checkHealth \<serviceId\> | Requests that the service perform a health check. The RMAdmin tool will exit with a non-zero exit code if the check fails. |

@@ -66,8 +66,7 @@ public class ConfigUtil {
    */
   public static void addLink(final Configuration conf, final String src,
       final URI target) {
-    addLink( conf, Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE, 
-        src, target);   
+    addLink(conf, getDefaultMountTableName(conf), src, target);
   }
 
   /**
@@ -88,8 +87,7 @@ public class ConfigUtil {
    * @param target
    */
   public static void addLinkMergeSlash(Configuration conf, final URI target) {
-    addLinkMergeSlash(conf, Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE,
-        target);
+    addLinkMergeSlash(conf, getDefaultMountTableName(conf), target);
   }
 
   /**
@@ -110,8 +108,7 @@ public class ConfigUtil {
    * @param target
    */
   public static void addLinkFallback(Configuration conf, final URI target) {
-    addLinkFallback(conf, Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE,
-        target);
+    addLinkFallback(conf, getDefaultMountTableName(conf), target);
   }
 
   /**
@@ -132,7 +129,18 @@ public class ConfigUtil {
    * @param targets
    */
   public static void addLinkMerge(Configuration conf, final URI[] targets) {
-    addLinkMerge(conf, Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE, targets);
+    addLinkMerge(conf, getDefaultMountTableName(conf), targets);
+  }
+
+  /**
+   * Add nfly link to configuration for the given mount table.
+   */
+  public static void addLinkNfly(Configuration conf, String mountTableName,
+      String src, String settings, final String targets) {
+    conf.set(
+        getConfigViewFsPrefix(mountTableName) + "."
+            + Constants.CONFIG_VIEWFS_LINK_NFLY + "." + settings + "." + src,
+        targets);
   }
 
   /**
@@ -149,16 +157,13 @@ public class ConfigUtil {
     settings = settings == null
         ? "minReplication=2,repairOnRead=true"
         : settings;
-
-    conf.set(getConfigViewFsPrefix(mountTableName) + "." +
-            Constants.CONFIG_VIEWFS_LINK_NFLY + "." + settings + "." + src,
+    addLinkNfly(conf, mountTableName, src, settings,
         StringUtils.uriToString(targets));
   }
 
   public static void addLinkNfly(final Configuration conf, final String src,
       final URI ... targets) {
-    addLinkNfly(conf, Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE, src, null,
-        targets);
+    addLinkNfly(conf, getDefaultMountTableName(conf), src, null, targets);
   }
 
   /**
@@ -168,8 +173,7 @@ public class ConfigUtil {
    */
   public static void setHomeDirConf(final Configuration conf,
       final String homedir) {
-    setHomeDirConf(  conf,
-        Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE,   homedir);
+    setHomeDirConf(conf, getDefaultMountTableName(conf), homedir);
   }
   
   /**
@@ -193,7 +197,7 @@ public class ConfigUtil {
    * @return home dir value, null if variable is not in conf
    */
   public static String getHomeDirValue(final Configuration conf) {
-    return getHomeDirValue(conf, Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE);
+    return getHomeDirValue(conf, getDefaultMountTableName(conf));
   }
   
   /**
@@ -206,5 +210,19 @@ public class ConfigUtil {
       final String mountTableName) {
     return conf.get(getConfigViewFsPrefix(mountTableName) + "." +
         Constants.CONFIG_VIEWFS_HOMEDIR);
+  }
+
+  /**
+   * Get the name of the default mount table to use. If
+   * {@link Constants#CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE_NAME_KEY} is specified,
+   * it's value is returned. Otherwise,
+   * {@link Constants#CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE} is returned.
+   *
+   * @param conf Configuration to use.
+   * @return the name of the default mount table to use.
+   */
+  public static String getDefaultMountTableName(final Configuration conf) {
+    return conf.get(Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE_NAME_KEY,
+        Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE);
   }
 }

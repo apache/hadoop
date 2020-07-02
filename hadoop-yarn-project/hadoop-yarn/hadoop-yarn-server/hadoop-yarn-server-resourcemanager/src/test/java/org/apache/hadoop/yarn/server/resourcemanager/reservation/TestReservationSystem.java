@@ -26,6 +26,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSMaxRunningAppsEnforcer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
@@ -123,13 +124,9 @@ public class TestReservationSystem extends
     } catch (YarnException e) {
       Assert.fail(e.getMessage());
     }
-    if (getSchedulerType().equals(SchedulerType.CAPACITY)) {
-      ReservationSystemTestUtil.validateReservationQueue(reservationSystem,
-          newQ);
-    } else {
-      ReservationSystemTestUtil.validateReservationQueue(reservationSystem,
-          "root." + newQ);
-    }
+    ReservationSystemTestUtil.validateReservationQueue(
+        reservationSystem,
+        "root." + newQ);
   }
 
   @SuppressWarnings("rawtypes")
@@ -179,6 +176,9 @@ public class TestReservationSystem extends
 
     CapacityScheduler cs = Mockito.spy(new CapacityScheduler());
     cs.setConf(conf);
+    CSMaxRunningAppsEnforcer enforcer =
+        Mockito.mock(CSMaxRunningAppsEnforcer.class);
+    cs.setMaxRunningAppsEnforcer(enforcer);
 
     mockRMContext = ReservationSystemTestUtil.createRMContext(conf);
 

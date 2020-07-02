@@ -23,18 +23,26 @@ import java.util.concurrent.ConcurrentSkipListSet;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 
 /**
- * An OrderingPolicy which orders SchedulableEntities for fairness (see
- * FairScheduler
- * FairSharePolicy), generally, processes with lesser usage are lesser. If
- * sizedBasedWeight is set to true then an application with high demand
- * may be prioritized ahead of an application with less usage.  This
- * is to offset the tendency to favor small apps, which could result in
- * starvation for large apps if many small ones enter and leave the queue
- * continuously (optional, default false)
+ *
+ * FairOrderingPolicy comparison goes through following steps.
+ *
+ * 1.Fairness based comparison. SchedulableEntities with lesser usage would be
+ * preferred when compared to another. If sizedBasedWeight is set to true then
+ * an application with high demand may be prioritized ahead of an application
+ * with less usage. This is to offset the tendency to favor small apps, which
+ * could result in starvation for large apps if many small ones enter and leave
+ * the queue continuously (optional, default false)
+ *
+ * 2. Compare using job submit time. SchedulableEntities submitted earlier would
+ * be preferred than later.
+ *
+ * 3. Compare demands. SchedulableEntities without resource demand get lower
+ * priority than ones which have demands.
  */
 public class FairOrderingPolicy<S extends SchedulableEntity> extends AbstractComparatorOrderingPolicy<S> {
 
@@ -45,6 +53,30 @@ public class FairOrderingPolicy<S extends SchedulableEntity> extends AbstractCom
     @Override
     public int compare(final SchedulableEntity r1, final SchedulableEntity r2) {
       int res = (int) Math.signum( getMagnitude(r1) - getMagnitude(r2) );
+
+      if (res == 0) {
+        res = (int) Math.signum(r1.getStartTime() - r2.getStartTime());
+      }
+
+      if (res == 0) {
+        res = compareDemand(r1, r2);
+      }
+      return res;
+    }
+
+    private int compareDemand(SchedulableEntity s1, SchedulableEntity s2) {
+      int res = 0;
+      long demand1 = s1.getSchedulingResourceUsage()
+          .getCachedDemand(CommonNodeLabelsManager.ANY).getMemorySize();
+      long demand2 = s2.getSchedulingResourceUsage()
+          .getCachedDemand(CommonNodeLabelsManager.ANY).getMemorySize();
+
+      if ((demand1 == 0) && (demand2 > 0)) {
+        res = 1;
+      } else if ((demand2 == 0) && (demand1 > 0)) {
+        res = -1;
+      }
+
       return res;
     }
   }
@@ -117,6 +149,11 @@ public class FairOrderingPolicy<S extends SchedulableEntity> extends AbstractCom
   public String getInfo() {
     String sbw = sizeBasedWeight ? " with sizeBasedWeight" : "";
     return "FairOrderingPolicy" + sbw;
+  }
+
+  @Override
+  public String getConfigName() {
+    return CapacitySchedulerConfiguration.FAIR_APP_ORDERING_POLICY;
   }
 
 }

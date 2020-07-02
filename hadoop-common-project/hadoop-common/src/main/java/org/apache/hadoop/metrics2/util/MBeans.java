@@ -18,7 +18,7 @@
 package org.apache.hadoop.metrics2.util;
 
 import java.lang.management.ManagementFactory;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -70,8 +70,7 @@ public final class MBeans {
    */
   static public ObjectName register(String serviceName, String nameName,
                                     Object theMbean) {
-    return register(serviceName, nameName, new HashMap<String, String>(),
-        theMbean);
+    return register(serviceName, nameName, Collections.emptyMap(), theMbean);
   }
 
   /**

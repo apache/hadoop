@@ -22,6 +22,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.applications.mawo.server.worker.WorkerId;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
@@ -343,5 +344,40 @@ public class TaskStatus implements Writable, Cloneable {
    */
   public final void setWorkerId(final WorkerId localworkerId) {
     this.workerId = localworkerId;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null || obj.getClass() != this.getClass()) {
+      return false;
+    }
+    TaskStatus other = (TaskStatus) obj;
+    return (getWorkerId().equals(other.getWorkerId()) &&
+        getTaskId().equals(other.getTaskId()) &&
+        getRunState().equals(other.getRunState()) &&
+        getStartTime() == other.getStartTime() &&
+        getEndTime() == other.getEndTime() &&
+        getTaskCMD().equals(other.getTaskCMD()) &&
+        getTaskType().equals(other.getTaskType()) &&
+        getExitCode() == other.getExitCode());
+  }
+
+  @Override
+  public int hashCode() {
+    HashCodeBuilder builder = new HashCodeBuilder();
+    builder.append(getWorkerId())
+        .append(getTaskId())
+        .append(getRunState())
+        .append(getStartTime())
+        .append(getEndTime())
+        .append(getTaskCMD())
+        .append(getTaskType())
+        .append(getExitCode());
+    return builder.hashCode();
+  }
+
+  @Override
+  protected Object clone() throws CloneNotSupportedException {
+    return super.clone();
   }
 }

@@ -77,7 +77,6 @@ public class TestFilterFileSystem {
         boolean overwrite, int bufferSize, short replication, long blockSize,
         Progressable progress) throws IOException;
 
-    public boolean mkdirs(Path f);
     public FSDataInputStream open(Path f);
     public FSDataInputStream open(PathHandle f);
     public FSDataOutputStream create(Path f);

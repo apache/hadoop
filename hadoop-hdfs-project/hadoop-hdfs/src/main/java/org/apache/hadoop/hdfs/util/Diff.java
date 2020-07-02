@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.hdfs.util;
 
+import com.google.common.base.Preconditions;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-
-import com.google.common.base.Preconditions;
 
 /**
  * The difference between the current state and a previous state of a list.
@@ -164,6 +164,17 @@ public class Diff<K, E extends Diff.Element<K>> {
           + " but old=" + old);
     }
     return old;
+  }
+
+  public boolean removeCreated(final E element) {
+    if (created != null) {
+      final int i = search(created, element.getKey());
+      if (i >= 0 && created.get(i) == element) {
+        created.remove(i);
+        return true;
+      }
+    }
+    return false;
   }
 
   public void clearCreated() {

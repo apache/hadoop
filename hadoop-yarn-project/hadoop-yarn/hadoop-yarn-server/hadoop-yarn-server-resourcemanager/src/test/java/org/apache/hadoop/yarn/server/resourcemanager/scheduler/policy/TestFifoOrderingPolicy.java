@@ -63,7 +63,7 @@ public class TestFifoOrderingPolicy {
     schedOrder.addSchedulableEntity(msp3);
     
     //Assignment, oldest to youngest
-    checkSerials(schedOrder.getAssignmentIterator(), new long[]{1, 2, 3});
+    checkSerials(schedOrder.getAssignmentIterator(IteratorSelector.EMPTY_ITERATOR_SELECTOR), new long[]{1, 2, 3});
     
     //Preemption, youngest to oldest
     checkSerials(schedOrder.getPreemptionIterator(), new long[]{3, 2, 1});

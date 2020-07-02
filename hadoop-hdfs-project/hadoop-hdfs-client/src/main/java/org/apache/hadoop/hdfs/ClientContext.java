@@ -40,6 +40,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.net.ScriptBasedMapping;
+import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -76,7 +77,7 @@ public class ClientContext {
   /**
    * Caches short-circuit file descriptors, mmap regions.
    */
-  private final ShortCircuitCache shortCircuitCache;
+  private final ShortCircuitCache[] shortCircuitCache;
 
   /**
    * Caches TCP and UNIX domain sockets for reuse.
@@ -118,13 +119,36 @@ public class ClientContext {
   private NodeBase clientNode;
   private boolean topologyResolutionEnabled;
 
+  private Daemon deadNodeDetectorThr = null;
+
+  /**
+   * The switch to DeadNodeDetector.
+   */
+  private boolean deadNodeDetectionEnabled = false;
+
+  /**
+   * Detect the dead datanodes in advance, and share this information among all
+   * the DFSInputStreams in the same client.
+   */
+  private DeadNodeDetector deadNodeDetector = null;
+
+  /**
+   * ShortCircuitCache array size.
+   */
+  private final int clientShortCircuitNum;
+
   private ClientContext(String name, DfsClientConf conf,
       Configuration config) {
     final ShortCircuitConf scConf = conf.getShortCircuitConf();
 
     this.name = name;
     this.confString = scConf.confAsString();
-    this.shortCircuitCache = ShortCircuitCache.fromConf(scConf);
+    this.clientShortCircuitNum = conf.getClientShortCircuitNum();
+    this.shortCircuitCache = new ShortCircuitCache[this.clientShortCircuitNum];
+    for (int i = 0; i < this.clientShortCircuitNum; i++) {
+      this.shortCircuitCache[i] = ShortCircuitCache.fromConf(scConf);
+    }
+
     this.peerCache = new PeerCache(scConf.getSocketCacheCapacity(),
         scConf.getSocketCacheExpiry());
     this.keyProviderCache = new KeyProviderCache(
@@ -134,6 +158,12 @@ public class ClientContext {
 
     this.byteArrayManager = ByteArrayManager.newInstance(
         conf.getWriteByteArrayManagerConf());
+    this.deadNodeDetectionEnabled = conf.isDeadNodeDetectionEnabled();
+    if (deadNodeDetectionEnabled && deadNodeDetector == null) {
+      deadNodeDetector = new DeadNodeDetector(name, config);
+      deadNodeDetectorThr = new Daemon(deadNodeDetector);
+      deadNodeDetectorThr.start();
+    }
     initTopologyResolution(config);
   }
 
@@ -208,7 +238,11 @@ public class ClientContext {
   }
 
   public ShortCircuitCache getShortCircuitCache() {
-    return shortCircuitCache;
+    return shortCircuitCache[0];
+  }
+
+  public ShortCircuitCache getShortCircuitCache(long idx) {
+    return shortCircuitCache[(int) (idx % clientShortCircuitNum)];
   }
 
   public PeerCache getPeerCache() {
@@ -250,5 +284,34 @@ public class ClientContext {
     NodeBase node = new NodeBase(datanodeInfo.getHostName(),
         datanodeInfo.getNetworkLocation());
     return NetworkTopology.getDistanceByPath(clientNode, node);
+  }
+
+  /**
+   * The switch to DeadNodeDetector. If true, DeadNodeDetector is available.
+   */
+  public boolean isDeadNodeDetectionEnabled() {
+    return deadNodeDetectionEnabled;
+  }
+
+  /**
+   * Obtain DeadNodeDetector of the current client.
+   */
+  public DeadNodeDetector getDeadNodeDetector() {
+    return deadNodeDetector;
+  }
+
+  /**
+   * Close dead node detector thread.
+   */
+  public void stopDeadNodeDetectorThread() {
+    if (deadNodeDetectorThr != null) {
+      deadNodeDetectorThr.interrupt();
+      try {
+        deadNodeDetectorThr.join();
+      } catch (InterruptedException e) {
+        LOG.warn("Encountered exception while waiting to join on dead " +
+            "node detector thread.", e);
+      }
+    }
   }
 }

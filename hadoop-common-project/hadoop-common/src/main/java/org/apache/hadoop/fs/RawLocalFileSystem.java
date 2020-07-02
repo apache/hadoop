@@ -53,6 +53,8 @@ import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
+
 /****************************************************************
  * Implement the FileSystem API for the raw local filesystem.
  *
@@ -62,6 +64,7 @@ import org.apache.hadoop.util.StringUtils;
 public class RawLocalFileSystem extends FileSystem {
   static final URI NAME = URI.create("file:///");
   private Path workingDir;
+  private long defaultBlockSize;
   // Temporary workaround for HADOOP-9652.
   private static boolean useDeprecatedFileStatus = true;
 
@@ -98,6 +101,7 @@ public class RawLocalFileSystem extends FileSystem {
   public void initialize(URI uri, Configuration conf) throws IOException {
     super.initialize(uri, conf);
     setConf(conf);
+    defaultBlockSize = getDefaultBlockSize(new Path(uri));
   }
   
   /*******************************************************
@@ -516,7 +520,12 @@ public class RawLocalFileSystem extends FileSystem {
     }
     return new FileStatus[] {
         new DeprecatedRawLocalFileStatus(localf,
-        getDefaultBlockSize(f), this) };
+        defaultBlockSize, this) };
+  }
+
+  @Override
+  public boolean exists(Path f) throws IOException {
+    return pathToFile(f).exists();
   }
   
   protected boolean mkOneDir(File p2f) throws IOException {
@@ -661,7 +670,7 @@ public class RawLocalFileSystem extends FileSystem {
     File path = pathToFile(f);
     if (path.exists()) {
       return new DeprecatedRawLocalFileStatus(pathToFile(f),
-          getDefaultBlockSize(f), this);
+          defaultBlockSize, this);
     } else {
       throw new FileNotFoundException("File " + f + " does not exist");
     }
@@ -1049,7 +1058,7 @@ public class RawLocalFileSystem extends FileSystem {
   private FileStatus getNativeFileLinkStatus(final Path f,
       boolean dereference) throws IOException {
     checkPath(f);
-    Stat stat = new Stat(f, getDefaultBlockSize(f), dereference, this);
+    Stat stat = new Stat(f, defaultBlockSize, dereference, this);
     FileStatus status = stat.getFileStatus();
     return status;
   }
@@ -1059,5 +1068,22 @@ public class RawLocalFileSystem extends FileSystem {
     FileStatus fi = getFileLinkStatusInternal(f, false);
     // return an unqualified symlink target
     return fi.getSymlink();
+  }
+
+  @Override
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+    switch (validatePathCapabilityArgs(makeQualified(path), capability)) {
+    case CommonPathCapabilities.FS_APPEND:
+    case CommonPathCapabilities.FS_CONCAT:
+    case CommonPathCapabilities.FS_PATHHANDLES:
+    case CommonPathCapabilities.FS_PERMISSIONS:
+    case CommonPathCapabilities.FS_TRUNCATE:
+      return true;
+    case CommonPathCapabilities.FS_SYMLINKS:
+      return FileSystem.areSymlinksEnabled();
+    default:
+      return super.hasPathCapability(path, capability);
+    }
   }
 }

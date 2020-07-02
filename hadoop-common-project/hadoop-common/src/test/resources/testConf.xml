@@ -282,7 +282,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-count \[-q\] \[-h\] \[-v\] \[-t \[&lt;storage type&gt;\]\] \[-u\] \[-x\] \[-e\] &lt;path&gt; \.\.\. :( )*</expected-output>
+          <expected-output>^-count \[-q\] \[-h\] \[-v\] \[-t \[&lt;storage type&gt;\]\] \[-u\] \[-x\] \[-e\] \[-s\] &lt;path&gt; \.\.\. :( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -496,7 +496,10 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-put \[-f\] \[-p\] \[-l\] \[-d\] &lt;localsrc&gt; \.\.\. &lt;dst&gt; :( )*</expected-output>
+          <comparator>
+            <type>RegexpComparator</type>
+            <expected-output>^-put \[-f\] \[-p\] \[-l\] \[-d\] \[-t &lt;thread count&gt;\] &lt;localsrc&gt; \.\.\. &lt;dst&gt; :\s*</expected-output>
+          </comparator>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -512,66 +515,11 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^\s*-p  Preserves access and modification times, ownership and the mode.( )*</expected-output>
+          <expected-output>^\s*-p                 Preserves timestamps, ownership and the mode.( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^\s*-f  Overwrites the destination if it already exists.( )*</expected-output>
-        </comparator>
-        <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>^\s*-l  Allow DataNode to lazily persist the file to disk. Forces( )*</expected-output>
-        </comparator>
-        <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>^\s*replication factor of 1. This flag will result in reduced( )*</expected-output>
-        </comparator>
-        <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>^\s*durability. Use with care.( )*</expected-output>
-        </comparator>
-        <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>^\s*-d  Skip creation of temporary file\(&lt;dst&gt;\._COPYING_\).( )*</expected-output>
-        </comparator>
-      </comparators>
-    </test>
-
-    <test> <!-- TESTED -->
-      <description>help: help for copyFromLocal</description>
-      <test-commands>
-        <command>-help copyFromLocal</command>
-      </test-commands>
-      <cleanup-commands>
-      </cleanup-commands>
-      <comparators>
-        <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>^-copyFromLocal \[-f\] \[-p\] \[-l\] \[-d\] \[-t &lt;thread count&gt;\] &lt;localsrc&gt; \.\.\. &lt;dst&gt; :\s*</expected-output>
-        </comparator>
-        <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>^\s*Copy files from the local file system into fs.( )*Copying fails if the file already( )*</expected-output>
-        </comparator>
-        <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>^\s*exists, unless the -f flag is given.( )*</expected-output>
-        </comparator>
-        <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>^\s*Flags:( )*</expected-output>
-        </comparator>
-        <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>^\s*-p                 Preserves access and modification times, ownership and the( )*</expected-output>
-        </comparator>
-        <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>^\s*mode.( )*</expected-output>
-        </comparator>
-        <comparator>
-           <type>RegexpComparator</type>
-           <expected-output>^\s*-f                 Overwrites the destination if it already exists.( )*</expected-output>
+          <expected-output>^\s*-f                 Overwrites the destination if it already exists.( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -597,6 +545,25 @@
     </test>
 
     <test> <!-- TESTED -->
+      <description>help: help for copyFromLocal</description>
+      <test-commands>
+        <command>-help copyFromLocal</command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-copyFromLocal \[-f\] \[-p\] \[-l\] \[-d\] \[-t &lt;thread count&gt;\] &lt;localsrc&gt; \.\.\. &lt;dst&gt; :\s*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s*Identical to the -put command\.\s*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
       <description>help: help for moveFromLocal</description>
       <test-commands>
         <command>-help moveFromLocal</command>
@@ -606,11 +573,14 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-moveFromLocal &lt;localsrc&gt; \.\.\. &lt;dst&gt; :\s*</expected-output>
+          <expected-output>^-moveFromLocal \[-f\] \[-p\] \[-l\] \[-d\] &lt;localsrc&gt; \.\.\. &lt;dst&gt; :\s*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*Same as -put, except that the source is deleted after it's copied.</expected-output>
+          <expected-output>^( |\t)*Same as -put, except that the source is deleted after it's copied</expected-output>
+        </comparator><comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^\s* and -t option has not yet implemented.</expected-output>
         </comparator>
       </comparators>
     </test>

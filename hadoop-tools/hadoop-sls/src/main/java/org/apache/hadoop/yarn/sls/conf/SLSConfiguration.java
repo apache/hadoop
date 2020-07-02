@@ -28,6 +28,9 @@ import org.apache.hadoop.yarn.api.records.Resource;
 public class SLSConfiguration {
   // sls
   public static final String PREFIX = "yarn.sls.";
+  public static final String DNS_CACHING_ENABLED = PREFIX
+      + "dns.caching.enabled";
+  public static final boolean DNS_CACHING_ENABLED_DEFAULT = false;
   // runner
   public static final String RUNNER_PREFIX = PREFIX + "runner.";
   public static final String RUNNER_POOL_SIZE = RUNNER_PREFIX + "pool.size";

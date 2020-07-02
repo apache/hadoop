@@ -35,8 +35,6 @@ import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
@@ -44,8 +42,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerFactory;
 import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
 import org.apache.hadoop.yarn.server.metrics.ContainerMetricsConstants;
-import org.apache.hadoop.yarn.webapp.BadRequestException;
-import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.slf4j.Logger;
@@ -71,7 +67,9 @@ import java.security.PrivilegedExceptionAction;
 /**
  * Support only ATSv2 client only.
  */
-@Singleton @Path("/ws/v2/applicationlog") public class LogWebService {
+@Singleton
+@Path("/ws/v2/applicationlog")
+public class LogWebService implements AppInfoProvider {
   private static final Logger LOG =
       LoggerFactory.getLogger(LogWebService.class);
   private static final String RESOURCE_URI_STR_V2 = "/ws/v2/timeline/";
@@ -81,6 +79,8 @@ import java.security.PrivilegedExceptionAction;
   private static LogAggregationFileControllerFactory factory;
   private static String base;
   private static String defaultClusterid;
+
+  private final LogServlet logServlet;
   private volatile Client webTimelineClient;
 
   static {
@@ -97,6 +97,10 @@ import java.security.PrivilegedExceptionAction;
         YarnConfiguration.DEFAULT_RM_CLUSTER_ID);
     LOG.info("Initialized LogWeService with clusterid " + defaultClusterid
         + " for URI: " + base);
+  }
+
+  public LogWebService() {
+    this.logServlet = new LogServlet(yarnConf, this);
   }
 
   private Client createTimelineWebClient() {
@@ -136,7 +140,8 @@ import java.security.PrivilegedExceptionAction;
    * @param redirectedFromNode Whether this is a redirected request from NM
    * @return The log file's name and current file size
    */
-  @GET @Path("/containers/{containerid}/logs")
+  @GET
+  @Path("/containers/{containerid}/logs")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public Response getContainerLogsInfo(@Context HttpServletRequest req,
       @Context HttpServletResponse res,
@@ -144,92 +149,21 @@ import java.security.PrivilegedExceptionAction;
       @QueryParam(YarnWebServiceParams.NM_ID) String nmId,
       @QueryParam(YarnWebServiceParams.REDIRECTED_FROM_NODE)
       @DefaultValue("false") boolean redirectedFromNode,
-      @QueryParam(YarnWebServiceParams.CLUSTER_ID) String clusterId) {
-    ContainerId containerId = null;
+      @QueryParam(YarnWebServiceParams.CLUSTER_ID) String clusterId,
+      @QueryParam(YarnWebServiceParams.MANUAL_REDIRECTION)
+      @DefaultValue("false") boolean manualRedirection) {
     initForReadableEndpoints(res);
-    try {
-      containerId = ContainerId.fromString(containerIdStr);
-    } catch (IllegalArgumentException e) {
-      throw new BadRequestException("invalid container id, " + containerIdStr);
-    }
 
-    ApplicationId appId =
-        containerId.getApplicationAttemptId().getApplicationId();
-    AppInfo appInfo;
-    try {
-      appInfo = getApp(req, appId.toString(), clusterId);
-    } catch (Exception ex) {
-      // directly find logs from HDFS.
-      return LogWebServiceUtils
-          .getContainerLogMeta(factory, appId, null, null, containerIdStr,
-              false);
-    }
-    // if the application finishes, directly find logs
-    // from HDFS.
-    if (LogWebServiceUtils.isFinishedState(appInfo.getAppState())) {
-      return LogWebServiceUtils
-          .getContainerLogMeta(factory, appId, null, null, containerIdStr,
-              false);
-    }
-    if (LogWebServiceUtils.isRunningState(appInfo.getAppState())) {
-      String appOwner = appInfo.getUser();
-      String nodeHttpAddress = null;
-      if (nmId != null && !nmId.isEmpty()) {
-        try {
-          nodeHttpAddress =
-              LogWebServiceUtils.getNMWebAddressFromRM(yarnConf, nmId);
-        } catch (Exception ex) {
-          LOG.debug("{}", ex);
-        }
-      }
-      if (nodeHttpAddress == null || nodeHttpAddress.isEmpty()) {
-        ContainerInfo containerInfo;
-        try {
-          containerInfo =
-              getContainer(req, appId.toString(), containerId.toString(),
-                  clusterId);
-        } catch (Exception ex) {
-          // return log meta for the aggregated logs if exists.
-          // It will also return empty log meta for the local logs.
-          return LogWebServiceUtils
-              .getContainerLogMeta(factory, appId, appOwner, null,
-                  containerIdStr, true);
-        }
-        nodeHttpAddress = containerInfo.getNodeHttpAddress();
-        // make sure nodeHttpAddress is not null and not empty. Otherwise,
-        // we would only get log meta for aggregated logs instead of
-        // re-directing the request
-        if (nodeHttpAddress == null || nodeHttpAddress.isEmpty()
-            || redirectedFromNode) {
-          // return log meta for the aggregated logs if exists.
-          // It will also return empty log meta for the local logs.
-          // If this is the redirect request from NM, we should not
-          // re-direct the request back. Simply output the aggregated log meta.
-          return LogWebServiceUtils
-              .getContainerLogMeta(factory, appId, appOwner, null,
-                  containerIdStr, true);
-        }
-      }
-      String uri = "/" + containerId.toString() + "/logs";
-      String resURI = JOINER.join(
-          LogWebServiceUtils.getAbsoluteNMWebAddress(yarnConf, nodeHttpAddress),
-          NM_DOWNLOAD_URI_STR, uri);
-      String query = req.getQueryString();
-      if (query != null && !query.isEmpty()) {
-        resURI += "?" + query;
-      }
-      Response.ResponseBuilder response =
-          Response.status(HttpServletResponse.SC_TEMPORARY_REDIRECT);
-      response.header("Location", resURI);
-      return response.build();
-    } else {
-      throw new NotFoundException(
-          "The application is not at Running or Finished State.");
-    }
+    WrappedLogMetaRequest.Builder logMetaRequestBuilder =
+        LogServlet.createRequestFromContainerId(containerIdStr);
+
+    return logServlet.getContainerLogsInfo(req, logMetaRequestBuilder, nmId,
+        redirectedFromNode, clusterId, manualRedirection);
   }
 
-  protected ContainerInfo getContainer(HttpServletRequest req, String appId,
-      String containerId, String clusterId) {
+  @Override
+  public String getNodeHttpAddress(HttpServletRequest req, String appId,
+      String appAttemptId, String containerId, String clusterId) {
     UserGroupInformation callerUGI = LogWebServiceUtils.getUser(req);
     String cId = clusterId != null ? clusterId : defaultClusterid;
     MultivaluedMap<String, String> params = new MultivaluedMapImpl();
@@ -255,14 +189,12 @@ import java.security.PrivilegedExceptionAction;
     if (conEntity == null) {
       return null;
     }
-    String nodeHttpAddress = (String) conEntity.getInfo()
+    return (String) conEntity.getInfo()
         .get(ContainerMetricsConstants.ALLOCATED_HOST_HTTP_ADDRESS_INFO);
-
-    ContainerInfo info = new ContainerInfo(nodeHttpAddress);
-    return info;
   }
 
-  protected AppInfo getApp(HttpServletRequest req, String appId,
+  @Override
+  public BasicAppInfo getApp(HttpServletRequest req, String appId,
       String clusterId) {
     UserGroupInformation callerUGI = LogWebServiceUtils.getUser(req);
 
@@ -296,8 +228,7 @@ import java.security.PrivilegedExceptionAction;
     String state = (String) appEntity.getInfo()
         .get(ApplicationMetricsConstants.STATE_EVENT_INFO);
     YarnApplicationState appState = YarnApplicationState.valueOf(state);
-    AppInfo info = new AppInfo(appState, appOwner);
-    return info;
+    return new BasicAppInfo(appState, appOwner);
   }
 
   /**
@@ -313,9 +244,12 @@ import java.security.PrivilegedExceptionAction;
    * @param redirectedFromNode Whether this is the redirect request from NM
    * @return The contents of the container's log file
    */
-  @GET @Path("/containers/{containerid}/logs/{filename}")
-  @Produces({ MediaType.TEXT_PLAIN }) @InterfaceAudience.Public
-  @InterfaceStability.Unstable public Response getContainerLogFile(
+  @GET
+  @Path("/containers/{containerid}/logs/{filename}")
+  @Produces({ MediaType.TEXT_PLAIN })
+  @InterfaceAudience.Public
+  @InterfaceStability.Unstable
+  public Response getContainerLogFile(
       @Context HttpServletRequest req, @Context HttpServletResponse res,
       @PathParam(YarnWebServiceParams.CONTAINER_ID) String containerIdStr,
       @PathParam(YarnWebServiceParams.CONTAINER_LOG_FILE_NAME) String filename,
@@ -324,17 +258,21 @@ import java.security.PrivilegedExceptionAction;
       @QueryParam(YarnWebServiceParams.NM_ID) String nmId,
       @QueryParam(YarnWebServiceParams.REDIRECTED_FROM_NODE)
           boolean redirectedFromNode,
-      @QueryParam(YarnWebServiceParams.CLUSTER_ID) String clusterId) {
+      @QueryParam(YarnWebServiceParams.CLUSTER_ID) String clusterId,
+      @QueryParam(YarnWebServiceParams.MANUAL_REDIRECTION)
+      @DefaultValue("false") boolean manualRedirection) {
     return getLogs(req, res, containerIdStr, filename, format, size, nmId,
-        redirectedFromNode, clusterId);
+        redirectedFromNode, clusterId, manualRedirection);
   }
 
   //TODO: YARN-4993: Refactory ContainersLogsBlock, AggregatedLogsBlock and
   //      container log webservice introduced in AHS to minimize
   //      the duplication.
-  @GET @Path("/containerlogs/{containerid}/{filename}")
+  @GET
+  @Path("/containerlogs/{containerid}/{filename}")
   @Produces({ MediaType.TEXT_PLAIN + "; " + JettyUtils.UTF_8 })
-  @InterfaceAudience.Public @InterfaceStability.Unstable
+  @InterfaceAudience.Public
+  @InterfaceStability.Unstable
   public Response getLogs(@Context HttpServletRequest req,
       @Context HttpServletResponse res,
       @PathParam(YarnWebServiceParams.CONTAINER_ID) String containerIdStr,
@@ -344,119 +282,12 @@ import java.security.PrivilegedExceptionAction;
       @QueryParam(YarnWebServiceParams.NM_ID) String nmId,
       @QueryParam(YarnWebServiceParams.REDIRECTED_FROM_NODE)
       @DefaultValue("false") boolean redirectedFromNode,
-      @QueryParam(YarnWebServiceParams.CLUSTER_ID) String clusterId) {
+      @QueryParam(YarnWebServiceParams.CLUSTER_ID) String clusterId,
+      @QueryParam(YarnWebServiceParams.MANUAL_REDIRECTION)
+      @DefaultValue("false") boolean manualRedirection) {
     initForReadableEndpoints(res);
-    ContainerId containerId;
-    try {
-      containerId = ContainerId.fromString(containerIdStr);
-    } catch (IllegalArgumentException ex) {
-      return LogWebServiceUtils.createBadResponse(Response.Status.NOT_FOUND,
-          "Invalid ContainerId: " + containerIdStr);
-    }
-
-    final long length = LogWebServiceUtils.parseLongParam(size);
-
-    ApplicationId appId =
-        containerId.getApplicationAttemptId().getApplicationId();
-    AppInfo appInfo;
-    try {
-      appInfo = getApp(req, appId.toString(), clusterId);
-    } catch (Exception ex) {
-      // directly find logs from HDFS.
-      return LogWebServiceUtils
-          .sendStreamOutputResponse(factory, appId, null, null, containerIdStr,
-              filename, format, length, false);
-    }
-    String appOwner = appInfo.getUser();
-    if (LogWebServiceUtils.isFinishedState(appInfo.getAppState())) {
-      // directly find logs from HDFS.
-      return LogWebServiceUtils
-          .sendStreamOutputResponse(factory, appId, appOwner, null,
-              containerIdStr, filename, format, length, false);
-    }
-
-    if (LogWebServiceUtils.isRunningState(appInfo.getAppState())) {
-      String nodeHttpAddress = null;
-      if (nmId != null && !nmId.isEmpty()) {
-        try {
-          nodeHttpAddress =
-              LogWebServiceUtils.getNMWebAddressFromRM(yarnConf, nmId);
-        } catch (Exception ex) {
-          LOG.debug("{}", ex);
-        }
-      }
-      if (nodeHttpAddress == null || nodeHttpAddress.isEmpty()) {
-        ContainerInfo containerInfo;
-        try {
-          containerInfo =
-              getContainer(req, appId.toString(), containerId.toString(),
-                  clusterId);
-        } catch (Exception ex) {
-          // output the aggregated logs
-          return LogWebServiceUtils
-              .sendStreamOutputResponse(factory, appId, appOwner, null,
-                  containerIdStr, filename, format, length, true);
-        }
-        nodeHttpAddress = containerInfo.getNodeHttpAddress();
-        // make sure nodeHttpAddress is not null and not empty. Otherwise,
-        // we would only get aggregated logs instead of re-directing the
-        // request.
-        // If this is the redirect request from NM, we should not re-direct the
-        // request back. Simply output the aggregated logs.
-        if (nodeHttpAddress == null || nodeHttpAddress.isEmpty()
-            || redirectedFromNode) {
-          // output the aggregated logs
-          return LogWebServiceUtils
-              .sendStreamOutputResponse(factory, appId, appOwner, null,
-                  containerIdStr, filename, format, length, true);
-        }
-      }
-      String uri = "/" + containerId.toString() + "/logs/" + filename;
-      String resURI = JOINER.join(
-          LogWebServiceUtils.getAbsoluteNMWebAddress(yarnConf, nodeHttpAddress),
-          NM_DOWNLOAD_URI_STR, uri);
-      String query = req.getQueryString();
-      if (query != null && !query.isEmpty()) {
-        resURI += "?" + query;
-      }
-      Response.ResponseBuilder response =
-          Response.status(HttpServletResponse.SC_TEMPORARY_REDIRECT);
-      response.header("Location", resURI);
-      return response.build();
-    } else {
-      return LogWebServiceUtils.createBadResponse(Response.Status.NOT_FOUND,
-          "The application is not at Running or Finished State.");
-    }
-  }
-
-  protected static class AppInfo {
-    private YarnApplicationState appState;
-    private String user;
-
-    AppInfo(YarnApplicationState appState, String user) {
-      this.appState = appState;
-      this.user = user;
-    }
-
-    public YarnApplicationState getAppState() {
-      return this.appState;
-    }
-
-    public String getUser() {
-      return this.user;
-    }
-  }
-
-  protected static class ContainerInfo {
-    private String nodeHttpAddress;
-
-    ContainerInfo(String nodeHttpAddress) {
-      this.nodeHttpAddress = nodeHttpAddress;
-    }
-
-    public String getNodeHttpAddress() {
-      return nodeHttpAddress;
-    }
+    return logServlet.getLogFile(req, containerIdStr, filename, format, size,
+        nmId, redirectedFromNode, clusterId, manualRedirection);
   }
 
   @VisibleForTesting protected TimelineEntity getEntity(String path,

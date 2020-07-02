@@ -22,13 +22,16 @@ import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.ConfigurationWithLogging;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
+import org.apache.hadoop.security.AuthenticationFilterInitializer;
+import org.apache.hadoop.security.authentication.server.ProxyUserAuthenticationFilterInitializer;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.util.JvmPauseMonitor;
@@ -94,6 +97,22 @@ public class KMSWebServer {
     int port = conf.getInt(KMSConfiguration.HTTP_PORT_KEY,
         KMSConfiguration.HTTP_PORT_DEFAULT);
     URI endpoint = new URI(scheme, null, host, port, null, null, null);
+
+    String configuredInitializers =
+        conf.get(HttpServer2.FILTER_INITIALIZER_PROPERTY);
+    if (configuredInitializers != null) {
+      Set<String> target = new LinkedHashSet<String>();
+      String[] initializers = configuredInitializers.split(",");
+      for (String init : initializers) {
+        if (!init.equals(AuthenticationFilterInitializer.class.getName()) &&
+            !init.equals(
+                ProxyUserAuthenticationFilterInitializer.class.getName())) {
+          target.add(init);
+        }
+      }
+      String actualInitializers = StringUtils.join(",", target);
+      conf.set(HttpServer2.FILTER_INITIALIZER_PROPERTY, actualInitializers);
+    }
 
     httpServer = new HttpServer2.Builder()
         .setName(NAME)
@@ -168,10 +187,8 @@ public class KMSWebServer {
   public static void main(String[] args) throws Exception {
     KMSConfiguration.initLogging();
     StringUtils.startupShutdownMessage(KMSWebServer.class, args, LOG);
-    Configuration conf = new ConfigurationWithLogging(
-        KMSConfiguration.getKMSConf());
-    Configuration sslConf = new ConfigurationWithLogging(
-        SSLFactory.readSSLConfiguration(conf, SSLFactory.Mode.SERVER));
+    Configuration conf = KMSConfiguration.getKMSConf();
+    Configuration sslConf = SSLFactory.readSSLConfiguration(conf, SSLFactory.Mode.SERVER);
     KMSWebServer kmsWebServer = new KMSWebServer(conf, sslConf);
     kmsWebServer.start();
     kmsWebServer.join();

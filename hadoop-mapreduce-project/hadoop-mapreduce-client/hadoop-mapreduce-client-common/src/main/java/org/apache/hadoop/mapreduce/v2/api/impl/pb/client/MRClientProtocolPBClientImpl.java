@@ -24,7 +24,7 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
@@ -99,7 +99,7 @@ import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.KillTaskRequestProto
 import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 public class MRClientProtocolPBClientImpl implements MRClientProtocol,
     Closeable {
@@ -108,8 +108,10 @@ public class MRClientProtocolPBClientImpl implements MRClientProtocol,
   
   public MRClientProtocolPBClientImpl() {};
   
-  public MRClientProtocolPBClientImpl(long clientVersion, InetSocketAddress addr, Configuration conf) throws IOException {
-    RPC.setProtocolEngine(conf, MRClientProtocolPB.class, ProtobufRpcEngine.class);
+  public MRClientProtocolPBClientImpl(long clientVersion,
+      InetSocketAddress addr, Configuration conf) throws IOException {
+    RPC.setProtocolEngine(conf, MRClientProtocolPB.class,
+        ProtobufRpcEngine2.class);
     proxy = RPC.getProxy(MRClientProtocolPB.class, clientVersion, addr, conf);
   }
   

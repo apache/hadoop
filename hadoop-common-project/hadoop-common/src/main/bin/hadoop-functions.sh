@@ -213,7 +213,7 @@ function hadoop_privilege_check
   [[ "${EUID}" = 0 ]]
 }
 
-## @description  Execute a command via su when running as root
+## @description  Execute a command via sudo when running as root
 ## @description  if the given user is found or exit with
 ## @description  failure if not.
 ## @description  otherwise just run it.  (This is intended to
@@ -224,14 +224,14 @@ function hadoop_privilege_check
 ## @param        user
 ## @param        commandstring
 ## @return       exitstatus
-function hadoop_su
+function hadoop_sudo
 {
   declare user=$1
   shift
 
   if hadoop_privilege_check; then
     if hadoop_verify_user_resolves user; then
-       su -l "${user}" -- "$@"
+       sudo -u "${user}" -- "$@"
     else
       hadoop_error "ERROR: Refusing to run as root: ${user} account is not found. Aborting."
       return 1
@@ -241,7 +241,7 @@ function hadoop_su
   fi
 }
 
-## @description  Execute a command via su when running as root
+## @description  Execute a command via sudo when running as root
 ## @description  with extra support for commands that might
 ## @description  legitimately start as root (e.g., datanode)
 ## @description  (This is intended to
@@ -259,7 +259,7 @@ function hadoop_uservar_su
   #
   # if $EUID != 0, then exec
   # if $EUID =0 then
-  #    if hdfs_subcmd_user is defined, call hadoop_su to exec
+  #    if hdfs_subcmd_user is defined, call hadoop_sudo to exec
   #    if hdfs_subcmd_user is not defined, error
   #
   # For secure daemons, this means both the secure and insecure env vars need to be
@@ -283,7 +283,7 @@ function hadoop_uservar_su
     svar=$(hadoop_build_custom_subcmd_var "${program}" "${command}" SECURE_USER)
 
     if [[ -n "${!uvar}" ]]; then
-      hadoop_su "${!uvar}" "$@"
+      hadoop_sudo "${!uvar}" "$@"
     elif [[ -n "${!svar}" ]]; then
       ## if we are here, then SECURE_USER with no USER defined
       ## we are already privileged, so just run the command and hope
@@ -596,11 +596,6 @@ function hadoop_bootstrap
   YARN_LIB_JARS_DIR=${YARN_LIB_JARS_DIR:-"share/hadoop/yarn/lib"}
   MAPRED_DIR=${MAPRED_DIR:-"share/hadoop/mapreduce"}
   MAPRED_LIB_JARS_DIR=${MAPRED_LIB_JARS_DIR:-"share/hadoop/mapreduce/lib"}
-  HDDS_DIR=${HDDS_DIR:-"share/hadoop/hdds"}
-  HDDS_LIB_JARS_DIR=${HDDS_LIB_JARS_DIR:-"share/hadoop/hdds/lib"}
-  OZONE_DIR=${OZONE_DIR:-"share/hadoop/ozone"}
-  OZONE_LIB_JARS_DIR=${OZONE_LIB_JARS_DIR:-"share/hadoop/ozone/lib"}
-  OZONEFS_DIR=${OZONEFS_DIR:-"share/hadoop/ozonefs"}
 
   HADOOP_TOOLS_HOME=${HADOOP_TOOLS_HOME:-${HADOOP_HOME}}
   HADOOP_TOOLS_DIR=${HADOOP_TOOLS_DIR:-"share/hadoop/tools"}
@@ -1342,7 +1337,7 @@ function hadoop_add_to_classpath_tools
     # shellcheck disable=SC1090
     . "${HADOOP_LIBEXEC_DIR}/tools/${module}.sh"
   else
-    hadoop_error "ERROR: Tools helper ${HADOOP_LIBEXEC_DIR}/tools/${module}.sh was not found."
+    hadoop_debug "Tools helper ${HADOOP_LIBEXEC_DIR}/tools/${module}.sh was not found."
   fi
 
   if declare -f hadoop_classpath_tools_${module} >/dev/null 2>&1; then
@@ -1921,6 +1916,22 @@ function hadoop_start_secure_daemon
     exit 1
   fi
 
+  if [[ -z "${HADOOP_DAEMON_JSVC_EXTRA_OPTS}" ]]; then
+    # If HADOOP_DAEMON_JSVC_EXTRA_OPTS is not set
+    if ${jsvc} -help | grep -q "\-cwd"; then
+      # Check if jsvc -help has entry for option -cwd
+      hadoop_debug "Your jsvc supports -cwd option." \
+        "Adding option '-cwd .'. See HADOOP-16276 for details."
+      HADOOP_DAEMON_JSVC_EXTRA_OPTS="-cwd ."
+    else
+      hadoop_debug "Your jsvc doesn't support -cwd option." \
+        "No need to add option '-cwd .'. See HADOOP-16276 for details."
+    fi
+  else
+    hadoop_debug "HADOOP_DAEMON_JSVC_EXTRA_OPTS is set." \
+      "Ignoring jsvc -cwd option detection and addition."
+  fi
+
   # note that shellcheck will throw a
   # bogus for-our-use-case 2086 here.
   # it doesn't properly support multi-line situations
@@ -2035,7 +2046,8 @@ function hadoop_start_secure_daemon_wrapper
     hadoop_error "ERROR: Cannot disconnect ${daemonname} process $!"
   fi
   # capture the ulimit output
-  su "${HADOOP_SECURE_USER}" -c 'bash -c "ulimit -a"' >> "${jsvcoutfile}" 2>&1
+  #shellcheck disable=SC2024
+  sudo -u "${HADOOP_SECURE_USER}" bash -c "ulimit -a" >> "${jsvcoutfile}" 2>&1
   #shellcheck disable=SC2086
   if ! ps -p $! >/dev/null 2>&1; then
     return 1

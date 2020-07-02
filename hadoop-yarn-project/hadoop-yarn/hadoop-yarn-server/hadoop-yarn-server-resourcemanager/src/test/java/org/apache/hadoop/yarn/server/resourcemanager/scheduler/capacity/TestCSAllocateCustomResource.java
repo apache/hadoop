@@ -19,17 +19,16 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
-import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.TestResourceProfiles;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
@@ -50,9 +49,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAXIMUM_ALLOCATION_MB;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
 
 /**
  * Test case for custom resource container allocation.
@@ -122,7 +118,13 @@ public class TestCSAllocateCustomResource {
     // submit app
     Resource amResource = Resources.createResource(1 * g, 1);
     amResource.setResourceValue(customResourceType, 1);
-    RMApp app1 = rm.submitApp(amResource, "app", "user", null, "a");
+    RMApp app1 = MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder.createWithResource(amResource, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("a")
+            .build());
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
     // am request containers
@@ -157,37 +159,27 @@ public class TestCSAllocateCustomResource {
     resourceTypesFile = new File(source.getParent(), "resource-types.xml");
     FileUtils.copyFile(source, resourceTypesFile);
 
-    CapacityScheduler cs = new CapacityScheduler();
-    CapacityScheduler spyCS = spy(cs);
-    CapacitySchedulerConfiguration csConf =
+    CapacitySchedulerConfiguration newConf =
         (CapacitySchedulerConfiguration) TestUtils
             .getConfigurationWithMultipleQueues(conf);
-    csConf.setClass(CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,
+    newConf.setClass(CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,
         DominantResourceCalculator.class, ResourceCalculator.class);
-    spyCS.setConf(csConf);
+    //start RM
+    MockRM rm = new MockRM(newConf);
+    rm.start();
 
-    RMNodeLabelsManager nodeLabelsManager = new NullRMNodeLabelsManager();
-    nodeLabelsManager.init(csConf);
-    PlacementManager pm = new PlacementManager();
-    RMContext mockContext = mock(RMContext.class);
-    when(mockContext.getConfigurationProvider()).thenReturn(
-        new LocalConfigurationProvider());
-    mockContext.setNodeLabelManager(nodeLabelsManager);
-    when(mockContext.getNodeLabelManager()).thenReturn(nodeLabelsManager);
-    when(mockContext.getQueuePlacementManager()).thenReturn(pm);
-    spyCS.setRMContext(mockContext);
-
-    spyCS.init(csConf);
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
 
     // Ensure the method can get custom resource type from
     // CapacitySchedulerConfiguration
     Assert.assertNotEquals(0,
         ResourceUtils
-            .fetchMaximumAllocationFromConfig(spyCS.getConfiguration())
+            .fetchMaximumAllocationFromConfig(cs.getConfiguration())
             .getResourceValue("yarn.io/gpu"));
     // Ensure custom resource type exists in queue's maximumAllocation
     Assert.assertNotEquals(0,
-        spyCS.getMaximumResourceCapability("a")
+        cs.getMaximumResourceCapability("a")
             .getResourceValue("yarn.io/gpu"));
+    rm.close();
   }
 }

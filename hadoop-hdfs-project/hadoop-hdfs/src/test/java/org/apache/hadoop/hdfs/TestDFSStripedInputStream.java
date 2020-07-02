@@ -19,8 +19,11 @@ package org.apache.hadoop.hdfs;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -561,6 +564,50 @@ public class TestDFSStripedInputStream {
     }
   }
 
+  @Test
+  public void testReadWhenLastIncompleteCellComeInToDecodeAlignedStripe()
+      throws IOException {
+    DataNodeProperties stopDataNode = null;
+    try {
+      cluster.waitActive();
+      ErasureCodingPolicy policy = getEcPolicy();
+      DistributedFileSystem filesystem = cluster.getFileSystem();
+      filesystem.enableErasureCodingPolicy(policy.getName());
+      Path dir = new Path("/tmp");
+      filesystem.mkdirs(dir);
+      filesystem.getClient().setErasureCodingPolicy(dir.toString(),
+          policy.getName());
+      Path f = new Path(dir, "file");
+
+      //1. File with one stripe, last data cell should be half filed.
+      long fileLength = (policy.getCellSize() * policy.getNumDataUnits())
+          - (policy.getCellSize() / 2);
+      DFSTestUtil.createFile(filesystem, f, fileLength, (short) 1, 0);
+
+      //2. Stop first DN from stripe.
+      LocatedBlocks lbs = cluster.getNameNodeRpc().getBlockLocations(
+          f.toString(), 0, fileLength);
+      LocatedStripedBlock bg = (LocatedStripedBlock) (lbs.get(0));
+      final LocatedBlock[] blocks = StripedBlockUtil.parseStripedBlockGroup(bg,
+          cellSize, dataBlocks, parityBlocks);
+      cluster.stopDataNode(blocks[0].getLocations()[0].getName());
+
+      //3. Do pread for fist cell, reconstruction should happen
+      try (FSDataInputStream in = filesystem.open(f)) {
+        DFSStripedInputStream stripedIn = (DFSStripedInputStream) in
+            .getWrappedStream();
+        byte[] b = new byte[policy.getCellSize()];
+        stripedIn.read(0, b, 0, policy.getCellSize());
+      }
+    } catch (HadoopIllegalArgumentException e) {
+      fail(e.getMessage());
+    } finally {
+      if (stopDataNode != null) {
+        cluster.restartDataNode(stopDataNode, true);
+      }
+    }
+  }
+
   /**
    * Empties the pool for the specified buffer type, for the current ecPolicy.
    * <p>
@@ -579,5 +626,42 @@ public class TestDFSStripedInputStream {
         break;
       }
     }
+  }
+
+  @Test
+  public void testUnbuffer() throws Exception {
+    final int numBlocks = 2;
+    final int fileSize = numBlocks * blockGroupSize;
+    DFSTestUtil.createStripedFile(cluster, filePath, null, numBlocks,
+        stripesPerBlock, false, ecPolicy);
+    LocatedBlocks lbs = fs.getClient().namenode.
+        getBlockLocations(filePath.toString(), 0, fileSize);
+
+    for (LocatedBlock lb : lbs.getLocatedBlocks()) {
+      assert lb instanceof LocatedStripedBlock;
+      LocatedStripedBlock bg = (LocatedStripedBlock)(lb);
+      for (int i = 0; i < dataBlocks; i++) {
+        Block blk = new Block(bg.getBlock().getBlockId() + i,
+            stripesPerBlock * cellSize,
+            bg.getBlock().getGenerationStamp());
+        blk.setGenerationStamp(bg.getBlock().getGenerationStamp());
+        cluster.injectBlocks(i, Arrays.asList(blk),
+            bg.getBlock().getBlockPoolId());
+      }
+    }
+      DFSStripedInputStream in = new DFSStripedInputStream(fs.getClient(),
+          filePath.toString(), false, ecPolicy, null);
+      ByteBuffer readBuffer = ByteBuffer.allocate(fileSize);
+      int done = 0;
+      while (done < fileSize) {
+        int ret = in.read(readBuffer);
+        assertTrue(ret > 0);
+        done += ret;
+      }
+      in.unbuffer();
+      ByteBuffer curStripeBuf = (in.getCurStripeBuf());
+      assertNull(curStripeBuf);
+      assertNull(in.parityBuf);
+      in.close();
   }
 }

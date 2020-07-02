@@ -21,8 +21,6 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
-import static org.apache.hadoop.fs.contract.router.SecurityConfUtil.initSecurity;
-
 /**
  * Test secure append operations on the Router-based FS.
  */
@@ -31,7 +29,7 @@ public class TestRouterHDFSContractAppendSecure
 
   @BeforeClass
   public static void createCluster() throws Exception {
-    RouterHDFSContract.createCluster(initSecurity());
+    RouterHDFSContract.createCluster(true);
   }
 
   @AfterClass

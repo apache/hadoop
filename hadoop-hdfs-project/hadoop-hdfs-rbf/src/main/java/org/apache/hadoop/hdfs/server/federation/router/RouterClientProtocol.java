@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_DEFAULT;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.FederationUtil.updateMountPointStatus;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
@@ -41,6 +43,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.inotify.EventBatchList;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.BatchedDirectoryListing;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -52,6 +55,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
+import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
@@ -78,6 +82,7 @@ import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamespaceInfo
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
+import org.apache.hadoop.hdfs.server.federation.resolver.RouterResolveException;
 import org.apache.hadoop.hdfs.server.federation.router.security.RouterSecurityManager;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -87,6 +92,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -97,6 +103,7 @@ import java.io.IOException;
 import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -120,6 +127,15 @@ public class RouterClientProtocol implements ClientProtocol {
   private final RouterRpcClient rpcClient;
   private final FileSubclusterResolver subclusterResolver;
   private final ActiveNamenodeResolver namenodeResolver;
+
+  /**
+   * Caching server defaults so as to prevent redundant calls to namenode,
+   * similar to DFSClient, caching saves efforts when router connects
+   * to multiple clients.
+   */
+  private volatile FsServerDefaults serverDefaults;
+  private volatile long serverDefaultsLastUpdate;
+  private final long serverDefaultsValidityPeriod;
 
   /** If it requires response from all subclusters. */
   private final boolean allowPartialList;
@@ -154,7 +170,10 @@ public class RouterClientProtocol implements ClientProtocol {
         RBFConfigKeys.DFS_ROUTER_CLIENT_MOUNT_TIME_OUT,
         RBFConfigKeys.DFS_ROUTER_CLIENT_MOUNT_TIME_OUT_DEFAULT,
         TimeUnit.MILLISECONDS);
-
+    this.serverDefaultsValidityPeriod = conf.getTimeDuration(
+        DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_KEY,
+        DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_DEFAULT,
+        TimeUnit.MILLISECONDS);
     // User and group for reporting
     try {
       this.superUser = UserGroupInformation.getCurrentUser().getShortUserName();
@@ -225,9 +244,15 @@ public class RouterClientProtocol implements ClientProtocol {
   @Override
   public FsServerDefaults getServerDefaults() throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.READ);
-
-    RemoteMethod method = new RemoteMethod("getServerDefaults");
-    return rpcServer.invokeAtAvailableNs(method, FsServerDefaults.class);
+    long now = Time.monotonicNow();
+    if ((serverDefaults == null) || (now - serverDefaultsLastUpdate
+        > serverDefaultsValidityPeriod)) {
+      RemoteMethod method = new RemoteMethod("getServerDefaults");
+      serverDefaults =
+          rpcServer.invokeAtAvailableNs(method, FsServerDefaults.class);
+      serverDefaultsLastUpdate = now;
+    }
+    return serverDefaults;
   }
 
   @Override
@@ -745,23 +770,16 @@ public class RouterClientProtocol implements ClientProtocol {
       boolean needLocation) throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.READ);
 
-    // Locate the dir and fetch the listing
-    final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, false, false);
-    RemoteMethod method = new RemoteMethod("getListing",
-        new Class<?>[] {String.class, startAfter.getClass(), boolean.class},
-        new RemoteParam(), startAfter, needLocation);
-    final List<RemoteResult<RemoteLocation, DirectoryListing>> listings =
-        rpcClient.invokeConcurrent(
-            locations, method, false, -1, DirectoryListing.class);
-
-    Map<String, HdfsFileStatus> nnListing = new TreeMap<>();
+    List<RemoteResult<RemoteLocation, DirectoryListing>> listings =
+        getListingInt(src, startAfter, needLocation);
+    TreeMap<String, HdfsFileStatus> nnListing = new TreeMap<>();
     int totalRemainingEntries = 0;
     int remainingEntries = 0;
     boolean namenodeListingExists = false;
+    // Check the subcluster listing with the smallest name to make sure
+    // no file is skipped across subclusters
+    String lastName = null;
     if (listings != null) {
-      // Check the subcluster listing with the smallest name
-      String lastName = null;
       for (RemoteResult<RemoteLocation, DirectoryListing> result : listings) {
         if (result.hasException()) {
           IOException ioe = result.getException();
@@ -808,6 +826,10 @@ public class RouterClientProtocol implements ClientProtocol {
 
     // Add mount points at this level in the tree
     final List<String> children = subclusterResolver.getMountPoints(src);
+    // Sort the list as the entries from subcluster are also sorted
+    if (children != null) {
+      Collections.sort(children);
+    }
     if (children != null) {
       // Get the dates for each mount point
       Map<String, Long> dates = getMountPointDates(src);
@@ -818,11 +840,31 @@ public class RouterClientProtocol implements ClientProtocol {
         if (dates != null && dates.containsKey(child)) {
           date = dates.get(child);
         }
-        HdfsFileStatus dirStatus = getMountPointStatus(child, 0, date);
+        Path childPath = new Path(src, child);
+        HdfsFileStatus dirStatus =
+            getMountPointStatus(childPath.toString(), 0, date);
 
-        // This may overwrite existing listing entries with the mount point
-        // TODO don't add if already there?
-        nnListing.put(child, dirStatus);
+        // if there is no subcluster path, always add mount point
+        if (lastName == null) {
+          nnListing.put(child, dirStatus);
+        } else {
+          if (shouldAddMountPoint(child,
+                lastName, startAfter, remainingEntries)) {
+            // This may overwrite existing listing entries with the mount point
+            // TODO don't add if already there?
+            nnListing.put(child, dirStatus);
+          }
+        }
+      }
+      // Update the remaining count to include left mount points
+      if (nnListing.size() > 0) {
+        String lastListing = nnListing.lastKey();
+        for (int i = 0; i < children.size(); i++) {
+          if (children.get(i).compareTo(lastListing) > 0) {
+            remainingEntries += (children.size() - i);
+            break;
+          }
+        }
       }
     }
 
@@ -837,6 +879,12 @@ public class RouterClientProtocol implements ClientProtocol {
     HdfsFileStatus[] combinedData = new HdfsFileStatus[nnListing.size()];
     combinedData = nnListing.values().toArray(combinedData);
     return new DirectoryListing(combinedData, remainingEntries);
+  }
+
+  @Override
+  public BatchedDirectoryListing getBatchedListing(String[] srcs,
+      byte[] startAfter, boolean needLocation) throws IOException {
+    throw new UnsupportedOperationException("Not implemented");
   }
 
   @Override
@@ -954,10 +1002,13 @@ public class RouterClientProtocol implements ClientProtocol {
       for (DatanodeStorageReport dn : dns) {
         DatanodeInfo dnInfo = dn.getDatanodeInfo();
         String nodeId = dnInfo.getXferAddr();
-        if (!datanodesMap.containsKey(nodeId)) {
+        DatanodeStorageReport oldDn = datanodesMap.get(nodeId);
+        if (oldDn == null ||
+            dnInfo.getLastUpdate() > oldDn.getDatanodeInfo().getLastUpdate()) {
           datanodesMap.put(nodeId, dn);
+        } else {
+          LOG.debug("{} is in multiple subclusters", nodeId);
         }
-        // TODO merge somehow, right now it just takes the first one
       }
     }
 
@@ -1590,7 +1641,7 @@ public class RouterClientProtocol implements ClientProtocol {
   public void setQuota(String path, long namespaceQuota, long storagespaceQuota,
       StorageType type) throws IOException {
     rpcServer.getQuotaModule()
-        .setQuota(path, namespaceQuota, storagespaceQuota, type);
+        .setQuota(path, namespaceQuota, storagespaceQuota, type, true);
   }
 
   @Override
@@ -1688,6 +1739,13 @@ public class RouterClientProtocol implements ClientProtocol {
   @Override
   public void unsetErasureCodingPolicy(String src) throws IOException {
     erasureCoding.unsetErasureCodingPolicy(src);
+  }
+
+  @Override
+  public ECTopologyVerifierResult getECTopologyResultForPolicies(
+      String... policyNames) throws IOException {
+    rpcServer.checkOperation(NameNode.OperationCategory.UNCHECKED, true);
+    return erasureCoding.getECTopologyResultForPolicies(policyNames);
   }
 
   @Override
@@ -1923,6 +1981,8 @@ public class RouterClientProtocol implements ClientProtocol {
     FsPermission permission = FsPermission.getDirDefault();
     String owner = this.superUser;
     String group = this.superGroup;
+    EnumSet<HdfsFileStatus.Flags> flags =
+        EnumSet.noneOf(HdfsFileStatus.Flags.class);
     if (subclusterResolver instanceof MountTableResolver) {
       try {
         String mName = name.startsWith("/") ? name : "/" + name;
@@ -1942,6 +2002,9 @@ public class RouterClientProtocol implements ClientProtocol {
             owner = fInfo.getOwner();
             group = fInfo.getGroup();
             childrenNum = fInfo.getChildrenNum();
+            flags = DFSUtil
+                .getFlags(fInfo.isEncrypted(), fInfo.isErasureCoded(),
+                    fInfo.isSnapshotEnabled(), fInfo.hasAcl());
           }
         }
       } catch (IOException e) {
@@ -1973,6 +2036,7 @@ public class RouterClientProtocol implements ClientProtocol {
         .path(DFSUtil.string2Bytes(name))
         .fileId(inodeId)
         .children(childrenNum)
+        .flags(flags)
         .build();
   }
 
@@ -2040,6 +2104,61 @@ public class RouterClientProtocol implements ClientProtocol {
       LOG.error("Cannot get mount point", e);
     }
     return modTime;
+  }
+
+  /**
+   * Get listing on remote locations.
+   */
+  private List<RemoteResult<RemoteLocation, DirectoryListing>> getListingInt(
+      String src, byte[] startAfter, boolean needLocation) throws IOException {
+    try {
+      List<RemoteLocation> locations =
+          rpcServer.getLocationsForPath(src, false, false);
+      // Locate the dir and fetch the listing.
+      if (locations.isEmpty()) {
+        return new ArrayList<>();
+      }
+      RemoteMethod method = new RemoteMethod("getListing",
+          new Class<?>[] {String.class, startAfter.getClass(), boolean.class},
+          new RemoteParam(), startAfter, needLocation);
+      List<RemoteResult<RemoteLocation, DirectoryListing>> listings = rpcClient
+          .invokeConcurrent(locations, method, false, -1,
+              DirectoryListing.class);
+      return listings;
+    } catch (RouterResolveException e) {
+      LOG.debug("Cannot get locations for {}, {}.", src, e.getMessage());
+      return new ArrayList<>();
+    }
+  }
+
+  /**
+   * Check if we should add the mount point into the total listing.
+   * This should be done under either of the two cases:
+   * 1) current mount point is between startAfter and cutoff lastEntry.
+   * 2) there are no remaining entries from subclusters and this mount
+   *    point is bigger than all files from subclusters
+   * This is to make sure that the following batch of
+   * getListing call will use the correct startAfter, which is lastEntry from
+   * subcluster.
+   *
+   * @param mountPoint to be added mount point inside router
+   * @param lastEntry biggest listing from subcluster
+   * @param startAfter starting listing from client, used to define listing
+   *                   start boundary
+   * @param remainingEntries how many entries left from subcluster
+   * @return
+   */
+  private static boolean shouldAddMountPoint(
+      String mountPoint, String lastEntry, byte[] startAfter,
+      int remainingEntries) {
+    if (mountPoint.compareTo(DFSUtil.bytes2String(startAfter)) > 0 &&
+        mountPoint.compareTo(lastEntry) <= 0) {
+      return true;
+    }
+    if (remainingEntries == 0 && mountPoint.compareTo(lastEntry) >= 0) {
+      return true;
+    }
+    return false;
   }
 
   /**

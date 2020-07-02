@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
@@ -25,10 +26,8 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.http.lib.StaticUserWebFilter;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.AuthenticationFilterInitializer;
@@ -39,6 +38,7 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnSched
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigConverterTestCommons;
 import org.apache.hadoop.yarn.server.security.http.RMAuthenticationFilterInitializer;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
@@ -55,39 +56,46 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestResourceManager {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestResourceManager.class);
-  
+
   private ResourceManager resourceManager = null;
 
   @Rule
   public ExpectedException thrown = ExpectedException.none();
+  private FSConfigConverterTestCommons converterTestCommons;
 
   @Before
   public void setUp() throws Exception {
-    Configuration conf = new YarnConfiguration();
+    YarnConfiguration conf = new YarnConfiguration();
     UserGroupInformation.setConfiguration(conf);
     resourceManager = new ResourceManager();
     resourceManager.init(conf);
     resourceManager.getRMContext().getContainerTokenSecretManager().rollMasterKey();
     resourceManager.getRMContext().getNMTokenSecretManager().rollMasterKey();
+
+    converterTestCommons = new FSConfigConverterTestCommons();
+    converterTestCommons.setUp();
   }
 
   @After
   public void tearDown() throws Exception {
     resourceManager.stop();
+    converterTestCommons.tearDown();
   }
 
   private org.apache.hadoop.yarn.server.resourcemanager.NodeManager
       registerNode(String hostName, int containerManagerPort, int httpPort,
-          String rackName, Resource capability) throws IOException,
-          YarnException {
+          String rackName, Resource capability, NodeStatus nodeStatus)
+          throws IOException, YarnException {
     org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm = 
         new org.apache.hadoop.yarn.server.resourcemanager.NodeManager(
             hostName, containerManagerPort, httpPort, rackName, capability,
-            resourceManager);
+            resourceManager, nodeStatus);
     NodeAddedSchedulerEvent nodeAddEvent1 = 
         new NodeAddedSchedulerEvent(resourceManager.getRMContext()
             .getRMNodes().get(nm.getNodeId()));
@@ -103,26 +111,30 @@ public class TestResourceManager {
         
     final int memory = 4 * 1024;
     final int vcores = 4;
-    
+
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
     // Register node1
     String host1 = "host1";
     org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm1 = 
       registerNode(host1, 1234, 2345, NetworkTopology.DEFAULT_RACK, 
-          Resources.createResource(memory, vcores));
+          Resources.createResource(memory, vcores), mockNodeStatus);
     
     // Register node2
     String host2 = "host2";
     org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm2 = 
       registerNode(host2, 1234, 2345, NetworkTopology.DEFAULT_RACK, 
-          Resources.createResource(memory/2, vcores/2));
+          Resources.createResource(memory/2, vcores/2), mockNodeStatus);
 
     // nodes should be in RUNNING state
     RMNodeImpl node1 = (RMNodeImpl) resourceManager.getRMContext().getRMNodes().get(
         nm1.getNodeId());
     RMNodeImpl node2 = (RMNodeImpl) resourceManager.getRMContext().getRMNodes().get(
         nm2.getNodeId());
-    node1.handle(new RMNodeStartedEvent(nm1.getNodeId(), null, null));
-    node2.handle(new RMNodeStartedEvent(nm2.getNodeId(), null, null));
+    node1.handle(new RMNodeStartedEvent(nm1.getNodeId(), null, null,
+        mockNodeStatus));
+    node2.handle(new RMNodeStartedEvent(nm2.getNodeId(), null, null,
+        mockNodeStatus));
 
     // Submit an application
     Application application = new Application("user1", resourceManager);
@@ -210,9 +222,12 @@ public class TestResourceManager {
   public void testNodeHealthReportIsNotNull() throws Exception{
     String host1 = "host1";
     final int memory = 4 * 1024;
+
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
     org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm1 = 
-      registerNode(host1, 1234, 2345, NetworkTopology.DEFAULT_RACK, 
-          Resources.createResource(memory, 1));
+        registerNode(host1, 1234, 2345, NetworkTopology.DEFAULT_RACK,
+        Resources.createResource(memory, 1), mockNodeStatus);
     nm1.heartbeat();
     nm1.heartbeat();
     Collection<RMNode> values = resourceManager.getRMContext().getRMNodes().values();
@@ -231,7 +246,7 @@ public class TestResourceManager {
   @Test (timeout = 30000)
   public void testResourceManagerInitConfigValidation() throws Exception {
     Configuration conf = new YarnConfiguration();
-    conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, -1);
+    conf.setInt(YarnConfiguration.GLOBAL_RM_AM_MAX_ATTEMPTS, -1);
     try {
       resourceManager = new MockRM(conf);
       fail("Exception is expected because the global max attempts" +
@@ -240,6 +255,17 @@ public class TestResourceManager {
       // Exception is expected.
       if (!e.getMessage().startsWith(
               "Invalid global max attempts configuration")) throw e;
+    }
+    Configuration yarnConf = new YarnConfiguration();
+    yarnConf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, -1);
+    try {
+      resourceManager = new MockRM(yarnConf);
+      fail("Exception is expected because AM max attempts" +
+          " is negative.");
+    } catch (YarnRuntimeException e) {
+      // Exception is expected.
+      if (!e.getMessage().startsWith(
+              "Invalid rm am max attempts configuration")) throw e;
     }
   }
 
@@ -356,5 +382,4 @@ public class TestResourceManager {
       dummyResourceManager.stop();
     }
   }
-
 }

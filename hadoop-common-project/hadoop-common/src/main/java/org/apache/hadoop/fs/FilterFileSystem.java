@@ -25,12 +25,12 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -334,6 +334,10 @@ public class FilterFileSystem extends FileSystem {
     return fs.mkdirs(f, permission);
   }
 
+  @Override
+  public boolean mkdirs(Path f) throws IOException {
+    return fs.mkdirs(f);
+  }
 
   /**
    * The src file is on the local disk.  Add it to FS at
@@ -710,19 +714,21 @@ public class FilterFileSystem extends FileSystem {
   @Override
   protected CompletableFuture<FSDataInputStream> openFileWithOptions(
       final Path path,
-      final Set<String> mandatoryKeys,
-      final Configuration options,
-      final int bufferSize) throws IOException {
-    return fs.openFileWithOptions(path, mandatoryKeys, options, bufferSize);
+      final OpenFileParameters parameters) throws IOException {
+    return fs.openFileWithOptions(path, parameters);
   }
 
   @Override
   protected CompletableFuture<FSDataInputStream> openFileWithOptions(
       final PathHandle pathHandle,
-      final Set<String> mandatoryKeys,
-      final Configuration options,
-      final int bufferSize) throws IOException {
-    return fs.openFileWithOptions(pathHandle, mandatoryKeys, options,
-        bufferSize);
+      final OpenFileParameters parameters) throws IOException {
+    return fs.openFileWithOptions(pathHandle, parameters);
   }
+
+  @Override
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+    return fs.hasPathCapability(path, capability);
+  }
+
 }

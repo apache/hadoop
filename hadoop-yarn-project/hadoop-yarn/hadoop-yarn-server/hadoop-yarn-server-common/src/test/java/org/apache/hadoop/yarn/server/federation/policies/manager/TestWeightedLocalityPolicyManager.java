@@ -19,7 +19,7 @@ package org.apache.hadoop.yarn.server.federation.policies.manager;
 
 import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.LocalityMulticastAMRMProxyPolicy;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
-import org.apache.hadoop.yarn.server.federation.policies.router.WeightedRandomRouterPolicy;
+import org.apache.hadoop.yarn.server.federation.policies.router.LocalityRouterPolicy;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import org.junit.Assert;
@@ -63,7 +63,7 @@ public class TestWeightedLocalityPolicyManager extends
     //set expected params that the base test class will use for tests
     expectedPolicyManager = WeightedLocalityPolicyManager.class;
     expectedAMRMProxyPolicy = LocalityMulticastAMRMProxyPolicy.class;
-    expectedRouterPolicy = WeightedRandomRouterPolicy.class;
+    expectedRouterPolicy = LocalityRouterPolicy.class;
   }
 
   @Test

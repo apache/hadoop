@@ -32,6 +32,7 @@ public final class HttpQueryParams {
   public static final String QUERY_PARAM_RECURSIVE = "recursive";
   public static final String QUERY_PARAM_MAXRESULTS = "maxResults";
   public static final String QUERY_PARAM_ACTION = "action";
+  public static final String QUERY_FS_ACTION = "fsAction";
   public static final String QUERY_PARAM_POSITION = "position";
   public static final String QUERY_PARAM_TIMEOUT = "timeout";
   public static final String QUERY_PARAM_RETAIN_UNCOMMITTED_DATA = "retainUncommittedData";

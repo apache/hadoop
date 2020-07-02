@@ -41,7 +41,10 @@ import com.google.common.collect.Lists;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.OpenFilesIterator;
@@ -83,7 +86,7 @@ public class LeaseManager {
       .getName());
   private final FSNamesystem fsnamesystem;
   private long softLimit = HdfsConstants.LEASE_SOFTLIMIT_PERIOD;
-  private long hardLimit = HdfsConstants.LEASE_HARDLIMIT_PERIOD;
+  private long hardLimit;
   static final int INODE_FILTER_WORKER_COUNT_MAX = 4;
   static final int INODE_FILTER_WORKER_TASK_MIN = 512;
   private long lastHolderUpdateTime;
@@ -111,7 +114,10 @@ public class LeaseManager {
   private volatile boolean shouldRunMonitor;
 
   LeaseManager(FSNamesystem fsnamesystem) {
+    Configuration conf = new Configuration();
     this.fsnamesystem = fsnamesystem;
+    this.hardLimit = conf.getLong(DFSConfigKeys.DFS_LEASE_HARDLIMIT_KEY,
+        DFSConfigKeys.DFS_LEASE_HARDLIMIT_DEFAULT) * 1000;
     updateInternalLeaseHolder();
   }
 
@@ -315,7 +321,8 @@ public class LeaseManager {
       }
 
       fullPathName = inodeFile.getFullPathName();
-      if (StringUtils.isEmpty(path) || fullPathName.startsWith(path)) {
+      if (StringUtils.isEmpty(path) ||
+          DFSUtil.isParentEntry(fullPathName, path)) {
         openFileEntries.add(new OpenFileEntry(inodeFile.getId(), fullPathName,
             inodeFile.getFileUnderConstructionFeature().getClientName(),
             inodeFile.getFileUnderConstructionFeature().getClientMachine()));

@@ -98,6 +98,7 @@ public class TestAdlSdkConfiguration {
     conf = AdlStorageConfiguration.getConfiguration();
     conf.set(ADL_SSL_CHANNEL_MODE, sslChannelModeConfigValue);
     fs = (AdlFileSystem) (AdlStorageConfiguration.createStorageConnector(conf));
+    Assume.assumeNotNull(fs);
 
     SSLChannelMode sslChannelMode = fs.getAdlClient().getSSLChannelMode();
     Assert.assertEquals(

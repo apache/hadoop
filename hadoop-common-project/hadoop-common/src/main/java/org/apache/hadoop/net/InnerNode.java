@@ -47,6 +47,9 @@ public interface InnerNode extends Node {
   /** @return its children */
   List<Node> getChildren();
 
+  /** @return the number of children this node has. */
+  int getNumOfChildren();
+
   /** @return the number of leave nodes. */
   int getNumOfLeaves();
 

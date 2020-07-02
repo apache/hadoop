@@ -78,4 +78,15 @@ public class BlockPlacementStatusWithNodeGroup implements BlockPlacementStatus {
     }
     return errorDescription.toString();
   }
+
+  @Override
+  public int getAdditionalReplicasRequired() {
+    if (isPlacementPolicySatisfied()) {
+      return 0;
+    } else {
+      int parent = parentBlockPlacementStatus.getAdditionalReplicasRequired();
+      int child = requiredNodeGroups - currentNodeGroups.size();
+      return Math.max(parent, child);
+    }
+  }
 }

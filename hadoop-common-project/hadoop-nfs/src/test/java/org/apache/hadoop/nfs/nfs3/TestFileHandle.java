@@ -17,11 +17,10 @@
  */
 package org.apache.hadoop.nfs.nfs3;
 
-import org.junit.Assert;
-
-import org.apache.hadoop.nfs.nfs3.FileHandle;
 import org.apache.hadoop.oncrpc.XDR;
 import org.junit.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestFileHandle {
   @Test
@@ -29,12 +28,12 @@ public class TestFileHandle {
     FileHandle handle = new FileHandle(1024);
     XDR xdr = new XDR();
     handle.serialize(xdr);
-    Assert.assertEquals(handle.getFileId(), 1024);
+    assertThat(handle.getFileId()).isEqualTo(1024);
 
     // Deserialize it back 
     FileHandle handle2 = new FileHandle();
     handle2.deserialize(xdr.asReadOnlyWrap());
-    Assert.assertEquals("Failed: Assert 1024 is id ", 1024, 
-            handle.getFileId());
+    assertThat(handle.getFileId())
+        .withFailMessage("Failed: Assert 1024 is id ").isEqualTo(1024);
   }
 }

@@ -75,6 +75,9 @@ public class TestLargeBlockReport {
 
   @Test
   public void testBlockReportExceedsLengthLimit() throws Exception {
+    //protobuf's default limit increased to 2GB from protobuf 3.x onwards.
+    //So there will not be any exception thrown from protobuf.
+    conf.setInt(IPC_MAXIMUM_DATA_LENGTH, IPC_MAXIMUM_DATA_LENGTH_DEFAULT / 2);
     initCluster();
     // Create a large enough report that we expect it will go beyond the RPC
     // server's length validation, and also protobuf length validation.

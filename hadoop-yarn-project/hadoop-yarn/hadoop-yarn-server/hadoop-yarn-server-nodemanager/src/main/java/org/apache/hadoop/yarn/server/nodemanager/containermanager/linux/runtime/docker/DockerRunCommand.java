@@ -199,6 +199,12 @@ public class DockerRunCommand extends DockerCommand {
     return this;
   }
 
+  public DockerRunCommand setServiceMode(boolean serviceMode) {
+    String value = Boolean.toString(serviceMode);
+    super.addCommandArguments("service-mode", value);
+    return this;
+  }
+
   /**
    * Check if user defined environment variables are empty.
    *

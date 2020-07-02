@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialProvider;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.auth.RoleModel;
 import org.apache.hadoop.fs.s3a.auth.STSClientFactory;
+import org.apache.hadoop.io.Text;
 
 import static org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding.fromSTSCredentials;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_CREDENTIALS_PROVIDER;
@@ -75,7 +76,7 @@ public class RoleTokenBinding extends SessionTokenBinding {
 
   /**
    * Constructor.
-   * Name is {@link #name}; token kind is
+   * Name is {@link #NAME}; token kind is
    * {@link DelegationConstants#ROLE_TOKEN_KIND}.
    */
   public RoleTokenBinding() {
@@ -109,7 +110,8 @@ public class RoleTokenBinding extends SessionTokenBinding {
     return new AWSCredentialProviderList(
         "Role Token Binding",
         new MarshalledCredentialProvider(
-            COMPONENT, getFileSystem().getUri(),
+            COMPONENT,
+            getStoreContext().getFsURI(),
             getConfig(),
             marshalledCredentials,
             MarshalledCredentials.CredentialTypeRequired.SessionOnly));
@@ -129,7 +131,8 @@ public class RoleTokenBinding extends SessionTokenBinding {
   @Retries.RetryTranslated
   public RoleTokenIdentifier createTokenIdentifier(
       final Optional<RoleModel.Policy> policy,
-      final EncryptionSecrets encryptionSecrets) throws IOException {
+      final EncryptionSecrets encryptionSecrets,
+      final Text renewer) throws IOException {
     requireServiceStarted();
     Preconditions.checkState(!roleArn.isEmpty(), E_NO_ARN);
     String policyJson = policy.isPresent() ?
@@ -152,6 +155,7 @@ public class RoleTokenBinding extends SessionTokenBinding {
     return new RoleTokenIdentifier(
         getCanonicalUri(),
         getOwnerText(),
+        renewer,
         fromSTSCredentials(credentials),
         encryptionSecrets,
         AbstractS3ATokenIdentifier.createDefaultOriginMessage()

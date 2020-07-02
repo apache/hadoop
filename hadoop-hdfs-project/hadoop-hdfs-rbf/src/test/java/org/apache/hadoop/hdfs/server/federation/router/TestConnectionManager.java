@@ -23,6 +23,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -300,5 +301,14 @@ public class TestConnectionManager {
     assertEquals(totalConns - 1, pool.getNumConnections());
 
     tmpConnManager.close();
+  }
+
+  @Test
+  public void testUnsupportedProtoExceptionMsg() throws Exception {
+    LambdaTestUtils.intercept(IllegalStateException.class,
+        "Unsupported protocol for connection to NameNode: "
+            + TestConnectionManager.class.getName(),
+        () -> ConnectionPool.newConnection(conf, TEST_NN_ADDRESS, TEST_USER1,
+            TestConnectionManager.class));
   }
 }

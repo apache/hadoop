@@ -85,8 +85,7 @@ import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
-import org.apache.hadoop.yarn.server.nodemanager.NodeHealthCheckerService;
-import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
+import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
@@ -157,8 +156,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     delSrvc.init(conf);
     exec = createContainerExecutor();
     dirsHandler = new LocalDirsHandlerService();
-    nodeHealthChecker = new NodeHealthCheckerService(
-        NodeManager.getNodeHealthScriptRunner(conf), dirsHandler);
+    nodeHealthChecker = new NodeHealthCheckerService(dirsHandler);
     nodeHealthChecker.init(conf);
 
   }
@@ -794,6 +792,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
       .byteValue() }));
     context.getContainerTokenSecretManager().setMasterKey(masterKey);
     context.getNMTokenSecretManager().setMasterKey(masterKey);
+    context.setContainerExecutor(exec);
     return context;
   }
 

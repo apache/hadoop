@@ -209,7 +209,7 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
       LOG.error("ERROR: failed to init HSQLDB " + e1.getMessage());
     }
     try {
-      conn = getConnection();
+      conn = super.conn;
 
       LOG.info("Database Init: Start");
 
@@ -234,7 +234,6 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
       conn.prepareStatement(SP_GETPOLICIESCONFIGURATIONS).execute();
 
       LOG.info("Database Init: Complete");
-      conn.close();
     } catch (SQLException e) {
       LOG.error("ERROR: failed to inizialize HSQLDB " + e.getMessage());
     }

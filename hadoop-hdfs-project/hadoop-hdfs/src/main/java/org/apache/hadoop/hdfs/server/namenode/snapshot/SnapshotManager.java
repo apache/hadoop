@@ -96,7 +96,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
   private final boolean snapshotDiffAllowSnapRootDescendant;
 
   private final AtomicInteger numSnapshots = new AtomicInteger();
-  private static final int SNAPSHOT_ID_BIT_WIDTH = 24;
+  private static final int SNAPSHOT_ID_BIT_WIDTH = 28;
 
   private boolean allowNestedSnapshots = false;
   private int snapshotCounter = 0;
@@ -153,6 +153,10 @@ public class SnapshotManager implements SnapshotStatsMXBean {
   /** Used in tests only */
   void setAllowNestedSnapshots(boolean allowNestedSnapshots) {
     this.allowNestedSnapshots = allowNestedSnapshots;
+  }
+
+  public boolean isAllowNestedSnapshots() {
+    return allowNestedSnapshots;
   }
 
   private void checkNestedSnapshottable(INodeDirectory dir, String path)
@@ -288,6 +292,19 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     }
   }
 
+  public boolean isDescendantOfSnapshotRoot(INodeDirectory dir) {
+    if (dir.isSnapshottable()) {
+      return true;
+    } else {
+      for (INodeDirectory p = dir; p != null; p = p.getParent()) {
+        if (this.snapshottables.containsValue(p)) {
+          return true;
+        }
+      }
+      return false;
+    }
+  }
+
   /**
    * Create a snapshot of the given path.
    * It is assumed that the caller will perform synchronization.
@@ -295,6 +312,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
    * @param iip the INodes resolved from the snapshottable directory's path
    * @param snapshotName
    *          The name of the snapshot.
+   * @param mtime is the snapshot creation time set by Time.now().
    * @throws IOException
    *           Throw IOException when 1) the given path does not lead to an
    *           existing snapshottable directory, and/or 2) there exists a
@@ -302,7 +320,8 @@ public class SnapshotManager implements SnapshotStatsMXBean {
    *           snapshot number exceeds quota
    */
   public String createSnapshot(final LeaseManager leaseManager,
-      final INodesInPath iip, String snapshotRoot, String snapshotName)
+      final INodesInPath iip, String snapshotRoot, String snapshotName,
+      long mtime)
       throws IOException {
     INodeDirectory srcRoot = getSnapshottableRoot(iip);
 
@@ -316,7 +335,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     }
 
     srcRoot.addSnapshot(snapshotCounter, snapshotName, leaseManager,
-        this.captureOpenFiles, maxSnapshotLimit);
+        this.captureOpenFiles, maxSnapshotLimit, mtime);
       
     //create success, update id
     snapshotCounter++;
@@ -327,13 +346,14 @@ public class SnapshotManager implements SnapshotStatsMXBean {
   /**
    * Delete a snapshot for a snapshottable directory
    * @param snapshotName Name of the snapshot to be deleted
+   * @param now is the snapshot deletion time set by Time.now().
    * @param reclaimContext Used to collect information to reclaim blocks
    *                       and inodes
    */
   public void deleteSnapshot(final INodesInPath iip, final String snapshotName,
-      INode.ReclaimContext reclaimContext) throws IOException {
+      INode.ReclaimContext reclaimContext, long now) throws IOException {
     INodeDirectory srcRoot = getSnapshottableRoot(iip);
-    srcRoot.removeSnapshot(reclaimContext, snapshotName);
+    srcRoot.removeSnapshot(reclaimContext, snapshotName, now);
     numSnapshots.getAndDecrement();
   }
 
@@ -343,6 +363,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
    *          Old name of the snapshot
    * @param newSnapshotName
    *          New name of the snapshot
+   * @param now is the snapshot modification time set by Time.now().
    * @throws IOException
    *           Throw IOException when 1) the given path does not lead to an
    *           existing snapshottable directory, and/or 2) the snapshot with the
@@ -350,10 +371,10 @@ public class SnapshotManager implements SnapshotStatsMXBean {
    *           a snapshot with the new name for the directory
    */
   public void renameSnapshot(final INodesInPath iip, final String snapshotRoot,
-      final String oldSnapshotName, final String newSnapshotName)
+      final String oldSnapshotName, final String newSnapshotName, long now)
       throws IOException {
     final INodeDirectory srcRoot = getSnapshottableRoot(iip);
-    srcRoot.renameSnapshot(snapshotRoot, oldSnapshotName, newSnapshotName);
+    srcRoot.renameSnapshot(snapshotRoot, oldSnapshotName, newSnapshotName, now);
   }
   
   public int getNumSnapshottableDirs() {
@@ -520,7 +541,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
    *
    * @return maximum allowable snapshot ID.
    */
-   public int getMaxSnapshotID() {
+  public int getMaxSnapshotID() {
     return ((1 << SNAPSHOT_ID_BIT_WIDTH) - 1);
   }
 

@@ -143,7 +143,10 @@ public class YarnRegistryViewForProviders {
       ServiceRecord record) throws IOException {
     String path = RegistryUtils.componentPath(
         user, serviceClass, serviceName, componentName);
-    registryOperations.mknode(RegistryPathUtils.parentOf(path), true);
+    String parentPath = RegistryPathUtils.parentOf(path);
+    if (!registryOperations.exists(parentPath)) {
+      registryOperations.mknode(parentPath, true);
+    }
     registryOperations.bind(path, record, BindFlags.OVERWRITE);
   }
 

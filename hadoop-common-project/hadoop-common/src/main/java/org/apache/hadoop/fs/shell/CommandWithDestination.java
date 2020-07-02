@@ -415,7 +415,6 @@ abstract class CommandWithDestination extends FsCommand {
       targetFs.setWriteChecksum(writeChecksum);
       targetFs.writeStreamToFile(in, tempTarget, lazyPersist, direct);
       if (!direct) {
-        targetFs.deleteOnExit(tempTarget.path);
         targetFs.rename(tempTarget, target);
       }
     } finally {
@@ -491,25 +490,18 @@ abstract class CommandWithDestination extends FsCommand {
         throws IOException {
       FSDataOutputStream out = null;
       try {
-        out = create(target, lazyPersist, direct);
+        out = create(target, lazyPersist);
         IOUtils.copyBytes(in, out, getConf(), true);
-      } catch (IOException e) {
-        // failure: clean up if we got as far as creating the file
-        if (!direct && out != null) {
-          try {
-            fs.delete(target.path, false);
-          } catch (IOException ignored) {
-          }
-        }
-        throw e;
       } finally {
+        if (!direct) {
+          deleteOnExit(target.path);
+        }
         IOUtils.closeStream(out); // just in case copyBytes didn't
       }
     }
     
     // tag created files as temp files
-    FSDataOutputStream create(PathData item, boolean lazyPersist,
-        boolean direct)
+    FSDataOutputStream create(PathData item, boolean lazyPersist)
         throws IOException {
       if (lazyPersist) {
         long defaultBlockSize;

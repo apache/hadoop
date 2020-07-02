@@ -50,7 +50,7 @@ public abstract class TreeWalk implements Iterable<TreePath> {
 
     private final Deque<TreePath> pending;
 
-    TreeIterator() {
+    public TreeIterator() {
       this(new ArrayDeque<TreePath>());
     }
 

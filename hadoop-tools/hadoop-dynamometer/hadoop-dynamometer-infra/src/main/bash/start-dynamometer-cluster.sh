@@ -30,7 +30,7 @@ else
   exit 1
 fi
 
-script_pwd="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.."
+script_pwd="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../.."
 
 for f in ${script_pwd}/lib/*.jar; do
   # Skip adding the infra JAR since it is added by the `hadoop jar` command
@@ -38,4 +38,4 @@ for f in ${script_pwd}/lib/*.jar; do
     export HADOOP_CLASSPATH="$HADOOP_CLASSPATH:$f"
   fi
 done
-"$hadoop_cmd" jar "${script_pwd}"/lib/dynamometer-infra-*.jar org.apache.hadoop.tools.dynamometer.Client "$@"
+"$hadoop_cmd" jar "${script_pwd}"/lib/hadoop-dynamometer-infra-*.jar org.apache.hadoop.tools.dynamometer.Client "$@"

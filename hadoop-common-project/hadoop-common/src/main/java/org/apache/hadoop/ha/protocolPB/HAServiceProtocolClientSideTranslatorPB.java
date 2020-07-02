@@ -38,13 +38,13 @@ import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.TransitionToActiveRequ
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.TransitionToStandbyRequestProto;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.TransitionToObserverRequestProto;
 import org.apache.hadoop.ipc.ProtobufHelper;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.UserGroupInformation;
 
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.RpcController;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 /**
  * This class is the client side translator to translate the requests made on
@@ -67,7 +67,7 @@ public class HAServiceProtocolClientSideTranslatorPB implements
   public HAServiceProtocolClientSideTranslatorPB(InetSocketAddress addr,
       Configuration conf) throws IOException {
     RPC.setProtocolEngine(conf, HAServiceProtocolPB.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     rpcProxy = RPC.getProxy(HAServiceProtocolPB.class,
         RPC.getProtocolVersion(HAServiceProtocolPB.class), addr, conf);
   }
@@ -76,7 +76,7 @@ public class HAServiceProtocolClientSideTranslatorPB implements
       InetSocketAddress addr, Configuration conf,
       SocketFactory socketFactory, int timeout) throws IOException {
     RPC.setProtocolEngine(conf, HAServiceProtocolPB.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     rpcProxy = RPC.getProxy(HAServiceProtocolPB.class,
         RPC.getProtocolVersion(HAServiceProtocolPB.class), addr,
         UserGroupInformation.getCurrentUser(), conf, socketFactory, timeout);

@@ -25,7 +25,7 @@ import java.net.InetSocketAddress;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.ProtobufHelper;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
@@ -104,7 +104,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.ReplaceLabelsOn
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.UpdateNodeResourceRequestPBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.UpdateNodeResourceResponsePBImpl;
 
-import com.google.protobuf.ServiceException;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 @Private
 public class ResourceManagerAdministrationProtocolPBClientImpl implements ResourceManagerAdministrationProtocol, Closeable {
@@ -114,7 +114,7 @@ public class ResourceManagerAdministrationProtocolPBClientImpl implements Resour
   public ResourceManagerAdministrationProtocolPBClientImpl(long clientVersion, InetSocketAddress addr, 
       Configuration conf) throws IOException {
     RPC.setProtocolEngine(conf, ResourceManagerAdministrationProtocolPB.class, 
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     proxy = (ResourceManagerAdministrationProtocolPB)RPC.getProxy(
         ResourceManagerAdministrationProtocolPB.class, clientVersion, addr, conf);
   }

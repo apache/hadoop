@@ -422,7 +422,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
               EnumSet.of(JobEventType.JOB_UPDATED_NODES,
                   JobEventType.JOB_TASK_ATTEMPT_FETCH_FAILURE,
                   JobEventType.JOB_TASK_ATTEMPT_COMPLETED,
-                  JobEventType.JOB_MAP_TASK_RESCHEDULED))
+                  JobEventType.JOB_MAP_TASK_RESCHEDULED,
+                  JobEventType.JOB_TASK_COMPLETED))
 
           // Transitions from SUCCEEDED state
           .addTransition(JobStateInternal.SUCCEEDED, JobStateInternal.SUCCEEDED,
@@ -441,7 +442,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
                   JobEventType.JOB_TASK_ATTEMPT_FETCH_FAILURE,
                   JobEventType.JOB_AM_REBOOT,
                   JobEventType.JOB_TASK_ATTEMPT_COMPLETED,
-                  JobEventType.JOB_MAP_TASK_RESCHEDULED))
+                  JobEventType.JOB_MAP_TASK_RESCHEDULED,
+                  JobEventType.JOB_TASK_COMPLETED))
 
           // Transitions from FAIL_WAIT state
           .addTransition(JobStateInternal.FAIL_WAIT,

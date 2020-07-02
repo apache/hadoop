@@ -31,12 +31,14 @@ import com.amazonaws.services.securitytoken.model.AssumeRoleRequest;
 import com.amazonaws.services.securitytoken.model.Credentials;
 import com.amazonaws.services.securitytoken.model.GetSessionTokenRequest;
 import com.google.common.base.Preconditions;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3AUtils;
@@ -73,7 +75,8 @@ public class STSClientFactory {
       final Configuration conf,
       final String bucket,
       final AWSCredentialsProvider credentials) throws IOException {
-    final ClientConfiguration awsConf = S3AUtils.createAwsConf(conf, bucket);
+    final ClientConfiguration awsConf = S3AUtils.createAwsConf(conf, bucket,
+        Constants.AWS_SERVICE_IDENTIFIER_STS);
     String endpoint = conf.getTrimmed(DELEGATION_TOKEN_ENDPOINT,
         DEFAULT_DELEGATION_TOKEN_ENDPOINT);
     String region = conf.getTrimmed(DELEGATION_TOKEN_REGION,
@@ -99,7 +102,8 @@ public class STSClientFactory {
       final AWSCredentialsProvider credentials,
       final String stsEndpoint,
       final String stsRegion) throws IOException {
-    final ClientConfiguration awsConf = S3AUtils.createAwsConf(conf, bucket);
+    final ClientConfiguration awsConf = S3AUtils.createAwsConf(conf, bucket,
+        Constants.AWS_SERVICE_IDENTIFIER_STS);
     return builder(credentials, awsConf, stsEndpoint, stsRegion);
   }
 

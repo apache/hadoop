@@ -473,9 +473,12 @@ public class TestCopyCommitter {
         if (!skipCrc) {
           Assert.fail("Expected commit to fail");
         }
+        Path sourcePath = new Path(sourceBase + srcFilename);
+        CopyListingFileStatus sourceCurrStatus =
+                new CopyListingFileStatus(fs.getFileStatus(sourcePath));
         Assert.assertFalse(DistCpUtils.checksumsAreEqual(
             fs, new Path(sourceBase + srcFilename), null,
-            fs, new Path(targetBase + srcFilename)));
+            fs, new Path(targetBase + srcFilename), sourceCurrStatus.getLen()));
       } catch(IOException exception) {
         if (skipCrc) {
           LOG.error("Unexpected exception is found", exception);

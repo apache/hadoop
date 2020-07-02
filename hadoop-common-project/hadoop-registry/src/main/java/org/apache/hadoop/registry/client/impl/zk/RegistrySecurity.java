@@ -32,6 +32,7 @@ import org.apache.hadoop.service.ServiceStateException;
 import org.apache.hadoop.util.ZKUtil;
 import org.apache.zookeeper.Environment;
 import org.apache.zookeeper.ZooDefs;
+import org.apache.zookeeper.client.ZKClientConfig;
 import org.apache.zookeeper.client.ZooKeeperSaslClient;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
@@ -769,19 +770,19 @@ public class RegistrySecurity extends AbstractService {
             JaasConfiguration jconf =
                 new JaasConfiguration(jaasClientEntry, principal, keytab);
             javax.security.auth.login.Configuration.setConfiguration(jconf);
-            setSystemPropertyIfUnset(ZooKeeperSaslClient.ENABLE_CLIENT_SASL_KEY,
-                "true");
-            setSystemPropertyIfUnset(ZooKeeperSaslClient.LOGIN_CONTEXT_NAME_KEY,
-                jaasClientEntry);
+            setSystemPropertyIfUnset(ZKClientConfig.ENABLE_CLIENT_SASL_KEY,
+                                     "true");
+            setSystemPropertyIfUnset(ZKClientConfig.LOGIN_CONTEXT_NAME_KEY,
+                                     jaasClientEntry);
           } else {
             // in this case, jaas config is specified so we will not change it
             LOG.info("Using existing ZK sasl configuration: " +
-                "jaasClientEntry = " + System.getProperty(
-                    ZooKeeperSaslClient.LOGIN_CONTEXT_NAME_KEY, "Client") +
-                ", sasl client = " + System.getProperty(
-                    ZooKeeperSaslClient.ENABLE_CLIENT_SASL_KEY,
-                    ZooKeeperSaslClient.ENABLE_CLIENT_SASL_DEFAULT) +
-                ", jaas = " + existingJaasConf);
+              "jaasClientEntry = " + System.getProperty(
+              ZKClientConfig.LOGIN_CONTEXT_NAME_KEY, "Client") +
+              ", sasl client = " + System.getProperty(
+              ZKClientConfig.ENABLE_CLIENT_SASL_KEY,
+              ZKClientConfig.ENABLE_CLIENT_SASL_DEFAULT) +
+              ", jaas = " + existingJaasConf);
           }
           break;
 
@@ -926,7 +927,7 @@ public class RegistrySecurity extends AbstractService {
       UserGroupInformation realUser = currentUser.getRealUser();
       LOG.info("Real User = {}" , realUser);
     } catch (IOException e) {
-      LOG.warn("Failed to get current user {}, {}", e);
+      LOG.warn("Failed to get current user, {}", e);
     }
   }
 

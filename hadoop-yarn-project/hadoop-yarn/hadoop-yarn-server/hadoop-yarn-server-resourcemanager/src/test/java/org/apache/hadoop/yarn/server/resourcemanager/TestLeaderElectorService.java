@@ -126,7 +126,14 @@ public class TestLeaderElectorService {
     rm2 = startRM("rm2", HAServiceState.STANDBY);
 
     // submit an app which will trigger state-store failure.
-    rm1.submitApp(200, "app1", "user1", null, "default", false);
+    MockRMAppSubmitter.submit(rm1,
+        MockRMAppSubmissionData.Builder.createWithMemory(200, rm1)
+        .withAppName("app1")
+        .withUser("user1")
+        .withAcls(null)
+        .withQueue("default")
+        .withWaitForAppAcceptedState(false)
+        .build());
     waitFor(rm1, HAServiceState.STANDBY);
 
     // rm2 should become active;
@@ -169,8 +176,7 @@ public class TestLeaderElectorService {
         service.getCuratorClient().getZookeeperClient();
     // this will expire current curator client session. curator will re-establish
     // the session. RM will first relinquish leadership and re-acquire leadership
-    KillSession
-        .kill(client.getZooKeeper(), client.getCurrentConnectionString());
+    KillSession.kill(client.getZooKeeper());
 
     waitFor(rm1, HAServiceState.ACTIVE);
   }

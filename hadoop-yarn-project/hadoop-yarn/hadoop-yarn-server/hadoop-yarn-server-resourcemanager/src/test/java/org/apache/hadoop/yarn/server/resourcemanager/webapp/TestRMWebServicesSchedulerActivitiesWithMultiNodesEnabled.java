@@ -31,6 +31,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
@@ -164,7 +166,13 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
     nm.registerNode();
 
     try {
-      RMApp app1 = rm.submitApp(1024, "app1", "user1", null, "b");
+      RMApp app1 = MockRMAppSubmitter.submit(rm,
+          MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
+              .withAppName("app1")
+              .withUser("user1")
+              .withAcls(null)
+              .withQueue("b")
+              .build());
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm);
       am1.allocate(Arrays.asList(ResourceRequest
           .newInstance(Priority.UNDEFINED, "127.0.0.1",
@@ -256,7 +264,13 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
     MockNM nm2 = rm.registerNode("127.0.0.2:1234", 2 * 1024);
 
     try {
-      RMApp app1 = rm.submitApp(1024, "app1", "user1", null, "b");
+      RMApp app1 = MockRMAppSubmitter.submit(rm,
+          MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
+              .withAppName("app1")
+              .withUser("user1")
+              .withAcls(null)
+              .withQueue("b")
+              .build());
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
       am1.allocate(Arrays.asList(ResourceRequest
@@ -318,10 +332,22 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
     MockNM nm4 = rm.registerNode("127.0.0.4:1234", 2 * 1024);
 
     try {
-      RMApp app1 = rm.submitApp(3072, "app1", "user1", null, "b");
+      RMApp app1 = MockRMAppSubmitter.submit(rm,
+          MockRMAppSubmissionData.Builder.createWithMemory(3072, rm)
+              .withAppName("app1")
+              .withUser("user1")
+              .withAcls(null)
+              .withQueue("b")
+              .build());
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
-      RMApp app2 = rm.submitApp(1024, "app2", "user1", null, "b");
+      RMApp app2 = MockRMAppSubmitter.submit(rm,
+          MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
+              .withAppName("app2")
+              .withUser("user1")
+              .withAcls(null)
+              .withQueue("b")
+              .build());
       MockAM am2 = MockRM.launchAndRegisterAM(app2, rm, nm1);
 
       WebResource r = resource();
@@ -392,7 +418,13 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
     MockNM nm4 = rm.registerNode("127.0.0.4:1234", 2 * 1024);
 
     try {
-      RMApp app1 = rm.submitApp(3072, "app1", "user1", null, "b");
+      RMApp app1 = MockRMAppSubmitter.submit(rm,
+          MockRMAppSubmissionData.Builder.createWithMemory(3072, rm)
+              .withAppName("app1")
+              .withUser("user1")
+              .withAcls(null)
+              .withQueue("b")
+              .build());
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
       WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
@@ -465,7 +497,13 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
     MockNM nm4 = rm.registerNode("127.0.0.4:1234", 2 * 1024);
 
     try {
-      RMApp app1 = rm.submitApp(3072, "app1", "user1", null, "b");
+      RMApp app1 = MockRMAppSubmitter.submit(rm,
+          MockRMAppSubmissionData.Builder.createWithMemory(3072, rm)
+              .withAppName("app1")
+              .withUser("user1")
+              .withAcls(null)
+              .withQueue("b")
+              .build());
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
       WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
@@ -545,7 +583,13 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
     MockNM nm4 = rm.registerNode("127.0.0.4:1234", 2 * 1024);
 
     try {
-      RMApp app1 = rm.submitApp(3072, "app1", "user1", null, "b");
+      RMApp app1 = MockRMAppSubmitter.submit(rm,
+          MockRMAppSubmissionData.Builder.createWithMemory(3072, rm)
+              .withAppName("app1")
+              .withUser("user1")
+              .withAcls(null)
+              .withQueue("b")
+              .build());
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
       WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)

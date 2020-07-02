@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import com.amazonaws.services.s3.AmazonS3;
+import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -111,7 +112,9 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
         MAGIC_COMMITTER_ENABLED,
         S3A_COMMITTER_FACTORY_KEY,
         FS_S3A_COMMITTER_NAME,
-        FS_S3A_COMMITTER_STAGING_CONFLICT_MODE);
+        FS_S3A_COMMITTER_STAGING_CONFLICT_MODE,
+        FS_S3A_COMMITTER_STAGING_UNIQUE_FILENAMES,
+        FAST_UPLOAD_BUFFER);
 
     conf.setBoolean(MAGIC_COMMITTER_ENABLED, true);
     conf.setLong(MIN_MULTIPART_THRESHOLD, MULTIPART_MIN_SIZE);
@@ -209,6 +212,7 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
    */
   @Override
   public void teardown() throws Exception {
+    Thread.currentThread().setName("teardown");
     LOG.info("AbstractCommitITest::teardown");
     waitForConsistency();
     // make sure there are no failures any more
@@ -359,7 +363,7 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
    * @throws IOException IO Failure
    */
   protected SuccessData verifySuccessMarker(Path dir) throws IOException {
-    return validateSuccessFile(dir, "", getFileSystem(), "query");
+    return validateSuccessFile(dir, "", getFileSystem(), "query", 0);
   }
 
   /**
@@ -437,13 +441,15 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
    * @param committerName name of committer to match, or ""
    * @param fs filesystem
    * @param origin origin (e.g. "teragen" for messages)
+   * @param minimumFileCount minimum number of files to have been created
    * @return the success data
    * @throws IOException IO failure
    */
   public static SuccessData validateSuccessFile(final Path outputPath,
       final String committerName,
       final S3AFileSystem fs,
-      final String origin) throws IOException {
+      final String origin,
+      final int minimumFileCount) throws IOException {
     SuccessData successData = loadSuccessFile(fs, outputPath, origin);
     String commitDetails = successData.toString();
     LOG.info("Committer name " + committerName + "\n{}",
@@ -456,6 +462,9 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
       assertEquals("Wrong committer in " + commitDetails,
           committerName, successData.getCommitter());
     }
+    Assertions.assertThat(successData.getFilenames())
+        .describedAs("Files committed")
+        .hasSizeGreaterThanOrEqualTo(minimumFileCount);
     return successData;
   }
 
@@ -485,8 +494,9 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
         status.isFile());
     assertTrue("0 byte success file "
             + success + " from " + origin
-            + "; a s3guard committer was not used",
+            + "; an S3A committer was not used",
         status.getLen() > 0);
+    LOG.info("Loading committer success file {}", success);
     return SuccessData.load(fs, success);
   }
 }

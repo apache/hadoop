@@ -1367,7 +1367,10 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
 
   @Override
   public void shutdown() {
-    if (mbeanName != null) MBeans.unregister(mbeanName);
+    if (mbeanName != null) {
+      MBeans.unregister(mbeanName);
+      mbeanName = null;
+    }
   }
 
   @Override
@@ -1574,6 +1577,12 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
 
   @Override
   public AutoCloseableLock acquireDatasetLock() {
+    return datasetLock.acquire();
+  }
+
+  @Override
+  public AutoCloseableLock acquireDatasetReadLock() {
+    // No RW lock implementation in simulated dataset currently.
     return datasetLock.acquire();
   }
 

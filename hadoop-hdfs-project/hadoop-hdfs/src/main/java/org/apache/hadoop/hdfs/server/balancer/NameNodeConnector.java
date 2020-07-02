@@ -25,12 +25,20 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.RateLimiter;
+import org.apache.hadoop.ha.HAServiceProtocol;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HAUtil;
+import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -98,6 +106,32 @@ public class NameNodeConnector implements Closeable {
     return connectors;
   }
 
+  public static List<NameNodeConnector> newNameNodeConnectors(
+      Collection<URI> namenodes, Collection<String> nsIds, String name,
+      Path idPath, Configuration conf, int maxIdleIterations)
+      throws IOException {
+    final List<NameNodeConnector> connectors = new ArrayList<NameNodeConnector>(
+        namenodes.size());
+    Map<URI, String> uriToNsId = new HashMap<>();
+    if (nsIds != null) {
+      for (URI uri : namenodes) {
+        for (String nsId : nsIds) {
+          if (uri.getAuthority().equals(nsId)) {
+            uriToNsId.put(uri, nsId);
+          }
+        }
+      }
+    }
+    for (URI uri : namenodes) {
+      String nsId = uriToNsId.get(uri);
+      NameNodeConnector nnc = new NameNodeConnector(name, uri, nsId, idPath,
+          null, conf, maxIdleIterations);
+      nnc.getKeyManager().startBlockKeyUpdater();
+      connectors.add(nnc);
+    }
+    return connectors;
+  }
+
   @VisibleForTesting
   public static void setWrite2IdFile(boolean write2IdFile) {
     NameNodeConnector.write2IdFile = write2IdFile;
@@ -112,6 +146,14 @@ public class NameNodeConnector implements Closeable {
   private final String blockpoolID;
 
   private final BalancerProtocols namenode;
+  /**
+   * If set requestToStandby true, Balancer will getBlocks from
+   * Standby NameNode only and it can reduce the performance impact of Active
+   * NameNode, especially in a busy HA mode cluster.
+   */
+  private boolean requestToStandby;
+  private String nsId;
+  private Configuration config;
   private final KeyManager keyManager;
   final AtomicBoolean fallbackToSimpleAuth = new AtomicBoolean(false);
 
@@ -123,6 +165,7 @@ public class NameNodeConnector implements Closeable {
 
   private final int maxNotChangedIterations;
   private int notChangedIterations = 0;
+  private final RateLimiter getBlocksRateLimiter;
 
   public NameNodeConnector(String name, URI nameNodeUri, Path idPath,
                            List<Path> targetPaths, Configuration conf,
@@ -133,9 +176,24 @@ public class NameNodeConnector implements Closeable {
     this.targetPaths = targetPaths == null || targetPaths.isEmpty() ? Arrays
         .asList(new Path("/")) : targetPaths;
     this.maxNotChangedIterations = maxNotChangedIterations;
+    int getBlocksMaxQps = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_GETBLOCKS_MAX_QPS_KEY,
+        DFSConfigKeys.DFS_NAMENODE_GETBLOCKS_MAX_QPS_DEFAULT);
+    if (getBlocksMaxQps > 0) {
+      LOG.info("getBlocks calls for {} will be rate-limited to {} per second",
+          nameNodeUri, getBlocksMaxQps);
+      this.getBlocksRateLimiter = RateLimiter.create(getBlocksMaxQps);
+    } else {
+      this.getBlocksRateLimiter = null;
+    }
 
     this.namenode = NameNodeProxies.createProxy(conf, nameNodeUri,
         BalancerProtocols.class, fallbackToSimpleAuth).getProxy();
+    this.requestToStandby = conf.getBoolean(
+        DFSConfigKeys.DFS_HA_ALLOW_STALE_READ_KEY,
+        DFSConfigKeys.DFS_HA_ALLOW_STALE_READ_DEFAULT);
+    this.config = conf;
+
     this.fs = (DistributedFileSystem)FileSystem.get(nameNodeUri, conf);
 
     final NamespaceInfo namespaceinfo = namenode.versionRequest();
@@ -154,6 +212,14 @@ public class NameNodeConnector implements Closeable {
     }
   }
 
+  public NameNodeConnector(String name, URI nameNodeUri, String nsId,
+                           Path idPath, List<Path> targetPaths,
+                           Configuration conf, int maxNotChangedIterations)
+      throws IOException {
+    this(name, nameNodeUri, idPath, targetPaths, conf, maxNotChangedIterations);
+    this.nsId = nsId;
+  }
+
   public DistributedFileSystem getDistributedFileSystem() {
     return fs;
   }
@@ -169,9 +235,47 @@ public class NameNodeConnector implements Closeable {
 
   /** @return blocks with locations. */
   public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size, long
-      minBlockSize)
-      throws IOException {
-    return namenode.getBlocks(datanode, size, minBlockSize);
+      minBlockSize) throws IOException {
+    if (getBlocksRateLimiter != null) {
+      getBlocksRateLimiter.acquire();
+    }
+    boolean isRequestStandby = false;
+    NamenodeProtocol nnproxy = null;
+    try {
+      if (requestToStandby && nsId != null
+          && HAUtil.isHAEnabled(config, nsId)) {
+        List<ClientProtocol> namenodes =
+            HAUtil.getProxiesForAllNameNodesInNameservice(config, nsId);
+        for (ClientProtocol proxy : namenodes) {
+          try {
+            if (proxy.getHAServiceState().equals(
+                HAServiceProtocol.HAServiceState.STANDBY)) {
+              NamenodeProtocol sbn = NameNodeProxies.createNonHAProxy(
+                  config, RPC.getServerAddress(proxy), NamenodeProtocol.class,
+                  UserGroupInformation.getCurrentUser(), false).getProxy();
+              nnproxy = sbn;
+              isRequestStandby = true;
+              break;
+            }
+          } catch (Exception e) {
+            // Ignore the exception while connecting to a namenode.
+            LOG.debug("Error while connecting to namenode", e);
+          }
+        }
+        if (nnproxy == null) {
+          LOG.warn("Request #getBlocks to Standby NameNode but meet exception,"
+              + " will fallback to normal way.");
+          nnproxy = namenode;
+        }
+      } else {
+        nnproxy = namenode;
+      }
+      return nnproxy.getBlocks(datanode, size, minBlockSize);
+    } finally {
+      if (isRequestStandby) {
+        LOG.info("Request #getBlocks to Standby NameNode success.");
+      }
+    }
   }
 
   /**

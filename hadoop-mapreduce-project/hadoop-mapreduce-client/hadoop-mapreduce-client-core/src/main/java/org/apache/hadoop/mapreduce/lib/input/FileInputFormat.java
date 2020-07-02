@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce.lib.input;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -283,7 +284,10 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
             job.getConfiguration(), dirs, recursive, inputFilter, true);
         locatedFiles = locatedFileStatusFetcher.getFileStatuses();
       } catch (InterruptedException e) {
-        throw new IOException("Interrupted while getting file statuses");
+        throw (IOException)
+            new InterruptedIOException(
+                "Interrupted while getting file statuses")
+                .initCause(e);
       }
       result = Lists.newArrayList(locatedFiles);
     }
@@ -321,7 +325,7 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
                   addInputPathRecursively(result, fs, stat.getPath(),
                       inputFilter);
                 } else {
-                  result.add(stat);
+                  result.add(shrinkStatus(stat));
                 }
               }
             }
@@ -360,13 +364,42 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
         if (stat.isDirectory()) {
           addInputPathRecursively(result, fs, stat.getPath(), inputFilter);
         } else {
-          result.add(stat);
+          result.add(shrinkStatus(stat));
         }
       }
     }
   }
-  
-  
+
+  /**
+   * The HdfsBlockLocation includes a LocatedBlock which contains messages
+   * for issuing more detailed queries to datanodes about a block, but these
+   * messages are useless during job submission currently. This method tries
+   * to exclude the LocatedBlock from HdfsBlockLocation by creating a new
+   * BlockLocation from original, reshaping the LocatedFileStatus,
+   * allowing {@link #listStatus(JobContext)} to scan more files with less
+   * memory footprint.
+   * @see BlockLocation
+   * @see org.apache.hadoop.fs.HdfsBlockLocation
+   * @param origStat The fat FileStatus.
+   * @return The FileStatus that has been shrunk.
+   */
+  public static FileStatus shrinkStatus(FileStatus origStat) {
+    if (origStat.isDirectory() || origStat.getLen() == 0 ||
+        !(origStat instanceof LocatedFileStatus)) {
+      return origStat;
+    } else {
+      BlockLocation[] blockLocations =
+          ((LocatedFileStatus)origStat).getBlockLocations();
+      BlockLocation[] locs = new BlockLocation[blockLocations.length];
+      int i = 0;
+      for (BlockLocation location : blockLocations) {
+        locs[i++] = new BlockLocation(location);
+      }
+      LocatedFileStatus newStat = new LocatedFileStatus(origStat, locs);
+      return newStat;
+    }
+  }
+
   /**
    * A factory that makes the split for this class. It can be overridden
    * by sub-classes to make sub-types

@@ -21,7 +21,7 @@
  * Please see http://wiki.apache.org/hadoop/Compatibility
  * for what changes are allowed for a *stable* .proto interface.
  */
-
+syntax="proto2";
 // This file contains protocol buffers that are used throughout HDFS -- i.e.
 // by the client, server, and data transfer protocols.
 
@@ -274,6 +274,12 @@ message LocatedBlockProto {
   repeated hadoop.common.TokenProto blockTokens = 10; // each internal block has a block token
 }
 
+message BatchedListingKeyProto {
+  required bytes checksum = 1;
+  required uint32 pathIndex = 2;
+  required bytes startAfter = 3;
+}
+
 message DataEncryptionKeyProto {
   required uint32 keyId = 1;
   required string blockPoolId = 2;
@@ -412,6 +418,11 @@ message AddErasureCodingPolicyResponseProto {
   optional string errorMsg = 3;
 }
 
+message ECTopologyVerifierResultProto {
+  required string resultMessage = 1;
+  required bool isSupported = 2;
+}
+
 /**
  * Placeholder type for consistent HDFS operations.
  */
@@ -524,6 +535,18 @@ message FsServerDefaultsProto {
 message DirectoryListingProto {
   repeated HdfsFileStatusProto partialListing = 1;
   required uint32 remainingEntries  = 2;
+}
+
+message RemoteExceptionProto {
+  required string className = 1;
+  optional string message = 2;
+}
+
+// Directory listing result for a batched listing call.
+message BatchedDirectoryListingProto {
+  repeated HdfsFileStatusProto partialListing = 1;
+  required uint32 parentIdx = 2;
+  optional RemoteExceptionProto exception = 3;
 }
 
 /**

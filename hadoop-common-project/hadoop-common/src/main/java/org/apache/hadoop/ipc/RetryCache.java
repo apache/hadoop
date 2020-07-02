@@ -290,7 +290,7 @@ public class RetryCache {
           Thread.currentThread().interrupt();
         }
       }
-      // Previous request has failed, the expectation is is that it will be
+      // Previous request has failed, the expectation is that it will be
       // retried again.
       if (mapEntry.state != CacheEntry.SUCCESS) {
         mapEntry.state = CacheEntry.INPROGRESS;

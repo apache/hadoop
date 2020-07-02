@@ -95,6 +95,11 @@ public class TestCryptoStreamsForLocalFS extends CryptoStreamsTestBase {
   @Override
   @Test(timeout=10000)
   public void testPositionedReadWithByteBuffer() throws IOException {}
+
+  @Ignore("Wrapped stream doesn't support ByteBufferPositionedReadable")
+  @Override
+  @Test(timeout=10000)
+  public void testByteBufferReadFully() throws Exception {}
   
   @Ignore("ChecksumFSOutputSummer doesn't support Syncable")
   @Override

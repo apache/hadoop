@@ -23,9 +23,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.MappingType;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.QueueMappingBuilder;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule.QueueMapping;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule.QueueMapping.MappingType;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -91,7 +92,39 @@ public class TestQueueMappings {
     // space trimming
     conf.set(CapacitySchedulerConfiguration.QUEUE_MAPPING, "    u : a : " + Q1);
     cs.reinitialize(conf, null);
-    checkQMapping(new QueueMapping(MappingType.USER, "a", Q1));
+    checkQMapping(
+        QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("a")
+                .queue(Q1)
+                .build());
+  }
+
+  @Test
+  public void testQueueMappingPathParsing() {
+    QueueMapping leafOnly = QueueMapping.QueueMappingBuilder.create()
+        .parsePathString("leaf")
+        .build();
+
+    Assert.assertEquals("leaf", leafOnly.getQueue());
+    Assert.assertEquals(null, leafOnly.getParentQueue());
+    Assert.assertEquals("leaf", leafOnly.getFullPath());
+
+    QueueMapping twoLevels = QueueMapping.QueueMappingBuilder.create()
+        .parsePathString("root.leaf")
+        .build();
+
+    Assert.assertEquals("leaf", twoLevels.getQueue());
+    Assert.assertEquals("root", twoLevels.getParentQueue());
+    Assert.assertEquals("root.leaf", twoLevels.getFullPath());
+
+    QueueMapping deep = QueueMapping.QueueMappingBuilder.create()
+        .parsePathString("root.a.b.c.d.e.leaf")
+        .build();
+
+    Assert.assertEquals("leaf", deep.getQueue());
+    Assert.assertEquals("root.a.b.c.d.e", deep.getParentQueue());
+    Assert.assertEquals("root.a.b.c.d.e.leaf", deep.getFullPath());
   }
 
   @Test (timeout = 60000)

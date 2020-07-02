@@ -173,7 +173,7 @@ public class TestRouterRPCClientRetries {
     NamenodeStatusReport report = new NamenodeStatusReport(ns0,
         nnInfo.getNamenodeId(), nnInfo.getRpcAddress(),
         nnInfo.getServiceAddress(), nnInfo.getLifelineAddress(),
-        nnInfo.getWebAddress());
+        nnInfo.getWebScheme(), nnInfo.getWebAddress());
     report.setRegistrationValid(false);
     assertTrue(resolver.registerNamenode(report));
     resolver.loadCache(true);

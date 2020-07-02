@@ -352,7 +352,7 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   /**
    * Populate the map with the State Store versions.
    *
-   * @param innerInfo Map with the information.
+   * @param map Map with the information.
    * @param version State Store versions.
    */
   private static void setStateStoreVersions(
@@ -652,6 +652,35 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   @Override
   public boolean isSecurityEnabled() {
     return UserGroupInformation.isSecurityEnabled();
+  }
+
+  @Override
+  public int getCorruptFilesCount() {
+    return getNameserviceAggregatedInt(MembershipStats::getCorruptFilesCount);
+  }
+
+  @Override
+  public long getScheduledReplicationBlocks() {
+    return getNameserviceAggregatedLong(
+        MembershipStats::getScheduledReplicationBlocks);
+  }
+
+  @Override
+  public long getNumberOfMissingBlocksWithReplicationFactorOne() {
+    return getNameserviceAggregatedLong(
+        MembershipStats::getNumberOfMissingBlocksWithReplicationFactorOne);
+  }
+
+  @Override
+  public long getHighestPriorityLowRedundancyReplicatedBlocks() {
+    return getNameserviceAggregatedLong(
+        MembershipStats::getHighestPriorityLowRedundancyReplicatedBlocks);
+  }
+
+  @Override
+  public long getHighestPriorityLowRedundancyECBlocks() {
+    return getNameserviceAggregatedLong(
+        MembershipStats::getHighestPriorityLowRedundancyECBlocks);
   }
 
   @Override

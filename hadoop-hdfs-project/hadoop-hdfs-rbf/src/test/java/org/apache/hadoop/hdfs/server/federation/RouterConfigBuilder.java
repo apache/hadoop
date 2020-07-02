@@ -154,10 +154,23 @@ public class RouterConfigBuilder {
     conf.setBoolean(RBFConfigKeys.DFS_ROUTER_STORE_ENABLE,
         this.enableStateStore);
     conf.setBoolean(RBFConfigKeys.DFS_ROUTER_RPC_ENABLE, this.enableRpcServer);
+    if (this.enableRpcServer) {
+      conf.set(RBFConfigKeys.DFS_ROUTER_RPC_ADDRESS_KEY, "127.0.0.1:0");
+      conf.set(RBFConfigKeys.DFS_ROUTER_RPC_BIND_HOST_KEY, "0.0.0.0");
+    }
     conf.setBoolean(RBFConfigKeys.DFS_ROUTER_ADMIN_ENABLE,
         this.enableAdminServer);
+    if (this.enableAdminServer) {
+      conf.set(RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_KEY, "127.0.0.1:0");
+      conf.set(RBFConfigKeys.DFS_ROUTER_ADMIN_BIND_HOST_KEY, "0.0.0.0");
+    }
     conf.setBoolean(RBFConfigKeys.DFS_ROUTER_HTTP_ENABLE,
         this.enableHttpServer);
+    if (this.enableHttpServer) {
+      conf.set(RBFConfigKeys.DFS_ROUTER_HTTP_ADDRESS_KEY, "127.0.0.1:0");
+      conf.set(RBFConfigKeys.DFS_ROUTER_HTTPS_ADDRESS_KEY, "127.0.0.1:0");
+      conf.set(RBFConfigKeys.DFS_ROUTER_HTTP_BIND_HOST_KEY, "0.0.0.0");
+    }
     conf.setBoolean(RBFConfigKeys.DFS_ROUTER_HEARTBEAT_ENABLE,
         this.enableHeartbeat);
     conf.setBoolean(RBFConfigKeys.DFS_ROUTER_MONITOR_LOCAL_NAMENODE,

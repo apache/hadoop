@@ -416,7 +416,8 @@ public class DefaultSpeculator extends AbstractService implements
           if (estimatedRunTime == data.getEstimatedRunTime()
               && progress == data.getProgress()) {
             // Previous stats are same as same stats
-            if (data.notHeartbeatedInAWhile(now)) {
+            if (data.notHeartbeatedInAWhile(now)
+                || estimator.hasStagnatedProgress(runningTaskAttemptID, now)) {
               // Stats have stagnated for a while, simulate heart-beat.
               TaskAttemptStatus taskAttemptStatus = new TaskAttemptStatus();
               taskAttemptStatus.id = runningTaskAttemptID;

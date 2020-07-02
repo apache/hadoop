@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -33,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -69,6 +71,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.NodeManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
@@ -142,10 +145,10 @@ public class TestFifoScheduler {
   
   private NodeManager registerNode(String hostName, int containerManagerPort,
                                    int nmHttpPort, String rackName,
-                                   Resource capability)
+                                   Resource capability, NodeStatus nodeStatus)
       throws IOException, YarnException {
     NodeManager nm = new NodeManager(hostName, containerManagerPort,
-        nmHttpPort, rackName, capability, resourceManager);
+        nmHttpPort, rackName, capability, resourceManager, nodeStatus);
     NodeAddedSchedulerEvent nodeAddEvent1 =
         new NodeAddedSchedulerEvent(resourceManager.getRMContext().getRMNodes()
             .get(nm.getNodeId()));
@@ -193,6 +196,7 @@ public class TestFifoScheduler {
 
     Configuration conf = new Configuration();
     ((RMContextImpl) rmContext).setScheduler(scheduler);
+    ((RMContextImpl) rmContext).setYarnConfiguration(conf);
     scheduler.setRMContext(rmContext);
     scheduler.init(conf);
     scheduler.start();
@@ -404,19 +408,21 @@ public class TestFifoScheduler {
     LOG.info("--- START: testFifoScheduler ---");
         
     final int GB = 1024;
-    
+
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
     // Register node1
     String host_0 = "host_0";
     org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm_0 = 
       registerNode(host_0, 1234, 2345, NetworkTopology.DEFAULT_RACK, 
-          Resources.createResource(4 * GB, 1));
+          Resources.createResource(4 * GB, 1), mockNodeStatus);
     nm_0.heartbeat();
     
     // Register node2
     String host_1 = "host_1";
     org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm_1 = 
       registerNode(host_1, 1234, 2345, NetworkTopology.DEFAULT_RACK, 
-          Resources.createResource(2 * GB, 1));
+          Resources.createResource(2 * GB, 1), mockNodeStatus);
     nm_1.heartbeat();
 
     // ResourceRequest priorities
@@ -661,7 +667,7 @@ public class TestFifoScheduler {
     rm.start();
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 6 * GB);
 
-    RMApp app1 = rm.submitApp(2048);
+    RMApp app1 = MockRMAppSubmitter.submitWithMemory(2048, rm);
     // kick the scheduling, 2 GB given to AM1, remaining 4GB on nm1
     nm1.nodeHeartbeat(true);
     RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
@@ -692,7 +698,7 @@ public class TestFifoScheduler {
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 6 * GB);
     MockNM nm2 = rm.registerNode("127.0.0.2:5678", 4 * GB);
 
-    RMApp app1 = rm.submitApp(2048);
+    RMApp app1 = MockRMAppSubmitter.submitWithMemory(2048, rm);
     // kick the scheduling, 2 GB given to AM1, remaining 4GB on nm1
     nm1.nodeHeartbeat(true);
     RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
@@ -702,7 +708,7 @@ public class TestFifoScheduler {
         rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
     Assert.assertEquals(2 * GB, report_nm1.getUsedResource().getMemorySize());
 
-    RMApp app2 = rm.submitApp(2048);
+    RMApp app2 = MockRMAppSubmitter.submitWithMemory(2048, rm);
     // kick the scheduling, 2GB given to AM, remaining 2 GB on nm2
     nm2.nodeHeartbeat(true);
     RMAppAttempt attempt2 = app2.getCurrentAppAttempt();
@@ -812,7 +818,7 @@ public class TestFifoScheduler {
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 6 * GB);
 
     // Submit an application
-    RMApp app1 = rm.submitApp(testAlloc);
+    RMApp app1 = MockRMAppSubmitter.submitWithMemory(testAlloc, rm);
 
     // kick the scheduling
     nm1.nodeHeartbeat(true);
@@ -1107,7 +1113,7 @@ public class TestFifoScheduler {
 
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 4 * GB);
 
-    RMApp app1 = rm.submitApp(2048);
+    RMApp app1 = MockRMAppSubmitter.submitWithMemory(2048, rm);
     // kick the scheduling, 2 GB given to AM1, remaining 2GB on nm1
     nm1.nodeHeartbeat(true);
     RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
@@ -1195,9 +1201,12 @@ public class TestFifoScheduler {
 
   @Test
   public void testRemovedNodeDecomissioningNode() throws Exception {
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
     // Register nodemanager
     NodeManager nm = registerNode("host_decom", 1234, 2345,
-        NetworkTopology.DEFAULT_RACK, Resources.createResource(8 * GB, 4));
+        NetworkTopology.DEFAULT_RACK, Resources.createResource(8 * GB, 4),
+        mockNodeStatus);
 
     RMNode node =
         resourceManager.getRMContext().getRMNodes().get(nm.getNodeId());
@@ -1240,10 +1249,14 @@ public class TestFifoScheduler {
     ((FifoScheduler) resourceManager.getResourceScheduler())
         .setRMContext(spyContext);
     ((AsyncDispatcher) mockDispatcher).start();
+
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
     // Register node
     String host_0 = "host_0";
     NodeManager nm_0 = registerNode(host_0, 1234, 2345,
-        NetworkTopology.DEFAULT_RACK, Resources.createResource(8 * GB, 4));
+        NetworkTopology.DEFAULT_RACK, Resources.createResource(8 * GB, 4),
+        mockNodeStatus);
     // ResourceRequest priorities
     Priority priority_0 = Priority.newInstance(0);
 

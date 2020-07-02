@@ -279,7 +279,15 @@ public class FileIoProvider {
           waitTime, transferTime);
       profilingEventHook.afterFileIo(volume, TRANSFER, begin, count);
     } catch (Exception e) {
-      onFailure(volume, begin);
+      String em = e.getMessage();
+      if (em != null) {
+        if (!em.startsWith("Broken pipe")
+            && !em.startsWith("Connection reset")) {
+          onFailure(volume, begin);
+        }
+      } else {
+        onFailure(volume, begin);
+      }
       throw e;
     }
   }

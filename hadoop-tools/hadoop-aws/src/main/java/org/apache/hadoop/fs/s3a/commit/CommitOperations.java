@@ -42,6 +42,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
@@ -50,9 +51,11 @@ import org.apache.hadoop.fs.s3a.WriteOperationHelper;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
+import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DurationInfo;
+import org.apache.hadoop.util.Progressable;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
@@ -437,13 +440,15 @@ public class CommitOperations {
    * @param destPath destination path
    * @param partition partition/subdir. Not used
    * @param uploadPartSize size of upload
+   * @param progress progress callback
    * @return a pending upload entry
    * @throws IOException failure
    */
   public SinglePendingCommit uploadFileToPendingCommit(File localFile,
       Path destPath,
       String partition,
-      long uploadPartSize)
+      long uploadPartSize,
+      Progressable progress)
       throws IOException {
 
     LOG.debug("Initiating multipart upload from {} to {}",
@@ -478,6 +483,15 @@ public class CommitOperations {
       if (numParts == 0) {
         numParts = 1;
       }
+      if (numParts > InternalConstants.DEFAULT_UPLOAD_PART_COUNT_LIMIT) {
+        // fail if the file is too big.
+        // it would be possible to be clever here and recalculate the part size,
+        // but this is not currently done.
+        throw new PathIOException(destPath.toString(),
+            String.format("File to upload (size %d)"
+                + " is too big to be uploaded in parts of size %d",
+                numParts, length));
+      }
 
       List<PartETag> parts = new ArrayList<>((int) numParts);
 
@@ -502,11 +516,11 @@ public class CommitOperations {
 
       commitData.bindCommitData(parts);
       statistics.commitUploaded(length);
+      progress.progress();
       threw = false;
       return commitData;
     } finally {
       if (threw && uploadId != null) {
-        statistics.commitAborted();
         try {
           abortMultipartCommit(destKey, uploadId);
         } catch (IOException e) {

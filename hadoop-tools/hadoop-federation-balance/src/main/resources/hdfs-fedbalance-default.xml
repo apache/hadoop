@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!--
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<!-- Do not modify this file directly. Anything that need to be overwritten,
+     need to be done so, through -D switches or customized conf -->
+
+<configuration>
+
+    <property>
+        <name>hdfs.fedbalance.procedure.scheduler.journal.uri</name>
+        <value>hdfs://localhost:8020/tmp/procedure</value>
+        <description>
+            The uri of the journal, the journal file is used for handling the
+            job persistence and recover.
+        </description>
+    </property>
+
+    <property>
+        <name>hdfs.fedbalance.procedure.work.thread.num</name>
+        <value>10</value>
+        <description>
+            The worker threads number of the BalanceProcedureScheduler.
+            BalanceProcedureScheduler is responsible for scheduling a balance
+            job, including submit, run, delay and recover.
+        </description>
+    </property>
+
+</configuration>

@@ -476,7 +476,6 @@ static int fuseNewConnect(const char *usrname, struct fuse_context *ctx,
   if (gPort) {
     hdfsBuilderSetNameNodePort(bld, gPort);
   }
-  hdfsBuilderSetUserName(bld, usrname);
   if (gHdfsAuthConf == AUTH_CONF_KERBEROS) {
     findKerbTicketCachePath(ctx, kpath, sizeof(kpath));
     if (stat(kpath, &st) < 0) {
@@ -495,6 +494,17 @@ static int fuseNewConnect(const char *usrname, struct fuse_context *ctx,
       ret = -ENOMEM;
       goto error;
     }
+  } else {
+    // earlier the username was set to the builder always, but due to
+    // HADOOP-9747 if we specify the username in case of kerberos authentication
+    // the username will be used as the principal name, and that will conflict
+    // with ticket cache based authentication as we have the OS user name here
+    // not the real kerberos principal name. So with SIMPLE auth we pass on the
+    // OS username still, and the UGI will use that as the username, but with
+    // kerberos authentication we do not pass in the OS username and let the
+    // authentication happen with the principal who's ticket is in the ticket
+    // cache. (HDFS-15034 is still a possible improvement for SIMPLE AUTH.)
+    hdfsBuilderSetUserName(bld, usrname);
   }
   conn->usrname = strdup(usrname);
   if (!conn->usrname) {

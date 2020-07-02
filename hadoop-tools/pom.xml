@@ -20,11 +20,11 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.3.0-SNAPSHOT</version>
+    <version>3.4.0-SNAPSHOT</version>
     <relativePath>../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-tools</artifactId>
-  <version>3.3.0-SNAPSHOT</version>
+  <version>3.4.0-SNAPSHOT</version>
   <description>Apache Hadoop Tools</description>
   <name>Apache Hadoop Tools</name>
   <packaging>pom</packaging>
@@ -32,6 +32,7 @@
   <modules>
     <module>hadoop-streaming</module>
     <module>hadoop-distcp</module>
+    <module>hadoop-federation-balance</module>
     <module>hadoop-dynamometer</module>
     <module>hadoop-archives</module>
     <module>hadoop-archive-logs</module>

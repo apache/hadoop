@@ -135,10 +135,9 @@ public class SlowDiskTracker {
       diskIDLatencyMap.put(diskID, diskLatency);
     }
 
-    checkAndUpdateReportIfNecessary();
   }
 
-  private void checkAndUpdateReportIfNecessary() {
+  public void checkAndUpdateReportIfNecessary() {
     // Check if it is time for update
     long now = timer.monotonicNow();
     if (now - lastUpdateTime > reportGenerationIntervalMs) {

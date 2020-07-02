@@ -20,11 +20,16 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azurebfs.oauth2.RetryTestTokenProvider;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
 import org.junit.Assert;
 import org.junit.Test;
+
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Verify the AbfsRestOperationException error message format.
@@ -71,5 +76,42 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
       Assert.assertTrue(errorFields[5].contains("RequestId")
               && errorFields[5].contains("Time"));
     }
+  }
+
+  @Test
+  public void testCustomTokenFetchRetryCount() throws Exception {
+    testWithDifferentCustomTokenFetchRetry(0);
+    testWithDifferentCustomTokenFetchRetry(3);
+    testWithDifferentCustomTokenFetchRetry(5);
+  }
+
+  public void testWithDifferentCustomTokenFetchRetry(int numOfRetries) throws Exception {
+    AzureBlobFileSystem fs = this.getFileSystem();
+
+    Configuration config = new Configuration(this.getRawConfiguration());
+    String accountName = config.get("fs.azure.abfs.account.name");
+    // Setup to configure custom token provider
+    config.set("fs.azure.account.auth.type." + accountName, "Custom");
+    config.set("fs.azure.account.oauth.provider.type." + accountName, "org.apache.hadoop.fs"
+        + ".azurebfs.oauth2.RetryTestTokenProvider");
+    config.set("fs.azure.custom.token.fetch.retry.count", Integer.toString(numOfRetries));
+    // Stop filesystem creation as it will lead to calls to store.
+    config.set("fs.azure.createRemoteFileSystemDuringInitialization", "false");
+
+    final AzureBlobFileSystem fs1 =
+        (AzureBlobFileSystem) FileSystem.newInstance(fs.getUri(),
+        config);
+    RetryTestTokenProvider.ResetStatusToFirstTokenFetch();
+
+    intercept(Exception.class,
+        ()-> {
+          fs1.getFileStatus(new Path("/"));
+        });
+
+    // Number of retries done should be as configured
+    Assert.assertTrue(
+        "Number of token fetch retries (" + RetryTestTokenProvider.reTryCount
+            + ") done, does not match with fs.azure.custom.token.fetch.retry.count configured (" + numOfRetries
+            + ")", RetryTestTokenProvider.reTryCount == numOfRetries);
   }
 }

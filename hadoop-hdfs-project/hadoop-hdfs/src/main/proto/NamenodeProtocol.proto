@@ -24,7 +24,7 @@
 
 // This file contains protocol buffers that are used throughout HDFS -- i.e.
 // by the client, server, and data transfer protocols.
-
+syntax = "proto2";
 option java_package = "org.apache.hadoop.hdfs.protocol.proto";
 option java_outer_classname = "NamenodeProtocolProtos";
 option java_generic_services = true;

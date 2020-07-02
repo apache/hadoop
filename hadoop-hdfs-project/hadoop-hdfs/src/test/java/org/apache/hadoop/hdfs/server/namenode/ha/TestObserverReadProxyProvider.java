@@ -24,6 +24,7 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -43,6 +44,7 @@ import org.mockito.stubbing.Answer;
 
 import static org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 
+import static org.apache.hadoop.hdfs.server.namenode.ha.ObserverReadProxyProvider.*;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -72,6 +74,11 @@ public class TestObserverReadProxyProvider {
     nnURI = URI.create("hdfs://" + ns);
     conf = new Configuration();
     conf.set(HdfsClientConfigKeys.DFS_NAMESERVICES, ns);
+    // Set observer probe retry period to 0. Required by the tests that
+    // transition observer back and forth
+    conf.setTimeDuration(
+        OBSERVER_PROBE_RETRY_PERIOD_KEY, 0, TimeUnit.MILLISECONDS);
+    conf.setBoolean(HdfsClientConfigKeys.Failover.RANDOM_ORDER, false);
   }
 
   private void setupProxyProvider(int namenodeCount) throws Exception {

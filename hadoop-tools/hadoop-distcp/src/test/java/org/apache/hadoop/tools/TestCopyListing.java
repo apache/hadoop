@@ -38,6 +38,7 @@ import org.junit.Test;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.AfterClass;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
 import java.io.IOException;
@@ -205,8 +206,8 @@ public class TestCopyListing extends SimpleCopyListing {
         Assert.fail("Duplicates not detected");
       } catch (DuplicateFileException ignore) {
       }
-      Assert.assertEquals(listing.getBytesToCopy(), 10);
-      Assert.assertEquals(listing.getNumberOfPaths(), 3);
+      assertThat(listing.getBytesToCopy()).isEqualTo(10);
+      assertThat(listing.getNumberOfPaths()).isEqualTo(3);
       TestDistCpUtils.delete(fs, "/tmp");
 
       try {

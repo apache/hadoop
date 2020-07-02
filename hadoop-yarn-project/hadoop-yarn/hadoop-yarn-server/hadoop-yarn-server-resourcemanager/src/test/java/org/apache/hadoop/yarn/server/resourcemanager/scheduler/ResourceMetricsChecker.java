@@ -43,6 +43,16 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMe
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.RESERVED_CONTAINERS;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.RESERVED_MB;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.RESERVED_V_CORES;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.ALLOCATED_CUSTOM_RES1;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.ALLOCATED_CUSTOM_RES2;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.AVAILABLE_CUSTOM_RES1;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.AVAILABLE_CUSTOM_RES2;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.PENDING_CUSTOM_RES1;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.PENDING_CUSTOM_RES2;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.RESERVED_CUSTOM_RES1;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.RESERVED_CUSTOM_RES2;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.AGGREGATE_PREEMPTED_SECONDS_CUSTOM_RES1;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.AGGREGATE_PREEMPTED_SECONDS_CUSTOM_RES2;
 
 final class ResourceMetricsChecker {
   private final static Logger LOG =
@@ -52,21 +62,33 @@ final class ResourceMetricsChecker {
     GAUGE_INT, GAUGE_LONG, COUNTER_INT, COUNTER_LONG
   }
 
+  private static final ResourceMetricsChecker INITIAL_MANDATORY_RES_CHECKER =
+    new ResourceMetricsChecker().gaugeLong(ALLOCATED_MB, 0)
+        .gaugeInt(ALLOCATED_V_CORES, 0).gaugeInt(ALLOCATED_CONTAINERS, 0)
+        .counter(AGGREGATE_CONTAINERS_ALLOCATED, 0)
+        .counter(AGGREGATE_CONTAINERS_RELEASED, 0).gaugeLong(AVAILABLE_MB, 0)
+        .gaugeInt(AVAILABLE_V_CORES, 0).gaugeLong(PENDING_MB, 0)
+        .gaugeInt(PENDING_V_CORES, 0).gaugeInt(PENDING_CONTAINERS, 0)
+        .gaugeLong(RESERVED_MB, 0).gaugeInt(RESERVED_V_CORES, 0)
+        .gaugeInt(RESERVED_CONTAINERS, 0);
+
   private static final ResourceMetricsChecker INITIAL_CHECKER =
-      new ResourceMetricsChecker()
-          .gaugeLong(ALLOCATED_MB, 0)
-          .gaugeInt(ALLOCATED_V_CORES, 0)
-          .gaugeInt(ALLOCATED_CONTAINERS, 0)
-          .counter(AGGREGATE_CONTAINERS_ALLOCATED, 0)
-          .counter(AGGREGATE_CONTAINERS_RELEASED, 0)
-          .gaugeLong(AVAILABLE_MB, 0)
-          .gaugeInt(AVAILABLE_V_CORES, 0)
-          .gaugeLong(PENDING_MB, 0)
-          .gaugeInt(PENDING_V_CORES, 0)
-          .gaugeInt(PENDING_CONTAINERS, 0)
-          .gaugeLong(RESERVED_MB, 0)
-          .gaugeInt(RESERVED_V_CORES, 0)
-          .gaugeInt(RESERVED_CONTAINERS, 0);
+    new ResourceMetricsChecker().gaugeLong(ALLOCATED_MB, 0)
+        .gaugeInt(ALLOCATED_V_CORES, 0).gaugeInt(ALLOCATED_CONTAINERS, 0)
+        .counter(AGGREGATE_CONTAINERS_ALLOCATED, 0)
+        .counter(AGGREGATE_CONTAINERS_RELEASED, 0).gaugeLong(AVAILABLE_MB, 0)
+        .gaugeInt(AVAILABLE_V_CORES, 0).gaugeLong(PENDING_MB, 0)
+        .gaugeInt(PENDING_V_CORES, 0).gaugeInt(PENDING_CONTAINERS, 0)
+        .gaugeLong(RESERVED_MB, 0).gaugeInt(RESERVED_V_CORES, 0)
+        .gaugeInt(RESERVED_CONTAINERS, 0).gaugeLong(ALLOCATED_CUSTOM_RES1, 0)
+        .gaugeLong(ALLOCATED_CUSTOM_RES2, 0).gaugeLong(AVAILABLE_CUSTOM_RES1, 0)
+        .gaugeLong(AVAILABLE_CUSTOM_RES2, 0).gaugeLong(PENDING_CUSTOM_RES1, 0)
+        .gaugeLong(PENDING_CUSTOM_RES2, 0).gaugeLong(RESERVED_CUSTOM_RES1, 0)
+        .gaugeLong(RESERVED_CUSTOM_RES2, 0)
+        .gaugeLong(AGGREGATE_PREEMPTED_SECONDS_CUSTOM_RES1, 0)
+        .gaugeLong(AGGREGATE_PREEMPTED_SECONDS_CUSTOM_RES2, 0);
+
+
 
   enum ResourceMetricsKey {
     ALLOCATED_MB("AllocatedMB", GAUGE_LONG),
@@ -87,7 +109,18 @@ final class ResourceMetricsChecker {
     AGGREGATE_VCORE_SECONDS_PREEMPTED(
         "AggregateVcoreSecondsPreempted", COUNTER_LONG),
     AGGREGATE_MEMORY_MB_SECONDS_PREEMPTED(
-        "AggregateMemoryMBSecondsPreempted", COUNTER_LONG);
+        "AggregateMemoryMBSecondsPreempted", COUNTER_LONG),
+    ALLOCATED_CUSTOM_RES1("AllocatedResource.custom_res_1", GAUGE_LONG),
+    ALLOCATED_CUSTOM_RES2("AllocatedResource.custom_res_2", GAUGE_LONG),
+    AVAILABLE_CUSTOM_RES1("AvailableResource.custom_res_1", GAUGE_LONG),
+    AVAILABLE_CUSTOM_RES2("AvailableResource.custom_res_2", GAUGE_LONG),
+    PENDING_CUSTOM_RES1("PendingResource.custom_res_1",GAUGE_LONG),
+    PENDING_CUSTOM_RES2("PendingResource.custom_res_2",GAUGE_LONG),
+    RESERVED_CUSTOM_RES1("ReservedResource.custom_res_1",GAUGE_LONG),
+    RESERVED_CUSTOM_RES2("ReservedResource.custom_res_2", GAUGE_LONG),
+    AGGREGATE_PREEMPTED_SECONDS_CUSTOM_RES1("AggregatePreemptedSeconds.custom_res_1", GAUGE_LONG),
+    AGGREGATE_PREEMPTED_SECONDS_CUSTOM_RES2("AggregatePreemptedSeconds.custom_res_2", GAUGE_LONG);
+
 
     private String value;
     private ResourceMetricType type;
@@ -129,6 +162,10 @@ final class ResourceMetricsChecker {
 
   public static ResourceMetricsChecker create() {
     return new ResourceMetricsChecker(INITIAL_CHECKER);
+  }
+
+  public static ResourceMetricsChecker createMandatoryResourceChecker() {
+    return new ResourceMetricsChecker(INITIAL_MANDATORY_RES_CHECKER);
   }
 
   ResourceMetricsChecker gaugeLong(ResourceMetricsKey key, long value) {

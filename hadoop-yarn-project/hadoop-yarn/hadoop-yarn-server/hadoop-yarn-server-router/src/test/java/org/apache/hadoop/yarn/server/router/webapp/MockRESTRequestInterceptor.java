@@ -128,7 +128,7 @@ public class MockRESTRequestInterceptor extends AbstractRESTRequestInterceptor {
       Set<String> statesQuery, String finalStatusQuery, String userQuery,
       String queueQuery, String count, String startedBegin, String startedEnd,
       String finishBegin, String finishEnd, Set<String> applicationTypes,
-      Set<String> applicationTags, Set<String> unselectedFields) {
+      Set<String> applicationTags, String name, Set<String> unselectedFields) {
     return new AppsInfo();
   }
 

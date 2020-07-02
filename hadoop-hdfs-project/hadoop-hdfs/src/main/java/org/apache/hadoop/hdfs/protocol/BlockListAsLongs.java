@@ -35,10 +35,10 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.Replica;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.protobuf.ByteString;
-import com.google.protobuf.CodedInputStream;
-import com.google.protobuf.CodedOutputStream;
-import com.google.protobuf.WireFormat;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.CodedInputStream;
+import org.apache.hadoop.thirdparty.protobuf.CodedOutputStream;
+import org.apache.hadoop.thirdparty.protobuf.WireFormat;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -276,12 +276,12 @@ public abstract class BlockListAsLongs implements Iterable<BlockReportReplica> {
       try {
         // zig-zag to reduce size of legacy blocks
         cos.writeSInt64NoTag(replica.getBlockId());
-        cos.writeRawVarint64(replica.getBytesOnDisk());
-        cos.writeRawVarint64(replica.getGenerationStamp());
+        cos.writeUInt64NoTag(replica.getBytesOnDisk());
+        cos.writeUInt64NoTag(replica.getGenerationStamp());
         ReplicaState state = replica.getState();
         // although state is not a 64-bit value, using a long varint to
         // allow for future use of the upper bits
-        cos.writeRawVarint64(state.getValue());
+        cos.writeUInt64NoTag(state.getValue());
         if (state == ReplicaState.FINALIZED) {
           numFinalized++;
         }

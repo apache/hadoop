@@ -105,7 +105,7 @@ public class TestApplicationMasterServiceCapacity extends
       MockNM nm1 = rm.registerNode(DEFAULT_HOST + ":" + DEFAULT_PORT, 6 * GB);
 
       // Submit an application
-      RMApp app1 = rm.submitApp(1024);
+      RMApp app1 = MockRMAppSubmitter.submitWithMemory(1024, rm);
 
       // kick the scheduling
       nm1.nodeHeartbeat(true);
@@ -177,7 +177,11 @@ public class TestApplicationMasterServiceCapacity extends
 
     // Submit an application
     Priority appPriority1 = Priority.newInstance(5);
-    RMApp app1 = rm.submitApp(2048, appPriority1);
+    MockRMAppSubmissionData data = MockRMAppSubmissionData.Builder
+        .createWithMemory(2048, rm)
+        .withAppPriority(appPriority1)
+        .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
 
     nm1.nodeHeartbeat(true);
     RMAppAttempt attempt1 = app1.getCurrentAppAttempt();

@@ -36,7 +36,7 @@ import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 
-import com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.delegation.TestDelegationToken;
@@ -544,8 +544,9 @@ public class TestClientRMTokens {
         ResourceScheduler scheduler,
         RMDelegationTokenSecretManager rmDTSecretManager) {
       super(mock(RMContext.class), scheduler, mock(RMAppManager.class),
-          new ApplicationACLsManager(conf), new QueueACLsManager(scheduler,
-              conf), rmDTSecretManager);
+          new ApplicationACLsManager(conf),
+          QueueACLsManager.getQueueACLsManager(scheduler, conf),
+          rmDTSecretManager);
     }
 
     // Use a random port unless explicitly specified.

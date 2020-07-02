@@ -264,10 +264,14 @@
   </property>
 
   <property>
-    <name>dfs.federation.router.metrics.enable</name>
-    <value>true</value>
+    <name>dfs.federation.router.fs-limits.max-component-length</name>
+    <value>0</value>
     <description>
-      If the metrics service in the router is enabled.
+      Defines the maximum number of bytes in UTF-8 encoding in each
+      component of a path at Router side. A value of 0 will disable the check.
+      Support multiple size unit suffix(case insensitive). It is act as
+      configuration dfs.namenode.fs-limits.max-component-length at NameNode
+      side.
     </description>
   </property>
 

@@ -22,6 +22,7 @@
  * for what changes are allowed for a *stable* .proto interface.
  */
 
+syntax = "proto2";
 option java_package = "org.apache.hadoop.yarn.proto";
 option java_outer_classname = "ContainerManagementProtocol";
 option java_generic_services = true;

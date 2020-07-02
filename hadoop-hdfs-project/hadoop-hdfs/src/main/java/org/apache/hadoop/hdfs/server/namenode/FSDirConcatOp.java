@@ -150,7 +150,7 @@ class FSDirConcatOp {
             + " is referred by some other reference in some snapshot.");
       }
       // source file cannot be the same with the target file
-      if (srcINode == targetINode) {
+      if (srcINode.equals(targetINode)) {
         throw new HadoopIllegalArgumentException("concat: the src file " + src
             + " is the same with the target file " + targetIIP.getPath());
       }
@@ -214,6 +214,7 @@ class FSDirConcatOp {
         }
       }
     }
+    deltas.addNameSpace(-srcList.length);
     return deltas;
   }
 

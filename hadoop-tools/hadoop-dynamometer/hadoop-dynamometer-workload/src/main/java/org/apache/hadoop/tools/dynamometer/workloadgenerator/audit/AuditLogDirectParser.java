@@ -125,8 +125,9 @@ public class AuditLogDirectParser implements AuditCommandParser {
       relativeTimestamp = dateFormat.parse(m.group("timestamp")).getTime()
           - startTimestamp;
     } catch (ParseException p) {
-      throw new IOException("Exception while parsing timestamp from audit log",
-          p);
+      throw new IOException(
+          "Exception while parsing timestamp from audit log line: `"
+          + inputLine + "`", p);
     }
     // Sanitize the = in the rename options field into a : so we can split on =
     String auditMessageSanitized =
@@ -141,7 +142,8 @@ public class AuditLogDirectParser implements AuditCommandParser {
         parameterMap.put(splitMessage[0], splitMessage[1]);
       } catch (ArrayIndexOutOfBoundsException e) {
         throw new IOException(
-            "Exception while parsing a message from audit log", e);
+            "Exception while parsing a message from audit log line: `"
+            + inputLine + "`", e);
       }
     }
 

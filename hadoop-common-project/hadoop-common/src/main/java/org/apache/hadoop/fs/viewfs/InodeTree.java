@@ -123,6 +123,7 @@ abstract class InodeTree<T> {
     private final Map<String, INode<T>> children = new HashMap<>();
     private T internalDirFs =  null; //filesystem of this internal directory
     private boolean isRoot = false;
+    private INodeLink<T> fallbackLink = null;
 
     INodeDir(final String pathToNode, final UserGroupInformation aUgi) {
       super(pathToNode, aUgi);
@@ -147,6 +148,17 @@ abstract class InodeTree<T> {
 
     boolean isRoot() {
       return isRoot;
+    }
+
+    INodeLink<T> getFallbackLink() {
+      return fallbackLink;
+    }
+
+    void addFallbackLink(INodeLink<T> link) throws IOException {
+      if (!isRoot) {
+        throw new IOException("Fallback link can only be added for root");
+      }
+      this.fallbackLink = link;
     }
 
     Map<String, INode<T>> getChildren() {
@@ -362,7 +374,7 @@ abstract class InodeTree<T> {
       throws UnsupportedFileSystemException, URISyntaxException, IOException;
 
   protected abstract T getTargetFileSystem(INodeDir<T> dir)
-      throws URISyntaxException;
+      throws URISyntaxException, IOException;
 
   protected abstract T getTargetFileSystem(String settings, URI[] mergeFsURIs)
       throws UnsupportedFileSystemException, URISyntaxException, IOException;
@@ -381,7 +393,7 @@ abstract class InodeTree<T> {
     return rootFallbackLink != null;
   }
 
-  private INodeLink<T> getRootFallbackLink() {
+  protected INodeLink<T> getRootFallbackLink() {
     Preconditions.checkState(root.isInternalDir());
     return rootFallbackLink;
   }
@@ -453,7 +465,7 @@ abstract class InodeTree<T> {
       FileAlreadyExistsException, IOException {
     String mountTableName = viewName;
     if (mountTableName == null) {
-      mountTableName = Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE;
+      mountTableName = ConfigUtil.getDefaultMountTableName(config);
     }
     homedirPrefix = ConfigUtil.getHomeDirValue(config, mountTableName);
 
@@ -580,6 +592,7 @@ abstract class InodeTree<T> {
         }
       }
       rootFallbackLink = fallbackLink;
+      getRootDir().addFallbackLink(rootFallbackLink);
     }
 
     if (!gotMountTableEntry) {

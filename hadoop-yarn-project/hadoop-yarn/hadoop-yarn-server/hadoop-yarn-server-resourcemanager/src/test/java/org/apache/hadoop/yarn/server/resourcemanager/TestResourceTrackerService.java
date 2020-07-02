@@ -31,6 +31,8 @@ import org.apache.hadoop.yarn.server.api.ServerRMProxy;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeToAttributes;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.NodeEventDispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.FileSystemNodeAttributeStore;
+
+import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -424,7 +426,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     rm.waitForState(id3, NodeState.RUNNING);
 
     // Create an app and launch two containers on host1.
-    RMApp app = rm.submitApp(2000);
+    RMApp app = MockRMAppSubmitter.submitWithMemory(2000, rm);
     MockAM am = MockRM.launchAndRegisterAM(app, rm, nm1);
     ApplicationAttemptId aaid = app.getCurrentAppAttempt().getAppAttemptId();
     nm1.nodeHeartbeat(aaid, 2, ContainerState.RUNNING);
@@ -1622,13 +1624,13 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RMNodeImpl node2 =
         (RMNodeImpl) rm.getRMContext().getRMNodes().get(nm2.getNodeId());
 
-    RMAppImpl app1 = (RMAppImpl) rm.submitApp(1024);
+    RMAppImpl app1 = (RMAppImpl) MockRMAppSubmitter.submitWithMemory(1024, rm);
     String collectorAddr1 = "1.2.3.4:5";
     app1.setCollectorData(AppCollectorData.newInstance(
         app1.getApplicationId(), collectorAddr1));
 
     String collectorAddr2 = "5.4.3.2:1";
-    RMAppImpl app2 = (RMAppImpl) rm.submitApp(1024);
+    RMAppImpl app2 = (RMAppImpl) MockRMAppSubmitter.submitWithMemory(1024, rm);
     app2.setCollectorData(AppCollectorData.newInstance(
         app2.getApplicationId(), collectorAddr2));
 
@@ -1752,7 +1754,11 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         spy(rm.getRMContext().getDispatcher().getEventHandler());
 
     // Case 1: Unmanaged AM
-    RMApp app = rm.submitApp(1024, true);
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
+            .withUnmanagedAM(true)
+            .build();
+    RMApp app = MockRMAppSubmitter.submit(rm, data);
 
     // Case 1.1: AppAttemptId is null
     NMContainerStatus report =
@@ -1776,7 +1782,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     verify(handler, never()).handle((Event)any());
 
     // Case 2: Managed AM
-    app = rm.submitApp(1024);
+    app = MockRMAppSubmitter.submitWithMemory(1024, rm);
 
     // Case 2.1: AppAttemptId is null
     report = NMContainerStatus.newInstance(
@@ -2206,7 +2212,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
                 DEFAULT_RM_NODEMANAGER_UNTRACKED_REMOVAL_TIMEOUT_MSEC);
     int nodeRemovalInterval =
         rmContext.getNodesListManager().getNodeRemovalCheckInterval();
-    long maxThreadSleeptime = nodeRemovalInterval + nodeRemovalTimeout;
+    long maxThreadSleeptime = nodeRemovalInterval + nodeRemovalTimeout + 100;
     latch.await(maxThreadSleeptime, TimeUnit.MILLISECONDS);
 
     rmNode = rmContext.getInactiveRMNodes().get(nm2.getNodeId());
@@ -2680,7 +2686,11 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     };
 
     rm.start();
-    RMApp app = rm.submitApp(1024, true);
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
+            .withUnmanagedAM(true)
+            .build();
+    RMApp app = MockRMAppSubmitter.submit(rm, data);
     ApplicationAttemptId appAttemptId = app.getCurrentAppAttempt()
         .getAppAttemptId();
 
@@ -2704,10 +2714,14 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         RegisterNodeManagerRequest.class);
     NodeId nodeId = NodeId.newInstance("host2", 1234);
     Resource capability = BuilderUtils.newResource(1024, 1);
+
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
     req.setResource(capability);
     req.setNodeId(nodeId);
     req.setHttpPort(1234);
     req.setNMVersion(YarnVersionInfo.getVersion());
+    req.setNodeStatus(mockNodeStatus);
     ContainerId c1 = ContainerId.newContainerId(appAttemptId, 1);
     ContainerId c2 = ContainerId.newContainerId(appAttemptId, 2);
     ContainerId c3 = ContainerId.newContainerId(appAttemptId, 3);

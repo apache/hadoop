@@ -44,6 +44,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -103,6 +105,7 @@ import org.apache.hadoop.hdfs.client.impl.LeaseRenewer;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
+import org.apache.hadoop.hdfs.protocol.BatchedDirectoryListing;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -116,6 +119,7 @@ import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.EncryptionZoneIterator;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
@@ -242,6 +246,20 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   private static volatile ThreadPoolExecutor STRIPED_READ_THREAD_POOL;
   private final int smallBufferSize;
   private final long serverDefaultsValidityPeriod;
+
+  /**
+   * Disabled stop DeadNodeDetectorThread for the testing when MiniDFSCluster
+   * start.
+   */
+  private static volatile boolean disabledStopDeadNodeDetectorThreadForTest =
+      false;
+
+  @VisibleForTesting
+  public static void setDisabledStopDeadNodeDetectorThreadForTest(
+      boolean disabledStopDeadNodeDetectorThreadForTest) {
+    DFSClient.disabledStopDeadNodeDetectorThreadForTest =
+        disabledStopDeadNodeDetectorThreadForTest;
+  }
 
   public DfsClientConf getConf() {
     return dfsClientConf;
@@ -373,9 +391,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
             null : conf.getBoolean(DFS_CLIENT_CACHE_DROP_BEHIND_READS, false);
     Long readahead = (conf.get(DFS_CLIENT_CACHE_READAHEAD) == null) ?
         null : conf.getLongBytes(DFS_CLIENT_CACHE_READAHEAD, 0);
-    this.serverDefaultsValidityPeriod =
-            conf.getLong(DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_KEY,
-      DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_DEFAULT);
+    this.serverDefaultsValidityPeriod = conf.getTimeDuration(
+        DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_KEY,
+        DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_DEFAULT,
+        TimeUnit.MILLISECONDS);
     Boolean writeDropBehind =
         (conf.get(DFS_CLIENT_CACHE_DROP_BEHIND_WRITES) == null) ?
             null : conf.getBoolean(DFS_CLIENT_CACHE_DROP_BEHIND_WRITES, false);
@@ -572,10 +591,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       } catch (IOException e) {
         // Abort if the lease has already expired.
         final long elapsed = Time.monotonicNow() - getLastLeaseRenewal();
-        if (elapsed > HdfsConstants.LEASE_HARDLIMIT_PERIOD) {
+        if (elapsed > dfsClientConf.getleaseHardLimitPeriod()) {
           LOG.warn("Failed to renew lease for " + clientName + " for "
               + (elapsed/1000) + " seconds (>= hard-limit ="
-              + (HdfsConstants.LEASE_HARDLIMIT_PERIOD / 1000) + " seconds.) "
+              + (dfsClientConf.getleaseHardLimitPeriod() / 1000) + " seconds.) "
               + "Closing all files being written ...", e);
           closeAllFilesBeingWritten(true);
         } else {
@@ -631,6 +650,11 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       // lease renewal stops when all files are closed
       closeAllFilesBeingWritten(false);
       clientRunning = false;
+      // close dead node detector thread
+      if (!disabledStopDeadNodeDetectorThreadForTest) {
+        clientContext.stopDeadNodeDetectorThread();
+      }
+
       // close connections to the namenode
       closeConnectionToNamenode();
     }
@@ -835,6 +859,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public void reportBadBlocks(LocatedBlock[] blocks) throws IOException {
     checkOpen();
     namenode.reportBadBlocks(blocks);
+  }
+
+  public long getRefreshReadBlkLocationsInterval() {
+    return dfsClientConf.getRefreshReadBlockLocationsMS();
   }
 
   public LocatedBlocks getLocatedBlocks(String src, long start)
@@ -1543,7 +1571,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
           DSQuotaExceededException.class,
           QuotaByStorageTypeExceededException.class,
           UnresolvedPathException.class,
-          SnapshotAccessControlException.class);
+          SnapshotAccessControlException.class,
+          ParentNotDirectoryException.class);
     }
   }
 
@@ -1671,6 +1700,24 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /**
+   * Get a batched listing for the indicated directories
+   *
+   * @see ClientProtocol#getBatchedListing(String[], byte[], boolean)
+   */
+  public BatchedDirectoryListing batchedListPaths(
+      String[] srcs, byte[] startAfter, boolean needLocation)
+      throws IOException {
+    checkOpen();
+    try {
+      return namenode.getBatchedListing(srcs, startAfter, needLocation);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+          FileNotFoundException.class,
+          UnresolvedPathException.class);
+    }
+  }
+
+  /**
    * Get the file info for a specific file or directory.
    * @param src The string representation of the path to the file
    * @return object containing information regarding the file
@@ -1689,7 +1736,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
-  /**
+ /**
    * Get the file info for a specific file or directory.
    * @param src The string representation of the path to the file
    * @param needBlockToken Include block tokens in {@link LocatedBlocks}.
@@ -2784,6 +2831,17 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
   }
 
+  public ECTopologyVerifierResult getECTopologyResultForPolicies(
+      final String... policyNames) throws IOException {
+    checkOpen();
+    try {
+      return namenode.getECTopologyResultForPolicies(policyNames);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+          SafeModeException.class);
+    }
+  }
+
   public void setXAttr(String src, String name, byte[] value,
       EnumSet<XAttrSetFlag> flag) throws IOException {
     checkOpen();
@@ -3225,5 +3283,99 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public HAServiceProtocol.HAServiceState getHAServiceState()
       throws IOException {
     return namenode.getHAServiceState();
+  }
+
+  /**
+   * If deadNodeDetectionEnabled is true, return the dead nodes that detected by
+   * all the DFSInputStreams in the same client. Otherwise return the dead nodes
+   * that detected by given DFSInputStream.
+   */
+  public ConcurrentHashMap<DatanodeInfo, DatanodeInfo> getDeadNodes(
+      DFSInputStream dfsInputStream) {
+    if (clientContext.isDeadNodeDetectionEnabled()) {
+      ConcurrentHashMap<DatanodeInfo, DatanodeInfo> deadNodes =
+          new ConcurrentHashMap<DatanodeInfo, DatanodeInfo>();
+      if (dfsInputStream != null) {
+        deadNodes.putAll(dfsInputStream.getLocalDeadNodes());
+      }
+
+      Set<DatanodeInfo> detectDeadNodes =
+          clientContext.getDeadNodeDetector().clearAndGetDetectedDeadNodes();
+      for (DatanodeInfo detectDeadNode : detectDeadNodes) {
+        deadNodes.put(detectDeadNode, detectDeadNode);
+      }
+      return deadNodes;
+    } else {
+      return dfsInputStream.getLocalDeadNodes();
+    }
+  }
+
+  /**
+   * If deadNodeDetectionEnabled is true, judgement based on whether this
+   * datanode is included or not in DeadNodeDetector. Otherwise judgment based
+   * given DFSInputStream.
+   */
+  public boolean isDeadNode(DFSInputStream dfsInputStream,
+      DatanodeInfo datanodeInfo) {
+    if (isDeadNodeDetectionEnabled()) {
+      boolean isDeadNode =
+          clientContext.getDeadNodeDetector().isDeadNode(datanodeInfo);
+      if (dfsInputStream != null) {
+        isDeadNode = isDeadNode
+            || dfsInputStream.getLocalDeadNodes().contains(datanodeInfo);
+      }
+      return isDeadNode;
+    } else {
+      return dfsInputStream.getLocalDeadNodes().contains(datanodeInfo);
+    }
+  }
+
+  /**
+   * Add given datanode in DeadNodeDetector.
+   */
+  public void addNodeToDeadNodeDetector(DFSInputStream dfsInputStream,
+      DatanodeInfo datanodeInfo) {
+    if (!isDeadNodeDetectionEnabled()) {
+      LOG.debug("DeadNode detection is not enabled, skip to add node {}.",
+          datanodeInfo);
+      return;
+    }
+    clientContext.getDeadNodeDetector().addNodeToDetect(dfsInputStream,
+        datanodeInfo);
+  }
+
+  /**
+   * Remove given datanode from DeadNodeDetector.
+   */
+  public void removeNodeFromDeadNodeDetector(DFSInputStream dfsInputStream,
+      DatanodeInfo datanodeInfo) {
+    if (!isDeadNodeDetectionEnabled()) {
+      LOG.debug("DeadNode detection is not enabled, skip to remove node {}.",
+          datanodeInfo);
+      return;
+    }
+    clientContext.getDeadNodeDetector()
+        .removeNodeFromDeadNodeDetector(dfsInputStream, datanodeInfo);
+  }
+
+  /**
+   * Remove datanodes that given block placed on from DeadNodeDetector.
+   */
+  public void removeNodeFromDeadNodeDetector(DFSInputStream dfsInputStream,
+      LocatedBlocks locatedBlocks) {
+    if (!isDeadNodeDetectionEnabled() || locatedBlocks == null) {
+      LOG.debug("DeadNode detection is not enabled or given block {} " +
+          "is null, skip to remove node.", locatedBlocks);
+      return;
+    }
+    for (LocatedBlock locatedBlock : locatedBlocks.getLocatedBlocks()) {
+      for (DatanodeInfo datanodeInfo : locatedBlock.getLocations()) {
+        removeNodeFromDeadNodeDetector(dfsInputStream, datanodeInfo);
+      }
+    }
+  }
+
+  private boolean isDeadNodeDetectionEnabled() {
+    return clientContext.isDeadNodeDetectionEnabled();
   }
 }

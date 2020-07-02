@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.metrics2.source;
 
+import org.apache.hadoop.metrics2.impl.MetricsCollectorImpl;
 import org.apache.hadoop.util.GcTimeMonitor;
 import org.junit.After;
 import org.junit.Assert;
@@ -37,6 +38,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.JvmPauseMonitor;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import static org.apache.hadoop.metrics2.source.JvmMetricsInfo.*;
@@ -65,7 +67,7 @@ public class TestJvmMetrics {
     pauseMonitor = new JvmPauseMonitor();
     pauseMonitor.init(new Configuration());
     pauseMonitor.start();
-    JvmMetrics jvmMetrics = new JvmMetrics("test", "test");
+    JvmMetrics jvmMetrics = new JvmMetrics("test", "test", false);
     jvmMetrics.setPauseMonitor(pauseMonitor);
     MetricsRecordBuilder rb = getMetrics(jvmMetrics);
     MetricsCollector mc = rb.parent();
@@ -91,7 +93,7 @@ public class TestJvmMetrics {
   public void testGcTimeMonitorPresence() {
     gcTimeMonitor = new GcTimeMonitor(60000, 1000, 70, null);
     gcTimeMonitor.start();
-    JvmMetrics jvmMetrics = new JvmMetrics("test", "test");
+    JvmMetrics jvmMetrics = new JvmMetrics("test", "test", false);
     jvmMetrics.setGcTimeMonitor(gcTimeMonitor);
     MetricsRecordBuilder rb = getMetrics(jvmMetrics);
     MetricsCollector mc = rb.parent();
@@ -225,5 +227,90 @@ public class TestJvmMetrics {
         process1Name, jvmMetrics1.processName);
     Assert.assertEquals("unexpected process name of the singleton instance",
         process1Name, jvmMetrics2.processName);
+  }
+
+  /**
+   * Performance test for JvmMetrics#getMetrics, comparing performance of
+   * getting thread usage from ThreadMXBean with that from ThreadGroup.
+   */
+  @Test
+  public void testGetMetricsPerf() {
+    JvmMetrics jvmMetricsUseMXBean = new JvmMetrics("test", "test", true);
+    JvmMetrics jvmMetrics = new JvmMetrics("test", "test", false);
+    MetricsCollectorImpl collector = new MetricsCollectorImpl();
+    // warm up
+    jvmMetrics.getMetrics(collector, true);
+    jvmMetricsUseMXBean.getMetrics(collector, true);
+    // test cases with different numbers of threads
+    int[] numThreadsCases = {100, 200, 500, 1000, 2000, 3000};
+    List<TestThread> threads = new ArrayList();
+    for (int numThreads : numThreadsCases) {
+      updateThreadsAndWait(threads, numThreads);
+      long startNs = System.nanoTime();
+      jvmMetricsUseMXBean.getMetrics(collector, true);
+      long processingNsFromMXBean = System.nanoTime() - startNs;
+      startNs = System.nanoTime();
+      jvmMetrics.getMetrics(collector, true);
+      long processingNsFromGroup = System.nanoTime() - startNs;
+      System.out.println(
+          "#Threads=" + numThreads + ", ThreadMXBean=" + processingNsFromMXBean
+              + " ns, ThreadGroup=" + processingNsFromGroup + " ns, ratio: " + (
+              processingNsFromMXBean / processingNsFromGroup));
+    }
+    // cleanup
+    updateThreadsAndWait(threads, 0);
+  }
+
+  private static void updateThreadsAndWait(List<TestThread> threads,
+      int expectedNumThreads) {
+    // add/remove threads according to expected number
+    int addNum = expectedNumThreads - threads.size();
+    if (addNum > 0) {
+      for (int i = 0; i < addNum; i++) {
+        TestThread testThread = new TestThread();
+        testThread.start();
+        threads.add(testThread);
+      }
+    } else if (addNum < 0) {
+      for (int i = 0; i < Math.abs(addNum); i++) {
+        threads.get(i).exit = true;
+      }
+    } else {
+      return;
+    }
+    // wait for threads to reach the expected number
+    while (true) {
+      Iterator<TestThread> it = threads.iterator();
+      while (it.hasNext()) {
+        if (it.next().exited) {
+          it.remove();
+        }
+      }
+      if (threads.size() == expectedNumThreads) {
+        break;
+      } else {
+        try {
+          Thread.sleep(500);
+        } catch (InterruptedException e) {
+          //ignore
+        }
+      }
+    }
+  }
+
+  static class TestThread extends Thread {
+    private volatile boolean exit = false;
+    private boolean exited = false;
+    @Override
+    public void run() {
+      while (!exit) {
+        try {
+          Thread.sleep(1000);
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        }
+      }
+      exited = true;
+    }
   }
 }

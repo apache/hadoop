@@ -95,7 +95,7 @@ public class RandomTreeWalk extends TreeWalk {
     int nChildren = r.nextInt(children);
     ArrayList<TreePath> ret = new ArrayList<TreePath>();
     for (int i = 0; i < nChildren; ++i) {
-      ret.add(new TreePath(genFileStatus(p, r), p.getId(), walk, null));
+      ret.add(new TreePath(genFileStatus(p, r), p.getId(), walk));
     }
     return ret;
   }
@@ -163,12 +163,12 @@ public class RandomTreeWalk extends TreeWalk {
     RandomTreeIterator(long seed) {
       Random r = new Random(seed);
       FileStatus iroot = genFileStatus(null, r);
-      getPendingQueue().addFirst(new TreePath(iroot, -1, this, null));
+      getPendingQueue().addFirst(new TreePath(iroot, -1, this));
     }
 
     RandomTreeIterator(TreePath p) {
       getPendingQueue().addFirst(
-          new TreePath(p.getFileStatus(), p.getParentId(), this, null));
+          new TreePath(p.getFileStatus(), p.getParentId(), this));
     }
 
     @Override

@@ -28,6 +28,7 @@ import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.sun.jersey.test.framework.WebAppDescriptor;
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -46,7 +47,6 @@ import org.apache.hadoop.yarn.logaggregation.ContainerLogFileInfo;
 import org.apache.hadoop.yarn.logaggregation.TestContainerLogsUtils;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
-import org.apache.hadoop.yarn.server.nodemanager.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.ResourceView;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationImpl;
@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.ResourcePluginManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.AssignedGpuDevice;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuDevice;
+import org.apache.hadoop.yarn.server.nodemanager.health.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.WebServer.NMWebApp;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NMResourceInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.GpuDeviceInformation;
@@ -93,6 +94,7 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -118,6 +120,7 @@ public class TestNMWebServices extends JerseyTestBase {
   private static LocalDirsHandlerService dirsHandler;
   private static WebApp nmWebApp;
   private static final String LOGSERVICEWSADDR = "test:1234";
+  private static final String LOG_MESSAGE = "log message\n";
 
   private static final File testRootDir = new File("target",
       TestNMWebServices.class.getSimpleName());
@@ -139,8 +142,8 @@ public class TestNMWebServices extends JerseyTestBase {
       conf.set(YarnConfiguration.YARN_LOG_SERVER_WEBSERVICE_URL,
           LOGSERVICEWSADDR);
       dirsHandler = new LocalDirsHandlerService();
-      NodeHealthCheckerService healthChecker = new NodeHealthCheckerService(
-          NodeManager.getNodeHealthScriptRunner(conf), dirsHandler);
+      NodeHealthCheckerService healthChecker =
+          new NodeHealthCheckerService(dirsHandler);
       healthChecker.init(conf);
       aclsManager = new ApplicationACLsManager(conf);
       nmContext = new NodeManager.NMContext(null, null, dirsHandler,
@@ -441,20 +444,26 @@ public class TestNMWebServices extends JerseyTestBase {
 
   @Test (timeout = 5000)
   public void testContainerLogsWithNewAPI() throws Exception {
-    final ContainerId containerId = BuilderUtils.newContainerId(0, 0, 0, 0);
-    WebResource r = resource();
-    r = r.path("ws").path("v1").path("node").path("containers")
-        .path(containerId.toString()).path("logs");
-    testContainerLogs(r, containerId);
+    ContainerId containerId0 = BuilderUtils.newContainerId(0, 0, 0, 0);
+    WebResource r0 = resource();
+    r0 = r0.path("ws").path("v1").path("node").path("containers")
+        .path(containerId0.toString()).path("logs");
+    testContainerLogs(r0, containerId0, LOG_MESSAGE);
+
+    ContainerId containerId1 = BuilderUtils.newContainerId(0, 0, 0, 1);
+    WebResource r1 = resource();
+    r1 = r1.path("ws").path("v1").path("node").path("containers")
+            .path(containerId1.toString()).path("logs");
+    testContainerLogs(r1, containerId1, "");
   }
 
   @Test (timeout = 5000)
   public void testContainerLogsWithOldAPI() throws Exception {
-    final ContainerId containerId = BuilderUtils.newContainerId(1, 1, 0, 1);
+    final ContainerId containerId2 = BuilderUtils.newContainerId(1, 1, 0, 2);
     WebResource r = resource();
     r = r.path("ws").path("v1").path("node").path("containerlogs")
-        .path(containerId.toString());
-    testContainerLogs(r, containerId);
+        .path(containerId2.toString());
+    testContainerLogs(r, containerId2, LOG_MESSAGE);
   }
 
   @Test (timeout = 10000)
@@ -583,15 +592,14 @@ public class TestNMWebServices extends JerseyTestBase {
         2, json.getJSONArray("assignedGpuDevices").length());
   }
 
-  private void testContainerLogs(WebResource r, ContainerId containerId)
-      throws Exception {
+  private void testContainerLogs(WebResource r, ContainerId containerId,
+      String logMessage) throws Exception {
     final String containerIdStr = containerId.toString();
     final ApplicationAttemptId appAttemptId = containerId
         .getApplicationAttemptId();
     final ApplicationId appId = appAttemptId.getApplicationId();
     final String appIdStr = appId.toString();
     final String filename = "logfile1";
-    final String logMessage = "log message\n";
     nmContext.getApplications().put(appId, new ApplicationImpl(null, "user",
         appId, null, nmContext));
     
@@ -607,6 +615,9 @@ public class TestNMWebServices extends JerseyTestBase {
     
     File logFile = new File(path.toUri().getPath());
     logFile.deleteOnExit();
+    if (logFile.getParentFile().exists()) {
+      FileUtils.deleteDirectory(logFile.getParentFile());
+    }
     assertTrue("Failed to create log dir", logFile.getParentFile().mkdirs());
     PrintWriter pw = new PrintWriter(logFile);
     pw.print(logMessage);
@@ -628,8 +639,10 @@ public class TestNMWebServices extends JerseyTestBase {
         .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
     responseText = response.getEntity(String.class);
     responseLogMessage = getLogContext(responseText);
-    assertEquals(5, responseLogMessage.getBytes().length);
-    assertEquals(new String(logMessage.getBytes(), 0, 5), responseLogMessage);
+    int truncatedLength = Math.min(5, logMessage.getBytes().length);
+    assertEquals(truncatedLength, responseLogMessage.getBytes().length);
+    assertEquals(new String(logMessage.getBytes(), 0, truncatedLength),
+        responseLogMessage);
     assertTrue(fullTextSize >= responseLogMessage.getBytes().length);
 
     // specify the bytes which is larger than the actual file size,
@@ -649,9 +662,10 @@ public class TestNMWebServices extends JerseyTestBase {
         .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
     responseText = response.getEntity(String.class);
     responseLogMessage = getLogContext(responseText);
-    assertEquals(5, responseLogMessage.getBytes().length);
+    assertEquals(truncatedLength, responseLogMessage.getBytes().length);
     assertEquals(new String(logMessage.getBytes(),
-        logMessage.getBytes().length - 5, 5), responseLogMessage);
+        logMessage.getBytes().length - truncatedLength, truncatedLength),
+        responseLogMessage);
     assertTrue(fullTextSize >= responseLogMessage.getBytes().length);
 
     response = r.path(filename)
@@ -715,8 +729,9 @@ public class TestNMWebServices extends JerseyTestBase {
       String aggregatedLogMessage = "This is aggregated ;og.";
       TestContainerLogsUtils.createContainerLogFileInRemoteFS(
           nmContext.getConf(), FileSystem.get(nmContext.getConf()),
-          tempLogDir.getAbsolutePath(), containerId, nmContext.getNodeId(),
-          aggregatedLogFile, "user", aggregatedLogMessage, true);
+          tempLogDir.getAbsolutePath(), appId,
+          Collections.singletonMap(containerId, aggregatedLogMessage),
+          nmContext.getNodeId(), aggregatedLogFile, "user", true);
       r1 = resource();
       response = r1.path("ws").path("v1").path("node")
           .path("containers").path(containerIdStr)
@@ -744,8 +759,9 @@ public class TestNMWebServices extends JerseyTestBase {
       // Test whether we could get aggregated log as well
       TestContainerLogsUtils.createContainerLogFileInRemoteFS(
           nmContext.getConf(), FileSystem.get(nmContext.getConf()),
-          tempLogDir.getAbsolutePath(), containerId, nmContext.getNodeId(),
-          filename, "user", aggregatedLogMessage, true);
+          tempLogDir.getAbsolutePath(), appId,
+          Collections.singletonMap(containerId, aggregatedLogMessage),
+          nmContext.getNodeId(), filename, "user", true);
       response = r.path(filename)
           .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
       responseText = response.getEntity(String.class);

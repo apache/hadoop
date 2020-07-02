@@ -232,6 +232,9 @@ within that file. A best effort is made to faithfully replay the audit log event
 originally occurred (optionally, this can be adjusted by specifying `auditreplay.rate-factor` which is a multiplicative
 factor towards the rate of replay, e.g. use 2.0 to replay the events at twice the original speed).
 
+The AuditReplayMapper will output the benchmark results to a file `part-r-00000` in the output directory in CSV format.
+Each line is in the format `user,type,operation,numops,cumulativelatency`, e.g. `hdfs,WRITE,MKDIRS,2,150`.
+
 ### Integrated Workload Launch
 
 To have the infrastructure application client launch the workload automatically, parameters for the workload job

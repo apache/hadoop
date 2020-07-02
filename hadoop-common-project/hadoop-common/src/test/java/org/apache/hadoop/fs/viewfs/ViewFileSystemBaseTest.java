@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
+import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
@@ -32,6 +34,8 @@ import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
+import org.apache.hadoop.fs.ContentSummary;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
@@ -57,6 +61,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assume;
+import org.junit.Rule;
+import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static org.apache.hadoop.fs.FileSystemTestHelper.*;
@@ -69,8 +75,8 @@ import org.junit.Test;
 
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.*;
-
 
 /**
  * <p>
@@ -108,6 +114,9 @@ abstract public class ViewFileSystemBaseTest {
   protected FileSystemTestHelper createFileSystemHelper() {
     return new FileSystemTestHelper();
   }
+
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Before
   public void setUp() throws Exception {
@@ -477,10 +486,10 @@ abstract public class ViewFileSystemBaseTest {
     Assert.assertEquals(targetBL.length, viewBL.length);
     int i = 0;
     for (BlockLocation vbl : viewBL) {
-      Assert.assertEquals(vbl.toString(), targetBL[i].toString());
-      Assert.assertEquals(targetBL[i].getOffset(), vbl.getOffset());
-      Assert.assertEquals(targetBL[i].getLength(), vbl.getLength());
-      i++;     
+      assertThat(vbl.toString(), equalTo(targetBL[i].toString()));
+      assertThat(vbl.getOffset(), equalTo(targetBL[i].getOffset()));
+      assertThat(vbl.getLength(), equalTo(targetBL[i].getLength()));
+      i++;
     } 
   }
 
@@ -1279,7 +1288,8 @@ abstract public class ViewFileSystemBaseTest {
 
   @Test
   public void testViewFileSystemInnerCache() throws Exception {
-    ViewFileSystem.InnerCache cache = new ViewFileSystem.InnerCache();
+    ViewFileSystem.InnerCache cache =
+        new ViewFileSystem.InnerCache(new FsGetter());
     FileSystem fs = cache.get(fsTarget.getUri(), conf);
 
     // InnerCache caches filesystem.
@@ -1367,5 +1377,57 @@ abstract public class ViewFileSystemBaseTest {
     viewFs.deleteOnExit(testDir);
     viewFs.close();
     assertFalse(fsTarget.exists(realTestPath));
+  }
+
+  @Test
+  public void testGetContentSummary() throws IOException {
+    ContentSummary summaryBefore =
+        fsView.getContentSummary(new Path("/internalDir"));
+    String expected = "GET CONTENT SUMMARY";
+    Path filePath =
+        new Path("/internalDir/internalDir2/linkToDir3", "foo");
+
+    try (FSDataOutputStream outputStream = fsView.create(filePath)) {
+      outputStream.write(expected.getBytes());
+    }
+
+    Path newDirPath = new Path("/internalDir/linkToDir2", "bar");
+    fsView.mkdirs(newDirPath);
+
+    ContentSummary summaryAfter =
+        fsView.getContentSummary(new Path("/internalDir"));
+    assertEquals("The file count didn't match",
+        summaryBefore.getFileCount() + 1,
+        summaryAfter.getFileCount());
+    assertEquals("The size didn't match",
+        summaryBefore.getLength() + expected.length(),
+        summaryAfter.getLength());
+    assertEquals("The directory count didn't match",
+        summaryBefore.getDirectoryCount() + 1,
+        summaryAfter.getDirectoryCount());
+  }
+
+  @Test
+  public void testGetContentSummaryWithFileInLocalFS() throws Exception {
+    ContentSummary summaryBefore =
+        fsView.getContentSummary(new Path("/internalDir"));
+    String expected = "GET CONTENT SUMMARY";
+    File localFile = temporaryFolder.newFile("localFile");
+    try (FileOutputStream fos = new FileOutputStream(localFile)) {
+      fos.write(expected.getBytes());
+    }
+    ConfigUtil.addLink(conf,
+        "/internalDir/internalDir2/linkToLocalFile", localFile.toURI());
+
+    try (FileSystem fs = FileSystem.get(FsConstants.VIEWFS_URI, conf)) {
+      ContentSummary summaryAfter =
+          fs.getContentSummary(new Path("/internalDir"));
+      assertEquals("The file count didn't match",
+          summaryBefore.getFileCount() + 1,
+          summaryAfter.getFileCount());
+      assertEquals("The directory count didn't match",
+          summaryBefore.getLength() + expected.length(),
+          summaryAfter.getLength());
+    }
   }
 }

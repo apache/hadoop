@@ -115,18 +115,18 @@ public final class HadoopExecutors {
     try {
       executorService.shutdown();
 
-      logger.info(
+      logger.debug(
           "Gracefully shutting down executor service. Waiting max {} {}",
           timeout, unit);
       if (!executorService.awaitTermination(timeout, unit)) {
-        logger.info(
+        logger.debug(
             "Executor service has not shutdown yet. Forcing. "
                 + "Will wait up to an additional {} {} for shutdown",
             timeout, unit);
         executorService.shutdownNow();
       }
       if (executorService.awaitTermination(timeout, unit)) {
-        logger.info("Succesfully shutdown executor service");
+        logger.debug("Succesfully shutdown executor service");
       } else {
         logger.error("Unable to shutdown executor service after timeout {} {}",
             (2 * timeout), unit);

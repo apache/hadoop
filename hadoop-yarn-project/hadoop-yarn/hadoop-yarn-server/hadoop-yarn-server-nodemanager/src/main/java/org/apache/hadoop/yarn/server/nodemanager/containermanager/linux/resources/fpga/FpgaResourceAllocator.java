@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resourc
 
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +29,8 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerException;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga.FpgaDevice;
+
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -142,124 +143,6 @@ public class FpgaResourceAllocator {
         sb.append(device + "\n");
       }
       return sb.toString();
-    }
-  }
-
-  /** A class that represents an FPGA card. */
-  public static class FpgaDevice implements Serializable {
-    private static final long serialVersionUID = -4678487141824092751L;
-    private final String type;
-    private final int major;
-    private final int minor;
-
-    // the alias device name. Intel use acl number acl0 to acl31
-    private final String aliasDevName;
-
-    // IP file identifier. matrix multiplication for instance (mutable)
-    private String IPID;
-    // SHA-256 hash of the uploaded aocx file (mutable)
-    private String aocxHash;
-
-    // cached hash value
-    private Integer hashCode;
-
-    public String getType() {
-      return type;
-    }
-
-    public int getMajor() {
-      return major;
-    }
-
-    public int getMinor() {
-      return minor;
-    }
-
-    public String getIPID() {
-      return IPID;
-    }
-
-    public String getAocxHash() {
-      return aocxHash;
-    }
-
-    public void setAocxHash(String hash) {
-      this.aocxHash = hash;
-    }
-
-    public void setIPID(String IPID) {
-      this.IPID = IPID;
-    }
-
-    public String getAliasDevName() {
-      return aliasDevName;
-    }
-
-    public FpgaDevice(String type, int major, int minor, String aliasDevName) {
-      this.type = Preconditions.checkNotNull(type, "type must not be null");
-      this.major = major;
-      this.minor = minor;
-      this.aliasDevName = Preconditions.checkNotNull(aliasDevName,
-          "aliasDevName must not be null");
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-      if (this == obj) {
-        return true;
-      }
-      if (obj == null) {
-        return false;
-      }
-      if (getClass() != obj.getClass()) {
-        return false;
-      }
-      FpgaDevice other = (FpgaDevice) obj;
-      if (aliasDevName == null) {
-        if (other.aliasDevName != null) {
-          return false;
-        }
-      } else if (!aliasDevName.equals(other.aliasDevName)) {
-        return false;
-      }
-      if (major != other.major) {
-        return false;
-      }
-      if (minor != other.minor) {
-        return false;
-      }
-      if (type == null) {
-        if (other.type != null) {
-          return false;
-        }
-      } else if (!type.equals(other.type)) {
-        return false;
-      }
-      return true;
-    }
-
-    @Override
-    public int hashCode() {
-      if (hashCode == null) {
-        final int prime = 31;
-        int result = 1;
-
-        result = prime * result + major;
-        result = prime * result + type.hashCode();
-        result = prime * result + minor;
-        result = prime * result + aliasDevName.hashCode();
-
-        hashCode = result;
-      }
-
-      return hashCode;
-    }
-
-    @Override
-    public String toString() {
-      return "FPGA Device:(Type: " + this.type + ", Major: " +
-          this.major + ", Minor: " + this.minor + ", IPID: " +
-          this.IPID + ", Hash: " + this.aocxHash + ")";
     }
   }
 

@@ -20,9 +20,12 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugi
 
 import java.util.List;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
+import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandler;
@@ -59,11 +62,23 @@ public class GpuResourcePlugin implements ResourcePlugin {
 
   @Override
   public void initialize(Context context) throws YarnException {
+    validateExecutorConfig(context.getConf());
     this.gpuDiscoverer.initialize(context.getConf(),
         new NvidiaBinaryHelper());
     this.dockerCommandPlugin =
         GpuDockerCommandPluginFactory.createGpuDockerCommandPlugin(
             context.getConf());
+  }
+
+  private void validateExecutorConfig(Configuration conf) {
+    Class<? extends ContainerExecutor> executorClass = conf.getClass(
+        YarnConfiguration.NM_CONTAINER_EXECUTOR, DefaultContainerExecutor.class,
+        ContainerExecutor.class);
+
+    if (executorClass.equals(DefaultContainerExecutor.class)) {
+      LOG.warn("Using GPU plugin with disabled LinuxContainerExecutor" +
+          " is considered to be unsafe.");
+    }
   }
 
   @Override
@@ -94,27 +109,29 @@ public class GpuResourcePlugin implements ResourcePlugin {
 
   @Override
   public synchronized NMResourceInfo getNMResourceInfo() throws YarnException {
-    GpuDeviceInformation gpuDeviceInformation;
+    final GpuDeviceInformation gpuDeviceInformation;
 
-    //At this point the gpu plugin is already enabled
-    checkGpuResourceHandler();
+    if (gpuDiscoverer.isAutoDiscoveryEnabled()) {
+      //At this point the gpu plugin is already enabled
+      checkGpuResourceHandler();
 
-    checkErrorCount();
-    try{
-      gpuDeviceInformation = gpuDiscoverer.getGpuDeviceInformation();
-      numOfErrorExecutionSinceLastSucceed = 0;
-    } catch (YarnException e) {
-      LOG.error(e.getMessage(), e);
-      numOfErrorExecutionSinceLastSucceed++;
-      throw e;
+      checkErrorCount();
+      try{
+        gpuDeviceInformation = gpuDiscoverer.getGpuDeviceInformation();
+        numOfErrorExecutionSinceLastSucceed = 0;
+      } catch (YarnException e) {
+        LOG.error(e.getMessage(), e);
+        numOfErrorExecutionSinceLastSucceed++;
+        throw e;
+      }
+    } else {
+      gpuDeviceInformation = null;
     }
-
     GpuResourceAllocator gpuResourceAllocator =
         gpuResourceHandler.getGpuAllocator();
     List<GpuDevice> totalGpus = gpuResourceAllocator.getAllowedGpus();
     List<AssignedGpuDevice> assignedGpuDevices =
         gpuResourceAllocator.getAssignedGpus();
-
     return new NMGpuResourceInfo(gpuDeviceInformation, totalGpus,
         assignedGpuDevices);
   }
