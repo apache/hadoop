@@ -112,8 +112,8 @@ public final class IOStatisticsBinding {
    * @param entry entry to evaluate
    * @return formatted string
    */
-  public static String entrytoString(
-      final Map.Entry<String, Long> entry) {
+  public static <E> String entrytoString(
+      final Map.Entry<String, E> entry) {
     return entrytoString(entry.getKey(), entry.getValue());
   }
 
@@ -124,8 +124,8 @@ public final class IOStatisticsBinding {
    * @param value stat value
    * @return formatted string
    */
-  public static String entrytoString(
-      final String name, final Long value) {
+  public static <E> String entrytoString(
+      final String name, final E value) {
     return String.format(
         ENTRY_PATTERN,
         name,

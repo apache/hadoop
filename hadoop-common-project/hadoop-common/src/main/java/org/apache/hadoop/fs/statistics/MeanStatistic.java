@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.statistics;
 import java.io.Serializable;
 import java.util.Objects;
 
-import static com.google.common.base.Preconditions.checkArgument;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
  * A mean statistic represented as the sum and the sample count;
@@ -30,8 +30,15 @@ import static com.google.common.base.Preconditions.checkArgument;
  * It can be used to accrue values so as to dynamically update
  * the mean. If so, know that there is no synchronization
  * on the methods.
- * <p></p>*
+ * <p></p>
  * If a statistic has 0 samples then it is considered to be empty.
+ * <p></p>
+ * All 'empty' statistics are equivalent, independent of the sum value.
+ * <p></p>
+ * For non-empty statistics, sum and sample values must match
+ * for equality.
+ * <p></p>
+ * It is serializable and annotated for correct serializations with jackson2.
  */
 public final class MeanStatistic implements Serializable, Cloneable {
 
@@ -49,14 +56,14 @@ public final class MeanStatistic implements Serializable, Cloneable {
   private long samples;
 
   /**
-   * Constructor.
-   * If the sample count is 0, the sum is set to 0.
-   * @param sum mean value
+   * Constructor, with some resilience against invalid sample counts.
+   * If the sample count is 0 or less, the sum is set to 0 and
+   * the sample count to 0.
+   * @param sum sum value
    * @param samples sample count.
    */
   public MeanStatistic(final long sum, final long samples) {
-    if (samples != 0) {
-      checkArgument(samples > 0);
+    if (samples > 0) {
       this.sum = sum;
       this.samples = samples;
     }
@@ -96,6 +103,7 @@ public final class MeanStatistic implements Serializable, Cloneable {
    * Is a statistic empty?
    * @return true if the sample count is 0
    */
+  @JsonIgnore
   public boolean isEmpty() {
     return samples == 0;
   }
@@ -105,9 +113,20 @@ public final class MeanStatistic implements Serializable, Cloneable {
     this.sum = sum;
   }
 
+  /**
+   * Set the sample count.
+   * If this is less than zero, it is set to zero.
+   * This avoids an ill-formed JSON entry to
+   * break deserialization, or get an invalid sample count
+   * into an entry.
+   * @param samples sample count.
+   */
   public void setSamples(final long samples) {
-    checkArgument(samples >= 0);
-    this.samples = samples;
+    if (samples < 0) {
+      this.samples = 0;
+    } else {
+      this.samples = samples;
+    }
   }
 
   /**
@@ -117,24 +136,25 @@ public final class MeanStatistic implements Serializable, Cloneable {
   public double mean() {
     return samples > 0
         ? ((double)sum)/ samples
-        : 0.0;
+        : 0.0d;
   }
 
   /**
    * Add another MeanStatistic.
    * @param other other value
    */
-  public void add(final MeanStatistic other) {
+  public MeanStatistic add(final MeanStatistic other) {
     if (other.isEmpty()) {
-      return;
+      return this;
     }
     if (isEmpty()) {
       samples = other.samples;
       sum = other.sum;
-      return;
+      return this;
     }
     samples += other.samples;
     sum += other.sum;
+    return this;
   }
 
   /**
@@ -164,6 +184,10 @@ public final class MeanStatistic implements Serializable, Cloneable {
     if (this == o) { return true; }
     if (o == null || getClass() != o.getClass()) { return false; }
     MeanStatistic that = (MeanStatistic) o;
+    if (isEmpty()) {
+      // if we are empty, then so must the other.
+      return that.isEmpty();
+    }
     return sum == that.sum &&
         samples == that.samples;
   }

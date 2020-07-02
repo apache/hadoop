@@ -31,8 +31,9 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.dynamicIOStatistics;
 
 /**
- * Implement counter statistics as a map of AtomicLong counters
- * created in the constructor.
+ * Implement statistics as a map of AtomicLong counters/gauges
+ * etc. created in the constructor.
+ * The statistics map is a map of initially empty statistics.
  */
 final class CounterIOStatisticsImpl extends WrappedIOStatistics
     implements CounterIOStatistics {
@@ -181,7 +182,6 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
     }
   }
 
-
   /**
    * Reset all statistics.
    * Unsynchronized.
@@ -211,15 +211,13 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
     });
     meanStatisticMap.entrySet().forEach(e -> {
       String key = e.getKey();
-      MeanStatistic statisticValue = source.meanStatistics().get(key);
-      checkNotNull(statisticValue,
-          "No statistic %s", key);
-      e.getValue().set(statisticValue);
+      MeanStatistic statisticValue = lookup(source.meanStatistics(), key);
+      e.getValue().set(statisticValue.copy());
     });
   }
 
   @Override
-  public void aggregateAllStatistics(final IOStatistics source) {
+  public void aggregate(final IOStatistics source) {
     // counters: addition
     counterMap.entrySet().forEach(e -> {
       e.getValue().addAndGet(lookup(source.counters(), e.getKey()));
@@ -243,14 +241,13 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
       long sourceValue = lookup(source.maximums(), e.getKey());
       dest.set(Math.max(dest.get(), sourceValue));
     });
-    // the most complex, as a new mean is calculated
+    // the most complex, as the reference itself is resolved and then updated.
     meanStatisticMap.entrySet().forEach(e -> {
       AtomicReference<MeanStatistic> dest = e.getValue();
       MeanStatistic current = dest.get();
       MeanStatistic sourceValue = lookup(source.meanStatistics(), e.getKey());
-      dest.set(current.add(sourceValue));
+      current.add(sourceValue);
     });
-
 
   }
 
@@ -288,8 +285,8 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
   @Override
   public AtomicLong getCounterReference(String key) {
       return lookup(counterMap, key);
-  } 
-    
+  }
+
   /**
    * Get a reference to the atomic instance providing the
    * value for a specific maximum. This is useful if
@@ -302,7 +299,7 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
   public AtomicLong getMaximumReference(String key) {
       return lookup(maximumMap, key);
   } 
-    
+
   /**
    * Get a reference to the atomic instance providing the
    * value for a specific minimum. This is useful if
@@ -314,8 +311,8 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
   @Override
   public AtomicLong getMinimumReference(String key) {
       return lookup(minimumMap, key);
-  } 
-    
+  }
+
   /**
    * Get a reference to the atomic instance providing the
    * value for a specific gauge. This is useful if
@@ -341,7 +338,5 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
   public AtomicReference<MeanStatistic> getMeanStatisticReference(String key) {
       return lookup(meanStatisticMap, key);
   }
-  
-  
 
 }

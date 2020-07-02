@@ -26,7 +26,7 @@ import org.apache.hadoop.fs.statistics.MeanStatistic;
 
 /**
  * Interface an IOStatistics source where all the counters,
- * gauges, mins/maximums
+ * gauges, minimums/maximums
  * are implemented as a static set of counters with atomic
  * set/increment operations.
  * the means are implemented as a map to AtomicReferences.
@@ -80,12 +80,8 @@ public interface CounterIOStatistics extends IOStatistics {
 
   /**
    * Aggregate all statistics from a source into this instance.
-   * counters are added, min/max used to aggregate minimums and maximums
-   * respectively, and means by recalculation.
-   * Gauges are also added, though their meaning may be invalid.
-   * @param source source
    */
-  void aggregateAllStatistics(IOStatistics source);
+  void aggregate(IOStatistics source);
 
   /**
    * Subtract the counter values from a statistics source.

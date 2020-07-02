@@ -23,10 +23,9 @@ import org.junit.Test;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticIsTracked;
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticIsUnknown;
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticIsUntracked;
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertCounterStatisticIsTracked;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertCounterStatisticIsUntracked;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyCounterStatisticValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.iostatisticsToString;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.emptyStatistics;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -41,8 +40,7 @@ public class TestEmptyIOStatistics extends AbstractHadoopTestBase {
 
   @Test
   public void testUnknownStatistic() throws Throwable {
-    assertStatisticIsUnknown(empty, "anything");
-    assertStatisticIsUntracked(empty, "anything");
+    assertCounterStatisticIsUntracked(empty, "anything");
   }
 
   @Test
@@ -50,7 +48,7 @@ public class TestEmptyIOStatistics extends AbstractHadoopTestBase {
     // expect an exception to be raised when an assertion
     // is made that an unknown statistic is tracked,.
     assertThatThrownBy(() ->
-        assertStatisticIsTracked(empty, "anything"))
+        assertCounterStatisticIsTracked(empty, "anything"))
         .isInstanceOf(AssertionError.class);
   }
 
@@ -59,7 +57,7 @@ public class TestEmptyIOStatistics extends AbstractHadoopTestBase {
     // expect an exception to be raised when
     // an assertion is made about the value of an unknown statistics
     assertThatThrownBy(() ->
-        verifyStatisticCounterValue(empty, "anything", 0))
+        verifyCounterStatisticValue(empty, "anything", 0))
         .isInstanceOf(AssertionError.class);
   }
 

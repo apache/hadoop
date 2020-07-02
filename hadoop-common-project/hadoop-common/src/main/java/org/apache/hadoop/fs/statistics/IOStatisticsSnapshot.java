@@ -22,20 +22,26 @@ import java.io.Serializable;
 import java.util.Map;
 import java.util.TreeMap;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
+import org.apache.hadoop.util.JsonSerialization;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.iostatisticsToString;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.aggregateMaps;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.snapshotMap;
 
 /**
  * Snapshot of statistics from a different source.
- * <p>
+ * <p></p>
  * It is serializable so that frameworks which can use java serialization
  * to propagate data (Spark, Flink...) can send the statistics
  * back.
+ * <p></p>
+ * It is annotated for correct serializations with jackson2.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -44,14 +50,19 @@ public final class IOStatisticsSnapshot
 
   private static final long serialVersionUID = -1762522703841538084L;
 
+  @JsonProperty
   private TreeMap<String, Long> counters;
 
+  @JsonProperty
   private TreeMap<String, Long> gauges;
 
+  @JsonProperty
   private TreeMap<String, Long> minimums;
 
+  @JsonProperty
   private TreeMap<String, Long> maximums;
 
+  @JsonProperty
   private TreeMap<String, MeanStatistic> meanStatistics;
 
   /**
@@ -128,6 +139,19 @@ public final class IOStatisticsSnapshot
   @Override
   public Map<String, MeanStatistic> meanStatistics() {
     return meanStatistics;
+  }
+
+  @Override
+  public String toString() {
+    return iostatisticsToString(this);
+  }
+
+  /**
+   * Get a JSON serializer for this class.
+   * @return a serializer.
+   */
+  public static JsonSerialization<IOStatisticsSnapshot> serializer() {
+    return new JsonSerialization<>(IOStatisticsSnapshot.class, false, true);
   }
 
 }

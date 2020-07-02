@@ -34,7 +34,7 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.extractStatistics;
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyCounterStatisticValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringify;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_BYTES;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_WRITE_BYTES;
@@ -94,9 +94,9 @@ public abstract class AbstractContractStreamIOStatisticsTest
     try (FSDataOutputStream out = fs.create(path, true)) {
       IOStatistics statistics = extractStatistics(out);
       // before a write, no bytes
-      verifyStatisticCounterValue(statistics, STREAM_WRITE_BYTES, 0);
+      verifyCounterStatisticValue(statistics, STREAM_WRITE_BYTES, 0);
       out.write('0');
-      verifyStatisticCounterValue(statistics, STREAM_WRITE_BYTES,
+      verifyCounterStatisticValue(statistics, STREAM_WRITE_BYTES,
           writesInBlocks ? 0 : 1);
       // close the stream
       out.close();
@@ -105,7 +105,7 @@ public abstract class AbstractContractStreamIOStatisticsTest
       statistics = extractStatistics(out);
       final String strVal = statistics.toString();
       LOG.info("Statistics = {}", strVal);
-      verifyStatisticCounterValue(statistics, STREAM_WRITE_BYTES, 1);
+      verifyCounterStatisticValue(statistics, STREAM_WRITE_BYTES, 1);
     } finally {
       fs.delete(path, false);
     }
@@ -129,11 +129,11 @@ public abstract class AbstractContractStreamIOStatisticsTest
       out.flush();
       LOG.info("stats {}", demandStatsString);
       IOStatistics statistics = extractStatistics(out);
-      verifyStatisticCounterValue(statistics, STREAM_WRITE_BYTES,
+      verifyCounterStatisticValue(statistics, STREAM_WRITE_BYTES,
           writesInBlocks ? 0 : len);
       out.write(bytes);
       out.flush();
-      verifyStatisticCounterValue(statistics, STREAM_WRITE_BYTES,
+      verifyCounterStatisticValue(statistics, STREAM_WRITE_BYTES,
           writesInBlocks ? 0 : len * 2);
       // close the stream
       out.close();
@@ -141,7 +141,7 @@ public abstract class AbstractContractStreamIOStatisticsTest
       // statistics are still valid after the close
       // always call the output stream to check that behavior
       statistics = extractStatistics(out);
-      verifyStatisticCounterValue(statistics, STREAM_WRITE_BYTES, len * 2);
+      verifyCounterStatisticValue(statistics, STREAM_WRITE_BYTES, len * 2);
       // the to string value must contain the same counterHiCable you mean
       Assertions.assertThat(demandStatsString.toString())
           .contains(Long.toString(len * 2));
@@ -165,7 +165,7 @@ public abstract class AbstractContractStreamIOStatisticsTest
       Assertions.assertThat(keys)
           .describedAs("Statistics supported by the stream %s", in)
           .contains(STREAM_READ_BYTES);
-      verifyStatisticCounterValue(statistics, STREAM_READ_BYTES, 0);
+      verifyCounterStatisticValue(statistics, STREAM_READ_BYTES, 0);
     } finally {
       fs.delete(path, false);
     }
@@ -183,7 +183,7 @@ public abstract class AbstractContractStreamIOStatisticsTest
     try (FSDataInputStream in = fs.open(path)) {
       long current = 0;
       IOStatistics statistics = extractStatistics(in);
-      verifyStatisticCounterValue(statistics, STREAM_READ_BYTES, 0);
+      verifyCounterStatisticValue(statistics, STREAM_READ_BYTES, 0);
       Assertions.assertThat(in.read()).isEqualTo('a');
       int bufferSize = readBufferSize();
       // either a single byte was read or a whole block
@@ -216,12 +216,12 @@ public abstract class AbstractContractStreamIOStatisticsTest
         Assertions.assertThat(in.read(buf128))
             .describedAs("Read overlapping EOF")
             .isEqualTo(sublen);
-        current = verifyStatisticCounterValue(statistics, STREAM_READ_BYTES,
+        current = verifyCounterStatisticValue(statistics, STREAM_READ_BYTES,
             current + sublen);
         Assertions.assertThat(in.read(pos, buf128, 0, bufferLen))
             .describedAs("Read(buffer) overlapping EOF")
             .isEqualTo(sublen);
-        verifyStatisticCounterValue(statistics, STREAM_READ_BYTES,
+        verifyCounterStatisticValue(statistics, STREAM_READ_BYTES,
             current + sublen);
       }
     } finally {
@@ -248,7 +248,7 @@ public abstract class AbstractContractStreamIOStatisticsTest
       // plus the current buffer, multiplied by that buffer size
       expected = bufferSize * (1 + (current / bufferSize));
     }
-    verifyStatisticCounterValue(statistics, STREAM_READ_BYTES, expected);
+    verifyCounterStatisticValue(statistics, STREAM_READ_BYTES, expected);
     return finalPos;
   }
 

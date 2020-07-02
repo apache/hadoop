@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -32,68 +33,225 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Assertions and any other support for IOStatistics testing.
+ * <p></p>
  * If used downstream: know it is unstable.
- * There's some oddness here related to AssertJ's handling of iterables;
- * we need to explicitly cast it to call methods on the interface
- * other than iterator().
  */
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public final class IOStatisticAssertions {
 
+  private static final String COUNTER = "Counter";
+  private static final String GAUGE = "Gauge";
+  private static final String MINIMUM = "Minimum";
+  private static final String MAXIMUM = "Maxiumum";
+  private static final String MEAN = "Mean";
+
   private IOStatisticAssertions() {
   }
 
   /**
-   * Get a required counter statistic
+   * Get a required counter statistic.
    * @param stats statistics source
    * @param key statistic key
    * @return the value
    */
-  public static long extractCounterStatistic(
+  public static long lookupCounterStatistic(
       final IOStatistics stats,
       final String key) {
-    final Long statistic = stats.counters().get(key);
+    return lookupStatistic(COUNTER, key, stats.counters());
+  }
+
+  /**
+   * Get a required gauge statistic.
+   * @param stats statistics source
+   * @param key statistic key
+   * @return the value
+   */
+  public static long lookupGaugeStatistic(
+      final IOStatistics stats,
+      final String key) {
+    return lookupStatistic(GAUGE, key, stats.gauges());
+  }
+
+  /**
+   * Get a required maximum statistic.
+   * @param stats statistics source
+   * @param key statistic key
+   * @return the value
+   */
+  public static long lookupMaximumStatistic(
+      final IOStatistics stats,
+      final String key) {
+    return lookupStatistic(MAXIMUM, key, stats.maximums());
+  }
+
+  /**
+   * Get a required minimum statistic.
+   * @param stats statistics source
+   * @param key statistic key
+   * @return the value
+   */
+  public static long lookupMinimumStatistic(
+      final IOStatistics stats,
+      final String key) {
+    return lookupStatistic(MINIMUM, key, stats.minimums());
+  }
+
+  /**
+   * Get a required mean statistic.
+   * @param stats statistics source
+   * @param key statistic key
+   * @return the value
+   */
+  public static MeanStatistic lookupMeanStatistic(
+      final IOStatistics stats,
+      final String key) {
+    return lookupStatistic(MEAN, key, stats.meanStatistics());
+  }
+
+
+  /**
+   * Get a required counter statistic.
+   * @param <E> type of map element
+   * @param type type for error text
+   * @param key statistic key
+   * @param map map to probe
+   * @return the value
+   */
+  private static <E> E lookupStatistic(
+      final String type,
+      final String key,
+      final Map<String, E> map) {
+    final E statistic = map.get(key);
     assertThat(statistic)
-        .describedAs("Statistics %s and key %s", stats,
-            key)
+        .describedAs("%s named %s", type, key)
         .isNotNull();
     return statistic;
   }
 
   /**
-   * Assert that a given statistic has an expected value.
+   * Assert that a counter has an expected value.
    * @param stats statistics source
    * @param key statistic key
    * @param value expected value.
    * @return the value (which always equals the expected value)
    */
-  public static long verifyStatisticCounterValue(
+  public static long verifyCounterStatisticValue(
       final IOStatistics stats,
       final String key,
       final long value) {
-    final Long statistic = extractCounterStatistic(stats,
-        key);
+    return verifyStatisticValue(COUNTER, key, stats.counters(), value);
+  }
+
+  /**
+   * Assert that a gauge has an expected value.
+   * @param stats statistics source
+   * @param key statistic key
+   * @param value expected value.
+   * @return the value (which always equals the expected value)
+   */
+  public static long verifyGaugeStatisticValue(
+      final IOStatistics stats,
+      final String key,
+      final long value) {
+    return verifyStatisticValue(GAUGE, key, stats.gauges(), value);
+  }
+
+  /**
+   * Assert that a maximum has an expected value.
+   * @param stats statistics source
+   * @param key statistic key
+   * @param value expected value.
+   * @return the value (which always equals the expected value)
+   */
+  public static long verifyMaximumStatisticValue(
+      final IOStatistics stats,
+      final String key,
+      final long value) {
+    return verifyStatisticValue(MAXIMUM, key, stats.maximums(), value);
+  }
+
+  /**
+   * Assert that a minimum has an expected value.
+   * @param stats statistics source
+   * @param key statistic key
+   * @param value expected value.
+   * @return the value (which always equals the expected value)
+   */
+  public static long verifyMinimumStatisticValue(
+      final IOStatistics stats,
+      final String key,
+      final long value) {
+    return verifyStatisticValue(MINIMUM, key, stats.minimums(), value);
+  }
+
+  /**
+   * Assert that a mean has an expected value.
+   * @param stats statistics source
+   * @param key statistic key
+   * @param value expected value.
+   * @return the value (which always equals the expected value)
+   */
+  public static MeanStatistic verifyMeanStatisticValue(
+      final IOStatistics stats,
+      final String key,
+      final MeanStatistic value) {
+    return verifyStatisticValue(MEAN, key, stats.meanStatistics(), value);
+  }
+
+  /**
+   * Assert that a given statistic has an expected value.
+   * @param type type for error text
+   * @param key statistic key
+   * @param map map to look up
+   * @param value expected value.
+   * @param <E> type of map element
+   * @return the value (which always equals the expected value)
+   */
+  private static <E> E verifyStatisticValue(
+      final String type,
+      final String key,
+      final Map<String, E> map,
+      final E value) {
+    final E statistic = lookupStatistic(type, key, map);
     assertThat(statistic)
-        .describedAs("Statistics %s and key %s with expected value %s", stats,
+        .describedAs("%s named %s with expected value %s", type,
             key, value)
         .isEqualTo(value);
     return statistic;
   }
 
   /**
-   * Assert that a given statistic is unknown.
+   * Assert that a given counter statistic is untracked.
    * @param stats statistics source
+   * @param type type for error text
    * @param key statistic key
+   * @param map map to probe
    */
-  public static void assertStatisticIsUnknown(
-      final IOStatistics stats,
-      final String key) {
-    assertThat(stats.counters().get(key))
-        .describedAs("Statistics %s and key %s", stats,
-            key)
-        .isNull();
+  private static void assertUntracked(final IOStatistics stats,
+      final String type,
+      final String key,
+      final Map<String, ?> map) {
+    assertThat(map.containsKey(key))
+        .describedAs("%s %s is tracked in %s", type, key, stats)
+        .isFalse();
+  }
+
+  /**
+   * Assert that a given counter statistic is untracked.
+   * @param stats statistics source
+   * @param type type for error text
+   * @param key statistic key
+   * @param map map to probe
+   */
+  private static void assertTracked(final IOStatistics stats,
+      final String type,
+      final String key,
+      final Map<String, ?> map) {
+    assertThat(map.containsKey(key))
+        .describedAs("%s %s is not tracked in %s", type, key, stats)
+        .isTrue();
   }
 
   /**
@@ -101,25 +259,21 @@ public final class IOStatisticAssertions {
    * @param stats statistics source
    * @param key statistic key
    */
-  public static void assertStatisticIsTracked(
+  public static void assertCounterStatisticIsTracked(
       final IOStatistics stats,
       final String key) {
-    assertThat(stats.counters().containsKey(key))
-        .describedAs("Statistic %s is not tracked in %s", key, stats)
-        .isTrue();
+    assertTracked(stats, COUNTER, key, stats.counters());
   }
 
   /**
-   * Assert that a given statistic is untracked.
+   * Assert that a given counter statistic is untracked.
    * @param stats statistics source
    * @param key statistic key
    */
-  public static void assertStatisticIsUntracked(
+  public static void assertCounterStatisticIsUntracked(
       final IOStatistics stats,
       final String key) {
-    assertThat(stats.counters().containsKey(key))
-        .describedAs("Statistic %s is tracked in %s", key, stats)
-        .isFalse();
+    assertUntracked(stats, COUNTER, key, stats.counters());
   }
 
   /**

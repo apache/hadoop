@@ -70,20 +70,33 @@ public final class IOStatisticsLogging {
   public static String iostatisticsToString(
       @Nullable final IOStatistics statistics) {
     if (statistics != null) {
-      int count = 0;
-      StringBuilder sb = new StringBuilder("(");
-      for (Map.Entry<String, Long> entry : statistics.counters().entrySet()) {
-        if (count > 0) {
-          sb.append(' ');
-        }
-        count++;
-        sb.append(entrytoString(entry.getKey(), entry.getValue()));
-      }
-      sb.append(")");
+      StringBuilder sb = new StringBuilder();
+      mapToString(sb, "counters", statistics.counters());
+      mapToString(sb, "gauges", statistics.gauges());
+      mapToString(sb, "minimums", statistics.minimums());
+      mapToString(sb, "maximums", statistics.maximums());
+      mapToString(sb, "means", statistics.meanStatistics());
+
       return sb.toString();
     } else {
       return "";
     }
+  }
+
+  private static <E> void mapToString(StringBuilder sb,
+      final String type,
+      final Map<String, E> map) {
+    int count = 0;
+    sb.append(type);
+    sb.append("=(");
+    for (Map.Entry<String, E> entry : map.entrySet()) {
+      if (count > 0) {
+        sb.append(' ');
+      }
+      count++;
+      sb.append(entrytoString(entry.getKey(), entry.getValue()));
+    }
+    sb.append("); ");
   }
 
   /**
