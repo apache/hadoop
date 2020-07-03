@@ -28,42 +28,46 @@ import org.apache.hadoop.fs.statistics.MeanStatistic;
  */
 public class WrappedIOStatistics implements IOStatistics {
 
-  private IOStatistics source;
+  private IOStatistics wrapped;
 
-  public WrappedIOStatistics(final IOStatistics source) {
-    this.source = source;
+  /**
+   * Instantiate.
+   * @param wrapped nullable wrapped statistics.
+   */
+  public WrappedIOStatistics(final IOStatistics wrapped) {
+    this.wrapped = wrapped;
   }
 
   @Override
   public Map<String, Long> counters() {
-    return getSource().counters();
+    return getWrapped().counters();
   }
 
-  protected IOStatistics getSource() {
-    return source;
+  protected IOStatistics getWrapped() {
+    return wrapped;
   }
 
-  protected void setSource(final IOStatistics source) {
-    this.source = source;
+  protected void setWrapped(final IOStatistics wrapped) {
+    this.wrapped = wrapped;
   }
 
   @Override
   public Map<String, Long> gauges() {
-    return getSource().gauges();
+    return getWrapped().gauges();
   }
 
   @Override
   public Map<String, Long> minimums() {
-    return getSource().minimums();
+    return getWrapped().minimums();
   }
 
   @Override
   public Map<String, Long> maximums() {
-    return getSource().maximums();
+    return getWrapped().maximums();
   }
 
   @Override
   public Map<String, MeanStatistic> meanStatistics() {
-    return getSource().meanStatistics();
+    return getWrapped().meanStatistics();
   }
 }

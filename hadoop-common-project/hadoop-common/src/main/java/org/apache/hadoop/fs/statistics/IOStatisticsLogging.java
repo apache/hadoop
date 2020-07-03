@@ -55,7 +55,7 @@ public final class IOStatisticsLogging {
    */
   public static String ioStatisticsSourceToString(@Nullable Object source) {
     try {
-      return iostatisticsToString(retrieveIOStatistics(source));
+      return ioStatisticsToString(retrieveIOStatistics(source));
     } catch (RuntimeException e) {
       LOG.debug("Ignoring", e);
       return "";
@@ -67,7 +67,7 @@ public final class IOStatisticsLogging {
    * @param statistics A statistics instance.
    * @return string value or the empty string if null
    */
-  public static String iostatisticsToString(
+  public static String ioStatisticsToString(
       @Nullable final IOStatistics statistics) {
     if (statistics != null) {
       StringBuilder sb = new StringBuilder();
@@ -174,7 +174,7 @@ public final class IOStatisticsLogging {
     @Override
     public String toString() {
       return statistics != null
-          ? iostatisticsToString(statistics)
+          ? ioStatisticsToString(statistics)
           : IOStatisticsBinding.NULL_SOURCE;
     }
   }

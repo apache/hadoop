@@ -29,22 +29,22 @@ import org.apache.hadoop.fs.s3a.s3guard.MetastoreInstrumentation;
  * An S3A statistics context which is bonded to a
  * S3AInstrumentation instance -inevitably that of an S3AFileSystem
  * instance.
- * <p>
+ * <p></p>
  * An interface is used to bind to the relevant fields, rather
  * than have them passed in the constructor because some
  * production code, specifically, DelegateToFileSystem,
  * patches the protected field after initialization.
- * <p>
+ * <p></p>
  * All operations are passed through directly to that class.
- * <p>
+ * <p></p>
  *
  * If an instance of FileSystem.Statistics is passed in, it
  * will be used whenever input stream statistics are created -
  * However, Internally always increments the statistics in the
  * current thread.
- * <p>
+ * <p></p>
  * As a result, cross-thread IO will under-report.
- * <p>
+ * <p></p>
  *
  * This is addressed through the stream statistics classes
  * only updating the stats in the close() call. Provided
@@ -182,7 +182,7 @@ public class BondedS3AStatisticsContext implements S3AStatisticsContext {
 
   @Override
   public StatisticsFromAwsSdk newStatisticsFromAwsSdk() {
-    return getInstrumentation().newStatisticsFromAwsSdk();
+    return new StatisticsFromAwsSdkImpl(getInstrumentation());
   }
 
   /**

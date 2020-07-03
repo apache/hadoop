@@ -26,7 +26,7 @@ import org.apache.hadoop.test.AbstractHadoopTestBase;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertCounterStatisticIsTracked;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertCounterStatisticIsUntracked;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyCounterStatisticValue;
-import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.iostatisticsToString;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToString;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.emptyStatistics;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -75,7 +75,7 @@ public class TestEmptyIOStatistics extends AbstractHadoopTestBase {
 
   @Test
   public void testStringification() throws Throwable {
-    assertThat(iostatisticsToString(empty))
+    assertThat(ioStatisticsToString(empty))
         .isNotBlank();
   }
 
@@ -102,7 +102,7 @@ public class TestEmptyIOStatistics extends AbstractHadoopTestBase {
 
   @Test
   public void testStringificationNull() throws Throwable {
-    assertThat(iostatisticsToString(null))
+    assertThat(ioStatisticsToString(null))
         .describedAs("Null statistics should stringify to \"\"")
         .isEmpty();
   }

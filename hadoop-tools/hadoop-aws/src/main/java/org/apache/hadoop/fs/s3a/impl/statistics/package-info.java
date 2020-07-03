@@ -19,7 +19,6 @@
 /**
  * Statistics collection for the S3A connector.
  */
-
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 package org.apache.hadoop.fs.s3a.impl.statistics;

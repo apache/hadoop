@@ -874,7 +874,7 @@ public class CryptoInputStream extends FilterInputStream implements
     case StreamCapabilities.IOSTATISTICS:
       return (in instanceof StreamCapabilities)
           && ((StreamCapabilities) in).hasCapability(capability);
-      default:
+    default:
       return false;
     }
   }

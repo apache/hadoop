@@ -37,7 +37,8 @@ import static com.amazonaws.util.AWSRequestMetrics.Field.ResponseProcessingTime;
 import static com.amazonaws.util.AWSRequestMetrics.Field.ThrottleException;
 
 /**
- * Collect statistics from the AWS SDK and update our statistics.
+ * Collect statistics from the AWS SDK and forward to an instance of
+ * {@link StatisticsFromAwsSdk} and thence into the S3A statistics.
  * <p>
  * See {@code com.facebook.presto.hive.s3.PrestoS3FileSystemMetricCollector}
  * for the inspiration for this.

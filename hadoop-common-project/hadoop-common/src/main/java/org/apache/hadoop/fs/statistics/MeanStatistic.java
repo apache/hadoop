@@ -135,7 +135,7 @@ public final class MeanStatistic implements Serializable, Cloneable {
    */
   public double mean() {
     return samples > 0
-        ? ((double)sum)/ samples
+        ? ((double) sum) / samples
         : 0.0d;
   }
 
@@ -171,7 +171,7 @@ public final class MeanStatistic implements Serializable, Cloneable {
    * The hash code is derived from the mean
    * and sample count: if either is changed
    * the statistic cannot be used as a key
-   * for hash tables/maps
+   * for hash tables/maps.
    * @return a hash value
    */
   @Override
@@ -181,8 +181,12 @@ public final class MeanStatistic implements Serializable, Cloneable {
 
   @Override
   public boolean equals(final Object o) {
-    if (this == o) { return true; }
-    if (o == null || getClass() != o.getClass()) { return false; }
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
     MeanStatistic that = (MeanStatistic) o;
     if (isEmpty()) {
       // if we are empty, then so must the other.

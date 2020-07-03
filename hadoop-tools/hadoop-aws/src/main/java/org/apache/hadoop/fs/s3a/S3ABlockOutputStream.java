@@ -395,7 +395,8 @@ class S3ABlockOutputStream extends OutputStream implements
         // then complete the operation
         if (putTracker.aboutToComplete(multiPartUpload.getUploadId(),
             partETags,
-            bytes)) {
+            bytes,
+            iostatistics)) {
           multiPartUpload.complete(partETags);
         } else {
           LOG.info("File {} will be visible when the job is committed", key);

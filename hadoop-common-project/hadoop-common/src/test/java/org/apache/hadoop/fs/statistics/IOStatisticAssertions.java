@@ -26,6 +26,8 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.Map;
 
+import org.assertj.core.api.ObjectAssert;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -42,9 +44,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 public final class IOStatisticAssertions {
 
   private static final String COUNTER = "Counter";
+
   private static final String GAUGE = "Gauge";
+
   private static final String MINIMUM = "Minimum";
+
   private static final String MAXIMUM = "Maxiumum";
+
   private static final String MEAN = "Mean";
 
   private IOStatisticAssertions() {
@@ -109,7 +115,6 @@ public final class IOStatisticAssertions {
       final String key) {
     return lookupStatistic(MEAN, key, stats.meanStatistics());
   }
-
 
   /**
    * Get a required counter statistic.
@@ -222,6 +227,89 @@ public final class IOStatisticAssertions {
     return statistic;
   }
 
+
+  /**
+   * Assert that a given statistic has an expected value.
+   * @param <E> type of map element
+   * @param type type for error text
+   * @param key statistic key
+   * @param map map to look up
+   * @return an ongoing assertion
+   */
+  private static <E> ObjectAssert<E> assertThatStatistic(
+      final String type,
+      final String key,
+      final Map<String, E> map) {
+    final E statistic = lookupStatistic(type, key, map);
+    return  assertThat(statistic)
+        .describedAs("%s named %s" , type, key);
+  }
+
+  /**
+   * Start an assertion chain on 
+   * a required counter statistic.
+   * @param stats statistics source
+   * @param key statistic key
+   * @return an ongoing assertion
+   */
+  public static ObjectAssert<Long> assertThatCounterStatistic(
+      final IOStatistics stats,
+      final String key) {
+    return assertThatStatistic(COUNTER, key, stats.counters());
+  }
+    
+  /**
+   * Start an assertion chain on 
+   * a required gauge statistic.
+   * @param stats statistics source
+   * @param key statistic key
+   * @return an ongoing assertion
+   */
+  public static ObjectAssert<Long> assertThatGaugeStatistic(
+      final IOStatistics stats,
+      final String key) {
+    return assertThatStatistic(GAUGE, key, stats.gauges());
+  }
+
+  /**
+   * Start an assertion chain on
+   * a required minimum statistic.
+   * @param stats statistics source
+   * @param key statistic key
+   * @return an ongoing assertion
+   */
+  public static ObjectAssert<Long> assertThatMinimumStatistic(
+      final IOStatistics stats,
+      final String key) {
+    return assertThatStatistic(MINIMUM, key, stats.minimums());
+  }
+
+  /**
+   * Start an assertion chain on 
+   * a required maximum statistic.
+   * @param stats statistics source
+   * @param key statistic key
+   * @return an ongoing assertion
+   */
+  public static ObjectAssert<Long> assertThatMaximumStatistic(
+      final IOStatistics stats,
+      final String key) {
+    return assertThatStatistic(MAXIMUM, key, stats.maximums());
+  }
+
+  /**
+   * Start an assertion chain on
+   * a required mean statistic.
+   * @param stats statistics source
+   * @param key statistic key
+   * @return an ongoing assertion
+   */
+  public static ObjectAssert<MeanStatistic> assertThatMeanStatistic(
+      final IOStatistics stats,
+      final String key) {
+    return assertThatStatistic(MEAN, key, stats.meanStatistics());
+  }
+
   /**
    * Assert that a given counter statistic is untracked.
    * @param stats statistics source
@@ -283,9 +371,9 @@ public final class IOStatisticAssertions {
    */
   public static void assertIsStatisticsSource(Object source) {
     assertThat(source)
-        .describedAs("Object %s", source )
+        .describedAs("Object %s", source)
         .isInstanceOf(IOStatisticsSource.class)
-        .extracting(o -> ((IOStatisticsSource)o).getIOStatistics())
+        .extracting(o -> ((IOStatisticsSource) o).getIOStatistics())
         .isNotNull();
   }
 
@@ -325,4 +413,5 @@ public final class IOStatisticAssertions {
     }
     return deser;
   }
+
 }

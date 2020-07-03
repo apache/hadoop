@@ -39,6 +39,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.commit.ValidationFailure;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.util.JsonSerialization;
 
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.validateCollectionClass;
@@ -47,19 +50,22 @@ import static org.apache.hadoop.util.StringUtils.join;
 
 /**
  * This is the serialization format for uploads yet to be committerd.
- *
+ * <p></p>
  * It's marked as {@link Serializable} so that it can be passed in RPC
  * calls; for this to work it relies on the fact that java.io ArrayList
  * and LinkedList are serializable. If any other list type is used for etags,
  * it must also be serialized. Jackson expects lists, and it is used
  * to persist to disk.
- *
+ * <p></p>
+ * The statistics published through the {@link IOStatisticsSource}
+ * interface are the static ones marshalled with the commit data;
+ * they may be empty.
  */
 @SuppressWarnings("unused")
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class SinglePendingCommit extends PersistentCommitData
-    implements Iterable<String> {
+    implements Iterable<String>, IOStatisticsSource {
 
   /**
    * Serialization ID: {@value}.
@@ -112,6 +118,11 @@ public class SinglePendingCommit extends PersistentCommitData
    * Any custom extra data committer subclasses may choose to add.
    */
   private Map<String, String> extraData = new HashMap<>(0);
+
+  /**
+   * IOStatistics.
+   */
+  private IOStatisticsSnapshot ioStatistics = new IOStatisticsSnapshot();
 
   /** Destination file size. */
   private long length;
@@ -428,5 +439,14 @@ public class SinglePendingCommit extends PersistentCommitData
 
   public void setLength(long length) {
     this.length = length;
+  }
+
+  @Override
+  public IOStatisticsSnapshot getIOStatistics() {
+    return ioStatistics;
+  }
+
+  public void setIOStatistics(final IOStatisticsSnapshot ioStatistics) {
+    this.ioStatistics = ioStatistics;
   }
 }

@@ -18,10 +18,13 @@
 
 package org.apache.hadoop.fs.s3a.impl.statistics;
 
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+
 /**
  * Statistics for committed work.
  */
-public interface CommitterStatistics {
+public interface CommitterStatistics
+    extends IOStatisticsSource {
 
   /** A commit has been created. */
   void commitCreated();

@@ -226,7 +226,8 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     logFSState();
     bandwidth(timer, filesize);
     LOG.info("Statistics after stream closed: {}", streamStatistics);
-    IOStatistics iostats = snapshotIOStatistics(retrieveIOStatistics(getFileSystem()));
+    IOStatistics iostats = snapshotIOStatistics(
+        retrieveIOStatistics(getFileSystem()));
     LOG.info("IOStatistics after upload: {}",
         demandStringify(iostats));
     long putRequestCount = storageStatistics.getLong(putRequests);

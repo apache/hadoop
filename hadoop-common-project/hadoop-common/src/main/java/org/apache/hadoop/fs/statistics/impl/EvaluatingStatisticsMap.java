@@ -173,9 +173,9 @@ final class EvaluatingStatisticsMap<E extends Serializable> implements
     }
 
     @Override
-    public E setValue(final E value) {
-      this.value = value;
-      return value;
+    public E setValue(final E val) {
+      this.value = val;
+      return val;
     }
   }
 

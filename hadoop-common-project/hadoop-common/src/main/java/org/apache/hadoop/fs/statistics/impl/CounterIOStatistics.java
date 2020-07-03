@@ -63,7 +63,6 @@ public interface CounterIOStatistics extends IOStatistics {
 
   void setMeanStatistic(String key, MeanStatistic value);
 
-
   /**
    * Reset all statistics.
    * Unsynchronized.

@@ -110,6 +110,7 @@ public final class IOStatisticsBinding {
    * Convert an entry to the string format used in logging.
    *
    * @param entry entry to evaluate
+   * @param <E> entry type
    * @return formatted string
    */
   public static <E> String entrytoString(
@@ -133,12 +134,13 @@ public final class IOStatisticsBinding {
   }
 
   /**
-   * Copy into the dest map all the source entries
-   * @param <E>
-   * @param dest
-   * @param source
-   * @param copyFn
-   * @return
+   * Copy into the dest map all the source entries.
+   * The destination is cleared first.
+   * @param <E> entry type
+   * @param dest destination of the copy
+   * @param source source
+   * @param copyFn function to copy entries
+   * @return the destination.
    */
   public static <E> Map<String, E> copyMap(
       Map<String, E> dest,
@@ -155,7 +157,7 @@ public final class IOStatisticsBinding {
 
   /**
    * A passthrough copy operation suitable for immutable
-   * types, including numbers
+   * types, including numbers.
    * @param src source object
    * @return the source object
    */

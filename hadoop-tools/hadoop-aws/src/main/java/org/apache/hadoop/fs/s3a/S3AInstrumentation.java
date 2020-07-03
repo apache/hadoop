@@ -35,7 +35,6 @@ import org.apache.hadoop.fs.s3a.impl.statistics.CountingChangeTracker;
 import org.apache.hadoop.fs.s3a.impl.statistics.DelegationTokenStatistics;
 import org.apache.hadoop.fs.s3a.impl.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.s3a.impl.statistics.BlockOutputStreamStatistics;
-import org.apache.hadoop.fs.s3a.impl.statistics.StatisticsFromAwsSdk;
 import org.apache.hadoop.fs.s3a.s3guard.MetastoreInstrumentation;
 import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
@@ -57,7 +56,6 @@ import org.apache.hadoop.metrics2.lib.MutableQuantiles;
 
 import java.io.Closeable;
 import java.net.URI;
-import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -635,7 +633,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
   private void mergeInputStreamStatistics(
       InputStreamStatisticsImpl statistics) {
 
-    streamOpenOperations.incr(statistics.lookupCounterValue(STREAM_READ_OPENED));
+    streamOpenOperations.incr(
+        statistics.lookupCounterValue(STREAM_READ_OPENED));
     streamCloseOperations.incr(statistics.getCloseOperations());
     streamClosed.incr(statistics.getClosed());
     streamAborted.incr(statistics.getAborted());
@@ -888,7 +887,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     public String toString() {
       final StringBuilder sb = new StringBuilder(
           "StreamStatistics{");
-      sb.append(IOStatisticsLogging.iostatisticsToString(
+      sb.append(IOStatisticsLogging.ioStatisticsToString(
           getCounterStats()));
       sb.append(", InputPolicy=").append(inputPolicy);
       sb.append('}');
@@ -954,7 +953,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
     @Override
     public long getCloseOperations() {
-      return lookupCounterValue(StreamStatisticNames.STREAM_READ_CLOSE_OPERATIONS);
+      return lookupCounterValue(
+          StreamStatisticNames.STREAM_READ_CLOSE_OPERATIONS);
     }
 
     @Override
@@ -986,9 +986,10 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
     @Override
     public long getBytesSkippedOnSeek() {
-      return lookupCounterValue(StreamStatisticNames.STREAM_READ_SEEK_BYTES_SKIPPED);
+      return lookupCounterValue(
+          StreamStatisticNames.STREAM_READ_SEEK_BYTES_SKIPPED);
     }
-    
+
     @Override
     public long getBytesBackwardsOnSeek() {
       return lookupCounterValue(
@@ -997,7 +998,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
     @Override
     public long getBytesReadInClose() {
-      return lookupCounterValue(StreamStatisticNames.STREAM_READ_CLOSE_BYTES_READ);
+      return lookupCounterValue(
+          StreamStatisticNames.STREAM_READ_CLOSE_BYTES_READ);
     }
 
     @Override
@@ -1013,12 +1015,14 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
     @Override
     public long getSeekOperations() {
-      return lookupCounterValue(StreamStatisticNames.STREAM_READ_SEEK_OPERATIONS);
+      return lookupCounterValue(
+          StreamStatisticNames.STREAM_READ_SEEK_OPERATIONS);
     }
-    
+
     @Override
     public long getReadExceptions() {
-      return lookupCounterValue(StreamStatisticNames.STREAM_READ_EXCEPTIONS);
+      return lookupCounterValue(
+          StreamStatisticNames.STREAM_READ_EXCEPTIONS);
     }
 
     @Override
@@ -1043,7 +1047,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
     @Override
     public long getVersionMismatches() {
-      return lookupCounterValue(StreamStatisticNames.STREAM_READ_VERSION_MISMATCHES);
+      return lookupCounterValue(
+          StreamStatisticNames.STREAM_READ_VERSION_MISMATCHES);
     }
 
     @Override
@@ -1120,8 +1125,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               )
           .withGauges(
               STREAM_WRITE_BLOCK_UPLOADS_PENDING.getSymbol(),
-              STREAM_WRITE_BLOCK_UPLOADS_DATA_PENDING.getSymbol(),
-              STREAM_WRITE_TOTAL_DATA.getSymbol())
+              STREAM_WRITE_BLOCK_UPLOADS_DATA_PENDING.getSymbol())
           .build();
       setIOStatistics(st);
       // these are extracted to avoid lookups on heavily used counters.
@@ -1129,12 +1133,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
           STREAM_WRITE_TOTAL_DATA.getSymbol());
       bytesWritten = st.getCounterReference(
           StreamStatisticNames.STREAM_WRITE_BYTES);
-
-
-      // gauges
-
     }
-
 
     /**
      * Increment the Statistic gauge and the local IOStats
@@ -1147,7 +1146,6 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       incrementGauge(statistic, v);
       return incGauge(statistic.getSymbol(), v);
     }
-
 
     /**
      * A block has been allocated.
@@ -1418,12 +1416,37 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
   /**
    * Instrumentation exported to S3A Committers.
    */
-  private final class CommitterStatisticsImpl implements CommitterStatistics {
+  private final class CommitterStatisticsImpl
+      extends AbstractS3AStatisticsSource
+      implements CommitterStatistics {
+
+    private CommitterStatisticsImpl() {
+      CounterIOStatistics st = counterIOStatistics()
+          .withCounters(
+              COMMITTER_BYTES_COMMITTED.getSymbol(),
+              COMMITTER_BYTES_UPLOADED.getSymbol(),
+              COMMITTER_COMMITS_CREATED.getSymbol(),
+              COMMITTER_COMMITS_ABORTED.getSymbol(),
+              COMMITTER_COMMITS_COMPLETED.getSymbol(),
+              COMMITTER_COMMITS_FAILED.getSymbol(),
+              COMMITTER_COMMITS_REVERTED.getSymbol(),
+              COMMITTER_JOBS_FAILED.getSymbol(),
+              COMMITTER_JOBS_SUCCEEDED.getSymbol(),
+              COMMITTER_TASKS_FAILED.getSymbol(),
+              COMMITTER_TASKS_SUCCEEDED.getSymbol())
+          .build();
+      setIOStatistics(st);
+    }
+
+    private long increment(Statistic stat, long value) {
+      incrementCounter(stat, value);
+      return incCounter(stat.getSymbol(), value);
+    }
 
     /** A commit has been created. */
     @Override
     public void commitCreated() {
-      incrementCounter(COMMITTER_COMMITS_CREATED, 1);
+      increment(COMMITTER_COMMITS_CREATED, 1);
     }
 
     /**
@@ -1432,7 +1455,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
      */
     @Override
     public void commitUploaded(long size) {
-      incrementCounter(COMMITTER_BYTES_UPLOADED, size);
+      increment(COMMITTER_BYTES_UPLOADED, size);
     }
 
     /**
@@ -1441,29 +1464,29 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
      */
     @Override
     public void commitCompleted(long size) {
-      incrementCounter(COMMITTER_COMMITS_COMPLETED, 1);
-      incrementCounter(COMMITTER_BYTES_COMMITTED, size);
+      increment(COMMITTER_COMMITS_COMPLETED, 1);
+      increment(COMMITTER_BYTES_COMMITTED, size);
     }
 
     /** A commit has been aborted. */
     @Override
     public void commitAborted() {
-      incrementCounter(COMMITTER_COMMITS_ABORTED, 1);
+      increment(COMMITTER_COMMITS_ABORTED, 1);
     }
 
     @Override
     public void commitReverted() {
-      incrementCounter(COMMITTER_COMMITS_REVERTED, 1);
+      increment(COMMITTER_COMMITS_REVERTED, 1);
     }
 
     @Override
     public void commitFailed() {
-      incrementCounter(COMMITTER_COMMITS_FAILED, 1);
+      increment(COMMITTER_COMMITS_FAILED, 1);
     }
 
     @Override
     public void taskCompleted(boolean success) {
-      incrementCounter(
+      increment(
           success ? COMMITTER_TASKS_SUCCEEDED
               : COMMITTER_TASKS_FAILED,
           1);
@@ -1471,11 +1494,12 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
     @Override
     public void jobCompleted(boolean success) {
-      incrementCounter(
+      increment(
           success ? COMMITTER_JOBS_SUCCEEDED
               : COMMITTER_JOBS_FAILED,
           1);
     }
+
   }
 
   /**
@@ -1597,66 +1621,4 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     }
   }
 
-  public StatisticsFromAwsSdk newStatisticsFromAwsSdk() {
-    return new StatisticsFromAwsSdkImpl(this);
-  }
-
-  /**
-   * Hook up AWS SDK Statistics to the S3 counters.
-   * Durations are not currently being used; that could be
-   * changed in future once an effective strategy for reporting
-   * them is determined.
-   */
-  private static final class StatisticsFromAwsSdkImpl implements
-      StatisticsFromAwsSdk {
-
-    private final CountersAndGauges countersAndGauges;
-
-    private StatisticsFromAwsSdkImpl(
-        final CountersAndGauges countersAndGauges) {
-      this.countersAndGauges = countersAndGauges;
-    }
-
-    @Override
-    public void updateAwsRequestCount(final long count) {
-      countersAndGauges.incrementCounter(STORE_IO_REQUEST, count);
-    }
-
-    @Override
-    public void updateAwsRetryCount(final long count) {
-      countersAndGauges.incrementCounter(STORE_IO_RETRY, count);
-
-    }
-
-    @Override
-    public void updateAwsThrottleExceptionsCount(final long count) {
-      countersAndGauges.incrementCounter(STORE_IO_THROTTLED, count);
-      countersAndGauges.addValueToQuantiles(STORE_IO_THROTTLE_RATE, count);
-    }
-
-    @Override
-    public void noteAwsRequestTime(final Duration duration) {
-
-    }
-
-    @Override
-    public void noteAwsClientExecuteTime(final Duration duration) {
-
-    }
-
-    @Override
-    public void noteRequestMarshallTime(final Duration duration) {
-
-    }
-
-    @Override
-    public void noteRequestSigningTime(final Duration duration) {
-
-    }
-
-    @Override
-    public void noteResponseProcessingTime(final Duration duration) {
-
-    }
-  }
 }

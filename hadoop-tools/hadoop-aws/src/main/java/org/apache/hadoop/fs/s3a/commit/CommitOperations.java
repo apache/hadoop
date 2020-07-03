@@ -53,10 +53,14 @@ import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
 import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.impl.statistics.CommitterStatistics;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.Progressable;
 
+import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
@@ -71,7 +75,7 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
  * duplicate that work.
  *
  */
-public class CommitOperations {
+public class CommitOperations implements IOStatisticsSource {
   private static final Logger LOG = LoggerFactory.getLogger(
       CommitOperations.class);
 
@@ -105,9 +109,18 @@ public class CommitOperations {
    * @param fs FS to bind to
    */
   public CommitOperations(S3AFileSystem fs) {
-    Preconditions.checkArgument(fs != null, "null fs");
-    this.fs = fs;
-    statistics = fs.newCommitterStatistics();
+    this(requireNonNull(fs), fs.newCommitterStatistics());
+  }
+
+  /**
+   * Instantiate.
+   * @param fs FS to bind to
+   * @param committerStatistics committer statistics
+   */
+  public CommitOperations(S3AFileSystem fs,
+      CommitterStatistics committerStatistics) {
+    this.fs = requireNonNull(fs);
+    statistics = requireNonNull(committerStatistics);
     writeOperations = fs.getWriteOperationHelper();
   }
 
@@ -130,6 +143,11 @@ public class CommitOperations {
   /** @return statistics. */
   protected CommitterStatistics getStatistics() {
     return statistics;
+  }
+
+  @Override
+  public IOStatistics getIOStatistics() {
+    return statistics.getIOStatistics();
   }
 
   /**

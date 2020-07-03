@@ -120,8 +120,8 @@ public class RawLocalFileSystem extends FileSystem {
   /*******************************************************
    * For open()'s FSInputStream.
    *******************************************************/
-  class LocalFSFileInputStream extends FSInputStream implements HasFileDescriptor,
-      IOStatisticsSource, StreamCapabilities {
+  class LocalFSFileInputStream extends FSInputStream implements
+      HasFileDescriptor, IOStatisticsSource, StreamCapabilities {
     private FileInputStream fis;
     private long position;
 
@@ -284,7 +284,7 @@ public class RawLocalFileSystem extends FileSystem {
   /*********************************************************
    * For create()'s FSOutputStream.
    *********************************************************/
-  class LocalFSFileOutputStream extends OutputStream implements
+  final class LocalFSFileOutputStream extends OutputStream implements
       IOStatisticsSource, StreamCapabilities {
     private FileOutputStream fos;
 

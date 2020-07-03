@@ -63,7 +63,8 @@ final class CounterIOStatisticsBuilderImpl implements
   }
 
   @Override
-  public CounterIOStatisticsBuilderImpl withMeanStatistics(final String... keys) {
+  public CounterIOStatisticsBuilderImpl withMeanStatistics(
+      final String... keys) {
     meanStatistics.addAll(Arrays.asList(keys));
     return this;
   }

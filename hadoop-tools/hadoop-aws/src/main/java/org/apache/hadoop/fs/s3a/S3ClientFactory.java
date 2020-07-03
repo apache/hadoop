@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.net.URI;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.metrics.RequestMetricCollector;
 import com.amazonaws.services.s3.AmazonS3;
 
 import org.apache.hadoop.classification.InterfaceAudience;

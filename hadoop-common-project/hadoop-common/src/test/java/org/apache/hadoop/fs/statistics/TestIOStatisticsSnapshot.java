@@ -29,7 +29,7 @@ import org.apache.hadoop.test.AbstractHadoopTestBase;
 import org.apache.hadoop.util.JsonSerialization;
 
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.*;
-import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.iostatisticsToString;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToString;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -81,7 +81,7 @@ public class TestIOStatisticsSnapshot extends AbstractHadoopTestBase {
 
   @Test
   public void testStringification() throws Throwable {
-    assertThat(iostatisticsToString(snapshot))
+    assertThat(ioStatisticsToString(snapshot))
         .isNotBlank();
   }
 

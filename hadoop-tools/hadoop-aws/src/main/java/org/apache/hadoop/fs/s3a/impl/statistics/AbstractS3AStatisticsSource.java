@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.statistics.impl.CounterIOStatistics;
 
 /**
  * Base class for implementing IOStatistics sources in the S3 module.
+ * <p></p>
  * A lot of the methods are very terse, because S3AInstrumentation has
  * verbose methods of similar names; the short ones always
  * refer to the inner class and not any superclass method.
@@ -70,7 +71,7 @@ public abstract class AbstractS3AStatisticsSource implements
     return 0L;
   }
 
-  public Long getGaugeVal(final String name) {
+  public Long getGaugeValue(final String name) {
     return ioStatistics.gauges().get(name);
   }
 
@@ -82,4 +83,12 @@ public abstract class AbstractS3AStatisticsSource implements
     return incGauge(name, 1);
   }
 
+  @Override
+  public String toString() {
+    final StringBuilder sb = new StringBuilder(
+        "AbstractS3AStatisticsSource{");
+    sb.append(ioStatistics);
+    sb.append('}');
+    return sb.toString();
+  }
 }

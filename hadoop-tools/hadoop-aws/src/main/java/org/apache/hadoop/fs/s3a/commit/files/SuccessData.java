@@ -34,6 +34,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.commit.ValidationFailure;
+import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.util.JsonSerialization;
 
 /**
@@ -62,20 +64,29 @@ import org.apache.hadoop.util.JsonSerialization;
 @SuppressWarnings("unused")
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class SuccessData extends PersistentCommitData {
+public class SuccessData extends PersistentCommitData
+    implements IOStatisticsSource {
+
   private static final Logger LOG = LoggerFactory.getLogger(SuccessData.class);
+
+  /**
+   * Supported version value: {@value}.
+   * If this is changed the value of {@link #serialVersionUID} will change,
+   * to avoid deserialization problems.
+   */
+  public static final int VERSION = 1;
 
   /**
    * Serialization ID: {@value}.
    */
-  private static final long serialVersionUID = 507133045258460084L;
+  private static final long serialVersionUID = 507133045258460084L + VERSION;;
 
   /**
    * Name to include in persisted data, so as to differentiate from
    * any other manifests: {@value}.
    */
   public static final String NAME
-      = "org.apache.hadoop.fs.s3a.commit.files.SuccessData/1";
+      = "org.apache.hadoop.fs.s3a.commit.files.SuccessData/" + VERSION;
 
   /**
    * Name of file; includes version marker.
@@ -117,6 +128,11 @@ public class SuccessData extends PersistentCommitData {
    * Filenames in the commit.
    */
   private List<String> filenames = new ArrayList<>(0);
+
+  /**
+   * IOStatistics.
+   */
+  private IOStatisticsSnapshot ioStatistics = new IOStatisticsSnapshot();
 
   @Override
   public void validate() throws ValidationFailure {
@@ -324,5 +340,14 @@ public class SuccessData extends PersistentCommitData {
    */
   public void addDiagnostic(String key, String value) {
     diagnostics.put(key, value);
+  }
+
+  @Override
+  public IOStatisticsSnapshot getIOStatistics() {
+    return ioStatistics;
+  }
+
+  public void setIOStatistics(final IOStatisticsSnapshot ioStatistics) {
+    this.ioStatistics = ioStatistics;
   }
 }

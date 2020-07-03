@@ -30,7 +30,7 @@ import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 import org.apache.hadoop.util.JsonSerialization;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.iostatisticsToString;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToString;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.aggregateMaps;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.snapshotMap;
 
@@ -77,11 +77,25 @@ public final class IOStatisticsSnapshot
   }
 
   /**
-   * Construct.
-   * @param source statistics source.
+   * Construct, reading the statistics data in
+   * if the source is non-null.
+   * @param source statistics source. Nullable.
    */
   public IOStatisticsSnapshot(IOStatistics source) {
-    snapshot(source);
+    if (source != null) {
+      snapshot(source);
+    }
+  }
+
+  /**
+   * Clear all the maps.
+   */
+  public void clear() {
+    counters.clear();
+    gauges.clear();
+    minimums.clear();
+    maximums.clear();
+    meanStatistics.clear();
   }
 
   /**
@@ -143,7 +157,7 @@ public final class IOStatisticsSnapshot
 
   @Override
   public String toString() {
-    return iostatisticsToString(this);
+    return ioStatisticsToString(this);
   }
 
   /**

@@ -27,13 +27,12 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.MeanStatistic;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.dynamicIOStatistics;
 
 /**
  * Implement statistics as a map of AtomicLong counters/gauges
  * etc. created in the constructor.
- * The statistics map is a map of initially empty statistics.
  */
 final class CounterIOStatisticsImpl extends WrappedIOStatistics
     implements CounterIOStatistics {
@@ -63,7 +62,12 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
       final List<String> minimums,
       final List<String> maximums,
       final List<String> meanStatistics) {
+    // initially create the superclass with no wrapped mapping;
     super(null);
+
+    // now construct a dynamic statistics source mapping to
+    // the various counters, gauges etc dynamically created
+    // into maps
     DynamicIOStatisticsBuilder builder = dynamicIOStatistics();
     if (counters != null) {
       for (String key : counters) {
@@ -104,7 +108,7 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
         });
       }
     }
-    setSource(builder.build());
+    setWrapped(builder.build());
   }
 
   /**
@@ -120,7 +124,7 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
 
   /**
    * increment an atomic long and return its value;
-   * null long is no-op returning 0
+   * null long is no-op returning 0.
    * @param aLong atomic long; may be null
    * @param increment amount to increment; -ve for a decrement
    * @return final value or 0
@@ -261,7 +265,7 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
   /**
    * Get a reference to the map type providing the
    * value for a specific key, raising an exception if
-   * there is no entry for that key
+   * there is no entry for that key.
    * @param <T> type of map/return type.
    * @param map map to look up
    * @param key statistic name
@@ -270,10 +274,10 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
    */
   private static <T> T lookup(final Map<String, T> map, String key) {
     T val = map.get(key);
-    checkNotNull(val, "unknown statistic %s", key);
+    requireNonNull(val, () -> ("unknown statistic " + key));
     return val;
   }
-  
+
   /**
    * Get a reference to the atomic instance providing the
    * value for a specific counter. This is useful if
@@ -284,7 +288,7 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
    */
   @Override
   public AtomicLong getCounterReference(String key) {
-      return lookup(counterMap, key);
+    return lookup(counterMap, key);
   }
 
   /**
@@ -297,8 +301,8 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
    */
   @Override
   public AtomicLong getMaximumReference(String key) {
-      return lookup(maximumMap, key);
-  } 
+    return lookup(maximumMap, key);
+  }
 
   /**
    * Get a reference to the atomic instance providing the
@@ -310,7 +314,7 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
    */
   @Override
   public AtomicLong getMinimumReference(String key) {
-      return lookup(minimumMap, key);
+    return lookup(minimumMap, key);
   }
 
   /**
@@ -323,7 +327,7 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
    */
   @Override
   public AtomicLong getGaugeReference(String key) {
-      return lookup(gaugeMap, key);
+    return lookup(gaugeMap, key);
   }
 
   /**
@@ -336,7 +340,11 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
    */
   @Override
   public AtomicReference<MeanStatistic> getMeanStatisticReference(String key) {
-      return lookup(meanStatisticMap, key);
+    return lookup(meanStatisticMap, key);
   }
 
+  @Override
+  public String toString() {
+    return super.toString();
+  }
 }

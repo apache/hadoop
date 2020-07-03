@@ -46,6 +46,8 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.MagicCommitPaths.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtilsWithMR.*;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringify;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsSourceToString;
 
 /**
  * This is a dedicated committer which requires the "magic" directory feature
@@ -177,6 +179,8 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
       destroyThreadPool();
     }
     getCommitOperations().taskCompleted(true);
+    LOG.debug("aggregate statistics\n{}",
+        demandStringify(getIOStatistics()));
   }
 
   /**
@@ -220,6 +224,8 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
         taskAttemptID.getTaskID().toString() +
         CommitConstants.PENDINGSET_SUFFIX);
     LOG.info("Saving work of {} to {}", taskAttemptID, taskOutcomePath);
+    LOG.debug("task statistics\n{}",
+        demandStringify(pendingSet));
     try {
       pendingSet.save(getDestFS(), taskOutcomePath, false);
     } catch (IOException e) {

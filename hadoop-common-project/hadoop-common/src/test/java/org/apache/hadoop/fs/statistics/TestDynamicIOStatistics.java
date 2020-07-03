@@ -37,9 +37,9 @@ import org.apache.hadoop.test.AbstractHadoopTestBase;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertCounterStatisticIsTracked;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertCounterStatisticIsUntracked;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyCounterStatisticValue;
-import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.NULL_SOURCE;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringify;
-import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.iostatisticsToString;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToString;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.NULL_SOURCE;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.dynamicIOStatistics;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.emptyStatistics;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -161,7 +161,8 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
     // set the counters all to 1
     incrementAllCounters();
     // take the snapshot
-    final Iterator<Map.Entry<String, Long>> it = statistics.counters().entrySet().iterator();
+    final Iterator<Map.Entry<String, Long>> it =
+        statistics.counters().entrySet().iterator();
     // reset the counters
     incrementAllCounters();
     // now assert that all the iterator values are of value 1
@@ -207,7 +208,7 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
     IOStatistics deser = IOStatisticAssertions.roundTrip(stat);
     assertThat(deser.counters().keySet())
         .containsExactlyInAnyOrder(KEYS);
-    for (Map.Entry<String, Long> e: deser.counters().entrySet()) {
+    for (Map.Entry<String, Long> e : deser.counters().entrySet()) {
       assertThat(e.getValue())
           .describedAs("Value of entry %s", e)
           .isEqualTo(1);
@@ -216,7 +217,7 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
 
   @Test
   public void testStringification() throws Throwable {
-    assertThat(iostatisticsToString(statistics))
+    assertThat(ioStatisticsToString(statistics))
         .isNotBlank()
         .contains(KEYS);
   }
@@ -255,14 +256,14 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
 
   @Test
   public void testNullSourceStringification() throws Throwable {
-    assertThat(demandStringify((IOStatisticsSource)null)
+    assertThat(demandStringify((IOStatisticsSource) null)
         .toString())
         .isEqualTo(NULL_SOURCE);
   }
 
   @Test
   public void testNullStatStringification() throws Throwable {
-    assertThat(demandStringify((IOStatistics)null)
+    assertThat(demandStringify((IOStatistics) null)
         .toString())
         .isEqualTo(NULL_SOURCE);
   }

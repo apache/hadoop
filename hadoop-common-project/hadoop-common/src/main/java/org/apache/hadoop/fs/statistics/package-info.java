@@ -41,9 +41,9 @@
  * <p>
  * Use pattern:
  * <p>
- * An application probes an object (filesystem, stream etc) for implementation of
- * {@code IOStatisticsSource}, and, if it is, calls {@code getIOStatistics()}
- * to get its statistics.
+ * An application probes an object (filesystem, stream etc) to see if it
+ * implements {@code IOStatisticsSource}, and, if it is,
+ * calls {@code getIOStatistics()} to get its statistics.
  * If this is non-null, the client has statistics on the current
  * state of the statistics.
  * <p>
@@ -60,7 +60,7 @@
  * contains a
  * set of names recommended for object store operations.
  * {@link org.apache.hadoop.fs.statistics.StreamStatisticNames} declares
- * recommended names for statistics provided forInconsistentS3ClientFactoryInconsistentS3ClientFactory
+ * recommended names for statistics provided for
  * input and output streams.
  * <p>
  * Utility classes are includes to assist use
@@ -74,6 +74,11 @@
  *     {@link org.apache.hadoop.fs.statistics.IOStatisticsLogging}.
  *     Methods for robust/on-demand string conversion, designed
  *     for use in logging statements and {@code toString()} implementations.
+ *   </li> *   <li>
+ *     {@link org.apache.hadoop.fs.statistics.IOStatisticsSnapshot}.
+ *     A static snaphot of statistics which can be marshalled via
+ *     java serialization or as JSON via jackson. It supports
+ *     aggregation, so can be used to generate aggregate statistics.
  *   </li>
  * </ul>
  *

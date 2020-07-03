@@ -40,6 +40,8 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
+import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.MapFile;
@@ -68,7 +70,11 @@ import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
+import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_COMMITS_COMPLETED;
+import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_TASKS_SUCCEEDED;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatCounterStatistic;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsSourceToString;
 import static org.apache.hadoop.test.LambdaTestUtils.*;
 
 /**
@@ -1245,9 +1251,28 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     assertTrue("Committer does not have data to commit " + committer,
         committer.needsTaskCommit(tContext));
     commitTask(committer, tContext);
+    // at this point the committer tasks stats should be current.
+    IOStatisticsSnapshot snapshot = new IOStatisticsSnapshot(
+        committer.getIOStatistics());
+    String commitsCompleted = COMMITTER_TASKS_SUCCEEDED.getSymbol();
+    assertThatCounterStatistic(snapshot, commitsCompleted)
+        .describedAs("task commit count")
+        .isEqualTo(1L);
+
+
     commitJob(committer, jContext);
+    LOG.info("committer iostatistics {}",
+        ioStatisticsSourceToString(committer));
+
     // validate output
-    verifySuccessMarker(outDir);
+    SuccessData successData = verifySuccessMarker(outDir);
+
+    // the task commit count should get through the job commit
+    IOStatisticsSnapshot successStats = successData.getIOStatistics();
+    LOG.info("loaded statistics {}", successStats);
+    assertThatCounterStatistic(successStats, commitsCompleted)
+        .describedAs("task commit count")
+        .isEqualTo(1L);
   }
 
   /**

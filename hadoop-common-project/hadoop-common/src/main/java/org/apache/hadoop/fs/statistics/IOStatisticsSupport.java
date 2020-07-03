@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.statistics;
 
-import java.io.Serializable;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -44,7 +42,7 @@ public final class IOStatisticsSupport {
    * @return a snapshot of the current values.
    */
   public static IOStatisticsSnapshot
-      snapshotIOStatistics(IOStatistics statistics) {
+  snapshotIOStatistics(IOStatistics statistics) {
 
     IOStatisticsSnapshot stats = new IOStatisticsSnapshot(statistics);
     stats.snapshot(statistics);
