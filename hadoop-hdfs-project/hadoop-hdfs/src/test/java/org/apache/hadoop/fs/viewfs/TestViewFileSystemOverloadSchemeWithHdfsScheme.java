@@ -39,7 +39,6 @@ import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.test.PathUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -343,33 +342,6 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
     try (FileSystem fs = FileSystem.get(conf)) {
       fs.createNewFile(new Path("/newFileOnRoot"));
       Assert.fail("It should fail as root is read only in viewFS.");
-    }
-  }
-
-  /**
-   * Create mount links as follows
-   * hdfs://localhost:xxx/HDFSUser --> hdfs://localhost:xxx/HDFSUser/
-   * hdfs://localhost:xxx/local --> file://TEST_ROOT_DIR/root/
-   * fallback --> hdfs://localhost:xxx/HDFSUser/
-   *
-   * It will find fallback link, but root is not accessible and read only.
-   */
-  @Test(expected = AccessControlException.class, timeout = 30000)
-  public void testCreateOnRootShouldFailEvenFallBackMountLinkConfigured()
-      throws Exception {
-    final Path hdfsTargetPath = new Path(defaultFSURI + HDFS_USER_FOLDER);
-    addMountLinks(defaultFSURI.getAuthority(),
-        new String[] {HDFS_USER_FOLDER, LOCAL_FOLDER,
-            Constants.CONFIG_VIEWFS_LINK_FALLBACK },
-        new String[] {hdfsTargetPath.toUri().toString(),
-            localTargetDir.toURI().toString(),
-            hdfsTargetPath.toUri().toString() },
-        conf);
-    try (FileSystem fs = FileSystem.get(conf)) {
-      fs.createNewFile(new Path("/onRootWhenFallBack"));
-      Assert.fail(
-          "It should fail as root is read only in viewFS, even when configured"
-              + " with fallback.");
     }
   }
 
