@@ -385,6 +385,7 @@ public class NameNode extends ReconfigurableBase implements
    */
   @Deprecated
   public static final int DEFAULT_PORT = DFS_NAMENODE_RPC_PORT_DEFAULT;
+  public static final String FS_HDFS_IMPL_KEY = "fs.hdfs.impl";
   public static final Logger LOG =
       LoggerFactory.getLogger(NameNode.class.getName());
   public static final Logger stateChangeLog =
@@ -726,6 +727,11 @@ public class NameNode extends ReconfigurableBase implements
           intervals);
       }
     }
+    // Currently NN uses FileSystem.get to initialize DFS in startTrashEmptier.
+    // If fs.hdfs.impl was overridden by core-site.xml, we may get other
+    // filesystem. To make sure we get DFS, we are setting fs.hdfs.impl to DFS.
+    // HDFS-15450
+    conf.set(FS_HDFS_IMPL_KEY, DistributedFileSystem.class.getName());
 
     UserGroupInformation.setConfiguration(conf);
     loginAsNameNodeUser(conf);
@@ -923,13 +929,11 @@ public class NameNode extends ReconfigurableBase implements
     // This may be called from the transitionToActive code path, in which
     // case the current user is the administrator, not the NN. The trash
     // emptier needs to run as the NN. See HDFS-3972.
-    DistributedFileSystem fs = SecurityUtil
-        .doAsLoginUser(new PrivilegedExceptionAction<DistributedFileSystem>() {
+    FileSystem fs = SecurityUtil.doAsLoginUser(
+        new PrivilegedExceptionAction<FileSystem>() {
           @Override
-          public DistributedFileSystem run() throws IOException {
-            DistributedFileSystem dfs = new DistributedFileSystem();
-            dfs.initialize(FileSystem.getDefaultUri(conf), conf);
-            return dfs;
+          public FileSystem run() throws IOException {
+            return FileSystem.get(conf);
           }
         });
     this.emptier = new Thread(new Trash(fs, conf).getEmptier(), "Trash Emptier");
