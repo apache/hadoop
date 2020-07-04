@@ -1183,7 +1183,6 @@ public class ViewFileSystem extends FileSystem {
         final int bufferSize, final short replication, final long blockSize,
         final Progressable progress) throws IOException {
       Preconditions.checkNotNull(f, "File cannot be null.");
-      // Just a sanity check. This should not happen.
       if (InodeTree.SlashPath.equals(f)) {
         throw new FileAlreadyExistsException(
             "/ is not a file. The directory / already exist at: "

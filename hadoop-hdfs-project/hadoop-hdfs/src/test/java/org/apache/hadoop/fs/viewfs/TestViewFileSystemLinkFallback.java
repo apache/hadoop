@@ -907,9 +907,9 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
         vfs.create(vfsTestDir);
         Assert.fail("Should fail to create file as this is an internal dir.");
       } catch (NotInMountpointException e){
-        // This tree is part of internal tree. The above expetion will be thrown
-        // from getDefaultReplication, getDefaultBlockSize APIs which was called
-        // in create API.
+        // This tree is part of internal tree. The above exception will be
+        // thrown from getDefaultReplication, getDefaultBlockSize APIs which was
+        // called in create API.
       }
     }
   }
