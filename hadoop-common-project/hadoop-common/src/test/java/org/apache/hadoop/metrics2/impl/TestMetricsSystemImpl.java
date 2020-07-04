@@ -649,11 +649,13 @@ public class TestMetricsSystemImpl {
     try {
       ms.start();
       ms.register(sinkName, "", ts);
-      assertNotNull("an adapter should exist for each sink", ms.getSinkAdapter(sinkName));
+      assertNotNull("no adapter exists for " + sinkName,
+              ms.getSinkAdapter(sinkName));
       ms.stop();
 
       ms.start();
-      assertNotNull("an adapter should exist for each sink", ms.getSinkAdapter(sinkName));
+      assertNotNull("no adapter exists for " + sinkName,
+              ms.getSinkAdapter(sinkName));
     } finally {
       ms.stop();
     }
