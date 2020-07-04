@@ -49,7 +49,8 @@ import org.apache.hadoop.fs.Path;
 public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
   private static final int BASE_SIZE = 1024;
   private static final int ONE_THOUSAND = 1000;
-  private static final int TEST_BUFFER_SIZE = 5 * ONE_THOUSAND * BASE_SIZE;
+ //3000 KB to support appenblob too
+  private static final int TEST_BUFFER_SIZE = 3 * ONE_THOUSAND * BASE_SIZE;
   private static final int ONE_MB = 1024 * 1024;
   private static final int FLUSH_TIMES = 200;
   private static final int THREAD_SLEEP_TIME = 1000;
@@ -226,11 +227,15 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
 
     final Path testFilePath = path(methodName.getMethodName());
     byte[] buffer = getRandomBytesArray();
-
     // The test case must write "fs.azure.write.request.size" bytes
     // to the stream in order for the data to be uploaded to storage.
-    assertEquals(fs.getAbfsStore().getAbfsConfiguration().getWriteBufferSize(),
-        buffer.length);
+    assertTrue(fs.getAbfsStore().getAbfsConfiguration().getWriteBufferSize()
+        <= buffer.length);
+
+    boolean isAppendBlob = true;
+    if (!fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(testFilePath).toString())) {
+      isAppendBlob = false;
+    }
 
     try (FSDataOutputStream stream = fs.create(testFilePath)) {
       stream.write(buffer);
@@ -245,7 +250,8 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
 
       // Verify that the data can be read if disableOutputStreamFlush is
       // false; and otherwise cannot be read.
-      validate(fs.open(testFilePath), buffer, !disableOutputStreamFlush);
+      /* For Appendlob flush is not needed to update data on server */
+      validate(fs.open(testFilePath), buffer, !disableOutputStreamFlush || isAppendBlob);
     }
   }
 
@@ -267,10 +273,15 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
     final AzureBlobFileSystem fs = this.getFileSystem();
     byte[] buffer = getRandomBytesArray();
     final Path testFilePath = path(methodName.getMethodName());
+    boolean isAppendBlob = false;
+    if (fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(testFilePath).toString())) {
+      isAppendBlob = true;
+    }
 
     try (FSDataOutputStream stream = getStreamAfterWrite(fs, testFilePath, buffer, false)) {
       stream.hflush();
-      validate(fs, testFilePath, buffer, false);
+      /* For Appendlob flush is not needed to update data on server */
+      validate(fs, testFilePath, buffer, isAppendBlob);
     }
   }
 
@@ -322,9 +333,14 @@ public class ITestAzureBlobFileSystemFlush extends AbstractAbfsScaleTest {
     final AzureBlobFileSystem fs = this.getFileSystem();
     byte[] buffer = getRandomBytesArray();
     final Path testFilePath = path(methodName.getMethodName());
+    boolean isAppendBlob = false;
+    if (fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(testFilePath).toString())) {
+      isAppendBlob = true;
+    }
     try (FSDataOutputStream stream = getStreamAfterWrite(fs, testFilePath, buffer, false)) {
       stream.hsync();
-      validate(fs, testFilePath, buffer, false);
+      /* For Appendlob flush is not needed to update data on server */
+      validate(fs, testFilePath, buffer, isAppendBlob);
     }
   }
 

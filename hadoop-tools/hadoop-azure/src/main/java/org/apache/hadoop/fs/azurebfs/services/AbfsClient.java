@@ -272,7 +272,8 @@ public class AbfsClient implements Closeable {
   }
 
   public AbfsRestOperation createPath(final String path, final boolean isFile, final boolean overwrite,
-                                      final String permission, final String umask) throws AzureBlobFileSystemException {
+                                      final String permission, final String umask,
+                                      final boolean isAppendBlob) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     if (!overwrite) {
       requestHeaders.add(new AbfsHttpHeader(IF_NONE_MATCH, AbfsHttpConstants.STAR));
@@ -288,6 +289,9 @@ public class AbfsClient implements Closeable {
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, isFile ? FILE : DIRECTORY);
+    if (isAppendBlob) {
+      abfsUriQueryBuilder.addQuery(QUERY_PARAM_BLOBTYPE, APPEND_BLOB_TYPE);
+    }
 
     String operation = isFile
         ? SASTokenProvider.CREATE_FILE_OPERATION
@@ -380,7 +384,7 @@ public class AbfsClient implements Closeable {
   }
 
   public AbfsRestOperation append(final String path, final long position, final byte[] buffer, final int offset,
-                                  final int length, final String cachedSasToken) throws AzureBlobFileSystemException {
+                                  final int length, final String cachedSasToken, final boolean isAppendBlob) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     // JDK7 does not support PATCH, so to workaround the issue we will use
     // PUT and specify the real method in the X-Http-Method-Override header.
@@ -401,8 +405,44 @@ public class AbfsClient implements Closeable {
             HTTP_METHOD_PUT,
             url,
             requestHeaders, buffer, offset, length, sasTokenForReuse);
-    op.execute();
+    try {
+      op.execute();
+    } catch (AzureBlobFileSystemException e) {
+      if (isAppendBlob && appendSuccessCheckOp(op, path, (position + length))) {
+        final AbfsRestOperation successOp = new AbfsRestOperation(
+            AbfsRestOperationType.Append,
+                this,
+                HTTP_METHOD_PUT,
+                url,
+                requestHeaders, buffer, offset, length, sasTokenForReuse);
+        successOp.hardSetResult(HttpURLConnection.HTTP_OK);
+        return successOp;
+      }
+      throw e;
+    }
+
     return op;
+  }
+
+  // For AppendBlob its possible that the append succeeded in the backend but the request failed.
+  // However a retry would fail with an InvalidQueryParameterValue
+  // (as the current offset would be unacceptable).
+  // Hence, we pass/succeed the appendblob append call
+  // in case we are doing a retry after checking the length of the file
+  public boolean appendSuccessCheckOp(AbfsRestOperation op, final String path,
+                                       final long length) throws AzureBlobFileSystemException {
+    if ((op.isARetriedRequest())
+        && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_BAD_REQUEST)) {
+      final AbfsRestOperation destStatusOp = getPathStatus(path, false);
+      if (destStatusOp.getResult().getStatusCode() == HttpURLConnection.HTTP_OK) {
+        String fileLength = destStatusOp.getResult().getResponseHeader(
+            HttpHeaderConfigurations.CONTENT_LENGTH);
+        if (length <= Long.parseLong(fileLength)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   public AbfsRestOperation flush(final String path, final long position, boolean retainUncommittedData,
