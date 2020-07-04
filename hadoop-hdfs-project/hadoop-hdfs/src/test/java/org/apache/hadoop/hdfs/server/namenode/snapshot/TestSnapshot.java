@@ -457,6 +457,59 @@ public class TestSnapshot {
   }
 
   /**
+   * HDFS-15446 - ensure that snapshot operations on /.reserved/raw
+   * paths work and the NN can load the resulting edits.
+   */
+  @Test(timeout = 60000)
+  public void testSnapshotOpsOnReservedPath() throws Exception {
+    Path dir = new Path("/dir");
+    Path nestedDir = new Path("/nested/dir");
+    Path sub = new Path(dir, "sub");
+    Path subFile = new Path(sub, "file");
+    Path nestedFile = new Path(nestedDir, "file");
+    DFSTestUtil.createFile(hdfs, subFile, BLOCKSIZE, REPLICATION, seed);
+    DFSTestUtil.createFile(hdfs, nestedFile, BLOCKSIZE, REPLICATION, seed);
+
+    hdfs.allowSnapshot(dir);
+    hdfs.allowSnapshot(nestedDir);
+    Path reservedDir = new Path("/.reserved/raw/dir");
+    Path reservedNestedDir = new Path("/.reserved/raw/nested/dir");
+    hdfs.createSnapshot(reservedDir, "s1");
+    hdfs.createSnapshot(reservedNestedDir, "s1");
+    hdfs.renameSnapshot(reservedDir, "s1", "s2");
+    hdfs.renameSnapshot(reservedNestedDir, "s1", "s2");
+    hdfs.deleteSnapshot(reservedDir, "s2");
+    hdfs.deleteSnapshot(reservedNestedDir, "s2");
+    // The original problem with reserved path, is that the NN was unable to
+    // replay the edits, therefore restarting the NN to ensure it starts
+    // and no exceptions are raised.
+    cluster.restartNameNode(true);
+  }
+
+  /**
+   * HDFS-15446 - ensure that snapshot operations on /.reserved/raw
+   * paths work and the NN can load the resulting edits. This test if for
+   * snapshots at the root level.
+   */
+  @Test(timeout = 60000)
+  public void testSnapshotOpsOnRootReservedPath() throws Exception {
+    Path dir = new Path("/");
+    Path sub = new Path(dir, "sub");
+    Path subFile = new Path(sub, "file");
+    DFSTestUtil.createFile(hdfs, subFile, BLOCKSIZE, REPLICATION, seed);
+
+    hdfs.allowSnapshot(dir);
+    Path reservedDir = new Path("/.reserved/raw");
+    hdfs.createSnapshot(reservedDir, "s1");
+    hdfs.renameSnapshot(reservedDir, "s1", "s2");
+    hdfs.deleteSnapshot(reservedDir, "s2");
+    // The original problem with reserved path, is that the NN was unable to
+    // replay the edits, therefore restarting the NN to ensure it starts
+    // and no exceptions are raised.
+    cluster.restartNameNode(true);
+  }
+
+  /**
    * Prepare a list of modifications. A modification may be a file creation,
    * file deletion, or a modification operation such as appending to an existing
    * file.

@@ -693,6 +693,26 @@ public class FSDirectory implements Closeable {
     return iip;
   }
 
+  /**
+   * This method should only be used from internal paths and not those provided
+   * directly by a user. It resolves a given path into an INodesInPath in a
+   * similar way to resolvePath(...), only traversal and permissions are not
+   * checked.
+   * @param src The path to resolve.
+   * @return if the path indicates an inode, return path after replacing up to
+   *        {@code <inodeid>} with the corresponding path of the inode, else
+   *        the path in {@code src} as is. If the path refers to a path in
+   *        the "raw" directory, return the non-raw pathname.
+   * @throws FileNotFoundException
+   */
+  public INodesInPath unprotectedResolvePath(String src)
+      throws FileNotFoundException {
+    byte[][] components = INode.getPathComponents(src);
+    boolean isRaw = isReservedRawName(components);
+    components = resolveComponents(components, this);
+    return INodesInPath.resolve(rootDir, components, isRaw);
+  }
+
   INodesInPath resolvePath(FSPermissionChecker pc, String src, long fileId)
       throws UnresolvedLinkException, FileNotFoundException,
       AccessControlException, ParentNotDirectoryException {
