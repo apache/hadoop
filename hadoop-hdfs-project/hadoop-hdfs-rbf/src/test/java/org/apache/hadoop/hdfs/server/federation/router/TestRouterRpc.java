@@ -1777,6 +1777,43 @@ public class TestRouterRpc {
     assertArrayEquals(group, result);
   }
 
+  @Test
+  public void testGetCachedDatanodeReport() throws Exception {
+    final DatanodeInfo[] datanodeReport =
+        routerProtocol.getDatanodeReport(DatanodeReportType.ALL);
+
+    // We should have 12 nodes in total
+    assertEquals(12, datanodeReport.length);
+
+    // We should be caching this information
+    DatanodeInfo[] datanodeReport1 =
+        routerProtocol.getDatanodeReport(DatanodeReportType.ALL);
+    assertArrayEquals(datanodeReport1, datanodeReport);
+
+    // Add one datanode
+    getCluster().getCluster().startDataNodes(getCluster().getCluster().getConfiguration(0),
+        1, true, null, null, null);
+
+    // We wait until the cached value is updated
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        DatanodeInfo[] dn = null;
+        try {
+          dn = routerProtocol.getDatanodeReport(DatanodeReportType.ALL);
+        } catch (IOException ex) {
+          LOG.error("Error on getDatanodeReport");
+        }
+        return !Arrays.equals(datanodeReport, dn);
+      }
+    }, 500, 5 * 1000);
+
+    // The cache should be updated now
+    final DatanodeInfo[] datanodeReport2 =
+        routerProtocol.getDatanodeReport(DatanodeReportType.ALL);
+    assertFalse(Arrays.equals(datanodeReport, datanodeReport2));
+  }
+
   /**
    * Check the erasure coding policies in the Router and the Namenode.
    * @return The erasure coding policies.
