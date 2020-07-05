@@ -72,7 +72,7 @@ extends AbstractDelegationTokenIdentifier>
 
   /**
    * Map of token real owners to its token count. This is used to generate
-   * top users by owned tokens.
+   * metrics of top users by owned tokens.
    */
   protected final Map<String, Long> tokenOwnerStats = new ConcurrentHashMap<>();
 
@@ -101,7 +101,7 @@ extends AbstractDelegationTokenIdentifier>
   private long tokenMaxLifetime;
   private long tokenRemoverScanInterval;
   private long tokenRenewInterval;
-  /**
+  /** Couldn't create proxy provide
    * Whether to store a token's tracking ID in its TokenInformation.
    * Can be overridden by a subclass.
    */
@@ -774,7 +774,7 @@ extends AbstractDelegationTokenIdentifier>
    * @param id
    * @return real owner
    */
-  public String getTokenRealOwner(TokenIdent id) {
+  private String getTokenRealOwner(TokenIdent id) {
     String realUser;
     if (id.getRealUser() != null && !id.getRealUser().toString().isEmpty()) {
       realUser = id.getRealUser().toString();
@@ -791,10 +791,10 @@ extends AbstractDelegationTokenIdentifier>
    *
    * @param id
    */
-  public void addTokenForOwnerStats(TokenIdent id) {
+  private void addTokenForOwnerStats(TokenIdent id) {
     String realOwner = getTokenRealOwner(id);
     tokenOwnerStats.put(realOwner,
-        tokenOwnerStats.getOrDefault(realOwner, 0l)+1);
+        tokenOwnerStats.getOrDefault(realOwner, 0L)+1);
   }
 
   /**
@@ -802,7 +802,7 @@ extends AbstractDelegationTokenIdentifier>
    *
    * @param id
    */
-  public void removeTokenForOwnerStats(TokenIdent id) {
+  private void removeTokenForOwnerStats(TokenIdent id) {
     String realOwner = getTokenRealOwner(id);
     if (tokenOwnerStats.containsKey(realOwner)) {
       // unlikely to be less than 1 but in case
@@ -816,9 +816,11 @@ extends AbstractDelegationTokenIdentifier>
 
   /**
    * This method syncs token information from currentTokens to tokenOwnerStats.
-   * It is used when the currentTokens is initialized or refreshed.
+   * It is used when the currentTokens is initialized or refreshed. This is
+   * called from a single thread thus no synchronization is needed.
    */
-  public void syncTokenOwnerStats() {
+  protected void syncTokenOwnerStats() {
+    tokenOwnerStats.clear();
     for (TokenIdent id : currentTokens.keySet()) {
       addTokenForOwnerStats(id);
     }
