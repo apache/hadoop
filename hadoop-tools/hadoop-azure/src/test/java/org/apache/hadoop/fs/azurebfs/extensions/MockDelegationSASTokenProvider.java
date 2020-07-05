@@ -34,7 +34,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpHeader;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
-import org.apache.hadoop.fs.azurebfs.utils.Base64;
+import java.util.Base64;
 import org.apache.hadoop.fs.azurebfs.utils.DelegationSASGenerator;
 import org.apache.hadoop.fs.azurebfs.utils.SASGenerator;
 import org.apache.hadoop.security.AccessControlException;
@@ -114,7 +114,7 @@ public class MockDelegationSASTokenProvider implements SASTokenProvider {
     int beginIndex = responseBody.indexOf("<Value>") + "<Value>".length();
     int endIndex = responseBody.indexOf("</Value>");
     String value = responseBody.substring(beginIndex, endIndex);
-    return Base64.decode(value);
+    return Base64.getDecoder().decode(value);
   }
 
   /**

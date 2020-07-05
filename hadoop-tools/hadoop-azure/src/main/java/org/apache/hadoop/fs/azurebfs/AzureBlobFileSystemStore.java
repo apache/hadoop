@@ -47,6 +47,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.Base64;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -97,7 +98,6 @@ import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
 import org.apache.hadoop.fs.azurebfs.services.SharedKeyCredentials;
 import org.apache.hadoop.fs.azurebfs.services.AbfsPerfTracker;
 import org.apache.hadoop.fs.azurebfs.services.AbfsPerfInfo;
-import org.apache.hadoop.fs.azurebfs.utils.Base64;
 import org.apache.hadoop.fs.azurebfs.utils.CRC64;
 import org.apache.hadoop.fs.azurebfs.utils.DateTimeUtils;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
@@ -814,7 +814,7 @@ public class AzureBlobFileSystemStore implements Closeable {
             .append(SINGLE_WHITE_SPACE)
             .append(firstEntryName);
 
-    return Base64.encode(token.toString().getBytes(StandardCharsets.UTF_8));
+    return Base64.getEncoder().encodeToString(token.toString().getBytes(StandardCharsets.UTF_8));
   }
 
   // generate continuation token for non-xns account
@@ -833,7 +833,7 @@ public class AzureBlobFileSystemStore implements Closeable {
     String date = simpleDateFormat.format(new Date());
     String token = String.format("%06d!%s!%06d!%s!%06d!%s!",
             path.length(), path, startFrom.length(), startFrom, date.length(), date);
-    String base64EncodedToken = Base64.encode(token.getBytes(StandardCharsets.UTF_8));
+    String base64EncodedToken = Base64.getEncoder().encodeToString(token.getBytes(StandardCharsets.UTF_8));
 
     StringBuilder encodedTokenBuilder = new StringBuilder(base64EncodedToken.length() + 5);
     encodedTokenBuilder.append(String.format("%s!%d!", TOKEN_VERSION, base64EncodedToken.length()));
@@ -1266,7 +1266,7 @@ public class AzureBlobFileSystemStore implements Closeable {
         throw new CharacterCodingException();
       }
 
-      String encodedPropertyValue = Base64.encode(encoder.encode(CharBuffer.wrap(value)).array());
+      String encodedPropertyValue = Base64.getEncoder().encodeToString(encoder.encode(CharBuffer.wrap(value)).array());
       commaSeparatedProperties.append(key)
               .append(AbfsHttpConstants.EQUAL)
               .append(encodedPropertyValue);
@@ -1304,7 +1304,7 @@ public class AzureBlobFileSystemStore implements Closeable {
           throw new InvalidFileSystemPropertyException(xMsProperties);
         }
 
-        byte[] decodedValue = Base64.decode(nameValue[1]);
+        byte[] decodedValue = Base64.getDecoder().decode(nameValue[1]);
 
         final String value;
         try {

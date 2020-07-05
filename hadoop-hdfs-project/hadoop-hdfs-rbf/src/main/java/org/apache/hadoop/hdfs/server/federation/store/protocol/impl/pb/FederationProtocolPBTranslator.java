@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.server.federation.store.protocol.impl.pb;
 import java.io.IOException;
 import java.lang.reflect.Method;
 
-import org.apache.commons.codec.binary.Base64;
+import java.util.Base64;
 
 import org.apache.hadoop.thirdparty.protobuf.GeneratedMessageV3;
 import org.apache.hadoop.thirdparty.protobuf.Message;
@@ -138,7 +138,7 @@ public class FederationProtocolPBTranslator<P extends GeneratedMessageV3,
    */
   @SuppressWarnings("unchecked")
   public void readInstance(String base64String) throws IOException {
-    byte[] bytes = Base64.decodeBase64(base64String);
+    byte[] bytes = Base64.getDecoder().decode(base64String);
     Message msg = getBuilder().mergeFrom(bytes).build();
     this.proto = (P) msg;
   }

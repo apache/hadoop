@@ -21,7 +21,7 @@ package org.apache.hadoop.yarn.util;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
-import org.apache.commons.codec.binary.Base64;
+import java.util.Base64;
 
 
 public class AuxiliaryServiceHelper {
@@ -34,7 +34,7 @@ public class AuxiliaryServiceHelper {
     if (null == meta) {
       return null;
     }
-    byte[] metaData = Base64.decodeBase64(meta);
+    byte[] metaData = Base64.getDecoder().decode(meta);
     return ByteBuffer.wrap(metaData);
   }
 
@@ -42,7 +42,7 @@ public class AuxiliaryServiceHelper {
       ByteBuffer metaData, Map<String, String> env) {
     byte[] byteData = metaData.array();
     env.put(getPrefixServiceName(serviceName),
-        Base64.encodeBase64String(byteData));
+        Base64.getEncoder().encodeToString(byteData));
   }
 
   public static String getPrefixServiceName(String serviceName) {

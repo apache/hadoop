@@ -39,7 +39,7 @@ import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
 import javax.security.sasl.SaslServerFactory;
 
-import org.apache.commons.codec.binary.Base64;
+import java.util.Base64;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -182,11 +182,11 @@ public class SaslRpcServer {
   }
   
   static String encodeIdentifier(byte[] identifier) {
-    return new String(Base64.encodeBase64(identifier), StandardCharsets.UTF_8);
+    return new String(Base64.getEncoder().encode(identifier), StandardCharsets.UTF_8);
   }
 
   static byte[] decodeIdentifier(String identifier) {
-    return Base64.decodeBase64(identifier.getBytes(StandardCharsets.UTF_8));
+    return Base64.getDecoder().decode(identifier.getBytes(StandardCharsets.UTF_8));
   }
 
   public static <T extends TokenIdentifier> T getIdentifier(String id,
@@ -204,7 +204,7 @@ public class SaslRpcServer {
   }
 
   static char[] encodePassword(byte[] password) {
-    return new String(Base64.encodeBase64(password),
+    return new String(Base64.getEncoder().encode(password),
                       StandardCharsets.UTF_8).toCharArray();
   }
 

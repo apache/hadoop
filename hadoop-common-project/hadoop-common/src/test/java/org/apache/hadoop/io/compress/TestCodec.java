@@ -48,7 +48,7 @@ import java.util.Random;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
-import org.apache.commons.codec.binary.Base64;
+import java.util.Base64;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileStatus;
@@ -361,7 +361,7 @@ public class TestCodec {
             fs.getUri(), fs.getWorkingDirectory());
     final Path file = new Path(wd, "test" + codec.getDefaultExtension());
     final byte[] b = new byte[REC_SIZE];
-    final Base64 b64 = new Base64(0, null);
+    final Base64.Encoder b64 = Base64.getEncoder();
     Compressor cmp = CodecPool.getCompressor(codec);
     try (DataOutputStream fout =
              new DataOutputStream(codec.createOutputStream(fs.create(file,

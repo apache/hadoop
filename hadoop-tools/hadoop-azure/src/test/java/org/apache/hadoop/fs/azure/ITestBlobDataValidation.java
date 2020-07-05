@@ -28,6 +28,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.util.Arrays;
+import java.util.Base64;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -47,7 +48,6 @@ import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.BlockEntry;
 import com.microsoft.azure.storage.blob.BlockSearchMode;
 import com.microsoft.azure.storage.blob.CloudBlockBlob;
-import com.microsoft.azure.storage.core.Base64;
 
 /**
  * Test that we do proper data integrity validation with MD5 checks as
@@ -113,7 +113,7 @@ public class ITestBlobDataValidation extends AbstractWasbTestWithTimeout {
     }
 
     // Mess with the content so it doesn't match the MD5.
-    String newBlockId = Base64.encode(new byte[] { 55, 44, 33, 22 });
+    String newBlockId = Base64.getEncoder().encodeToString(new byte[] { 55, 44, 33, 22 });
     blob.uploadBlock(newBlockId,
         new ByteArrayInputStream(new byte[] { 6, 45 }), 2);
     blob.commitBlockList(Arrays.asList(new BlockEntry[] { new BlockEntry(

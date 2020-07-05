@@ -32,7 +32,6 @@ import javax.ws.rs.core.UriBuilder;
 
 import com.google.common.base.Preconditions;
 
-import org.apache.commons.codec.binary.Base64;
 import com.google.common.base.Strings;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -76,7 +75,6 @@ import static org.apache.hadoop.yarn.service.exceptions.LauncherExitCodes.*;
 public class ApiServiceClient extends AppAdminClient {
   private static final Logger LOG =
       LoggerFactory.getLogger(ApiServiceClient.class);
-  private static final Base64 BASE_64_CODEC = new Base64(0);
   protected YarnClient yarnClient;
 
   public ApiServiceClient() {

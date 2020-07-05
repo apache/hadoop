@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.util;
 
-import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
@@ -35,6 +34,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Base64;
 
 /**
  * Utils for KMS.
@@ -101,7 +101,7 @@ public final class KMSUtil {
       json.put(KMSRESTConstants.VERSION_NAME_FIELD,
           keyVersion.getVersionName());
       json.put(KMSRESTConstants.MATERIAL_FIELD,
-          Base64.encodeBase64URLSafeString(
+              Base64.getUrlEncoder().encodeToString(
               keyVersion.getMaterial()));
     }
     return json;
@@ -114,7 +114,7 @@ public final class KMSUtil {
       json.put(KMSRESTConstants.VERSION_NAME_FIELD,
           encryptedKeyVersion.getEncryptionKeyVersionName());
       json.put(KMSRESTConstants.IV_FIELD, Base64
-          .encodeBase64URLSafeString(encryptedKeyVersion.getEncryptedKeyIv()));
+          .getUrlEncoder().encodeToString(encryptedKeyVersion.getEncryptedKeyIv()));
       json.put(KMSRESTConstants.ENCRYPTED_KEY_VERSION_FIELD,
           toJSON(encryptedKeyVersion.getEncryptedKeyVersion()));
     }
@@ -162,7 +162,7 @@ public final class KMSUtil {
         (String) valueMap.get(KMSRESTConstants.VERSION_NAME_FIELD),
         KMSRESTConstants.VERSION_NAME_FIELD);
 
-    byte[] iv = Base64.decodeBase64(checkNotNull(
+    byte[] iv = Base64.getDecoder().decode(checkNotNull(
         (String) valueMap.get(KMSRESTConstants.IV_FIELD),
         KMSRESTConstants.IV_FIELD));
 
@@ -174,7 +174,7 @@ public final class KMSUtil {
             encValueMap.get(KMSRESTConstants.VERSION_NAME_FIELD),
         KMSRESTConstants.VERSION_NAME_FIELD);
 
-    byte[] encKeyMaterial = Base64.decodeBase64(checkNotNull((String)
+    byte[] encKeyMaterial = Base64.getDecoder().decode(checkNotNull((String)
             encValueMap.get(KMSRESTConstants.MATERIAL_FIELD),
         KMSRESTConstants.MATERIAL_FIELD));
 
@@ -189,7 +189,7 @@ public final class KMSUtil {
     if (!valueMap.isEmpty()) {
       byte[] material =
           (valueMap.containsKey(KMSRESTConstants.MATERIAL_FIELD)) ?
-              Base64.decodeBase64(
+                  Base64.getDecoder().decode(
                   (String) valueMap.get(KMSRESTConstants.MATERIAL_FIELD)) :
               null;
       String versionName =

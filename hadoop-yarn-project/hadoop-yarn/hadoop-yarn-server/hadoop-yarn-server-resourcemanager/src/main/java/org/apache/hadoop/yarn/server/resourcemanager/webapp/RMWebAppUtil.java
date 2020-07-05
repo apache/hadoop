@@ -27,7 +27,7 @@ import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 
-import org.apache.commons.codec.binary.Base64;
+import java.util.Base64;
 import org.apache.hadoop.security.authentication.server.ProxyUserAuthenticationFilterInitializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -278,8 +278,7 @@ public final class RMWebAppUtil {
     for (Map.Entry<String, String> entry : newApp
         .getContainerLaunchContextInfo().getAuxillaryServiceData().entrySet()) {
       if (!entry.getValue().isEmpty()) {
-        Base64 decoder = new Base64(0, null, true);
-        byte[] data = decoder.decode(entry.getValue());
+        byte[] data = Base64.getUrlDecoder().decode(entry.getValue());
         hmap.put(entry.getKey(), ByteBuffer.wrap(data));
       }
     }
@@ -327,8 +326,7 @@ public final class RMWebAppUtil {
       for (Map.Entry<String, String> entry : credentials.getSecrets()
           .entrySet()) {
         Text alias = new Text(entry.getKey());
-        Base64 decoder = new Base64(0, null, true);
-        byte[] secret = decoder.decode(entry.getValue());
+        byte[] secret = Base64.getUrlDecoder().decode(entry.getValue());
         ret.addSecretKey(alias, secret);
       }
     } catch (IOException ie) {

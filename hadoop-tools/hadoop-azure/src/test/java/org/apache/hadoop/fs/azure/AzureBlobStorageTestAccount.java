@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.azure;
 
 import com.microsoft.azure.storage.*;
 import com.microsoft.azure.storage.blob.*;
-import com.microsoft.azure.storage.core.Base64;
 import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -451,7 +450,7 @@ public final class AzureBlobStorageTestAccount implements AutoCloseable,
    */
   public static void setMockAccountKey(Configuration conf, String accountName) {
     conf.set(ACCOUNT_KEY_PROPERTY_NAME + accountName,
-        Base64.encode(new byte[] { 1, 2, 3 }));  
+        Base64.getEncoder().encodeToString(new byte[] { 1, 2, 3 }));
   }
 
   private static URI createAccountUri(String accountName)

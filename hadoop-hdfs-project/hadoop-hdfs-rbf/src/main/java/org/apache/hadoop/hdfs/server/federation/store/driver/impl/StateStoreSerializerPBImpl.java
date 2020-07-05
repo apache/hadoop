@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs.server.federation.store.driver.impl;
 
 import java.io.IOException;
 
-import org.apache.commons.codec.binary.Base64;
+import java.util.Base64;
 import org.apache.commons.codec.binary.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.federation.store.driver.StateStoreSerializer;
@@ -80,7 +80,7 @@ public final class StateStoreSerializerPBImpl extends StateStoreSerializer {
       PBRecord recordPB = (PBRecord) record;
       Message msg = recordPB.getProto();
       byte[] byteArray = msg.toByteArray();
-      byteArray64 = Base64.encodeBase64(byteArray, false);
+      byteArray64 = Base64.getEncoder().encode(byteArray);
     }
     return byteArray64;
   }
@@ -99,7 +99,7 @@ public final class StateStoreSerializerPBImpl extends StateStoreSerializer {
     T record = newRecord(clazz);
     if (record instanceof PBRecord) {
       PBRecord pbRecord = (PBRecord) record;
-      byte[] byteArray64 = Base64.encodeBase64(byteArray, false);
+      byte[] byteArray64 = Base64.getEncoder().encode(byteArray);
       String base64Encoded = StringUtils.newStringUtf8(byteArray64);
       pbRecord.readInstance(base64Encoded);
     }
@@ -109,7 +109,7 @@ public final class StateStoreSerializerPBImpl extends StateStoreSerializer {
   @Override
   public <T extends BaseRecord> T deserialize(String data, Class<T> clazz)
       throws IOException {
-    byte[] byteArray64 = Base64.decodeBase64(data);
+    byte[] byteArray64 = Base64.getDecoder().decode(data);
     return deserialize(byteArray64, clazz);
   }
 }

@@ -26,7 +26,7 @@ import java.util.List;
 
 import com.google.common.collect.ImmutableSet;
 
-import org.apache.commons.codec.binary.Base64;
+import java.util.Base64;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -51,7 +51,6 @@ public abstract class YarnClientUtils {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(YarnClientUtils.class);
-  private static final Base64 BASE_64_CODEC = new Base64(0);
   private static final String ADD_LABEL_FORMAT_ERR_MSG =
       "Input format for adding node-labels is not correct, it should be "
           + "labelName1[(exclusive=true/false)],LabelName2[] ..";
@@ -243,7 +242,7 @@ public abstract class YarnClientUtils {
               gssContext.dispose();
               // Base64 encoded and stringified token for server
               LOG.debug("Got valid challenge for host {}", serverName);
-              return new String(BASE_64_CODEC.encode(outToken),
+              return new String(Base64.getEncoder().encode(outToken),
                   StandardCharsets.US_ASCII);
             } catch (GSSException | IllegalAccessException
                 | NoSuchFieldException | ClassNotFoundException e) {

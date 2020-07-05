@@ -30,7 +30,7 @@ import java.util.Properties;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.codec.binary.Base64;
+import java.util.Base64;
 import org.apache.directory.server.annotations.CreateLdapServer;
 import org.apache.directory.server.annotations.CreateTransport;
 import org.apache.directory.server.core.annotations.ApplyLdifs;
@@ -138,10 +138,9 @@ public class TestMultiSchemeAuthenticationHandler
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
 
-    final Base64 base64 = new Base64(0);
     String credentials = "bjones:invalidpassword";
     Mockito.when(request.getHeader(AUTHORIZATION_HEADER))
-        .thenReturn(base64.encodeToString(credentials.getBytes()));
+        .thenReturn(Base64.getEncoder().encodeToString(credentials.getBytes()));
     Assert.assertNull(handler.authenticate(request, response));
     Mockito.verify(response).addHeader(WWW_AUTHENTICATE_HEADER, BASIC);
     Mockito.verify(response).addHeader(WWW_AUTHENTICATE_HEADER, NEGOTIATE);
@@ -153,8 +152,7 @@ public class TestMultiSchemeAuthenticationHandler
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
 
-    final Base64 base64 = new Base64(0);
-    String credentials = base64.encodeToString("bjones:p@ssw0rd".getBytes());
+    String credentials = Base64.getEncoder().encodeToString("bjones:p@ssw0rd".getBytes());
     String authHeader = BASIC + " " + credentials;
     Mockito.when(request.getHeader(AUTHORIZATION_HEADER))
         .thenReturn(authHeader);
@@ -168,7 +166,7 @@ public class TestMultiSchemeAuthenticationHandler
 
   @Test(timeout = 60000)
   public void testRequestWithInvalidKerberosAuthorization() throws Exception {
-    String token = new Base64(0).encodeToString(new byte[]{0, 1, 2});
+    String token = Base64.getEncoder().encodeToString(new byte[]{0, 1, 2});
 
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);

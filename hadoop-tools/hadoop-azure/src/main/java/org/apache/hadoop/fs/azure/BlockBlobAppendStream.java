@@ -41,13 +41,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.Base64;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.StringUtils;
 
 import org.apache.hadoop.fs.FSExceptionMessages;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.fs.azure.StorageInterface.CloudBlockBlobWrapper;
@@ -691,7 +691,7 @@ public class BlockBlobAppendStream extends OutputStream implements Syncable,
     }
 
     return new String(
-            Base64.encodeBase64(blockIdInBytes),
+            Base64.getEncoder().encode(blockIdInBytes),
             StandardCharsets.UTF_8);
   }
 
@@ -704,7 +704,7 @@ public class BlockBlobAppendStream extends OutputStream implements Syncable,
     String blockIdSuffix  = String.format("%06d", id);
     byte[] blockIdInBytes =
             (prefix + blockIdSuffix).getBytes(StandardCharsets.UTF_8);
-    return new String(Base64.encodeBase64(blockIdInBytes), StandardCharsets.UTF_8);
+    return new String(Base64.getEncoder().encode(blockIdInBytes), StandardCharsets.UTF_8);
   }
 
   /**

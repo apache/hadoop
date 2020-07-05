@@ -21,7 +21,7 @@ package org.apache.hadoop.security.token;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Bytes;
 
-import org.apache.commons.codec.binary.Base64;
+import java.util.Base64;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -339,10 +339,9 @@ public class Token<T extends TokenIdentifier> implements Writable {
   private static String encodeWritable(Writable obj) throws IOException {
     DataOutputBuffer buf = new DataOutputBuffer();
     obj.write(buf);
-    Base64 encoder = new Base64(0, null, true);
     byte[] raw = new byte[buf.getLength()];
     System.arraycopy(buf.getData(), 0, raw, 0, buf.getLength());
-    return encoder.encodeToString(raw);
+    return Base64.getEncoder().encodeToString(raw);
   }
 
   /**
@@ -357,9 +356,8 @@ public class Token<T extends TokenIdentifier> implements Writable {
       throw new HadoopIllegalArgumentException(
               "Invalid argument, newValue is null");
     }
-    Base64 decoder = new Base64(0, null, true);
     DataInputBuffer buf = new DataInputBuffer();
-    byte[] decoded = decoder.decode(newValue);
+    byte[] decoded = Base64.getDecoder().decode(newValue);
     buf.reset(decoded, decoded.length);
     obj.readFields(buf);
   }

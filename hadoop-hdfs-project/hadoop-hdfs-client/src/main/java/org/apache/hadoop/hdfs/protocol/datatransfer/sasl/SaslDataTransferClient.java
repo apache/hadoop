@@ -44,7 +44,7 @@ import javax.security.sasl.RealmCallback;
 import javax.security.sasl.RealmChoiceCallback;
 
 import javax.security.sasl.Sasl;
-import org.apache.commons.codec.binary.Base64;
+import java.util.Base64;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CipherOption;
@@ -346,7 +346,7 @@ public class SaslDataTransferClient {
       DataEncryptionKey encryptionKey) {
     return encryptionKey.keyId + NAME_DELIMITER +
         encryptionKey.blockPoolId + NAME_DELIMITER +
-        new String(Base64.encodeBase64(encryptionKey.nonce, false),
+        new String(Base64.getEncoder().encode(encryptionKey.nonce),
             Charsets.UTF_8);
   }
 
@@ -470,7 +470,7 @@ public class SaslDataTransferClient {
    * @return SASL user name
    */
   private static String buildUserName(Token<BlockTokenIdentifier> blockToken) {
-    return new String(Base64.encodeBase64(blockToken.getIdentifier(), false),
+    return new String(Base64.getEncoder().encode(blockToken.getIdentifier()),
         Charsets.UTF_8);
   }
 
@@ -482,7 +482,7 @@ public class SaslDataTransferClient {
    * @return SASL password
    */
   private char[] buildClientPassword(Token<BlockTokenIdentifier> blockToken) {
-    return new String(Base64.encodeBase64(blockToken.getPassword(), false),
+    return new String(Base64.getEncoder().encode(blockToken.getPassword()),
         Charsets.UTF_8).toCharArray();
   }
 

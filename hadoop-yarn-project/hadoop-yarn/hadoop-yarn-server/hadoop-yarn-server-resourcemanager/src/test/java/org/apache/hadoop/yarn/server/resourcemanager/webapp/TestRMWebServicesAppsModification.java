@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.Base64;
 
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
@@ -49,7 +50,6 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
-import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.io.Text;
@@ -810,7 +810,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     CredentialsInfo credentials = new CredentialsInfo();
     HashMap<String, String> tokens = new HashMap<>();
     HashMap<String, String> secrets = new HashMap<>();
-    secrets.put("secret1", Base64.encodeBase64String(
+    secrets.put("secret1", Base64.getEncoder().encodeToString(
         "mysecret".getBytes("UTF8")));
     credentials.setSecrets(secrets);
     credentials.setTokens(tokens);
@@ -834,7 +834,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     appInfo.getContainerLaunchContextInfo().setEnvironment(environment);
     appInfo.getContainerLaunchContextInfo().setAcls(acls);
     appInfo.getContainerLaunchContextInfo().getAuxillaryServiceData()
-      .put("test", Base64.encodeBase64URLSafeString("value12".getBytes("UTF8")));
+      .put("test", Base64.getUrlEncoder().encodeToString("value12".getBytes("UTF8")));
     appInfo.getContainerLaunchContextInfo().setCredentials(credentials);
     appInfo.getResource().setMemory(1024);
     appInfo.getResource().setvCores(1);

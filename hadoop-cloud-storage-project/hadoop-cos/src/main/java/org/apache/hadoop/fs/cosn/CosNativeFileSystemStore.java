@@ -58,7 +58,7 @@ import com.qcloud.cos.model.PutObjectResult;
 import com.qcloud.cos.model.UploadPartRequest;
 import com.qcloud.cos.model.UploadPartResult;
 import com.qcloud.cos.region.Region;
-import com.qcloud.cos.utils.Base64;
+import java.util.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -168,7 +168,7 @@ class CosNativeFileSystemStore implements NativeFileSystemStore {
       byte[] md5Hash, long length) throws IOException {
     try {
       ObjectMetadata objectMetadata = new ObjectMetadata();
-      objectMetadata.setContentMD5(Base64.encodeAsString(md5Hash));
+      objectMetadata.setContentMD5(Base64.getEncoder().encodeToString(md5Hash));
       objectMetadata.setContentLength(length);
       PutObjectRequest putObjectRequest =
           new PutObjectRequest(bucketName, key, inputStream, objectMetadata);

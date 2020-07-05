@@ -36,7 +36,7 @@ import java.util.Map;
 import java.util.Set;
 import javax.security.sasl.Sasl;
 
-import org.apache.commons.codec.binary.Base64;
+import java.util.Base64;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CipherOption;
@@ -145,7 +145,7 @@ public final class DataTransferSaslUtil {
    * @return key encoded as SASL password
    */
   public static char[] encryptionKeyToPassword(byte[] encryptionKey) {
-    return new String(Base64.encodeBase64(encryptionKey, false), Charsets.UTF_8)
+    return new String(Base64.getEncoder().encode(encryptionKey), Charsets.UTF_8)
         .toCharArray();
   }
 

@@ -16,7 +16,7 @@ package org.apache.hadoop.security.authentication.server;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
-import org.apache.commons.codec.binary.Base64;
+import java.util.Base64;
 import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.ietf.jgss.GSSException;
@@ -324,8 +324,7 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
     } else {
       authorization = authorization.substring(
           KerberosAuthenticator.NEGOTIATE.length()).trim();
-      final Base64 base64 = new Base64(0);
-      final byte[] clientToken = base64.decode(authorization);
+      final byte[] clientToken = Base64.getDecoder().decode(authorization);
       try {
         final String serverPrincipal =
             KerberosUtil.getTokenServerName(clientToken);
@@ -338,8 +337,7 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
             new PrivilegedExceptionAction<AuthenticationToken>() {
               @Override
               public AuthenticationToken run() throws Exception {
-                return runWithPrincipal(serverPrincipal, clientToken,
-                      base64, response);
+                return runWithPrincipal(serverPrincipal, clientToken, response);
               }
             });
       } catch (PrivilegedActionException ex) {
@@ -356,7 +354,7 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
   }
 
   private AuthenticationToken runWithPrincipal(String serverPrincipal,
-      byte[] clientToken, Base64 base64, HttpServletResponse response) throws
+      byte[] clientToken, HttpServletResponse response) throws
       IOException, GSSException {
     GSSContext gssContext = null;
     GSSCredential gssCreds = null;
@@ -375,7 +373,7 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
       byte[] serverToken = gssContext.acceptSecContext(clientToken, 0,
           clientToken.length);
       if (serverToken != null && serverToken.length > 0) {
-        String authenticate = base64.encodeToString(serverToken);
+        String authenticate = Base64.getEncoder().encodeToString(serverToken);
         response.setHeader(KerberosAuthenticator.WWW_AUTHENTICATE,
                            KerberosAuthenticator.NEGOTIATE + " " +
                            authenticate);

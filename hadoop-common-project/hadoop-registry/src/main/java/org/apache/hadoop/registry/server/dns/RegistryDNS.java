@@ -19,7 +19,7 @@ package org.apache.hadoop.registry.server.dns;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.IOFileFilter;
-import org.apache.commons.net.util.Base64;
+import java.util.Base64;
 import org.apache.commons.net.util.SubnetUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
@@ -636,7 +636,7 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
       Name zoneName = zone.getOrigin();
       DNSKEYRecord dnskeyRecord = dnsKeyRecs.get(zoneName);
       if (dnskeyRecord == null) {
-        byte[] key = Base64.decodeBase64(publicKey.getBytes("UTF-8"));
+        byte[] key = Base64.getDecoder().decode(publicKey.getBytes("UTF-8"));
         dnskeyRecord = new DNSKEYRecord(zoneName,
             DClass.IN, ttl,
             DNSKEYRecord.Flags.ZONE_KEY,
@@ -661,8 +661,8 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
         String privateExponent = props.getProperty("PrivateExponent");
 
         RSAPrivateKeySpec privateSpec = new RSAPrivateKeySpec(
-            new BigInteger(1, Base64.decodeBase64(privateModulus)),
-            new BigInteger(1, Base64.decodeBase64(privateExponent)));
+            new BigInteger(1, Base64.getDecoder().decode(privateModulus)),
+            new BigInteger(1, Base64.getDecoder().decode(privateExponent)));
 
         KeyFactory factory = KeyFactory.getInstance("RSA");
         privateKey = factory.generatePrivate(privateSpec);

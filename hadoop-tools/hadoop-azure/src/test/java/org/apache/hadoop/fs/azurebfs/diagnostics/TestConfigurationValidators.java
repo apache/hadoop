@@ -22,7 +22,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
-import org.apache.hadoop.fs.azurebfs.utils.Base64;
+import java.util.Base64;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MAX_BUFFER_SIZE;
@@ -106,7 +106,7 @@ public class TestConfigurationValidators extends Assert {
 
   @Test
   public void testBase64StringConfigValidator() throws Exception {
-    String encodedVal = Base64.encode("someValue".getBytes());
+    String encodedVal = Base64.getEncoder().encodeToString("someValue".getBytes());
     Base64StringConfigurationBasicValidator base64StringConfigurationValidator = new Base64StringConfigurationBasicValidator(FAKE_KEY, "", false);
 
     assertEquals("", base64StringConfigurationValidator.validate(null));

@@ -16,7 +16,7 @@
  */
 package org.apache.hadoop.registry.server.dns;
 
-import org.apache.commons.net.util.Base64;
+import java.util.Base64;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.registry.client.api.RegistryConstants;
 import org.apache.hadoop.registry.client.binding.RegistryUtils;
@@ -445,14 +445,14 @@ public class TestRegistryDNS extends Assert {
             DNSKEYRecord.Flags.ZONE_KEY,
             DNSKEYRecord.Protocol.DNSSEC,
             DNSSEC.Algorithm.RSASHA256,
-            Base64.decodeBase64(publicK.getBytes()));
+            Base64.getDecoder().decode(publicK.getBytes()));
     assertNotNull(dnskeyRecord);
     RSAPrivateKeySpec privateSpec = new RSAPrivateKeySpec(new BigInteger(1,
-        Base64.decodeBase64(
+        Base64.getDecoder().decode(
             "7Ul6/QDPWSGVAK9/Se53X8I0dDDA8S7wE1yFm2F0PEo9Wfb3KsMIegBaPCIaw5LDd"
                 + "LMg+trBJsfPImyOfSgsGEasfpB50UafJ2jGM2zDeb9IKY6NH9rssYEAwMUq"
                 + "oWKiLiA7K43rqy8F5j7/m7Dvb7R6L0BDbSCp/qqX07OzltU=")),
-        new BigInteger(1, Base64.decodeBase64(
+        new BigInteger(1, Base64.getDecoder().decode(
             "MgbQ6DBYhskeufNGGdct0cGG/4wb0X183ggenwCv2dopDyOTPq+5xMb4Pz9Ndzgk/"
                 + "yCY7mpaWIu9rttGOzrR+LBRR30VobPpMK1bMnzu2C0x08oYAguVwZB79DLC"
                 + "705qmZpiaaFB+LnhG7VtpPiOBm3UzZxdrBfeq/qaKrXid60=")));

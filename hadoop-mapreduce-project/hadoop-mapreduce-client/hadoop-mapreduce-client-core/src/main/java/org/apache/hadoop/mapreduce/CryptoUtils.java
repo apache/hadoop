@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 
-import org.apache.commons.codec.binary.Base64;
+import java.util.Base64;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -135,7 +135,7 @@ public class CryptoUtils {
       out.write(iv);
       if (LOG.isDebugEnabled()) {
         LOG.debug("IV written to Stream ["
-            + Base64.encodeBase64URLSafeString(iv) + "]");
+            + Base64.getUrlEncoder().encodeToString(iv) + "]");
       }
       return new CryptoFSDataOutputStream(out, CryptoCodec.getInstance(conf),
           getBufferSize(conf), getEncryptionKey(), iv, closeOutputStream);
@@ -180,7 +180,7 @@ public class CryptoUtils {
           cryptoCodec.getCipherSuite().getAlgorithmBlockSize());
       if (LOG.isDebugEnabled()) {
         LOG.debug("IV read from ["
-            + Base64.encodeBase64URLSafeString(iv) + "]");
+            + Base64.getUrlEncoder().encodeToString(iv) + "]");
       }
       return new CryptoInputStream(in, cryptoCodec, bufferSize,
           getEncryptionKey(), iv, offset + cryptoPadding(conf));
@@ -215,7 +215,7 @@ public class CryptoUtils {
           cryptoCodec.getCipherSuite().getAlgorithmBlockSize());
       if (LOG.isDebugEnabled()) {
         LOG.debug("IV read from Stream ["
-            + Base64.encodeBase64URLSafeString(iv) + "]");
+            + Base64.getUrlEncoder().encodeToString(iv) + "]");
       }
       return new CryptoFSDataInputStream(in, cryptoCodec, bufferSize,
           getEncryptionKey(), iv);

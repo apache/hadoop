@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
-import org.apache.hadoop.fs.azurebfs.utils.Base64;
+import java.util.Base64;
 
 /**
  * Represents the shared key credentials used to access an Azure Storage
@@ -76,7 +76,7 @@ public class SharedKeyCredentials {
       throw new IllegalArgumentException("Invalid account key.");
     }
     this.accountName = accountName;
-    this.accountKey = Base64.decode(accountKey);
+    this.accountKey = Base64.getDecoder().decode(accountKey);
     initializeMac();
   }
 
@@ -108,7 +108,7 @@ public class SharedKeyCredentials {
     synchronized (this) {
       hmac = hmacSha256.doFinal(utf8Bytes);
     }
-    return Base64.encode(hmac);
+    return Base64.getEncoder().encodeToString(hmac);
   }
 
   /**

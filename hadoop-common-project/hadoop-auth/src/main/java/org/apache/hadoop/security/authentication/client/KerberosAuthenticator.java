@@ -15,7 +15,7 @@ package org.apache.hadoop.security.authentication.client;
 
 import com.google.common.annotations.VisibleForTesting;
 import java.lang.reflect.Constructor;
-import org.apache.commons.codec.binary.Base64;
+import java.util.Base64;
 import org.apache.hadoop.security.authentication.server.HttpConstants;
 import org.apache.hadoop.security.authentication.util.AuthToken;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
@@ -149,7 +149,6 @@ public class KerberosAuthenticator implements Authenticator {
   }
   
   private URL url;
-  private Base64 base64;
   private ConnectionConfigurator connConfigurator;
 
   /**
@@ -182,7 +181,6 @@ public class KerberosAuthenticator implements Authenticator {
       throws IOException, AuthenticationException {
     if (!token.isSet()) {
       this.url = url;
-      base64 = new Base64(0);
       try {
         HttpURLConnection conn = token.openConnection(url, connConfigurator);
         conn.setRequestMethod(AUTH_HTTP_METHOD);
@@ -369,7 +367,7 @@ public class KerberosAuthenticator implements Authenticator {
   */
   private void sendToken(HttpURLConnection conn, byte[] outToken)
       throws IOException {
-    String token = base64.encodeToString(outToken);
+    String token = Base64.getEncoder().encodeToString(outToken);
     conn.setRequestMethod(AUTH_HTTP_METHOD);
     conn.setRequestProperty(AUTHORIZATION, NEGOTIATE + " " + token);
     conn.connect();
@@ -388,7 +386,7 @@ public class KerberosAuthenticator implements Authenticator {
                                           "' header incorrect: " + authHeader);
       }
       String negotiation = authHeader.trim().substring((NEGOTIATE + " ").length()).trim();
-      return base64.decode(negotiation);
+      return Base64.getDecoder().decode(negotiation);
     }
     throw new AuthenticationException("Invalid SPNEGO sequence, status code: " + status);
   }

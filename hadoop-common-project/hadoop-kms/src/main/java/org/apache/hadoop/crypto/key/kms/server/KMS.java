@@ -19,7 +19,6 @@ package org.apache.hadoop.crypto.key.kms.server;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.util.KMSUtil;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
@@ -55,6 +54,7 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Base64;
 
 import static org.apache.hadoop.util.KMSUtil.checkNotEmpty;
 import static org.apache.hadoop.util.KMSUtil.checkNotNull;
@@ -151,7 +151,7 @@ public class KMS {
             @Override
             public KeyVersion run() throws Exception {
               KeyProvider.KeyVersion keyVersion = (material != null)
-                  ? provider.createKey(name, Base64.decodeBase64(material),
+                  ? provider.createKey(name, Base64.getDecoder().decode(material),
                       options)
                   : provider.createKey(name, options);
               provider.flush();
@@ -235,7 +235,7 @@ public class KMS {
                 public KeyVersion run() throws Exception {
                 KeyVersion keyVersion = (material != null)
                         ? provider.rollNewVersion(name,
-                        Base64.decodeBase64(material))
+                        Base64.getDecoder().decode(material))
                         : provider.rollNewVersion(name);
                 provider.flush();
                 return keyVersion;
@@ -625,10 +625,10 @@ public class KMS {
       String encMaterialStr =
               (String) jsonPayload.get(KMSRESTConstants.MATERIAL_FIELD);
       checkNotNull(ivStr, KMSRESTConstants.IV_FIELD);
-      final byte[] iv = Base64.decodeBase64(ivStr);
+      final byte[] iv = Base64.getDecoder().decode(ivStr);
       checkNotNull(encMaterialStr,
           KMSRESTConstants.MATERIAL_FIELD);
-      final byte[] encMaterial = Base64.decodeBase64(encMaterialStr);
+      final byte[] encMaterial = Base64.getDecoder().decode(encMaterialStr);
       Object retJSON;
       if (eekOp.equals(KMSRESTConstants.EEK_DECRYPT)) {
         KMSWebApp.getDecryptEEKCallsMeter().mark();

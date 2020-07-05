@@ -31,7 +31,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.codec.binary.Base64;
+import java.util.Base64;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
@@ -190,9 +190,8 @@ public class LdapAuthenticationHandler implements AuthenticationHandler {
     } else {
       authorization =
           authorization.substring(HttpConstants.BASIC.length()).trim();
-      final Base64 base64 = new Base64(0);
       // As per RFC7617, UTF-8 charset should be used for decoding.
-      String[] credentials = new String(base64.decode(authorization),
+      String[] credentials = new String(Base64.getDecoder().decode(authorization),
           StandardCharsets.UTF_8).split(":", 2);
       if (credentials.length == 2) {
         token = authenticateUser(credentials[0], credentials[1]);

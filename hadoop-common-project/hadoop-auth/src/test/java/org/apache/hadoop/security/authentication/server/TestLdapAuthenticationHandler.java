@@ -21,7 +21,7 @@ import javax.servlet.http.HttpServletResponse;
 import static org.apache.hadoop.security.authentication.server.LdapAuthenticationHandler.*;
 import static org.apache.hadoop.security.authentication.server.LdapConstants.*;
 
-import org.apache.commons.codec.binary.Base64;
+import java.util.Base64;
 import org.apache.directory.server.annotations.CreateLdapServer;
 import org.apache.directory.server.annotations.CreateTransport;
 import org.apache.directory.server.core.annotations.ApplyLdifs;
@@ -99,10 +99,9 @@ public class TestLdapAuthenticationHandler extends AbstractLdapTestUnit {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
 
-    final Base64 base64 = new Base64(0);
     String credentials = "bjones:invalidpassword";
     Mockito.when(request.getHeader(HttpConstants.AUTHORIZATION_HEADER))
-        .thenReturn(base64.encodeToString(credentials.getBytes()));
+        .thenReturn(Base64.getEncoder().encodeToString(credentials.getBytes()));
     Assert.assertNull(handler.authenticate(request, response));
     Mockito.verify(response).setHeader(WWW_AUTHENTICATE, HttpConstants.BASIC);
     Mockito.verify(response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
@@ -123,8 +122,7 @@ public class TestLdapAuthenticationHandler extends AbstractLdapTestUnit {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
 
-    final Base64 base64 = new Base64(0);
-    String credentials = base64.encodeToString("bjones:p@ssw0rd".getBytes());
+    String credentials = Base64.getEncoder().encodeToString("bjones:p@ssw0rd".getBytes());
     String authHeader = HttpConstants.BASIC + " " + credentials;
     Mockito.when(request.getHeader(HttpConstants.AUTHORIZATION_HEADER))
         .thenReturn(authHeader);
@@ -141,8 +139,7 @@ public class TestLdapAuthenticationHandler extends AbstractLdapTestUnit {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
 
-    final Base64 base64 = new Base64(0);
-    String credentials = base64.encodeToString("bjones:foo123".getBytes());
+    String credentials = Base64.getEncoder().encodeToString("bjones:foo123".getBytes());
     String authHeader = HttpConstants.BASIC + " " + credentials;
     Mockito.when(request.getHeader(HttpConstants.AUTHORIZATION_HEADER))
         .thenReturn(authHeader);

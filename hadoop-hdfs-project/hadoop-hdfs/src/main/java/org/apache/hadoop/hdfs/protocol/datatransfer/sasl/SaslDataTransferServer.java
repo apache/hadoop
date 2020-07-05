@@ -41,7 +41,7 @@ import javax.security.sasl.RealmCallback;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 
-import org.apache.commons.codec.binary.Base64;
+import java.util.Base64;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CipherOption;
@@ -271,7 +271,7 @@ public class SaslDataTransferServer {
     }
     int keyId = Integer.parseInt(nameComponents[0]);
     String blockPoolId = nameComponents[1];
-    byte[] nonce = Base64.decodeBase64(nameComponents[2]);
+    byte[] nonce = Base64.getDecoder().decode(nameComponents[2]);
     return blockPoolTokenSecretManager.retrieveDataEncryptionKey(keyId,
         blockPoolId, nonce);
   }
@@ -323,7 +323,7 @@ public class SaslDataTransferServer {
     BlockTokenIdentifier identifier = deserializeIdentifier(userName);
     byte[] tokenPassword = blockPoolTokenSecretManager.retrievePassword(
       identifier);
-    return (new String(Base64.encodeBase64(tokenPassword, false),
+    return (new String(Base64.getEncoder().encode(tokenPassword),
       Charsets.UTF_8)).toCharArray();
   }
 
@@ -339,7 +339,7 @@ public class SaslDataTransferServer {
       throws IOException {
     BlockTokenIdentifier identifier = new BlockTokenIdentifier();
     identifier.readFields(new DataInputStream(new ByteArrayInputStream(
-      Base64.decodeBase64(str))));
+      Base64.getDecoder().decode(str))));
     return identifier;
   }
 

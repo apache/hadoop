@@ -27,7 +27,7 @@ import java.security.PrivilegedExceptionAction;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 
-import org.apache.commons.codec.binary.Base64;
+import java.util.Base64;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
@@ -49,7 +49,6 @@ import com.sun.jersey.api.client.WebResource.Builder;
 public class HttpUtil {
   private static final Logger LOG =
       LoggerFactory.getLogger(HttpUtil.class);
-  private static final Base64 BASE_64_CODEC = new Base64(0);
 
   protected HttpUtil() {
     // prevents calls from subclass
@@ -93,7 +92,7 @@ public class HttpUtil {
               gssContext.dispose();
               // Base64 encoded and stringified token for server
               LOG.debug("Got valid challenge for host {}", serverName);
-              return new String(BASE_64_CODEC.encode(outToken),
+              return new String(Base64.getEncoder().encode(outToken),
                   StandardCharsets.US_ASCII);
             } catch (GSSException | IllegalAccessException
                 | NoSuchFieldException | ClassNotFoundException e) {

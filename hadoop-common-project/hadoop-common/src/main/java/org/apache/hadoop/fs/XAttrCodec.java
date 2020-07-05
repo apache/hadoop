@@ -20,12 +20,12 @@ package org.apache.hadoop.fs;
 import java.io.IOException;
 
 import org.apache.commons.codec.DecoderException;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 import com.google.common.base.Preconditions;
+import java.util.Base64;
 
 /**
  * The value of <code>XAttr</code> is byte[], this class is to 
@@ -57,8 +57,7 @@ public enum XAttrCodec {
   
   private static final String HEX_PREFIX = "0x";
   private static final String BASE64_PREFIX = "0s";
-  private static final Base64 base64 = new Base64(0);
-  
+
   /**
    * Decode string representation of a value and check whether it's 
    * encoded. If the given string begins with 0x or 0X, it expresses
@@ -87,7 +86,7 @@ public enum XAttrCodec {
           }
         } else if (en.equalsIgnoreCase(BASE64_PREFIX)) {
           value = value.substring(2, value.length());
-          result = base64.decode(value);
+          result = Base64.getDecoder().decode(value);
         }
       }
       if (result == null) {
@@ -113,7 +112,7 @@ public enum XAttrCodec {
     if (encoding == HEX) {
       return HEX_PREFIX + Hex.encodeHexString(value);
     } else if (encoding == BASE64) {
-      return BASE64_PREFIX + base64.encodeToString(value);
+      return BASE64_PREFIX + Base64.getEncoder().encodeToString(value);
     } else {
       return "\"" + new String(value, "utf-8") + "\"";
     }

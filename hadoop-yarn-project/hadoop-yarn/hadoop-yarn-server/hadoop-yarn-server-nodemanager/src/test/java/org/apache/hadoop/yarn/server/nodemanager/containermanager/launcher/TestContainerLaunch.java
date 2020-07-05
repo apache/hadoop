@@ -56,7 +56,7 @@ import java.util.jar.Manifest;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
-import org.apache.commons.codec.binary.Base64;
+import java.util.Base64;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -1161,7 +1161,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     for (String serviceName : containerManager.getAuxServiceMetaData().keySet()) {
       Assert.assertEquals(
           containerManager.getAuxServiceMetaData().get(serviceName),
-          ByteBuffer.wrap(Base64.decodeBase64(reader.readLine().getBytes())));
+          ByteBuffer.wrap(Base64.getDecoder().decode(reader.readLine().getBytes())));
     }
 
     Assert.assertEquals(cId.toString(), containerLaunchContext

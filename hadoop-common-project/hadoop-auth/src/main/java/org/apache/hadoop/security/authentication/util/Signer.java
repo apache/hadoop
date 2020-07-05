@@ -13,7 +13,7 @@
  */
 package org.apache.hadoop.security.authentication.util;
 
-import org.apache.commons.codec.binary.Base64;
+import java.util.Base64;
 import org.apache.commons.codec.binary.StringUtils;
 
 import javax.crypto.Mac;
@@ -94,7 +94,7 @@ public class Signer {
       Mac mac = Mac.getInstance(SIGNING_ALGORITHM);
       mac.init(key);
       byte[] sig = mac.doFinal(StringUtils.getBytesUtf8(str));
-      return new Base64(0).encodeToString(sig);
+      return Base64.getEncoder().encodeToString(sig);
     } catch (NoSuchAlgorithmException | InvalidKeyException ex) {
       throw new RuntimeException("It should not happen, " + ex.getMessage(), ex);
     }

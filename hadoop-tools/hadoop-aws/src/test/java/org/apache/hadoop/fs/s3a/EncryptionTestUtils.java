@@ -23,7 +23,7 @@ import java.io.IOException;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.net.util.Base64;
+import java.util.Base64;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -53,9 +53,9 @@ public final class EncryptionTestUtils {
     String base64Key = fs.getConf().getTrimmed(
             SERVER_SIDE_ENCRYPTION_KEY
     );
-    byte[] key = Base64.decodeBase64(base64Key);
+    byte[] key = Base64.getDecoder().decode(base64Key);
     byte[] md5 =  DigestUtils.md5(key);
-    return Base64.encodeBase64String(md5).trim();
+    return Base64.getEncoder().encodeToString(md5).trim();
   }
 
   /**

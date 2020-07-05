@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.crypto.key.kms;
 
-import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
@@ -74,6 +73,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ExecutionException;
+import java.util.Base64;
 
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.CryptoExtension;
@@ -701,7 +701,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     jsonKey.put(KMSRESTConstants.LENGTH_FIELD, options.getBitLength());
     if (material != null) {
       jsonKey.put(KMSRESTConstants.MATERIAL_FIELD,
-          Base64.encodeBase64String(material));
+          Base64.getEncoder().encodeToString(material));
     }
     if (options.getDescription() != null) {
       jsonKey.put(KMSRESTConstants.DESCRIPTION_FIELD,
@@ -752,7 +752,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     Map<String, String> jsonMaterial = new HashMap<String, String>();
     if (material != null) {
       jsonMaterial.put(KMSRESTConstants.MATERIAL_FIELD,
-          Base64.encodeBase64String(material));
+          Base64.getEncoder().encodeToString(material));
     }
     URL url = createURL(KMSRESTConstants.KEY_RESOURCE, name, null, null);
     HttpURLConnection conn = createConnection(url, HTTP_POST);
@@ -816,9 +816,9 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     Map<String, Object> jsonPayload = new HashMap<String, Object>();
     jsonPayload.put(KMSRESTConstants.NAME_FIELD,
         encryptedKeyVersion.getEncryptionKeyName());
-    jsonPayload.put(KMSRESTConstants.IV_FIELD, Base64.encodeBase64String(
+    jsonPayload.put(KMSRESTConstants.IV_FIELD, Base64.getEncoder().encodeToString(
         encryptedKeyVersion.getEncryptedKeyIv()));
-    jsonPayload.put(KMSRESTConstants.MATERIAL_FIELD, Base64.encodeBase64String(
+    jsonPayload.put(KMSRESTConstants.MATERIAL_FIELD, Base64.getEncoder().encodeToString(
             encryptedKeyVersion.getEncryptedKeyVersion().getMaterial()));
     URL url = createURL(KMSRESTConstants.KEY_VERSION_RESOURCE,
         encryptedKeyVersion.getEncryptionKeyVersionName(),
@@ -846,9 +846,9 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     final Map<String, Object> jsonPayload = new HashMap<>();
     jsonPayload.put(KMSRESTConstants.NAME_FIELD, ekv.getEncryptionKeyName());
     jsonPayload.put(KMSRESTConstants.IV_FIELD,
-        Base64.encodeBase64String(ekv.getEncryptedKeyIv()));
+        Base64.getEncoder().encodeToString(ekv.getEncryptedKeyIv()));
     jsonPayload.put(KMSRESTConstants.MATERIAL_FIELD,
-        Base64.encodeBase64String(ekv.getEncryptedKeyVersion().getMaterial()));
+        Base64.getEncoder().encodeToString(ekv.getEncryptedKeyVersion().getMaterial()));
     final URL url = createURL(KMSRESTConstants.KEY_VERSION_RESOURCE,
         ekv.getEncryptionKeyVersionName(), KMSRESTConstants.EEK_SUB_RESOURCE,
         params);

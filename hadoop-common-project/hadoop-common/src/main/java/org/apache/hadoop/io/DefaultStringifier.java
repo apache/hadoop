@@ -23,7 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.ArrayList;
 
-import org.apache.commons.codec.binary.Base64;
+import java.util.Base64;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -76,7 +76,7 @@ public class DefaultStringifier<T> implements Stringifier<T> {
   @Override
   public T fromString(String str) throws IOException {
     try {
-      byte[] bytes = Base64.decodeBase64(str.getBytes("UTF-8"));
+      byte[] bytes = Base64.getDecoder().decode(str.getBytes("UTF-8"));
       inBuf.reset(bytes, bytes.length);
       T restored = deserializer.deserialize(null);
       return restored;
@@ -91,7 +91,7 @@ public class DefaultStringifier<T> implements Stringifier<T> {
     serializer.serialize(obj);
     byte[] buf = new byte[outBuf.getLength()];
     System.arraycopy(outBuf.getData(), 0, buf, 0, buf.length);
-    return new String(Base64.encodeBase64(buf), StandardCharsets.UTF_8);
+    return new String(Base64.getEncoder().encode(buf), StandardCharsets.UTF_8);
   }
 
   @Override

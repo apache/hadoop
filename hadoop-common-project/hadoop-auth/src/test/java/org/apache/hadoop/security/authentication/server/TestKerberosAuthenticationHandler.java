@@ -17,7 +17,7 @@ import org.apache.hadoop.minikdc.KerberosSecurityTestcase;
 import org.apache.hadoop.security.authentication.KerberosTestUtils;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
-import org.apache.commons.codec.binary.Base64;
+import java.util.Base64;
 import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.ietf.jgss.GSSContext;
@@ -314,8 +314,7 @@ public class TestKerberosAuthenticationHandler
           byte[] inToken = new byte[0];
           byte[] outToken =
               gssContext.initSecContext(inToken, 0, inToken.length);
-          Base64 base64 = new Base64(0);
-          return base64.encodeToString(outToken);
+          return Base64.getEncoder().encodeToString(outToken);
 
         } finally {
           if (gssContext != null) {
@@ -356,7 +355,7 @@ public class TestKerberosAuthenticationHandler
   @Test
   public void testRequestWithInvalidKerberosAuthorization() {
 
-    String token = new Base64(0).encodeToString(new byte[]{0, 1, 2});
+    String token = Base64.getEncoder().encodeToString(new byte[]{0, 1, 2});
 
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
@@ -376,7 +375,7 @@ public class TestKerberosAuthenticationHandler
 
   @Test
   public void testRequestToWhitelist() throws Exception {
-    final String token = new Base64(0).encodeToString(new byte[]{0, 1, 2});
+    final String token = Base64.getEncoder().encodeToString(new byte[]{0, 1, 2});
     final HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     final HttpServletResponse response =
         Mockito.mock(HttpServletResponse.class);

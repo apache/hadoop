@@ -24,7 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.AccessControlException;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
-import org.apache.hadoop.fs.azurebfs.utils.Base64;
+import java.util.Base64;
 import org.apache.hadoop.fs.azurebfs.utils.ServiceSASGenerator;
 
 /**
@@ -45,7 +45,7 @@ public class MockSASTokenProvider implements SASTokenProvider {
   public void initialize(Configuration configuration, String accountName) throws IOException {
     try {
       AbfsConfiguration abfsConfig = new AbfsConfiguration(configuration, accountName);
-      accountKey = Base64.decode(abfsConfig.getStorageAccountKey());
+      accountKey = Base64.getDecoder().decode(abfsConfig.getStorageAccountKey());
     } catch (Exception ex) {
       throw new IOException(ex);
     }
