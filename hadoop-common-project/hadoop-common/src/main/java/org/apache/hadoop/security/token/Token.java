@@ -341,7 +341,7 @@ public class Token<T extends TokenIdentifier> implements Writable {
     obj.write(buf);
     byte[] raw = new byte[buf.getLength()];
     System.arraycopy(buf.getData(), 0, raw, 0, buf.getLength());
-    return Base64.getEncoder().encodeToString(raw);
+    return Base64.getUrlEncoder().encodeToString(raw);
   }
 
   /**
@@ -357,7 +357,7 @@ public class Token<T extends TokenIdentifier> implements Writable {
               "Invalid argument, newValue is null");
     }
     DataInputBuffer buf = new DataInputBuffer();
-    byte[] decoded = Base64.getDecoder().decode(newValue);
+    byte[] decoded = Base64.getUrlDecoder().decode(newValue);
     buf.reset(decoded, decoded.length);
     obj.readFields(buf);
   }
