@@ -434,7 +434,7 @@
           }
         });
     });
-    
+
     var url = '/webhdfs/v1' + encode_path(append_path(current_directory,
       $('#new_directory').val())) + '?op=MKDIRS';
 
