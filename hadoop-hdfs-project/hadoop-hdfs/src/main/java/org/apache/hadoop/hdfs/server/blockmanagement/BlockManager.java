@@ -2759,6 +2759,7 @@ public class BlockManager implements BlockStatsMXBean {
         storageInfo = node.updateStorage(storage);
       }
       if (namesystem.isInStartupSafeMode()
+          && !StorageType.PROVIDED.equals(storageInfo.getStorageType())
           && storageInfo.getBlockReportCount() > 0) {
         blockLog.info("BLOCK* processReport 0x{}: "
             + "discarded non-initial block report from {}"
