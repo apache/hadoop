@@ -273,7 +273,11 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
   T register(final String name, final String description, final T sink) {
     LOG.debug(name +", "+ description);
     if (allSinks.containsKey(name)) {
-      LOG.warn("Sink "+ name +" already exists!");
+      if(sinks.get(name) == null) {
+        registerSink(name, description, sink);
+      } else {
+        LOG.warn("Sink "+ name +" already exists!");
+      }
       return sink;
     }
     allSinks.put(name, sink);
