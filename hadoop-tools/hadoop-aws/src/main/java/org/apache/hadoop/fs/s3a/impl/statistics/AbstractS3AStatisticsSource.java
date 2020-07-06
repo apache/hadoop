@@ -51,10 +51,6 @@ public abstract class AbstractS3AStatisticsSource implements
     this.ioStatistics = statistics;
   }
 
-  public CounterIOStatistics getCounterStats() {
-    return ioStatistics;
-  }
-
   public long incCounter(String name) {
     return incCounter(name, 1);
   }

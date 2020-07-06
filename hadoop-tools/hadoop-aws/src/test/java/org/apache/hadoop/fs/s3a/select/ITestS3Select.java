@@ -395,7 +395,7 @@ public class ITestS3Select extends AbstractS3SelectTest {
         "SELECT * FROM S3OBJECT s WHERE s._5 = `TRUE`");
     // and do a quick check on the instrumentation
     long bytesRead = getFileSystem().getInstrumentation()
-        .getCounterValue(Statistic.STREAM_SEEK_BYTES_READ);
+        .getCounterValue(Statistic.STREAM_READ_SEEK_BYTES_READ);
     assertNotEquals("No bytes read count", 0, bytesRead);
   }
 

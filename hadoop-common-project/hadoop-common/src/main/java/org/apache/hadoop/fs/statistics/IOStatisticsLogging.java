@@ -100,32 +100,33 @@ public final class IOStatisticsLogging {
   }
 
   /**
-   * On demand stringifier.
+   * On demand stringifier of an IOStatisticsSource instance.
    * <p>
    * Whenever this object's toString() method is called, it evaluates the
    * statistics.
    * <p>
    * This is designed to affordable to use in log statements.
-   * @param source source of statistics.
+   * @param source source of statistics -may be null.
    * @return an object whose toString() operation returns the current values.
    */
-  public static Object demandStringify(
+  public static Object demandStringifyIOStatisticsSource(
       @Nullable IOStatisticsSource source) {
     return new SourceToString(source);
   }
 
   /**
-   * On demand stringifier.
+   * On demand stringifier of an IOStatistics instance.
    * <p>
    * Whenever this object's toString() method is called, it evaluates the
    * statistics.
    * <p>
    * This is for use in log statements where for the cost of creation
    * of this entry is low; it is affordable to use in log statements.
-   * @param statistics statistics to scan.
+   * @param statistics statistics to stringify -may be null.
    * @return an object whose toString() operation returns the current values.
    */
-  public static Object demandStringify(@Nullable IOStatistics statistics) {
+  public static Object demandStringifyIOStatistics(
+      @Nullable IOStatistics statistics) {
     return new StatisticsToString(statistics);
   }
 

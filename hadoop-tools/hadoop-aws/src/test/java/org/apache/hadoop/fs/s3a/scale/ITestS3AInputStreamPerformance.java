@@ -28,6 +28,8 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.impl.statistics.S3AInputStreamStatistics;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -46,6 +48,7 @@ import java.io.IOException;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyCounterStatisticValue;
 
 /**
  * Look at the performance of S3a operations.
@@ -433,6 +436,15 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
     assertEquals("input policy in " + streamStatistics,
         S3AInputPolicy.Random.ordinal(),
         streamStatistics.getInputPolicy());
+    IOStatistics ioStatistics = streamStatistics.getIOStatistics();
+    verifyCounterStatisticValue(
+        ioStatistics,
+        StreamStatisticNames.STREAM_READ_ABORTED,
+        1);
+    verifyCounterStatisticValue(
+        ioStatistics,
+        StreamStatisticNames.STREAM_READ_SEEK_POLICY_CHANGED,
+        2);
   }
 
   /**

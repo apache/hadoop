@@ -100,7 +100,8 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     }
 
     @Override
-    public void seekForwards(final long skipped) {
+    public void seekForwards(final long bytesForward,
+        final long bytesRead) {
 
     }
 
@@ -191,6 +192,11 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
 
     @Override
     public long getBytesRead() {
+      return 0;
+    }
+
+    @Override
+    public long getTotalBytesRead() {
       return 0;
     }
 

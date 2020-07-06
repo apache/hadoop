@@ -130,60 +130,71 @@ public enum Statistic {
       "number of bytes queued for upload/being actively uploaded"),
   OBJECT_SELECT_REQUESTS("object_select_requests",
       "Count of S3 Select requests issued"),
-  STREAM_ABORTED(
+  STREAM_READ_ABORTED(
       StreamStatisticNames.STREAM_READ_ABORTED,
       "Count of times the TCP stream was aborted"),
-  STREAM_BACKWARD_SEEK_OPERATIONS(
-      StreamStatisticNames.STREAM_READ_SEEK_BACKWARD_OPERATIONS,
-      "Number of executed seek operations which went backwards in a stream"),
-  STREAM_CLOSED(
+  STREAM_READ_BYTES(
+      StreamStatisticNames.STREAM_READ_BYTES,
+      "Bytes read from an input stream in read() calls"),
+  STREAM_READ_CLOSED(
       StreamStatisticNames.STREAM_READ_CLOSED,
       "Count of times the TCP stream was closed"),
-  STREAM_CLOSE_OPERATIONS(
+  STREAM_READ_CLOSE_OPERATIONS(
       StreamStatisticNames.STREAM_READ_CLOSE_OPERATIONS,
-      "Total count of times an attempt to close a data stream was made"),
-  STREAM_FORWARD_SEEK_OPERATIONS(
-      StreamStatisticNames.STREAM_READ_SEEK_FORWARD_OPERATIONS,
-      "Number of executed seek operations which went forward in a stream"),
-  STREAM_OPENED(
-      StreamStatisticNames.STREAM_READ_OPENED,
-      "Total count of times an input stream to object store data was opened"),
+      "Total count of times an attempt to close an input stream was made"),
   STREAM_READ_EXCEPTIONS(
       StreamStatisticNames.STREAM_READ_EXCEPTIONS,
       "Number of exceptions raised during input stream reads"),
   STREAM_READ_FULLY_OPERATIONS(
       StreamStatisticNames.STREAM_READ_FULLY_OPERATIONS,
-      "Count of readFully() operations in streams"),
+      "Count of readFully() operations in an input stream"),
+  STREAM_READ_OPENED(
+      StreamStatisticNames.STREAM_READ_OPENED,
+      "Total count of times an input stream to object store data was opened"),
   STREAM_READ_OPERATIONS(
       StreamStatisticNames.STREAM_READ_OPERATIONS,
-      "Count of read() operations in streams"),
+      "Count of read() operations in an input stream"),
   STREAM_READ_OPERATIONS_INCOMPLETE(
       StreamStatisticNames.STREAM_READ_OPERATIONS_INCOMPLETE,
-      "Count of incomplete read() operations in streams"),
+      "Count of incomplete read() operations in an input stream"),
   STREAM_READ_VERSION_MISMATCHES(
       StreamStatisticNames.STREAM_READ_VERSION_MISMATCHES,
-      "Count of version mismatches encountered while reading streams"),
-  STREAM_SEEK_BYTES_BACKWARDS(
+      "Count of version mismatches encountered while reading an input stream"),
+  STREAM_READ_SEEK_BACKWARD_OPERATIONS(
+      StreamStatisticNames.STREAM_READ_SEEK_BACKWARD_OPERATIONS,
+      "Number of executed seek operations which went backwards in a stream"),
+  STREAM_READ_SEEK_BYTES_BACKWARDS(
       StreamStatisticNames.STREAM_READ_SEEK_BYTES_BACKWARDS,
-      "Count of bytes moved backwards during seek operations"),
-  STREAM_SEEK_BYTES_READ(
+      "Count of bytes moved backwards during seek operations"
+          + " in an input stream"),
+  STREAM_READ_SEEK_BYTES_READ(
       StreamStatisticNames.STREAM_READ_SEEK_BYTES_READ,
-      "Count of bytes read during seek() in stream operations"),
-  STREAM_SEEK_BYTES_SKIPPED(
+      "Count of bytes read during seek() in an input stream"),
+  STREAM_READ_SEEK_BYTES_SKIPPED(
       StreamStatisticNames.STREAM_READ_SEEK_BYTES_SKIPPED,
-      "Count of bytes skipped during forward seek operation"),
-  STREAM_SEEK_OPERATIONS(
+      "Count of bytes skipped during forward seek operations"
+          + " an input stream"),
+  STREAM_READ_SEEK_FORWARD_OPERATIONS(
+      StreamStatisticNames.STREAM_READ_SEEK_FORWARD_OPERATIONS,
+      "Number of executed seek operations which went forward in"
+          + " an input stream"),
+  STREAM_READ_SEEK_OPERATIONS(
       StreamStatisticNames.STREAM_READ_SEEK_OPERATIONS,
-      "Number of seek operations during stream IO."),
+      "Number of seek operations in an input stream"),
   STREAM_READ_SEEK_POLICY_CHANGED(
       StreamStatisticNames.STREAM_READ_SEEK_POLICY_CHANGED,
-      "Count of times the seek policy was dynamically changed"),
-  STREAM_CLOSE_BYTES_READ(
+      "Count of times the seek policy was dynamically changed"
+          + " in an input stream"),
+  STREAM_READ_CLOSE_BYTES_READ(
       StreamStatisticNames.STREAM_READ_CLOSE_BYTES_READ,
-      "Count of bytes read when closing streams during seek operations."),
-  STREAM_ABORT_BYTES_DISCARDED(
+      "Count of bytes read when closing an input stream"),
+  STREAM_READ_BYTES_DISCARDED_ABORT(
       StreamStatisticNames.STREAM_READ_BYTES_DISCARDED_ABORT,
-      "Count of bytes discarded by aborting the stream"),
+      "Count of bytes discarded by aborting in an input stream"),
+  STREAM_READ_TOTAL_BYTES(
+      StreamStatisticNames.STREAM_READ_TOTAL_BYTES,
+      "Total count of read from an input stream calls"),
+
   STREAM_WRITE_FAILURES(
       StreamStatisticNames.STREAM_WRITE_EXCEPTIONS,
       "Count of stream write failures reported"),

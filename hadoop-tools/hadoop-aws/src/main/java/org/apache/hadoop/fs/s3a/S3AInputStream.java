@@ -296,11 +296,11 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       if (skipForward) {
         // the forward seek range is within the limits
         LOG.debug("Forward seek on {}, of {} bytes", uri, diff);
-        streamStatistics.seekForwards(diff);
         long skipped = wrappedStream.skip(diff);
         if (skipped > 0) {
           pos += skipped;
         }
+        streamStatistics.seekForwards(diff, skipped);
 
         if (pos == targetPos) {
           // all is well
@@ -312,6 +312,9 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
           LOG.warn("Failed to seek on {} to {}. Current position {}",
               uri, targetPos,  pos);
         }
+      } else {
+        // not attempting to read any bytes from the stream
+        streamStatistics.seekForwards(diff, 0);
       }
     } else if (diff < 0) {
       // backwards seek

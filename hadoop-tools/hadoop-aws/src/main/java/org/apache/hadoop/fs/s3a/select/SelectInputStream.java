@@ -204,7 +204,7 @@ public class SelectInputStream extends FSInputStream implements
     long skipped = once("skip", uri, () -> wrappedStream.skip(n));
     pos.addAndGet(skipped);
     // treat as a forward skip for stats
-    streamStatistics.seekForwards(skipped);
+    streamStatistics.seekForwards(0, skipped);
     return skipped;
   }
 
@@ -331,7 +331,7 @@ public class SelectInputStream extends FSInputStream implements
         bytesSkipped++;
       }
       // read has finished.
-      streamStatistics.seekForwards(bytesSkipped);
+      streamStatistics.seekForwards(0, bytesSkipped);
     }
   }
 

@@ -49,7 +49,7 @@ import org.apache.hadoop.util.Progressable;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
-import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringify;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringifyIOStatistics;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
 
@@ -229,7 +229,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     IOStatistics iostats = snapshotIOStatistics(
         retrieveIOStatistics(getFileSystem()));
     LOG.info("IOStatistics after upload: {}",
-        demandStringify(iostats));
+        demandStringifyIOStatistics(iostats));
     long putRequestCount = storageStatistics.getLong(putRequests);
     Long putByteCount = storageStatistics.getLong(putBytes);
     Assertions.assertThat(putRequestCount)

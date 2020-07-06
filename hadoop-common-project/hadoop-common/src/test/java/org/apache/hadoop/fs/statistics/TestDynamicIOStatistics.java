@@ -37,7 +37,7 @@ import org.apache.hadoop.test.AbstractHadoopTestBase;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertCounterStatisticIsTracked;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertCounterStatisticIsUntracked;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyCounterStatisticValue;
-import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringify;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringifyIOStatistics;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToString;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.NULL_SOURCE;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.dynamicIOStatistics;
@@ -226,9 +226,9 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
   public void testDemandStringification() throws Throwable {
     String counterPattern = "(along=(type=counter, (%d))";
     // this is not yet evaluated
-    Object demand = demandStringify(statistics);
+    Object demand = demandStringifyIOStatistics(statistics);
     // nor is this.
-    Object demandSource = demandStringify(statsSource);
+    Object demandSource = IOStatisticsLogging.demandStringifyIOStatisticsSource(statsSource);
 
     // show it evaluates
     String formatted1 = String.format(counterPattern, aLong.get());
@@ -256,21 +256,21 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
 
   @Test
   public void testNullSourceStringification() throws Throwable {
-    assertThat(demandStringify((IOStatisticsSource) null)
+    assertThat(IOStatisticsLogging.demandStringifyIOStatisticsSource((IOStatisticsSource) null)
         .toString())
         .isEqualTo(NULL_SOURCE);
   }
 
   @Test
   public void testNullStatStringification() throws Throwable {
-    assertThat(demandStringify((IOStatistics) null)
+    assertThat(demandStringifyIOStatistics((IOStatistics) null)
         .toString())
         .isEqualTo(NULL_SOURCE);
   }
 
   @Test
   public void testStringLogging() throws Throwable {
-    LOG.info("Output {}", demandStringify(statistics));
+    LOG.info("Output {}", demandStringifyIOStatistics(statistics));
   }
 
   /**

@@ -42,7 +42,7 @@ public final class IOStatisticsSupport {
    * @return a snapshot of the current values.
    */
   public static IOStatisticsSnapshot
-  snapshotIOStatistics(IOStatistics statistics) {
+      snapshotIOStatistics(IOStatistics statistics) {
 
     IOStatisticsSnapshot stats = new IOStatisticsSnapshot(statistics);
     stats.snapshot(statistics);

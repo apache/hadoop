@@ -117,7 +117,9 @@ public final class IOStatisticsSnapshot
    * @param source statistics source.
    */
   public void aggregate(IOStatistics source) {
-    checkNotNull(source);
+    if (source == null) {
+      return;
+    }
     aggregateMaps(counters, source.counters(),
         IOStatisticsBinding::aggregateCounters);
     aggregateMaps(gauges, source.gauges(),

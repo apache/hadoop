@@ -124,6 +124,10 @@ public final class StreamStatisticNames {
       "stream_read_skip_bytes";
 
   /** {@value}. */
+  public static final String STREAM_READ_TOTAL_BYTES
+      = "stream_read_total_bytes";
+
+  /** {@value}. */
   public static final String STREAM_WRITE_EXCEPTIONS =
       "stream_write_exceptions";
 

@@ -24,6 +24,9 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.MeanStatistic;
 
@@ -36,6 +39,13 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.dynamicIO
  */
 final class CounterIOStatisticsImpl extends WrappedIOStatistics
     implements CounterIOStatistics {
+
+  /**
+   * Log changes at debug.
+   * Noisy, but occasionally useful.
+   */
+  private static final Logger LOG =
+      LoggerFactory.getLogger(CounterIOStatisticsImpl.class);
 
   private final Map<String, AtomicLong> counterMap = new HashMap<>();
 
@@ -132,7 +142,7 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
   private long incAtomicLong(final AtomicLong aLong,
       final long increment) {
     if (aLong != null) {
-      return aLong.getAndAdd(increment);
+      return aLong.addAndGet(increment);
     } else {
       return 0;
     }
@@ -141,11 +151,16 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
   @Override
   public void setCounter(final String key, final long value) {
     setAtomicLong(counterMap.get(key), value);
+    LOG.debug("Setting counter {} to {}", key, value);
+
   }
 
   @Override
   public long incrementCounter(final String key, final long value) {
-    return incAtomicLong(counterMap.get(key), value);
+    long l = incAtomicLong(counterMap.get(key), value);
+    LOG.debug("Incrementing counter {} by {} with final value {}",
+        key, value, l);
+    return l;
   }
 
   @Override
