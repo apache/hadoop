@@ -68,6 +68,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
@@ -1798,10 +1799,9 @@ public class TestRouterRpc {
         rpcServer.getCachedDatanodeReport(DatanodeReportType.LIVE);
     assertArrayEquals(datanodeReport1, datanodeReport);
 
-    // Add one datanode
-    MiniDFSCluster cluster = getCluster().getCluster();
-    cluster.startDataNodes(
-        cluster.getConfiguration(0), 1, true, null, null, null);
+    // Stop one datanode
+    MiniDFSCluster miniDFSCluster = getCluster().getCluster();
+    DataNodeProperties dnprop = miniDFSCluster.stopDataNode(0);
 
     // We wait until the cached value is updated
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
@@ -1820,10 +1820,11 @@ public class TestRouterRpc {
     // The cache should be updated now
     final DatanodeInfo[] datanodeReport2 =
         rpcServer.getCachedDatanodeReport(DatanodeReportType.LIVE);
-    assertEquals(datanodeReport.length + 1, datanodeReport2.length);
+    assertEquals(datanodeReport.length - 1, datanodeReport2.length);
 
-    // Remove the DN we just added
-    cluster.stopDataNode(0);
+    // Restart the DN we just stopped
+    miniDFSCluster.restartDataNode(dnprop);
+    miniDFSCluster.waitActive();
 
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
