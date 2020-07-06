@@ -210,7 +210,7 @@ public class DFSAdmin extends FsShell {
                 "\" is not a valid value for a quota.");
       }
       if (HdfsConstants.QUOTA_DONT_SET == this.quota) {
-        System.out.print("WARN: \"" + this.quota +
+        System.err.print("WARN: \"" + this.quota +
                 "\" means QUOTA_DONT_SET, quota will not be set, "
                 + "it keep the old values. \n");
       }
@@ -335,7 +335,7 @@ public class DFSAdmin extends FsShell {
         throw new IllegalArgumentException("\"" + str + "\" is not a valid value for a quota.");
       }
       if (HdfsConstants.QUOTA_DONT_SET == quota) {
-        System.out.print("WARN: \"" + this.quota +
+        System.err.print("WARN: \"" + this.quota +
                 "\" means QUOTA_DONT_SET, quota will not be set, "
                 + "it keep the old values. \n");
       }
