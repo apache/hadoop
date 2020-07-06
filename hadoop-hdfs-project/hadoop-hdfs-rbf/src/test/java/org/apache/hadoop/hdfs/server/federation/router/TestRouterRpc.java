@@ -67,6 +67,7 @@ import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
@@ -216,6 +217,12 @@ public class TestRouterRpc {
     // Register and verify all NNs with all routers
     cluster.registerNamenodes();
     cluster.waitNamenodeRegistration();
+
+    // We decrease the DN heartbeat expire interval to make them dead faster
+    cluster.getCluster().getNamesystem(0).getBlockManager()
+        .getDatanodeManager().setHeartbeatExpireInterval(5000);
+    cluster.getCluster().getNamesystem(1).getBlockManager()
+        .getDatanodeManager().setHeartbeatExpireInterval(5000);
   }
 
   @AfterClass
@@ -1779,20 +1786,22 @@ public class TestRouterRpc {
 
   @Test
   public void testGetCachedDatanodeReport() throws Exception {
+    RouterRpcServer rpcServer = router.getRouter().getRpcServer();
     final DatanodeInfo[] datanodeReport =
-        routerProtocol.getDatanodeReport(DatanodeReportType.ALL);
+        rpcServer.getCachedDatanodeReport(DatanodeReportType.LIVE);
 
     // We should have 12 nodes in total
     assertEquals(12, datanodeReport.length);
 
     // We should be caching this information
     DatanodeInfo[] datanodeReport1 =
-        routerProtocol.getDatanodeReport(DatanodeReportType.ALL);
+        rpcServer.getCachedDatanodeReport(DatanodeReportType.LIVE);
     assertArrayEquals(datanodeReport1, datanodeReport);
 
     // Add one datanode
-    getCluster().getCluster().startDataNodes(getCluster().getCluster().getConfiguration(0),
-        1, true, null, null, null);
+    MiniDFSCluster cluster = getCluster().getCluster();
+    cluster.startDataNodes(
+        cluster.getConfiguration(0), 1, true, null, null, null);
 
     // We wait until the cached value is updated
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
@@ -1800,9 +1809,9 @@ public class TestRouterRpc {
       public Boolean get() {
         DatanodeInfo[] dn = null;
         try {
-          dn = routerProtocol.getDatanodeReport(DatanodeReportType.ALL);
+          dn = rpcServer.getCachedDatanodeReport(DatanodeReportType.LIVE);
         } catch (IOException ex) {
-          LOG.error("Error on getDatanodeReport");
+          LOG.error("Error on getCachedDatanodeReport");
         }
         return !Arrays.equals(datanodeReport, dn);
       }
@@ -1810,8 +1819,29 @@ public class TestRouterRpc {
 
     // The cache should be updated now
     final DatanodeInfo[] datanodeReport2 =
-        routerProtocol.getDatanodeReport(DatanodeReportType.ALL);
-    assertFalse(Arrays.equals(datanodeReport, datanodeReport2));
+        rpcServer.getCachedDatanodeReport(DatanodeReportType.LIVE);
+    assertEquals(datanodeReport.length + 1, datanodeReport2.length);
+
+    // Remove the DN we just added
+    cluster.stopDataNode(0);
+
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        DatanodeInfo[] dn = null;
+        try {
+          dn = rpcServer.getCachedDatanodeReport(DatanodeReportType.LIVE);
+        } catch (IOException ex) {
+          LOG.error("Error on getCachedDatanodeReport");
+        }
+        return datanodeReport.length == dn.length;
+      }
+    }, 500, 5 * 1000);
+
+    // The cache should be updated now
+    final DatanodeInfo[] datanodeReport3 =
+        rpcServer.getCachedDatanodeReport(DatanodeReportType.LIVE);
+    assertEquals(datanodeReport.length, datanodeReport3.length);
   }
 
   /**
