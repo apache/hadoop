@@ -32,7 +32,7 @@ The View File System Overload Scheme is an extension to the View File System. Th
 Mount link configurations key, value formats are same as in [ViewFS Guide](./ViewFs.html).
 If a user wants to continue use the same fs.defaultFS and wants to have more mount points, then mount link configurations should have the ViewFileSystemOverloadScheme initialized uri's hostname as the mount table name.
 Example if fs.defaultFS is `hdfs://mycluster`, then the mount link configuration key name should be like in the following format `fs.viewfs.mounttable.*mycluster*.link.<mountLinkPath>`.
-Even if the initialized fs uri has hostname:port, it will simply ignore the port number and considers only hostname as mount table name.  We will discuss more example configurations in following sections.
+Even if the initialized fs uri has hostname:port, it will simply ignore the port number and only consider the hostname as the mount table name.  We will discuss more example configurations in following sections.
 
 Another important improvement with the ViewFileSystemOverloadScheme is, administrators need not copy the `mount-table.xml` configuration file to 1000s of client nodes. Instead they can keep the mount-table configuration file in a Hadoop compatible file system. So, keeping the configuration file in a central place makes administrators life easier as they can update mount-table in single place.
 

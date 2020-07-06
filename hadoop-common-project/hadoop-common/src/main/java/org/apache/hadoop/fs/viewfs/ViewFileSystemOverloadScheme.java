@@ -91,7 +91,7 @@ import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_IGNORE_PORT_IN
  * (1) In ViewFileSystemOverloadScheme, by default the mount links will be
  * represented as non-symlinks. If you want to change this behavior, please see
  * {@link ViewFileSystem#listStatus(Path)}
- * (2) In ViewFileSystemOverloadScheme, the initialized uri's hostname only will
+ * (2) In ViewFileSystemOverloadScheme, only the initialized uri's hostname will
  * be considered as the mount table name. When the passed uri has hostname:port,
  * it will simply ignore the port number and only hostname will be considered as
  * the mount table name.

@@ -200,8 +200,8 @@ public class TestViewFileSystemOverloadSchemeWithDFSAdmin {
   public void testSafeModeWithWrongFS() throws Exception {
     final Path hdfsTargetPath =
         new Path("hdfs://nonExistent" + HDFS_USER_FOLDER);
-    addMountLinks(defaultFSURI.getHost(), new String[] {HDFS_USER_FOLDER },
-        new String[] {hdfsTargetPath.toUri().toString() }, conf);
+    addMountLinks(defaultFSURI.getHost(), new String[] {HDFS_USER_FOLDER},
+        new String[] {hdfsTargetPath.toUri().toString()}, conf);
     final DFSAdmin dfsAdmin = new DFSAdmin(conf);
     redirectStream();
     int ret = ToolRunner.run(dfsAdmin, new String[] {"-safemode", "enter" });
