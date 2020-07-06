@@ -1238,7 +1238,7 @@ public class TestQuota {
             new String[] {"-setQuota",
                     String.valueOf(HdfsConstants.QUOTA_DONT_SET), dir.toString()});
     assertEquals(0, ret);
-    scanIntoList(OUT_STREAM, outs);
+    scanIntoList(ERR_STREAM, outs);
     assertEquals(1, outs.size());
     assertThat(outs.get(0),
             is(allOf(containsString("WARN:"),
@@ -1282,7 +1282,7 @@ public class TestQuota {
             new String[] {"-setSpaceQuota",
                     String.valueOf(HdfsConstants.QUOTA_DONT_SET), dir.toString()});
     assertEquals(0, ret);
-    scanIntoList(OUT_STREAM, outs);
+    scanIntoList(ERR_STREAM, outs);
     assertEquals(1, outs.size());
     assertThat(outs.get(0),
             is(allOf(containsString("WARN:"),
