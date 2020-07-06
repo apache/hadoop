@@ -39,7 +39,6 @@ import org.apache.hadoop.io.compress.BlockCompressorStream;
 import org.apache.hadoop.io.compress.BlockDecompressorStream;
 import org.apache.hadoop.io.compress.CompressionInputStream;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
-import org.apache.hadoop.io.compress.SnappyCodec;
 import org.apache.hadoop.io.compress.snappy.SnappyDecompressor.SnappyDirectDecompressor;
 import org.apache.hadoop.test.MultithreadedTestUtil;
 import org.junit.Assert;
@@ -48,8 +47,6 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assume.*;
-
 public class TestSnappyCompressorDecompressor {
 
   public static final Logger LOG =
@@ -57,7 +54,6 @@ public class TestSnappyCompressorDecompressor {
 
   @Before
   public void before() {
-    assumeTrue(SnappyCodec.isNativeCodeLoaded());
   }
 
   @Test
@@ -318,46 +314,45 @@ public class TestSnappyCompressorDecompressor {
   }
 
   private void compressDecompressLoop(int rawDataSize) throws IOException {
-    byte[] rawData = BytesGenerator.get(rawDataSize);    
+    byte[] rawData = BytesGenerator.get(rawDataSize);
     byte[] compressedResult = new byte[rawDataSize+20];
-    int directBufferSize = Math.max(rawDataSize*2, 64*1024);    
+    int directBufferSize = Math.max(rawDataSize*2, 64*1024);
     SnappyCompressor compressor = new SnappyCompressor(directBufferSize);
     compressor.setInput(rawData, 0, rawDataSize);
     int compressedSize = compressor.compress(compressedResult, 0, compressedResult.length);
     SnappyDirectDecompressor decompressor = new SnappyDirectDecompressor();
-   
+
     ByteBuffer inBuf = ByteBuffer.allocateDirect(compressedSize);
     ByteBuffer outBuf = ByteBuffer.allocateDirect(rawDataSize);
 
     inBuf.put(compressedResult, 0, compressedSize);
-    inBuf.flip();    
+    inBuf.flip();
 
     ByteBuffer expected = ByteBuffer.wrap(rawData);
-    
+
     outBuf.clear();
     while(!decompressor.finished()) {
       decompressor.decompress(inBuf, outBuf);
       if (outBuf.remaining() == 0) {
         outBuf.flip();
-        while (outBuf.remaining() > 0) {        
+        while (outBuf.remaining() > 0) {
           assertEquals(expected.get(), outBuf.get());
         }
         outBuf.clear();
       }
     }
     outBuf.flip();
-    while (outBuf.remaining() > 0) {        
+    while (outBuf.remaining() > 0) {
       assertEquals(expected.get(), outBuf.get());
     }
     outBuf.clear();
-    
+
     assertEquals(0, expected.remaining());
   }
   
   @Test
   public void testSnappyDirectBlockCompression() {
-    int[] size = { 4 * 1024, 64 * 1024, 128 * 1024, 1024 * 1024 };    
-    assumeTrue(SnappyCodec.isNativeCodeLoaded());
+    int[] size = {4 * 1024, 64 * 1024, 128 * 1024, 1024 * 1024};
     try {
       for (int i = 0; i < size.length; i++) {
         compressDecompressLoop(size[i]);

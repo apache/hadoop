@@ -79,27 +79,6 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
     };
   }
 
-  private static boolean isNativeSnappyLoadable() {
-    boolean snappyAvailable = false;
-    boolean loaded = false;
-    try {
-      System.loadLibrary("snappy");
-      logger.warn("Snappy native library is available");
-      snappyAvailable = true;
-      boolean hadoopNativeAvailable = NativeCodeLoader.isNativeCodeLoaded();
-      loaded = snappyAvailable && hadoopNativeAvailable;
-      if (loaded) {
-        logger.info("Snappy native library loaded");
-      } else {
-        logger.warn("Snappy native library not loaded");
-      }
-    } catch (Throwable t) {
-      logger.warn("Failed to load snappy: ", t);
-      return false;
-    }
-    return loaded;
-  }
-
   public static <T extends Compressor, E extends Decompressor> CompressDecompressTester<T, E> of(
       byte[] rawData) {
     return new CompressDecompressTester<T, E>(rawData);
@@ -421,13 +400,19 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
           for (Integer step : blockLabels) {
             decompressor.setInput(compressedBytes, off, step);
             while (!decompressor.finished()) {
-              int dSize = decompressor.decompress(operationBlock, 0,
-                  operationBlock.length);
-              decompressOut.write(operationBlock, 0, dSize);
+              try {
+                int dSize = decompressor.decompress(operationBlock, 0,
+                        operationBlock.length);
+                decompressOut.write(operationBlock, 0, dSize);
+              } catch (NullPointerException ex) {
+                int b = 10;
+
+              }
             }
             decompressor.reset();
             off = off + step;
           }
+          int a = 10;
           assertArrayEquals(
               joiner.join(name, "byte arrays not equals error !!!"),
               originalRawData, decompressOut.toByteArray());
@@ -495,19 +480,16 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
     Compressor compressor = pair.compressor;
 
     if (compressor.getClass().isAssignableFrom(Lz4Compressor.class)
-            && (NativeCodeLoader.isNativeCodeLoaded()))
+            && (NativeCodeLoader.isNativeCodeLoaded())) {
       return true;
-
-    else if (compressor.getClass().isAssignableFrom(BuiltInZlibDeflater.class)
-            && NativeCodeLoader.isNativeCodeLoaded())
+    } else if (compressor.getClass().isAssignableFrom(BuiltInZlibDeflater.class)
+            && NativeCodeLoader.isNativeCodeLoaded()) {
       return true;
-
-    else if (compressor.getClass().isAssignableFrom(ZlibCompressor.class)) {
+    } else if (compressor.getClass().isAssignableFrom(ZlibCompressor.class)) {
       return ZlibFactory.isNativeZlibLoaded(new Configuration());
-    }              
-    else if (compressor.getClass().isAssignableFrom(SnappyCompressor.class)
-            && isNativeSnappyLoadable())
+    } else if (compressor.getClass().isAssignableFrom(SnappyCompressor.class)) {
       return true;
+    }
     
     return false;      
   }
