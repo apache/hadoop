@@ -55,7 +55,6 @@ public final class AzureADAuthenticator {
   private static final String SCOPE = "https://storage.azure.com/.default";
   private static final int CONNECT_TIMEOUT = 30 * 1000;
   private static final int READ_TIMEOUT = 30 * 1000;
-  private static final int SIXTY_SECONDS = 60 * 1000;
 
   private AzureADAuthenticator() {
     // no operation
@@ -78,11 +77,14 @@ public final class AzureADAuthenticator {
    * @param clientId     the client ID (GUID) of the client web app
    *                     btained from Azure Active Directory configuration
    * @param clientSecret the secret key of the client web app
+   * @param tokenFetchRetryPolicy retry policy to be used for token fetch AAD
+   *                             calls.
    * @return {@link AzureADToken} obtained using the creds
    * @throws IOException throws IOException if there is a failure in connecting to Azure AD
    */
   public static AzureADToken getTokenUsingClientCreds(String authEndpoint,
-                                                      String clientId, String clientSecret)
+                                                      String clientId,
+      String clientSecret, ExponentialRetryPolicy tokenFetchRetryPolicy)
           throws IOException {
     Preconditions.checkNotNull(authEndpoint, "authEndpoint");
     Preconditions.checkNotNull(clientId, "clientId");
@@ -100,7 +102,8 @@ public final class AzureADAuthenticator {
     qp.add("client_secret", clientSecret);
     LOG.debug("AADToken: starting to fetch token using client creds for client ID " + clientId);
 
-    return getTokenCall(authEndpoint, qp.serialize(), null, null);
+    return getTokenCall(authEndpoint, qp.serialize(), null, null,
+        tokenFetchRetryPolicy);
   }
 
   /**
@@ -116,12 +119,15 @@ public final class AzureADAuthenticator {
    *                    principal to use. Can be {@code null}.
    * @param bypassCache {@code boolean} specifying whether a cached token is acceptable or a fresh token
    *                    request should me made to AAD
+   * @param tokenFetchRetryPolicy retry policy to be used for token fetch AAD
+   *                             calls.
    * @return {@link AzureADToken} obtained using the creds
    * @throws IOException throws IOException if there is a failure in obtaining the token
    */
   public static AzureADToken getTokenFromMsi(final String authEndpoint,
       final String tenantGuid, final String clientId, String authority,
-      boolean bypassCache) throws IOException {
+      boolean bypassCache, ExponentialRetryPolicy tokenFetchRetryPolicy)
+      throws IOException {
     QueryParams qp = new QueryParams();
     qp.add("api-version", "2018-02-01");
     qp.add("resource", RESOURCE_NAME);
@@ -144,7 +150,8 @@ public final class AzureADAuthenticator {
     headers.put("Metadata", "true");
 
     LOG.debug("AADToken: starting to fetch token using MSI");
-    return getTokenCall(authEndpoint, qp.serialize(), headers, "GET", true);
+    return getTokenCall(authEndpoint, qp.serialize(), headers, "GET", true,
+        tokenFetchRetryPolicy);
   }
 
   /**
@@ -155,12 +162,16 @@ public final class AzureADAuthenticator {
    *                     Active Directory configuration)
    * @param clientId the client ID (GUID) of the client web app obtained from Azure Active Directory configuration
    * @param refreshToken the refresh token
+   * @param tokenFetchRetryPolicy retry policy to be used for token fetch AAD
+   *                             calls.
    * @return {@link AzureADToken} obtained using the refresh token
    * @throws IOException throws IOException if there is a failure in connecting to Azure AD
    */
   public static AzureADToken getTokenUsingRefreshToken(
       final String authEndpoint, final String clientId,
-      final String refreshToken) throws IOException {
+      final String refreshToken,
+      final ExponentialRetryPolicy tokenFetchRetryPolicy)
+      throws IOException {
     QueryParams qp = new QueryParams();
     qp.add("grant_type", "refresh_token");
     qp.add("refresh_token", refreshToken);
@@ -168,7 +179,7 @@ public final class AzureADAuthenticator {
       qp.add("client_id", clientId);
     }
     LOG.debug("AADToken: starting to fetch token using refresh token for client ID " + clientId);
-    return getTokenCall(authEndpoint, qp.serialize(), null, null);
+    return getTokenCall(authEndpoint, qp.serialize(), null, null, tokenFetchRetryPolicy);
   }
 
 
@@ -276,16 +287,17 @@ public final class AzureADAuthenticator {
   }
 
   private static AzureADToken getTokenCall(String authEndpoint, String body,
-      Hashtable<String, String> headers, String httpMethod) throws IOException {
-    return getTokenCall(authEndpoint, body, headers, httpMethod, false);
+      Hashtable<String, String> headers, String httpMethod,
+      ExponentialRetryPolicy tokenFetchRetryPolicy) throws IOException {
+    return getTokenCall(authEndpoint, body, headers, httpMethod, false,
+        tokenFetchRetryPolicy);
   }
 
   private static AzureADToken getTokenCall(String authEndpoint, String body,
-      Hashtable<String, String> headers, String httpMethod, boolean isMsi)
+      Hashtable<String, String> headers, String httpMethod, boolean isMsi,
+      ExponentialRetryPolicy tokenFetchRetryPolicy)
       throws IOException {
     AzureADToken token = null;
-    ExponentialRetryPolicy retryPolicy
-            = new ExponentialRetryPolicy(5, 0, SIXTY_SECONDS, 2);
 
     int httperror = 0;
     IOException ex = null;
@@ -312,13 +324,13 @@ public final class AzureADAuthenticator {
       if (!succeeded) {
         LOG.debug("Retrying getTokenSingleCall. RetryCount = {}", retryCount);
         try {
-          Thread.sleep(retryPolicy.getRetryInterval(retryCount));
+          Thread.sleep(tokenFetchRetryPolicy.getRetryInterval(retryCount));
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
         }
       }
 
-    } while (!succeeded && retryPolicy.shouldRetry(retryCount, httperror));
+    } while (!succeeded && tokenFetchRetryPolicy.shouldRetry(retryCount, httperror));
     if (!succeeded) {
       throw ex;
     }

@@ -58,6 +58,7 @@ public class RefreshTokenBasedTokenProvider extends AccessTokenProvider {
   protected AzureADToken refreshToken() throws IOException {
     LOG.debug("AADToken: refreshing refresh-token based token");
     return AzureADAuthenticator
-        .getTokenUsingRefreshToken(authEndpoint, clientId, refreshToken);
+        .getTokenUsingRefreshToken(authEndpoint, clientId, refreshToken,
+            getTokenFetchRetryPolicy());
   }
 }

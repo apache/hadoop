@@ -58,6 +58,7 @@ import org.apache.hadoop.fs.azurebfs.oauth2.RefreshTokenBasedTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.UserPasswordTokenProvider;
 import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
+import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
 import org.apache.hadoop.fs.azurebfs.services.KeyProvider;
 import org.apache.hadoop.fs.azurebfs.services.SimpleKeyProvider;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
@@ -119,6 +120,26 @@ public class AbfsConfiguration{
       MinValue = 0,
       DefaultValue = DEFAULT_CUSTOM_TOKEN_FETCH_RETRY_COUNT)
   private int customTokenFetchRetryCount;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_OAUTH_TOKEN_FETCH_RETRY_COUNT,
+      MinValue = 0,
+      DefaultValue = DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MAX_ATTEMPTS)
+  private int oauthTokenFetchRetryCount;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_OAUTH_TOKEN_FETCH_RETRY_MIN_BACKOFF,
+      MinValue = 0,
+      DefaultValue = DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MIN_BACKOFF_INTERVAL)
+  private int oauthTokenFetchRetryMinBackoff;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_OAUTH_TOKEN_FETCH_RETRY_MAX_BACKOFF,
+      MinValue = 0,
+      DefaultValue = DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MAX_BACKOFF_INTERVAL)
+  private int oauthTokenFetchRetryMaxBackoff;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_OAUTH_TOKEN_FETCH_RETRY_DELTA_BACKOFF,
+      MinValue = 0,
+      DefaultValue = DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_DELTA_BACKOFF)
+  private int oauthTokenFetchRetryDeltaBackoff;
 
   @LongConfigurationValidatorAnnotation(ConfigurationKey = AZURE_BLOCK_SIZE_PROPERTY_NAME,
       MinValue = 0,
@@ -600,6 +621,7 @@ public class AbfsConfiguration{
         } else {
           throw new IllegalArgumentException("Failed to initialize " + tokenProviderClass);
         }
+        tokenProvider.setTokenFetchRetryPolicy(getOauthTokenFetchRetryPolicy());
         return tokenProvider;
       } catch(IllegalArgumentException e) {
         throw e;
@@ -732,6 +754,12 @@ public class AbfsConfiguration{
         validator.ConfigurationKey(),
         validator.DefaultValue(),
         validator.ThrowIfInvalid()).validate(value);
+  }
+
+  public ExponentialRetryPolicy getOauthTokenFetchRetryPolicy() {
+    return new ExponentialRetryPolicy(oauthTokenFetchRetryCount,
+        oauthTokenFetchRetryMinBackoff, oauthTokenFetchRetryMaxBackoff,
+        oauthTokenFetchRetryDeltaBackoff);
   }
 
   @VisibleForTesting
