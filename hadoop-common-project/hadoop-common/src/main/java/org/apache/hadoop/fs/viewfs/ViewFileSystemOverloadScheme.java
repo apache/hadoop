@@ -31,6 +31,8 @@ import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME;
+
 /******************************************************************************
  * This class is extended from the ViewFileSystem for the overloaded scheme
  * file system. Mount link configurations and in-memory mount table
@@ -85,9 +87,14 @@ import org.apache.hadoop.fs.UnsupportedFileSystemException;
  * Op3: Create file s3a://bucketA/salesDB/dbfile will go to
  *      s3a://bucketA/salesDB/dbfile
  *
- * Note: In ViewFileSystemOverloadScheme, by default the mount links will be
+ * Note:
+ * (1) In ViewFileSystemOverloadScheme, by default the mount links will be
  * represented as non-symlinks. If you want to change this behavior, please see
  * {@link ViewFileSystem#listStatus(Path)}
+ * (2) In ViewFileSystemOverloadScheme, only the initialized uri's hostname will
+ * be considered as the mount table name. When the passed uri has hostname:port,
+ * it will simply ignore the port number and only hostname will be considered as
+ * the mount table name.
  *****************************************************************************/
 @InterfaceAudience.LimitedPrivate({ "MapReduce", "HBase", "Hive" })
 @InterfaceStability.Evolving
@@ -115,6 +122,10 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
     conf.setBoolean(Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS,
         conf.getBoolean(Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS,
             false));
+    /* the default value to true in ViewFSOverloadScheme */
+    conf.setBoolean(CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME,
+        conf.getBoolean(Constants.CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME,
+            true));
     if (null != mountTableConfigPath) {
       MountTableConfigLoader loader = new HCFSMountTableConfigLoader();
       loader.load(mountTableConfigPath, conf);
