@@ -142,7 +142,7 @@ public class TestViewFileSystemOverloadSchemeWithFSCommands {
     List<String> mounts = Lists.newArrayList();
     mounts.add(HDFS_USER_FOLDER);
     mounts.add(LOCAL_FOLDER);
-    addMountLinks(defaultFSURI.getAuthority(),
+    addMountLinks(defaultFSURI.getHost(),
         mounts.toArray(new String[mounts.size()]),
         new String[] {hdfsTargetPath.toUri().toString(),
             localTargetDir.toURI().toString() },
