@@ -45,6 +45,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME;
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME_DEFAULT;
 import static org.junit.Assert.*;
 
 
@@ -79,6 +81,8 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
     conf.set(String.format(
         FsConstants.FS_VIEWFS_OVERLOAD_SCHEME_TARGET_FS_IMPL_PATTERN,
         HDFS_SCHEME), DistributedFileSystem.class.getName());
+    conf.setBoolean(CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME,
+        CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME_DEFAULT);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     cluster.waitClusterUp();
     defaultFSURI =
@@ -365,7 +369,7 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
     if (mountTableIfSet != null) {
       conf.set(Constants.CONFIG_VIEWFS_MOUNTTABLE_PATH, mountTableIfSet);
     }
-    addMountLinks(defaultFSURI.getAuthority(),
+    addMountLinks(defaultFSURI.getHost(),
         new String[] {HDFS_USER_FOLDER, LOCAL_FOLDER,
             Constants.CONFIG_VIEWFS_LINK_FALLBACK },
         new String[] {hdfsTargetPath.toUri().toString(),
@@ -590,6 +594,45 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
         // Verify file recovered.
         assertTrue(fs1.exists(new Path(testUris[0].toString() + testFile)));
       }
+    }
+  }
+
+  /**
+   * Tests that the fs initialization should ignore the port number when it's
+   * extracting the mount table name from uri.
+   */
+  @Test(timeout = 30000)
+  public void testMountTableNameShouldIgnorePortFromURI() throws Exception {
+    final Path hdfsTargetPath = new Path(defaultFSURI + HDFS_USER_FOLDER);
+    conf = new Configuration(getConf());
+    addMountLinks(defaultFSURI.getHost(),
+        new String[] {HDFS_USER_FOLDER, LOCAL_FOLDER,
+            Constants.CONFIG_VIEWFS_LINK_FALLBACK},
+        new String[] {hdfsTargetPath.toUri().toString(),
+            localTargetDir.toURI().toString(),
+            hdfsTargetPath.toUri().toString()}, conf);
+    conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY,
+        defaultFSURI.toString());
+    conf.set(String.format(FS_IMPL_PATTERN_KEY, HDFS_SCHEME),
+        ViewFileSystemOverloadScheme.class.getName());
+    conf.set(String
+        .format(FsConstants.FS_VIEWFS_OVERLOAD_SCHEME_TARGET_FS_IMPL_PATTERN,
+            HDFS_SCHEME), DistributedFileSystem.class.getName());
+    conf.setBoolean(CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME, true);
+
+    Path testDirOnRoot = new Path("/test");
+    URI uriWithoutPort = new URI("hdfs://" + defaultFSURI.getHost());
+    //Initialize with out port
+    try (FileSystem fs = FileSystem
+        .get(uriWithoutPort, conf)) {
+      fs.mkdirs(testDirOnRoot);
+      fs.delete(testDirOnRoot, true);
+    }
+
+    //Initialize with port
+    try (FileSystem fs = FileSystem.get(defaultFSURI, conf)) {
+      fs.mkdirs(testDirOnRoot);
+      fs.delete(testDirOnRoot, true);
     }
   }
 

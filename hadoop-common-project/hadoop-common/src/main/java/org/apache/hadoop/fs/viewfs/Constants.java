@@ -104,4 +104,17 @@ public interface Constants {
       "fs.viewfs.mount.links.as.symlinks";
 
   boolean CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS_DEFAULT = true;
+
+  /**
+   * When initializing the viewfs, authority will be used as the mount table
+   * name to find the mount link configurations. To make the mount table name
+   * unique, we may want to ignore port if initialized uri authority contains
+   * port number. By default, we will consider port number also in
+   * ViewFileSystem(This default value false, because to support existing
+   * deployments continue with the current behavior).
+   */
+  String CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME =
+      "fs.viewfs.ignore.port.in.mount.table.name";
+
+  boolean CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME_DEFAULT = false;
 }
