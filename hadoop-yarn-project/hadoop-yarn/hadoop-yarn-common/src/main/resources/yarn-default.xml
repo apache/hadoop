@@ -3331,6 +3331,26 @@
   </property>
 
   <property>
+    <description>
+    Used to specify custom web services for Resourcemanager. Value can be
+    classnames separated by comma.
+    Ex: org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebServices,
+    org.apache.hadoop.yarn.server.resourcemanager.webapp.DummyClass
+    </description>
+    <name>yarn.http.rmwebapp.external.classes</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+    Used to specify custom scheduler page
+    </description>
+    <name>hadoop.http.rmwebapp.scheduler.page.class</name>
+    <value></value>
+  </property>
+
+
+  <property>
     <description>The Node Label script to run. Script output Line starting with
      "NODE_PARTITION:" will be considered as Node Label Partition. In case of
      multiple lines have this pattern, then last one will be considered
