@@ -1085,8 +1085,8 @@ public class TestConfiguration {
     // verify that the includes file contains all properties
     Path fileResource = new Path(configFile.toURI());
     conf.addResource(fileResource);
-    assertEquals(conf.get("a"), "b");
-    assertEquals(conf.get("c"), "d");
+    assertEquals("b", conf.get("a"));
+    assertEquals("d", conf.get("c"));
 
     // Cleanup
     configFile.delete();
