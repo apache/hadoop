@@ -210,9 +210,9 @@ public class DFSAdmin extends FsShell {
                 "\" is not a valid value for a quota.");
       }
       if (HdfsConstants.QUOTA_DONT_SET == this.quota) {
-        System.err.print("WARN: \"" + this.quota +
-                "\" means QUOTA_DONT_SET, quota will not be set, "
-                + "it keep the old values. \n");
+        throw new IllegalArgumentException("WARN: \"" + this.quota +
+                "\" means QUOTA_DONT_SET, quota will not be set, " +
+                "it keep the old values.");
       }
       this.args = parameters.toArray(new String[parameters.size()]);
     }
@@ -335,9 +335,9 @@ public class DFSAdmin extends FsShell {
         throw new IllegalArgumentException("\"" + str + "\" is not a valid value for a quota.");
       }
       if (HdfsConstants.QUOTA_DONT_SET == quota) {
-        System.err.print("WARN: \"" + this.quota +
-                "\" means QUOTA_DONT_SET, quota will not be set, "
-                + "it keep the old values. \n");
+        throw new IllegalArgumentException("WARN: \"" + this.quota +
+                "\" means QUOTA_DONT_SET, quota will not be set, " +
+                "it keep the old values.");
       }
       String storageTypeString =
           StringUtils.popOptionWithArgument("-storageType", parameters);

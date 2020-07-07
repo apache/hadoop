@@ -1236,14 +1236,15 @@ public class TestQuota {
     final int ret = ToolRunner.run(
             dfsAdmin,
             new String[] {"-setQuota",
-                    String.valueOf(HdfsConstants.QUOTA_DONT_SET), dir.toString()});
-    assertEquals(0, ret);
+                    String.valueOf(HdfsConstants.QUOTA_DONT_SET),
+                            dir.toString()});
+    assertEquals(-1, ret);
     scanIntoList(ERR_STREAM, outs);
-    assertEquals(1, outs.size());
+    assertEquals(2, outs.size());
     assertThat(outs.get(0),
             is(allOf(containsString("WARN:"),
-                    containsString("means QUOTA_DONT_SET, quota will not be set, " +
-                            "it keep the old values."))));
+                    containsString("means QUOTA_DONT_SET, quota will " +
+                            "not be set, it keep the old values."))));
 
     final List<String> outs1 = Lists.newArrayList();
     /* set quota 0 */
@@ -1280,14 +1281,15 @@ public class TestQuota {
     final int ret = ToolRunner.run(
             dfsAdmin,
             new String[] {"-setSpaceQuota",
-                    String.valueOf(HdfsConstants.QUOTA_DONT_SET), dir.toString()});
-    assertEquals(0, ret);
+                    String.valueOf(HdfsConstants.QUOTA_DONT_SET),
+                            dir.toString()});
+    assertEquals(-1, ret);
     scanIntoList(ERR_STREAM, outs);
-    assertEquals(1, outs.size());
+    assertEquals(2, outs.size());
     assertThat(outs.get(0),
             is(allOf(containsString("WARN:"),
-                    containsString("means QUOTA_DONT_SET, quota will not be set, " +
-                            "it keep the old values."))));
+                    containsString("means QUOTA_DONT_SET, quota will " +
+                            "not be set, it keep the old values."))));
   }
 
   /**
