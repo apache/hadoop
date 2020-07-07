@@ -2450,6 +2450,12 @@ public class YarnConfiguration extends Configuration {
   public static final boolean DEFAULT_NM_DOCKER_ALLOW_HOST_PID_NAMESPACE =
       false;
 
+  public static final String YARN_HTTP_WEBAPP_EXTERNAL_CLASSES =
+      "yarn.http.rmwebapp.external.classes";
+
+  public static final String YARN_HTTP_WEBAPP_SCHEDULER_PAGE =
+      "hadoop.http.rmwebapp.scheduler.page.class";
+
   /**
    * Whether or not users are allowed to request that Docker containers honor
    * the debug deletion delay. This is useful for troubleshooting Docker
