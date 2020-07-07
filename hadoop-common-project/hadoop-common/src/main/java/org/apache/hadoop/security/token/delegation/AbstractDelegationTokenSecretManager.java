@@ -101,7 +101,7 @@ extends AbstractDelegationTokenIdentifier>
   private long tokenMaxLifetime;
   private long tokenRemoverScanInterval;
   private long tokenRenewInterval;
-  /** Couldn't create proxy provide
+  /**
    * Whether to store a token's tracking ID in its TokenInformation.
    * Can be overridden by a subclass.
    */
