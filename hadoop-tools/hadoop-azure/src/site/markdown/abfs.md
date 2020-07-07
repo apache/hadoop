@@ -332,18 +332,18 @@ possible
 
 ### <a name="aad-token-fetch-retry-logic"></a> AAD Token fetch retries
 
-The exponential retry policy used for the AAD token fetch retries can be tuned 
+The exponential retry policy used for the AAD token fetch retries can be tuned
 with the following configurations.
 * `fs.azure.oauth.token.fetch.retry.max.retries`: Sets the maximum number of
  retries. Default value is 5.
 * `fs.azure.oauth.token.fetch.retry.min.backoff.interval`: Minimum back-off
   interval. Added to the retry interval computed from delta backoff. By
    default this si set as 0. Set the interval in milli seconds.
-* `fs.azure.oauth.token.fetch.retry.max.backoff.interval`: Maximum back-off 
- interval. Default value is 60000 (sixty seconds). Set the interval in milli 
- seconds.
-* `fs.azure.oauth.token.fetch.retry.delta.backoff`: Back-off interval between 
- retries. Multiples of this timespan are used for subsequent retry attempts
+* `fs.azure.oauth.token.fetch.retry.max.backoff.interval`: Maximum back-off
+interval. Default value is 60000 (sixty seconds). Set the interval in milli
+seconds.
+* `fs.azure.oauth.token.fetch.retry.delta.backoff`: Back-off interval between
+retries. Multiples of this timespan are used for subsequent retry attempts
  . The default value is 2.
 
 ### <a name="shared-key-auth"></a> Default: Shared Key

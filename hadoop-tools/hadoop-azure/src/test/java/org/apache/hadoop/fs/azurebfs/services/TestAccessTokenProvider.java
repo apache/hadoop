@@ -35,9 +35,14 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.D
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MIN_BACKOFF_INTERVAL;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ACCOUNT_NAME;
 
-public class AccessTokenProviderTest extends AbstractAbfsIntegrationTest {
+public class TestAccessTokenProvider extends AbstractAbfsIntegrationTest {
 
-  public AccessTokenProviderTest() throws Exception {
+  private static final int TEST_RETRY_COUNT = 10;
+  private static final int TEST_MIN_BACKOFF = 20;
+  private static final int TEST_MAX_BACKOFF = 30;
+  private static final int TEST_DELTA_BACKOFF = 40;
+
+  public TestAccessTokenProvider() throws Exception {
     super();
   }
 
@@ -82,19 +87,14 @@ public class AccessTokenProviderTest extends AbstractAbfsIntegrationTest {
   public void testOAuthTokenFetchRetryPolicy()
       throws IOException, IllegalAccessException {
 
-    int retryCount = 10;
-    int minBackOff = 20;
-    int maxBackOff = 30;
-    int deltaBackOff = 40;
-
     getConfiguration()
-        .set(AZURE_OAUTH_TOKEN_FETCH_RETRY_COUNT, String.valueOf(retryCount));
+        .set(AZURE_OAUTH_TOKEN_FETCH_RETRY_COUNT, String.valueOf(TEST_RETRY_COUNT));
     getConfiguration().set(AZURE_OAUTH_TOKEN_FETCH_RETRY_MIN_BACKOFF,
-        String.valueOf(minBackOff));
+        String.valueOf(TEST_MIN_BACKOFF));
     getConfiguration().set(AZURE_OAUTH_TOKEN_FETCH_RETRY_MAX_BACKOFF,
-        String.valueOf(maxBackOff));
+        String.valueOf(TEST_MAX_BACKOFF));
     getConfiguration().set(AZURE_OAUTH_TOKEN_FETCH_RETRY_DELTA_BACKOFF,
-        String.valueOf(deltaBackOff));
+        String.valueOf(TEST_DELTA_BACKOFF));
 
     String accountName = getConfiguration().get(FS_AZURE_ACCOUNT_NAME);
     AbfsConfiguration abfsConfig = new AbfsConfiguration(getRawConfiguration(),
@@ -104,16 +104,17 @@ public class AccessTokenProviderTest extends AbstractAbfsIntegrationTest {
         .getOauthTokenFetchRetryPolicy();
 
     Assertions.assertThat(retryPolicy.getRetryCount())
-        .describedAs("retryCount should be {}", retryCount)
-        .isEqualTo(retryCount);
+        .describedAs("retryCount should be {}", TEST_RETRY_COUNT)
+        .isEqualTo(TEST_RETRY_COUNT);
     Assertions.assertThat(retryPolicy.getMinBackoff())
-        .describedAs("minBackOff should be {}", minBackOff)
-        .isEqualTo(minBackOff);
+        .describedAs("minBackOff should be {}", TEST_MIN_BACKOFF)
+        .isEqualTo(TEST_MIN_BACKOFF);
     Assertions.assertThat(retryPolicy.getMaxBackoff())
-        .describedAs("maxBackOff should be {}", maxBackOff)
-        .isEqualTo(maxBackOff);
+        .describedAs("maxBackOff should be {}", TEST_MAX_BACKOFF)
+        .isEqualTo(TEST_MAX_BACKOFF);
     Assertions.assertThat(retryPolicy.getDeltaBackoff())
-        .describedAs("deltaBackOff should be {}", deltaBackOff)
-        .isEqualTo(deltaBackOff);
+        .describedAs("deltaBackOff should be {}", TEST_DELTA_BACKOFF)
+        .isEqualTo(TEST_DELTA_BACKOFF);
   }
+
 }
