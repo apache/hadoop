@@ -332,12 +332,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                 MIN_REPLICATION,
             HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.
                 MIN_REPLICATION_DEFAULT);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(
-          "Sets " + HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.
-              MIN_REPLICATION + " to "
-              + dtpReplaceDatanodeOnFailureReplication);
-    }
+    LOG.debug("Sets {} to {}",
+        HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.
+            MIN_REPLICATION, dtpReplaceDatanodeOnFailureReplication);
     this.ugi = UserGroupInformation.getCurrentUser();
 
     this.namenodeUri = nameNodeUri;

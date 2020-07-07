@@ -110,9 +110,7 @@ public class DFSStripedInputStream extends DFSInputStream {
         dataBlkNum, parityBlkNum);
     decoder = CodecUtil.createRawDecoder(dfsClient.getConfiguration(),
         ecPolicy.getCodecName(), coderOptions);
-    if (DFSClient.LOG.isDebugEnabled()) {
-      DFSClient.LOG.debug("Creating an striped input stream for file " + src);
-    }
+    DFSClient.LOG.debug("Creating an striped input stream for file {}", src);
   }
 
   private boolean useDirectBuffer() {
@@ -465,10 +463,8 @@ public class DFSStripedInputStream extends DFSInputStream {
         break;
       }
     }
-    if (DFSClient.LOG.isDebugEnabled()) {
-      DFSClient.LOG.debug("refreshLocatedBlock for striped blocks, offset="
-          + block.getStartOffset() + ". Obtained block " + lb + ", idx=" + idx);
-    }
+    DFSClient.LOG.debug("refreshLocatedBlock for striped blocks, offset={}." +
+        " Obtained block {}, idx={}", block.getStartOffset(), lb, idx);
     return StripedBlockUtil.constructInternalBlock(
         lsb, i, cellSize, dataBlkNum, idx);
   }
@@ -526,7 +522,7 @@ public class DFSStripedInputStream extends DFSInputStream {
       if (!warnedNodes.containsAll(dnUUIDs)) {
         DFSClient.LOG.warn(Arrays.toString(nodes) + " are unavailable and " +
             "all striping blocks on them are lost. " +
-            "IgnoredNodes = " + ignoredNodes);
+            "IgnoredNodes = {}", ignoredNodes);
         warnedNodes.addAll(dnUUIDs);
       }
     } else {
