@@ -434,7 +434,6 @@ public class CapacityScheduler extends
          boolean validation) throws IOException {
     writeLock.lock();
     try {
-      writeLock.lock();
       Configuration configuration = new Configuration(newConf);
       CapacitySchedulerConfiguration oldConf = this.conf;
       if (validation) {
