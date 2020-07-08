@@ -303,6 +303,7 @@ public final class AzureADAuthenticator {
     IOException ex = null;
     boolean succeeded = false;
     int retryCount = 0;
+    boolean shouldRetry;
     LOG.debug("First execution of REST operation getTokenSingleCall");
     do {
       httperror = 0;
@@ -320,8 +321,10 @@ public final class AzureADAuthenticator {
             "");
       }
       succeeded = ((httperror == 0) && (ex == null));
+      shouldRetry = !succeeded && tokenFetchRetryPolicy
+          .shouldRetry(retryCount, httperror);
       retryCount++;
-      if (!succeeded) {
+      if (shouldRetry) {
         LOG.debug("Retrying getTokenSingleCall. RetryCount = {}", retryCount);
         try {
           Thread.sleep(tokenFetchRetryPolicy.getRetryInterval(retryCount));
@@ -330,7 +333,7 @@ public final class AzureADAuthenticator {
         }
       }
 
-    } while (!succeeded && tokenFetchRetryPolicy.shouldRetry(retryCount, httperror));
+    } while (shouldRetry);
     if (!succeeded) {
       throw ex;
     }
