@@ -242,7 +242,7 @@ def commitTask(fs, jobAttemptPath, taskAttemptPath, dest):
 
 On a genuine filesystem this is an `O(1)` directory rename.
 
-On an object store with a mimiced rename, it is `O(data)` for the copy,
+On an object store with a mimicked rename, it is `O(data)` for the copy,
 along with overhead for listing and deleting all files (For S3, that's
 `(1 + files/500)` lists, and the same number of delete calls.
 
@@ -476,7 +476,7 @@ def needsTaskCommit(fs, jobAttemptPath, taskAttemptPath, dest):
 
 def commitTask(fs, jobAttemptPath, taskAttemptPath, dest):
   if fs.exists(taskAttemptPath) :
-    mergePathsV2(fs. taskAttemptPath, dest)
+    mergePathsV2(fs, taskAttemptPath, dest)
 ```
 
 ### v2 Task Abort
@@ -903,7 +903,7 @@ not be a problem.
 IBM's [Stocator](https://github.com/SparkTC/stocator) can transform indirect
 writes of V1/V2 committers into direct writes to the destination directory.
 
-Hpw does it do this? It's a special Hadoop `FileSystem` implementation which
+How does it do this? It's a special Hadoop `FileSystem` implementation which
 recognizes writes to `_temporary` paths and translate them to writes to the
 base directory. As well as translating the write operation, it also supports
 a `getFileStatus()` call on the original path, returning details on the file
@@ -969,7 +969,7 @@ It is that fact, that a different process may perform different parts
 of the upload, which make this algorithm viable.
 
 
-## The Netfix "Staging" committer
+## The Netflix "Staging" committer
 
 Ryan Blue, of Netflix, has submitted an alternate committer, one which has a
 number of appealing features
@@ -1081,7 +1081,7 @@ output reaches the job commit.
 Similarly, if a task is aborted, temporary output on the local FS is removed.
 
 If a task dies while the committer is running, it is possible for data to be
-eft on the local FS or as unfinished parts in S3.
+left on the local FS or as unfinished parts in S3.
 Unfinished upload parts in S3 are not visible to table readers and are cleaned
 up following the rules in the target bucket's life-cycle policy.
 
