@@ -968,6 +968,14 @@
 </property>
 
 <property>
+  <name>fs.viewfs.overload.scheme.target.ofs.impl</name>
+  <value>org.apache.hadoop.fs.ozone.RootedOzoneFileSystem</value>
+  <description>The RootedOzoneFileSystem for view file system overload scheme
+    when child file system and ViewFSOverloadScheme's schemes are ofs.
+  </description>
+</property>
+
+<property>
   <name>fs.viewfs.overload.scheme.target.o3fs.impl</name>
   <value>org.apache.hadoop.fs.ozone.OzoneFileSystem</value>
   <description>The OzoneFileSystem for view file system overload scheme when
