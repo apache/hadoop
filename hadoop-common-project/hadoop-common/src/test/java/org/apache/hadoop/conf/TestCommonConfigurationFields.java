@@ -133,6 +133,7 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.hdfs.impl");
     xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.http.impl");
     xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.https.impl");
+    xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.ofs.impl");
     xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.o3fs.impl");
     xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.oss.impl");
     xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.s3a.impl");
