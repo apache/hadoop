@@ -157,7 +157,8 @@ RUN apt-get -q update && apt-get -q install -y bats
 ####
 RUN pip2 install \
     configparser==4.0.2 \
-    pylint==1.9.2
+    pylint==1.9.2 \
+    isort==4.3.21
 
 ####
 # Install dateutil.parser
