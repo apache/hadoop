@@ -144,7 +144,7 @@ public abstract class MountTable extends BaseRecord {
     // Set permission fields
     UserGroupInformation ugi = NameNode.getRemoteUser();
     record.setOwnerName(ugi.getShortUserName());
-    String group = ugi.getGroups().isEmpty() ? ugi.getShortUserName()
+    String group = ugi.getGroupsSet().isEmpty() ? ugi.getShortUserName()
         : ugi.getPrimaryGroupName();
     record.setGroupName(group);
     record.setMode(new FsPermission(

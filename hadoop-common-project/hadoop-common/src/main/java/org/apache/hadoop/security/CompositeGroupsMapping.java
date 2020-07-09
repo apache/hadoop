@@ -19,6 +19,7 @@ package org.apache.hadoop.security;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -105,6 +106,29 @@ public class CompositeGroupsMapping
   @Override
   public void cacheGroupsAdd(List<String> groups) throws IOException {
     // does nothing in this provider of user to groups mapping
+  }
+
+  @Override
+  public synchronized Set<String> getGroupsSet(String user) throws IOException {
+    Set<String> groupSet = new HashSet<String>();
+
+    Set<String> groups = null;
+    for (GroupMappingServiceProvider provider : providersList) {
+      try {
+        groups = provider.getGroupsSet(user);
+      } catch (Exception e) {
+        LOG.warn("Unable to get groups for user {} via {} because: {}",
+            user, provider.getClass().getSimpleName(), e.toString());
+        LOG.debug("Stacktrace: ", e);
+      }
+      if (groups != null && !groups.isEmpty()) {
+        groupSet.addAll(groups);
+        if (!combined) {
+          break;
+        }
+      }
+    }
+    return groupSet;
   }
 
   @Override

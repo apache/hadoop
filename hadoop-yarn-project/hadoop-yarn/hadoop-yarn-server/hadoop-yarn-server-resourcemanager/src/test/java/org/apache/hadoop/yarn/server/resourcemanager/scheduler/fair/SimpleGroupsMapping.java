@@ -21,7 +21,9 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 
+import com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.security.GroupMappingServiceProvider;
 
 public class SimpleGroupsMapping implements GroupMappingServiceProvider {
@@ -41,4 +43,9 @@ public class SimpleGroupsMapping implements GroupMappingServiceProvider {
     throw new UnsupportedOperationException();
   }
 
+  @Override
+  public Set<String> getGroupsSet(String user) throws IOException {
+    return ImmutableSet.of(user + "group", user + "subgroup1",
+        user + "subgroup2");
+  }
 }

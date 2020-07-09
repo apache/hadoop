@@ -121,7 +121,7 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
           if (mapping.queue.equals(CURRENT_USER_MAPPING)) {
             return user;
           } else if (mapping.queue.equals(PRIMARY_GROUP_MAPPING)) {
-            return groups.getGroups(user).get(0);
+            return groups.getGroupsSet(user).iterator().next();
           } else {
             return mapping.queue;
           }
@@ -131,10 +131,8 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
         }
       }
       if (mapping.type == MappingType.GROUP) {
-        for (String userGroups : groups.getGroups(user)) {
-          if (userGroups.equals(mapping.source)) {
-            return mapping.queue;
-          }
+        if (groups.getGroupsSet(user).contains(mapping.source)) {
+          return mapping.queue;
         }
       }
     }

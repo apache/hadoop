@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Hashtable;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.HashSet;
 import java.util.Collection;
@@ -278,33 +279,33 @@ public class LdapGroupsMapping
   }
 
   private DirContext ctx;
-  private Configuration conf;
+  private volatile Configuration conf;
 
-  private Iterator<String> ldapUrls;
+  private volatile Iterator<String> ldapUrls;
   private String currentLdapUrl;
 
-  private boolean useSsl;
+  private volatile boolean useSsl;
   private String keystore;
   private String keystorePass;
   private String truststore;
   private String truststorePass;
   private String bindUser;
   private String bindPassword;
-  private String userbaseDN;
+  private volatile String userbaseDN;
   private String groupbaseDN;
   private String groupSearchFilter;
-  private String userSearchFilter;
-  private String memberOfAttr;
+  private volatile String userSearchFilter;
+  private volatile String memberOfAttr;
   private String groupMemberAttr;
-  private String groupNameAttr;
-  private int groupHierarchyLevels;
-  private String posixUidAttr;
-  private String posixGidAttr;
+  private volatile String groupNameAttr;
+  private volatile int groupHierarchyLevels;
+  private volatile String posixUidAttr;
+  private volatile String posixGidAttr;
   private boolean isPosix;
-  private boolean useOneQuery;
+  private volatile boolean useOneQuery;
   private int numAttempts;
-  private int numAttemptsBeforeFailover;
-  private Class<? extends InitialContextFactory> ldapCxtFactoryClass;
+  private volatile int numAttemptsBeforeFailover;
+  private volatile Class<? extends InitialContextFactory> ldapCxtFactoryClass;
 
   /**
    * Returns list of groups for a user.
@@ -318,36 +319,7 @@ public class LdapGroupsMapping
    */
   @Override
   public synchronized List<String> getGroups(String user) {
-    /*
-     * Normal garbage collection takes care of removing Context instances when
-     * they are no longer in use. Connections used by Context instances being
-     * garbage collected will be closed automatically. So in case connection is
-     * closed and gets CommunicationException, retry some times with new new
-     * DirContext/connection.
-     */
-
-    // Tracks the number of attempts made using the same LDAP server
-    int atemptsBeforeFailover = 1;
-
-    for (int attempt = 1; attempt <= numAttempts; attempt++,
-        atemptsBeforeFailover++) {
-      try {
-        return doGetGroups(user, groupHierarchyLevels);
-      } catch (NamingException e) {
-        LOG.warn("Failed to get groups for user {} (attempt={}/{}) using {}. " +
-            "Exception: ", user, attempt, numAttempts, currentLdapUrl, e);
-        LOG.trace("TRACE", e);
-
-        if (failover(atemptsBeforeFailover, numAttemptsBeforeFailover)) {
-          atemptsBeforeFailover = 0;
-        }
-      }
-
-      // Reset ctx so that new DirContext can be created with new connection
-      this.ctx = null;
-    }
-    
-    return Collections.emptyList();
+    return new ArrayList<>(getGroupsSet(user));
   }
 
   /**
@@ -426,10 +398,10 @@ public class LdapGroupsMapping
    * @return a list of strings representing group names of the user.
    * @throws NamingException if unable to find group names
    */
-  private List<String> lookupGroup(SearchResult result, DirContext c,
+  private Set<String> lookupGroup(SearchResult result, DirContext c,
       int goUpHierarchy)
       throws NamingException {
-    List<String> groups = new ArrayList<>();
+    Set<String> groups = new LinkedHashSet<>();
     Set<String> groupDNs = new HashSet<>();
 
     NamingEnumeration<SearchResult> groupResults;
@@ -452,11 +424,7 @@ public class LdapGroupsMapping
         getGroupNames(groupResult, groups, groupDNs, goUpHierarchy > 0);
       }
       if (goUpHierarchy > 0 && !isPosix) {
-        // convert groups to a set to ensure uniqueness
-        Set<String> groupset = new HashSet<>(groups);
-        goUpGroupHierarchy(groupDNs, goUpHierarchy, groupset);
-        // convert set back to list for compatibility
-        groups = new ArrayList<>(groupset);
+        goUpGroupHierarchy(groupDNs, goUpHierarchy, groups);
       }
     }
     return groups;
@@ -475,7 +443,7 @@ public class LdapGroupsMapping
    * return an empty string array.
    * @throws NamingException if unable to get group names
    */
-  List<String> doGetGroups(String user, int goUpHierarchy)
+  Set<String> doGetGroups(String user, int goUpHierarchy)
       throws NamingException {
     DirContext c = getDirContext();
 
@@ -486,11 +454,11 @@ public class LdapGroupsMapping
     if (!results.hasMoreElements()) {
       LOG.debug("doGetGroups({}) returned no groups because the " +
           "user is not found.", user);
-      return new ArrayList<>();
+      return Collections.emptySet();
     }
     SearchResult result = results.nextElement();
 
-    List<String> groups = null;
+    Set<String> groups = Collections.emptySet();
     if (useOneQuery) {
       try {
         /**
@@ -504,7 +472,7 @@ public class LdapGroupsMapping
               memberOfAttr + "' attribute." +
               "Returned user object: " + result.toString());
         }
-        groups = new ArrayList<>();
+        groups = new LinkedHashSet<>();
         NamingEnumeration groupEnumeration = groupDNAttr.getAll();
         while (groupEnumeration.hasMore()) {
           String groupDN = groupEnumeration.next().toString();
@@ -653,6 +621,40 @@ public class LdapGroupsMapping
   @Override
   public void cacheGroupsAdd(List<String> groups) {
     // does nothing in this provider of user to groups mapping
+  }
+
+  @Override
+  public Set<String> getGroupsSet(String user) {
+    /*
+     * Normal garbage collection takes care of removing Context instances when
+     * they are no longer in use. Connections used by Context instances being
+     * garbage collected will be closed automatically. So in case connection is
+     * closed and gets CommunicationException, retry some times with new new
+     * DirContext/connection.
+     */
+
+    // Tracks the number of attempts made using the same LDAP server
+    int atemptsBeforeFailover = 1;
+
+    for (int attempt = 1; attempt <= numAttempts; attempt++,
+        atemptsBeforeFailover++) {
+      try {
+        return doGetGroups(user, groupHierarchyLevels);
+      } catch (NamingException e) {
+        LOG.warn("Failed to get groups for user {} (attempt={}/{}) using {}. " +
+            "Exception: ", user, attempt, numAttempts, currentLdapUrl, e);
+        LOG.trace("TRACE", e);
+
+        if (failover(atemptsBeforeFailover, numAttemptsBeforeFailover)) {
+          atemptsBeforeFailover = 0;
+        }
+      }
+
+      // Reset ctx so that new DirContext can be created with new connection
+      this.ctx = null;
+    }
+
+    return Collections.emptySet();
   }
 
   @Override
