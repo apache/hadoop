@@ -20,7 +20,9 @@ package org.apache.hadoop.yarn.server.resourcemanager.placement;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -74,18 +76,21 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
   }
 
   private String getPrimaryGroup(String user) throws IOException {
-    return groups.getGroups(user).get(0);
+    return groups.getGroupsSet(user).iterator().next();
   }
 
   private String getSecondaryGroup(String user) throws IOException {
-    List<String> groupsList = groups.getGroups(user);
+    Set<String> groupsSet = groups.getGroupsSet(user);
     String secondaryGroup = null;
     // Traverse all secondary groups (as there could be more than one
     // and position is not guaranteed) and ensure there is queue with
     // the same name
-    for (int i = 1; i < groupsList.size(); i++) {
-      if (this.queueManager.getQueue(groupsList.get(i)) != null) {
-        secondaryGroup = groupsList.get(i);
+    Iterator<String> it = groupsSet.iterator();
+    it.next();
+    while (it.hasNext()) {
+      String group = it.next();
+      if (this.queueManager.getQueue(group) != null) {
+        secondaryGroup = group;
         break;
       }
     }
@@ -180,7 +185,7 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
         }
       }
       if (mapping.getType().equals(MappingType.GROUP)) {
-        for (String userGroups : groups.getGroups(user)) {
+        for (String userGroups : groups.getGroupsSet(user)) {
           if (userGroups.equals(mapping.getSource())) {
             if (mapping.getQueue().equals(CURRENT_USER_MAPPING)) {
               if (LOG.isDebugEnabled()) {

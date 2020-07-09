@@ -15,8 +15,10 @@
  */
 package org.apache.hadoop.security;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 /**
  * This class provides groups mapping for {@link UserGroupInformation} when the
@@ -29,6 +31,19 @@ public class NullGroupsMapping implements GroupMappingServiceProvider {
    */
   @Override
   public void cacheGroupsAdd(List<String> groups) {
+  }
+
+  /**
+   * Get all various group memberships of a given user.
+   * Returns EMPTY set in case of non-existing user
+   *
+   * @param user User's name
+   * @return set of group memberships of user
+   * @throws IOException
+   */
+  @Override
+  public Set<String> getGroupsSet(String user) throws IOException {
+    return Collections.emptySet();
   }
 
   /**
