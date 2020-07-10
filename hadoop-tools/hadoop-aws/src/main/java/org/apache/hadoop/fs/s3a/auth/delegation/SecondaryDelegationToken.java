@@ -175,10 +175,6 @@ class SecondaryDelegationToken extends AbstractDTService implements
     return tokenBinding.deployUnbonded();
   }
 
-  public AWSCredentialProviderList lookupToken() throws IOException {
-    return tokenBinding.deployUnbonded();
-  }
-
   @Override
   public AWSCredentialProviderList bindToTokenIdentifier(
       final AbstractS3ATokenIdentifier retrievedIdentifier) throws IOException {

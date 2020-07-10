@@ -59,8 +59,8 @@ public interface DelegationTokenBinding extends DTService {
    * If null is returned, the S3ADelegation token class will construct one
    * via {@link S3ADelegationTokens#getTokenServiceForKind}.
    * @param fsURI filesystem URI
-   * @return the string to be used to build the canonical name of this token service,
-   * or null/empty string.
+   * @return the string to be used to build the canonical name of this token
+   * service, or null/empty string.
    */
   default Text buildCanonicalNameForSecondaryBinding(String fsURI) {
     return null;

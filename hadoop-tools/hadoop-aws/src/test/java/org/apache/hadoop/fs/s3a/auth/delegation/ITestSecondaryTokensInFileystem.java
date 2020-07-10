@@ -99,7 +99,7 @@ public class ITestSecondaryTokensInFileystem extends AbstractDelegationIT {
    * Total count of the tokens expected to be issued.
    */
   public static final int EXPECTED_TOTAL_TOKEN_COUNT =
-      1 + EXPECTED_2ARY_TOKEN_COUNT ;
+      1 + EXPECTED_2ARY_TOKEN_COUNT;
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestSecondaryTokensInFileystem.class);
@@ -537,7 +537,7 @@ public class ITestSecondaryTokensInFileystem extends AbstractDelegationIT {
     try (S3AFileSystem delegatedFS = new S3AFileSystem()) {
       intercept(ServiceStateException.class,
           ERROR_DUPLICATE_TOKENS, () ->
-        delegatedFS.initialize(fsuri, conf));
+              delegatedFS.initialize(fsuri, conf));
     }
   }
 

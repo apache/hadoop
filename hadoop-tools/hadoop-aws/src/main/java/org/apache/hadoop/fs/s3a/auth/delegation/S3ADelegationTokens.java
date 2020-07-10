@@ -629,6 +629,7 @@ public class S3ADelegationTokens extends AbstractDTService implements
               encryptionSecrets,
               this))
           .collect(Collectors.toList());
+      // TODO: what if the list is empty?
       return issuers.toArray(new S3ATokenIssuer[0]);
     }
   }

@@ -107,7 +107,7 @@ public class TestDelegationTokenFetcher {
       Credentials creds = getArgumentAt(invocation,
             1, Credentials.class);
       creds.addToken(testToken.getService(), testToken);
-        return tokens;
+      return tokens;
     })
         .when(fs).addDelegationTokens(any(), any());
     Path p = new Path(f.getRoot().getAbsolutePath(), tokenFile);

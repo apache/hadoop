@@ -44,7 +44,6 @@ import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
-import org.apache.hadoop.hdfs.tools.DelegationTokenFetcher;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.security.Credentials;
@@ -54,7 +53,6 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.service.ServiceStateException;
-import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
@@ -642,8 +640,8 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     DtUtilShell dt = new DtUtilShell();
     dt.setOut(new PrintStream(dtUtilContent));
     dtUtilContent.reset();
-    int r =  doAs(aliceUser,
-        () ->ToolRunner.run(getConfiguration(), dt, super.args(args)));
+    int r = doAs(aliceUser,
+        () -> ToolRunner.run(getConfiguration(), dt, super.args(args)));
     String s = dtUtilContent.toString();
     LOG.info("\n{}", s);
     assertEquals("result of dtutil", expected, r);

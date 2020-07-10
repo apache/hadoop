@@ -33,6 +33,8 @@ import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.ENCRY
 /**
  * A token identifier for the encrypting binding.
  * This contains no credentials and cannot authenticate.
+ * <p></p>
+ * It is critical not to include any references to org.amazonaws here.
  */
 public final class EncryptingTokenIdentifier extends
     AbstractS3ATokenIdentifier {

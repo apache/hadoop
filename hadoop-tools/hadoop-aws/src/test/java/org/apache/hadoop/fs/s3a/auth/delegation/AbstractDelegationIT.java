@@ -312,9 +312,11 @@ public abstract class AbstractDelegationIT extends AbstractS3ATestBase {
    * @param tokenfile file to save to.
    * @return the credentials.
    */
-  protected Credentials fetchTokensThroughDtUtils(final UserGroupInformation user,
-      Text tokenKind, File tokenfile)
-      throws Exception {
+  protected Credentials fetchTokensThroughDtUtils(
+      final UserGroupInformation user,
+      final Text tokenKind,
+      final File tokenfile) throws Exception {
+
     ExitUtil.disableSystemExit();
     S3AFileSystem fs = getFileSystem();
     Configuration conf = fs.getConf();
