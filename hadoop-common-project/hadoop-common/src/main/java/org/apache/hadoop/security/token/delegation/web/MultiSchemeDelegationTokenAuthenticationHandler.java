@@ -122,7 +122,7 @@ public class MultiSchemeDelegationTokenAuthenticationHandler extends
           .checkAuthScheme(scheme));
     }
 
-    Preconditions.checkExpression(authSchemes.containsAll(delegationAuthSchemes));
+    Preconditions.checkIsTrue(authSchemes.containsAll(delegationAuthSchemes));
   }
 
   /**

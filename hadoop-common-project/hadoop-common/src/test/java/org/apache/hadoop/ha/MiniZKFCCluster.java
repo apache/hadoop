@@ -270,7 +270,7 @@ public class MiniZKFCCluster {
    */
   public void expireAndVerifyFailover(int fromIdx, int toIdx)
       throws Exception {
-    Preconditions.checkExpression(fromIdx != toIdx);
+    Preconditions.checkIsTrue(fromIdx != toIdx);
     
     getElector(fromIdx).preventSessionReestablishmentForTests();
     try {

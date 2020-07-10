@@ -309,7 +309,7 @@ public final class ZKCuratorManager {
   public void createRootDirRecursively(String path, List<ACL> zkAcl)
       throws Exception {
     String[] pathParts = path.split("/");
-    Preconditions.checkExpression(
+    Preconditions.checkIsTrue(
         pathParts.length >= 1 && pathParts[0].isEmpty(),
         "Invalid path: %s", path);
     StringBuilder sb = new StringBuilder();

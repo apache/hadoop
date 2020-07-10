@@ -221,14 +221,14 @@ public class ValueQueue <E> {
   public ValueQueue(final int numValues, final float lowWatermark,
       long expiry, int numFillerThreads, SyncGenerationPolicy policy,
       final QueueRefiller<E> refiller) {
-    Preconditions.checkExpression(numValues > 0, "\"numValues\" must be > 0");
-    Preconditions.checkExpression(((lowWatermark > 0)&&(lowWatermark <= 1)),
+    Preconditions.checkIsTrue(numValues > 0, "\"numValues\" must be > 0");
+    Preconditions.checkIsTrue(((lowWatermark > 0)&&(lowWatermark <= 1)),
         "\"lowWatermark\" must be > 0 and <= 1");
     final int watermarkValue = (int) (numValues * lowWatermark);
-    Preconditions.checkExpression(watermarkValue > 0,
+    Preconditions.checkIsTrue(watermarkValue > 0,
         "(int) (\"numValues\" * \"lowWatermark\") must be > 0");
-    Preconditions.checkExpression(expiry > 0, "\"expiry\" must be > 0");
-    Preconditions.checkExpression(numFillerThreads > 0,
+    Preconditions.checkIsTrue(expiry > 0, "\"expiry\" must be > 0");
+    Preconditions.checkIsTrue(numFillerThreads > 0,
         "\"numFillerThreads\" must be > 0");
     Preconditions.checkNotNull(policy, "\"policy\" must not be null");
     this.refiller = refiller;

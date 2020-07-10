@@ -179,7 +179,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
 
       // AuthType has to be explicitly set to 'none' or 'sasl'
       Preconditions.checkNotNull(authType, "Zookeeper authType cannot be null !!");
-      Preconditions.checkExpression(
+      Preconditions.checkIsTrue(
           authType.equals("sasl") || authType.equals("none"),
           "Zookeeper authType must be one of [none, sasl]");
 

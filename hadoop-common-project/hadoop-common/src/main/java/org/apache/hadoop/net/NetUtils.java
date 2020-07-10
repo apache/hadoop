@@ -520,7 +520,7 @@ public class NetUtils {
     if (localAddr != null) {
       Class localClass = localAddr.getClass();
       Class remoteClass = endpoint.getClass();
-      Preconditions.checkExpression(localClass.equals(remoteClass),
+      Preconditions.checkIsTrue(localClass.equals(remoteClass),
           "Local address %s must be of same family as remote address %s.",
           localAddr, endpoint);
       socket.bind(localAddr);

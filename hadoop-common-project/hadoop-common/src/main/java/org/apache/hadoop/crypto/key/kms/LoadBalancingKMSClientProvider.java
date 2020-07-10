@@ -286,7 +286,7 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
   // This request is sent to all providers in the load-balancing group
   @Override
   public void warmUpEncryptedKeys(String... keyNames) throws IOException {
-    Preconditions.checkExpression(providers.length > 0,
+    Preconditions.checkIsTrue(providers.length > 0,
         "No providers are configured");
     boolean success = false;
     IOException e = null;

@@ -79,12 +79,12 @@ public class UnionStorageStatistics extends StorageStatistics {
   public UnionStorageStatistics(String name, StorageStatistics[] stats) {
     super(name);
 
-    Preconditions.checkExpression(name != null,
+    Preconditions.checkIsTrue(name != null,
         "The name of union storage statistics can not be null!");
-    Preconditions.checkExpression(stats != null,
+    Preconditions.checkIsTrue(stats != null,
         "The stats of union storage statistics can not be null!");
     for (StorageStatistics stat : stats) {
-      Preconditions.checkExpression(stat != null,
+      Preconditions.checkIsTrue(stat != null,
           "The stats of union storage statistics can not have null element!");
     }
 

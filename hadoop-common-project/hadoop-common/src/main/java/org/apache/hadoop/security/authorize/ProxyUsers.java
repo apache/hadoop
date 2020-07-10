@@ -67,7 +67,7 @@ public class ProxyUsers {
    */
   public static void refreshSuperUserGroupsConfiguration(Configuration conf,
       String proxyUserPrefix) {
-    Preconditions.checkExpression(proxyUserPrefix != null &&
+    Preconditions.checkIsTrue(proxyUserPrefix != null &&
         !proxyUserPrefix.isEmpty(), "prefix cannot be NULL or empty");
     // sip is volatile. Any assignment to it as well as the object's state
     // will be visible to all the other threads. 

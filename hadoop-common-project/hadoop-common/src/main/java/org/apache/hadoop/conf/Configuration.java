@@ -427,7 +427,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     DeprecationDelta(String key, String[] newKeys, String customMessage) {
       Preconditions.checkNotNull(key);
       Preconditions.checkNotNull(newKeys);
-      Preconditions.checkExpression(newKeys.length > 0);
+      Preconditions.checkIsTrue(newKeys.length > 0);
       this.key = key;
       this.newKeys = newKeys;
       this.customMessage = customMessage;
@@ -1374,10 +1374,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @throws IllegalArgumentException when the value or name is null.
    */
   public void set(String name, String value, String source) {
-    Preconditions.checkExpression(
+    Preconditions.checkIsTrue(
         name != null,
         "Property name must not be null");
-    Preconditions.checkExpression(
+    Preconditions.checkIsTrue(
         value != null,
         "The value of property %s must not be null", name);
     name = name.trim();

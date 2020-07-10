@@ -206,7 +206,7 @@ public final class OpensslCipher {
   public int update(ByteBuffer input, ByteBuffer output) 
       throws ShortBufferException {
     checkState();
-    Preconditions.checkExpression(input.isDirect() && output.isDirect(),
+    Preconditions.checkIsTrue(input.isDirect() && output.isDirect(),
         "Direct buffers are required.");
     int len = update(context, input, input.position(), input.remaining(),
         output, output.position(), output.remaining());
@@ -246,7 +246,7 @@ public final class OpensslCipher {
   public int doFinal(ByteBuffer output) throws ShortBufferException, 
       IllegalBlockSizeException, BadPaddingException {
     checkState();
-    Preconditions.checkExpression(output.isDirect(), "Direct buffer is required.");
+    Preconditions.checkIsTrue(output.isDirect(), "Direct buffer is required.");
     int len = doFinal(context, output, output.position(), output.remaining());
     output.position(output.position() + len);
     return len;

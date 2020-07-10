@@ -47,8 +47,8 @@ class FsUrlConnection extends URLConnection {
 
   FsUrlConnection(Configuration conf, URL url) {
     super(url);
-    Preconditions.checkExpression(conf != null, "null conf argument");
-    Preconditions.checkExpression(url != null, "null url argument");
+    Preconditions.checkIsTrue(conf != null, "null conf argument");
+    Preconditions.checkIsTrue(url != null, "null url argument");
     this.conf = conf;
   }
 

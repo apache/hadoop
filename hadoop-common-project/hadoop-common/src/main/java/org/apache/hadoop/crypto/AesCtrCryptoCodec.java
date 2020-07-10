@@ -47,8 +47,8 @@ public abstract class AesCtrCryptoCodec extends CryptoCodec {
    */
   @Override
   public void calculateIV(byte[] initIV, long counter, byte[] IV) {
-    Preconditions.checkExpression(initIV.length == AES_BLOCK_SIZE);
-    Preconditions.checkExpression(IV.length == AES_BLOCK_SIZE);
+    Preconditions.checkIsTrue(initIV.length == AES_BLOCK_SIZE);
+    Preconditions.checkIsTrue(IV.length == AES_BLOCK_SIZE);
 
     int i = IV.length; // IV length
     int j = 0; // counter bytes index

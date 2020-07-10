@@ -597,10 +597,10 @@ public class LoadGenerator extends Configured implements Tool {
       double r = Double.parseDouble(a[1]);
       double w = Double.parseDouble(a[2]);
 
-      Preconditions.checkExpression(d >= 0, "Invalid duration: " + d);
-      Preconditions.checkExpression(0 <= r && r <= 1.0,
+      Preconditions.checkIsTrue(d >= 0, "Invalid duration: " + d);
+      Preconditions.checkIsTrue(0 <= r && r <= 1.0,
           "The read probability must be [0, 1]: " + r);
-      Preconditions.checkExpression(0 <= w && w <= 1.0,
+      Preconditions.checkIsTrue(0 <= w && w <= 1.0,
           "The read probability must be [0, 1]: " + w);
 
       readProb.add(r);

@@ -71,7 +71,7 @@ public class RetryCache {
 
     CacheEntry(byte[] clientId, int callId, long expirationTime) {
       // ClientId must be a UUID - that is 16 octets.
-      Preconditions.checkExpression(clientId.length == ClientId.BYTE_LENGTH,
+      Preconditions.checkIsTrue(clientId.length == ClientId.BYTE_LENGTH,
           "Invalid clientId - length is " + clientId.length
               + " expected length " + ClientId.BYTE_LENGTH);
       // Convert UUID bytes to two longs

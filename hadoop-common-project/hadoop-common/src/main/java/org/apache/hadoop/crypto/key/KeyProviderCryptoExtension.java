@@ -25,10 +25,6 @@ import java.security.SecureRandom;
 import java.util.List;
 import java.util.ListIterator;
 
-import javax.crypto.Cipher;
-import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
-
 import org.apache.hadoop.util.noguava.Preconditions;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -335,7 +331,7 @@ public class KeyProviderCryptoExtension extends
       final KeyVersion ekNow = keyProvider.getCurrentKey(ekName);
       Preconditions
           .checkNotNull(ekNow, "KeyVersion name '%s' does not exist", ekName);
-      Preconditions.checkExpression(ekv.getEncryptedKeyVersion().getVersionName()
+      Preconditions.checkIsTrue(ekv.getEncryptedKeyVersion().getVersionName()
               .equals(KeyProviderCryptoExtension.EEK),
           "encryptedKey version name must be '%s', but found '%s'",
           KeyProviderCryptoExtension.EEK,
@@ -375,7 +371,7 @@ public class KeyProviderCryptoExtension extends
           Preconditions.checkNotNull(ekName, "Key name is null");
           Preconditions.checkNotNull(ekv.getEncryptedKeyVersion(),
               "EncryptedKeyVersion is null");
-          Preconditions.checkExpression(
+          Preconditions.checkIsTrue(
               ekv.getEncryptedKeyVersion().getVersionName()
                   .equals(KeyProviderCryptoExtension.EEK),
               "encryptedKey version name must be '%s', but found '%s'",
@@ -387,7 +383,7 @@ public class KeyProviderCryptoExtension extends
             Preconditions
                 .checkNotNull(ekNow, "Key name '%s' does not exist", ekName);
           } else {
-            Preconditions.checkExpression(ekNow.getName().equals(ekName),
+            Preconditions.checkIsTrue(ekNow.getName().equals(ekName),
                 "All keys must have the same key name. Expected '%s' "
                     + "but found '%s'", ekNow.getName(), ekName);
           }
@@ -446,7 +442,7 @@ public class KeyProviderCryptoExtension extends
       Preconditions
           .checkNotNull(encryptionKey, "KeyVersion name '%s' does not exist",
               encryptionKeyVersionName);
-      Preconditions.checkExpression(
+      Preconditions.checkIsTrue(
           encryptedKeyVersion.getEncryptedKeyVersion().getVersionName()
               .equals(KeyProviderCryptoExtension.EEK),
           "encryptedKey version name must be '%s', but found '%s'",

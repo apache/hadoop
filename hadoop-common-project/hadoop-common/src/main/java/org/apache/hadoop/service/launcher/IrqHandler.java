@@ -76,8 +76,8 @@ public final class IrqHandler implements SignalHandler {
    * @param handler handler
    */
   public IrqHandler(String name, Interrupted handler) {
-    Preconditions.checkExpression(name != null, "Null \"name\"");
-    Preconditions.checkExpression(handler != null, "Null \"handler\"");
+    Preconditions.checkIsTrue(name != null, "Null \"name\"");
+    Preconditions.checkIsTrue(handler != null, "Null \"handler\"");
     this.handler = handler;
     this.name = name;
   }

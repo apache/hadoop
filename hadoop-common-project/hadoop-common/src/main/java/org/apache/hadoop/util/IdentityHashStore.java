@@ -62,7 +62,7 @@ public final class IdentityHashStore<K, V> {
   private static final int DEFAULT_MAX_CAPACITY = 2;
 
   public IdentityHashStore(int capacity) {
-    Preconditions.checkExpression(capacity >= 0);
+    Preconditions.checkIsTrue(capacity >= 0);
     if (capacity == 0) {
       this.capacity = 0;
       this.buffer = null;
@@ -74,7 +74,7 @@ public final class IdentityHashStore<K, V> {
   }
 
   private void realloc(int newCapacity) {
-    Preconditions.checkExpression(newCapacity > 0);
+    Preconditions.checkIsTrue(newCapacity > 0);
     Object prevBuffer[] = buffer;
     this.capacity = newCapacity;
     // Each element takes two array slots -- one for the key, 

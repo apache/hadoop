@@ -46,7 +46,7 @@ public class SocketInputWrapper extends FilterInputStream {
     this.socket = s;
     this.hasChannel = s.getChannel() != null;
     if (hasChannel) {
-      Preconditions.checkExpression(is instanceof SocketInputStream,
+      Preconditions.checkIsTrue(is instanceof SocketInputStream,
           "Expected a SocketInputStream when there is a channel. " +
           "Got: %s", is);
     }

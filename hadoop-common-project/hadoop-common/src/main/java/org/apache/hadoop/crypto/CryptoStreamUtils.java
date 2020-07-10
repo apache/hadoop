@@ -67,7 +67,7 @@ public class CryptoStreamUtils {
 
   /** Check and floor buffer size */
   public static int checkBufferSize(CryptoCodec codec, int bufferSize) {
-    Preconditions.checkExpression(bufferSize >= MIN_BUFFER_SIZE,
+    Preconditions.checkIsTrue(bufferSize >= MIN_BUFFER_SIZE,
         "Minimum value of buffer size is " + MIN_BUFFER_SIZE + ".");
     return bufferSize - bufferSize % codec.getCipherSuite()
         .getAlgorithmBlockSize();

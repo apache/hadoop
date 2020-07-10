@@ -201,7 +201,7 @@ public class TestFTPFileSystem {
     String errorFormat = "access must be in [%d,%d,%d], but it is %d now.";
     String errorMessage = String.format(errorFormat, FTPFile.USER_ACCESS,
          FTPFile.GROUP_ACCESS, FTPFile.WORLD_ACCESS, access);
-    Preconditions.checkExpression(check, errorMessage);
+    Preconditions.checkIsTrue(check, errorMessage);
     Preconditions.checkNotNull(action);
     FTPFile ftpFile = new FTPFile();
 

@@ -79,7 +79,7 @@ class XAttrCommands extends FsCommand {
           throw new IllegalArgumentException(
               "Invalid/unsupported encoding option specified: " + en);
         }
-        Preconditions.checkExpression(encoding != null,
+        Preconditions.checkIsTrue(encoding != null,
             "Invalid/unsupported encoding option specified: " + en);
       }
 

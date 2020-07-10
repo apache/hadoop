@@ -347,10 +347,10 @@ public abstract class ZKFailoverController {
     List<ZKAuthInfo> zkAuths = SecurityUtil.getZKAuthInfos(conf, ZK_AUTH_KEY);
 
     // Sanity check configuration.
-    Preconditions.checkExpression(zkQuorum != null,
+    Preconditions.checkIsTrue(zkQuorum != null,
         "Missing required configuration '%s' for ZooKeeper quorum",
         ZK_QUORUM_KEY);
-    Preconditions.checkExpression(zkTimeout > 0,
+    Preconditions.checkIsTrue(zkTimeout > 0,
         "Invalid ZK session timeout %s", zkTimeout);
     
     int maxRetryNum = conf.getInt(

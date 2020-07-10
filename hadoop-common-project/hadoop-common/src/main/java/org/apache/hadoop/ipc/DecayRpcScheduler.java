@@ -238,7 +238,7 @@ public class DecayRpcScheduler implements RpcScheduler,
     topUsersCount =
         conf.getInt(DECAYSCHEDULER_METRICS_TOP_USER_COUNT,
             DECAYSCHEDULER_METRICS_TOP_USER_COUNT_DEFAULT);
-    Preconditions.checkExpression(topUsersCount > 0,
+    Preconditions.checkIsTrue(topUsersCount > 0,
         "the number of top users for scheduler metrics must be at least 1");
 
     decayRpcSchedulerDetailedMetrics =

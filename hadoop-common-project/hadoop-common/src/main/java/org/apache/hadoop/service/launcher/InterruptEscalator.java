@@ -72,7 +72,7 @@ public class InterruptEscalator implements IrqHandler.Interrupted {
   private boolean forcedShutdownTimedOut;
 
   public InterruptEscalator(ServiceLauncher owner, int shutdownTimeMillis) {
-    Preconditions.checkExpression(owner != null, "null owner");
+    Preconditions.checkIsTrue(owner != null, "null owner");
     this.ownerRef = new WeakReference<>(owner);
     this.shutdownTimeMillis = shutdownTimeMillis;
   }

@@ -58,7 +58,7 @@ class CallReturn {
     this(null, null, s);
   }
   private CallReturn(Object r, Throwable t, State s) {
-    Preconditions.checkExpression(r == null || t == null);
+    Preconditions.checkIsTrue(r == null || t == null);
     returnValue = r;
     thrown = t;
     state = s;

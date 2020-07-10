@@ -245,7 +245,7 @@ public class AclStatus {
   public FsAction getEffectivePermission(AclEntry entry, FsPermission permArg)
       throws IllegalArgumentException {
     // At least one permission bits should be available.
-    Preconditions.checkExpression(this.permission != null || permArg != null,
+    Preconditions.checkIsTrue(this.permission != null || permArg != null,
         "Permission bits are not available to calculate effective permission");
     if (this.permission != null) {
       // permission bits from server response will have the priority for
@@ -257,7 +257,7 @@ public class AclStatus {
         FsAction entryPerm = entry.getPermission();
         return entryPerm.and(permArg.getGroupAction());
       } else {
-        Preconditions.checkExpression(this.entries.contains(entry)
+        Preconditions.checkIsTrue(this.entries.contains(entry)
             && this.entries.size() >= 3,
             "Passed default ACL entry not found in the list of ACLs");
         // default mask entry for effective permission calculation will be the

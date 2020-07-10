@@ -243,7 +243,7 @@ public final class DomainSocketWatcher implements Closeable {
     if (loadingFailureReason != null) {
       throw new UnsupportedOperationException(loadingFailureReason);
     }
-    Preconditions.checkExpression(interruptCheckPeriodMs > 0);
+    Preconditions.checkIsTrue(interruptCheckPeriodMs > 0);
     this.interruptCheckPeriodMs = interruptCheckPeriodMs;
     notificationSockets = DomainSocket.socketpair();
     watcherThread.setDaemon(true);
@@ -407,7 +407,7 @@ public final class DomainSocketWatcher implements Closeable {
       try {
         sock.refCount.unreferenceCheckClosed();
       } catch (IOException e) {
-        Preconditions.checkExpression(false,
+        Preconditions.checkIsTrue(false,
             this + ": file descriptor " + sock.fd + " was closed while " +
             "still in the poll(2) loop.");
       }

@@ -103,7 +103,7 @@ public class ChunkedArrayList<T> extends AbstractList<T> {
    * @param maxChunkSize the maximum size of any chunk allocated
    */
   public ChunkedArrayList(int initialChunkCapacity, int maxChunkSize) {
-    Preconditions.checkExpression(maxChunkSize >= initialChunkCapacity);
+    Preconditions.checkIsTrue(maxChunkSize >= initialChunkCapacity);
     this.initialChunkCapacity = initialChunkCapacity;
     this.maxChunkSize = maxChunkSize;
   }

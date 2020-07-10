@@ -433,7 +433,7 @@ public class JavaKeyStoreProvider extends KeyProvider {
   @Override
   public KeyVersion createKey(String name, byte[] material,
                                Options options) throws IOException {
-    Preconditions.checkExpression(name.equals(StringUtils.toLowerCase(name)),
+    Preconditions.checkIsTrue(name.equals(StringUtils.toLowerCase(name)),
         "Uppercase key names are unsupported: %s", name);
     writeLock.lock();
     try {

@@ -200,7 +200,7 @@ public class FailoverController {
                        boolean forceFence,
                        boolean forceActive)
       throws FailoverFailedException {
-    Preconditions.checkExpression(fromSvc.getFencer() != null,
+    Preconditions.checkIsTrue(fromSvc.getFencer() != null,
         "failover requires a fencer");
     preFailoverChecks(fromSvc, toSvc, forceActive);
 

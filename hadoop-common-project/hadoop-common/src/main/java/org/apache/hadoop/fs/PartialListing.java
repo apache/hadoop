@@ -51,7 +51,7 @@ public class PartialListing<T extends FileStatus> {
 
   private PartialListing(Path listedPath, List<T> partialListing,
       RemoteException exception) {
-    Preconditions.checkExpression(partialListing == null ^ exception == null);
+    Preconditions.checkIsTrue(partialListing == null ^ exception == null);
     this.partialListing = partialListing;
     this.listedPath = listedPath;
     this.exception = exception;

@@ -53,7 +53,7 @@ public class ClientId {
       return "";
     }
     // otherwise should be 16 bytes
-    Preconditions.checkExpression(clientId.length == BYTE_LENGTH);
+    Preconditions.checkIsTrue(clientId.length == BYTE_LENGTH);
     long msb = getMsb(clientId);
     long lsb = getLsb(clientId);
     return (new UUID(msb, lsb)).toString();

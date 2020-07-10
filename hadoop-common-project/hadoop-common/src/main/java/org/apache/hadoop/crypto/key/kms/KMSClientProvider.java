@@ -803,7 +803,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     checkNotNull(encryptedKeyVersion.getEncryptionKeyVersionName(),
         "versionName");
     checkNotNull(encryptedKeyVersion.getEncryptedKeyIv(), "iv");
-    Preconditions.checkExpression(
+    Preconditions.checkIsTrue(
         encryptedKeyVersion.getEncryptedKeyVersion().getVersionName()
             .equals(KeyProviderCryptoExtension.EEK),
         "encryptedKey version name must be '%s', is '%s'",
@@ -836,7 +836,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     checkNotNull(ekv.getEncryptionKeyVersionName(), "versionName");
     checkNotNull(ekv.getEncryptedKeyIv(), "iv");
     checkNotNull(ekv.getEncryptedKeyVersion(), "encryptedKey");
-    Preconditions.checkExpression(ekv.getEncryptedKeyVersion().getVersionName()
+    Preconditions.checkIsTrue(ekv.getEncryptedKeyVersion().getVersionName()
             .equals(KeyProviderCryptoExtension.EEK),
         "encryptedKey version name must be '%s', is '%s'",
         KeyProviderCryptoExtension.EEK,
@@ -873,7 +873,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       checkNotNull(ekv.getEncryptionKeyVersionName(), "versionName");
       checkNotNull(ekv.getEncryptedKeyIv(), "iv");
       checkNotNull(ekv.getEncryptedKeyVersion(), "encryptedKey");
-      Preconditions.checkExpression(ekv.getEncryptedKeyVersion().getVersionName()
+      Preconditions.checkIsTrue(ekv.getEncryptedKeyVersion().getVersionName()
               .equals(KeyProviderCryptoExtension.EEK),
           "encryptedKey version name must be '%s', is '%s'",
           KeyProviderCryptoExtension.EEK,
@@ -881,7 +881,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       if (keyName == null) {
         keyName = ekv.getEncryptionKeyName();
       } else {
-        Preconditions.checkExpression(keyName.equals(ekv.getEncryptionKeyName()),
+        Preconditions.checkIsTrue(keyName.equals(ekv.getEncryptionKeyName()),
             "All EncryptedKey must have the same key name.");
       }
       jsonPayload.add(KMSUtil.toJSON(ekv));
@@ -892,7 +892,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     conn.setRequestProperty(CONTENT_TYPE, APPLICATION_JSON_MIME);
     final List<Map> response =
         call(conn, jsonPayload, HttpURLConnection.HTTP_OK, List.class);
-    Preconditions.checkExpression(response.size() == ekvs.size(),
+    Preconditions.checkIsTrue(response.size() == ekvs.size(),
         "Response size is different than input size.");
     for (int i = 0; i < response.size(); ++i) {
       final Map item = response.get(i);

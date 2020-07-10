@@ -104,7 +104,7 @@ public class OpensslSecureRandom extends Random {
    */
   @Override
   final protected int next(int numBits) {
-    Preconditions.checkExpression(numBits >= 0 && numBits <= 32);
+    Preconditions.checkIsTrue(numBits >= 0 && numBits <= 32);
     int numBytes = (numBits + 7) / 8;
     byte b[] = new byte[numBytes];
     int next = 0;

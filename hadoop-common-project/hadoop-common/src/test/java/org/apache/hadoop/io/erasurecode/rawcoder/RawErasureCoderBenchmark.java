@@ -84,7 +84,7 @@ public final class RawErasureCoderBenchmark {
   }
 
   static {
-    Preconditions.checkExpression(CODER_MAKERS.size() == CODER.values().length);
+    Preconditions.checkIsTrue(CODER_MAKERS.size() == CODER.values().length);
   }
 
   private static void printAvailableCoders() {
@@ -325,7 +325,7 @@ public final class RawErasureCoderBenchmark {
       // buffer size needs to be a multiple of (numDataUnits * chunkSize)
       int round = (int) Math.round(
           TARGET_BUFFER_SIZE_MB * 1024.0 / NUM_DATA_UNITS / chunkSizeKB);
-      Preconditions.checkExpression(round > 0);
+      Preconditions.checkIsTrue(round > 0);
       bufferSizeKB = NUM_DATA_UNITS * chunkSizeKB * round;
       System.out.println("Using " + bufferSizeKB / 1024 + "MB buffer.");
 
@@ -367,12 +367,12 @@ public final class RawErasureCoderBenchmark {
     public BenchmarkCallable(boolean isEncode, RawErasureEncoder encoder,
         RawErasureDecoder decoder, ByteBuffer testData) {
       if (isEncode) {
-        Preconditions.checkExpression(encoder != null);
+        Preconditions.checkIsTrue(encoder != null);
         this.encoder = encoder;
         this.decoder = null;
         benchData = new BenchData(encoder.preferDirectBuffer());
       } else {
-        Preconditions.checkExpression(decoder != null);
+        Preconditions.checkIsTrue(decoder != null);
         this.decoder = decoder;
         this.encoder = null;
         benchData = new BenchData(decoder.preferDirectBuffer());

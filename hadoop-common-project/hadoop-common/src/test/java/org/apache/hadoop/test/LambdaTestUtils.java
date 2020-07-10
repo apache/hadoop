@@ -121,7 +121,7 @@ public final class LambdaTestUtils {
       Callable<Integer> retry,
       TimeoutHandler timeoutHandler)
       throws Exception {
-    Preconditions.checkExpression(timeoutMillis >= 0,
+    Preconditions.checkIsTrue(timeoutMillis >= 0,
         "timeoutMillis must be >= 0");
     Preconditions.checkNotNull(timeoutHandler);
 
@@ -239,7 +239,7 @@ public final class LambdaTestUtils {
   public static <T> T eventually(int timeoutMillis,
       Callable<T> eval,
       Callable<Integer> retry) throws Exception {
-    Preconditions.checkExpression(timeoutMillis >= 0,
+    Preconditions.checkIsTrue(timeoutMillis >= 0,
         "timeoutMillis must be >= 0");
     long endTime = Time.now() + timeoutMillis;
     Throwable ex;
@@ -866,7 +866,7 @@ public final class LambdaTestUtils {
     private int invocationCount = 0;
 
     public FixedRetryInterval(int intervalMillis) {
-      Preconditions.checkExpression(intervalMillis > 0);
+      Preconditions.checkIsTrue(intervalMillis > 0);
       this.intervalMillis = intervalMillis;
     }
 
@@ -903,8 +903,8 @@ public final class LambdaTestUtils {
 
     public ProportionalRetryInterval(int intervalMillis,
         int maxIntervalMillis) {
-      Preconditions.checkExpression(intervalMillis > 0);
-      Preconditions.checkExpression(maxIntervalMillis > 0);
+      Preconditions.checkIsTrue(intervalMillis > 0);
+      Preconditions.checkIsTrue(maxIntervalMillis > 0);
       this.intervalMillis = intervalMillis;
       this.current = intervalMillis;
       this.maxIntervalMillis = maxIntervalMillis;

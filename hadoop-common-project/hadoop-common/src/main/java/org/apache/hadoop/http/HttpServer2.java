@@ -1175,7 +1175,7 @@ public final class HttpServer2 implements FilterContainer {
    *         such connector or the connector is not bounded or was closed.
    */
   public InetSocketAddress getConnectorAddress(int index) {
-    Preconditions.checkExpression(index >= 0);
+    Preconditions.checkIsTrue(index >= 0);
     if (index > webServer.getConnectors().length)
       return null;
 

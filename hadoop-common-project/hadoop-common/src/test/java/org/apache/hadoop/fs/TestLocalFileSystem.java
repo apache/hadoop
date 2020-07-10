@@ -751,7 +751,7 @@ public class TestLocalFileSystem {
         throws IllegalArgumentException, IOException {
       Set<String> unsupported = new HashSet<>(getMandatoryKeys());
       unsupported.removeAll(supportedKeys);
-      Preconditions.checkExpression(unsupported.isEmpty(),
+      Preconditions.checkIsTrue(unsupported.isEmpty(),
           "unsupported key found: " + supportedKeys);
       return getFS().create(
           getPath(), getPermission(), getFlags(), getBufferSize(),

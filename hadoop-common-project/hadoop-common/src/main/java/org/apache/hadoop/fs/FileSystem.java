@@ -743,7 +743,7 @@ public abstract class FileSystem extends Configured
    *
    */
   protected void checkPath(Path path) {
-    Preconditions.checkExpression(path != null, "null path");
+    Preconditions.checkIsTrue(path != null, "null path");
     URI uri = path.toUri();
     String thatScheme = uri.getScheme();
     if (thatScheme == null)                // fs is relative

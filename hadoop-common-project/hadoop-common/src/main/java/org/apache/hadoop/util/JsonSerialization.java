@@ -97,7 +97,7 @@ public class JsonSerialization<T> {
    */
   public JsonSerialization(Class<T> classType,
       boolean failOnUnknownProperties, boolean pretty) {
-    Preconditions.checkExpression(classType != null, "null classType");
+    Preconditions.checkIsTrue(classType != null, "null classType");
     this.classType = classType;
     this.mapper = new ObjectMapper();
     mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,
@@ -321,7 +321,7 @@ public class JsonSerialization<T> {
    * @return a JSON string
    */
   public String toString(T instance) {
-    Preconditions.checkExpression(instance != null, "Null instance argument");
+    Preconditions.checkIsTrue(instance != null, "Null instance argument");
     try {
       return toJson(instance);
     } catch (JsonProcessingException e) {

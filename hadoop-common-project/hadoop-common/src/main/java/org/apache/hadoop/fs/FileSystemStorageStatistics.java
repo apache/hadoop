@@ -83,7 +83,7 @@ public class FileSystemStorageStatistics extends StorageStatistics {
   }
 
   private static Long fetch(StatisticsData data, String key) {
-    Preconditions.checkExpression(key != null,
+    Preconditions.checkIsTrue(key != null,
         "The stat key of FileSystemStorageStatistics should not be null!");
 
     switch (key) {
@@ -114,9 +114,9 @@ public class FileSystemStorageStatistics extends StorageStatistics {
 
   FileSystemStorageStatistics(String name, FileSystem.Statistics stats) {
     super(name);
-    Preconditions.checkExpression(stats != null,
+    Preconditions.checkIsTrue(stats != null,
         "FileSystem.Statistics can not be null");
-    Preconditions.checkExpression(stats.getData() != null,
+    Preconditions.checkIsTrue(stats.getData() != null,
         "FileSystem.Statistics can not have null data");
     this.stats = stats;
   }

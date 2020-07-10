@@ -656,10 +656,10 @@ public class ServiceLauncher<S extends Service>
    */
   @SuppressWarnings("unchecked")
   public Service instantiateService(Configuration conf) {
-    Preconditions.checkExpression(conf != null, "null conf");
-    Preconditions.checkExpression(serviceClassName != null,
+    Preconditions.checkIsTrue(conf != null, "null conf");
+    Preconditions.checkIsTrue(serviceClassName != null,
         "null service classname");
-    Preconditions.checkExpression(!serviceClassName.isEmpty(),
+    Preconditions.checkIsTrue(!serviceClassName.isEmpty(),
         "undefined service classname");
     configuration = conf;
 

@@ -98,11 +98,11 @@ public abstract class FSInputStream extends InputStream
    */
   protected void validatePositionedReadArgs(long position,
       byte[] buffer, int offset, int length) throws EOFException {
-    Preconditions.checkExpression(length >= 0, "length is negative");
+    Preconditions.checkIsTrue(length >= 0, "length is negative");
     if (position < 0) {
       throw new EOFException("position is negative");
     }
-    Preconditions.checkExpression(buffer != null, "Null buffer");
+    Preconditions.checkIsTrue(buffer != null, "Null buffer");
     if (buffer.length - offset < length) {
       throw new IndexOutOfBoundsException(
           FSExceptionMessages.TOO_MANY_BYTES_FOR_DEST_BUFFER

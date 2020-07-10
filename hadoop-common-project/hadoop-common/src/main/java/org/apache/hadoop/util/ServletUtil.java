@@ -93,7 +93,7 @@ public class ServletUtil {
    * @return path component, null if the default charset is not supported
    */
   public static String getRawPath(final HttpServletRequest request, String servletName) {
-    Preconditions.checkExpression(request.getRequestURI().startsWith(servletName+"/"));
+    Preconditions.checkIsTrue(request.getRequestURI().startsWith(servletName+"/"));
     return request.getRequestURI().substring(servletName.length());
   }
 }

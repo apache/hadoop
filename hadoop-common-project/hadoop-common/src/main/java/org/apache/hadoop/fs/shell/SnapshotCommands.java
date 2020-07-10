@@ -164,7 +164,7 @@ class SnapshotCommands extends FsCommand {
       if (numErrors != 0) { // check for error collecting paths
         return;
       }
-      Preconditions.checkExpression(items.size() == 1);
+      Preconditions.checkIsTrue(items.size() == 1);
       PathData sroot = items.getFirst();
       sroot.fs.renameSnapshot(sroot.path, oldName, newName);
       out.println("Renamed snapshot " + oldName + " to " + newName +

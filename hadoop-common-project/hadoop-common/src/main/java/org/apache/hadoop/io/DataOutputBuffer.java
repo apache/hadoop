@@ -77,7 +77,7 @@ public class DataOutputBuffer extends DataOutputStream {
      * @return the original count
      */
     private int setCount(int newCount) {
-      Preconditions.checkExpression(newCount >= 0 && newCount <= buf.length);
+      Preconditions.checkIsTrue(newCount >= 0 && newCount <= buf.length);
       int oldCount = count;
       count = newCount;
       return oldCount;

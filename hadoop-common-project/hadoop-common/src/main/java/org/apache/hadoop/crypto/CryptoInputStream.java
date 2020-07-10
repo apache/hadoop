@@ -544,7 +544,7 @@ public class CryptoInputStream extends FilterInputStream implements
   /** Skip n bytes */
   @Override
   public long skip(long n) throws IOException {
-    Preconditions.checkExpression(n >= 0, "Negative skip length.");
+    Preconditions.checkIsTrue(n >= 0, "Negative skip length.");
     checkStream();
     
     if (n == 0) {
@@ -688,7 +688,7 @@ public class CryptoInputStream extends FilterInputStream implements
 
   @Override
   public boolean seekToNewSource(long targetPos) throws IOException {
-    Preconditions.checkExpression(targetPos >= 0,
+    Preconditions.checkIsTrue(targetPos >= 0,
         "Cannot seek to negative offset.");
     checkStream();
     if (!(in instanceof Seekable)) {

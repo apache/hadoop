@@ -96,7 +96,7 @@ public class ReadaheadPool {
       long maxOffsetToRead,
       ReadaheadRequest lastReadahead) {
     
-    Preconditions.checkExpression(curPos <= maxOffsetToRead,
+    Preconditions.checkIsTrue(curPos <= maxOffsetToRead,
         "Readahead position %s higher than maxOffsetToRead %s",
         curPos, maxOffsetToRead);
 
