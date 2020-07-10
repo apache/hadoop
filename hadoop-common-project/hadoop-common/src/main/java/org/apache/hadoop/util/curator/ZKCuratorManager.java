@@ -39,7 +39,7 @@ import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 
 /**
  * Helper class that provides utility methods specific to ZK operations.
@@ -309,7 +309,7 @@ public final class ZKCuratorManager {
   public void createRootDirRecursively(String path, List<ACL> zkAcl)
       throws Exception {
     String[] pathParts = path.split("/");
-    Preconditions.checkArgument(
+    Preconditions.checkExpression(
         pathParts.length >= 1 && pathParts[0].isEmpty(),
         "Invalid path: %s", path);
     StringBuilder sb = new StringBuilder();

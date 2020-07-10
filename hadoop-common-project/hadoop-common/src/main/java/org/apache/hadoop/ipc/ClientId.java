@@ -22,7 +22,7 @@ import java.util.UUID;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 
 /**
  * A class defining a set of static helper methods to provide conversion between
@@ -53,7 +53,7 @@ public class ClientId {
       return "";
     }
     // otherwise should be 16 bytes
-    Preconditions.checkArgument(clientId.length == BYTE_LENGTH);
+    Preconditions.checkExpression(clientId.length == BYTE_LENGTH);
     long msb = getMsb(clientId);
     long lsb = getLsb(clientId);
     return (new UUID(msb, lsb)).toString();

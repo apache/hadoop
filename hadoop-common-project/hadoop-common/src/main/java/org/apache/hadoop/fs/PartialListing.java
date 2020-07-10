@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.fs;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -51,7 +51,7 @@ public class PartialListing<T extends FileStatus> {
 
   private PartialListing(Path listedPath, List<T> partialListing,
       RemoteException exception) {
-    Preconditions.checkArgument(partialListing == null ^ exception == null);
+    Preconditions.checkExpression(partialListing == null ^ exception == null);
     this.partialListing = partialListing;
     this.listedPath = listedPath;
     this.exception = exception;

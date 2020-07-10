@@ -51,7 +51,7 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.zookeeper.data.ACL;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -347,10 +347,10 @@ public abstract class ZKFailoverController {
     List<ZKAuthInfo> zkAuths = SecurityUtil.getZKAuthInfos(conf, ZK_AUTH_KEY);
 
     // Sanity check configuration.
-    Preconditions.checkArgument(zkQuorum != null,
+    Preconditions.checkExpression(zkQuorum != null,
         "Missing required configuration '%s' for ZooKeeper quorum",
         ZK_QUORUM_KEY);
-    Preconditions.checkArgument(zkTimeout > 0,
+    Preconditions.checkExpression(zkTimeout > 0,
         "Invalid ZK session timeout %s", zkTimeout);
     
     int maxRetryNum = conf.getInt(

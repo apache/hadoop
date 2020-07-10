@@ -30,7 +30,7 @@ import java.util.EnumSet;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.ByteBufferPositionedReadable;
@@ -544,7 +544,7 @@ public class CryptoInputStream extends FilterInputStream implements
   /** Skip n bytes */
   @Override
   public long skip(long n) throws IOException {
-    Preconditions.checkArgument(n >= 0, "Negative skip length.");
+    Preconditions.checkExpression(n >= 0, "Negative skip length.");
     checkStream();
     
     if (n == 0) {
@@ -688,7 +688,7 @@ public class CryptoInputStream extends FilterInputStream implements
 
   @Override
   public boolean seekToNewSource(long targetPos) throws IOException {
-    Preconditions.checkArgument(targetPos >= 0, 
+    Preconditions.checkExpression(targetPos >= 0,
         "Cannot seek to negative offset.");
     checkStream();
     if (!(in instanceof Seekable)) {

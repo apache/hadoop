@@ -105,7 +105,7 @@ import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 import com.google.common.base.Strings;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
@@ -427,7 +427,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     DeprecationDelta(String key, String[] newKeys, String customMessage) {
       Preconditions.checkNotNull(key);
       Preconditions.checkNotNull(newKeys);
-      Preconditions.checkArgument(newKeys.length > 0);
+      Preconditions.checkExpression(newKeys.length > 0);
       this.key = key;
       this.newKeys = newKeys;
       this.customMessage = customMessage;
@@ -1374,10 +1374,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @throws IllegalArgumentException when the value or name is null.
    */
   public void set(String name, String value, String source) {
-    Preconditions.checkArgument(
+    Preconditions.checkExpression(
         name != null,
         "Property name must not be null");
-    Preconditions.checkArgument(
+    Preconditions.checkExpression(
         value != null,
         "The value of property %s must not be null", name);
     name = name.trim();

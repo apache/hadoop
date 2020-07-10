@@ -20,7 +20,7 @@ package org.apache.hadoop.service.launcher;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sun.misc.Signal;
@@ -76,8 +76,8 @@ public final class IrqHandler implements SignalHandler {
    * @param handler handler
    */
   public IrqHandler(String name, Interrupted handler) {
-    Preconditions.checkArgument(name != null, "Null \"name\"");
-    Preconditions.checkArgument(handler != null, "Null \"handler\"");
+    Preconditions.checkExpression(name != null, "Null \"name\"");
+    Preconditions.checkExpression(handler != null, "Null \"handler\"");
     this.handler = handler;
     this.name = name;
   }

@@ -35,7 +35,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -97,7 +97,7 @@ public class JsonSerialization<T> {
    */
   public JsonSerialization(Class<T> classType,
       boolean failOnUnknownProperties, boolean pretty) {
-    Preconditions.checkArgument(classType != null, "null classType");
+    Preconditions.checkExpression(classType != null, "null classType");
     this.classType = classType;
     this.mapper = new ObjectMapper();
     mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,
@@ -321,7 +321,7 @@ public class JsonSerialization<T> {
    * @return a JSON string
    */
   public String toString(T instance) {
-    Preconditions.checkArgument(instance != null, "Null instance argument");
+    Preconditions.checkExpression(instance != null, "Null instance argument");
     try {
       return toJson(instance);
     } catch (JsonProcessingException e) {

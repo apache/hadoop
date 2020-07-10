@@ -56,7 +56,7 @@ import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -520,7 +520,7 @@ public class NetUtils {
     if (localAddr != null) {
       Class localClass = localAddr.getClass();
       Class remoteClass = endpoint.getClass();
-      Preconditions.checkArgument(localClass.equals(remoteClass),
+      Preconditions.checkExpression(localClass.equals(remoteClass),
           "Local address %s must be of same family as remote address %s.",
           localAddr, endpoint);
       socket.bind(localAddr);

@@ -21,7 +21,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.slf4j.Logger;
@@ -98,11 +98,11 @@ public abstract class FSInputStream extends InputStream
    */
   protected void validatePositionedReadArgs(long position,
       byte[] buffer, int offset, int length) throws EOFException {
-    Preconditions.checkArgument(length >= 0, "length is negative");
+    Preconditions.checkExpression(length >= 0, "length is negative");
     if (position < 0) {
       throw new EOFException("position is negative");
     }
-    Preconditions.checkArgument(buffer != null, "Null buffer");
+    Preconditions.checkExpression(buffer != null, "Null buffer");
     if (buffer.length - offset < length) {
       throw new IndexOutOfBoundsException(
           FSExceptionMessages.TOO_MANY_BYTES_FOR_DEST_BUFFER

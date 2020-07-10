@@ -80,7 +80,7 @@ import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.CryptoExtension;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 import com.google.common.base.Strings;
 
 import static org.apache.hadoop.util.KMSUtil.checkNotEmpty;
@@ -803,7 +803,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     checkNotNull(encryptedKeyVersion.getEncryptionKeyVersionName(),
         "versionName");
     checkNotNull(encryptedKeyVersion.getEncryptedKeyIv(), "iv");
-    Preconditions.checkArgument(
+    Preconditions.checkExpression(
         encryptedKeyVersion.getEncryptedKeyVersion().getVersionName()
             .equals(KeyProviderCryptoExtension.EEK),
         "encryptedKey version name must be '%s', is '%s'",
@@ -836,7 +836,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     checkNotNull(ekv.getEncryptionKeyVersionName(), "versionName");
     checkNotNull(ekv.getEncryptedKeyIv(), "iv");
     checkNotNull(ekv.getEncryptedKeyVersion(), "encryptedKey");
-    Preconditions.checkArgument(ekv.getEncryptedKeyVersion().getVersionName()
+    Preconditions.checkExpression(ekv.getEncryptedKeyVersion().getVersionName()
             .equals(KeyProviderCryptoExtension.EEK),
         "encryptedKey version name must be '%s', is '%s'",
         KeyProviderCryptoExtension.EEK,
@@ -873,7 +873,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       checkNotNull(ekv.getEncryptionKeyVersionName(), "versionName");
       checkNotNull(ekv.getEncryptedKeyIv(), "iv");
       checkNotNull(ekv.getEncryptedKeyVersion(), "encryptedKey");
-      Preconditions.checkArgument(ekv.getEncryptedKeyVersion().getVersionName()
+      Preconditions.checkExpression(ekv.getEncryptedKeyVersion().getVersionName()
               .equals(KeyProviderCryptoExtension.EEK),
           "encryptedKey version name must be '%s', is '%s'",
           KeyProviderCryptoExtension.EEK,
@@ -881,7 +881,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       if (keyName == null) {
         keyName = ekv.getEncryptionKeyName();
       } else {
-        Preconditions.checkArgument(keyName.equals(ekv.getEncryptionKeyName()),
+        Preconditions.checkExpression(keyName.equals(ekv.getEncryptionKeyName()),
             "All EncryptedKey must have the same key name.");
       }
       jsonPayload.add(KMSUtil.toJSON(ekv));
@@ -892,7 +892,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     conn.setRequestProperty(CONTENT_TYPE, APPLICATION_JSON_MIME);
     final List<Map> response =
         call(conn, jsonPayload, HttpURLConnection.HTTP_OK, List.class);
-    Preconditions.checkArgument(response.size() == ekvs.size(),
+    Preconditions.checkExpression(response.size() == ekvs.size(),
         "Response size is different than input size.");
     for (int i = 0; i < response.size(); ++i) {
       final Map item = response.get(i);

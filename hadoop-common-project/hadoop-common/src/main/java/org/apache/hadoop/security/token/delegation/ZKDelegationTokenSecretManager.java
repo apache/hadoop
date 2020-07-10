@@ -67,7 +67,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 
 /**
  * An implementation of {@link AbstractDelegationTokenSecretManager} that
@@ -179,7 +179,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
 
       // AuthType has to be explicitly set to 'none' or 'sasl'
       Preconditions.checkNotNull(authType, "Zookeeper authType cannot be null !!");
-      Preconditions.checkArgument(
+      Preconditions.checkExpression(
           authType.equals("sasl") || authType.equals("none"),
           "Zookeeper authType must be one of [none, sasl]");
 

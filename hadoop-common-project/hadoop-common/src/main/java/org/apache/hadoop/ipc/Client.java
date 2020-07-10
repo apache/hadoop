@@ -19,7 +19,7 @@
 package org.apache.hadoop.ipc;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
@@ -114,9 +114,9 @@ public class Client implements AutoCloseable {
   /** Set call id and retry count for the next call. */
   public static void setCallIdAndRetryCount(int cid, int rc,
                                             Object externalHandler) {
-    Preconditions.checkArgument(cid != RpcConstants.INVALID_CALL_ID);
+    Preconditions.checkExpression(cid != RpcConstants.INVALID_CALL_ID);
     Preconditions.checkState(callId.get() == null);
-    Preconditions.checkArgument(rc != RpcConstants.INVALID_RETRY_COUNT);
+    Preconditions.checkExpression(rc != RpcConstants.INVALID_RETRY_COUNT);
 
     callId.set(cid);
     retryCount.set(rc);

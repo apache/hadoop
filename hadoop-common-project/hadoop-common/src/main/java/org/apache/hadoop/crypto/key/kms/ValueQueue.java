@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -221,14 +221,14 @@ public class ValueQueue <E> {
   public ValueQueue(final int numValues, final float lowWatermark,
       long expiry, int numFillerThreads, SyncGenerationPolicy policy,
       final QueueRefiller<E> refiller) {
-    Preconditions.checkArgument(numValues > 0, "\"numValues\" must be > 0");
-    Preconditions.checkArgument(((lowWatermark > 0)&&(lowWatermark <= 1)),
+    Preconditions.checkExpression(numValues > 0, "\"numValues\" must be > 0");
+    Preconditions.checkExpression(((lowWatermark > 0)&&(lowWatermark <= 1)),
         "\"lowWatermark\" must be > 0 and <= 1");
     final int watermarkValue = (int) (numValues * lowWatermark);
-    Preconditions.checkArgument(watermarkValue > 0,
+    Preconditions.checkExpression(watermarkValue > 0,
         "(int) (\"numValues\" * \"lowWatermark\") must be > 0");
-    Preconditions.checkArgument(expiry > 0, "\"expiry\" must be > 0");
-    Preconditions.checkArgument(numFillerThreads > 0,
+    Preconditions.checkExpression(expiry > 0, "\"expiry\" must be > 0");
+    Preconditions.checkExpression(numFillerThreads > 0,
         "\"numFillerThreads\" must be > 0");
     Preconditions.checkNotNull(policy, "\"policy\" must not be null");
     this.refiller = refiller;

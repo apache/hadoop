@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.security.authorize;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -67,7 +67,7 @@ public class ProxyUsers {
    */
   public static void refreshSuperUserGroupsConfiguration(Configuration conf,
       String proxyUserPrefix) {
-    Preconditions.checkArgument(proxyUserPrefix != null && 
+    Preconditions.checkExpression(proxyUserPrefix != null &&
         !proxyUserPrefix.isEmpty(), "prefix cannot be NULL or empty");
     // sip is volatile. Any assignment to it as well as the object's state
     // will be visible to all the other threads. 

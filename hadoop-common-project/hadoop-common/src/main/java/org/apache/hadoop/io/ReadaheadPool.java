@@ -29,7 +29,7 @@ import org.apache.hadoop.io.nativeio.NativeIO;
 
 import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.POSIX_FADV_WILLNEED;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -96,7 +96,7 @@ public class ReadaheadPool {
       long maxOffsetToRead,
       ReadaheadRequest lastReadahead) {
     
-    Preconditions.checkArgument(curPos <= maxOffsetToRead,
+    Preconditions.checkExpression(curPos <= maxOffsetToRead,
         "Readahead position %s higher than maxOffsetToRead %s",
         curPos, maxOffsetToRead);
 

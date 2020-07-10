@@ -23,7 +23,7 @@ import java.io.*;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 
 /** A reusable {@link DataOutput} implementation that writes to an in-memory
  * buffer.
@@ -77,7 +77,7 @@ public class DataOutputBuffer extends DataOutputStream {
      * @return the original count
      */
     private int setCount(int newCount) {
-      Preconditions.checkArgument(newCount >= 0 && newCount <= buf.length);
+      Preconditions.checkExpression(newCount >= 0 && newCount <= buf.length);
       int oldCount = count;
       count = newCount;
       return oldCount;

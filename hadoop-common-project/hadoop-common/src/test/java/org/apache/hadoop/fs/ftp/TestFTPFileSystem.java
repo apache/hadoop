@@ -23,7 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Comparator;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
@@ -201,7 +201,7 @@ public class TestFTPFileSystem {
     String errorFormat = "access must be in [%d,%d,%d], but it is %d now.";
     String errorMessage = String.format(errorFormat, FTPFile.USER_ACCESS,
          FTPFile.GROUP_ACCESS, FTPFile.WORLD_ACCESS, access);
-    Preconditions.checkArgument(check, errorMessage);
+    Preconditions.checkExpression(check, errorMessage);
     Preconditions.checkNotNull(action);
     FTPFile ftpFile = new FTPFile();
 

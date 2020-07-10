@@ -44,7 +44,7 @@ import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.KeeperException.Code;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -337,7 +337,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
     }
 
     String pathParts[] = znodeWorkingDir.split("/");
-    Preconditions.checkArgument(pathParts.length >= 1 &&
+    Preconditions.checkExpression(pathParts.length >= 1 &&
         pathParts[0].isEmpty(),
         "Invalid path: %s", znodeWorkingDir);
     

@@ -26,7 +26,7 @@ import javax.servlet.http.HttpServletRequest;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -93,7 +93,7 @@ public class ServletUtil {
    * @return path component, null if the default charset is not supported
    */
   public static String getRawPath(final HttpServletRequest request, String servletName) {
-    Preconditions.checkArgument(request.getRequestURI().startsWith(servletName+"/"));
+    Preconditions.checkExpression(request.getRequestURI().startsWith(servletName+"/"));
     return request.getRequestURI().substring(servletName.length());
   }
 }

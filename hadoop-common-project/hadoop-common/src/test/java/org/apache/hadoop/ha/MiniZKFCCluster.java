@@ -37,7 +37,7 @@ import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.server.ZooKeeperServer;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 import com.google.common.primitives.Ints;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -270,7 +270,7 @@ public class MiniZKFCCluster {
    */
   public void expireAndVerifyFailover(int fromIdx, int toIdx)
       throws Exception {
-    Preconditions.checkArgument(fromIdx != toIdx);
+    Preconditions.checkExpression(fromIdx != toIdx);
     
     getElector(fromIdx).preventSessionReestablishmentForTests();
     try {

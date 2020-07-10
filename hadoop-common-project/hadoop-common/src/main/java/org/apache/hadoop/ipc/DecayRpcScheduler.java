@@ -37,7 +37,7 @@ import javax.management.ObjectName;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 import com.google.common.util.concurrent.AtomicDoubleArray;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -238,7 +238,7 @@ public class DecayRpcScheduler implements RpcScheduler,
     topUsersCount =
         conf.getInt(DECAYSCHEDULER_METRICS_TOP_USER_COUNT,
             DECAYSCHEDULER_METRICS_TOP_USER_COUNT_DEFAULT);
-    Preconditions.checkArgument(topUsersCount > 0,
+    Preconditions.checkExpression(topUsersCount > 0,
         "the number of top users for scheduler metrics must be at least 1");
 
     decayRpcSchedulerDetailedMetrics =

@@ -47,7 +47,7 @@ import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -597,10 +597,10 @@ public class LoadGenerator extends Configured implements Tool {
       double r = Double.parseDouble(a[1]);
       double w = Double.parseDouble(a[2]);
 
-      Preconditions.checkArgument(d >= 0, "Invalid duration: " + d);
-      Preconditions.checkArgument(0 <= r && r <= 1.0,
+      Preconditions.checkExpression(d >= 0, "Invalid duration: " + d);
+      Preconditions.checkExpression(0 <= r && r <= 1.0,
           "The read probability must be [0, 1]: " + r);
-      Preconditions.checkArgument(0 <= w && w <= 1.0,
+      Preconditions.checkExpression(0 <= w && w <= 1.0,
           "The read probability must be [0, 1]: " + w);
 
       readProb.add(r);

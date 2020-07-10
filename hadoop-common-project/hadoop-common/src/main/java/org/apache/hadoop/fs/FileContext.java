@@ -65,7 +65,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ShutdownHookManager;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.htrace.core.Tracer;
 import org.slf4j.Logger;

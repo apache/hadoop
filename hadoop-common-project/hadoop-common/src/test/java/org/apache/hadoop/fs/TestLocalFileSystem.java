@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.fs;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -751,7 +751,7 @@ public class TestLocalFileSystem {
         throws IllegalArgumentException, IOException {
       Set<String> unsupported = new HashSet<>(getMandatoryKeys());
       unsupported.removeAll(supportedKeys);
-      Preconditions.checkArgument(unsupported.isEmpty(),
+      Preconditions.checkExpression(unsupported.isEmpty(),
           "unsupported key found: " + supportedKeys);
       return getFS().create(
           getPath(), getPermission(), getFlags(), getBufferSize(),

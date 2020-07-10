@@ -22,7 +22,7 @@ import java.util.Random;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.util.NativeCodeLoader;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 import org.apache.hadoop.util.PerformanceAdvisory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -104,7 +104,7 @@ public class OpensslSecureRandom extends Random {
    */
   @Override
   final protected int next(int numBits) {
-    Preconditions.checkArgument(numBits >= 0 && numBits <= 32);
+    Preconditions.checkExpression(numBits >= 0 && numBits <= 32);
     int numBytes = (numBits + 7) / 8;
     byte b[] = new byte[numBytes];
     int next = 0;

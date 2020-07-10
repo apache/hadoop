@@ -27,7 +27,7 @@ import java.util.Collections;
 import java.util.List;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -656,10 +656,10 @@ public class ServiceLauncher<S extends Service>
    */
   @SuppressWarnings("unchecked")
   public Service instantiateService(Configuration conf) {
-    Preconditions.checkArgument(conf != null, "null conf");
-    Preconditions.checkArgument(serviceClassName != null,
+    Preconditions.checkExpression(conf != null, "null conf");
+    Preconditions.checkExpression(serviceClassName != null,
         "null service classname");
-    Preconditions.checkArgument(!serviceClassName.isEmpty(),
+    Preconditions.checkExpression(!serviceClassName.isEmpty(),
         "undefined service classname");
     configuration = conf;
 

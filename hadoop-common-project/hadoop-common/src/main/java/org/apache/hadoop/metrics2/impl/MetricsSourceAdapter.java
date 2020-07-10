@@ -31,7 +31,7 @@ import javax.management.ReflectionException;
 
 import static com.google.common.base.Preconditions.*;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 import com.google.common.collect.Maps;
 
 import org.apache.hadoop.metrics2.AbstractMetric;

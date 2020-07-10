@@ -20,7 +20,7 @@ package org.apache.hadoop.crypto;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 
 import java.io.IOException;
 
@@ -47,8 +47,8 @@ public abstract class AesCtrCryptoCodec extends CryptoCodec {
    */
   @Override
   public void calculateIV(byte[] initIV, long counter, byte[] IV) {
-    Preconditions.checkArgument(initIV.length == AES_BLOCK_SIZE);
-    Preconditions.checkArgument(IV.length == AES_BLOCK_SIZE);
+    Preconditions.checkExpression(initIV.length == AES_BLOCK_SIZE);
+    Preconditions.checkExpression(IV.length == AES_BLOCK_SIZE);
 
     int i = IV.length; // IV length
     int j = 0; // counter bytes index

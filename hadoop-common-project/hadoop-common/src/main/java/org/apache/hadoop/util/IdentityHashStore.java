@@ -21,7 +21,7 @@ package org.apache.hadoop.util;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 
 /**
  * The IdentityHashStore stores (key, value) mappings in an array.
@@ -62,7 +62,7 @@ public final class IdentityHashStore<K, V> {
   private static final int DEFAULT_MAX_CAPACITY = 2;
 
   public IdentityHashStore(int capacity) {
-    Preconditions.checkArgument(capacity >= 0);
+    Preconditions.checkExpression(capacity >= 0);
     if (capacity == 0) {
       this.capacity = 0;
       this.buffer = null;
@@ -74,7 +74,7 @@ public final class IdentityHashStore<K, V> {
   }
 
   private void realloc(int newCapacity) {
-    Preconditions.checkArgument(newCapacity > 0);
+    Preconditions.checkExpression(newCapacity > 0);
     Object prevBuffer[] = buffer;
     this.capacity = newCapacity;
     // Each element takes two array slots -- one for the key, 

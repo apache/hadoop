@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.crypto.key;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -433,7 +433,7 @@ public class JavaKeyStoreProvider extends KeyProvider {
   @Override
   public KeyVersion createKey(String name, byte[] material,
                                Options options) throws IOException {
-    Preconditions.checkArgument(name.equals(StringUtils.toLowerCase(name)),
+    Preconditions.checkExpression(name.equals(StringUtils.toLowerCase(name)),
         "Uppercase key names are unsupported: %s", name);
     writeLock.lock();
     try {

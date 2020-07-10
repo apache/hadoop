@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.util;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
@@ -118,10 +118,10 @@ public class GcTimeMonitor extends Thread {
    */
   public GcTimeMonitor(long observationWindowMs, long sleepIntervalMs,
       int maxGcTimePercentage, GcTimeAlertHandler alertHandler) {
-    Preconditions.checkArgument(observationWindowMs > 0);
-    Preconditions.checkArgument(
+    Preconditions.checkExpression(observationWindowMs > 0);
+    Preconditions.checkExpression(
         sleepIntervalMs > 0 && sleepIntervalMs < observationWindowMs);
-    Preconditions.checkArgument(
+    Preconditions.checkExpression(
         maxGcTimePercentage >= 0 && maxGcTimePercentage <= 100);
 
     this.observationWindowMs = observationWindowMs;
@@ -132,7 +132,7 @@ public class GcTimeMonitor extends Thread {
     bufSize = (int) (observationWindowMs / sleepIntervalMs + 2);
     // Prevent the user from accidentally creating an abnormally big buffer,
     // which will result in slow calculations and likely inaccuracy.
-    Preconditions.checkArgument(bufSize <= 128 * 1024);
+    Preconditions.checkExpression(bufSize <= 128 * 1024);
     gcDataBuf = new TsAndData[bufSize];
     for (int i = 0; i < bufSize; i++) {
       gcDataBuf[i] = new TsAndData();

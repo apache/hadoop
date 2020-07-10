@@ -24,7 +24,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,8 +47,8 @@ class FsUrlConnection extends URLConnection {
 
   FsUrlConnection(Configuration conf, URL url) {
     super(url);
-    Preconditions.checkArgument(conf != null, "null conf argument");
-    Preconditions.checkArgument(url != null, "null url argument");
+    Preconditions.checkExpression(conf != null, "null conf argument");
+    Preconditions.checkExpression(url != null, "null url argument");
     this.conf = conf;
   }
 

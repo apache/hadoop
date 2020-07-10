@@ -24,7 +24,7 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
@@ -103,7 +103,7 @@ public class ChunkedArrayList<T> extends AbstractList<T> {
    * @param maxChunkSize the maximum size of any chunk allocated
    */
   public ChunkedArrayList(int initialChunkCapacity, int maxChunkSize) {
-    Preconditions.checkArgument(maxChunkSize >= initialChunkCapacity);
+    Preconditions.checkExpression(maxChunkSize >= initialChunkCapacity);
     this.initialChunkCapacity = initialChunkCapacity;
     this.maxChunkSize = maxChunkSize;
   }

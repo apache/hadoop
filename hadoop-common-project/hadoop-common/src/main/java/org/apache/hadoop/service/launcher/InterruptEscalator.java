@@ -23,7 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,7 +72,7 @@ public class InterruptEscalator implements IrqHandler.Interrupted {
   private boolean forcedShutdownTimedOut;
 
   public InterruptEscalator(ServiceLauncher owner, int shutdownTimeMillis) {
-    Preconditions.checkArgument(owner != null, "null owner");
+    Preconditions.checkExpression(owner != null, "null owner");
     this.ownerRef = new WeakReference<>(owner);
     this.shutdownTimeMillis = shutdownTimeMillis;
   }

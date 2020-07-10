@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.io.retry;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 
 /** The call return from a method invocation. */
 class CallReturn {
@@ -58,7 +58,7 @@ class CallReturn {
     this(null, null, s);
   }
   private CallReturn(Object r, Throwable t, State s) {
-    Preconditions.checkArgument(r == null || t == null);
+    Preconditions.checkExpression(r == null || t == null);
     returnValue = r;
     thrown = t;
     state = s;

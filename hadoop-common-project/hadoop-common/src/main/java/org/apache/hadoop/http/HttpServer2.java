@@ -50,7 +50,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
@@ -1175,7 +1175,7 @@ public final class HttpServer2 implements FilterContainer {
    *         such connector or the connector is not bounded or was closed.
    */
   public InetSocketAddress getConnectorAddress(int index) {
-    Preconditions.checkArgument(index >= 0);
+    Preconditions.checkExpression(index >= 0);
     if (index > webServer.getConnectors().length)
       return null;
 

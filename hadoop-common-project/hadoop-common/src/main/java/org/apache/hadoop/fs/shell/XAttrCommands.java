@@ -23,7 +23,7 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -79,7 +79,7 @@ class XAttrCommands extends FsCommand {
           throw new IllegalArgumentException(
               "Invalid/unsupported encoding option specified: " + en);
         }
-        Preconditions.checkArgument(encoding != null,
+        Preconditions.checkExpression(encoding != null,
             "Invalid/unsupported encoding option specified: " + en);
       }
 

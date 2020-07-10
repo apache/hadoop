@@ -27,7 +27,7 @@ import java.nio.channels.ReadableByteChannel;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 
 /**
  * A wrapper stream around a socket which allows setting of its timeout. If the
@@ -46,7 +46,7 @@ public class SocketInputWrapper extends FilterInputStream {
     this.socket = s;
     this.hasChannel = s.getChannel() != null;
     if (hasChannel) {
-      Preconditions.checkArgument(is instanceof SocketInputStream,
+      Preconditions.checkExpression(is instanceof SocketInputStream,
           "Expected a SocketInputStream when there is a channel. " +
           "Got: %s", is);
     }

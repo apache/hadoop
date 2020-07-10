@@ -83,7 +83,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.htrace.core.Tracer;
 import org.apache.htrace.core.TraceScope;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -743,7 +743,7 @@ public abstract class FileSystem extends Configured
    *
    */
   protected void checkPath(Path path) {
-    Preconditions.checkArgument(path != null, "null path");
+    Preconditions.checkExpression(path != null, "null path");
     URI uri = path.toUri();
     String thatScheme = uri.getScheme();
     if (thatScheme == null)                // fs is relative

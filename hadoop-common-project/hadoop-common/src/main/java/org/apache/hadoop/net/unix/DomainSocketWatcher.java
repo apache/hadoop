@@ -36,7 +36,7 @@ import org.apache.commons.lang3.SystemUtils;
 import org.apache.hadoop.util.NativeCodeLoader;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 import com.google.common.util.concurrent.Uninterruptibles;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -243,7 +243,7 @@ public final class DomainSocketWatcher implements Closeable {
     if (loadingFailureReason != null) {
       throw new UnsupportedOperationException(loadingFailureReason);
     }
-    Preconditions.checkArgument(interruptCheckPeriodMs > 0);
+    Preconditions.checkExpression(interruptCheckPeriodMs > 0);
     this.interruptCheckPeriodMs = interruptCheckPeriodMs;
     notificationSockets = DomainSocket.socketpair();
     watcherThread.setDaemon(true);
@@ -407,7 +407,7 @@ public final class DomainSocketWatcher implements Closeable {
       try {
         sock.refCount.unreferenceCheckClosed();
       } catch (IOException e) {
-        Preconditions.checkArgument(false,
+        Preconditions.checkExpression(false,
             this + ": file descriptor " + sock.fd + " was closed while " +
             "still in the poll(2) loop.");
       }

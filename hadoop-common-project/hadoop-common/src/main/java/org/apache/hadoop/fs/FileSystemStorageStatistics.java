@@ -20,7 +20,7 @@ package org.apache.hadoop.fs;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem.Statistics.StatisticsData;
@@ -83,7 +83,7 @@ public class FileSystemStorageStatistics extends StorageStatistics {
   }
 
   private static Long fetch(StatisticsData data, String key) {
-    Preconditions.checkArgument(key != null,
+    Preconditions.checkExpression(key != null,
         "The stat key of FileSystemStorageStatistics should not be null!");
 
     switch (key) {
@@ -114,9 +114,9 @@ public class FileSystemStorageStatistics extends StorageStatistics {
 
   FileSystemStorageStatistics(String name, FileSystem.Statistics stats) {
     super(name);
-    Preconditions.checkArgument(stats != null,
+    Preconditions.checkExpression(stats != null,
         "FileSystem.Statistics can not be null");
-    Preconditions.checkArgument(stats.getData() != null,
+    Preconditions.checkExpression(stats.getData() != null,
         "FileSystem.Statistics can not have null data");
     this.stats = stats;
   }

@@ -26,7 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotDirectoryException;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.noguava.Preconditions;
 
 /**
  * Snapshot related operations
@@ -164,7 +164,7 @@ class SnapshotCommands extends FsCommand {
       if (numErrors != 0) { // check for error collecting paths
         return;
       }
-      Preconditions.checkArgument(items.size() == 1);
+      Preconditions.checkExpression(items.size() == 1);
       PathData sroot = items.getFirst();
       sroot.fs.renameSnapshot(sroot.path, oldName, newName);
       out.println("Renamed snapshot " + oldName + " to " + newName +
