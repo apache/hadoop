@@ -39,7 +39,7 @@ public class TestViewFsConfig {
     class Foo {
     }
 
-    new InodeTree<Foo>(conf, null) {
+    new InodeTree<Foo>(conf, null, null, false) {
 
       @Override
       protected Foo getTargetFileSystem(final URI uri) {

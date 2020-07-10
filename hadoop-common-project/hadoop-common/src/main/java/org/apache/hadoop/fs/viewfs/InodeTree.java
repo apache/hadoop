@@ -67,7 +67,7 @@ abstract class InodeTree<T> {
   // the root of the mount table
   private final INode<T> root;
   // the fallback filesystem
-  private final INodeLink<T> rootFallbackLink;
+  private INodeLink<T> rootFallbackLink;
   // the homedir for this mount table
   private final String homedirPrefix;
   private List<MountPoint<T>> mountPoints = new ArrayList<MountPoint<T>>();
@@ -460,7 +460,8 @@ abstract class InodeTree<T> {
    * @throws FileAlreadyExistsException
    * @throws IOException
    */
-  protected InodeTree(final Configuration config, final String viewName)
+  protected InodeTree(final Configuration config, final String viewName,
+      final URI theUri, boolean initUriAsFallbackOnNoMounts)
       throws UnsupportedFileSystemException, URISyntaxException,
       FileAlreadyExistsException, IOException {
     String mountTableName = viewName;
@@ -596,9 +597,15 @@ abstract class InodeTree<T> {
     }
 
     if (!gotMountTableEntry) {
-      throw new IOException(
-          "ViewFs: Cannot initialize: Empty Mount table in config for " +
-              "viewfs://" + mountTableName + "/");
+      if (!initUriAsFallbackOnNoMounts) {
+        throw new IOException(
+            "ViewFs: Cannot initialize: Empty Mount table in config for "
+                + "viewfs://" + mountTableName + "/");
+      }
+      rootFallbackLink =
+          new INodeLink<T>(mountTableName, ugi, getTargetFileSystem(theUri),
+              theUri);
+      getRootDir().addFallbackLink(rootFallbackLink);
     }
   }
 

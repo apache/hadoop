@@ -282,4 +282,19 @@ public class TestViewFileSystemOverloadSchemeWithDFSAdmin {
     assertOutMsg("Balancer bandwidth is set to 1000", 0);
     assertEquals(0, ret);
   }
+
+  /**
+   * Tests safemode get with ViewFSOverloadScheme, but without any mount links
+   * configured. The ViewFSOverloadScheme should consider initialized fs as
+   * fallback fs automatically.
+   */
+  @Test
+  public void testGetSafemodeWithoutMountLinksConfigured() throws Exception {
+    final DFSAdmin dfsAdmin = new DFSAdmin(conf);
+    redirectStream();
+    int ret = ToolRunner.run(dfsAdmin,
+        new String[] {"-fs", defaultFSURI.toString(), "-safemode", "get" });
+    assertOutMsg("Safe mode is OFF", 0);
+    assertEquals(0, ret);
+  }
 }

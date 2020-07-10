@@ -259,6 +259,14 @@ public class ViewFileSystem extends FileSystem {
   }
 
   /**
+   * Returns the ViewFileSystem type.
+   * @return <code>viewfs</code>
+   */
+  String getType() {
+    return FsConstants.VIEWFS_TYPE;
+  }
+
+  /**
    * Called after a new FileSystem instance is constructed.
    * @param theUri a uri whose authority section names the host, port, etc. for
    *        this FileSystem
@@ -284,7 +292,10 @@ public class ViewFileSystem extends FileSystem {
     }
     try {
       myUri = new URI(getScheme(), authority, "/", null, null);
-      fsState = new InodeTree<FileSystem>(conf, tableName) {
+      boolean initingUriAsFallbackOnNoMounts =
+          !FsConstants.VIEWFS_TYPE.equals(getType());
+      fsState = new InodeTree<FileSystem>(conf, tableName, theUri,
+          initingUriAsFallbackOnNoMounts) {
         @Override
         protected FileSystem getTargetFileSystem(final URI uri)
           throws URISyntaxException, IOException {

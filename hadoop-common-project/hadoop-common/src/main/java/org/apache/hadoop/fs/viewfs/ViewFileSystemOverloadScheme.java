@@ -95,6 +95,10 @@ import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_IGNORE_PORT_IN
  * be considered as the mount table name. When the passed uri has hostname:port,
  * it will simply ignore the port number and only hostname will be considered as
  * the mount table name.
+ * (3) If there are no mount links configured with the initializing uri's
+ * hostname as the mount table name, then it will automatically consider the
+ * current uri as fallback( ex: fs.viewfs.mounttable.<mycluster>.linkFallBack)
+ * target fs uri.
  *****************************************************************************/
 @InterfaceAudience.LimitedPrivate({ "MapReduce", "HBase", "Hive" })
 @InterfaceStability.Evolving
@@ -107,6 +111,14 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
   @Override
   public String getScheme() {
     return myUri.getScheme();
+  }
+
+  /**
+   * Returns the ViewFileSystem type.
+   * @return <code>viewfs</code>
+   */
+  String getType() {
+    return FsConstants.VIEWFSOS_TYPE;
   }
 
   @Override
