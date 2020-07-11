@@ -228,16 +228,22 @@ public class TestViewFileSystemOverloadSchemeWithDFSAdmin {
   }
 
   /**
-   * Tests safemode with ViewFSOverloadScheme, but without mounttables.
+   * Tests safemode get with ViewFSOverloadScheme, but without any mount links
+   * configured. The ViewFSOverloadScheme should consider initialized fs as
+   * fallback fs automatically.
    */
   @Test
-  public void testSafeModeShouldFailWithoutMountTables() throws Exception {
+  public void testGetSafemodeWithoutMountLinksConfigured() throws Exception {
     final DFSAdmin dfsAdmin = new DFSAdmin(conf);
-    String uri = defaultFSURI.toString();
-    redirectStream();
-    int ret = ToolRunner.run(dfsAdmin,
-        new String[] {"-fs", uri, "-safemode", "enter" });
-    assertEquals(-1, ret);
+    try {
+      redirectStream();
+      int ret = ToolRunner.run(dfsAdmin,
+          new String[] {"-fs", defaultFSURI.toString(), "-safemode", "get"});
+      assertOutMsg("Safe mode is OFF", 0);
+      assertEquals(0, ret);
+    } finally {
+      dfsAdmin.close();
+    }
   }
 
   /**
@@ -280,21 +286,6 @@ public class TestViewFileSystemOverloadSchemeWithDFSAdmin {
         new String[] {"-fs", defaultFSURI.toString(), "-setBalancerBandwidth",
             "1000"});
     assertOutMsg("Balancer bandwidth is set to 1000", 0);
-    assertEquals(0, ret);
-  }
-
-  /**
-   * Tests safemode get with ViewFSOverloadScheme, but without any mount links
-   * configured. The ViewFSOverloadScheme should consider initialized fs as
-   * fallback fs automatically.
-   */
-  @Test
-  public void testGetSafemodeWithoutMountLinksConfigured() throws Exception {
-    final DFSAdmin dfsAdmin = new DFSAdmin(conf);
-    redirectStream();
-    int ret = ToolRunner.run(dfsAdmin,
-        new String[] {"-fs", defaultFSURI.toString(), "-safemode", "get" });
-    assertOutMsg("Safe mode is OFF", 0);
     assertEquals(0, ret);
   }
 }

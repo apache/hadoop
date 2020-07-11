@@ -636,21 +636,6 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
     }
   }
 
-  /**
-   * Tests that ViewFSOverloadScheme should consider initialized fs as fallback
-   * if there are no mount links configured.
-   */
-  @Test(timeout = 30000)
-  public void testViewFSOverloadSchemeWithoutAnyMountLinks() throws Exception {
-    try (FileSystem fs = FileSystem.get(defaultFSURI, conf)) {
-      ViewFileSystemOverloadScheme vfs = (ViewFileSystemOverloadScheme) fs;
-      Assert.assertEquals(0, vfs.getMountPoints().length);
-      Path testDirOnFallback = new Path("/test");
-      Assert.assertTrue(fs.mkdirs(testDirOnFallback));
-      fs.delete(testDirOnFallback, true);
-    }
-  }
-
   private void writeString(final FileSystem nfly, final String testString,
       final Path testFile) throws IOException {
     try (FSDataOutputStream fsDos = nfly.create(testFile)) {

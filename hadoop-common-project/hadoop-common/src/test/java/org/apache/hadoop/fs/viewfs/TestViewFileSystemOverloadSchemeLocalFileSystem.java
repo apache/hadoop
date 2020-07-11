@@ -150,6 +150,22 @@ public class TestViewFileSystemOverloadSchemeLocalFileSystem {
     Assert.fail("A merge slash cannot be configured with other mount links.");
   }
 
+  /**
+   * Tests that ViewFSOverloadScheme should consider initialized fs as fallback
+   * if there are no mount links configured.
+   */
+  @Test(timeout = 30000)
+  public void testViewFSOverloadSchemeWithoutAnyMountLinks() throws Exception {
+    try (FileSystem fs = FileSystem.get(targetTestRoot.toUri(), conf)) {
+      ViewFileSystemOverloadScheme vfs = (ViewFileSystemOverloadScheme) fs;
+      Assert.assertEquals(0, vfs.getMountPoints().length);
+      Path testFallBack = new Path("testFile");
+      Assert.assertTrue(vfs.mkdirs(testFallBack));
+      Assert.assertEquals(testFallBack.getName(),
+          vfs.getFileLinkStatus(testFallBack).getPath().getName());
+    }
+  }
+
   @After
   public void tearDown() throws Exception {
     if (null != fsTarget) {
