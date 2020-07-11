@@ -1,3 +1,20 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.hadoop.util.noguava;
 
 import java.util.Collection;
@@ -5,17 +22,17 @@ import java.util.Objects;
 import javax.annotation.Nullable;
 
 public final class Preconditions {
-  private static final String DEFAULT_VALID_STATE_EX_MESSAGE =
+  private static final String VALIDATE_STATE_EX_MESSAGE =
       "The validated state is false";
-  private static final String DEFAULT_IS_NULL_EX_MESSAGE =
+  private static final String VALIDATE_IS_NOT_NULL_EX_MESSAGE =
       "The validated object is null";
-  private static final String DEFAULT_RANGE_INDEX_ARRAY_EX_MESSAGE =
+  private static final String VALIDATE_RANGE_INDEX_ARRAY_EX_MESSAGE =
       "The validated array size: %d, index is out of range: %d";
-  private static final String DEFAULT_VALID_INDEX_ARRAY_EX_MESSAGE =
+  private static final String VALIDATE_INDEX_ARRAY_EX_MESSAGE =
       "The validated array index is invalid: %d";
-  private static final String DEFAULT_VALID_SIZE_ARRAY_EX_MESSAGE =
+  private static final String VALIDATE_SIZE_ARRAY_EX_MESSAGE =
       "The validated array size is invalid: %d";
-  private static final String DEFAULT_IS_TRUE_EX_MESSAGE =
+  private static final String VALIDATE_IS_TRUE_EX_MESSAGE =
       "The validated expression is false";
 
   private Preconditions() {
@@ -47,12 +64,12 @@ public final class Preconditions {
 
   public static void checkIsTrue(final boolean expression) {
     if (!expression) {
-      throw new IllegalArgumentException(DEFAULT_IS_TRUE_EX_MESSAGE);
+      throw new IllegalArgumentException(VALIDATE_IS_TRUE_EX_MESSAGE);
     }
   }
 
   public static <T> T checkNotNull(final T object) {
-    return checkNotNull(object, DEFAULT_IS_NULL_EX_MESSAGE);
+    return checkNotNull(object, VALIDATE_IS_NOT_NULL_EX_MESSAGE);
   }
 
   public static <T> T checkNotNull(final T reference,
@@ -67,7 +84,7 @@ public final class Preconditions {
 
   public static void checkState(final boolean expression) {
     if (!expression) {
-      throw new IllegalStateException(DEFAULT_VALID_STATE_EX_MESSAGE);
+      throw new IllegalStateException(VALIDATE_STATE_EX_MESSAGE);
     }
   }
 
@@ -78,12 +95,12 @@ public final class Preconditions {
     }
   }
 
-  public static <T> T[] validIndex(final T[] array, final int index) {
-    return validIndex(array, index, DEFAULT_VALID_INDEX_ARRAY_EX_MESSAGE,
+  public static <T> T[] checkIndex(final T[] array, final int index) {
+    return checkIndex(array, index, VALIDATE_INDEX_ARRAY_EX_MESSAGE,
         Integer.valueOf(index));
   }
 
-  public static <T> T[] validIndex(final T[] array, final int index,
+  public static <T> T[] checkIndex(final T[] array, final int index,
       final String message, final Object... values) {
     checkNotNull(array);
     if (index < 0 || index >= array.length) {
@@ -92,7 +109,7 @@ public final class Preconditions {
     return array;
   }
 
-  public static <T extends Collection<?>> T validIndex(final T collection,
+  public static <T extends Collection<?>> T checkIndex(final T collection,
       final int index, final String message, final Object... values) {
     checkNotNull(collection);
     if (index < 0 || index >= collection.size()) {
@@ -101,74 +118,21 @@ public final class Preconditions {
     return collection;
   }
 
-  public static int checkPositionIndex(final int index, final int size) {
-    return checkPositionIndex(index, size,
-        DEFAULT_VALID_INDEX_ARRAY_EX_MESSAGE);
-  }
-
-  public static int checkPositionIndex(final int index, final int size,
-      @Nullable final String desc) {
-    // Carefully optimized for execution by hotspot (explanatory comment above)
+  public static int checkIndex(final int index, final int size) {
     if (index < 0 || index > size) {
-      throw new IndexOutOfBoundsException(evaluateIndexAndSize(index, size));
+      throw new IndexOutOfBoundsException(checkIndexAndSize(index, size));
     }
     return index;
   }
 
-  private static String evaluateIndexAndSize(final int index, final int size) {
+  private static String checkIndexAndSize(final int index, final int size) {
     if (index < 0) {
-      return String.format(DEFAULT_VALID_INDEX_ARRAY_EX_MESSAGE, index);
+      return String.format(VALIDATE_INDEX_ARRAY_EX_MESSAGE, index);
     } else if (size < 0) {
       throw new IllegalArgumentException(
-          String.format(DEFAULT_VALID_SIZE_ARRAY_EX_MESSAGE, size));
+          String.format(VALIDATE_SIZE_ARRAY_EX_MESSAGE, size));
     } else { // index > size
-      return String.format(DEFAULT_RANGE_INDEX_ARRAY_EX_MESSAGE, size, index);
-    }
-  }
-
-  public static void checkPositionIndexes(final int start, final int end,
-      final int size) {
-    // Carefully optimized for execution by hotspot (explanatory comment above)
-    if (start < 0 || end < start || end > size) {
-      throw new IndexOutOfBoundsException(badPositionIndexes(start, end, size));
-    }
-  }
-
-  private static String badPositionIndexes(final int start, final int end,
-      final int size) {
-    if (start < 0 || start > size) {
-      return evaluateIndexAndSize(start, size);
-    }
-    if (end < 0 || end > size) {
-      return evaluateIndexAndSize(end, size);
-    }
-    // end < start
-    return String.format(
-        "end index (%s) must not be less than start index (%s)", end, start);
-  }
-
-  public static int checkElementIndex(final int index, final int size) {
-    return checkElementIndex(index, size, "index");
-  }
-
-  public static int checkElementIndex(final int index, final int size,
-      @Nullable final String desc) {
-    // Carefully optimized for execution by hotspot (explanatory comment above)
-    if (index < 0 || index >= size) {
-      throw new IndexOutOfBoundsException(badElementIndex(index, size, desc));
-    }
-    return index;
-  }
-
-  private static String badElementIndex(final int index, final int size,
-      @Nullable final String desc) {
-    if (index < 0) {
-      return String.format("%s (%s) must not be negative", desc, index);
-    } else if (size < 0) {
-      throw new IllegalArgumentException("negative size: " + size);
-    } else { // index >= size
-      return String.format("%s (%s) must be less than size (%s)", desc,
-          index, size);
+      return String.format(VALIDATE_RANGE_INDEX_ARRAY_EX_MESSAGE, size, index);
     }
   }
 }
