@@ -160,10 +160,10 @@ public class TestCopyCommitter {
       context.setTargetPathExists(false);
 
       CopyListing listing = new GlobbedCopyListing(conf, CREDENTIALS);
-      Path listingFile = new Path("/tmp1/" + String.valueOf(rand.nextLong()));
+      Path listingFile = new Path("/tmp1/" + rand.nextLong());
       listing.buildListing(listingFile, context);
 
-      conf.set(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH, targetBase);
+      conf.set(DistCpConstants.CONF_LABEL_TARGET_FINAL_PATH, targetBase);
 
       committer.commitJob(jobContext);
       checkDirectoryPermissions(fs, targetBase, sourcePerm);
@@ -172,6 +172,44 @@ public class TestCopyCommitter {
       committer.commitJob(jobContext);
       checkDirectoryPermissions(fs, targetBase, sourcePerm);
 
+    } finally {
+      TestDistCpUtils.delete(fs, "/tmp1");
+      conf.unset(DistCpConstants.CONF_LABEL_PRESERVE_STATUS);
+    }
+
+  }
+  @Test
+  public void testPreserveStatusWithAtomicCommit() throws IOException {
+    TaskAttemptContext taskAttemptContext = getTaskAttemptContext(config);
+    JobContext jobContext = new JobContextImpl(taskAttemptContext.getConfiguration(),
+                            taskAttemptContext.getTaskAttemptID().getJobID());
+    Configuration conf = jobContext.getConfiguration();
+    String sourceBase;
+    String workBase;
+    String targetBase;
+    FileSystem fs = null;
+    try {
+      OutputCommitter committer = new CopyCommitter(null, taskAttemptContext);
+      fs = FileSystem.get(conf);
+      FsPermission sourcePerm = new FsPermission((short) 511);
+      FsPermission initialPerm = new FsPermission((short) 448);
+      sourceBase = TestDistCpUtils.createTestSetup(fs, sourcePerm);
+      workBase = TestDistCpUtils.createTestSetup(fs, initialPerm);
+      targetBase = "/tmp1/" + String.valueOf(rand.nextLong());
+      final DistCpOptions options = new DistCpOptions.Builder(
+              Collections.singletonList(new Path(sourceBase)), new Path("/out"))
+              .preserve(FileAttribute.PERMISSION).build();
+      options.appendToConf(conf);
+      final DistCpContext context = new DistCpContext(options);
+      context.setTargetPathExists(false);
+      CopyListing listing = new GlobbedCopyListing(conf, CREDENTIALS);
+      Path listingFile = new Path("/tmp1/" + String.valueOf(rand.nextLong()));
+      listing.buildListing(listingFile, context);
+      conf.set(DistCpConstants.CONF_LABEL_TARGET_FINAL_PATH, targetBase);
+      conf.set(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH, workBase);
+      conf.setBoolean(DistCpConstants.CONF_LABEL_ATOMIC_COPY, true);
+      committer.commitJob(jobContext);
+      checkDirectoryPermissions(fs, targetBase, sourcePerm);
     } finally {
       TestDistCpUtils.delete(fs, "/tmp1");
       conf.unset(DistCpConstants.CONF_LABEL_PRESERVE_STATUS);
