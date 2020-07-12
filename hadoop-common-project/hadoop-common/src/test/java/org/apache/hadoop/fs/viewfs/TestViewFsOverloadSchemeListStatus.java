@@ -34,7 +34,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -134,12 +133,12 @@ public class TestViewFsOverloadSchemeListStatus {
   public void testViewFSOverloadSchemeWithoutAnyMountLinks() throws Exception {
     try (FileSystem fs = FileSystem.get(TEST_DIR.toPath().toUri(), conf)) {
       ViewFileSystemOverloadScheme vfs = (ViewFileSystemOverloadScheme) fs;
-      Assert.assertEquals(0, vfs.getMountPoints().length);
+      assertEquals(0, vfs.getMountPoints().length);
       Path testFallBack = new Path("test", FILE_NAME);
-      Assert.assertTrue(vfs.mkdirs(testFallBack));
+      assertTrue(vfs.mkdirs(testFallBack));
       FileStatus[] status = vfs.listStatus(testFallBack.getParent());
-      Assert.assertEquals(FILE_NAME, status[0].getPath().getName());
-      Assert.assertEquals(testFallBack.getName(),
+      assertEquals(FILE_NAME, status[0].getPath().getName());
+      assertEquals(testFallBack.getName(),
           vfs.getFileLinkStatus(testFallBack).getPath().getName());
     }
   }
