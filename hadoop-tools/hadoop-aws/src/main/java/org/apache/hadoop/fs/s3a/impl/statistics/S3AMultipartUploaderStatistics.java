@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,26 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileSystemMultipartUploader;
-import org.apache.hadoop.fs.MultipartUploader;
-import org.apache.hadoop.fs.MultipartUploaderFactory;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+package org.apache.hadoop.fs.s3a.impl.statistics;
+
+import java.io.Closeable;
 
 /**
- * Support for HDFS multipart uploads, built on
- * {@link FileSystem#concat(Path, Path[])}.
+ * Statistics for the S3A multipart uploader.
  */
-public class DFSMultipartUploaderFactory extends MultipartUploaderFactory {
-  protected MultipartUploader createMultipartUploader(FileSystem fs,
-      Configuration conf) {
-    if (fs.getScheme().equals(HdfsConstants.HDFS_URI_SCHEME)) {
-      return new FileSystemMultipartUploader(fs);
-    }
-    return null;
-  }
+public interface S3AMultipartUploaderStatistics extends Closeable {
+
+  void instantiated();
+
+  void uploadStarted();
+
+  void partPut(long lengthInBytes);
+
+  void uploadCompleted();
+
+  void uploadAborted();
+
+  void abortUploadsUnderPathInvoked();
 }
