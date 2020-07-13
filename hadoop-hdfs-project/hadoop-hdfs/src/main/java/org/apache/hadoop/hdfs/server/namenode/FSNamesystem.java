@@ -3478,6 +3478,17 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             " internalReleaseLease: Committed blocks are minimally" +
             " replicated, lease removed, file" + src + " closed.");
         return true;  // closed!
+      } else if (penultimateBlockMinStorage && lastBlock.getNumBytes() == 0) {
+        // HDFS-14498 - this is a file with a final block of zero bytes and was
+        // likely left in this state by a client which exited unexpectedly
+        pendingFile.removeLastBlock(lastBlock);
+        finalizeINodeFileUnderConstruction(src, pendingFile,
+            iip.getLatestSnapshotId(), false);
+        NameNode.stateChangeLog.warn("BLOCK*" +
+            " internalReleaseLease: Committed last block is zero bytes with" +
+            " insufficient replicas. Final block removed, lease removed, file "
+            + src + " closed.");
+        return true;
       }
       // Cannot close file right now, since some blocks 
       // are not yet minimally replicated.
