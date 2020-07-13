@@ -146,6 +146,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
   @Before
   public void setUp() throws IOException {
+    DefaultMetricsSystem.setMiniClusterMode(true);
     scheduler = new FairScheduler();
     conf = createConfiguration();
     resourceManager = new MockRM(conf);
