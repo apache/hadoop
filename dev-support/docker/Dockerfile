@@ -84,16 +84,6 @@ RUN apt-get -q update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-#######
-# Boost 1.72 (1.65 ships with Bionic)
-#######
-WORKDIR /root/boost-library
-RUN curl -L https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download > boost_1_72_0.tar.bz2 \
-    && tar --bzip2 -xf boost_1_72_0.tar.bz2
-WORKDIR /root/boost-library/boost_1_72_0
-RUN ./bootstrap.sh --prefix=/usr/ \
-    && ./b2 --without-python install
-
 ######
 # Set env vars required to build Hadoop
 ######
@@ -101,6 +91,20 @@ ENV MAVEN_HOME /usr
 # JAVA_HOME must be set in Maven >= 3.5.0 (MNG-6003)
 ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
 ENV FINDBUGS_HOME /usr
+
+#######
+# Install Boost 1.72 (1.65 ships with Bionic)
+#######
+RUN mkdir -p /opt/boost-library \
+    && curl -L https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download > boost_1_72_0.tar.bz2 \
+    && mv boost_1_72_0.tar.bz2 /opt/boost-library \
+    && cd /opt/boost-library \
+    && tar --bzip2 -xf boost_1_72_0.tar.bz2 \
+    && cd /opt/boost-library/boost_1_72_0 \
+    && ./bootstrap.sh --prefix=/usr/ \
+    && ./b2 --without-python install \
+    && cd /root \
+    && rm -rf /opt/boost-library
 
 ######
 # Install Google Protobuf 3.7.1 (3.0.0 ships with Bionic)
