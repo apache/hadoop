@@ -3980,6 +3980,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Increments the statistic {@link Statistic#INVOCATION_GLOB_STATUS}.
+   * Override superclass so as to disable symlink resolution as symlinks
+   * are not supported by S3A.
    * {@inheritDoc}
    */
   @Override
@@ -3988,9 +3990,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Override superclass so as to disable symlink resolution and so avoid
-   * some calls to the FS which may have problems when the store is being
-   * inconsistent.
+   * Increments the statistic {@link Statistic#INVOCATION_GLOB_STATUS}.
+   * Override superclass so as to disable symlink resolution as symlinks
+   * are not supported by S3A.
    * {@inheritDoc}
    */
   @Override
@@ -4002,7 +4004,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     return Globber.createGlobber(this)
         .withPathPattern(pathPattern)
         .withPathFiltern(filter)
-        .withResolveSymlinks(true)
+        .withResolveSymlinks(false)
         .build()
         .glob();
   }

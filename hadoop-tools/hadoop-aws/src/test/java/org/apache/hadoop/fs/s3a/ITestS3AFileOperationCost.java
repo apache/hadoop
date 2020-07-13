@@ -574,4 +574,48 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     }
 
   }
+
+  @Test
+  public void testCostOfGlobStatus() throws Throwable {
+    describe("Test globStatus has expected cost");
+    S3AFileSystem fs = getFileSystem();
+    assume("Unguarded FS only", !fs.hasMetadataStore());
+
+    Path basePath = path("testCostOfGlobStatus/nextFolder/");
+
+    // create a bunch of files
+    int filesToCreate = 10;
+    for (int i = 0; i < filesToCreate; i++) {
+      try (FSDataOutputStream out = fs.create(basePath.suffix("/" + i))) {
+        verifyOperationCount(1, 1);
+      }
+    }
+
+    fs.globStatus(basePath.suffix("/*"));
+    // 2 head + 1 list from getFileStatus on path,
+    // plus 1 list to match the glob pattern
+    verifyOperationCount(2, 2);
+  }
+
+  @Test
+  public void testCostOfGlobStatusNoSymlinkResolution() throws Throwable {
+    describe("Test globStatus does not attempt to resolve symlinks");
+    S3AFileSystem fs = getFileSystem();
+    assume("Unguarded FS only", !fs.hasMetadataStore());
+
+    Path basePath = path("testCostOfGlobStatusNoSymlinkResolution/f/");
+
+    // create a single file, globStatus returning a single file on a pattern
+    // triggers attempts at symlinks resolution if configured
+    String fileName = "/notASymlinkDOntResolveMeLikeOne";
+    try (FSDataOutputStream out = fs.create(basePath.suffix(fileName))) {
+      verifyOperationCount(1, 1);
+    }
+
+    fs.globStatus(basePath.suffix("/*"));
+    // unguarded: 2 head + 1 list from getFileStatus on path,
+    // plus 1 list to match the glob pattern
+    // no additional operations from symlink resolution
+    verifyOperationCount(2, 2);
+  }
 }
