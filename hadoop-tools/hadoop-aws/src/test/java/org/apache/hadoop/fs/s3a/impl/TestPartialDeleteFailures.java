@@ -54,13 +54,13 @@ import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
-import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3AStorageStatistics;
 import org.apache.hadoop.fs.s3a.S3ListRequest;
 import org.apache.hadoop.fs.s3a.S3ListResult;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
+import org.apache.hadoop.fs.s3a.impl.statistics.EmptyS3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata;
 import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
@@ -227,7 +227,7 @@ public class TestPartialDeleteFailures {
         .setExecutorCapacity(Constants.DEFAULT_EXECUTOR_CAPACITY)
         .setInvoker(
             new Invoker(RetryPolicies.TRY_ONCE_THEN_FAIL, Invoker.LOG_EVENT))
-        .setInstrumentation(new S3AInstrumentation(name))
+        .setStatisticsContext(new EmptyS3AStatisticsContext())
         .setStorageStatistics(new S3AStorageStatistics())
         .setInputPolicy(S3AInputPolicy.Normal)
         .setChangeDetectionPolicy(
@@ -401,6 +401,10 @@ public class TestPartialDeleteFailures {
       return null;
     }
 
+    @Override
+    public Path makeQualified(final Path path) {
+      return path;
+    }
   }
   /**
    * MetadataStore which tracks what is deleted and added.

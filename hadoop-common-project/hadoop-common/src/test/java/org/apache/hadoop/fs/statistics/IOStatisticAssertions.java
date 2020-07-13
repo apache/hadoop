@@ -241,7 +241,7 @@ public final class IOStatisticAssertions {
       final String key,
       final Map<String, E> map) {
     final E statistic = lookupStatistic(type, key, map);
-    return  assertThat(statistic)
+    return assertThat(statistic)
         .describedAs("%s named %s" , type, key);
   }
 
@@ -308,6 +308,26 @@ public final class IOStatisticAssertions {
       final IOStatistics stats,
       final String key) {
     return assertThatStatistic(MEAN, key, stats.meanStatistics());
+  }
+
+  /**
+   * Start an assertion chain on
+   * a required mean statistic with the initial validation on the
+   * sample count and sum
+   * @param stats statistics source
+   * @param key statistic key
+   * @return an ongoing assertion
+   */
+  public static ObjectAssert<MeanStatistic> assertThatMeanStatisticMatches(
+      final IOStatistics stats,
+      final String key,
+      final long samples,
+      final long sum) {
+    return assertThatMeanStatistic(stats, key)
+        .matches(p -> (p.getSamples() == samples),
+            "samples == " + samples)
+        .matches(p -> (p.getSum() == sum),
+            "sum == " + sum);
   }
 
   /**

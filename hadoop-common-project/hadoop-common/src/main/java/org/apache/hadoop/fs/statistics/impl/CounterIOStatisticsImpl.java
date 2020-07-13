@@ -22,7 +22,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +31,8 @@ import org.apache.hadoop.fs.statistics.MeanStatistic;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.dynamicIOStatistics;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.maybeUpdateMaximum;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.maybeUpdateMinimum;
 
 /**
  * Implement statistics as a map of AtomicLong counters/gauges
@@ -55,7 +56,7 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
 
   private final Map<String, AtomicLong> maximumMap = new HashMap<>();
 
-  private final Map<String, AtomicReference<MeanStatistic>> meanStatisticMap
+  private final Map<String, MeanStatistic> meanStatisticMap
       = new HashMap<>();
 
   /**
@@ -109,12 +110,9 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
     }
     if (meanStatistics != null) {
       for (String key : meanStatistics) {
-        AtomicReference<MeanStatistic> msr = new AtomicReference<>();
-        meanStatisticMap.put(key, msr);
+        meanStatisticMap.put(key, new MeanStatistic());
         builder.withMeanStatisticFunction(key, k -> {
-          AtomicReference<MeanStatistic> r
-              = meanStatisticMap.get(key);
-          return r != null ? r.get() : null;
+          return meanStatisticMap.get(k);
         });
       }
     }
@@ -184,6 +182,22 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
   }
 
   @Override
+  public void addMinimumSample(final String key, final long value) {
+    AtomicLong min = minimumMap.get(key);
+    if (min != null) {
+      maybeUpdateMinimum(min, value);
+    }
+  }
+  
+  @Override
+  public void addMaximumSample(final String key, final long value) {
+    AtomicLong max = maximumMap.get(key);
+    if (max != null) {
+      maybeUpdateMaximum(max, value);
+    }
+  }
+  
+  @Override
   public void setGauge(final String key, final long value) {
     setAtomicLong(gaugeMap.get(key), value);
   }
@@ -195,9 +209,17 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
 
   @Override
   public void setMeanStatistic(final String key, final MeanStatistic value) {
-    final AtomicReference<MeanStatistic> ref = meanStatisticMap.get(key);
+    final MeanStatistic ref = meanStatisticMap.get(key);
     if (ref != null) {
-      ref.set(value);
+      ref.setSamplesAndSum(value.getSamples(), value.getSum());
+    }
+  }
+
+  @Override
+  public void addMeanStatisticSample(final String key, final long value) {
+    final MeanStatistic ref = meanStatisticMap.get(key);
+    if (ref != null) {
+      ref.addSample(value);
     }
   }
 
@@ -211,7 +233,7 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
     gaugeMap.values().forEach(a -> a.set(0));
     minimumMap.values().forEach(a -> a.set(0));
     maximumMap.values().forEach(a -> a.set(0));
-    meanStatisticMap.values().forEach(a -> a.set(new MeanStatistic()));
+    meanStatisticMap.values().forEach(a -> a.clear());
   }
 
   @Override
@@ -231,7 +253,7 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
     meanStatisticMap.entrySet().forEach(e -> {
       String key = e.getKey();
       MeanStatistic statisticValue = lookup(source.meanStatistics(), key);
-      e.getValue().set(statisticValue.copy());
+      e.getValue().set(statisticValue);
     });
   }
 
@@ -260,10 +282,9 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
       long sourceValue = lookup(source.maximums(), e.getKey());
       dest.set(Math.max(dest.get(), sourceValue));
     });
-    // the most complex, as the reference itself is resolved and then updated.
+    // the most complex
     meanStatisticMap.entrySet().forEach(e -> {
-      AtomicReference<MeanStatistic> dest = e.getValue();
-      MeanStatistic current = dest.get();
+      MeanStatistic current = e.getValue();
       MeanStatistic sourceValue = lookup(source.meanStatistics(), e.getKey());
       current.add(sourceValue);
     });
@@ -354,12 +375,9 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
    * @throws NullPointerException if there is no entry of that name
    */
   @Override
-  public AtomicReference<MeanStatistic> getMeanStatisticReference(String key) {
+  public MeanStatistic getMeanStatistic(String key) {
     return lookup(meanStatisticMap, key);
   }
 
-  @Override
-  public String toString() {
-    return super.toString();
-  }
+
 }

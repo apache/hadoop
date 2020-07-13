@@ -287,7 +287,7 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
    * Needed to provide a metrics info instance for the counter
    * constructor.
    */
-  private final class Info implements MetricsInfo {
+  private static final class Info implements MetricsInfo {
 
     private final String name;
 

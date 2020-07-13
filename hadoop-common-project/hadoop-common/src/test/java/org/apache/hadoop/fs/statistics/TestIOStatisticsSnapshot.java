@@ -55,7 +55,7 @@ public class TestIOStatisticsSnapshot extends AbstractHadoopTestBase {
     mean1 = new MeanStatistic(1, 1);
     snapshot.meanStatistics().put("mean1",
         mean1);
-    mean0 = new MeanStatistic(1, 0);
+    mean0 = new MeanStatistic(0, 1);
     snapshot.meanStatistics().put("mean0",
         mean0);
   }
@@ -66,7 +66,7 @@ public class TestIOStatisticsSnapshot extends AbstractHadoopTestBase {
     verifyGaugeStatisticValue(snapshot, "g1", 1L);
     verifyMinimumStatisticValue(snapshot, "m1", -1L);
     verifyMeanStatisticValue(snapshot, "mean0",
-        new MeanStatistic(1, 0));
+        new MeanStatistic(0, 1));
   }
 
 
@@ -116,7 +116,7 @@ public class TestIOStatisticsSnapshot extends AbstractHadoopTestBase {
     verifyGaugeStatisticValue(deser, "g1", 1L);
     verifyMinimumStatisticValue(deser, "m1", -1L);
     verifyMeanStatisticValue(deser, "mean0",
-        new MeanStatistic(1, 0));
+        new MeanStatistic(0, 1));
     verifyMeanStatisticValue(deser, "mean1",
         snapshot.meanStatistics().get("mean1"));
   }

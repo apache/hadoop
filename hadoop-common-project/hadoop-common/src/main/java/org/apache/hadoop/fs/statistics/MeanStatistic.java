@@ -39,15 +39,23 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
  * for equality.
  * <p></p>
  * It is serializable and annotated for correct serializations with jackson2.
+ * <p></p>
+ * Thread safety. The operations to add/copy sample data, are thread safe.
+ * <ol>
+ *   <li>{@link #add(MeanStatistic)}</li>
+ *   <li>{@link #addSample(long)} </li>
+ *   <li>{@link #clear()} </li>
+ *   <li>{@link #setSamplesAndSum(long, long)}</li>
+ *   <li>{@link #set(MeanStatistic)}</li>
+ * </ol>
+ * So is the {@link #mean()} method. This ensures that when
+ * used to aggregated statistics, the aggregate value and sample
+ * count are set and evaluated consistently.
+ * No other operations are synchronized.
  */
 public final class MeanStatistic implements Serializable, Cloneable {
 
   private static final long serialVersionUID = 567888327998615425L;
-
-  /**
-   * sum of the values.
-   */
-  private long sum;
 
   /**
    * Number of samples used to calculate
@@ -56,13 +64,18 @@ public final class MeanStatistic implements Serializable, Cloneable {
   private long samples;
 
   /**
+   * sum of the values.
+   */
+  private long sum;
+
+  /**
    * Constructor, with some resilience against invalid sample counts.
    * If the sample count is 0 or less, the sum is set to 0 and
    * the sample count to 0.
-   * @param sum sum value
    * @param samples sample count.
+   * @param sum sum value
    */
-  public MeanStatistic(final long sum, final long samples) {
+  public MeanStatistic(final long samples, final long sum) {
     if (samples > 0) {
       this.sum = sum;
       this.samples = samples;
@@ -74,7 +87,7 @@ public final class MeanStatistic implements Serializable, Cloneable {
    * @param that source
    */
   public MeanStatistic(MeanStatistic that) {
-    this(that.sum, that.samples);
+    this(that.samples, that.sum);
   }
 
   /**
@@ -109,15 +122,46 @@ public final class MeanStatistic implements Serializable, Cloneable {
   }
 
 
+  public void clear() {
+    setSamplesAndSum(0, 0);
+  }
+
+  /**
+   * Set the sum and samples.
+   * Synchronized.
+   * @param sampleCount new sample count.
+   * @param newSum new sum
+   */
+  public synchronized void setSamplesAndSum(long sampleCount,
+      long newSum) {
+    setSamples(sampleCount);
+    sum = sampleCount;
+  }
+
+  /**
+   * Set the statistic to the values of another.
+   * Synchronized.
+   * @param other the source.
+   */
+  public void set(final MeanStatistic other) {
+    setSamplesAndSum(other.getSamples(), other.getSum());
+  }
+
+  /**
+   * Set the sum.
+   * @param sum new sum
+   */
   public void setSum(final long sum) {
     this.sum = sum;
   }
 
   /**
    * Set the sample count.
+   * <p></p>
    * If this is less than zero, it is set to zero.
-   * This avoids an ill-formed JSON entry to
-   * break deserialization, or get an invalid sample count
+   * <p></p>
+   * This stops an ill-formed JSON entry from
+   * breaking deserialization, or get an invalid sample count
    * into an entry.
    * @param samples sample count.
    */
@@ -131,9 +175,11 @@ public final class MeanStatistic implements Serializable, Cloneable {
 
   /**
    * Get the arithmetic mean value.
+   * <p></p>
+   * Thread safe.
    * @return the mean
    */
-  public double mean() {
+  public synchronized double mean() {
     return samples > 0
         ? ((double) sum) / samples
         : 0.0d;
@@ -143,7 +189,7 @@ public final class MeanStatistic implements Serializable, Cloneable {
    * Add another MeanStatistic.
    * @param other other value
    */
-  public MeanStatistic add(final MeanStatistic other) {
+  public synchronized MeanStatistic add(final MeanStatistic other) {
     if (other.isEmpty()) {
       return this;
     }
@@ -159,10 +205,11 @@ public final class MeanStatistic implements Serializable, Cloneable {
 
   /**
    * Add a sample.
-   * Unsynchronized/nonatomic
+   * <p></p>
+   * Thread safe.
    * @param value value to add to the sum
    */
-  public void addSample(int value) {
+  public synchronized void addSample(long value) {
     samples++;
     sum += value;
   }

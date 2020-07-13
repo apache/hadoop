@@ -20,10 +20,15 @@ package org.apache.hadoop.fs.s3a.impl.statistics;
 
 import java.io.Closeable;
 
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+
 /**
  * Statistics for the S3A multipart uploader.
+ * It is expected to act as the statistics source for
+ * the uploader.
  */
-public interface S3AMultipartUploaderStatistics extends Closeable {
+public interface S3AMultipartUploaderStatistics extends Closeable,
+    IOStatisticsSource {
 
   void instantiated();
 

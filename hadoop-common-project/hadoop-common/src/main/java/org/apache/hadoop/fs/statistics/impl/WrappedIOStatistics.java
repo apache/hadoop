@@ -20,14 +20,21 @@ package org.apache.hadoop.fs.statistics.impl;
 
 import java.util.Map;
 
+import com.google.common.base.Preconditions;
+
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.MeanStatistic;
+
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToString;
 
 /**
  * Wrap IOStatistics source with another (dynamic) wrapper.
  */
 public class WrappedIOStatistics implements IOStatistics {
 
+  /**
+   * The wrapped statistics.
+   */
   private IOStatistics wrapped;
 
   /**
@@ -36,6 +43,14 @@ public class WrappedIOStatistics implements IOStatistics {
    */
   public WrappedIOStatistics(final IOStatistics wrapped) {
     this.wrapped = wrapped;
+  }
+
+  /**
+   * Instantiate without setting the statistics.
+   * This is for subclasses which build up the map during their own
+   * construction.
+   */
+  protected WrappedIOStatistics() {
   }
 
   @Override
@@ -47,7 +62,14 @@ public class WrappedIOStatistics implements IOStatistics {
     return wrapped;
   }
 
+  /**
+   * Set the wrapped statistics.
+   * Will fail if the field is already set.
+   * @param wrapped new value
+   */
   protected void setWrapped(final IOStatistics wrapped) {
+    Preconditions.checkState(this.wrapped == null,
+        "Attempted to overwrite existing wrapped statistics");
     this.wrapped = wrapped;
   }
 
@@ -69,5 +91,14 @@ public class WrappedIOStatistics implements IOStatistics {
   @Override
   public Map<String, MeanStatistic> meanStatistics() {
     return getWrapped().meanStatistics();
+  }
+
+  /**
+   * return the statistics dump of the wrapped statistics
+   * @return the statistics for logging.
+   */
+  @Override
+  public String toString() {
+    return ioStatisticsToString(wrapped);
   }
 }

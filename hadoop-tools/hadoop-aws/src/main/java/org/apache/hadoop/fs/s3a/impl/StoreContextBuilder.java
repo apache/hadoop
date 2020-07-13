@@ -25,8 +25,8 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
-import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3AStorageStatistics;
+import org.apache.hadoop.fs.s3a.impl.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -52,7 +52,7 @@ public class StoreContextBuilder {
 
   private Invoker invoker;
 
-  private S3AInstrumentation instrumentation;
+  private S3AStatisticsContext statisticsContext;
 
   private S3AStorageStatistics storageStatistics;
 
@@ -112,9 +112,9 @@ public class StoreContextBuilder {
     return this;
   }
 
-  public StoreContextBuilder setInstrumentation(
-      final S3AInstrumentation instr) {
-    this.instrumentation = instr;
+  public StoreContextBuilder setStatisticsContext(
+      final S3AStatisticsContext statisticsContext) {
+    this.statisticsContext = statisticsContext;
     return this;
   }
 
@@ -176,7 +176,7 @@ public class StoreContextBuilder {
         executor,
         executorCapacity,
         invoker,
-        instrumentation,
+        statisticsContext,
         storageStatistics,
         inputPolicy,
         changeDetectionPolicy,

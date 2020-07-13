@@ -57,11 +57,22 @@ public interface CounterIOStatistics extends IOStatistics {
 
   long incrementMinimum(String key, long value);
 
+  void addMinimumSample(String key, long value);
+
+  void addMaximumSample(String key, long value);
+
   void setGauge(String key, long value);
 
   long incrementGauge(String key, long value);
 
   void setMeanStatistic(String key, MeanStatistic value);
+
+  /**
+   * Add a sample to the mean statistics.
+   * @param key key
+   * @param value sample value.
+   */
+  void addMeanStatisticSample(String key, long value);
 
   /**
    * Reset all statistics.
@@ -141,5 +152,5 @@ public interface CounterIOStatistics extends IOStatistics {
    * @return the reference
    * @throws NullPointerException if there is no entry of that name
    */
-  AtomicReference<MeanStatistic> getMeanStatisticReference(String key);
+  MeanStatistic getMeanStatistic(String key);
 }

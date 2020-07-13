@@ -39,7 +39,7 @@ public class TestMeanStatistic extends AbstractHadoopTestBase {
 
   private final MeanStatistic empty = new MeanStatistic(0, 0);
 
-  private final MeanStatistic tenFromOne = new MeanStatistic(TEN, 1);
+  private final MeanStatistic tenFromOne = new MeanStatistic(1, TEN);
 
   private final MeanStatistic tenFromTen = new MeanStatistic(TEN, TEN);
 
@@ -47,7 +47,7 @@ public class TestMeanStatistic extends AbstractHadoopTestBase {
   public void testEmptiness() throws Throwable {
     Assertions.assertThat(empty)
         .matches(MeanStatistic::isEmpty, "is empty")
-        .isEqualTo(new MeanStatistic(TEN, 0))
+        .isEqualTo(new MeanStatistic(0, TEN))
         .isEqualTo(new MeanStatistic())
         .isNotEqualTo(tenFromOne);
     Assertions.assertThat(empty.mean())
@@ -68,7 +68,7 @@ public class TestMeanStatistic extends AbstractHadoopTestBase {
 
   @Test
   public void testNegativeSamplesAreEmpty() throws Throwable {
-    MeanStatistic stat = new MeanStatistic(1, -10);
+    MeanStatistic stat = new MeanStatistic(-10, 1);
     Assertions.assertThat(stat)
         .describedAs("stat with negative samples")
         .matches(MeanStatistic::isEmpty, "is empty")
@@ -102,7 +102,7 @@ public class TestMeanStatistic extends AbstractHadoopTestBase {
   public void testDoubleSamples() throws Throwable {
     MeanStatistic stat = tenFromOne.copy();
     Assertions.assertThat(stat.add(tenFromOne))
-        .isEqualTo(new MeanStatistic(20, 2))
+        .isEqualTo(new MeanStatistic(2, 20))
         .extracting(MeanStatistic::mean)
         .isEqualTo(TEND);
   }
@@ -160,7 +160,7 @@ public class TestMeanStatistic extends AbstractHadoopTestBase {
     stat.setSum(100);
     stat.setSamples(20);
     Assertions.assertThat(stat)
-        .isEqualTo(new MeanStatistic(100, 20))
+        .isEqualTo(new MeanStatistic(20, 100))
         .extracting(MeanStatistic::mean)
         .isEqualTo(5.0d);
   }

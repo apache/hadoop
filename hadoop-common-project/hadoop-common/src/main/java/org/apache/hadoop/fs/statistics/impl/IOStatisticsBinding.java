@@ -22,6 +22,7 @@ import java.io.Serializable;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -233,5 +234,47 @@ public final class IOStatisticsBinding {
     MeanStatistic res = l.copy();
     res.add(r);
     return res;
+  }
+
+  /**
+   * Update a maximum value tracked in an atomic long.
+   * This is thread safe -it uses compareAndSet to ensure
+   * that Thread T1 whose sample is greater than the current
+   * value never overwrites an update from thread T2 whose
+   * sample was also higher -and which completed first.
+   * @param dest destination for all changes.
+   * @param sample sample to update.
+   */
+  public static void maybeUpdateMaximum(AtomicLong dest, long sample) {
+    boolean done;
+    do {
+      long current = dest.get();
+      if (sample > current) {
+        done = dest.compareAndSet(current, sample);
+      } else {
+        done = true;
+      }
+    } while (!done);
+  }
+
+  /**
+   * Update a maximum value tracked in an atomic long.
+   * This is thread safe -it uses compareAndSet to ensure
+   * that Thread T1 whose sample is greater than the current
+   * value never overwrites an update from thread T2 whose
+   * sample was also higher -and which completed first.
+   * @param dest destination for all changes.
+   * @param sample sample to update.
+   */
+  public static void maybeUpdateMinimum(AtomicLong dest, long sample) {
+    boolean done;
+    do {
+      long current = dest.get();
+      if (sample < current) {
+        done = dest.compareAndSet(current, sample);
+      } else {
+        done = true;
+      }
+    } while (!done);
   }
 }
