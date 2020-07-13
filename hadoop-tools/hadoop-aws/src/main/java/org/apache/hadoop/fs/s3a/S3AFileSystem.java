@@ -108,8 +108,11 @@ import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport;
 import org.apache.hadoop.fs.s3a.impl.OperationCallbacks;
 import org.apache.hadoop.fs.s3a.impl.RenameOperation;
+import org.apache.hadoop.fs.s3a.impl.S3AMultipartUploaderBuilder;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
+import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
+import org.apache.hadoop.fs.s3a.impl.statistics.S3AMultipartUploaderStatisticsImpl;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.select.InternalSelectConstants;
 import org.apache.hadoop.io.IOUtils;
@@ -4493,6 +4496,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       return getConf().getBoolean(ETAG_CHECKSUM_ENABLED,
           ETAG_CHECKSUM_ENABLED_DEFAULT);
 
+    case CommonPathCapabilities.FS_MULTIPART_UPLOADER:
+      return true;
+
     default:
       return super.hasPathCapability(p, capability);
     }
@@ -4722,6 +4728,18 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     return result;
   }
 
+  @Override
+  public S3AMultipartUploaderBuilder createMultipartUploader(
+      final Path basePath)
+      throws IOException {
+    StoreContext ctx = createStoreContext();
+    return new S3AMultipartUploaderBuilder(this,
+        getWriteOperationHelper(),
+        ctx,
+        basePath,
+        new S3AMultipartUploaderStatisticsImpl(ctx::incrementStatistic));
+  }
+
   /**
    * Build an immutable store context.
    * If called while the FS is being initialized,
@@ -4731,24 +4749,24 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   @InterfaceAudience.Private
   public StoreContext createStoreContext() {
-    return new StoreContext(
-        getUri(),
-        getBucket(),
-        getConf(),
-        getUsername(),
-        owner,
-        boundedThreadPool,
-        executorCapacity,
-        invoker,
-        getInstrumentation(),
-        getStorageStatistics(),
-        getInputPolicy(),
-        changeDetectionPolicy,
-        enableMultiObjectsDelete,
-        metadataStore,
-        useListV1,
-        new ContextAccessorsImpl(),
-        getTtlTimeProvider());
+    return new StoreContextBuilder().setFsURI(getUri())
+        .setBucket(getBucket())
+        .setConfiguration(getConf())
+        .setUsername(getUsername())
+        .setOwner(owner)
+        .setExecutor(boundedThreadPool)
+        .setExecutorCapacity(executorCapacity)
+        .setInvoker(invoker)
+        .setInstrumentation(getInstrumentation())
+        .setStorageStatistics(getStorageStatistics())
+        .setInputPolicy(getInputPolicy())
+        .setChangeDetectionPolicy(changeDetectionPolicy)
+        .setMultiObjectDeleteEnabled(enableMultiObjectsDelete)
+        .setMetadataStore(metadataStore)
+        .setUseListV1(useListV1)
+        .setContextAccessors(new ContextAccessorsImpl())
+        .setTimeProvider(getTtlTimeProvider())
+        .build();
   }
 
   /**
@@ -4775,6 +4793,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     @Override
     public String getBucketLocation() throws IOException {
       return S3AFileSystem.this.getBucketLocation();
+    }
+
+    @Override
+    public Path makeQualified(final Path path) {
+      return S3AFileSystem.this.makeQualified(path);
     }
   }
 }

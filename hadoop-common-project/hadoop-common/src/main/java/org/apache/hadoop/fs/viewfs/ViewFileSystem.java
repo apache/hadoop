@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.viewfs;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE_DEFAULT;
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME;
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME_DEFAULT;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS_DEFAULT;
 import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
@@ -41,6 +43,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -256,6 +259,14 @@ public class ViewFileSystem extends FileSystem {
   }
 
   /**
+   * Returns the ViewFileSystem type.
+   * @return <code>viewfs</code>
+   */
+  String getType() {
+    return FsConstants.VIEWFS_TYPE;
+  }
+
+  /**
    * Called after a new FileSystem instance is constructed.
    * @param theUri a uri whose authority section names the host, port, etc. for
    *        this FileSystem
@@ -273,9 +284,18 @@ public class ViewFileSystem extends FileSystem {
     final InnerCache innerCache = new InnerCache(fsGetter);
     // Now build  client side view (i.e. client side mount table) from config.
     final String authority = theUri.getAuthority();
+    String tableName = authority;
+    if (theUri.getPort() != -1 && config
+        .getBoolean(CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME,
+            CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME_DEFAULT)) {
+      tableName = theUri.getHost();
+    }
     try {
       myUri = new URI(getScheme(), authority, "/", null, null);
-      fsState = new InodeTree<FileSystem>(conf, authority) {
+      boolean initingUriAsFallbackOnNoMounts =
+          !FsConstants.VIEWFS_TYPE.equals(getType());
+      fsState = new InodeTree<FileSystem>(conf, tableName, theUri,
+          initingUriAsFallbackOnNoMounts) {
         @Override
         protected FileSystem getTargetFileSystem(final URI uri)
           throws URISyntaxException, IOException {
@@ -1180,7 +1200,41 @@ public class ViewFileSystem extends FileSystem {
     public FSDataOutputStream create(final Path f,
         final FsPermission permission, final boolean overwrite,
         final int bufferSize, final short replication, final long blockSize,
-        final Progressable progress) throws AccessControlException {
+        final Progressable progress) throws IOException {
+      Preconditions.checkNotNull(f, "File cannot be null.");
+      if (InodeTree.SlashPath.equals(f)) {
+        throw new FileAlreadyExistsException(
+            "/ is not a file. The directory / already exist at: "
+                + theInternalDir.fullPath);
+      }
+
+      if (this.fsState.getRootFallbackLink() != null) {
+
+        if (theInternalDir.getChildren().containsKey(f.getName())) {
+          throw new FileAlreadyExistsException(
+              "A mount path(file/dir) already exist with the requested path: "
+                  + theInternalDir.getChildren().get(f.getName()).fullPath);
+        }
+
+        FileSystem linkedFallbackFs =
+            this.fsState.getRootFallbackLink().getTargetFileSystem();
+        Path parent = Path.getPathWithoutSchemeAndAuthority(
+            new Path(theInternalDir.fullPath));
+        String leaf = f.getName();
+        Path fileToCreate = new Path(parent, leaf);
+
+        try {
+          return linkedFallbackFs
+              .create(fileToCreate, permission, overwrite, bufferSize,
+                  replication, blockSize, progress);
+        } catch (IOException e) {
+          StringBuilder msg =
+              new StringBuilder("Failed to create file:").append(fileToCreate)
+                  .append(" at fallback : ").append(linkedFallbackFs.getUri());
+          LOG.error(msg.toString(), e);
+          throw e;
+        }
+      }
       throw readOnlyMountTable("create", f);
     }
 
@@ -1326,6 +1380,43 @@ public class ViewFileSystem extends FileSystem {
         }
       }
       return new FileStatus[0];
+    }
+
+    @Override
+    public ContentSummary getContentSummary(Path f) throws IOException {
+      long[] summary = {0, 0, 1};
+      for (FileStatus status : listStatus(f)) {
+        Path targetPath =
+            Path.getPathWithoutSchemeAndAuthority(status.getPath());
+        InodeTree.ResolveResult<FileSystem> res =
+            fsState.resolve(targetPath.toString(), true);
+        ContentSummary child =
+            res.targetFileSystem.getContentSummary(res.remainingPath);
+        summary[0] += child.getLength();
+        summary[1] += child.getFileCount();
+        summary[2] += child.getDirectoryCount();
+      }
+      return new ContentSummary.Builder()
+          .length(summary[0])
+          .fileCount(summary[1])
+          .directoryCount(summary[2])
+          .build();
+    }
+
+    @Override
+    public FsStatus getStatus(Path p) throws IOException {
+      long[] summary = {0, 0, 0};
+      for (FileStatus status : listStatus(p)) {
+        Path targetPath =
+            Path.getPathWithoutSchemeAndAuthority(status.getPath());
+        InodeTree.ResolveResult<FileSystem> res =
+            fsState.resolve(targetPath.toString(), true);
+        FsStatus child = res.targetFileSystem.getStatus(res.remainingPath);
+        summary[0] += child.getCapacity();
+        summary[1] += child.getUsed();
+        summary[2] += child.getRemaining();
+      }
+      return new FsStatus(summary[0], summary[1], summary[2]);
     }
 
     @Override

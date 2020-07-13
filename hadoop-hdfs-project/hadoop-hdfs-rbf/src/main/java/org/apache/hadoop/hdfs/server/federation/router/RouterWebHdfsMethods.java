@@ -454,19 +454,12 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
   private DatanodeInfo chooseDatanode(final Router router,
       final String path, final HttpOpParam.Op op, final long openOffset,
       final String excludeDatanodes) throws IOException {
-    // We need to get the DNs as a privileged user
     final RouterRpcServer rpcServer = getRPCServer(router);
-    UserGroupInformation loginUser = UserGroupInformation.getLoginUser();
-    RouterRpcServer.setCurrentUser(loginUser);
-
     DatanodeInfo[] dns = null;
     try {
-      dns = rpcServer.getDatanodeReport(DatanodeReportType.LIVE);
+      dns = rpcServer.getCachedDatanodeReport(DatanodeReportType.LIVE);
     } catch (IOException e) {
       LOG.error("Cannot get the datanodes from the RPC server", e);
-    } finally {
-      // Reset ugi to remote user for remaining operations.
-      RouterRpcServer.resetCurrentUser();
     }
 
     HashSet<Node> excludes = new HashSet<Node>();

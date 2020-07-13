@@ -457,6 +457,9 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
         ++count;
       }
     }
+    if (isTokenCache) {
+      syncTokenOwnerStats();
+    }
     if (count > 0) {
       LOG.warn("Ignored {} nodes while loading {} cache.", count, cacheName);
     }

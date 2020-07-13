@@ -149,6 +149,7 @@ public class TestUserGroupMappingPlacementRule {
       ParentQueue root = mock(ParentQueue.class);
       when(root.getQueuePath()).thenReturn(rootQueueName);
       when(queueManager.getQueue(rootQueueName)).thenReturn(root);
+      when(queueManager.getQueueByFullName(rootQueueName)).thenReturn(root);
       return root;
     }
 
@@ -220,11 +221,13 @@ public class TestUserGroupMappingPlacementRule {
         .withQueue("root.agroup.a")
         .withQueue("root.asubgroup2")
         .withQueue("root.bsubgroup2.b")
+        .withQueue("root.users.primarygrouponly")
+        .withQueue("root.admins.primarygrouponly")
         .withManagedParentQueue("root.managedParent")
         .build();
 
     when(queueManager.getQueue(isNull())).thenReturn(null);
-
+    when(queueManager.isAmbiguous("primarygrouponly")).thenReturn(true);
     rule.setQueueManager(queueManager);
     ApplicationSubmissionContext asc = Records.newRecord(
         ApplicationSubmissionContext.class);
@@ -372,6 +375,170 @@ public class TestUserGroupMappingPlacementRule {
             .inputUser("a")
             .expectedQueue("a")
             .expectedParentQueue("root.agroup")
+            .build());
+  }
+
+  @Test
+  public void testUserMappingToPrimaryGroupInvalidNestedPlaceholder()
+      throws YarnException {
+    // u:%user:%primary_group.%random, no matching queue
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("%user")
+                .queue("%random")
+                .parentQueue("%primary_group")
+                .build())
+            .inputUser("a")
+            .expectedQueue("default")
+            .build());
+  }
+
+  @Test
+  public void testUserMappingToSecondaryGroupInvalidNestedPlaceholder()
+      throws YarnException {
+    // u:%user:%secondary_group.%random, no matching queue
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("%user")
+                .queue("%random")
+                .parentQueue("%secondary_group")
+                .build())
+            .inputUser("a")
+            .expectedQueue("default")
+            .build());
+  }
+
+  @Test
+  public void testUserMappingDiffersFromSubmitterQueueDoesNotExist()
+      throws YarnException {
+    // u:a:%random, submitter: xyz, no matching queue
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("a")
+                .queue("%random")
+                .build())
+            .inputUser("xyz")
+            .expectedQueue("default")
+            .build());
+  }
+
+  @Test
+  public void testSpecificUserMappingToPrimaryGroup() throws YarnException {
+    // u:a:%primary_group
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("a")
+                .queue("%primary_group")
+                .build())
+            .inputUser("a")
+            .expectedQueue("agroup")
+            .build());
+  }
+
+  @Test
+  public void testSpecificUserMappingToSecondaryGroup()
+      throws YarnException {
+    // u:a:%secondary_group
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("a")
+                .queue("%secondary_group")
+                .build())
+            .inputUser("a")
+            .expectedQueue("asubgroup2")
+            .build());
+  }
+
+  @Test
+  public void testSpecificUserMappingWithNoSecondaryGroup()
+      throws YarnException {
+    // u:nosecondarygroupuser:%secondary_group, no matching queue
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("nosecondarygroupuser")
+                .queue("%secondary_group")
+                .build())
+            .inputUser("nosecondarygroupuser")
+            .expectedQueue("default")
+            .build());
+  }
+
+  @Test
+  public void testGenericUserMappingWithNoSecondaryGroup()
+      throws YarnException {
+    // u:%user:%user, no matching queue
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("%user")
+                .queue("%user")
+                .parentQueue("%secondary_group")
+                .build())
+            .inputUser("nosecondarygroupuser")
+            .expectedQueue("default")
+            .build());
+  }
+
+  @Test(expected = YarnException.class)
+  public void testUserMappingToNestedUserPrimaryGroupWithAmbiguousQueues()
+      throws YarnException {
+    // u:%user:%user, submitter nosecondarygroupuser, queue is ambiguous
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("%user")
+                .queue("%user")
+                .parentQueue("%primary_group")
+                .build())
+            .inputUser("nosecondarygroupuser")
+            .build());
+  }
+
+  @Test(expected = YarnException.class)
+  public void testResolvedQueueIsNotManaged()
+      throws YarnException {
+    // u:%user:%primary_group.%user, "admins" group will be "root",
+    // resulting parent queue will be "root" which is not managed
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("%user")
+                .queue("%user")
+                .parentQueue("%primary_group")
+                .build())
+            .inputUser("admins")
+            .build());
+  }
+
+  @Test(expected = YarnException.class)
+  public void testUserMappingToPrimaryGroupWithAmbiguousQueues()
+      throws YarnException {
+    // u:%user:%primary_group, submitter nosecondarygroupuser,
+    // queue is ambiguous
+    verifyQueueMapping(
+        QueueMappingTestDataBuilder.create()
+            .queueMapping(QueueMappingBuilder.create()
+                .type(MappingType.USER)
+                .source("%user")
+                .queue("%primary_group")
+                .build())
+            .inputUser("nosecondarygroupuser")
+            .expectedQueue("default")
             .build());
   }
 

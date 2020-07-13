@@ -41,6 +41,8 @@ import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Progressable;
 
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
+
 /****************************************************************
  * A <code>FilterFileSystem</code> contains
  * some other file system, which it uses as
@@ -728,7 +730,16 @@ public class FilterFileSystem extends FileSystem {
   @Override
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
-    return fs.hasPathCapability(path, capability);
+    switch (validatePathCapabilityArgs(makeQualified(path), capability)) {
+    case CommonPathCapabilities.FS_MULTIPART_UPLOADER:
+    case CommonPathCapabilities.FS_EXPERIMENTAL_BATCH_LISTING:
+      // operations known to be unsupported, irrespective of what
+      // the wrapped class implements.
+      return false;
+    default:
+      // the feature is not implemented.
+      return fs.hasPathCapability(path, capability);
+    }
   }
 
 }

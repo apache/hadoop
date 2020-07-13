@@ -392,10 +392,11 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     // during RM recovery
     synchronized (this.context) {
       List<NMContainerStatus> containerReports = getNMContainerStatuses();
+      NodeStatus nodeStatus = getNodeStatus(0);
       RegisterNodeManagerRequest request =
           RegisterNodeManagerRequest.newInstance(nodeId, httpPort, totalResource,
               nodeManagerVersionId, containerReports, getRunningApplications(),
-              nodeLabels, physicalResource, nodeAttributes);
+              nodeLabels, physicalResource, nodeAttributes, nodeStatus);
 
       if (containerReports != null) {
         LOG.info("Registering with RM using containers :" + containerReports);

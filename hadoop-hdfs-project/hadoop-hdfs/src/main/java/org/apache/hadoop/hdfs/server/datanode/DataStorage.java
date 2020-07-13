@@ -388,6 +388,11 @@ public class DataStorage extends Storage {
     try {
       final List<StorageLocation> successLocations = loadDataStorage(
           datanode, nsInfo, dataDirs, startOpt, executor);
+
+      if (successLocations.isEmpty()) {
+        return Lists.newArrayList();
+      }
+
       return loadBlockPoolSliceStorage(
           datanode, nsInfo, successLocations, startOpt, executor);
     } finally {

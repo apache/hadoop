@@ -24,9 +24,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public final class FedBalanceConfigs {
-  /* The class used for federation balance */
-  public static final String FEDERATION_BALANCE_CLASS =
-      "federation.balance.class";
+
   public static final String LAST_SNAPSHOT_NAME = "DISTCP-BALANCE-CURRENT";
   public static final String CURRENT_SNAPSHOT_NAME = "DISTCP-BALANCE-NEXT";
   /* Specify the behaviour of trash. */
@@ -34,17 +32,18 @@ public final class FedBalanceConfigs {
     TRASH, DELETE, SKIP
   }
 
-  /* The worker threads number of the BalanceProcedureScheduler */
+  /* The worker threads number of the BalanceProcedureScheduler.
+   BalanceProcedureScheduler is responsible for scheduling a balance job,
+   including submit, run, delay and recover. */
   public static final String WORK_THREAD_NUM =
-      "hadoop.hdfs.procedure.work.thread.num";
+      "hdfs.fedbalance.procedure.work.thread.num";
   public static final int WORK_THREAD_NUM_DEFAULT = 10;
-  /* The uri of the journal */
+  /* The uri of the journal, the journal file is used for handling the job
+   persistence and recover. */
   public static final String SCHEDULER_JOURNAL_URI =
-      "hadoop.hdfs.procedure.scheduler.journal.uri";
+      "hdfs.fedbalance.procedure.scheduler.journal.uri";
   public static final String JOB_PREFIX = "JOB-";
   public static final String TMP_TAIL = ".tmp";
-  public static final String JOURNAL_CLASS =
-      "hadoop.hdfs.procedure.journal.class";
 
   private FedBalanceConfigs(){}
 }

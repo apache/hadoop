@@ -737,7 +737,7 @@ public class ServiceScheduler extends CompositeService {
           LOG.warn(
               "Container {} Completed. No component instance exists. exitStatus={}. diagnostics={} ",
               containerId, status.getExitStatus(), status.getDiagnostics());
-          return;
+          continue;
         }
         ComponentEvent event =
             new ComponentEvent(instance.getCompName(), CONTAINER_COMPLETED)

@@ -33,6 +33,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import java.util.Set;
+
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -194,7 +196,16 @@ public class ViewFs extends AbstractFileSystem {
       return targets;
     }
   }
-  
+
+  /**
+   * Returns the ViewFileSystem type.
+   *
+   * @return <code>viewfs</code>
+   */
+  String getType() {
+    return FsConstants.VIEWFS_TYPE;
+  }
+
   public ViewFs(final Configuration conf) throws IOException,
       URISyntaxException {
     this(FsConstants.VIEWFS_URI, conf);
@@ -220,7 +231,10 @@ public class ViewFs extends AbstractFileSystem {
             CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS_DEFAULT);
     // Now build  client side view (i.e. client side mount table) from config.
     String authority = theUri.getAuthority();
-    fsState = new InodeTree<AbstractFileSystem>(conf, authority) {
+    boolean initingUriAsFallbackOnNoMounts =
+        !FsConstants.VIEWFS_TYPE.equals(getType());
+    fsState = new InodeTree<AbstractFileSystem>(conf, authority, theUri,
+        initingUriAsFallbackOnNoMounts) {
 
       @Override
       protected AbstractFileSystem getTargetFileSystem(final URI uri)
@@ -919,6 +933,41 @@ public class ViewFs extends AbstractFileSystem {
         FileAlreadyExistsException, FileNotFoundException,
         ParentNotDirectoryException, UnsupportedFileSystemException,
         UnresolvedLinkException, IOException {
+      Preconditions.checkNotNull(f, "File cannot be null.");
+      if (InodeTree.SlashPath.equals(f)) {
+        throw new FileAlreadyExistsException(
+            "/ is not a file. The directory / already exist at: "
+                + theInternalDir.fullPath);
+      }
+
+      if (this.fsState.getRootFallbackLink() != null) {
+        if (theInternalDir.getChildren().containsKey(f.getName())) {
+          throw new FileAlreadyExistsException(
+              "A mount path(file/dir) already exist with the requested path: "
+                  + theInternalDir.getChildren().get(f.getName()).fullPath);
+        }
+
+        AbstractFileSystem linkedFallbackFs =
+            this.fsState.getRootFallbackLink().getTargetFileSystem();
+        Path parent = Path.getPathWithoutSchemeAndAuthority(
+            new Path(theInternalDir.fullPath));
+        String leaf = f.getName();
+        Path fileToCreate = new Path(parent, leaf);
+
+        try {
+          return linkedFallbackFs
+              .createInternal(fileToCreate, flag, absolutePermission,
+                  bufferSize, replication, blockSize, progress, checksumOpt,
+                  true);
+        } catch (IOException e) {
+          StringBuilder msg =
+              new StringBuilder("Failed to create file:").append(fileToCreate)
+                  .append(" at fallback : ").append(linkedFallbackFs.getUri());
+          LOG.error(msg.toString(), e);
+          throw e;
+        }
+      }
+
       throw readOnlyMountTable("create", f);
     }
 

@@ -49,9 +49,11 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.BlockTargetPair;
+import org.apache.hadoop.hdfs.server.common.blockaliasmap.BlockAliasMap;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.TestProvidedImpl;
 import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaBeingWritten;
 import org.apache.hadoop.hdfs.server.namenode.CacheManager;
@@ -1049,6 +1051,57 @@ public class TestBlockManager {
     assertNull(bm.getStoredBlock(new Block(ReceivedDeletedBlockId)));
     assertTrue(bm.getStoredBlock(new Block(existedBlock)).findStorageInfo
         (ds) >= 0);
+  }
+
+  @Test
+  public void testSafeModeWithProvidedStorageBR() throws Exception {
+    DatanodeDescriptor node0 = spy(nodes.get(0));
+    DatanodeStorageInfo ds0 = node0.getStorageInfos()[0];
+    node0.setAlive(true);
+    DatanodeDescriptor node1 = spy(nodes.get(1));
+    DatanodeStorageInfo ds1 = node1.getStorageInfos()[0];
+    node1.setAlive(true);
+
+    String providedStorageID = DFSConfigKeys.DFS_PROVIDER_STORAGEUUID_DEFAULT;
+    DatanodeStorage providedStorage = new DatanodeStorage(
+        providedStorageID, DatanodeStorage.State.NORMAL, StorageType.PROVIDED);
+
+    // create block manager with provided storage enabled
+    Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_PROVIDED_ENABLED, true);
+    conf.setClass(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_CLASS,
+        TestProvidedImpl.TestFileRegionBlockAliasMap.class,
+        BlockAliasMap.class);
+    BlockManager bmPs = new BlockManager(fsn, false, conf);
+    bmPs.setBlockPoolId("BP-12344-10.1.1.2-12344");
+
+    // pretend to be in safemode
+    doReturn(true).when(fsn).isInStartupSafeMode();
+
+    // register new node
+    DatanodeRegistration nodeReg0 =
+        new DatanodeRegistration(node0, null, null, "");
+    bmPs.getDatanodeManager().registerDatanode(nodeReg0);
+    bmPs.getDatanodeManager().addDatanode(node0);
+    DatanodeRegistration nodeReg1 =
+        new DatanodeRegistration(node1, null, null, "");
+    bmPs.getDatanodeManager().registerDatanode(nodeReg1);
+    bmPs.getDatanodeManager().addDatanode(node1);
+
+    // process reports of provided storage and disk storage
+    bmPs.processReport(node0, providedStorage, BlockListAsLongs.EMPTY, null);
+    bmPs.processReport(node0, new DatanodeStorage(ds0.getStorageID()),
+        BlockListAsLongs.EMPTY, null);
+    bmPs.processReport(node1, providedStorage, BlockListAsLongs.EMPTY, null);
+    bmPs.processReport(node1, new DatanodeStorage(ds1.getStorageID()),
+        BlockListAsLongs.EMPTY, null);
+
+    // The provided stoage report should not affect disk storage report
+    DatanodeStorageInfo dsPs =
+        bmPs.getProvidedStorageMap().getProvidedStorageInfo();
+    assertEquals(2, dsPs.getBlockReportCount());
+    assertEquals(1, ds0.getBlockReportCount());
+    assertEquals(1, ds1.getBlockReportCount());
   }
 
   @Test

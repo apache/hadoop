@@ -1669,6 +1669,13 @@
   </property>
 
   <property>
+    <description>Whether or not to run the node health script
+    before the NM starts up.</description>
+    <name>yarn.nodemanager.health-checker.run-before-startup</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>Frequency of running node health scripts.</description>
     <name>yarn.nodemanager.health-checker.interval-ms</name>
     <value>600000</value>
@@ -3322,6 +3329,26 @@
     <name>yarn.resourcemanager.decommissioning-nodes-watcher.poll-interval-secs</name>
     <value>20</value>
   </property>
+
+  <property>
+    <description>
+    Used to specify custom web services for Resourcemanager. Value can be
+    classnames separated by comma.
+    Ex: org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebServices,
+    org.apache.hadoop.yarn.server.resourcemanager.webapp.DummyClass
+    </description>
+    <name>yarn.http.rmwebapp.external.classes</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+    Used to specify custom scheduler page
+    </description>
+    <name>hadoop.http.rmwebapp.scheduler.page.class</name>
+    <value></value>
+  </property>
+
 
   <property>
     <description>The Node Label script to run. Script output Line starting with

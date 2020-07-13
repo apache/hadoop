@@ -21,13 +21,17 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.QUEUE_NAME;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.util.StringHelper;
 import org.apache.hadoop.yarn.webapp.Controller;
+import org.apache.hadoop.yarn.webapp.View;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 
 import com.google.inject.Inject;
@@ -92,9 +96,52 @@ public class RmController extends Controller {
       render(FairSchedulerPage.class);
       return;
     }
-    
-    setTitle("Default Scheduler");
-    render(DefaultSchedulerPage.class);
+
+    if (rs instanceof FifoScheduler) {
+      setTitle("FIFO Scheduler");
+      render(DefaultSchedulerPage.class);
+      return;
+    }
+
+    renderOtherPluginScheduler(rm);
+  }
+
+  private void renderOtherPluginScheduler(ResourceManager rm) {
+    ResourceScheduler rs = rm.getResourceScheduler();
+    String schedulerName = rs.getClass().getSimpleName();
+
+    Class<? extends View> cls = PluginSchedulerPageHelper
+        .getPageClass(rm.getConfig());
+    if (cls != null) {
+      setTitle(schedulerName);
+      render(cls);
+    } else {
+      LOG.warn(
+          "Render default scheduler page as scheduler page configured doesn't exist");
+      setTitle("Default Scheduler");
+      render(DefaultSchedulerPage.class);
+    }
+  }
+
+  static class PluginSchedulerPageHelper {
+    private static boolean hasLoaded = false;
+    private static Class<? extends View> pageClass = null;
+    public static Class<? extends View> getPageClass(Configuration conf) {
+      if (!hasLoaded) {
+        loadPluginSchedulerPageClass(conf);
+        hasLoaded = true;
+      }
+      return pageClass;
+    }
+
+    private static void loadPluginSchedulerPageClass(Configuration conf) {
+      Class<?> configuredClass = conf
+          .getClass(YarnConfiguration.YARN_HTTP_WEBAPP_SCHEDULER_PAGE, null);
+      if (!View.class.isAssignableFrom(configuredClass)) {
+        return;
+      }
+      pageClass = (Class<? extends View>) configuredClass;
+    }
   }
 
   public void queue() {

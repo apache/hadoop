@@ -16,51 +16,60 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a;
+package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.EOFException;
 import java.io.IOException;
 
 import org.junit.Test;
 
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.test.HadoopTestBase;
 
-import static org.apache.hadoop.fs.s3a.S3AMultipartUploader.*;
-import static org.apache.hadoop.fs.s3a.S3AMultipartUploader.parsePartHandlePayload;
+import static org.apache.hadoop.fs.s3a.impl.S3AMultipartUploader.PartHandlePayload;
+import static org.apache.hadoop.fs.s3a.impl.S3AMultipartUploader.buildPartHandlePayload;
+import static org.apache.hadoop.fs.s3a.impl.S3AMultipartUploader.parsePartHandlePayload;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
- * Test multipart upload support methods and classes.
+ * Unit test of multipart upload support methods and classes.
  */
 public class TestS3AMultipartUploaderSupport extends HadoopTestBase {
 
+  public static final String PATH = "s3a://bucket/path";
+
+  public static final String UPLOAD = "01";
+
   @Test
   public void testRoundTrip() throws Throwable {
-    Pair<Long, String> result = roundTrip("tag", 1);
-    assertEquals("tag", result.getRight());
-    assertEquals(1, result.getLeft().longValue());
+    PartHandlePayload result = roundTrip(999, "tag", 1);
+    assertEquals(PATH, result.getPath());
+    assertEquals(UPLOAD, result.getUploadId());
+    assertEquals(999, result.getPartNumber());
+    assertEquals("tag", result.getEtag());
+    assertEquals(1, result.getLen());
   }
 
   @Test
   public void testRoundTrip2() throws Throwable {
     long len = 1L + Integer.MAX_VALUE;
-    Pair<Long, String> result = roundTrip("11223344",
-        len);
-    assertEquals("11223344", result.getRight());
-    assertEquals(len, result.getLeft().longValue());
+    PartHandlePayload result =
+        roundTrip(1, "11223344", len);
+    assertEquals(1, result.getPartNumber());
+    assertEquals("11223344", result.getEtag());
+    assertEquals(len, result.getLen());
   }
 
   @Test
   public void testNoEtag() throws Throwable {
     intercept(IllegalArgumentException.class,
-        () -> buildPartHandlePayload("", 1));
+        () -> buildPartHandlePayload(PATH, UPLOAD,
+            0, "", 1));
   }
 
   @Test
   public void testNoLen() throws Throwable {
     intercept(IllegalArgumentException.class,
-        () -> buildPartHandlePayload("tag", -1));
+        () -> buildPartHandlePayload(PATH, UPLOAD, 0, "tag", -1));
   }
 
   @Test
@@ -71,14 +80,17 @@ public class TestS3AMultipartUploaderSupport extends HadoopTestBase {
 
   @Test
   public void testBadHeader() throws Throwable {
-    byte[] bytes = buildPartHandlePayload("tag", 1);
-    bytes[2]='f';
+    byte[] bytes = buildPartHandlePayload(PATH, UPLOAD, 0, "tag", 1);
+    bytes[2] = 'f';
     intercept(IOException.class, "header",
         () -> parsePartHandlePayload(bytes));
   }
 
-  private Pair<Long, String> roundTrip(final String tag, final long len) throws IOException {
-    byte[] bytes = buildPartHandlePayload(tag, len);
+  private PartHandlePayload roundTrip(
+      int partNumber,
+      String tag,
+      long len) throws IOException {
+    byte[] bytes = buildPartHandlePayload(PATH, UPLOAD, partNumber, tag, len);
     return parsePartHandlePayload(bytes);
   }
 }

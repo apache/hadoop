@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.tools.fedbalance;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
@@ -25,7 +26,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.tools.fedbalance.procedure.BalanceProcedure;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
@@ -34,7 +34,6 @@ import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.tools.fedbalance.procedure.BalanceJob;
 import org.apache.hadoop.tools.fedbalance.procedure.BalanceProcedureScheduler;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.slf4j.Logger;
@@ -45,14 +44,13 @@ import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 
-import static org.apache.hadoop.tools.fedbalance.DistCpBalanceOptions.ROUTER;
-import static org.apache.hadoop.tools.fedbalance.DistCpBalanceOptions.FORCE_CLOSE_OPEN;
-import static org.apache.hadoop.tools.fedbalance.DistCpBalanceOptions.MAP;
-import static org.apache.hadoop.tools.fedbalance.DistCpBalanceOptions.BANDWIDTH;
-import static org.apache.hadoop.tools.fedbalance.DistCpBalanceOptions.TRASH;
-import static org.apache.hadoop.tools.fedbalance.DistCpBalanceOptions.DELAY_DURATION;
-import static org.apache.hadoop.tools.fedbalance.DistCpBalanceOptions.CLI_OPTIONS;
-import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.FEDERATION_BALANCE_CLASS;
+import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.ROUTER;
+import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.FORCE_CLOSE_OPEN;
+import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.MAP;
+import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.BANDWIDTH;
+import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.TRASH;
+import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.DELAY_DURATION;
+import static org.apache.hadoop.tools.fedbalance.FedBalanceOptions.CLI_OPTIONS;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.TrashOption;
 
 /**
@@ -72,6 +70,10 @@ public class FedBalance extends Configured implements Tool {
   private static final String DISTCP_PROCEDURE = "distcp-procedure";
   private static final String MOUNT_TABLE_PROCEDURE = "mount-table-procedure";
   private static final String TRASH_PROCEDURE = "trash-procedure";
+
+  private static final String FED_BALANCE_DEFAULT_XML =
+      "hdfs-fedbalance-default.xml";
+  private static final String FED_BALANCE_SITE_XML = "hdfs-fedbalance-site.xml";
 
   /**
    * This class helps building the balance job.
@@ -210,7 +212,7 @@ public class FedBalance extends Configured implements Tool {
   public int run(String[] args) throws Exception {
     CommandLineParser parser = new GnuParser();
     CommandLine command =
-        parser.parse(DistCpBalanceOptions.CLI_OPTIONS, args, true);
+        parser.parse(FedBalanceOptions.CLI_OPTIONS, args, true);
     String[] leftOverArgs = command.getArgs();
     if (leftOverArgs == null || leftOverArgs.length < 1) {
       printUsage();
@@ -356,18 +358,32 @@ public class FedBalance extends Configured implements Tool {
   }
 
   /**
+   * Loads properties from hdfs-fedbalance-default.xml into configuration
+   * object.
+   *
+   * @return Configuration which includes properties from
+   *         hdfs-fedbalance-default.xml and hdfs-fedbalance-site.xml
+   */
+  @VisibleForTesting
+  static Configuration getDefaultConf() {
+    Configuration config = new Configuration();
+    config.addResource(FED_BALANCE_DEFAULT_XML);
+    config.addResource(FED_BALANCE_SITE_XML);
+    return config;
+  }
+
+  /**
    * Main function of the FedBalance program. Parses the input arguments and
    * invokes the FedBalance::run() method, via the ToolRunner.
    * @param argv Command-line arguments sent to FedBalance.
    */
   public static void main(String[] argv) {
-    Configuration conf = new HdfsConfiguration();
-    Class<Tool> balanceClazz = (Class<Tool>) conf
-        .getClass(FEDERATION_BALANCE_CLASS, FedBalance.class);
-    Tool balancer = ReflectionUtils.newInstance(balanceClazz, conf);
+    Configuration conf = getDefaultConf();
+    FedBalance fedBalance = new FedBalance();
+    fedBalance.setConf(conf);
     int exitCode;
     try {
-      exitCode = ToolRunner.run(balancer, argv);
+      exitCode = ToolRunner.run(fedBalance, argv);
     } catch (Exception e) {
       LOG.warn("Couldn't complete FedBalance operation.", e);
       exitCode = -1;

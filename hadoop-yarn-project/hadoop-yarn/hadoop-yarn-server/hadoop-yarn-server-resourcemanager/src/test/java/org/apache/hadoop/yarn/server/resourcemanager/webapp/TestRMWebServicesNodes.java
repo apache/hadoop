@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
 import static org.junit.Assert.assertEquals;
@@ -241,8 +242,10 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
   }
 
   private void sendStartedEvent(RMNode node) {
+    NodeStatus mockNodeStatus = createMockNodeStatus();
     ((RMNodeImpl) node)
-        .handle(new RMNodeStartedEvent(node.getNodeID(), null, null));
+        .handle(new RMNodeStartedEvent(node.getNodeID(), null, null,
+        mockNodeStatus));
   }
 
   private void sendLostEvent(RMNode node) {

@@ -1082,8 +1082,7 @@ public class DataNode extends ReconfigurableBase
     }
 
     // Is the user a member of the super group?
-    List<String> groups = callerUgi.getGroups();
-    if (groups.contains(supergroup)) {
+    if (callerUgi.getGroupsSet().contains(supergroup)) {
       return;
     }
     // Not a superuser.
@@ -3060,7 +3059,7 @@ public class DataNode extends ReconfigurableBase
     final BlockConstructionStage stage;
 
     //get replica information
-    try(AutoCloseableLock lock = data.acquireDatasetLock()) {
+    try(AutoCloseableLock lock = data.acquireDatasetReadLock()) {
       Block storedBlock = data.getStoredBlock(b.getBlockPoolId(),
           b.getBlockId());
       if (null == storedBlock) {

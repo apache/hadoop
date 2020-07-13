@@ -142,6 +142,23 @@ Configuration
 |:---- |:---- |
 | `yarn.scheduler.capacity.maximum-applications` / `yarn.scheduler.capacity.<queue-path>.maximum-applications` | Maximum number of applications in the system which can be concurrently active both running and pending. Limits on each queue are directly proportional to their queue capacities and user limits. This is a hard limit and any applications submitted when this limit is reached will be rejected. Default is 10000. This can be set for all queues with `yarn.scheduler.capacity.maximum-applications` and can also be overridden on a per queue basis by setting `yarn.scheduler.capacity.<queue-path>.maximum-applications`. Integer value expected. |
 | `yarn.scheduler.capacity.maximum-am-resource-percent` / `yarn.scheduler.capacity.<queue-path>.maximum-am-resource-percent` | Maximum percent of resources in the cluster which can be used to run application masters - controls number of concurrent active applications. Limits on each queue are directly proportional to their queue capacities and user limits. Specified as a float - ie 0.5 = 50%. Default is 10%. This can be set for all queues with `yarn.scheduler.capacity.maximum-am-resource-percent` and can also be overridden on a per queue basis by setting `yarn.scheduler.capacity.<queue-path>.maximum-am-resource-percent` |
+| `yarn.scheduler.capacity.max-parallel-apps` / `yarn.scheduler.capacity.<queue-path>.max-parallel-apps` | Maximum number of applications that can run at the same time. Unlike to `maximum-applications`, application submissions are *not* rejected when this limit is reached. Instead they stay in `ACCEPTED` state until they are eligible to run. This can be set for all queues with `yarn.scheduler.capacity.max-parallel-apps` and can also be overridden on a per queue basis by setting `yarn.scheduler.capacity.<queue-path>.max-parallel-apps`. Integer value is expected. By default, there is no limit. |
+
+  You can also limit the number of parallel applications on a per user basis.
+
+| Property | Description |
+|:---- |:---- |
+| `yarn.scheduler.capacity.user.max-parallel-apps` | Maximum number of applications that can run at the same time for all users. Default value is unlimited. |
+| `yarn.scheduler.capacity.user.<username>.max-parallel-apps` | Maximum number of applications that can run at the same for a specific user. This overrides the global setting. |
+
+
+ The evaluation of these limits happens in the following order:
+
+1. `maximum-applications` check - if the limit is exceeded, the submission is rejected immediately.
+
+2. `max-parallel-apps` check - the submission is accepted, but the application will not transition to `RUNNING` state. It stays in `ACCEPTED` until the queue / user limits are satisfied.
+
+3. `maximum-am-resource-percent` check - if there are too many Application Masters running, the application stays in `ACCEPTED` state until there is enough room for it.
 
   * Queue Administration & Permissions
   

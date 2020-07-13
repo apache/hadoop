@@ -15,26 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs;
+package org.apache.hadoop.tools.fedbalance;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileSystemMultipartUploader;
-import org.apache.hadoop.fs.MultipartUploader;
-import org.apache.hadoop.fs.MultipartUploaderFactory;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.junit.Test;
 
-/**
- * Support for HDFS multipart uploads, built on
- * {@link FileSystem#concat(Path, Path[])}.
- */
-public class DFSMultipartUploaderFactory extends MultipartUploaderFactory {
-  protected MultipartUploader createMultipartUploader(FileSystem fs,
-      Configuration conf) {
-    if (fs.getScheme().equals(HdfsConstants.HDFS_URI_SCHEME)) {
-      return new FileSystemMultipartUploader(fs);
-    }
-    return null;
+import static junit.framework.TestCase.assertNotNull;
+import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.SCHEDULER_JOURNAL_URI;
+import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.WORK_THREAD_NUM;
+
+public class TestFedBalance {
+  @Test
+  public void testLoadFedBalanceDefaultConf() {
+    Configuration conf = FedBalance.getDefaultConf();
+    assertNotNull(conf.get(SCHEDULER_JOURNAL_URI));
+    assertNotNull(conf.get(WORK_THREAD_NUM));
   }
 }

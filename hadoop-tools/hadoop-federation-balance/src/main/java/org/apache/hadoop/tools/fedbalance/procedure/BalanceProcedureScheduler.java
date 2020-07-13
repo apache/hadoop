@@ -35,14 +35,12 @@ import org.apache.commons.lang3.builder.CompareToBuilder;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.WORK_THREAD_NUM;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.WORK_THREAD_NUM_DEFAULT;
-import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.JOURNAL_CLASS;
 /**
  * <pre>
  * The state machine framework consist of:
@@ -115,9 +113,8 @@ public class BalanceProcedureScheduler {
     this.readerThread.start();
 
     // init journal.
-    Class<BalanceJournal> clazz = (Class<BalanceJournal>) conf
-        .getClass(JOURNAL_CLASS, BalanceJournalInfoHDFS.class);
-    journal = ReflectionUtils.newInstance(clazz, conf);
+    journal = new BalanceJournalInfoHDFS();
+    journal.setConf(conf);
 
     if (recoverJobs) {
       recoverAllJobs();

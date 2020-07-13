@@ -131,7 +131,7 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
   protected ContainerManagerImpl createContainerManager(
       DeletionService delSrvc) {
     return new ContainerManagerImpl(context, exec, delSrvc,
-        nodeStatusUpdater, metrics, dirsHandler) {
+        getNodeStatusUpdater(), metrics, dirsHandler) {
 
       @Override
       protected UserGroupInformation getRemoteUgi() throws YarnException {
