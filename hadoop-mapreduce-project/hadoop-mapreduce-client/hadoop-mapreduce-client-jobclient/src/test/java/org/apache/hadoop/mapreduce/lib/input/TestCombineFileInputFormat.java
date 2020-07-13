@@ -1641,7 +1641,7 @@ public class TestCombineFileInputFormat {
       namenode = (dfs.getFileSystem()).getUri().getHost() + ":" +
                  (dfs.getFileSystem()).getUri().getPort();
 
-      fileSys = dfs.getFileSystem();
+      fileSys = MissingBlockFileSystem.newInstance(dfs.getURI(), conf);
       if (!fileSys.mkdirs(inDir)) {
         throw new IOException("Mkdirs failed to create " + inDir.toString());
       }
