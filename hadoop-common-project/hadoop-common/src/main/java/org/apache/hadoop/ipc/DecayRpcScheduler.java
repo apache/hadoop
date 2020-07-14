@@ -43,6 +43,7 @@ import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ipc.metrics.DecayRpcSchedulerDetailedMetrics;
+import org.apache.hadoop.ipc.metrics.RpcMetrics;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.MetricsSource;
@@ -632,8 +633,8 @@ public class DecayRpcScheduler implements RpcScheduler,
     addCost(user, processingCost);
 
     int priorityLevel = schedulable.getPriorityLevel();
-    long queueTime = details.get(Timing.QUEUE, TimeUnit.MILLISECONDS);
-    long processingTime = details.get(Timing.PROCESSING, TimeUnit.MILLISECONDS);
+    long queueTime = details.get(Timing.QUEUE, RpcMetrics.TIMEUNIT);
+    long processingTime = details.get(Timing.PROCESSING, RpcMetrics.TIMEUNIT);
 
     this.decayRpcSchedulerDetailedMetrics.addQueueTime(
         priorityLevel, queueTime);
