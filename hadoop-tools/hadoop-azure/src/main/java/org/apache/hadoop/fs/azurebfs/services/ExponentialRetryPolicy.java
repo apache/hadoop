@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import java.util.Random;
 import java.net.HttpURLConnection;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Retry policy used by AbfsClient.

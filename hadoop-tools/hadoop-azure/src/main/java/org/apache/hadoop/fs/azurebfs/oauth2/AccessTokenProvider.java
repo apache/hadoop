@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.azurebfs.oauth2;
 import java.io.IOException;
 import java.util.Date;
 
-import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

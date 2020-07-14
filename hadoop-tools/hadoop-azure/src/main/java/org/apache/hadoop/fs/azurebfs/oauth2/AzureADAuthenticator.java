@@ -27,15 +27,14 @@ import java.util.Date;
 import java.util.Hashtable;
 import java.util.Map;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonToken;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.azurebfs.services.AbfsIoUtils;
@@ -514,10 +513,4 @@ public final class AzureADAuthenticator {
 
     return new String(b, 0, totalBytesRead, StandardCharsets.UTF_8);
   }
-
-  @VisibleForTesting
-  ExponentialRetryPolicy getTokenFetchRetryPolicy() {
-    return TOKEN_FETCH_RETRY_POLICY;
-  }
-
 }

@@ -815,8 +815,7 @@ public class AbfsClient implements Closeable {
 
   public synchronized String getAccessToken() throws IOException {
     if (tokenProvider != null) {
-      return "Bearer " + tokenProvider
-          .getToken().getAccessToken();
+      return "Bearer " + tokenProvider.getToken().getAccessToken();
     } else {
       return null;
     }
