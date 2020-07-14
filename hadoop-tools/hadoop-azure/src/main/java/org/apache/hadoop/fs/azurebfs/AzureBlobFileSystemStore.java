@@ -50,6 +50,7 @@ import java.util.Set;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import org.apache.hadoop.fs.azurebfs.oauth2.AzureADAuthenticator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1179,6 +1180,10 @@ public class AzureBlobFileSystemStore implements Closeable {
     SharedKeyCredentials creds = null;
     AccessTokenProvider tokenProvider = null;
     SASTokenProvider sasTokenProvider = null;
+
+    if (authType == AuthType.OAuth) {
+      AzureADAuthenticator.init(abfsConfiguration);
+    }
 
     if (authType == AuthType.SharedKey) {
       LOG.trace("Fetching SharedKey credentials");

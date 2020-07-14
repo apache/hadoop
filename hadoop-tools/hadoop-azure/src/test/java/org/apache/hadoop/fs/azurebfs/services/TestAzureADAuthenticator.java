@@ -35,14 +35,14 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.D
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MIN_BACKOFF_INTERVAL;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ACCOUNT_NAME;
 
-public class TestAccessTokenProvider extends AbstractAbfsIntegrationTest {
+public class TestAzureADAuthenticator extends AbstractAbfsIntegrationTest {
 
   private static final int TEST_RETRY_COUNT = 10;
   private static final int TEST_MIN_BACKOFF = 20;
   private static final int TEST_MAX_BACKOFF = 30;
   private static final int TEST_DELTA_BACKOFF = 40;
 
-  public TestAccessTokenProvider() throws Exception {
+  public TestAzureADAuthenticator() throws Exception {
     super();
   }
 

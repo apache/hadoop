@@ -24,8 +24,6 @@ import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
-
 /**
  * Returns an Azure Active Directory token when requested. The provider can
  * cache the token if it has already retrieved one. If it does, then the
@@ -40,8 +38,6 @@ public abstract class AccessTokenProvider {
   private AzureADToken token;
   private static final Logger LOG = LoggerFactory.getLogger(AccessTokenProvider.class);
 
-  private ExponentialRetryPolicy tokenFetchRetryPolicy;
-
   /**
    * returns the {@link AzureADToken} cached (or retrieved) by this instance.
    *
@@ -55,16 +51,6 @@ public abstract class AccessTokenProvider {
       token = refreshToken();
     }
     return token;
-  }
-
-  public ExponentialRetryPolicy getTokenFetchRetryPolicy() {
-    return this.tokenFetchRetryPolicy;
-  }
-
-  public void setTokenFetchRetryPolicy(
-      ExponentialRetryPolicy tokenFetchRetryPolicy) {
-    Preconditions.checkNotNull(tokenFetchRetryPolicy, "tokenFetchRetryPolicy");
-    this.tokenFetchRetryPolicy = tokenFetchRetryPolicy;
   }
 
   /**

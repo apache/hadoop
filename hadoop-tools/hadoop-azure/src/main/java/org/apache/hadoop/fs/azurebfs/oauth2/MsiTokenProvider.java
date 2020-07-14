@@ -54,8 +54,7 @@ public class MsiTokenProvider extends AccessTokenProvider {
   protected AzureADToken refreshToken() throws IOException {
     LOG.debug("AADToken: refreshing token from MSI");
     AzureADToken token = AzureADAuthenticator
-        .getTokenFromMsi(authEndpoint, tenantGuid, clientId, authority, false,
-            getTokenFetchRetryPolicy());
+        .getTokenFromMsi(authEndpoint, tenantGuid, clientId, authority, false);
     tokenFetchTime = System.currentTimeMillis();
     return token;
   }

@@ -27,7 +27,9 @@ import java.util.Date;
 import java.util.Hashtable;
 import java.util.Map;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonToken;
@@ -56,8 +58,14 @@ public final class AzureADAuthenticator {
   private static final int CONNECT_TIMEOUT = 30 * 1000;
   private static final int READ_TIMEOUT = 30 * 1000;
 
+  private static ExponentialRetryPolicy TOKEN_FETCH_RETRY_POLICY;
+
   private AzureADAuthenticator() {
     // no operation
+  }
+
+  public static void init(AbfsConfiguration abfsConfiguration) {
+    TOKEN_FETCH_RETRY_POLICY = abfsConfiguration.getOauthTokenFetchRetryPolicy();
   }
 
   /**
@@ -77,14 +85,11 @@ public final class AzureADAuthenticator {
    * @param clientId     the client ID (GUID) of the client web app
    *                     btained from Azure Active Directory configuration
    * @param clientSecret the secret key of the client web app
-   * @param tokenFetchRetryPolicy retry policy to be used for token fetch AAD
-   *                             calls.
    * @return {@link AzureADToken} obtained using the creds
    * @throws IOException throws IOException if there is a failure in connecting to Azure AD
    */
   public static AzureADToken getTokenUsingClientCreds(String authEndpoint,
-      String clientId, String clientSecret,
-      ExponentialRetryPolicy tokenFetchRetryPolicy) throws IOException {
+      String clientId, String clientSecret) throws IOException {
     Preconditions.checkNotNull(authEndpoint, "authEndpoint");
     Preconditions.checkNotNull(clientId, "clientId");
     Preconditions.checkNotNull(clientSecret, "clientSecret");
@@ -101,8 +106,7 @@ public final class AzureADAuthenticator {
     qp.add("client_secret", clientSecret);
     LOG.debug("AADToken: starting to fetch token using client creds for client ID " + clientId);
 
-    return getTokenCall(authEndpoint, qp.serialize(), null, null,
-        tokenFetchRetryPolicy);
+    return getTokenCall(authEndpoint, qp.serialize(), null, null);
   }
 
   /**
@@ -118,15 +122,12 @@ public final class AzureADAuthenticator {
    *                    principal to use. Can be {@code null}.
    * @param bypassCache {@code boolean} specifying whether a cached token is acceptable or a fresh token
    *                    request should me made to AAD
-   * @param tokenFetchRetryPolicy retry policy to be used for token fetch AAD
-   *                             calls.
    * @return {@link AzureADToken} obtained using the creds
    * @throws IOException throws IOException if there is a failure in obtaining the token
    */
   public static AzureADToken getTokenFromMsi(final String authEndpoint,
       final String tenantGuid, final String clientId, String authority,
-      boolean bypassCache, ExponentialRetryPolicy tokenFetchRetryPolicy)
-      throws IOException {
+      boolean bypassCache) throws IOException {
     QueryParams qp = new QueryParams();
     qp.add("api-version", "2018-02-01");
     qp.add("resource", RESOURCE_NAME);
@@ -149,8 +150,7 @@ public final class AzureADAuthenticator {
     headers.put("Metadata", "true");
 
     LOG.debug("AADToken: starting to fetch token using MSI");
-    return getTokenCall(authEndpoint, qp.serialize(), headers, "GET", true,
-        tokenFetchRetryPolicy);
+    return getTokenCall(authEndpoint, qp.serialize(), headers, "GET", true);
   }
 
   /**
@@ -161,16 +161,12 @@ public final class AzureADAuthenticator {
    *                     Active Directory configuration)
    * @param clientId the client ID (GUID) of the client web app obtained from Azure Active Directory configuration
    * @param refreshToken the refresh token
-   * @param tokenFetchRetryPolicy retry policy to be used for token fetch AAD
-   *                             calls.
    * @return {@link AzureADToken} obtained using the refresh token
    * @throws IOException throws IOException if there is a failure in connecting to Azure AD
    */
   public static AzureADToken getTokenUsingRefreshToken(
       final String authEndpoint, final String clientId,
-      final String refreshToken,
-      final ExponentialRetryPolicy tokenFetchRetryPolicy)
-      throws IOException {
+      final String refreshToken) throws IOException {
     QueryParams qp = new QueryParams();
     qp.add("grant_type", "refresh_token");
     qp.add("refresh_token", refreshToken);
@@ -178,7 +174,7 @@ public final class AzureADAuthenticator {
       qp.add("client_id", clientId);
     }
     LOG.debug("AADToken: starting to fetch token using refresh token for client ID " + clientId);
-    return getTokenCall(authEndpoint, qp.serialize(), null, null, tokenFetchRetryPolicy);
+    return getTokenCall(authEndpoint, qp.serialize(), null, null);
   }
 
 
@@ -286,15 +282,12 @@ public final class AzureADAuthenticator {
   }
 
   private static AzureADToken getTokenCall(String authEndpoint, String body,
-      Hashtable<String, String> headers, String httpMethod,
-      ExponentialRetryPolicy tokenFetchRetryPolicy) throws IOException {
-    return getTokenCall(authEndpoint, body, headers, httpMethod, false,
-        tokenFetchRetryPolicy);
+      Hashtable<String, String> headers, String httpMethod) throws IOException {
+    return getTokenCall(authEndpoint, body, headers, httpMethod, false);
   }
 
   private static AzureADToken getTokenCall(String authEndpoint, String body,
-      Hashtable<String, String> headers, String httpMethod, boolean isMsi,
-      ExponentialRetryPolicy tokenFetchRetryPolicy)
+      Hashtable<String, String> headers, String httpMethod, boolean isMsi)
       throws IOException {
     AzureADToken token = null;
 
@@ -320,13 +313,13 @@ public final class AzureADAuthenticator {
             "");
       }
       succeeded = ((httperror == 0) && (ex == null));
-      shouldRetry = !succeeded && tokenFetchRetryPolicy
+      shouldRetry = !succeeded && TOKEN_FETCH_RETRY_POLICY
           .shouldRetry(retryCount, httperror);
       retryCount++;
       if (shouldRetry) {
         LOG.debug("Retrying getTokenSingleCall. RetryCount = {}", retryCount);
         try {
-          Thread.sleep(tokenFetchRetryPolicy.getRetryInterval(retryCount));
+          Thread.sleep(TOKEN_FETCH_RETRY_POLICY.getRetryInterval(retryCount));
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
         }
@@ -521,4 +514,10 @@ public final class AzureADAuthenticator {
 
     return new String(b, 0, totalBytesRead, StandardCharsets.UTF_8);
   }
+
+  @VisibleForTesting
+  ExponentialRetryPolicy getTokenFetchRetryPolicy() {
+    return TOKEN_FETCH_RETRY_POLICY;
+  }
+
 }
