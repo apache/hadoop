@@ -70,6 +70,8 @@ public class StoreContextBuilder {
 
   private ITtlTimeProvider timeProvider;
 
+  private OperationCallbacks operationCallbacks;
+
   public StoreContextBuilder setFsURI(final URI fsURI) {
     this.fsURI = fsURI;
     return this;
@@ -166,6 +168,12 @@ public class StoreContextBuilder {
     return this;
   }
 
+  public StoreContextBuilder setOperationCallbacks(
+          OperationCallbacks operationCallbacks) {
+    this.operationCallbacks = operationCallbacks;
+    return this;
+  }
+
   @SuppressWarnings("deprecation")
   public StoreContext build() {
     return new StoreContext(fsURI,
@@ -184,6 +192,7 @@ public class StoreContextBuilder {
         metadataStore,
         useListV1,
         contextAccessors,
-        timeProvider);
+        timeProvider,
+        operationCallbacks);
   }
 }

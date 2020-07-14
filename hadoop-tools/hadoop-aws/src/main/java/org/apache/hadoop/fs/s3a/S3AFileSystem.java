@@ -362,7 +362,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           FAIL_ON_METADATA_WRITE_ERROR_DEFAULT);
 
       maxKeys = intOption(conf, MAX_PAGING_KEYS, DEFAULT_MAX_PAGING_KEYS, 1);
-      listing = new Listing(this);
+      listing = new Listing(createStoreContext());
       partSize = getMultipartSizeProperty(conf,
           MULTIPART_SIZE, DEFAULT_MULTIPART_SIZE);
       multiPartThreshold = getMultipartSizeProperty(conf,
@@ -1597,6 +1597,44 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               Listing.ACCEPT_ALL_BUT_S3N,
               null));
     }
+
+    @Override
+    public Path keyToQualifiedPath(String key) {
+      return S3AFileSystem.this.keyToQualifiedPath(key);
+    }
+
+    @Override
+    public long getDefaultBlockSize(Path path) {
+      return S3AFileSystem.this.getDefaultBlockSize(path);
+    }
+
+    @Override
+    public int getMaxKeys() {
+      return S3AFileSystem.this.getMaxKeys();
+    }
+
+    @Override
+    @Retries.RetryRaw
+    public S3ListResult listObjects(
+            S3ListRequest request)
+            throws IOException {
+      return S3AFileSystem.this.listObjects(request);
+    }
+
+    @Override
+    @Retries.RetryRaw
+    public S3ListResult continueListObjects(
+            S3ListRequest request,
+            S3ListResult prevResult)
+            throws IOException {
+      return S3AFileSystem.this.continueListObjects(request, prevResult);
+    }
+
+    @Override
+    public S3ALocatedFileStatus toLocatedFileStatus(S3AFileStatus status) throws IOException {
+      return S3AFileSystem.this.toLocatedFileStatus(status);
+    }
+
   }
 
   /**
@@ -4814,6 +4852,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .setUseListV1(useListV1)
         .setContextAccessors(new ContextAccessorsImpl())
         .setTimeProvider(getTtlTimeProvider())
+        .setOperationCallbacks(operationCallbacks)
         .build();
   }
 

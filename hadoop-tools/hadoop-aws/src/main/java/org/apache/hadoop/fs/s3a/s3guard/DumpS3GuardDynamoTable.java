@@ -348,7 +348,7 @@ public class DumpS3GuardDynamoTable extends AbstractS3GuardDynamoDBDiagnostic {
       final CsvFile csv) throws IOException {
     S3AFileSystem fs = getFilesystem();
     Path rootPath = fs.qualify(new Path("/"));
-    Listing listing = new Listing(fs);
+    Listing listing = new Listing(fs.createStoreContext());
     S3ListRequest request = fs.createListObjectsRequest("", null);
     long count = 0;
     RemoteIterator<S3AFileStatus> st =

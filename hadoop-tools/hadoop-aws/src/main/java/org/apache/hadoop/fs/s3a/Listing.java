@@ -30,6 +30,9 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.s3a.impl.AbstractStoreOperation;
+import org.apache.hadoop.fs.s3a.impl.OperationCallbacks;
+import org.apache.hadoop.fs.s3a.impl.StoreContext;
 
 import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
@@ -55,16 +58,15 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
  * Place for the S3A listing classes; keeps all the small classes under control.
  */
 @InterfaceAudience.Private
-public class Listing {
+public class Listing extends AbstractStoreOperation {
 
-  private final S3AFileSystem owner;
   private static final Logger LOG = S3AFileSystem.LOG;
 
   static final FileStatusAcceptor ACCEPT_ALL_BUT_S3N =
       new AcceptAllButS3nDirs();
 
-  public Listing(S3AFileSystem owner) {
-    this.owner = owner;
+  public Listing(StoreContext storeContext) {
+    super(storeContext);
   }
 
   /**
@@ -193,7 +195,7 @@ public class Listing {
    * value.
    *
    * If the status value is null, the iterator declares that it has no data.
-   * This iterator is used to handle {@link S3AFileSystem#listStatus} calls
+   * This iterator is used to handle {@link S3AFileSystem#listStatus(Path)} calls
    * where the path handed in refers to a file, not a directory: this is the
    * iterator returned.
    */
@@ -465,14 +467,15 @@ public class Listing {
       // objects
       for (S3ObjectSummary summary : objects.getObjectSummaries()) {
         String key = summary.getKey();
-        Path keyPath = owner.keyToQualifiedPath(key);
+        Path keyPath = getStoreContext().getOperationCallbacks().keyToQualifiedPath(key);
         if (LOG.isDebugEnabled()) {
           LOG.debug("{}: {}", keyPath, stringify(summary));
         }
         // Skip over keys that are ourselves and old S3N _$folder$ files
         if (acceptor.accept(keyPath, summary) && filter.accept(keyPath)) {
           S3AFileStatus status = createFileStatus(keyPath, summary,
-              owner.getDefaultBlockSize(keyPath), owner.getUsername(),
+                  getStoreContext().getOperationCallbacks().getDefaultBlockSize(keyPath),
+                  getStoreContext().getUsername(),
               summary.getETag(), null);
           LOG.debug("Adding: {}", status);
           stats.add(status);
@@ -485,10 +488,10 @@ public class Listing {
 
       // prefixes: always directories
       for (String prefix : objects.getCommonPrefixes()) {
-        Path keyPath = owner.keyToQualifiedPath(prefix);
+        Path keyPath = getStoreContext().getOperationCallbacks().keyToQualifiedPath(prefix);
         if (acceptor.accept(keyPath, prefix) && filter.accept(keyPath)) {
           S3AFileStatus status = new S3AFileStatus(Tristate.FALSE, keyPath,
-              owner.getUsername());
+              getStoreContext().getUsername());
           LOG.debug("Adding directory: {}", status);
           added++;
           stats.add(status);
@@ -573,8 +576,8 @@ public class Listing {
         Path listPath,
         S3ListRequest request) throws IOException {
       this.listPath = listPath;
-      this.maxKeys = owner.getMaxKeys();
-      this.objects = owner.listObjects(request);
+      this.maxKeys = getStoreContext().getOperationCallbacks().getMaxKeys();
+      this.objects = getStoreContext().getOperationCallbacks().listObjects(request);
       this.request = request;
     }
 
@@ -616,7 +619,7 @@ public class Listing {
           // need to request a new set of objects.
           LOG.debug("[{}], Requesting next {} objects under {}",
               listingCount, maxKeys, listPath);
-          objects = owner.continueListObjects(request, objects);
+          objects = getStoreContext().getOperationCallbacks().continueListObjects(request, objects);
           listingCount++;
           LOG.debug("New listing status: {}", this);
         } catch (AmazonClientException e) {
@@ -716,7 +719,7 @@ public class Listing {
 
     @Override
     public S3ALocatedFileStatus next() throws IOException {
-      return owner.toLocatedFileStatus(statusIterator.next());
+      return getStoreContext().getOperationCallbacks().toLocatedFileStatus(statusIterator.next());
     }
   }
 
