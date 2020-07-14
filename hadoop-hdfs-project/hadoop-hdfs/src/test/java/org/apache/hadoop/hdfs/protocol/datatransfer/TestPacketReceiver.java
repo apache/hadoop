@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hdfs.AppendTestUtil;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -56,7 +57,13 @@ public class TestPacketReceiver {
     buf.get(b);
     return b;
   }
-  
+
+  @Test
+  public void testPacketSize() {
+    assertEquals(PacketReceiver.MAX_PACKET_SIZE,
+            HdfsClientConfigKeys.DFS_DATA_TRANSFER_MAX_PACKET_SIZE_DEFAULT);
+  }
+
   @Test
   public void testReceiveAndMirror() throws IOException {
     PacketReceiver pr = new PacketReceiver(false);
