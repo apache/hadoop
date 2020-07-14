@@ -95,6 +95,7 @@ ENV FINDBUGS_HOME /usr
 #######
 # Install Boost 1.72 (1.65 ships with Bionic)
 #######
+# hadolint ignore=DL3003
 RUN mkdir -p /opt/boost-library \
     && curl -L https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download > boost_1_72_0.tar.bz2 \
     && mv boost_1_72_0.tar.bz2 /opt/boost-library \
