@@ -398,6 +398,10 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
       forbidden("",
           () -> fs.listStatus(ROOT));
       forbidden("",
+          () -> fs.listFiles(ROOT, true));
+      forbidden("",
+          () -> fs.listLocatedStatus(ROOT));
+      forbidden("",
           () -> fs.mkdirs(path("testAssumeRoleFS")));
     }
   }
