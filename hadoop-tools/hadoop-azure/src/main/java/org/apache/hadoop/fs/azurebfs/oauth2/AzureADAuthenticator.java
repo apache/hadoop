@@ -83,9 +83,8 @@ public final class AzureADAuthenticator {
    * @throws IOException throws IOException if there is a failure in connecting to Azure AD
    */
   public static AzureADToken getTokenUsingClientCreds(String authEndpoint,
-                                                      String clientId,
-      String clientSecret, ExponentialRetryPolicy tokenFetchRetryPolicy)
-          throws IOException {
+      String clientId, String clientSecret,
+      ExponentialRetryPolicy tokenFetchRetryPolicy) throws IOException {
     Preconditions.checkNotNull(authEndpoint, "authEndpoint");
     Preconditions.checkNotNull(clientId, "clientId");
     Preconditions.checkNotNull(clientSecret, "clientSecret");
@@ -304,7 +303,7 @@ public final class AzureADAuthenticator {
     boolean succeeded = false;
     int retryCount = 0;
     boolean shouldRetry;
-    LOG.debug("First execution of REST operation getTokenSingleCall");
+    LOG.trace("First execution of REST operation getTokenSingleCall");
     do {
       httperror = 0;
       ex = null;
