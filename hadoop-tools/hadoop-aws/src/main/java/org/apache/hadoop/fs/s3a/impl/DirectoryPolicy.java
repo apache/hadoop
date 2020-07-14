@@ -18,40 +18,37 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
-import java.util.EnumSet;
-import java.util.Set;
+import org.apache.hadoop.fs.Path;
 
-/**
- * Enum of probes which can be made of S3.
- */
-public enum StatusProbeEnum {
+public interface DirectoryPolicy {
 
-  /** The actual path. */
-  Head,
-  /** HEAD of the path + /. */
-  DirMarker,
-  /** LIST under the path. */
-  List;
+  /**
+   * Should a directory marker be retained?
+   * @param path path a file/directory is being created with.
+   * @return true if the marker MAY be kept, false if it MUST be deleted.
+   */
+  boolean keepDirectoryMarkers(Path path);
 
-  /** Look for files and directories. */
-  public static final Set<StatusProbeEnum> ALL =
-      EnumSet.of(Head, List);
+  /**
+   * Supported retention policies.
+   */
+  enum MarkerPolicy {
+    /**
+     * Keep markers.
+     * This is <i>Not backwards compatible</i>.
+     */
+    Keep,
 
-  /** We only want the HEAD. */
-  public static final Set<StatusProbeEnum> HEAD_ONLY =
-      EnumSet.of(Head);
+    /**
+     * Delete markers.
+     * This is what has been done since S3A was released. */
+    Delete,
 
-  /** List operation only. */
-  public static final Set<StatusProbeEnum> LIST_ONLY =
-      EnumSet.of(List);
-
-  /** Look for files and directories. */
-  public static final Set<StatusProbeEnum> FILE =
-      HEAD_ONLY;
-
-  /** Skip the HEAD and only look for directories. */
-  public static final Set<StatusProbeEnum> DIRECTORIES =
-      LIST_ONLY;
-
-
+    /**
+     * Keep markers in authoritative paths only.
+     * This is <i>Not backwards compatible</i> within the
+     * auth paths, but is outside these.
+     */
+    Authoritative
+  }
 }

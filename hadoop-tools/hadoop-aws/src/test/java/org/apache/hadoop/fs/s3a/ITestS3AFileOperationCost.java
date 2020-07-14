@@ -20,11 +20,14 @@ package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
+import org.apache.hadoop.fs.s3a.test.HeadListCosts;
+import org.apache.hadoop.fs.s3a.test.OperationCostValidator;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
@@ -35,33 +38,40 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
+import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY;
+import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_DELETE;
+import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_KEEP;
+import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
+import static org.apache.hadoop.fs.s3a.test.OperationCostValidator.probe;
+import static org.apache.hadoop.fs.s3a.test.OperationCostValidator.probes;
+import static org.apache.hadoop.test.AssertExtensions.dynamicDescription;
 import static org.apache.hadoop.test.GenericTestUtils.getTestDir;
-import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Use metrics to assert about the cost of file status queries.
  * {@link S3AFileSystem#getFileStatus(Path)}.
- * Parameterized on guarded vs raw.
+ * Parameterized on guarded vs raw. and directory marker keep vs delete
  */
 @RunWith(Parameterized.class)
 public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
 
-  private MetricDiff metadataRequests;
-  private MetricDiff listRequests;
-
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3AFileOperationCost.class);
+
+  private OperationCostValidator costValidator;
 
   /**
    * Parameterization.
@@ -69,18 +79,44 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
   @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
-        {"raw", false},
-        {"guarded", true}
+        {"raw-keep-markers", false, true},
+        {"raw-delete-markers", false, false},
+        {"guarded-keep-markers", true, true},
+        {"guarded-delete-markers", true, false}
     });
   }
 
-  private final String name;
-
+  /**
+   * Parameter: should the stores be guarded?
+   */
   private final boolean s3guard;
 
-  public ITestS3AFileOperationCost(final String name, final boolean s3guard) {
-    this.name = name;
+  /**
+   * Parameter: should directory markers be retained?
+   */
+  private final boolean keepMarkers;
+
+  /**
+   * Is this an auth mode test run?
+   */
+  private boolean authoritative;
+
+  /* probe states calculated from the configuration options. */
+  boolean isGuarded;
+  boolean isRaw;
+
+  boolean isAuthoritative;
+  boolean isNonAuth;
+
+  boolean isKeeping;
+
+  boolean isDeleting;
+
+  public ITestS3AFileOperationCost(final String name,
+      final boolean s3guard,
+      final boolean keepMarkers) {
     this.s3guard = s3guard;
+    this.keepMarkers = keepMarkers;
   }
 
   @Override
@@ -89,83 +125,119 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     String bucketName = getTestBucketName(conf);
     removeBucketOverrides(bucketName, conf,
         S3_METADATA_STORE_IMPL);
-    if (!s3guard) {
+    if (!isGuarded()) {
       // in a raw run remove all s3guard settings
       removeBaseAndBucketOverrides(bucketName, conf,
           S3_METADATA_STORE_IMPL);
     }
+    // directory marker options
+    removeBaseAndBucketOverrides(bucketName, conf,
+        DIRECTORY_MARKER_POLICY);
+    conf.set(DIRECTORY_MARKER_POLICY,
+        keepMarkers
+            ? DIRECTORY_MARKER_POLICY_KEEP
+            : DIRECTORY_MARKER_POLICY_DELETE);
+    conf.setBoolean(METADATASTORE_AUTHORITATIVE, authoritative);
     disableFilesystemCaching(conf);
     return conf;
   }
+
   @Override
   public void setup() throws Exception {
     super.setup();
-    if (s3guard) {
+    if (isGuarded()) {
       // s3guard is required for those test runs where any of the
       // guard options are set
       assumeS3GuardState(true, getConfiguration());
     }
     S3AFileSystem fs = getFileSystem();
-    metadataRequests = new MetricDiff(fs, OBJECT_METADATA_REQUESTS);
-    listRequests = new MetricDiff(fs, OBJECT_LIST_REQUESTS);
     skipDuringFaultInjection(fs);
+    authoritative = fs.allowAuthoritative(new Path("/"));
+
+    // build up the states
+    isGuarded = isGuarded();
+    boolean isUnguarded = !isGuarded;
+
+    boolean isAuthoritative = isGuarded && authoritative;
+    boolean isNonAuth = isGuarded && !authoritative;
+
+    boolean isKeeping = isKeepingMarkers ();
+
+    boolean isDeleting = !isKeeping;
+
+    costValidator = OperationCostValidator.builder(getFileSystem())
+        .withMetrics(INVOCATION_COPY_FROM_LOCAL_FILE,
+            OBJECT_COPY_REQUESTS,
+            OBJECT_DELETE_REQUESTS,
+            DIRECTORIES_CREATED,
+            DIRECTORIES_DELETED,
+            FAKE_DIRECTORIES_DELETED,
+            FILES_DELETED,
+            OBJECT_LIST_REQUESTS,
+            OBJECT_METADATA_REQUESTS,
+            OBJECT_PUT_BYTES,
+            OBJECT_PUT_REQUESTS)
+        .build();
+  }
+
+  public void assumeUnguarded() {
+    assume("Unguarded FS only", !isGuarded());
+  }
+
+  public boolean isAuthoritative() {
+    return authoritative;
+  }
+
+  public boolean isGuarded() {
+    return s3guard;
+  }
+
+  public boolean isKeepingMarkers() {
+    return keepMarkers;
   }
 
   @Test
   public void testCostOfLocatedFileStatusOnFile() throws Throwable {
     describe("performing listLocatedStatus on a file");
-    Path file = path(getMethodName() + ".txt");
+    Path file = file(methodPath());
     S3AFileSystem fs = getFileSystem();
-    touch(fs, file);
-    resetMetricDiffs();
-    fs.listLocatedStatus(file);
-    if (!fs.hasMetadataStore()) {
-      // Unguarded FS.
-      metadataRequests.assertDiffEquals(1);
-    }
-    listRequests.assertDiffEquals(1);
+    verifyMetrics(() -> fs.listLocatedStatus(file),
+        raw(OBJECT_LIST_REQUESTS, HeadListCosts.LIST_LOCATED_STATUS_L),
+        nonauth(OBJECT_LIST_REQUESTS, HeadListCosts.LIST_LOCATED_STATUS_L),
+        raw(OBJECT_METADATA_REQUESTS, HeadListCosts.GFS_FILE_PROBE_H));
   }
 
   @Test
   public void testCostOfListLocatedStatusOnEmptyDir() throws Throwable {
     describe("performing listLocatedStatus on an empty dir");
-    Path dir = path(getMethodName());
+    Path dir = dir(methodPath());
     S3AFileSystem fs = getFileSystem();
-    fs.mkdirs(dir);
-    resetMetricDiffs();
-    fs.listLocatedStatus(dir);
-    if (!fs.hasMetadataStore()) {
-      // Unguarded FS.
-      verifyOperationCount(2, 1);
-    } else {
-      if (fs.allowAuthoritative(dir)) {
-        verifyOperationCount(0, 0);
-      } else {
-        verifyOperationCount(0, 1);
-      }
-    }
+    verifyMetrics(() ->
+            fs.listLocatedStatus(dir),
+        raw(OBJECT_METADATA_REQUESTS,
+            HeadListCosts.GFS_FILE_PROBE_H),
+        raw(OBJECT_LIST_REQUESTS,
+            HeadListCosts.LIST_LOCATED_STATUS_L + HeadListCosts.GFS_DIR_L),
+        guarded(OBJECT_METADATA_REQUESTS, 0),
+        authoritative(OBJECT_LIST_REQUESTS, 0),
+        nonauth(OBJECT_LIST_REQUESTS,
+            HeadListCosts.LIST_LOCATED_STATUS_L));
   }
 
   @Test
   public void testCostOfListLocatedStatusOnNonEmptyDir() throws Throwable {
     describe("performing listLocatedStatus on a non empty dir");
-    Path dir = path(getMethodName() + "dir");
+    Path dir = dir(methodPath());
     S3AFileSystem fs = getFileSystem();
-    fs.mkdirs(dir);
-    Path file = new Path(dir, "file.txt");
-    touch(fs, file);
-    resetMetricDiffs();
-    fs.listLocatedStatus(dir);
-    if (!fs.hasMetadataStore()) {
-      // Unguarded FS.
-      verifyOperationCount(0, 1);
-    } else {
-      if(fs.allowAuthoritative(dir)) {
-        verifyOperationCount(0, 0);
-      } else {
-        verifyOperationCount(0, 1);
-      }
-    }
+    Path file = file(new Path(dir, "file.txt"));
+    verifyMetrics(() ->
+          fs.listLocatedStatus(dir),
+        always(OBJECT_METADATA_REQUESTS, 0),
+        raw(OBJECT_LIST_REQUESTS,
+            HeadListCosts.LIST_LOCATED_STATUS_L),
+        authoritative(OBJECT_LIST_REQUESTS, 0),
+        nonauth(OBJECT_LIST_REQUESTS,
+            HeadListCosts.LIST_LOCATED_STATUS_L));
   }
 
   @Test
@@ -174,7 +246,15 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     Path file = path(getMethodName() + ".txt");
     S3AFileSystem fs = getFileSystem();
     touch(fs, file);
-    resetMetricDiffs();
+    verifyMetrics(() ->
+            fs.listFiles(file, true),
+        raw(OBJECT_METADATA_REQUESTS, 1),
+        raw(OBJECT_LIST_REQUESTS,
+            HeadListCosts.LIST_LOCATED_STATUS_L),
+        authoritative(OBJECT_LIST_REQUESTS, 0),
+        nonauth(OBJECT_LIST_REQUESTS,
+            1));
+/*    resetMetricDiffs();
     fs.listFiles(file, true);
     if (!fs.hasMetadataStore()) {
       metadataRequests.assertDiffEquals(1);
@@ -184,7 +264,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
       } else {
         listRequests.assertDiffEquals(1);
       }
-    }
+    }*/
   }
 
   @Test
@@ -193,17 +273,11 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     Path dir = path(getMethodName());
     S3AFileSystem fs = getFileSystem();
     fs.mkdirs(dir);
-    resetMetricDiffs();
-    fs.listFiles(dir, true);
-    if (!fs.hasMetadataStore()) {
-      verifyOperationCount(2, 1);
-    } else {
-      if (fs.allowAuthoritative(dir)) {
-        verifyOperationCount(0, 0);
-      } else {
-        verifyOperationCount(0, 1);
-      }
-    }
+    verifyMetrics(() ->
+            fs.listFiles(dir, true),
+        expectHeadList(isRaw, 2, 1),
+        expectHeadList(isAuthoritative, 0, 0),
+        expectHeadList(isNonAuth, 0, 1));
   }
 
   @Test
@@ -241,107 +315,114 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
   @Test
   public void testCostOfGetFileStatusOnFile() throws Throwable {
     describe("performing getFileStatus on a file");
-    Path simpleFile = path("simple.txt");
-    S3AFileSystem fs = getFileSystem();
-    touch(fs, simpleFile);
-    resetMetricDiffs();
-    FileStatus status = fs.getFileStatus(simpleFile);
+    Path simpleFile = file(methodPath());
+    S3AFileStatus status = verifyRawGetFileStatus(simpleFile, true,
+        StatusProbeEnum.ALL,
+        HeadListCosts.GFS_SINGLE_FILE_H,
+        HeadListCosts.GFS_SINGLE_FILE_L);
     assertTrue("not a file: " + status, status.isFile());
-    if (!fs.hasMetadataStore()) {
-      metadataRequests.assertDiffEquals(1);
-    }
-    listRequests.assertDiffEquals(0);
   }
 
-  private void resetMetricDiffs() {
-    reset(metadataRequests, listRequests);
-  }
-
-  /**
-   * Verify that the head and list calls match expectations,
-   * then reset the counters ready for the next operation.
-   * @param head expected HEAD count
-   * @param list expected LIST count
-   */
-  private void verifyOperationCount(int head, int list) {
-    metadataRequests.assertDiffEquals(head);
-    listRequests.assertDiffEquals(list);
-    metadataRequests.reset();
-    listRequests.reset();
-  }
 
   @Test
   public void testCostOfGetFileStatusOnEmptyDir() throws Throwable {
     describe("performing getFileStatus on an empty directory");
-    S3AFileSystem fs = getFileSystem();
-    Path dir = path("empty");
-    fs.mkdirs(dir);
-    resetMetricDiffs();
-    S3AFileStatus status = fs.innerGetFileStatus(dir, true,
-        StatusProbeEnum.ALL);
+    Path dir = dir(methodPath());
+    S3AFileStatus status = verifyRawGetFileStatus(dir, true,
+        StatusProbeEnum.ALL,
+        HeadListCosts.GFS_MARKER_H,
+        HeadListCosts.GFS_EMPTY_DIR_L);
     assertSame("not empty: " + status, Tristate.TRUE,
         status.isEmptyDirectory());
-
-    if (!fs.hasMetadataStore()) {
-      metadataRequests.assertDiffEquals(2);
-    }
-    listRequests.assertDiffEquals(0);
-
     // but now only ask for the directories and the file check is skipped.
-    resetMetricDiffs();
-    fs.innerGetFileStatus(dir, false,
-        StatusProbeEnum.DIRECTORIES);
-    if (!fs.hasMetadataStore()) {
-      metadataRequests.assertDiffEquals(1);
-    }
+    verifyRawGetFileStatus(dir, false,
+        StatusProbeEnum.DIRECTORIES,
+        HeadListCosts.GFS_DIR_PROBE_H,
+        HeadListCosts.GFS_EMPTY_DIR_L);
+
+    // now look at isFile/isDir against the same entry
+    isDir(dir, true, 0,
+        HeadListCosts.GFS_EMPTY_DIR_L);
+    isFile(dir, false,
+        HeadListCosts.GFS_SINGLE_FILE_H, HeadListCosts.GFS_SINGLE_FILE_L);
   }
 
   @Test
   public void testCostOfGetFileStatusOnMissingFile() throws Throwable {
     describe("performing getFileStatus on a missing file");
-    S3AFileSystem fs = getFileSystem();
-    Path path = path("missing");
-    resetMetricDiffs();
-    intercept(FileNotFoundException.class,
-        () -> fs.getFileStatus(path));
-    metadataRequests.assertDiffEquals(2);
-    listRequests.assertDiffEquals(1);
+    verifyRawGetFileStatusFNFE(methodPath(), false,
+        StatusProbeEnum.ALL,
+        HeadListCosts.GFS_FNFE_H,
+        HeadListCosts.GFS_FNFE_L);
   }
 
   @Test
-  public void testCostOfGetFileStatusOnMissingSubPath() throws Throwable {
-    describe("performing getFileStatus on a missing file");
-    S3AFileSystem fs = getFileSystem();
-    Path path = path("missingdir/missingpath");
-    resetMetricDiffs();
-    intercept(FileNotFoundException.class,
-        () -> fs.getFileStatus(path));
-    metadataRequests.assertDiffEquals(2);
-    listRequests.assertDiffEquals(1);
+  public void testIsDirIsFileMissingPath() throws Throwable {
+    describe("performing isDir and isFile on a missing file");
+    Path path = methodPath();
+    // now look at isFile/isDir against the same entry
+    isDir(path, false,
+        HeadListCosts.GFS_DIR_PROBE_H,
+        HeadListCosts.GFS_DIR_PROBE_L);
+    isFile(path, false,
+        HeadListCosts.GFS_FILE_PROBE_H,
+        HeadListCosts.GFS_FILE_PROBE_L);
   }
 
   @Test
   public void testCostOfGetFileStatusOnNonEmptyDir() throws Throwable {
     describe("performing getFileStatus on a non-empty directory");
+    Path dir = dir(methodPath());
+    Path simpleFile = file(new Path(dir, "simple.txt"));
+    S3AFileStatus status = verifyRawGetFileStatus(dir, true,
+            StatusProbeEnum.ALL,
+        HeadListCosts.GFS_DIR_H, HeadListCosts.GFS_DIR_L);
+    assertEmptyDirStatus(status, Tristate.FALSE);
+  }
+
+  /**
+   * This creates a directory with a child and then deletes it.
+   * The parent dir must be found and declared as empty.
+   */
+  @Test
+  public void testDeleteFile() throws Throwable {
+    describe("performing getFileStatus on newly emptied directory");
     S3AFileSystem fs = getFileSystem();
-    Path dir = path("empty");
-    fs.mkdirs(dir);
-    Path simpleFile = new Path(dir, "simple.txt");
-    touch(fs, simpleFile);
-    resetMetricDiffs();
-    S3AFileStatus status = fs.innerGetFileStatus(dir, true,
-        StatusProbeEnum.ALL);
-    if (status.isEmptyDirectory() == Tristate.TRUE) {
-      // erroneous state
-      String fsState = fs.toString();
-      fail("FileStatus says directory isempty: " + status
-          + "\n" + ContractTestUtils.ls(fs, dir)
-          + "\n" + fsState);
-    }
-    if (!fs.hasMetadataStore()) {
-      metadataRequests.assertDiffEquals(2);
-      listRequests.assertDiffEquals(1);
-    }
+    // creates the marker
+    Path dir = dir(methodPath());
+    // file creation may have deleted that marker, but it may
+    // still be there
+    Path simpleFile = file(new Path(dir, "simple.txt"));
+
+    verifyMetrics(() -> {
+          fs.delete(simpleFile, false);
+          return "after fs.delete(simpleFile) " + metricSummary;
+        },
+        // delete file. For keeping: that's it
+        probe(isRaw && isKeeping, OBJECT_METADATA_REQUESTS,
+            HeadListCosts.GFS_FILE_PROBE_H),
+        // if deleting markers, look for the parent too
+        probe(isRaw && isDeleting, OBJECT_METADATA_REQUESTS,
+            HeadListCosts.GFS_FILE_PROBE_H  + HeadListCosts.GFS_DIR_PROBE_H),
+        raw(OBJECT_LIST_REQUESTS,
+            HeadListCosts.GFS_FILE_PROBE_L + HeadListCosts.GFS_DIR_PROBE_L),
+        always(DIRECTORIES_DELETED, 0),
+        always(FILES_DELETED, 1),
+
+        // keeping: create no parent dirs or delete parents
+        keeping(DIRECTORIES_CREATED, 0),
+        keeping(OBJECT_DELETE_REQUESTS, HeadListCosts.DELETE_OBJECT_REQUEST),
+
+        // deleting: create a parent and delete any of its parents
+        deleting(DIRECTORIES_CREATED, 1),
+        deleting(OBJECT_DELETE_REQUESTS,
+            HeadListCosts.DELETE_OBJECT_REQUEST
+                + HeadListCosts.DELETE_MARKER_REQUEST)
+    );
+    // there is an empty dir for a parent
+    S3AFileStatus status = verifyRawGetFileStatus(dir, true,
+        StatusProbeEnum.ALL, HeadListCosts.GFS_DIR_H, HeadListCosts.GFS_DIR_L);
+    assertEmptyDirStatus(status, Tristate.TRUE);
   }
 
   @Test
@@ -361,19 +442,18 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
       byte[] data = dataset(len, 'A', 'Z');
       writeDataset(localFS, localPath, data, len, 1024, true);
       S3AFileSystem s3a = getFileSystem();
-      MetricDiff copyLocalOps = new MetricDiff(s3a,
-          INVOCATION_COPY_FROM_LOCAL_FILE);
-      MetricDiff putRequests = new MetricDiff(s3a,
-          OBJECT_PUT_REQUESTS);
-      MetricDiff putBytes = new MetricDiff(s3a,
-          OBJECT_PUT_BYTES);
 
-      Path remotePath = path("copied");
-      s3a.copyFromLocalFile(false, true, localPath, remotePath);
+
+      Path remotePath = methodPath();
+
+      verifyMetrics(() -> {
+            s3a.copyFromLocalFile(false, true, localPath, remotePath);
+            return "copy";
+          },
+          always(INVOCATION_COPY_FROM_LOCAL_FILE, 1),
+          always(OBJECT_PUT_REQUESTS, 1),
+          always(OBJECT_PUT_BYTES, len));
       verifyFileContents(s3a, remotePath, data);
-      copyLocalOps.assertDiffEquals(1);
-      putRequests.assertDiffEquals(1);
-      putBytes.assertDiffEquals(len);
       // print final stats
       LOG.info("Filesystem {}", s3a);
     } finally {
@@ -381,133 +461,129 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     }
   }
 
-  private boolean reset(MetricDiff... diffs) {
-    for (MetricDiff diff : diffs) {
-      diff.reset();
-    }
-    return true;
+  @Test
+  public void testDirMarkersSubdir() throws Throwable {
+    describe("verify cost of deep subdir creation");
+
+    Path subDir = new Path(methodPath(), "1/2/3/4/5/6");
+    // one dir created, possibly a parent removed
+    verifyMetrics(() -> {
+          mkdirs(subDir);
+          return "after mkdir(subDir) " + metricSummary;
+        },
+        always(DIRECTORIES_CREATED, 1),
+        always(DIRECTORIES_DELETED, 0),
+        keeping(OBJECT_DELETE_REQUESTS, 0),
+        keeping(FAKE_DIRECTORIES_DELETED, 0),
+        deleting(OBJECT_DELETE_REQUESTS, HeadListCosts.DELETE_MARKER_REQUEST),
+        // delete all possible fake dirs above the subdirectory
+        deleting(FAKE_DIRECTORIES_DELETED, directoriesInPath(subDir) - 1));
   }
 
   @Test
-  public void testFakeDirectoryDeletion() throws Throwable {
-    describe("Verify whether create file works after renaming a file. "
-        + "In S3, rename deletes any fake directories as a part of "
-        + "clean up activity");
+  public void testDirMarkersFileCreation() throws Throwable {
+    describe("verify cost of file creation");
+
+    Path srcBaseDir = dir(methodPath());
+
+    Path srcDir = dir(new Path(srcBaseDir, "1/2/3/4/5/6"));
+
+    // creating a file should trigger demise of the src dir marker
+    // unless markers are being kept
+
+    verifyMetrics(() -> {
+          file(new Path(srcDir, "source.txt"));
+          return "after touch(fs, srcFilePath) " + metricSummary;
+        },
+        always(DIRECTORIES_CREATED, 0),
+        always(DIRECTORIES_DELETED, 0),
+        // keeping: no delete operations.
+        keeping(OBJECT_DELETE_REQUESTS, 0),
+        keeping(FAKE_DIRECTORIES_DELETED, 0),
+        // delete all possible fake dirs above the file
+        deleting(OBJECT_DELETE_REQUESTS, 1),
+        deleting(FAKE_DIRECTORIES_DELETED, directoriesInPath(srcDir)));
+  }
+
+  @Test
+  public void testRenameFileToDifferentDirectory() throws Throwable {
+    describe("rename a file to a different directory, "
+        + "keeping the source dir present");
     S3AFileSystem fs = getFileSystem();
 
-    Path srcBaseDir = path("src");
-    mkdirs(srcBaseDir);
-    MetricDiff deleteRequests =
-        new MetricDiff(fs, Statistic.OBJECT_DELETE_REQUESTS);
-    MetricDiff directoriesDeleted =
-        new MetricDiff(fs, Statistic.DIRECTORIES_DELETED);
-    MetricDiff fakeDirectoriesDeleted =
-        new MetricDiff(fs, Statistic.FAKE_DIRECTORIES_DELETED);
-    MetricDiff directoriesCreated =
-        new MetricDiff(fs, Statistic.DIRECTORIES_CREATED);
+    Path baseDir = dir(methodPath());
 
-    // when you call toString() on this, you get the stats
-    // so it gets auto-evaluated in log calls.
-    Object summary = new Object() {
-      @Override
-      public String toString() {
-        return String.format("[%s, %s, %s, %s]",
-            directoriesCreated, directoriesDeleted,
-            deleteRequests, fakeDirectoriesDeleted);
-      }
-    };
-
-    // reset operation to invoke
-    Callable<Boolean> reset = () ->
-        reset(deleteRequests, directoriesCreated, directoriesDeleted,
-          fakeDirectoriesDeleted);
-
-    Path srcDir = new Path(srcBaseDir, "1/2/3/4/5/6");
-    int srcDirDepth = directoriesInPath(srcDir);
-    // one dir created, one removed
-    mkdirs(srcDir);
-    String state = "after mkdir(srcDir) " + summary;
-    directoriesCreated.assertDiffEquals(state, 1);
-    deleteRequests.assertDiffEquals(state, 1);
-    directoriesDeleted.assertDiffEquals(state, 0);
-    // HADOOP-14255 deletes unnecessary fake directory objects in mkdirs()
-    fakeDirectoriesDeleted.assertDiffEquals(state, srcDirDepth - 1);
-    reset.call();
-
-    // creating a file should trigger demise of the src dir
-    final Path srcFilePath = new Path(srcDir, "source.txt");
-    touch(fs, srcFilePath);
-    state = "after touch(fs, srcFilePath) " + summary;
-    deleteRequests.assertDiffEquals(state, 1);
-    directoriesCreated.assertDiffEquals(state, 0);
-    directoriesDeleted.assertDiffEquals(state, 0);
-    fakeDirectoriesDeleted.assertDiffEquals(state, srcDirDepth);
-
-    reset.call();
-
-    // create a directory tree, expect the dir to be created and
-    // a request to delete all parent directories made.
-    Path destBaseDir = path("dest");
-    Path destDir = new Path(destBaseDir, "1/2/3/4/5/6");
-    Path destFilePath = new Path(destDir, "dest.txt");
-    mkdirs(destDir);
-    state = "after mkdir(destDir) " + summary;
-
-    int destDirDepth = directoriesInPath(destDir);
-    directoriesCreated.assertDiffEquals(state, 1);
-    deleteRequests.assertDiffEquals(state, 1);
-    directoriesDeleted.assertDiffEquals(state, 0);
-    fakeDirectoriesDeleted.assertDiffEquals(state, destDirDepth - 1);
+    Path srcDir = new Path(baseDir, "1/2/3/4/5/6");
+    final Path srcFilePath = file(new Path(srcDir, "source.txt"));
 
     // create a new source file.
     // Explicitly use a new path object to guarantee that the parent paths
-    // are different object instances
-    final Path srcFile2 = new Path(srcDir.toUri() + "/source2.txt");
-    touch(fs, srcFile2);
+    // are different object instances and so equals() rather than ==
+    // is
+    Path parent2 = srcFilePath.getParent();
+    Path srcFile2 = file(new Path(parent2, "source2.txt"));
+    Assertions.assertThat(srcDir)
+        .isNotSameAs(parent2);
+    Assertions.assertThat(srcFilePath.getParent())
+        .isEqualTo(srcFile2.getParent());
 
-    reset.call();
+    // create a directory tree, expect the dir to be created and
+    // possibly a request to delete all parent directories made.
+    Path destBaseDir = new Path(baseDir, "dest");
+    Path destDir = dir(new Path(destBaseDir, "a/b/c/d"));
+    Path destFilePath = new Path(destDir, "dest.txt");
 
     // rename the source file to the destination file.
-    // this tests the file rename path, not the dir rename path
+    // this tests file rename, not dir rename
     // as srcFile2 exists, the parent dir of srcFilePath must not be created.
-    fs.rename(srcFilePath, destFilePath);
-    state = String.format("after rename(srcFilePath, destFilePath)"
-            + " %s dest dir depth=%d",
-        summary,
-        destDirDepth);
+    verifyMetrics(() ->
+      execRename(srcFilePath, destFilePath),
+        raw(OBJECT_METADATA_REQUESTS,
+            HeadListCosts.RENAME_SINGLE_FILE_RENAME_H),
+        raw(OBJECT_LIST_REQUESTS,
+            HeadListCosts.RENAME_SINGLE_FILE_RENAME_DIFFERENT_DIR_L),
+        always(DIRECTORIES_CREATED, 0),
+        always(DIRECTORIES_DELETED, 0),
+        // keeping: only the core delete operation is issued.
+        keeping(OBJECT_DELETE_REQUESTS, HeadListCosts.DELETE_OBJECT_REQUEST),
+        keeping(FAKE_DIRECTORIES_DELETED, 0),
+        // deleting: delete any fake marker above the destination.
+        deleting(OBJECT_DELETE_REQUESTS,
+            HeadListCosts.DELETE_OBJECT_REQUEST + HeadListCosts.DELETE_MARKER_REQUEST),
+        deleting(FAKE_DIRECTORIES_DELETED, directoriesInPath(destDir)));
 
-    directoriesCreated.assertDiffEquals(state, 0);
-    // one for the renamed file, one for the parent of the dest dir
-    deleteRequests.assertDiffEquals(state, 2);
-    directoriesDeleted.assertDiffEquals(state, 0);
-    fakeDirectoriesDeleted.assertDiffEquals(state, destDirDepth);
-
-    // these asserts come after the checks on iop counts, so they don't
-    // interfere
     assertIsFile(destFilePath);
     assertIsDirectory(srcDir);
     assertPathDoesNotExist("should have gone in the rename", srcFilePath);
-    reset.call();
-
-    // rename the source file2 to the (no longer existing
-    // this tests the file rename path, not the dir rename path
-    // as srcFile2 exists, the parent dir of srcFilePath must not be created.
-    fs.rename(srcFile2, srcFilePath);
-    state = String.format("after rename(%s, %s) %s dest dir depth=%d",
-        srcFile2, srcFilePath,
-        summary,
-        destDirDepth);
-
-    // here we expect there to be no fake directories
-    directoriesCreated.assertDiffEquals(state, 0);
-    // one for the renamed file only
-    deleteRequests.assertDiffEquals(state, 1);
-    directoriesDeleted.assertDiffEquals(state, 0);
-    fakeDirectoriesDeleted.assertDiffEquals(state, 0);
   }
 
-  private int directoriesInPath(Path path) {
-    return path.isRoot() ? 0 : 1 + directoriesInPath(path.getParent());
+  /**
+   * Same directory rename is lower cost as there's no need to
+   * look for the parent dir of the dest path or worry about
+   * deleting markers.
+   */
+  @Test
+  public void testRenameSameDirectory() throws Throwable {
+    describe("rename a file to a different directory, "
+        + "keeping the source dir present");
+
+    Path baseDir = dir(methodPath());
+    final Path sourceFile = file(new Path(baseDir, "source.txt"));
+
+    // create a new source file.
+    // Explicitly use a new path object to guarantee that the parent paths
+    // are different object instances and so equals() rather than ==
+    // is
+    Path parent2 = sourceFile.getParent();
+    Path destFile = new Path(parent2, "dest");
+    verifyMetrics(() ->
+            execRename(sourceFile, destFile),
+        raw(OBJECT_METADATA_REQUESTS, HeadListCosts.RENAME_SINGLE_FILE_RENAME_H),
+        raw(OBJECT_LIST_REQUESTS, HeadListCosts.GFS_FNFE_L),
+        always(OBJECT_COPY_REQUESTS, 1),
+        always(DIRECTORIES_CREATED, 0),
+        always(OBJECT_DELETE_REQUESTS, HeadListCosts.DELETE_OBJECT_REQUEST),
+        always(FAKE_DIRECTORIES_DELETED, 0));
   }
 
   @Test
@@ -518,56 +594,44 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
 
     // unique name, so that even when run in parallel tests, there's no conflict
     String uuid = UUID.randomUUID().toString();
-    Path src = new Path("/src-" + uuid);
+    Path src = file(new Path("/src-" + uuid));
     Path dest = new Path("/dest-" + uuid);
-
     try {
-      MetricDiff deleteRequests =
-          new MetricDiff(fs, Statistic.OBJECT_DELETE_REQUESTS);
-      MetricDiff directoriesDeleted =
-          new MetricDiff(fs, Statistic.DIRECTORIES_DELETED);
-      MetricDiff fakeDirectoriesDeleted =
-          new MetricDiff(fs, Statistic.FAKE_DIRECTORIES_DELETED);
-      MetricDiff directoriesCreated =
-          new MetricDiff(fs, Statistic.DIRECTORIES_CREATED);
-      touch(fs, src);
-      fs.rename(src, dest);
-      Object summary = new Object() {
-        @Override
-        public String toString() {
-          return String.format("[%s, %s, %s, %s]",
-              directoriesCreated, directoriesDeleted,
-              deleteRequests, fakeDirectoriesDeleted);
-        }
-      };
 
-      String state = String.format("after touch(%s) %s",
-          src, summary);
-      touch(fs, src);
-      fs.rename(src, dest);
-      directoriesCreated.assertDiffEquals(state, 0);
-
-
-      state = String.format("after rename(%s, %s) %s",
-          src, dest, summary);
-      // here we expect there to be no fake directories
-      directoriesCreated.assertDiffEquals(state, 0);
-      // one for the renamed file only
-      deleteRequests.assertDiffEquals(state, 1);
-      directoriesDeleted.assertDiffEquals(state, 0);
-      fakeDirectoriesDeleted.assertDiffEquals(state, 0);
+      verifyMetrics(() -> {
+        fs.rename(src, dest);
+        return "after fs.rename(/src,/dest) " + metricSummary;
+        },
+          // TWO HEAD for exists, one for source MD in copy
+          raw(OBJECT_METADATA_REQUESTS,
+              HeadListCosts.RENAME_SINGLE_FILE_RENAME_H),
+          raw(OBJECT_LIST_REQUESTS,
+              HeadListCosts.GFS_FNFE_L),
+          // here we expect there to be no fake directories
+          always(DIRECTORIES_CREATED, 0),
+          // one for the renamed file only
+          always(OBJECT_DELETE_REQUESTS,
+              HeadListCosts.DELETE_OBJECT_REQUEST),
+          // no directories are deleted: This is root
+          always(DIRECTORIES_DELETED, 0),
+          // no fake directories are deleted: This is root
+          always(FAKE_DIRECTORIES_DELETED, 0),
+          always(FILES_DELETED, 1));
 
       // delete that destination file, assert only the file delete was issued
-      reset(deleteRequests, directoriesCreated, directoriesDeleted,
-          fakeDirectoriesDeleted);
+      verifyMetrics(() -> {
+        fs.delete(dest, false);
+        return "after fs.delete(/dest) " + metricSummary;
+        },
+          always(DIRECTORIES_CREATED, 0),
+          always(DIRECTORIES_DELETED, 0),
+          always(FAKE_DIRECTORIES_DELETED, 0),
+          always(FILES_DELETED, 1),
+          always(OBJECT_DELETE_REQUESTS, HeadListCosts.DELETE_OBJECT_REQUEST),
+          raw(OBJECT_METADATA_REQUESTS, HeadListCosts.GFS_FILE_PROBE_H),
+          raw(OBJECT_LIST_REQUESTS, 0)   /* no need to look at parent. */
+          );
 
-      fs.delete(dest, false);
-      // here we expect there to be no fake directories
-      directoriesCreated.assertDiffEquals(state, 0);
-      // one for the deleted file
-      deleteRequests.assertDiffEquals(state, 1);
-      directoriesDeleted.assertDiffEquals(state, 0);
-      fakeDirectoriesDeleted.assertDiffEquals(state, 0);
     } finally {
       fs.delete(src, false);
       fs.delete(dest, false);
@@ -576,73 +640,126 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
 
   @Test
   public void testDirProbes() throws Throwable {
-    describe("Test directory probe cost -raw only");
+    describe("Test directory probe cost");
+    assumeUnguarded();
     S3AFileSystem fs = getFileSystem();
-    assume("Unguarded FS only", !fs.hasMetadataStore());
-    String dir = "testEmptyDirHeadProbe";
-    Path emptydir = path(dir);
     // Create the empty directory.
-    fs.mkdirs(emptydir);
+    Path emptydir = dir(methodPath());
 
-    // metrics and assertions.
-    resetMetricDiffs();
+    // head probe fails
+    verifyRawGetFileStatusFNFE(emptydir, false,
+        StatusProbeEnum.HEAD_ONLY,
+        HeadListCosts.GFS_FILE_PROBE_H,
+        HeadListCosts.GFS_FILE_PROBE_L);
 
-    intercept(FileNotFoundException.class, () ->
-        fs.innerGetFileStatus(emptydir, false,
-            StatusProbeEnum.HEAD_ONLY));
-    verifyOperationCount(1, 0);
+    // a LIST will find it and declare as empty
+    S3AFileStatus status = verifyRawGetFileStatus(emptydir, true,
+        StatusProbeEnum.LIST_ONLY, 0,
+        HeadListCosts.GFS_EMPTY_DIR_L);
+    assertEmptyDirStatus(status, Tristate.TRUE);
 
-    // a LIST will find it -but it doesn't consider it an empty dir.
-    S3AFileStatus status = fs.innerGetFileStatus(emptydir, true,
-        StatusProbeEnum.LIST_ONLY);
-    verifyOperationCount(0, 1);
-    Assertions.assertThat(status)
-        .describedAs("LIST output is not considered empty")
-        .matches(s -> !s.isEmptyDirectory().equals(Tristate.TRUE),  "is empty");
-
-    // finally, skip all probes and expect no operations toThere are
-    // take place
-    intercept(FileNotFoundException.class, () ->
-        fs.innerGetFileStatus(emptydir, false,
-            EnumSet.noneOf(StatusProbeEnum.class)));
-    verifyOperationCount(0, 0);
+    // skip all probes and expect no operations to take place
+    verifyRawGetFileStatusFNFE(emptydir, false,
+        EnumSet.noneOf(StatusProbeEnum.class),
+        0, 0);
 
     // now add a trailing slash to the key and use the
     // deep internal s3GetFileStatus method call.
     String emptyDirTrailingSlash = fs.pathToKey(emptydir.getParent())
-        + "/" + dir +  "/";
+        + "/" + emptydir.getName() +  "/";
     // A HEAD request does not probe for keys with a trailing /
-    intercept(FileNotFoundException.class, () ->
+    verifyRawHeadListIntercepting(FileNotFoundException.class, "",
+        0, 0, () ->
         fs.s3GetFileStatus(emptydir, emptyDirTrailingSlash,
-            StatusProbeEnum.HEAD_ONLY, null));
-    verifyOperationCount(0, 0);
+            StatusProbeEnum.HEAD_ONLY, null, false));
 
     // but ask for a directory marker and you get the entry
-    status = fs.s3GetFileStatus(emptydir,
-        emptyDirTrailingSlash,
-        StatusProbeEnum.DIR_MARKER_ONLY, null);
-    verifyOperationCount(1, 0);
+    status = verifyRawHeadList(0, HeadListCosts.GFS_EMPTY_DIR_L, () ->
+        fs.s3GetFileStatus(emptydir,
+            emptyDirTrailingSlash,
+            StatusProbeEnum.LIST_ONLY,
+            null,
+            true));
     assertEquals(emptydir, status.getPath());
+    assertEmptyDirStatus(status, Tristate.TRUE);
+  }
+
+  /**
+   * Assert the empty directory status of a file is as expected.
+   * @param status status to probe.
+   * @param expected expected value
+   */
+  protected void assertEmptyDirStatus(final S3AFileStatus status,
+      final Tristate expected) {
+    Assertions.assertThat(status.isEmptyDirectory())
+        .describedAs(dynamicDescription(() ->
+            "FileStatus says directory is not empty: " + status
+                + "\n" + ContractTestUtils.ls(getFileSystem(), status.getPath())))
+        .isEqualTo(expected);
   }
 
   @Test
   public void testCreateCost() throws Throwable {
     describe("Test file creation cost -raw only");
-    S3AFileSystem fs = getFileSystem();
-    assume("Unguarded FS only", !fs.hasMetadataStore());
-    resetMetricDiffs();
-    Path testFile = path("testCreateCost");
-
+    assumeUnguarded();
+    Path testFile = methodPath();
     // when overwrite is false, the path is checked for existence.
-    try (FSDataOutputStream out = fs.create(testFile, false)) {
-      verifyOperationCount(2, 1);
-    }
-
+    create(testFile, false, HeadListCosts.GFS_FNFE_H, HeadListCosts.GFS_FNFE_L);
     // but when true: only the directory checks take place.
-    try (FSDataOutputStream out = fs.create(testFile, true)) {
-      verifyOperationCount(1, 1);
-    }
+    create(testFile, true, 0, HeadListCosts.GFS_FNFE_L);
+  }
 
+  @Test
+  public void testCreateCostFileExists() throws Throwable {
+    describe("Test cost of create file failing with existing file");
+    assumeUnguarded();
+    Path testFile = file(methodPath());
+
+    // now there is a file there, an attempt with overwrite == false will
+    // fail on the first HEAD.
+    verifyRawHeadListIntercepting(FileAlreadyExistsException.class, "",
+        HeadListCosts.GFS_FILE_PROBE_H, 0,
+        () -> file(testFile, false));
+  }
+
+  @Test
+  public void testCreateCostDirExists() throws Throwable {
+    describe("Test cost of create file failing with existing dir");
+    assumeUnguarded();
+    Path testFile = dir(methodPath());
+
+    // now there is a file there, an attempt with overwrite == false will
+    // fail on the first HEAD.
+    verifyRawHeadListIntercepting(FileAlreadyExistsException.class, "",
+        HeadListCosts.GFS_MARKER_H, HeadListCosts.GFS_EMPTY_DIR_L,
+        () -> file(testFile, false));
+  }
+
+  /**
+   * Use the builder API.
+   * This always looks for a parent unless the caller says otherwise.
+   */
+  @Test
+  public void testCreateBuilder() throws Throwable {
+    describe("Test builder file creation cost -raw only");
+    assumeUnguarded();
+    Path testFile = methodPath();
+    dir(testFile.getParent());
+
+    // builder defaults to looking for parent existence (non-recursive)
+    buildFile(testFile, false,  false,
+        HeadListCosts.GFS_FILE_PROBE_H,   // destination file
+        HeadListCosts.GFS_DIR_PROBE_L * 2);    // destination file and parent dir
+    // recursive = false and overwrite=true:
+    // only make sure the dest path isn't a directory.
+    buildFile(testFile, true, true,
+        HeadListCosts.GFS_DIR_PROBE_H, HeadListCosts.GFS_DIR_PROBE_L);
+
+    // now there is a file there, an attempt with overwrite == false will
+    // fail on the first HEAD.
+    verifyRawHeadListIntercepting(FileAlreadyExistsException.class, "",
+        HeadListCosts.GFS_FILE_PROBE_H, 0, () ->
+            buildFile(testFile, false, true, HeadListCosts.GFS_FILE_PROBE_H, 0));
   }
 
   @Test
@@ -688,4 +805,342 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     // no additional operations from symlink resolution
     verifyOperationCount(2, 2);
   }
+
+  /**
+   * Create then close the file.
+   * @param path path
+   * @param overwrite overwrite flag
+   * @param head expected head count
+   * @param list expected list count
+   * @return path to new object.
+   */
+  private Path create(Path path, boolean overwrite,
+      int head, int list) throws Exception {
+    return verifyRawHeadList(head, list, () ->
+      file(path, overwrite));
+  }
+
+  /**
+   * Create then close the file through the builder API.
+   * @param path path
+   * @param overwrite overwrite flag
+   * @param recursive true == skip parent existence check
+   * @param head expected head count
+   * @param list expected list count
+   * @return path to new object.
+   */
+  private Path buildFile(Path path,
+      boolean overwrite,
+      boolean recursive,
+      int head,
+      int list) throws IOException {
+    resetStatistics();
+    verifyRawHeadList(head, list, () -> {
+      FSDataOutputStreamBuilder builder = getFileSystem().createFile(path)
+          .overwrite(overwrite);
+      if (recursive) {
+        builder.recursive();
+      }
+      builder.build().close();
+    });
+    return path;
+  }
+
+  /**
+   * Create a directory, returning its path.
+   * @param p path to dir.
+   * @return path of new dir
+   */
+  private Path dir(Path p) throws IOException {
+    mkdirs(p);
+    return p;
+  }
+
+  /**
+   * Create a file, returning its path.
+   * @param p path to file.
+   * @return path of new file
+   */
+  private Path file(Path p) throws IOException {
+    return file(p, true);
+  }
+
+  /**
+   * Create a file, returning its path.
+   * @param path path to file.
+   * @param overwrite overwrite flag
+   * @return path of new file
+   */
+  private Path file(Path path, final boolean overwrite)
+      throws IOException {
+    getFileSystem().create(path, overwrite).close();
+    return path;
+  }
+
+
+  /**
+   * Execute rename, returning the current metrics.
+   * For use in l-expressions.
+   * @param source source path.
+   * @param dest dest path
+   * @return a string for exceptions.
+   */
+  public String execRename(final Path source,
+      final Path dest) throws IOException {
+    getFileSystem().rename(source, dest);
+    return String.format("rename(%s, %s): %s", dest, source, metricSummary);
+  }
+
+  /**
+   * How many directories are in a path?
+   * @param path path to probe.
+   * @return the number of entries below root this path is
+   */
+  private int directoriesInPath(Path path) {
+    return path.isRoot() ? 0 : 1 + directoriesInPath(path.getParent());
+  }
+
+  /**
+   * Reset all the metrics being tracked.
+   */
+  private void resetStatistics() {
+    costValidator.resetMetricDiffs();
+  }
+
+  /**
+   * Execute a closure and verify the metrics.
+   * @param eval closure to evaluate
+   * @param expected varargs list of expected diffs
+   * @param <T> return type.
+   * @return the result of the evaluation
+   */
+  private <T> T verifyMetrics(
+      Callable<T> eval,
+      OperationCostValidator.ExpectedProbe... expected) throws Exception {
+    return costValidator.verify(eval, expected);
+
+  }
+
+  /**
+   * Execute a closure, expecting an exception.
+   * Verify the metrics after the exception has been caught and
+   * validated.
+   * @param clazz type of exception
+   * @param text text to look for in exception (optional)
+   * @param eval closure to evaluate
+   * @param expected varargs list of expected diffs
+   * @param <T> return type of closure
+   * @param <E> exception type
+   * @return the exception caught.
+   * @throws Exception any other exception
+   */
+  private <T, E extends Throwable> E verifyMetricsIntercepting(
+      Class<E> clazz,
+      String text,
+      Callable<T> eval,
+      OperationCostValidator.ExpectedProbe... expected) throws Exception {
+    return costValidator.verifyIntercepting(clazz, text, eval, expected);
+  }
+
+  /**
+   * Execute a closure expecting an exception.
+   * @param clazz type of exception
+   * @param text text to look for in exception (optional)
+   * @param head expected head request count.
+   * @param list expected list request count.
+   * @param eval closure to evaluate
+   * @param <T> return type of closure
+   * @param <E> exception type
+   * @return the exception caught.
+   * @throws Exception any other exception
+   */
+  private <T, E extends Throwable> E verifyRawHeadListIntercepting(
+      Class<E> clazz,
+      String text,
+      int head,
+      int list,
+      Callable<T> eval) throws Exception {
+    return verifyMetricsIntercepting(clazz, text, eval,
+        raw(OBJECT_METADATA_REQUESTS, head),
+        raw(OBJECT_LIST_REQUESTS, list));
+  }
+
+
+  /**
+   * Verify that the head and list calls match expectations,
+   * then reset the counters ready for the next operation.
+   * @param head expected HEAD count
+   * @param list expected LIST count
+   * @return a probe list
+   */
+  private OperationCostValidator.ExpectedProbe
+   expectHeadList(boolean enabled,
+      int head, int list) {
+    return probes(enabled,
+        probe(OBJECT_METADATA_REQUESTS, head),
+        probe(OBJECT_LIST_REQUESTS, list));
+  }
+
+  /**
+   * Execute a closure expecting a specific number of HEAD/LIST calls
+   * on <i>raw</i> S3 stores only.
+   * @param head expected head request count.
+   * @param list expected list request count.
+   * @param eval closure to evaluate
+   * @param <T> return type of closure
+   * @return the result of the evaluation
+   */
+  private <T> T verifyRawHeadList(
+      int head,
+      int list,
+      Callable<T> eval) throws Exception {
+    return verifyMetrics(eval,
+        expectHeadList(isRaw, head, list));
+  }
+
+  /**
+   * Execute innerGetFileStatus for the given probes
+   * and expect in raw FS to have the specific HEAD/LIST count.
+   */
+  public S3AFileStatus verifyRawGetFileStatus(final Path path,
+      boolean needEmptyDirectoryFlag,
+      Set<StatusProbeEnum> probes, int head, int list) throws Exception {
+    return verifyRawHeadList(head, list, () ->
+        getFileSystem().innerGetFileStatus(path, needEmptyDirectoryFlag,
+            probes));
+  }
+
+  /**
+   * Execute innerGetFileStatus for the given probes and expect failure
+   * and expect in raw FS to have the specific HEAD/LIST count.
+   */
+  public void verifyRawGetFileStatusFNFE(final Path path,
+      boolean needEmptyDirectoryFlag,
+      Set<StatusProbeEnum> probes, int head, int list) throws Exception {
+    verifyRawHeadListIntercepting(FileNotFoundException.class, "",
+        head, list, () ->
+            getFileSystem().innerGetFileStatus(path, needEmptyDirectoryFlag,
+                probes));
+  }
+
+  /**
+   * Probe for a path being a directory.
+   * Metrics are only checked on unguarded stores.
+   * @param path path
+   * @param expected expected outcome
+   * @param head head count (unguarded)
+   * @param list listCount (unguarded)
+   */
+  private void isDir(Path path, boolean expected,
+      int head, int list) throws Exception {
+    boolean b = verifyRawHeadList(head, list, () ->
+        getFileSystem().isDirectory(path));
+    Assertions.assertThat(b)
+        .describedAs("isDirectory(%s)", path)
+        .isEqualTo(expected);
+  }
+
+  /**
+   * Probe for a path being a file.
+   * Metrics are only checked on unguarded stores.
+   * @param path path
+   * @param expected expected outcome
+   * @param head head count (unguarded)
+   * @param list listCount (unguarded)
+   */
+  private void isFile(Path path, boolean expected,
+      int head, int list) throws Exception {
+    boolean b = verifyRawHeadList(head, list, () ->
+        getFileSystem().isFile(path));
+    Assertions.assertThat(b)
+        .describedAs("isFile(%s)", path)
+        .isEqualTo(expected);
+  }
+
+  /**
+   * A metric diff which must always hold.
+   * @param Statistic metric source
+   * @param expected expected value.
+   * @return the diff.
+   */
+  private OperationCostValidator.ExpectedProbe always(
+      final Statistic Statistic, final int expected) {
+    return probe(Statistic, expected);
+  }
+
+  /**
+   * A metric diff which must hold when the fs is unguarded.
+   * @param Statistic metric source
+   * @param expected expected value.
+   * @return the diff.
+   */
+  private OperationCostValidator.ExpectedProbe raw(
+      final Statistic Statistic, final int expected) {
+    return probe(isRaw, Statistic, expected);
+  }
+
+  /**
+   * A metric diff which must hold when the fs is guarded.
+   * @param Statistic metric source
+   * @param expected expected value.
+   * @return the diff.
+   */
+  private OperationCostValidator.ExpectedProbe guarded(
+      final Statistic Statistic,
+      final int expected) {
+    return probe(isGuarded, Statistic, expected);
+  }
+
+  /**
+   * A metric diff which must hold when the fs is guarded + authoritative.
+   * @param Statistic metric source
+   * @param expected expected value.
+   * @return the diff.
+   */
+  private OperationCostValidator.ExpectedProbe authoritative(final Statistic Statistic,
+      final int expected) {
+    return probe(isAuthoritative, Statistic, expected);
+  }
+
+  /**
+   * A metric diff which must hold when the fs is guarded + authoritative.
+   * @param Statistic metric source
+   * @param expected expected value.
+   * @return the diff.
+   */
+  private OperationCostValidator.ExpectedProbe nonauth(final Statistic Statistic,
+      final int expected) {
+    return probe(isNonAuth, Statistic, expected);
+  }
+
+  /**
+   * A metric diff which must hold when the fs is keeping markers
+   * @param Statistic metric source
+   * @param expected expected value.
+   * @return the diff.
+   */
+  private OperationCostValidator.ExpectedProbe keeping(final Statistic Statistic,
+      final int expected) {
+    return probe(isKeeping, Statistic, expected);
+  }
+
+  /**
+   * A metric diff which must hold when the fs is keeping markers
+   * @param Statistic metric source
+   * @param expected expected value.
+   * @return the diff.
+   */
+  private OperationCostValidator.ExpectedProbe deleting(
+      final Statistic Statistic,
+      final int expected) {
+    return probe(isDeleting, Statistic, expected);
+  }
+
+
+  /**
+   * A special object whose toString() value is the current
+   * state of the metrics.
+   */
+  private final Object metricSummary = costValidator;
+
 }

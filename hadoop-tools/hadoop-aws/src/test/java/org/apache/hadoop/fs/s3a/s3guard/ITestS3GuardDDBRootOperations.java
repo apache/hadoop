@@ -38,9 +38,12 @@ import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY;
+import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_DELETE;
 import static org.apache.hadoop.fs.s3a.Constants.ENABLE_MULTI_DELETE;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_KEY;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3AUtils.applyLocatedFiles;
@@ -82,13 +85,17 @@ public class ITestS3GuardDDBRootOperations extends AbstractS3ATestBase {
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     String bucketName = getTestBucketName(conf);
+    disableFilesystemCaching(conf);
 
     // set a sleep time of 0 on pruning, for speedier test runs.
-    removeBucketOverrides(bucketName, conf, ENABLE_MULTI_DELETE);
+    removeBucketOverrides(bucketName, conf, ENABLE_MULTI_DELETE,
+        DIRECTORY_MARKER_POLICY);
     conf.setTimeDuration(
         S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_KEY,
         0,
         TimeUnit.MILLISECONDS);
+    conf.set(DIRECTORY_MARKER_POLICY,
+             DIRECTORY_MARKER_POLICY_DELETE);
     return conf;
   }
 
