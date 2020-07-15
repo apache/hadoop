@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.fs.azurebfs.oauth2;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
@@ -293,6 +295,7 @@ public final class AzureADAuthenticator {
     int httperror = 0;
     IOException ex = null;
     boolean succeeded = false;
+    boolean isRecoverableFailure = true;
     int retryCount = 0;
     boolean shouldRetry;
     LOG.trace("First execution of REST operation getTokenSingleCall");
@@ -306,14 +309,15 @@ public final class AzureADAuthenticator {
         ex = e;
       } catch (IOException e) {
         httperror = -1;
+        isRecoverableFailure = isRecoverableFailure(e);
         ex = new HttpException(httperror, "", String
             .format("AzureADAuthenticator.getTokenCall threw %s : %s",
                 e.getClass().getTypeName(), e.getMessage()), authEndpoint, "",
             "");
       }
       succeeded = ((httperror == 0) && (ex == null));
-      shouldRetry = !succeeded && TOKEN_FETCH_RETRY_POLICY
-          .shouldRetry(retryCount, httperror);
+      shouldRetry = !succeeded && isRecoverableFailure
+          && TOKEN_FETCH_RETRY_POLICY.shouldRetry(retryCount, httperror);
       retryCount++;
       if (shouldRetry) {
         LOG.debug("Retrying getTokenSingleCall. RetryCount = {}", retryCount);
@@ -329,6 +333,11 @@ public final class AzureADAuthenticator {
       throw ex;
     }
     return token;
+  }
+
+  private static boolean isRecoverableFailure(IOException e) {
+    return !(e instanceof MalformedURLException
+        || e instanceof FileNotFoundException);
   }
 
   private static AzureADToken getTokenSingleCall(String authEndpoint,
