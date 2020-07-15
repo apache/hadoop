@@ -74,7 +74,6 @@ import org.apache.hadoop.yarn.util.Times;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 
@@ -355,14 +354,9 @@ public class AggregatedLogFormat {
               : this.logAggregationContext.getRolledLogsExcludePattern(),
           candidates, true);
 
-      Iterable<File> mask =
-          Iterables.filter(candidates, new Predicate<File>() {
-            @Override
-            public boolean apply(File next) {
-              return !alreadyUploadedLogFiles
-                  .contains(getLogFileMetaData(next));
-            }
-          });
+      Iterable<File> mask = Iterables.filter(candidates, (input) ->
+          !alreadyUploadedLogFiles
+              .contains(getLogFileMetaData(input)));
       return Sets.newHashSet(mask);
     }
 
