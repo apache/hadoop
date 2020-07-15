@@ -37,11 +37,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.LongAccumulator;
 
-import com.google.common.base.Function;
 import com.google.common.base.Joiner;
-import com.google.common.collect.Iterables;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.ClientGSIContext;
@@ -303,15 +302,11 @@ public abstract class HATestUtil {
   public static <P extends FailoverProxyProvider<?>> void
       setFailoverConfigurations(Configuration conf, String logicalName,
       List<InetSocketAddress> nnAddresses, Class<P> classFPP) {
-    setFailoverConfigurations(conf, logicalName,
-        Iterables.transform(nnAddresses, new Function<InetSocketAddress, String>() {
-
-          // transform the inet address to a simple string
-          @Override
-          public String apply(InetSocketAddress addr) {
-            return "hdfs://" + addr.getHostName() + ":" + addr.getPort();
-          }
-        }), classFPP);
+    final List<String> addresses = new ArrayList();
+    nnAddresses.forEach(
+        addr -> addresses.add(
+            "hdfs://" + addr.getHostName() + ":" + addr.getPort()));
+    setFailoverConfigurations(conf, logicalName, addresses, classFPP);
   }
 
   public static <P extends FailoverProxyProvider<?>>
