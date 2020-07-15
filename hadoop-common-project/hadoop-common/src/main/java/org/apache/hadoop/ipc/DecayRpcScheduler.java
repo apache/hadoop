@@ -40,6 +40,7 @@ import com.google.common.util.concurrent.AtomicDoubleArray;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.ipc.metrics.RpcMetrics;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.MetricsSource;
@@ -614,8 +615,8 @@ public class DecayRpcScheduler implements RpcScheduler,
     addCost(user, processingCost);
 
     int priorityLevel = schedulable.getPriorityLevel();
-    long queueTime = details.get(Timing.QUEUE, TimeUnit.MILLISECONDS);
-    long processingTime = details.get(Timing.PROCESSING, TimeUnit.MILLISECONDS);
+    long queueTime = details.get(Timing.QUEUE, RpcMetrics.TIMEUNIT);
+    long processingTime = details.get(Timing.PROCESSING, RpcMetrics.TIMEUNIT);
 
     responseTimeCountInCurrWindow.getAndIncrement(priorityLevel);
     responseTimeTotalInCurrWindow.getAndAdd(priorityLevel,
