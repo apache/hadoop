@@ -23,7 +23,6 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConfigurationPropertyNotFoundException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.KeyProviderException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.fs.azurebfs.diagnostics.Base64StringConfigurationBasicValidator;
@@ -39,7 +38,7 @@ public class SimpleKeyProvider implements KeyProvider {
 
   @Override
   public String getStorageAccountKey(String accountName, Configuration rawConfig)
-      throws KeyProviderException, ConfigurationPropertyNotFoundException {
+      throws KeyProviderException {
     String key = null;
 
     try {
@@ -49,9 +48,6 @@ public class SimpleKeyProvider implements KeyProvider {
       // Validating the key.
       validateStorageAccountKey(key);
     } catch (IllegalAccessException | InvalidConfigurationValueException e) {
-      if (key == null) {
-        throw new ConfigurationPropertyNotFoundException(accountName);
-      }
       throw new KeyProviderException("Failure to initialize configuration", e);
     } catch(IOException ioe) {
       LOG.warn("Unable to get key from credential providers. {}", ioe);

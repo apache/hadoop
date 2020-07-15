@@ -24,7 +24,6 @@ import java.util.Arrays;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConfigurationPropertyNotFoundException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.KeyProviderException;
 import org.apache.hadoop.util.Shell;
 import org.slf4j.Logger;
@@ -39,7 +38,7 @@ public class ShellDecryptionKeyProvider extends SimpleKeyProvider {
 
   @Override
   public String getStorageAccountKey(String accountName, Configuration rawConfig)
-      throws KeyProviderException, ConfigurationPropertyNotFoundException {
+      throws KeyProviderException {
     String envelope = super.getStorageAccountKey(accountName, rawConfig);
 
     AbfsConfiguration abfsConfig;

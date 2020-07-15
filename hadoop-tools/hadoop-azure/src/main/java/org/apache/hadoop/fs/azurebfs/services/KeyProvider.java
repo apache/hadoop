@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConfigurationPropertyNotFoundException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.KeyProviderException;
 
 /**
@@ -40,5 +39,5 @@ public interface KeyProvider {
    *         the storage account key.
    */
   String getStorageAccountKey(String accountName, Configuration conf)
-      throws KeyProviderException, ConfigurationPropertyNotFoundException;
+      throws KeyProviderException;
 }
