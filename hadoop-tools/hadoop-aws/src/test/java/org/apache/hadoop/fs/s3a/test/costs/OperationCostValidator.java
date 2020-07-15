@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.test;
+package org.apache.hadoop.fs.s3a.test.costs;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,7 +27,10 @@ import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
 import org.assertj.core.api.Assumptions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.s3a.ITestS3AFileOperationCost;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
@@ -40,8 +43,11 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  */
 public class OperationCostValidator {
 
+  private static final Logger LOG =
+      LoggerFactory.getLogger(OperationCostValidator.class);
+
   /**
-   * The empty probe. This is a no-op.
+   * The empty probe.
    */
   public static final ExpectedProbe EMPTY_PROBE =
       new ProbeList(new ArrayList<>());
@@ -91,7 +97,8 @@ public class OperationCostValidator {
    */
   public <T> T verify(
       Callable<T> eval,
-      ExpectedProbe... expected) throws Exception {
+      ExpectedProbe... expectedA) throws Exception {
+    List<ExpectedProbe> expected = Arrays.asList(expectedA);
     resetMetricDiffs();
     // verify that 1+ probe is enabled
     assumeProbesEnabled(expected);
@@ -99,7 +106,12 @@ public class OperationCostValidator {
     // evaluate it
     T r = eval.call();
     // build the text for errors
-    String text = r != null ? r.toString() : "operation returning null";
+    String text =
+        "operation returning "
+            + (r != null ? r.toString() : "null");
+    LOG.info("{}", text);
+    LOG.info("state {}", this);
+    LOG.info("probes {}", expected);
     for (ExpectedProbe ed : expected) {
       ed.verify(this, text);
     }
@@ -112,13 +124,16 @@ public class OperationCostValidator {
    * If none of them are enabled, the evaluation will be skipped.
    * @param expected list of expected probes
    */
-  private void assumeProbesEnabled(ExpectedProbe[] expected) {
+  private void assumeProbesEnabled(List<ExpectedProbe> expected) {
     boolean enabled = false;
     for (ExpectedProbe ed : expected) {
       enabled |= ed.isEnabled();
     }
+    String pstr = expected.stream()
+        .map(Object::toString)
+        .collect(Collectors.joining(", "));
     Assumptions.assumeThat(enabled)
-        .describedAs("metrics to probe for")
+        .describedAs("metrics to probe for are not enabled in %s", pstr)
         .isTrue();
   }
 
@@ -230,7 +245,9 @@ public class OperationCostValidator {
   public static ExpectedProbe probes(
       final boolean enabled,
       final ExpectedProbe...plist) {
-    return new ProbeList(Arrays.asList(plist));
+    return enabled
+        ? new ProbeList(Arrays.asList(plist))
+        : EMPTY_PROBE;
   }
 
   /**
@@ -291,16 +308,33 @@ public class OperationCostValidator {
     public boolean isEnabled() {
       return true;
     }
+
+    @Override
+    public String toString() {
+      String sb = "ExpectSingleStatistic{"
+          + statistic
+          + ", expected=" + expected
+          + ", enabled=" + isEnabled()
+          + '}';
+      return sb;
+    }
   }
 
   /**
    * A list of probes; the verify operation
-   * verifies them all
+   * verifies them all.
    */
   public static class ProbeList implements ExpectedProbe {
 
+    /**
+     * Probe list.
+     */
     private final List<ExpectedProbe> probes;
 
+    /**
+     * Constructor.
+     * @param probes probe list.
+     */
     public ProbeList(final List<ExpectedProbe> probes) {
       this.probes = probes;
     }
@@ -322,6 +356,14 @@ public class OperationCostValidator {
         enabled |= probe.isEnabled();
       }
       return enabled;
+    }
+
+    @Override
+    public String toString() {
+      String pstr = probes.stream()
+          .map(Object::toString)
+          .collect(Collectors.joining(", "));
+      return "ProbeList{" + pstr + '}';
     }
   }
 }

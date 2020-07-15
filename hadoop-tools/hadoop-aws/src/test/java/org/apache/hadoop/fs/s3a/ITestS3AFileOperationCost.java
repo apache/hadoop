@@ -26,8 +26,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
-import org.apache.hadoop.fs.s3a.test.HeadListCosts;
-import org.apache.hadoop.fs.s3a.test.OperationCostValidator;
+import org.apache.hadoop.fs.s3a.test.costs.OperationCostValidator;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
@@ -55,8 +54,9 @@ import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
-import static org.apache.hadoop.fs.s3a.test.OperationCostValidator.probe;
-import static org.apache.hadoop.fs.s3a.test.OperationCostValidator.probes;
+import static org.apache.hadoop.fs.s3a.test.costs.HeadListCosts.*;
+import static org.apache.hadoop.fs.s3a.test.costs.OperationCostValidator.probe;
+import static org.apache.hadoop.fs.s3a.test.costs.OperationCostValidator.probes;
 import static org.apache.hadoop.test.AssertExtensions.dynamicDescription;
 import static org.apache.hadoop.test.GenericTestUtils.getTestDir;
 
@@ -156,14 +156,14 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
 
     // build up the states
     isGuarded = isGuarded();
-    boolean isUnguarded = !isGuarded;
 
-    boolean isAuthoritative = isGuarded && authoritative;
-    boolean isNonAuth = isGuarded && !authoritative;
+    isRaw = !isGuarded;
+    isAuthoritative = isGuarded && authoritative;
+    isNonAuth = isGuarded && !authoritative;
 
-    boolean isKeeping = isKeepingMarkers ();
+    isKeeping = isKeepingMarkers ();
 
-    boolean isDeleting = !isKeeping;
+    isDeleting = !isKeeping;
 
     costValidator = OperationCostValidator.builder(getFileSystem())
         .withMetrics(INVOCATION_COPY_FROM_LOCAL_FILE,
@@ -184,12 +184,44 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     assume("Unguarded FS only", !isGuarded());
   }
 
+  /**
+   * Is the store guarded authoritatively on the test path?
+   * @return true if the condition is met on this test run.
+   */
   public boolean isAuthoritative() {
     return authoritative;
   }
 
+  /**
+   * Is the store guarded?
+   * @return true if the condition is met on this test run.
+   */
   public boolean isGuarded() {
     return s3guard;
+  }
+
+  /**
+   * Is the store raw?
+   * @return true if the condition is met on this test run.
+   */
+  public boolean isRaw() {
+    return isRaw;
+  }
+
+  /**
+   * Is the store guarded non-authoritatively on the test path?
+   * @return true if the condition is met on this test run.
+   */
+  public boolean isNonAuth() {
+    return isNonAuth;
+  }
+
+  public boolean isKeeping() {
+    return isKeeping;
+  }
+
+  public boolean isDeleting() {
+    return isDeleting;
   }
 
   public boolean isKeepingMarkers() {
@@ -202,9 +234,9 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     Path file = file(methodPath());
     S3AFileSystem fs = getFileSystem();
     verifyMetrics(() -> fs.listLocatedStatus(file),
-        raw(OBJECT_LIST_REQUESTS, HeadListCosts.LIST_LOCATED_STATUS_L),
-        nonauth(OBJECT_LIST_REQUESTS, HeadListCosts.LIST_LOCATED_STATUS_L),
-        raw(OBJECT_METADATA_REQUESTS, HeadListCosts.GFS_FILE_PROBE_H));
+        raw(OBJECT_LIST_REQUESTS, LIST_LOCATED_STATUS_L),
+        nonauth(OBJECT_LIST_REQUESTS, LIST_LOCATED_STATUS_L),
+        raw(OBJECT_METADATA_REQUESTS, FILESTATUS_FILE_PROBE_H));
   }
 
   @Test
@@ -214,14 +246,12 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     S3AFileSystem fs = getFileSystem();
     verifyMetrics(() ->
             fs.listLocatedStatus(dir),
-        raw(OBJECT_METADATA_REQUESTS,
-            HeadListCosts.GFS_FILE_PROBE_H),
-        raw(OBJECT_LIST_REQUESTS,
-            HeadListCosts.LIST_LOCATED_STATUS_L + HeadListCosts.GFS_DIR_L),
+        expectRawHeadList(FILESTATUS_FILE_PROBE_H,
+            LIST_LOCATED_STATUS_L + GETFILESTATUS_DIR_L),
         guarded(OBJECT_METADATA_REQUESTS, 0),
         authoritative(OBJECT_LIST_REQUESTS, 0),
         nonauth(OBJECT_LIST_REQUESTS,
-            HeadListCosts.LIST_LOCATED_STATUS_L));
+            LIST_LOCATED_STATUS_L));
   }
 
   @Test
@@ -234,10 +264,10 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
           fs.listLocatedStatus(dir),
         always(OBJECT_METADATA_REQUESTS, 0),
         raw(OBJECT_LIST_REQUESTS,
-            HeadListCosts.LIST_LOCATED_STATUS_L),
+            LIST_LOCATED_STATUS_L),
         authoritative(OBJECT_LIST_REQUESTS, 0),
         nonauth(OBJECT_LIST_REQUESTS,
-            HeadListCosts.LIST_LOCATED_STATUS_L));
+            LIST_LOCATED_STATUS_L));
   }
 
   @Test
@@ -248,36 +278,26 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     touch(fs, file);
     verifyMetrics(() ->
             fs.listFiles(file, true),
-        raw(OBJECT_METADATA_REQUESTS, 1),
-        raw(OBJECT_LIST_REQUESTS,
-            HeadListCosts.LIST_LOCATED_STATUS_L),
+        expectRawHeadList(GETFILESTATUS_SINGLE_FILE_H,
+            LIST_LOCATED_STATUS_L),
         authoritative(OBJECT_LIST_REQUESTS, 0),
         nonauth(OBJECT_LIST_REQUESTS,
-            1));
-/*    resetMetricDiffs();
-    fs.listFiles(file, true);
-    if (!fs.hasMetadataStore()) {
-      metadataRequests.assertDiffEquals(1);
-    } else {
-      if (fs.allowAuthoritative(file)) {
-        listRequests.assertDiffEquals(0);
-      } else {
-        listRequests.assertDiffEquals(1);
-      }
-    }*/
+            LIST_FILES_L));
   }
 
   @Test
   public void testCostOfListFilesOnEmptyDir() throws Throwable {
-    describe("Performing listFiles() on an empty dir");
+    describe("Perpforming listFiles() on an empty dir with marker");
+    // this attem
     Path dir = path(getMethodName());
     S3AFileSystem fs = getFileSystem();
     fs.mkdirs(dir);
     verifyMetrics(() ->
             fs.listFiles(dir, true),
-        expectHeadList(isRaw, 2, 1),
-        expectHeadList(isAuthoritative, 0, 0),
-        expectHeadList(isNonAuth, 0, 1));
+        expectRawHeadList(GETFILESTATUS_EMPTY_DIR_H,
+            LIST_FILES_L + GETFILESTATUS_EMPTY_DIR_L),
+        expectAuthHeadList(0, 0),
+        expectNonauthHeadList(0, LIST_FILES_L));
   }
 
   @Test
@@ -288,17 +308,11 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     fs.mkdirs(dir);
     Path file = new Path(dir, "file.txt");
     touch(fs, file);
-    resetMetricDiffs();
-    fs.listFiles(dir, true);
-    if (!fs.hasMetadataStore()) {
-      verifyOperationCount(0, 1);
-    } else {
-      if (fs.allowAuthoritative(dir)) {
-        verifyOperationCount(0, 0);
-      } else {
-        verifyOperationCount(0, 1);
-      }
-    }
+    verifyMetrics(() ->
+            fs.listFiles(dir, true),
+        expectRawHeadList(0, LIST_FILES_L),
+        expectAuthHeadList(0, 0),
+        expectNonauthHeadList(0, LIST_FILES_L));
   }
 
   @Test
@@ -306,10 +320,12 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     describe("Performing listFiles() on a non existing dir");
     Path dir = path(getMethodName());
     S3AFileSystem fs = getFileSystem();
-    resetMetricDiffs();
-    intercept(FileNotFoundException.class,
-        () -> fs.listFiles(dir, true));
-    verifyOperationCount(2, 2);
+    verifyMetricsIntercepting(FileNotFoundException.class, "",
+        () -> fs.listFiles(dir, true),
+        expectRawHeadList(GETFILESTATUS_FNFE_H,
+            GETFILESTATUS_FNFE_L + LIST_FILES_L)
+
+    );
   }
 
   @Test
@@ -318,8 +334,8 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     Path simpleFile = file(methodPath());
     S3AFileStatus status = verifyRawGetFileStatus(simpleFile, true,
         StatusProbeEnum.ALL,
-        HeadListCosts.GFS_SINGLE_FILE_H,
-        HeadListCosts.GFS_SINGLE_FILE_L);
+        GETFILESTATUS_SINGLE_FILE_H,
+        GETFILESTATUS_SINGLE_FILE_L);
     assertTrue("not a file: " + status, status.isFile());
   }
 
@@ -330,21 +346,21 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     Path dir = dir(methodPath());
     S3AFileStatus status = verifyRawGetFileStatus(dir, true,
         StatusProbeEnum.ALL,
-        HeadListCosts.GFS_MARKER_H,
-        HeadListCosts.GFS_EMPTY_DIR_L);
+        GETFILESTATUS_MARKER_H,
+        GETFILESTATUS_EMPTY_DIR_L);
     assertSame("not empty: " + status, Tristate.TRUE,
         status.isEmptyDirectory());
     // but now only ask for the directories and the file check is skipped.
     verifyRawGetFileStatus(dir, false,
         StatusProbeEnum.DIRECTORIES,
-        HeadListCosts.GFS_DIR_PROBE_H,
-        HeadListCosts.GFS_EMPTY_DIR_L);
+        FILESTATUS_DIR_PROBE_H,
+        GETFILESTATUS_EMPTY_DIR_L);
 
     // now look at isFile/isDir against the same entry
     isDir(dir, true, 0,
-        HeadListCosts.GFS_EMPTY_DIR_L);
+        GETFILESTATUS_EMPTY_DIR_L);
     isFile(dir, false,
-        HeadListCosts.GFS_SINGLE_FILE_H, HeadListCosts.GFS_SINGLE_FILE_L);
+        GETFILESTATUS_SINGLE_FILE_H, GETFILESTATUS_SINGLE_FILE_L);
   }
 
   @Test
@@ -352,8 +368,8 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     describe("performing getFileStatus on a missing file");
     verifyRawGetFileStatusFNFE(methodPath(), false,
         StatusProbeEnum.ALL,
-        HeadListCosts.GFS_FNFE_H,
-        HeadListCosts.GFS_FNFE_L);
+        GETFILESTATUS_FNFE_H,
+        GETFILESTATUS_FNFE_L);
   }
 
   @Test
@@ -362,21 +378,21 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     Path path = methodPath();
     // now look at isFile/isDir against the same entry
     isDir(path, false,
-        HeadListCosts.GFS_DIR_PROBE_H,
-        HeadListCosts.GFS_DIR_PROBE_L);
+        FILESTATUS_DIR_PROBE_H,
+        FILESTATUS_DIR_PROBE_L);
     isFile(path, false,
-        HeadListCosts.GFS_FILE_PROBE_H,
-        HeadListCosts.GFS_FILE_PROBE_L);
+        FILESTATUS_FILE_PROBE_H,
+        FILESTATUS_FILE_PROBE_L);
   }
 
   @Test
   public void testCostOfGetFileStatusOnNonEmptyDir() throws Throwable {
     describe("performing getFileStatus on a non-empty directory");
     Path dir = dir(methodPath());
-    Path simpleFile = file(new Path(dir, "simple.txt"));
+    file(new Path(dir, "simple.txt"));
     S3AFileStatus status = verifyRawGetFileStatus(dir, true,
             StatusProbeEnum.ALL,
-        HeadListCosts.GFS_DIR_H, HeadListCosts.GFS_DIR_L);
+        GETFILESTATUS_DIR_H, GETFILESTATUS_DIR_L);
     assertEmptyDirStatus(status, Tristate.FALSE);
   }
 
@@ -400,28 +416,28 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
         },
         // delete file. For keeping: that's it
         probe(isRaw && isKeeping, OBJECT_METADATA_REQUESTS,
-            HeadListCosts.GFS_FILE_PROBE_H),
+            FILESTATUS_FILE_PROBE_H),
         // if deleting markers, look for the parent too
         probe(isRaw && isDeleting, OBJECT_METADATA_REQUESTS,
-            HeadListCosts.GFS_FILE_PROBE_H  + HeadListCosts.GFS_DIR_PROBE_H),
+            FILESTATUS_FILE_PROBE_H + FILESTATUS_DIR_PROBE_H),
         raw(OBJECT_LIST_REQUESTS,
-            HeadListCosts.GFS_FILE_PROBE_L + HeadListCosts.GFS_DIR_PROBE_L),
+            FILESTATUS_FILE_PROBE_L + FILESTATUS_DIR_PROBE_L),
         always(DIRECTORIES_DELETED, 0),
         always(FILES_DELETED, 1),
 
         // keeping: create no parent dirs or delete parents
         keeping(DIRECTORIES_CREATED, 0),
-        keeping(OBJECT_DELETE_REQUESTS, HeadListCosts.DELETE_OBJECT_REQUEST),
+        keeping(OBJECT_DELETE_REQUESTS, DELETE_OBJECT_REQUEST),
 
         // deleting: create a parent and delete any of its parents
         deleting(DIRECTORIES_CREATED, 1),
         deleting(OBJECT_DELETE_REQUESTS,
-            HeadListCosts.DELETE_OBJECT_REQUEST
-                + HeadListCosts.DELETE_MARKER_REQUEST)
+            DELETE_OBJECT_REQUEST
+                + DELETE_MARKER_REQUEST)
     );
     // there is an empty dir for a parent
     S3AFileStatus status = verifyRawGetFileStatus(dir, true,
-        StatusProbeEnum.ALL, HeadListCosts.GFS_DIR_H, HeadListCosts.GFS_DIR_L);
+        StatusProbeEnum.ALL, GETFILESTATUS_DIR_H, GETFILESTATUS_DIR_L);
     assertEmptyDirStatus(status, Tristate.TRUE);
   }
 
@@ -475,7 +491,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
         always(DIRECTORIES_DELETED, 0),
         keeping(OBJECT_DELETE_REQUESTS, 0),
         keeping(FAKE_DIRECTORIES_DELETED, 0),
-        deleting(OBJECT_DELETE_REQUESTS, HeadListCosts.DELETE_MARKER_REQUEST),
+        deleting(OBJECT_DELETE_REQUESTS, DELETE_MARKER_REQUEST),
         // delete all possible fake dirs above the subdirectory
         deleting(FAKE_DIRECTORIES_DELETED, directoriesInPath(subDir) - 1));
   }
@@ -539,17 +555,17 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     verifyMetrics(() ->
       execRename(srcFilePath, destFilePath),
         raw(OBJECT_METADATA_REQUESTS,
-            HeadListCosts.RENAME_SINGLE_FILE_RENAME_H),
+            RENAME_SINGLE_FILE_RENAME_H),
         raw(OBJECT_LIST_REQUESTS,
-            HeadListCosts.RENAME_SINGLE_FILE_RENAME_DIFFERENT_DIR_L),
+            RENAME_SINGLE_FILE_RENAME_DIFFERENT_DIR_L),
         always(DIRECTORIES_CREATED, 0),
         always(DIRECTORIES_DELETED, 0),
         // keeping: only the core delete operation is issued.
-        keeping(OBJECT_DELETE_REQUESTS, HeadListCosts.DELETE_OBJECT_REQUEST),
+        keeping(OBJECT_DELETE_REQUESTS, DELETE_OBJECT_REQUEST),
         keeping(FAKE_DIRECTORIES_DELETED, 0),
         // deleting: delete any fake marker above the destination.
         deleting(OBJECT_DELETE_REQUESTS,
-            HeadListCosts.DELETE_OBJECT_REQUEST + HeadListCosts.DELETE_MARKER_REQUEST),
+            DELETE_OBJECT_REQUEST + DELETE_MARKER_REQUEST),
         deleting(FAKE_DIRECTORIES_DELETED, directoriesInPath(destDir)));
 
     assertIsFile(destFilePath);
@@ -578,11 +594,11 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     Path destFile = new Path(parent2, "dest");
     verifyMetrics(() ->
             execRename(sourceFile, destFile),
-        raw(OBJECT_METADATA_REQUESTS, HeadListCosts.RENAME_SINGLE_FILE_RENAME_H),
-        raw(OBJECT_LIST_REQUESTS, HeadListCosts.GFS_FNFE_L),
+        raw(OBJECT_METADATA_REQUESTS, RENAME_SINGLE_FILE_RENAME_H),
+        raw(OBJECT_LIST_REQUESTS, GETFILESTATUS_FNFE_L),
         always(OBJECT_COPY_REQUESTS, 1),
         always(DIRECTORIES_CREATED, 0),
-        always(OBJECT_DELETE_REQUESTS, HeadListCosts.DELETE_OBJECT_REQUEST),
+        always(OBJECT_DELETE_REQUESTS, DELETE_OBJECT_REQUEST),
         always(FAKE_DIRECTORIES_DELETED, 0));
   }
 
@@ -603,15 +619,13 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
         return "after fs.rename(/src,/dest) " + metricSummary;
         },
           // TWO HEAD for exists, one for source MD in copy
-          raw(OBJECT_METADATA_REQUESTS,
-              HeadListCosts.RENAME_SINGLE_FILE_RENAME_H),
-          raw(OBJECT_LIST_REQUESTS,
-              HeadListCosts.GFS_FNFE_L),
+          expectRawHeadList(RENAME_SINGLE_FILE_RENAME_H,
+              GETFILESTATUS_FNFE_L));
           // here we expect there to be no fake directories
           always(DIRECTORIES_CREATED, 0),
           // one for the renamed file only
           always(OBJECT_DELETE_REQUESTS,
-              HeadListCosts.DELETE_OBJECT_REQUEST),
+              DELETE_OBJECT_REQUEST),
           // no directories are deleted: This is root
           always(DIRECTORIES_DELETED, 0),
           // no fake directories are deleted: This is root
@@ -627,10 +641,8 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
           always(DIRECTORIES_DELETED, 0),
           always(FAKE_DIRECTORIES_DELETED, 0),
           always(FILES_DELETED, 1),
-          always(OBJECT_DELETE_REQUESTS, HeadListCosts.DELETE_OBJECT_REQUEST),
-          raw(OBJECT_METADATA_REQUESTS, HeadListCosts.GFS_FILE_PROBE_H),
-          raw(OBJECT_LIST_REQUESTS, 0)   /* no need to look at parent. */
-          );
+          always(OBJECT_DELETE_REQUESTS, DELETE_OBJECT_REQUEST),
+          expectRawHeadList(FILESTATUS_FILE_PROBE_H, 0)); /* no need to look at parent. */
 
     } finally {
       fs.delete(src, false);
@@ -649,13 +661,13 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     // head probe fails
     verifyRawGetFileStatusFNFE(emptydir, false,
         StatusProbeEnum.HEAD_ONLY,
-        HeadListCosts.GFS_FILE_PROBE_H,
-        HeadListCosts.GFS_FILE_PROBE_L);
+        FILESTATUS_FILE_PROBE_H,
+        FILESTATUS_FILE_PROBE_L);
 
     // a LIST will find it and declare as empty
     S3AFileStatus status = verifyRawGetFileStatus(emptydir, true,
         StatusProbeEnum.LIST_ONLY, 0,
-        HeadListCosts.GFS_EMPTY_DIR_L);
+        GETFILESTATUS_EMPTY_DIR_L);
     assertEmptyDirStatus(status, Tristate.TRUE);
 
     // skip all probes and expect no operations to take place
@@ -674,7 +686,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
             StatusProbeEnum.HEAD_ONLY, null, false));
 
     // but ask for a directory marker and you get the entry
-    status = verifyRawHeadList(0, HeadListCosts.GFS_EMPTY_DIR_L, () ->
+    status = verifyRawHeadList(0, GETFILESTATUS_EMPTY_DIR_L, () ->
         fs.s3GetFileStatus(emptydir,
             emptyDirTrailingSlash,
             StatusProbeEnum.LIST_ONLY,
@@ -704,9 +716,10 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     assumeUnguarded();
     Path testFile = methodPath();
     // when overwrite is false, the path is checked for existence.
-    create(testFile, false, HeadListCosts.GFS_FNFE_H, HeadListCosts.GFS_FNFE_L);
+    create(testFile, false,
+        CREATE_FILE_NO_OVERWRITE_H, CREATE_FILE_NO_OVERWRITE_L);
     // but when true: only the directory checks take place.
-    create(testFile, true, 0, HeadListCosts.GFS_FNFE_L);
+    create(testFile, true, CREATE_FILE_OVERWRITE_H, CREATE_FILE_OVERWRITE_L);
   }
 
   @Test
@@ -718,7 +731,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     // now there is a file there, an attempt with overwrite == false will
     // fail on the first HEAD.
     verifyRawHeadListIntercepting(FileAlreadyExistsException.class, "",
-        HeadListCosts.GFS_FILE_PROBE_H, 0,
+        FILESTATUS_FILE_PROBE_H, 0,
         () -> file(testFile, false));
   }
 
@@ -731,7 +744,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     // now there is a file there, an attempt with overwrite == false will
     // fail on the first HEAD.
     verifyRawHeadListIntercepting(FileAlreadyExistsException.class, "",
-        HeadListCosts.GFS_MARKER_H, HeadListCosts.GFS_EMPTY_DIR_L,
+        GETFILESTATUS_MARKER_H, GETFILESTATUS_EMPTY_DIR_L,
         () -> file(testFile, false));
   }
 
@@ -748,18 +761,18 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
 
     // builder defaults to looking for parent existence (non-recursive)
     buildFile(testFile, false,  false,
-        HeadListCosts.GFS_FILE_PROBE_H,   // destination file
-        HeadListCosts.GFS_DIR_PROBE_L * 2);    // destination file and parent dir
+        FILESTATUS_FILE_PROBE_H,   // destination file
+        FILESTATUS_DIR_PROBE_L * 2);    // destination file and parent dir
     // recursive = false and overwrite=true:
     // only make sure the dest path isn't a directory.
     buildFile(testFile, true, true,
-        HeadListCosts.GFS_DIR_PROBE_H, HeadListCosts.GFS_DIR_PROBE_L);
+        FILESTATUS_DIR_PROBE_H, FILESTATUS_DIR_PROBE_L);
 
     // now there is a file there, an attempt with overwrite == false will
     // fail on the first HEAD.
     verifyRawHeadListIntercepting(FileAlreadyExistsException.class, "",
-        HeadListCosts.GFS_FILE_PROBE_H, 0, () ->
-            buildFile(testFile, false, true, HeadListCosts.GFS_FILE_PROBE_H, 0));
+        FILESTATUS_FILE_PROBE_H, 0, () ->
+            buildFile(testFile, false, true, FILESTATUS_FILE_PROBE_H, 0));
   }
 
   @Test
@@ -773,15 +786,15 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     // create a bunch of files
     int filesToCreate = 10;
     for (int i = 0; i < filesToCreate; i++) {
-      try (FSDataOutputStream out = fs.create(basePath.suffix("/" + i))) {
-        verifyOperationCount(1, 1);
-      }
+      create(basePath.suffix("/" + i));
     }
 
     fs.globStatus(basePath.suffix("/*"));
     // 2 head + 1 list from getFileStatus on path,
     // plus 1 list to match the glob pattern
-    verifyOperationCount(2, 2);
+    verifyRawHeadList(GETFILESTATUS_DIR_H,
+        GETFILESTATUS_DIR_L + 1, () ->
+        fs.globStatus(basePath.suffix("/*")));
   }
 
   @Test
@@ -795,15 +808,26 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     // create a single file, globStatus returning a single file on a pattern
     // triggers attempts at symlinks resolution if configured
     String fileName = "/notASymlinkDOntResolveMeLikeOne";
-    try (FSDataOutputStream out = fs.create(basePath.suffix(fileName))) {
-      verifyOperationCount(1, 1);
-    }
-
-    fs.globStatus(basePath.suffix("/*"));
+    create(basePath.suffix(fileName));
     // unguarded: 2 head + 1 list from getFileStatus on path,
     // plus 1 list to match the glob pattern
     // no additional operations from symlink resolution
-    verifyOperationCount(2, 2);
+    verifyRawHeadList(
+        GETFILESTATUS_DIR_H,
+        GETFILESTATUS_DIR_L + 1, () ->
+        fs.globStatus(basePath.suffix("/*")));
+  }
+
+
+  /**
+   * Touch a file, overwriting.
+   * @param path path
+   * @return path to new object.
+   */
+  private Path create(Path path) throws Exception {
+    return create(path, true,
+        CREATE_FILE_OVERWRITE_H,
+        CREATE_FILE_OVERWRITE_L);
   }
 
   /**
@@ -833,7 +857,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
       boolean overwrite,
       boolean recursive,
       int head,
-      int list) throws IOException {
+      int list) throws Exception {
     resetStatistics();
     verifyRawHeadList(head, list, () -> {
       FSDataOutputStreamBuilder builder = getFileSystem().createFile(path)
@@ -841,7 +865,9 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
       if (recursive) {
         builder.recursive();
       }
-      builder.build().close();
+      FSDataOutputStream stream = builder.build();
+      stream.close();
+      return stream.toString();
     });
     return path;
   }
@@ -961,24 +987,67 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
       int list,
       Callable<T> eval) throws Exception {
     return verifyMetricsIntercepting(clazz, text, eval,
-        raw(OBJECT_METADATA_REQUESTS, head),
-        raw(OBJECT_LIST_REQUESTS, list));
+        expectRawHeadList(head, list));
   }
 
-
   /**
-   * Verify that the head and list calls match expectations,
-   * then reset the counters ready for the next operation.
+   * Create the probes to expect a given set of head and list requests.
+   * @param enabled is the probe enabled?
    * @param head expected HEAD count
    * @param list expected LIST count
    * @return a probe list
    */
   private OperationCostValidator.ExpectedProbe
-   expectHeadList(boolean enabled,
-      int head, int list) {
+      expectHeadList(boolean enabled, int head, int list) {
     return probes(enabled,
         probe(OBJECT_METADATA_REQUESTS, head),
         probe(OBJECT_LIST_REQUESTS, list));
+  }
+  /**
+   * Create the probes to expect a given set of head and list requests.
+   * @param head expected HEAD count
+   * @param list expected LIST count
+   * @return a probe list
+   */
+  private OperationCostValidator.ExpectedProbe
+      expectHeadList(int head, int list) {
+    return probes(true,
+        probe(OBJECT_METADATA_REQUESTS, head),
+        probe(OBJECT_LIST_REQUESTS, list));
+  }
+
+  /**
+   * Declare the expected head and list requests on a raw FS.
+   * @param head expected HEAD count
+   * @param list expected LIST count
+   * @return a probe list
+   */
+  private OperationCostValidator.ExpectedProbe
+      expectRawHeadList(int head, int list) {
+    return expectHeadList(isRaw(), head, list);
+  }
+
+  /**
+   * Declare the expected head and list requests on an authoritative FS.
+   * @param head expected HEAD count
+   * @param list expected LIST count
+   * @return a probe list
+   */
+  private OperationCostValidator.ExpectedProbe
+      expectAuthHeadList(int head, int list) {
+    return expectHeadList(isAuthoritative(), head, list);
+  }
+
+  /**
+   * Declare the expected head and list requests on a
+   * non authoritative FS.
+   * @param head expected HEAD count
+   * @param list expected LIST count
+   * @return a probe list
+   */
+  private OperationCostValidator.ExpectedProbe
+      expectNonauthHeadList(int head, int list) {
+    return expectHeadList(isNonAuth(), head, list);
   }
 
   /**
@@ -995,7 +1064,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
       int list,
       Callable<T> eval) throws Exception {
     return verifyMetrics(eval,
-        expectHeadList(isRaw, head, list));
+        expectRawHeadList(head, list));
   }
 
   /**
@@ -1097,7 +1166,8 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
    * @param expected expected value.
    * @return the diff.
    */
-  private OperationCostValidator.ExpectedProbe authoritative(final Statistic Statistic,
+  private OperationCostValidator.ExpectedProbe authoritative(
+      final Statistic Statistic,
       final int expected) {
     return probe(isAuthoritative, Statistic, expected);
   }
@@ -1108,9 +1178,10 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
    * @param expected expected value.
    * @return the diff.
    */
-  private OperationCostValidator.ExpectedProbe nonauth(final Statistic Statistic,
+  private OperationCostValidator.ExpectedProbe nonauth(
+      final Statistic Statistic,
       final int expected) {
-    return probe(isNonAuth, Statistic, expected);
+    return probe(isNonAuth(), Statistic, expected);
   }
 
   /**
@@ -1119,9 +1190,10 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
    * @param expected expected value.
    * @return the diff.
    */
-  private OperationCostValidator.ExpectedProbe keeping(final Statistic Statistic,
+  private OperationCostValidator.ExpectedProbe keeping(
+      final Statistic Statistic,
       final int expected) {
-    return probe(isKeeping, Statistic, expected);
+    return probe(isKeepingMarkers(), Statistic, expected);
   }
 
   /**
