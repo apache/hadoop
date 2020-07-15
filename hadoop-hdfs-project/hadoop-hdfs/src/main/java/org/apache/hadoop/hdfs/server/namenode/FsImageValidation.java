@@ -47,7 +47,7 @@ import java.util.TimerTask;
  * {@link org.apache.hadoop.hdfs.tools.offlineImageViewer.OfflineImageViewer}.
  */
 public class FsImageValidation {
-  static final String FS_IMAGE_FILE = "FS_IMAGE_FILE";
+  static final String FS_IMAGE = "FS_IMAGE";
 
   static HdfsConfiguration newHdfsConfiguration() {
     final HdfsConfiguration conf = new HdfsConfiguration();
@@ -61,19 +61,19 @@ public class FsImageValidation {
     final String f = Cli.parse(args);
     if (f == null) {
       throw new HadoopIllegalArgumentException(
-          FS_IMAGE_FILE + " is not specified.");
+          FS_IMAGE + " is not specified.");
     }
     return new FsImageValidation(new File(f));
   }
 
-  private final File fsImageFile;
+  private final File fsImage;
 
-  FsImageValidation(File fsImageFile) {
-    this.fsImageFile = fsImageFile;
+  FsImageValidation(File fsImage) {
+    this.fsImage = fsImage;
   }
 
   int checkINodeReference() throws Exception {
-    Cli.println("Check INodeReference for %d: %d", FS_IMAGE_FILE, fsImageFile);
+    Cli.println("Check INodeReference for %s", fsImage);
 
     final TimerTask checkProgress = new TimerTask() {
       @Override
@@ -83,29 +83,39 @@ public class FsImageValidation {
         Cli.println("%s Progress: %.1f%%", Phase.LOADING_FSIMAGE, 100*percent);
       }
     };
-    final Timer t = new Timer();
-    t.scheduleAtFixedRate(checkProgress, 0, 60_000);
 
     final HdfsConfiguration conf = newHdfsConfiguration();
-    final FSImage fsImage = new FSImage(conf);
-    final FSNamesystem namesystem = new FSNamesystem(conf, fsImage, false);
 
-    final NamespaceInfo namespaceInfo = NNStorage.newNamespaceInfo();
-    namespaceInfo.clusterID = "cluster0";
-    fsImage.getStorage().setStorageInfo(namespaceInfo);
-
-    final FSImageFormat.LoaderDelegator loader
-        = FSImageFormat.newLoader(conf, namesystem);
     INodeReferenceValidation.start();
-    namesystem.writeLock();
-    namesystem.getFSDirectory().writeLock();
-    try {
-      loader.load(fsImageFile, false);
-    } finally {
-      namesystem.getFSDirectory().writeUnlock();
-      namesystem.writeUnlock();
-      t.cancel();
+    final Timer t = new Timer();
+    t.scheduleAtFixedRate(checkProgress, 0, 60_000);
+    if (fsImage.isDirectory()) {
+      Cli.println("Loading %s as a directory.", fsImage);
+      final String dir = fsImage.getCanonicalPath();
+      conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, dir);
+      conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, dir);
+      FSNamesystem.loadFromDisk(conf);
+    } else {
+      Cli.println("Loading %s as a file.", fsImage);
+      final FSImage fsImage = new FSImage(conf);
+      final FSNamesystem namesystem = new FSNamesystem(conf, fsImage, false);
+
+      final NamespaceInfo namespaceInfo = NNStorage.newNamespaceInfo();
+      namespaceInfo.clusterID = "cluster0";
+      fsImage.getStorage().setStorageInfo(namespaceInfo);
+
+      final FSImageFormat.LoaderDelegator loader
+          = FSImageFormat.newLoader(conf, namesystem);
+      namesystem.writeLock();
+      namesystem.getFSDirectory().writeLock();
+      try {
+        loader.load(this.fsImage, false);
+      } finally {
+        namesystem.getFSDirectory().writeUnlock();
+        namesystem.writeUnlock();
+      }
     }
+    t.cancel();
     return INodeReferenceValidation.end();
   }
 
@@ -115,9 +125,8 @@ public class FsImageValidation {
     static {
       final String clazz = FsImageValidation.class.getSimpleName();
       COMMAND = Character.toLowerCase(clazz.charAt(0)) + clazz.substring(1);
-      USAGE = "Usage: hdfs " + COMMAND + " <" + FS_IMAGE_FILE + ">";
+      USAGE = "Usage: hdfs " + COMMAND + " <" + FS_IMAGE + ">";
     }
-
 
     @Override
     public int run(String[] args) throws Exception {
@@ -130,9 +139,9 @@ public class FsImageValidation {
     static String parse(String... args) {
       final String f;
       if (args == null || args.length == 0) {
-        f = System.getenv().get(FS_IMAGE_FILE);
+        f = System.getenv().get(FS_IMAGE);
         if (f != null) {
-          println("Environment variable %s = %s", FS_IMAGE_FILE, f);
+          println("Environment variable %s = %s", FS_IMAGE, f);
         }
       } else if (args.length == 1) {
         f = args[0];
@@ -141,7 +150,7 @@ public class FsImageValidation {
             "args = " + Arrays.toString(args));
       }
 
-      println("%s = %s", FS_IMAGE_FILE, f);
+      println("%s = %s", FS_IMAGE, f);
       return f;
     }
 

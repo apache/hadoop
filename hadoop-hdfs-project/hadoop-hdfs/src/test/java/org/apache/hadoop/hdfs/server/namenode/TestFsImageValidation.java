@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.event.Level;
 
@@ -37,10 +38,11 @@ public class TestFsImageValidation {
   public void testINodeReference() throws Exception {
     try {
       final FsImageValidation validation = FsImageValidation.newInstance();
-      validation.checkINodeReference();
+      final int errorCount = validation.checkINodeReference();
+      Assert.assertEquals("Error Count: " + errorCount, 0, errorCount);
     } catch (HadoopIllegalArgumentException e) {
       FsImageValidation.Cli.printError("The environment variable "
-          + FsImageValidation.FS_IMAGE_FILE + " is not set.", e);
+          + FsImageValidation.FS_IMAGE + " is not set.", e);
     }
   }
 }
