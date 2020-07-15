@@ -27,6 +27,7 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import java.util.stream.Collectors;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DF;
@@ -34,8 +35,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.common.Util;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Collections2;
-import com.google.common.base.Predicate;
 
 /**
  * 
@@ -115,18 +114,15 @@ public class NameNodeResourceChecker {
     
     Collection<URI> extraCheckedVolumes = Util.stringCollectionAsURIs(conf
         .getTrimmedStringCollection(DFSConfigKeys.DFS_NAMENODE_CHECKED_VOLUMES_KEY));
-    
-    Collection<URI> localEditDirs = Collections2.filter(
-        FSNamesystem.getNamespaceEditsDirs(conf),
-        new Predicate<URI>() {
-          @Override
-          public boolean apply(URI input) {
-            if (input.getScheme().equals(NNStorage.LOCAL_URI_SCHEME)) {
-              return true;
-            }
-            return false;
-          }
-        });
+
+    Collection<URI> localEditDirs =
+        FSNamesystem.getNamespaceEditsDirs(conf).stream().filter(
+            input -> {
+              if (input.getScheme().equals(NNStorage.LOCAL_URI_SCHEME)) {
+                return true;
+              }
+              return false;
+            }).collect(Collectors.toList());
 
     // Add all the local edits dirs, marking some as required if they are
     // configured as such.
