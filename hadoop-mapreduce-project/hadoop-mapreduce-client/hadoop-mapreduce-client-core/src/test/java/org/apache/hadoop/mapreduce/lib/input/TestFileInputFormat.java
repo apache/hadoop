@@ -23,8 +23,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-
-import javax.annotation.Nullable;
+import java.util.stream.Collectors;
 
 import org.junit.Assert;
 
@@ -49,8 +48,6 @@ import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -353,13 +350,10 @@ public class TestFileInputFormat {
       List<FileStatus> fetchedStatuses, final FileSystem localFs) {
     Assert.assertEquals(expectedPaths.size(), fetchedStatuses.size());
 
-    Iterable<Path> fqExpectedPaths = Iterables.transform(expectedPaths,
-        new Function<Path, Path>() {
-          @Override
-          public Path apply(Path input) {
-            return localFs.makeQualified(input);
-          }
-        });
+    Iterable<Path> fqExpectedPaths =
+        expectedPaths.stream().map(
+            input -> localFs.makeQualified(input)).collect(Collectors.toList());
+
 
     Set<Path> expectedPathSet = Sets.newHashSet(fqExpectedPaths);
     for (FileStatus fileStatus : fetchedStatuses) {
@@ -374,13 +368,10 @@ public class TestFileInputFormat {
 
 
   private void verifySplits(List<String> expected, List<InputSplit> splits) {
-    Iterable<String> pathsFromSplits = Iterables.transform(splits,
-        new Function<InputSplit, String>() {
-          @Override
-          public String apply(@Nullable InputSplit input) {
-            return ((FileSplit) input).getPath().toString();
-          }
-        });
+    Iterable<String> pathsFromSplits =
+        splits.stream().map(
+            input-> ((FileSplit) input).getPath().toString())
+            .collect(Collectors.toList());
 
     Set<String> expectedSet = Sets.newHashSet(expected);
     for (String splitPathString : pathsFromSplits) {
