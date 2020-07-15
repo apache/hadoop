@@ -260,7 +260,7 @@ public class AzureBlobFileSystem extends FileSystem {
 
   public boolean rename(final Path src, final Path dst) throws IOException {
     LOG.debug(
-        "AzureBlobFileSystem.rename src: {} dst: {}", src.toString(), dst.toString());
+        "AzureBlobFileSystem.rename src: {} dst: {}", src, dst);
 
     trailingPeriodCheck(dst);
 
@@ -740,7 +740,7 @@ public class AzureBlobFileSystem extends FileSystem {
   @Override
   public void modifyAclEntries(final Path path, final List<AclEntry> aclSpec)
       throws IOException {
-    LOG.debug("AzureBlobFileSystem.modifyAclEntries path: {}", path.toString());
+    LOG.debug("AzureBlobFileSystem.modifyAclEntries path: {}", path);
 
     if (!getIsNamespaceEnabled()) {
       throw new UnsupportedOperationException(
@@ -889,7 +889,7 @@ public class AzureBlobFileSystem extends FileSystem {
    */
   @Override
   public AclStatus getAclStatus(final Path path) throws IOException {
-    LOG.debug("AzureBlobFileSystem.getAclStatus path: {}", path.toString());
+    LOG.debug("AzureBlobFileSystem.getAclStatus path: {}", path);
 
     if (!getIsNamespaceEnabled()) {
       throw new UnsupportedOperationException(
