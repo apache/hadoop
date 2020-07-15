@@ -661,8 +661,14 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   }
 
   @VisibleForTesting
+  public String getFullPathAndObjectString() {
+    return getFullPathName() + "(" + getId() + ", " + getObjectString() + ")";
+  }
+
+  @VisibleForTesting
   public String toDetailString() {
-    return toString() + "(" + getObjectString() + "), " + getParentString();
+    return toString() + "(" + getId() + ", " + getObjectString()
+        + ", " + getParentString() + ")";
   }
 
   /** @return the parent directory */
@@ -697,7 +703,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   }
 
   /** Set container. */
-  public final void setParentReference(INodeReference parent) {
+  public void setParentReference(INodeReference parent) {
     this.parent = parent;
   }
 

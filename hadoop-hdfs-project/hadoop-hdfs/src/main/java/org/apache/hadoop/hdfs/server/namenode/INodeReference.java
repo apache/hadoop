@@ -21,6 +21,7 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -61,6 +62,15 @@ import org.apache.hadoop.security.AccessControlException;
  *         inode(id=1000,name=bar).getParent() returns /xyz but not /abc.
  */
 public abstract class INodeReference extends INode {
+  /** Assert the relationship this node and the references. */
+  abstract void assertReferences();
+
+  @Override
+  public String toDetailString() {
+    final String s = referred == null? null: referred.getFullPathAndObjectString();
+    return super.toDetailString() + ", ->" + s;
+  }
+
   /**
    * Try to remove the given reference and then return the reference count.
    * If the given inode is not a reference, return -1;
@@ -346,7 +356,7 @@ public abstract class INodeReference extends INode {
       out.print(", dstSnapshotId=" + ((DstReference) this).dstSnapshotId);
     }
     if (this instanceof WithCount) {
-      out.print(", count=" + ((WithCount)this).getReferenceCount());
+      out.print(", " + ((WithCount)this).getCountDetails());
     }
     out.println();
     
@@ -382,7 +392,77 @@ public abstract class INodeReference extends INode {
     public WithCount(INodeReference parent, INode referred) {
       super(parent, referred);
       Preconditions.checkArgument(!referred.isReference());
+      Preconditions.checkArgument(parent == null);
       referred.setParentReference(this);
+
+      INodeReferenceValidation.addWithCount(this);
+    }
+
+    private String getCountDetails() {
+      final StringBuilder b = new StringBuilder("[");
+      if (!withNameList.isEmpty()) {
+        final Iterator<WithName> i = withNameList.iterator();
+        b.append(i.next().getFullPathAndObjectString());
+        for(; i.hasNext(); ) {
+          b.append(", ").append(i.next().getFullPathAndObjectString());
+        }
+      }
+      b.append("]");
+      return ", count=" + getReferenceCount() + ", names=" + b;
+    }
+
+    @Override
+    public String toDetailString() {
+      return super.toDetailString() + getCountDetails();
+    }
+
+    @Override
+    public void setParentReference(INodeReference parentRef) {
+      if (parentRef != null) {
+        assertDstReference(parentRef);
+
+        if (getParentReference() != null) {
+          throw new IllegalArgumentException("Overwriting Parent Reference:"
+              + "\n  parentRef: " + parentRef.toDetailString()
+              + "\n  withCount: " + this.toDetailString());
+        }
+      } else {
+        final INodeReference old = getParentReference();
+        LOG.debug("remove parent reference: parent={}, this={}",
+            old == null? null: old.toDetailString(), this.toDetailString());
+      }
+      super.setParentReference(parentRef);
+    }
+
+    private void assertDstReference(INodeReference parentRef) {
+      if (parentRef instanceof DstReference) {
+        return;
+      }
+      throw new IllegalArgumentException("Unexpected non-DstReference:"
+          + "\n  parentRef: " + parentRef.toDetailString()
+          + "\n  withCount: " + this.toDetailString());
+    }
+
+    private void assertReferredINode(INodeReference ref, String name) {
+      if (ref.getReferredINode() == this) {
+        return;
+      }
+      throw new IllegalStateException("Inconsistent Reference:"
+          + "\n  " + name + ": " + ref.toDetailString()
+          + "\n  withCount: " + this.toDetailString());
+    }
+
+    @Override
+    void assertReferences() {
+      for(WithName withName : withNameList) {
+        assertReferredINode(withName, " withName");
+      }
+
+      final INodeReference parentRef = getParentReference();
+      if (parentRef != null) {
+        assertDstReference(parentRef);
+        assertReferredINode(parentRef, "parentRef");
+      }
     }
     
     public int getReferenceCount() {
@@ -403,19 +483,26 @@ public abstract class INodeReference extends INode {
         withNameList.add(-i - 1, refWithName);
       } else if (ref instanceof DstReference) {
         setParentReference(ref);
+      } else {
+        throw new IllegalStateException("Failed to add reference:"
+            + "\n        ref: " + ref.toDetailString()
+            + "\n  withCount: " + this.toDetailString());
       }
+    }
+
+    private int search(WithName ref) {
+      return Collections.binarySearch(withNameList, ref, WITHNAME_COMPARATOR);
     }
 
     /** Decrement and then return the reference count. */
     public void removeReference(INodeReference ref) {
       if (ref instanceof WithName) {
-        int i = Collections.binarySearch(withNameList, (WithName) ref,
-            WITHNAME_COMPARATOR);
+        final int i = search((WithName) ref);
         if (i >= 0) {
           withNameList.remove(i);
         }
       } else if (ref == getParentReference()) {
-        setParent(null);
+        setParentReference(null);
       }
     }
 
@@ -481,6 +568,33 @@ public abstract class INodeReference extends INode {
       this.name = name;
       this.lastSnapshotId = lastSnapshotId;
       referred.addReference(this);
+
+      INodeReferenceValidation.addWithName(this);
+    }
+
+    @Override
+    void assertReferences() {
+      final INode ref= getReferredINode();
+      final String err;
+      if (ref instanceof WithCount) {
+        final WithCount withCount = (WithCount)ref;
+        final int i = withCount.search(this);
+        if (i >= 0) {
+          if (withCount.withNameList.get(i) == this) {
+            return;
+          } else {
+            err = "OBJECT MISMATCH, withNameList.get(" + i + ") != this";
+          }
+        } else {
+          err = "NOT FOUND in withNameList";
+        }
+      } else {
+        err = "UNEXPECTED CLASS, expecting WithCount";
+      }
+
+      throw new IllegalStateException(err + ":"
+          + "\n  ref: " + (ref == null? null : ref.toDetailString())
+          + "\n this: " + this.toDetailString());
     }
 
     @Override
@@ -642,6 +756,27 @@ public abstract class INodeReference extends INode {
       super(parent, referred);
       this.dstSnapshotId = dstSnapshotId;
       referred.addReference(this);
+
+      INodeReferenceValidation.addDstReference(this);
+    }
+
+    @Override
+    void assertReferences() {
+      final INode ref = getReferredINode();
+      final String err;
+      if (ref instanceof WithCount) {
+        if (ref.getParentReference() == this) {
+          return;
+        } else {
+          err = "OBJECT MISMATCH, ref.getParentReference() != this";
+        }
+      } else {
+        err = "UNEXPECTED CLASS, expecting WithCount";
+      }
+
+      throw new IllegalStateException(err + ":"
+          + "\n  ref: " + (ref == null? null : ref.toDetailString())
+          + "\n this: " + this.toDetailString());
     }
     
     @Override

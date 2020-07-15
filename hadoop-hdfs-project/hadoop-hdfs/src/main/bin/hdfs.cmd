@@ -59,7 +59,7 @@ if "%1" == "--loglevel" (
     )
   )
 
-  set hdfscommands=dfs namenode secondarynamenode journalnode zkfc datanode dfsadmin haadmin fsck balancer jmxget oiv oev fetchdt getconf groups snapshotDiff lsSnapshottableDir cacheadmin mover storagepolicies classpath crypto dfsrouter dfsrouteradmin debug
+  set hdfscommands=dfs namenode secondarynamenode journalnode zkfc datanode dfsadmin haadmin fsck fsImageValidation balancer jmxget oiv oev fetchdt getconf groups snapshotDiff lsSnapshottableDir cacheadmin mover storagepolicies classpath crypto dfsrouter dfsrouteradmin debug
   for %%i in ( %hdfscommands% ) do (
     if %hdfs-command% == %%i set hdfscommand=true
   )
@@ -118,6 +118,11 @@ goto :eof
 
 :fsck
   set CLASS=org.apache.hadoop.hdfs.tools.DFSck
+  set HADOOP_OPTS=%HADOOP_OPTS% %HADOOP_CLIENT_OPTS%
+  goto :eof
+
+:fsImageValidation
+  set CLASS=org.apache.hadoop.hdfs.server.namenode.FsImageValidation
   set HADOOP_OPTS=%HADOOP_OPTS% %HADOOP_CLIENT_OPTS%
   goto :eof
 
@@ -236,6 +241,7 @@ goto :eof
   @echo   dfsadmin             run a DFS admin client
   @echo   haadmin              run a DFS HA admin client
   @echo   fsck                 run a DFS filesystem checking utility
+  @echo   fsImageValidation    run FsImageValidation to check an fsimage
   @echo   balancer             run a cluster balancing utility
   @echo   jmxget               get JMX exported values from NameNode or DataNode.
   @echo   oiv                  apply the offline fsimage viewer to an fsimage
