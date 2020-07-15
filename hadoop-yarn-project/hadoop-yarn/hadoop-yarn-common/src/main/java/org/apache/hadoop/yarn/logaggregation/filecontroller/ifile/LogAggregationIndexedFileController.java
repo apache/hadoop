@@ -19,9 +19,7 @@
 package org.apache.hadoop.yarn.logaggregation.filecontroller.ifile;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -43,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -706,16 +705,12 @@ public class LogAggregationIndexedFileController
   public Map<String, Long> parseCheckSumFiles(
       List<FileStatus> fileList) throws IOException {
     Map<String, Long> checkSumFiles = new HashMap<>();
-    Set<FileStatus> status = new HashSet<FileStatus>(fileList);
-    Iterable<FileStatus> mask =
-        Iterables.filter(status, new Predicate<FileStatus>() {
-          @Override
-          public boolean apply(FileStatus next) {
-            return next.getPath().getName().endsWith(
-                CHECK_SUM_FILE_SUFFIX);
-          }
-        });
-    status = Sets.newHashSet(mask);
+    Set<FileStatus> status =
+        new HashSet<>(fileList).stream().filter(
+            next -> next.getPath().getName().endsWith(
+                CHECK_SUM_FILE_SUFFIX)).collect(
+            Collectors.toSet());
+
     FileContext fc = null;
     for (FileStatus file : status) {
       FSDataInputStream checksumFileInputStream = null;
