@@ -32,6 +32,7 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <properties>
     <hadoop.component>hdfs</hadoop.component>
     <is.hadoop.component>true</is.hadoop.component>
+    <javadoc.skip.jdk11>true</javadoc.skip.jdk11>
   </properties>
 
   <dependencies>
