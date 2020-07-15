@@ -20,13 +20,15 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.KeyProviderException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.hadoop.fs.azurebfs.diagnostics.Base64StringConfigurationBasicValidator;
 
 /**
  * Key provider that simply returns the storage account key from the
@@ -49,6 +51,27 @@ public class SimpleKeyProvider implements KeyProvider {
       LOG.warn("Unable to get key from credential providers. {}", ioe);
     }
 
+    // Validating the key.
+    try {
+      validateStorageAccountKey(key);
+    } catch (InvalidConfigurationValueException e) {
+      e.printStackTrace();
+    }
+
     return key;
+  }
+
+  /**
+   * A method to validate the storage key.
+   *
+   * @param key the key to be validated.
+   * @throws InvalidConfigurationValueException
+   */
+  private void validateStorageAccountKey(String key)
+      throws InvalidConfigurationValueException {
+    Base64StringConfigurationBasicValidator validator = new Base64StringConfigurationBasicValidator(
+        ConfigurationKeys.FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME, "", true);
+
+    validator.validate(key);
   }
 }
