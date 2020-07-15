@@ -42,6 +42,8 @@
 #include <deque>
 #include <unordered_map>
 
+#include <boost/asio/ip/tcp.hpp>
+
 namespace hdfs {
 
 typedef const std::function<void(const Status &)> RpcCallback;
@@ -57,10 +59,10 @@ class RpcConnection : public std::enable_shared_from_this<RpcConnection> {
 
   // Note that a single server can have multiple endpoints - especially both
   //   an ipv4 and ipv6 endpoint
-  virtual void Connect(const std::vector<::asio::ip::tcp::endpoint> &server,
+  virtual void Connect(const std::vector<boost::asio::ip::tcp::endpoint> &server,
                        const AuthInfo & auth_info,
                        RpcCallback &handler) = 0;
-  virtual void ConnectAndFlush(const std::vector<::asio::ip::tcp::endpoint> &server) = 0;
+  virtual void ConnectAndFlush(const std::vector<boost::asio::ip::tcp::endpoint> &server) = 0;
   virtual void Disconnect() = 0;
 
   void StartReading();
@@ -110,9 +112,9 @@ class RpcConnection : public std::enable_shared_from_this<RpcConnection> {
   virtual void SendContext(RpcCallback &handler) = 0;
   void ContextComplete(const Status &s);
 
-  virtual void OnSendCompleted(const ::asio::error_code &ec,
+  virtual void OnSendCompleted(const boost::system::error_code &ec,
                                size_t transferred) = 0;
-  virtual void OnRecvCompleted(const ::asio::error_code &ec,
+  virtual void OnRecvCompleted(const boost::system::error_code &ec,
                                size_t transferred) = 0;
   virtual void FlushPendingRequests()=0;      // Synchronously write the next request
 
@@ -133,10 +135,10 @@ class RpcConnection : public std::enable_shared_from_this<RpcConnection> {
 
   Status HandleRpcResponse(std::shared_ptr<Response> response);
   void HandleRpcTimeout(std::shared_ptr<Request> req,
-                        const ::asio::error_code &ec);
+                        const boost::system::error_code &ec);
   void CommsError(const Status &status);
 
-  void ClearAndDisconnect(const ::asio::error_code &ec);
+  void ClearAndDisconnect(const boost::system::error_code &ec);
   std::shared_ptr<Request> RemoveFromRunningQueue(int call_id);
 
   std::weak_ptr<LockFreeRpcEngine> engine_;

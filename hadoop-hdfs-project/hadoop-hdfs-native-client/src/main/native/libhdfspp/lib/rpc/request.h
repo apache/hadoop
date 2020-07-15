@@ -29,7 +29,7 @@
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/io/zero_copy_stream_impl_lite.h>
 
-#include <asio/deadline_timer.hpp>
+#include <boost/asio/deadline_timer.hpp>
 
 
 namespace hdfs {
@@ -59,7 +59,7 @@ class Request {
 
   int call_id() const { return call_id_; }
   std::string  method_name() const { return method_name_; }
-  ::asio::deadline_timer &timer() { return timer_; }
+  boost::asio::deadline_timer &timer() { return timer_; }
   int IncrementRetryCount() { return retry_count_++; }
   int IncrementFailoverCount();
   void GetPacket(std::string *res) const;
@@ -75,7 +75,7 @@ class Request {
   const std::string method_name_;
   const int call_id_;
 
-  ::asio::deadline_timer timer_;
+  boost::asio::deadline_timer timer_;
   std::string payload_;
   const Handler handler_;
 

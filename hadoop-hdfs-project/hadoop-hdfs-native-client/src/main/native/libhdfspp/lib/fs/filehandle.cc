@@ -26,6 +26,8 @@
 #include <future>
 #include <tuple>
 
+#include <boost/asio/buffer.hpp>
+
 #define FMT_THIS_ADDR "this=" << (void*)this
 
 namespace hdfs {
@@ -72,7 +74,7 @@ void FileHandleImpl::PositionRead(
     handler(status, bytes_read);
   };
 
-  AsyncPreadSome(offset, asio::buffer(buf, buf_size), bad_node_tracker_, callback);
+  AsyncPreadSome(offset, boost::asio::buffer(buf, buf_size), bad_node_tracker_, callback);
 }
 
 Status FileHandleImpl::PositionRead(void *buf, size_t buf_size, off_t offset, size_t *bytes_read) {
@@ -233,7 +235,7 @@ void FileHandleImpl::AsyncPreadSome(
 
   uint64_t offset_within_block = offset - block->offset();
   uint64_t size_within_block = std::min<uint64_t>(
-      block->b().numbytes() - offset_within_block, asio::buffer_size(buffer));
+      block->b().numbytes() - offset_within_block, boost::asio::buffer_size(buffer));
 
   LOG_DEBUG(kFileHandle, << "FileHandleImpl::AsyncPreadSome("
             << FMT_THIS_ADDR << "), ...) Datanode hostname=" << dnHostName << ", IP Address=" << dnIpAddr
@@ -281,7 +283,7 @@ void FileHandleImpl::AsyncPreadSome(
     if (status.ok()) {
       reader->AsyncReadBlock(
           client_name, *block, offset_within_block,
-          asio::buffer(buffer, size_within_block), read_handler);
+          boost::asio::buffer(buffer, size_within_block), read_handler);
     } else {
       handler(status, dn_id, 0);
     }
