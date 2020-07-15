@@ -67,7 +67,8 @@ public abstract class INodeReference extends INode {
 
   @Override
   public String toDetailString() {
-    final String s = referred == null? null: referred.getFullPathAndObjectString();
+    final String s = referred == null? null
+        : referred.getFullPathAndObjectString();
     return super.toDetailString() + ", ->" + s;
   }
 
@@ -403,7 +404,7 @@ public abstract class INodeReference extends INode {
       if (!withNameList.isEmpty()) {
         final Iterator<WithName> i = withNameList.iterator();
         b.append(i.next().getFullPathAndObjectString());
-        for(; i.hasNext(); ) {
+        for(; i.hasNext();) {
           b.append(", ").append(i.next().getFullPathAndObjectString());
         }
       }
@@ -414,24 +415,6 @@ public abstract class INodeReference extends INode {
     @Override
     public String toDetailString() {
       return super.toDetailString() + getCountDetails();
-    }
-
-    @Override
-    public void setParentReference(INodeReference parentRef) {
-      if (parentRef != null) {
-        assertDstReference(parentRef);
-
-        if (getParentReference() != null) {
-          throw new IllegalArgumentException("Overwriting Parent Reference:"
-              + "\n  parentRef: " + parentRef.toDetailString()
-              + "\n  withCount: " + this.toDetailString());
-        }
-      } else {
-        final INodeReference old = getParentReference();
-        LOG.debug("remove parent reference: parent={}, this={}",
-            old == null? null: old.toDetailString(), this.toDetailString());
-      }
-      super.setParentReference(parentRef);
     }
 
     private void assertDstReference(INodeReference parentRef) {

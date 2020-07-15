@@ -17,24 +17,29 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.log4j.Level;
 import org.junit.Test;
+import org.slf4j.event.Level;
 
 public class TestFsImageValidation {
   static {
-    GenericTestUtils.setLogLevel(INode.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(INodeReferenceValidation.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(FsImageValidation.LOG, Level.ALL);
+    GenericTestUtils.setLogLevel(INode.LOG, Level.TRACE);
+    GenericTestUtils.setLogLevel(INodeReferenceValidation.LOG, Level.TRACE);
   }
 
-  /** Set environment variable FS_IMAGE_FILE to the path of the fsimage file being tested. */
+  /**
+   * Run validation as a unit test.
+   * The path of the fsimage file being tested is specified
+   * by the environment variable FS_IMAGE_FILE.
+   */
   @Test
   public void testINodeReference() throws Exception {
     try {
-      FsImageValidation.checkINodeReference(FsImageValidation.getFsImageFile());
-    } catch (IllegalArgumentException e) {
-      FsImageValidation.LOG.warn("The environment variable "
+      final FsImageValidation validation = FsImageValidation.newInstance();
+      validation.checkINodeReference();
+    } catch (HadoopIllegalArgumentException e) {
+      FsImageValidation.Cli.printError("The environment variable "
           + FsImageValidation.FS_IMAGE_FILE + " is not set.", e);
     }
   }

@@ -703,7 +703,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   }
 
   /** Set container. */
-  public void setParentReference(INodeReference parent) {
+  public final void setParentReference(INodeReference parent) {
     this.parent = parent;
   }
 

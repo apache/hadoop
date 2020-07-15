@@ -18,17 +18,14 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
-import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgressView;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.Arrays;
@@ -37,37 +34,59 @@ import java.util.TimerTask;
 
 /**
  * For validating {@link FSImage}.
- *
- * This tool will load the user specified {@link FSImage}
- * and then build the namespace tree in order to run the validation.
+ * This tool will load the user specified {@link FSImage},
+ * build the namespace tree,
+ * and then run validations over the namespace tree.
  *
  * The main difference of this tool and
  * {@link org.apache.hadoop.hdfs.tools.offlineImageViewer.OfflineImageViewer}
  * is that
  * {@link org.apache.hadoop.hdfs.tools.offlineImageViewer.OfflineImageViewer}
  * only loads {@link FSImage} but it does not build the namespace tree.
+ * Therefore, running validations over the namespace tree is impossible in
+ * {@link org.apache.hadoop.hdfs.tools.offlineImageViewer.OfflineImageViewer}.
  */
 public class FsImageValidation {
-  static final Logger LOG = LoggerFactory.getLogger(FsImageValidation.class);
-
   static final String FS_IMAGE_FILE = "FS_IMAGE_FILE";
 
-  static int checkINodeReference(File fsImageFile) throws Exception {
-    LOG.info("Check INodeReference for {}: {}", FS_IMAGE_FILE, fsImageFile);
+  static HdfsConfiguration newHdfsConfiguration() {
+    final HdfsConfiguration conf = new HdfsConfiguration();
+    final int aDay = 24*3600_000;
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_KEY, aDay);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_KEY, aDay);
+    return conf;
+  }
+
+  static FsImageValidation newInstance(String... args) {
+    final String f = Cli.parse(args);
+    if (f == null) {
+      throw new HadoopIllegalArgumentException(
+          FS_IMAGE_FILE + " is not specified.");
+    }
+    return new FsImageValidation(new File(f));
+  }
+
+  private final File fsImageFile;
+
+  FsImageValidation(File fsImageFile) {
+    this.fsImageFile = fsImageFile;
+  }
+
+  int checkINodeReference() throws Exception {
+    Cli.println("Check INodeReference for %d: %d", FS_IMAGE_FILE, fsImageFile);
 
     final TimerTask checkProgress = new TimerTask() {
       @Override
       public void run() {
-        final StartupProgressView view = NameNode.getStartupProgress().createView();
-        final double percent = view.getPercentComplete(Phase.LOADING_FSIMAGE);
-        LOG.info("{} Progress: {}%", Phase.LOADING_FSIMAGE,
-            String.format("%.1f", 100 * percent));
+        final double percent = NameNode.getStartupProgress().createView()
+            .getPercentComplete(Phase.LOADING_FSIMAGE);
+        Cli.println("%s Progress: %.1f%%", Phase.LOADING_FSIMAGE, 100*percent);
       }
     };
     final Timer t = new Timer();
     t.scheduleAtFixedRate(checkProgress, 0, 60_000);
 
-    final Configuration conf = new HdfsConfiguration();
+    final HdfsConfiguration conf = newHdfsConfiguration();
     final FSImage fsImage = new FSImage(conf);
     final FSNamesystem namesystem = new FSNamesystem(conf, fsImage, false);
 
@@ -75,7 +94,8 @@ public class FsImageValidation {
     namespaceInfo.clusterID = "cluster0";
     fsImage.getStorage().setStorageInfo(namespaceInfo);
 
-    final FSImageFormat.LoaderDelegator loader = FSImageFormat.newLoader(conf, namesystem);
+    final FSImageFormat.LoaderDelegator loader
+        = FSImageFormat.newLoader(conf, namesystem);
     INodeReferenceValidation.start();
     namesystem.writeLock();
     namesystem.getFSDirectory().writeLock();
@@ -89,33 +109,6 @@ public class FsImageValidation {
     return INodeReferenceValidation.end();
   }
 
-  static File getFsImageFile(String... args) {
-    final String f = parse(args);
-    if (f == null) {
-      throw new HadoopIllegalArgumentException(
-              FS_IMAGE_FILE + " is not specified.");
-    }
-    return new File(f);
-  }
-
-  static String parse(String... args) {
-    final String f;
-    if (args == null || args.length == 0) {
-      f = System.getenv().get(FS_IMAGE_FILE);
-      if (f != null) {
-        LOG.info("Environment variable {} = {}", FS_IMAGE_FILE, f);
-      }
-    } else if (args.length == 1) {
-      f = args[0];
-    } else {
-      throw new HadoopIllegalArgumentException(
-              "args = " + Arrays.toString(args));
-    }
-
-    LOG.info("{} = {}", FS_IMAGE_FILE, f);
-    return f;
-  }
-
   static class Cli extends Configured implements Tool {
     static final String COMMAND;
     static final String USAGE;
@@ -125,11 +118,43 @@ public class FsImageValidation {
       USAGE = "Usage: hdfs " + COMMAND + " <" + FS_IMAGE_FILE + ">";
     }
 
+
     @Override
     public int run(String[] args) throws Exception {
-      final int errorCount = checkINodeReference(getFsImageFile(args));
-      LOG.info("Error Count: {}", errorCount);
+      final FsImageValidation validation = FsImageValidation.newInstance(args);
+      final int errorCount = validation.checkINodeReference();
+      println("Error Count: %s", errorCount);
       return errorCount == 0? 0: 1;
+    }
+
+    static String parse(String... args) {
+      final String f;
+      if (args == null || args.length == 0) {
+        f = System.getenv().get(FS_IMAGE_FILE);
+        if (f != null) {
+          println("Environment variable %s = %s", FS_IMAGE_FILE, f);
+        }
+      } else if (args.length == 1) {
+        f = args[0];
+      } else {
+        throw new HadoopIllegalArgumentException(
+            "args = " + Arrays.toString(args));
+      }
+
+      println("%s = %s", FS_IMAGE_FILE, f);
+      return f;
+    }
+
+    static void println(String format, Object... args) {
+      final String s = String.format(format, args);
+      System.out.println(s);
+    }
+
+    static void printError(String message, Throwable t) {
+      System.out.println(message);
+      if (t != null) {
+        t.printStackTrace(System.out);
+      }
     }
   }
 
@@ -146,7 +171,7 @@ public class FsImageValidation {
       System.exit(-1);
       ToolRunner.printGenericCommandUsage(System.err);
     } catch (Throwable e) {
-      LOG.error("Failed to run " + Cli.COMMAND, e);
+      Cli.printError("Failed to run " + Cli.COMMAND, e);
       System.exit(-2);
     }
   }

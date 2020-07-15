@@ -17,25 +17,35 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
-import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgressView;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.apache.hadoop.hdfs.server.namenode.FsImageValidation.Cli.printError;
+import static org.apache.hadoop.hdfs.server.namenode.FsImageValidation.Cli.println;
+
 /** For validating {@link INodeReference} subclasses. */
 public class INodeReferenceValidation {
-  public static final Logger LOG = LoggerFactory.getLogger(INodeReference.class);
+  public static final Logger LOG = LoggerFactory.getLogger(
+      INodeReferenceValidation.class);
 
-  private static final AtomicReference<INodeReferenceValidation> INSTANCE = new AtomicReference<>();
+  private static final AtomicReference<INodeReferenceValidation> INSTANCE
+      = new AtomicReference<>();
 
   public static void start() {
     INSTANCE.compareAndSet(null, new INodeReferenceValidation());
-    LOG.info("Validation started");
+    println("Validation started");
   }
 
   public static int end() {
@@ -45,7 +55,7 @@ public class INodeReferenceValidation {
     }
 
     final int errorCount = instance.assertReferences();
-    LOG.info("Validation ended successfully: {} error(s) found.", errorCount);
+    println("Validation ended successfully: %d error(s) found.", errorCount);
     return errorCount;
   }
 
@@ -53,7 +63,9 @@ public class INodeReferenceValidation {
     final INodeReferenceValidation validation = INSTANCE.get();
     if (validation != null) {
       validation.withCounts.add(c);
-      LOG.info("addWithCount: " + c.toDetailString());
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("addWithCount: " + c.toDetailString());
+      }
     }
   }
 
@@ -61,7 +73,9 @@ public class INodeReferenceValidation {
     final INodeReferenceValidation validation = INSTANCE.get();
     if (validation != null) {
       validation.withNames.add(n);
-      LOG.info("addWithName: {}", n.toDetailString());
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("addWithName: {}", n.toDetailString());
+      }
     }
   }
 
@@ -69,7 +83,9 @@ public class INodeReferenceValidation {
     final INodeReferenceValidation validation = INSTANCE.get();
     if (validation != null) {
       validation.dstReferences.add(d);
-      LOG.info("addDstReference: {}", d.toDetailString());
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("addDstReference: {}", d.toDetailString());
+      }
     }
   }
 
@@ -92,7 +108,7 @@ public class INodeReferenceValidation {
         throws InterruptedException {
       final int size = references.size();
       tasks = createTasks(references, errorCount);
-      LOG.info("Submitting {} tasks for validating {} {}(s)",
+      println("Submitting %d tasks for validating %d %s(s)",
           tasks.size(), size, clazz.getSimpleName());
       futures = service.invokeAll(tasks);
     }
@@ -126,19 +142,19 @@ public class INodeReferenceValidation {
       = new Ref<>(INodeReference.DstReference.class);
 
   private int assertReferences() {
-    final int availableProcessors = Runtime.getRuntime().availableProcessors();
-    LOG.info("Available Processors: {}", availableProcessors);
-    final ExecutorService service = Executors.newFixedThreadPool(availableProcessors);
+    final int p = Runtime.getRuntime().availableProcessors();
+    LOG.info("Available Processors: {}", p);
+    final ExecutorService service = Executors.newFixedThreadPool(p);
 
     final TimerTask checkProgress = new TimerTask() {
       @Override
       public void run() {
-        LOG.info("ASSERT_REFERENCES Progress: {}, {}, {}",
+        println("ASSERT_REFERENCES Progress: %s, %s, %s",
             dstReferences, withCounts, withNames);
       }
     };
     final Timer t = new Timer();
-    t.scheduleAtFixedRate(checkProgress, 0, 60_000);
+    t.scheduleAtFixedRate(checkProgress, 0, 10_000);
 
     final AtomicInteger errorCount = new AtomicInteger();
     try {
@@ -150,7 +166,7 @@ public class INodeReferenceValidation {
       withCounts.waitForFutures();
       withNames.waitForFutures();
     } catch (Throwable e) {
-      LOG.error("Failed to assertReferences", e);
+      printError("Failed to assertReferences", e);
     } finally {
       service.shutdown();
       t.cancel();
@@ -161,7 +177,7 @@ public class INodeReferenceValidation {
   static <REF extends INodeReference> List<Task<REF>> createTasks(
       List<REF> references, AtomicInteger errorCount) {
     final List<Task<REF>> tasks = new LinkedList<>();
-    for (final Iterator<REF> i = references.iterator(); i.hasNext(); ) {
+    for (final Iterator<REF> i = references.iterator(); i.hasNext();) {
       tasks.add(new Task<>(i, errorCount));
     }
     return tasks;
@@ -187,7 +203,7 @@ public class INodeReferenceValidation {
         try {
           ref.assertReferences();
         } catch (Throwable t) {
-          LOG.error("{}: {}", errorCount.incrementAndGet(), t);
+          println("%d: %s", errorCount.incrementAndGet(), t);
         }
       }
       return references.size();
