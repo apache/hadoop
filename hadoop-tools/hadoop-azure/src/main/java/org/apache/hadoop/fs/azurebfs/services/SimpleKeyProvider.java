@@ -20,15 +20,15 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConfigurationPropertyNotFoundException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.KeyProviderException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.fs.azurebfs.diagnostics.Base64StringConfigurationBasicValidator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Key provider that simply returns the storage account key from the
@@ -39,23 +39,22 @@ public class SimpleKeyProvider implements KeyProvider {
 
   @Override
   public String getStorageAccountKey(String accountName, Configuration rawConfig)
-      throws KeyProviderException {
+      throws KeyProviderException, ConfigurationPropertyNotFoundException {
     String key = null;
 
     try {
       AbfsConfiguration abfsConfig = new AbfsConfiguration(rawConfig, accountName);
       key = abfsConfig.getPasswordString(ConfigurationKeys.FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME);
-    } catch(IllegalAccessException | InvalidConfigurationValueException e) {
+
+      // Validating the key.
+      validateStorageAccountKey(key);
+    } catch (IllegalAccessException | InvalidConfigurationValueException e) {
+      if (key == null) {
+        throw new ConfigurationPropertyNotFoundException(accountName);
+      }
       throw new KeyProviderException("Failure to initialize configuration", e);
     } catch(IOException ioe) {
       LOG.warn("Unable to get key from credential providers. {}", ioe);
-    }
-
-    // Validating the key.
-    try {
-      validateStorageAccountKey(key);
-    } catch (InvalidConfigurationValueException e) {
-      e.printStackTrace();
     }
 
     return key;
