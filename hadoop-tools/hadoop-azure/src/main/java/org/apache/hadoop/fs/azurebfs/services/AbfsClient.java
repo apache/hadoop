@@ -336,10 +336,21 @@ public class AbfsClient implements Closeable {
             url,
             requestHeaders);
     Instant renameRequestStartTime = Instant.now();
-    op.execute();
-
-    if (op.getResult().getStatusCode() != HttpURLConnection.HTTP_OK) {
-      return renameIdempotencyCheckOp(renameRequestStartTime, op, destination);
+    try {
+      op.execute();
+    } catch (AzureBlobFileSystemException e) {
+      if (op.getResult().getStatusCode() != HttpURLConnection.HTTP_OK) {
+        final AbfsRestOperation idempotencyOp = renameIdempotencyCheckOp(
+            renameRequestStartTime, op, destination);
+        if (idempotencyOp.getResult().getStatusCode() ==
+            op.getResult().getStatusCode()) {
+          // idempotency did not return different result
+          // throw back the exception
+          throw e;
+        } else {
+          return idempotencyOp;
+        }
+      }
     }
 
     return op;
@@ -570,10 +581,20 @@ public class AbfsClient implements Closeable {
             HTTP_METHOD_DELETE,
             url,
             requestHeaders);
+    try {
     op.execute();
-
-    if (op.getResult().getStatusCode() != HttpURLConnection.HTTP_OK) {
-      return deleteIdempotencyCheckOp(op);
+    } catch (AzureBlobFileSystemException e) {
+      if (op.getResult().getStatusCode() != HttpURLConnection.HTTP_OK) {
+        final AbfsRestOperation idempotencyOp = deleteIdempotencyCheckOp(op);
+        if (idempotencyOp.getResult().getStatusCode() ==
+            op.getResult().getStatusCode()) {
+          // idempotency did not return different result
+          // throw back the exception
+          throw e;
+        } else {
+          return idempotencyOp;
+        }
+      }
     }
 
     return op;
