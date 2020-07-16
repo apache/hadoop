@@ -93,6 +93,7 @@ import org.eclipse.jetty.server.handler.AllowSymLinkAliasChecker;
 import org.eclipse.jetty.server.handler.ContextHandlerCollection;
 import org.eclipse.jetty.server.handler.HandlerCollection;
 import org.eclipse.jetty.server.handler.RequestLogHandler;
+import org.eclipse.jetty.server.handler.StatisticsHandler;
 import org.eclipse.jetty.server.session.SessionHandler;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.FilterMapping;
@@ -665,6 +666,14 @@ public final class HttpServer2 implements FilterContainer {
       handlers.addHandler(requestLogHandler);
     }
     handlers.addHandler(webAppContext);
+
+    if (conf.getBoolean(CommonConfigurationKeysPublic.HADOOP_HTTP_METRICS_ENABLED,
+        CommonConfigurationKeysPublic.HADOOP_HTTP_METRICS_ENABLED_DEFAULT)) {
+      StatisticsHandler stats = new StatisticsHandler();
+      handlers.addHandler(stats);
+      HttpServer2Metrics.create(stats);
+    }
+
     final String appDir = getWebAppsPath(name);
     addDefaultApps(contexts, appDir, conf);
     webServer.setHandler(handlers);
