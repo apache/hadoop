@@ -28,6 +28,7 @@ import java.io.InputStream;
 import java.io.Writer;
 import java.lang.reflect.Constructor;
 import java.net.HttpURLConnection;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -71,8 +72,8 @@ public class HttpExceptionUtils {
     json.put(ERROR_MESSAGE_JSON, getOneLineMessage(ex));
     json.put(ERROR_EXCEPTION_JSON, ex.getClass().getSimpleName());
     json.put(ERROR_CLASSNAME_JSON, ex.getClass().getName());
-    Map<String, Object> jsonResponse = new LinkedHashMap<String, Object>();
-    jsonResponse.put(ERROR_JSON, json);
+    Map<String, Object> jsonResponse =
+        Collections.singletonMap(ERROR_JSON, json);
     Writer writer = response.getWriter();
     JsonSerialization.writer().writeValue(writer, jsonResponse);
     writer.flush();
@@ -91,8 +92,7 @@ public class HttpExceptionUtils {
     json.put(ERROR_MESSAGE_JSON, getOneLineMessage(ex));
     json.put(ERROR_EXCEPTION_JSON, ex.getClass().getSimpleName());
     json.put(ERROR_CLASSNAME_JSON, ex.getClass().getName());
-    Map<String, Object> response = new LinkedHashMap<String, Object>();
-    response.put(ERROR_JSON, json);
+    Map<String, Object> response = Collections.singletonMap(ERROR_JSON, json);
     return Response.status(status).type(MediaType.APPLICATION_JSON).
         entity(response).build();
   }

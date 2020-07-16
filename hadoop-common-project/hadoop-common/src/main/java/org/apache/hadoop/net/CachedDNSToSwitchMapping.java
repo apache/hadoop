@@ -130,8 +130,7 @@ public class CachedDNSToSwitchMapping extends AbstractDNSToSwitchMapping {
    */
   @Override
   public Map<String, String> getSwitchMap() {
-    Map<String, String > switchMap = new HashMap<String, String>(cache);
-    return switchMap;
+    return new HashMap<>(cache);
   }
 
 

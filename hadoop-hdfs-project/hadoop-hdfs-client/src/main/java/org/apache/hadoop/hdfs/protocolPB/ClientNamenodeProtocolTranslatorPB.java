@@ -237,7 +237,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.AsyncCallHandler;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtobufHelper;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
@@ -456,7 +456,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
 
   private void setAsyncReturnValue() {
     final AsyncGet<Message, Exception> asyncReturnMessage
-        = ProtobufRpcEngine.getAsyncReturnMessage();
+        = ProtobufRpcEngine2.getAsyncReturnMessage();
     final AsyncGet<Void, Exception> asyncGet
         = new AsyncGet<Void, Exception>() {
       @Override
@@ -609,7 +609,8 @@ public class ClientNamenodeProtocolTranslatorPB implements
       for (Rename option : options) {
         if (option == Rename.OVERWRITE) {
           overwrite = true;
-        } else if (option == Rename.TO_TRASH) {
+        }
+        if (option == Rename.TO_TRASH) {
           toTrash = true;
         }
       }
@@ -1569,7 +1570,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
       if (Client.isAsynchronousMode()) {
         rpcProxy.getAclStatus(null, req);
         final AsyncGet<Message, Exception> asyncReturnMessage
-            = ProtobufRpcEngine.getAsyncReturnMessage();
+            = ProtobufRpcEngine2.getAsyncReturnMessage();
         final AsyncGet<AclStatus, Exception> asyncGet
             = new AsyncGet<AclStatus, Exception>() {
           @Override

@@ -651,4 +651,35 @@ public class TestFSConfigToCSConfigArgumentHandler {
 
     verifyZeroInteractions(mockValidator);
   }
+
+  @Test
+  public void testEnabledAsyncScheduling() throws Exception {
+    setupFSConfigConversionFiles(true);
+
+    FSConfigToCSConfigArgumentHandler argumentHandler =
+            new FSConfigToCSConfigArgumentHandler(conversionOptions, mockValidator);
+
+    String[] args = getArgumentsAsArrayWithDefaults("-f",
+            FSConfigConverterTestCommons.FS_ALLOC_FILE, "-p",
+            "-a");
+    argumentHandler.parseAndConvert(args);
+
+    assertTrue("-a switch had no effect",
+            conversionOptions.isEnableAsyncScheduler());
+  }
+
+  @Test
+  public void testDisabledAsyncScheduling() throws Exception {
+    setupFSConfigConversionFiles(true);
+
+    FSConfigToCSConfigArgumentHandler argumentHandler =
+            new FSConfigToCSConfigArgumentHandler(conversionOptions, mockValidator);
+
+    String[] args = getArgumentsAsArrayWithDefaults("-f",
+            FSConfigConverterTestCommons.FS_ALLOC_FILE, "-p");
+    argumentHandler.parseAndConvert(args);
+
+    assertFalse("-a switch wasn't provided but async scheduling option is true",
+            conversionOptions.isEnableAsyncScheduler());
+  }
 }

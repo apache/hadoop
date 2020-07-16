@@ -167,19 +167,6 @@ public class TestLogsCLI {
         "options parsing failed: Unrecognized option: -InvalidOpts"));
   }
 
-  @Test(timeout = 5000l)
-  public void testInvalidApplicationId() throws Exception {
-    YarnClient mockYarnClient = createMockYarnClient(
-        YarnApplicationState.FINISHED,
-        UserGroupInformation.getCurrentUser().getShortUserName());
-    LogsCLI cli = new LogsCLIForTest(mockYarnClient);
-    cli.setConf(conf);
-
-    int exitCode = cli.run( new String[] { "-applicationId", "not_an_app_id"});
-    assertTrue(exitCode == -1);
-    assertTrue(sysErrStream.toString().startsWith("Invalid ApplicationId specified"));
-  }
-
   @Test(timeout = 5000L)
   public void testInvalidAMContainerId() throws Exception {
     conf.setBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED, true);
@@ -526,6 +513,48 @@ public class TestLogsCLI {
     assertFalse(sysOutStream.toString().contains(
         logMessage(containerId3, "stdout1234")));
     assertFalse(sysOutStream.toString().contains(
+        createEmptyLog("empty")));
+    sysOutStream.reset();
+
+    // Check backward compatibility for -logFiles
+    exitCode = cli.run(new String[] {"-applicationId", appId.toString(),
+        "-logFiles", "stdout"});
+    assertTrue("Failed with -logFiles", exitCode == 0);
+    assertFalse("Failed with -logFiles", sysOutStream.toString().contains(
+        logMessage(containerId1, "syslog")));
+    assertFalse("Failed with -logFiles", sysOutStream.toString().contains(
+        logMessage(containerId2, "syslog")));
+    assertFalse("Failed with -logFiles", sysOutStream.toString().contains(
+        logMessage(containerId3, "syslog")));
+    assertTrue("Failed with -logFiles", sysOutStream.toString().contains(
+        logMessage(containerId3, "stdout")));
+    assertFalse("Failed with -logFiles", sysOutStream.toString().contains(
+        logMessage(containerId3, "stdout1234")));
+    assertFalse("Failed with -logFiles", sysOutStream.toString().contains(
+        createEmptyLog("empty")));
+    sysOutStream.reset();
+
+    // Check -log_files supercedes -logFiles
+    exitCode = cli.run(new String[] {"-applicationId", appId.toString(),
+        "-log_files", "stdout", "-logFiles", "syslog"});
+    assertTrue("Failed with -logFiles and -log_files", exitCode == 0);
+    assertFalse("Failed with -logFiles and -log_files",
+        sysOutStream.toString().contains(
+        logMessage(containerId1, "syslog")));
+    assertFalse("Failed with -logFiles and -log_files",
+        sysOutStream.toString().contains(
+        logMessage(containerId2, "syslog")));
+    assertFalse("Failed with -logFiles and -log_files",
+        sysOutStream.toString().contains(
+        logMessage(containerId3, "syslog")));
+    assertTrue("Failed with -logFiles and -log_files",
+        sysOutStream.toString().contains(
+        logMessage(containerId3, "stdout")));
+    assertFalse("Failed with -logFiles and -log_files",
+        sysOutStream.toString().contains(
+        logMessage(containerId3, "stdout1234")));
+    assertFalse("Failed with -logFiles and -log_files",
+        sysOutStream.toString().contains(
         createEmptyLog("empty")));
     sysOutStream.reset();
 

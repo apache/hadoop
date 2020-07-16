@@ -47,6 +47,7 @@ public final class DfsPathCapabilities {
     case CommonPathCapabilities.FS_CHECKSUMS:
     case CommonPathCapabilities.FS_CONCAT:
     case CommonPathCapabilities.FS_LIST_CORRUPT_FILE_BLOCKS:
+    case CommonPathCapabilities.FS_MULTIPART_UPLOADER:
     case CommonPathCapabilities.FS_PATHHANDLES:
     case CommonPathCapabilities.FS_PERMISSIONS:
     case CommonPathCapabilities.FS_SNAPSHOTS:

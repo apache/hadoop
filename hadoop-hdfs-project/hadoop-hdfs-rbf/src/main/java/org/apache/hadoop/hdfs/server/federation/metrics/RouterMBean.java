@@ -101,4 +101,11 @@ public interface RouterMBean {
    * @return true, if security is enabled.
    */
   boolean isSecurityEnabled();
+
+  /**
+   * Get the top delegation token owners(realUser).
+   *
+   * @return Json string of owners to token counts
+   */
+  String getTopTokenRealOwners();
 }

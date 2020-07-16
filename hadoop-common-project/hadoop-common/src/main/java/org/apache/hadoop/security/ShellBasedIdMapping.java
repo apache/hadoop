@@ -24,6 +24,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -534,7 +535,7 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
   static final class PassThroughMap<K> extends HashMap<K, K> {
     
     public PassThroughMap() {
-      this(new HashMap<K, K>());
+      this(Collections.emptyMap());
     }
     
     public PassThroughMap(Map<K, K> mapping) {

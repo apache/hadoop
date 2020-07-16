@@ -30,7 +30,7 @@
 
 namespace hdfs {
 
-Status ToStatus(const ::asio::error_code &ec) {
+Status ToStatus(const boost::system::error_code &ec) {
   if (ec) {
     return Status(ec.value(), ec.message().c_str());
   } else {
@@ -134,7 +134,7 @@ std::string Base64Encode(const std::string &src) {
 }
 
 
-std::string SafeDisconnect(asio::ip::tcp::socket *sock) {
+std::string SafeDisconnect(boost::asio::ip::tcp::socket *sock) {
   std::string err;
   if(sock && sock->is_open()) {
     /**
@@ -147,7 +147,7 @@ std::string SafeDisconnect(asio::ip::tcp::socket *sock) {
      **/
 
     try {
-      sock->shutdown(asio::ip::tcp::socket::shutdown_both);
+      sock->shutdown(boost::asio::ip::tcp::socket::shutdown_both);
     } catch (const std::exception &e) {
       err = std::string("shutdown() threw") + e.what();
     }

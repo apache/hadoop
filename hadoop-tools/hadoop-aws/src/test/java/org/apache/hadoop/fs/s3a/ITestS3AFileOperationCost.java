@@ -169,6 +169,76 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
   }
 
   @Test
+  public void testCostOfListFilesOnFile() throws Throwable {
+    describe("Performing listFiles() on a file");
+    Path file = path(getMethodName() + ".txt");
+    S3AFileSystem fs = getFileSystem();
+    touch(fs, file);
+    resetMetricDiffs();
+    fs.listFiles(file, true);
+    if (!fs.hasMetadataStore()) {
+      metadataRequests.assertDiffEquals(1);
+    } else {
+      if (fs.allowAuthoritative(file)) {
+        listRequests.assertDiffEquals(0);
+      } else {
+        listRequests.assertDiffEquals(1);
+      }
+    }
+  }
+
+  @Test
+  public void testCostOfListFilesOnEmptyDir() throws Throwable {
+    describe("Performing listFiles() on an empty dir");
+    Path dir = path(getMethodName());
+    S3AFileSystem fs = getFileSystem();
+    fs.mkdirs(dir);
+    resetMetricDiffs();
+    fs.listFiles(dir, true);
+    if (!fs.hasMetadataStore()) {
+      verifyOperationCount(2, 1);
+    } else {
+      if (fs.allowAuthoritative(dir)) {
+        verifyOperationCount(0, 0);
+      } else {
+        verifyOperationCount(0, 1);
+      }
+    }
+  }
+
+  @Test
+  public void testCostOfListFilesOnNonEmptyDir() throws Throwable {
+    describe("Performing listFiles() on a non empty dir");
+    Path dir = path(getMethodName());
+    S3AFileSystem fs = getFileSystem();
+    fs.mkdirs(dir);
+    Path file = new Path(dir, "file.txt");
+    touch(fs, file);
+    resetMetricDiffs();
+    fs.listFiles(dir, true);
+    if (!fs.hasMetadataStore()) {
+      verifyOperationCount(0, 1);
+    } else {
+      if (fs.allowAuthoritative(dir)) {
+        verifyOperationCount(0, 0);
+      } else {
+        verifyOperationCount(0, 1);
+      }
+    }
+  }
+
+  @Test
+  public void testCostOfListFilesOnNonExistingDir() throws Throwable {
+    describe("Performing listFiles() on a non existing dir");
+    Path dir = path(getMethodName());
+    S3AFileSystem fs = getFileSystem();
+    resetMetricDiffs();
+    intercept(FileNotFoundException.class,
+        () -> fs.listFiles(dir, true));
+    verifyOperationCount(2, 2);
+  }
+
+  @Test
   public void testCostOfGetFileStatusOnFile() throws Throwable {
     describe("performing getFileStatus on a file");
     Path simpleFile = path("simple.txt");
@@ -573,5 +643,49 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
       verifyOperationCount(1, 1);
     }
 
+  }
+
+  @Test
+  public void testCostOfGlobStatus() throws Throwable {
+    describe("Test globStatus has expected cost");
+    S3AFileSystem fs = getFileSystem();
+    assume("Unguarded FS only", !fs.hasMetadataStore());
+
+    Path basePath = path("testCostOfGlobStatus/nextFolder/");
+
+    // create a bunch of files
+    int filesToCreate = 10;
+    for (int i = 0; i < filesToCreate; i++) {
+      try (FSDataOutputStream out = fs.create(basePath.suffix("/" + i))) {
+        verifyOperationCount(1, 1);
+      }
+    }
+
+    fs.globStatus(basePath.suffix("/*"));
+    // 2 head + 1 list from getFileStatus on path,
+    // plus 1 list to match the glob pattern
+    verifyOperationCount(2, 2);
+  }
+
+  @Test
+  public void testCostOfGlobStatusNoSymlinkResolution() throws Throwable {
+    describe("Test globStatus does not attempt to resolve symlinks");
+    S3AFileSystem fs = getFileSystem();
+    assume("Unguarded FS only", !fs.hasMetadataStore());
+
+    Path basePath = path("testCostOfGlobStatusNoSymlinkResolution/f/");
+
+    // create a single file, globStatus returning a single file on a pattern
+    // triggers attempts at symlinks resolution if configured
+    String fileName = "/notASymlinkDOntResolveMeLikeOne";
+    try (FSDataOutputStream out = fs.create(basePath.suffix(fileName))) {
+      verifyOperationCount(1, 1);
+    }
+
+    fs.globStatus(basePath.suffix("/*"));
+    // unguarded: 2 head + 1 list from getFileStatus on path,
+    // plus 1 list to match the glob pattern
+    // no additional operations from symlink resolution
+    verifyOperationCount(2, 2);
   }
 }

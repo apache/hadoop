@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -27,7 +28,10 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsConstants;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
+
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME;
 
 /******************************************************************************
  * This class is extended from the ViewFileSystem for the overloaded scheme
@@ -57,9 +61,9 @@ import org.apache.hadoop.fs.UnsupportedFileSystemException;
  * data to mount with other hdfs and object store clusters(hdfs://NN1,
  * o3fs://bucket1.volume1/, s3a://bucket1/)
  *
- * fs.viewfs.mounttable.Cluster./user = hdfs://NN1/user
- * fs.viewfs.mounttable.Cluster./data = o3fs://bucket1.volume1/data
- * fs.viewfs.mounttable.Cluster./backup = s3a://bucket1/backup/
+ * fs.viewfs.mounttable.Cluster.link./user = hdfs://NN1/user
+ * fs.viewfs.mounttable.Cluster.link./data = o3fs://bucket1.volume1/data
+ * fs.viewfs.mounttable.Cluster.link./backup = s3a://bucket1/backup/
  *
  * Op1: Create file hdfs://Cluster/user/fileA will go to hdfs://NN1/user/fileA
  * Op2: Create file hdfs://Cluster/data/datafile will go to
@@ -73,15 +77,28 @@ import org.apache.hadoop.fs.UnsupportedFileSystemException;
  * data to mount with other hdfs and object store clusters
  * (hdfs://NN1, o3fs://bucket1.volume1/)
  *
- * fs.viewfs.mounttable.bucketA./user = hdfs://NN1/user
- * fs.viewfs.mounttable.bucketA./data = o3fs://bucket1.volume1/data
- * fs.viewfs.mounttable.bucketA./salesDB = s3a://bucketA/salesDB/
+ * fs.viewfs.mounttable.bucketA.link./user = hdfs://NN1/user
+ * fs.viewfs.mounttable.bucketA.link./data = o3fs://bucket1.volume1/data
+ * fs.viewfs.mounttable.bucketA.link./salesDB = s3a://bucketA/salesDB/
  *
  * Op1: Create file s3a://bucketA/user/fileA will go to hdfs://NN1/user/fileA
  * Op2: Create file s3a://bucketA/data/datafile will go to
  *      o3fs://bucket1.volume1/data/datafile
  * Op3: Create file s3a://bucketA/salesDB/dbfile will go to
  *      s3a://bucketA/salesDB/dbfile
+ *
+ * Note:
+ * (1) In ViewFileSystemOverloadScheme, by default the mount links will be
+ * represented as non-symlinks. If you want to change this behavior, please see
+ * {@link ViewFileSystem#listStatus(Path)}
+ * (2) In ViewFileSystemOverloadScheme, only the initialized uri's hostname will
+ * be considered as the mount table name. When the passed uri has hostname:port,
+ * it will simply ignore the port number and only hostname will be considered as
+ * the mount table name.
+ * (3) If there are no mount links configured with the initializing uri's
+ * hostname as the mount table name, then it will automatically consider the
+ * current uri as fallback( ex: fs.viewfs.mounttable.<mycluster>.linkFallBack)
+ * target fs uri.
  *****************************************************************************/
 @InterfaceAudience.LimitedPrivate({ "MapReduce", "HBase", "Hive" })
 @InterfaceStability.Evolving
@@ -96,6 +113,14 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
     return myUri.getScheme();
   }
 
+  /**
+   * Returns the ViewFileSystem type.
+   * @return <code>viewfs</code>
+   */
+  String getType() {
+    return FsConstants.VIEWFSOS_TYPE;
+  }
+
   @Override
   public void initialize(URI theUri, Configuration conf) throws IOException {
     this.myUri = theUri;
@@ -105,6 +130,14 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
     }
     String mountTableConfigPath =
         conf.get(Constants.CONFIG_VIEWFS_MOUNTTABLE_PATH);
+    /* The default value to false in ViewFSOverloadScheme */
+    conf.setBoolean(Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS,
+        conf.getBoolean(Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS,
+            false));
+    /* the default value to true in ViewFSOverloadScheme */
+    conf.setBoolean(CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME,
+        conf.getBoolean(Constants.CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME,
+            true));
     if (null != mountTableConfigPath) {
       MountTableConfigLoader loader = new HCFSMountTableConfigLoader();
       loader.load(mountTableConfigPath, conf);
@@ -225,6 +258,33 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
       return result;
     }
 
+  }
+
+  /**
+   * This is an admin only API to give access to its child raw file system, if
+   * the path is link. If the given path is an internal directory(path is from
+   * mount paths tree), it will initialize the file system of given path uri
+   * directly. If path cannot be resolved to any internal directory or link, it
+   * will throw NotInMountpointException. Please note, this API will not return
+   * chrooted file system. Instead, this API will get actual raw file system
+   * instances.
+   *
+   * @param path - fs uri path
+   * @param conf - configuration
+   * @throws IOException
+   */
+  public FileSystem getRawFileSystem(Path path, Configuration conf)
+      throws IOException {
+    InodeTree.ResolveResult<FileSystem> res;
+    try {
+      res = fsState.resolve(getUriPath(path), true);
+      return res.isInternalDir() ? fsGetter().get(path.toUri(), conf)
+          : ((ChRootedFileSystem) res.targetFileSystem).getMyFs();
+    } catch (FileNotFoundException e) {
+      // No link configured with passed path.
+      throw new NotInMountpointException(path,
+          "No link found for the given path.");
+    }
   }
 
 }

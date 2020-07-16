@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
 
 import com.google.common.collect.Lists;
@@ -271,7 +272,10 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
     assertTrue(fs.delete(testDirs[1], false));
     assertTrue(fs.delete(testDirs[2], false));
 
-    fs.rename(path("a"), path("a3"));
+    ContractTestUtils.rename(fs, path("a"), path("a3"));
+    ContractTestUtils.assertPathsDoNotExist(fs,
+            "Source paths shouldn't exist post rename operation",
+            testDirs[0], testDirs[1], testDirs[2]);
     FileStatus[] paths = fs.listStatus(path("a3/b"));
     List<Path> list = new ArrayList<>();
     for (FileStatus fileState : paths) {

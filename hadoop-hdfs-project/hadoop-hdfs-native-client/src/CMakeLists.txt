@@ -18,6 +18,8 @@
 
 cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
 
+project(hadoop_hdfs_native_client)
+
 enable_testing()
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/../../../hadoop-common-project/hadoop-common)

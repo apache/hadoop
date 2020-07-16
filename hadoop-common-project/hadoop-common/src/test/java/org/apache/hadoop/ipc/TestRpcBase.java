@@ -70,7 +70,7 @@ public class TestRpcBase {
   protected void setupConf() {
     conf = new Configuration();
     // Set RPC engine to protobuf RPC engine
-    RPC.setProtocolEngine(conf, TestRpcService.class, ProtobufRpcEngine.class);
+    RPC.setProtocolEngine(conf, TestRpcService.class, ProtobufRpcEngine2.class);
     UserGroupInformation.setConfiguration(conf);
   }
 

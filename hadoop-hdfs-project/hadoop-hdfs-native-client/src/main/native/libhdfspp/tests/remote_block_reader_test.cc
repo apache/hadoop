@@ -29,6 +29,9 @@
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <boost/system/error_code.hpp>
+#include <boost/asio/buffer.hpp>
+#include <boost/asio/io_service.hpp>
 
 #include <iostream>
 
@@ -44,9 +47,9 @@ using ::hadoop::hdfs::ReadOpChecksumInfoProto;
 using ::hadoop::hdfs::LocatedBlockProto;
 using ::hadoop::hdfs::LocatedBlocksProto;
 
-using ::asio::buffer;
-using ::asio::error_code;
-using ::asio::mutable_buffers_1;
+using boost::asio::buffer;
+using boost::system::error_code;
+using boost::asio::mutable_buffers_1;
 using ::testing::_;
 using ::testing::InvokeArgument;
 using ::testing::Return;
@@ -60,7 +63,7 @@ namespace hdfs {
 
 class MockDNConnection : public MockConnectionBase, public DataNodeConnection{
 public:
-  MockDNConnection(::asio::io_service &io_service)
+  MockDNConnection(boost::asio::io_service &io_service)
       : MockConnectionBase(&io_service), OnRead([](){}) {}
   MOCK_METHOD0(Produce, ProducerResult());
 
@@ -70,14 +73,14 @@ public:
   std::function<void(void)> OnRead;
 
   void async_read_some(const MutableBuffer &buf,
-        std::function<void (const asio::error_code & error,
+        std::function<void (const boost::system::error_code & error,
                                std::size_t bytes_transferred) > handler) override {
       this->OnRead();
       this->MockConnectionBase::async_read_some(buf, handler);
   }
 
   void async_write_some(const ConstBuffer &buf,
-            std::function<void (const asio::error_code & error,
+            std::function<void (const boost::system::error_code & error,
                                  std::size_t bytes_transferred) > handler) override {
     this->MockConnectionBase::async_write_some(buf, handler);
   }
@@ -96,7 +99,7 @@ public:
 
   MOCK_METHOD2(
       AsyncReadPacket,
-      void(const asio::mutable_buffers_1 &,
+      void(const boost::asio::mutable_buffers_1 &,
            const std::function<void(const Status &, size_t transferred)> &));
 
   MOCK_METHOD5(AsyncRequestBlock,
@@ -163,7 +166,7 @@ TEST(RemoteBlockReaderTest, TestReadSingleTrunk) {
       .WillOnce(InvokeArgument<1>(Status::OK(), sizeof(buf)));
 
   reader.AsyncReadBlock(
-       GetRandomClientName(), block, 0, asio::buffer(buf, sizeof(buf)),
+       GetRandomClientName(), block, 0, boost::asio::buffer(buf, sizeof(buf)),
       [&stat, &read](const Status &status, size_t transferred) {
         stat = status;
         read = transferred;
@@ -190,7 +193,7 @@ TEST(RemoteBlockReaderTest, TestReadMultipleTrunk) {
       .WillRepeatedly(InvokeArgument<1>(Status::OK(), sizeof(buf) / 4));
 
   reader.AsyncReadBlock(
-       GetRandomClientName(), block, 0, asio::buffer(buf, sizeof(buf)),
+       GetRandomClientName(), block, 0, boost::asio::buffer(buf, sizeof(buf)),
       [&stat, &read](const Status &status, size_t transferred) {
         stat = status;
         read = transferred;
@@ -218,7 +221,7 @@ TEST(RemoteBlockReaderTest, TestReadError) {
       .WillOnce(InvokeArgument<1>(Status::Error("error"), 0));
 
   reader.AsyncReadBlock(
-       GetRandomClientName(), block, 0, asio::buffer(buf, sizeof(buf)),
+       GetRandomClientName(), block, 0, boost::asio::buffer(buf, sizeof(buf)),
       [&stat, &read](const Status &status, size_t transferred) {
         stat = status;
         read = transferred;
@@ -250,7 +253,7 @@ ReadContent(std::shared_ptr<Stream> conn, const ExtendedBlockProto &block,
 TEST(RemoteBlockReaderTest, TestReadWholeBlock) {
   static const size_t kChunkSize = 512;
   static const string kChunkData(kChunkSize, 'a');
-  ::asio::io_service io_service;
+  boost::asio::io_service io_service;
   auto conn = std::make_shared<MockDNConnection>(io_service);
   BlockOpResponseProto block_op_resp;
 
@@ -287,7 +290,7 @@ TEST(RemoteBlockReaderTest, TestCancelWhileReceiving) {
 
   static const size_t kChunkSize = 512;
   static const string kChunkData(kChunkSize, 'a');
-  ::asio::io_service io_service;
+  boost::asio::io_service io_service;
   auto conn = std::make_shared<MockDNConnection>(io_service);
   BlockOpResponseProto block_op_resp;
 
@@ -338,7 +341,7 @@ TEST(RemoteBlockReaderTest, TestReadWithinChunk) {
   static const size_t kOffset = kChunkSize / 4;
   static const string kChunkData = string(kOffset, 'a') + string(kLength, 'b');
 
-  ::asio::io_service io_service;
+  boost::asio::io_service io_service;
   auto conn = std::make_shared<MockDNConnection>(io_service);
   BlockOpResponseProto block_op_resp;
   ReadOpChecksumInfoProto *checksum_info =
@@ -378,7 +381,7 @@ TEST(RemoteBlockReaderTest, TestReadMultiplePacket) {
   static const size_t kChunkSize = 1024;
   static const string kChunkData(kChunkSize, 'a');
 
-  ::asio::io_service io_service;
+  boost::asio::io_service io_service;
   auto conn = std::make_shared<MockDNConnection>(io_service);
   BlockOpResponseProto block_op_resp;
   block_op_resp.set_status(::hadoop::hdfs::Status::SUCCESS);
@@ -428,7 +431,7 @@ TEST(RemoteBlockReaderTest, TestReadCancelBetweenPackets) {
   static const size_t kChunkSize = 1024;
   static const string kChunkData(kChunkSize, 'a');
 
-  ::asio::io_service io_service;
+  boost::asio::io_service io_service;
   auto conn = std::make_shared<MockDNConnection>(io_service);
   BlockOpResponseProto block_op_resp;
   block_op_resp.set_status(::hadoop::hdfs::Status::SUCCESS);
@@ -482,7 +485,7 @@ TEST(RemoteBlockReaderTest, TestSaslConnection) {
   static const string kAuthPayload = "realm=\"0\",nonce=\"+GAWc+O6yEAWpew/"
                                      "qKah8qh4QZLoOLCDcTtEKhlS\",qop=\"auth\","
                                      "charset=utf-8,algorithm=md5-sess";
-  ::asio::io_service io_service;
+  boost::asio::io_service io_service;
   auto conn = std::make_shared<MockDNConnection>(io_service);
   BlockOpResponseProto block_op_resp;
   block_op_resp.set_status(::hadoop::hdfs::Status::SUCCESS);

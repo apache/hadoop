@@ -45,6 +45,7 @@ public abstract class TimedHealthReporterService extends AbstractService
   private Timer timer;
   private TimerTask task;
   private long intervalMs;
+  private boolean runBeforeStartup;
 
   TimedHealthReporterService(String name, long intervalMs) {
     super(name);
@@ -52,6 +53,17 @@ public abstract class TimedHealthReporterService extends AbstractService
     this.healthReport = "";
     this.lastReportedTime = System.currentTimeMillis();
     this.intervalMs = intervalMs;
+    this.runBeforeStartup = false;
+  }
+
+  TimedHealthReporterService(String name, long intervalMs,
+      boolean runBeforeStartup) {
+    super(name);
+    this.isHealthy = true;
+    this.healthReport = "";
+    this.lastReportedTime = System.currentTimeMillis();
+    this.intervalMs = intervalMs;
+    this.runBeforeStartup = runBeforeStartup;
   }
 
   @VisibleForTesting
@@ -73,7 +85,13 @@ public abstract class TimedHealthReporterService extends AbstractService
       throw new Exception("Health reporting task hasn't been set!");
     }
     timer = new Timer("HealthReporterService-Timer", true);
-    timer.scheduleAtFixedRate(task, 0, intervalMs);
+    long delay = 0;
+    if (runBeforeStartup) {
+      delay = intervalMs;
+      task.run();
+    }
+
+    timer.scheduleAtFixedRate(task, delay, intervalMs);
     super.serviceStart();
   }
 

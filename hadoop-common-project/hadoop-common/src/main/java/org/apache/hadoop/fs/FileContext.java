@@ -66,6 +66,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ShutdownHookManager;
 
 import com.google.common.base.Preconditions;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.htrace.core.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -507,10 +508,9 @@ public class FileContext implements PathCapabilities {
     return getFileContext(FsConstants.LOCAL_FS_URI, aConf);
   }
 
-  /* This method is needed for tests. */
+  @VisibleForTesting
   @InterfaceAudience.Private
-  @InterfaceStability.Unstable /* return type will change to AFS once
-                                  HADOOP-6223 is completed */
+  @InterfaceStability.Unstable
   public AbstractFileSystem getDefaultFileSystem() {
     return defaultFS;
   }
@@ -2957,4 +2957,31 @@ public class FileContext implements PathCapabilities {
         (fs, p) -> fs.hasPathCapability(p, capability));
   }
 
+  /**
+   * Return a set of server default configuration values based on path.
+   * @param path path to fetch server defaults
+   * @return server default configuration values for path
+   * @throws IOException an I/O error occurred
+   */
+  public FsServerDefaults getServerDefaults(final Path path)
+      throws IOException {
+    return FsLinkResolution.resolve(this,
+        fixRelativePart(path),
+        (fs, p) -> fs.getServerDefaults(p));
+  }
+
+  /**
+   * Create a multipart uploader.
+   * @param basePath file path under which all files are uploaded
+   * @return a MultipartUploaderBuilder object to build the uploader
+   * @throws IOException if some early checks cause IO failures.
+   * @throws UnsupportedOperationException if support is checked early.
+   */
+  @InterfaceStability.Unstable
+  public MultipartUploaderBuilder createMultipartUploader(Path basePath)
+      throws IOException {
+    return FsLinkResolution.resolve(this,
+        fixRelativePart(basePath),
+        (fs, p) -> fs.createMultipartUploader(p));
+  }
 }

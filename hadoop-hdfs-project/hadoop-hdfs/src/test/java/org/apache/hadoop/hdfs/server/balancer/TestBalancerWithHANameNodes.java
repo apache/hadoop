@@ -198,6 +198,7 @@ public class TestBalancerWithHANameNodes {
     TestBalancer.initConf(conf);
     // Avoid the same FS being reused between tests
     conf.setBoolean("fs.hdfs.impl.disable.cache", true);
+    conf.setBoolean(HdfsClientConfigKeys.Failover.RANDOM_ORDER, false);
 
     MiniQJMHACluster qjmhaCluster = null;
     try {

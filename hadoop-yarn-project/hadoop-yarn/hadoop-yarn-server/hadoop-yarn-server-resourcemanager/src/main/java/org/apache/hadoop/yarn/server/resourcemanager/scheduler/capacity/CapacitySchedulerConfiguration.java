@@ -42,7 +42,6 @@ import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.QueueMappingBuilder;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMappingEntity;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AppPriorityACLConfigurationParser.AppPriorityACLKeyType;
@@ -379,6 +378,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   public static final Pattern RESOURCE_PATTERN = Pattern.compile(PATTERN_FOR_ABSOLUTE_RESOURCE);
 
+  public static final String MAX_PARALLEL_APPLICATIONS = "max-parallel-apps";
+
+  public static final int DEFAULT_MAX_PARALLEL_APPLICATIONS = Integer.MAX_VALUE;
+
   /**
    * Different resource types supported.
    */
@@ -413,7 +416,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     String queueName = PREFIX + queue + DOT + ORDERING_POLICY + DOT;
     return queueName;
   }
-  
+
+  static String getUserPrefix(String user) {
+    return PREFIX + "user." + user + DOT;
+  }
+
   private String getNodeLabelPrefix(String queue, String label) {
     if (label.equals(CommonNodeLabelsManager.NO_LABEL)) {
       return getQueuePrefix(queue);
@@ -1039,12 +1046,12 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     setBoolean(ENABLE_QUEUE_MAPPING_OVERRIDE, overrideWithQueueMappings);
   }
 
-  public List<QueueMappingEntity> getQueueMappingEntity(
+  public List<QueueMapping> getQueueMappingEntity(
       String queueMappingSuffix) {
     String queueMappingName = buildQueueMappingRuleProperty(queueMappingSuffix);
 
-    List<QueueMappingEntity> mappings =
-        new ArrayList<QueueMappingEntity>();
+    List<QueueMapping> mappings =
+        new ArrayList<QueueMapping>();
     Collection<String> mappingsString =
         getTrimmedStringCollection(queueMappingName);
     for (String mappingValue : mappingsString) {
@@ -1058,10 +1065,11 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
       //Mappings should be consistent, and have the parent path parsed
       // from the beginning
-      QueueMappingEntity m = new QueueMappingEntity(
-          mapping[0],
-          QueuePlacementRuleUtils.extractQueuePath(mapping[1]));
-
+      QueueMapping m = QueueMapping.QueueMappingBuilder.create()
+          .type(QueueMapping.MappingType.APPLICATION)
+          .source(mapping[0])
+          .parsePathString(mapping[1])
+          .build();
       mappings.add(m);
     }
 
@@ -1076,15 +1084,15 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   }
 
   @VisibleForTesting
-  public void setQueueMappingEntities(List<QueueMappingEntity> queueMappings,
+  public void setQueueMappingEntities(List<QueueMapping> queueMappings,
       String queueMappingSuffix) {
     if (queueMappings == null) {
       return;
     }
 
     List<String> queueMappingStrs = new ArrayList<>();
-    for (QueueMappingEntity mapping : queueMappings) {
-      queueMappingStrs.add(mapping.toString());
+    for (QueueMapping mapping : queueMappings) {
+      queueMappingStrs.add(mapping.toTypelessString());
     }
 
     String mappingRuleProp = buildQueueMappingRuleProperty(queueMappingSuffix);
@@ -1136,7 +1144,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         m = QueueMappingBuilder.create()
                 .type(mappingType)
                 .source(mapping[1])
-                .queuePath(QueuePlacementRuleUtils.extractQueuePath(mapping[2]))
+                .parsePathString(mapping[2])
                 .build();
       } catch (Throwable t) {
         throw new IllegalArgumentException(
@@ -1390,6 +1398,31 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   public boolean shouldAppFailFast(Configuration conf) {
     return conf.getBoolean(APP_FAIL_FAST, DEFAULT_APP_FAIL_FAST);
+  }
+
+  public Integer getMaxParallelAppsForQueue(String queue) {
+    int defaultMaxParallelAppsForQueue =
+        getInt(PREFIX + MAX_PARALLEL_APPLICATIONS,
+        DEFAULT_MAX_PARALLEL_APPLICATIONS);
+
+    String maxParallelAppsForQueue = get(getQueuePrefix(queue)
+        + MAX_PARALLEL_APPLICATIONS);
+
+    return (maxParallelAppsForQueue != null) ?
+        Integer.parseInt(maxParallelAppsForQueue)
+        : defaultMaxParallelAppsForQueue;
+  }
+
+  public Integer getMaxParallelAppsForUser(String user) {
+    int defaultMaxParallelAppsForUser =
+        getInt(PREFIX + "user." + MAX_PARALLEL_APPLICATIONS,
+        DEFAULT_MAX_PARALLEL_APPLICATIONS);
+    String maxParallelAppsForUser = get(getUserPrefix(user)
+        + MAX_PARALLEL_APPLICATIONS);
+
+    return (maxParallelAppsForUser != null) ?
+        Integer.parseInt(maxParallelAppsForUser)
+        : defaultMaxParallelAppsForUser;
   }
 
   private static final String PREEMPTION_CONFIG_PREFIX =

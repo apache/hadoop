@@ -73,7 +73,6 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -733,6 +732,26 @@ public class FSDirectory implements Closeable {
       throw pnde;
     }
     return iip;
+  }
+
+  /**
+   * This method should only be used from internal paths and not those provided
+   * directly by a user. It resolves a given path into an INodesInPath in a
+   * similar way to resolvePath(...), only traversal and permissions are not
+   * checked.
+   * @param src The path to resolve.
+   * @return if the path indicates an inode, return path after replacing up to
+   *        {@code <inodeid>} with the corresponding path of the inode, else
+   *        the path in {@code src} as is. If the path refers to a path in
+   *        the "raw" directory, return the non-raw pathname.
+   * @throws FileNotFoundException
+   */
+  public INodesInPath unprotectedResolvePath(String src)
+      throws FileNotFoundException {
+    byte[][] components = INode.getPathComponents(src);
+    boolean isRaw = isReservedRawName(components);
+    components = resolveComponents(components, this);
+    return INodesInPath.resolve(rootDir, components, isRaw);
   }
 
   INodesInPath resolvePath(FSPermissionChecker pc, String src, long fileId)
@@ -2032,7 +2051,23 @@ public class FSDirectory implements Closeable {
       // first empty component for the root.  however file status
       // related calls are expected to strip out the root component according
       // to TestINodeAttributeProvider.
-      byte[][] components = iip.getPathComponents();
+      // Due to HDFS-15372 the attribute provider should received the resolved
+      // snapshot path. Ie, rather than seeing /d/.snapshot/sn/data it should
+      // see /d/data. However, for the path /d/.snapshot/sn it should see this
+      // full path. If the current inode is the snapshot name, it always has the
+      // same ID as its parent inode, so we can use that to check if it is the
+      // path which needs handled specially.
+      byte[][] components;
+      INodeDirectory parent = node.getParent();
+      if (iip.isSnapshot()
+          && parent != null && parent.getId() != node.getId()) {
+        // For snapshot paths, we always user node.getPathComponents so the
+        // snapshot path is resolved to the real path, unless the last component
+        // is the snapshot name root directory.
+        components = node.getPathComponents();
+      } else {
+        components = iip.getPathComponents();
+      }
       components = Arrays.copyOfRange(components, 1, components.length);
       nodeAttrs = ap.getAttributes(components, nodeAttrs);
     }

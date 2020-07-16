@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.StorageType;
@@ -156,7 +157,8 @@ public class FileWithSnapshotFeature implements INode.Feature {
     QuotaCounts oldCounts;
     if (removed.snapshotINode != null) {
       oldCounts = new QuotaCounts.Builder().build();
-      List<BlockInfo> allBlocks = new ArrayList<BlockInfo>();
+      // collect all distinct blocks
+      Set<BlockInfo> allBlocks = new HashSet<BlockInfo>();
       if (file.getBlocks() != null) {
         allBlocks.addAll(Arrays.asList(file.getBlocks()));
       }

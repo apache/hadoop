@@ -49,6 +49,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
 import org.apache.hadoop.fs.s3a.select.SelectBinding;
@@ -57,6 +58,9 @@ import org.apache.hadoop.util.DurationInfo;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.Invoker.*;
+import static org.apache.hadoop.fs.s3a.S3AUtils.longOption;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DEFAULT_UPLOAD_PART_COUNT_LIMIT;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.UPLOAD_PART_COUNT_LIMIT;
 
 /**
  * Helper for low-level operations against an S3 Bucket for writing data,
@@ -83,7 +87,7 @@ import static org.apache.hadoop.fs.s3a.Invoker.*;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class WriteOperationHelper {
+public class WriteOperationHelper implements WriteOperations {
   private static final Logger LOG =
       LoggerFactory.getLogger(WriteOperationHelper.class);
 
@@ -250,11 +254,11 @@ public class WriteOperationHelper {
       Retried retrying,
       @Nullable BulkOperationState operationState) throws IOException {
     if (partETags.isEmpty()) {
-      throw new IOException(
-          "No upload parts in multipart upload to " + destKey);
+      throw new PathIOException(destKey,
+          "No upload parts in multipart upload");
     }
     CompleteMultipartUploadResult uploadResult =
-        invoker.retry("Completing multipart commit", destKey,
+        invoker.retry("Completing multipart upload", destKey,
             true,
             retrying,
             () -> {
@@ -384,6 +388,7 @@ public class WriteOperationHelper {
    * A subset of the file may be posted, by providing the starting point
    * in {@code offset} and a length of block in {@code size} equal to
    * or less than the remaining bytes.
+   * The part number must be less than 10000.
    * @param destKey destination key of ongoing operation
    * @param uploadId ID of ongoing upload
    * @param partNumber current part number of the upload
@@ -392,6 +397,8 @@ public class WriteOperationHelper {
    * @param sourceFile optional source file.
    * @param offset offset in file to start reading.
    * @return the request.
+   * @throws IllegalArgumentException if the parameters are invalid -including
+   * @throws PathIOException if the part number is out of range.
    */
   public UploadPartRequest newUploadPartRequest(
       String destKey,
@@ -400,18 +407,32 @@ public class WriteOperationHelper {
       int size,
       InputStream uploadStream,
       File sourceFile,
-      Long offset) {
+      Long offset) throws PathIOException {
     checkNotNull(uploadId);
     // exactly one source must be set; xor verifies this
     checkArgument((uploadStream != null) ^ (sourceFile != null),
         "Data source");
     checkArgument(size >= 0, "Invalid partition size %s", size);
-    checkArgument(partNumber > 0 && partNumber <= 10000,
-        "partNumber must be between 1 and 10000 inclusive, but is %s",
-        partNumber);
+    checkArgument(partNumber > 0,
+        "partNumber must be between 1 and %s inclusive, but is %s",
+            DEFAULT_UPLOAD_PART_COUNT_LIMIT, partNumber);
 
     LOG.debug("Creating part upload request for {} #{} size {}",
         uploadId, partNumber, size);
+    long partCountLimit = longOption(conf,
+        UPLOAD_PART_COUNT_LIMIT,
+        DEFAULT_UPLOAD_PART_COUNT_LIMIT,
+        1);
+    if (partCountLimit != DEFAULT_UPLOAD_PART_COUNT_LIMIT) {
+      LOG.warn("Configuration property {} shouldn't be overridden by client",
+              UPLOAD_PART_COUNT_LIMIT);
+    }
+    final String pathErrorMsg = "Number of parts in multipart upload exceeded."
+        + " Current part count = %s, Part count limit = %s ";
+    if (partNumber > partCountLimit) {
+      throw new PathIOException(destKey,
+          String.format(pathErrorMsg, partNumber, partCountLimit));
+    }
     UploadPartRequest request = new UploadPartRequest()
         .withBucketName(bucket)
         .withKey(destKey)
@@ -539,8 +560,20 @@ public class WriteOperationHelper {
    */
   public BulkOperationState initiateCommitOperation(
       Path path) throws IOException {
+    return initiateOperation(path, BulkOperationState.OperationType.Commit);
+  }
+
+  /**
+   * Initiate a commit operation through any metastore.
+   * @param path path under which the writes will all take place.
+   * @param operationType operation to initiate
+   * @return an possibly null operation state from the metastore.
+   * @throws IOException failure to instantiate.
+   */
+  public BulkOperationState initiateOperation(final Path path,
+      final BulkOperationState.OperationType operationType) throws IOException {
     return S3Guard.initiateBulkWrite(owner.getMetadataStore(),
-        BulkOperationState.OperationType.Commit, path);
+        operationType, path);
   }
 
   /**

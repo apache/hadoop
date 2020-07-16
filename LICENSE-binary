@@ -385,7 +385,7 @@ com.google.protobuf:protobuf-java:3.6.1
 com.google.re2j:re2j:1.1
 com.jcraft:jsch:0.1.54
 com.thoughtworks.paranamer:paranamer:2.3
-javax.activation:javax.activation-api:1.2.0
+jakarta.activation:jakarta.activation-api:1.2.1
 org.fusesource.leveldbjni:leveldbjni-all:1.8
 org.jline:jline:3.9.0
 org.hamcrest:hamcrest-core:1.3

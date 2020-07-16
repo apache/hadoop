@@ -19,8 +19,11 @@
 package org.apache.hadoop.ipc;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.thirdparty.protobuf.*;
-import org.apache.hadoop.thirdparty.protobuf.Descriptors.MethodDescriptor;
+import com.google.protobuf.BlockingService;
+import com.google.protobuf.Descriptors.MethodDescriptor;
+import com.google.protobuf.Message;
+import com.google.protobuf.ServiceException;
+import com.google.protobuf.TextFormat;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -29,6 +32,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.ipc.RPC.RpcInvoker;
+import org.apache.hadoop.ipc.RPC.RpcKind;
 import org.apache.hadoop.ipc.protobuf.ProtobufRpcEngineProtos.RequestHeaderProto;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
@@ -52,7 +56,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * RPC Engine for for protobuf based RPCs.
+ * This engine uses Protobuf 2.5.0. Recommended to upgrade to Protobuf 3.x
+ * from hadoop-thirdparty and use ProtobufRpcEngine2.
  */
+@Deprecated
 @InterfaceStability.Evolving
 public class ProtobufRpcEngine implements RpcEngine {
   public static final Logger LOG =
@@ -355,6 +362,7 @@ public class ProtobufRpcEngine implements RpcEngine {
         new ThreadLocal<>();
 
     static final ThreadLocal<CallInfo> currentCallInfo = new ThreadLocal<>();
+    private static final RpcInvoker RPC_INVOKER = new ProtoBufRpcInvoker();
 
     static class CallInfo {
       private final RPC.Server server;
@@ -433,7 +441,15 @@ public class ProtobufRpcEngine implements RpcEngine {
       registerProtocolAndImpl(RPC.RpcKind.RPC_PROTOCOL_BUFFER, protocolClass,
           protocolImpl);
     }
-    
+
+    @Override
+    protected RpcInvoker getServerRpcInvoker(RpcKind rpcKind) {
+      if (rpcKind == RpcKind.RPC_PROTOCOL_BUFFER) {
+        return RPC_INVOKER;
+      }
+      return super.getServerRpcInvoker(rpcKind);
+    }
+
     /**
      * Protobuf invoker for {@link RpcInvoker}
      */

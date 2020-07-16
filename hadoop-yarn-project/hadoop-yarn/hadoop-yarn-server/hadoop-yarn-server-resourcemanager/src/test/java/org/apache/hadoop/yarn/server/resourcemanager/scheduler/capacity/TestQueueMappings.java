@@ -100,6 +100,33 @@ public class TestQueueMappings {
                 .build());
   }
 
+  @Test
+  public void testQueueMappingPathParsing() {
+    QueueMapping leafOnly = QueueMapping.QueueMappingBuilder.create()
+        .parsePathString("leaf")
+        .build();
+
+    Assert.assertEquals("leaf", leafOnly.getQueue());
+    Assert.assertEquals(null, leafOnly.getParentQueue());
+    Assert.assertEquals("leaf", leafOnly.getFullPath());
+
+    QueueMapping twoLevels = QueueMapping.QueueMappingBuilder.create()
+        .parsePathString("root.leaf")
+        .build();
+
+    Assert.assertEquals("leaf", twoLevels.getQueue());
+    Assert.assertEquals("root", twoLevels.getParentQueue());
+    Assert.assertEquals("root.leaf", twoLevels.getFullPath());
+
+    QueueMapping deep = QueueMapping.QueueMappingBuilder.create()
+        .parsePathString("root.a.b.c.d.e.leaf")
+        .build();
+
+    Assert.assertEquals("leaf", deep.getQueue());
+    Assert.assertEquals("root.a.b.c.d.e", deep.getParentQueue());
+    Assert.assertEquals("root.a.b.c.d.e.leaf", deep.getFullPath());
+  }
+
   @Test (timeout = 60000)
   public void testQueueMappingParsingInvalidCases() throws Exception {
     // configuration parsing tests - negative test cases
