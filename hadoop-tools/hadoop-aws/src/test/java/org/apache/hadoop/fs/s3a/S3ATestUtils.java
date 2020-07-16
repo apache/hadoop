@@ -1448,4 +1448,26 @@ public final class S3ATestUtils {
         .collect(Collectors.toCollection(TreeSet::new));
     return threads;
   }
+
+  /**
+   * Call the package-private {@code innerGetFileStatus()} method
+   * on the passed in FS.
+   * @param fs filesystem
+   * @param path path
+   * @param needEmptyDirectoryFlag look for empty directory
+   * @param probes file status probes to perform
+   * @return the status
+   * @throws IOException
+   */
+  public static S3AFileStatus innerGetFileStatus(
+      S3AFileSystem fs,
+      Path path,
+      boolean needEmptyDirectoryFlag,
+      Set<StatusProbeEnum> probes) throws IOException {
+
+    return fs.innerGetFileStatus(
+        path,
+        needEmptyDirectoryFlag,
+        probes);
+  }
 }
