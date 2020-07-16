@@ -30,6 +30,7 @@ import java.util.Set;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer2;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.authentication.server.ProxyUserAuthenticationFilterInitializer;
 import org.apache.hadoop.security.authorize.AccessControlList;
@@ -119,6 +120,7 @@ public class HttpFSServerWebServer {
       conf.set(HttpServer2.FILTER_INITIALIZER_PROPERTY, actualInitializers);
     }
 
+    DefaultMetricsSystem.initialize("httpfs");
     httpServer = new HttpServer2.Builder()
         .setName(NAME)
         .setConf(conf)
