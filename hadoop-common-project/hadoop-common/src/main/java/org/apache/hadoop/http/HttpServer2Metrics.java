@@ -104,7 +104,7 @@ public class HttpServer2Metrics {
   @Metric public int responses5xx() {
     return handler.getResponses5xx();
   }
-  @Metric public long getResponseBytesTotal() {
+  @Metric public long getResponsesBytesTotal() {
     return handler.getResponsesBytesTotal();
   }
   @Metric public long statsOnMs() {

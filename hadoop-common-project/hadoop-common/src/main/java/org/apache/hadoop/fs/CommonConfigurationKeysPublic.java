@@ -956,8 +956,7 @@ public class CommonConfigurationKeysPublic {
    */
   public static final String HADOOP_HTTP_METRICS_ENABLED =
       "hadoop.http.metrics.enabled";
-  /** Defalt value for HADOOP_HTTP_METRIC_ENABLED */
-  public static final boolean HADOOP_HTTP_METRICS_ENABLED_DEFAULT = false;
+  public static final boolean HADOOP_HTTP_METRICS_ENABLED_DEFAULT = true;
 
   /**
    * @see

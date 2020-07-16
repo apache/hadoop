@@ -56,6 +56,15 @@
     </description>
   </property>
 
+<property>
+  <name>hadoop.http.metrics.enabled</name>
+  <value>true</value>
+  <description>
+    If true, add Jetty's StatisticsHandler to HTTP server to collect
+    HTTP layer metrics and register them to Hadoop metrics system.
+  </description>
+</property>
+
 <!--- security properties -->
 
 <property>
