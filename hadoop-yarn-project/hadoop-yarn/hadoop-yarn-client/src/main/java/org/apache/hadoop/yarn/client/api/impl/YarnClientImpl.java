@@ -43,6 +43,7 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.FailApplicationAttemptRequest;
@@ -315,7 +316,9 @@ public class YarnClientImpl extends YarnClient {
 
     // Automatically add the timeline DT into the CLC
     // Only when the security and the timeline service are both enabled
-    if (isSecurityEnabled() && timelineV1ServiceEnabled) {
+    if (isSecurityEnabled() && timelineV1ServiceEnabled &&
+            getConfig().get(YarnConfiguration.TIMELINE_HTTP_AUTH_TYPE)
+                    .equals(KerberosAuthenticationHandler.TYPE)) {
       addTimelineDelegationToken(appContext.getAMContainerSpec());
     }
 
