@@ -3839,6 +3839,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     Pattern p = Pattern.compile(regex);
 
     Map<String,String> result = new HashMap<String,String>();
+    List<String> resultKeys = new ArrayList<>();
     Matcher m;
 
     for(Map.Entry<Object,Object> item: getProps().entrySet()) {
@@ -3846,11 +3847,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
           item.getValue() instanceof String) {
         m = p.matcher((String)item.getKey());
         if(m.find()) { // match
-          result.put((String) item.getKey(),
-              substituteVars(getProps().getProperty((String) item.getKey())));
+          resultKeys.add((String) item.getKey());
         }
       }
     }
+    resultKeys.forEach(item ->
+            result.put(item, substituteVars(getProps().getProperty(item))));
     return result;
   }
 
