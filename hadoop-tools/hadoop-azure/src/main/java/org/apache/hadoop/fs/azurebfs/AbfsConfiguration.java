@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.util.Map;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -215,8 +214,6 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_SAS_TOKEN_RENEW_PERIOD_FOR_STREAMS_IN_SECONDS)
   private long sasTokenRenewPeriodForStreamsInSeconds;
 
-  private Map<String, String> storageAccountKeys;
-
   public AbfsConfiguration(final Configuration rawConfig, String accountName)
       throws IllegalAccessException, InvalidConfigurationValueException, IOException {
     this.rawConfig = ProviderUtils.excludeIncompatibleCredentialProviders(
@@ -224,7 +221,6 @@ public class AbfsConfiguration{
     this.accountName = accountName;
     this.isSecure = getBoolean(FS_AZURE_SECURE_MODE, false);
 
-    validateStorageAccountKeys();
     Field[] fields = this.getClass().getDeclaredFields();
     for (Field field : fields) {
       field.setAccessible(true);
@@ -662,16 +658,6 @@ public class AbfsConfiguration{
       return sasTokenProvider;
     } catch (Exception e) {
       throw new TokenAccessProviderException("Unable to load SAS token provider class: " + e, e);
-    }
-  }
-
-  void validateStorageAccountKeys() throws InvalidConfigurationValueException {
-    Base64StringConfigurationBasicValidator validator = new Base64StringConfigurationBasicValidator(
-        FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME, "", true);
-    this.storageAccountKeys = rawConfig.getValByRegex(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME_REGX);
-
-    for (Map.Entry<String, String> account : storageAccountKeys.entrySet()) {
-      validator.validate(account.getValue());
     }
   }
 
