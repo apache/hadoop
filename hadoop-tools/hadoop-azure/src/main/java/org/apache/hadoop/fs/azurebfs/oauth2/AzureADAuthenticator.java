@@ -59,14 +59,14 @@ public final class AzureADAuthenticator {
   private static final int CONNECT_TIMEOUT = 30 * 1000;
   private static final int READ_TIMEOUT = 30 * 1000;
 
-  private static ExponentialRetryPolicy TOKEN_FETCH_RETRY_POLICY;
+  private static ExponentialRetryPolicy tokenFetchRetryPolicy;
 
   private AzureADAuthenticator() {
     // no operation
   }
 
   public static void init(AbfsConfiguration abfsConfiguration) {
-    TOKEN_FETCH_RETRY_POLICY = abfsConfiguration.getOauthTokenFetchRetryPolicy();
+    tokenFetchRetryPolicy = abfsConfiguration.getOauthTokenFetchRetryPolicy();
   }
 
   /**
@@ -317,12 +317,12 @@ public final class AzureADAuthenticator {
       }
       succeeded = ((httperror == 0) && (ex == null));
       shouldRetry = !succeeded && isRecoverableFailure
-          && TOKEN_FETCH_RETRY_POLICY.shouldRetry(retryCount, httperror);
+          && tokenFetchRetryPolicy.shouldRetry(retryCount, httperror);
       retryCount++;
       if (shouldRetry) {
         LOG.debug("Retrying getTokenSingleCall. RetryCount = {}", retryCount);
         try {
-          Thread.sleep(TOKEN_FETCH_RETRY_POLICY.getRetryInterval(retryCount));
+          Thread.sleep(tokenFetchRetryPolicy.getRetryInterval(retryCount));
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
         }
