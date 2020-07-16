@@ -30,7 +30,6 @@ import org.assertj.core.api.Assumptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.fs.s3a.ITestS3AFileOperationCost;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
@@ -40,29 +39,66 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Support for declarative assertions about operation cost.
+ * <p></p>
+ * Usage: A builder is used to declare the set of statistics
+ * to be monitored in the filesystem.
+ * <p></p>
+ * A call to {@link #exec(Callable, ExpectedProbe...)}
+ * executes the callable if 1+ probe is enabled; after
+ * invocation the probes are validated.
+ * The result of the callable is returned.
+ * <p></p>
+ * A call of {@link #intercepting(Class, String, Callable, ExpectedProbe...)}
+ * Invokes the callable if 1+ probe is enabled, expects an exception
+ * to be raised and then verifies metrics declared in the probes.
+ * <p></p>
+ * Probes are built up from the static method to create probes
+ * for metrics:
+ * <ul>
+ *   <li>{@link #probe(boolean, Statistic, int)} </li>
+ *   <li>{@link #probe(Statistic, int)} </li>
+ *   <li>{@link #probes(boolean, ExpectedProbe...)} (Statistic, int)} </li>
+ *   <li>{@link #always()}</li>
+ * </ul>
+ * If any probe evaluates to false, an assertion is raised.
+ * <p></p>
+ * When this happens: look in the logs!
+ * The logs will contain the whole set of metrics, the probe details
+ * and the result of the call.
  */
-public class OperationCostValidator {
+public final class OperationCostValidator {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(OperationCostValidator.class);
 
   /**
-   * The empty probe.
+   * The empty probe: declared as disabled.
    */
-  public static final ExpectedProbe EMPTY_PROBE =
-      new ProbeList(new ArrayList<>());
+  private static final ExpectedProbe EMPTY_PROBE =
+      new EmptyProbe("empty", false);
 
+  /**
+   * A probe which is always enabled.
+   */
+  private static final ExpectedProbe ALWAYS_PROBE =
+      new EmptyProbe("always", true);
+
+  /**
+   * The map of metric diffs to track.
+   */
   private final Map<String, S3ATestUtils.MetricDiff> metricDiffs
       = new TreeMap<>();
 
-  public OperationCostValidator(Builder builder) {
+  /**
+   * Build the instance.
+   * @param builder builder containing all options.
+   */
+  private OperationCostValidator(Builder builder) {
     builder.metrics.forEach(stat ->
         metricDiffs.put(stat.getSymbol(),
-            new S3ATestUtils.MetricDiff(builder.fs, stat))
-    );
+            new S3ATestUtils.MetricDiff(builder.filesystem, stat)));
     builder.metrics.clear();
   }
-
 
   /**
    * Reset all the metrics being tracked.
@@ -84,7 +120,6 @@ public class OperationCostValidator {
     return diff;
   }
 
-
   /**
    * Execute a closure and verify the metrics.
    * <p></p>
@@ -95,7 +130,7 @@ public class OperationCostValidator {
    * @param <T> return type.
    * @return the result of the evaluation
    */
-  public <T> T verify(
+  public <T> T exec(
       Callable<T> eval,
       ExpectedProbe... expectedA) throws Exception {
     List<ExpectedProbe> expected = Arrays.asList(expectedA);
@@ -150,13 +185,13 @@ public class OperationCostValidator {
    * @return the exception caught.
    * @throws Exception any other exception
    */
-  public <T, E extends Throwable> E verifyIntercepting(
+  public <T, E extends Throwable> E intercepting(
       Class<E> clazz,
       String text,
       Callable<T> eval,
       ExpectedProbe... expected) throws Exception {
 
-    return verify(() ->
+    return exec(() ->
             intercept(clazz, text, eval),
         expected);
   }
@@ -183,29 +218,60 @@ public class OperationCostValidator {
    */
   public static final class Builder {
 
+    /**
+     * Filesystem.
+     */
+    private final S3AFileSystem filesystem;
+
+    /**
+     * Metrics to create.
+     */
     private final List<Statistic> metrics = new ArrayList<>();
 
-    private final S3AFileSystem fs;
 
-
-    public Builder(final S3AFileSystem fs) {
-      this.fs = requireNonNull(fs);
+    /**
+     * Create with a required filesystem.
+     * @param filesystem monitored filesystem
+     */
+    public Builder(final S3AFileSystem filesystem) {
+      this.filesystem = requireNonNull(filesystem);
     }
 
 
+    /**
+     * Add a single metric.
+     * @param statistic statistic to monitor.
+     * @return this
+     */
     public Builder withMetric(Statistic statistic) {
       return withMetric(statistic);
     }
 
-
+    /**
+     * Add a varargs list of metrics.
+     * @param stat statistics to monitor.
+     * @return this.
+     */
     public Builder withMetrics(Statistic...stats) {
       metrics.addAll(Arrays.asList(stats));
       return this;
     }
 
+    /**
+     * Instantiate.
+     * @return the validator.
+     */
     public OperationCostValidator build() {
       return new OperationCostValidator(this);
     }
+  }
+
+  /**
+   * Get the "always" probe.
+   * @return a probe which always triggers execution.
+   */
+  public static ExpectedProbe always() {
+    return ALWAYS_PROBE;
   }
 
   /**
@@ -364,6 +430,37 @@ public class OperationCostValidator {
           .map(Object::toString)
           .collect(Collectors.joining(", "));
       return "ProbeList{" + pstr + '}';
+    }
+  }
+
+  /**
+   * The empty probe always runs; it can be used to force
+   * a verification to execute.
+   */
+  private static final class EmptyProbe implements ExpectedProbe {
+
+    private final String name;
+
+    private final boolean enabled;
+
+    private EmptyProbe(final String name, boolean enabled) {
+      this.name = name;
+      this.enabled = enabled;
+    }
+
+    @Override
+    public void verify(final OperationCostValidator diffs,
+        final String message) {
+    }
+
+    @Override
+    public boolean isEnabled() {
+      return enabled;
+    }
+
+    @Override
+    public String toString() {
+      return name;
     }
   }
 }

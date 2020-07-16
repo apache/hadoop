@@ -62,7 +62,7 @@ public class HeadListCosts {
   public static final int GETFILESTATUS_SINGLE_FILE_H = FILESTATUS_FILE_PROBE_H;
 
 
-  public static final int GETFILESTATUS_SINGLE_FILE_L = 0;
+  public static final int GETFILESTATUS_SINGLE_FILE_L = FILESTATUS_FILE_PROBE_L;
 
   public static final int DELETE_OBJECT_REQUEST = 1;
 
@@ -81,6 +81,15 @@ public class HeadListCosts {
    */
   public static final int RENAME_SINGLE_FILE_RENAME_DIFFERENT_DIR_L =
       GETFILESTATUS_FNFE_L + GETFILESTATUS_DIR_L * 2;
+
+  /**
+   * Cost of renaming a file to a different directory.
+   * <p></p>
+   * LIST on dest not found, look for dest dir, and then, at
+   * end of rename, whether a parent dir needs to be created.
+   */
+  public static final int RENAME_SINGLE_FILE_RENAME_SAME_DIR_L =
+      GETFILESTATUS_FNFE_L;
 
   /**
    * Rename a single file.
