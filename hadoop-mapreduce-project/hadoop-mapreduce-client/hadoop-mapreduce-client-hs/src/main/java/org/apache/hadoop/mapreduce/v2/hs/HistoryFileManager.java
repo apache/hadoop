@@ -21,6 +21,7 @@ package org.apache.hadoop.mapreduce.v2.hs;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.ConnectException;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -76,10 +77,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
-import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 
 /**
  * This class provides a way to interact with history files in a thread safe
@@ -535,7 +534,7 @@ public class HistoryFileManager extends AbstractService {
     }
 
     public synchronized void waitUntilMoved() {
-      while (isMovePending() && !didMoveFail()) {
+      while (!isReadOnlyMode() && isMovePending() && !didMoveFail()) {
         try {
           wait();
         } catch (InterruptedException e) {
@@ -941,16 +940,16 @@ public class HistoryFileManager extends AbstractService {
    *           if there was a error while scanning
    */
   void scanDoneDirectoryUpdate() throws IOException {
-    DateTime today = DateTime.now();
-    DateTime previousDay = today.minusDays(1);
-    DateTime nextDay = today.plusDays(1);
+    ZonedDateTime today = ZonedDateTime.now();
+    ZonedDateTime previousDay = today.minusDays(1);
+    ZonedDateTime nextDay = today.plusDays(1);
 
     StringBuilder scanDatesPattern = new StringBuilder("{")
-        .append(JobHistoryUtils.timestampDirectoryComponent(previousDay.getMillis()))
+        .append(JobHistoryUtils.timestampDirectoryComponent(previousDay.toInstant().toEpochMilli()))
         .append(",")
-        .append(JobHistoryUtils.timestampDirectoryComponent(today.getMillis()))
+        .append(JobHistoryUtils.timestampDirectoryComponent(today.toInstant().toEpochMilli()))
         .append(",")
-        .append(JobHistoryUtils.timestampDirectoryComponent(nextDay.getMillis()))
+        .append(JobHistoryUtils.timestampDirectoryComponent(nextDay.toInstant().toEpochMilli()))
         .append("}");
 
     scanDoneDirectory(new Path(readOnlyDirectoryPattern, scanDatesPattern + "/*/*"));
