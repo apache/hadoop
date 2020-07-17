@@ -466,10 +466,6 @@ public abstract class INodeReference extends INode {
         withNameList.add(-i - 1, refWithName);
       } else if (ref instanceof DstReference) {
         setParentReference(ref);
-      } else {
-        throw new IllegalStateException("Failed to add reference:"
-            + "\n        ref: " + ref.toDetailString()
-            + "\n  withCount: " + this.toDetailString());
       }
     }
 
