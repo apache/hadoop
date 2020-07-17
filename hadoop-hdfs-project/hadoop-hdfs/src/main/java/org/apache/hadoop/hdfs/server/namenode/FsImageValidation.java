@@ -17,20 +17,39 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.HadoopIllegalArgumentException;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
+import org.apache.hadoop.hdfs.server.namenode.top.metrics.TopMetrics;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.util.GSet;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.log4j.Level;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.Arrays;
 import java.util.Timer;
 import java.util.TimerTask;
+
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ENABLE_RETRY_CACHE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_KEY;
+import static org.apache.hadoop.util.Time.now;
 
 /**
  * For validating {@link FSImage}.
@@ -47,15 +66,10 @@ import java.util.TimerTask;
  * {@link org.apache.hadoop.hdfs.tools.offlineImageViewer.OfflineImageViewer}.
  */
 public class FsImageValidation {
-  static final String FS_IMAGE = "FS_IMAGE";
+  public static final Logger LOG = LoggerFactory.getLogger(
+      FsImageValidation.class);
 
-  static HdfsConfiguration newHdfsConfiguration() {
-    final HdfsConfiguration conf = new HdfsConfiguration();
-    final int aDay = 24*3600_000;
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_KEY, aDay);
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_KEY, aDay);
-    return conf;
-  }
+  static final String FS_IMAGE = "FS_IMAGE";
 
   static FsImageValidation newInstance(String... args) {
     final String f = Cli.parse(args);
@@ -66,39 +80,105 @@ public class FsImageValidation {
     return new FsImageValidation(new File(f));
   }
 
-  private final File fsImage;
-
-  FsImageValidation(File fsImage) {
-    this.fsImage = fsImage;
+  static void initConf(Configuration conf) {
+    final int aDay = 24*3600_000;
+    conf.setInt(DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_KEY, aDay);
+    conf.setInt(DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_KEY, aDay);
+    conf.setBoolean(DFS_NAMENODE_ENABLE_RETRY_CACHE_KEY, false);
   }
 
-  int checkINodeReference() throws Exception {
-    Cli.println("Check INodeReference for %s", fsImage);
+  /** Simulate HA so that the editlogs are not loaded. */
+  static void setHaConf(String nsId, Configuration conf) {
+    conf.set(DFSConfigKeys.DFS_NAMESERVICES, nsId);
+    final String haNNKey = DFS_HA_NAMENODES_KEY_PREFIX + "." + nsId;
+    conf.set(haNNKey, "nn0,nn1");
+    final String rpcKey = DFS_NAMENODE_RPC_ADDRESS_KEY + "." + nsId + ".";
+    conf.set(rpcKey + "nn0", "127.0.0.1:8080");
+    conf.set(rpcKey + "nn1", "127.0.0.1:8080");
+  }
+
+  static void initLogLevels() {
+    Util.setLogLevel(FSImage.class, Level.TRACE);
+    Util.setLogLevel(FileJournalManager.class, Level.TRACE);
+
+    Util.setLogLevel(GSet.class, Level.OFF);
+    Util.setLogLevel(BlockManager.class, Level.OFF);
+    Util.setLogLevel(DatanodeManager.class, Level.OFF);
+    Util.setLogLevel(TopMetrics.class, Level.OFF);
+  }
+
+  static class Util {
+    static String memoryInfo() {
+      final Runtime runtime = Runtime.getRuntime();
+      return "Memory Info: free=" + StringUtils.byteDesc(runtime.freeMemory())
+          + ", total=" + StringUtils.byteDesc(runtime.totalMemory())
+          + ", max=" + StringUtils.byteDesc(runtime.maxMemory());
+    }
+
+    static void setLogLevel(Class<?> clazz, Level level) {
+      final Log log = LogFactory.getLog(clazz);
+      if (log instanceof Log4JLogger) {
+        final org.apache.log4j.Logger logger = ((Log4JLogger) log).getLogger();
+        logger.setLevel(level);
+        LOG.info("setLogLevel {} to {}, getEffectiveLevel() = {}",
+            clazz.getName(), level, logger.getEffectiveLevel());
+      } else {
+        LOG.warn("Failed setLogLevel {} to {}", clazz.getName(), level);
+      }
+    }
+
+    static String toCommaSeparatedNumber(long n) {
+      final StringBuilder b = new StringBuilder();
+      for(; n > 999;) {
+        b.insert(0, String.format(",%03d", n%1000));
+        n /= 1000;
+      }
+      return b.insert(0, n).toString();
+    }
+  }
+
+  private final File fsImageFile;
+
+  FsImageValidation(File fsImageFile) {
+    this.fsImageFile = fsImageFile;
+  }
+
+  int checkINodeReference(Configuration conf) throws Exception {
+    LOG.info(Util.memoryInfo());
+    initConf(conf);
 
     final TimerTask checkProgress = new TimerTask() {
       @Override
       public void run() {
         final double percent = NameNode.getStartupProgress().createView()
             .getPercentComplete(Phase.LOADING_FSIMAGE);
-        Cli.println("%s Progress: %.1f%%", Phase.LOADING_FSIMAGE, 100*percent);
+        LOG.info(String.format("%s Progress: %.1f%%",
+            Phase.LOADING_FSIMAGE, 100*percent));
       }
     };
-
-    final HdfsConfiguration conf = newHdfsConfiguration();
 
     INodeReferenceValidation.start();
     final Timer t = new Timer();
     t.scheduleAtFixedRate(checkProgress, 0, 60_000);
-    if (fsImage.isDirectory()) {
-      Cli.println("Loading %s as a directory.", fsImage);
-      final String dir = fsImage.getCanonicalPath();
+    final long loadStart = now();
+    final FSNamesystem namesystem;
+    if (fsImageFile.isDirectory()) {
+      Cli.println("Loading %s as a directory.", fsImageFile);
+      final String dir = fsImageFile.getCanonicalPath();
       conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, dir);
       conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, dir);
-      FSNamesystem.loadFromDisk(conf);
-    } else {
-      Cli.println("Loading %s as a file.", fsImage);
+
+
       final FSImage fsImage = new FSImage(conf);
-      final FSNamesystem namesystem = new FSNamesystem(conf, fsImage, false);
+      namesystem = new FSNamesystem(conf, fsImage, true);
+      // Avoid saving fsimage
+      namesystem.setRollingUpgradeInfo(false, 0);
+
+      namesystem.loadFSImage(HdfsServerConstants.StartupOption.REGULAR);
+    } else {
+      Cli.println("Loading %s as a file.", fsImageFile);
+      final FSImage fsImage = new FSImage(conf);
+      namesystem = new FSNamesystem(conf, fsImage, true);
 
       final NamespaceInfo namespaceInfo = NNStorage.newNamespaceInfo();
       namespaceInfo.clusterID = "cluster0";
@@ -109,14 +189,19 @@ public class FsImageValidation {
       namesystem.writeLock();
       namesystem.getFSDirectory().writeLock();
       try {
-        loader.load(this.fsImage, false);
+        loader.load(fsImageFile, false);
       } finally {
         namesystem.getFSDirectory().writeUnlock();
         namesystem.writeUnlock();
       }
     }
     t.cancel();
-    return INodeReferenceValidation.end();
+    Cli.println("Loaded %s %s successfully in %s",
+        FS_IMAGE, fsImageFile, StringUtils.formatTime(now() - loadStart));
+    LOG.info(Util.memoryInfo());
+    final int errorCount = INodeReferenceValidation.end();
+    LOG.info(Util.memoryInfo());
+    return errorCount;
   }
 
   static class Cli extends Configured implements Tool {
@@ -130,8 +215,10 @@ public class FsImageValidation {
 
     @Override
     public int run(String[] args) throws Exception {
+      initLogLevels();
+
       final FsImageValidation validation = FsImageValidation.newInstance(args);
-      final int errorCount = validation.checkINodeReference();
+      final int errorCount = validation.checkINodeReference(getConf());
       println("Error Count: %s", errorCount);
       return errorCount == 0? 0: 1;
     }
@@ -157,6 +244,7 @@ public class FsImageValidation {
     static void println(String format, Object... args) {
       final String s = String.format(format, args);
       System.out.println(s);
+      LOG.info(s);
     }
 
     static void printError(String message, Throwable t) {
@@ -164,6 +252,7 @@ public class FsImageValidation {
       if (t != null) {
         t.printStackTrace(System.out);
       }
+      LOG.error(message, t);
     }
   }
 
@@ -173,7 +262,7 @@ public class FsImageValidation {
     }
 
     try {
-      System.exit(ToolRunner.run(new HdfsConfiguration(), new Cli(), args));
+      System.exit(ToolRunner.run(new Configuration(), new Cli(), args));
     } catch (HadoopIllegalArgumentException e) {
       e.printStackTrace(System.err);
       System.err.println(Cli.USAGE);

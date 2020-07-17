@@ -396,7 +396,7 @@ public abstract class INodeReference extends INode {
       Preconditions.checkArgument(parent == null);
       referred.setParentReference(this);
 
-      INodeReferenceValidation.addWithCount(this);
+      INodeReferenceValidation.add(this, WithCount.class);
     }
 
     private String getCountDetails() {
@@ -480,12 +480,19 @@ public abstract class INodeReference extends INode {
     /** Decrement and then return the reference count. */
     public void removeReference(INodeReference ref) {
       if (ref instanceof WithName) {
-        final int i = search((WithName) ref);
+        final WithName withName = (WithName) ref;
+        final int i = search(withName);
         if (i >= 0) {
           withNameList.remove(i);
+          INodeReferenceValidation.remove(withName, WithName.class);
         }
       } else if (ref == getParentReference()) {
-        setParentReference(null);
+        setParent(null);
+        INodeReferenceValidation.remove((DstReference) ref, DstReference.class);
+      }
+
+      if (getReferenceCount() == 0) {
+        INodeReferenceValidation.remove(this, WithCount.class);
       }
     }
 
@@ -552,7 +559,7 @@ public abstract class INodeReference extends INode {
       this.lastSnapshotId = lastSnapshotId;
       referred.addReference(this);
 
-      INodeReferenceValidation.addWithName(this);
+      INodeReferenceValidation.add(this, WithName.class);
     }
 
     @Override
@@ -740,7 +747,7 @@ public abstract class INodeReference extends INode {
       this.dstSnapshotId = dstSnapshotId;
       referred.addReference(this);
 
-      INodeReferenceValidation.addDstReference(this);
+      INodeReferenceValidation.add(this, DstReference.class);
     }
 
     @Override

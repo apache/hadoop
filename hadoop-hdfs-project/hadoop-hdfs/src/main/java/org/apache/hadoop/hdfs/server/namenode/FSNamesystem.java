@@ -1179,7 +1179,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return Collections.unmodifiableList(auditLoggers);
   }
 
-  private void loadFSImage(StartupOption startOpt) throws IOException {
+  void loadFSImage(StartupOption startOpt) throws IOException {
     final FSImage fsImage = getFSImage();
 
     // format before starting up if requested

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdfs.server.namenode.FsImageValidation.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,8 +34,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.apache.hadoop.hdfs.server.namenode.FsImageValidation.Cli.printError;
-import static org.apache.hadoop.hdfs.server.namenode.FsImageValidation.Cli.println;
+import static org.apache.hadoop.hdfs.server.namenode.FsImageValidation.Cli.*;
 
 /** For validating {@link INodeReference} subclasses. */
 public class INodeReferenceValidation {
@@ -59,57 +60,56 @@ public class INodeReferenceValidation {
     return errorCount;
   }
 
-  static void addWithCount(INodeReference.WithCount c) {
+  static <REF extends INodeReference> void add(REF ref, Class<REF> clazz) {
     final INodeReferenceValidation validation = INSTANCE.get();
     if (validation != null) {
-      validation.withCounts.add(c);
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("addWithCount: " + c.toDetailString());
-      }
+      final boolean added = validation.getReferences(clazz).add(ref);
+      Preconditions.checkState(added);
+      LOG.trace("add {}: {}", clazz, ref.toDetailString());
     }
   }
 
-  static void addWithName(INodeReference.WithName n) {
+  static <REF extends INodeReference> void remove(REF ref, Class<REF> clazz) {
     final INodeReferenceValidation validation = INSTANCE.get();
     if (validation != null) {
-      validation.withNames.add(n);
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("addWithName: {}", n.toDetailString());
-      }
+      final boolean removed = validation.getReferences(clazz).remove(ref);
+      Preconditions.checkState(removed);
+      LOG.trace("remove {}: {}", clazz, ref.toDetailString());
     }
   }
 
-  static void addDstReference(INodeReference.DstReference d) {
-    final INodeReferenceValidation validation = INSTANCE.get();
-    if (validation != null) {
-      validation.dstReferences.add(d);
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("addDstReference: {}", d.toDetailString());
-      }
-    }
-  }
-
-  static class Ref<REF extends INodeReference> {
+  static class ReferenceSet<REF extends INodeReference> {
     private final Class<REF> clazz;
     private final List<REF> references = new LinkedList<>();
     private volatile List<Task<REF>> tasks;
     private volatile List<Future<Integer>> futures;
     private final AtomicInteger taskCompleted = new AtomicInteger();
 
-    Ref(Class<REF> clazz) {
+    ReferenceSet(Class<REF> clazz) {
       this.clazz = clazz;
     }
 
-    void add(REF ref) {
-      references.add(ref);
+    boolean add(REF ref) {
+      return references.add(ref);
+    }
+
+    boolean remove(REF ref) {
+      for(final Iterator<REF> i = references.iterator(); i.hasNext();) {
+        if (i.next() == ref) {
+          i.remove();
+          return true;
+        }
+      }
+      return false;
     }
 
     void submit(AtomicInteger errorCount, ExecutorService service)
         throws InterruptedException {
       final int size = references.size();
       tasks = createTasks(references, errorCount);
-      println("Submitting %d tasks for validating %d %s(s)",
-          tasks.size(), size, clazz.getSimpleName());
+      println("Submitting %d tasks for validating %s %s(s)",
+          tasks.size(), Util.toCommaSeparatedNumber(size),
+          clazz.getSimpleName());
       futures = service.invokeAll(tasks);
     }
 
@@ -134,12 +134,23 @@ public class INodeReferenceValidation {
     }
   }
 
-  private final Ref<INodeReference.WithCount> withCounts
-      = new Ref<>(INodeReference.WithCount.class);
-  private final Ref<INodeReference.WithName> withNames
-      = new Ref<>(INodeReference.WithName.class);
-  private final Ref<INodeReference.DstReference> dstReferences
-      = new Ref<>(INodeReference.DstReference.class);
+  private final ReferenceSet<INodeReference.WithCount> withCounts
+      = new ReferenceSet<>(INodeReference.WithCount.class);
+  private final ReferenceSet<INodeReference.WithName> withNames
+      = new ReferenceSet<>(INodeReference.WithName.class);
+  private final ReferenceSet<INodeReference.DstReference> dstReferences
+      = new ReferenceSet<>(INodeReference.DstReference.class);
+
+  <REF extends INodeReference> ReferenceSet<REF> getReferences(Class<REF> clazz) {
+    if (clazz == INodeReference.WithCount.class) {
+      return (ReferenceSet<REF>) withCounts;
+    } else if (clazz == INodeReference.WithName.class) {
+      return (ReferenceSet<REF>) withNames;
+    } else if (clazz == INodeReference.DstReference.class) {
+      return (ReferenceSet<REF>) dstReferences;
+    }
+    throw new IllegalArgumentException("References not found for " + clazz);
+  }
 
   private int assertReferences() {
     final int p = Runtime.getRuntime().availableProcessors();
@@ -149,12 +160,12 @@ public class INodeReferenceValidation {
     final TimerTask checkProgress = new TimerTask() {
       @Override
       public void run() {
-        println("ASSERT_REFERENCES Progress: %s, %s, %s",
+        LOG.info("ASSERT_REFERENCES Progress: {}, {}, {}",
             dstReferences, withCounts, withNames);
       }
     };
     final Timer t = new Timer();
-    t.scheduleAtFixedRate(checkProgress, 0, 10_000);
+    t.scheduleAtFixedRate(checkProgress, 0, 1_000);
 
     final AtomicInteger errorCount = new AtomicInteger();
     try {
@@ -184,7 +195,7 @@ public class INodeReferenceValidation {
   }
 
   static class Task<REF extends INodeReference> implements Callable<Integer> {
-    static final int BATCH_SIZE = 1000;
+    static final int BATCH_SIZE = 100_000;
 
     private final List<REF> references = new LinkedList<>();
     private final AtomicInteger errorCount;

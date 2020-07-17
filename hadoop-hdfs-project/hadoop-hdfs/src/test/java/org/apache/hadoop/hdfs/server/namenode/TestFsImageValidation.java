@@ -18,15 +18,16 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
-import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Test;
-import org.slf4j.event.Level;
 
 public class TestFsImageValidation {
   static {
-    GenericTestUtils.setLogLevel(INode.LOG, Level.TRACE);
-    GenericTestUtils.setLogLevel(INodeReferenceValidation.LOG, Level.TRACE);
+    FsImageValidation.Util.setLogLevel(FsImageValidation.class, Level.TRACE);
+    FsImageValidation.Util.setLogLevel(INodeReferenceValidation.class, Level.TRACE);
+    FsImageValidation.Util.setLogLevel(INode.class, Level.TRACE);
   }
 
   /**
@@ -36,9 +37,11 @@ public class TestFsImageValidation {
    */
   @Test
   public void testINodeReference() throws Exception {
+    FsImageValidation.initLogLevels();
+
     try {
       final FsImageValidation validation = FsImageValidation.newInstance();
-      final int errorCount = validation.checkINodeReference();
+      final int errorCount = validation.checkINodeReference(new Configuration());
       Assert.assertEquals("Error Count: " + errorCount, 0, errorCount);
     } catch (HadoopIllegalArgumentException e) {
       FsImageValidation.Cli.printError("The environment variable "
