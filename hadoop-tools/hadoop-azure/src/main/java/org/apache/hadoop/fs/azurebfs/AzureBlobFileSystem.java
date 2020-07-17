@@ -272,8 +272,7 @@ public class AzureBlobFileSystem extends FileSystem {
   }
 
   public boolean rename(final Path src, final Path dst) throws IOException {
-    LOG.debug(
-        "AzureBlobFileSystem.rename src: {} dst: {}", src, dst);
+    LOG.debug("AzureBlobFileSystem.rename src: {} dst: {}", src, dst);
     statIncrement(CALL_RENAME);
 
     trailingPeriodCheck(dst);
