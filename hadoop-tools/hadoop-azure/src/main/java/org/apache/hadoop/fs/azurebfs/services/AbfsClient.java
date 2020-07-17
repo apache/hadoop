@@ -339,18 +339,16 @@ public class AbfsClient implements Closeable {
     try {
       op.execute();
     } catch (AzureBlobFileSystemException e) {
-      if (op.getResult().getStatusCode() != HttpURLConnection.HTTP_OK) {
         final AbfsRestOperation idempotencyOp = renameIdempotencyCheckOp(
             renameRequestStartTime, op, destination);
-        if (idempotencyOp.getResult().getStatusCode() ==
-            op.getResult().getStatusCode()) {
+        if (idempotencyOp.getResult().getStatusCode()
+            == op.getResult().getStatusCode()) {
           // idempotency did not return different result
           // throw back the exception
           throw e;
         } else {
           return idempotencyOp;
         }
-      }
     }
 
     return op;
@@ -380,14 +378,21 @@ public class AbfsClient implements Closeable {
       // exists. Check on destination status and if it has a recent LMT timestamp.
       // If yes, return success, else fall back to original rename request failure response.
 
-      final AbfsRestOperation destStatusOp = getPathStatus(destination, false);
-      if (destStatusOp.getResult().getStatusCode() == HttpURLConnection.HTTP_OK) {
-        String lmt = destStatusOp.getResult().getResponseHeader(
-            HttpHeaderConfigurations.LAST_MODIFIED);
+      try {
+        final AbfsRestOperation destStatusOp = getPathStatus(destination,
+            false);
+        if (destStatusOp.getResult().getStatusCode()
+            == HttpURLConnection.HTTP_OK) {
+          String lmt = destStatusOp.getResult().getResponseHeader(
+              HttpHeaderConfigurations.LAST_MODIFIED);
 
-        if (DateTimeUtils.isRecentlyModified(lmt, renameRequestStartTime)) {
-          return destStatusOp;
+          if (DateTimeUtils.isRecentlyModified(lmt, renameRequestStartTime)) {
+            return destStatusOp;
+          }
         }
+      } catch (AzureBlobFileSystemException e) {
+        // GetFileStatus on the destination failed, return original op
+        return op;
       }
     }
 
@@ -584,16 +589,14 @@ public class AbfsClient implements Closeable {
     try {
     op.execute();
     } catch (AzureBlobFileSystemException e) {
-      if (op.getResult().getStatusCode() != HttpURLConnection.HTTP_OK) {
-        final AbfsRestOperation idempotencyOp = deleteIdempotencyCheckOp(op);
-        if (idempotencyOp.getResult().getStatusCode() ==
-            op.getResult().getStatusCode()) {
-          // idempotency did not return different result
-          // throw back the exception
-          throw e;
-        } else {
-          return idempotencyOp;
-        }
+      final AbfsRestOperation idempotencyOp = deleteIdempotencyCheckOp(op);
+      if (idempotencyOp.getResult().getStatusCode()
+          == op.getResult().getStatusCode()) {
+        // idempotency did not return different result
+        // throw back the exception
+        throw e;
+      } else {
+        return idempotencyOp;
       }
     }
 
@@ -843,7 +846,8 @@ public class AbfsClient implements Closeable {
     return createRequestUrl(EMPTY_STRING, query);
   }
 
-  private URL createRequestUrl(final String path, final String query)
+  @VisibleForTesting
+  protected URL createRequestUrl(final String path, final String query)
           throws AzureBlobFileSystemException {
     final String base = baseUrl.toString();
     String encodedPath = path;

@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.regex.Pattern;
@@ -33,6 +34,9 @@ import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APN_VERSION;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CLIENT_VERSION;
@@ -270,5 +274,77 @@ public final class TestAbfsClient {
         tracker, null);
 
     return testClient;
+  }
+
+  public static AbfsClient getMockAbfsClient(AbfsClient baseAbfsClientInstance,
+      AbfsConfiguration abfsConfig)
+      throws IOException, NoSuchFieldException, IllegalAccessException {
+    AuthType currentAuthType = abfsConfig.getAuthType(
+        abfsConfig.getAccountName());
+
+    org.junit.Assume.assumeTrue(
+        (currentAuthType == AuthType.SharedKey)
+        || (currentAuthType == AuthType.OAuth));
+
+    AbfsClient client = mock(AbfsClient.class);
+    AbfsPerfTracker tracker = new AbfsPerfTracker(
+        "test",
+        abfsConfig.getAccountName(),
+        abfsConfig);
+
+    when(client.getAbfsPerfTracker()).thenReturn(tracker);
+    when(client.getAuthType()).thenReturn(currentAuthType);
+    when(client.getRetryPolicy()).thenReturn(
+        new ExponentialRetryPolicy(1));
+
+    when(client.createDefaultUriQueryBuilder()).thenCallRealMethod();
+    when(client.createRequestUrl(any(), any())).thenCallRealMethod();
+    when(client.getAccessToken()).thenCallRealMethod();
+    when(client.getSharedKeyCredentials()).thenCallRealMethod();
+    when(client.createDefaultHeaders()).thenCallRealMethod();
+
+    // override baseurl
+    Field baseUrlField = AbfsClient.class.getDeclaredField("baseUrl");
+    baseUrlField.setAccessible(true);
+    Field modifiersField = Field.class.getDeclaredField("modifiers");
+    modifiersField.setAccessible(true);
+    modifiersField.setInt(baseUrlField, baseUrlField.getModifiers() & ~java.lang.reflect.Modifier.FINAL);
+    baseUrlField.set(client, baseAbfsClientInstance.getBaseUrl());
+
+    // override auth provider
+    if (currentAuthType == AuthType.SharedKey) {
+      Field sharedKeyCredsField = AbfsClient.class.getDeclaredField(
+          "sharedKeyCredentials");
+      sharedKeyCredsField.setAccessible(true);
+      modifiersField.setInt(sharedKeyCredsField,
+          sharedKeyCredsField.getModifiers()
+              & ~java.lang.reflect.Modifier.FINAL);
+      sharedKeyCredsField.set(client, new SharedKeyCredentials(
+          abfsConfig.getAccountName().substring(0,
+              abfsConfig.getAccountName().indexOf(DOT)),
+          abfsConfig.getStorageAccountKey()));
+    } else {
+      Field tokenProviderField = AbfsClient.class.getDeclaredField(
+          "tokenProvider");
+      tokenProviderField.setAccessible(true);
+      modifiersField.setInt(tokenProviderField,
+          tokenProviderField.getModifiers()
+              & ~java.lang.reflect.Modifier.FINAL);
+      tokenProviderField.set(client, abfsConfig.getTokenProvider());
+    }
+
+    // override user agent
+    String userAgent = "APN/1.0 Azure Blob FS/3.4.0-SNAPSHOT (PrivateBuild "
+        + "JavaJRE 1.8.0_252; Linux 5.3.0-59-generic/amd64; openssl-1.0; "
+        + "UNKNOWN/UNKNOWN) MSFT";
+    Field userAgentField = AbfsClient.class.getDeclaredField(
+        "userAgent");
+    userAgentField.setAccessible(true);
+    modifiersField.setInt(userAgentField,
+        userAgentField.getModifiers()
+            & ~java.lang.reflect.Modifier.FINAL);
+    userAgentField.set(client, userAgent);
+
+    return client;
   }
 }
