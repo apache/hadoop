@@ -114,6 +114,7 @@ public class KMSWebServer {
       conf.set(HttpServer2.FILTER_INITIALIZER_PROPERTY, actualInitializers);
     }
 
+    DefaultMetricsSystem.initialize("kms");
     httpServer = new HttpServer2.Builder()
         .setName(NAME)
         .setConf(conf)
