@@ -260,4 +260,14 @@ public interface OperationCallbacks {
   S3ALocatedFileStatus toLocatedFileStatus(
           S3AFileStatus status)
           throws IOException;
+  /**
+   * Create a {@code ListObjectsRequest} request against this bucket,
+   * with the maximum keys returned in a query set by {@link #getMaxKeys()}.
+   * @param key key for request
+   * @param delimiter any delimiter
+   * @return the request
+   */
+  public S3ListRequest createListObjectsRequest(
+          String key,
+          String delimiter);
 }

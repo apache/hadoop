@@ -33,11 +33,19 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.impl.AbstractStoreOperation;
 import org.apache.hadoop.fs.s3a.impl.OperationCallbacks;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
+import org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata;
+import org.apache.hadoop.fs.s3a.s3guard.MetadataStoreListFilesIterator;
+import org.apache.hadoop.fs.s3a.s3guard.PathMetadata;
+import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
 
 import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -49,10 +57,13 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 
 import static org.apache.hadoop.fs.s3a.Constants.S3N_FOLDER_SUFFIX;
+import static org.apache.hadoop.fs.s3a.S3AUtils.ACCEPT_ALL;
 import static org.apache.hadoop.fs.s3a.S3AUtils.createFileStatus;
+import static org.apache.hadoop.fs.s3a.S3AUtils.maybeAddTrailingSlash;
 import static org.apache.hadoop.fs.s3a.S3AUtils.objectRepresentsDirectory;
 import static org.apache.hadoop.fs.s3a.S3AUtils.stringify;
 import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
+import static org.apache.hadoop.fs.s3a.auth.RoleModel.pathToKey;
 
 /**
  * Place for the S3A listing classes; keeps all the small classes under control.
@@ -156,6 +167,144 @@ public class Listing extends AbstractStoreOperation {
   TombstoneReconcilingIterator createTombstoneReconcilingIterator(
       RemoteIterator<S3ALocatedFileStatus> iterator, Set<Path> tombstones) {
     return new TombstoneReconcilingIterator(iterator, tombstones);
+  }
+
+
+  /**
+   * List files under a path assuming the path to be a directory.
+   * @param path input path.
+   * @param recursive recursive listing?
+   * @param acceptor file status filter
+   * @param collectTombstones should tombstones be collected from S3Guard?
+   * @param forceNonAuthoritativeMS forces metadata store to act like non
+   *                                authoritative. This is useful when
+   *                                listFiles output is used by import tool.
+   * @return an iterator over listing.
+   * @throws IOException any exception.
+   */
+  public RemoteIterator<S3ALocatedFileStatus> getListFilesAssumingDir(
+          Path path,
+          boolean recursive, Listing.FileStatusAcceptor acceptor,
+          boolean collectTombstones,
+          boolean forceNonAuthoritativeMS) throws IOException {
+
+    String key = maybeAddTrailingSlash(pathToKey(path));
+    String delimiter = recursive ? null : "/";
+    LOG.debug("Requesting all entries under {} with delimiter '{}'",
+            key, delimiter);
+    final RemoteIterator<S3AFileStatus> cachedFilesIterator;
+    final Set<Path> tombstones;
+    boolean allowAuthoritative = getStoreContext()
+            .getOperationCallbacks()
+            .allowAuthoritative(path);
+    if (recursive) {
+      final PathMetadata pm = getStoreContext()
+              .getMetadataStore()
+              .get(path, true);
+      if (pm != null) {
+        if (pm.isDeleted()) {
+          OffsetDateTime deletedAt = OffsetDateTime
+                  .ofInstant(Instant.ofEpochMilli(
+                          pm.getFileStatus().getModificationTime()),
+                          ZoneOffset.UTC);
+          throw new FileNotFoundException("Path " + path + " is recorded as " +
+                  "deleted by S3Guard at " + deletedAt);
+        }
+      }
+      MetadataStoreListFilesIterator metadataStoreListFilesIterator =
+              new MetadataStoreListFilesIterator(
+                      getStoreContext().getMetadataStore(),
+                      pm,
+                      allowAuthoritative);
+      tombstones = metadataStoreListFilesIterator.listTombstones();
+      // if all of the below is true
+      //  - authoritative access is allowed for this metadatastore
+      //  for this directory,
+      //  - all the directory listings are authoritative on the client
+      //  - the caller does not force non-authoritative access
+      // return the listing without any further s3 access
+      if (!forceNonAuthoritativeMS &&
+              allowAuthoritative &&
+              metadataStoreListFilesIterator.isRecursivelyAuthoritative()) {
+        S3AFileStatus[] statuses = S3Guard.iteratorToStatuses(
+                metadataStoreListFilesIterator, tombstones);
+        cachedFilesIterator = createProvidedFileStatusIterator(
+                statuses, ACCEPT_ALL, acceptor);
+        return createLocatedFileStatusIterator(cachedFilesIterator);
+      }
+      cachedFilesIterator = metadataStoreListFilesIterator;
+    } else {
+      DirListingMetadata meta =
+              S3Guard.listChildrenWithTtl(
+                      getStoreContext().getMetadataStore(),
+                      path,
+                      getStoreContext().getTimeProvider(),
+                      allowAuthoritative);
+      if (meta != null) {
+        tombstones = meta.listTombstones();
+      } else {
+        tombstones = null;
+      }
+      cachedFilesIterator = createProvidedFileStatusIterator(
+              S3Guard.dirMetaToStatuses(meta), ACCEPT_ALL, acceptor);
+      if (allowAuthoritative && meta != null && meta.isAuthoritative()) {
+        // metadata listing is authoritative, so return it directly
+        return createLocatedFileStatusIterator(cachedFilesIterator);
+      }
+    }
+    return createTombstoneReconcilingIterator(
+            createLocatedFileStatusIterator(
+                    createFileStatusListingIterator(path,
+                            getStoreContext()
+                                    .getOperationCallbacks()
+                                    .createListObjectsRequest(key, delimiter),
+                            ACCEPT_ALL,
+                            acceptor,
+                            cachedFilesIterator)),
+            collectTombstones ? tombstones : null);
+  }
+
+  /**
+   * Generate list located status for a directory.
+   * Also performing tombstone reconciliation for guarded directories.
+   * @param dir directory to check.
+   * @param filter a path filter.
+   * @return an iterator that traverses statuses of the given dir.
+   * @throws IOException in case of failure.
+   */
+  public RemoteIterator<S3ALocatedFileStatus> getLocatedFileStatusIteratorForDir(
+          Path dir, PathFilter filter) throws IOException {
+    final String key = maybeAddTrailingSlash(pathToKey(dir));
+    final Listing.FileStatusAcceptor acceptor =
+            new Listing.AcceptAllButSelfAndS3nDirs(dir);
+    boolean allowAuthoritative = getStoreContext()
+            .getOperationCallbacks()
+            .allowAuthoritative(dir);
+    DirListingMetadata meta =
+            S3Guard.listChildrenWithTtl(getStoreContext().getMetadataStore(),
+                    dir,
+                    getStoreContext().getTimeProvider(),
+                    allowAuthoritative);
+    Set<Path> tombstones = meta != null
+            ? meta.listTombstones()
+            : null;
+    final RemoteIterator<S3AFileStatus> cachedFileStatusIterator =
+            createProvidedFileStatusIterator(
+                    S3Guard.dirMetaToStatuses(meta), filter, acceptor);
+    return (allowAuthoritative && meta != null
+            && meta.isAuthoritative())
+            ? createLocatedFileStatusIterator(
+            cachedFileStatusIterator)
+            : createTombstoneReconcilingIterator(
+            createLocatedFileStatusIterator(
+                    createFileStatusListingIterator(dir,
+                            getStoreContext()
+                                    .getOperationCallbacks()
+                                    .createListObjectsRequest(key, "/"),
+                            filter,
+                            acceptor,
+                            cachedFileStatusIterator)),
+            tombstones);
   }
 
   /**

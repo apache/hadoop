@@ -361,6 +361,13 @@ public class TestPartialDeleteFailures {
             throws IOException {
       return null;
     }
+
+    @Override
+    public S3ListRequest createListObjectsRequest(
+            String key,
+            String delimiter) {
+      return null;
+    }
   }
 
   private static class MinimalContextAccessor implements ContextAccessors {

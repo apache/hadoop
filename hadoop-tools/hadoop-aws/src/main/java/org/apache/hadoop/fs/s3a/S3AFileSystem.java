@@ -362,7 +362,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           FAIL_ON_METADATA_WRITE_ERROR_DEFAULT);
 
       maxKeys = intOption(conf, MAX_PAGING_KEYS, DEFAULT_MAX_PAGING_KEYS, 1);
-      listing = new Listing(createStoreContext());
       partSize = getMultipartSizeProperty(conf,
           MULTIPART_SIZE, DEFAULT_MULTIPART_SIZE);
       multiPartThreshold = getMultipartSizeProperty(conf,
@@ -455,6 +454,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       pageSize = intOption(getConf(), BULK_DELETE_PAGE_SIZE,
           BULK_DELETE_PAGE_SIZE_DEFAULT, 0);
+      listing = new Listing(createStoreContext());
     } catch (AmazonClientException e) {
       // amazon client exception: stop all services then throw the translation
       stopAllServices();
@@ -1635,6 +1635,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       return S3AFileSystem.this.toLocatedFileStatus(status);
     }
 
+    @Override
+    public S3ListRequest createListObjectsRequest(String key, String delimiter) {
+      return S3AFileSystem.this.createListObjectsRequest(key, delimiter);
+    }
   }
 
   /**
@@ -4254,7 +4258,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // Assuming the path to be a directory
       // do a bulk operation.
       RemoteIterator<S3ALocatedFileStatus> listFilesAssumingDir =
-              getListFilesAssumingDir(path,
+              listing.getListFilesAssumingDir(path,
                       recursive,
                       acceptor,
                       collectTombstones,
@@ -4278,89 +4282,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     } catch (AmazonClientException e) {
       throw translateException("listFiles", path, e);
     }
-  }
-
-  /**
-   * List files under a path assuming the path to be a directory.
-   * @param path input path.
-   * @param recursive recursive listing?
-   * @param acceptor file status filter
-   * @param collectTombstones should tombstones be collected from S3Guard?
-   * @param forceNonAuthoritativeMS forces metadata store to act like non
-   *                                authoritative. This is useful when
-   *                                listFiles output is used by import tool.
-   * @return an iterator over listing.
-   * @throws IOException any exception.
-   */
-  private RemoteIterator<S3ALocatedFileStatus> getListFilesAssumingDir(
-          Path path,
-          boolean recursive, Listing.FileStatusAcceptor acceptor,
-          boolean collectTombstones,
-          boolean forceNonAuthoritativeMS) throws IOException {
-
-    String key = maybeAddTrailingSlash(pathToKey(path));
-    String delimiter = recursive ? null : "/";
-    LOG.debug("Requesting all entries under {} with delimiter '{}'",
-        key, delimiter);
-    final RemoteIterator<S3AFileStatus> cachedFilesIterator;
-    final Set<Path> tombstones;
-    boolean allowAuthoritative = allowAuthoritative(path);
-    if (recursive) {
-      final PathMetadata pm = metadataStore.get(path, true);
-      if (pm != null) {
-        if (pm.isDeleted()) {
-          OffsetDateTime deletedAt = OffsetDateTime
-                  .ofInstant(Instant.ofEpochMilli(
-                          pm.getFileStatus().getModificationTime()),
-                          ZoneOffset.UTC);
-          throw new FileNotFoundException("Path " + path + " is recorded as " +
-                  "deleted by S3Guard at " + deletedAt);
-        }
-      }
-      MetadataStoreListFilesIterator metadataStoreListFilesIterator =
-          new MetadataStoreListFilesIterator(metadataStore, pm,
-              allowAuthoritative);
-      tombstones = metadataStoreListFilesIterator.listTombstones();
-      // if all of the below is true
-      //  - authoritative access is allowed for this metadatastore
-      //  for this directory,
-      //  - all the directory listings are authoritative on the client
-      //  - the caller does not force non-authoritative access
-      // return the listing without any further s3 access
-      if (!forceNonAuthoritativeMS &&
-          allowAuthoritative &&
-          metadataStoreListFilesIterator.isRecursivelyAuthoritative()) {
-        S3AFileStatus[] statuses = S3Guard.iteratorToStatuses(
-            metadataStoreListFilesIterator, tombstones);
-        cachedFilesIterator = listing.createProvidedFileStatusIterator(
-            statuses, ACCEPT_ALL, acceptor);
-        return listing.createLocatedFileStatusIterator(cachedFilesIterator);
-      }
-      cachedFilesIterator = metadataStoreListFilesIterator;
-    } else {
-      DirListingMetadata meta =
-          S3Guard.listChildrenWithTtl(metadataStore, path, ttlTimeProvider,
-              allowAuthoritative);
-      if (meta != null) {
-        tombstones = meta.listTombstones();
-      } else {
-        tombstones = null;
-      }
-      cachedFilesIterator = listing.createProvidedFileStatusIterator(
-          S3Guard.dirMetaToStatuses(meta), ACCEPT_ALL, acceptor);
-      if (allowAuthoritative && meta != null && meta.isAuthoritative()) {
-        // metadata listing is authoritative, so return it directly
-        return listing.createLocatedFileStatusIterator(cachedFilesIterator);
-      }
-    }
-    return listing.createTombstoneReconcilingIterator(
-        listing.createLocatedFileStatusIterator(
-            listing.createFileStatusListingIterator(path,
-                createListObjectsRequest(key, delimiter),
-                ACCEPT_ALL,
-                acceptor,
-                cachedFilesIterator)),
-        collectTombstones ? tombstones : null);
   }
 
   /**
@@ -4401,7 +4322,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             // trigger a list call directly.
             final RemoteIterator<S3ALocatedFileStatus>
                     locatedFileStatusIteratorForDir =
-                    getLocatedFileStatusIteratorForDir(path, filter);
+                    listing.getLocatedFileStatusIteratorForDir(path, filter);
 
             // If no listing is present then path might be a file.
             if (!locatedFileStatusIteratorForDir.hasNext()) {
