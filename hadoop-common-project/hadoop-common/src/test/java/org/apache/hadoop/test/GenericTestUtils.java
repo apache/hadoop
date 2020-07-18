@@ -32,12 +32,14 @@ import java.lang.management.ThreadMXBean;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.Enumeration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.IOUtils;
@@ -61,7 +63,6 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import com.google.common.base.Joiner;
-import com.google.common.base.Supplier;
 import com.google.common.collect.Sets;
 
 /**
@@ -88,7 +89,8 @@ public abstract class GenericTestUtils {
   public static final String DEFAULT_TEST_DATA_PATH = "target/test/data/";
 
   /**
-   * Error string used in {@link GenericTestUtils#waitFor(Supplier, int, int)}.
+   * Error string used in
+   * {@link GenericTestUtils#waitFor(Supplier, long, long)}.
    */
   public static final String ERROR_MISSING_ARGUMENT =
       "Input supplier interface should be initailized";
@@ -380,9 +382,7 @@ public abstract class GenericTestUtils {
   public static void waitFor(final Supplier<Boolean> check,
       final long checkEveryMillis, final long waitForMillis)
       throws TimeoutException, InterruptedException {
-    if (check == null) {
-      throw new NullPointerException(ERROR_MISSING_ARGUMENT);
-    }
+    Objects.requireNonNull(check, ERROR_MISSING_ARGUMENT);
     if (waitForMillis < checkEveryMillis) {
       throw new IllegalArgumentException(ERROR_INVALID_ARGUMENT);
     }

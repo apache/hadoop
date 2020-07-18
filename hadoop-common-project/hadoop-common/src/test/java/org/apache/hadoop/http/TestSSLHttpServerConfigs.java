@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.http;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;

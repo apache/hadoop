@@ -21,7 +21,7 @@ package org.apache.hadoop.yarn.server.nodemanager.logaggregation.tracker;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;

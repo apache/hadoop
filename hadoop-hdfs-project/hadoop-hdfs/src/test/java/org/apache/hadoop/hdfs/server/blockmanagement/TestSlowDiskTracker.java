@@ -45,7 +45,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.SlowDiskTracker
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.FakeTimer;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import com.google.common.collect.Maps;
 
 import org.junit.Before;

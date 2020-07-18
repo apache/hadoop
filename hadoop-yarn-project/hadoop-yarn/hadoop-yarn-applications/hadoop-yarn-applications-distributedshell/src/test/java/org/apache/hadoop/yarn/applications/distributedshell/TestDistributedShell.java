@@ -40,7 +40,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import org.apache.commons.cli.MissingArgumentException;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;

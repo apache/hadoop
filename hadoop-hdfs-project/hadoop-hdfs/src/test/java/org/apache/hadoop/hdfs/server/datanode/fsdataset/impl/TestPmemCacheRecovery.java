@@ -62,7 +62,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.event.Level;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import com.google.common.primitives.Ints;
 
 /**
