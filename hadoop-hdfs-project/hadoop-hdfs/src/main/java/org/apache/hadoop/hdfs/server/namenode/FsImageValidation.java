@@ -66,8 +66,7 @@ import static org.apache.hadoop.util.Time.now;
  * {@link org.apache.hadoop.hdfs.tools.offlineImageViewer.OfflineImageViewer}.
  */
 public class FsImageValidation {
-  public static final Logger LOG = LoggerFactory.getLogger(
-      FsImageValidation.class);
+  static final Logger LOG = LoggerFactory.getLogger(FsImageValidation.class);
 
   static final String FS_IMAGE = "FS_IMAGE";
 
@@ -87,7 +86,7 @@ public class FsImageValidation {
     conf.setBoolean(DFS_NAMENODE_ENABLE_RETRY_CACHE_KEY, false);
   }
 
-  /** Simulate HA so that the editlogs are not loaded. */
+  /** Set (fake) HA so that edit logs will not be loaded. */
   static void setHaConf(String nsId, Configuration conf) {
     conf.set(DFSConfigKeys.DFS_NAMESERVICES, nsId);
     final String haNNKey = DFS_HA_NAMENODES_KEY_PREFIX + "." + nsId;

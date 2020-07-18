@@ -141,7 +141,8 @@ public class INodeReferenceValidation {
   private final ReferenceSet<INodeReference.DstReference> dstReferences
       = new ReferenceSet<>(INodeReference.DstReference.class);
 
-  <REF extends INodeReference> ReferenceSet<REF> getReferences(Class<REF> clazz) {
+  <REF extends INodeReference> ReferenceSet<REF> getReferences(
+      Class<REF> clazz) {
     if (clazz == INodeReference.WithCount.class) {
       return (ReferenceSet<REF>) withCounts;
     } else if (clazz == INodeReference.WithName.class) {
