@@ -671,7 +671,7 @@ public final class HttpServer2 implements FilterContainer {
         CommonConfigurationKeysPublic.HADOOP_HTTP_METRICS_ENABLED_DEFAULT)) {
       StatisticsHandler stats = new StatisticsHandler();
       HttpServer2Metrics.create(stats);
-      handlers.addHandler(stats);
+      webServer.setHandler(stats);
     }
 
     final String appDir = getWebAppsPath(name);
