@@ -49,6 +49,7 @@ public class ITestAzureBlobFileSystemCreate extends
 
   @Test
   public void testEnsureFileCreatedImmediately() throws Exception {
+    AbfsConfiguration abfsconf = getConfiguration();
     final AzureBlobFileSystem fs = getFileSystem();
     FSDataOutputStream out = fs.create(TEST_FILE_PATH);
     try {

@@ -293,6 +293,8 @@ Only a few properties can be set this way; more will be added.
 |-----------|-------------|
 | `fs.azure.scale.test.huge.filesize`| Size for huge file uploads |
 | `fs.azure.scale.test.huge.huge.partitionsize`| Size for partitions in huge file uploads |
+| `fs.azure.scale.test.readwriteseek.timeout.mins`| To set the timeout for the scale tests in ITestAbfsReadWriteAndSeek. Specify the value in minutes. By default the timeout will be 30 minutes. |
+| `fa.azure.scale.test.readwriteseek.max.size.mb'| To set the largest file size to run the scale test in ITestAbfsReadWriteAndSeek. Specify the value in MBs. By default this will be 100 MB |
 
 The file and partition sizes are numeric values with a k/m/g/t/p suffix depending
 on the desired size. For example: 128M, 128m, 2G, 2G, 4T or even 1P.

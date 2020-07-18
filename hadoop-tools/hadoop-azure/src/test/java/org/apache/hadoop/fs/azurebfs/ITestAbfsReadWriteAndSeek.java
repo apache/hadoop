@@ -25,6 +25,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
@@ -33,6 +34,12 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.A
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_READ_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MAX_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.SCALETEST_READ_WRITE_SEEK_MAX_SIZE_MB;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.SCALETEST_READ_WRITE_SEEK_TIMEOUT_IN_MINS;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.bandwidth;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.toHuman;
 
 /**
  * Test read, write and seek.
@@ -45,16 +52,48 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
 
   @Parameterized.Parameters(name = "Size={0}")
   public static Iterable<Object[]> sizes() {
+
     return Arrays.asList(new Object[][]{{MIN_BUFFER_SIZE},
         {DEFAULT_READ_BUFFER_SIZE},
         {APPENDBLOB_MAX_WRITE_BUFFER_SIZE},
-        {MAX_BUFFER_SIZE}});
+        {getMaxSize()}});
   }
 
   private final int size;
 
   public ITestAbfsReadWriteAndSeek(final int size) throws Exception {
     this.size = size;
+  }
+
+  private static int getInt(String key) {
+    String timeoutStr = System.getProperty(key);
+    int timeout;
+    try {
+      return Integer.parseInt(timeoutStr);
+    } catch (NumberFormatException nfe) {
+      return -1;
+    }
+  }
+
+  private static int getMaxSize() {
+    int maxSize = getInt(SCALETEST_READ_WRITE_SEEK_MAX_SIZE_MB);
+    if (maxSize < 0) {
+      maxSize = MAX_BUFFER_SIZE;
+    } else {
+      maxSize *= ONE_MB;
+    }
+    return maxSize;
+  }
+
+  @Override
+  protected int getTestTimeoutMillis() {
+    int timeout = getInt(SCALETEST_READ_WRITE_SEEK_TIMEOUT_IN_MINS);
+    if (timeout < 0) {
+      timeout = super.getTestTimeoutMillis();
+    } else {
+      timeout *= 60 * 1000;
+    }
+    return timeout;
   }
 
   @Test
@@ -73,18 +112,36 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     final byte[] b = new byte[2 * bufferSize];
     new Random().nextBytes(b);
 
+    ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
     try (FSDataOutputStream stream = fs.create(TEST_PATH)) {
       stream.write(b);
     }
+    int sizeInKb = 2 * bufferSize / ONE_KB;
+    timer.end("Time to write file of %d KB ", sizeInKb);
+    LOG.info("Time per KB to write = {} nS",
+        toHuman(timer.nanosPerOperation(sizeInKb)));
+    bandwidth(timer, 2 * bufferSize);
 
     final byte[] readBuffer = new byte[2 * bufferSize];
     int result;
     try (FSDataInputStream inputStream = fs.open(TEST_PATH)) {
       inputStream.seek(bufferSize);
+      timer.reset();
       result = inputStream.read(readBuffer, bufferSize, bufferSize);
+      sizeInKb = bufferSize / ONE_KB;
+      timer.end("Time to read file of %d KB ", sizeInKb);
+      LOG.info("Time per KB to read = {} nS",
+          toHuman(timer.nanosPerOperation(sizeInKb)));
+      bandwidth(timer, bufferSize);
       assertNotEquals(-1, result);
       inputStream.seek(0);
+      timer.reset();
       result = inputStream.read(readBuffer, 0, bufferSize);
+      sizeInKb = bufferSize / ONE_KB;
+      timer.end("Time to read file of %d KB ", sizeInKb);
+      LOG.info("Time per KB to read = {} nS",
+          toHuman(timer.nanosPerOperation(sizeInKb)));
+      bandwidth(timer, bufferSize);
     }
     assertNotEquals("data read in final read()", -1, result);
     assertArrayEquals(readBuffer, b);

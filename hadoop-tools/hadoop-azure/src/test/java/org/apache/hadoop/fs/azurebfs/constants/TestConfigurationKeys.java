@@ -58,5 +58,8 @@ public final class TestConfigurationKeys {
   public static final String TEST_CONTAINER_PREFIX = "abfs-testcontainer-";
   public static final int TEST_TIMEOUT = 15 * 60 * 1000;
 
+  public static final String SCALETEST_READ_WRITE_SEEK_TIMEOUT_IN_MINS = "fs.azure.scale.test.readwriteseek.timeout.mins";
+  public static final String SCALETEST_READ_WRITE_SEEK_MAX_SIZE_MB = "fa.azure.scale.test.readwriteseek.max.size.mb";
+
   private TestConfigurationKeys() {}
 }
