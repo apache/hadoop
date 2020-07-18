@@ -120,7 +120,6 @@ public class HttpFSServerWebServer {
       conf.set(HttpServer2.FILTER_INITIALIZER_PROPERTY, actualInitializers);
     }
 
-    DefaultMetricsSystem.initialize("httpfs");
     httpServer = new HttpServer2.Builder()
         .setName(NAME)
         .setConf(conf)
@@ -152,6 +151,7 @@ public class HttpFSServerWebServer {
   }
 
   public void start() throws IOException {
+    DefaultMetricsSystem.initialize("httpfs");
     httpServer.start();
   }
 
@@ -160,6 +160,7 @@ public class HttpFSServerWebServer {
   }
 
   public void stop() throws Exception {
+    DefaultMetricsSystem.shutdown();
     httpServer.stop();
   }
 
