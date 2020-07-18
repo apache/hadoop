@@ -31,6 +31,7 @@ import org.eclipse.jetty.server.handler.StatisticsHandler;
 public class HttpServer2Metrics {
 
   private final StatisticsHandler handler;
+  private final int port;
 
   @Metric public int asyncDispatches() {
     return handler.getAsyncDispatches();
@@ -111,12 +112,18 @@ public class HttpServer2Metrics {
     return handler.getStatsOnMs();
   }
 
-  HttpServer2Metrics(StatisticsHandler handler) {
+  HttpServer2Metrics(StatisticsHandler handler, int port) {
     this.handler = handler;
+    this.port = port;
   }
 
-  public static HttpServer2Metrics create(StatisticsHandler handler) {
+  public static HttpServer2Metrics create(StatisticsHandler handler, int port) {
     MetricsSystem ms = DefaultMetricsSystem.instance();
-    return ms.register(new HttpServer2Metrics(handler));
+    return ms.register("HttpServer2-" + port,
+        "HttpServer2 metrics", new HttpServer2Metrics(handler, port));
+  }
+
+  public void remove() {
+    DefaultMetricsSystem.removeSourceName("HttpServer2-" + port);
   }
 }

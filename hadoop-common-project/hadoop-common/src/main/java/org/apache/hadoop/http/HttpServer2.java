@@ -202,6 +202,9 @@ public final class HttpServer2 implements FilterContainer {
   protected static final String PROMETHEUS_SINK = "PROMETHEUS_SINK";
   private PrometheusMetricsSink prometheusMetricsSink;
 
+  private StatisticsHandler statsHandler;
+  private HttpServer2Metrics metrics;
+
   /**
    * Class to construct instances of HTTP server with specific options.
    */
@@ -669,9 +672,8 @@ public final class HttpServer2 implements FilterContainer {
 
     if (conf.getBoolean(CommonConfigurationKeysPublic.HADOOP_HTTP_METRICS_ENABLED,
         CommonConfigurationKeysPublic.HADOOP_HTTP_METRICS_ENABLED_DEFAULT)) {
-      StatisticsHandler stats = new StatisticsHandler();
-      HttpServer2Metrics.create(stats);
-      webServer.setHandler(stats);
+      statsHandler = new StatisticsHandler();
+      webServer.setHandler(statsHandler);
     }
 
     final String appDir = getWebAppsPath(name);
@@ -1236,6 +1238,16 @@ public final class HttpServer2 implements FilterContainer {
               .register("prometheus", "Hadoop metrics prometheus exporter",
                   prometheusMetricsSink);
         }
+        if (statsHandler != null) {
+          // Create metrics source for each HttpServer2 instance.
+          // Use port number to make the metrics source name unique.
+          int port = -1;
+          for (ServerConnector connector : listeners) {
+            port = connector.getLocalPort();
+            break;
+          }
+          metrics = HttpServer2Metrics.create(statsHandler, port);
+        }
       } catch (IOException ex) {
         LOG.info("HttpServer.start() threw a non Bind IOException", ex);
         throw ex;
@@ -1418,6 +1430,9 @@ public final class HttpServer2 implements FilterContainer {
 
     try {
       webServer.stop();
+      if (metrics != null) {
+        metrics.remove();
+      }
     } catch (Exception e) {
       LOG.error("Error while stopping web server for webapp "
           + webAppContext.getDisplayName(), e);
