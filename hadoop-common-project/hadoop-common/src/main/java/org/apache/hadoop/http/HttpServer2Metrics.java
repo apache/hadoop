@@ -117,13 +117,13 @@ public class HttpServer2Metrics {
     this.port = port;
   }
 
-  public static HttpServer2Metrics create(StatisticsHandler handler, int port) {
+  static HttpServer2Metrics create(StatisticsHandler handler, int port) {
     MetricsSystem ms = DefaultMetricsSystem.instance();
     return ms.register("HttpServer2-" + port,
         "HttpServer2 metrics", new HttpServer2Metrics(handler, port));
   }
 
-  public void remove() {
+  void remove() {
     DefaultMetricsSystem.removeSourceName("HttpServer2-" + port);
   }
 }
