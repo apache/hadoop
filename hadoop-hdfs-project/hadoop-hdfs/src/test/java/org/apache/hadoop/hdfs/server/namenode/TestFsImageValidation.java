@@ -67,7 +67,7 @@ public class TestFsImageValidation {
 
   @Test
   public void testToCommaSeparatedNumber() {
-    for(long b = 1; b < Integer.MAX_VALUE; ) {
+    for(long b = 1; b < Integer.MAX_VALUE;) {
       for (long n = b; n < Integer.MAX_VALUE; n *= 10) {
         runTestToCommaSeparatedNumber(n);
       }
@@ -78,7 +78,7 @@ public class TestFsImageValidation {
   static void runTestToCommaSeparatedNumber(long n) {
     final String s = FsImageValidation.Util.toCommaSeparatedNumber(n);
     LOG.info("{} ?= {}", n, s);
-    for(int i = s.length(); i > 0; ) {
+    for(int i = s.length(); i > 0;) {
       for(int j = 0; j < 3 && i > 0; j++) {
         Assert.assertTrue(Character.isDigit(s.charAt(--i)));
       }
