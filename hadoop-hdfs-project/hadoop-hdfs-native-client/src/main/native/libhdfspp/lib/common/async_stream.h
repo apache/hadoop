@@ -39,11 +39,9 @@ typedef boost::asio::const_buffers_1   ConstBuffer;
  * Threading model: async_read_some and async_write_some are not thread-safe.
  */
 class AsyncStream  {
-private:
-  using executor_type = boost::asio::system_executor;
-  executor_type executor_;
-
 public:
+  using executor_type = boost::asio::system_executor;
+
   virtual void async_read_some(const MutableBuffer &buf,
           std::function<void (const boost::system::error_code & error,
                                  std::size_t bytes_transferred) > handler) = 0;
@@ -55,6 +53,10 @@ public:
   executor_type get_executor() {
       return executor_;
   }
+
+private:
+  executor_type executor_;
+
 };
 
 }
