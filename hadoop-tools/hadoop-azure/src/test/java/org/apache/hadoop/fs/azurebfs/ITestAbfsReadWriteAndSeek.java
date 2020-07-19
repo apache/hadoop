@@ -49,6 +49,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.toHuman;
 @RunWith(Parameterized.class)
 public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
   private static final Path TEST_PATH = new Path("/testfile");
+  private static final int SIXTY = 60;
 
   @Parameterized.Parameters(name = "Size={0}")
   public static Iterable<Object[]> sizes() {
@@ -91,7 +92,7 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     if (timeout < 0) {
       timeout = super.getTestTimeoutMillis();
     } else {
-      timeout *= 60 * 1000;
+      timeout *= SIXTY * 1000;
     }
     return timeout;
   }
