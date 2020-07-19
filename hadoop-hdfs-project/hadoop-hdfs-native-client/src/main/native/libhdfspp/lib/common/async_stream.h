@@ -41,7 +41,6 @@ typedef boost::asio::const_buffers_1   ConstBuffer;
 class AsyncStream  {
 public:
   using executor_type = boost::asio::system_executor;
-  executor_type executor_;
 
   virtual void async_read_some(const MutableBuffer &buf,
           std::function<void (const boost::system::error_code & error,
@@ -54,6 +53,10 @@ public:
   executor_type get_executor() {
       return executor_;
   }
+
+private:
+  executor_type executor_;
+
 };
 
 }
