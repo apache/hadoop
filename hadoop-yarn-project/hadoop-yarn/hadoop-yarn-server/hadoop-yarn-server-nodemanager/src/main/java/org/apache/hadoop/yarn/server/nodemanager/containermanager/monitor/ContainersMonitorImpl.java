@@ -605,15 +605,20 @@ public class ContainersMonitorImpl extends AbstractService implements
       long vmemLimit = ptInfo.getVmemLimit();
       long pmemLimit = ptInfo.getPmemLimit();
       if (AUDITLOG.isDebugEnabled()) {
+        int vcoreLimit = ptInfo.getCpuVcores();
+        long cumulativeCpuTime = pTree.getCumulativeCpuTime();
         AUDITLOG.debug(String.format(
             "Resource usage of ProcessTree %s for container-id %s:" +
-                " %s CPU:%f CPU/core:%f",
+                " %s %%CPU: %f %%CPU-cores: %f" +
+                " vCores-used: %d of %d Cumulative-CPU-ms: %d",
             pId, containerId.toString(),
             formatUsageString(
                 currentVmemUsage, vmemLimit,
                 currentPmemUsage, pmemLimit),
             cpuUsagePercentPerCore,
-            cpuUsageTotalCoresPercentage));
+            cpuUsageTotalCoresPercentage,
+            milliVcoresUsed / 1000, vcoreLimit,
+            cumulativeCpuTime));
       }
 
       // Add resource utilization for this container
