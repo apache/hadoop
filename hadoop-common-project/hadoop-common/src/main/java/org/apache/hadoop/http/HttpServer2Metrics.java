@@ -118,9 +118,12 @@ public class HttpServer2Metrics {
   }
 
   static HttpServer2Metrics create(StatisticsHandler handler, int port) {
-    MetricsSystem ms = DefaultMetricsSystem.instance();
-    return ms.register("HttpServer2-" + port,
-        "HttpServer2 metrics", new HttpServer2Metrics(handler, port));
+    final MetricsSystem ms = DefaultMetricsSystem.instance();
+    final HttpServer2Metrics metrics = new HttpServer2Metrics(handler, port);
+    // Remove the old metrics from metrics system to avoid duplicate error
+    // when HttpServer2 is started twice.
+    metrics.remove();
+    return ms.register("HttpServer2-" + port, "HttpServer2 metrics", metrics);
   }
 
   void remove() {

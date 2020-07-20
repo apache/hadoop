@@ -160,8 +160,8 @@ public class HttpFSServerWebServer {
   }
 
   public void stop() throws Exception {
-    DefaultMetricsSystem.shutdown();
     httpServer.stop();
+    DefaultMetricsSystem.shutdown();
   }
 
   public URL getUrl() {
