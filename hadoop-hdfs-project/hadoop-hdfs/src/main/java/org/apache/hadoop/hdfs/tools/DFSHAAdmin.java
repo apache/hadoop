@@ -284,6 +284,11 @@ public class DFSHAAdmin extends HAAdmin {
     HAServiceTarget fromNode = resolveTarget(args[0]);
     HAServiceTarget toNode = resolveTarget(args[1]);
 
+    fromNode.setTransitionTargetHAStatus(
+        HAServiceProtocol.HAServiceState.STANDBY);
+    toNode.setTransitionTargetHAStatus(
+        HAServiceProtocol.HAServiceState.ACTIVE);
+
     // Check that auto-failover is consistently configured for both nodes.
     Preconditions.checkState(
         fromNode.isAutoFailoverEnabled() ==
