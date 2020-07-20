@@ -294,7 +294,7 @@ public class ViewFileSystem extends FileSystem {
       myUri = new URI(getScheme(), authority, "/", null, null);
       boolean initingUriAsFallbackOnNoMounts =
           !FsConstants.VIEWFS_TYPE.equals(getType());
-      fsState = new InodeTree<FileSystem>(conf, tableName, theUri,
+      fsState = new InodeTree<FileSystem>(conf, tableName, myUri,
           initingUriAsFallbackOnNoMounts) {
         @Override
         protected FileSystem getTargetFileSystem(final URI uri)
