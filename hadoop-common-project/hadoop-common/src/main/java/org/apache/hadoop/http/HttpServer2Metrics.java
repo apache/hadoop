@@ -25,6 +25,10 @@ import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.eclipse.jetty.server.handler.StatisticsHandler;
 
+/**
+ * This class collects all the metrics of Jetty's StatisticsHandler
+ * and expose them as Hadoop Metrics.
+ */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 @Metrics(name="HttpServer2", about="HttpServer2 metrics", context="http")
@@ -33,82 +37,108 @@ public class HttpServer2Metrics {
   private final StatisticsHandler handler;
   private final int port;
 
-  @Metric public int asyncDispatches() {
+  @Metric("number of async requests requests that have expired")
+  public int asyncDispatches() {
     return handler.getAsyncDispatches();
   }
-  @Metric public int asyncRequests() {
+  @Metric("total number of async requests")
+  public int asyncRequests() {
     return handler.getAsyncRequests();
   }
-  @Metric public int asyncRequestsWaiting() {
+  @Metric("currently waiting async requests")
+  public int asyncRequestsWaiting() {
     return handler.getAsyncRequestsWaiting();
   }
-  @Metric public int asyncRequestsWaitingMax() {
+  @Metric("maximum number of waiting async requests")
+  public int asyncRequestsWaitingMax() {
     return handler.getAsyncRequestsWaitingMax();
   }
-  @Metric public int dispatched() {
+  @Metric("number of dispatches")
+  public int dispatched() {
     return handler.getDispatched();
   }
-  @Metric public int dispatchedActive() {
+  @Metric("number of dispatches currently active")
+  public int dispatchedActive() {
     return handler.getDispatchedActive();
   }
-  @Metric public int dispatchedActiveMax() {
+  @Metric("maximum number of active dispatches being handled")
+  public int dispatchedActiveMax() {
     return handler.getDispatchedActiveMax();
   }
-  @Metric public long dispatchedTimeMax() {
+  @Metric("maximum time spend in dispatch handling (in ms)")
+  public long dispatchedTimeMax() {
     return handler.getDispatchedTimeMax();
   }
-  @Metric public double dispatchedTimeMean() {
+  @Metric("mean time spent in dispatch handling (in ms)")
+  public double dispatchedTimeMean() {
     return handler.getDispatchedTimeMean();
   }
-  @Metric public double dispatchedTimeStdDev() {
+  @Metric("standard deviation for dispatch handling (in ms)")
+  public double dispatchedTimeStdDev() {
     return handler.getDispatchedTimeStdDev();
   }
-  @Metric public long dispatchedTimeTotal() {
+  @Metric("total time spent in dispatch handling (in ms)")
+  public long dispatchedTimeTotal() {
     return handler.getDispatchedTimeTotal();
   }
-  @Metric public int expires() {
+  @Metric("number of async requests requests that have expired")
+  public int expires() {
     return handler.getExpires();
   }
-  @Metric public int requests() {
+  @Metric("number of requests")
+  public int requests() {
     return handler.getRequests();
   }
-  @Metric public int requestsActive() {
+  @Metric("number of requests currently active")
+  public int requestsActive() {
     return handler.getRequestsActive();
   }
-  @Metric public int requestsActiveMax() {
+  @Metric("maximum number of active requests")
+  public int requestsActiveMax() {
     return handler.getRequestsActiveMax();
   }
-  @Metric public long requestTimeMax() {
+  @Metric("maximum time spend handling requests (in ms)")
+  public long requestTimeMax() {
     return handler.getRequestTimeMax();
   }
-  @Metric public double requestTimeMean() {
+  @Metric("mean time spent handling requests (in ms)")
+  public double requestTimeMean() {
     return handler.getRequestTimeMean();
   }
-  @Metric public double requestTimeStdDev() {
+  @Metric("standard deviation for request handling (in ms)")
+  public double requestTimeStdDev() {
     return handler.getRequestTimeStdDev();
   }
-  @Metric public long requestTimeTotal() {
+  @Metric("total time spend in all request handling (in ms)")
+  public long requestTimeTotal() {
     return handler.getRequestTimeTotal();
   }
-  @Metric public int responses1xx() {
+  @Metric("number of requests with 1xx response status")
+  public int responses1xx() {
     return handler.getResponses1xx();
   }
-  @Metric public int responses2xx() {
+  @Metric("number of requests with 2xx response status")
+  public int responses2xx() {
     return handler.getResponses2xx();
   }
-  @Metric public int responses3xx() {
+  @Metric("number of requests with 3xx response status")
+  public int responses3xx() {
     return handler.getResponses3xx();
   }
-  @Metric public int responses4xx() {
+  @Metric("number of requests with 4xx response status")
+  public int responses4xx() {
     return handler.getResponses4xx();
   }
-  @Metric public int responses5xx() {
+  @Metric("number of requests with 5xx response status")
+  public int responses5xx() {
     return handler.getResponses5xx();
   }
-  @Metric public long getResponsesBytesTotal() {
+  @Metric("total number of bytes across all responses")
+  public long getResponsesBytesTotal() {
     return handler.getResponsesBytesTotal();
   }
-  @Metric public long statsOnMs() {
+  @Metric("time in milliseconds stats have been collected for")
+  public long statsOnMs() {
     return handler.getStatsOnMs();
   }
 
@@ -123,6 +153,7 @@ public class HttpServer2Metrics {
     // Remove the old metrics from metrics system to avoid duplicate error
     // when HttpServer2 is started twice.
     metrics.remove();
+    // Add port number to the suffix to allow multiple instances in a host.
     return ms.register("HttpServer2-" + port, "HttpServer2 metrics", metrics);
   }
 
