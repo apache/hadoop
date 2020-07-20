@@ -260,7 +260,8 @@ class FSDirSnapshotOp {
           srcRoot, snapshotName);
 
       // Diffs must be not empty since a snapshot exists in the list
-      final int earliest = snapshottable.getDiffs().iterator().next().getSnapshotId();
+      final int earliest = snapshottable.getDiffs().iterator().next()
+          .getSnapshotId();
       if (snapshot.getId() != earliest) {
         throw new SnapshotException("Failed to delete snapshot " + snapshotName
             + " from directory " + srcRoot.getFullPathName()

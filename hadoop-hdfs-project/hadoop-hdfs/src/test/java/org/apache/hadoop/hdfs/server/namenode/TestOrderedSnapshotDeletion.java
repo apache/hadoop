@@ -37,7 +37,7 @@ import java.io.IOException;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED;
 
 /**
- * Test FSImage save/load when Snapshot is supported
+ * Test ordered snapshot deletion
  */
 public class TestOrderedSnapshotDeletion {
   static final Logger LOG = LoggerFactory.getLogger(FSDirectory.class);
@@ -47,9 +47,10 @@ public class TestOrderedSnapshotDeletion {
     GenericTestUtils.setLogLevel(INode.LOG, Level.TRACE);
   }
 
-  private final Path snapshottableDir = new Path("/" + getClass().getSimpleName());
+  private final Path snapshottableDir
+      = new Path("/" + getClass().getSimpleName());
 
-  MiniDFSCluster cluster;
+  private MiniDFSCluster cluster;
 
   @Before
   public void setUp() throws Exception {
