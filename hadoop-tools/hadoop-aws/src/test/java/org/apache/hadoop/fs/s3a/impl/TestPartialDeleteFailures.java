@@ -238,9 +238,38 @@ public class TestPartialDeleteFailures {
         .setContextAccessors(CONTEXT_ACCESSORS)
         .setTimeProvider(new S3Guard.TtlTimeProvider(conf))
         .setOperationCallbacks(new MinimalOperationCallbacks())
+        .setListingOperationCallbacks(new MinimalListingOperationCallbacks())
         .build();
   }
 
+  private static class MinimalListingOperationCallbacks implements ListingOperationCallbacks {
+    @Override
+    public S3ListResult listObjects(S3ListRequest request)
+            throws IOException {
+      return null;
+    }
+
+    @Override
+    public S3ListResult continueListObjects(
+            S3ListRequest request,
+            S3ListResult prevResult)
+            throws IOException {
+      return null;
+    }
+
+    @Override
+    public S3ALocatedFileStatus toLocatedFileStatus(
+            S3AFileStatus status) throws IOException {
+      return null;
+    }
+
+    @Override
+    public S3ListRequest createListObjectsRequest(
+            String key,
+            String delimiter) {
+      return null;
+    }
+  }
   private static class MinimalOperationCallbacks implements OperationCallbacks {
     @Override
     public S3ObjectAttributes createObjectAttributes(
@@ -324,50 +353,6 @@ public class TestPartialDeleteFailures {
             throws IOException {
       return null;
     }
-
-    @Override
-    public Path keyToQualifiedPath(String key) {
-      return null;
-    }
-
-    @Override
-    public long getDefaultBlockSize(Path path) {
-      return 0;
-    }
-
-    @Override
-    public int getMaxKeys() {
-      return 0;
-    }
-
-    @Override
-    public S3ListResult listObjects(
-            S3ListRequest request)
-            throws IOException {
-      return null;
-    }
-
-    @Override
-    public S3ListResult continueListObjects(
-            S3ListRequest request,
-            S3ListResult prevResult)
-            throws IOException {
-      return null;
-    }
-
-    @Override
-    public S3ALocatedFileStatus toLocatedFileStatus(
-            S3AFileStatus status)
-            throws IOException {
-      return null;
-    }
-
-    @Override
-    public S3ListRequest createListObjectsRequest(
-            String key,
-            String delimiter) {
-      return null;
-    }
   }
 
   private static class MinimalContextAccessor implements ContextAccessors {
@@ -396,6 +381,21 @@ public class TestPartialDeleteFailures {
     @Override
     public Path makeQualified(final Path path) {
       return path;
+    }
+
+    @Override
+    public long getDefaultBlockSize(Path path) {
+      return 0;
+    }
+
+    @Override
+    public int getMaxKeys() {
+      return 0;
+    }
+
+    @Override
+    public ITtlTimeProvider getUpdatedTtlTimeProvider() {
+      return null;
     }
   }
   /**

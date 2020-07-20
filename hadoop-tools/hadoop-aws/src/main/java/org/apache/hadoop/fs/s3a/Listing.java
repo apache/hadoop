@@ -31,7 +31,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.impl.AbstractStoreOperation;
-import org.apache.hadoop.fs.s3a.impl.OperationCallbacks;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStoreListFilesIterator;
@@ -238,7 +237,9 @@ public class Listing extends AbstractStoreOperation {
               S3Guard.listChildrenWithTtl(
                       getStoreContext().getMetadataStore(),
                       path,
-                      getStoreContext().getTimeProvider(),
+                      getStoreContext()
+                              .getContextAccessors()
+                              .getUpdatedTtlTimeProvider(),
                       allowAuthoritative);
       if (meta != null) {
         tombstones = meta.listTombstones();
@@ -256,7 +257,7 @@ public class Listing extends AbstractStoreOperation {
             createLocatedFileStatusIterator(
                     createFileStatusListingIterator(path,
                             getStoreContext()
-                                    .getOperationCallbacks()
+                                    .getListingOperationCallbacks()
                                     .createListObjectsRequest(key, delimiter),
                             ACCEPT_ALL,
                             acceptor,
@@ -283,7 +284,9 @@ public class Listing extends AbstractStoreOperation {
     DirListingMetadata meta =
             S3Guard.listChildrenWithTtl(getStoreContext().getMetadataStore(),
                     dir,
-                    getStoreContext().getTimeProvider(),
+                    getStoreContext()
+                            .getContextAccessors()
+                            .getUpdatedTtlTimeProvider(),
                     allowAuthoritative);
     Set<Path> tombstones = meta != null
             ? meta.listTombstones()
@@ -299,7 +302,7 @@ public class Listing extends AbstractStoreOperation {
             createLocatedFileStatusIterator(
                     createFileStatusListingIterator(dir,
                             getStoreContext()
-                                    .getOperationCallbacks()
+                                    .getListingOperationCallbacks()
                                     .createListObjectsRequest(key, "/"),
                             filter,
                             acceptor,
@@ -616,14 +619,14 @@ public class Listing extends AbstractStoreOperation {
       // objects
       for (S3ObjectSummary summary : objects.getObjectSummaries()) {
         String key = summary.getKey();
-        Path keyPath = getStoreContext().getOperationCallbacks().keyToQualifiedPath(key);
+        Path keyPath = getStoreContext().getContextAccessors().keyToPath(key);
         if (LOG.isDebugEnabled()) {
           LOG.debug("{}: {}", keyPath, stringify(summary));
         }
         // Skip over keys that are ourselves and old S3N _$folder$ files
         if (acceptor.accept(keyPath, summary) && filter.accept(keyPath)) {
           S3AFileStatus status = createFileStatus(keyPath, summary,
-                  getStoreContext().getOperationCallbacks().getDefaultBlockSize(keyPath),
+                  getStoreContext().getContextAccessors().getDefaultBlockSize(keyPath),
                   getStoreContext().getUsername(),
               summary.getETag(), null);
           LOG.debug("Adding: {}", status);
@@ -637,7 +640,7 @@ public class Listing extends AbstractStoreOperation {
 
       // prefixes: always directories
       for (String prefix : objects.getCommonPrefixes()) {
-        Path keyPath = getStoreContext().getOperationCallbacks().keyToQualifiedPath(prefix);
+        Path keyPath = getStoreContext().getContextAccessors().keyToPath(prefix);
         if (acceptor.accept(keyPath, prefix) && filter.accept(keyPath)) {
           S3AFileStatus status = new S3AFileStatus(Tristate.FALSE, keyPath,
               getStoreContext().getUsername());
@@ -725,8 +728,8 @@ public class Listing extends AbstractStoreOperation {
         Path listPath,
         S3ListRequest request) throws IOException {
       this.listPath = listPath;
-      this.maxKeys = getStoreContext().getOperationCallbacks().getMaxKeys();
-      this.objects = getStoreContext().getOperationCallbacks().listObjects(request);
+      this.maxKeys = getStoreContext().getContextAccessors().getMaxKeys();
+      this.objects = getStoreContext().getListingOperationCallbacks().listObjects(request);
       this.request = request;
     }
 
@@ -768,7 +771,9 @@ public class Listing extends AbstractStoreOperation {
           // need to request a new set of objects.
           LOG.debug("[{}], Requesting next {} objects under {}",
               listingCount, maxKeys, listPath);
-          objects = getStoreContext().getOperationCallbacks().continueListObjects(request, objects);
+          objects = getStoreContext()
+                  .getListingOperationCallbacks()
+                  .continueListObjects(request, objects);
           listingCount++;
           LOG.debug("New listing status: {}", this);
         } catch (AmazonClientException e) {
@@ -868,7 +873,9 @@ public class Listing extends AbstractStoreOperation {
 
     @Override
     public S3ALocatedFileStatus next() throws IOException {
-      return getStoreContext().getOperationCallbacks().toLocatedFileStatus(statusIterator.next());
+      return getStoreContext()
+              .getListingOperationCallbacks()
+              .toLocatedFileStatus(statusIterator.next());
     }
   }
 

@@ -105,6 +105,7 @@ import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
 import org.apache.hadoop.fs.s3a.impl.CopyOutcome;
 import org.apache.hadoop.fs.s3a.impl.DeleteOperation;
 import org.apache.hadoop.fs.s3a.impl.InternalConstants;
+import org.apache.hadoop.fs.s3a.impl.ListingOperationCallbacks;
 import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport;
 import org.apache.hadoop.fs.s3a.impl.OperationCallbacks;
 import org.apache.hadoop.fs.s3a.impl.RenameOperation;
@@ -292,6 +293,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   private final S3AFileSystem.OperationCallbacksImpl
       operationCallbacks = new OperationCallbacksImpl();
+
+  private final S3AFileSystem.ListingOperationCallbacksImpl
+      listingOperationCallbacks = new ListingOperationCallbacksImpl();
 
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
@@ -1597,21 +1601,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               Listing.ACCEPT_ALL_BUT_S3N,
               null));
     }
+  }
 
-    @Override
-    public Path keyToQualifiedPath(String key) {
-      return S3AFileSystem.this.keyToQualifiedPath(key);
-    }
-
-    @Override
-    public long getDefaultBlockSize(Path path) {
-      return S3AFileSystem.this.getDefaultBlockSize(path);
-    }
-
-    @Override
-    public int getMaxKeys() {
-      return S3AFileSystem.this.getMaxKeys();
-    }
+  protected class ListingOperationCallbacksImpl implements ListingOperationCallbacks {
 
     @Override
     @Retries.RetryRaw
@@ -4774,6 +4766,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .setContextAccessors(new ContextAccessorsImpl())
         .setTimeProvider(getTtlTimeProvider())
         .setOperationCallbacks(operationCallbacks)
+        .setListingOperationCallbacks(listingOperationCallbacks)
         .build();
   }
 
@@ -4806,6 +4799,21 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     @Override
     public Path makeQualified(final Path path) {
       return S3AFileSystem.this.makeQualified(path);
+    }
+
+    @Override
+    public long getDefaultBlockSize(Path path) {
+      return S3AFileSystem.this.getDefaultBlockSize(path);
+    }
+
+    @Override
+    public int getMaxKeys() {
+      return S3AFileSystem.this.getMaxKeys();
+    }
+
+    @Override
+    public ITtlTimeProvider getUpdatedTtlTimeProvider() {
+      return S3AFileSystem.this.ttlTimeProvider;
     }
   }
 }

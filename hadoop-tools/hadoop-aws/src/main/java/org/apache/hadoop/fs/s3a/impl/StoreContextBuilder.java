@@ -72,6 +72,8 @@ public class StoreContextBuilder {
 
   private OperationCallbacks operationCallbacks;
 
+  private ListingOperationCallbacks listingOperationCallbacks;
+
   public StoreContextBuilder setFsURI(final URI fsURI) {
     this.fsURI = fsURI;
     return this;
@@ -174,6 +176,12 @@ public class StoreContextBuilder {
     return this;
   }
 
+  public StoreContextBuilder setListingOperationCallbacks(
+          ListingOperationCallbacks listingOperationCallbacks) {
+    this.listingOperationCallbacks = listingOperationCallbacks;
+    return this;
+  }
+
   @SuppressWarnings("deprecation")
   public StoreContext build() {
     return new StoreContext(fsURI,
@@ -193,6 +201,7 @@ public class StoreContextBuilder {
         useListV1,
         contextAccessors,
         timeProvider,
-        operationCallbacks);
+        operationCallbacks,
+        listingOperationCallbacks);
   }
 }

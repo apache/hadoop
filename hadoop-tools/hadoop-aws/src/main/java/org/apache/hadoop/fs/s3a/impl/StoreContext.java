@@ -117,9 +117,14 @@ public class StoreContext {
   private ITtlTimeProvider timeProvider;
 
   /**
-   * Specific operations used by rename, delete and list operations.
+   * Specific operations used by rename, delete operations.
    */
   private OperationCallbacks operationCallbacks;
+
+  /**
+   * Specific operations used by list operations.
+   */
+  private ListingOperationCallbacks listingOperationCallbacks;
 
   /**
    * Instantiate.
@@ -143,7 +148,8 @@ public class StoreContext {
       final boolean useListV1,
       final ContextAccessors contextAccessors,
       final ITtlTimeProvider timeProvider,
-      final OperationCallbacks operationCallbacks) {
+      final OperationCallbacks operationCallbacks,
+      final ListingOperationCallbacks listingOperationCallbacks) {
     this.fsURI = fsURI;
     this.bucket = bucket;
     this.configuration = configuration;
@@ -162,6 +168,7 @@ public class StoreContext {
     this.contextAccessors = contextAccessors;
     this.timeProvider = timeProvider;
     this.operationCallbacks = operationCallbacks;
+    this.listingOperationCallbacks = listingOperationCallbacks;
   }
 
   @Override
@@ -217,8 +224,16 @@ public class StoreContext {
     return useListV1;
   }
 
+  public ContextAccessors getContextAccessors() {
+    return contextAccessors;
+  }
+
   public OperationCallbacks getOperationCallbacks() {
     return operationCallbacks;
+  }
+
+  public ListingOperationCallbacks getListingOperationCallbacks() {
+    return listingOperationCallbacks;
   }
 
   /**
