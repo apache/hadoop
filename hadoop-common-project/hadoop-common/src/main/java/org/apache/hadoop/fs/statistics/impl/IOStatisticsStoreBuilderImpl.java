@@ -22,11 +22,15 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MAX;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MEAN;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MIN;
+
 /**
  * Builder implementation.
  */
-final class CounterIOStatisticsBuilderImpl implements
-    CounterIOStatisticsBuilder {
+final class IOStatisticsStoreBuilderImpl implements
+    IOStatisticsStoreBuilder {
 
   private final List<String> counters = new ArrayList<>();
 
@@ -39,39 +43,52 @@ final class CounterIOStatisticsBuilderImpl implements
   private final List<String> meanStatistics = new ArrayList<>();
 
   @Override
-  public CounterIOStatisticsBuilderImpl withCounters(final String... keys) {
+  public IOStatisticsStoreBuilderImpl withCounters(final String... keys) {
     counters.addAll(Arrays.asList(keys));
     return this;
   }
 
   @Override
-  public CounterIOStatisticsBuilderImpl withGauges(final String... keys) {
+  public IOStatisticsStoreBuilderImpl withGauges(final String... keys) {
     gauges.addAll(Arrays.asList(keys));
     return this;
   }
 
   @Override
-  public CounterIOStatisticsBuilderImpl withMaximums(final String... keys) {
+  public IOStatisticsStoreBuilderImpl withMaximums(final String... keys) {
     maximums.addAll(Arrays.asList(keys));
     return this;
   }
 
   @Override
-  public CounterIOStatisticsBuilderImpl withMinimums(final String... keys) {
+  public IOStatisticsStoreBuilderImpl withMinimums(final String... keys) {
     minimums.addAll(Arrays.asList(keys));
     return this;
   }
 
   @Override
-  public CounterIOStatisticsBuilderImpl withMeanStatistics(
+  public IOStatisticsStoreBuilderImpl withMeanStatistics(
       final String... keys) {
     meanStatistics.addAll(Arrays.asList(keys));
     return this;
   }
 
+
   @Override
-  public CounterIOStatistics build() {
-    return new CounterIOStatisticsImpl(counters, gauges, minimums,
+  public IOStatisticsStoreBuilderImpl withDurationTracking(
+      final String... prefixes) {
+    for (String p : prefixes) {
+      withCounters(p);
+      withMinimums(p + SUFFIX_MIN);
+      withMaximums(p + SUFFIX_MAX);
+      withMeanStatistics(p + SUFFIX_MEAN);
+    }
+    return this;
+  }
+
+  @Override
+  public IOStatisticsStore build() {
+    return new IOStatisticsStoreImpl(counters, gauges, minimums,
         maximums, meanStatistics);
   }
 }

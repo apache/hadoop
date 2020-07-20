@@ -18,13 +18,36 @@
 
 package org.apache.hadoop.fs.statistics.impl;
 
-import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.util.OperationDuration;
 
 /**
- * Base implementation in case common methods/fields need to be added
- * in future.
+ * Track the duration of an object; when closed the
+ * statistics are updated.
  */
-public abstract class AbstractIOStatisticsImpl implements IOStatistics {
+public class SingleStatisticDurationTracker extends OperationDuration
+    implements DurationTracker {
 
+  private final IOStatisticsStore iostats;
 
+  private final String prefix;
+
+  /**
+   * Constructor.
+   * @param iostats statistics to update
+   * @param prefix prefix of values.
+   */
+  public SingleStatisticDurationTracker(final IOStatisticsStore iostats,
+      final String prefix) {
+    this.iostats = iostats;
+    this.prefix = prefix;
+  }
+
+  /**
+   * Set the finished time and then update the statistics.
+   */
+  @Override
+  public void close() {
+    finished();
+    iostats.addTimedOperation(prefix, asDuration());
+  }
 }

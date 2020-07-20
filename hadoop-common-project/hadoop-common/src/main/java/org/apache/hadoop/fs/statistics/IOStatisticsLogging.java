@@ -29,7 +29,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
-import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.entrytoString;
 
 /**
  * Utility operations convert IO Statistics sources/instances
@@ -94,7 +93,8 @@ public final class IOStatisticsLogging {
         sb.append(' ');
       }
       count++;
-      sb.append(entrytoString(entry.getKey(), entry.getValue()));
+      sb.append(IOStatisticsBinding.entryToString(
+          entry.getKey(), entry.getValue()));
     }
     sb.append("); ");
   }

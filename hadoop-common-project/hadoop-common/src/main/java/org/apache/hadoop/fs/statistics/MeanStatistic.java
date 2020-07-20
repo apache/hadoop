@@ -259,13 +259,8 @@ public final class MeanStatistic implements Serializable, Cloneable {
 
   @Override
   public String toString() {
-    final StringBuilder sb = new StringBuilder(
-        "MeanStatistic{");
-    sb.append("sum=").append(sum);
-    sb.append(", samples=").append(samples);
-    sb.append(", mean=").append(mean());
-    sb.append('}');
-    return sb.toString();
+    return String.format("sum=%d, samples=%d, mean=%3f",
+        sum, samples, mean());
   }
 
 }

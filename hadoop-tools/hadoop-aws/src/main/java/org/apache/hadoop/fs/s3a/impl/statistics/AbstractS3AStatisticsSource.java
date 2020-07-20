@@ -19,7 +19,7 @@
 package org.apache.hadoop.fs.s3a.impl.statistics;
 
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
-import org.apache.hadoop.fs.statistics.impl.CounterIOStatistics;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 
 /**
  * Base class for implementing IOStatistics sources in the S3 module.
@@ -31,13 +31,13 @@ import org.apache.hadoop.fs.statistics.impl.CounterIOStatistics;
 public abstract class AbstractS3AStatisticsSource implements
     IOStatisticsSource {
 
-  private CounterIOStatistics ioStatistics;
+  private IOStatisticsStore ioStatistics;
 
   protected AbstractS3AStatisticsSource() {
   }
 
   @Override
-  public CounterIOStatistics getIOStatistics() {
+  public IOStatisticsStore getIOStatistics() {
     return ioStatistics;
   }
 
@@ -47,7 +47,7 @@ public abstract class AbstractS3AStatisticsSource implements
    * whatever
    * @param statistics statistics to set
    */
-  protected void setIOStatistics(final CounterIOStatistics statistics) {
+  protected void setIOStatistics(final IOStatisticsStore statistics) {
     this.ioStatistics = statistics;
   }
 

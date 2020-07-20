@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.amazonaws.services.s3.model.PartETag;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 
 import org.apache.commons.lang3.StringUtils;
@@ -39,7 +40,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.commit.ValidationFailure;
-import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.util.JsonSerialization;
@@ -122,6 +122,7 @@ public class SinglePendingCommit extends PersistentCommitData
   /**
    * IOStatistics.
    */
+  @JsonProperty("iosstatistics")
   private IOStatisticsSnapshot ioStatistics = new IOStatisticsSnapshot();
 
   /** Destination file size. */

@@ -29,7 +29,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -37,6 +38,9 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 
 import com.google.common.collect.Iterables;
@@ -51,15 +55,22 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
+import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
+import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
+
 /**
  * Utility class to fetch block locations for specified Input paths using a
  * configured number of threads.
  * The thread count is determined from the value of
  * "mapreduce.input.fileinputformat.list-status.num-threads" in the
  * configuration.
+ * <p></p>
+ * Although historically tagged as private, it is used elsewhere, such as
+ * in the Parquet-hadoop module. Avoid breaking it where possible.
  */
-@Private
-public class LocatedFileStatusFetcher {
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+public class LocatedFileStatusFetcher implements IOStatisticsSource {
 
   public static final Logger LOG =
       LoggerFactory.getLogger(LocatedFileStatusFetcher.class.getName());
@@ -85,6 +96,12 @@ public class LocatedFileStatusFetcher {
   private final Condition condition = lock.newCondition();
 
   private volatile Throwable unknownError;
+
+  /**
+   * Demand created IO Statistics: only if the filesystem
+   * returns statistics does this fetch collect them.
+   */
+  private IOStatisticsSnapshot iostats;
 
   /**
    * Instantiate.
@@ -224,7 +241,32 @@ public class LocatedFileStatusFetcher {
       lock.unlock();
     }
   }
-  
+
+  /**
+   * Return any IOStatistics collected during listing.
+   * @return IO stats accrued.
+   */
+  @Override
+  public IOStatistics getIOStatistics() {
+    return iostats;
+  }
+
+  /**
+   * Add the statistics of an individual thread's scan.
+   * @param stats possibly null statistics.
+   */
+  private void addResultStatistics(IOStatistics stats) {
+    if (stats != null) {
+      synchronized (this) {
+        if (iostats == null) {
+          // demand create the statistics
+          iostats = snapshotIOStatistics();
+        }
+      }
+      LOG.debug("Adding IOStatistics: {}", stats);
+      iostats.aggregate(stats);
+    }
+  }
   /**
    * Retrieves block locations for the given @link {@link FileStatus}, and adds
    * additional paths to the process queue if required.
@@ -264,6 +306,8 @@ public class LocatedFileStatusFetcher {
             }
           }
         }
+        // aggregate any stats
+        result.stats = retrieveIOStatistics(iter);
       } else {
         result.locatedFileStatuses.add(fileStatus);
       }
@@ -274,6 +318,7 @@ public class LocatedFileStatusFetcher {
       private List<FileStatus> locatedFileStatuses = new LinkedList<>();
       private List<FileStatus> dirsNeedingRecursiveCalls = new LinkedList<>();
       private FileSystem fs;
+      private IOStatistics stats;
     }
   }
 
@@ -288,6 +333,7 @@ public class LocatedFileStatusFetcher {
     @Override
     public void onSuccess(ProcessInputDirCallable.Result result) {
       try {
+        addResultStatistics(result.stats);
         if (!result.locatedFileStatuses.isEmpty()) {
           resultQueue.add(result.locatedFileStatuses);
         }

@@ -279,6 +279,10 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     public ChangeTrackerStatistics getChangeTrackerStatistics() {
       return new CountingChangeTracker();
     }
+
+    @Override
+    public void getRequestCompleted(final Duration duration) {
+    }
   }
 
   private static final class EmptyCommitterStatistics

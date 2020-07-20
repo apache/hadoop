@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.statistics.impl;
 
+import javax.annotation.Nullable;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,23 +32,25 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.MeanStatistic;
 
 import static java.util.Objects.requireNonNull;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MAX;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MEAN;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MIN;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.dynamicIOStatistics;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.maybeUpdateMaximum;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.maybeUpdateMinimum;
 
 /**
- * Implement statistics as a map of AtomicLong counters/gauges
- * etc. created in the constructor.
+ * Implementation of {@link IOStatisticsStore}.
  */
-final class CounterIOStatisticsImpl extends WrappedIOStatistics
-    implements CounterIOStatistics {
+final class IOStatisticsStoreImpl extends WrappedIOStatistics
+    implements IOStatisticsStore {
 
   /**
    * Log changes at debug.
    * Noisy, but occasionally useful.
    */
   private static final Logger LOG =
-      LoggerFactory.getLogger(CounterIOStatisticsImpl.class);
+      LoggerFactory.getLogger(IOStatisticsStoreImpl.class);
 
   private final Map<String, AtomicLong> counterMap = new HashMap<>();
 
@@ -67,7 +71,7 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
    * @param maximums names of maximums
    * @param meanStatistics names of mean statistics.
    */
-  CounterIOStatisticsImpl(
+  IOStatisticsStoreImpl(
       final List<String> counters,
       final List<String> gauges,
       final List<String> minimums,
@@ -103,7 +107,7 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
     }
     if (minimums != null) {
       for (String key : minimums) {
-        AtomicLong minimum = new AtomicLong();
+        AtomicLong minimum = new AtomicLong(Long.MAX_VALUE);
         minimumMap.put(key, minimum);
         builder.withAtomicLongMinimum(key, minimum);
       }
@@ -257,15 +261,25 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
     });
   }
 
+  /**
+   * Aggregate those statistics which the store is tracking;
+   * ignore the rest.
+   *
+   * @param statistics statistics; may be null
+   * @return true if a statistics reference was supplied/aggregated.
+   */
   @Override
-  public void aggregate(final IOStatistics source) {
+  public boolean aggregate(@Nullable final IOStatistics statistics) {
+    if (statistics == null) {
+      return false;
+    }
     // counters: addition
     counterMap.entrySet().forEach(e -> {
-      e.getValue().addAndGet(lookup(source.counters(), e.getKey()));
+      e.getValue().addAndGet(lookup(statistics.counters(), e.getKey()));
     });
     // gauge: add positive values only
     gaugeMap.entrySet().forEach(e -> {
-      long sourceGauge = lookup(source.gauges(), e.getKey());
+      long sourceGauge = lookup(statistics.gauges(), e.getKey());
       if (sourceGauge > 0) {
         e.getValue().addAndGet(sourceGauge);
       }
@@ -273,29 +287,22 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
     // min: min of current and source
     minimumMap.entrySet().forEach(e -> {
       AtomicLong dest = e.getValue();
-      long sourceValue = lookup(source.minimums(), e.getKey());
+      long sourceValue = lookup(statistics.minimums(), e.getKey());
       dest.set(Math.min(dest.get(), sourceValue));
     });
     // max: max of current and source
     maximumMap.entrySet().forEach(e -> {
       AtomicLong dest = e.getValue();
-      long sourceValue = lookup(source.maximums(), e.getKey());
+      long sourceValue = lookup(statistics.maximums(), e.getKey());
       dest.set(Math.max(dest.get(), sourceValue));
     });
     // the most complex
     meanStatisticMap.entrySet().forEach(e -> {
       MeanStatistic current = e.getValue();
-      MeanStatistic sourceValue = lookup(source.meanStatistics(), e.getKey());
+      MeanStatistic sourceValue = lookup(statistics.meanStatistics(), e.getKey());
       current.add(sourceValue);
     });
-
-  }
-
-  @Override
-  public void subtractCounters(final IOStatistics source) {
-    counterMap.entrySet().forEach(e -> {
-      e.getValue().addAndGet(-lookup(source.counters(), e.getKey()));
-    });
+    return true;
   }
 
   /**
@@ -379,5 +386,39 @@ final class CounterIOStatisticsImpl extends WrappedIOStatistics
     return lookup(meanStatisticMap, key);
   }
 
+  /**
+   * Add a duration to the min/mean/max statistics, using the
+   * given prefix and adding a suffix for each specific value.
+   * <p></p>
+   * The update is not-atomic, even though each individual statistic
+   * is updated thread-safely. If two threads update the values
+   * simultaneously, at the end of each operation the state will
+   * be correct. It is only during the sequence that the statistics
+   * may be observably inconsistent.
+   * @param prefix statistic prefix
+   * @param durationMillis duration in milliseconds.
+   */
+  @Override
+  public void addTimedOperation(String prefix, long durationMillis) {
+    incrementCounter(prefix);
+    addMeanStatisticSample(prefix + SUFFIX_MEAN, durationMillis);
+    addMinimumSample(prefix + SUFFIX_MIN, durationMillis);
+    addMaximumSample(prefix + SUFFIX_MAX, durationMillis);
+  }
 
+  @Override
+  public void addTimedOperation(String prefix, Duration duration) {
+    addTimedOperation(prefix, duration.toMillis());
+  }
+
+  /**
+   * Track the duration of a single statistic through a
+   * {@link SingleStatisticDurationTracker}.
+   * @param prefix statistic prefix
+   * @return a tracker instance.
+   */
+  @Override
+  public DurationTracker trackDuration(final String prefix) {
+    return new SingleStatisticDurationTracker(this, prefix);
+  }
 }

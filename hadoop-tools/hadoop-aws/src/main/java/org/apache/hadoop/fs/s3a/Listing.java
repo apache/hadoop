@@ -37,6 +37,11 @@ import org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStoreListFilesIterator;
 import org.apache.hadoop.fs.s3a.s3guard.PathMetadata;
 import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+import org.apache.hadoop.fs.statistics.IOStatisticsSupport;
+import org.apache.hadoop.fs.statistics.impl.DurationTracker;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 
 import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
@@ -66,6 +71,8 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.objectRepresentsDirectory;
 import static org.apache.hadoop.fs.s3a.S3AUtils.stringify;
 import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.pathToKey;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_HTTP_LIST_REQUEST;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 
 /**
  * Place for the S3A listing classes; keeps all the small classes under control.
@@ -491,7 +498,7 @@ public class Listing extends AbstractStoreOperation {
    * Thread safety: None.
    */
   class FileStatusListingIterator
-      implements RemoteIterator<S3AFileStatus> {
+      implements RemoteIterator<S3AFileStatus>, IOStatisticsSource {
 
     /** Source of objects. */
     private final ObjectListingIterator source;
@@ -694,6 +701,15 @@ public class Listing extends AbstractStoreOperation {
     public int getBatchSize() {
       return batchSize;
     }
+
+    /**
+     * Return any IOStatistics provided by the underlying stream.
+     * @return IO stats from the inner stream.
+     */
+    @Override
+    public IOStatistics getIOStatistics() {
+      return source.getIOStatistics();
+    }
   }
 
   /**
@@ -716,7 +732,8 @@ public class Listing extends AbstractStoreOperation {
    *
    * Thread safety: none.
    */
-  class ObjectListingIterator implements RemoteIterator<S3ListResult> {
+  class ObjectListingIterator implements RemoteIterator<S3ListResult>,
+      IOStatisticsSource {
 
     /** The path listed. */
     private final Path listPath;
@@ -740,6 +757,8 @@ public class Listing extends AbstractStoreOperation {
      * Maximum keys in a request.
      */
     private int maxKeys;
+
+    private final IOStatisticsStore iostats;
 
     /**
      * Future to store current batch listing result.
@@ -768,6 +787,9 @@ public class Listing extends AbstractStoreOperation {
               .listObjectsAsync(request);
       this.request = request;
       this.objectsPrev = null;
+      iostats = iostatisticsStore()
+          .withDurationTracking(OP_HTTP_LIST_REQUEST)
+          .build();
     }
 
     /**
@@ -811,6 +833,14 @@ public class Listing extends AbstractStoreOperation {
           objects = awaitFuture(s3ListResultFuture);
           // Requesting next batch of results.
           fetchNextBatchAsyncIfPresent();
+          // need to request a new set of objects.
+          LOG.debug("[{}], Requesting next {} objects under {}",
+              listingCount, maxKeys, listPath);
+          iostats.incrementCounter(OP_HTTP_LIST_REQUEST);
+          try (DurationTracker ignored =
+                   iostats.trackDuration(OP_HTTP_LIST_REQUEST)) {
+            // TODO
+          }
           listingCount++;
           LOG.debug("New listing status: {}", this);
         } catch (AmazonClientException e) {
@@ -839,7 +869,13 @@ public class Listing extends AbstractStoreOperation {
     public String toString() {
       return "Object listing iterator against " + listPath
           + "; listing count "+ listingCount
-          + "; isTruncated=" + objects.isTruncated();
+          + "; isTruncated=" + objects.isTruncated()
+          + "; " + iostats;
+    }
+
+    @Override
+    public IOStatistics getIOStatistics() {
+      return iostats;
     }
 
     /**
@@ -907,7 +943,7 @@ public class Listing extends AbstractStoreOperation {
    * return a remote iterator of {@link LocatedFileStatus} instances.
    */
   class LocatedFileStatusIterator
-      implements RemoteIterator<S3ALocatedFileStatus> {
+      implements RemoteIterator<S3ALocatedFileStatus>, IOStatisticsSource {
     private final RemoteIterator<S3AFileStatus> statusIterator;
 
     /**
@@ -928,6 +964,16 @@ public class Listing extends AbstractStoreOperation {
       return listingOperationCallbacks
               .toLocatedFileStatus(statusIterator.next());
     }
+
+    /**
+     * Return any IOStatistics provided by the underlying stream.
+     * @return IO stats from the inner stream.
+     */
+    @Override
+    public IOStatistics getIOStatistics() {
+      return IOStatisticsSupport.retrieveIOStatistics(statusIterator);
+    }
+
   }
 
   /**
@@ -937,7 +983,7 @@ public class Listing extends AbstractStoreOperation {
    * remain in the source iterator.
    */
   static class TombstoneReconcilingIterator implements
-      RemoteIterator<S3ALocatedFileStatus> {
+      RemoteIterator<S3ALocatedFileStatus>, IOStatisticsSource {
     private S3ALocatedFileStatus next = null;
     private final RemoteIterator<S3ALocatedFileStatus> iterator;
     private final Set<Path> tombstones;
@@ -982,6 +1028,15 @@ public class Listing extends AbstractStoreOperation {
         return result;
       }
       throw new NoSuchElementException();
+    }
+
+    /**
+     * Return any IOStatistics provided by the underlying stream.
+     * @return IO stats from the inner stream.
+     */
+    @Override
+    public IOStatistics getIOStatistics() {
+      return IOStatisticsSupport.retrieveIOStatistics(iterator);
     }
   }
 
@@ -1051,6 +1106,11 @@ public class Listing extends AbstractStoreOperation {
     public boolean accept(FileStatus status) {
       return (status != null) && !status.getPath().equals(qualifiedPath);
     }
+  }
+
+  public static RemoteIterator<LocatedFileStatus> toLocatedFileStatusIterator(
+      RemoteIterator<? extends LocatedFileStatus> iterator) {
+    return (RemoteIterator < LocatedFileStatus >) iterator;
   }
 
 }

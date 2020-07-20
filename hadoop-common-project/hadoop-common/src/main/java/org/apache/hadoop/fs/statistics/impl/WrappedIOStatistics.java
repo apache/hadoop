@@ -30,7 +30,7 @@ import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsTo
 /**
  * Wrap IOStatistics source with another (dynamic) wrapper.
  */
-public class WrappedIOStatistics implements IOStatistics {
+public class WrappedIOStatistics extends AbstractIOStatisticsImpl {
 
   /**
    * The wrapped statistics.
@@ -58,6 +58,10 @@ public class WrappedIOStatistics implements IOStatistics {
     return getWrapped().counters();
   }
 
+  /**
+   * Get at the wrapped inner statistics.
+   * @return the wrapped value
+   */
   protected IOStatistics getWrapped() {
     return wrapped;
   }

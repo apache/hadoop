@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -132,6 +133,7 @@ public class SuccessData extends PersistentCommitData
   /**
    * IOStatistics.
    */
+  @JsonProperty("iosstatistics")
   private IOStatisticsSnapshot ioStatistics = new IOStatisticsSnapshot();
 
   @Override

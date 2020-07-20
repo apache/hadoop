@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.statistics;
 
+import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.util.Map;
 import java.util.TreeMap;
@@ -46,7 +47,7 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.snapshotM
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public final class IOStatisticsSnapshot
-    implements IOStatistics, Serializable {
+    implements IOStatistics, Serializable, IOStatisticsAggregator {
 
   private static final long serialVersionUID = -1762522703841538084L;
 
@@ -62,7 +63,7 @@ public final class IOStatisticsSnapshot
   @JsonProperty
   private TreeMap<String, Long> maximums;
 
-  @JsonProperty
+  @JsonProperty("meanstatistics")
   private TreeMap<String, MeanStatistic> meanStatistics;
 
   /**
@@ -112,24 +113,26 @@ public final class IOStatisticsSnapshot
         MeanStatistic::copy);
   }
 
-  /**
-   * Produce an aggregate snapshot.
-   * @param source statistics source.
-   */
-  public void aggregate(IOStatistics source) {
-    if (source == null) {
-      return;
+  @Override
+  public boolean aggregate(@Nullable IOStatistics statistics) {
+    if (statistics == null) {
+      return false;
     }
-    aggregateMaps(counters, source.counters(),
-        IOStatisticsBinding::aggregateCounters);
-    aggregateMaps(gauges, source.gauges(),
-        IOStatisticsBinding::aggregateGauges);
-    aggregateMaps(minimums, source.minimums(),
-        IOStatisticsBinding::aggregateMinimums);
-    aggregateMaps(maximums, source.maximums(),
-        IOStatisticsBinding::aggregateMaximums);
-    aggregateMaps(meanStatistics, source.meanStatistics(),
-        IOStatisticsBinding::aggregateMeanStatistics);
+    aggregateMaps(counters, statistics.counters(),
+        IOStatisticsBinding::aggregateCounters,
+        IOStatisticsBinding::passthroughFn);
+    aggregateMaps(gauges, statistics.gauges(),
+        IOStatisticsBinding::aggregateGauges,
+        IOStatisticsBinding::passthroughFn);
+    aggregateMaps(minimums, statistics.minimums(),
+        IOStatisticsBinding::aggregateMinimums,
+        IOStatisticsBinding::passthroughFn);
+    aggregateMaps(maximums, statistics.maximums(),
+        IOStatisticsBinding::aggregateMaximums,
+        IOStatisticsBinding::passthroughFn);
+    aggregateMaps(meanStatistics, statistics.meanStatistics(),
+        IOStatisticsBinding::aggregateMeanStatistics, MeanStatistic::copy);
+    return true;
   }
 
   @Override

@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,6 +92,7 @@ public class PendingSet extends PersistentCommitData
   /**
    * IOStatistics.
    */
+  @JsonProperty("iosstatistics")
   private IOStatisticsSnapshot ioStatistics = new IOStatisticsSnapshot();
 
   public PendingSet() {

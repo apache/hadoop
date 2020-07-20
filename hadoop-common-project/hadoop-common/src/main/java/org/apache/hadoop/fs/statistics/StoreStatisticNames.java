@@ -145,6 +145,59 @@ public final class StoreStatisticNames {
   public static final String STORE_IO_RETRY
       = "store_io_retry";
 
+  /**
+   * An HTTP HEAD request was made: {@value}.
+   */
+  public static final String OP_HTTP_HEAD_REQUEST
+      = "op_http_head_request";
+
+  /**
+   * An HTTP GET request was made: {@value}.
+   */
+  public static final String OP_HTTP_GET_REQUEST
+      = "op_http_get_request";
+
+  /**
+   * A store's equivalent of a paged LIST request was made: {@value}.
+   */
+  public static final String OP_HTTP_LIST_REQUEST
+      = "op_http_list_request";
+
+  /**
+   * A store's equivalent of a DELETE request was made: {@value}.
+   * This may be an HTTP DELETE verb, or it may be some custom
+   * operation which takes a list of objects to delete.
+   */
+  public static final String OP_HTTP_DELETE_REQUEST
+      = "op_http_delete_request";
+
+  /**
+   * Suffix to use for a minimum value when
+   * the same key is shared across min/mean/max
+   * statistics.
+   * <p></p>
+   * Value {@value}.
+   */
+  public static final String SUFFIX_MIN = ".min";
+
+  /**
+   * Suffix to use for a maximum value when
+   * the same key is shared across max/mean/max
+   * statistics.
+   * <p></p>
+   * Value {@value}.
+   */
+  public static final String SUFFIX_MAX = ".max";
+
+  /**
+   * Suffix to use for a mean statistic value when
+   * the same key is shared across mean/mean/max
+   * statistics.
+   * <p></p>
+   * Value {@value}.
+   */
+  public static final String SUFFIX_MEAN = ".mean";
+
   private StoreStatisticNames() {
   }
 

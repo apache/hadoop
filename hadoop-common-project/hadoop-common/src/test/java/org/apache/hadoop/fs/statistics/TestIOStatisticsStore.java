@@ -25,7 +25,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.fs.statistics.impl.CounterIOStatistics;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 import org.apache.hadoop.util.JsonSerialization;
 
@@ -35,12 +35,12 @@ import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyGaugeS
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyMaximumStatisticValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyMinimumStatisticValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
-import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.counterIOStatistics;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 
-public class TestCounterIOStatistics extends AbstractHadoopTestBase {
+public class TestIOStatisticsStore extends AbstractHadoopTestBase {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestCounterIOStatistics.class);
+      LoggerFactory.getLogger(TestIOStatisticsStore.class);
 
 
   private static final String COUNT = "count";
@@ -55,11 +55,11 @@ public class TestCounterIOStatistics extends AbstractHadoopTestBase {
 
   public static final String UNKNOWN = "unknown";
 
-  private CounterIOStatistics stats;
+  private IOStatisticsStore stats;
 
   @Before
   public void setup() {
-    stats = counterIOStatistics()
+    stats = iostatisticsStore()
         .withCounters(COUNT)
         .withGauges(GAUGE)
         .withMinimums(MIN)

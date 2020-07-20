@@ -24,7 +24,7 @@ import java.util.Objects;
 import java.util.function.BiConsumer;
 
 import org.apache.hadoop.fs.s3a.Statistic;
-import org.apache.hadoop.fs.statistics.impl.CounterIOStatistics;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 
 import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_UPLOAD_ABORT_UNDER_PATH_INVOKED;
 import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_INSTANTIATED;
@@ -33,7 +33,7 @@ import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_PART_PUT_BYTES;
 import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_UPLOAD_ABORTED;
 import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_UPLOAD_COMPLETED;
 import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_UPLOAD_STARTED;
-import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.counterIOStatistics;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 
 /**
  * Implementation of the uploader statistics.
@@ -63,7 +63,7 @@ public final class S3AMultipartUploaderStatisticsImpl
   public S3AMultipartUploaderStatisticsImpl(
       final BiConsumer<Statistic, Long> incrementCallback) {
     this.incrementCallback = Objects.requireNonNull(incrementCallback);
-    CounterIOStatistics st = counterIOStatistics()
+    IOStatisticsStore st = iostatisticsStore()
         .withCounters(
             MULTIPART_INSTANTIATED.getSymbol(),
             MULTIPART_PART_PUT.getSymbol(),

@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.s3a.impl.statistics;
 
+import java.time.Duration;
+
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
 /**
@@ -185,4 +187,10 @@ public interface S3AInputStreamStatistics extends AutoCloseable,
    * @return the value or null if no matching gauge was found.
    */
   Long lookupGaugeValue(String name);
+
+  /**
+   * A GET request completed.
+   * @param duration duration of the operaton.
+   */
+  void getRequestCompleted(Duration duration);
 }

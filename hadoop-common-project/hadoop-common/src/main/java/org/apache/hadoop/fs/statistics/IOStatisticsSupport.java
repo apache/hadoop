@@ -44,11 +44,22 @@ public final class IOStatisticsSupport {
   public static IOStatisticsSnapshot
       snapshotIOStatistics(IOStatistics statistics) {
 
-    IOStatisticsSnapshot stats = new IOStatisticsSnapshot(statistics);
-    stats.snapshot(statistics);
-    return stats;
+    return new IOStatisticsSnapshot(statistics);
   }
 
+
+  /**
+   * Create a snapsnot statistics instance ready to aggregate data.
+   * <p>
+   * The instance can be serialized, and its
+   * {@code toString()} method lists all the values.
+   * @return an empty snapshot
+   */
+  public static IOStatisticsSnapshot
+      snapshotIOStatistics() {
+
+    return new IOStatisticsSnapshot();
+  }
 
   /**
    * Get the IOStatistics of the source, falling back to

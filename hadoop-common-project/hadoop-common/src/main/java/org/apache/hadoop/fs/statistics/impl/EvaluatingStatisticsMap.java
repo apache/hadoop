@@ -26,6 +26,11 @@ import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * A map of functions which can be invoked to dynamically
+ * create the value of an entry.
+ * @param <E> type of entry value.
+ */
 final class EvaluatingStatisticsMap<E extends Serializable> implements
     Map<String, E> {
 
@@ -35,6 +40,9 @@ final class EvaluatingStatisticsMap<E extends Serializable> implements
   private final Map<String, Function<String, E>> evaluators
       = new TreeMap<>();
 
+  /**
+   * Function to use when copying map values.
+   */
   private final Function<E, E> copyFn;
 
   /**

@@ -31,8 +31,10 @@ import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStat
  * An extension of {@code BufferedInputStream} which implements
  * {@link IOStatisticsSource} and forwards requests for the
  * {@link IOStatistics} to the wrapped stream.
+ * <p></p>
  * This should be used when any input stream needs buffering while
  * allowing the inner stream to be a source of statistics.
+ * <p></p>
  * It also implements {@link StreamCapabilities} and forwards the probe
  * to the inner stream, if possible.
  */

@@ -39,7 +39,7 @@ import org.apache.hadoop.fs.s3a.s3guard.MetastoreInstrumentation;
 import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
-import org.apache.hadoop.fs.statistics.impl.CounterIOStatistics;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricStringBuilder;
 import org.apache.hadoop.metrics2.MetricsCollector;
@@ -57,6 +57,7 @@ import org.apache.hadoop.metrics2.lib.MutableQuantiles;
 
 import java.io.Closeable;
 import java.net.URI;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -66,7 +67,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import static org.apache.hadoop.fs.s3a.Constants.STREAM_READ_GAUGE_INPUT_POLICY;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringifyIOStatistics;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
-import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.counterIOStatistics;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_HTTP_GET_REQUEST;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 
 /**
@@ -681,7 +683,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     private InputStreamStatisticsImpl(
         FileSystem.Statistics filesystemStatistics) {
       this.filesystemStatistics = filesystemStatistics;
-      CounterIOStatistics st = counterIOStatistics()
+      IOStatisticsStore st = iostatisticsStore()
           .withCounters(
               StreamStatisticNames.STREAM_READ_ABORTED,
               StreamStatisticNames.STREAM_READ_BYTES_DISCARDED_ABORT,
@@ -704,6 +706,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               StreamStatisticNames.STREAM_READ_TOTAL_BYTES,
               StreamStatisticNames.STREAM_READ_VERSION_MISMATCHES)
           .withGauges(STREAM_READ_GAUGE_INPUT_POLICY)
+          .withDurationTracking(OP_HTTP_GET_REQUEST)
           .build();
       setIOStatistics(st);
       mergedStats = snapshotIOStatistics(st);
@@ -1049,6 +1052,11 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     public long getInputPolicy() {
       return getIOStatistics().gauges().get(STREAM_READ_GAUGE_INPUT_POLICY);
     }
+
+    @Override
+    public void getRequestCompleted(final Duration duration) {
+      getIOStatistics().addTimedOperation(OP_HTTP_GET_REQUEST, duration);
+    }
   }
 
   /**
@@ -1105,7 +1113,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     private BlockOutputStreamStatisticsImpl(
         @Nullable FileSystem.Statistics filesystemStatistics) {
       this.filesystemStatistics = filesystemStatistics;
-      CounterIOStatistics st = counterIOStatistics()
+      IOStatisticsStore st = iostatisticsStore()
           .withCounters(
               StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS,
               StreamStatisticNames.STREAM_WRITE_BYTES,
@@ -1415,7 +1423,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       implements CommitterStatistics {
 
     private CommitterStatisticsImpl() {
-      CounterIOStatistics st = counterIOStatistics()
+      IOStatisticsStore st = iostatisticsStore()
           .withCounters(
               COMMITTER_BYTES_COMMITTED.getSymbol(),
               COMMITTER_BYTES_UPLOADED.getSymbol(),

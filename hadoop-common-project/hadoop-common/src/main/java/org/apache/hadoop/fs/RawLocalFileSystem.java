@@ -51,7 +51,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.impl.BufferedIOStatisticsOutputStream;
-import org.apache.hadoop.fs.statistics.impl.CounterIOStatistics;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.Progressable;
@@ -66,7 +66,7 @@ import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_S
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_SKIP_OPERATIONS;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_WRITE_BYTES;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_WRITE_EXCEPTIONS;
-import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.counterIOStatistics;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 
 /****************************************************************
  * Implement the FileSystem API for the raw local filesystem.
@@ -128,7 +128,7 @@ public class RawLocalFileSystem extends FileSystem {
     /**
      * Minimal set of counters.
      */
-    private final CounterIOStatistics ioStatistics = counterIOStatistics()
+    private final IOStatisticsStore ioStatistics = iostatisticsStore()
         .withCounters(
             STREAM_READ_BYTES,
             STREAM_READ_EXCEPTIONS,
@@ -291,7 +291,7 @@ public class RawLocalFileSystem extends FileSystem {
     /**
      * Minimal set of counters.
      */
-    private final CounterIOStatistics ioStatistics = counterIOStatistics()
+    private final IOStatisticsStore ioStatistics = iostatisticsStore()
         .withCounters(
             STREAM_WRITE_BYTES,
             STREAM_WRITE_EXCEPTIONS)

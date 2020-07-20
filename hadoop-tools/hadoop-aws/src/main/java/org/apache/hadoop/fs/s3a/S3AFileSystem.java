@@ -179,6 +179,7 @@ import static org.apache.hadoop.fs.impl.AbstractFSBuilderImpl.rejectUnknownManda
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.Invoker.*;
+import static org.apache.hadoop.fs.s3a.Listing.toLocatedFileStatusIterator;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
@@ -4344,21 +4345,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       boolean recursive) throws FileNotFoundException, IOException {
     return toLocatedFileStatusIterator(innerListFiles(f, recursive,
         new Listing.AcceptFilesOnly(qualify(f)), null, true, false));
-  }
-
-  private static RemoteIterator<LocatedFileStatus> toLocatedFileStatusIterator(
-      RemoteIterator<? extends LocatedFileStatus> iterator) {
-    return new RemoteIterator<LocatedFileStatus>() {
-      @Override
-      public boolean hasNext() throws IOException {
-        return iterator.hasNext();
-      }
-
-      @Override
-      public LocatedFileStatus next() throws IOException {
-        return iterator.next();
-      }
-    };
   }
 
   /**

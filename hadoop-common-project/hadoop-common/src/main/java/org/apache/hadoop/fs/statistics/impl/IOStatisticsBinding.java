@@ -48,7 +48,6 @@ public final class IOStatisticsBinding {
   private IOStatisticsBinding() {
   }
 
-
   /**
    * Create  IOStatistics from a storage statistics instance.
    * This will be updated as the storage statistics change.
@@ -95,16 +94,12 @@ public final class IOStatisticsBinding {
   }
 
   /**
-   * Create a builder from an IOStatistics instance
-   * which creates the appropriate counters, gauges etc in maps
-   * of atomic references.
-   * This is the simplest way to build an IOStatistics instance as all
-   * the details are handled internally.
+   * Create an a builder for an {@link IOStatisticsStore}.
    *
    * @return a builder instance.
    */
-  public static CounterIOStatisticsBuilder counterIOStatistics() {
-    return new CounterIOStatisticsBuilderImpl();
+  public static IOStatisticsStoreBuilder iostatisticsStore() {
+    return new IOStatisticsStoreBuilderImpl();
   }
 
   /**
@@ -114,9 +109,9 @@ public final class IOStatisticsBinding {
    * @param <E> entry type
    * @return formatted string
    */
-  public static <E> String entrytoString(
+  public static <E> String entryToString(
       final Map.Entry<String, E> entry) {
-    return entrytoString(entry.getKey(), entry.getValue());
+    return entryToString(entry.getKey(), entry.getValue());
   }
 
   /**
@@ -126,7 +121,7 @@ public final class IOStatisticsBinding {
    * @param value stat value
    * @return formatted string
    */
-  public static <E> String entrytoString(
+  public static <E> String entryToString(
       final String name, final E value) {
     return String.format(
         ENTRY_PATTERN,
@@ -166,12 +161,28 @@ public final class IOStatisticsBinding {
     return src;
   }
 
+  /**
+   * Take a snapshot of a supplied map, were the copy option simply
+   * uses the existing value.
+   * For this to be safe, the map must refer to immutable objects.
+   * @param source source map
+   * @param <E> type of values.
+   * @return a new map referencing the same values.
+   */
   public static <E extends Serializable> TreeMap<String, E> snapshotMap(
       Map<String, E> source) {
     return snapshotMap(source,
         IOStatisticsBinding::passthroughFn);
   }
 
+  /**
+   * Take a snapshot of a supplied map, using the copy function
+   * to replicate the source values.
+   * @param source source map
+   * @param copyFn function to copy the value
+   * @param <E> type of values.
+   * @return a new map referencing the same values.
+   */
   public static <E extends Serializable> TreeMap<String, E> snapshotMap(
       Map<String, E> source,
       Function<E, E> copyFn) {
@@ -180,22 +191,31 @@ public final class IOStatisticsBinding {
     return dest;
   }
 
+  /**
+   * Aggregate two maps so that the destination
+   * @param <E> type of values
+   * @param dest destination map.
+   * @param other other map
+   * @param aggregateFn function to aggregate the values.
+   * @param copyFn function to copy the value
+   */
   public static <E> void aggregateMaps(
-      Map<String, E> left,
-      Map<String, E> right,
-      BiFunction<E, E, E> aggregateFn) {
-    // scan through the right hand map; copy
+      Map<String, E> dest,
+      Map<String, E> other,
+      BiFunction<E, E, E> aggregateFn,
+      final Function<E, E> copyFn) {
+    // scan through the other hand map; copy
     // any values not in the left map,
     // aggregate those for which there is already
     // an entry
-    right.entrySet().forEach(entry -> {
+    other.entrySet().forEach(entry -> {
       String key = entry.getKey();
       E rVal = entry.getValue();
-      E lVal = left.get(key);
+      E lVal = dest.get(key);
       if (lVal == null) {
-        left.put(key, rVal);
+        dest.put(key, copyFn.apply(rVal));
       } else {
-        left.put(key, aggregateFn.apply(lVal, rVal));
+        dest.put(key, aggregateFn.apply(lVal, rVal));
       }
     });
   }

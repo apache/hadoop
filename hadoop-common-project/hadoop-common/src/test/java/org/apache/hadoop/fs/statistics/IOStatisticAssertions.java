@@ -26,6 +26,8 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.Map;
 
+import org.assertj.core.api.AbstractLongAssert;
+import org.assertj.core.api.Assertions;
 import org.assertj.core.api.ObjectAssert;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -246,16 +248,33 @@ public final class IOStatisticAssertions {
   }
 
   /**
+   * Assert that a given statistic has an expected value.
+   * @param <E> type of map element
+   * @param type type for error text
+   * @param key statistic key
+   * @param map map to look up
+   * @return an ongoing assertion
+   */
+  private static AbstractLongAssert<?> assertThatLongStatistic(
+      final String type,
+      final String key,
+      final Map<String, Long> map) {
+    final long statistic = lookupStatistic(type, key, map);
+    return assertThat(statistic)
+        .describedAs("%s named %s" , type, key);
+  }
+
+  /**
    * Start an assertion chain on 
    * a required counter statistic.
    * @param stats statistics source
    * @param key statistic key
    * @return an ongoing assertion
    */
-  public static ObjectAssert<Long> assertThatCounterStatistic(
+  public static AbstractLongAssert<?> assertThatCounterStatistic(
       final IOStatistics stats,
       final String key) {
-    return assertThatStatistic(COUNTER, key, stats.counters());
+    return assertThatLongStatistic(COUNTER, key, stats.counters());
   }
     
   /**
@@ -265,10 +284,10 @@ public final class IOStatisticAssertions {
    * @param key statistic key
    * @return an ongoing assertion
    */
-  public static ObjectAssert<Long> assertThatGaugeStatistic(
+  public static AbstractLongAssert<?> assertThatGaugeStatistic(
       final IOStatistics stats,
       final String key) {
-    return assertThatStatistic(GAUGE, key, stats.gauges());
+    return assertThatLongStatistic(GAUGE, key, stats.gauges());
   }
 
   /**
@@ -278,10 +297,10 @@ public final class IOStatisticAssertions {
    * @param key statistic key
    * @return an ongoing assertion
    */
-  public static ObjectAssert<Long> assertThatMinimumStatistic(
+  public static AbstractLongAssert<?> assertThatMinimumStatistic(
       final IOStatistics stats,
       final String key) {
-    return assertThatStatistic(MINIMUM, key, stats.minimums());
+    return assertThatLongStatistic(MINIMUM, key, stats.minimums());
   }
 
   /**
@@ -291,10 +310,10 @@ public final class IOStatisticAssertions {
    * @param key statistic key
    * @return an ongoing assertion
    */
-  public static ObjectAssert<Long> assertThatMaximumStatistic(
+  public static AbstractLongAssert<?> assertThatMaximumStatistic(
       final IOStatistics stats,
       final String key) {
-    return assertThatStatistic(MAXIMUM, key, stats.maximums());
+    return assertThatLongStatistic(MAXIMUM, key, stats.maximums());
   }
 
   /**
@@ -399,7 +418,7 @@ public final class IOStatisticAssertions {
 
   /**
    * Query the source for the statistics; fails if the statistics
-   * returned are null.
+   * returned are null or the class does not implement the API.
    * @param source source object.
    * @return the statistics it provides.
    */
@@ -407,9 +426,19 @@ public final class IOStatisticAssertions {
     assertThat(source)
         .describedAs("Object %s", source)
         .isInstanceOf(IOStatisticsSource.class);
-    IOStatistics statistics = ((IOStatisticsSource) source).getIOStatistics();
+    IOStatisticsSource ios = (IOStatisticsSource) source;
+    return extractStatistics(ios);
+  }
+
+  /**
+   * Get the non-null statistics.
+   * @param ioStatisticsSource source
+   * @return the statistics, guaranteed to be non null
+   */
+  private static IOStatistics extractStatistics(final IOStatisticsSource ioStatisticsSource) {
+    IOStatistics statistics = ioStatisticsSource.getIOStatistics();
     assertThat(statistics)
-        .describedAs("Statistics from %s", source)
+        .describedAs("Statistics from %s", ioStatisticsSource)
         .isNotNull();
     return statistics;
   }

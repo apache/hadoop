@@ -19,19 +19,15 @@
 package org.apache.hadoop.fs.statistics.impl;
 
 /**
- * Builder of the CounterIOStatistics class.
+ * Interface to be implemented by objects which can track duration.
+ * It extends AutoCloseable to fit into a try-with-resources statement,
+ * but then strips out the {@link throws Exception} aspect of the signature
+ * so it doesn't force code to add extra handling for any failures.
  */
-public interface CounterIOStatisticsBuilder {
+public interface DurationTracker extends AutoCloseable {
 
-  CounterIOStatisticsBuilder withCounters(String... keys);
-
-  CounterIOStatisticsBuilder withGauges(String... keys);
-
-  CounterIOStatisticsBuilder withMaximums(String... keys);
-
-  CounterIOStatisticsBuilder withMinimums(String... keys);
-
-  CounterIOStatisticsBuilder withMeanStatistics(String... keys);
-
-  CounterIOStatistics build();
+  /**
+   * Finish tracking: update the statistics with the timings.
+   */
+  void close();
 }

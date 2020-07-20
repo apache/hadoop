@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.FSInputStream;
+import org.apache.hadoop.util.DurationInfo;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -212,8 +213,15 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     String text = String.format("%s %s at %d",
         operation, uri, targetPos);
     changeTracker.maybeApplyConstraint(request);
-    S3Object object = Invoker.once(text, uri,
-        () -> client.getObject(request));
+    DurationInfo getRequestDuration = new DurationInfo(LOG, false, text);
+    S3Object object;
+    try  {
+      object = Invoker.once(text, uri,
+          () -> client.getObject(request));
+    } finally {
+      getRequestDuration.finished();
+      streamStatistics.getRequestCompleted(getRequestDuration.asDuration());
+    }
 
     changeTracker.processResponse(object, operation,
         targetPos);
