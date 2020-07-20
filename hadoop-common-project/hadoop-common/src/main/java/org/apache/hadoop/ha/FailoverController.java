@@ -213,7 +213,7 @@ public class FailoverController {
 
     // Fence fromSvc if it's required or forced by the user
     if (tryFence) {
-      if (!fromSvc.getFencer().fence(fromSvc)) {
+      if (!fromSvc.getFencer().fence(fromSvc, toSvc)) {
         throw new FailoverFailedException("Unable to fence " +
             fromSvc + ". Fencing failed.");
       }
