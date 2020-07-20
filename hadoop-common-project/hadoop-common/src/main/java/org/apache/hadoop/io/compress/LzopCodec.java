@@ -18,8 +18,91 @@
 
 package org.apache.hadoop.io.compress;
 
+import io.airlift.compress.lzo.LzoCodec;
 import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configuration;
+
+import java.io.IOException;
 
 public class LzopCodec extends io.airlift.compress.lzo.LzopCodec
         implements Configurable, CompressionCodec {
+    @Override
+    public Class<? extends Compressor> getCompressorType()
+    {
+        return LzopCodec.HadoopLzopCompressor.class;
+    }
+
+    /**
+     * No Hadoop code seems to actually use the compressor, so just return a dummy one so the createOutputStream method
+     * with a compressor can function.  This interface can be implemented if needed.
+     */
+    @DoNotPool
+    static class HadoopLzopCompressor
+            implements Compressor
+    {
+        @Override
+        public void setInput(byte[] b, int off, int len)
+        {
+            throw new UnsupportedOperationException("LZOP block compressor is not supported");
+        }
+
+        @Override
+        public boolean needsInput()
+        {
+            throw new UnsupportedOperationException("LZOP block compressor is not supported");
+        }
+
+        @Override
+        public void setDictionary(byte[] b, int off, int len)
+        {
+            throw new UnsupportedOperationException("LZOP block compressor is not supported");
+        }
+
+        @Override
+        public long getBytesRead()
+        {
+            throw new UnsupportedOperationException("LZOP block compressor is not supported");
+        }
+
+        @Override
+        public long getBytesWritten()
+        {
+            throw new UnsupportedOperationException("LZOP block compressor is not supported");
+        }
+
+        @Override
+        public void finish()
+        {
+            throw new UnsupportedOperationException("LZOP block compressor is not supported");
+        }
+
+        @Override
+        public boolean finished()
+        {
+            throw new UnsupportedOperationException("LZOP block compressor is not supported");
+        }
+
+        @Override
+        public int compress(byte[] b, int off, int len)
+                throws IOException
+        {
+            throw new UnsupportedOperationException("LZOP block compressor is not supported");
+        }
+
+        @Override
+        public void reset()
+        {
+        }
+
+        @Override
+        public void end()
+        {
+            throw new UnsupportedOperationException("LZOP block compressor is not supported");
+        }
+
+        @Override
+        public void reinit(Configuration conf)
+        {
+        }
+    }
 }
