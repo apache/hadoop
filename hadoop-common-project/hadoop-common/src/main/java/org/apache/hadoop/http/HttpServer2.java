@@ -1280,7 +1280,11 @@ public final class HttpServer2 implements FilterContainer {
       try {
         bindListener(listener);
         return;
-      } catch (BindException ex) {
+      } catch (IOException ex) {
+        if (!(ex instanceof BindException)
+            && !(ex.getCause() instanceof BindException)) {
+          throw ex;
+        }
         // Ignore exception. Move to next port.
         ioException = ex;
       }
