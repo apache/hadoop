@@ -176,6 +176,18 @@ public class TestCodec {
     codecTest(conf, seed, count, "org.apache.hadoop.io.compress.GzipCodec");
   }
 
+  @Test
+  public void testLzoCodec() throws IOException {
+    codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.LzoCodec");
+    codecTest(conf, seed, count, "org.apache.hadoop.io.compress.LzoCodec");
+  }
+
+  @Test
+  public void testLzopCodec() throws IOException {
+    codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.LzopCodec");
+    codecTest(conf, seed, count, "org.apache.hadoop.io.compress.LzopCodec");
+  }
+
   private static void codecTest(Configuration conf, int seed, int count, 
                                 String codecClass) 
     throws IOException {
