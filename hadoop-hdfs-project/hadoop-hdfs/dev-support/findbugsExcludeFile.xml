@@ -163,6 +163,15 @@
       <Field name="txid" />
       <Bug pattern="VO_VOLATILE_INCREMENT" />
     </Match>
+    <!--
+      HADOOP-17138: suppressing false positive DLS_DEAD_LOCAL_STORE.
+      https://github.com/spotbugs/spotbugs/issues/571
+    -->
+    <Match>
+      <Class name="org.apache.hadoop.hdfs.server.namenode.FSEditLogLoader" />
+      <Method name="incrOpCount" />
+      <Bug pattern="DLS_DEAD_LOCAL_STORE" />
+    </Match>
      <!--
       This method isn't performance-critical and is much clearer to write as it's written.
       -->

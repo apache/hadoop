@@ -470,4 +470,17 @@
     <Method name="getFixedByteString" />
     <Bug pattern="AT_OPERATION_SEQUENCE_ON_CONCURRENT_ABSTRACTION" />
   </Match>
+
+  <!--
+    HADOOP-17138: suppressing false positive DLS_DEAD_LOCAL_STORE.
+    https://github.com/spotbugs/spotbugs/issues/571
+  -->
+  <Match>
+    <Class name="org.apache.hadoop.ipc.Server$ConnectionManager" />
+    <Or>
+      <Method name="incrUserConnections" />
+      <Method name="decrUserConnections" />
+    </Or>
+    <Bug pattern="DLS_DEAD_LOCAL_STORE" />
+  </Match>
 </FindBugsFilter>
