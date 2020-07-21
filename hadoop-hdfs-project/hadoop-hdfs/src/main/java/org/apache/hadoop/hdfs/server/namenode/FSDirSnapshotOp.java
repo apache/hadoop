@@ -20,29 +20,37 @@ package org.apache.hadoop.hdfs.server.namenode;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.XAttr;
+import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.FsAction;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.FSLimitException;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectorySnapshottableFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.util.ChunkedArrayList;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Arrays;
+import java.util.EnumSet;
 
 class FSDirSnapshotOp {
+
+  static final XAttr.NameSpace XAttrNS = XAttr.NameSpace.SYSTEM;
   /** Verify if the snapshot name is legal. */
   static void verifySnapshotName(FSDirectory fsd, String snapshotName,
       String path)
@@ -263,11 +271,15 @@ class FSDirSnapshotOp {
       final int earliest = snapshottable.getDiffs().iterator().next()
           .getSnapshotId();
       if (snapshot.getId() != earliest) {
-        throw new SnapshotException("Failed to delete snapshot " + snapshotName
-            + " from directory " + srcRoot.getFullPathName()
-            + ": " + snapshot + " is not the earliest snapshot id=" + earliest
-            + " (" + DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED
-            + " is " + fsd.isSnapshotDeletionOrdered() + ")");
+        List<XAttr> existingXAttrs = XAttrStorage.readINodeXAttrs(srcRoot);
+        XAttr xAttr = buildXAttr(snapshotName);
+        // Mark the snapshot to be deleted in the xattr of the snapshot root
+        List<XAttr> newXAttrs = FSDirXAttrOp.setINodeXAttrs(fsd, existingXAttrs,
+            Arrays.asList(xAttr),
+            EnumSet.of(XAttrSetFlag.CREATE, XAttrSetFlag.REPLACE));
+        XAttrStorage.updateINodeXAttrs(srcRoot, newXAttrs,
+            iip.getLatestSnapshotId());
+        return null;
       }
     }
 
@@ -360,5 +372,15 @@ class FSDirSnapshotOp {
     if (sm.getNumSnapshottableDirs() > 0) {
       checkSnapshot(iip.getLastINode(), snapshottableDirs);
     }
+  }
+
+  static String buildXAttrName(String snapName) {
+    return StringUtils.toLowerCase(XAttrNS.toString())
+        + "." + HdfsServerConstants.SNAPSHOT_XATTR_NAME + "." + snapName;
+  }
+
+  public static XAttr buildXAttr(String snapName) {
+    final String name = buildXAttrName(snapName);
+    return XAttrHelper.buildXAttr(name);
   }
 }

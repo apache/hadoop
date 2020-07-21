@@ -19,32 +19,30 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.XAttr;
+import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.SnapshotException;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
-import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.hdfs.XAttrHelper;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.slf4j.event.Level;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.Map;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED;
+import static org.junit.Assert.assertTrue;
 
-/** Test ordered snapshot deletion. */
+/**
+ * Test ordered snapshot deletion.
+ */
 public class TestOrderedSnapshotDeletion {
-  static final Logger LOG = LoggerFactory.getLogger(FSDirectory.class);
-
-  {
-    SnapshotTestHelper.disableLogs();
-    GenericTestUtils.setLogLevel(INode.LOG, Level.TRACE);
-  }
-
+  static final String name = "user.a1";
+  static final byte[] value = {0x31, 0x32, 0x33};
   private final Path snapshottableDir
       = new Path("/" + getClass().getSimpleName());
 
@@ -67,7 +65,7 @@ public class TestOrderedSnapshotDeletion {
     }
   }
 
-  @Test (timeout=60000)
+  @Test(timeout = 60000)
   public void testConf() throws Exception {
     DistributedFileSystem hdfs = cluster.getFileSystem();
     hdfs.mkdirs(snapshottableDir);
@@ -85,21 +83,72 @@ public class TestOrderedSnapshotDeletion {
     hdfs.mkdirs(sub2);
     hdfs.createSnapshot(snapshottableDir, "s2");
 
-    assertDeletionDenied(snapshottableDir, "s1", hdfs);
-    assertDeletionDenied(snapshottableDir, "s2", hdfs);
+    assertXAttrSet(snapshottableDir, "s1", hdfs, null);
+    assertXAttrSet(snapshottableDir, "s2", hdfs, null);
     hdfs.deleteSnapshot(snapshottableDir, "s0");
-    assertDeletionDenied(snapshottableDir, "s2", hdfs);
+    assertXAttrSet(snapshottableDir, "s2", hdfs, null);
     hdfs.deleteSnapshot(snapshottableDir, "s1");
     hdfs.deleteSnapshot(snapshottableDir, "s2");
   }
 
-  static void assertDeletionDenied(Path snapshottableDir, String snapshot,
-      DistributedFileSystem hdfs) throws IOException {
-    try {
-      hdfs.deleteSnapshot(snapshottableDir, snapshot);
-      Assert.fail("deleting " +snapshot + " should fail");
-    } catch (SnapshotException se) {
-      LOG.info("Good, it is expected to have " + se);
-    }
+  void assertXAttrSet(Path snapshottableDir, String snapshot,
+                      DistributedFileSystem hdfs, XAttr newXattr)
+      throws IOException {
+    hdfs.deleteSnapshot(snapshottableDir, snapshot);
+    // Check xAttr for parent directory
+    FSNamesystem namesystem = cluster.getNamesystem();
+    INode inode = namesystem.getFSDirectory().getINode(
+        snapshottableDir.toString());
+    XAttrFeature f = inode.getXAttrFeature();
+    XAttr xAttr = f.getXAttr(FSDirSnapshotOp.buildXAttrName(snapshot));
+    assertTrue("Snapshot xAttr should exist", xAttr != null);
+    assertTrue(xAttr.getName().equals(getXattrName(snapshot)));
+    assertTrue(xAttr.getNameSpace().equals(XAttr.NameSpace.SYSTEM));
+
+    // Make sure its not user visible
+    Map<String, byte[]> xattrMap = hdfs.getXAttrs(snapshottableDir);
+    assertTrue(newXattr == null ? xattrMap.isEmpty() :
+        Arrays.equals(newXattr.getValue(), xattrMap.get(name)));
+  }
+
+  @Test(timeout = 60000)
+  public void testSnapshotXattrPersistence() throws Exception {
+    DistributedFileSystem hdfs = cluster.getFileSystem();
+    hdfs.mkdirs(snapshottableDir);
+    hdfs.allowSnapshot(snapshottableDir);
+
+    final Path sub0 = new Path(snapshottableDir, "sub0");
+    hdfs.mkdirs(sub0);
+    hdfs.createSnapshot(snapshottableDir, "s0");
+
+    final Path sub1 = new Path(snapshottableDir, "sub1");
+    hdfs.mkdirs(sub1);
+    hdfs.createSnapshot(snapshottableDir, "s1");
+    assertXAttrSet(snapshottableDir, "s1", hdfs, null);
+    cluster.restartNameNodes();
+    assertXAttrSet(snapshottableDir, "s1", hdfs, null);
+  }
+
+  @Test(timeout = 60000)
+  public void testSnapshotXAttrWithPreExistingXattrs() throws Exception {
+    DistributedFileSystem hdfs = cluster.getFileSystem();
+    hdfs.mkdirs(snapshottableDir);
+    hdfs.allowSnapshot(snapshottableDir);
+    hdfs.setXAttr(snapshottableDir, name, value,
+        EnumSet.of(XAttrSetFlag.CREATE));
+    XAttr newXAttr = XAttrHelper.buildXAttr(name, value);
+    final Path sub0 = new Path(snapshottableDir, "sub0");
+    hdfs.mkdirs(sub0);
+    hdfs.createSnapshot(snapshottableDir, "s0");
+
+    final Path sub1 = new Path(snapshottableDir, "sub1");
+    hdfs.mkdirs(sub1);
+    hdfs.createSnapshot(snapshottableDir, "s1");
+    assertXAttrSet(snapshottableDir, "s1", hdfs, newXAttr);
+  }
+
+
+  private static String getXattrName(String snapshot) {
+    return HdfsServerConstants.SNAPSHOT_XATTR_NAME + "." + snapshot;
   }
 }

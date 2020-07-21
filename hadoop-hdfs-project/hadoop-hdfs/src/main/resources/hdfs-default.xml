@@ -5119,7 +5119,14 @@
     for storing directory snapshot diffs. By default, value is set to 10.
   </description>
 </property>
-
+<property>
+  <name>dfs.namenode.snapshot.deletion.ordered</name>
+  <value>false</value>
+  <description>
+    If set to true, ensures snashots are deleted in order of creation
+    for a snapshottable root.
+  </description>
+</property>
 <property>
   <name>dfs.storage.policy.satisfier.enabled</name>
   <value>false</value>
