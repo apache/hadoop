@@ -20,31 +20,30 @@ package com.hadoop.compression.lzo;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class LzoCodec extends org.apache.hadoop.io.compress.LzoCodec {
-    private static final Log LOG = LogFactory.getLog(LzoCodec.class);
+  private static final Logger LOG = LoggerFactory.getLogger(LzoCodec.class.getName());
+  private static final String gplLzoCodec = LzoCodec.class.getName();
+  private static final String hadoopLzoCodec = org.apache.hadoop.io.compress.LzoCodec.class.getName();
+  private static AtomicBoolean warned = new AtomicBoolean(false);
 
-    static final String gplLzoCodec = LzoCodec.class.getName();
-    static final String hadoopLzoCodec = org.apache.hadoop.io.compress.LzoCodec.class.getName();
-    static boolean warned = false;
+  static {
+    LOG.info("Bridging " + gplLzoCodec + " to " + hadoopLzoCodec + ".");
+  }
 
-    static {
-        LOG.info("Bridging " + gplLzoCodec + " to " + hadoopLzoCodec + ".");
+  @Override
+  public CompressionOutputStream createOutputStream(OutputStream out,
+      Compressor compressor) throws IOException {
+    if (warned.compareAndSet(false, true)) {
+      LOG.warn("{} is deprecated. You should use {} instead to generate LZO compressed data.",
+        gplLzoCodec, hadoopLzoCodec);
     }
-
-    @Override
-    public CompressionOutputStream createOutputStream(OutputStream out,
-                                                      Compressor compressor) throws IOException {
-        if (!warned) {
-            LOG.warn(gplLzoCodec + " is deprecated. You should use " + hadoopLzoCodec
-                    + " instead to generate LZO compressed data.");
-            warned = true;
-        }
-        return super.createOutputStream(out, compressor);
-    }
+    return super.createOutputStream(out, compressor);
+  }
 }

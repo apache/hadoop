@@ -21,5 +21,5 @@ package org.apache.hadoop.io.compress;
 import org.apache.hadoop.conf.Configurable;
 
 public class LzoCodec extends io.airlift.compress.lzo.LzoCodec
-        implements Configurable, CompressionCodec {
+    implements Configurable, CompressionCodec {
 }
