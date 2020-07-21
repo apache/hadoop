@@ -655,7 +655,12 @@ class FSDirRenameOp {
       // snapshot is taken on the dst tree, changes will be recorded in the
       // latest snapshot of the src tree.
       if (isSrcInSnapshot) {
-        srcChild.recordModification(srcLatestSnapshotId);
+        if (srcChild.isFile()) {
+          INodeFile file = srcChild.asFile();
+          file.recordModification(srcLatestSnapshotId, true);
+        } else {
+          srcChild.recordModification(srcLatestSnapshotId);
+        }
       }
 
       // check srcChild for reference
