@@ -187,6 +187,7 @@ public class FSDirectory implements Closeable {
   private boolean posixAclInheritanceEnabled;
   private final boolean xattrsEnabled;
   private final int xattrMaxSize;
+  private final boolean snapshotDeletionOrdered;
 
   // precision of access times.
   private final long accessTimePrecision;
@@ -352,6 +353,20 @@ public class FSDirectory implements Closeable {
         "The maximum size of an xattr should be <= maximum size"
         + " hard limit " + DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_HARD_LIMIT
         + ": (%s).", DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_KEY);
+
+    this.snapshotDeletionOrdered =
+        conf.getBoolean(DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED,
+            DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED_DEFAULT);
+    LOG.info("{} = {}", DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED,
+        snapshotDeletionOrdered);
+    if (snapshotDeletionOrdered && !xattrsEnabled) {
+      throw new HadoopIllegalArgumentException("" +
+          "XAttrs is required by snapshotDeletionOrdered:"
+          + DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED
+          + " is true but "
+          + DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_KEY
+          + " is false.");
+    }
 
     this.accessTimePrecision = conf.getLong(
         DFS_NAMENODE_ACCESSTIME_PRECISION_KEY,
@@ -610,6 +625,11 @@ public class FSDirectory implements Closeable {
     return xattrsEnabled;
   }
   int getXattrMaxSize() { return xattrMaxSize; }
+
+  boolean isSnapshotDeletionOrdered() {
+    return snapshotDeletionOrdered;
+  }
+
   boolean isAccessTimeSupported() {
     return accessTimePrecision > 0;
   }
