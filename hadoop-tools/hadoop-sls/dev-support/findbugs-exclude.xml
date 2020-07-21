@@ -23,14 +23,4 @@
     <Bug pattern="EQ_COMPARETO_USE_OBJECT_EQUALS" />
   </Match>
 
-  <!--
-    HADOOP-17138: suppressing false positive DLS_DEAD_LOCAL_STORE.
-    https://github.com/spotbugs/spotbugs/issues/571
-  -->
-  <Match>
-    <Class name="org.apache.hadoop.yarn.sls.SLSRunner" />
-    <Method name="increaseQueueAppNum" />
-    <Bug pattern="DLS_DEAD_LOCAL_STORE" />
-  </Match>
-
 </FindBugsFilter>
