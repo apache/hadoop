@@ -657,4 +657,14 @@
     </description>
   </property>
 
+  <property>
+    <name>dfs.federation.router.top.num.token.realowners</name>
+    <value>10</value>
+    <description>
+      The number of top real owners by tokens count to report in the JMX metrics.
+      Real owners are the effective users whose cretential are used to generate
+      the tokens.
+    </description>
+  </property>
+
 </configuration>

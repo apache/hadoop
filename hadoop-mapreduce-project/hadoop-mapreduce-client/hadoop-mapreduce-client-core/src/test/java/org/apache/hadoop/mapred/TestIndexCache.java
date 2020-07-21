@@ -21,7 +21,6 @@ import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Random;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.zip.CRC32;
 import java.util.zip.CheckedOutputStream;
 
@@ -217,32 +216,23 @@ public class TestIndexCache {
     final String user = 
       UserGroupInformation.getCurrentUser().getShortUserName();
     writeFile(fs, big, bytesPerFile, partsPerMap);
-
-    // Capture if any runtime exception occurred
-    AtomicBoolean failed = new AtomicBoolean();
-
+    
     // run multiple times
     for (int i = 0; i < 20; ++i) {
       Thread getInfoThread = new Thread() {
         @Override
         public void run() {
           try {
-            cache.getIndexInformation("bigIndex", 0, big, user);
+            cache.getIndexInformation("bigIndex", partsPerMap, big, user);
           } catch (Exception e) {
             // should not be here
-            failed.set(true);
           }
         }
       };
       Thread removeMapThread = new Thread() {
         @Override
         public void run() {
-          try {
-            cache.removeMap("bigIndex");
-          } catch (Exception e) {
-            // should not be here
-            failed.set(true);
-          }
+          cache.removeMap("bigIndex");
         }
       };
       if (i%2==0) {
@@ -254,7 +244,6 @@ public class TestIndexCache {
       }
       getInfoThread.join();
       removeMapThread.join();
-      assertFalse("An unexpected exception", failed.get());
       assertTrue(cache.checkTotalMemoryUsed());
     }      
   }
@@ -272,9 +261,6 @@ public class TestIndexCache {
       UserGroupInformation.getCurrentUser().getShortUserName();
     writeFile(fs, racy, bytesPerFile, partsPerMap);
 
-    // Capture if any runtime exception occurred
-    AtomicBoolean failed = new AtomicBoolean();
-
     // run multiple instances
     Thread[] getInfoThreads = new Thread[50];
     for (int i = 0; i < 50; i++) {
@@ -282,15 +268,10 @@ public class TestIndexCache {
         @Override
         public void run() {
           try {
-            while (!Thread.currentThread().isInterrupted()) {
-              cache.getIndexInformation("racyIndex", 0, racy, user);
-              cache.removeMap("racyIndex");
-            }
+            cache.getIndexInformation("racyIndex", partsPerMap, racy, user);
+            cache.removeMap("racyIndex");
           } catch (Exception e) {
-            if (!Thread.currentThread().isInterrupted()) {
-              // should not be here
-              failed.set(true);
-            }
+            // should not be here
           }
         }
       };
@@ -300,12 +281,20 @@ public class TestIndexCache {
       getInfoThreads[i].start();
     }
 
-    // The duration to keep the threads testing
-    Thread.sleep(5000);
+    final Thread mainTestThread = Thread.currentThread();
 
-    for (int i = 0; i < 50; i++) {
-      getInfoThreads[i].interrupt();
-    }
+    Thread timeoutThread = new Thread() {
+      @Override
+      public void run() {
+        try {
+          Thread.sleep(15000);
+          mainTestThread.interrupt();
+        } catch (InterruptedException ie) {
+          // we are done;
+        }
+      }
+    };
+
     for (int i = 0; i < 50; i++) {
       try {
         getInfoThreads[i].join();
@@ -314,9 +303,10 @@ public class TestIndexCache {
         fail("Unexpectedly long delay during concurrent cache entry creations");
       }
     }
-    assertFalse("An unexpected exception", failed.get());
-    assertTrue("Total memory used does not represent contents of the cache",
-        cache.checkTotalMemoryUsed());
+    // stop the timeoutThread. If we get interrupted before stopping, there
+    // must be something wrong, although it wasn't a deadlock. No need to
+    // catch and swallow.
+    timeoutThread.interrupt();
   }
 
   private static void checkRecord(IndexRecord rec, long fill) {

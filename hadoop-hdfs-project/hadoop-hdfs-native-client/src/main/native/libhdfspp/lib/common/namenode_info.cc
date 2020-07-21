@@ -70,7 +70,7 @@ bool ResolveInPlace(std::shared_ptr<IoService> ioservice, ResolvedNamenodeInfo &
   return true;
 }
 
-typedef std::vector<asio::ip::tcp::endpoint> endpoint_vector;
+typedef std::vector<boost::asio::ip::tcp::endpoint> endpoint_vector;
 
 // RAII wrapper
 class ScopedResolver {
@@ -78,8 +78,8 @@ class ScopedResolver {
   std::shared_ptr<IoService> io_service_;
   std::string host_;
   std::string port_;
-  ::asio::ip::tcp::resolver::query query_;
-  ::asio::ip::tcp::resolver resolver_;
+  boost::asio::ip::tcp::resolver::query query_;
+  boost::asio::ip::tcp::resolver resolver_;
   endpoint_vector endpoints_;
 
   // Caller blocks on access if resolution isn't finished
@@ -111,9 +111,9 @@ class ScopedResolver {
     std::shared_ptr<std::promise<Status>> shared_result = result_status_;
 
     // Callback to pull a copy of endpoints out of resolver and set promise
-    auto callback = [this, shared_result](const asio::error_code &ec, ::asio::ip::tcp::resolver::iterator out) {
+    auto callback = [this, shared_result](const boost::system::error_code &ec, boost::asio::ip::tcp::resolver::iterator out) {
       if(!ec) {
-        std::copy(out, ::asio::ip::tcp::resolver::iterator(), std::back_inserter(endpoints_));
+        std::copy(out, boost::asio::ip::tcp::resolver::iterator(), std::back_inserter(endpoints_));
       }
       shared_result->set_value( ToStatus(ec) );
     };

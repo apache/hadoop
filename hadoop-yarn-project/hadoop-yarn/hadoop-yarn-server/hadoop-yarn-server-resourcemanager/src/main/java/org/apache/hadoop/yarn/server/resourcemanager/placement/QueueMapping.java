@@ -66,10 +66,20 @@ public class QueueMapping {
       return this;
     }
 
-    public QueueMappingBuilder queuePath(QueuePath path) {
-      this.queue = path.getLeafQueue();
-      this.parentQueue = path.getParentQueue();
-      return this;
+    public QueueMappingBuilder parsePathString(String queuePath) {
+      int parentQueueNameEndIndex = queuePath.lastIndexOf(DOT);
+
+      if (parentQueueNameEndIndex > -1) {
+        final String parentQueue =
+            queuePath.substring(0, parentQueueNameEndIndex).trim();
+        final String leafQueue =
+            queuePath.substring(parentQueueNameEndIndex + 1).trim();
+        return this
+            .parentQueue(parentQueue)
+            .queue(leafQueue);
+      }
+
+      return this.queue(queuePath);
     }
 
     public QueueMapping build() {
@@ -82,6 +92,7 @@ public class QueueMapping {
     this.source = builder.source;
     this.queue = builder.queue;
     this.parentQueue = builder.parentQueue;
+    this.fullPath = (parentQueue != null) ? (parentQueue + DOT + queue) : queue;
   }
 
   /**
@@ -89,8 +100,9 @@ public class QueueMapping {
    *
    */
   public enum MappingType {
-
-    USER("u"), GROUP("g");
+    USER("u"),
+    GROUP("g"),
+    APPLICATION("a");
 
     private final String type;
 
@@ -108,6 +120,7 @@ public class QueueMapping {
   private String source;
   private String queue;
   private String parentQueue;
+  private String fullPath;
 
   private final static String DELIMITER = ":";
 
@@ -132,13 +145,7 @@ public class QueueMapping {
   }
 
   public String getFullPath() {
-    return (parentQueue != null ? parentQueue + DOT + queue : queue);
-  }
-
-  public QueuePath getQueuePath() {
-    //This is to make sure the parsing is the same everywhere, but the
-    //whole parsing part should be moved to QueuePathConstructor
-    return QueuePlacementRuleUtils.extractQueuePath(getFullPath());
+    return fullPath;
   }
 
   @Override
@@ -197,4 +204,10 @@ public class QueueMapping {
     return type.toString() + DELIMITER + source + DELIMITER
         + (parentQueue != null ? parentQueue + "." + queue : queue);
   }
+
+  public String toTypelessString() {
+    return source + DELIMITER
+        + (parentQueue != null ? parentQueue + "." + queue : queue);
+  }
+
 }

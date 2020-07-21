@@ -88,6 +88,7 @@ The effective storage policy can be retrieved by the "[`storagepolicies -getStor
 ### Configuration
 
 * **dfs.storage.policy.enabled** - for enabling/disabling the storage policy feature. The default value is `true`.
+* **dfs.storage.default.policy** - Set the default storage policy with the policy name. The default value is `HOT`.  All possible policies are defined in enum StoragePolicy, including `LAZY_PERSIST` `ALL_SSD` `ONE_SSD` `HOT` `WARM` `COLD` and `PROVIDED`.
 * **dfs.datanode.data.dir** - on each data node, the comma-separated storage locations should be tagged with their storage types. This allows storage policies to place the blocks on different storage types according to policy. For example:
 
     1.  A datanode storage location /grid/dn/disk0 on DISK should be configured with `[DISK]file:///grid/dn/disk0`

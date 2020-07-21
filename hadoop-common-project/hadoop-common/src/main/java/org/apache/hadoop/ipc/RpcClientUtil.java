@@ -114,7 +114,7 @@ public class RpcClientUtil {
     if (versionMap == null) {
       Configuration conf = new Configuration();
       RPC.setProtocolEngine(conf, ProtocolMetaInfoPB.class,
-          ProtobufRpcEngine.class);
+          ProtobufRpcEngine2.class);
       ProtocolMetaInfoPB protocolInfoProxy = getProtocolMetaInfoProxy(rpcProxy,
           conf);
       GetProtocolSignatureRequestProto.Builder builder = 

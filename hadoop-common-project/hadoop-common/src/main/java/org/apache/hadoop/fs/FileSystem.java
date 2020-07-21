@@ -132,22 +132,35 @@ import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapa
  * New methods may be marked as Unstable or Evolving for their initial release,
  * as a warning that they are new and may change based on the
  * experience of use in applications.
+ * <p></p>
  * <b>Important note for developers</b>
- *
- * If you're making changes here to the public API or protected methods,
+ * <p></p>
+ * If you are making changes here to the public API or protected methods,
  * you must review the following subclasses and make sure that
  * they are filtering/passing through new methods as appropriate.
+ * <p></p>
  *
- * {@link FilterFileSystem}: methods are passed through.
+ * {@link FilterFileSystem}: methods are passed through. If not,
+ * then {@code TestFilterFileSystem.MustNotImplement} must be
+ * updated with the unsupported interface.
+ * Furthermore, if the new API's support is probed for via
+ * {@link #hasPathCapability(Path, String)} then
+ * {@link FilterFileSystem#hasPathCapability(Path, String)}
+ * must return false, always.
+ * <p></p>
  * {@link ChecksumFileSystem}: checksums are created and
  * verified.
+ * <p></p>
  * {@code TestHarFileSystem} will need its {@code MustNotImplement}
  * interface updated.
+ * <p></p>
  *
  * There are some external places your changes will break things.
  * Do co-ordinate changes here.
+ * <p></p>
  *
  * HBase: HBoss
+ * <p></p>
  * Hive: HiveShim23
  * {@code shims/0.23/src/main/java/org/apache/hadoop/hive/shims/Hadoop23Shims.java}
  *
@@ -2695,7 +2708,7 @@ public abstract class FileSystem extends Configured
       if (perm.getUserAction().implies(mode)) {
         return;
       }
-    } else if (ugi.getGroups().contains(stat.getGroup())) {
+    } else if (ugi.getGroupsSet().contains(stat.getGroup())) {
       if (perm.getGroupAction().implies(mode)) {
         return;
       }
@@ -4644,4 +4657,17 @@ public abstract class FileSystem extends Configured
 
   }
 
+  /**
+   * Create a multipart uploader.
+   * @param basePath file path under which all files are uploaded
+   * @return a MultipartUploaderBuilder object to build the uploader
+   * @throws IOException if some early checks cause IO failures.
+   * @throws UnsupportedOperationException if support is checked early.
+   */
+  @InterfaceStability.Unstable
+  public MultipartUploaderBuilder createMultipartUploader(Path basePath)
+      throws IOException {
+    methodNotSupported();
+    return null;
+  }
 }

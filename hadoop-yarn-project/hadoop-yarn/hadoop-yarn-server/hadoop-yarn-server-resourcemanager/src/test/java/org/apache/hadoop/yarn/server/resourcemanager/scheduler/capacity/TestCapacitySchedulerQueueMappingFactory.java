@@ -29,7 +29,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.MappingType;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.QueueMappingBuilder;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMappingEntity;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SimpleGroupsMapping;
@@ -84,17 +83,20 @@ public class TestCapacitySchedulerQueueMappingFactory {
     existingMappingsForUG.addAll(queueMappingsForUG);
     conf.setQueueMappings(existingMappingsForUG);
 
-    List<QueueMappingEntity> existingMappingsForAN =
+    List<QueueMapping> existingMappingsForAN =
         conf.getQueueMappingEntity(QUEUE_MAPPING_NAME);
 
     //set queue mapping
-    List<QueueMappingEntity> queueMappingsForAN =
+    List<QueueMapping> queueMappingsForAN =
         new ArrayList<>();
     for (int i = 0; i < sourceIds.length; i++) {
       //Set C as parent queue name for auto queue creation
-      QueueMappingEntity queueMapping =
-          new QueueMappingEntity(USER + sourceIds[i],
-              getQueueMapping(parentQueue, USER + sourceIds[i]));
+      QueueMapping queueMapping = QueueMapping.QueueMappingBuilder.create()
+          .type(MappingType.APPLICATION)
+          .source(USER + sourceIds[i])
+          .queue(getQueueMapping(parentQueue, USER + sourceIds[i]))
+          .build();
+
       queueMappingsForAN.add(queueMapping);
     }
 
@@ -206,7 +208,7 @@ public class TestCapacitySchedulerQueueMappingFactory {
 
       ApplicationPlacementContext ctx2 = r.getPlacementForApp(asc, "user2");
       assertEquals("Queue", "user2", ctx2.getQueue());
-      assertEquals("Queue", "c", ctx2.getParentQueue());
+      assertEquals("Queue", "root.c", ctx2.getParentQueue());
     } finally {
       if(mockRM != null) {
         mockRM.close();
@@ -398,7 +400,7 @@ public class TestCapacitySchedulerQueueMappingFactory {
     // u:user2:%primary_group
     QueueMapping userQueueMapping2 = QueueMappingBuilder.create()
                                           .type(QueueMapping.MappingType.USER)
-                                          .source("user2")
+                                          .source("a1")
                                           .queue("%primary_group")
                                           .build();
 
@@ -430,8 +432,8 @@ public class TestCapacitySchedulerQueueMappingFactory {
       ApplicationPlacementContext ctx = r.getPlacementForApp(asc, "user1");
       assertEquals("Queue", "b1", ctx.getQueue());
 
-      ApplicationPlacementContext ctx1 = r.getPlacementForApp(asc, "user2");
-      assertEquals("Queue", "user2group", ctx1.getQueue());
+      ApplicationPlacementContext ctx1 = r.getPlacementForApp(asc, "a1");
+      assertEquals("Queue", "a1group", ctx1.getQueue());
     } finally {
       if (mockRM != null) {
         mockRM.close();
@@ -467,14 +469,14 @@ public class TestCapacitySchedulerQueueMappingFactory {
     // u:user2:%primary_group
     QueueMapping userQueueMapping2 = QueueMappingBuilder.create()
                                           .type(QueueMapping.MappingType.USER)
-                                          .source("user2")
+                                          .source("a1")
                                           .queue("%primary_group")
                                           .build();
 
     // u:b4:%secondary_group
     QueueMapping userQueueMapping3 = QueueMappingBuilder.create()
                                           .type(QueueMapping.MappingType.USER)
-                                          .source("b4")
+                                          .source("e")
                                           .queue("%secondary_group")
                                           .build();
 
@@ -507,11 +509,11 @@ public class TestCapacitySchedulerQueueMappingFactory {
       ApplicationPlacementContext ctx = r.getPlacementForApp(asc, "user1");
       assertEquals("Queue", "b1", ctx.getQueue());
 
-      ApplicationPlacementContext ctx1 = r.getPlacementForApp(asc, "user2");
-      assertEquals("Queue", "user2group", ctx1.getQueue());
+      ApplicationPlacementContext ctx1 = r.getPlacementForApp(asc, "a1");
+      assertEquals("Queue", "a1group", ctx1.getQueue());
 
-      ApplicationPlacementContext ctx2 = r.getPlacementForApp(asc, "b4");
-      assertEquals("Queue", "b4subgroup1", ctx2.getQueue());
+      ApplicationPlacementContext ctx2 = r.getPlacementForApp(asc, "e");
+      assertEquals("Queue", "esubgroup1", ctx2.getQueue());
     } finally {
       if (mockRM != null) {
         mockRM.close();

@@ -29,6 +29,8 @@
 #include <pwd.h>
 #include <fnmatch.h>
 
+#include <boost/asio/ip/tcp.hpp>
+
 #define FMT_THIS_ADDR "this=" << (void*)this
 
 namespace hdfs {
@@ -36,7 +38,7 @@ namespace hdfs {
 static const char kNamenodeProtocol[] = "org.apache.hadoop.hdfs.protocol.ClientProtocol";
 static const int kNamenodeProtocolVersion = 1;
 
-using ::asio::ip::tcp;
+using boost::asio::ip::tcp;
 
 static constexpr uint16_t kDefaultPort = 8020;
 

@@ -1546,4 +1546,41 @@ public class TestBlockStoragePolicy {
       }
     }
   }
+
+  @Test
+  public void testCreateDefaultPoliciesFromConf() {
+    BlockStoragePolicySuite suite =
+        BlockStoragePolicySuite.createDefaultSuite();
+    Assert.assertEquals(HdfsConstants.StoragePolicy.HOT.value(),
+        suite.getDefaultPolicy().getId());
+
+    Configuration newConf = new Configuration();
+    newConf.setEnum(DFSConfigKeys.DFS_STORAGE_DEFAULT_POLICY,
+        HdfsConstants.StoragePolicy.ONE_SSD);
+    BlockStoragePolicySuite suiteConf =
+        BlockStoragePolicySuite.createDefaultSuite(newConf);
+    Assert.assertEquals(HdfsConstants.StoragePolicy.ONE_SSD.value(),
+        suiteConf.getDefaultPolicy().getId());
+  }
+
+  @Test
+  public void testCreateFileWithConfiguredDefaultPolicies()
+      throws IOException{
+    Configuration newConf = new HdfsConfiguration();
+    newConf.set(DFSConfigKeys.DFS_STORAGE_DEFAULT_POLICY,
+        HdfsConstants.StoragePolicy.WARM.name());
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(newConf)
+        .numDataNodes(0).build();
+    try {
+      cluster.waitActive();
+      final Path fooFile = new Path("/foo");
+      FileSystem newfs = cluster.getFileSystem();
+      DFSTestUtil.createFile(newfs, fooFile, 0, REPLICATION, 0L);
+
+      String policy = newfs.getStoragePolicy(fooFile).getName();
+      Assert.assertEquals(HdfsConstants.StoragePolicy.WARM.name(), policy);
+    } finally {
+      cluster.shutdown();
+    }
+  }
 }

@@ -329,6 +329,12 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-hdfs-rbf</artifactId>
+        <version>${hadoop.version}</version>
+        <type>test-jar</type>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-mapreduce-client-app</artifactId>
         <version>${hadoop.version}</version>
       </dependency>
@@ -575,6 +581,17 @@
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-distcp</artifactId>
+        <version>${hadoop.version}</version>
+        <type>test-jar</type>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-federation-balance</artifactId>
+        <version>${hadoop.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-federation-balance</artifactId>
         <version>${hadoop.version}</version>
         <type>test-jar</type>
       </dependency>
@@ -1402,7 +1419,7 @@
       <dependency>
         <groupId>com.microsoft.azure</groupId>
         <artifactId>azure-storage</artifactId>
-        <version>7.0.0</version>
+        <version>7.0.1</version>
      </dependency>
 
       <!--Wildfly openssl dependency is introduced by HADOOP-15669-->
@@ -1696,9 +1713,9 @@
         <version>1.0.13</version>
       </dependency>
       <dependency>
-        <groupId>javax.activation</groupId>
-        <artifactId>javax.activation-api</artifactId>
-        <version>1.2.0</version>
+        <groupId>jakarta.activation</groupId>
+        <artifactId>jakarta.activation-api</artifactId>
+        <version>1.2.1</version>
       </dependency>
       <dependency>
         <groupId>javax.annotation</groupId>

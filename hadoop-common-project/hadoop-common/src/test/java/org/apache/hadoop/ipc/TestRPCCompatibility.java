@@ -114,19 +114,19 @@ public class TestRPCCompatibility {
     ProtocolSignature.resetCache();
 
     RPC.setProtocolEngine(conf,
-        TestProtocol0.class, ProtobufRpcEngine.class);
+        TestProtocol0.class, ProtobufRpcEngine2.class);
 
     RPC.setProtocolEngine(conf,
-        TestProtocol1.class, ProtobufRpcEngine.class);
+        TestProtocol1.class, ProtobufRpcEngine2.class);
 
     RPC.setProtocolEngine(conf,
-        TestProtocol2.class, ProtobufRpcEngine.class);
+        TestProtocol2.class, ProtobufRpcEngine2.class);
 
     RPC.setProtocolEngine(conf,
-        TestProtocol3.class, ProtobufRpcEngine.class);
+        TestProtocol3.class, ProtobufRpcEngine2.class);
 
     RPC.setProtocolEngine(conf,
-        TestProtocol4.class, ProtobufRpcEngine.class);
+        TestProtocol4.class, ProtobufRpcEngine2.class);
   }
   
   @After

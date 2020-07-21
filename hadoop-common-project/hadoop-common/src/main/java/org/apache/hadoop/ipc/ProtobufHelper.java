@@ -53,6 +53,23 @@ public class ProtobufHelper {
     return e instanceof IOException ? (IOException) e : new IOException(se);
   }
 
+  /**
+   * Kept for backward compatible.
+   * Return the IOException thrown by the remote server wrapped in
+   * ServiceException as cause.
+   * @param se ServiceException that wraps IO exception thrown by the server
+   * @return Exception wrapped in ServiceException or
+   *         a new IOException that wraps the unexpected ServiceException.
+   */
+  @Deprecated
+  public static IOException getRemoteException(
+      com.google.protobuf.ServiceException se) {
+    Throwable e = se.getCause();
+    if (e == null) {
+      return new IOException(se);
+    }
+    return e instanceof IOException ? (IOException) e : new IOException(se);
+  }
 
   /**
    * Map used to cache fixed strings to ByteStrings. Since there is no

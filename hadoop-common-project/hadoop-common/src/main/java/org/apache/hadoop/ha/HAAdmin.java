@@ -19,9 +19,9 @@ package org.apache.hadoop.ha;
 
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 
 import org.apache.commons.cli.Options;
@@ -107,8 +107,7 @@ public abstract class HAAdmin extends Configured implements Tool {
   protected abstract HAServiceTarget resolveTarget(String string);
   
   protected Collection<String> getTargetIds(String targetNodeToActivate) {
-    return new ArrayList<String>(
-        Arrays.asList(new String[]{targetNodeToActivate}));
+    return Collections.singleton(targetNodeToActivate);
   }
 
   protected String getUsageString() {
@@ -188,8 +187,10 @@ public abstract class HAAdmin extends Configured implements Tool {
   private boolean isOtherTargetNodeActive(String targetNodeToActivate, boolean forceActive)
       throws IOException  {
     Collection<String> targetIds = getTargetIds(targetNodeToActivate);
-    targetIds.remove(targetNodeToActivate);
-    for(String targetId : targetIds) {
+    for (String targetId : targetIds) {
+      if (targetNodeToActivate.equals(targetId)) {
+        continue;
+      }
       HAServiceTarget target = resolveTarget(targetId);
       if (!checkManualStateManagementOK(target)) {
         return true;

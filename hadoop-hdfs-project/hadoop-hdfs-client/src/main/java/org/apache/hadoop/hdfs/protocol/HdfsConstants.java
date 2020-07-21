@@ -50,6 +50,52 @@ public final class HdfsConstants {
   public static final byte PROVIDED_STORAGE_POLICY_ID = 1;
   public static final String PROVIDED_STORAGE_POLICY_NAME = "PROVIDED";
 
+  /**
+   * This enum wraps above Storage Policy ID and name.
+   * Recommend to use this enum instead of above static variables.
+   * For example,
+   * StoragePolicy.HOT.value() is equal to HOT_STORAGE_POLICY_ID
+   * StoragePolicy.HOT.name() is equal to HOT_STORAGE_POLICY_NAME
+   */
+  public enum StoragePolicy{
+    PROVIDED(PROVIDED_STORAGE_POLICY_ID),
+    COLD(COLD_STORAGE_POLICY_ID),
+    WARM(WARM_STORAGE_POLICY_ID),
+    HOT(HOT_STORAGE_POLICY_ID),
+    ONE_SSD(ONESSD_STORAGE_POLICY_ID),
+    ALL_SSD(ALLSSD_STORAGE_POLICY_ID),
+    LAZY_PERSIST(MEMORY_STORAGE_POLICY_ID);
+
+    private byte value;
+    StoragePolicy(byte value) {
+      this.value = value;
+    }
+
+    public static StoragePolicy valueOf(int value) {
+      switch (value) {
+      case 1:
+        return PROVIDED;
+      case 2:
+        return COLD;
+      case 5:
+        return WARM;
+      case 7:
+        return HOT;
+      case 10:
+        return ONE_SSD;
+      case 12:
+        return ALL_SSD;
+      case 15:
+        return LAZY_PERSIST;
+      default:
+        return null;
+      }
+    }
+
+    public byte value() {
+      return this.value;
+    }
+  }
 
   public static final int DEFAULT_DATA_SOCKET_SIZE = 0;
 
@@ -59,6 +105,8 @@ public final class HdfsConstants {
   public static final String DOT_SNAPSHOT_DIR = ".snapshot";
   public static final String SEPARATOR_DOT_SNAPSHOT_DIR
           = Path.SEPARATOR + DOT_SNAPSHOT_DIR;
+  public static final String DOT_SNAPSHOT_DIR_SEPARATOR =
+      DOT_SNAPSHOT_DIR + Path.SEPARATOR;
   public static final String SEPARATOR_DOT_SNAPSHOT_DIR_SEPARATOR
       = Path.SEPARATOR + DOT_SNAPSHOT_DIR + Path.SEPARATOR;
   public final static String DOT_RESERVED_STRING = ".reserved";

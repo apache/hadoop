@@ -79,6 +79,10 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
   public static final Class<? extends RouterRpcMonitor>
       DFS_ROUTER_METRICS_CLASS_DEFAULT =
       FederationRPCPerformanceMonitor.class;
+  public static final String DFS_ROUTER_METRICS_TOP_NUM_TOKEN_OWNERS_KEY =
+      FEDERATION_ROUTER_PREFIX + "top.num.token.realowners";
+  public static final int
+      DFS_ROUTER_METRICS_TOP_NUM_TOKEN_OWNERS_KEY_DEFAULT = 10;
 
   // HDFS Router heartbeat
   public static final String DFS_ROUTER_HEARTBEAT_ENABLE =

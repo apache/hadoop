@@ -100,7 +100,7 @@ public final class TestAbfsClient {
   private String getUserAgentString(AbfsConfiguration config,
       boolean includeSSLProvider) throws MalformedURLException {
     AbfsClient client = new AbfsClient(new URL("https://azure.com"), null,
-        config, null, (AccessTokenProvider) null, null);
+        config, null, (AccessTokenProvider) null, null, null);
     String sslProviderName = null;
     if (includeSSLProvider) {
       sslProviderName = DelegatingSSLSocketFactory.getDefaultFactory()
@@ -246,21 +246,29 @@ public final class TestAbfsClient {
       AbfsClient baseAbfsClientInstance,
       AbfsConfiguration abfsConfig)
       throws AzureBlobFileSystemException {
-      AbfsPerfTracker tracker = new AbfsPerfTracker("test",
-          abfsConfig.getAccountName(),
-          abfsConfig);
+    AuthType currentAuthType = abfsConfig.getAuthType(
+        abfsConfig.getAccountName());
 
-      // Create test AbfsClient
-      AbfsClient testClient = new AbfsClient(
-          baseAbfsClientInstance.getBaseUrl(),
-          new SharedKeyCredentials(abfsConfig.getAccountName().substring(0,
-              abfsConfig.getAccountName().indexOf(DOT)),
-              abfsConfig.getStorageAccountKey()),
-          abfsConfig,
-          new ExponentialRetryPolicy(abfsConfig.getMaxIoRetries()),
-          abfsConfig.getTokenProvider(),
-          tracker);
+    AbfsPerfTracker tracker = new AbfsPerfTracker("test",
+        abfsConfig.getAccountName(),
+        abfsConfig);
 
-      return testClient;
-    }
+    // Create test AbfsClient
+    AbfsClient testClient = new AbfsClient(
+        baseAbfsClientInstance.getBaseUrl(),
+        (currentAuthType == AuthType.SharedKey
+            ? new SharedKeyCredentials(
+            abfsConfig.getAccountName().substring(0,
+                abfsConfig.getAccountName().indexOf(DOT)),
+            abfsConfig.getStorageAccountKey())
+            : null),
+        abfsConfig,
+        new ExponentialRetryPolicy(abfsConfig.getMaxIoRetries()),
+        (currentAuthType == AuthType.OAuth
+            ? abfsConfig.getTokenProvider()
+            : null),
+        tracker, null);
+
+    return testClient;
+  }
 }

@@ -129,6 +129,9 @@ public class LeafQueue extends AbstractCSQueue {
   List<AppPriorityACLGroup> priorityAcls =
       new ArrayList<AppPriorityACLGroup>();
 
+  private final List<FiCaSchedulerApp> runnableApps = new ArrayList<>();
+  private final List<FiCaSchedulerApp> nonRunnableApps = new ArrayList<>();
+
   @SuppressWarnings({ "unchecked", "rawtypes" })
   public LeafQueue(CapacitySchedulerContext cs,
       String queueName, CSQueue parent, CSQueue old) throws IOException {
@@ -159,6 +162,7 @@ public class LeafQueue extends AbstractCSQueue {
     setupQueueConfigs(clusterResource, csContext.getConfiguration());
   }
 
+  @SuppressWarnings("checkstyle:nowhitespaceafter")
   protected void setupQueueConfigs(Resource clusterResource,
       CapacitySchedulerConfiguration conf) throws
       IOException {
@@ -289,7 +293,9 @@ public class LeafQueue extends AbstractCSQueue {
               + " (int)(configuredMaximumSystemApplications * absoluteCapacity)]"
               + "\n" + "maxApplicationsPerUser = " + maxApplicationsPerUser
               + " [= (int)(maxApplications * (userLimit / 100.0f) * "
-              + "userLimitFactor) ]" + "\n" + "usedCapacity = "
+              + "userLimitFactor) ]" + "\n"
+              + "maxParallelApps = " + getMaxParallelApps() + "\n"
+              + "usedCapacity = " +
               + queueCapacities.getUsedCapacity() + " [= usedResourcesMemory / "
               + "(clusterResourceMemory * absoluteCapacity)]" + "\n"
               + "absoluteUsedCapacity = " + absoluteUsedCapacity
@@ -386,7 +392,8 @@ public class LeafQueue extends AbstractCSQueue {
   public int getNumApplications() {
     readLock.lock();
     try {
-      return getNumPendingApplications() + getNumActiveApplications();
+      return getNumPendingApplications() + getNumActiveApplications() +
+          getNumNonRunnableApps();
     } finally {
       readLock.unlock();
     }
@@ -887,16 +894,28 @@ public class LeafQueue extends AbstractCSQueue {
       writeLock.unlock();
     }
   }
-  
+
   private void addApplicationAttempt(FiCaSchedulerApp application,
       User user) {
     writeLock.lock();
     try {
+      applicationAttemptMap.put(application.getApplicationAttemptId(),
+          application);
+
+      if (application.isRunnable()) {
+        runnableApps.add(application);
+        LOG.debug("Adding runnable application: {}",
+            application.getApplicationAttemptId());
+      } else {
+        nonRunnableApps.add(application);
+        LOG.info("Application attempt {} is not runnable,"
+            + " parallel limit reached", application.getApplicationAttemptId());
+        return;
+      }
+
       // Accept
       user.submitApplication();
       getPendingAppsOrderingPolicy().addSchedulableEntity(application);
-      applicationAttemptMap.put(application.getApplicationAttemptId(),
-          application);
 
       // Activate applications
       if (Resources.greaterThan(resourceCalculator, lastClusterResource,
@@ -917,7 +936,9 @@ public class LeafQueue extends AbstractCSQueue {
               .getPendingApplications() + " #user-active-applications: " + user
               .getActiveApplications() + " #queue-pending-applications: "
               + getNumPendingApplications() + " #queue-active-applications: "
-              + getNumActiveApplications());
+              + getNumActiveApplications()
+              + " #queue-nonrunnable-applications: "
+              + getNumNonRunnableApps());
     } finally {
       writeLock.unlock();
     }
@@ -949,6 +970,15 @@ public class LeafQueue extends AbstractCSQueue {
       // TODO, should use getUser, use this method just to avoid UT failure
       // which is caused by wrong invoking order, will fix UT separately
       User user = usersManager.getUserAndAddIfAbsent(userName);
+
+      boolean runnable = runnableApps.remove(application);
+      if (!runnable) {
+        // removeNonRunnableApp acquires the write lock again, which is fine
+        if (!removeNonRunnableApp(application)) {
+          LOG.error("Given app to remove " + application +
+              " does not exist in queue " + getQueuePath());
+        }
+      }
 
       String partitionName = application.getAppAMNodePartitionName();
       boolean wasActive = orderingPolicy.removeSchedulableEntity(application);
@@ -1397,8 +1427,9 @@ public class LeafQueue extends AbstractCSQueue {
             : getQueueMaxResource(partition);
 
     Resource headroom = Resources.componentwiseMin(
-        Resources.subtract(userLimitResource, user.getUsed(partition)),
-        Resources.subtract(currentPartitionResourceLimit,
+        Resources.subtractNonNegative(userLimitResource,
+            user.getUsed(partition)),
+        Resources.subtractNonNegative(currentPartitionResourceLimit,
             queueUsage.getUsed(partition)));
     // Normalize it before return
     headroom =
@@ -1543,8 +1574,7 @@ public class LeafQueue extends AbstractCSQueue {
           user.getUsed(nodePartition), limit)) {
         // if enabled, check to see if could we potentially use this node instead
         // of a reserved node if the application has reserved containers
-        if (this.reservationsContinueLooking && nodePartition.equals(
-            CommonNodeLabelsManager.NO_LABEL)) {
+        if (this.reservationsContinueLooking) {
           if (Resources.lessThanOrEqual(resourceCalculator, clusterResource,
               Resources.subtract(user.getUsed(),
                   application.getCurrentReservation()), limit)) {
@@ -1718,11 +1748,16 @@ public class LeafQueue extends AbstractCSQueue {
       User user = usersManager.updateUserResourceUsage(userName, resource,
           nodePartition, true);
 
-      // Note this is a bit unconventional since it gets the object and modifies
-      // it here, rather then using set routine
-      Resources.subtractFrom(application.getHeadroom(), resource); // headroom
-      metrics.setAvailableResourcesToUser(nodePartition,
-          userName, application.getHeadroom());
+      Resource partitionHeadroom = Resources.createResource(0, 0);
+      if (metrics.getUserMetrics(userName) != null) {
+        partitionHeadroom = getHeadroom(user,
+            cachedResourceLimitsForHeadroom.getLimit(), clusterResource,
+            getResourceLimitForActiveUsers(userName, clusterResource,
+                nodePartition, SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY),
+            nodePartition);
+      }
+      metrics.setAvailableResourcesToUser(nodePartition, userName,
+          partitionHeadroom);
 
       if (LOG.isDebugEnabled()) {
         LOG.debug(getQueuePath() + " user=" + userName + " used="
@@ -1761,8 +1796,16 @@ public class LeafQueue extends AbstractCSQueue {
       User user = usersManager.updateUserResourceUsage(userName, resource,
           nodePartition, false);
 
-      metrics.setAvailableResourcesToUser(nodePartition,
-          userName, application.getHeadroom());
+      Resource partitionHeadroom = Resources.createResource(0, 0);
+      if (metrics.getUserMetrics(userName) != null) {
+        partitionHeadroom = getHeadroom(user,
+            cachedResourceLimitsForHeadroom.getLimit(), clusterResource,
+            getResourceLimitForActiveUsers(userName, clusterResource,
+                nodePartition, SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY),
+            nodePartition);
+      }
+      metrics.setAvailableResourcesToUser(nodePartition, userName,
+          partitionHeadroom);
 
       if (LOG.isDebugEnabled()) {
         LOG.debug(
@@ -2214,5 +2257,44 @@ public class LeafQueue extends AbstractCSQueue {
     metrics.updatePreemptedSecondsForCustomResources(containerResource,
         usedSeconds);
     metrics.updatePreemptedForCustomResources(containerResource);
+  }
+
+  @Override
+  int getNumRunnableApps() {
+    readLock.lock();
+    try {
+      return runnableApps.size();
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  int getNumNonRunnableApps() {
+    readLock.lock();
+    try {
+      return nonRunnableApps.size();
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  boolean removeNonRunnableApp(FiCaSchedulerApp app) {
+    writeLock.lock();
+    try {
+      return nonRunnableApps.remove(app);
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
+  List<FiCaSchedulerApp> getCopyOfNonRunnableAppSchedulables() {
+    List<FiCaSchedulerApp> appsToReturn = new ArrayList<>();
+    readLock.lock();
+    try {
+      appsToReturn.addAll(nonRunnableApps);
+    } finally {
+      readLock.unlock();
+    }
+    return appsToReturn;
   }
 }

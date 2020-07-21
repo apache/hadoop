@@ -47,7 +47,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryUtils;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.RefreshUserMappingsProtocol;
@@ -379,7 +379,7 @@ public class ConnectionPool {
       throw new IllegalStateException(msg);
     }
     ProtoImpl classes = PROTO_MAP.get(proto);
-    RPC.setProtocolEngine(conf, classes.protoPb, ProtobufRpcEngine.class);
+    RPC.setProtocolEngine(conf, classes.protoPb, ProtobufRpcEngine2.class);
 
     final RetryPolicy defaultPolicy = RetryUtils.getDefaultRetryPolicy(conf,
         HdfsClientConfigKeys.Retry.POLICY_ENABLED_KEY,

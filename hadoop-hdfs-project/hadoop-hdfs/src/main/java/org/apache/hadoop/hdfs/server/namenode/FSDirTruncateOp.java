@@ -262,7 +262,11 @@ final class FSDirTruncateOp {
       uc.setTruncateBlock(new BlockInfoContiguous(oldBlock,
           oldBlock.getReplication()));
       uc.getTruncateBlock().setNumBytes(oldBlock.getNumBytes() - lastBlockDelta);
-      uc.getTruncateBlock().setGenerationStamp(newBlock.getGenerationStamp());
+      final long newGenerationStamp = newBlock.getGenerationStamp();
+      uc.getTruncateBlock().setGenerationStamp(newGenerationStamp);
+      // Update global generation stamp in Standby NameNode
+      blockManager.getBlockIdManager().setGenerationStampIfGreater(
+          newGenerationStamp);
       truncatedBlockUC = oldBlock;
 
       NameNode.stateChangeLog.debug("BLOCK* prepareFileForTruncate: " +
