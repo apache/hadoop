@@ -55,7 +55,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 
 public class TestDFSZKFailoverController extends ClientBaseWithFixes {
   private static final String LOCALHOST_SERVER_ADDRESS = "127.0.0.1";

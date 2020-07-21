@@ -503,8 +503,14 @@ public class DFSStripedOutputStream extends DFSOutputStream
 
     LOG.debug("Allocating new block group. The previous block group: "
         + prevBlockGroup);
-    final LocatedBlock lb = addBlock(excludedNodes, dfsClient, src,
-         prevBlockGroup, fileId, favoredNodes, getAddBlockFlags());
+    final LocatedBlock lb;
+    try {
+      lb = addBlock(excludedNodes, dfsClient, src,
+          prevBlockGroup, fileId, favoredNodes, getAddBlockFlags());
+    } catch (IOException ioe) {
+      closeAllStreamers();
+      throw ioe;
+    }
     assert lb.isStriped();
     // assign the new block to the current block group
     currentBlockGroup = lb.getBlock();

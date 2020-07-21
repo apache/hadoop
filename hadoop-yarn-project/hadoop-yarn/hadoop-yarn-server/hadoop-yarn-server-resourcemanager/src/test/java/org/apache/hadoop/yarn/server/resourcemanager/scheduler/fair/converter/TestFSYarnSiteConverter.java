@@ -26,6 +26,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -52,7 +53,8 @@ public class TestFSYarnSiteConverter {
     yarnConfig.setInt(
         FairSchedulerConfiguration.CONTINUOUS_SCHEDULING_SLEEP_MS, 666);
 
-    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false);
+    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false,
+      false);
 
     assertTrue("Cont. scheduling", yarnConvertedConfig.getBoolean(
         CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_ENABLE, false));
@@ -70,7 +72,8 @@ public class TestFSYarnSiteConverter {
         FairSchedulerConfiguration.WAIT_TIME_BEFORE_NEXT_STARVATION_CHECK_MS,
           321);
 
-    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false);
+    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false,
+      false);
 
     assertTrue("Preemption enabled",
         yarnConvertedConfig.getBoolean(
@@ -90,7 +93,8 @@ public class TestFSYarnSiteConverter {
   public void testSiteAssignMultipleConversion() {
     yarnConfig.setBoolean(FairSchedulerConfiguration.ASSIGN_MULTIPLE, true);
 
-    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false);
+    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false,
+      false);
 
     assertTrue("Assign multiple",
         yarnConvertedConfig.getBoolean(
@@ -102,7 +106,8 @@ public class TestFSYarnSiteConverter {
   public void testSiteMaxAssignConversion() {
     yarnConfig.setInt(FairSchedulerConfiguration.MAX_ASSIGN, 111);
 
-    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false);
+    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false,
+      false);
 
     assertEquals("Max assign", 111,
         yarnConvertedConfig.getInt(
@@ -116,7 +121,8 @@ public class TestFSYarnSiteConverter {
     yarnConfig.set(FairSchedulerConfiguration.LOCALITY_THRESHOLD_RACK,
         "321.321");
 
-    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false);
+    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false,
+      false);
 
     assertEquals("Locality threshold node", "123.123",
         yarnConvertedConfig.get(
@@ -128,7 +134,8 @@ public class TestFSYarnSiteConverter {
 
   @Test
   public void testSiteDrfEnabledConversion() {
-    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, true);
+    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, true,
+      false);
 
     assertEquals("Resource calculator type", DominantResourceCalculator.class,
         yarnConvertedConfig.getClass(
@@ -137,11 +144,32 @@ public class TestFSYarnSiteConverter {
 
   @Test
   public void testSiteDrfDisabledConversion() {
-    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false);
+    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false,
+      false);
 
     assertEquals("Resource calculator type", DefaultResourceCalculator.class,
         yarnConvertedConfig.getClass(
             CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,
             CapacitySchedulerConfiguration.DEFAULT_RESOURCE_CALCULATOR_CLASS));
+  }
+
+  @Test
+  public void testAsyncSchedulingEnabledConversion() {
+    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, true,
+            true);
+
+    assertTrue("Asynchronous scheduling", yarnConvertedConfig.getBoolean(
+                    CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_ENABLE,
+            CapacitySchedulerConfiguration.DEFAULT_SCHEDULE_ASYNCHRONOUSLY_ENABLE));
+  }
+
+  @Test
+  public void testAsyncSchedulingDisabledConversion() {
+    converter.convertSiteProperties(yarnConfig, yarnConvertedConfig, false,
+            false);
+
+    assertFalse("Asynchronous scheduling", yarnConvertedConfig.getBoolean(
+            CapacitySchedulerConfiguration.SCHEDULE_ASYNCHRONOUSLY_ENABLE,
+            CapacitySchedulerConfiguration.DEFAULT_SCHEDULE_ASYNCHRONOUSLY_ENABLE));
   }
 }

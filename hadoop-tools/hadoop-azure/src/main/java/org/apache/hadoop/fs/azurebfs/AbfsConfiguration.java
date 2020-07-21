@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.util.Map;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -153,6 +152,10 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_FS_AZURE_ATOMIC_RENAME_DIRECTORIES)
   private String azureAtomicDirs;
 
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_APPEND_BLOB_KEY,
+      DefaultValue = DEFAULT_FS_AZURE_APPEND_BLOB_DIRECTORIES)
+  private String azureAppendBlobDirs;
+
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION,
       DefaultValue = DEFAULT_AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION)
   private boolean createRemoteFileSystemDuringInitialization;
@@ -215,8 +218,6 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_SAS_TOKEN_RENEW_PERIOD_FOR_STREAMS_IN_SECONDS)
   private long sasTokenRenewPeriodForStreamsInSeconds;
 
-  private Map<String, String> storageAccountKeys;
-
   public AbfsConfiguration(final Configuration rawConfig, String accountName)
       throws IllegalAccessException, InvalidConfigurationValueException, IOException {
     this.rawConfig = ProviderUtils.excludeIncompatibleCredentialProviders(
@@ -224,7 +225,6 @@ public class AbfsConfiguration{
     this.accountName = accountName;
     this.isSecure = getBoolean(FS_AZURE_SECURE_MODE, false);
 
-    validateStorageAccountKeys();
     Field[] fields = this.getClass().getDeclaredFields();
     for (Field field : fields) {
       field.setAccessible(true);
@@ -544,6 +544,10 @@ public class AbfsConfiguration{
     return this.azureAtomicDirs;
   }
 
+  public String getAppendBlobDirs() {
+    return this.azureAppendBlobDirs;
+  }
+
   public boolean getCreateRemoteFileSystemDuringInitialization() {
     // we do not support creating the filesystem when AuthType is SAS
     return this.createRemoteFileSystemDuringInitialization
@@ -729,16 +733,6 @@ public class AbfsConfiguration{
       return sasTokenProvider;
     } catch (Exception e) {
       throw new TokenAccessProviderException("Unable to load SAS token provider class: " + e, e);
-    }
-  }
-
-  void validateStorageAccountKeys() throws InvalidConfigurationValueException {
-    Base64StringConfigurationBasicValidator validator = new Base64StringConfigurationBasicValidator(
-        FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME, "", true);
-    this.storageAccountKeys = rawConfig.getValByRegex(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME_REGX);
-
-    for (Map.Entry<String, String> account : storageAccountKeys.entrySet()) {
-      validator.validate(account.getValue());
     }
   }
 

@@ -105,6 +105,8 @@ public final class HdfsConstants {
   public static final String DOT_SNAPSHOT_DIR = ".snapshot";
   public static final String SEPARATOR_DOT_SNAPSHOT_DIR
           = Path.SEPARATOR + DOT_SNAPSHOT_DIR;
+  public static final String DOT_SNAPSHOT_DIR_SEPARATOR =
+      DOT_SNAPSHOT_DIR + Path.SEPARATOR;
   public static final String SEPARATOR_DOT_SNAPSHOT_DIR_SEPARATOR
       = Path.SEPARATOR + DOT_SNAPSHOT_DIR + Path.SEPARATOR;
   public final static String DOT_RESERVED_STRING = ".reserved";

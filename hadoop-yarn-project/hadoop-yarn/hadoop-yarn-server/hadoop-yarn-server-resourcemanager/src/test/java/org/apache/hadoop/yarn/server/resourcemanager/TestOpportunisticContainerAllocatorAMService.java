@@ -19,7 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
@@ -1045,7 +1045,7 @@ public class TestOpportunisticContainerAllocatorAMService {
     // Verify that the OpportunisticContainerAllocatorAMSercvice can handle
     // vanilla ApplicationMasterProtocol clients
     RPC.setProtocolEngine(conf, ApplicationMasterProtocolPB.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     ApplicationMasterProtocolPB ampProxy =
         RPC.getProxy(ApplicationMasterProtocolPB
             .class, 1, NetUtils.getConnectAddress(server), conf);
@@ -1080,7 +1080,7 @@ public class TestOpportunisticContainerAllocatorAMService {
     // Verify that the DistrubutedSchedulingService can handle the
     // DistributedSchedulingAMProtocol clients as well
     RPC.setProtocolEngine(conf, DistributedSchedulingAMProtocolPB.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     DistributedSchedulingAMProtocolPB dsProxy =
         RPC.getProxy(DistributedSchedulingAMProtocolPB
             .class, 1, NetUtils.getConnectAddress(server), conf);

@@ -479,10 +479,10 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
   }
 
   private void listCorruptFileBlocks() throws IOException {
-    final List<String> corrputBlocksFiles = namenode.getNamesystem()
+    final List<String> corruptBlocksFiles = namenode.getNamesystem()
         .listCorruptFileBlocksWithSnapshot(path, snapshottableDirs,
             currentCookie);
-    int numCorruptFiles = corrputBlocksFiles.size();
+    int numCorruptFiles = corruptBlocksFiles.size();
     String filler;
     if (numCorruptFiles > 0) {
       filler = Integer.toString(numCorruptFiles);
@@ -492,7 +492,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
       filler = "no more";
     }
     out.println("Cookie:\t" + currentCookie[0]);
-    for (String s : corrputBlocksFiles) {
+    for (String s : corruptBlocksFiles) {
       out.println(s);
     }
     out.println("\n\nThe filesystem under path '" + path + "' has " + filler

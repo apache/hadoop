@@ -805,6 +805,16 @@
   </property>
 
   <property>
+    <description>If true, ResourceManager will always try to cancel delegation
+      tokens after the application completes, even if the client sets
+      shouldCancelAtEnd false.  References to delegation tokens are tracked,
+      so they will not be canceled until all sub-tasks are done using them.
+    </description>
+    <name>yarn.resourcemanager.delegation-token.always-cancel</name>
+    <value>false</value>
+  </property>
+
+  <property>
   <description>If true, ResourceManager will have proxy-user privileges.
     Use case: In a secure cluster, YARN requires the user hdfs delegation-tokens to
     do localization and log-aggregation on behalf of the user. If this is set to true,
@@ -1666,6 +1676,13 @@
     <description>Health check script time out period.</description>
     <name>yarn.nodemanager.health-checker.timeout-ms</name>
     <value>1200000</value>
+  </property>
+
+  <property>
+    <description>Whether or not to run the node health script
+    before the NM starts up.</description>
+    <name>yarn.nodemanager.health-checker.run-before-startup</name>
+    <value>false</value>
   </property>
 
   <property>
@@ -3322,6 +3339,26 @@
     <name>yarn.resourcemanager.decommissioning-nodes-watcher.poll-interval-secs</name>
     <value>20</value>
   </property>
+
+  <property>
+    <description>
+    Used to specify custom web services for Resourcemanager. Value can be
+    classnames separated by comma.
+    Ex: org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebServices,
+    org.apache.hadoop.yarn.server.resourcemanager.webapp.DummyClass
+    </description>
+    <name>yarn.http.rmwebapp.external.classes</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+    Used to specify custom scheduler page
+    </description>
+    <name>hadoop.http.rmwebapp.scheduler.page.class</name>
+    <value></value>
+  </property>
+
 
   <property>
     <description>The Node Label script to run. Script output Line starting with

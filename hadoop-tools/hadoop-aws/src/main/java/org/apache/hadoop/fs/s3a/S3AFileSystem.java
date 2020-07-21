@@ -108,12 +108,16 @@ import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport;
 import org.apache.hadoop.fs.s3a.impl.OperationCallbacks;
 import org.apache.hadoop.fs.s3a.impl.RenameOperation;
+import org.apache.hadoop.fs.s3a.impl.S3AMultipartUploaderBuilder;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
+import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
+import org.apache.hadoop.fs.s3a.impl.statistics.S3AMultipartUploaderStatisticsImpl;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.select.InternalSelectConstants;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.token.DelegationTokenIssuer;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.LambdaUtils;
@@ -3378,6 +3382,25 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
+   * Ask any DT plugin for any extra token issuers.
+   * These do not get told of the encryption secrets and can
+   * return any type of token.
+   * This allows DT plugins to issue extra tokens for
+   * ancillary services.
+   */
+  @Override
+  public DelegationTokenIssuer[] getAdditionalTokenIssuers()
+      throws IOException {
+    if (delegationTokens.isPresent()) {
+      return delegationTokens.get().getAdditionalTokenIssuers();
+    } else {
+      // Delegation token support is not set up
+      LOG.debug("Token support is not enabled");
+      return null;
+    }
+  }
+
+  /**
    * Build the AWS policy for restricted access to the resources needed
    * by this bucket.
    * The policy generated includes S3 access, S3Guard access
@@ -3957,6 +3980,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Increments the statistic {@link Statistic#INVOCATION_GLOB_STATUS}.
+   * Override superclass so as to disable symlink resolution as symlinks
+   * are not supported by S3A.
    * {@inheritDoc}
    */
   @Override
@@ -3965,9 +3990,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Override superclass so as to disable symlink resolution and so avoid
-   * some calls to the FS which may have problems when the store is being
-   * inconsistent.
+   * Increments the statistic {@link Statistic#INVOCATION_GLOB_STATUS}.
+   * Override superclass so as to disable symlink resolution as symlinks
+   * are not supported by S3A.
    * {@inheritDoc}
    */
   @Override
@@ -3979,7 +4004,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     return Globber.createGlobber(this)
         .withPathPattern(pathPattern)
         .withPathFiltern(filter)
-        .withResolveSymlinks(true)
+        .withResolveSymlinks(false)
         .build()
         .glob();
   }
@@ -4181,77 +4206,123 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     Path path = qualify(f);
     LOG.debug("listFiles({}, {})", path, recursive);
     try {
-      // if a status was given, that is used, otherwise
-      // call getFileStatus, which triggers an existence check
-      final S3AFileStatus fileStatus = status != null
-          ? status
-          : (S3AFileStatus) getFileStatus(path);
-      if (fileStatus.isFile()) {
+      // if a status was given and it is a file.
+      if (status != null && status.isFile()) {
         // simple case: File
-        LOG.debug("Path is a file");
+        LOG.debug("Path is a file: {}", path);
         return new Listing.SingleStatusRemoteIterator(
-            toLocatedFileStatus(fileStatus));
-      } else {
-        // directory: do a bulk operation
-        String key = maybeAddTrailingSlash(pathToKey(path));
-        String delimiter = recursive ? null : "/";
-        LOG.debug("Requesting all entries under {} with delimiter '{}'",
-            key, delimiter);
-        final RemoteIterator<S3AFileStatus> cachedFilesIterator;
-        final Set<Path> tombstones;
-        boolean allowAuthoritative = allowAuthoritative(f);
-        if (recursive) {
-          final PathMetadata pm = metadataStore.get(path, true);
-          // shouldn't need to check pm.isDeleted() because that will have
-          // been caught by getFileStatus above.
-          MetadataStoreListFilesIterator metadataStoreListFilesIterator =
-              new MetadataStoreListFilesIterator(metadataStore, pm,
-                  allowAuthoritative);
-          tombstones = metadataStoreListFilesIterator.listTombstones();
-          // if all of the below is true
-          //  - authoritative access is allowed for this metadatastore for this directory,
-          //  - all the directory listings are authoritative on the client
-          //  - the caller does not force non-authoritative access
-          // return the listing without any further s3 access
-          if (!forceNonAuthoritativeMS &&
-              allowAuthoritative &&
-              metadataStoreListFilesIterator.isRecursivelyAuthoritative()) {
-            S3AFileStatus[] statuses = S3Guard.iteratorToStatuses(
-                metadataStoreListFilesIterator, tombstones);
-            cachedFilesIterator = listing.createProvidedFileStatusIterator(
-                statuses, ACCEPT_ALL, acceptor);
-            return listing.createLocatedFileStatusIterator(cachedFilesIterator);
-          }
-          cachedFilesIterator = metadataStoreListFilesIterator;
-        } else {
-          DirListingMetadata meta =
-              S3Guard.listChildrenWithTtl(metadataStore, path, ttlTimeProvider,
-                  allowAuthoritative);
-          if (meta != null) {
-            tombstones = meta.listTombstones();
-          } else {
-            tombstones = null;
-          }
-          cachedFilesIterator = listing.createProvidedFileStatusIterator(
-              S3Guard.dirMetaToStatuses(meta), ACCEPT_ALL, acceptor);
-          if (allowAuthoritative && meta != null && meta.isAuthoritative()) {
-            // metadata listing is authoritative, so return it directly
-            return listing.createLocatedFileStatusIterator(cachedFilesIterator);
-          }
-        }
-        return listing.createTombstoneReconcilingIterator(
-            listing.createLocatedFileStatusIterator(
-                listing.createFileStatusListingIterator(path,
-                    createListObjectsRequest(key, delimiter),
-                    ACCEPT_ALL,
-                    acceptor,
-                    cachedFilesIterator)),
-            collectTombstones ? tombstones : null);
+            toLocatedFileStatus(status));
       }
+      // Assuming the path to be a directory
+      // do a bulk operation.
+      RemoteIterator<S3ALocatedFileStatus> listFilesAssumingDir =
+              getListFilesAssumingDir(path,
+                      recursive,
+                      acceptor,
+                      collectTombstones,
+                      forceNonAuthoritativeMS);
+      // If there are no list entries present, we
+      // fallback to file existence check as the path
+      // can be a file or empty directory.
+      if (!listFilesAssumingDir.hasNext()) {
+        // If file status was already passed, reuse it.
+        final S3AFileStatus fileStatus = status != null
+                ? status
+                : (S3AFileStatus) getFileStatus(path);
+        if (fileStatus.isFile()) {
+          return new Listing.SingleStatusRemoteIterator(
+                  toLocatedFileStatus(fileStatus));
+        }
+      }
+      // If we have reached here, it means either there are files
+      // in this directory or it is empty.
+      return listFilesAssumingDir;
     } catch (AmazonClientException e) {
-      // TODO S3Guard: retry on file not found exception
       throw translateException("listFiles", path, e);
     }
+  }
+
+  /**
+   * List files under a path assuming the path to be a directory.
+   * @param path input path.
+   * @param recursive recursive listing?
+   * @param acceptor file status filter
+   * @param collectTombstones should tombstones be collected from S3Guard?
+   * @param forceNonAuthoritativeMS forces metadata store to act like non
+   *                                authoritative. This is useful when
+   *                                listFiles output is used by import tool.
+   * @return an iterator over listing.
+   * @throws IOException any exception.
+   */
+  private RemoteIterator<S3ALocatedFileStatus> getListFilesAssumingDir(
+          Path path,
+          boolean recursive, Listing.FileStatusAcceptor acceptor,
+          boolean collectTombstones,
+          boolean forceNonAuthoritativeMS) throws IOException {
+
+    String key = maybeAddTrailingSlash(pathToKey(path));
+    String delimiter = recursive ? null : "/";
+    LOG.debug("Requesting all entries under {} with delimiter '{}'",
+        key, delimiter);
+    final RemoteIterator<S3AFileStatus> cachedFilesIterator;
+    final Set<Path> tombstones;
+    boolean allowAuthoritative = allowAuthoritative(path);
+    if (recursive) {
+      final PathMetadata pm = metadataStore.get(path, true);
+      if (pm != null) {
+        if (pm.isDeleted()) {
+          OffsetDateTime deletedAt = OffsetDateTime
+                  .ofInstant(Instant.ofEpochMilli(
+                          pm.getFileStatus().getModificationTime()),
+                          ZoneOffset.UTC);
+          throw new FileNotFoundException("Path " + path + " is recorded as " +
+                  "deleted by S3Guard at " + deletedAt);
+        }
+      }
+      MetadataStoreListFilesIterator metadataStoreListFilesIterator =
+          new MetadataStoreListFilesIterator(metadataStore, pm,
+              allowAuthoritative);
+      tombstones = metadataStoreListFilesIterator.listTombstones();
+      // if all of the below is true
+      //  - authoritative access is allowed for this metadatastore
+      //  for this directory,
+      //  - all the directory listings are authoritative on the client
+      //  - the caller does not force non-authoritative access
+      // return the listing without any further s3 access
+      if (!forceNonAuthoritativeMS &&
+          allowAuthoritative &&
+          metadataStoreListFilesIterator.isRecursivelyAuthoritative()) {
+        S3AFileStatus[] statuses = S3Guard.iteratorToStatuses(
+            metadataStoreListFilesIterator, tombstones);
+        cachedFilesIterator = listing.createProvidedFileStatusIterator(
+            statuses, ACCEPT_ALL, acceptor);
+        return listing.createLocatedFileStatusIterator(cachedFilesIterator);
+      }
+      cachedFilesIterator = metadataStoreListFilesIterator;
+    } else {
+      DirListingMetadata meta =
+          S3Guard.listChildrenWithTtl(metadataStore, path, ttlTimeProvider,
+              allowAuthoritative);
+      if (meta != null) {
+        tombstones = meta.listTombstones();
+      } else {
+        tombstones = null;
+      }
+      cachedFilesIterator = listing.createProvidedFileStatusIterator(
+          S3Guard.dirMetaToStatuses(meta), ACCEPT_ALL, acceptor);
+      if (allowAuthoritative && meta != null && meta.isAuthoritative()) {
+        // metadata listing is authoritative, so return it directly
+        return listing.createLocatedFileStatusIterator(cachedFilesIterator);
+      }
+    }
+    return listing.createTombstoneReconcilingIterator(
+        listing.createLocatedFileStatusIterator(
+            listing.createFileStatusListingIterator(path,
+                createListObjectsRequest(key, delimiter),
+                ACCEPT_ALL,
+                acceptor,
+                cachedFilesIterator)),
+        collectTombstones ? tombstones : null);
   }
 
   /**
@@ -4472,6 +4543,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // capability depends on FS configuration
       return getConf().getBoolean(ETAG_CHECKSUM_ENABLED,
           ETAG_CHECKSUM_ENABLED_DEFAULT);
+
+    case CommonPathCapabilities.FS_MULTIPART_UPLOADER:
+      return true;
 
     default:
       return super.hasPathCapability(p, capability);
@@ -4702,6 +4776,18 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     return result;
   }
 
+  @Override
+  public S3AMultipartUploaderBuilder createMultipartUploader(
+      final Path basePath)
+      throws IOException {
+    StoreContext ctx = createStoreContext();
+    return new S3AMultipartUploaderBuilder(this,
+        getWriteOperationHelper(),
+        ctx,
+        basePath,
+        new S3AMultipartUploaderStatisticsImpl(ctx::incrementStatistic));
+  }
+
   /**
    * Build an immutable store context.
    * If called while the FS is being initialized,
@@ -4711,24 +4797,24 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   @InterfaceAudience.Private
   public StoreContext createStoreContext() {
-    return new StoreContext(
-        getUri(),
-        getBucket(),
-        getConf(),
-        getUsername(),
-        owner,
-        boundedThreadPool,
-        executorCapacity,
-        invoker,
-        getInstrumentation(),
-        getStorageStatistics(),
-        getInputPolicy(),
-        changeDetectionPolicy,
-        enableMultiObjectsDelete,
-        metadataStore,
-        useListV1,
-        new ContextAccessorsImpl(),
-        getTtlTimeProvider());
+    return new StoreContextBuilder().setFsURI(getUri())
+        .setBucket(getBucket())
+        .setConfiguration(getConf())
+        .setUsername(getUsername())
+        .setOwner(owner)
+        .setExecutor(boundedThreadPool)
+        .setExecutorCapacity(executorCapacity)
+        .setInvoker(invoker)
+        .setInstrumentation(getInstrumentation())
+        .setStorageStatistics(getStorageStatistics())
+        .setInputPolicy(getInputPolicy())
+        .setChangeDetectionPolicy(changeDetectionPolicy)
+        .setMultiObjectDeleteEnabled(enableMultiObjectsDelete)
+        .setMetadataStore(metadataStore)
+        .setUseListV1(useListV1)
+        .setContextAccessors(new ContextAccessorsImpl())
+        .setTimeProvider(getTtlTimeProvider())
+        .build();
   }
 
   /**
@@ -4755,6 +4841,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     @Override
     public String getBucketLocation() throws IOException {
       return S3AFileSystem.this.getBucketLocation();
+    }
+
+    @Override
+    public Path makeQualified(final Path path) {
+      return S3AFileSystem.this.makeQualified(path);
     }
   }
 }

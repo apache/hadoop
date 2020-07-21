@@ -122,6 +122,10 @@ public abstract class AbstractAbfsIntegrationTest extends
     this.testUrl = defaultUri.toString();
     abfsConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, defaultUri.toString());
     abfsConfig.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, true);
+    if (abfsConfig.get(FS_AZURE_TEST_APPENDBLOB_ENABLED) == "true") {
+      String appendblobDirs = this.testUrl + "," + abfsConfig.get(FS_AZURE_CONTRACT_TEST_URI);
+      rawConfig.set(FS_AZURE_APPEND_BLOB_KEY, appendblobDirs);
+    }
     // For testing purposes, an IP address and port may be provided to override
     // the host specified in the FileSystem URI.  Also note that the format of
     // the Azure Storage Service URI changes from
@@ -436,9 +440,10 @@ public abstract class AbstractAbfsIntegrationTest extends
    * @param metricMap map of (String, Long) with statistics name as key and
    *                  statistics value as map value.
    */
-  protected void assertAbfsStatistics(AbfsStatistic statistic,
+  protected long assertAbfsStatistics(AbfsStatistic statistic,
       long expectedValue, Map<String, Long> metricMap) {
     assertEquals("Mismatch in " + statistic.getStatName(), expectedValue,
         (long) metricMap.get(statistic.getStatName()));
+    return expectedValue;
   }
 }

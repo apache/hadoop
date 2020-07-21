@@ -146,6 +146,7 @@ public abstract class AbstractCSQueue implements CSQueue {
 
   volatile Priority priority = Priority.newInstance(0);
   private Map<String, Float> userWeights = new HashMap<String, Float>();
+  private int maxParallelApps;
 
   public AbstractCSQueue(CapacitySchedulerContext cs,
       String queueName, CSQueue parent, CSQueue old) throws IOException {
@@ -389,6 +390,11 @@ public abstract class AbstractCSQueue implements CSQueue {
       // Setup queue's maximumAllocation respecting the global setting
       // and queue setting
       setupMaximumAllocation(configuration);
+
+      // Max parallel apps
+      int queueMaxParallelApps =
+          configuration.getMaxParallelAppsForQueue(getQueuePath());
+      setMaxParallelApps(queueMaxParallelApps);
 
       // initialized the queue state based on previous state, configured state
       // and its parent state.
@@ -1070,14 +1076,12 @@ public abstract class AbstractCSQueue implements CSQueue {
       if (Resources.greaterThanOrEqual(resourceCalculator, clusterResource,
           usedExceptKillable, currentLimitResource)) {
 
-        // if reservation continous looking enabled, check to see if could we
+        // if reservation continue looking enabled, check to see if could we
         // potentially use this node instead of a reserved node if the application
         // has reserved containers.
-        // TODO, now only consider reservation cases when the node has no label
-        if (this.reservationsContinueLooking && nodePartition.equals(
-            RMNodeLabelsManager.NO_LABEL) && Resources.greaterThan(
-            resourceCalculator, clusterResource, resourceCouldBeUnreserved,
-            Resources.none())) {
+        if (this.reservationsContinueLooking
+            && Resources.greaterThan(resourceCalculator, clusterResource,
+                resourceCouldBeUnreserved, Resources.none())) {
           // resource-without-reserved = used - reserved
           Resource newTotalWithoutReservedResource = Resources.subtract(
               usedExceptKillable, resourceCouldBeUnreserved);
@@ -1431,4 +1435,14 @@ public abstract class AbstractCSQueue implements CSQueue {
   public boolean getDefaultAppLifetimeWasSpecifiedInConfig() {
     return defaultAppLifetimeWasSpecifiedInConfig;
   }
+
+  public void setMaxParallelApps(int maxParallelApps) {
+    this.maxParallelApps = maxParallelApps;
+  }
+
+  public int getMaxParallelApps() {
+    return maxParallelApps;
+  }
+
+  abstract int getNumRunnableApps();
 }

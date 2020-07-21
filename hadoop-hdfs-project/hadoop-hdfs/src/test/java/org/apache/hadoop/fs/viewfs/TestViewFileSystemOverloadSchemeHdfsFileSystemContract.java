@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME;
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME_DEFAULT;
 import static org.junit.Assume.assumeTrue;
 
 import java.io.File;
@@ -73,6 +75,8 @@ public class TestViewFileSystemOverloadSchemeHdfsFileSystemContract
         FsConstants.FS_VIEWFS_OVERLOAD_SCHEME_TARGET_FS_IMPL_PATTERN,
         "hdfs"),
         DistributedFileSystem.class.getName());
+    conf.setBoolean(CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME,
+        CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME_DEFAULT);
     URI defaultFSURI =
         URI.create(conf.get(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY));
     ConfigUtil.addLink(conf, defaultFSURI.getAuthority(), "/user",
@@ -116,6 +120,11 @@ public class TestViewFileSystemOverloadSchemeHdfsFileSystemContract
     assumeTrue(rootDirTestEnabled());
     Path dir = path("/");
     Path child = path("/FileSystemContractBaseTest");
+    try (FileSystem dfs = ((ViewFileSystemOverloadScheme) fs).getRawFileSystem(
+        new Path(conf.get(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY), "/"),
+        conf)) {
+      dfs.mkdirs(child);
+    }
     assertListStatusFinds(dir, child);
   }
 

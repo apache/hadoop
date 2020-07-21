@@ -31,8 +31,8 @@
 
 #include <google/protobuf/message_lite.h>
 
-#include <asio/ip/tcp.hpp>
-#include <asio/deadline_timer.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/deadline_timer.hpp>
 
 #include <atomic>
 #include <memory>
@@ -160,7 +160,7 @@ protected:
   static std::string getRandomClientId();
 
   // Remember all of the last endpoints in case we need to reconnect and retry
-  std::vector<::asio::ip::tcp::endpoint> last_endpoints_;
+  std::vector<boost::asio::ip::tcp::endpoint> last_endpoints_;
 
 private:
   mutable std::shared_ptr<IoService> io_service_;
@@ -173,7 +173,7 @@ private:
   AuthInfo auth_info_;
   std::string cluster_name_;
   std::atomic_int call_id_;
-  ::asio::deadline_timer retry_timer;
+  boost::asio::deadline_timer retry_timer;
 
   std::shared_ptr<LibhdfsEvents> event_handlers_;
 

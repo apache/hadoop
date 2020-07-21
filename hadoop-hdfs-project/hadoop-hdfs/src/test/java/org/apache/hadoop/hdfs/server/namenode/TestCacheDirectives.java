@@ -96,7 +96,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 
 public class TestCacheDirectives {
   static final Logger LOG = LoggerFactory.getLogger(TestCacheDirectives.class);

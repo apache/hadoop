@@ -83,6 +83,9 @@ public class FSConfigToCSConfigConverter {
   private boolean preemptionEnabled = false;
   private int queueMaxAppsDefault;
   private float queueMaxAMShareDefault;
+  private Map<String, Integer> userMaxApps;
+  private int userMaxAppsDefault;
+
   private boolean autoCreateChildQueues = false;
   private boolean sizeBasedWeight = false;
   private boolean userAsDefaultQueue = false;
@@ -98,6 +101,8 @@ public class FSConfigToCSConfigConverter {
   private OutputStream capacitySchedulerOutputStream;
   private boolean consoleMode = false;
   private boolean convertPlacementRules = false;
+
+
 
   public FSConfigToCSConfigConverter(FSConfigToCSConfigRuleHandler
       ruleHandler, ConversionOptions conversionOptions) {
@@ -242,13 +247,12 @@ public class FSConfigToCSConfigConverter {
 
     AllocationConfiguration allocConf = fs.getAllocationConfiguration();
     queueMaxAppsDefault = allocConf.getQueueMaxAppsDefault();
+    userMaxAppsDefault = allocConf.getUserMaxAppsDefault();
+    userMaxApps = allocConf.getUserMaxApps();
     queueMaxAMShareDefault = allocConf.getQueueMaxAMShareDefault();
 
     convertedYarnSiteConfig = new Configuration(false);
     capacitySchedulerConfig = new Configuration(false);
-
-    checkUserMaxApps(allocConf);
-    checkUserMaxAppsDefault(allocConf);
 
     convertYarnSiteXml(inputYarnSiteConfig, havePlacementPolicies);
     convertCapacitySchedulerXml(fs);
@@ -270,7 +274,8 @@ public class FSConfigToCSConfigConverter {
     FSYarnSiteConverter siteConverter =
         new FSYarnSiteConverter();
     siteConverter.convertSiteProperties(inputYarnSiteConfig,
-        convertedYarnSiteConfig, drfUsed);
+        convertedYarnSiteConfig, drfUsed,
+        conversionOptions.isEnableAsyncScheduler());
 
     // See docs: "allow-undeclared-pools" and "user-as-default-queue" are
     // ignored if we have placement rules
@@ -286,7 +291,9 @@ public class FSConfigToCSConfigConverter {
 
   private void convertCapacitySchedulerXml(FairScheduler fs) {
     FSParentQueue rootQueue = fs.getQueueManager().getRootQueue();
-    emitDefaultMaxApplications();
+    emitDefaultQueueMaxParallelApplications();
+    emitDefaultUserMaxParallelApplications();
+    emitUserMaxParallelApplications();
     emitDefaultMaxAMShare();
 
     FSQueueConverter queueConverter = FSQueueConverterBuilder.create()
@@ -321,12 +328,28 @@ public class FSConfigToCSConfigConverter {
     }
   }
 
-  private void emitDefaultMaxApplications() {
+  private void emitDefaultQueueMaxParallelApplications() {
     if (queueMaxAppsDefault != Integer.MAX_VALUE) {
       capacitySchedulerConfig.set(
-          CapacitySchedulerConfiguration.MAXIMUM_SYSTEM_APPLICATIONS,
+          PREFIX + "max-parallel-apps",
           String.valueOf(queueMaxAppsDefault));
     }
+  }
+
+  private void emitDefaultUserMaxParallelApplications() {
+    if (userMaxAppsDefault != Integer.MAX_VALUE) {
+      capacitySchedulerConfig.set(
+          PREFIX + "user.max-parallel-apps",
+          String.valueOf(userMaxAppsDefault));
+    }
+  }
+
+  private void emitUserMaxParallelApplications() {
+    userMaxApps
+        .forEach((user, apps) -> {
+          capacitySchedulerConfig.setInt(
+              PREFIX + "user." + user + ".max-parallel-apps", apps);
+        });
   }
 
   private void emitDefaultMaxAMShare() {
@@ -370,19 +393,6 @@ public class FSConfigToCSConfigConverter {
     if (conf.getBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE,
         YarnConfiguration.DEFAULT_RM_RESERVATION_SYSTEM_ENABLE)) {
       ruleHandler.handleReservationSystem();
-    }
-  }
-
-  private void checkUserMaxApps(AllocationConfiguration allocConf) {
-    if (allocConf.getUserMaxApps() != null
-        && allocConf.getUserMaxApps().size() > 0) {
-      ruleHandler.handleUserMaxApps();
-    }
-  }
-
-  private void checkUserMaxAppsDefault(AllocationConfiguration allocConf) {
-    if (allocConf.getUserMaxAppsDefault() > 0) {
-      ruleHandler.handleUserMaxAppsDefault();
     }
   }
 

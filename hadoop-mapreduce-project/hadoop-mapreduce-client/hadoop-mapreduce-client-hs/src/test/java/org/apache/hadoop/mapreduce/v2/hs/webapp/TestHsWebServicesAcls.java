@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -275,6 +276,11 @@ public class TestHsWebServicesAcls {
 
     @Override
     public void cacheGroupsAdd(List<String> groups) throws IOException {
+    }
+
+    @Override
+    public Set<String> getGroupsSet(String user) throws IOException {
+      return Collections.emptySet();
     }
   }
 

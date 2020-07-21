@@ -438,7 +438,7 @@ public class ResourceManager extends CompositeService
 
   protected QueueACLsManager createQueueACLsManager(ResourceScheduler scheduler,
       Configuration conf) {
-    return new QueueACLsManager(scheduler, conf);
+    return QueueACLsManager.getQueueACLsManager(scheduler, conf);
   }
 
   @VisibleForTesting

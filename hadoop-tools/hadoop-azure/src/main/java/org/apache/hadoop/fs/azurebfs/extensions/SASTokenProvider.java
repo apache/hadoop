@@ -33,6 +33,7 @@ import org.apache.hadoop.security.AccessControlException;
 public interface SASTokenProvider {
 
   String CHECK_ACCESS_OPERATION = "check-access";
+  String CREATE_DIRECTORY_OPERATION = "create-directory";
   String CREATE_FILE_OPERATION = "create-file";
   String DELETE_OPERATION = "delete";
   String DELETE_RECURSIVE_OPERATION = "delete-recursive";
@@ -40,7 +41,6 @@ public interface SASTokenProvider {
   String GET_STATUS_OPERATION = "get-status";
   String GET_PROPERTIES_OPERATION = "get-properties";
   String LIST_OPERATION = "list";
-  String CREATE_DIRECTORY_OPERATION = "create-directory";
   String READ_OPERATION = "read";
   String RENAME_SOURCE_OPERATION = "rename-source";
   String RENAME_DESTINATION_OPERATION = "rename-destination";

@@ -115,6 +115,7 @@ public class DelegationTokenRenewer extends AbstractService {
   private volatile boolean isServiceStarted;
   private LinkedBlockingQueue<DelegationTokenRenewerEvent> pendingEventQueue;
   
+  private boolean alwaysCancelDelegationTokens;
   private boolean tokenKeepAliveEnabled;
   private boolean hasProxyUserPrivileges;
   private long credentialsValidTimeRemaining;
@@ -137,6 +138,9 @@ public class DelegationTokenRenewer extends AbstractService {
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
+    this.alwaysCancelDelegationTokens =
+        conf.getBoolean(YarnConfiguration.RM_DELEGATION_TOKEN_ALWAYS_CANCEL,
+            YarnConfiguration.DEFAULT_RM_DELEGATION_TOKEN_ALWAYS_CANCEL);
     this.hasProxyUserPrivileges =
         conf.getBoolean(YarnConfiguration.RM_PROXY_USER_PRIVILEGES_ENABLED,
           YarnConfiguration.DEFAULT_RM_PROXY_USER_PRIVILEGES_ENABLED);
@@ -268,7 +272,7 @@ public class DelegationTokenRenewer extends AbstractService {
    *
    */
   @VisibleForTesting
-  protected static class DelegationTokenToRenew {
+  protected class DelegationTokenToRenew {
     public final Token<?> token;
     public final Collection<ApplicationId> referringAppIds;
     public final Configuration conf;
@@ -298,7 +302,7 @@ public class DelegationTokenRenewer extends AbstractService {
       this.conf = conf;
       this.expirationDate = expirationDate;
       this.timerTask = null;
-      this.shouldCancelAtEnd = shouldCancelAtEnd;
+      this.shouldCancelAtEnd = shouldCancelAtEnd | alwaysCancelDelegationTokens;
     }
     
     public void setTimerTask(RenewalTimerTask tTask) {

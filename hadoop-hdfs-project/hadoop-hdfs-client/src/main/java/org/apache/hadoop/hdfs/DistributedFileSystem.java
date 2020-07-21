@@ -52,6 +52,7 @@ import org.apache.hadoop.fs.GlobalStorageStatistics;
 import org.apache.hadoop.fs.GlobalStorageStatistics.StorageStatisticsProvider;
 import org.apache.hadoop.fs.InvalidPathHandleException;
 import org.apache.hadoop.fs.PartialListing;
+import org.apache.hadoop.fs.MultipartUploaderBuilder;
 import org.apache.hadoop.fs.PathHandle;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Options;
@@ -66,6 +67,7 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.XAttrSetFlag;
+import org.apache.hadoop.fs.impl.FileSystemMultipartUploaderBuilder;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -1143,10 +1145,21 @@ public class DistributedFileSystem extends FileSystem
   /**
    * List all the entries of a directory
    *
-   * Note that this operation is not atomic for a large directory.
-   * The entries of a directory may be fetched from NameNode multiple times.
-   * It only guarantees that  each name occurs once if a directory
-   * undergoes changes between the calls.
+   * Note that this operation is not atomic for a large directory. The entries
+   * of a directory may be fetched from NameNode multiple times. It only
+   * guarantees that each name occurs once if a directory undergoes changes
+   * between the calls.
+   *
+   * If any of the the immediate children of the given path f is a symlink, the
+   * returned FileStatus object of that children would be represented as a
+   * symlink. It will not be resolved to the target path and will not get the
+   * target path FileStatus object. The target path will be available via
+   * getSymlink on that children's FileStatus object. Since it represents as
+   * symlink, isDirectory on that children's FileStatus will return false.
+   *
+   * If you want to get the FileStatus of target path for that children, you may
+   * want to use GetFileStatus API with that children's symlink path. Please see
+   * {@link DistributedFileSystem#getFileStatus(Path f)}
    */
   @Override
   public FileStatus[] listStatus(Path p) throws IOException {
@@ -1712,6 +1725,12 @@ public class DistributedFileSystem extends FileSystem
 
   /**
    * Returns the stat information about the file.
+   *
+   * If the given path is a symlink, the path will be resolved to a target path
+   * and it will get the resolved path's FileStatus object. It will not be
+   * represented as a symlink and isDirectory API returns true if the resolved
+   * path is a directory, false otherwise.
+   *
    * @throws FileNotFoundException if the file does not exist.
    */
   @Override
@@ -3597,5 +3616,11 @@ public class DistributedFileSystem extends FileSystem
     }
 
     return super.hasPathCapability(p, capability);
+  }
+
+  @Override
+  public MultipartUploaderBuilder createMultipartUploader(final Path basePath)
+      throws IOException {
+    return new FileSystemMultipartUploaderBuilder(this, basePath);
   }
 }

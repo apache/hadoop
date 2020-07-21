@@ -74,6 +74,7 @@ message RegisterNodeManagerRequestProto {
   optional ResourceProto physicalResource = 9;
   repeated LogAggregationReportProto log_aggregation_reports_for_apps = 10;
   optional NodeAttributesProto nodeAttributes = 11;
+  optional NodeStatusProto nodeStatus = 12;
 }
 
 message RegisterNodeManagerResponseProto {

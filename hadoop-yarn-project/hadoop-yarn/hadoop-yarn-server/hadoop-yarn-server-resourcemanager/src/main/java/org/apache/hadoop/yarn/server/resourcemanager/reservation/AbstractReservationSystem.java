@@ -50,6 +50,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.security.CapacityReservationsACLsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.FairReservationsACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ReservationsACLsManager;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.UTCClock;
@@ -173,7 +175,13 @@ public abstract class AbstractReservationSystem extends AbstractService
         YarnConfiguration.DEFAULT_YARN_RESERVATION_ACL_ENABLE)
         && conf.getBoolean(YarnConfiguration.YARN_ACL_ENABLE,
             YarnConfiguration.DEFAULT_YARN_ACL_ENABLE)) {
-      reservationsACLsManager = new ReservationsACLsManager(scheduler, conf);
+      if (scheduler instanceof CapacityScheduler) {
+        reservationsACLsManager = new CapacityReservationsACLsManager(scheduler,
+            conf);
+      } else if (scheduler instanceof FairScheduler) {
+        reservationsACLsManager = new FairReservationsACLsManager(scheduler,
+            conf);
+      }
     }
   }
 

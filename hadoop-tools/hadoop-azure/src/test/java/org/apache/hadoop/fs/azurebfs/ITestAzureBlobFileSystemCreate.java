@@ -145,15 +145,19 @@ public class ITestAzureBlobFileSystemCreate extends
       out.hsync();
       fail("Expected a failure");
     } catch (FileNotFoundException fnfe) {
-      // the exception raised in close() must be in the caught exception's
-      // suppressed list
-      Throwable[] suppressed = fnfe.getSuppressed();
-      assertEquals("suppressed count", 1, suppressed.length);
-      Throwable inner = suppressed[0];
-      if (!(inner instanceof IOException)) {
-        throw inner;
+      //appendblob outputStream does not generate suppressed exception on close as it is
+      //single threaded code
+      if (!fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(testPath).toString())) {
+        // the exception raised in close() must be in the caught exception's
+        // suppressed list
+        Throwable[] suppressed = fnfe.getSuppressed();
+        assertEquals("suppressed count", 1, suppressed.length);
+        Throwable inner = suppressed[0];
+        if (!(inner instanceof IOException)) {
+          throw inner;
+        }
+        GenericTestUtils.assertExceptionContains(fnfe.getMessage(), inner);
       }
-      GenericTestUtils.assertExceptionContains(fnfe.getMessage(), inner);
     }
   }
 

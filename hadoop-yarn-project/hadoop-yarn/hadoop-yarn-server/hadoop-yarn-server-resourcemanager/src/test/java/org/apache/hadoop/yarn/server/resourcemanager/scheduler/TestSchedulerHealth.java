@@ -27,6 +27,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.NodeManager;
 import org.apache.hadoop.yarn.server.resourcemanager.Application;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
@@ -43,6 +44,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
 import static org.junit.Assume.assumeTrue;
 
 public class TestSchedulerHealth {
@@ -170,11 +172,11 @@ public class TestSchedulerHealth {
   }
 
   private NodeManager registerNode(String hostName, int containerManagerPort,
-      int httpPort, String rackName, Resource capability) throws IOException,
-      YarnException {
+      int httpPort, String rackName, Resource capability, NodeStatus nodeStatus)
+      throws IOException, YarnException {
     NodeManager nm =
         new NodeManager(hostName, containerManagerPort, httpPort, rackName,
-          capability, resourceManager);
+          capability, resourceManager, nodeStatus);
     NodeAddedSchedulerEvent nodeAddEvent1 =
         new NodeAddedSchedulerEvent(resourceManager.getRMContext().getRMNodes()
           .get(nm.getNodeId()));
@@ -200,11 +202,13 @@ public class TestSchedulerHealth {
     assumeTrue("This test is only supported on Capacity Scheduler",
       isCapacityScheduler);
 
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
     // Register node1
     String host_0 = "host_0";
     NodeManager nm_0 =
         registerNode(host_0, 1234, 2345, NetworkTopology.DEFAULT_RACK,
-          Resources.createResource(5 * 1024, 1));
+          Resources.createResource(5 * 1024, 1), mockNodeStatus);
 
     // ResourceRequest priorities
     Priority priority_0 = Priority.newInstance(0);
@@ -275,15 +279,17 @@ public class TestSchedulerHealth {
     assumeTrue("This test is only supported on Capacity Scheduler",
       isCapacityScheduler);
 
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
     // Register nodes
     String host_0 = "host_0";
     NodeManager nm_0 =
         registerNode(host_0, 1234, 2345, NetworkTopology.DEFAULT_RACK,
-          Resources.createResource(2 * 1024, 1));
+          Resources.createResource(2 * 1024, 1), mockNodeStatus);
     String host_1 = "host_1";
     NodeManager nm_1 =
         registerNode(host_1, 1234, 2345, NetworkTopology.DEFAULT_RACK,
-          Resources.createResource(5 * 1024, 1));
+          Resources.createResource(5 * 1024, 1), mockNodeStatus);
     nodeUpdate(nm_0);
     nodeUpdate(nm_1);
 

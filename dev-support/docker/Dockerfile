@@ -33,16 +33,10 @@ RUN echo APT::Install-Suggests "0"\; >>  /etc/apt/apt.conf.d/10disableextras
 ENV DEBIAN_FRONTEND noninteractive
 ENV DEBCONF_TERSE true
 
-######
-# Install common dependencies from packages. Versions here are either
-# sufficient or irrelevant.
-#
-# WARNING: DO NOT PUT JAVA APPS HERE! Otherwise they will install default
-# Ubuntu Java.  See Java section below!
-######
 # hadolint ignore=DL3008
 RUN apt-get -q update \
     && apt-get -q install -y --no-install-recommends \
+        ant \
         apt-utils \
         bats \
         build-essential \
@@ -51,11 +45,13 @@ RUN apt-get -q update \
         cmake \
         curl \
         doxygen \
+        findbugs \
         fuse \
         g++ \
         gcc \
         git \
         gnupg-agent \
+        libbcprov-java \
         libbz2-dev \
         libcurl4-openssl-dev \
         libfuse-dev \
@@ -64,11 +60,13 @@ RUN apt-get -q update \
         libsasl2-dev \
         libsnappy-dev \
         libssl-dev \
-        libsnappy-dev \
         libtool \
         libzstd1-dev \
         locales \
         make \
+        maven \
+        openjdk-11-jdk \
+        openjdk-8-jdk \
         pinentry-curses \
         pkg-config \
         python \
@@ -86,15 +84,28 @@ RUN apt-get -q update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+######
+# Set env vars required to build Hadoop
+######
+ENV MAVEN_HOME /usr
+# JAVA_HOME must be set in Maven >= 3.5.0 (MNG-6003)
+ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
+ENV FINDBUGS_HOME /usr
 
 #######
-# OpenJDK 8
+# Install Boost 1.72 (1.65 ships with Bionic)
 #######
-# hadolint ignore=DL3008
-RUN apt-get -q update \
-    && apt-get -q install -y --no-install-recommends openjdk-8-jdk libbcprov-java \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+# hadolint ignore=DL3003
+RUN mkdir -p /opt/boost-library \
+    && curl -L https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download > boost_1_72_0.tar.bz2 \
+    && mv boost_1_72_0.tar.bz2 /opt/boost-library \
+    && cd /opt/boost-library \
+    && tar --bzip2 -xf boost_1_72_0.tar.bz2 \
+    && cd /opt/boost-library/boost_1_72_0 \
+    && ./bootstrap.sh --prefix=/usr/ \
+    && ./b2 --without-python install \
+    && cd /root \
+    && rm -rf /opt/boost-library
 
 ######
 # Install Google Protobuf 3.7.1 (3.0.0 ships with Bionic)
@@ -113,29 +124,6 @@ RUN mkdir -p /opt/protobuf-src \
 ENV PROTOBUF_HOME /opt/protobuf
 ENV PATH "${PATH}:/opt/protobuf/bin"
 
-######
-# Install Apache Maven 3.6.0 (3.6.0 ships with Bionic)
-######
-# hadolint ignore=DL3008
-RUN apt-get -q update \
-    && apt-get -q install -y --no-install-recommends maven \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-ENV MAVEN_HOME /usr
-# JAVA_HOME must be set in Maven >= 3.5.0 (MNG-6003)
-ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
-
-######
-# Install findbugs 3.1.0 (3.1.0 ships with Bionic)
-# Ant is needed for findbugs
-######
-# hadolint ignore=DL3008
-RUN apt-get -q update \
-    && apt-get -q install -y --no-install-recommends findbugs ant \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-ENV FINDBUGS_HOME /usr
-
 ####
 # Install pylint at fixed version (2.0.0 removed python2 support)
 # https://github.com/PyCQA/pylint/issues/2294
@@ -150,10 +138,10 @@ RUN pip2 install \
 RUN pip2 install python-dateutil==2.7.3
 
 ###
-# Install node.js 8.17.0 for web UI framework (4.2.6 ships with Xenial)
+# Install node.js 10.21.0 for web UI framework (4.2.6 ships with Xenial)
 ###
-RUN curl -L -s -S https://deb.nodesource.com/setup_8.x | bash - \
-    && apt-get install -y --no-install-recommends nodejs=8.17.0-1nodesource1 \
+RUN curl -L -s -S https://deb.nodesource.com/setup_10.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs=10.21.0-1nodesource1 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && npm install -g bower@1.8.8

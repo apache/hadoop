@@ -153,7 +153,7 @@ public class ViewFsTestSetup {
         String prefix =
             new StringBuilder(Constants.CONFIG_VIEWFS_PREFIX).append(".")
                 .append((mountTable == null
-                    ? Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE
+                    ? ConfigUtil.getDefaultMountTableName(conf)
                     : mountTable))
                 .append(".").toString();
         out.writeBytes("<configuration>");

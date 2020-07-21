@@ -23,7 +23,7 @@ pipeline {
 
     options {
         buildDiscarder(logRotator(numToKeepStr: '5'))
-        timeout (time: 5, unit: 'HOURS')
+        timeout (time: 20, unit: 'HOURS')
         timestamps()
         checkoutToSubdirectory('src')
     }
@@ -153,6 +153,11 @@ pipeline {
 
                         # use emoji vote so it is easier to find the broken line
                         YETUS_ARGS+=("--github-use-emoji-vote")
+
+                        # test with Java 8 and 11
+                        YETUS_ARGS+=("--java-home=/usr/lib/jvm/java-8-openjdk-amd64")
+                        YETUS_ARGS+=("--multijdkdirs=/usr/lib/jvm/java-11-openjdk-amd64")
+                        YETUS_ARGS+=("--multijdktests=compile")
 
                         "${TESTPATCHBIN}" "${YETUS_ARGS[@]}"
                         '''

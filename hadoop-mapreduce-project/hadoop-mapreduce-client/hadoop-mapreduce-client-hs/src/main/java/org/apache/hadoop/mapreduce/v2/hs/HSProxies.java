@@ -23,7 +23,7 @@ import java.net.InetSocketAddress;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.mapreduce.v2.api.HSAdminRefreshProtocol;
 import org.apache.hadoop.mapreduce.v2.api.HSAdminRefreshProtocolPB;
@@ -93,7 +93,7 @@ public class HSProxies {
   private static Object createHSProxy(InetSocketAddress address,
       Configuration conf, UserGroupInformation ugi, Class<?> xface,
       int rpcTimeout) throws IOException {
-    RPC.setProtocolEngine(conf, xface, ProtobufRpcEngine.class);
+    RPC.setProtocolEngine(conf, xface, ProtobufRpcEngine2.class);
     Object proxy = RPC.getProxy(xface, RPC.getProtocolVersion(xface), address,
         ugi, conf, NetUtils.getDefaultSocketFactory(conf), rpcTimeout);
     return proxy;

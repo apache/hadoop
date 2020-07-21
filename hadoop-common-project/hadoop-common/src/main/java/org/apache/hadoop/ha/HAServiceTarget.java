@@ -45,6 +45,12 @@ public abstract class HAServiceTarget {
   private static final String ADDRESS_SUBST_KEY = "address";
 
   /**
+   * The HAState this service target is intended to be after transition
+   * is complete.
+   */
+  private HAServiceProtocol.HAServiceState transitionTargetHAStatus;
+
+  /**
    * @return the IPC address of the target node.
    */
   public abstract InetSocketAddress getAddress();
@@ -91,6 +97,15 @@ public abstract class HAServiceTarget {
   public HAServiceProtocol getProxy(Configuration conf, int timeoutMs)
       throws IOException {
     return getProxyForAddress(conf, timeoutMs, getAddress());
+  }
+
+  public void setTransitionTargetHAStatus(
+      HAServiceProtocol.HAServiceState status) {
+    this.transitionTargetHAStatus = status;
+  }
+
+  public HAServiceProtocol.HAServiceState getTransitionTargetHAStatus() {
+    return this.transitionTargetHAStatus;
   }
 
   /**

@@ -203,6 +203,9 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
   public void testFlushWithFileNotFoundException() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
     final Path testFilePath = new Path(methodName.getMethodName());
+    if (fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(testFilePath).toString())) {
+      return;
+    }
 
     FSDataOutputStream stream = fs.create(testFilePath);
     assertTrue(fs.exists(testFilePath));

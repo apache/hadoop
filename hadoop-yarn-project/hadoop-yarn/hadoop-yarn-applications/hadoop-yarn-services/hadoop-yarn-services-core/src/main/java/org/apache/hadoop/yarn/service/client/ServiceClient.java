@@ -1478,18 +1478,18 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     if ("file".equals(keytabURI.getScheme())) {
       LOG.info("Using a keytab from localhost: " + keytabURI);
     } else {
-      Path keytabOnhdfs = new Path(keytabURI);
-      if (!fileSystem.getFileSystem().exists(keytabOnhdfs)) {
+      Path keytabPath = new Path(keytabURI);
+      if (!fileSystem.getFileSystem().exists(keytabPath)) {
         LOG.warn(service.getName() + "'s keytab (principalName = "
-            + principalName + ") doesn't exist at: " + keytabOnhdfs);
+            + principalName + ") doesn't exist at: " + keytabPath);
         return;
       }
-      LocalResource keytabRes = fileSystem.createAmResource(keytabOnhdfs,
+      LocalResource keytabRes = fileSystem.createAmResource(keytabPath,
           LocalResourceType.FILE, LocalResourceVisibility.PRIVATE);
       localResource.put(String.format(YarnServiceConstants.KEYTAB_LOCATION,
           service.getName()), keytabRes);
       LOG.info("Adding " + service.getName() + "'s keytab for "
-          + "localization, uri = " + keytabOnhdfs);
+          + "localization, uri = " + keytabPath);
     }
   }
 
