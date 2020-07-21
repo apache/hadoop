@@ -27,6 +27,10 @@ import org.apache.hadoop.io.compress.Compressor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * This class creates lzo compressors/decompressors that are bridged
+ * to `org.apache.hadoop.io.compress.LzoCodec` from `com.hadoop.compression.lzo.LzoCodec`
+ */
 public class LzoCodec extends org.apache.hadoop.io.compress.LzoCodec {
   private static final Logger LOG = LoggerFactory.getLogger(LzoCodec.class.getName());
   private static final String gplLzoCodec = LzoCodec.class.getName();

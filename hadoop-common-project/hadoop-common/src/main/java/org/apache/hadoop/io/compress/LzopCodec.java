@@ -23,6 +23,9 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 
+/**
+ * This class creates lzop compressors/decompressors.
+ */
 public class LzopCodec extends io.airlift.compress.lzo.LzopCodec
     implements Configurable, CompressionCodec {
   @Override

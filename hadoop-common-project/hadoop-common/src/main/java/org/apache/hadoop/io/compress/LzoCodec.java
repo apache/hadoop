@@ -20,6 +20,9 @@ package org.apache.hadoop.io.compress;
 
 import org.apache.hadoop.conf.Configurable;
 
+/**
+ * This class creates lzo compressors/decompressors.
+ */
 public class LzoCodec extends io.airlift.compress.lzo.LzoCodec
     implements Configurable, CompressionCodec {
 }
