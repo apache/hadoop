@@ -641,4 +641,16 @@
     <Bug pattern="EQ_OVERRIDING_EQUALS_NOT_SYMMETRIC" />
   </Match>
 
+  <!-- Ignore WMI_WRONG_MAP_ITERATOR for EnumMap -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.state.StateMachineFactory" />
+    <Method name="generateStateGraph" />
+    <Bug pattern="WMI_WRONG_MAP_ITERATOR" />
+  </Match>
+
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.timelineservice.storage.common.ColumnRWHelper" />
+    <Method name="readResultsWithTimestamps" />
+    <Bug pattern="BX_UNBOXING_IMMEDIATELY_REBOXED" />
+  </Match>
 </FindBugsFilter>
