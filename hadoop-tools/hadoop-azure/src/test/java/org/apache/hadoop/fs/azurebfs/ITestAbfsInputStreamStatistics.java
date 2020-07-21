@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -366,15 +367,13 @@ public class ITestAbfsInputStreamStatistics
        * remotely could also be greater than 32Kb.
        *
        */
-      assertTrue(String.format("actual value of %d is not greater than or "
-              + "equal to the expected value %d for readAheadReadBytes counter",
-          stats.getReadAheadBytesRead(), CUSTOM_BLOCK_BUFFER_SIZE),
-          stats.getReadAheadBytesRead() >= CUSTOM_BLOCK_BUFFER_SIZE);
+      Assertions.assertThat(stats.getReadAheadBytesRead()).describedAs(
+          "Mismatch in readAheadBytesRead counter value")
+          .isGreaterThanOrEqualTo(CUSTOM_BLOCK_BUFFER_SIZE);
 
-      assertTrue(String.format("actual value of %d is not greater than or "
-              + "equal to the expected value %d for remoteBytesRead counter",
-          stats.getRemoteBytesRead(), CUSTOM_READ_AHEAD_BUFFER_SIZE),
-          stats.getRemoteBytesRead() >= CUSTOM_READ_AHEAD_BUFFER_SIZE);
+      Assertions.assertThat(stats.getRemoteBytesRead()).describedAs(
+          "Mismatch in remoteBytesRead counter value")
+          .isGreaterThanOrEqualTo(CUSTOM_READ_AHEAD_BUFFER_SIZE);
 
     } catch (InterruptedException e) {
       e.printStackTrace();
