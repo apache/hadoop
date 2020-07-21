@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import com.google.common.collect.Lists;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.Path;
@@ -45,12 +46,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Arrays;
 import java.util.EnumSet;
 
 class FSDirSnapshotOp {
-
-  static final XAttr.NameSpace XAttrNS = XAttr.NameSpace.SYSTEM;
   /** Verify if the snapshot name is legal. */
   static void verifySnapshotName(FSDirectory fsd, String snapshotName,
       String path)
@@ -271,14 +269,17 @@ class FSDirSnapshotOp {
       final int earliest = snapshottable.getDiffs().iterator().next()
           .getSnapshotId();
       if (snapshot.getId() != earliest) {
-        List<XAttr> existingXAttrs = XAttrStorage.readINodeXAttrs(srcRoot);
-        XAttr xAttr = buildXAttr(snapshotName);
-        // Mark the snapshot to be deleted in the xattr of the snapshot root
-        List<XAttr> newXAttrs = FSDirXAttrOp.setINodeXAttrs(fsd, existingXAttrs,
-            Arrays.asList(xAttr),
+        final XAttr snapshotXAttr = buildXAttr(snapshotName);
+        final List<XAttr> xattrs = Lists.newArrayListWithCapacity(1);
+        xattrs.add(snapshotXAttr);
+
+        // The snapshot to be deleted is just marked for deletion in the xAttr.
+        // Same snaphot delete call can happen multiple times until annd unless
+        // the very 1st instance of a snapshot delete hides it/remove it from
+        // snapshot list. XAttrSetFlag.REPLACE needs to be set to here in order
+        // to address this.
+        FSDirXAttrOp.unprotectedSetXAttrs(fsd, iip, xattrs,
             EnumSet.of(XAttrSetFlag.CREATE, XAttrSetFlag.REPLACE));
-        XAttrStorage.updateINodeXAttrs(srcRoot, newXAttrs,
-            iip.getLatestSnapshotId());
         return null;
       }
     }
@@ -375,8 +376,8 @@ class FSDirSnapshotOp {
   }
 
   static String buildXAttrName(String snapName) {
-    return StringUtils.toLowerCase(XAttrNS.toString())
-        + "." + HdfsServerConstants.SNAPSHOT_XATTR_NAME + "." + snapName;
+    return StringUtils.toLowerCase(HdfsServerConstants.SNAPSHOT_XATTR_NAME
+        + "." + snapName);
   }
 
   public static XAttr buildXAttr(String snapName) {

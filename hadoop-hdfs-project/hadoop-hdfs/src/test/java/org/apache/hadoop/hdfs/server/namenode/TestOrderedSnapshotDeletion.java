@@ -24,7 +24,6 @@ import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.XAttrHelper;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -35,6 +34,7 @@ import java.util.EnumSet;
 import java.util.Map;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -102,8 +102,9 @@ public class TestOrderedSnapshotDeletion {
     XAttrFeature f = inode.getXAttrFeature();
     XAttr xAttr = f.getXAttr(FSDirSnapshotOp.buildXAttrName(snapshot));
     assertTrue("Snapshot xAttr should exist", xAttr != null);
-    assertTrue(xAttr.getName().equals(getXattrName(snapshot)));
+    assertTrue(xAttr.getName().contains(snapshot));
     assertTrue(xAttr.getNameSpace().equals(XAttr.NameSpace.SYSTEM));
+    assertNull(xAttr.getValue());
 
     // Make sure its not user visible
     Map<String, byte[]> xattrMap = hdfs.getXAttrs(snapshottableDir);
@@ -145,10 +146,5 @@ public class TestOrderedSnapshotDeletion {
     hdfs.mkdirs(sub1);
     hdfs.createSnapshot(snapshottableDir, "s1");
     assertXAttrSet(snapshottableDir, "s1", hdfs, newXAttr);
-  }
-
-
-  private static String getXattrName(String snapshot) {
-    return HdfsServerConstants.SNAPSHOT_XATTR_NAME + "." + snapshot;
   }
 }
