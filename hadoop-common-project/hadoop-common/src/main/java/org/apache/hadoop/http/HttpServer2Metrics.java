@@ -135,7 +135,7 @@ public class HttpServer2Metrics {
     return handler.getResponses5xx();
   }
   @Metric("total number of bytes across all responses")
-  public long getResponsesBytesTotal() {
+  public long responsesBytesTotal() {
     return handler.getResponsesBytesTotal();
   }
   @Metric("time in milliseconds stats have been collected for")

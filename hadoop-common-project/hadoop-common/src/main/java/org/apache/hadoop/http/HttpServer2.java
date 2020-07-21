@@ -50,6 +50,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
@@ -673,7 +674,7 @@ public final class HttpServer2 implements FilterContainer {
     if (conf.getBoolean(CommonConfigurationKeysPublic.HADOOP_HTTP_METRICS_ENABLED,
         CommonConfigurationKeysPublic.HADOOP_HTTP_METRICS_ENABLED_DEFAULT)) {
       statsHandler = new StatisticsHandler();
-      webServer.setHandler(statsHandler);
+      handlers.addHandler(statsHandler);
     }
 
     final String appDir = getWebAppsPath(name);
@@ -1813,4 +1814,10 @@ public final class HttpServer2 implements FilterContainer {
             splitVal[1]);
     return headers;
   }
+
+  @VisibleForTesting
+  HttpServer2Metrics getMetrics() {
+    return metrics;
+  }
+
 }
