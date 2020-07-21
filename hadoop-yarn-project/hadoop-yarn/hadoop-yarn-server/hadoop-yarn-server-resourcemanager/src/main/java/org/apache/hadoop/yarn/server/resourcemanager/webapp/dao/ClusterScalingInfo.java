@@ -41,11 +41,16 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
+import java.util.NavigableMap;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 import org.slf4j.Logger;
@@ -106,24 +111,24 @@ public class ClusterScalingInfo {
     this.consideredResourceTypes =
         resTypes == null ? ResourceInformation.MEMORY_URI : resTypes;
 
-    QueueMetrics metrics = rs.getRootQueueMetrics();
-    int pendingAppCount = metrics.getAppsPending();
-    int pendingContainersCount = metrics.getPendingContainers();
-    List<FiCaSchedulerNode> rmNodes =
-        ((CapacityScheduler) rs).getAllNodes();
-
+    CapacityScheduler cs = (CapacityScheduler) rs;
+    List<FiCaSchedulerNode> rmNodes = cs.getAllNodes();
     if (rmNodes.size() == 0) {
       return;
     }
 
-    // The downscaling
-    recommendDownscaling(rmNodes, decommissionCandidates,
-        downscalingFactorInNodeCount);
-
     // The upscaling
-    recommendUpscaling(pendingAppCount, pendingContainersCount,
-        metrics.getContainerAskToCount(), consideredResourceTypes, nodeInstanceTypeList,
-        newNMCandidates);
+    boolean upScale = recommendUpscaling(cs, consideredResourceTypes,
+        nodeInstanceTypeList, newNMCandidates);
+
+    // Downscale when CB requests with downscalingFactorInNodeCount or
+    // there is no upscale happened.
+    if (downscalingFactorInNodeCount >= 0 || !upScale) {
+      // The downscaling
+      recommendDownscaling(rmNodes, decommissionCandidates,
+          downscalingFactorInNodeCount);
+    }
+
     this.autoScalerInfo = new AutoScalerInfo(rs);
   }
 
@@ -223,7 +228,7 @@ public class ClusterScalingInfo {
       return;
     }
     // if negative value, it means let the engine decide.
-    if (downscalingFactorInNodeCount <= 0) {
+    if (downscalingFactorInNodeCount < 0) {
       upToEngine = true;
     }
     HashMap<RMNode, Integer> nodeToDecommissionTimeout = new HashMap<>();
@@ -314,23 +319,111 @@ public class ClusterScalingInfo {
     return false;
   }
 
-  public static void recommendUpscaling(int pendingAppCount,
-      int pendingContainersCount,
-      Map<Resource, Integer> containerAskToCount,
-      String resourceTypes,
-      NodeInstanceTypeList nodeInstanceTypeList,
-      NewNMCandidates newNMCandidates) {
-    if (pendingAppCount > 0 ||
-        pendingContainersCount > 0) {
-      // Given existing node types, found the maximum count of instance
-      // that can serve the pending resource. Generally, the more instance,
-      // the more opportunity for future scale down
+  // Fetches the pending containers which cannot be fit in
+  // available space of any running nodes
+  public static class UpScaleArbiter {
 
+    private Map<Resource, Integer> getContainerAskToCount(
+        CapacityScheduler cs) {
+      NavigableMap<Resource, Integer> containerAskToCount = new TreeMap<>(
+          new Comparator<Resource>() {
+              @Override
+              public int compare(Resource o1, Resource o2) {
+                return o2.compareTo(o1);
+              }
+           });
+
+      // Step 1: Get all Pending Containers
+      QueueMetrics metrics = cs.getRootQueueMetrics();
+      containerAskToCount.putAll(metrics.getContainerAskToCount());
+
+      ResourceCalculator rc = cs.getResourceCalculator();
+      List<FiCaSchedulerNode> rmNodes = cs.getAllNodes();
+      Resource minimumAllocation = cs.getMinimumAllocation();
+      Resource clusterResource = cs.getClusterResource();
+
+      // Step 2: Sort the available resources from existing nodes
+      LinkedList<Resource> availableResources = new LinkedList<>();
+      for (FiCaSchedulerNode rmNode : rmNodes) {
+        Resource nodeAvailableResource = Resources.add(
+            rmNode.getUnallocatedResource(),
+            rmNode.getTotalKillableResources());
+        if (rc.computeAvailableContainers(nodeAvailableResource,
+            minimumAllocation) > 0) {
+          availableResources.add(nodeAvailableResource);
+        }
+      }
+
+      if (availableResources.isEmpty()) {
+        return containerAskToCount;
+      }
+      Collections.sort(availableResources);
+
+      // Step 3: Order the Pending Containers by placing smaller capacity ahead
+      NavigableMap<Resource, Integer> revMap = containerAskToCount.descendingMap();
+
+      // Step 4: Find the Pending Containers which cannot be fit with
+      // available resources.
+      for (Map.Entry<Resource, Integer> pendingContainer :
+           revMap.entrySet()) {
+        Resource pending = Resources.clone(pendingContainer.getKey());
+        int count = pendingContainer.getValue();
+
+        // No Available Resources to fit the pending resources
+        if (availableResources.isEmpty() || Resources.lessThan(rc,
+            clusterResource, availableResources.getLast(), pending)) {
+          break;
+        }
+
+        ListIterator<Resource> listItr = availableResources.listIterator();
+        while (listItr.hasNext() && count > 0) {
+          Resource curavailable = listItr.next();
+          Resource available = Resources.clone(curavailable);
+          while (Resources.greaterThanOrEqual(rc,
+              clusterResource, available, pending) && count > 0) {
+            Resources.subtractFrom(available, pending);
+            count--;
+          }
+          if (count > 0) {
+            listItr.remove();
+          }
+        }
+
+        if (count == 0) {
+          containerAskToCount.remove(pendingContainer.getKey());
+        } else {
+          containerAskToCount.put(pendingContainer.getKey(), count);
+        }
+      }
+      return containerAskToCount;
+    }
+  }
+
+  public static boolean recommendUpscaling(CapacityScheduler cs,
+      String resourceTypes, NodeInstanceTypeList nodeInstanceTypeList,
+      NewNMCandidates newNMCandidates) {
+
+    QueueMetrics metrics = cs.getRootQueueMetrics();
+    int pendingAppCount = metrics.getAppsPending();
+    int pendingContainersCount = metrics.getPendingContainers();
+
+    if (pendingAppCount > 0 || pendingContainersCount > 0) {
       // Choose resource calculator based on specified resource types
       ResourceCalculator rc = chooseResCalculator(resourceTypes);
-      recommendNewInstances(containerAskToCount, newNMCandidates,
-          nodeInstanceTypeList.getInstanceTypes(), rc);
+      UpScaleArbiter upScaleArbiter = new UpScaleArbiter();
+      Map<Resource, Integer> containerAskToCount =
+          upScaleArbiter.getContainerAskToCount(cs);
+
+      if (containerAskToCount.size() > 0) {
+        // Given existing node types, found the maximum count of instance
+        // that can serve the pending resource. Generally, the more instance,
+        // the more opportunity for future scale down
+        recommendNewInstances(containerAskToCount, newNMCandidates,
+            nodeInstanceTypeList.getInstanceTypes(), rc);
+        return true;
+      }
     }
+    return false;
   }
 
   // If only contains "memory-mb", use default resource calculator
@@ -358,12 +451,13 @@ public class ClusterScalingInfo {
       NewNMCandidates newNMCandidates, List<NodeInstanceType> allTypes,
       ResourceCalculator rc) {
     int[] suitableInstanceRet = null;
-    StringBuilder tip = new StringBuilder();
 
     Iterator<Map.Entry<Resource, Integer>> it =
         pendingContainers.entrySet().iterator();
+
     while (it.hasNext()) {
       Map.Entry<Resource, Integer> entry = it.next();
+
       // What if the existing new instance have headroom
       // to allocate for some containers?
       // Try allocate on existing nodes' headroom
@@ -377,9 +471,8 @@ public class ClusterScalingInfo {
           entry.getKey(), allTypes, rc);
       int ti = suitableInstanceRet[0];
       if (ti == -1) {
-        tip.append(String.format(
-            "No capable instance type for container resource: %s, count: %d",
-            entry.getKey(), entry.getValue()));
+        LOG.warn("No capable instance type for container resource: "
+            + entry.getKey() + ", count: " + entry.getValue());
       } else {
         Resource containerResource = entry.getKey();
         int containerCount = entry.getValue();

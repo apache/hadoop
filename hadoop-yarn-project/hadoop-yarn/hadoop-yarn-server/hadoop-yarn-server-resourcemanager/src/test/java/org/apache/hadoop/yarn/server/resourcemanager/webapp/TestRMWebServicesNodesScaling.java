@@ -109,7 +109,6 @@ import com.sun.jersey.test.framework.WebAppDescriptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 public class TestRMWebServicesNodesScaling extends JerseyTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(
       TestRMWebServicesNodesScaling.class);
@@ -351,6 +350,110 @@ public class TestRMWebServicesNodesScaling extends JerseyTestBase {
     assertEquals(400, response.getStatusInfo().getStatusCode());
 
     rm.stop();
+  }
+
+  /* This tests recommendation upscale logic when there is a pending app and
+   * pending container with nodes available to fit them.
+   */
+  @Test
+  public void testRecommendationWhenAvailableResource()
+      throws JSONException, Exception {
+    // Recommendation should not recommend any upscale of nodes
+    ClientResponse response = getResponseWithPendingResource(8, false);
+
+    JSONObject json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 6, json.length());
+    JSONObject newCandidates = json.getJSONObject("newNMCandidates");
+    assertTrue("Should have no upscaling info.",
+        !newCandidates.has("candidates"));
+  }
+
+
+  /* This tests Fragmentation Scenario where all the nodes available
+   * resource combined can fit the pending but not separate.
+   */
+  @Test
+  public void testRecommendationDuringFragmentation()
+      throws JSONException, Exception {
+    // Recommendation Engine should recommend upscale of a node with 16GB
+    ClientResponse response = getResponseWithPendingResource(16, true);
+
+    JSONObject json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 6, json.length());
+    JSONObject newCandidates = json.getJSONObject("newNMCandidates");
+
+    JSONArray newNodesArray = newCandidates.getJSONArray("candidates");
+    assertEquals(1, newNodesArray.length());
+    // 1 new node recommendation
+    assertEquals("Incorrect upscaling node count", "1",
+        newNodesArray.getJSONObject(0).getString("count"));
+    assertEquals("Incorrect upscaling node type", "m5.xlarge",
+        newNodesArray.getJSONObject(0).getString("modelName"));
+  }
+
+
+  private ClientResponse getResponseWithPendingResource(int memorySize,
+      boolean heartbeat) throws JSONException, Exception {
+    rm.start();
+    ResourceScheduler scheduler = rm.getRMContext().getScheduler();
+    MockNM[] nms = new MockNM[3];
+    MockNM nm1 = rm.registerNode("127.0.0.1:1234", 10 * GB, 4);
+    MockNM nm2 = rm.registerNode("127.0.0.2:1234", 10 * GB, 4);
+    MockNM nm3 = rm.registerNode("127.0.0.3:1234", 10 * GB, 4);
+    nms[0] = nm1;
+    nms[1] = nm2;
+    nms[2] = nm3;
+    waitforNMRegistered(scheduler, 3, 5);
+
+    WebResource r = resource();
+    NodeInstanceTypeList niTypeList = new NodeInstanceTypeList();
+    niTypeList.getInstanceTypes().addAll(fakeInstanceTypes(1));
+    String niTypeListStr = toJson(niTypeList, NodeInstanceTypeList.class);
+
+    // Submit a Application which will be in pending
+    Thread t = new Thread() {
+      @Override
+      public void run() {
+        try {
+          MockRMAppSubmissionData data =
+              MockRMAppSubmissionData.Builder.createWithMemory(memorySize * GB, rm)
+                  .withAppName("app-1")
+                  .withUser("user1")
+                  .withAcls(null)
+                  .withQueue("default")
+                  .build();
+          RMApp app1 = MockRMAppSubmitter.submit(rm, data);
+          MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nms);
+
+          Resource cResource = Resources.createResource(memorySize * GB, 1);
+          am1.allocate("*", cResource, 1, new ArrayList<ContainerId>(), null);
+        } catch (Exception e) {
+          Assert.fail("Unexpected Exception: " + e.getMessage());
+        }
+      }
+    };
+    t.start();
+
+    if (heartbeat) {
+      nm1.nodeHeartbeat(true);
+      nm2.nodeHeartbeat(true);
+      nm3.nodeHeartbeat(true);
+    }
+
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+        .path("scaling")
+        .queryParam(RMWSConsts.UPSCALING_FACTOR_IN_NODE_RESOURCE_TYPES_KEY,
+            ResourceInformation.MEMORY_URI)
+        .header(RMWSConsts.SCALING_CUSTOM_HEADER_KEY,
+            RMWSConsts.SCALING_CUSTOM_HEADER_VERSION_V1)
+        .entity(niTypeListStr, MediaType.APPLICATION_JSON)
+        .accept("application/json").post(ClientResponse.class);
+
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
+
+    rm.stop();
+    return response;
   }
 
   @Test
