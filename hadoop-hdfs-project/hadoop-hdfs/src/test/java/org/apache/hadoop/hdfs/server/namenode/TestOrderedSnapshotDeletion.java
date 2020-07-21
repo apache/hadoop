@@ -36,9 +36,7 @@ import java.io.IOException;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED;
 
-/**
- * Test ordered snapshot deletion
- */
+/** Test ordered snapshot deletion. */
 public class TestOrderedSnapshotDeletion {
   static final Logger LOG = LoggerFactory.getLogger(FSDirectory.class);
 
