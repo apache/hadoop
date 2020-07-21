@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.XAttrHelper;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -41,8 +42,8 @@ import static org.junit.Assert.assertTrue;
  * Test ordered snapshot deletion.
  */
 public class TestOrderedSnapshotDeletion {
-  static final String name = "user.a1";
-  static final byte[] value = {0x31, 0x32, 0x33};
+  static final String name1 = "user.a1";
+  static final byte[] value1 = {0x31, 0x32, 0x33};
   private final Path snapshottableDir
       = new Path("/" + getClass().getSimpleName());
 
@@ -83,15 +84,15 @@ public class TestOrderedSnapshotDeletion {
     hdfs.mkdirs(sub2);
     hdfs.createSnapshot(snapshottableDir, "s2");
 
-    assertXAttrSet(snapshottableDir, "s1", hdfs, null);
-    assertXAttrSet(snapshottableDir, "s2", hdfs, null);
+    assertXAttrSet("s1", hdfs, null);
+    assertXAttrSet("s2", hdfs, null);
     hdfs.deleteSnapshot(snapshottableDir, "s0");
-    assertXAttrSet(snapshottableDir, "s2", hdfs, null);
+    assertXAttrSet("s2", hdfs, null);
     hdfs.deleteSnapshot(snapshottableDir, "s1");
     hdfs.deleteSnapshot(snapshottableDir, "s2");
   }
 
-  void assertXAttrSet(Path snapshottableDir, String snapshot,
+  void assertXAttrSet(String snapshot,
                       DistributedFileSystem hdfs, XAttr newXattr)
       throws IOException {
     hdfs.deleteSnapshot(snapshottableDir, snapshot);
@@ -109,7 +110,7 @@ public class TestOrderedSnapshotDeletion {
     // Make sure its not user visible
     Map<String, byte[]> xattrMap = hdfs.getXAttrs(snapshottableDir);
     assertTrue(newXattr == null ? xattrMap.isEmpty() :
-        Arrays.equals(newXattr.getValue(), xattrMap.get(name)));
+        Arrays.equals(newXattr.getValue(), xattrMap.get(name1)));
   }
 
   @Test(timeout = 60000)
@@ -125,19 +126,17 @@ public class TestOrderedSnapshotDeletion {
     final Path sub1 = new Path(snapshottableDir, "sub1");
     hdfs.mkdirs(sub1);
     hdfs.createSnapshot(snapshottableDir, "s1");
-    assertXAttrSet(snapshottableDir, "s1", hdfs, null);
+    assertXAttrSet("s1", hdfs, null);
     cluster.restartNameNodes();
-    assertXAttrSet(snapshottableDir, "s1", hdfs, null);
+    assertXAttrSet("s1", hdfs, null);
   }
 
   @Test(timeout = 60000)
-  public void testSnapshotXAttrWithPreExistingXattrs() throws Exception {
+  public void testSnapshotXattrWithSaveNameSpace() throws Exception {
     DistributedFileSystem hdfs = cluster.getFileSystem();
     hdfs.mkdirs(snapshottableDir);
     hdfs.allowSnapshot(snapshottableDir);
-    hdfs.setXAttr(snapshottableDir, name, value,
-        EnumSet.of(XAttrSetFlag.CREATE));
-    XAttr newXAttr = XAttrHelper.buildXAttr(name, value);
+
     final Path sub0 = new Path(snapshottableDir, "sub0");
     hdfs.mkdirs(sub0);
     hdfs.createSnapshot(snapshottableDir, "s0");
@@ -145,6 +144,29 @@ public class TestOrderedSnapshotDeletion {
     final Path sub1 = new Path(snapshottableDir, "sub1");
     hdfs.mkdirs(sub1);
     hdfs.createSnapshot(snapshottableDir, "s1");
-    assertXAttrSet(snapshottableDir, "s1", hdfs, newXAttr);
+    assertXAttrSet("s1", hdfs, null);
+    hdfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
+    hdfs.saveNamespace();
+    hdfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
+    cluster.restartNameNodes();
+    assertXAttrSet("s1", hdfs, null);
+  }
+  
+  @Test(timeout = 60000)
+  public void testSnapshotXAttrWithPreExistingXattrs() throws Exception {
+    DistributedFileSystem hdfs = cluster.getFileSystem();
+    hdfs.mkdirs(snapshottableDir);
+    hdfs.allowSnapshot(snapshottableDir);
+    hdfs.setXAttr(snapshottableDir, name1, value1,
+        EnumSet.of(XAttrSetFlag.CREATE));
+    XAttr newXAttr = XAttrHelper.buildXAttr(name1, value1);
+    final Path sub0 = new Path(snapshottableDir, "sub0");
+    hdfs.mkdirs(sub0);
+    hdfs.createSnapshot(snapshottableDir, "s0");
+
+    final Path sub1 = new Path(snapshottableDir, "sub1");
+    hdfs.mkdirs(sub1);
+    hdfs.createSnapshot(snapshottableDir, "s1");
+    assertXAttrSet("s1", hdfs, newXAttr);
   }
 }

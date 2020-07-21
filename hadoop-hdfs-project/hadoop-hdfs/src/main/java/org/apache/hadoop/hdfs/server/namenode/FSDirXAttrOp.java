@@ -41,7 +41,11 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.ListIterator;
 
-import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.*;
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.SECURITY_XATTR_UNREADABLE_BY_SUPERUSER;
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY;
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_FILE_ENCRYPTION_INFO;
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.SNAPSHOT_XATTR_NAME;
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_ENCRYPTION_ZONE;
 
 class FSDirXAttrOp {
   private static final XAttr KEYID_XATTR =
