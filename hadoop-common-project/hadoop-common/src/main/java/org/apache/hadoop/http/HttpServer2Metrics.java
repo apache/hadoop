@@ -17,13 +17,14 @@
  */
 package org.apache.hadoop.http;
 
+import org.eclipse.jetty.server.handler.StatisticsHandler;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
-import org.eclipse.jetty.server.handler.StatisticsHandler;
 
 /**
  * This class collects all the metrics of Jetty's StatisticsHandler
