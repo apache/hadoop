@@ -296,7 +296,7 @@ public class ITestAbfsInputStreamStatistics
    * Testing readAhead counters in AbfsInputStream with 30 seconds timeout.
    */
   @Test(timeout = TIMEOUT_30_SECONDS)
-  public void testReadAheadCounters() throws IOException {
+  public void testReadAheadCounters() throws IOException, InterruptedException {
     describe("Test to check correct values for readAhead counters in "
         + "AbfsInputStream");
 
@@ -375,8 +375,6 @@ public class ITestAbfsInputStreamStatistics
           "Mismatch in remoteBytesRead counter value")
           .isGreaterThanOrEqualTo(CUSTOM_READ_AHEAD_BUFFER_SIZE);
 
-    } catch (InterruptedException e) {
-      e.printStackTrace();
     } finally {
       IOUtils.cleanupWithLogger(LOG, out, in);
     }
