@@ -20,84 +20,158 @@ package org.apache.hadoop.io.compress;
 
 import java.io.IOException;
 
+import java.io.InputStream;
+import java.io.OutputStream;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.io.compress.lzo.*;
 
 /**
  * This class creates lzop compressors/decompressors.
  */
-public class LzopCodec extends io.airlift.compress.lzo.LzopCodec
-    implements Configurable, CompressionCodec {
-  @Override
-  public Class<? extends Compressor> getCompressorType()
-    {
-        return HadoopLzopCompressor.class;
-    }
-
-  @Override
-  public Compressor createCompressor()
-    {
-        return new HadoopLzopCompressor();
-    }
+public class LzopCodec implements Configurable, CompressionCodec {
+  private Configuration conf;
 
   /**
-   * No Hadoop code seems to actually use the compressor, so just return a dummy one so the createOutputStream method
-   * with a compressor can function.  This interface can be implemented if needed.
+   * Set the configuration to be used by this object.
+   *
+   * @param conf the configuration object.
    */
-  @DoNotPool
-  static class HadoopLzopCompressor
-      implements Compressor {
-    @Override
-    public void setInput(byte[] b, int off, int len) {
-      throw new UnsupportedOperationException("LZOP block compressor is not supported");
-    }
+  @Override
+  public void setConf(Configuration conf) {
+    this.conf = conf;
+  }
 
-    @Override
-    public boolean needsInput() {
-      throw new UnsupportedOperationException("LZOP block compressor is not supported");
-    }
+  /**
+   * Return the configuration used by this object.
+   *
+   * @return the configuration object used by this objec.
+   */
+  @Override
+  public Configuration getConf() {
+    return conf;
+  }
 
-    @Override
-    public void setDictionary(byte[] b, int off, int len) {
-      throw new UnsupportedOperationException("LZOP block compressor is not supported");
-    }
+  /**
+   * Create a {@link CompressionOutputStream} that will write to the given
+   * {@link OutputStream}.
+   *
+   * @param out the location for the final output stream
+   * @return a stream the user can write uncompressed data to have it compressed
+   * @throws IOException
+   */
+  @Override
+  public CompressionOutputStream createOutputStream(OutputStream out)
+          throws IOException {
+    return CompressionCodec.Util.
+            createOutputStreamWithCodecPool(this, conf, out);
+  }
 
-    @Override
-    public long getBytesRead() {
-      throw new UnsupportedOperationException("LZOP block compressor is not supported");
-    }
+  /**
+   * Create a {@link CompressionOutputStream} that will write to the given
+   * {@link OutputStream} with the given {@link Compressor}.
+   *
+   * @param out        the location for the final output stream
+   * @param compressor compressor to use
+   * @return a stream the user can write uncompressed data to have it compressed
+   * @throws IOException
+   */
+  @Override
+  public CompressionOutputStream createOutputStream(OutputStream out,
+                                                    Compressor compressor) throws IOException {
+    int bufferSize = conf.getInt(
+            CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZO_BUFFERSIZE_KEY,
+            CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZO_BUFFERSIZE_DEFAULT);
+    return new LzopOutputStream(out, bufferSize);
+  }
 
-    @Override
-    public long getBytesWritten() {
-      throw new UnsupportedOperationException("LZOP block compressor is not supported");
-    }
+  /**
+   * Get the type of {@link Compressor} needed by this {@link CompressionCodec}.
+   *
+   * @return the type of compressor needed by this codec.
+   */
+  @Override
+  public Class<? extends Compressor> getCompressorType() {
+    return LzopCompressor.class;
+  }
 
-    @Override
-    public void finish() {
-      throw new UnsupportedOperationException("LZOP block compressor is not supported");
-    }
+  /**
+   * Create a new {@link Compressor} for use by this {@link CompressionCodec}.
+   *
+   * @return a new compressor for use by this codec
+   */
+  @Override
+  public Compressor createCompressor() {
+    int bufferSize = conf.getInt(
+            CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZO_BUFFERSIZE_KEY,
+            CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZO_BUFFERSIZE_DEFAULT);
+    return new LzopCompressor(bufferSize);
+  }
 
-    @Override
-    public boolean finished() {
-      throw new UnsupportedOperationException("LZOP block compressor is not supported");
-    }
+  /**
+   * Create a {@link CompressionInputStream} that will read from the given
+   * input stream.
+   *
+   * @param in the stream to read compressed bytes from
+   * @return a stream to read uncompressed bytes from
+   * @throws IOException
+   */
+  @Override
+  public CompressionInputStream createInputStream(InputStream in)
+          throws IOException {
+    return CompressionCodec.Util.
+            createInputStreamWithCodecPool(this, conf, in);
+  }
 
-    @Override
-    public int compress(byte[] b, int off, int len) throws IOException {
-      throw new UnsupportedOperationException("LZOP block compressor is not supported");
-    }
+  /**
+   * Create a {@link CompressionInputStream} that will read from the given
+   * {@link InputStream} with the given {@link Decompressor}.
+   *
+   * @param in           the stream to read compressed bytes from
+   * @param decompressor decompressor to use
+   * @return a stream to read uncompressed bytes from
+   * @throws IOException
+   */
+  @Override
+  public CompressionInputStream createInputStream(InputStream in,
+                                                  Decompressor decompressor) throws IOException {
+    int bufferSize = conf.getInt(
+            CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZO_BUFFERSIZE_KEY,
+            CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZO_BUFFERSIZE_DEFAULT);
+    return new LzopInputStream(in, bufferSize);
+  }
 
-    @Override
-    public void reset() {
-    }
+  /**
+   * Get the type of {@link Decompressor} needed by this {@link CompressionCodec}.
+   *
+   * @return the type of decompressor needed by this codec.
+   */
+  @Override
+  public Class<? extends Decompressor> getDecompressorType() {
+    return LzopDecompressor.class;
+  }
 
-    @Override
-    public void end() {
-      throw new UnsupportedOperationException("LZOP block compressor is not supported");
-    }
+  /**
+   * Create a new {@link Decompressor} for use by this {@link CompressionCodec}.
+   *
+   * @return a new decompressor for use by this codec
+   */
+  @Override
+  public Decompressor createDecompressor() {
+    int bufferSize = conf.getInt(
+            CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZO_BUFFERSIZE_KEY,
+            CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZO_BUFFERSIZE_DEFAULT);
+    return new LzopDecompressor(bufferSize);
+  }
 
-    @Override
-    public void reinit(Configuration conf) {
-    }
+  /**
+   * Get the default filename extension for this kind of compression.
+   *
+   * @return <code>.lzo</code>.
+   */
+  @Override
+  public String getDefaultExtension() {
+    return CodecConstants.LZO_CODEC_EXTENSION;
   }
 }
