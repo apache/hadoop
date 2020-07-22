@@ -358,7 +358,6 @@ public class LogLevel {
 
       out.println(FORMS);
       out.println(ServletUtil.HTML_TAIL);
-      out.close();
     }
 
     static final String FORMS = "\n<br /><hr /><h3>Get / Set</h3>"

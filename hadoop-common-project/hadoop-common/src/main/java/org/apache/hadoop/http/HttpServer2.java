@@ -670,16 +670,19 @@ public final class HttpServer2 implements FilterContainer {
       handlers.addHandler(requestLogHandler);
     }
     handlers.addHandler(webAppContext);
-
-    if (conf.getBoolean(CommonConfigurationKeysPublic.HADOOP_HTTP_METRICS_ENABLED,
-        CommonConfigurationKeysPublic.HADOOP_HTTP_METRICS_ENABLED_DEFAULT)) {
-      statsHandler = new StatisticsHandler();
-      handlers.addHandler(statsHandler);
-    }
-
     final String appDir = getWebAppsPath(name);
     addDefaultApps(contexts, appDir, conf);
     webServer.setHandler(handlers);
+
+    // Jetty StatisticsHandler should be the first handler.
+    // The handler returns 503 if there is no next handler and the response is
+    // not committed. In Apache Hadoop, there are some servlets that do not
+    // commit (i.e. close) the response. Therefore the handler fails.
+    if (conf.getBoolean(CommonConfigurationKeysPublic.HADOOP_HTTP_METRICS_ENABLED,
+        CommonConfigurationKeysPublic.HADOOP_HTTP_METRICS_ENABLED_DEFAULT)) {
+      statsHandler = new StatisticsHandler();
+      webServer.insertHandler(statsHandler);
+    }
 
     Map<String, String> xFrameParams = setHeaders(conf);
     addGlobalFilter("safety", QuotingInputFilter.class.getName(), xFrameParams);

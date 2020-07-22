@@ -51,7 +51,6 @@ public class HttpServerFunctionalTest extends Assert {
     ) throws ServletException, IOException {
       Assert.assertEquals(63 * 1024, request.getHeader("longheader").length());
       response.setStatus(HttpServletResponse.SC_OK);
-      response.getWriter().close();
     }
   }
 
