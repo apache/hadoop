@@ -28,6 +28,7 @@ import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectorySnapshottableFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
@@ -149,6 +150,23 @@ class FSDirSnapshotOp {
     try {
       final String user = pc.isSuperUser()? null : pc.getUser();
       return snapshotManager.getSnapshottableDirListing(user);
+    } finally {
+      fsd.readUnlock();
+    }
+  }
+
+  static SnapshotStatus[] getSnapshotListing(
+      FSDirectory fsd, SnapshotManager snapshotManager, String path)
+      throws IOException {
+    FSPermissionChecker pc = fsd.getPermissionChecker();
+    fsd.readLock();
+    try {
+      INodesInPath iip = fsd.getINodesInPath(path, DirOp.READ);
+      if (fsd.isPermissionEnabled()) {
+        fsd.checkPermission(pc, iip, false, null, null, FsAction.READ,
+            FsAction.READ);
+      }
+      return snapshotManager.getSnapshotListing(iip);
     } finally {
       fsd.readUnlock();
     }

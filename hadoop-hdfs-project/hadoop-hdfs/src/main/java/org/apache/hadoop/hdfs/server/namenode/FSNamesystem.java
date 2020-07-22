@@ -99,6 +99,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.text.CaseUtils;
 import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.server.namenode.FSDirStatAndListingOp.*;
 import static org.apache.hadoop.ha.HAServiceProtocol.HAServiceState.ACTIVE;
@@ -7001,7 +7002,33 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     logAuditEvent(true, operationName, null, null, null);
     return status;
   }
-  
+
+  /**
+   * Get the list of snapshots for a given snapshottable directory.
+   *
+   * @return The list of all the snapshots for a snapshottable directory
+   * @throws IOException
+   */
+  public SnapshotStatus[] getSnapshotListing(String snapshotRoot)
+      throws IOException {
+    SnapshotStatus[] status = null;
+    checkOperation(OperationCategory.READ);
+    boolean success = false;
+    readLock();
+    try {
+      checkOperation(OperationCategory.READ);
+      status = FSDirSnapshotOp.getSnapshotListing(dir, snapshotManager,
+          snapshotRoot);
+      success = true;
+    } catch (AccessControlException ace) {
+      logAuditEvent(success, "listSnapshots", null, null, null);
+      throw ace;
+    } finally {
+      readUnlock();
+    }
+    logAuditEvent(success, "listSnapshots", null, null, null);
+    return status;
+  }
   /**
    * Get the difference between two snapshots (or between a snapshot and the
    * current status) of a snapshottable directory.

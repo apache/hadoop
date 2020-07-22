@@ -28,6 +28,7 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamespaceInfo;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
@@ -155,6 +156,22 @@ public class RouterSnapshot {
             nss, method, true, false, SnapshottableDirectoryStatus[].class);
 
     return RouterRpcServer.merge(ret, SnapshottableDirectoryStatus.class);
+  }
+
+  public SnapshotStatus[] getSnapshotListing(String snapshotRoot)
+      throws IOException {
+    rpcServer.checkOperation(NameNode.OperationCategory.READ);
+    final List<RemoteLocation> locations =
+        rpcServer.getLocationsForPath(snapshotRoot, true, false);
+    RemoteMethod method = new RemoteMethod("getSnapshotListing",
+        new Class<?>[] {String.class},
+        new RemoteParam());
+    Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
+    Map<FederationNamespaceInfo, SnapshotStatus[]> ret =
+        rpcClient.invokeConcurrent(
+            nss, method, true, false, SnapshotStatus[].class);
+
+    return RouterRpcServer.merge(ret, SnapshotStatus.class);
   }
 
   public SnapshotDiffReport getSnapshotDiffReport(String snapshotRoot,

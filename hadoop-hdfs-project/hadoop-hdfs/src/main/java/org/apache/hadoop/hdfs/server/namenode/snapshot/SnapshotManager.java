@@ -50,10 +50,18 @@ import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.SnapshotInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.*;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
+import org.apache.hadoop.hdfs.server.namenode.FSImageFormat;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.INode;
+import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
+import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
+import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
+import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.metrics2.util.MBeans;
 
 import com.google.common.base.Preconditions;
@@ -501,7 +509,35 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     return statusList.toArray(
         new SnapshottableDirectoryStatus[statusList.size()]);
   }
-  
+
+  /**
+   * List all the snapshots under a snapshottable directory.
+   */
+  public SnapshotStatus[] getSnapshotListing(INodesInPath iip)
+      throws IOException {
+    INodeDirectory srcRoot = getSnapshottableRoot(iip);
+    ReadOnlyList<Snapshot> snapshotList = srcRoot.getDirectorySnapshottableFeature().
+        getSnapshotList();
+    if (snapshotList.isEmpty()) {
+      return null;
+    }
+    List<SnapshotStatus> statusList =
+        new ArrayList<>();
+    for (Snapshot s : snapshotList) {
+      Snapshot.Root dir = s.getRoot();
+      SnapshotStatus status = new SnapshotStatus(dir.getModificationTime()
+          , dir.getAccessTime(), dir.getFsPermission(),
+          EnumSet.noneOf(HdfsFileStatus.Flags.class),
+          dir.getUserName(), dir.getGroupName(),
+          dir.getLocalNameBytes(), dir.getId(),
+          dir.getChildrenNum(Snapshot.CURRENT_STATE_ID),
+          s.getId(), DFSUtil.string2Bytes(dir.getParent().getFullPathName()));
+      statusList.add(status);
+    }
+    return statusList.toArray(
+        new SnapshotStatus[statusList.size()]);
+  }
+
   /**
    * Compute the difference between two snapshots of a directory, or between a
    * snapshot of the directory and its current tree.
