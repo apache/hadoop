@@ -50,7 +50,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import org.apache.hadoop.http.TestHttpServer;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.server.webproxy.ProxyUtils;

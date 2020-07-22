@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.crypto.key.kms.server;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import com.google.common.cache.LoadingCache;
 import org.apache.curator.test.TestingServer;
 import org.apache.hadoop.conf.Configuration;

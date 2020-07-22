@@ -41,7 +41,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 
 import org.junit.Test;
 

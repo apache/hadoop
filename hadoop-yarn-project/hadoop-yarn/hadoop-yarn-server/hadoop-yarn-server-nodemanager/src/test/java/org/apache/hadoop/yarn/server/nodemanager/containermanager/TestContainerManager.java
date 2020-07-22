@@ -48,7 +48,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
