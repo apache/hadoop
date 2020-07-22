@@ -533,5 +533,17 @@
     <Class name="org.apache.hadoop.mapreduce.v2.hs.CachedHistoryStorage$1" />
     <Bug pattern="SE_BAD_FIELD_INNER_CLASS" />
   </Match>
-   
+
+  <!--
+    HADOOP-17138: Suppress warnings about unchecked Nullable
+    since the methoad catches NullPointerException then registerError.
+  -->
+  <Match>
+    <Or>
+      <Class name="org.apache.hadoop.mapred.LocatedFileStatusFetcher$ProcessInputDirCallback" />
+      <Class name="org.apache.hadoop.mapred.LocatedFileStatusFetcher$ProcessInitialInputPathCallback" />
+    </Or>
+    <Method name="onSuccess" />
+    <Bug pattern="NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE" />
+  </Match>
  </FindBugsFilter>
