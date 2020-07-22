@@ -32,7 +32,6 @@ import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.RenameFailedException;
@@ -45,6 +44,7 @@ import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.RenameTracker;
 import org.apache.hadoop.util.DurationInfo;
+import org.apache.hadoop.util.OperationDuration;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_BLOCK_SIZE;
@@ -186,11 +186,23 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
   /**
    * Queue an object for deletion.
    * @param path path to the object
+   * @param s
    * @param key key of the object.
    */
-  private void queueToDelete(Path path, String key) {
+  private void queueToDelete(Path path, String key, String version) {
     pathsToDelete.add(path);
-    keysToDelete.add(new DeleteObjectsRequest.KeyVersion(key));
+    keysToDelete.add(new DeleteObjectsRequest.KeyVersion(key, version));
+  }
+
+  /**
+   * Queue a list of markers for deletion.
+   * no-op if the list is empty.
+   * @param markersToDelete markers
+   */
+  private void queueToDelete(
+      List<DirMarkerTracker.Marker> markersToDelete) {
+    markersToDelete.forEach(m ->
+        queueToDelete(m.getPath(), m.getKey(), m.getStatus().getVersionId()));
   }
 
   /**
@@ -331,6 +343,8 @@ Are   * @throws IOException failure
       // TODO: dir marker policy doesn't always need to do this.
       callbacks.deleteObjectAtPath(destStatus.getPath(), dstKey, false, null);
     }
+    // Track directory markers so that we know which leaf directories need to be
+    // recreated
     DirMarkerTracker dirMarkerTracker = new DirMarkerTracker();
 
     Path parentPath = storeContext.keyToPath(srcKey);
@@ -353,58 +367,41 @@ Are   * @throws IOException failure
       Path childSourcePath = storeContext.keyToPath(key);
 
       // mark for deletion on a successful copy.
-      queueToDelete(childSourcePath, key);
-
-
+      queueToDelete(childSourcePath, key, child.getVersionId());
+      List<DirMarkerTracker.Marker> markersToDelete;
 
       boolean isMarker = key.endsWith("/");
       if (isMarker) {
-        // markers are not replicated until we know
-        // that they are leaf markers.
-        dirMarkerTracker.markerFound(childSourcePath, key, child);
+        // add the marker to the tracker.
+        // it will not be deleted _yet_ but it may find a list of parent
+        // markers which may now be deleted.
+        markersToDelete = dirMarkerTracker.markerFound(childSourcePath, key, child);
       } else {
-        // its a file, note
-        dirMarkerTracker.fileFound(childSourcePath, key, child);
+        // it is a file.
+        // note that it has been found -ths may find a list of parent
+        // markers which may now be deleted.
+        markersToDelete = dirMarkerTracker.fileFound(childSourcePath, key, child);
         // the destination key is that of the key under the source tree,
         // remapped under the new destination path.
         String newDestKey =
             dstKey + key.substring(srcKey.length());
         Path childDestPath = storeContext.keyToPath(newDestKey);
+
         // now begin the single copy
-        activeCopies.add(initiateCopy(child, key,
-            childSourcePath, newDestKey, childDestPath));
-        bytesCopied.addAndGet(sourceStatus.getLen());
+      CompletableFuture<Path> copy = initiateCopy(child, key,
+          childSourcePath, newDestKey, childDestPath);
+      activeCopies.add(copy);
+      bytesCopied.addAndGet(sourceStatus.getLen());
       }
+      // add any markers to delete to the operation so they get cleaned
+      // incrementally
+      queueToDelete(markersToDelete);
+      // and trigger any end of loop operations
       endOfLoopActions();
     } // end of iteration through the list
 
-    // directory marker work.
-    // for all leaf markers: copy the original
-    Map<Path, Pair<String, S3ALocatedFileStatus>> leafMarkers =
-        dirMarkerTracker.getLeafMarkers();
-    Map<Path, Pair<String, S3ALocatedFileStatus>> surplus =
-        dirMarkerTracker.getSurplusMarkers();
-    LOG.debug("copying {} leaf markers; {} surplus",
-        leafMarkers.size(), surplus.size());
-    for (Map.Entry<Path, Pair<String, S3ALocatedFileStatus>> entry :
-        leafMarkers.entrySet()) {
-      Path source = entry.getKey();
-      String key = entry.getValue().getLeft();
-      S3ALocatedFileStatus stat = entry.getValue().getRight();
-      String newDestKey =
-          dstKey + key.substring(srcKey.length());
-      Path childDestPath = storeContext.keyToPath(newDestKey);
-      LOG.debug("copying dir marker from {} to {}", key, newDestKey);
-      activeCopies.add(initiateCopy(stat, key,
-          source, newDestKey, childDestPath));
-      endOfLoopActions();
-    }
-    // the surplus ones are also explicitly deleted
-    for (Map.Entry<Path, Pair<String, S3ALocatedFileStatus>> entry :
-        surplus.entrySet()) {
-      queueToDelete(entry.getKey(), entry.getValue().getLeft());
-      endOfLoopActions();
-    }
+    // finally process remaining directory markers
+    copyEmptyDirectoryMarkers(srcKey, dstKey, dirMarkerTracker);
 
     // await the final set of copies and their deletion
     // This will notify the renameTracker that these objects
@@ -416,20 +413,86 @@ Are   * @throws IOException failure
     renameTracker.moveSourceDirectory();
   }
 
+  /**
+   * Operations to perform at the end of every loop iteration.
+   * This may block the thread waiting for copies to complete
+   * and/or delete a page of data.
+   */
   private void endOfLoopActions() throws IOException {
-    if (activeCopies.size() == RENAME_PARALLEL_LIMIT) {
-      // the limit of active copies has been reached;
-      // wait for completion or errors to surface.
-      LOG.debug("Waiting for active copies to complete");
-      completeActiveCopies("batch threshold reached");
-    }
     if (keysToDelete.size() == pageSize) {
       // finish ongoing copies then delete all queued keys.
-      // provided the parallel limit is a factor of the max entry
-      // constant, this will not need to block for the copy, and
-      // simply jump straight to the delete.
       completeActiveCopiesAndDeleteSources("paged delete");
+    } else {
+      if (activeCopies.size() == RENAME_PARALLEL_LIMIT) {
+        // the limit of active copies has been reached;
+        // wait for completion or errors to surface.
+        LOG.debug("Waiting for active copies to complete");
+        completeActiveCopies("batch threshold reached");
+      }
     }
+
+  }
+
+  /**
+   * Process all directory markers at the end of the rename.
+   * All leaf markers are queued to be copied in the store;
+   * this updates the metastore tracker as it does so.
+   * <p></p>
+   * Why not simply create new markers? All the metadata
+   * gets copied too, so if there was anything relevant then
+   * it would be preserved.
+   * <p></p>
+   * At the same time: markers aren't valued much and may
+   * be deleted without any safety checks -so if there was relevant
+   * data it is at risk of destruction at any point.
+   * If there are lots of empty directory rename operations taking place,
+   * the decision to copy the source may need revisiting.
+   * <p></p>
+   * The duration returned is the time to initiate all copy/delete operations,
+   * including any blocking waits for active copies and paged deletes
+   * to execute. There may still be outstanding operations
+   * queued by this method -the duration may be an underestimate
+   * of the time this operation actually takes.
+   *
+   * @param srcKey source key with trailing /
+   * @param dstKey dest key with trailing /
+   * @param dirMarkerTracker tracker of markers
+   * @return how long it took.
+   */
+  private OperationDuration copyEmptyDirectoryMarkers(
+      final String srcKey,
+      final String dstKey,
+      final DirMarkerTracker dirMarkerTracker) throws IOException {
+    // directory marker work.
+    LOG.debug("Copying markers from {}", dirMarkerTracker);
+    final StoreContext storeContext = getStoreContext();
+    Map<Path, DirMarkerTracker.Marker> leafMarkers =
+        dirMarkerTracker.getLeafMarkers();
+    Map<Path, DirMarkerTracker.Marker> surplus =
+        dirMarkerTracker.getSurplusMarkers();
+    // for all leaf markers: copy the original
+    DurationInfo duration = new DurationInfo(LOG, false,
+        "copying %d leaf markers with %d surplus not copied",
+        leafMarkers.size(), surplus.size());
+    for (DirMarkerTracker.Marker entry: leafMarkers.values()) {
+      Path source = entry.getPath();
+      String key = entry.getKey();
+      String newDestKey =
+          dstKey + key.substring(srcKey.length());
+      Path childDestPath = storeContext.keyToPath(newDestKey);
+      LOG.debug("copying dir marker from {} to {}", key, newDestKey);
+      activeCopies.add(
+          initiateCopy(
+              entry.getStatus(),
+              key,
+              source,
+              newDestKey,
+              childDestPath));
+      // end of loop
+      endOfLoopActions();
+    }
+    duration.close();
+    return duration;
   }
 
   /**

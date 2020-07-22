@@ -18,12 +18,11 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import com.google.common.annotations.VisibleForTesting;
-
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
 
@@ -50,13 +49,13 @@ public class DirMarkerTracker {
   /**
    * all leaf markers.
    */
-  private final Map<Path, Pair<String, S3ALocatedFileStatus>> leafMarkers
+  private final Map<Path, Marker> leafMarkers
       = new TreeMap<>();
 
   /**
    * all surplus markers.
    */
-  private final Map<Path, Pair<String, S3ALocatedFileStatus>> surplusMarkers
+  private final Map<Path, Marker> surplusMarkers
       = new TreeMap<>();
 
   /**
@@ -69,19 +68,24 @@ public class DirMarkerTracker {
    */
   private int scanCount;
 
+  private int filesFound;
+
+  private int markersFound;
+
   /**
    * A marker has been found; this may or may not be a leaf.
    * Trigger a move of all markers above it into the surplus map.
    * @param path marker path
    * @param key object key
    * @param source listing source
-   * @return the number of surplus markers found.
+   * @return the surplus markers found.
    */
-  public int markerFound(Path path,
+  public List<Marker> markerFound(Path path,
       final String key,
       final S3ALocatedFileStatus source) {
-    leafMarkers.put(path, Pair.of(key, source));
-    return fileFound(path, key, source);
+    markersFound++;
+    leafMarkers.put(path, new Marker(path, key, source));
+    return pathFound(path, key, source);
   }
 
   /**
@@ -90,47 +94,65 @@ public class DirMarkerTracker {
    * @param path marker path
    * @param key object key
    * @param source listing source
-   * @return the number of surplus markers found.
+   * @return the surplus markers found.
    */
-  public int fileFound(Path path,
+  public List<Marker> fileFound(Path path,
       final String key,
       final S3ALocatedFileStatus source) {
+    filesFound++;
+    return pathFound(path, key, source);
+  }
+
+  /**
+   * A path has been found. Trigger a move of all
+   * markers above it into the surplus map.
+   * @param path marker path
+   * @param key object key
+   * @param source listing source
+   * @return the surplus markers found.
+   */
+  public List<Marker> pathFound(Path path,
+      final String key,
+      final S3ALocatedFileStatus source) {
+    List<Marker> removed = new ArrayList<>();
+
     // all parent entries are superfluous
     final Path parent = path.getParent();
     if (parent == null || parent.equals(lastDirChecked)) {
       // short cut exit
-      return 0;
+      return removed;
     }
-    final int markers = removeParentMarkers(parent);
+    removeParentMarkers(parent, removed);
     lastDirChecked = parent;
-    return markers;
+    return removed;
   }
 
   /**
    * Remove all markers from the path and its parents.
    * @param path path to start at
-   * @return number of markers removed.
+   * @param removed list of markers removed; is built up during the
+   * recursive operation.
    */
-  private int removeParentMarkers(final Path path) {
+  private void removeParentMarkers(final Path path,
+      List<Marker> removed) {
     if (path == null || path.isRoot()) {
-      return 0;
+      return;
     }
     scanCount++;
-    int parents = removeParentMarkers(path.getParent());
-    final Pair<String, S3ALocatedFileStatus> value = leafMarkers.remove(path);
+    removeParentMarkers(path.getParent(), removed);
+    final Marker value = leafMarkers.remove(path);
     if (value != null) {
       // marker is surplus
       surplusMarkers.put(path, value);
-      parents++;
+      removed.add(value);
     }
-    return parents;
   }
 
   /**
    * get the map of leaf markers.
    * @return all leaf markers.
    */
-  public Map<Path, Pair<String, S3ALocatedFileStatus>> getLeafMarkers() {
+  public Map<Path, Marker> getLeafMarkers() {
     return leafMarkers;
   }
 
@@ -138,18 +160,24 @@ public class DirMarkerTracker {
    * get the map of surplus markers.
    * @return all surplus markers.
    */
-  public Map<Path, Pair<String, S3ALocatedFileStatus>> getSurplusMarkers() {
+  public Map<Path, Marker> getSurplusMarkers() {
     return surplusMarkers;
   }
 
-  @VisibleForTesting
   public Path getLastDirChecked() {
     return lastDirChecked;
   }
 
-  @VisibleForTesting
   public int getScanCount() {
     return scanCount;
+  }
+
+  public int getFilesFound() {
+    return filesFound;
+  }
+
+  public int getMarkersFound() {
+    return markersFound;
   }
 
   @Override
@@ -158,7 +186,58 @@ public class DirMarkerTracker {
         "leafMarkers=" + leafMarkers.size() +
         ", surplusMarkers=" + surplusMarkers.size() +
         ", lastDirChecked=" + lastDirChecked +
+        ", filesFound=" + filesFound +
         ", scanCount=" + scanCount +
         '}';
   }
+
+  /**
+   * This is a marker entry stored in the map and
+   * returned as markers are deleted.
+   */
+  public static final class Marker {
+    /** Path of the marker. */
+    private final Path path;
+
+    /**
+     * Key in the store.
+     */
+    private final String key;
+
+    /**
+     * The file status of the marker.
+     */
+    private final S3ALocatedFileStatus status;
+
+    public Marker(final Path path,
+        final String key,
+        final S3ALocatedFileStatus status) {
+      this.path = path;
+      this.key = key;
+      this.status = status;
+    }
+
+    public Path getPath() {
+      return path;
+    }
+
+    public String getKey() {
+      return key;
+    }
+
+    public S3ALocatedFileStatus getStatus() {
+      return status;
+    }
+
+    @Override
+    public String toString() {
+      return "Marker{" +
+          "path=" + path +
+          ", key='" + key + '\'' +
+          ", status=" + status +
+          '}';
+    }
+
+  }
+
 }

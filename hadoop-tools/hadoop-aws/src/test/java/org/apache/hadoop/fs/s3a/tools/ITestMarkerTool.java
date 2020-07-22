@@ -36,19 +36,11 @@ import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.io.IOUtils;
 
-import static org.apache.hadoop.fs.s3a.Constants.AUTHORITATIVE_PATH;
-import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY;
-import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_DELETE;
-import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_KEEP;
-import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
-import static org.apache.hadoop.fs.s3a.Constants.S3A_BUCKET_PROBE;
-import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_METASTORE_NULL;
-import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
+import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBucketOverrides;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_NOT_ACCEPTABLE;
-import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test the marker tool and use it to compare the behavior
@@ -61,7 +53,16 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
 
 
   private S3AFileSystem keepingFS;
+
   private S3AFileSystem mixedFS;
+
+  private int expectedFiles;
+
+  private int expectMarkersUnderDir1;
+
+  private int expectMarkersUnderDir2;
+
+  private int expectMarkers;
 
   @Override
   protected Configuration createConfiguration() {
@@ -70,10 +71,13 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
     removeBaseAndBucketOverrides(bucketName, conf,
         S3A_BUCKET_PROBE,
         DIRECTORY_MARKER_POLICY,
+        S3_METADATA_STORE_IMPL,
         METADATASTORE_AUTHORITATIVE,
         AUTHORITATIVE_PATH);
     // base FS is legacy
     conf.set(DIRECTORY_MARKER_POLICY, DIRECTORY_MARKER_POLICY_DELETE);
+    conf.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL);
+
     // turn off bucket probes for a bit of speedup in the connectors we create.
     conf.setInt(S3A_BUCKET_PROBE, 0);
     return conf;
@@ -117,19 +121,18 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
       String authPath) throws Exception {
     S3AFileSystem testFS = getFileSystem();
     Configuration conf = new Configuration(testFS.getConf());
-    URI uri = testFS.getUri();
+    URI testFSUri = testFS.getUri();
     String bucketName = getTestBucketName(conf);
     removeBucketOverrides(bucketName, conf,
         DIRECTORY_MARKER_POLICY,
         S3_METADATA_STORE_IMPL,
         AUTHORITATIVE_PATH);
     if (authPath != null) {
-
       conf.set(AUTHORITATIVE_PATH, authPath);
     }
     conf.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL);
     conf.set(DIRECTORY_MARKER_POLICY, markerPolicy);
-    final S3AFileSystem newFS = createFS(uri, conf);
+    final S3AFileSystem newFS = createFS(testFSUri, conf);
     return newFS;
   }
 
@@ -161,47 +164,88 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
     this.mixedFS = mixedFS;
   }
 
-  private static class CreatedPaths {
-    Path base;
-    List<Path> files = new ArrayList<>();
-    List<Path> dirs = new ArrayList<>();
-    List<Path> emptyDirs = new ArrayList<>();
+  private static Path mkpath(Path base, final String name) {
+    return name.isEmpty() ? base : new Path(base, name);
   }
 
+  /**
+   * Tracker of created paths.
+   */
+  private static class CreatedPaths {
+
+    Path base;
+
+    List<Path> files = new ArrayList<>();
+
+    List<Path> dirs = new ArrayList<>();
+
+    List<Path> emptyDirs = new ArrayList<>();
+
+    List<String> filesUnderBase = new ArrayList<>();
+
+    List<String> dirsUnderBase = new ArrayList<>();
+
+    List<String> emptyDirsUnderBase = new ArrayList<>();
+
+
+    private Path mkdir(FileSystem fs, String name)
+        throws IOException {
+      Path dir = mkpath(base, name);
+      fs.mkdirs(dir);
+      dirs.add(dir);
+      dirsUnderBase.add(name);
+      return dir;
+    }
+
+    private Path emptydir(FileSystem fs, String name)
+        throws IOException {
+      Path dir = mkpath(base, name);
+      fs.mkdirs(dir);
+      emptyDirs.add(dir);
+      emptyDirsUnderBase.add(name);
+      return dir;
+    }
+
+    private Path mkfile(FileSystem fs, String name)
+        throws IOException {
+      Path file = mkpath(base, name);
+      ContractTestUtils.touch(fs, file);
+      files.add(file);
+      filesUnderBase.add(name);
+      return file;
+    }
+  }
+
+  /**
+   * Create the "standard" test paths.
+   * @param fs filesystem
+   * @param base base dir
+   * @return the details on what was created.
+   */
   private CreatedPaths createPaths(FileSystem fs, Path base)
       throws IOException {
     CreatedPaths r = new CreatedPaths();
     r.base = base;
-    Path dir1 = mkdir(r, fs, base, "dir1");
-    Path subdir2 = mkdir(r, fs, dir1, "subdir2");
-    Path subdir3 = mkdir(r, fs, subdir2, "subdir3");
+    // the directories under which we will create files, so expect to have markers
+    r.mkdir(fs, "");
+    r.mkdir(fs, "dir1");
+    r.mkdir(fs, "dir2");
+    r.mkdir(fs, "dir2/dir3");
 
-    // create the emtpy dir
-    Path empty = mkdir(r, fs, base, "empty");
-    r.emptyDirs.add(empty);
-    r.dirs.remove(empty);
+    // create the empty dirs
+    r.emptydir(fs, "empty");
+    r.emptydir(fs, "dir2/empty");
 
     // files
-    mkfile(r, fs, dir1, "file1");
-    mkfile(r, fs, subdir2, "file2");
-    mkfile(r, fs, subdir3, "file3");
+    r.mkfile(fs, "dir1/file1");
+    r.mkfile(fs, "dir2/file2");
+    r.mkfile(fs, "dir2/dir3/file3");
+
+    expectedFiles = 3;
+    expectMarkersUnderDir1 = 1;
+    expectMarkersUnderDir2 = 2;
+    expectMarkers = expectMarkersUnderDir1 + expectMarkersUnderDir2;
     return r;
-  }
-
-  private Path mkdir(CreatedPaths r, FileSystem fs, Path base, String name)
-      throws IOException {
-    Path dir = new Path(base, name);
-    fs.mkdirs(dir);
-    r.dirs.add(dir);
-    return dir;
-  }
-
-  private Path mkfile(CreatedPaths r,
-      FileSystem fs, Path base, String name) throws IOException {
-    Path file = new Path(base, name);
-    ContractTestUtils.touch(fs, file);
-    r.files.add(file);
-    return file;
   }
 
   private MarkerTool.ScanResult markerTool(
@@ -214,7 +258,8 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
   }
 
   @SuppressWarnings("IOResourceOpenedButNotSafelyClosed")
-  private MarkerTool.ScanResult markerTool(final int expected,
+  private MarkerTool.ScanResult markerTool(
+      final int exitCode,
       final FileSystem sourceFS,
       final Path path,
       final boolean doPurge,
@@ -224,10 +269,10 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
 
     MarkerTool.ScanResult result = tool.execute(sourceFS, path, doPurge,
         expectedMarkerCount);
-    Assertions.assertThat(result.exitCode)
+    Assertions.assertThat(result.getExitCode())
         .describedAs("Exit code of marker(%s, %s, %d) -> %s",
             path, doPurge, expectedMarkerCount, result)
-        .isEqualTo(expected);
+        .isEqualTo(exitCode);
     return result;
   }
 
@@ -242,7 +287,7 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
   public void testAuditPruneMarkersKeepingDir() throws Throwable {
     CreatedPaths createdPaths = createPaths(getKeepingFS(), methodPath());
 
-    // audit will find three entries
+    // audit will find the expected entries
     int expectedMarkerCount = createdPaths.dirs.size();
     S3AFileSystem fs = getLegacyFS();
     markerTool(EXIT_NOT_ACCEPTABLE, fs,
@@ -254,14 +299,17 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
     markerTool(fs, createdPaths.base, false,
         expectedMarkerCount);
     // purge cleans up
-    markerTool(fs, createdPaths.base, true, expectedMarkerCount);
+    assertMarkersDeleted(expectedMarkerCount,
+        markerTool(fs, createdPaths.base, true, expectedMarkerCount));
     // and a rerun doesn't find markers
-    markerTool(fs, createdPaths.base, true, 0);
+    assertMarkersDeleted(0,
+        markerTool(fs, createdPaths.base, true, 0));
   }
 
   @Test
   public void testRenameKeepingFS() throws Throwable {
-    describe("Rename with the keeping FS");
+    describe(
+        "Rename with the keeping FS -verify that no markers exist at far end");
     Path base = methodPath();
     Path source = new Path(base, "source");
     Path dest = new Path(base, "dest");
@@ -279,6 +327,73 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
 
     // there are no markers
     markerTool(fs, dest, false, 0);
+    LOG.info("Auditing destination paths");
+    verifyRenamed(dest, createdPaths);
+
   }
 
+  void verifyRenamed(final Path dest,
+      final CreatedPaths createdPaths) throws IOException {
+    // all leaf directories exist
+    for (String p : createdPaths.emptyDirsUnderBase) {
+      assertIsDirectory(mkpath(dest, p));
+    }
+    // non-empty dirs
+    for (String p : createdPaths.dirsUnderBase) {
+      assertIsDirectory(mkpath(dest, p));
+    }
+    // all files exist
+    for (String p : createdPaths.filesUnderBase) {
+      assertIsFile(mkpath(dest, p));
+    }
+  }
+
+  /**
+   * Create a FS where only dir2 in the source tree keeps markers;
+   * verify all is good.
+   */
+  @Test
+  public void testAuthPathIsMixed() throws Throwable {
+    describe("Create a source tree with mixed semantics");
+    Path base = methodPath();
+    Path source = new Path(base, "source");
+    Path dest = new Path(base, "dest");
+    Path dir2 = new Path(source, "dir2");
+    S3AFileSystem mixedFS = createFS(DIRECTORY_MARKER_POLICY_AUTHORITATIVE,
+        dir2.toUri().toString());
+    // some of these paths will retain markers, some will not
+    CreatedPaths createdPaths = createPaths(mixedFS, source);
+
+    // markers are only under dir2
+    markerTool(mixedFS, mkpath(source, "dir1"), false, 0);
+    markerTool(mixedFS, source, false, expectMarkersUnderDir2);
+
+    // if we now rename, all will be good
+    mixedFS.rename(source, dest);
+    assertIsDirectory(dest);
+
+    // there are no markers
+    MarkerTool.ScanResult scanResult = markerTool(mixedFS, dest, false, 0);
+    // there are exactly the files we want
+    Assertions.assertThat(scanResult)
+        .describedAs("Scan result %s", scanResult)
+        .extracting(s -> s.getTracker().getFilesFound())
+        .isEqualTo(expectedFiles);
+    verifyRenamed(dest, createdPaths);
+  }
+
+  /**
+   * Assert that an expected number of markers were deleted.
+   * @param expected expected count.
+   * @param result scan result
+   */
+  private static void assertMarkersDeleted(int expected,
+      MarkerTool.ScanResult result) {
+
+    Assertions.assertThat(result.getPurgeSummary())
+        .describedAs("Purge result of scan %s", result)
+        .isNotNull()
+        .extracting(f -> f.getMarkersDeleted())
+        .isEqualTo(expected);
+  }
 }

@@ -223,14 +223,11 @@ public final class MarkerTool extends S3GuardTool {
    */
   static final class ScanResult {
 
-    /** Exit code to report. */
-    int exitCode;
+    private int exitCode;
 
-    /** Tracker which did the scan. */
-    DirMarkerTracker tracker;
+    private DirMarkerTracker tracker;
 
-    /** Summary of purge. Null if none took place. */
-    MarkerPurgeSummary purgeSummary;
+    private MarkerPurgeSummary purgeSummary;
 
     @Override
     public String toString() {
@@ -239,6 +236,21 @@ public final class MarkerTool extends S3GuardTool {
           ", tracker=" + tracker +
           ", purgeSummary=" + purgeSummary +
           '}';
+    }
+
+    /** Exit code to report. */
+    public int getExitCode() {
+      return exitCode;
+    }
+
+    /** Tracker which did the scan. */
+    public DirMarkerTracker getTracker() {
+      return tracker;
+    }
+
+    /** Summary of purge. Null if none took place. */
+    public MarkerPurgeSummary getPurgeSummary() {
+      return purgeSummary;
     }
   }
 
@@ -265,9 +277,9 @@ public final class MarkerTool extends S3GuardTool {
       scanDirectoryTree(path, tracker);
     }
     // scan done. what have we got?
-    Map<Path, Pair<String, S3ALocatedFileStatus>> surplusMarkers
+    Map<Path, DirMarkerTracker.Marker> surplusMarkers
         = tracker.getSurplusMarkers();
-    Map<Path, Pair<String, S3ALocatedFileStatus>> leafMarkers
+    Map<Path, DirMarkerTracker.Marker> leafMarkers
         = tracker.getLeafMarkers();
     int size = surplusMarkers.size();
     if (size == 0) {
@@ -286,8 +298,11 @@ public final class MarkerTool extends S3GuardTool {
     if (verbose && !leafMarkers.isEmpty()) {
       println(out, "Found %d empty directory 'leaf' marker%s under %s",
           leafMarkers.size(),
-          suffix(size),
+          suffix(leafMarkers.size()),
           path);
+      for (Path markers : leafMarkers.keySet()) {
+        println(out, "    %s", markers);
+      }
       println(out, "These are required to indicate empty directories");
     }
     if (size > expectedMarkerCount) {
@@ -383,6 +398,19 @@ public final class MarkerTool extends S3GuardTool {
           ", totalDeleteRequestDuration=" + totalDeleteRequestDuration +
           '}';
     }
+
+
+    int getMarkersDeleted() {
+      return markersDeleted;
+    }
+
+    int getDeleteRequests() {
+      return deleteRequests;
+    }
+
+    long getTotalDeleteRequestDuration() {
+      return totalDeleteRequestDuration;
+    }
   }
 
   /**
@@ -400,13 +428,13 @@ public final class MarkerTool extends S3GuardTool {
 
     MarkerPurgeSummary summary = new MarkerPurgeSummary();
     // we get a map of surplus markers to delete.
-    Map<Path, Pair<String, S3ALocatedFileStatus>> markers
+    Map<Path, DirMarkerTracker.Marker> markers
         = tracker.getSurplusMarkers();
     int size = markers.size();
     // build a list from the strings in the map
     List<DeleteObjectsRequest.KeyVersion> collect =
         markers.values().stream()
-            .map(p -> new DeleteObjectsRequest.KeyVersion(p.getLeft()))
+            .map(p -> new DeleteObjectsRequest.KeyVersion(p.getKey()))
             .collect(Collectors.toList());
     // as an array list so .sublist is straightforward
     List<DeleteObjectsRequest.KeyVersion> markerKeys = new ArrayList<>(
