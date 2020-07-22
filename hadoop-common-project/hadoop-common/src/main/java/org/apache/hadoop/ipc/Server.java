@@ -3728,7 +3728,7 @@ public abstract class Server {
         if (count == null) {
           count = 1;
         } else {
-          count++;
+          count = count + 1;
         }
         userToConnectionsMap.put(user, count);
       }
@@ -3740,7 +3740,7 @@ public abstract class Server {
         if (count == null) {
           return;
         } else {
-          count--;
+          count = count - 1;
         }
         if (count == 0) {
           userToConnectionsMap.remove(user);
