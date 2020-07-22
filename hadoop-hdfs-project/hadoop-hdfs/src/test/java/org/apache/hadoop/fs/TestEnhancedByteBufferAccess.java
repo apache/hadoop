@@ -72,7 +72,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 
 /**
  * This class tests if EnhancedByteBufferAccess works correctly.

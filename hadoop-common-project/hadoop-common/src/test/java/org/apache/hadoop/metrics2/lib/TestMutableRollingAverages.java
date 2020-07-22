@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.metrics2.lib;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.test.GenericTestUtils;

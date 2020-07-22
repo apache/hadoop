@@ -29,7 +29,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 
 import org.junit.After;
 import org.junit.Before;

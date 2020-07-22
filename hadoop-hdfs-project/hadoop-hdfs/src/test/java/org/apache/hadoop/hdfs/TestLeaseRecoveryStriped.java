@@ -18,8 +18,8 @@
 package org.apache.hadoop.hdfs;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
-import org.apache.commons.lang.builder.ToStringBuilder;
+
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -54,6 +54,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Supplier;
 
 public class TestLeaseRecoveryStriped {
   public static final Logger LOG = LoggerFactory

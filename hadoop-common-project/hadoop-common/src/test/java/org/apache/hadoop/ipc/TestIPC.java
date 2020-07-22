@@ -97,7 +97,7 @@ import org.mockito.internal.util.reflection.Whitebox;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import org.slf4j.Logger;

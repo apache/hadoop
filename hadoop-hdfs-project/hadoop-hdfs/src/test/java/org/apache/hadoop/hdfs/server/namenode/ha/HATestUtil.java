@@ -59,7 +59,7 @@ import org.apache.hadoop.io.retry.RetryInvocationHandler;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 
 /**
  * Static utility functions useful for testing HA.
