@@ -127,19 +127,30 @@ public class TestViewFsOverloadSchemeListStatus {
 
   /**
    * Tests that ViewFSOverloadScheme should consider initialized fs as fallback
-   * if there are no mount links configured.
+   * if there are no mount links configured. It should add fallback with the
+   * chrootedFS at it's uri's root.
    */
   @Test(timeout = 30000)
   public void testViewFSOverloadSchemeWithoutAnyMountLinks() throws Exception {
-    try (FileSystem fs = FileSystem.get(TEST_DIR.toPath().toUri(), conf)) {
+    Path initUri = new Path(TEST_DIR.toURI().toString(), "init");
+    try (FileSystem fs = FileSystem.get(initUri.toUri(), conf)) {
       ViewFileSystemOverloadScheme vfs = (ViewFileSystemOverloadScheme) fs;
       assertEquals(0, vfs.getMountPoints().length);
-      Path testFallBack = new Path("test", FILE_NAME);
-      assertTrue(vfs.mkdirs(testFallBack));
-      FileStatus[] status = vfs.listStatus(testFallBack.getParent());
-      assertEquals(FILE_NAME, status[0].getPath().getName());
-      assertEquals(testFallBack.getName(),
-          vfs.getFileLinkStatus(testFallBack).getPath().getName());
+      Path testOnFallbackPath = new Path(TEST_DIR.toURI().toString(), "test");
+      assertTrue(vfs.mkdirs(testOnFallbackPath));
+      FileStatus[] status = vfs.listStatus(testOnFallbackPath.getParent());
+      assertEquals(Path.getPathWithoutSchemeAndAuthority(testOnFallbackPath),
+          Path.getPathWithoutSchemeAndAuthority(status[0].getPath()));
+      //Check directly on localFS. The fallBackFs(localFS) should be chrooted
+      //at it's root. So, after
+      FileSystem lfs = vfs.getRawFileSystem(testOnFallbackPath, conf);
+      FileStatus[] statusOnLocalFS =
+          lfs.listStatus(testOnFallbackPath.getParent());
+      assertEquals(testOnFallbackPath.getName(),
+          statusOnLocalFS[0].getPath().getName());
+      //initUri should not have exist in lfs, as it would have chrooted on it's
+      // root only.
+      assertFalse(lfs.exists(initUri));
     }
   }
 
