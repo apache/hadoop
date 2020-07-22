@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.GZIPOutputStream;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import com.google.common.collect.Lists;
 
 import org.apache.commons.lang3.RandomStringUtils;

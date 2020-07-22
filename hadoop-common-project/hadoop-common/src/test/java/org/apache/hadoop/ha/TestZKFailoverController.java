@@ -21,7 +21,7 @@ import static org.junit.Assert.*;
 
 import java.security.NoSuchAlgorithmException;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;

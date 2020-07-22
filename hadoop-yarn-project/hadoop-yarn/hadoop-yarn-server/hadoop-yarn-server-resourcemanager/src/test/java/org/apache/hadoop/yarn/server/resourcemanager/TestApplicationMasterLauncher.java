@@ -84,7 +84,7 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;

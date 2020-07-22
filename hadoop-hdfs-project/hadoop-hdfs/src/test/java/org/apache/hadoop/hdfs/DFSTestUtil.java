@@ -76,7 +76,7 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 

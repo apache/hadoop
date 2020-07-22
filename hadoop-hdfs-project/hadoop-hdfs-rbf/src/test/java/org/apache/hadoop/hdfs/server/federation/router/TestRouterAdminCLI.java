@@ -54,7 +54,7 @@ import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.internal.util.reflection.Whitebox;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 
 /**
  * Tests Router admin commands.

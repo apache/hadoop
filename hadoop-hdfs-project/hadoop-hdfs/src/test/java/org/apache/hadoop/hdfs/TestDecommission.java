@@ -38,7 +38,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import com.google.common.collect.Lists;
 import org.apache.commons.text.TextStringBuilder;
 import org.apache.hadoop.fs.BlockLocation;

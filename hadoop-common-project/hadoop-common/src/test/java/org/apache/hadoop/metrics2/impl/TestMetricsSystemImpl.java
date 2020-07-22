@@ -36,7 +36,7 @@ import org.mockito.stubbing.Answer;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import com.google.common.collect.Iterables;
 
 import org.apache.commons.configuration2.SubsetConfiguration;

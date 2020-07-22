@@ -18,7 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import com.google.common.util.concurrent.Uninterruptibles;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;

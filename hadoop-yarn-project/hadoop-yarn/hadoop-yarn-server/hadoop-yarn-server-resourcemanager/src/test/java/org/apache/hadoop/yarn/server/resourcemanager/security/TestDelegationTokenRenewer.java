@@ -104,7 +104,7 @@ import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 
 /**
  * unit test - 

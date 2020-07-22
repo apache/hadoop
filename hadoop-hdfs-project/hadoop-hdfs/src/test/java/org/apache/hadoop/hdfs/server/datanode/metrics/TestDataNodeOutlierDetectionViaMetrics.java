@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode.metrics;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.metrics2.lib.MetricsTestHelper;
