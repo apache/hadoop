@@ -36,10 +36,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.management.ObjectName;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.XAttr;
+import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
@@ -47,14 +51,9 @@ import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.SnapshotInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
-import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.server.namenode.*;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
-import org.apache.hadoop.hdfs.server.namenode.FSImageFormat;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.hdfs.server.namenode.INode;
-import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
-import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
-import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.metrics2.util.MBeans;
 
 import com.google.common.base.Preconditions;
@@ -352,7 +351,38 @@ public class SnapshotManager implements SnapshotStatsMXBean {
    */
   public void deleteSnapshot(final INodesInPath iip, final String snapshotName,
       INode.ReclaimContext reclaimContext, long now) throws IOException {
-    INodeDirectory srcRoot = getSnapshottableRoot(iip);
+    final INodeDirectory srcRoot = getSnapshottableRoot(iip);
+    if (fsdir.isSnapshotDeletionOrdered()) {
+      final DirectorySnapshottableFeature snapshottable
+          = srcRoot.getDirectorySnapshottableFeature();
+      final Snapshot snapshot = snapshottable.getSnapshotByName(
+          srcRoot, snapshotName);
+
+      // Diffs must be not empty since a snapshot exists in the list
+      final int earliest = snapshottable.getDiffs().iterator().next()
+          .getSnapshotId();
+      if (snapshot.getId() != earliest) {
+        final XAttr snapshotXAttr = buildXAttr();
+        final List<XAttr> xattrs = Lists.newArrayListWithCapacity(1);
+        xattrs.add(snapshotXAttr);
+
+        // The snapshot to be deleted is just marked for deletion in the xAttr.
+        // Same snaphot delete call can happen multiple times until and unless
+        // the very 1st instance of a snapshot delete hides it/remove it from
+        // snapshot list. XAttrSetFlag.REPLACE needs to be set to here in order
+        // to address this.
+
+        // XAttr will set on the snapshot root directory
+        // NOTE : This function is directly called while replaying the edit
+        // logs.While replaying the edit logs we need to mark the snapshot
+        // deleted in the xattr of the snapshot root.
+        FSDirXAttrOp.unprotectedSetXAttrs(fsdir,
+            INodesInPath.append(iip, snapshot.getRoot(),
+                DFSUtil.string2Bytes(snapshotName)), xattrs,
+            EnumSet.of(XAttrSetFlag.CREATE, XAttrSetFlag.REPLACE));
+        return;
+      }
+    }
     srcRoot.removeSnapshot(reclaimContext, snapshotName, now);
     numSnapshots.getAndDecrement();
   }
@@ -543,6 +573,10 @@ public class SnapshotManager implements SnapshotStatsMXBean {
    */
   public int getMaxSnapshotID() {
     return ((1 << SNAPSHOT_ID_BIT_WIDTH) - 1);
+  }
+
+  public static XAttr buildXAttr() {
+    return XAttrHelper.buildXAttr(HdfsServerConstants.SNAPSHOT_XATTR_NAME);
   }
 
   private ObjectName mxBeanName;
