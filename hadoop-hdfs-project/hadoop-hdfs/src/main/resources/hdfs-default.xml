@@ -5119,6 +5119,7 @@
     for storing directory snapshot diffs. By default, value is set to 10.
   </description>
 </property>
+
 <property>
   <name>dfs.storage.policy.satisfier.enabled</name>
   <value>false</value>

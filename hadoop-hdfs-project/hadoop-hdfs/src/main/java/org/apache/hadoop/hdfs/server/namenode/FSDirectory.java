@@ -618,7 +618,7 @@ public class FSDirectory implements Closeable {
   }
   int getXattrMaxSize() { return xattrMaxSize; }
 
-  boolean isSnapshotDeletionOrdered() {
+  public boolean isSnapshotDeletionOrdered() {
     return snapshotDeletionOrdered;
   }
 

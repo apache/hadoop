@@ -137,6 +137,7 @@ public class TestOrderedSnapshotDeletion {
     hdfs.mkdirs(sub1);
     hdfs.createSnapshot(snapshottableDir, "s1");
     assertXAttrSet("s1", hdfs, null);
+    assertXAttrSet("s1", hdfs, null);
     cluster.restartNameNodes();
     assertXAttrSet("s1", hdfs, null);
   }

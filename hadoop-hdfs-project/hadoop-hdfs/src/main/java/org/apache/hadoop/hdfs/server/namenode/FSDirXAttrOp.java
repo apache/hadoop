@@ -47,7 +47,7 @@ import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XA
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.SNAPSHOT_XATTR_NAME;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_ENCRYPTION_ZONE;
 
-class FSDirXAttrOp {
+public class FSDirXAttrOp {
   private static final XAttr KEYID_XATTR =
       XAttrHelper.buildXAttr(CRYPTO_XATTR_ENCRYPTION_ZONE, null);
   private static final XAttr UNREADABLE_BY_SUPERUSER_XATTR =
@@ -266,7 +266,7 @@ class FSDirXAttrOp {
     return newXAttrs;
   }
 
-  static INode unprotectedSetXAttrs(
+  public static INode unprotectedSetXAttrs(
       FSDirectory fsd, final INodesInPath iip, final List<XAttr> xAttrs,
       final EnumSet<XAttrSetFlag> flag)
       throws IOException {
