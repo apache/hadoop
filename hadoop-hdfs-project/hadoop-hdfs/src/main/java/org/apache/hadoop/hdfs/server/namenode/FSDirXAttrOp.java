@@ -328,9 +328,10 @@ class FSDirXAttrOp {
             SECURITY_XATTR_UNREADABLE_BY_SUPERUSER + "' on a file.");
       }
 
-      if (xaName.contains(SNAPSHOT_XATTR_NAME)) {
-        Preconditions.checkArgument(inode.isDirectory() &&
-            inode.asDirectory().isSnapshottable());
+      if (xaName.equals(SNAPSHOT_XATTR_NAME) && !(inode.isDirectory() &&
+          inode.getParent().isSnapshottable())) {
+        throw new IOException("Can only set '" +
+            SNAPSHOT_XATTR_NAME + "' on a snapshot root.");
       }
     }
 

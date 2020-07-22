@@ -21,10 +21,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -34,7 +37,8 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Map;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.
+    DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -98,19 +102,25 @@ public class TestOrderedSnapshotDeletion {
     hdfs.deleteSnapshot(snapshottableDir, snapshot);
     // Check xAttr for parent directory
     FSNamesystem namesystem = cluster.getNamesystem();
-    INode inode = namesystem.getFSDirectory().getINode(
-        snapshottableDir.toString());
+    Path snapshotRoot = SnapshotTestHelper.getSnapshotRoot(snapshottableDir,
+        snapshot);
+    INode inode = namesystem.getFSDirectory().getINode(snapshotRoot.toString());
     XAttrFeature f = inode.getXAttrFeature();
-    XAttr xAttr = f.getXAttr(FSDirSnapshotOp.buildXAttrName(snapshot));
+    XAttr xAttr = f.getXAttr(HdfsServerConstants.SNAPSHOT_XATTR_NAME);
     assertTrue("Snapshot xAttr should exist", xAttr != null);
-    assertTrue(xAttr.getName().contains(snapshot));
+    assertTrue(xAttr.getName().equals(HdfsServerConstants.SNAPSHOT_XATTR_NAME.
+        replace("system.", "")));
     assertTrue(xAttr.getNameSpace().equals(XAttr.NameSpace.SYSTEM));
     assertNull(xAttr.getValue());
 
     // Make sure its not user visible
-    Map<String, byte[]> xattrMap = hdfs.getXAttrs(snapshottableDir);
-    assertTrue(newXattr == null ? xattrMap.isEmpty() :
-        Arrays.equals(newXattr.getValue(), xattrMap.get(name1)));
+    if (cluster.getNameNode().getConf().getBoolean(DFSConfigKeys.
+            DFS_NAMENODE_XATTRS_ENABLED_KEY,
+        DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_DEFAULT)) {
+      Map<String, byte[]> xattrMap = hdfs.getXAttrs(snapshotRoot);
+      assertTrue(newXattr == null ? xattrMap.isEmpty() :
+          Arrays.equals(newXattr.getValue(), xattrMap.get(name1)));
+    }
   }
 
   @Test(timeout = 60000)
@@ -151,7 +161,36 @@ public class TestOrderedSnapshotDeletion {
     cluster.restartNameNodes();
     assertXAttrSet("s1", hdfs, null);
   }
-  
+
+  @Test(timeout = 60000)
+  public void testSnapshotXattrWithDisablingXattr() throws Exception {
+    DistributedFileSystem hdfs = cluster.getFileSystem();
+    hdfs.mkdirs(snapshottableDir);
+    hdfs.allowSnapshot(snapshottableDir);
+
+    final Path sub0 = new Path(snapshottableDir, "sub0");
+    hdfs.mkdirs(sub0);
+    hdfs.createSnapshot(snapshottableDir, "s0");
+
+    final Path sub1 = new Path(snapshottableDir, "sub1");
+    hdfs.mkdirs(sub1);
+    hdfs.createSnapshot(snapshottableDir, "s1");
+    assertXAttrSet("s1", hdfs, null);
+    cluster.getNameNode().getConf().setBoolean(
+        DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY, false);
+    cluster.restartNameNodes();
+    // ensure xAttr feature is disabled
+    try {
+      hdfs.getXAttrs(snapshottableDir);
+    } catch (Exception e) {
+      assertTrue(e.getMessage().contains("The XAttr operation has been " +
+          "rejected.  Support for XAttrs has been disabled by " +
+          "setting dfs.namenode.xattrs.enabled to false"));
+    }
+    // try deleting snapshot and verify it still sets the snapshot XAttr
+    assertXAttrSet("s1", hdfs, null);
+  }
+
   @Test(timeout = 60000)
   public void testSnapshotXAttrWithPreExistingXattrs() throws Exception {
     DistributedFileSystem hdfs = cluster.getFileSystem();

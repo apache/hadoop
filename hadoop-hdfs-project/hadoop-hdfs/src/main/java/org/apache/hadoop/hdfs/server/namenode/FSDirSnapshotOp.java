@@ -269,7 +269,7 @@ class FSDirSnapshotOp {
       final int earliest = snapshottable.getDiffs().iterator().next()
           .getSnapshotId();
       if (snapshot.getId() != earliest) {
-        final XAttr snapshotXAttr = buildXAttr(snapshotName);
+        final XAttr snapshotXAttr = buildXAttr();
         final List<XAttr> xattrs = Lists.newArrayListWithCapacity(1);
         xattrs.add(snapshotXAttr);
 
@@ -278,8 +278,14 @@ class FSDirSnapshotOp {
         // the very 1st instance of a snapshot delete hides it/remove it from
         // snapshot list. XAttrSetFlag.REPLACE needs to be set to here in order
         // to address this.
-        FSDirXAttrOp.unprotectedSetXAttrs(fsd, iip, xattrs,
+
+        // Xattr will set on the snapshot root directory
+        FSDirXAttrOp.unprotectedSetXAttrs(fsd,
+            INodesInPath.append(iip, snapshot.getRoot(),
+                snapshotName.getBytes()), xattrs,
             EnumSet.of(XAttrSetFlag.CREATE, XAttrSetFlag.REPLACE));
+        fsd.getEditLog().logDeleteSnapshot(snapshotRoot, snapshotName,
+            logRetryCache, now);
         return null;
       }
     }
@@ -375,13 +381,7 @@ class FSDirSnapshotOp {
     }
   }
 
-  static String buildXAttrName(String snapName) {
-    return StringUtils.toLowerCase(HdfsServerConstants.SNAPSHOT_XATTR_NAME
-        + "." + snapName);
-  }
-
-  public static XAttr buildXAttr(String snapName) {
-    final String name = buildXAttrName(snapName);
-    return XAttrHelper.buildXAttr(name);
+  public static XAttr buildXAttr() { ;
+    return XAttrHelper.buildXAttr(HdfsServerConstants.SNAPSHOT_XATTR_NAME);
   }
 }
