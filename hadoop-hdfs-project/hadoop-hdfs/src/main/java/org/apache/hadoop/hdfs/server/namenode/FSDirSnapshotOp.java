@@ -39,7 +39,6 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.util.ChunkedArrayList;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 
 import java.io.IOException;
@@ -282,7 +281,7 @@ class FSDirSnapshotOp {
         // Xattr will set on the snapshot root directory
         FSDirXAttrOp.unprotectedSetXAttrs(fsd,
             INodesInPath.append(iip, snapshot.getRoot(),
-                snapshotName.getBytes()), xattrs,
+                DFSUtil.string2Bytes(snapshotName)), xattrs,
             EnumSet.of(XAttrSetFlag.CREATE, XAttrSetFlag.REPLACE));
         fsd.getEditLog().logDeleteSnapshot(snapshotRoot, snapshotName,
             logRetryCache, now);
@@ -381,7 +380,7 @@ class FSDirSnapshotOp {
     }
   }
 
-  public static XAttr buildXAttr() { ;
+  public static XAttr buildXAttr() {
     return XAttrHelper.buildXAttr(HdfsServerConstants.SNAPSHOT_XATTR_NAME);
   }
 }

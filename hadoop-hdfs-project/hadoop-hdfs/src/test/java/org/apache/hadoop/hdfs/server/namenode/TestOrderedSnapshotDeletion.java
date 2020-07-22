@@ -46,8 +46,8 @@ import static org.junit.Assert.assertTrue;
  * Test ordered snapshot deletion.
  */
 public class TestOrderedSnapshotDeletion {
-  static final String name1 = "user.a1";
-  static final byte[] value1 = {0x31, 0x32, 0x33};
+  static final String xattrName = "user.a1";
+  static final byte[] xattrValue = {0x31, 0x32, 0x33};
   private final Path snapshottableDir
       = new Path("/" + getClass().getSimpleName());
 
@@ -119,7 +119,7 @@ public class TestOrderedSnapshotDeletion {
         DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_DEFAULT)) {
       Map<String, byte[]> xattrMap = hdfs.getXAttrs(snapshotRoot);
       assertTrue(newXattr == null ? xattrMap.isEmpty() :
-          Arrays.equals(newXattr.getValue(), xattrMap.get(name1)));
+          Arrays.equals(newXattr.getValue(), xattrMap.get(xattrName)));
     }
   }
 
@@ -196,9 +196,9 @@ public class TestOrderedSnapshotDeletion {
     DistributedFileSystem hdfs = cluster.getFileSystem();
     hdfs.mkdirs(snapshottableDir);
     hdfs.allowSnapshot(snapshottableDir);
-    hdfs.setXAttr(snapshottableDir, name1, value1,
+    hdfs.setXAttr(snapshottableDir, xattrName, xattrValue,
         EnumSet.of(XAttrSetFlag.CREATE));
-    XAttr newXAttr = XAttrHelper.buildXAttr(name1, value1);
+    XAttr newXAttr = XAttrHelper.buildXAttr(xattrName, xattrValue);
     final Path sub0 = new Path(snapshottableDir, "sub0");
     hdfs.mkdirs(sub0);
     hdfs.createSnapshot(snapshottableDir, "s0");
