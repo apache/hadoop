@@ -711,4 +711,9 @@
     <Bug pattern="NP_NONNULL_PARAM_VIOLATION"/>
   </Match>
 
+  <!-- Suppress warning about anonymous class for mocking. -->
+  <Match>
+    <Class name="~org\.apache\.hadoop\.yarn\.server\.timelineservice\.reader\.TestTimelineReaderWebServicesHBaseStorage.*" />
+    <Bug pattern="UMAC_UNCALLABLE_METHOD_OF_ANONYMOUS_CLASS" />
+  </Match>
 </FindBugsFilter>
