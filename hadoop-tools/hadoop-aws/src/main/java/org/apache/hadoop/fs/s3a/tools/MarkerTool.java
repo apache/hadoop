@@ -20,10 +20,17 @@ package org.apache.hadoop.fs.s3a.tools;
 
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
+import com.amazonaws.AmazonClientException;
+import com.amazonaws.services.s3.model.DeleteObjectsRequest;
+import com.amazonaws.services.s3.model.MultiObjectDeleteException;
+import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,6 +40,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StorageStatistics;
+import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
@@ -43,6 +51,7 @@ import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool;
 import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.OperationDuration;
 
 import static org.apache.hadoop.fs.s3a.Invoker.once;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_NOT_ACCEPTABLE;
@@ -71,7 +80,7 @@ public final class MarkerTool extends S3GuardTool {
       "view and manipulate S3 directory markers";
 
   private static final String USAGE = NAME
-      + " [OPTIONS]"
+      + " [-verbose] [-expected <count>]"
       + " (audit || report || clean)"
 //      + " [-out <path>]"
       + " [-" + VERBOSE + "]"
@@ -80,11 +89,11 @@ public final class MarkerTool extends S3GuardTool {
 
   public static final String OPT_EXPECTED = "expected";
 
-  public static final String OPT_AUDIT = "audit";
+  public static final String AUDIT = "audit";
 
-  public static final String OPT_CLEAN = "clean";
+  public static final String CLEAN = "clean";
 
-  public static final String OPT_REPORT = "report";
+  public static final String REPORT = "report";
 
   public static final String OPT_OUTPUT = "output";
 
@@ -92,10 +101,23 @@ public final class MarkerTool extends S3GuardTool {
 
   static final String TOO_FEW_ARGUMENTS = "Too few arguments";
 
-  private PrintStream out;
+  /** Will be overridden in run(), but during tests needs to avoid NPEs */
+  private PrintStream out = System.out;
+
+  private boolean verbose;
+
+  private boolean purge;
+
+  private int expected;
+
+  private OperationCallbacks operationCallbacks;
+
+  private StoreContext storeContext;
 
   public MarkerTool(final Configuration conf) {
-    super(conf, OPT_VERBOSE);
+    super(conf,
+        OPT_VERBOSE
+    );
     getCommandFormat().addOptionWithValue(OPT_EXPECTED);
 //    getCommandFormat().addOptionWithValue(OPT_OUTPUT);
   }
@@ -108,6 +130,18 @@ public final class MarkerTool extends S3GuardTool {
   @Override
   public String getName() {
     return NAME;
+  }
+
+  @Override
+  public void resetBindings() {
+    super.resetBindings();
+    storeContext = null;
+    operationCallbacks = null;
+  }
+
+  @Override
+  public void close() throws IOException {
+    super.close();
   }
 
   @Override
@@ -127,21 +161,21 @@ public final class MarkerTool extends S3GuardTool {
     }
     // read arguments
     CommandFormat commandFormat = getCommandFormat();
-    boolean verbose = commandFormat.getOpt(VERBOSE);
+    verbose = commandFormat.getOpt(VERBOSE);
 
-    boolean purge = false;
-    int expected = 0;
+    expected = 0;
+    // argument 0 is the action
     String action = parsedArgs.get(0);
     switch (action) {
-    case OPT_AUDIT:
+    case AUDIT:
       purge = false;
       expected = 0;
       break;
-    case OPT_CLEAN:
+    case CLEAN:
       purge = true;
       expected = -1;
       break;
-    case OPT_REPORT:
+    case REPORT:
       purge = false;
       expected = -1;
       break;
@@ -152,33 +186,83 @@ public final class MarkerTool extends S3GuardTool {
 
     final String file = parsedArgs.get(1);
     final Path path = new Path(file);
-    S3AFileSystem fs = bindFilesystem(path.getFileSystem(getConf()));
-    final StoreContext context = fs.createStoreContext();
-    final OperationCallbacks operations = fs.getOperationCallbacks();
+    ScanResult result = execute(path.getFileSystem(getConf()), path, purge, expected);
+    return result.exitCode;
+  }
 
+  /**
+   * Execute the scan/purge.
+   * @param sourceFS source FS; must be or wrap an S3A FS.
+   * @param path path to scan.
+   * @param doPurge purge?
+   * @param expectedMarkerCount expected marker count
+   * @return scan+purge result.
+   * @throws IOException failure
+   */
+  @VisibleForTesting
+  ScanResult execute(
+      final FileSystem sourceFS,
+      final Path path,
+      final boolean doPurge,
+      final int expectedMarkerCount)
+      throws IOException {
+    S3AFileSystem fs = bindFilesystem(sourceFS);
+    storeContext = fs.createStoreContext();
+    operationCallbacks = fs.getOperationCallbacks();
 
-    boolean finalPurge = purge;
-    int finalExpected = expected;
-    int result = once("action", path.toString(),
-        () -> scan(path, finalPurge, finalExpected, verbose, context,
-            operations));
+    ScanResult result = once("action", path.toString(),
+        () -> scan(path, doPurge, expectedMarkerCount));
     if (verbose) {
       dumpFileSystemStatistics(fs);
     }
     return result;
   }
 
-  private int scan(final Path path,
-      final boolean purge,
-      final int expected,
-      final boolean verbose,
-      final StoreContext context,
-      final OperationCallbacks operations)
+  /**
+   * Result of the scan operation.
+   */
+  static final class ScanResult {
+
+    /** Exit code to report. */
+    int exitCode;
+
+    /** Tracker which did the scan. */
+    DirMarkerTracker tracker;
+
+    /** Summary of purge. Null if none took place. */
+    MarkerPurgeSummary purgeSummary;
+
+    @Override
+    public String toString() {
+      return "ScanResult{" +
+          "exitCode=" + exitCode +
+          ", tracker=" + tracker +
+          ", purgeSummary=" + purgeSummary +
+          '}';
+    }
+  }
+
+  /**
+   * Do the scan.
+   * @param path path to scan.
+   * @param doPurge purge?
+   * @param expectedMarkerCount expected marker count
+   * @return scan+purge result.
+   * @throws IOException
+   * @throws ExitUtil.ExitException
+   */
+  private ScanResult scan(
+      final Path path,
+      final boolean doPurge,
+      final int expectedMarkerCount)
       throws IOException, ExitUtil.ExitException {
+    ScanResult result = new ScanResult();
+
     DirMarkerTracker tracker = new DirMarkerTracker();
+    result.tracker = tracker;
     try (DurationInfo ignored =
              new DurationInfo(LOG, "marker scan %s", path)) {
-      scanDirectoryTree(path, expected, context, operations, tracker);
+      scanDirectoryTree(path, tracker);
     }
     // scan done. what have we got?
     Map<Path, Pair<String, S3ALocatedFileStatus>> surplusMarkers
@@ -198,36 +282,66 @@ public final class MarkerTool extends S3GuardTool {
         println(out, "    %s", markers);
       }
 
-      if (size > expected) {
-        // failure
-        println(out, "Expected %d marker%s", expected, suffix(size));
-        return EXIT_NOT_ACCEPTABLE;
-      }
-
     }
-    return EXIT_SUCCESS;
+    if (verbose && !leafMarkers.isEmpty()) {
+      println(out, "Found %d empty directory 'leaf' marker%s under %s",
+          leafMarkers.size(),
+          suffix(size),
+          path);
+      println(out, "These are required to indicate empty directories");
+    }
+    if (size > expectedMarkerCount) {
+      // failure
+      println(out, "Expected %d marker%s", expectedMarkerCount, suffix(size));
+      result.exitCode = EXIT_NOT_ACCEPTABLE;
+      return result;
+    }
+
+    if (doPurge) {
+      int deletePageSize = storeContext.getConfiguration()
+          .getInt(Constants.BULK_DELETE_PAGE_SIZE,
+              Constants.BULK_DELETE_PAGE_SIZE_DEFAULT);
+      result.purgeSummary = purgeMarkers(tracker,
+          deletePageSize);
+    }
+    result.exitCode = EXIT_SUCCESS;
+    return result;
   }
 
+  /**
+   * Suffix for plurals.
+   * @param size size to generate a suffix for
+   * @return "" or "s", depending on size
+   */
   private String suffix(final int size) {
     return size == 1 ? "" : "s";
   }
 
+  public static Logger getLOG() {
+    return LOG;
+  }
+
+  /**
+   * Scan a directory tree
+   * @param path path to scan
+   * @param tracker tracker to update
+   * @throws IOException
+   */
   private void scanDirectoryTree(final Path path,
-      final int expected,
-      final StoreContext context,
-      final OperationCallbacks operations,
       final DirMarkerTracker tracker) throws IOException {
-    RemoteIterator<S3AFileStatus> listing = operations
-        .listObjects(path,
-            context.pathToKey(path));
+    RemoteIterator<S3AFileStatus> listing = operationCallbacks
+        .listObjects(path, storeContext.pathToKey(path));
     while (listing.hasNext()) {
       S3AFileStatus status = listing.next();
       Path p = status.getPath();
       S3ALocatedFileStatus lfs = new S3ALocatedFileStatus(
           status, null);
-      String key = context.pathToKey(p);
+      String key = storeContext.pathToKey(p);
       if (status.isDirectory()) {
-        LOG.info("{}", key);
+        if (verbose) {
+          println(out, "Directory Marker %s", key);
+        }
+        LOG.debug("{}", key);
         tracker.markerFound(p,
             key + "/",
             lfs);
@@ -236,9 +350,97 @@ public final class MarkerTool extends S3GuardTool {
             key,
             lfs);
       }
-
-
     }
+
+  }
+
+
+  /**
+   * Result of a call of {@link #purgeMarkers(DirMarkerTracker, int)};
+   * included in {@link ScanResult} so must share visibility.
+   */
+  static final class MarkerPurgeSummary {
+
+    /** Number of markers deleted. */
+    private int markersDeleted;
+
+    /** Number of delete requests issued. */
+    private int deleteRequests;
+
+    /**
+     * Total duration of delete requests.
+     * If this is ever parallelized, this will
+     * be greater than the elapsed time of the
+     * operation.
+     */
+    private long totalDeleteRequestDuration;
+
+    @Override
+    public String toString() {
+      return "MarkerPurgeSummary{" +
+          "markersDeleted=" + markersDeleted +
+          ", deleteRequests=" + deleteRequests +
+          ", totalDeleteRequestDuration=" + totalDeleteRequestDuration +
+          '}';
+    }
+  }
+
+  /**
+   * Purge the markers.
+   * @param tracker tracker with the details
+   * @param deletePageSize page size of deletes
+   * @return summary
+   * @throws MultiObjectDeleteException
+   * @throws AmazonClientException
+   * @throws IOException
+   */
+  private MarkerPurgeSummary purgeMarkers(DirMarkerTracker tracker,
+      int deletePageSize)
+      throws MultiObjectDeleteException, AmazonClientException, IOException {
+
+    MarkerPurgeSummary summary = new MarkerPurgeSummary();
+    // we get a map of surplus markers to delete.
+    Map<Path, Pair<String, S3ALocatedFileStatus>> markers
+        = tracker.getSurplusMarkers();
+    int size = markers.size();
+    // build a list from the strings in the map
+    List<DeleteObjectsRequest.KeyVersion> collect =
+        markers.values().stream()
+            .map(p -> new DeleteObjectsRequest.KeyVersion(p.getLeft()))
+            .collect(Collectors.toList());
+    // as an array list so .sublist is straightforward
+    List<DeleteObjectsRequest.KeyVersion> markerKeys = new ArrayList<>(
+        collect);
+
+    // now randomize. Why so? if the list spans multiple S3 partitions,
+    // it should reduce the IO load on each part.
+    Collections.shuffle(markerKeys);
+    int pages = size / deletePageSize;
+    if (size % deletePageSize > 0) {
+      pages += 1;
+    }
+    if (verbose) {
+      println(out, "%d markers to delete in %d pages of %d keys/page",
+          size, pages, deletePageSize);
+    }
+    int start = 0;
+    while (start < size) {
+      // end is one past the end of the page
+      int end = Math.min(start + deletePageSize, size);
+      List<DeleteObjectsRequest.KeyVersion> page = markerKeys.subList(start,
+          end);
+      List<Path> undeleted = new ArrayList<>();
+      // currently no attempt at doing this in pages.
+      OperationDuration duration = new OperationDuration();
+      operationCallbacks.removeKeys(page, true, undeleted, null, false);
+      duration.finished();
+      summary.deleteRequests++;
+      summary.totalDeleteRequestDuration += duration.value();
+      // and move to the start of the next page
+      start = end;
+    }
+    summary.markersDeleted = size;
+    return summary;
   }
 
   /**
@@ -257,5 +459,13 @@ public final class MarkerTool extends S3GuardTool {
       StorageStatistics.LongStatistic next = it.next();
       println(out, "%s\t%s", next.getName(), next.getValue());
     }
+  }
+
+  public boolean isVerbose() {
+    return verbose;
+  }
+
+  public void setVerbose(final boolean verbose) {
+    this.verbose = verbose;
   }
 }

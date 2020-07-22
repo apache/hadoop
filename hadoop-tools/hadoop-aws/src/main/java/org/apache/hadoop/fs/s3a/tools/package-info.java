@@ -17,7 +17,7 @@
  */
 
 /**
- * Command line tools.
+ * S3A Command line tools independent of S3Guard.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable

@@ -102,11 +102,11 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
       removeBaseAndBucketOverrides(bucketName, conf,
           S3_METADATA_STORE_IMPL);
     }
-    // directory marker options
     removeBaseAndBucketOverrides(bucketName, conf,
         DIRECTORY_MARKER_POLICY,
         METADATASTORE_AUTHORITATIVE,
         AUTHORITATIVE_PATH);
+    // directory marker options
     conf.set(DIRECTORY_MARKER_POLICY,
         keepMarkers
             ? DIRECTORY_MARKER_POLICY_KEEP

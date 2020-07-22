@@ -151,4 +151,14 @@ public class DirMarkerTracker {
   public int getScanCount() {
     return scanCount;
   }
+
+  @Override
+  public String toString() {
+    return "DirMarkerTracker{" +
+        "leafMarkers=" + leafMarkers.size() +
+        ", surplusMarkers=" + surplusMarkers.size() +
+        ", lastDirChecked=" + lastDirChecked +
+        ", scanCount=" + scanCount +
+        '}';
+  }
 }

@@ -475,6 +475,14 @@ public abstract class S3GuardTool extends Configured implements Tool,
     this.store = store;
   }
 
+  /**
+   * Reset the store and filesystem bindings.
+   */
+  protected void resetBindings() {
+    store = null;
+    filesystem = null;
+  }
+
   protected CommandFormat getCommandFormat() {
     return commandFormat;
   }
