@@ -31,6 +31,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.management.ObjectName;
@@ -103,7 +104,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
   
   /** All snapshottable directories in the namesystem. */
   private final Map<Long, INodeDirectory> snapshottables =
-      new HashMap<Long, INodeDirectory>();
+      new ConcurrentHashMap<>();
 
   public SnapshotManager(final Configuration conf, final FSDirectory fsdir) {
     this.fsdir = fsdir;
@@ -427,9 +428,8 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     snapshotCounter = counter;
   }
 
-  INodeDirectory[] getSnapshottableDirs() {
-    return snapshottables.values().toArray(
-        new INodeDirectory[snapshottables.size()]);
+  List<INodeDirectory> getSnapshottableDirs() {
+    return new ArrayList<>(snapshottables.values());
   }
 
   /**
@@ -576,7 +576,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
   }
 
   public static XAttr buildXAttr() {
-    return XAttrHelper.buildXAttr(HdfsServerConstants.SNAPSHOT_XATTR_NAME);
+    return XAttrHelper.buildXAttr(HdfsServerConstants.XATTR_SNAPSHOT_DELETED);
   }
 
   private ObjectName mxBeanName;
@@ -628,5 +628,37 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     return new SnapshotInfo.Bean(
         s.getRoot().getLocalName(), s.getRoot().getFullPathName(),
         s.getRoot().getModificationTime());
+  }
+
+  Snapshot.Root chooseDeletedSnapshot() {
+    final List<INodeDirectory> dirs = getSnapshottableDirs();
+    Collections.shuffle(dirs);
+
+    for(INodeDirectory dir : dirs) {
+      final Snapshot.Root root = chooseDeletedSnapshot(dir);
+      if (root != null) {
+        return root;
+      }
+    }
+    return null;
+  }
+
+  private static Snapshot.Root chooseDeletedSnapshot(INodeDirectory dir) {
+    final DirectorySnapshottableFeature snapshottable
+        = dir.getDirectorySnapshottableFeature();
+    if (snapshottable == null) {
+      return null;
+    }
+    final DirectoryWithSnapshotFeature.DirectoryDiffList diffs
+        = snapshottable.getDiffs();
+    if (diffs.isEmpty()) {
+      return null;
+    }
+    final Snapshot.Root first = (Snapshot.Root) diffs.iterator().next()
+        .getSnapshotINode();
+    if (!first.isMarkedAsDeleted()) {
+      return null;
+    }
+    return first;
   }
 }

@@ -506,6 +506,12 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.namenode.snapshot.deletion.ordered";
   public static final boolean DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED_DEFAULT
       = false;
+  public static final String
+      DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED_GC_PERIOD_MS
+      = "dfs.namenode.snapshot.deletion.ordered.gc.period.ms";
+  public static final int
+      DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED_GC_PERIOD_MS_DEFAULT
+      = 60_000;
 
   public static final String DFS_NAMENODE_SNAPSHOT_SKIPLIST_SKIP_INTERVAL =
       "dfs.namenode.snapshot.skiplist.interval";

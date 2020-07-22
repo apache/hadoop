@@ -438,7 +438,7 @@ public class FSImageFormatPBSnapshot {
           .setSnapshotCounter(sm.getSnapshotCounter())
           .setNumSnapshots(sm.getNumSnapshots());
 
-      INodeDirectory[] snapshottables = sm.getSnapshottableDirs();
+      final List<INodeDirectory> snapshottables = sm.getSnapshottableDirs();
       for (INodeDirectory sdir : snapshottables) {
         b.addSnapshottableDir(sdir.getId());
       }

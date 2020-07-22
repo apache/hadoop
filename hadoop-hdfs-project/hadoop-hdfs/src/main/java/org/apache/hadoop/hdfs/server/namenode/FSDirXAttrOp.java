@@ -44,7 +44,7 @@ import java.util.ListIterator;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.SECURITY_XATTR_UNREADABLE_BY_SUPERUSER;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_FILE_ENCRYPTION_INFO;
-import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.SNAPSHOT_XATTR_NAME;
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SNAPSHOT_DELETED;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_ENCRYPTION_ZONE;
 
 public class FSDirXAttrOp {
@@ -328,10 +328,10 @@ public class FSDirXAttrOp {
             SECURITY_XATTR_UNREADABLE_BY_SUPERUSER + "' on a file.");
       }
 
-      if (xaName.equals(SNAPSHOT_XATTR_NAME) && !(inode.isDirectory() &&
+      if (xaName.equals(XATTR_SNAPSHOT_DELETED) && !(inode.isDirectory() &&
           inode.getParent().isSnapshottable())) {
         throw new IOException("Can only set '" +
-            SNAPSHOT_XATTR_NAME + "' on a snapshot root.");
+            XATTR_SNAPSHOT_DELETED + "' on a snapshot root.");
       }
     }
 
