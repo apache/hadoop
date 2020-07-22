@@ -19,11 +19,29 @@
 package org.apache.hadoop.io.compress.lzo;
 
 import java.io.IOException;
+
+import java.nio.Buffer;
+import java.nio.ByteBuffer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.compress.Compressor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class LzoCompressor implements Compressor {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(LzoCompressor.class.getName());
+  private static final int DEFAULT_DIRECT_BUFFER_SIZE = 64 * 1024;
+
   private int directBufferSize;
+  private Buffer compressedDirectBuf = null;
+  private int uncompressedDirectBufLen;
+  private Buffer uncompressedDirectBuf = null;
+  private byte[] userBuf = null;
+  private int userBufOff = 0, userBufLen = 0;
+  private boolean finish, finished;
+
+  private long bytesRead = 0L;
+  private long bytesWritten = 0L;
 
   /**
    * Creates a new compressor.
@@ -32,70 +50,177 @@ public class LzoCompressor implements Compressor {
    */
   public LzoCompressor(int directBufferSize) {
     this.directBufferSize = directBufferSize;
+
+    uncompressedDirectBuf = ByteBuffer.allocateDirect(directBufferSize);
+    compressedDirectBuf = ByteBuffer.allocateDirect(directBufferSize);
+    compressedDirectBuf.position(directBufferSize);
   }
 
+  /**
+   * Creates a new compressor with the default buffer size.
+   */
+  public LzoCompressor() {
+    this(DEFAULT_DIRECT_BUFFER_SIZE);
+  }
+
+  /**
+   * Sets input data for compression.
+   * This should be called whenever #needsInput() returns
+   * <code>true</code> indicating that more input data is required.
+   *
+   * @param b   Input data
+   * @param off Start offset
+   * @param len Length
+   */
   @Override
-  public void setInput(byte[] b, int off, int len)
-  {
+  public synchronized void setInput(byte[] b, int off, int len) {
+    if (b == null) {
+      throw new NullPointerException();
+    }
+    if (off < 0 || len < 0 || off > b.length - len) {
+      throw new ArrayIndexOutOfBoundsException();
+    }
+    finished = false;
+
+    if (len > uncompressedDirectBuf.remaining()) {
+      // save data; now !needsInput
+      this.userBuf = b;
+      this.userBufOff = off;
+      this.userBufLen = len;
+    } else {
+      ((ByteBuffer) uncompressedDirectBuf).put(b, off, len);
+      uncompressedDirectBufLen = uncompressedDirectBuf.position();
+    }
+
+    bytesRead += len;
+  }
+
+  /**
+   * If a write would exceed the capacity of the direct buffers, it is set
+   * aside to be loaded by this function while the compressed data are
+   * consumed.
+   */
+  synchronized void setInputFromSavedData() {
+    if (0 >= userBufLen) {
+      return;
+    }
+    finished = false;
+
+    uncompressedDirectBufLen = Math.min(userBufLen, directBufferSize);
+    ((ByteBuffer) uncompressedDirectBuf).put(userBuf, userBufOff,
+            uncompressedDirectBufLen);
+
+    // Note how much data is being fed to lz4
+    userBufOff += uncompressedDirectBufLen;
+    userBufLen -= uncompressedDirectBufLen;
+  }
+
+  /**
+   * Does nothing.
+   */
+  @Override
+  public synchronized void setDictionary(byte[] b, int off, int len) {
+    // do nothing
+  }
+
+  /**
+   * Returns true if the input data buffer is empty and
+   * #setInput() should be called to provide more input.
+   *
+   * @return <code>true</code> if the input data buffer is empty and
+   *         #setInput() should be called in order to provide more input.
+   */
+  @Override
+  public synchronized boolean needsInput() {
+    return !(compressedDirectBuf.remaining() > 0
+            || uncompressedDirectBuf.remaining() == 0 || userBufLen > 0);
+  }
+
+  /**
+   * When called, indicates that compression should end
+   * with the current contents of the input buffer.
+   */
+  @Override
+  public synchronized void finish() {
+    finish = true;
+  }
+
+  /**
+   * Returns true if the end of the compressed
+   * data output stream has been reached.
+   *
+   * @return <code>true</code> if the end of the compressed
+   *         data output stream has been reached.
+   */
+  @Override
+  public synchronized boolean finished() {
+    // Check if all uncompressed data has been consumed
+    return (finish && finished && compressedDirectBuf.remaining() == 0);
+  }
+
+  /**
+   * Fills specified buffer with compressed data. Returns actual number
+   * of bytes of compressed data. A return value of 0 indicates that
+   * needsInput() should be called in order to determine if more input
+   * data is required.
+   *
+   * @param b   Buffer for the compressed data
+   * @param off Start offset of the data
+   * @param len Size of the buffer
+   * @return The actual number of bytes of compressed data.
+   */
+  @Override
+  public synchronized int compress(byte[] b, int off, int len)
+          throws IOException {
     throw new UnsupportedOperationException("LZO block compressor is not supported");
   }
 
+  /**
+   * Resets compressor so that a new set of input data can be processed.
+   */
   @Override
-  public boolean needsInput()
-  {
-    throw new UnsupportedOperationException("LZO block compressor is not supported");
+  public synchronized void reset() {
+    finish = false;
+    finished = false;
+    uncompressedDirectBuf.clear();
+    uncompressedDirectBufLen = 0;
+    compressedDirectBuf.clear();
+    compressedDirectBuf.limit(0);
+    userBufOff = userBufLen = 0;
+    bytesRead = bytesWritten = 0L;
   }
 
+  /**
+   * Prepare the compressor to be used in a new stream with settings defined in
+   * the given Configuration
+   *
+   * @param conf Configuration from which new setting are fetched
+   */
   @Override
-  public void setDictionary(byte[] b, int off, int len)
-  {
-    throw new UnsupportedOperationException("LZO block compressor is not supported");
+  public synchronized void reinit(Configuration conf) {
+    reset();
   }
 
+  /**
+   * Return number of bytes given to this compressor since last reset.
+   */
   @Override
-  public long getBytesRead()
-  {
-    throw new UnsupportedOperationException("LZO block compressor is not supported");
+  public synchronized long getBytesRead() {
+    return bytesRead;
   }
 
+  /**
+   * Return number of bytes consumed by callers of compress since last reset.
+   */
   @Override
-  public long getBytesWritten()
-  {
-    throw new UnsupportedOperationException("LZO block compressor is not supported");
+  public synchronized long getBytesWritten() {
+    return bytesWritten;
   }
 
+  /**
+   * Closes the compressor and discards any unprocessed input.
+   */
   @Override
-  public void finish()
-  {
-    throw new UnsupportedOperationException("LZO block compressor is not supported");
-  }
-
-  @Override
-  public boolean finished()
-  {
-    throw new UnsupportedOperationException("LZO block compressor is not supported");
-  }
-
-  @Override
-  public int compress(byte[] b, int off, int len)
-          throws IOException
-  {
-    throw new UnsupportedOperationException("LZO block compressor is not supported");
-  }
-
-  @Override
-  public void reset()
-  {
-  }
-
-  @Override
-  public void end()
-  {
-    throw new UnsupportedOperationException("LZO block compressor is not supported");
-  }
-
-  @Override
-  public void reinit(Configuration conf)
-  {
+  public synchronized void end() {
   }
 }
