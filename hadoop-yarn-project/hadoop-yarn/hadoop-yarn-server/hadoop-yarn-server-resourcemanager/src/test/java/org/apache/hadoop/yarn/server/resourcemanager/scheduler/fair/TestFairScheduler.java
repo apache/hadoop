@@ -136,6 +136,8 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @SuppressWarnings("unchecked")
@@ -4956,6 +4958,13 @@ public class TestFairScheduler extends FairSchedulerTestBase {
             .getSchedulerNode(nm_0.getNodeId()).getUnallocatedResource();
     assertThat(availableResource.getMemorySize()).isEqualTo(0);
     assertThat(availableResource.getVirtualCores()).isEqualTo(0);
+    // Kick off another heartbeat where the RMNodeResourceUpdateEvent would
+    // be skipped for DECOMMISSIONING state since the total resource is
+    // already equal to used resource from the previous heartbeat.
+    when(spyNode.getState()).thenReturn(NodeState.DECOMMISSIONING);
+    resourceManager.getResourceScheduler().handle(
+        new NodeUpdateSchedulerEvent(spyNode));
+    verify(mockDispatcher, times(1)).getEventHandler();
   }
 
   private NodeManager registerNode(String hostName, int containerManagerPort,
