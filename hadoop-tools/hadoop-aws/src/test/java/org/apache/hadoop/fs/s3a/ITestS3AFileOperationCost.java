@@ -46,9 +46,9 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
-import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADVISE;
-import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADV_SEQUENTIAL;
-import static org.apache.hadoop.fs.s3a.Constants.OPEN_OPTION_LENGTH;
+import static org.apache.hadoop.fs.impl.OpenFileParameters.FS_OPT_OPENFILE_FADVISE;
+import static org.apache.hadoop.fs.impl.OpenFileParameters.FS_OPT_OPENFILE_FADVISE_SEQUENTIAL;
+import static org.apache.hadoop.fs.impl.OpenFileParameters.FS_OPT_OPENFILE_LENGTH;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
@@ -727,7 +727,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
         st.getPermission(),
         st.getOwner(),
         st.getGroup(),
-        new Path("gopher:///"));
+        new Path("gopher:///localhost/" + testFile.getName()));
     resetMetricDiffs();
     // measure GET requests issued.
     MetricDiff getRequests = new MetricDiff(fs, STREAM_OPENED);
@@ -754,8 +754,8 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     int offset = 2;
     long shortLen = len - offset;
     CompletableFuture<FSDataInputStream> f2 = fs.openFile(testFile)
-        .must(INPUT_FADVISE, INPUT_FADV_SEQUENTIAL)
-        .must(OPEN_OPTION_LENGTH, shortLen)
+        .must(FS_OPT_OPENFILE_FADVISE, FS_OPT_OPENFILE_FADVISE_SEQUENTIAL)
+        .opt(FS_OPT_OPENFILE_LENGTH, shortLen)
         .build();
     verifyOperationCount(0, 0);
     getRequests.assertDiffEquals(0);
@@ -772,8 +772,8 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
 
     long longLen = len + 10;
     FSDataInputStream in3 = fs.openFile(testFile)
-        .must(INPUT_FADVISE, INPUT_FADV_SEQUENTIAL)
-        .must(OPEN_OPTION_LENGTH, longLen)
+        .must(FS_OPT_OPENFILE_FADVISE, FS_OPT_OPENFILE_FADVISE_SEQUENTIAL)
+        .must(FS_OPT_OPENFILE_LENGTH, longLen)
         .build()
         .get();
     byte[] out = new byte[(int) longLen];

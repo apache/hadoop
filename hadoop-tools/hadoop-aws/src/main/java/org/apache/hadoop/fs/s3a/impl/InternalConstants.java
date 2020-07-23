@@ -18,15 +18,17 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.google.common.annotations.VisibleForTesting;
 
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.s3a.Constants;
+
+import static org.apache.hadoop.fs.impl.OpenFileParameters.FS_OPT_OPENFILE_FADVISE;
+import static org.apache.hadoop.fs.impl.OpenFileParameters.FS_OPT_OPENFILE_LENGTH;
 
 /**
  * Internal constants private only to the S3A codebase.
@@ -79,12 +81,14 @@ public final class InternalConstants {
    * used becomes that of the select operation.
    */
   @InterfaceStability.Unstable
-  public static final Set<String> STANDARD_OPENFILE_KEYS =
-      Collections.unmodifiableSet(
-          new HashSet<>(
-              Arrays.asList(Constants.INPUT_FADVISE,
-                  Constants.OPEN_OPTION_LENGTH,
-                  Constants.READAHEAD_RANGE)));
+  public static final Set<String> S3A_OPENFILE_KEYS =
+      Stream.of(
+          FS_OPT_OPENFILE_FADVISE,
+          FS_OPT_OPENFILE_LENGTH,
+          Constants.INPUT_FADVISE,
+          Constants.READAHEAD_RANGE)
+          .collect(Collectors.toSet());
+
 
   /** 404 error code. */
   public static final int SC_404 = 404;

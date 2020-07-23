@@ -105,7 +105,7 @@ import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
 import org.apache.hadoop.fs.s3a.impl.CopyOutcome;
 import org.apache.hadoop.fs.s3a.impl.DeleteOperation;
 import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport;
-import org.apache.hadoop.fs.s3a.impl.OpenFileHelper;
+import org.apache.hadoop.fs.s3a.impl.S3AOpenFileHelper;
 import org.apache.hadoop.fs.s3a.impl.OperationCallbacks;
 import org.apache.hadoop.fs.s3a.impl.RenameOperation;
 import org.apache.hadoop.fs.s3a.impl.S3AMultipartUploaderBuilder;
@@ -291,6 +291,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private final S3AFileSystem.OperationCallbacksImpl
       operationCallbacks = new OperationCallbacksImpl();
 
+  /**
+   * Helper for the openFile() method.
+   */
+  private S3AOpenFileHelper openFileHelper;
+
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
   private static void addDeprecatedKeys() {
@@ -453,6 +458,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       pageSize = intOption(getConf(), BULK_DELETE_PAGE_SIZE,
           BULK_DELETE_PAGE_SIZE_DEFAULT, 0);
+      // now the open file logic
+      openFileHelper = new S3AOpenFileHelper(
+          inputPolicy,
+          changeDetectionPolicy,
+          readAhead,
+          username);
     } catch (AmazonClientException e) {
       // amazon client exception: stop all services then throw the translation
       stopAllServices();
@@ -1067,71 +1078,33 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.RetryTranslated
   public FSDataInputStream open(Path f, int bufferSize)
       throws IOException {
-    return open(f, Optional.empty(), Optional.empty());
+    entryPoint(INVOCATION_OPEN);
+    return open(qualify(f), openFileHelper.openSimpleFile());
   }
 
   /**
    * Opens an FSDataInputStream at the indicated Path.
-   * if status contains an S3AFileStatus reference, it is used
-   * and so a HEAD request to the store is avoided.
+   * if fileInformation contains an FileStatus reference,
+   * then that is used to avoid a check for the file length/existence
    *
-   * @param file the file to open
-   * @param options configuration options if opened with the builder API.
-   * @param providedStatus optional file status.
+   * @param path the file to open
+   * @param fileInformation information about the file to open
    * @throws IOException IO failure.
    */
   @Retries.RetryTranslated
   private FSDataInputStream open(
-      final Path file,
-      final Optional<Configuration> options,
-      final Optional<S3AFileStatus> providedStatus)
+      final Path path,
+      final S3AOpenFileHelper.OpenFileInformation fileInformation)
       throws IOException {
 
-    entryPoint(INVOCATION_OPEN);
-    final Path path = qualify(file);
-
-    S3AFileStatus fileStatus;
-    Configuration opts = options.orElse(null);
-    if (!providedStatus.isPresent()
-        && opts != null
-        && opts.get(OPEN_OPTION_LENGTH) != null) {
-      // build a minimal S3A FileStatus From the input length alone.
-      // this is all we actually need.
-      long length = opts.getLong(OPEN_OPTION_LENGTH, 0);
-      LOG.debug("Fixing length of file to read {} as {}", path, length);
-      fileStatus = new S3AFileStatus(
-          length,
-          0, path,
-          getDefaultBlockSize(path),
-          username, null, null);
-    } else {
-      fileStatus = extractOrFetchSimpleFileStatus(path,
-          providedStatus);
-    }
-
-    S3AReadOpContext readContext;
-    if (opts != null) {
-      // normal path. Open the file with the chosen seek policy, if different
-      // from the normal one.
-      // and readahead.
-      S3AInputPolicy policy = S3AInputPolicy.getPolicy(
-          opts.get(INPUT_FADVISE, inputPolicy.toString()));
-      long readAheadRange2 = opts.getLong(READAHEAD_RANGE, readAhead);
-      // TODO support change detection policy from options?
-      readContext = createReadContext(
-          fileStatus,
-          policy,
-          changeDetectionPolicy,
-          readAheadRange2);
-    } else {
-      readContext = createReadContext(
-          fileStatus,
-          inputPolicy,
-          changeDetectionPolicy,
-          readAhead);
-    }
+    final S3AFileStatus fileStatus =
+        extractOrFetchSimpleFileStatus(path, fileInformation);
+    S3AReadOpContext readContext = createReadContext(
+        fileStatus,
+        fileInformation.getInputPolicy(),
+        fileInformation.getChangePolicy(),
+        fileInformation.getReadAheadRange());
     LOG.debug("Opening '{}'", readContext);
-
     return new FSDataInputStream(
         new S3AInputStream(
             readContext,
@@ -4624,25 +4597,27 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IOException IO failure
    */
   @Retries.RetryTranslated
-  private FSDataInputStream select(final Path source,
-      final String expression,
+  private FSDataInputStream select(final Path path,
       final Configuration options,
-      final Optional<S3AFileStatus> providedStatus)
+      final S3AOpenFileHelper.OpenFileInformation fileInformation)
       throws IOException {
     entryPoint(OBJECT_SELECT_REQUESTS);
-    requireSelectSupport(source);
-    final Path path = makeQualified(source);
+    requireSelectSupport(path);
+    String expression = fileInformation.getSql();
     final S3AFileStatus fileStatus = extractOrFetchSimpleFileStatus(path,
-        providedStatus);
+        fileInformation);
 
     // readahead range can be dynamically set
-    long ra = options.getLong(READAHEAD_RANGE, readAhead);
     S3ObjectAttributes objectAttributes = createObjectAttributes(
         path, fileStatus);
-    S3AReadOpContext readContext = createReadContext(fileStatus, inputPolicy,
-        changeDetectionPolicy, ra);
+    ChangeDetectionPolicy changePolicy = fileInformation.getChangePolicy();
+    S3AReadOpContext readContext = createReadContext(
+        fileStatus,
+        fileInformation.getInputPolicy(),
+        changePolicy,
+        fileInformation.getReadAheadRange());
 
-    if (changeDetectionPolicy.getSource() != ChangeDetectionPolicy.Source.None
+    if (changePolicy.getSource() != ChangeDetectionPolicy.Source.None
         && fileStatus.getETag() != null) {
       // if there is change detection, and the status includes at least an
       // etag,
@@ -4654,7 +4629,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // version in the final read; nor can we check the etag match)
       ChangeTracker changeTracker =
           new ChangeTracker(uri.toString(),
-              changeDetectionPolicy,
+              changePolicy,
               readContext.instrumentation.newInputStreamStatistics()
                   .getVersionMismatchCounter(),
               objectAttributes);
@@ -4687,21 +4662,20 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Extract the status from the optional parameter, querying
-   * S3Guard/s3 if it is absent.
+   * Get the status for the file, querying
+   * S3Guard/s3 if there is none in the fileInformation parameter.
    * @param path path of the status
-   * @param optStatus optional status
+   * @param fileInformation information on the file to open
    * @return a file status
    * @throws FileNotFoundException if there is no normal file at that path
    * @throws IOException IO failure
    */
   private S3AFileStatus extractOrFetchSimpleFileStatus(
-      final Path path, final Optional<S3AFileStatus> optStatus)
+      final Path path,
+      final S3AOpenFileHelper.OpenFileInformation fileInformation)
       throws IOException {
-    S3AFileStatus fileStatus;
-    if (optStatus.isPresent()) {
-      fileStatus = optStatus.get();
-    } else {
+    S3AFileStatus fileStatus = fileInformation.getStatus();
+    if (fileStatus == null) {
       // this looks at S3guard and gets any type of status back,
       // if it falls back to S3 it does a HEAD only.
       // therefore: if there is no S3Guard and there is a dir, this
@@ -4734,20 +4708,19 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       final Path rawPath,
       final OpenFileParameters parameters) throws IOException {
     final Path path = qualify(rawPath);
-    Triple<Boolean, S3AFileStatus, String> statusT = new OpenFileHelper()
-        .prepareToOpenFile(
-            path, parameters, username,
+    S3AOpenFileHelper.OpenFileInformation fileInformation =
+        openFileHelper.prepareToOpenFile(
+            path,
+            parameters,
             getDefaultBlockSize(path));
-    boolean isSelect = statusT.getLeft();
-    String sql = statusT.getRight();
-    Optional<S3AFileStatus> ost = Optional.ofNullable(statusT.getMiddle());
+    boolean isSelect = fileInformation.isSql();
     CompletableFuture<FSDataInputStream> result = new CompletableFuture<>();
     Configuration options = parameters.getOptions();
     if (!isSelect) {
       // normal path.
       unboundedThreadPool.submit(() ->
           LambdaUtils.eval(result,
-              () -> open(path, Optional.of(options), ost)));
+              () -> open(path, fileInformation)));
     } else {
       // it is a select statement.
       // fail fast if the operation is not available
@@ -4755,7 +4728,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // submit the query
       unboundedThreadPool.submit(() ->
           LambdaUtils.eval(result,
-              () -> select(path, sql, options, ost)));
+              () -> select(path, options, fileInformation)));
     }
     return result;
   }
