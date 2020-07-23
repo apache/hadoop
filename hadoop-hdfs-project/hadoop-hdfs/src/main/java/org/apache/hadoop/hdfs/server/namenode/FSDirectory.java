@@ -95,6 +95,8 @@ import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XA
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.SECURITY_XATTR_UNREADABLE_BY_SUPERUSER;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY;
 import static org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.CURRENT_STATE_ID;
+import static org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager.DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED;
+import static org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager.DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED_DEFAULT;
 
 /**
  * Both FSDirectory and FSNamesystem manage the state of the namespace.
@@ -355,9 +357,9 @@ public class FSDirectory implements Closeable {
         + ": (%s).", DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_KEY);
 
     this.snapshotDeletionOrdered =
-        conf.getBoolean(DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED,
-            DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED_DEFAULT);
-    LOG.info("{} = {}", DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED,
+        conf.getBoolean(DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED,
+            DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED_DEFAULT);
+    LOG.info("{} = {}", DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED,
         snapshotDeletionOrdered);
 
     this.accessTimePrecision = conf.getLong(

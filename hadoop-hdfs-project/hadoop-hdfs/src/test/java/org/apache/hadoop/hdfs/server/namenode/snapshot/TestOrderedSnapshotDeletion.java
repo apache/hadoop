@@ -26,7 +26,6 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.XAttrFeature;
 import org.junit.After;
@@ -34,13 +33,13 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Map;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED;
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SNAPSHOT_DELETED;
+import static org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager.DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -106,10 +105,10 @@ public class TestOrderedSnapshotDeletion {
     final INode inode = cluster.getNamesystem().getFSDirectory()
         .getINode(snapshotRoot.toString());
     final XAttrFeature f = inode.getXAttrFeature();
-    final XAttr xAttr = f.getXAttr(HdfsServerConstants.XATTR_SNAPSHOT_DELETED);
+    final XAttr xAttr = f.getXAttr(XATTR_SNAPSHOT_DELETED);
     Assert.assertNotNull(xAttr);
-    Assert.assertEquals(HdfsServerConstants.XATTR_SNAPSHOT_DELETED
-        .substring("system.".length()), xAttr.getName());
+    Assert.assertEquals(XATTR_SNAPSHOT_DELETED.substring("system.".length()),
+        xAttr.getName());
     Assert.assertEquals(XAttr.NameSpace.SYSTEM, xAttr.getNameSpace());
     Assert.assertNull(xAttr.getValue());
 
@@ -118,8 +117,8 @@ public class TestOrderedSnapshotDeletion {
     Assert.assertTrue(((Snapshot.Root)inode).isMarkedAsDeleted());
   }
 
-  static void assertNotMarkedAsDeleted(Path snapshotRoot, MiniDFSCluster cluster)
-      throws IOException {
+  static void assertNotMarkedAsDeleted(Path snapshotRoot,
+      MiniDFSCluster cluster) throws IOException {
     // Check if the path exists
     Assert.assertNotNull(cluster.getFileSystem().getFileStatus(snapshotRoot));
 
@@ -128,7 +127,7 @@ public class TestOrderedSnapshotDeletion {
         .getINode(snapshotRoot.toString());
     final XAttrFeature f = inode.getXAttrFeature();
     if (f != null) {
-      final XAttr xAttr = f.getXAttr(HdfsServerConstants.XATTR_SNAPSHOT_DELETED);
+      final XAttr xAttr = f.getXAttr(XATTR_SNAPSHOT_DELETED);
       Assert.assertNull(xAttr);
     }
 

@@ -77,6 +77,18 @@ public class SnapshotManager implements SnapshotStatsMXBean {
   public static final Logger LOG =
       LoggerFactory.getLogger(SnapshotManager.class);
 
+  // The following are private configurations
+  public static final String DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED =
+      "dfs.namenode.snapshot.deletion.ordered";
+  public static final boolean DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED_DEFAULT
+      = false;
+  public static final String
+      DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED_GC_PERIOD_MS
+      = "dfs.namenode.snapshot.deletion.ordered.gc.period.ms";
+  public static final int
+      DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED_GC_PERIOD_MS_DEFAULT
+      = 60_000;
+
   private final FSDirectory fsdir;
   private boolean captureOpenFiles;
   /**
