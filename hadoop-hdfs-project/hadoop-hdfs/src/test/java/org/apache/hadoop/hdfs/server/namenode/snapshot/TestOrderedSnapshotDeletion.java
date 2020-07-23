@@ -71,7 +71,7 @@ public class TestOrderedSnapshotDeletion {
   }
 
   @Test(timeout = 60000)
-  public void testSnapshotDeletionGc() throws Exception {
+  public void testOrderedSnapshotDeletion() throws Exception {
     DistributedFileSystem hdfs = cluster.getFileSystem();
     hdfs.mkdirs(snapshottableDir);
     hdfs.allowSnapshot(snapshottableDir);
