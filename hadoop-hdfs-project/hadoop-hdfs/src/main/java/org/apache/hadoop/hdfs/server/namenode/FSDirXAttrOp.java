@@ -47,7 +47,7 @@ import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XA
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.SNAPSHOT_XATTR_NAME;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XATTR_ENCRYPTION_ZONE;
 
-public class FSDirXAttrOp {
+class FSDirXAttrOp {
   private static final XAttr KEYID_XATTR =
       XAttrHelper.buildXAttr(CRYPTO_XATTR_ENCRYPTION_ZONE, null);
   private static final XAttr UNREADABLE_BY_SUPERUSER_XATTR =
@@ -266,7 +266,7 @@ public class FSDirXAttrOp {
     return newXAttrs;
   }
 
-  public static INode unprotectedSetXAttrs(
+  static INode unprotectedSetXAttrs(
       FSDirectory fsd, final INodesInPath iip, final List<XAttr> xAttrs,
       final EnumSet<XAttrSetFlag> flag)
       throws IOException {
@@ -286,19 +286,19 @@ public class FSDirXAttrOp {
 
       if (CRYPTO_XATTR_FILE_ENCRYPTION_INFO.equals(xaName)) {
         HdfsProtos.PerFileEncryptionInfoProto fileProto = HdfsProtos.
-                PerFileEncryptionInfoProto.parseFrom(xattr.getValue());
+            PerFileEncryptionInfoProto.parseFrom(xattr.getValue());
         String keyVersionName = fileProto.getEzKeyVersionName();
         String zoneKeyName = fsd.ezManager.getKeyName(iip);
         if (zoneKeyName == null) {
           throw new IOException("Cannot add raw feInfo XAttr to a file in a " +
-                  "non-encryption zone");
+              "non-encryption zone");
         }
 
         if (!KeyProviderCryptoExtension.
-                getBaseName(keyVersionName).equals(zoneKeyName)) {
+            getBaseName(keyVersionName).equals(zoneKeyName)) {
           throw new IllegalArgumentException(String.format(
-                  "KeyVersion '%s' does not belong to the key '%s'",
-                  keyVersionName, zoneKeyName));
+              "KeyVersion '%s' does not belong to the key '%s'",
+              keyVersionName, zoneKeyName));
         }
       }
 

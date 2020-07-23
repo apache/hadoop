@@ -27,6 +27,7 @@ import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.List;
 
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -817,15 +818,19 @@ public class FSEditLogLoader {
           renameReservedPathsOnUpgrade(deleteSnapshotOp.snapshotRoot,
               logVersion);
       INodesInPath iip = fsDir.unprotectedResolvePath(snapshotRoot);
-      fsNamesys.getSnapshotManager().deleteSnapshot(iip,
-          deleteSnapshotOp.snapshotName,
-          new INode.ReclaimContext(fsNamesys.dir.getBlockStoragePolicySuite(),
-              collectedBlocks, removedINodes, null), deleteSnapshotOp.mtime);
-      fsNamesys.getBlockManager().removeBlocksAndUpdateSafemodeTotal(
-          collectedBlocks);
-      collectedBlocks.clear();
-      fsNamesys.dir.removeFromInodeMap(removedINodes);
-      removedINodes.clear();
+      SnapshotManager snapshotManager = fsNamesys.getSnapshotManager();
+      if (!FSDirSnapshotOp.checkAndSetSnapshotXAttr(snapshotManager, iip, fsDir,
+          deleteSnapshotOp.snapshotName)) {
+        snapshotManager.deleteSnapshot(iip,
+            deleteSnapshotOp.snapshotName,
+            new INode.ReclaimContext(fsNamesys.dir.getBlockStoragePolicySuite(),
+                collectedBlocks, removedINodes, null), deleteSnapshotOp.mtime);
+        fsNamesys.getBlockManager().removeBlocksAndUpdateSafemodeTotal(
+            collectedBlocks);
+        collectedBlocks.clear();
+        fsNamesys.dir.removeFromInodeMap(removedINodes);
+        removedINodes.clear();
+      }
 
       if (toAddRetryCache) {
         fsNamesys.addCacheEntry(deleteSnapshotOp.rpcClientId,

@@ -17,17 +17,22 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import com.google.common.collect.Lists;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.XAttr;
+import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.FSLimitException;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectorySnapshottableFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
@@ -39,6 +44,7 @@ import org.apache.hadoop.util.Time;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.List;
 
 class FSDirSnapshotOp {
@@ -251,11 +257,58 @@ class FSDirSnapshotOp {
 
     // time of snapshot deletion
     final long now = Time.now();
+    if (checkAndSetSnapshotXAttr(snapshotManager, iip, fsd, snapshotName)) {
+      fsd.getEditLog().logDeleteSnapshot(snapshotRoot, snapshotName,
+          logRetryCache, now);
+      return null;
+    }
     final INode.BlocksMapUpdateInfo collectedBlocks = deleteSnapshot(
         fsd, snapshotManager, iip, snapshotName, now);
     fsd.getEditLog().logDeleteSnapshot(snapshotRoot, snapshotName,
         logRetryCache, now);
     return collectedBlocks;
+  }
+
+  static boolean checkAndSetSnapshotXAttr(SnapshotManager snapshotManager,
+                                       INodesInPath iip, FSDirectory fsd,
+                                       String snapshotName) throws IOException {
+    final INodeDirectory srcRoot = snapshotManager.getSnapshottableRoot(iip);
+    if (fsd.isSnapshotDeletionOrdered()) {
+      final DirectorySnapshottableFeature snapshottable
+          = srcRoot.getDirectorySnapshottableFeature();
+      final Snapshot snapshot = snapshottable.getSnapshotByName(
+          srcRoot, snapshotName);
+
+      // Diffs must be not empty since a snapshot exists in the list
+      final int earliest = snapshottable.getDiffs().iterator().next()
+          .getSnapshotId();
+      if (snapshot.getId() != earliest) {
+        final XAttr snapshotXAttr = buildXAttr();
+        final List<XAttr> xattrs = Lists.newArrayListWithCapacity(1);
+        xattrs.add(snapshotXAttr);
+
+        // The snapshot to be deleted is just marked for deletion in the xAttr.
+        // Same snaphot delete call can happen multiple times until and unless
+        // the very 1st instance of a snapshot delete hides it/remove it from
+        // snapshot list. XAttrSetFlag.REPLACE needs to be set to here in order
+        // to address this.
+
+        // XAttr will set on the snapshot root directory
+        // NOTE : This function is directly called while replaying the edit
+        // logs.While replaying the edit logs we need to mark the snapshot
+        // deleted in the xattr of the snapshot root.
+        FSDirXAttrOp.unprotectedSetXAttrs(fsd,
+            INodesInPath.append(iip, snapshot.getRoot(),
+                DFSUtil.string2Bytes(snapshotName)), xattrs,
+            EnumSet.of(XAttrSetFlag.CREATE, XAttrSetFlag.REPLACE));
+        return true;
+      }
+    }
+    return false;
+  }
+
+  static XAttr buildXAttr() {
+    return XAttrHelper.buildXAttr(HdfsServerConstants.SNAPSHOT_XATTR_NAME);
   }
 
   static INode.BlocksMapUpdateInfo deleteSnapshot(
