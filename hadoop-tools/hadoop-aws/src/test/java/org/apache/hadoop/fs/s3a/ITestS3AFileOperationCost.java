@@ -138,8 +138,8 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
           + "\n" + fsState);
     }
     if (!fs.hasMetadataStore()) {
-      metadataRequests.assertDiffEquals(2);
-      listRequests.assertDiffEquals(1);
+      metadataRequests.assertDiffEquals(GETFILESTATUS_FNFE_H);
+      listRequests.assertDiffEquals(GETFILESTATUS_FNFE_L);
     }
   }
 
