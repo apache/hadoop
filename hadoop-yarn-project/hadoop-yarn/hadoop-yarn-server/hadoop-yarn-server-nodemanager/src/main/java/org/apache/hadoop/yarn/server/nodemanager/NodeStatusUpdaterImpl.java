@@ -777,8 +777,13 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       while (i.hasNext()) {
         Entry<ContainerId, Long> mapEntry = i.next();
         ContainerId cid = mapEntry.getKey();
-        if (mapEntry.getValue() < currentTime) {
-          if (!context.getContainers().containsKey(cid)) {
+        if (mapEntry.getValue() >= currentTime) {
+          break;
+        }
+        if (!context.getContainers().containsKey(cid)) {
+          ApplicationId appId =
+              cid.getApplicationAttemptId().getApplicationId();
+          if (isApplicationStopped(appId)) {
             i.remove();
             try {
               context.getNMStateStore().removeContainer(cid);
@@ -786,8 +791,6 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
               LOG.error("Unable to remove container " + cid + " in store", e);
             }
           }
-        } else {
-          break;
         }
       }
     }
