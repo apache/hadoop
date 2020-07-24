@@ -25,6 +25,11 @@ import org.apache.avro.file.SeekableInput;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
+import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
+
 /** Adapts an {@link FSDataInputStream} to Avro's SeekableInput interface. */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
@@ -42,7 +47,13 @@ public class AvroFSInput implements Closeable, SeekableInput {
   public AvroFSInput(final FileContext fc, final Path p) throws IOException {
     FileStatus status = fc.getFileStatus(p);
     this.len = status.getLen();
-    this.stream = fc.open(p);
+    this.stream = awaitFuture(fc.openFile(p)
+        .opt(FS_OPTION_OPENFILE_READ_POLICY,
+            FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL)
+        .opt(FS_OPTION_OPENFILE_LENGTH,
+            status.getLen())   // file length hint for object stores
+        .build());
+    fc.open(p);
   }
 
   @Override

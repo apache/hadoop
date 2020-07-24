@@ -442,6 +442,6 @@ public class TestStreamChangeTracker extends HadoopTestBase {
         null,
         etag,
         versionId,
-        0);
+        0, 0, 0);
   }
 }

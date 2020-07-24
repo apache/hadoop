@@ -104,7 +104,7 @@ public class JobHistoryParser implements HistoryEventHandler {
    * Only used for unit tests.
    */
   @Private
-  public synchronized void parse(EventReader reader, HistoryEventHandler handler)
+  public synchronized void  parse(EventReader reader, HistoryEventHandler handler)
     throws IOException {
     int eventCtr = 0;
     HistoryEvent event;

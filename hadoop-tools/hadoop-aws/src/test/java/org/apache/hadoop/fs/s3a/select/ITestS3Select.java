@@ -64,7 +64,7 @@ import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADVISE;
-import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADV_NORMAL;
+import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADV_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.READAHEAD_RANGE;
 import static org.apache.hadoop.fs.s3a.select.CsvFile.ALL_QUOTES;
 import static org.apache.hadoop.fs.s3a.select.SelectBinding.expandBackslashChars;
@@ -767,7 +767,7 @@ public class ITestS3Select extends AbstractS3SelectTest {
     JobConf conf = createJobConf();
     inputOpt(conf, CSV_INPUT_HEADER, CSV_HEADER_OPT_NONE);
     inputMust(conf, CSV_INPUT_HEADER, CSV_HEADER_OPT_IGNORE);
-    inputMust(conf, INPUT_FADVISE, INPUT_FADV_NORMAL);
+    inputMust(conf, INPUT_FADVISE, INPUT_FADV_DEFAULT);
     inputMust(conf, SELECT_ERRORS_INCLUDE_SQL, "true");
     verifySelectionCount(EVEN_ROWS_COUNT,
         SELECT_EVEN_ROWS_NO_HEADER,

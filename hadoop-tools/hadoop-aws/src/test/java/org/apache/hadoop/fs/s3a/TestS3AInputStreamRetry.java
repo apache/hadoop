@@ -100,7 +100,9 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
         new EncryptionSecrets().getEncryptionKey(),
         eTag,
         versionId,
-        INPUT.length());
+        INPUT.length(),
+        0,
+        0);
 
     S3AReadOpContext s3AReadOpContext = fs.createReadContext(
         s3AFileStatus, S3AInputPolicy.Normal,
@@ -109,7 +111,8 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
     return new S3AInputStream(
         s3AReadOpContext,
         s3ObjectAttributes,
-        getMockedInputStreamCallback());
+        getMockedInputStreamCallback(),
+        s3AReadOpContext.getS3AStatisticsContext().newInputStreamStatistics());
   }
 
   /**

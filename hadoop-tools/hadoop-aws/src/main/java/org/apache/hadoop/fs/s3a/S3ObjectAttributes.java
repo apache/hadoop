@@ -43,6 +43,8 @@ public class S3ObjectAttributes {
   private final String eTag;
   private final String versionId;
   private final long len;
+  private final long readStart;
+  private final long readEnd;
 
   public S3ObjectAttributes(
       String bucket,
@@ -52,7 +54,9 @@ public class S3ObjectAttributes {
       String serverSideEncryptionKey,
       String eTag,
       String versionId,
-      long len) {
+      long len,
+      long readStart,
+      long readEnd) {
     this.bucket = bucket;
     this.path = path;
     this.key = key;
@@ -61,6 +65,8 @@ public class S3ObjectAttributes {
     this.eTag = eTag;
     this.versionId = versionId;
     this.len = len;
+    this.readStart = readStart;
+    this.readEnd = readEnd;
   }
 
   /**
@@ -86,6 +92,8 @@ public class S3ObjectAttributes {
     this.eTag = copyResult.getETag();
     this.versionId = copyResult.getVersionId();
     this.len = len;
+    this.readStart = 0;
+    this.readEnd = len;
   }
 
   public String getBucket() {
@@ -118,5 +126,13 @@ public class S3ObjectAttributes {
 
   public Path getPath() {
     return path;
+  }
+
+  public long getReadStart() {
+    return readStart;
+  }
+
+  public long getReadEnd() {
+    return readEnd;
   }
 }

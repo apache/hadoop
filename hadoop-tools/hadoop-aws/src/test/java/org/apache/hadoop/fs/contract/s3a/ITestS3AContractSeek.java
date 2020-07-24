@@ -45,6 +45,7 @@ import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.util.NativeCodeLoader;
 
 import static org.apache.hadoop.util.Preconditions.checkNotNull;
+import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADV_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADVISE;
 import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADV_NORMAL;
 import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADV_RANDOM;
@@ -89,7 +90,7 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
     return Arrays.asList(new Object[][]{
         {INPUT_FADV_SEQUENTIAL, Default_JSSE},
         {INPUT_FADV_RANDOM, OpenSSL},
-        {INPUT_FADV_NORMAL, Default_JSSE_with_GCM},
+        {INPUT_FADV_DEFAULT, Default_JSSE_with_GCM},
     });
   }
 
@@ -215,7 +216,8 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
   public void testReadPolicyInFS() throws Throwable {
     describe("Verify the read policy is being consistently set");
     S3AFileSystem fs = getFileSystem();
-    assertEquals(S3AInputPolicy.getPolicy(seekPolicy), fs.getInputPolicy());
+    assertEquals(S3AInputPolicy.getPolicy(seekPolicy, S3AInputPolicy.Normal),
+        fs.getInputPolicy());
   }
 
   /**

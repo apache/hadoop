@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.impl;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
@@ -53,6 +52,7 @@ public final class FutureIOSupport {
   /**
    * Given a future, evaluate it. Raised exceptions are
    * extracted and handled.
+   * See {@link FutureIO#awaitFuture(Future, long, TimeUnit)}.
    * @param future future to evaluate
    * @param <T> type of the result.
    * @return the result, if all went well.
@@ -69,6 +69,7 @@ public final class FutureIOSupport {
   /**
    * Given a future, evaluate it. Raised exceptions are
    * extracted and handled.
+   * See {@link FutureIO#awaitFuture(Future, long, TimeUnit)}.
    * @param future future to evaluate
    * @param <T> type of the result.
    * @return the result, if all went well.
@@ -88,10 +89,7 @@ public final class FutureIOSupport {
   /**
    * From the inner cause of an execution exception, extract the inner cause
    * if it is an IOE or RTE.
-   * This will always raise an exception, either the inner IOException,
-   * an inner RuntimeException, or a new IOException wrapping the raised
-   * exception.
-   *
+   * See {@link FutureIO#raiseInnerCause(ExecutionException)}.
    * @param e exception.
    * @param <T> type of return value.
    * @return nothing, ever.
@@ -107,6 +105,7 @@ public final class FutureIOSupport {
   /**
    * Extract the cause of a completion failure and rethrow it if an IOE
    * or RTE.
+   * See {@link FutureIO#raiseInnerCause(CompletionException)}.
    * @param e exception.
    * @param <T> type of return value.
    * @return nothing, ever.
@@ -120,14 +119,8 @@ public final class FutureIOSupport {
   }
 
   /**
-   * Propagate options to any builder, converting everything with the
-   * prefix to an option where, if there were 2+ dot-separated elements,
-   * it is converted to a schema.
-   * <pre>{@code
-   *   fs.example.s3a.option => s3a:option
-   *   fs.example.fs.io.policy => s3a.io.policy
-   *   fs.example.something => something
-   * }</pre>
+   * Propagate options to any builder.
+   * {@link FutureIO#propagateOptions(FSBuilder, Configuration, String, String)}
    * @param builder builder to modify
    * @param conf configuration to read
    * @param optionalPrefix prefix for optional settings
@@ -136,56 +129,39 @@ public final class FutureIOSupport {
    * @param <U> type of builder
    * @return the builder passed in.
    */
+  @Deprecated
   public static <T, U extends FSBuilder<T, U>>
         FSBuilder<T, U> propagateOptions(
       final FSBuilder<T, U> builder,
       final Configuration conf,
       final String optionalPrefix,
       final String mandatoryPrefix) {
-    propagateOptions(builder, conf,
-        optionalPrefix, false);
-    propagateOptions(builder, conf,
-        mandatoryPrefix, true);
-    return builder;
+    return FutureIO.propagateOptions(builder,
+        conf, optionalPrefix, mandatoryPrefix);
   }
 
   /**
-   * Propagate options to any builder, converting everything with the
-   * prefix to an option where, if there were 2+ dot-separated elements,
-   * it is converted to a schema.
-   * <pre>{@code
-   *   fs.example.s3a.option => s3a:option
-   *   fs.example.fs.io.policy => s3a.io.policy
-   *   fs.example.something => something
-   * }</pre>
+   * Propagate options to any builder.
+   * {@link FutureIO#propagateOptions(FSBuilder, Configuration, String, boolean)}
    * @param builder builder to modify
    * @param conf configuration to read
    * @param prefix prefix to scan/strip
    * @param mandatory are the options to be mandatory or optional?
    */
+  @Deprecated
   public static void propagateOptions(
       final FSBuilder<?, ?> builder,
       final Configuration conf,
       final String prefix,
       final boolean mandatory) {
-
-    final String p = prefix.endsWith(".") ? prefix : (prefix + ".");
-    final Map<String, String> propsWithPrefix = conf.getPropsWithPrefix(p);
-    for (Map.Entry<String, String> entry : propsWithPrefix.entrySet()) {
-      // change the schema off each entry
-      String key = entry.getKey();
-      String val = entry.getValue();
-      if (mandatory) {
-        builder.must(key, val);
-      } else {
-        builder.opt(key, val);
-      }
-    }
+    FutureIO.propagateOptions(builder, conf, prefix, mandatory);
   }
 
   /**
    * Evaluate a CallableRaisingIOE in the current thread,
    * converting IOEs to RTEs and propagating.
+   * See {@link FutureIO#eval(CallableRaisingIOE)}.
+   *
    * @param callable callable to invoke
    * @param <T> Return type.
    * @return the evaluated result.
@@ -194,17 +170,6 @@ public final class FutureIOSupport {
    */
   public static <T> CompletableFuture<T> eval(
       CallableRaisingIOE<T> callable) {
-    CompletableFuture<T> result = new CompletableFuture<>();
-    try {
-      result.complete(callable.apply());
-    } catch (UnsupportedOperationException | IllegalArgumentException tx) {
-      // fail fast here
-      throw tx;
-    } catch (Throwable tx) {
-      // fail lazily here to ensure callers expect all File IO operations to
-      // surface later
-      result.completeExceptionally(tx);
-    }
-    return result;
+    return FutureIO.eval(callable);
   }
 }

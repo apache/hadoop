@@ -50,6 +50,8 @@ import org.slf4j.LoggerFactory;
 import java.io.EOFException;
 import java.io.IOException;
 
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_BUFFER_SIZE;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
@@ -64,9 +66,10 @@ import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_HTTP_GE
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MAX;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MEAN;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MIN;
+import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 
 /**
- * Look at the performance of S3a operations.
+ * Look at the performance of S3a Input Stream Reads.
  */
 public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -196,18 +199,16 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
       long readahead) throws IOException {
     int bufferSize = getConf().getInt(KEY_READ_BUFFER_SIZE,
         DEFAULT_READ_BUFFER_SIZE);
-    S3AInputPolicy policy = fs.getInputPolicy();
-    fs.setInputPolicy(inputPolicy);
-    try {
-      FSDataInputStream stream = fs.open(path, bufferSize);
-      if (readahead >= 0) {
-        stream.setReadahead(readahead);
-      }
-      streamStatistics = getInputStreamStatistics(stream);
-      return stream;
-    } finally {
-      fs.setInputPolicy(policy);
+    FSDataInputStream stream = awaitFuture(fs.openFile(path)
+        .opt(FS_OPTION_OPENFILE_READ_POLICY,
+            inputPolicy.toString())
+        .opt(FS_OPTION_OPENFILE_BUFFER_SIZE, bufferSize)
+        .build());
+    if (readahead >= 0) {
+      stream.setReadahead(readahead);
     }
+    streamStatistics = getInputStreamStatistics(stream);
+    return stream;
   }
 
   /**

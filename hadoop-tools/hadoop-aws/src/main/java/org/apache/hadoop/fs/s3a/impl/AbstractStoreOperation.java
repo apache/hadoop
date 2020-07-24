@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
+import javax.annotation.Nullable;
+
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 
 import static org.apache.hadoop.util.Preconditions.checkNotNull;
@@ -45,7 +47,7 @@ public abstract class AbstractStoreOperation {
    * stores it for later.
    * @param storeContext store context.
    */
-  protected AbstractStoreOperation(final StoreContext storeContext) {
+  protected AbstractStoreOperation(final @Nullable StoreContext storeContext) {
     this(storeContext, storeContext.getActiveAuditSpan());
   }
 
@@ -54,9 +56,9 @@ public abstract class AbstractStoreOperation {
    * @param storeContext store context.
    * @param auditSpan active span
    */
-  protected AbstractStoreOperation(final StoreContext storeContext,
+  protected AbstractStoreOperation(final @Nullable StoreContext storeContext,
       final AuditSpan auditSpan) {
-    this.storeContext = checkNotNull(storeContext);
+    this.storeContext = storeContext;
     this.auditSpan = checkNotNull(auditSpan);
   }
 
@@ -80,6 +82,6 @@ public abstract class AbstractStoreOperation {
    * Activate the audit span.
    */
   public void activateAuditSpan() {
-    auditSpan.activate();
+    if (auditSpan != null) auditSpan.activate();
   }
 }
