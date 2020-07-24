@@ -140,7 +140,7 @@ public class RMAdminCLI extends HAAdmin {
                   "remove from cluster node labels"))
           .put("-replaceLabelsOnNode",
               new UsageInfo(
-                  "<\"node1[:port]=label1,label2 node2[:port]=label1,label2\"> "
+                  "<\"node1[:port]=label1 node2[:port]=label2\"> "
                   + "[-failOnUnknownNodes] ",
               "replace labels on nodes"
                   + " (please note that we do not support specifying multiple"
@@ -280,7 +280,7 @@ public class RMAdminCLI extends HAAdmin {
         + "label2(exclusive=false),label3\">]"
         + " [-removeFromClusterNodeLabels <label1,label2,label3>]"
         + " [-replaceLabelsOnNode "
-        + "<\"node1[:port]=label1,label2 node2[:port]=label1\"> "
+        + "<\"node1[:port]=label1 node2[:port]=label2\"> "
         + "[-failOnUnknownNodes]]"
         + " [-directlyAccessNodeLabelStore]"
         + " [-refreshClusterMaxPriority]"
