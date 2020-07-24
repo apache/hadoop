@@ -35,6 +35,7 @@ import java.util.concurrent.Callable;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
+import static org.apache.hadoop.fs.s3a.test.costs.HeadListCosts.*;
 import static org.apache.hadoop.test.GenericTestUtils.getTestDir;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -90,9 +91,9 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
         Tristate.TRUE);
 
     if (!fs.hasMetadataStore()) {
-      metadataRequests.assertDiffEquals(2);
+      metadataRequests.assertDiffEquals(GETFILESTATUS_EMPTY_DIR_H);
     }
-    listRequests.assertDiffEquals(0);
+    listRequests.assertDiffEquals(GETFILESTATUS_EMPTY_DIR_L);
   }
 
   @Test
@@ -103,8 +104,8 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     resetMetricDiffs();
     intercept(FileNotFoundException.class,
         () -> fs.getFileStatus(path));
-    metadataRequests.assertDiffEquals(2);
-    listRequests.assertDiffEquals(1);
+    metadataRequests.assertDiffEquals(GETFILESTATUS_FNFE_H);
+    listRequests.assertDiffEquals(GETFILESTATUS_FNFE_L);
   }
 
   @Test
@@ -115,8 +116,8 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     resetMetricDiffs();
     intercept(FileNotFoundException.class,
         () -> fs.getFileStatus(path));
-    metadataRequests.assertDiffEquals(2);
-    listRequests.assertDiffEquals(1);
+    metadataRequests.assertDiffEquals(GETFILESTATUS_FNFE_H);
+    listRequests.assertDiffEquals(GETFILESTATUS_FNFE_L);
   }
 
   @Test
