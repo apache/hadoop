@@ -160,6 +160,9 @@ public class PrivilegedOperationExecutor {
       }
     } catch (ExitCodeException e) {
       if (operation.isFailureLoggingEnabled()) {
+        String troubleshootingUrl = "https://docs.cloudera.com/runtime" +
+             "/latest/yarn-troubleshooting/topics/yarn-troubleshooting.html";
+
         StringBuilder logBuilder = new StringBuilder("Shell execution returned "
             + "exit code: ")
             .append(exec.getExitCode())
@@ -171,7 +174,11 @@ public class PrivilegedOperationExecutor {
             .append(System.lineSeparator());
         logBuilder.append("Full command array for failed execution: ")
             .append(System.lineSeparator());
-        logBuilder.append(Arrays.toString(fullCommandArray));
+        logBuilder.append(Arrays.toString(fullCommandArray))
+            .append(System.lineSeparator());
+        logBuilder.append("For more information about common exit codes " +
+            "and general troubleshooting please visit: ")
+            .append(troubleshootingUrl);
 
         LOG.warn(logBuilder.toString());
       }
