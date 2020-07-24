@@ -148,7 +148,7 @@ public abstract class FutureDataInputStreamBuilderImpl
 
   @Override
   public FutureDataInputStreamBuilder withFileStatus(FileStatus st) {
-    this.status = requireNonNull(st, "status");
+    this.status = st;
     return this;
   }
 

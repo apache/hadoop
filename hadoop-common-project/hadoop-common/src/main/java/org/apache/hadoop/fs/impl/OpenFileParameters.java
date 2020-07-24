@@ -19,6 +19,8 @@
 package org.apache.hadoop.fs.impl;
 
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -37,6 +39,9 @@ public class OpenFileParameters {
    * Set of options declared as mandatory.
    */
   private Set<String> mandatoryKeys;
+
+  /** The optional keys. */
+  private Set<String> optionalKeys;
 
   /**
    * Options set during the build sequence.
@@ -61,6 +66,11 @@ public class OpenFileParameters {
     return this;
   }
 
+  public OpenFileParameters withOptionalKeys(final Set<String> keys) {
+    this.optionalKeys = requireNonNull(keys);
+    return this;
+  }
+
   public OpenFileParameters withOptions(final Configuration opts) {
     this.options = requireNonNull(opts);
     return this;
@@ -80,6 +90,10 @@ public class OpenFileParameters {
     return mandatoryKeys;
   }
 
+  public Set<String> getOptionalKeys() {
+    return optionalKeys;
+  }
+
   public Configuration getOptions() {
     return options;
   }
@@ -91,4 +105,48 @@ public class OpenFileParameters {
   public FileStatus getStatus() {
     return status;
   }
+
+
+  /**
+   * OpenFile option for seek policies: {@value}.
+   */
+  public static final String FS_OPT_OPENFILE_FADVISE =
+      "fs.opt.openfile.fadvise";
+
+  /**
+   * fadvise policy: {@value}.
+   */
+  public static final String FS_OPT_OPENFILE_FADVISE_NORMAL = "normal";
+
+  /**
+   * fadvise policy: {@value}.
+   */
+  public static final String FS_OPT_OPENFILE_FADVISE_SEQUENTIAL = "sequential";
+
+  /**
+   * fadvise policy: {@value}.
+   */
+  public static final String FS_OPT_OPENFILE_FADVISE_RANDOM = "random";
+
+  /**
+   * fadvise policy: {@value}.
+   */
+  public static final String FS_OPT_OPENFILE_FADVISE_ADAPTIVE = "adaptive";
+
+  /**
+   * OpenFile option for seek policies: {@value}.
+   */
+  public static final String FS_OPT_OPENFILE_LENGTH =
+      "fs.opt.openfile.length";
+
+  /**
+   * Set of standard options.
+   */
+  public static final Set<String> STANDARD_OPTIONS =
+      Stream.of(
+          FS_OPT_OPENFILE_FADVISE,
+          FS_OPT_OPENFILE_LENGTH)
+          .collect(Collectors.toSet());
+
+
 }

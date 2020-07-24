@@ -65,8 +65,29 @@ If a filesystem implementation extends the `FileStatus` returned in its
 implementation MAY use this information when opening the file.
 
 This is relevant with those stores which return version/etag information,
-including the S3A and ABFS connectors -they MAY use this to guarantee that
-the file they opened is exactly the one returned in the listing.
+-they MAY use this to guarantee that the file they opened
+is exactly the one returned in the listing.
+
+
+The final `status.getPath().getName()` element of the supplied status MUST equal
+the name value of the path supplied to the  `openFile(path)` call.
+
+Filesystems MUST NOT validate the rest of the path.
+This is needed to support viewfs and other mount-point wrapper filesystems
+where schemas and paths are different. These often create their own FileStatus results
+
+Preconditions
+
+```python
+status == null or status.getPath().getName() == path.getName()
+
+```
+
+Filesystems MUST NOT require the class of `status` to equal
+that of any specific subclass their implementation returns in filestatus/list
+operations. This is to support wrapper filesystems and serialization/deserialization
+of the status.
+
 
 ### Set optional or mandatory parameters
 
@@ -77,14 +98,21 @@ Set optional or mandatory parameters to the builder. Using `opt()` or `must()`,
 client can specify FS-specific parameters without inspecting the concrete type
 of `FileSystem`.
 
+Example:
+
 ```java
 out = fs.openFile(path)
-    .opt("fs.s3a.experimental.input.fadvise", "random")
-    .must("fs.s3a.readahead.range", 256 * 1024)
+    .must("fs.opt.openfile.fadvise", "random")
+    .opt("fs.http.connection.timeout", 30_000L)
     .withFileStatus(statusFromListing)
     .build()
     .get();
 ```
+
+Here the seek policy of `random` has been specified,
+with the requirement that the filesystem implementation must understand the option.
+And s3a-specific option has been supplied which may be interpreted by any store;
+the expectation is that the S3A connector will recognize it.
 
 #### Implementation Notes
 
@@ -151,3 +179,121 @@ evaluation, and so will surface when the future is completed:
 ```java
 FSDataInputStream in = future.get();
 ```
+
+## <a name="options"></a> Standard options
+
+Individual filesystems MAY provide their own set of options for use in the builder.
+
+There are also some standard options with common names, all of which begin with
+`fs.opt.openfile`
+
+| Name | Type | Description |
+|------|------|-------------|
+| `fs.opt.openfile.fadvise` | string | seek policy |
+| `fs.opt.openfile.length` | long | file length |
+
+These policies are *not* declared as constants in
+public `org.apache.hadoop` classes/interfaces, so as to avoid
+applications being unable to link to a specific hadoop release
+without that standard option.
+
+(Implementors: use `org.apache.hadoop.fs.impl.OpenFileParameters`.)
+
+### <a name="option.fadvise"></a> Seek Policy Option `fs.opt.openfile.fadvise`
+
+This is a hint as to what the expected read pattern of an input stream will be.
+"sequential" -read a file from start to finish. "Random": client will be
+reading data in different parts of the file using a sequence of `seek()/read()`
+or via the `PositionedReadable` or `ByteBufferPositionedReadable` APIs.
+
+Sequential reads may be optimized with prefetching data and/or reading data in larger blocks.
+In contrast, random IO performance may be best if little/no prefetching takes place, along
+with other possible optimizations.
+Queries over columnar formats such as Apach ORC and Apache Parquet
+perform such random IO; other data formats are best for sequential reads.
+Some applications (e.g. distCp) perform sequential IO even over columnar data.
+
+What is key is that optimizing reads for seqential reads may impair random performance
+-and vice versa.
+
+Allowing applications to hint what their read policy is allows the filesystem clients
+to optimize their interaction with the underlying data stores.
+
+1. The seek policy is a hint; even if declared as a `must()` option, the filesystem
+MAY ignore it.
+1. The interpretation/implementation of a policy is a filesystem specific behavior
+-and it may change with Hadoop releases and/or specific storage subsystems.
+1. If a policy is not recognized, the FileSystem MUST ignore it and revert to
+whichever policy is active for that specific FileSystem instance.
+
+| Policy | Meaning |
+|--------|---------|
+| `normal` | Default policy for the filesystem |
+| `sequential` | Optimize for sequential IO |
+| `random` | Optimize for random IO |
+| `adaptive` | Adapt seek policy based on read patterns |
+
+
+#### Seek Policy `normal`
+
+The default policy for the filesystem instance.
+Implementation/installation-specific
+
+#### Seek Policy `sequential`
+
+Expect sequential reads from the first byte read to the end of the file/until the stream is closed.
+
+
+#### Seek Policy `random`
+
+Expect `seek()/read()` sequences, or use of `PositionedReadable` or `ByteBufferPositionedReadable` APIs.
+
+#### Seek Policy `adaptive`
+
+Try to adapt the seek policy to the read pattern of the application.
+
+The `normal` policy of the S3A client and the sole policy supported by the `wasb:` client are both
+adaptive -they assume sequential IO, but once a backwards seek/positioned read call is made
+the stream switches to random IO.
+
+Other filesystem implementations may wish to adopt similar strategies, and/or extend
+the algorithms to detect forward seeks and/or switch from random to sequential IO if
+that is considered more efficient.
+
+Adaptive seek policies have proven effective in the absence of the ability to declare
+the seek policy in the `open()` API, so requiring it to be declared, if configurable,
+in the cluster/application configuration. However, the switch from sequential to
+random seek policies may
+
+When applications explicitly set the `fs.opt.openfile.fadvise` option, if they
+know their read plan, they SHOULD declare which policy is most appropriate.
+
+_Implementor's Notes_
+
+If a policy is unrecognized/unsupported: SHOULD log it and then MUST ignore the option. This is
+to support future evolution of policies and implementations
+
+
+_Futher reading_
+
+* [Linux fadvise()](https://linux.die.net/man/2/fadvise).
+* [Windows `CreateFile()`](https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilea#caching-behavior)
+
+### <a name="option.length"></a> File Length hint `fs.opt.openfile.length`
+
+Declare that a file is expected to be *at least as long as the specified length*
+
+This can be used by clients to skip querying a remote store for the size of/existence of a file when
+opening it, similar to declaring a file status through the `withFileStatus()` option.
+
+The supplied length MAY be shorter than the actual file.
+
+This allows worker tasks which only know of of their task's split to declare that as the
+length of the file.
+
+If this option is used by the FileSystem implementation
+
+* A `length` &lt; 0 MUST be rejected.
+* If a file status is supplied along with a value in `fs.opt.openfile.length`; the file status
+values take precedence.
+* seek/read calls past the length value MAY be rejected, equally: they MAY be accepted. It is simply a hint.

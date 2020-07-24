@@ -24,6 +24,8 @@ import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.hadoop.fs.impl.OpenFileParameters.FS_OPT_OPENFILE_LENGTH;
+
 /**
  * All the constants used with the {@link S3AFileSystem}.
  *
@@ -522,7 +524,6 @@ public final class Constants {
    * reading data.
    * Value: {@value}
    */
-  @InterfaceStability.Unstable
   public static final String INPUT_FADVISE =
       "fs.s3a.experimental.input.fadvise";
 
@@ -530,14 +531,12 @@ public final class Constants {
    * General input. Some seeks, some reads.
    * Value: {@value}
    */
-  @InterfaceStability.Unstable
   public static final String INPUT_FADV_NORMAL = "normal";
 
   /**
    * Optimized for sequential access.
    * Value: {@value}
    */
-  @InterfaceStability.Unstable
   public static final String INPUT_FADV_SEQUENTIAL = "sequential";
 
   /**
@@ -546,7 +545,6 @@ public final class Constants {
    * more efficient {@code seek()} operations.
    * Value: {@value}
    */
-  @InterfaceStability.Unstable
   public static final String INPUT_FADV_RANDOM = "random";
 
   @InterfaceAudience.Private
