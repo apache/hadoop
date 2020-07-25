@@ -449,6 +449,14 @@ Building on CentOS 8
 * Install libraries provided by CentOS 8.
   $ sudo dnf install libtirpc-devel zlib-devel lz4-devel bzip2-devel openssl-devel cyrus-sasl-devel libpmem-devel
 
+* Install boost.
+  $ curl -L -o boost_1_72_0.tar.bz2 https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download
+  $ tar xjf boost_1_72_0.tar.bz2
+  $ cd boost_1_72_0
+  $ ./bootstrap.sh --prefix=/usr/local
+  $ ./b2
+  $ sudo ./b2 install
+
 * Install optional dependencies (snappy-devel).
   $ sudo dnf --enablerepo=PowerTools snappy-devel
 
