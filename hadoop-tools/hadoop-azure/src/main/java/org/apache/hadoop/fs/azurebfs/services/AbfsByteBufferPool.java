@@ -52,6 +52,11 @@ public class AbfsByteBufferPool {
   private int maxBuffersToPool;
   private int maxMemUsagePercentage;
 
+  private static final Runtime RT = Runtime.getRuntime();
+  private static final int AVAILABLE_PROCESSORS = RT.availableProcessors();
+
+  private static int MAX_BUFFERS_THAT_CAN_BE_IN_USE;
+
   /**
    * @param bufferSize            Size of the byte[] to be returned.
    * @param queueCapacity         Maximum number of buffers that the pool can
@@ -83,24 +88,21 @@ public class AbfsByteBufferPool {
         .checkArgument(queueCapacity > 0, "queueCapacity cannot be < 1");
   }
 
-  private synchronized boolean isPossibleToIssueNewBuffer() {
-    Runtime rt = Runtime.getRuntime();
-    int bufferCountByMaxFreeBuffers =
-        maxBuffersToPool + rt.availableProcessors();
-    if (numBuffersInUse >= bufferCountByMaxFreeBuffers) {
-      return false;
-    }
-
-    double freeMemory = rt.maxMemory() - (rt.totalMemory() - rt.freeMemory());
+  private void setMaxBuffersThatCanBeInUse() {
+    double freeMemory = RT.maxMemory() - (RT.totalMemory() - RT.freeMemory());
     int bufferCountByMemory = (int) ceil(
         (freeMemory * maxMemUsagePercentage / HUNDRED) / bufferSize);
-    int maxBuffersThatCanBeInUse = min(bufferCountByMemory,
+    int bufferCountByMaxFreeBuffers = maxBuffersToPool + AVAILABLE_PROCESSORS;
+    MAX_BUFFERS_THAT_CAN_BE_IN_USE = min(bufferCountByMemory,
         bufferCountByMaxFreeBuffers);
-    if (maxBuffersThatCanBeInUse < 2) {
-      maxBuffersThatCanBeInUse = 2;
+    if (MAX_BUFFERS_THAT_CAN_BE_IN_USE < 2) {
+      MAX_BUFFERS_THAT_CAN_BE_IN_USE = 2;
     }
+  }
 
-    return numBuffersInUse < maxBuffersThatCanBeInUse;
+  private synchronized boolean isPossibleToIssueNewBuffer() {
+    setMaxBuffersThatCanBeInUse();
+    return numBuffersInUse < MAX_BUFFERS_THAT_CAN_BE_IN_USE;
   }
 
   /**
@@ -108,7 +110,6 @@ public class AbfsByteBufferPool {
    * Waits if pool is empty and already maximum number of buffers are in use.
    */
   public byte[] get() {
-    isPossibleToIssueNewBuffer();
     byte[] byteArray = null;
     synchronized (this) {
       byteArray = freeBuffers.poll();
