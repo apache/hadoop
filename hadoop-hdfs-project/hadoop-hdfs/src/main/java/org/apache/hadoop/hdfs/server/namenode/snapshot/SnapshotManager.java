@@ -522,8 +522,8 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     for (int count = 0; count < snapshotList.size(); count++) {
       Snapshot s = snapshotList.get(count);
       Snapshot.Root dir = s.getRoot();
-      statuses[count] = new SnapshotStatus(dir.getModificationTime()
-          , dir.getAccessTime(), dir.getFsPermission(),
+      statuses[count] = new SnapshotStatus(dir.getModificationTime(),
+          dir.getAccessTime(), dir.getFsPermission(),
           EnumSet.noneOf(HdfsFileStatus.Flags.class),
           dir.getUserName(), dir.getGroupName(),
           dir.getLocalNameBytes(), dir.getId(),
