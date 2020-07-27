@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.test.costs;
+package org.apache.hadoop.fs.s3a.performance;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -40,9 +40,9 @@ import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
-import static org.apache.hadoop.fs.s3a.test.costs.HeadListCosts.*;
-import static org.apache.hadoop.fs.s3a.test.costs.OperationCostValidator.probe;
-import static org.apache.hadoop.fs.s3a.test.costs.OperationCostValidator.probes;
+import static org.apache.hadoop.fs.s3a.performance.HeadListCosts.*;
+import static org.apache.hadoop.fs.s3a.performance.OperationCostValidator.probe;
+import static org.apache.hadoop.fs.s3a.performance.OperationCostValidator.probes;
 import static org.apache.hadoop.test.AssertExtensions.dynamicDescription;
 
 /**

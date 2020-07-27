@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.test.costs;
+package org.apache.hadoop.fs.s3a.performance;
 
 
 import java.util.Arrays;
@@ -35,8 +35,8 @@ import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 
 import static org.apache.hadoop.fs.s3a.Statistic.*;
-import static org.apache.hadoop.fs.s3a.test.costs.HeadListCosts.*;
-import static org.apache.hadoop.fs.s3a.test.costs.OperationCostValidator.probe;
+import static org.apache.hadoop.fs.s3a.performance.HeadListCosts.*;
+import static org.apache.hadoop.fs.s3a.performance.OperationCostValidator.probe;
 
 
 /**

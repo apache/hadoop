@@ -23,7 +23,7 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
-import org.apache.hadoop.fs.s3a.test.costs.AbstractS3ACostTest;
+import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 
 
 import org.junit.Test;
@@ -43,7 +43,7 @@ import java.util.EnumSet;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
-import static org.apache.hadoop.fs.s3a.test.costs.HeadListCosts.*;
+import static org.apache.hadoop.fs.s3a.performance.HeadListCosts.*;
 import static org.apache.hadoop.test.GenericTestUtils.getTestDir;
 
 /**

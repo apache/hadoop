@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.test.costs;
+package org.apache.hadoop.fs.s3a.performance;
 
 /**
  * Declaration of the costs of head and list calls for various FS IO operations.

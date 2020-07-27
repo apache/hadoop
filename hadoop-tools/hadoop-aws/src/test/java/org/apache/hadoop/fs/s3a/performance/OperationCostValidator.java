@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.test.costs;
+package org.apache.hadoop.fs.s3a.performance;
 
 import java.util.ArrayList;
 import java.util.Arrays;

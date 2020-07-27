@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.test.costs;
+package org.apache.hadoop.fs.s3a.performance;
 
 
 import java.util.Arrays;
@@ -34,7 +34,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 
 import static org.apache.hadoop.fs.s3a.Statistic.*;
-import static org.apache.hadoop.fs.s3a.test.costs.HeadListCosts.*;
+import static org.apache.hadoop.fs.s3a.performance.HeadListCosts.*;
 
 /**
  * Use metrics to assert about the cost of file API calls.
