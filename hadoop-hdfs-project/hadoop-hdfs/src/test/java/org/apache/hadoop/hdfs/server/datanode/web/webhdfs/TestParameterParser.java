@@ -56,6 +56,15 @@ public class TestParameterParser {
   }
 
   @Test
+  public void testNullToken() throws IOException {
+    Configuration conf = new Configuration();
+    QueryStringDecoder decoder = new QueryStringDecoder(
+            WebHdfsHandler.WEBHDFS_PREFIX + "/test");
+    ParameterParser testParser = new ParameterParser(decoder, conf);
+    Assert.assertNull(testParser.delegationToken());
+  }
+
+  @Test
   public void testDecodePath() {
     final String ESCAPED_PATH = "/test%25+1%26%3Dtest?op=OPEN&foo=bar";
     final String EXPECTED_PATH = "/test%+1&=test";
