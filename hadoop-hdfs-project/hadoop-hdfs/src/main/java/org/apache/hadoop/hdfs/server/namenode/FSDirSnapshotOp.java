@@ -358,4 +358,24 @@ class FSDirSnapshotOp {
       checkSnapshot(iip.getLastINode(), snapshottableDirs);
     }
   }
+
+  static void checkUnderSameSnapshottableRoot(FSDirectory fsd,
+      INodesInPath srcIIP, INodesInPath dstIIP) throws IOException {
+    // Ensure rename out of a snapshottable root is not permitted if ordered
+    // snapshot deletion feature is enabled
+    if (fsd.isSnapshotDeletionOrdered()) {
+      SnapshotManager snapshotManager = fsd.getFSNamesystem().
+          getSnapshotManager();
+      String errMsg = "Source " + srcIIP.getPath() +
+          " and dest " + dstIIP.getPath() + " are not under " +
+          "the same snapshot root.";
+      INodeDirectory src = snapshotManager.
+          getSnapshottableAncestorDir(srcIIP);
+      INodeDirectory dst = snapshotManager.getSnapshottableAncestorDir(dstIIP);
+      if (!(dstIIP.isDescendant(snapshotManager.
+          getSnapshottableAncestorDir(srcIIP)))) {
+        throw new SnapshotException(errMsg);
+      }
+    }
+  }
 }

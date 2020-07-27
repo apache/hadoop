@@ -363,22 +363,37 @@ public class SnapshotManager implements SnapshotStatsMXBean {
    * @param iip INodesInPath for the directory to get snapshot root.
    * @return the snapshot root INodeDirectory
    */
-  public INodeDirectory getSnapshottableAncestorDir(final INodesInPath iip)
-      throws IOException {
-    final String path = iip.getPath();
-    final INodeDirectory dir = INodeDirectory.valueOf(iip.getLastINode(), path);
-    if (dir.isSnapshottable()) {
-      return dir;
-    } else {
-      for (INodeDirectory snapRoot : this.snapshottables.values()) {
-        if (dir.isAncestorDirectory(snapRoot)) {
-          return snapRoot;
-        }
-      }
+  public INodeDirectory checkAndGetSnapshottableAncestorDir(
+      final INodesInPath iip) throws IOException {
+    final INodeDirectory dir = getSnapshottableAncestorDir(iip);
+    if (dir == null) {
       throw new SnapshotException("Directory is neither snapshottable nor" +
           " under a snap root!");
     }
+    return dir;
   }
+
+  public INodeDirectory getSnapshottableAncestorDir(final INodesInPath iip)
+      throws IOException {
+    final String path = iip.getPath();
+    final INode inode = iip.getLastINode();
+    final INodeDirectory dir;
+    if (inode instanceof INodeDirectory) {
+      dir = INodeDirectory.valueOf(inode, path);
+      if (dir.isSnapshottable()) {
+        return dir;
+      }
+    } else {
+      dir = INodeDirectory.valueOf(iip.getINode(-2), iip.getParentPath());
+    }
+    for (INodeDirectory snapRoot : this.snapshottables.values()) {
+      if (dir.isAncestorDirectory(snapRoot)) {
+        return snapRoot;
+      }
+    }
+    return null;
+  }
+
 
   public boolean isDescendantOfSnapshotRoot(INodeDirectory dir) {
     if (dir.isSnapshottable()) {
@@ -641,7 +656,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     // All the check for path has been included in the valueOf method.
     INodeDirectory snapshotRootDir;
     if (this.snapshotDiffAllowSnapRootDescendant) {
-      snapshotRootDir = getSnapshottableAncestorDir(iip);
+      snapshotRootDir = checkAndGetSnapshottableAncestorDir(iip);
     } else {
       snapshotRootDir = getSnapshottableRoot(iip);
     }
@@ -674,7 +689,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     // All the check for path has been included in the valueOf method.
     INodeDirectory snapshotRootDir;
     if (this.snapshotDiffAllowSnapRootDescendant) {
-      snapshotRootDir = getSnapshottableAncestorDir(iip);
+      snapshotRootDir = checkAndGetSnapshottableAncestorDir(iip);
     } else {
       snapshotRootDir = getSnapshottableRoot(iip);
     }
