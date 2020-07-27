@@ -21,17 +21,20 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
+/**
+ * Tests listSnapshot.
+ */
 public class TestListSnapshot {
 
   static final short REPLICATION = 3;
@@ -63,22 +66,19 @@ public class TestListSnapshot {
   }
 
   /**
-   * Test listing all the snapshottable directories
+   * Test listing all the snapshottable directories.
    */
   @Test(timeout = 60000)
   public void testListSnapshot() throws Exception {
-    cluster.getNamesystem().getSnapshotManager().setAllowNestedSnapshots(true);
+    fsn.getSnapshotManager().setAllowNestedSnapshots(true);
 
     // Initially there is no snapshottable directories in the system
     SnapshotStatus[] snapshotStatuses = null;
     SnapshottableDirectoryStatus[] dirs = hdfs.getSnapshottableDirListing();
     assertNull(dirs);
-    try {
-      hdfs.getSnapshotListing(dir1);
-    } catch (Exception e) {
-      assertTrue(e.getMessage().contains(
-          "Directory is not a snapshottable directory"));
-    }
+    LambdaTestUtils.intercept(SnapshotException.class,
+        "Directory is not a " + "snapshottable directory",
+        () -> hdfs.getSnapshotListing(dir1));
     // Make root as snapshottable
     final Path root = new Path("/");
     hdfs.allowSnapshot(root);
@@ -87,13 +87,13 @@ public class TestListSnapshot {
     assertEquals("", dirs[0].getDirStatus().getLocalName());
     assertEquals(root, dirs[0].getFullPath());
     snapshotStatuses = hdfs.getSnapshotListing(root);
-    assertNull(snapshotStatuses);
+    assertTrue(snapshotStatuses.length == 0);
     // Make root non-snaphsottable
     hdfs.disallowSnapshot(root);
     dirs = hdfs.getSnapshottableDirListing();
     assertNull(dirs);
     snapshotStatuses = hdfs.getSnapshotListing(root);
-    assertNull(snapshotStatuses);
+    assertTrue(snapshotStatuses.length == 0);
 
     // Make dir1 as snapshottable
     hdfs.allowSnapshot(dir1);

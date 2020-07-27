@@ -2155,7 +2155,11 @@ public class DistributedFileSystem extends FileSystem
    */
   public SnapshotStatus[] getSnapshotListing(Path snapshotRoot)
       throws IOException {
-    return dfs.getSnapshotListing(getPathName(snapshotRoot));
+    Path absF = fixRelativePart(snapshotRoot);
+    statistics.incrementReadOps(1);
+    storageStatistics
+        .incrementOpCounter(OpType.GET_SNAPSHOT_LIST);
+    return dfs.getSnapshotListing(getPathName(absF));
   }
 
   @Override

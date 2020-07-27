@@ -7011,22 +7011,27 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   public SnapshotStatus[] getSnapshotListing(String snapshotRoot)
       throws IOException {
-    SnapshotStatus[] status = null;
+    final String operationName = "listSnapshotDirectory";
+    SnapshotStatus[] status;
     checkOperation(OperationCategory.READ);
     boolean success = false;
-    readLock();
+    final FSPermissionChecker pc = getPermissionChecker();
+    FSPermissionChecker.setOperationType(operationName);
     try {
-      checkOperation(OperationCategory.READ);
-      status = FSDirSnapshotOp.getSnapshotListing(dir, snapshotManager,
-          snapshotRoot);
-      success = true;
+      readLock();
+      try {
+        checkOperation(OperationCategory.READ);
+        status = FSDirSnapshotOp.getSnapshotListing(dir, pc, snapshotManager,
+            snapshotRoot);
+        success = true;
+      } finally {
+        readUnlock(operationName, getLockReportInfoSupplier(null));
+      }
     } catch (AccessControlException ace) {
-      logAuditEvent(success, "listSnapshots", null, null, null);
+      logAuditEvent(success, "listSnapshots", snapshotRoot);
       throw ace;
-    } finally {
-      readUnlock();
     }
-    logAuditEvent(success, "listSnapshots", null, null, null);
+    logAuditEvent(success, "listSnapshots", snapshotRoot);
     return status;
   }
   /**

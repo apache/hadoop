@@ -27,16 +27,16 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 
 /**
- * Metadata about a snapshottable directory
+ * Metadata about a snapshottable directory.
  */
 public class SnapshotStatus {
   /**
-   * Basic information of the snapshot directory
+   * Basic information of the snapshot directory.
    */
   private final HdfsFileStatus dirStatus;
 
   /**
-   * Snapshot ID for the snapshot
+   * Snapshot ID for the snapshot.
    */
   private final int snapshotID;
 
@@ -45,7 +45,7 @@ public class SnapshotStatus {
    */
   private final byte[] parentFullPath;
 
-  public SnapshotStatus(long modification_time, long access_time,
+  public SnapshotStatus(long modificationTime, long accessTime,
                         FsPermission permission,
                         EnumSet<HdfsFileStatus.Flags> flags,
                         String owner, String group, byte[] localName,
@@ -53,8 +53,8 @@ public class SnapshotStatus {
                         byte[] parentFullPath) {
     this.dirStatus = new HdfsFileStatus.Builder()
         .isdir(true)
-        .mtime(modification_time)
-        .atime(access_time)
+        .mtime(modificationTime)
+        .atime(accessTime)
         .perm(permission)
         .flags(flags)
         .owner(owner)
@@ -102,9 +102,9 @@ public class SnapshotStatus {
     String parentFullPathStr =
         (parentFullPath == null || parentFullPath.length == 0) ?
             "/" : DFSUtilClient.bytes2String(parentFullPath);
-      return new Path(getSnapshotPath(parentFullPathStr,
-          dirStatus.getLocalName()));
-    }
+    return new Path(getSnapshotPath(parentFullPathStr,
+        dirStatus.getLocalName()));
+  }
 
   /**
    * Print a list of {@link SnapshotStatus} out to a given stream.

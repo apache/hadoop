@@ -17,16 +17,13 @@
  */
 package org.apache.hadoop.hdfs.tools.snapshot;
 
-import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
-import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.tools.AdminHelper;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -43,26 +40,18 @@ public class LsSnapshot extends Configured implements Tool {
         "\tGet the list of snapshots for a snapshottable directory.\n";
 
     if(argv.length != 1) {
+      System.err.println("Invalid no of arguments");
       System.err.println("Usage: \n" + description);
       return 1;
     }
-
-    FileSystem fs = FileSystem.get(getConf());
-    if (! (fs instanceof DistributedFileSystem)) {
-      System.err.println(
-          "lsSnapshot can only be used in DistributedFileSystem");
-      return 1;
-    }
-    DistributedFileSystem dfs = (DistributedFileSystem) fs;
     Path snapshotRoot = new Path(argv[0]);
-
     try {
+      DistributedFileSystem dfs = AdminHelper.getDFS(getConf());
       SnapshotStatus[] stats = dfs.getSnapshotListing(snapshotRoot);
       SnapshotStatus.print(stats, System.out);
-    } catch (IOException e) {
+    } catch (Exception e) {
       String[] content = e.getLocalizedMessage().split("\n");
       System.err.println("lsSnapshot: " + content[0]);
-      e.printStackTrace(System.err);
       return 1;
     }
     return 0;

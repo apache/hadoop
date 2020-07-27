@@ -156,15 +156,14 @@ class FSDirSnapshotOp {
   }
 
   static SnapshotStatus[] getSnapshotListing(
-      FSDirectory fsd, SnapshotManager snapshotManager, String path)
+      FSDirectory fsd, FSPermissionChecker pc, SnapshotManager snapshotManager,
+      String path)
       throws IOException {
-    FSPermissionChecker pc = fsd.getPermissionChecker();
     fsd.readLock();
     try {
       INodesInPath iip = fsd.getINodesInPath(path, DirOp.READ);
       if (fsd.isPermissionEnabled()) {
-        fsd.checkPermission(pc, iip, false, null, null, FsAction.READ,
-            FsAction.READ);
+        fsd.checkPathAccess(pc, iip, FsAction.READ);
       }
       return snapshotManager.getSnapshotListing(iip);
     } finally {

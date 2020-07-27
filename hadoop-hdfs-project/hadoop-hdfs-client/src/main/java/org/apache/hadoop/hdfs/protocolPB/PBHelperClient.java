@@ -1674,8 +1674,9 @@ public class PBHelperClient {
 
   public static SnapshotStatus[] convert(
       HdfsProtos.SnapshotListingProto sdlp) {
-    if (sdlp == null)
+    if (sdlp == null) {
       return null;
+    }
     List<HdfsProtos.SnapshotStatusProto> list = sdlp
         .getSnapshotListingList();
     if (list.isEmpty()) {
@@ -2712,8 +2713,9 @@ public class PBHelperClient {
 
   public static HdfsProtos.SnapshotListingProto convert(
       SnapshotStatus[] status) {
-    if (status == null)
+    if (status == null) {
       return null;
+    }
     HdfsProtos.SnapshotStatusProto[] protos =
         new HdfsProtos.SnapshotStatusProto[status.length];
     for (int i = 0; i < status.length; i++) {

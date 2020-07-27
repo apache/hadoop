@@ -516,26 +516,22 @@ public class SnapshotManager implements SnapshotStatsMXBean {
   public SnapshotStatus[] getSnapshotListing(INodesInPath iip)
       throws IOException {
     INodeDirectory srcRoot = getSnapshottableRoot(iip);
-    ReadOnlyList<Snapshot> snapshotList = srcRoot.getDirectorySnapshottableFeature().
-        getSnapshotList();
-    if (snapshotList.isEmpty()) {
-      return null;
-    }
-    List<SnapshotStatus> statusList =
-        new ArrayList<>();
-    for (Snapshot s : snapshotList) {
+    ReadOnlyList<Snapshot> snapshotList = srcRoot.
+        getDirectorySnapshottableFeature().getSnapshotList();
+    SnapshotStatus[] statuses = new SnapshotStatus[snapshotList.size()];
+    for (int count = 0; count < snapshotList.size(); count++) {
+      Snapshot s = snapshotList.get(count);
       Snapshot.Root dir = s.getRoot();
-      SnapshotStatus status = new SnapshotStatus(dir.getModificationTime()
+      statuses[count] = new SnapshotStatus(dir.getModificationTime()
           , dir.getAccessTime(), dir.getFsPermission(),
           EnumSet.noneOf(HdfsFileStatus.Flags.class),
           dir.getUserName(), dir.getGroupName(),
           dir.getLocalNameBytes(), dir.getId(),
           dir.getChildrenNum(Snapshot.CURRENT_STATE_ID),
           s.getId(), DFSUtil.string2Bytes(dir.getParent().getFullPathName()));
-      statusList.add(status);
+
     }
-    return statusList.toArray(
-        new SnapshotStatus[statusList.size()]);
+    return statuses;
   }
 
   /**

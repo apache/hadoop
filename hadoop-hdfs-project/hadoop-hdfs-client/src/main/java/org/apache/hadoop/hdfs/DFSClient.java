@@ -2192,16 +2192,16 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /**
-   * Get listing of all the snapshots for a snapshottable directory
+   * Get listing of all the snapshots for a snapshottable directory.
    *
    * @return Information about all the snapshots for a snapshottable directory
    * @throws IOException If an I/O error occurred
-   * @see ClientProtocol#getSnapshotListing()
+   * @see ClientProtocol#getSnapshotListing(String)
    */
   public SnapshotStatus[] getSnapshotListing(String snapshotRoot)
       throws IOException {
     checkOpen();
-    try (TraceScope ignored = tracer.newScope("getSnapshottableDirListing")) {
+    try (TraceScope ignored = tracer.newScope("getSnapshotListing")) {
       return namenode.getSnapshotListing(snapshotRoot);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException();

@@ -163,15 +163,17 @@ public class RouterSnapshot {
     rpcServer.checkOperation(NameNode.OperationCategory.READ);
     final List<RemoteLocation> locations =
         rpcServer.getLocationsForPath(snapshotRoot, true, false);
-    RemoteMethod method = new RemoteMethod("getSnapshotListing",
-        new Class<?>[] {String.class},
+    RemoteMethod remoteMethod = new RemoteMethod("getSnapshotListing",
+        new Class<?>[]{String.class},
         new RemoteParam());
-    Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
-    Map<FederationNamespaceInfo, SnapshotStatus[]> ret =
-        rpcClient.invokeConcurrent(
-            nss, method, true, false, SnapshotStatus[].class);
-
-    return RouterRpcServer.merge(ret, SnapshotStatus.class);
+    if (rpcServer.isInvokeConcurrent(snapshotRoot)) {
+      Map<RemoteLocation, SnapshotStatus[]> ret = rpcClient.invokeConcurrent(
+          locations, remoteMethod, true, false, SnapshotStatus[].class);
+      return ret.values().iterator().next();
+    } else {
+      return rpcClient.invokeSequential(
+          locations, remoteMethod, SnapshotStatus[].class, null);
+    }
   }
 
   public SnapshotDiffReport getSnapshotDiffReport(String snapshotRoot,

@@ -2006,11 +2006,11 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // Client Protocol
-  public SnapshotStatus[] getSnapshotListing(String path)
+  public SnapshotStatus[] getSnapshotListing(String snapshotRoot)
       throws IOException {
     checkNNStartup();
     SnapshotStatus[] status = namesystem
-        .getSnapshotListing(path);
+        .getSnapshotListing(snapshotRoot);
     metrics.incrListSnapshotsOps();
     return status;
   }
