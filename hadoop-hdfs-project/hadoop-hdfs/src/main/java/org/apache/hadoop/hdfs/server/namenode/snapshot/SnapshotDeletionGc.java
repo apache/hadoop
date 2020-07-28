@@ -36,13 +36,13 @@ public class SnapshotDeletionGc {
       SnapshotDeletionGc.class);
 
   private final FSNamesystem namesystem;
-  private final int deletionOrderedGcPeriodMs;
+  private final long deletionOrderedGcPeriodMs;
   private final AtomicReference<Timer> timer = new AtomicReference<>();
 
   public SnapshotDeletionGc(FSNamesystem namesystem, Configuration conf) {
     this.namesystem = namesystem;
 
-    this.deletionOrderedGcPeriodMs = conf.getInt(
+    this.deletionOrderedGcPeriodMs = conf.getLong(
         DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED_GC_PERIOD_MS,
         DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED_GC_PERIOD_MS_DEFAULT);
     LOG.info("{} = {}", DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED_GC_PERIOD_MS,

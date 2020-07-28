@@ -85,9 +85,9 @@ public class SnapshotManager implements SnapshotStatsMXBean {
   public static final String
       DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED_GC_PERIOD_MS
       = "dfs.namenode.snapshot.deletion.ordered.gc.period.ms";
-  public static final int
+  public static final long
       DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED_GC_PERIOD_MS_DEFAULT
-      = 60_000;
+      = 5 * 60_000L; //5 minutes
 
   private final FSDirectory fsdir;
   private boolean captureOpenFiles;
@@ -395,6 +395,14 @@ public class SnapshotManager implements SnapshotStatsMXBean {
             EnumSet.of(XAttrSetFlag.CREATE, XAttrSetFlag.REPLACE));
         return;
       }
+
+      // assert if it is deleting the first snapshot
+      final INodeDirectoryAttributes first = snapshottable.getDiffs().getFirstSnapshotINode();
+      if (snapshot.getRoot() != first) {
+        throw new IllegalStateException("Failed to delete snapshot " + snapshotName
+            + " from " + srcRoot.getFullPathName() + " since " + snapshotName
+            + " is not the first snapshot (=" + first + ")");
+      }
     }
     srcRoot.removeSnapshot(reclaimContext, snapshotName, now);
     numSnapshots.getAndDecrement();
@@ -642,11 +650,14 @@ public class SnapshotManager implements SnapshotStatsMXBean {
         s.getRoot().getModificationTime());
   }
 
-  Snapshot.Root chooseDeletedSnapshot() {
+  private List<INodeDirectory> getSnapshottableDirsForGc() {
     final List<INodeDirectory> dirs = getSnapshottableDirs();
     Collections.shuffle(dirs);
+    return dirs;
+  }
 
-    for(INodeDirectory dir : dirs) {
+  Snapshot.Root chooseDeletedSnapshot() {
+    for(INodeDirectory dir : getSnapshottableDirsForGc()) {
       final Snapshot.Root root = chooseDeletedSnapshot(dir);
       if (root != null) {
         return root;
@@ -663,12 +674,8 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     }
     final DirectoryWithSnapshotFeature.DirectoryDiffList diffs
         = snapshottable.getDiffs();
-    if (diffs.isEmpty()) {
-      return null;
-    }
-    final Snapshot.Root first = (Snapshot.Root) diffs.iterator().next()
-        .getSnapshotINode();
-    if (!first.isMarkedAsDeleted()) {
+    final Snapshot.Root first = (Snapshot.Root)diffs.getFirstSnapshotINode();
+    if (first == null || !first.isMarkedAsDeleted()) {
       return null;
     }
     return first;

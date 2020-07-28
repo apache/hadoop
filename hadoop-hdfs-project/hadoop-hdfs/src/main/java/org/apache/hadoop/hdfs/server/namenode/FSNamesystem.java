@@ -1288,7 +1288,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       dir.setINodeAttributeProvider(inodeAttributeProvider);
     }
     snapshotManager.registerMXBean();
-    snapshotDeletionGc.schedule();
     InetSocketAddress serviceAddress = NameNode.getServiceAddress(conf, true);
     this.nameNodeHostName = (serviceAddress != null) ?
         serviceAddress.getHostName() : "";
@@ -1363,6 +1362,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       // Enable quota checks.
       dir.enableQuotaChecks();
       dir.ezManager.startReencryptThreads();
+
+      snapshotDeletionGc.schedule();
 
       if (haEnabled) {
         // Renew all of the leases before becoming active.
