@@ -177,7 +177,7 @@ public class RouterSnapshot {
       for (SnapshotStatus s : response) {
         String mountPath =
             new String(s.getParentFullPath()).replaceFirst(src, dst);
-        s.setParentFullPath(mountPath.getBytes());
+        s.setParentFullPath(DFSUtil.string2Bytes(mountPath));
       }
     } else {
       response = rpcClient.invokeSequential(
@@ -187,7 +187,7 @@ public class RouterSnapshot {
         String mountPath =
             new String(s.getParentFullPath()).replaceFirst(loc.getDest(),
                 loc.getSrc());
-        s.setParentFullPath(mountPath.getBytes());
+        s.setParentFullPath(DFSUtil.string2Bytes(mountPath));
       }
     }
     return response;

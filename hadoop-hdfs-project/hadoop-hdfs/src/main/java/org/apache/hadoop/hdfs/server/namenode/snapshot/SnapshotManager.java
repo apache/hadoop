@@ -527,6 +527,11 @@ public class SnapshotManager implements SnapshotStatsMXBean {
           EnumSet.noneOf(HdfsFileStatus.Flags.class),
           dir.getUserName(), dir.getGroupName(),
           dir.getLocalNameBytes(), dir.getId(),
+          // the children number is same as the
+          // live fs as the children count is not cached per snashot.
+          // It is just used here to construct the HdfsFileStatus object.
+          // It is expensive to build the snapshot tree for the directory
+          // and determine the child count.
           dir.getChildrenNum(Snapshot.CURRENT_STATE_ID),
           s.getId(), DFSUtil.string2Bytes(dir.getParent().getFullPathName()));
 

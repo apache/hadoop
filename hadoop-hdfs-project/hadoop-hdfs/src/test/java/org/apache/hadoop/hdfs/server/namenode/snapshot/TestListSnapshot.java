@@ -30,7 +30,9 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 /**
  * Tests listSnapshot.
@@ -106,7 +108,7 @@ public class TestListSnapshot {
         snapshotStatuses[0].getFullPath());
     // snapshot id is zero
     assertEquals(0, snapshotStatuses[0].getSnapshotID());
-    // Create a snapshot for dir2
+    // Create a snapshot for dir1
     hdfs.createSnapshot(dir1, "s1");
     hdfs.createSnapshot(dir1, "s2");
     snapshotStatuses = hdfs.getSnapshotListing(dir1);
