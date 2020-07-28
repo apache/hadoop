@@ -146,15 +146,21 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
   }
 
   @Test
-  public void testFailedRequestWhenCredentialsNotCorrect() throws Exception {
+  public void testFailedRequestWithWrongSharedKey() throws Exception {
     Assume.assumeTrue(this.getAuthType() == AuthType.SharedKey);
     Configuration config = this.getRawConfiguration();
     config.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, false);
+    //  If this is set, there won't be an HTTP call to server
+    config.unset(FS_AZURE_ACCOUNT_IS_HNS_ENABLED);
     String accountName = this.getAccountName();
     String configkKey = FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME + "." + accountName;
     // Provide a wrong sharedKey
     String secret = config.get(configkKey);
-    secret = (char) (secret.charAt(0) + 1) + secret.substring(1);
+    char incorrectChar = '1';
+    if (secret.charAt(0) == '1') {
+      incorrectChar = '2';
+    }
+    secret = incorrectChar + secret.substring(1);
     config.set(configkKey, secret);
 
     AzureBlobFileSystem fs = this.getFileSystem(config);
