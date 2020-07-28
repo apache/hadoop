@@ -258,7 +258,7 @@ goto :eof
   @echo   lsSnapshottableDir   list all snapshottable dirs owned by the current user
   @echo 						Use -help to see options
   @echo   lsSnapshot           list all snapshots for a snapshottable dir
-  @echo 						Use -help to see options
+  @echo                         Use -help to see options
   @echo   cacheadmin           configure the HDFS cache
   @echo   crypto               configure HDFS encryption zones
   @echo   mover                run a utility to move block replicas across storage types

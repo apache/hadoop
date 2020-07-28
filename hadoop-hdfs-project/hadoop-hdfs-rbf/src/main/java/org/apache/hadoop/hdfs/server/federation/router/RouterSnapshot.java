@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
@@ -166,14 +167,30 @@ public class RouterSnapshot {
     RemoteMethod remoteMethod = new RemoteMethod("getSnapshotListing",
         new Class<?>[]{String.class},
         new RemoteParam());
+    SnapshotStatus[] response;
     if (rpcServer.isInvokeConcurrent(snapshotRoot)) {
       Map<RemoteLocation, SnapshotStatus[]> ret = rpcClient.invokeConcurrent(
           locations, remoteMethod, true, false, SnapshotStatus[].class);
-      return ret.values().iterator().next();
+      response = ret.values().iterator().next();
+      String src = ret.keySet().iterator().next().getSrc();
+      String dst = ret.keySet().iterator().next().getDest();
+      for (SnapshotStatus s : response) {
+        String mountPath =
+            new String(s.getParentFullPath()).replaceFirst(src, dst);
+        s.setParentFullPath(mountPath.getBytes());
+      }
     } else {
-      return rpcClient.invokeSequential(
+      response = rpcClient.invokeSequential(
           locations, remoteMethod, SnapshotStatus[].class, null);
+      RemoteLocation loc = locations.get(0);
+      for (SnapshotStatus s : response) {
+        String mountPath =
+            new String(s.getParentFullPath()).replaceFirst(loc.getDest(),
+                loc.getSrc());
+        s.setParentFullPath(mountPath.getBytes());
+      }
     }
+    return response;
   }
 
   public SnapshotDiffReport getSnapshotDiffReport(String snapshotRoot,

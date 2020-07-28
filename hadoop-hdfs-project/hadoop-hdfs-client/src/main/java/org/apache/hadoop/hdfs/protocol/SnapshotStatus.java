@@ -43,7 +43,7 @@ public class SnapshotStatus {
   /**
    * Full path of the parent.
    */
-  private final byte[] parentFullPath;
+  private byte[] parentFullPath;
 
   public SnapshotStatus(long modificationTime, long accessTime,
                         FsPermission permission,
@@ -72,6 +72,14 @@ public class SnapshotStatus {
     this.dirStatus = dirStatus;
     this.snapshotID = snapshotNumber;
     this.parentFullPath = parentFullPath;
+  }
+
+  /**
+   * sets the prent path name.
+   * @param path parent path
+   */
+  public void setParentFullPath(byte[] path) {
+    parentFullPath = path;
   }
 
   /**
