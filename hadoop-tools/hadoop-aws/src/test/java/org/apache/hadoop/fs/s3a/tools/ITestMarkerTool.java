@@ -173,19 +173,19 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
    */
   private static class CreatedPaths {
 
-    Path base;
+    private Path base;
 
-    List<Path> files = new ArrayList<>();
+    private List<Path> files = new ArrayList<>();
 
-    List<Path> dirs = new ArrayList<>();
+    private List<Path> dirs = new ArrayList<>();
 
-    List<Path> emptyDirs = new ArrayList<>();
+    private List<Path> emptyDirs = new ArrayList<>();
 
-    List<String> filesUnderBase = new ArrayList<>();
+    private List<String> filesUnderBase = new ArrayList<>();
 
-    List<String> dirsUnderBase = new ArrayList<>();
+    private List<String> dirsUnderBase = new ArrayList<>();
 
-    List<String> emptyDirsUnderBase = new ArrayList<>();
+    private List<String> emptyDirsUnderBase = new ArrayList<>();
 
 
     private Path mkdir(FileSystem fs, String name)
@@ -226,7 +226,8 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
       throws IOException {
     CreatedPaths r = new CreatedPaths();
     r.base = base;
-    // the directories under which we will create files, so expect to have markers
+    // the directories under which we will create files,
+    // so expect to have markers
     r.mkdir(fs, "");
     r.mkdir(fs, "dir1");
     r.mkdir(fs, "dir2");
@@ -359,21 +360,21 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
     Path source = new Path(base, "source");
     Path dest = new Path(base, "dest");
     Path dir2 = new Path(source, "dir2");
-    S3AFileSystem mixedFS = createFS(DIRECTORY_MARKER_POLICY_AUTHORITATIVE,
+    S3AFileSystem mixedFSDir2 = createFS(DIRECTORY_MARKER_POLICY_AUTHORITATIVE,
         dir2.toUri().toString());
     // some of these paths will retain markers, some will not
-    CreatedPaths createdPaths = createPaths(mixedFS, source);
+    CreatedPaths createdPaths = createPaths(mixedFSDir2, source);
 
     // markers are only under dir2
-    markerTool(mixedFS, mkpath(source, "dir1"), false, 0);
-    markerTool(mixedFS, source, false, expectMarkersUnderDir2);
+    markerTool(mixedFSDir2, mkpath(source, "dir1"), false, 0);
+    markerTool(mixedFSDir2, source, false, expectMarkersUnderDir2);
 
     // if we now rename, all will be good
-    mixedFS.rename(source, dest);
+    mixedFSDir2.rename(source, dest);
     assertIsDirectory(dest);
 
     // there are no markers
-    MarkerTool.ScanResult scanResult = markerTool(mixedFS, dest, false, 0);
+    MarkerTool.ScanResult scanResult = markerTool(mixedFSDir2, dest, false, 0);
     // there are exactly the files we want
     Assertions.assertThat(scanResult)
         .describedAs("Scan result %s", scanResult)

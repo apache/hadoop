@@ -462,12 +462,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             DEFAULT_S3GUARD_DISABLED_WARN_LEVEL);
         S3Guard.logS3GuardDisabled(LOG, warnLevel, bucket);
       }
-      // directory policy, which will look at authoritative paths
-      // if needed
+      // directory policy, which may look at authoritative paths
       directoryPolicy = new DirectoryPolicyImpl(conf,
           this::allowAuthoritative);
-      LOG.debug("Directory marker retention policy is {}",
-          directoryPolicy);
+      LOG.debug("Directory marker retention policy is {}", directoryPolicy);
 
       initMultipartUploads(conf);
 
@@ -1460,7 +1458,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // Parent must exist
       Path parent = dst.getParent();
       if (!pathToKey(parent).isEmpty()
-          && !parent.equals(src.getParent()) ) {
+          && !parent.equals(src.getParent())) {
         try {
           // only look against S3 for directories; saves
           // a HEAD request on all normal operations.
@@ -1569,17 +1567,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       once("delete", path.toString(), () ->
           S3AFileSystem.this.deleteObjectAtPath(path, key, isFile,
               operationState));
-    }
-
-    @Override
-    @Retries.RetryTranslated
-    public void deleteDirectoryMarkers(final Path path,
-        final String key,
-        final BulkOperationState operationState)
-        throws IOException {
-      if (!keepDirectoryMarkers(path)) {
-        deleteUnnecessaryFakeDirectories(path, operationState);
-      }
     }
 
     @Override
@@ -2950,18 +2937,27 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         // a file has been found in a non-auth path and the caller has not said
         // they only care about directories
         LOG.debug("Metadata for {} found in the non-auth metastore.", path);
-        // TODO: if the timestamp of the pm is close to "now", we don't need to
-        // TODO:  bother with a check of S3. that means:
-        // TODO:  one of : status modtime is close to now,
-        // TODO:  or pm.getLastUpdated() == now
-        long validTime = ttlTimeProvider.getNow() - ttlTimeProvider.getMetadataTtl();
+        // If the timestamp of the pm is close to "now", we don't need to
+        // bother with a check of S3. that means:
+        // one of : status modtime is close to now,
+        //  or pm.getLastUpdated() == now
+
+        // get the time in which a status modtime is considered valid
+        // in a non-auth metastore
+        long validTime =
+            ttlTimeProvider.getNow() - ttlTimeProvider.getMetadataTtl();
         final long msModTime = msStatus.getModificationTime();
 
         if (msModTime < validTime) {
-          LOG.debug("Metastore entry is out of date, probing S3");
+          LOG.debug("Metastore entry of {} is out of date, probing S3", path);
           try {
-            S3AFileStatus s3AFileStatus = s3GetFileStatus(path, key, probes,
-                tombstones, needEmptyDirectoryFlag);
+            S3AFileStatus s3AFileStatus = s3GetFileStatus(path,
+                key,
+                probes,
+                tombstones,
+                needEmptyDirectoryFlag);
+            // if the new status is more current than that in the metastore,
+            // it means S3 has changed and the store needs updating
             final long s3ModTime = s3AFileStatus.getModificationTime();
 
             if (s3ModTime > msModTime) {
@@ -2969,10 +2965,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               LOG.debug("S3Guard metadata for {} is outdated;"
                       + " s3modtime={}; msModTime={} updating metastore",
                   path, s3ModTime, msModTime);
-              // add to S3Guard and return the value
-              // note that the checks for empty dir status below can be skipped
-              // because the call to s3GetFileStatus include the checks there
-              return S3Guard.putAndReturn(metadataStore, s3AFileStatus,
+              // add to S3Guard
+              S3Guard.putAndReturn(metadataStore, s3AFileStatus,
                   ttlTimeProvider);
             } else {
               // the modtime of the data is the same as/older than the s3guard
@@ -2982,6 +2976,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               S3Guard.refreshEntry(metadataStore, pm, s3AFileStatus,
                   ttlTimeProvider);
             }
+            // return the value
+            // note that the checks for empty dir status below can be skipped
+            // because the call to s3GetFileStatus include the checks there
+            return s3AFileStatus;
           } catch (FileNotFoundException fne) {
             // the attempt to refresh the record failed because there was
             // no entry. Either it is a new file not visible, or it
@@ -3018,7 +3016,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       // now issue the S3 getFileStatus call.
       try {
-        S3AFileStatus s3FileStatus = s3GetFileStatus(path, key, probes, tombstones,
+        S3AFileStatus s3FileStatus = s3GetFileStatus(path,
+            key,
+            probes,
+            tombstones,
             true);
         // entry was found, so save in S3Guard and return the final value.
         return S3Guard.putAndReturn(metadataStore, s3FileStatus,
@@ -3033,7 +3034,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // there was no entry in S3Guard
       // retrieve the data and update the metadata store in the process.
       return S3Guard.putAndReturn(metadataStore,
-          s3GetFileStatus(path, key, probes, tombstones, needEmptyDirectoryFlag),
+          s3GetFileStatus(path,
+              key,
+              probes,
+              tombstones,
+              needEmptyDirectoryFlag),
           ttlTimeProvider);
     }
   }
@@ -3169,7 +3174,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             listResult.logAtDebug(LOG);
           }
           // At least one entry has been found.
-          // If looking for an empty directory, the marker must exist but no children.
+          // If looking for an empty directory, the marker must exist but no
+          // children.
           // So the listing must contain the marker entry only.
           if (needEmptyDirectoryFlag
               && listResult.representsEmptyDirectory(
@@ -3747,16 +3753,21 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Perform post-write actions.
-   * Calls {@link #deleteUnnecessaryFakeDirectories(Path, BulkOperationState)} and then
-   * updates any metastore.
+   * <p></p>
    * This operation MUST be called after any PUT/multipart PUT completes
    * successfully.
-   *
-   * The operations actions include
+   * <p></p>
+   * The actions include:
    * <ol>
-   *   <li>Calling {@link #deleteUnnecessaryFakeDirectories(Path, BulkOperationState)}</li>
-   *   <li>Updating any metadata store with details on the newly created
-   *   object.</li>
+   *   <li>
+   *     Calling
+   *     {@link #deleteUnnecessaryFakeDirectories(Path, BulkOperationState)}
+   *     if directory markers are not being retained.
+   *   </li>
+   *   <li>
+   *     Updating any metadata store with details on the newly created
+   *     object.
+   *     </li>
    * </ol>
    * @param key key written to
    * @param length  total length of file written

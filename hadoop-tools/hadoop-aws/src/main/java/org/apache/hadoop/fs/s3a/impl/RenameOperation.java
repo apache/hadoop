@@ -375,23 +375,25 @@ Are   * @throws IOException failure
         // add the marker to the tracker.
         // it will not be deleted _yet_ but it may find a list of parent
         // markers which may now be deleted.
-        markersToDelete = dirMarkerTracker.markerFound(childSourcePath, key, child);
+        markersToDelete = dirMarkerTracker.markerFound(
+            childSourcePath, key, child);
       } else {
         // it is a file.
         // note that it has been found -ths may find a list of parent
         // markers which may now be deleted.
-        markersToDelete = dirMarkerTracker.fileFound(childSourcePath, key, child);
+        markersToDelete = dirMarkerTracker.fileFound(
+            childSourcePath, key, child);
         // the destination key is that of the key under the source tree,
         // remapped under the new destination path.
         String newDestKey =
             dstKey + key.substring(srcKey.length());
         Path childDestPath = storeContext.keyToPath(newDestKey);
 
-        // now begin the single copy
-      CompletableFuture<Path> copy = initiateCopy(child, key,
-          childSourcePath, newDestKey, childDestPath);
-      activeCopies.add(copy);
-      bytesCopied.addAndGet(sourceStatus.getLen());
+          // now begin the single copy
+        CompletableFuture<Path> copy = initiateCopy(child, key,
+            childSourcePath, newDestKey, childDestPath);
+        activeCopies.add(copy);
+        bytesCopied.addAndGet(sourceStatus.getLen());
       }
       // add any markers to delete to the operation so they get cleaned
       // incrementally

@@ -43,7 +43,6 @@ import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
-import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
@@ -383,10 +382,10 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
   }
 
   /**
-   * Expect the list of status to match that of the paths
-   * @param statuses
-   * @param paths
-   * @param <T>
+   * Expect the list of status to match that of the paths.
+   * @param statuses status list
+   * @param paths ordered varargs list of paths
+   * @param <T> type of status
    */
   private <T extends FileStatus> void containsStatusOfPaths(
       List<T> statuses, Path... paths) {
@@ -417,7 +416,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
   }
 
   private <T extends FileStatus> List<FileStatus>
-  toList(RemoteIterator<T> status) throws IOException {
+      toList(RemoteIterator<T> status) throws IOException {
 
     List<FileStatus> l = new ArrayList<>();
     while (status.hasNext()) {
@@ -428,7 +427,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
   }
 
   private <T extends FileStatus> List<FileStatus>
-  toList(T[] status) throws IOException {
+      toList(T[] status) throws IOException {
     List<FileStatus> l = Arrays.asList(status);
     return dump(l);
   }

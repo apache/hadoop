@@ -266,9 +266,9 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
       Path remotePath = methodPath();
 
       verifyMetrics(() -> {
-            s3a.copyFromLocalFile(false, true, localPath, remotePath);
-            return "copy";
-          },
+        s3a.copyFromLocalFile(false, true, localPath, remotePath);
+        return "copy";
+        },
           always(INVOCATION_COPY_FROM_LOCAL_FILE, 1),
           always(OBJECT_PUT_REQUESTS, 1),
           always(OBJECT_PUT_BYTES, len));

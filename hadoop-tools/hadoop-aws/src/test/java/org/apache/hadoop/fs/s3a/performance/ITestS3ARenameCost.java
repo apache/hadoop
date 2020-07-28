@@ -155,11 +155,10 @@ public class ITestS3ARenameCost extends AbstractS3ACostTest {
     Path src = file(new Path("/src-" + uuid));
     Path dest = new Path("/dest-" + uuid);
     try {
-
       verifyMetrics(() -> {
-            fs.rename(src, dest);
-            return "after fs.rename(/src,/dest) " + getMetricSummary();
-          },
+        fs.rename(src, dest);
+        return "after fs.rename(/src,/dest) " + getMetricSummary();
+      },
           // TWO HEAD for exists, one for source MD in copy
           rawHeadList(RENAME_SINGLE_FILE_RENAME_H,
               GETFILESTATUS_FNFE_L),

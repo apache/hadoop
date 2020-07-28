@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.s3a.performance;
 /**
  * Declaration of the costs of head and list calls for various FS IO operations.
  */
-public class HeadListCosts {
+public final class HeadListCosts {
 
   /** Head costs for getFileStatus() directory probe: {@value}. */
   public static final int FILESTATUS_DIR_PROBE_H = 0;
@@ -120,4 +120,6 @@ public class HeadListCosts {
    */
   public static final int CREATE_FILE_NO_OVERWRITE_L = FILESTATUS_DIR_PROBE_L;
 
+  private HeadListCosts() {
+  }
 }

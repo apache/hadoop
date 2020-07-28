@@ -85,13 +85,6 @@ public class TestDirectoryMarkerPolicy extends AbstractHadoopTestBase {
     return new DirectoryPolicyImpl(c, authoritativeness);
   }
 
-  private static final Predicate<Path> authPathOnly =
-      (p) -> p.toUri().getPath().startsWith("/auth/");
-
-  private static final Predicate<Path> failIfInvoked = (p) -> {
-    throw new RuntimeException("failed");
-  };
-
   private final Path nonAuthPath = new Path("s3a://bucket/nonauth/data");
   private final Path authPath = new Path("s3a://bucket/auth/data1");
   private final Path deepAuth = new Path("s3a://bucket/auth/d1/d2/data2");

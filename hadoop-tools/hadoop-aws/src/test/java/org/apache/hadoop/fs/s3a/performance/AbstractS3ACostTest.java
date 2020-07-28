@@ -55,30 +55,30 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
   /**
    * Parameter: should the stores be guarded?
    */
-  protected final boolean s3guard;
+  private final boolean s3guard;
 
   /**
    * Parameter: should directory markers be retained?
    */
-  protected final boolean keepMarkers;
+  private final boolean keepMarkers;
 
   /**
    * Is this an auth mode test run?
    */
-  protected final boolean authoritative;
+  private final boolean authoritative;
 
   /** probe states calculated from the configuration options. */
-  boolean isGuarded;
+  private boolean isGuarded;
 
-  boolean isRaw;
+  private boolean isRaw;
 
-  boolean isAuthoritative;
+  private boolean isAuthoritative;
 
-  boolean isNonAuth;
+  private boolean isNonAuth;
 
-  boolean isKeeping;
+  private boolean isKeeping;
 
-  boolean isDeleting;
+  private boolean isDeleting;
 
   private OperationCostValidator costValidator;
 
@@ -134,7 +134,7 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
     isAuthoritative = isGuarded && authoritative;
     isNonAuth = isGuarded && !authoritative;
 
-    isKeeping = isKeepingMarkers ();
+    isKeeping = isKeepingMarkers();
 
     isDeleting = !isKeeping;
 
@@ -301,7 +301,8 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
   public String execRename(final Path source,
       final Path dest) throws IOException {
     getFileSystem().rename(source, dest);
-    return String.format("rename(%s, %s): %s", dest, source, getMetricSummary());
+    return String.format("rename(%s, %s): %s",
+        dest, source, getMetricSummary());
   }
 
   /**
@@ -544,84 +545,84 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
 
   /**
    * A metric diff which must always hold.
-   * @param Statistic metric source
+   * @param stat metric source
    * @param expected expected value.
    * @return the diff.
    */
   protected OperationCostValidator.ExpectedProbe always(
-      final Statistic Statistic, final int expected) {
-    return probe(Statistic, expected);
+      final Statistic stat, final int expected) {
+    return probe(stat, expected);
   }
 
   /**
    * A metric diff which must hold when the fs is unguarded.
-   * @param Statistic metric source
+   * @param stat metric source
    * @param expected expected value.
    * @return the diff.
    */
   protected OperationCostValidator.ExpectedProbe raw(
-      final Statistic Statistic, final int expected) {
-    return probe(isRaw(), Statistic, expected);
+      final Statistic stat, final int expected) {
+    return probe(isRaw(), stat, expected);
   }
 
   /**
    * A metric diff which must hold when the fs is guarded.
-   * @param Statistic metric source
+   * @param stat metric source
    * @param expected expected value.
    * @return the diff.
    */
   protected OperationCostValidator.ExpectedProbe guarded(
-      final Statistic Statistic,
+      final Statistic stat,
       final int expected) {
-    return probe(isGuarded(), Statistic, expected);
+    return probe(isGuarded(), stat, expected);
   }
 
   /**
    * A metric diff which must hold when the fs is guarded + authoritative.
-   * @param Statistic metric source
+   * @param stat metric source
    * @param expected expected value.
    * @return the diff.
    */
   protected OperationCostValidator.ExpectedProbe authoritative(
-      final Statistic Statistic,
+      final Statistic stat,
       final int expected) {
-    return probe(isAuthoritative(), Statistic, expected);
+    return probe(isAuthoritative(), stat, expected);
   }
 
   /**
    * A metric diff which must hold when the fs is guarded + authoritative.
-   * @param Statistic metric source
+   * @param stat metric source
    * @param expected expected value.
    * @return the diff.
    */
   protected OperationCostValidator.ExpectedProbe nonauth(
-      final Statistic Statistic,
+      final Statistic stat,
       final int expected) {
-    return probe(isNonAuth(), Statistic, expected);
+    return probe(isNonAuth(), stat, expected);
   }
 
   /**
    * A metric diff which must hold when the fs is keeping markers
-   * @param Statistic metric source
+   * @param stat metric source
    * @param expected expected value.
    * @return the diff.
    */
   protected OperationCostValidator.ExpectedProbe keeping(
-      final Statistic Statistic,
+      final Statistic stat,
       final int expected) {
-    return probe(isKeepingMarkers(), Statistic, expected);
+    return probe(isKeepingMarkers(), stat, expected);
   }
 
   /**
    * A metric diff which must hold when the fs is keeping markers
-   * @param Statistic metric source
+   * @param stat metric source
    * @param expected expected value.
    * @return the diff.
    */
   protected OperationCostValidator.ExpectedProbe deleting(
-      final Statistic Statistic,
+      final Statistic stat,
       final int expected) {
-    return probe(isDeleting(), Statistic, expected);
+    return probe(isDeleting(), stat, expected);
   }
 
   /**

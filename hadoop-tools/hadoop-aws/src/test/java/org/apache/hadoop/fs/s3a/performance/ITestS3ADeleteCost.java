@@ -124,9 +124,9 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
     Path subDir = new Path(methodPath(), "1/2/3/4/5/6");
     // one dir created, possibly a parent removed
     verifyMetrics(() -> {
-          mkdirs(subDir);
-          return "after mkdir(subDir) " + getMetricSummary();
-        },
+      mkdirs(subDir);
+      return "after mkdir(subDir) " + getMetricSummary();
+    },
         always(DIRECTORIES_CREATED, 1),
         always(DIRECTORIES_DELETED, 0),
         keeping(OBJECT_DELETE_REQUESTS, 0),
@@ -148,9 +148,9 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
     // unless markers are being kept
 
     verifyMetrics(() -> {
-          file(new Path(srcDir, "source.txt"));
-          return "after touch(fs, srcFilePath) " + getMetricSummary();
-        },
+      file(new Path(srcDir, "source.txt"));
+      return "after touch(fs, srcFilePath) " + getMetricSummary();
+    },
         always(DIRECTORIES_CREATED, 0),
         always(DIRECTORIES_DELETED, 0),
         // keeping: no delete operations.

@@ -34,7 +34,6 @@ import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -101,7 +100,7 @@ public final class MarkerTool extends S3GuardTool {
 
   static final String TOO_FEW_ARGUMENTS = "Too few arguments";
 
-  /** Will be overridden in run(), but during tests needs to avoid NPEs */
+  /** Will be overridden in run(), but during tests needs to avoid NPEs. */
   private PrintStream out = System.out;
 
   private boolean verbose;
@@ -181,12 +180,17 @@ public final class MarkerTool extends S3GuardTool {
       break;
     default:
       errorln(getUsage());
-      throw new ExitUtil.ExitException(EXIT_USAGE, "Unknown action: " + action);
+      throw new ExitUtil.ExitException(EXIT_USAGE,
+          "Unknown action: " + action);
     }
 
     final String file = parsedArgs.get(1);
     final Path path = new Path(file);
-    ScanResult result = execute(path.getFileSystem(getConf()), path, purge, expected);
+    ScanResult result = execute(
+        path.getFileSystem(getConf()),
+        path,
+        purge,
+        expected);
     return result.exitCode;
   }
 
@@ -337,7 +341,7 @@ public final class MarkerTool extends S3GuardTool {
   }
 
   /**
-   * Scan a directory tree
+   * Scan a directory tree.
    * @param path path to scan
    * @param tracker tracker to update
    * @throws IOException

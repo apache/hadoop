@@ -108,8 +108,8 @@ public abstract class S3GuardTool extends Configured implements Tool,
       "\t" + Prune.NAME + " - " + Prune.PURPOSE + "\n" +
       "\t" + SetCapacity.NAME + " - " + SetCapacity.PURPOSE + "\n" +
       "\t" + SelectTool.NAME + " - " + SelectTool.PURPOSE + "\n" +
-      "\t" + Uploads.NAME + " - " + Uploads.PURPOSE + "\n"
-      ;
+      "\t" + Uploads.NAME + " - " + Uploads.PURPOSE + "\n";
+
   private static final String DATA_IN_S3_IS_PRESERVED
       = "(all data in S3 is preserved)";
 
@@ -119,6 +119,7 @@ public abstract class S3GuardTool extends Configured implements Tool,
   static final int SUCCESS = EXIT_SUCCESS;
   static final int INVALID_ARGUMENT = EXIT_COMMAND_ARGUMENT_ERROR;
   static final int E_USAGE = EXIT_USAGE;
+
   static final int ERROR = EXIT_FAIL;
   static final int E_BAD_STATE = EXIT_NOT_ACCEPTABLE;
   static final int E_NOT_FOUND = EXIT_NOT_FOUND;
