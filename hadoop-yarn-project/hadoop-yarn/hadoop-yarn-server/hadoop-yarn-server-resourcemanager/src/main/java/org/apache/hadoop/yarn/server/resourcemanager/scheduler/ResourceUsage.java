@@ -200,6 +200,10 @@ public class ResourceUsage extends AbstractResourceUsage {
     return _getAll(ResourceType.USED);
   }
 
+  public Resource getAllReserved() {
+    return _getAll(ResourceType.RESERVED);
+  }
+
   // Cache Used
   public Resource getCachedUsed() {
     return _get(NL, ResourceType.CACHED_USED);
