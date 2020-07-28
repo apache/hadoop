@@ -108,6 +108,11 @@ public final class DirectoryPolicyImpl
   }
 
   @Override
+  public String describe() {
+    return markerPolicy.toString();
+  }
+
+  @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder(
         "DirectoryMarkerRetention{");

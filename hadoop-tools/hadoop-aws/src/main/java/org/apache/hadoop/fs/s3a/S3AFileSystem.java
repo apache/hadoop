@@ -4019,6 +4019,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     return getConf().getLongBytes(FS_S3A_BLOCK_SIZE, DEFAULT_BLOCKSIZE);
   }
 
+  public DirectoryPolicy getDirectoryPolicy() {
+    return directoryPolicy;
+  }
+
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder(
@@ -4057,6 +4061,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     sb.append(", credentials=").append(credentials);
     sb.append(", delegation tokens=")
         .append(delegationTokens.map(Objects::toString).orElse("disabled"));
+    sb.append(", ").append(directoryPolicy);
     sb.append(", statistics {")
         .append(statistics)
         .append("}");

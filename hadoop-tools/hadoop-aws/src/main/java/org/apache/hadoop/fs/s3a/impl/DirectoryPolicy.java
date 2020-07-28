@@ -20,6 +20,9 @@ package org.apache.hadoop.fs.s3a.impl;
 
 import org.apache.hadoop.fs.Path;
 
+/**
+ * Interface for Directory Marker policies to implement.
+ */
 public interface DirectoryPolicy {
 
   /**
@@ -30,22 +33,33 @@ public interface DirectoryPolicy {
   boolean keepDirectoryMarkers(Path path);
 
   /**
+   * Describe the policy for marker tools and logs.
+   * @return description of the current policy.
+   */
+  String describe();
+
+  /**
    * Supported retention policies.
    */
   enum MarkerPolicy {
+
+    /**
+     * Delete markers.
+     * <p></p>
+     * This is the classic S3A policy,
+     */
+    Delete,
+
     /**
      * Keep markers.
+     * <p></p>
      * This is <i>Not backwards compatible</i>.
      */
     Keep,
 
     /**
-     * Delete markers.
-     * This is what has been done since S3A was released. */
-    Delete,
-
-    /**
      * Keep markers in authoritative paths only.
+     * <p></p>
      * This is <i>Not backwards compatible</i> within the
      * auth paths, but is outside these.
      */

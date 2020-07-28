@@ -52,6 +52,8 @@ import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.OperationDuration;
 
+import static org.apache.hadoop.fs.s3a.Constants.BULK_DELETE_PAGE_SIZE;
+import static org.apache.hadoop.fs.s3a.Constants.BULK_DELETE_PAGE_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Invoker.once;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_NOT_ACCEPTABLE;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_SUCCESS;
@@ -76,29 +78,45 @@ public final class MarkerTool extends S3GuardTool {
   public static final String NAME = "markers";
 
   public static final String PURPOSE =
-      "view and manipulate S3 directory markers";
+      "View and manipulate S3 directory markers";
 
   private static final String USAGE = NAME
-      + " [-verbose] [-expected <count>]"
-      + " (audit || report || clean)"
-//      + " [-out <path>]"
       + " [-" + VERBOSE + "]"
+      + " (audit | report | clean)"
       + " <PATH>\n"
       + "\t" + PURPOSE + "\n\n";
 
-  public static final String OPT_EXPECTED = "expected";
-
+  /**
+   * Audit sub-command: {@value}.
+   */
   public static final String AUDIT = "audit";
 
+  /**
+   * Clean Sub-command: {@value}.
+   */
   public static final String CLEAN = "clean";
 
+  /**
+   * Report Sub-command: {@value}.
+   */
   public static final String REPORT = "report";
 
-  public static final String OPT_OUTPUT = "output";
-
+  /**
+   * Verbose option: {@value}.
+   */
   public static final String OPT_VERBOSE = "verbose";
 
+  /**
+   * Error text when too few arguments are found.
+   */
+  @VisibleForTesting
   static final String TOO_FEW_ARGUMENTS = "Too few arguments";
+
+  /**
+   * Constant to use when there is no limit on the number of
+   * markers expected.
+   */
+  private static final int UNLIMITED = -1;
 
   /** Will be overridden in run(), but during tests needs to avoid NPEs. */
   private PrintStream out = System.out;
@@ -114,11 +132,7 @@ public final class MarkerTool extends S3GuardTool {
   private StoreContext storeContext;
 
   public MarkerTool(final Configuration conf) {
-    super(conf,
-        OPT_VERBOSE
-    );
-    getCommandFormat().addOptionWithValue(OPT_EXPECTED);
-//    getCommandFormat().addOptionWithValue(OPT_OUTPUT);
+    super(conf, OPT_VERBOSE);
   }
 
   @Override
@@ -136,11 +150,6 @@ public final class MarkerTool extends S3GuardTool {
     super.resetBindings();
     storeContext = null;
     operationCallbacks = null;
-  }
-
-  @Override
-  public void close() throws IOException {
-    super.close();
   }
 
   @Override
@@ -162,21 +171,22 @@ public final class MarkerTool extends S3GuardTool {
     CommandFormat commandFormat = getCommandFormat();
     verbose = commandFormat.getOpt(VERBOSE);
 
-    expected = 0;
+    expected = UNLIMITED;
     // argument 0 is the action
     String action = parsedArgs.get(0);
     switch (action) {
     case AUDIT:
+      // audit. no purge; fail if any marker is found
       purge = false;
       expected = 0;
       break;
     case CLEAN:
+      // clean -purge the markers
       purge = true;
-      expected = -1;
       break;
     case REPORT:
+      // report -no purge
       purge = false;
-      expected = -1;
       break;
     default:
       errorln(getUsage());
@@ -213,6 +223,9 @@ public final class MarkerTool extends S3GuardTool {
     S3AFileSystem fs = bindFilesystem(sourceFS);
     storeContext = fs.createStoreContext();
     operationCallbacks = fs.getOperationCallbacks();
+
+    println(out, "Directory Marker Policy is %s",
+        fs.getDirectoryPolicy().describe());
 
     ScanResult result = once("action", path.toString(),
         () -> scan(path, doPurge, expectedMarkerCount));
@@ -311,15 +324,19 @@ public final class MarkerTool extends S3GuardTool {
     }
     if (size > expectedMarkerCount) {
       // failure
-      println(out, "Expected %d marker%s", expectedMarkerCount, suffix(size));
+      if (expectedMarkerCount > UNLIMITED) {
+        println(out, "Expected %d marker%s", expectedMarkerCount, suffix(size));
+      }
+      println(out, "Surplus markers were found -failing audit");
+
       result.exitCode = EXIT_NOT_ACCEPTABLE;
       return result;
     }
 
     if (doPurge) {
       int deletePageSize = storeContext.getConfiguration()
-          .getInt(Constants.BULK_DELETE_PAGE_SIZE,
-              Constants.BULK_DELETE_PAGE_SIZE_DEFAULT);
+          .getInt(BULK_DELETE_PAGE_SIZE,
+              BULK_DELETE_PAGE_SIZE_DEFAULT);
       result.purgeSummary = purgeMarkers(tracker,
           deletePageSize);
     }
@@ -334,10 +351,6 @@ public final class MarkerTool extends S3GuardTool {
    */
   private String suffix(final int size) {
     return size == 1 ? "" : "s";
-  }
-
-  public static Logger getLOG() {
-    return LOG;
   }
 
   /**
@@ -372,7 +385,6 @@ public final class MarkerTool extends S3GuardTool {
     }
 
   }
-
 
   /**
    * Result of a call of {@link #purgeMarkers(DirMarkerTracker, int)};
@@ -462,7 +474,6 @@ public final class MarkerTool extends S3GuardTool {
       List<DeleteObjectsRequest.KeyVersion> page = markerKeys.subList(start,
           end);
       List<Path> undeleted = new ArrayList<>();
-      // currently no attempt at doing this in pages.
       OperationDuration duration = new OperationDuration();
       operationCallbacks.removeKeys(page, true, undeleted, null, false);
       duration.finished();

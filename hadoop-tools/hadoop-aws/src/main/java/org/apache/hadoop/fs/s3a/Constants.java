@@ -961,14 +961,7 @@ public final class Constants {
    * at the risk of backwards compatibility.
    */
   public static final String DIRECTORY_MARKER_POLICY =
-      "fs.s3a.directory.markers";
-
-  /**
-   * Retain directory markers.
-   * Value: {@value}.
-   */
-  public static final String DIRECTORY_MARKER_POLICY_KEEP =
-      "keep";
+      "fs.s3a.directory.marker.retention";
 
   /**
    * Delete directory markers. This is the backwards compatible option.
@@ -976,6 +969,13 @@ public final class Constants {
    */
   public static final String DIRECTORY_MARKER_POLICY_DELETE =
       "delete";
+
+  /**
+   * Retain directory markers.
+   * Value: {@value}.
+   */
+  public static final String DIRECTORY_MARKER_POLICY_KEEP =
+      "keep";
 
   /**
    * Retain directory markers in authoritative directory trees only.

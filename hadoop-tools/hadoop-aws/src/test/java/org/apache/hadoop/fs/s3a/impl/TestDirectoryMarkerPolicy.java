@@ -41,17 +41,17 @@ public class TestDirectoryMarkerPolicy extends AbstractHadoopTestBase {
     return Arrays.asList(new Object[][]{
         {
             DirectoryPolicy.MarkerPolicy.Delete,
-            failIfInvoked,
+            FAIL_IF_INVOKED,
             false, false
         },
         {
             DirectoryPolicy.MarkerPolicy.Keep,
-            failIfInvoked,
+            FAIL_IF_INVOKED,
             true, true
         },
         {
             DirectoryPolicy.MarkerPolicy.Authoritative,
-            authPathOnly,
+            AUTH_PATH_ONLY,
             false, true
         }});
   }
@@ -84,6 +84,13 @@ public class TestDirectoryMarkerPolicy extends AbstractHadoopTestBase {
     c.set(DIRECTORY_MARKER_POLICY, markerPolicy.name());
     return new DirectoryPolicyImpl(c, authoritativeness);
   }
+
+  private static final Predicate<Path> AUTH_PATH_ONLY =
+      (p) -> p.toUri().getPath().startsWith("/auth/");
+
+  private static final Predicate<Path> FAIL_IF_INVOKED = (p) -> {
+    throw new RuntimeException("failed");
+  };
 
   private final Path nonAuthPath = new Path("s3a://bucket/nonauth/data");
   private final Path authPath = new Path("s3a://bucket/auth/data1");
