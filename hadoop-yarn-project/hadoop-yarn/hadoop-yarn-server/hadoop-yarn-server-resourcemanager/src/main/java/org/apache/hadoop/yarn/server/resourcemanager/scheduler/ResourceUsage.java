@@ -361,6 +361,10 @@ public class ResourceUsage {
     return _getAll(ResourceType.USED);
   }
 
+  public Resource getAllReserved() {
+    return _getAll(ResourceType.RESERVED);
+  }
+
   private UsageByLabel getAndAddIfMissing(String label) {
     if (label == null || label.equals(NL)) {
       return usageNoLabel;
