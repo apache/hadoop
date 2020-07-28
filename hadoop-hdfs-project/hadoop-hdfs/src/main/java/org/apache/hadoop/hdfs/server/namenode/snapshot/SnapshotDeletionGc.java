@@ -75,6 +75,9 @@ public class SnapshotDeletionGc {
     namesystem.readLock();
     try {
       deleted = namesystem.getSnapshotManager().chooseDeletedSnapshot();
+    } catch (Throwable e) {
+      LOG.error("Failed to chooseDeletedSnapshot", e);
+      throw e;
     } finally {
       namesystem.readUnlock();
     }
@@ -91,7 +94,7 @@ public class SnapshotDeletionGc {
     try {
       namesystem.gcDeletedSnapshot(snapshotRoot, snapshotName);
     } catch (Throwable e) {
-      LOG.warn("Failed to gcDeletedSnapshot " + deleted.getFullPathName(), e);
+      LOG.error("Failed to gcDeletedSnapshot " + deleted.getFullPathName(), e);
     }
   }
 

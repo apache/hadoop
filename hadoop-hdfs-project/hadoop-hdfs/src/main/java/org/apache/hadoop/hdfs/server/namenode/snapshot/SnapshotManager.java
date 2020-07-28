@@ -280,6 +280,20 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     return dir;
   }
 
+  public void assertMarkedAsDeleted(INodesInPath iip, String snapshotName)
+      throws IOException {
+    final INodeDirectory dir = getSnapshottableRoot(iip);
+    final Snapshot.Root snapshotRoot = dir.getDirectorySnapshottableFeature()
+        .getSnapshotByName(dir, snapshotName)
+        .getRoot();
+
+    if (snapshotRoot.isMarkedAsDeleted()) {
+      throw new IllegalStateException("Failed to gcDeletedSnapshot "
+          + snapshotName + " from " + dir.getFullPathName()
+          + ": snapshot is not marked as deleted");
+    }
+  }
+
   /**
    * Get the snapshot root directory for the given directory. The given
    * directory must either be a snapshot root or a descendant of any
@@ -372,8 +386,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
           srcRoot, snapshotName);
 
       // Diffs must be not empty since a snapshot exists in the list
-      final int earliest = snapshottable.getDiffs().iterator().next()
-          .getSnapshotId();
+      final int earliest = snapshottable.getDiffs().getFirst().getSnapshotId();
       if (snapshot.getId() != earliest) {
         final XAttr snapshotXAttr = buildXAttr();
         final List<XAttr> xattrs = Lists.newArrayListWithCapacity(1);
