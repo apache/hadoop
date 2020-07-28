@@ -1828,6 +1828,7 @@ public class CapacityScheduler extends
     case NODE_UPDATE:
     {
       NodeUpdateSchedulerEvent nodeUpdatedEvent = (NodeUpdateSchedulerEvent)event;
+      updateSchedulerNodeHBIntervalMetrics(nodeUpdatedEvent);
       nodeUpdate(nodeUpdatedEvent.getRMNode());
     }
     break;
@@ -2111,6 +2112,19 @@ public class CapacityScheduler extends
               + getClusterResource());
     } finally {
       writeLock.unlock();
+    }
+  }
+
+  private void updateSchedulerNodeHBIntervalMetrics(
+      NodeUpdateSchedulerEvent nodeUpdatedEvent) {
+    // Add metrics for evaluating the time difference between heartbeats.
+    SchedulerNode node =
+        nodeTracker.getNode(nodeUpdatedEvent.getRMNode().getNodeID());
+    if (node != null) {
+      long lastInterval =
+          Time.monotonicNow() - node.getLastHeartbeatMonotonicTime();
+      CapacitySchedulerMetrics.getMetrics()
+          .addSchedulerNodeHBInterval(lastInterval);
     }
   }
 
