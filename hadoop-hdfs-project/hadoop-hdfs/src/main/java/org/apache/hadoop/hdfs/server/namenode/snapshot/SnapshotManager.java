@@ -305,14 +305,16 @@ public class SnapshotManager implements SnapshotStatsMXBean {
 
   void assertPrior(INodeDirectory dir, String snapshotName, int prior)
       throws SnapshotException {
-    if (isSnapshotDeletionOrdered()) {
-      if (prior != Snapshot.NO_SNAPSHOT_ID) {
-        throw new SnapshotException("Failed to removeSnapshot "
-            + snapshotName + " from " + dir.getFullPathName()
-            + ": Unexpected prior (=" + prior
-            + ") when " + DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED
-            + " is enabled.");
-      }
+    if (!isSnapshotDeletionOrdered()) {
+      return;
+    }
+    // prior must not exist
+    if (prior != Snapshot.NO_SNAPSHOT_ID) {
+      throw new SnapshotException("Failed to removeSnapshot "
+          + snapshotName + " from " + dir.getFullPathName()
+          + ": Unexpected prior (=" + prior + ") when "
+          + DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED
+          + " is " + isSnapshotDeletionOrdered());
     }
   }
 
@@ -325,7 +327,8 @@ public class SnapshotManager implements SnapshotStatsMXBean {
       throw new SnapshotException("Failed to delete snapshot " + snapshot
           + " from " + dir.getFullPathName() + " since " + snapshot
           + " is not the first snapshot (=" + first + ") and "
-          + DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED + " is enabled.");
+          + DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED
+          + " is " + isSnapshotDeletionOrdered());
     }
   }
 
