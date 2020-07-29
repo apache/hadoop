@@ -17,12 +17,13 @@
  */
 package org.apache.hadoop.fs.azurebfs;
 
-import com.google.common.collect.Lists;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
 
+import com.google.common.collect.Lists;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.junit.Assume;
 import org.junit.Test;
 
@@ -44,9 +45,19 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_A
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_BLOB_FS_CLIENT_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_BLOB_FS_CLIENT_SECRET;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test cases for AzureBlobFileSystem.access()
+ *
+ * Some of the tests in this class requires the following 3 configs set in the
+ * test config file.
+ * fs.azure.account.test.oauth2.client.id
+ * fs.azure.account.test.oauth2.client.secret
+ * fs.azure.check.access.testuser.guid
+ * Set the above client id, secret and guid of a service principal which has no
+ * RBAC on the account.
+ *
  */
 public class ITestAzureBlobFileSystemCheckAccess
     extends AbstractAbfsIntegrationTest {
@@ -66,31 +77,27 @@ public class ITestAzureBlobFileSystemCheckAccess
     this.isCheckAccessEnabled = getConfiguration().isCheckAccessEnabled();
     this.isHNSEnabled = getConfiguration()
         .getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
+    setTestUserFs();
   }
 
   private void setTestUserFs() throws Exception {
     if (this.testUserFs != null) {
       return;
     }
-    String orgClientId = getConfiguration().get(FS_AZURE_BLOB_FS_CLIENT_ID);
-    String orgClientSecret = getConfiguration()
-        .get(FS_AZURE_BLOB_FS_CLIENT_SECRET);
-    Boolean orgCreateFileSystemDurungInit = getConfiguration()
-        .getBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, true);
-    getRawConfiguration().set(FS_AZURE_BLOB_FS_CLIENT_ID,
-        getConfiguration().get(FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_ID));
-    getRawConfiguration().set(FS_AZURE_BLOB_FS_CLIENT_SECRET, getConfiguration()
-        .get(FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_SECRET));
+    final String testClientIdConfKey =
+        FS_AZURE_BLOB_FS_CLIENT_ID + "." + getAccountName();
+    final String testClientId = getConfiguration()
+        .getString(FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_ID, "");
+    getRawConfiguration().set(testClientIdConfKey, testClientId);
+    final String clientSecretConfKey =
+        FS_AZURE_BLOB_FS_CLIENT_SECRET + "." + getAccountName();
+    final String testClientSecret = getConfiguration()
+        .getString(FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_SECRET, "");
+    getRawConfiguration().set(clientSecretConfKey, testClientSecret);
     getRawConfiguration()
         .setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION,
             false);
-    FileSystem fs = FileSystem.newInstance(getRawConfiguration());
-    getRawConfiguration().set(FS_AZURE_BLOB_FS_CLIENT_ID, orgClientId);
-    getRawConfiguration().set(FS_AZURE_BLOB_FS_CLIENT_SECRET, orgClientSecret);
-    getRawConfiguration()
-        .setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION,
-            orgCreateFileSystemDurungInit);
-    this.testUserFs = fs;
+    this.testUserFs = FileSystem.newInstance(getRawConfiguration());
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -100,15 +107,15 @@ public class ITestAzureBlobFileSystemCheckAccess
 
   @Test(expected = NullPointerException.class)
   public void testCheckAccessForFileWithNullFsAction() throws Exception {
-    assumeHNSAndCheckAccessEnabled();
+    Assume.assumeTrue(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT + " is false",
+        isHNSEnabled);
     //  NPE when trying to convert null FsAction enum
     superUserFs.access(new Path("test.txt"), null);
   }
 
   @Test(expected = FileNotFoundException.class)
   public void testCheckAccessForNonExistentFile() throws Exception {
-    assumeHNSAndCheckAccessEnabled();
-    setTestUserFs();
+    checkPrerequisites();
     Path nonExistentFile = setupTestDirectoryAndUserAccess(
         "/nonExistentFile1.txt", FsAction.ALL);
     superUserFs.delete(nonExistentFile, true);
@@ -153,15 +160,19 @@ public class ITestAzureBlobFileSystemCheckAccess
         getConfiguration()
             .getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, true));
     Assume.assumeTrue(FS_AZURE_ENABLE_CHECK_ACCESS + " is false",
-            isCheckAccessEnabled);
-    setTestUserFs();
-    testUserFs.access(new Path("/"), FsAction.READ);
+        isCheckAccessEnabled);
+
+    intercept(AccessControlException.class,
+        "\"This request is not authorized to perform this operation using "
+            + "this permission.\", 403",
+        () -> testUserFs.access(new Path("/"), FsAction.READ));
+
+    superUserFs.access(new Path("/"), FsAction.READ);
   }
 
   @Test
   public void testFsActionNONE() throws Exception {
-    assumeHNSAndCheckAccessEnabled();
-    setTestUserFs();
+    checkPrerequisites();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test2.txt",
         FsAction.NONE);
     assertInaccessible(testFilePath, FsAction.EXECUTE);
@@ -175,8 +186,7 @@ public class ITestAzureBlobFileSystemCheckAccess
 
   @Test
   public void testFsActionEXECUTE() throws Exception {
-    assumeHNSAndCheckAccessEnabled();
-    setTestUserFs();
+    checkPrerequisites();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test3.txt",
         FsAction.EXECUTE);
     assertAccessible(testFilePath, FsAction.EXECUTE);
@@ -191,8 +201,7 @@ public class ITestAzureBlobFileSystemCheckAccess
 
   @Test
   public void testFsActionREAD() throws Exception {
-    assumeHNSAndCheckAccessEnabled();
-    setTestUserFs();
+    checkPrerequisites();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test4.txt",
         FsAction.READ);
     assertAccessible(testFilePath, FsAction.READ);
@@ -207,8 +216,7 @@ public class ITestAzureBlobFileSystemCheckAccess
 
   @Test
   public void testFsActionWRITE() throws Exception {
-    assumeHNSAndCheckAccessEnabled();
-    setTestUserFs();
+    checkPrerequisites();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test5.txt",
         FsAction.WRITE);
     assertAccessible(testFilePath, FsAction.WRITE);
@@ -223,8 +231,7 @@ public class ITestAzureBlobFileSystemCheckAccess
 
   @Test
   public void testFsActionREADEXECUTE() throws Exception {
-    assumeHNSAndCheckAccessEnabled();
-    setTestUserFs();
+    checkPrerequisites();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test6.txt",
         FsAction.READ_EXECUTE);
     assertAccessible(testFilePath, FsAction.EXECUTE);
@@ -239,8 +246,7 @@ public class ITestAzureBlobFileSystemCheckAccess
 
   @Test
   public void testFsActionWRITEEXECUTE() throws Exception {
-    assumeHNSAndCheckAccessEnabled();
-    setTestUserFs();
+    checkPrerequisites();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test7.txt",
         FsAction.WRITE_EXECUTE);
     assertAccessible(testFilePath, FsAction.EXECUTE);
@@ -255,8 +261,7 @@ public class ITestAzureBlobFileSystemCheckAccess
 
   @Test
   public void testFsActionALL() throws Exception {
-    assumeHNSAndCheckAccessEnabled();
-    setTestUserFs();
+    checkPrerequisites();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test8.txt",
         FsAction.ALL);
     assertAccessible(testFilePath, FsAction.EXECUTE);
@@ -268,13 +273,21 @@ public class ITestAzureBlobFileSystemCheckAccess
     assertAccessible(testFilePath, FsAction.ALL);
   }
 
-  private void assumeHNSAndCheckAccessEnabled() {
+  private void checkPrerequisites() {
     Assume.assumeTrue(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT + " is false",
         isHNSEnabled);
     Assume.assumeTrue(FS_AZURE_ENABLE_CHECK_ACCESS + " is false",
         isCheckAccessEnabled);
+    AbfsConfiguration conf = getConfiguration();
+    Assume.assumeTrue("AuthType is not OAuth",
+        conf.getAuthType(getAccountName()) == AuthType.OAuth);
+    checkIfConfigIsSet(FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_SECRET);
+    checkIfConfigIsSet(FS_AZURE_BLOB_FS_CHECKACCESS_TEST_USER_GUID);
+  }
 
-    Assume.assumeNotNull(getRawConfiguration().get(FS_AZURE_BLOB_FS_CLIENT_ID));
+  private void checkIfConfigIsSet(String configKey){
+    AbfsConfiguration conf = getConfiguration();
+    Assume.assumeNotNull(configKey + " config missing", conf.get(configKey));
   }
 
   private void assertAccessible(Path testFilePath, FsAction fsAction)
