@@ -41,10 +41,9 @@ public class ITestSharedKeyAuth extends AbstractAbfsIntegrationTest {
     Configuration config = this.getRawConfiguration();
     config.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION,
         false);
-    //  If this is set, there won't be an HTTP call to server
     String accountName = this.getAccountName();
     String configkKey = FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME + "." + accountName;
-    // Provide a wrong sharedKey
+    // a wrong sharedKey
     String secret = "XjUjsGherkDpljuyThd7RpljhR6uhsFjhlxRpmhgD12lnj7lhfRn8kgPt5"
         + "+MJHS7UJNDER+jn6KP6Jnm2ONQlm==";
     config.set(configkKey, secret);
