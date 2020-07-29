@@ -155,12 +155,8 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
     String accountName = this.getAccountName();
     String configkKey = FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME + "." + accountName;
     // Provide a wrong sharedKey
-    String secret = config.get(configkKey);
-    char incorrectChar = '1';
-    if (secret.charAt(0) == '1') {
-      incorrectChar = '2';
-    }
-    secret = incorrectChar + secret.substring(1);
+    String secret = "XjUjsGherkDpljuyThd7RpljhR6uhsFjhlxRpmhgD12lnj7lhfRn8kgPt5"
+        + "+MJHS7UJNDER+jn6KP6Jnm2ONQlm==";
     config.set(configkKey, secret);
 
     AzureBlobFileSystem fs = this.getFileSystem(config);
