@@ -78,15 +78,13 @@ public class SnapshotManager implements SnapshotStatsMXBean {
       LoggerFactory.getLogger(SnapshotManager.class);
 
   // The following are private configurations
-  public static final String DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED =
-      "dfs.namenode.snapshot.deletion.ordered";
-  public static final boolean DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED_DEFAULT
+  static final String DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED
+      = "dfs.namenode.snapshot.deletion.ordered";
+  static final boolean DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED_DEFAULT
       = false;
-  public static final String
-      DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED_GC_PERIOD_MS
+  static final String DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED_GC_PERIOD_MS
       = "dfs.namenode.snapshot.deletion.ordered.gc.period.ms";
-  public static final long
-      DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED_GC_PERIOD_MS_DEFAULT
+  static final long DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED_GC_PERIOD_MS_DEFAULT
       = 5 * 60_000L; //5 minutes
 
   private final FSDirectory fsdir;
@@ -111,6 +109,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
   private static final int SNAPSHOT_ID_BIT_WIDTH = 28;
 
   private boolean allowNestedSnapshots = false;
+  private final boolean snapshotDeletionOrdered;
   private int snapshotCounter = 0;
   private final int maxSnapshotLimit;
   
@@ -141,6 +140,12 @@ public class SnapshotManager implements SnapshotStatsMXBean {
         + ", maxSnapshotLimit: "
         + maxSnapshotLimit);
 
+    this.snapshotDeletionOrdered = conf.getBoolean(
+        DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED,
+        DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED_DEFAULT);
+    LOG.info("{} = {}", DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED,
+        snapshotDeletionOrdered);
+
     final int maxLevels = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_SKIPLIST_MAX_LEVELS,
         DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_SKIPLIST_MAX_SKIP_LEVELS_DEFAULT);
@@ -148,6 +153,10 @@ public class SnapshotManager implements SnapshotStatsMXBean {
         DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_SKIPLIST_SKIP_INTERVAL,
         DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_SKIPLIST_SKIP_INTERVAL_DEFAULT);
     DirectoryDiffListFactory.init(skipInterval, maxLevels, LOG);
+  }
+
+  public boolean isSnapshotDeletionOrdered() {
+    return snapshotDeletionOrdered;
   }
 
   @VisibleForTesting
@@ -288,9 +297,35 @@ public class SnapshotManager implements SnapshotStatsMXBean {
         .getRoot();
 
     if (!snapshotRoot.isMarkedAsDeleted()) {
-      throw new IllegalStateException("Failed to gcDeletedSnapshot "
+      throw new SnapshotException("Failed to gcDeletedSnapshot "
           + snapshotName + " from " + dir.getFullPathName()
           + ": snapshot is not marked as deleted");
+    }
+  }
+
+  void assertPrior(INodeDirectory dir, String snapshotName, int prior)
+      throws SnapshotException {
+    if (isSnapshotDeletionOrdered()) {
+      if (prior != Snapshot.NO_SNAPSHOT_ID) {
+        throw new SnapshotException("Failed to removeSnapshot "
+            + snapshotName + " from " + dir.getFullPathName()
+            + ": Unexpected prior (=" + prior
+            + ") when " + DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED
+            + " is enabled.");
+      }
+    }
+  }
+
+  void assertFirstSnapshot(INodeDirectory dir,
+      DirectorySnapshottableFeature snapshottable, Snapshot snapshot)
+      throws SnapshotException {
+    final INodeDirectoryAttributes first
+        = snapshottable.getDiffs().getFirstSnapshotINode();
+    if (snapshot.getRoot() != first) {
+      throw new SnapshotException("Failed to delete snapshot " + snapshot
+          + " from " + dir.getFullPathName() + " since " + snapshot
+          + " is not the first snapshot (=" + first + ") and "
+          + DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED + " is enabled.");
     }
   }
 
@@ -379,7 +414,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
   public void deleteSnapshot(final INodesInPath iip, final String snapshotName,
       INode.ReclaimContext reclaimContext, long now) throws IOException {
     final INodeDirectory srcRoot = getSnapshottableRoot(iip);
-    if (fsdir.isSnapshotDeletionOrdered()) {
+    if (isSnapshotDeletionOrdered()) {
       final DirectorySnapshottableFeature snapshottable
           = srcRoot.getDirectorySnapshottableFeature();
       final Snapshot snapshot = snapshottable.getSnapshotByName(
@@ -409,16 +444,10 @@ public class SnapshotManager implements SnapshotStatsMXBean {
         return;
       }
 
-      // assert if it is deleting the first snapshot
-      final INodeDirectoryAttributes first = snapshottable.getDiffs().getFirstSnapshotINode();
-      if (snapshot.getRoot() != first) {
-        throw new IllegalStateException("Failed to delete snapshot " + snapshotName
-            + " from " + srcRoot.getFullPathName() + " since " + snapshotName
-            + " is not the first snapshot (=" + first + ")");
-      }
+      assertFirstSnapshot(srcRoot, snapshottable, snapshot);
     }
-    srcRoot.removeSnapshot(reclaimContext, snapshotName, now,
-        fsdir.isSnapshotDeletionOrdered());
+
+    srcRoot.removeSnapshot(reclaimContext, snapshotName, now, this);
     numSnapshots.getAndDecrement();
   }
 

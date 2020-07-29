@@ -95,8 +95,6 @@ import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.CRYPTO_XA
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.SECURITY_XATTR_UNREADABLE_BY_SUPERUSER;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY;
 import static org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.CURRENT_STATE_ID;
-import static org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager.DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED;
-import static org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager.DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED_DEFAULT;
 
 /**
  * Both FSDirectory and FSNamesystem manage the state of the namespace.
@@ -189,7 +187,6 @@ public class FSDirectory implements Closeable {
   private boolean posixAclInheritanceEnabled;
   private final boolean xattrsEnabled;
   private final int xattrMaxSize;
-  private final boolean snapshotDeletionOrdered;
 
   // precision of access times.
   private final long accessTimePrecision;
@@ -355,12 +352,6 @@ public class FSDirectory implements Closeable {
         "The maximum size of an xattr should be <= maximum size"
         + " hard limit " + DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_HARD_LIMIT
         + ": (%s).", DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_KEY);
-
-    this.snapshotDeletionOrdered =
-        conf.getBoolean(DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED,
-            DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED_DEFAULT);
-    LOG.info("{} = {}", DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED,
-        snapshotDeletionOrdered);
 
     this.accessTimePrecision = conf.getLong(
         DFS_NAMENODE_ACCESSTIME_PRECISION_KEY,
@@ -619,10 +610,6 @@ public class FSDirectory implements Closeable {
     return xattrsEnabled;
   }
   int getXattrMaxSize() { return xattrMaxSize; }
-
-  public boolean isSnapshotDeletionOrdered() {
-    return snapshotDeletionOrdered;
-  }
 
   boolean isAccessTimeSupported() {
     return accessTimePrecision > 0;

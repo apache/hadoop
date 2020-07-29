@@ -234,13 +234,12 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
    * @param snapshotRoot The directory where we take snapshots
    * @param snapshotName The name of the snapshot to be removed
    * @param now The snapshot deletion time set by Time.now().
-   * @param isSnapshotDeletionOrdered
    * @return The removed snapshot. Null if no snapshot with the given name
    *         exists.
    */
   public Snapshot removeSnapshot(
       INode.ReclaimContext reclaimContext, INodeDirectory snapshotRoot,
-      String snapshotName, long now, boolean isSnapshotDeletionOrdered)
+      String snapshotName, long now, SnapshotManager snapshotManager)
       throws SnapshotException {
     final int i = searchSnapshot(DFSUtil.string2Bytes(snapshotName));
     if (i < 0) {
@@ -250,15 +249,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
     } else {
       final Snapshot snapshot = snapshotsByNames.get(i);
       int prior = Snapshot.findLatestSnapshot(snapshotRoot, snapshot.getId());
-      if (isSnapshotDeletionOrdered) {
-        if (prior != Snapshot.NO_SNAPSHOT_ID) {
-          throw new IllegalStateException("Failed to removeSnapshot "
-              + snapshotName + " from " + snapshotRoot.getFullPathName()
-              + ": Unexpected prior (=" + prior
-              + ") when " + SnapshotManager.DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED
-              + " is enabled.");
-        }
-      }
+      snapshotManager.assertPrior(snapshotRoot, snapshotName, prior);
       snapshotRoot.cleanSubtree(reclaimContext, snapshot.getId(), prior);
       // remove from snapshotsByNames after successfully cleaning the subtree
       snapshotsByNames.remove(i);
