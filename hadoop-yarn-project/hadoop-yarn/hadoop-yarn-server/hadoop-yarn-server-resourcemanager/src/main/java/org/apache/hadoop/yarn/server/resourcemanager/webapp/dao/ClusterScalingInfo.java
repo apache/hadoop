@@ -41,6 +41,7 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -121,13 +122,11 @@ public class ClusterScalingInfo {
     boolean upScale = recommendUpscaling(cs, consideredResourceTypes,
         nodeInstanceTypeList, newNMCandidates);
 
-    // Downscale when CB requests with downscalingFactorInNodeCount or
-    // there is no upscale happened.
-    if (downscalingFactorInNodeCount >= 0 || !upScale) {
-      // The downscaling
-      recommendDownscaling(rmNodes, decommissionCandidates,
-          downscalingFactorInNodeCount);
-    }
+    // The downscaling
+    Collection<RMNode> inActiveNodes = cs.getRMContext()
+        .getInactiveRMNodes().values();
+    recommendDownscaling(inActiveNodes, rmNodes,
+        decommissionCandidates, downscalingFactorInNodeCount, upScale);
 
     this.autoScalerInfo = new AutoScalerInfo(rs);
   }
@@ -215,14 +214,15 @@ public class ClusterScalingInfo {
    * recommended by the engine, but is required by the caller like time-based
    * autoscaler asking for a fixed number.
    *
-   * @param rmNodes list of RM nodes
+   * @param cs CapacityScheduler
    * @param decommissionCandidates structure to populate
    * @param downscalingFactorInNodeCount query param indicate node count
+   * @param upScale if UpScale has recommended new candidates
    */
-  public static void recommendDownscaling(List<FiCaSchedulerNode> rmNodes,
+  public static void recommendDownscaling(Collection<RMNode> inActiveNodes,
+      List<FiCaSchedulerNode> rmNodes,
       DecommissionCandidates decommissionCandidates,
-      int downscalingFactorInNodeCount) {
-
+      int downscalingFactorInNodeCount, boolean upScale) {
     boolean upToEngine = false;
     if (downscalingFactorInNodeCount == 0) {
       return;
@@ -231,49 +231,64 @@ public class ClusterScalingInfo {
     if (downscalingFactorInNodeCount < 0) {
       upToEngine = true;
     }
+
     HashMap<RMNode, Integer> nodeToDecommissionTimeout = new HashMap<>();
     HashMap<RMNode, Integer> nodeToAMCount = new HashMap<>();
     HashMap<RMNode, Integer> nodeToRunningAppCount = new HashMap<>();
 
-    for (FiCaSchedulerNode node : rmNodes) {
-      RMNode rmNode = node.getRMNode();
-      Integer deTimeout = rmNode.getDecommissioningTimeout();
-      if (deTimeout == null) {
-        deTimeout = -1;
-      }
-      // Workaround the timeout inaccuracy
-      if (deTimeout > 0 && rmNode.getState() != NodeState.DECOMMISSIONING) {
-        deTimeout = -1;
-      }
-      nodeToDecommissionTimeout.put(rmNode, deTimeout);
-      int amCount = 0;
-      for (RMContainer rmContainer : node.getCopiedListOfRunningContainers()) {
-        // calculate AM count
-        if (rmContainer.isAMContainer()) {
-          amCount++;
-        }
-      }
-      nodeToAMCount.put(rmNode, amCount);
-      nodeToRunningAppCount.put(rmNode,
-          node.getRMNode().getRunningApps().size());
-    }
     DownscalingNodeComparator comparator = new DownscalingNodeComparator(
         nodeToDecommissionTimeout, nodeToAMCount, nodeToRunningAppCount
     );
     TreeSet<RMNode> sortedNodes = new TreeSet<>(comparator);
-    // Sort all nodes
-    for (FiCaSchedulerNode node : rmNodes) {
-      RMNode rmNode = node.getRMNode();
+
+    // Inactive nodes including LOST are included always
+    for (RMNode rmNode : inActiveNodes) {
+      nodeToAMCount.put(rmNode, 0);
+      nodeToRunningAppCount.put(rmNode, 0);
+      nodeToDecommissionTimeout.put(rmNode, 0);
       sortedNodes.add(rmNode);
+    }
+
+    // Downscale Idle nodes only when downscalingFactorInNodeCount is
+    // set with a positive value or there is no upscale need.
+    if (!upToEngine || !upScale) {
+      for (FiCaSchedulerNode node : rmNodes) {
+        RMNode rmNode = node.getRMNode();
+        Integer deTimeout = rmNode.getDecommissioningTimeout();
+        if (deTimeout == null) {
+          deTimeout = -1;
+        }
+        // Workaround the timeout inaccuracy
+        if (deTimeout > 0 && rmNode.getState() != NodeState.DECOMMISSIONING) {
+          deTimeout = -1;
+        }
+        nodeToDecommissionTimeout.put(rmNode, deTimeout);
+        int amCount = 0;
+        for (RMContainer rmContainer : node.getCopiedListOfRunningContainers()) {
+          // calculate AM count
+          if (rmContainer.isAMContainer()) {
+            amCount++;
+          }
+        }
+        nodeToAMCount.put(rmNode, amCount);
+        nodeToRunningAppCount.put(rmNode,
+            node.getRMNode().getRunningApps().size());
+      }
+
+      // Sort all nodes
+      for (FiCaSchedulerNode node : rmNodes) {
+        RMNode rmNode = node.getRMNode();
+        sortedNodes.add(rmNode);
+      }
     }
 
     // Fetch needed count of nodes
     int neededCount = downscalingFactorInNodeCount;
     int foundCount = 0;
-    if (downscalingFactorInNodeCount > rmNodes.size()) {
+    if (downscalingFactorInNodeCount > sortedNodes.size()) {
       LOG.warn("Requested downscaling candidates count is larger than" +
           "cluster node count!");
-      neededCount = rmNodes.size();
+      neededCount = sortedNodes.size();
     }
     for (RMNode node : sortedNodes) {
       int amCount = nodeToAMCount.get(node);

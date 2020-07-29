@@ -32,6 +32,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -966,8 +967,8 @@ public class TestRMWebServicesNodesScaling extends JerseyTestBase {
     // Case 2. End-to-end. Request 10 nodes to decommission. Should return 8
     DecommissionCandidates decommissionCandidates =
         new DecommissionCandidates();
-    ClusterScalingInfo.recommendDownscaling(rmNodes,
-        decommissionCandidates, 10);
+    ClusterScalingInfo.recommendDownscaling(Collections.EMPTY_LIST,
+        rmNodes, decommissionCandidates, 10, false);
     assertEquals(expectedSortedNodes.size(),
         decommissionCandidates.getCandidates().size());
     for (i = 0; i < decommissionCandidates.getCandidates().size(); i++) {
@@ -980,15 +981,15 @@ public class TestRMWebServicesNodesScaling extends JerseyTestBase {
     // Case 3. Request 0
     decommissionCandidates =
         new DecommissionCandidates();
-    ClusterScalingInfo.recommendDownscaling(rmNodes,
-        decommissionCandidates, 0);
+    ClusterScalingInfo.recommendDownscaling(Collections.EMPTY_LIST,
+        rmNodes, decommissionCandidates, 0, false);
     assertEquals(0,
         decommissionCandidates.getCandidates().size());
     // Case 4. Request 5
     decommissionCandidates =
         new DecommissionCandidates();
-    ClusterScalingInfo.recommendDownscaling(rmNodes,
-        decommissionCandidates, 5);
+    ClusterScalingInfo.recommendDownscaling(Collections.EMPTY_LIST,
+        rmNodes, decommissionCandidates, 5, false);
     assertEquals(5,
         decommissionCandidates.getCandidates().size());
     for (i = 0; i < decommissionCandidates.getCandidates().size(); i++) {
@@ -1001,8 +1002,8 @@ public class TestRMWebServicesNodesScaling extends JerseyTestBase {
     // Case 5. Request -1. Let the engine decide
     decommissionCandidates =
         new DecommissionCandidates();
-    ClusterScalingInfo.recommendDownscaling(rmNodes,
-        decommissionCandidates, -1);
+    ClusterScalingInfo.recommendDownscaling(Collections.EMPTY_LIST,
+        rmNodes, decommissionCandidates, -1, false);
     assertEquals(4,
         decommissionCandidates.getCandidates().size());
     for (i = 0; i < decommissionCandidates.getCandidates().size(); i++) {
@@ -1013,6 +1014,19 @@ public class TestRMWebServicesNodesScaling extends JerseyTestBase {
       assertEquals(expectedId, id);
       assertEquals(true, candidiate.isRecommended());
     }
+
+    // Case 6: Validate if InActive LOST node gets added
+    decommissionCandidates =
+        new DecommissionCandidates();
+    List<RMNode> inActiveNodes = new LinkedList<>();
+    inActiveNodes.add(node_lost.getRMNode());
+    ClusterScalingInfo.recommendDownscaling(inActiveNodes,
+        Collections.EMPTY_LIST, decommissionCandidates, -1, false);
+    assertEquals(1,
+        decommissionCandidates.getCandidates().size());
+    assertEquals(node_lost.getRMNode().getNodeID().toString(),
+        decommissionCandidates.getCandidates().get(0).getNodeId());
+
   }
 
   @Test
@@ -1122,6 +1136,7 @@ public class TestRMWebServicesNodesScaling extends JerseyTestBase {
       rmContainers.add(c);
       runningAmCount--;
     }
+    when(node.getRMNode()).thenReturn(rmNode);
     when(node.getCopiedListOfRunningContainers()).thenReturn(rmContainers);
     return node;
   }
