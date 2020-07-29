@@ -3150,6 +3150,23 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /**
+   * Get the snapshot root of a given file or directory if it exists. e.g. if /snapdir1 is a snapshottable directory and path given is /snapdir1/
+   * @param path Path to a file or a directory.
+   * @return Not null if found in a snapshot root directory.
+   * @throws IOException
+   */
+  String getSnapshotRoot(Path path) throws IOException {
+    SnapshottableDirectoryStatus[] dirStatusList = getSnapshottableDirListing();
+    for (SnapshottableDirectoryStatus dirStatus : dirStatusList) {
+      String currDir = dirStatus.getFullPath().toString();
+      if (path.toUri().getPath().startsWith(currDir)) {
+        return currDir;
+      }
+    }
+    return null;
+  }
+
+  /**
    * Returns the SaslDataTransferClient configured for this DFSClient.
    *
    * @return SaslDataTransferClient configured for this DFSClient

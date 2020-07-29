@@ -3273,8 +3273,10 @@ public class DistributedFileSystem extends FileSystem
   /**
    * Get the root directory of Trash for a path in HDFS.
    * 1. File in encryption zone returns /ez1/.Trash/username
-   * 2. File not in encryption zone, or encountered exception when checking
-   *    the encryption zone of the path, returns /users/username/.Trash
+   * 2. File in snapshottable directory returns /snapdir1/.Trash/username
+   * 3. In other cases, or encountered exception when checking the encryption
+   *    zone or when checking snapshot root of the path, returns
+   *    /users/username/.Trash
    * Caller appends either Current or checkpoint timestamp for trash destination
    * @param path the trash root of the path to be determined.
    * @return trash root
@@ -3283,13 +3285,32 @@ public class DistributedFileSystem extends FileSystem
   public Path getTrashRoot(Path path) {
     statistics.incrementReadOps(1);
     storageStatistics.incrementOpCounter(OpType.GET_TRASH_ROOT);
+
+    // Snapshot root, not null if the path is inside a snapshottable directory
+    String ssRoot = null;
     try {
-      if ((path == null) || !dfs.isHDFSEncryptionEnabled()) {
+      ssRoot = dfs.getSnapshotRoot(path);
+    } catch (IOException ioe) {
+      DFSClient.LOG.warn("Exception while checking whether the path is in a "
+          + "snapshot", ioe);
+    }
+
+    try {
+      if ((path == null) ||
+          (!dfs.isHDFSEncryptionEnabled() && ssRoot == null)) {
         return super.getTrashRoot(path);
       }
     } catch (IOException ioe) {
       DFSClient.LOG.warn("Exception while checking whether encryption zone is "
           + "supported", ioe);
+    }
+
+    if (ssRoot != null) {
+      String ssTrashRootStr =
+          (ssRoot.equals("/") ? ssRoot : ssRoot + Path.SEPARATOR)
+              + FileSystem.TRASH_PREFIX + Path.SEPARATOR
+              + dfs.ugi.getShortUserName();
+      return this.makeQualified(new Path(ssTrashRootStr));
     }
 
     String parentSrc = path.isRoot()?
