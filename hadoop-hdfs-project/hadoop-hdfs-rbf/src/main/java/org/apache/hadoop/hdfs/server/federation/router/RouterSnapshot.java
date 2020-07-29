@@ -175,8 +175,8 @@ public class RouterSnapshot {
       String src = ret.keySet().iterator().next().getSrc();
       String dst = ret.keySet().iterator().next().getDest();
       for (SnapshotStatus s : response) {
-        String mountPath =
-            new String(s.getParentFullPath()).replaceFirst(src, dst);
+        String mountPath = DFSUtil.bytes2String(s.getParentFullPath()).
+            replaceFirst(src, dst);
         s.setParentFullPath(DFSUtil.string2Bytes(mountPath));
       }
     } else {
@@ -184,9 +184,8 @@ public class RouterSnapshot {
           locations, remoteMethod, SnapshotStatus[].class, null);
       RemoteLocation loc = locations.get(0);
       for (SnapshotStatus s : response) {
-        String mountPath =
-            new String(s.getParentFullPath()).replaceFirst(loc.getDest(),
-                loc.getSrc());
+        String mountPath = DFSUtil.bytes2String(s.getParentFullPath()).
+            replaceFirst(loc.getDest(),loc.getSrc());
         s.setParentFullPath(DFSUtil.string2Bytes(mountPath));
       }
     }
