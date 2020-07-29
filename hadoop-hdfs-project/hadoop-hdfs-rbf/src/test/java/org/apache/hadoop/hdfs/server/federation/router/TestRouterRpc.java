@@ -932,11 +932,11 @@ public class TestRouterRpc {
     SnapshotStatus[] snapshots = routerProtocol.
         getSnapshotListing(snapshotPath);
     assertEquals(2, snapshots.length);
-    assertEquals(SnapshotTestHelper.getSnapshotRoot
-        (new Path(snapshotPath), snapshot1),
+    assertEquals(SnapshotTestHelper.getSnapshotRoot(
+        new Path(snapshotPath), snapshot1),
         snapshots[0].getFullPath());
-    assertEquals(SnapshotTestHelper.getSnapshotRoot
-        (new Path(snapshotPath), snapshot2),
+    assertEquals(SnapshotTestHelper.getSnapshotRoot(
+        new Path(snapshotPath), snapshot2),
         snapshots[1].getFullPath());
     // Check for difference report in two snapshot
     SnapshotDiffReport diffReport = routerProtocol.getSnapshotDiffReport(

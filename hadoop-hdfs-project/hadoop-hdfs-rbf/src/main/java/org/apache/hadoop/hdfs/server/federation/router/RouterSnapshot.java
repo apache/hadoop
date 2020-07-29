@@ -185,7 +185,7 @@ public class RouterSnapshot {
       RemoteLocation loc = locations.get(0);
       for (SnapshotStatus s : response) {
         String mountPath = DFSUtil.bytes2String(s.getParentFullPath()).
-            replaceFirst(loc.getDest(),loc.getSrc());
+            replaceFirst(loc.getDest(), loc.getSrc());
         s.setParentFullPath(DFSUtil.string2Bytes(mountPath));
       }
     }
