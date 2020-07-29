@@ -23,6 +23,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -64,6 +65,7 @@ public class TestRenameWithOrderedSnapshotDeletion {
     final Path dir1 = new Path("/dir1");
     final Path dir2 = new Path("/dir2");
     final Path sub0 = new Path(snapshottableDir, "sub0");
+    final Path sub1 = new Path(snapshottableDir, "sub1");
     hdfs.mkdirs(sub0);
     final Path file1 = new Path(dir1, "file1");
     final Path file2 = new Path(sub0, "file2");
@@ -84,13 +86,23 @@ public class TestRenameWithOrderedSnapshotDeletion {
     validateRename(file2, dir1);
     // rename within snapshottable root should work
     hdfs.rename(file2, snapshottableDir);
+
+    // rename dirs outside snapshottable root should work
+    hdfs.rename(dir2, dir1);
+    // rename dir into snapshottable root should fail
+    validateRename(dir2, snapshottableDir);
+    // rename dir outside snapshottable root should fail
+    validateRename(sub0, dir2);
+    // rename dir within snapshottable root should work
+    hdfs.rename(sub0, sub1);
   }
 
   private void validateRename(Path src, Path dest) {
     try {
       hdfs.rename(src, dest);
     } catch (IOException ioe) {
-      ioe.getMessage().contains("are not under the same snapshot root.");
+      Assert.assertTrue(ioe.getMessage().contains("are not under the" +
+          " same snapshot root."));
     }
   }
- }
+}

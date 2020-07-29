@@ -371,9 +371,7 @@ class FSDirSnapshotOp {
           "the same snapshot root.";
       INodeDirectory src = snapshotManager.
           getSnapshottableAncestorDir(srcIIP);
-      INodeDirectory dst = snapshotManager.getSnapshottableAncestorDir(dstIIP);
-      if (!(dstIIP.isDescendant(snapshotManager.
-          getSnapshottableAncestorDir(srcIIP)))) {
+      if (!(dstIIP.isDescendant(src))) {
         throw new SnapshotException(errMsg);
       }
     }
