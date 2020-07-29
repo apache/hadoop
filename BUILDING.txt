@@ -6,6 +6,7 @@ Requirements:
 * Unix System
 * JDK 1.8
 * Maven 3.3 or later
+* Boost 1.72 (if compiling native code)
 * Protocol Buffers 3.7.1 (if compiling native code)
 * CMake 3.1 or newer (if compiling native code)
 * Zlib devel (if compiling native code)
@@ -72,6 +73,12 @@ Installing required packages for clean install of Ubuntu 14.04 LTS Desktop:
         && ./configure\
         && make install \
         && rm -rf /opt/protobuf-3.7-src
+* Boost
+  $ curl -L https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download > boost_1_72_0.tar.bz2 \
+    && tar --bzip2 -xf boost_1_72_0.tar.bz2 \
+    && cd boost_1_72_0 \
+    && ./bootstrap.sh --prefix=/usr/ \
+    && ./b2 --without-python install
 
 Optional packages:
 
@@ -442,6 +449,14 @@ Building on CentOS 8
 * Install libraries provided by CentOS 8.
   $ sudo dnf install libtirpc-devel zlib-devel lz4-devel bzip2-devel openssl-devel cyrus-sasl-devel libpmem-devel
 
+* Install boost.
+  $ curl -L -o boost_1_72_0.tar.bz2 https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download
+  $ tar xjf boost_1_72_0.tar.bz2
+  $ cd boost_1_72_0
+  $ ./bootstrap.sh --prefix=/usr/local
+  $ ./b2
+  $ sudo ./b2 install
+
 * Install optional dependencies (snappy-devel).
   $ sudo dnf --enablerepo=PowerTools snappy-devel
 
@@ -468,6 +483,7 @@ Requirements:
 * Windows System
 * JDK 1.8
 * Maven 3.0 or later
+* Boost 1.72
 * Protocol Buffers 3.7.1
 * CMake 3.1 or newer
 * Visual Studio 2010 Professional or Higher

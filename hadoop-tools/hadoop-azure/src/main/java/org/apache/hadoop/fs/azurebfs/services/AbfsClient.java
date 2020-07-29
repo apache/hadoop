@@ -73,11 +73,13 @@ public class AbfsClient implements Closeable {
   private final AuthType authType;
   private AccessTokenProvider tokenProvider;
   private SASTokenProvider sasTokenProvider;
+  private final AbfsCounters abfsCounters;
 
   private AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
                     final AbfsConfiguration abfsConfiguration,
                     final ExponentialRetryPolicy exponentialRetryPolicy,
-                    final AbfsPerfTracker abfsPerfTracker) {
+                    final AbfsPerfTracker abfsPerfTracker,
+                    final AbfsCounters abfsCounters) {
     this.baseUrl = baseUrl;
     this.sharedKeyCredentials = sharedKeyCredentials;
     String baseUrlString = baseUrl.toString();
@@ -104,14 +106,17 @@ public class AbfsClient implements Closeable {
 
     this.userAgent = initializeUserAgent(abfsConfiguration, sslProviderName);
     this.abfsPerfTracker = abfsPerfTracker;
+    this.abfsCounters = abfsCounters;
   }
 
   public AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
                     final AbfsConfiguration abfsConfiguration,
                     final ExponentialRetryPolicy exponentialRetryPolicy,
                     final AccessTokenProvider tokenProvider,
-                    final AbfsPerfTracker abfsPerfTracker) {
-    this(baseUrl, sharedKeyCredentials, abfsConfiguration, exponentialRetryPolicy, abfsPerfTracker);
+                    final AbfsPerfTracker abfsPerfTracker,
+                    final AbfsCounters abfsCounters) {
+    this(baseUrl, sharedKeyCredentials, abfsConfiguration,
+        exponentialRetryPolicy, abfsPerfTracker, abfsCounters);
     this.tokenProvider = tokenProvider;
   }
 
@@ -119,8 +124,10 @@ public class AbfsClient implements Closeable {
                     final AbfsConfiguration abfsConfiguration,
                     final ExponentialRetryPolicy exponentialRetryPolicy,
                     final SASTokenProvider sasTokenProvider,
-                    final AbfsPerfTracker abfsPerfTracker) {
-    this(baseUrl, sharedKeyCredentials, abfsConfiguration, exponentialRetryPolicy, abfsPerfTracker);
+                    final AbfsPerfTracker abfsPerfTracker,
+                    final AbfsCounters abfsCounters) {
+    this(baseUrl, sharedKeyCredentials, abfsConfiguration,
+        exponentialRetryPolicy, abfsPerfTracker, abfsCounters);
     this.sasTokenProvider = sasTokenProvider;
   }
 
@@ -265,7 +272,8 @@ public class AbfsClient implements Closeable {
   }
 
   public AbfsRestOperation createPath(final String path, final boolean isFile, final boolean overwrite,
-                                      final String permission, final String umask) throws AzureBlobFileSystemException {
+                                      final String permission, final String umask,
+                                      final boolean isAppendBlob) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     if (!overwrite) {
       requestHeaders.add(new AbfsHttpHeader(IF_NONE_MATCH, AbfsHttpConstants.STAR));
@@ -281,6 +289,9 @@ public class AbfsClient implements Closeable {
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, isFile ? FILE : DIRECTORY);
+    if (isAppendBlob) {
+      abfsUriQueryBuilder.addQuery(QUERY_PARAM_BLOBTYPE, APPEND_BLOB_TYPE);
+    }
 
     String operation = isFile
         ? SASTokenProvider.CREATE_FILE_OPERATION
@@ -325,10 +336,19 @@ public class AbfsClient implements Closeable {
             url,
             requestHeaders);
     Instant renameRequestStartTime = Instant.now();
-    op.execute();
-
-    if (op.getResult().getStatusCode() != HttpURLConnection.HTTP_OK) {
-      return renameIdempotencyCheckOp(renameRequestStartTime, op, destination);
+    try {
+      op.execute();
+    } catch (AzureBlobFileSystemException e) {
+        final AbfsRestOperation idempotencyOp = renameIdempotencyCheckOp(
+            renameRequestStartTime, op, destination);
+        if (idempotencyOp.getResult().getStatusCode()
+            == op.getResult().getStatusCode()) {
+          // idempotency did not return different result
+          // throw back the exception
+          throw e;
+        } else {
+          return idempotencyOp;
+        }
     }
 
     return op;
@@ -358,14 +378,21 @@ public class AbfsClient implements Closeable {
       // exists. Check on destination status and if it has a recent LMT timestamp.
       // If yes, return success, else fall back to original rename request failure response.
 
-      final AbfsRestOperation destStatusOp = getPathStatus(destination, false);
-      if (destStatusOp.getResult().getStatusCode() == HttpURLConnection.HTTP_OK) {
-        String lmt = destStatusOp.getResult().getResponseHeader(
-            HttpHeaderConfigurations.LAST_MODIFIED);
+      try {
+        final AbfsRestOperation destStatusOp = getPathStatus(destination,
+            false);
+        if (destStatusOp.getResult().getStatusCode()
+            == HttpURLConnection.HTTP_OK) {
+          String lmt = destStatusOp.getResult().getResponseHeader(
+              HttpHeaderConfigurations.LAST_MODIFIED);
 
-        if (DateTimeUtils.isRecentlyModified(lmt, renameRequestStartTime)) {
-          return destStatusOp;
+          if (DateTimeUtils.isRecentlyModified(lmt, renameRequestStartTime)) {
+            return destStatusOp;
+          }
         }
+      } catch (AzureBlobFileSystemException e) {
+        // GetFileStatus on the destination failed, return original op
+        return op;
       }
     }
 
@@ -373,7 +400,7 @@ public class AbfsClient implements Closeable {
   }
 
   public AbfsRestOperation append(final String path, final long position, final byte[] buffer, final int offset,
-                                  final int length, final String cachedSasToken) throws AzureBlobFileSystemException {
+                                  final int length, final String cachedSasToken, final boolean isAppendBlob) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     // JDK7 does not support PATCH, so to workaround the issue we will use
     // PUT and specify the real method in the X-Http-Method-Override header.
@@ -394,8 +421,44 @@ public class AbfsClient implements Closeable {
             HTTP_METHOD_PUT,
             url,
             requestHeaders, buffer, offset, length, sasTokenForReuse);
-    op.execute();
+    try {
+      op.execute();
+    } catch (AzureBlobFileSystemException e) {
+      if (isAppendBlob && appendSuccessCheckOp(op, path, (position + length))) {
+        final AbfsRestOperation successOp = new AbfsRestOperation(
+            AbfsRestOperationType.Append,
+                this,
+                HTTP_METHOD_PUT,
+                url,
+                requestHeaders, buffer, offset, length, sasTokenForReuse);
+        successOp.hardSetResult(HttpURLConnection.HTTP_OK);
+        return successOp;
+      }
+      throw e;
+    }
+
     return op;
+  }
+
+  // For AppendBlob its possible that the append succeeded in the backend but the request failed.
+  // However a retry would fail with an InvalidQueryParameterValue
+  // (as the current offset would be unacceptable).
+  // Hence, we pass/succeed the appendblob append call
+  // in case we are doing a retry after checking the length of the file
+  public boolean appendSuccessCheckOp(AbfsRestOperation op, final String path,
+                                       final long length) throws AzureBlobFileSystemException {
+    if ((op.isARetriedRequest())
+        && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_BAD_REQUEST)) {
+      final AbfsRestOperation destStatusOp = getPathStatus(path, false);
+      if (destStatusOp.getResult().getStatusCode() == HttpURLConnection.HTTP_OK) {
+        String fileLength = destStatusOp.getResult().getResponseHeader(
+            HttpHeaderConfigurations.CONTENT_LENGTH);
+        if (length <= Long.parseLong(fileLength)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   public AbfsRestOperation flush(final String path, final long position, boolean retainUncommittedData,
@@ -523,10 +586,18 @@ public class AbfsClient implements Closeable {
             HTTP_METHOD_DELETE,
             url,
             requestHeaders);
+    try {
     op.execute();
-
-    if (op.getResult().getStatusCode() != HttpURLConnection.HTTP_OK) {
-      return deleteIdempotencyCheckOp(op);
+    } catch (AzureBlobFileSystemException e) {
+      final AbfsRestOperation idempotencyOp = deleteIdempotencyCheckOp(op);
+      if (idempotencyOp.getResult().getStatusCode()
+          == op.getResult().getStatusCode()) {
+        // idempotency did not return different result
+        // throw back the exception
+        throw e;
+      } else {
+        return idempotencyOp;
+      }
     }
 
     return op;
@@ -775,7 +846,8 @@ public class AbfsClient implements Closeable {
     return createRequestUrl(EMPTY_STRING, query);
   }
 
-  private URL createRequestUrl(final String path, final String query)
+  @VisibleForTesting
+  protected URL createRequestUrl(final String path, final String query)
           throws AzureBlobFileSystemException {
     final String base = baseUrl.toString();
     String encodedPath = path;
@@ -891,5 +963,13 @@ public class AbfsClient implements Closeable {
   @VisibleForTesting
   public SASTokenProvider getSasTokenProvider() {
     return this.sasTokenProvider;
+  }
+
+  /**
+   * Getter for abfsCounters from AbfsClient.
+   * @return AbfsCounters instance.
+   */
+  protected AbfsCounters getAbfsCounters() {
+    return abfsCounters;
   }
 }

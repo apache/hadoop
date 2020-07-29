@@ -41,12 +41,18 @@ public interface Constants {
    * then the hadoop default value (/user) is used.
    */
   public static final String CONFIG_VIEWFS_HOMEDIR = "homedir";
-  
+
+  /**
+   * Config key to specify the name of the default mount table.
+   */
+  String CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE_NAME_KEY =
+      "fs.viewfs.mounttable.default.name.key";
+
   /**
    * Config variable name for the default mount table.
    */
   public static final String CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE = "default";
-  
+
   /**
    * Config variable full prefix for the default mount table.
    */
@@ -90,4 +96,25 @@ public interface Constants {
   String CONFIG_VIEWFS_ENABLE_INNER_CACHE = "fs.viewfs.enable.inner.cache";
 
   boolean CONFIG_VIEWFS_ENABLE_INNER_CACHE_DEFAULT = true;
+
+  /**
+   * Enable ViewFileSystem to show mountlinks as symlinks.
+   */
+  String CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS =
+      "fs.viewfs.mount.links.as.symlinks";
+
+  boolean CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS_DEFAULT = true;
+
+  /**
+   * When initializing the viewfs, authority will be used as the mount table
+   * name to find the mount link configurations. To make the mount table name
+   * unique, we may want to ignore port if initialized uri authority contains
+   * port number. By default, we will consider port number also in
+   * ViewFileSystem(This default value false, because to support existing
+   * deployments continue with the current behavior).
+   */
+  String CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME =
+      "fs.viewfs.ignore.port.in.mount.table.name";
+
+  boolean CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME_DEFAULT = false;
 }

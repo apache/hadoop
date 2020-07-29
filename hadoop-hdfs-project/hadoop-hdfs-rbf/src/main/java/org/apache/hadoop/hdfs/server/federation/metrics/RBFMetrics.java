@@ -124,7 +124,8 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   private MountTableStore mountTableStore;
   /** Router state store. */
   private RouterStore routerStore;
-
+  /** The number of top token owners reported in metrics. */
+  private int topTokenRealOwners;
 
   public RBFMetrics(Router router) throws IOException {
     this.router = router;
@@ -166,7 +167,9 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
     Configuration conf = router.getConfig();
     this.timeOut = conf.getTimeDuration(RBFConfigKeys.DN_REPORT_TIME_OUT,
         RBFConfigKeys.DN_REPORT_TIME_OUT_MS_DEFAULT, TimeUnit.MILLISECONDS);
-
+    this.topTokenRealOwners = conf.getInt(
+        RBFConfigKeys.DFS_ROUTER_METRICS_TOP_NUM_TOKEN_OWNERS_KEY,
+        RBFConfigKeys.DFS_ROUTER_METRICS_TOP_NUM_TOKEN_OWNERS_KEY_DEFAULT);
   }
 
   /**
@@ -647,6 +650,17 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
       return mgr.getSecretManager().getCurrentTokensSize();
     }
     return -1;
+  }
+
+  @Override
+  public String getTopTokenRealOwners() {
+    RouterSecurityManager mgr =
+        this.router.getRpcServer().getRouterSecurityManager();
+    if (mgr != null && mgr.getSecretManager() != null) {
+      return JSON.toString(mgr.getSecretManager()
+          .getTopTokenRealOwners(this.topTokenRealOwners));
+    }
+    return "";
   }
 
   @Override

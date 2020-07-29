@@ -50,6 +50,7 @@ import org.apache.hadoop.yarn.exceptions.SchedulerInvalidResoureRequestException
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
+import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
@@ -124,6 +125,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES;
 import static org.junit.Assert.assertEquals;
@@ -134,6 +136,8 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @SuppressWarnings("unchecked")
@@ -144,6 +148,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
   @Before
   public void setUp() throws IOException {
+    DefaultMetricsSystem.setMiniClusterMode(true);
     scheduler = new FairScheduler();
     conf = createConfiguration();
     resourceManager = new MockRM(conf);
@@ -4862,9 +4867,12 @@ public class TestFairScheduler extends FairSchedulerTestBase {
 
   @Test
   public void testRemovedNodeDecomissioningNode() throws Exception {
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
     // Register nodemanager
     NodeManager nm = registerNode("host_decom", 1234, 2345,
-        NetworkTopology.DEFAULT_RACK, Resources.createResource(8 * GB, 4));
+        NetworkTopology.DEFAULT_RACK, Resources.createResource(8 * GB, 4),
+        mockNodeStatus);
 
     RMNode node =
         resourceManager.getRMContext().getRMNodes().get(nm.getNodeId());
@@ -4907,10 +4915,14 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     ((FairScheduler) resourceManager.getResourceScheduler())
         .setRMContext(spyContext);
     ((AsyncDispatcher) mockDispatcher).start();
+
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
     // Register node
     String host_0 = "host_0";
     NodeManager nm_0 = registerNode(host_0, 1234, 2345,
-        NetworkTopology.DEFAULT_RACK, Resources.createResource(8 * GB, 4));
+        NetworkTopology.DEFAULT_RACK, Resources.createResource(8 * GB, 4),
+        mockNodeStatus);
 
     RMNode node =
         resourceManager.getRMContext().getRMNodes().get(nm_0.getNodeId());
@@ -4946,14 +4958,23 @@ public class TestFairScheduler extends FairSchedulerTestBase {
             .getSchedulerNode(nm_0.getNodeId()).getUnallocatedResource();
     assertThat(availableResource.getMemorySize()).isEqualTo(0);
     assertThat(availableResource.getVirtualCores()).isEqualTo(0);
+    // Kick off another heartbeat where the RMNodeResourceUpdateEvent would
+    // be skipped for DECOMMISSIONING state since the total resource is
+    // already equal to used resource from the previous heartbeat.
+    when(spyNode.getState()).thenReturn(NodeState.DECOMMISSIONING);
+    resourceManager.getResourceScheduler().handle(
+        new NodeUpdateSchedulerEvent(spyNode));
+    verify(mockDispatcher, times(1)).getEventHandler();
   }
 
   private NodeManager registerNode(String hostName, int containerManagerPort,
-                                   int httpPort, String rackName,
-                                   Resource capability)
+      int httpPort, String rackName,
+      Resource capability, NodeStatus nodeStatus)
       throws IOException, YarnException {
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
     NodeManager nm = new NodeManager(hostName, containerManagerPort, httpPort,
-        rackName, capability, resourceManager);
+        rackName, capability, resourceManager, mockNodeStatus);
 
     // after YARN-5375, scheduler event is processed in rm main dispatcher,
     // wait it processed, or may lead dead lock

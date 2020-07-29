@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.ActiveStandbyElector;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.util.BasicDiskValidator;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
@@ -743,6 +744,9 @@ public class YarnConfiguration extends Configuration {
       RM_PREFIX + "delegation-token.max-conf-size-bytes";
   public static final int DEFAULT_RM_DELEGATION_TOKEN_MAX_CONF_SIZE_BYTES =
       12800;
+  public static final String RM_DELEGATION_TOKEN_ALWAYS_CANCEL =
+      RM_PREFIX + "delegation-token.always-cancel";
+  public static final boolean DEFAULT_RM_DELEGATION_TOKEN_ALWAYS_CANCEL = false;
 
   public static final String RM_DT_RENEWER_THREAD_TIMEOUT =
       RM_PREFIX + "delegation-token-renewer.thread-timeout";
@@ -2013,6 +2017,13 @@ public class YarnConfiguration extends Configuration {
       NM_PREFIX + "health-checker.interval-ms";
   public static final long DEFAULT_NM_HEALTH_CHECK_INTERVAL_MS = 10 * 60 * 1000;
 
+  /** Whether or not to run the node health script before the NM
+   *  starts up.*/
+  public static final String NM_HEALTH_CHECK_RUN_BEFORE_STARTUP =
+      NM_PREFIX + "health-checker.run-before-startup";
+  public static final boolean DEFAULT_NM_HEALTH_CHECK_RUN_BEFORE_STARTUP =
+      false;
+
   /** Health check time out period for all scripts.*/
   public static final String NM_HEALTH_CHECK_TIMEOUT_MS =
       NM_PREFIX + "health-checker.timeout-ms";
@@ -2382,6 +2393,12 @@ public class YarnConfiguration extends Configuration {
   /** Host pid namespace for containers is disabled by default. */
   public static final boolean DEFAULT_NM_DOCKER_ALLOW_HOST_PID_NAMESPACE =
       false;
+
+  public static final String YARN_HTTP_WEBAPP_EXTERNAL_CLASSES =
+      "yarn.http.rmwebapp.external.classes";
+
+  public static final String YARN_HTTP_WEBAPP_SCHEDULER_PAGE =
+      "hadoop.http.rmwebapp.scheduler.page.class";
 
   /**
    * Whether or not users are allowed to request that Docker containers honor
@@ -3249,6 +3266,18 @@ public class YarnConfiguration extends Configuration {
       TIMELINE_SERVICE_CLIENT_PREFIX + "drain-entities.timeout.ms";
   public static final long DEFAULT_TIMELINE_V2_CLIENT_DRAIN_TIME_MILLIS
       = 2000L;
+
+  /**
+   * The configuration prefix of timeline HTTP authentication.
+   */
+  public static final String TIMELINE_HTTP_AUTH_PREFIX =
+          TIMELINE_SERVICE_PREFIX + "http-authentication.";
+
+  /**
+   * The authentication type for timeline HTTP authentication.
+   */
+  public static final String TIMELINE_HTTP_AUTH_TYPE =
+          TIMELINE_HTTP_AUTH_PREFIX + AuthenticationFilter.AUTH_TYPE;
 
   // mark app-history related configs @Private as application history is going
   // to be integrated into the timeline service

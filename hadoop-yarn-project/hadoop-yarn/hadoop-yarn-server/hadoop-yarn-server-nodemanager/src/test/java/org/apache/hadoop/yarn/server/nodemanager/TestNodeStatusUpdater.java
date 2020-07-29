@@ -931,9 +931,8 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
   public void testRecentlyFinishedContainers() throws Exception {
     NodeManager nm = new NodeManager();
     YarnConfiguration conf = new YarnConfiguration();
-    conf.set(
-        NodeStatusUpdaterImpl.YARN_NODEMANAGER_DURATION_TO_TRACK_STOPPED_CONTAINERS,
-        "10000");                                                             
+    conf.setInt(NodeStatusUpdaterImpl.
+        YARN_NODEMANAGER_DURATION_TO_TRACK_STOPPED_CONTAINERS, 1);
     nm.init(conf);                                                            
     NodeStatusUpdaterImpl nodeStatusUpdater =                                 
         (NodeStatusUpdaterImpl) nm.getNodeStatusUpdater();                    
@@ -948,18 +947,17 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
     nodeStatusUpdater.addCompletedContainer(cId);
     Assert.assertTrue(nodeStatusUpdater.isContainerRecentlyStopped(cId));     
 
+    // verify container remains even after expiration if app
+    // is still active
     nm.getNMContext().getContainers().remove(cId);
-    long time1 = System.currentTimeMillis();                                  
-    int waitInterval = 15;                                                    
-    while (waitInterval-- > 0                                                 
-        && nodeStatusUpdater.isContainerRecentlyStopped(cId)) {               
-      nodeStatusUpdater.removeVeryOldStoppedContainersFromCache();
-      Thread.sleep(1000);                                                     
-    }                                                                         
-    long time2 = System.currentTimeMillis();
-    // By this time the container will be removed from cache. need to verify.
+    Thread.sleep(10);
+    nodeStatusUpdater.removeVeryOldStoppedContainersFromCache();
+    Assert.assertTrue(nodeStatusUpdater.isContainerRecentlyStopped(cId));
+
+    // complete the application and verify container is removed
+    nm.getNMContext().getApplications().remove(appId);
+    nodeStatusUpdater.removeVeryOldStoppedContainersFromCache();
     Assert.assertFalse(nodeStatusUpdater.isContainerRecentlyStopped(cId));
-    Assert.assertTrue((time2 - time1) >= 10000 && (time2 - time1) <= 250000);
   }
 
   @Test(timeout = 90000)

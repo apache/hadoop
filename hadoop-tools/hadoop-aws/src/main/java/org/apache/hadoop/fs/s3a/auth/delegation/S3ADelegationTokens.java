@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.DelegationTokenIssuer;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.util.DurationInfo;
@@ -445,6 +446,19 @@ public class S3ADelegationTokens extends AbstractDTService {
     LOG.info("Created S3A Delegation Token: {}", token);
     creationCount.incrementAndGet();
     stats.tokenIssued();
+  }
+
+  /**
+   * Get a null/possibly empty list of extra delegation token issuers.
+   * These will be asked for tokens when
+   * {@link DelegationTokenIssuer#getAdditionalTokenIssuers()} recursively
+   * collects all DTs a filesystem can offer.
+   * @return a null or empty array. Default implementation: null
+   * @throws IOException failure
+   */
+  public DelegationTokenIssuer[] getAdditionalTokenIssuers()
+      throws IOException {
+    return null;
   }
 
   /**

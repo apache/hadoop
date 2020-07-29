@@ -26,6 +26,8 @@ import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
+import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -190,7 +192,16 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       RMAppAttempt attempt = app.getCurrentAppAttempt();
       if (attempt != null) {
         trackingUrl = attempt.getTrackingUrl();
-        host = attempt.getHost();
+        Container masterContainer = attempt.getMasterContainer();
+        if (masterContainer != null) {
+          NodeId nodeId = masterContainer.getNodeId();
+          if (nodeId != null) {
+            String amHost = nodeId.getHost();
+            if (amHost != null) {
+              host = amHost;
+            }
+          }
+        }
       }
       RMAppMetrics metrics = app.getRMAppMetrics();
       SummaryBuilder summary = new SummaryBuilder()

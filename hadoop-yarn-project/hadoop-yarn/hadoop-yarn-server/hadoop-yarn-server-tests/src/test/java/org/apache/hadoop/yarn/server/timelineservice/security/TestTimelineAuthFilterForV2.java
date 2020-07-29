@@ -68,13 +68,13 @@ import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.CollectorNodemanagerProtocol;
 import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextResponse;
-import org.apache.hadoop.yarn.server.timeline.security.TimelineAuthenticationFilterInitializer;
 import org.apache.hadoop.yarn.server.timelineservice.collector.AppLevelTimelineCollector;
 import org.apache.hadoop.yarn.server.timelineservice.collector.NodeTimelineCollectorManager;
 import org.apache.hadoop.yarn.server.timelineservice.collector.PerNodeTimelineCollectorsAuxService;
 import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineReaderImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.TIMELINE_HTTP_AUTH_PREFIX;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -151,11 +151,11 @@ public class TestTimelineAuthFilterForV2 {
       conf = new Configuration(false);
       conf.setClass("fs.file.impl", RawLocalFileSystem.class,
           FileSystem.class);
-      conf.setStrings(TimelineAuthenticationFilterInitializer.PREFIX + "type",
+      conf.setStrings(TIMELINE_HTTP_AUTH_PREFIX + "type",
           "kerberos");
-      conf.set(TimelineAuthenticationFilterInitializer.PREFIX +
+      conf.set(TIMELINE_HTTP_AUTH_PREFIX +
           KerberosAuthenticationHandler.PRINCIPAL, httpSpnegoPrincipal);
-      conf.set(TimelineAuthenticationFilterInitializer.PREFIX +
+      conf.set(TIMELINE_HTTP_AUTH_PREFIX +
           KerberosAuthenticationHandler.KEYTAB,
           httpSpnegoKeytabFile.getAbsolutePath());
       conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,

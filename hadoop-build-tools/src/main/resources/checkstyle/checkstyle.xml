@@ -119,7 +119,12 @@
 
         <!-- Checks for imports                              -->
         <!-- See http://checkstyle.sf.net/config_import.html -->
-        <module name="IllegalImport"/> <!-- defaults to sun.* packages -->
+        <module name="IllegalImport">
+          <property name="regexp" value="true"/>
+          <property name="illegalPkgs" value="^sun\.[^.]+"/>
+          <property name="illegalClasses"
+            value="^com\.google\.common\.base\.(Optional|Function|Predicate|Supplier), ^com\.google\.common\.collect\.(ImmutableListMultimap)"/>
+        </module>
         <module name="RedundantImport"/>
         <module name="UnusedImports"/>
 

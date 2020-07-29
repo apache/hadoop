@@ -254,8 +254,6 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     // if parent is a reference node, parent must be a renamed node. We can 
     // stop the check at the reference node.
     if (parent != null && parent.isReference()) {
-      // TODO: Is it a bug to return true?
-      //       Some ancestor nodes may not be in the latest snapshot.
       return true;
     }
     final INodeDirectory parentDir = getParent();
@@ -663,8 +661,14 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   }
 
   @VisibleForTesting
+  public String getFullPathAndObjectString() {
+    return getFullPathName() + "(" + getId() + ", " + getObjectString() + ")";
+  }
+
+  @VisibleForTesting
   public String toDetailString() {
-    return toString() + "(" + getObjectString() + "), " + getParentString();
+    return toString() + "(" + getId() + ", " + getObjectString()
+        + ", " + getParentString() + ")";
   }
 
   /** @return the parent directory */

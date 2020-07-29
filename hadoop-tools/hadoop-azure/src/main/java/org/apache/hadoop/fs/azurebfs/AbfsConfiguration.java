@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.util.Map;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -58,6 +57,7 @@ import org.apache.hadoop.fs.azurebfs.oauth2.RefreshTokenBasedTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.UserPasswordTokenProvider;
 import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
+import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
 import org.apache.hadoop.fs.azurebfs.services.KeyProvider;
 import org.apache.hadoop.fs.azurebfs.services.SimpleKeyProvider;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
@@ -120,6 +120,26 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_CUSTOM_TOKEN_FETCH_RETRY_COUNT)
   private int customTokenFetchRetryCount;
 
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_OAUTH_TOKEN_FETCH_RETRY_COUNT,
+      MinValue = 0,
+      DefaultValue = DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MAX_ATTEMPTS)
+  private int oauthTokenFetchRetryCount;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_OAUTH_TOKEN_FETCH_RETRY_MIN_BACKOFF,
+      MinValue = 0,
+      DefaultValue = DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MIN_BACKOFF_INTERVAL)
+  private int oauthTokenFetchRetryMinBackoff;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_OAUTH_TOKEN_FETCH_RETRY_MAX_BACKOFF,
+      MinValue = 0,
+      DefaultValue = DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MAX_BACKOFF_INTERVAL)
+  private int oauthTokenFetchRetryMaxBackoff;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_OAUTH_TOKEN_FETCH_RETRY_DELTA_BACKOFF,
+      MinValue = 0,
+      DefaultValue = DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_DELTA_BACKOFF)
+  private int oauthTokenFetchRetryDeltaBackoff;
+
   @LongConfigurationValidatorAnnotation(ConfigurationKey = AZURE_BLOCK_SIZE_PROPERTY_NAME,
       MinValue = 0,
       MaxValue = MAX_AZURE_BLOCK_SIZE,
@@ -152,6 +172,10 @@ public class AbfsConfiguration{
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ATOMIC_RENAME_KEY,
       DefaultValue = DEFAULT_FS_AZURE_ATOMIC_RENAME_DIRECTORIES)
   private String azureAtomicDirs;
+
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_APPEND_BLOB_KEY,
+      DefaultValue = DEFAULT_FS_AZURE_APPEND_BLOB_DIRECTORIES)
+  private String azureAppendBlobDirs;
 
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION,
       DefaultValue = DEFAULT_AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION)
@@ -215,8 +239,6 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_SAS_TOKEN_RENEW_PERIOD_FOR_STREAMS_IN_SECONDS)
   private long sasTokenRenewPeriodForStreamsInSeconds;
 
-  private Map<String, String> storageAccountKeys;
-
   public AbfsConfiguration(final Configuration rawConfig, String accountName)
       throws IllegalAccessException, InvalidConfigurationValueException, IOException {
     this.rawConfig = ProviderUtils.excludeIncompatibleCredentialProviders(
@@ -224,7 +246,6 @@ public class AbfsConfiguration{
     this.accountName = accountName;
     this.isSecure = getBoolean(FS_AZURE_SECURE_MODE, false);
 
-    validateStorageAccountKeys();
     Field[] fields = this.getClass().getDeclaredFields();
     for (Field field : fields) {
       field.setAccessible(true);
@@ -544,6 +565,10 @@ public class AbfsConfiguration{
     return this.azureAtomicDirs;
   }
 
+  public String getAppendBlobDirs() {
+    return this.azureAppendBlobDirs;
+  }
+
   public boolean getCreateRemoteFileSystemDuringInitialization() {
     // we do not support creating the filesystem when AuthType is SAS
     return this.createRemoteFileSystemDuringInitialization
@@ -732,16 +757,6 @@ public class AbfsConfiguration{
     }
   }
 
-  void validateStorageAccountKeys() throws InvalidConfigurationValueException {
-    Base64StringConfigurationBasicValidator validator = new Base64StringConfigurationBasicValidator(
-        FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME, "", true);
-    this.storageAccountKeys = rawConfig.getValByRegex(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME_REGX);
-
-    for (Map.Entry<String, String> account : storageAccountKeys.entrySet()) {
-      validator.validate(account.getValue());
-    }
-  }
-
   int validateInt(Field field) throws IllegalAccessException, InvalidConfigurationValueException {
     IntegerConfigurationValidatorAnnotation validator = field.getAnnotation(IntegerConfigurationValidatorAnnotation.class);
     String value = get(validator.ConfigurationKey());
@@ -799,6 +814,12 @@ public class AbfsConfiguration{
         validator.ConfigurationKey(),
         validator.DefaultValue(),
         validator.ThrowIfInvalid()).validate(value);
+  }
+
+  public ExponentialRetryPolicy getOauthTokenFetchRetryPolicy() {
+    return new ExponentialRetryPolicy(oauthTokenFetchRetryCount,
+        oauthTokenFetchRetryMinBackoff, oauthTokenFetchRetryMaxBackoff,
+        oauthTokenFetchRetryDeltaBackoff);
   }
 
   @VisibleForTesting

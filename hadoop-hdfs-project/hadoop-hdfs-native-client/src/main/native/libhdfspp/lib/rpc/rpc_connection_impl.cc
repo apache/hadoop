@@ -23,6 +23,8 @@
 #include "ProtobufRpcEngine.pb.h"
 #include "IpcConnectionContext.pb.h"
 
+#include <boost/asio/error.hpp>
+
 namespace hdfs {
 
 namespace pb = ::google::protobuf;
@@ -89,7 +91,7 @@ void RpcConnection::StartReading() {
   }
 
   service->PostLambda(
-    [shared_this, this] () { OnRecvCompleted(::asio::error_code(), 0); }
+    [shared_this, this] () { OnRecvCompleted(boost::system::error_code(), 0); }
   );
 }
 
@@ -248,8 +250,8 @@ Status RpcConnection::HandleRpcResponse(std::shared_ptr<Response> response) {
 }
 
 void RpcConnection::HandleRpcTimeout(std::shared_ptr<Request> req,
-                                     const ::asio::error_code &ec) {
-  if (ec.value() == asio::error::operation_aborted) {
+                                     const boost::system::error_code &ec) {
+  if (ec.value() == boost::asio::error::operation_aborted) {
     return;
   }
 
@@ -260,7 +262,7 @@ void RpcConnection::HandleRpcTimeout(std::shared_ptr<Request> req,
     return;
   }
 
-  Status stat = ToStatus(ec ? ec : make_error_code(::asio::error::timed_out));
+  Status stat = ToStatus(ec ? ec : make_error_code(boost::asio::error::timed_out));
 
   r->OnResponseArrived(nullptr, stat);
 }
@@ -469,7 +471,7 @@ void RpcConnection::CommsError(const Status &status) {
   pinnedEngine->AsyncRpcCommsError(status, shared_from_this(), requestsToReturn);
 }
 
-void RpcConnection::ClearAndDisconnect(const ::asio::error_code &ec) {
+void RpcConnection::ClearAndDisconnect(const boost::system::error_code &ec) {
   Disconnect();
   std::vector<std::shared_ptr<Request>> requests;
   std::transform(sent_requests_.begin(), sent_requests_.end(),

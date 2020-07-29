@@ -60,8 +60,9 @@ public class NodeHealthScriptRunner extends TimedHealthReporterService {
       "Node health script timed out";
 
   private NodeHealthScriptRunner(String scriptName, long checkInterval,
-      long timeout, String[] scriptArgs) {
-    super(NodeHealthScriptRunner.class.getName(), checkInterval);
+      long timeout, String[] scriptArgs, boolean runBeforeStartup) {
+    super(NodeHealthScriptRunner.class.getName(), checkInterval,
+        runBeforeStartup);
     this.nodeHealthScript = scriptName;
     this.scriptTimeout = timeout;
     setTimerTask(new NodeHealthMonitorExecutor(scriptArgs));
@@ -91,6 +92,10 @@ public class NodeHealthScriptRunner extends TimedHealthReporterService {
           "interval-ms can not be set to a negative number.");
     }
 
+    boolean runBeforeStartup = conf.getBoolean(
+        YarnConfiguration.NM_HEALTH_CHECK_RUN_BEFORE_STARTUP,
+        YarnConfiguration.DEFAULT_NM_HEALTH_CHECK_RUN_BEFORE_STARTUP);
+
     // Determine time out
     String scriptTimeoutConfig = String.format(
         YarnConfiguration.NM_HEALTH_CHECK_SCRIPT_TIMEOUT_MS_TEMPLATE,
@@ -113,7 +118,7 @@ public class NodeHealthScriptRunner extends TimedHealthReporterService {
     String[] scriptArgs = conf.getStrings(scriptArgsConfig, new String[]{});
 
     return new NodeHealthScriptRunner(nodeHealthScript,
-        checkIntervalMs, scriptTimeout, scriptArgs);
+        checkIntervalMs, scriptTimeout, scriptArgs, runBeforeStartup);
   }
 
   private enum HealthCheckerExitStatus {

@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
+import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -364,5 +365,20 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
       }
     }
     assertEquals(0, count);
+  }
+
+  @Test
+  // Test filesystem operations getXAttr and setXAttr
+  public void testProperties() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path reqPath = new Path(UUID.randomUUID().toString());
+
+    fs.create(reqPath).close();
+
+    final String propertyName = "user.mime_type";
+    final byte[] propertyValue = "text/plain".getBytes("utf-8");
+    fs.setXAttr(reqPath, propertyName, propertyValue);
+
+    assertArrayEquals(propertyValue, fs.getXAttr(reqPath, propertyName));
   }
 }

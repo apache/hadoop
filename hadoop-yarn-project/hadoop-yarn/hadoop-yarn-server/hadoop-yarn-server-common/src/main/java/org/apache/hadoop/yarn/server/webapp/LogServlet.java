@@ -62,13 +62,21 @@ public class LogServlet extends Configured {
   private static final Joiner JOINER = Joiner.on("");
   private static final String NM_DOWNLOAD_URI_STR = "/ws/v1/node/containers";
 
-  private final LogAggregationFileControllerFactory factory;
+  private LogAggregationFileControllerFactory factoryInstance = null;
   private final AppInfoProvider appInfoProvider;
 
   public LogServlet(Configuration conf, AppInfoProvider appInfoProvider) {
     super(conf);
-    this.factory = new LogAggregationFileControllerFactory(conf);
     this.appInfoProvider = appInfoProvider;
+  }
+
+  private LogAggregationFileControllerFactory getOrCreateFactory() {
+    if (factoryInstance != null) {
+      return factoryInstance;
+    } else {
+      factoryInstance = new LogAggregationFileControllerFactory(getConf());
+      return factoryInstance;
+    }
   }
 
   @VisibleForTesting
@@ -226,7 +234,7 @@ public class LogServlet extends Configured {
       String nmId, boolean redirectedFromNode,
       String clusterId, boolean manualRedirection) {
 
-    builder.setFactory(factory);
+    builder.setFactory(getOrCreateFactory());
 
     BasicAppInfo appInfo;
     try {
@@ -360,6 +368,8 @@ public class LogServlet extends Configured {
       return LogWebServiceUtils.createBadResponse(Status.NOT_FOUND,
           "Invalid ContainerId: " + containerIdStr);
     }
+
+    LogAggregationFileControllerFactory factory = getOrCreateFactory();
 
     final long length = LogWebServiceUtils.parseLongParam(size);
 

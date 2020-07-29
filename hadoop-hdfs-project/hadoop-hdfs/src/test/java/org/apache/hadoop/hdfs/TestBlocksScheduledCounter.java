@@ -202,4 +202,60 @@ public class TestBlocksScheduledCounter {
     }
   }
 
+  /**
+   * Test Block Scheduled counter on truncating a file.
+   * @throws Exception
+   */
+  @Test
+  public void testBlocksScheduledCounterOnTruncate() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+    cluster.waitActive();
+    BlockManager bm = cluster.getNamesystem().getBlockManager();
+    try {
+      DistributedFileSystem dfs = cluster.getFileSystem();
+      // 1. stop a datanode
+      cluster.stopDataNode(0);
+
+      // 2. create a file
+      Path filePath = new Path("/tmp");
+      DFSTestUtil.createFile(dfs, filePath, 1024, (short) 3, 0L);
+
+      DatanodeManager datanodeManager =
+          cluster.getNamesystem().getBlockManager().getDatanodeManager();
+      ArrayList<DatanodeDescriptor> dnList =
+          new ArrayList<DatanodeDescriptor>();
+      datanodeManager.fetchDatanodes(dnList, dnList, false);
+
+      // 3. restart the stopped datanode
+      cluster.restartDataNode(0);
+
+      // 4. disable the heartbeats
+      for (DataNode dn : cluster.getDataNodes()) {
+        DataNodeTestUtils.setHeartbeatsDisabledForTests(dn, true);
+      }
+
+      cluster.getNamesystem().writeLock();
+      try {
+        BlockManagerTestUtil.computeAllPendingWork(bm);
+        BlockManagerTestUtil.updateState(bm);
+        assertEquals(1L, bm.getPendingReconstructionBlocksCount());
+      } finally {
+        cluster.getNamesystem().writeUnlock();
+      }
+
+      // 5.truncate the file whose block exists in pending reconstruction
+      dfs.truncate(filePath, 10);
+      int blocksScheduled = 0;
+      for (DatanodeDescriptor descriptor : dnList) {
+        if (descriptor.getBlocksScheduled() != 0) {
+          blocksScheduled += descriptor.getBlocksScheduled();
+        }
+      }
+      assertEquals(0, blocksScheduled);
+    } finally {
+      cluster.shutdown();
+    }
+  }
 }

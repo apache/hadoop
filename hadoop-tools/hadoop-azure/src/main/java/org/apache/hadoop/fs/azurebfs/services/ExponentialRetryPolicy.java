@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.util.Random;
 import java.net.HttpURLConnection;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Retry policy used by AbfsClient.
  * */
@@ -138,4 +140,25 @@ public class ExponentialRetryPolicy {
 
     return retryInterval;
   }
+
+  @VisibleForTesting
+  int getRetryCount() {
+    return this.retryCount;
+  }
+
+  @VisibleForTesting
+  int getMinBackoff() {
+    return this.minBackoff;
+  }
+
+  @VisibleForTesting
+  int getMaxBackoff() {
+    return maxBackoff;
+  }
+
+  @VisibleForTesting
+  int getDeltaBackoff() {
+    return this.deltaBackoff;
+  }
+
 }

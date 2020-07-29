@@ -35,7 +35,7 @@ import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -505,7 +505,7 @@ public class JournalNodeSyncer {
             @Override
             public InterQJournalProtocol run() throws IOException {
               RPC.setProtocolEngine(confCopy, InterQJournalProtocolPB.class,
-                  ProtobufRpcEngine.class);
+                  ProtobufRpcEngine2.class);
               InterQJournalProtocolPB interQJournalProtocolPB = RPC.getProxy(
                   InterQJournalProtocolPB.class,
                   RPC.getProtocolVersion(InterQJournalProtocolPB.class),

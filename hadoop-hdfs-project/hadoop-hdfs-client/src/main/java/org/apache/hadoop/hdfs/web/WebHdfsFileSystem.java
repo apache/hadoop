@@ -76,10 +76,12 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.GlobalStorageStatistics;
 import org.apache.hadoop.fs.GlobalStorageStatistics.StorageStatisticsProvider;
+import org.apache.hadoop.fs.MultipartUploaderBuilder;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.PathCapabilities;
 import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.impl.FileSystemMultipartUploaderBuilder;
 import org.apache.hadoop.fs.permission.FsCreateModes;
 import org.apache.hadoop.hdfs.DFSOpsCountStatistics;
 import org.apache.hadoop.hdfs.DFSOpsCountStatistics.OpType;
@@ -152,6 +154,7 @@ public class WebHdfsFileSystem extends FileSystem
       + "/v" + VERSION;
   public static final String EZ_HEADER = "X-Hadoop-Accept-EZ";
   public static final String FEFINFO_HEADER = "X-Hadoop-feInfo";
+  public static final String DFS_HTTP_POLICY_KEY = "dfs.http.policy";
 
   /**
    * Default connection factory may be overridden in tests to use smaller
@@ -181,6 +184,7 @@ public class WebHdfsFileSystem extends FileSystem
 
   private DFSOpsCountStatistics storageStatistics;
   private KeyProvider testProvider;
+  private boolean isTLSKrb;
 
   /**
    * Return the protocol scheme for the FileSystem.
@@ -242,6 +246,7 @@ public class WebHdfsFileSystem extends FileSystem
           .newDefaultURLConnectionFactory(connectTimeout, readTimeout, conf);
     }
 
+    this.isTLSKrb = "HTTPS_ONLY".equals(conf.get(DFS_HTTP_POLICY_KEY));
 
     ugi = UserGroupInformation.getCurrentUser();
     this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
@@ -699,6 +704,11 @@ public class WebHdfsFileSystem extends FileSystem
       //redirect hostname and port
       redirectHost = null;
 
+      if (url.getProtocol().equals("http") &&
+        UserGroupInformation.isSecurityEnabled() &&
+        isTLSKrb) {
+        throw new IOException("Access denied: dfs.http.policy is HTTPS_ONLY.");
+      }
 
       // resolve redirects for a DN operation unless already resolved
       if (op.getRedirect() && !redirected) {
@@ -2115,6 +2125,12 @@ public class WebHdfsFileSystem extends FileSystem
       return cap.get();
     }
     return super.hasPathCapability(p, capability);
+  }
+
+  @Override
+  public MultipartUploaderBuilder createMultipartUploader(final Path basePath)
+      throws IOException {
+    return new FileSystemMultipartUploaderBuilder(this, basePath);
   }
 
   /**

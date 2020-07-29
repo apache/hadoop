@@ -26,6 +26,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 
 @XmlRootElement(name = "clusterMetrics")
 @XmlAccessorType(XmlAccessType.FIELD)
@@ -68,6 +69,14 @@ public class ClusterMetricsInfo {
 
   // Total registered resources of the cluster, including all partitions
   private ResourceInfo totalClusterResourcesAcrossPartition;
+
+  // Total reserved resources of the cluster, including all partitions.
+  private ResourceInfo totalReservedResourcesAcrossPartition;
+
+  // Total allocated containers across all partitions.
+  private int totalAllocatedContainersAcrossPartition;
+
+  private boolean crossPartitionMetricsAvailable = false;
 
   public ClusterMetricsInfo() {
   } // JAXB needs this
@@ -115,6 +124,11 @@ public class ClusterMetricsInfo {
             cs.getRootQueue().getQueueResourceUsage().getAllUsed());
         totalClusterResourcesAcrossPartition = new ResourceInfo(
             cs.getClusterResource());
+        totalReservedResourcesAcrossPartition = new ResourceInfo(
+            cs.getRootQueue().getQueueResourceUsage().getAllReserved());
+        totalAllocatedContainersAcrossPartition =
+            ((ParentQueue) cs.getRootQueue()).getNumContainers();
+        crossPartitionMetricsAvailable = true;
       }
     } else {
       this.totalMB = availableMB + allocatedMB;
@@ -345,5 +359,17 @@ public class ClusterMetricsInfo {
 
   public ResourceInfo getTotalClusterResourcesAcrossPartition() {
     return totalClusterResourcesAcrossPartition;
+  }
+
+  public ResourceInfo getTotalReservedResourcesAcrossPartition() {
+    return totalReservedResourcesAcrossPartition;
+  }
+
+  public int getTotalAllocatedContainersAcrossPartition() {
+    return totalAllocatedContainersAcrossPartition;
+  }
+
+  public boolean getCrossPartitionMetricsAvailable() {
+    return crossPartitionMetricsAvailable;
   }
 }

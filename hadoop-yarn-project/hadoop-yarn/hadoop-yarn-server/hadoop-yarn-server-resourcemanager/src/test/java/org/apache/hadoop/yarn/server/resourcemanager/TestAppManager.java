@@ -22,7 +22,10 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.QueueACL;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -972,6 +975,17 @@ public class TestAppManager extends AppManagerTestBase{
     when(app.getSubmitTime()).thenReturn(1000L);
     when(app.getLaunchTime()).thenReturn(2000L);
     when(app.getApplicationTags()).thenReturn(Sets.newHashSet("tag2", "tag1"));
+
+    RMAppAttempt mockRMAppAttempt = mock(RMAppAttempt.class);
+    Container mockContainer = mock(Container.class);
+    NodeId mockNodeId = mock(NodeId.class);
+    String host = "127.0.0.1";
+
+    when(mockNodeId.getHost()).thenReturn(host);
+    when(mockContainer.getNodeId()).thenReturn(mockNodeId);
+    when(mockRMAppAttempt.getMasterContainer()).thenReturn(mockContainer);
+    when(app.getCurrentAppAttempt()).thenReturn(mockRMAppAttempt);
+
     Map<String, Long> resourceSecondsMap = new HashMap<>();
     resourceSecondsMap.put(ResourceInformation.MEMORY_MB.getName(), 16384L);
     resourceSecondsMap.put(ResourceInformation.VCORES.getName(), 64L);
@@ -993,6 +1007,7 @@ public class TestAppManager extends AppManagerTestBase{
     assertTrue(msg.contains("Multiline" + escaped +"AppName"));
     assertTrue(msg.contains("Multiline" + escaped +"UserName"));
     assertTrue(msg.contains("Multiline" + escaped +"QueueName"));
+    assertTrue(msg.contains("appMasterHost=" + host));
     assertTrue(msg.contains("submitTime=1000"));
     assertTrue(msg.contains("launchTime=2000"));
     assertTrue(msg.contains("memorySeconds=16384"));

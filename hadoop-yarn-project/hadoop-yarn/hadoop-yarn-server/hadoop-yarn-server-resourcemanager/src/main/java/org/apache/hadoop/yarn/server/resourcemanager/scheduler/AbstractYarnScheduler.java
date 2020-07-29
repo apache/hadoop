@@ -1188,7 +1188,9 @@ public abstract class AbstractYarnScheduler
     // If the node is decommissioning, send an update to have the total
     // resource equal to the used resource, so no available resource to
     // schedule.
-    if (nm.getState() == NodeState.DECOMMISSIONING && schedulerNode != null) {
+    if (nm.getState() == NodeState.DECOMMISSIONING && schedulerNode != null
+        && schedulerNode.getTotalResource().compareTo(
+            schedulerNode.getAllocatedResource()) != 0) {
       this.rmContext
           .getDispatcher()
           .getEventHandler()

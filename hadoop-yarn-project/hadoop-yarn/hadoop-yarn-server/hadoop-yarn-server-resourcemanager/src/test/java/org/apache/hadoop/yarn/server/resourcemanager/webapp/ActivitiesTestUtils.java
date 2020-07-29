@@ -99,6 +99,8 @@ public final class ActivitiesTestUtils {
 
   public static final String FN_SCHEDULER_ACT_ROOT = "activities";
 
+  public static final String FN_SCHEDULER_BULK_ACT_ROOT = "bulkActivities";
+
   private ActivitiesTestUtils(){}
 
   public static List<JSONObject> findInAllocations(JSONObject allocationObj,

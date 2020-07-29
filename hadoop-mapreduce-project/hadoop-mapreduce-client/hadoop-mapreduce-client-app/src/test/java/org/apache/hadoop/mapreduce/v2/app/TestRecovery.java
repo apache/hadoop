@@ -28,7 +28,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.google.common.base.Supplier;
+import java.util.function.Supplier;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;

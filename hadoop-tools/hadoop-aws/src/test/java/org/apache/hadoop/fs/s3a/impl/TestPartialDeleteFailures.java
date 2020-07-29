@@ -203,29 +203,31 @@ public class TestPartialDeleteFailures {
       OperationTrackingStore store) throws URISyntaxException, IOException {
     URI name = new URI("s3a://bucket");
     Configuration conf = new Configuration();
-    return new StoreContext(
-        name,
-        "bucket",
-        conf,
-        "alice",
-        UserGroupInformation.getCurrentUser(),
-        BlockingThreadPoolExecutorService.newInstance(
+    return new StoreContextBuilder().setFsURI(name)
+        .setBucket("bucket")
+        .setConfiguration(conf)
+        .setUsername("alice")
+        .setOwner(UserGroupInformation.getCurrentUser())
+        .setExecutor(BlockingThreadPoolExecutorService.newInstance(
             4,
             4,
             10, TimeUnit.SECONDS,
-            "s3a-transfer-shared"),
-        Constants.DEFAULT_EXECUTOR_CAPACITY,
-        new Invoker(RetryPolicies.TRY_ONCE_THEN_FAIL, Invoker.LOG_EVENT),
-        new S3AInstrumentation(name),
-        new S3AStorageStatistics(),
-        S3AInputPolicy.Normal,
-        ChangeDetectionPolicy.createPolicy(ChangeDetectionPolicy.Mode.None,
-            ChangeDetectionPolicy.Source.ETag, false),
-        multiDelete,
-        store,
-        false,
-        CONTEXT_ACCESSORS,
-        new S3Guard.TtlTimeProvider(conf));
+            "s3a-transfer-shared"))
+        .setExecutorCapacity(Constants.DEFAULT_EXECUTOR_CAPACITY)
+        .setInvoker(
+            new Invoker(RetryPolicies.TRY_ONCE_THEN_FAIL, Invoker.LOG_EVENT))
+        .setInstrumentation(new S3AInstrumentation(name))
+        .setStorageStatistics(new S3AStorageStatistics())
+        .setInputPolicy(S3AInputPolicy.Normal)
+        .setChangeDetectionPolicy(
+            ChangeDetectionPolicy.createPolicy(ChangeDetectionPolicy.Mode.None,
+                ChangeDetectionPolicy.Source.ETag, false))
+        .setMultiObjectDeleteEnabled(multiDelete)
+        .setMetadataStore(store)
+        .setUseListV1(false)
+        .setContextAccessors(CONTEXT_ACCESSORS)
+        .setTimeProvider(new S3Guard.TtlTimeProvider(conf))
+        .build();
   }
 
   private static class MinimalContextAccessor implements ContextAccessors {
@@ -251,6 +253,10 @@ public class TestPartialDeleteFailures {
       return null;
     }
 
+    @Override
+    public Path makeQualified(final Path path) {
+      return path;
+    }
   }
   /**
    * MetadataStore which tracks what is deleted and added.

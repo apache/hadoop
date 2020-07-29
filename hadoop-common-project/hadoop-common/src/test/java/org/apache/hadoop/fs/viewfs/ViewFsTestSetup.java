@@ -153,7 +153,7 @@ public class ViewFsTestSetup {
         String prefix =
             new StringBuilder(Constants.CONFIG_VIEWFS_PREFIX).append(".")
                 .append((mountTable == null
-                    ? Constants.CONFIG_VIEWFS_DEFAULT_MOUNT_TABLE
+                    ? ConfigUtil.getDefaultMountTableName(conf)
                     : mountTable))
                 .append(".").toString();
         out.writeBytes("<configuration>");
@@ -192,7 +192,7 @@ public class ViewFsTestSetup {
    * Adds the given mount links to the configuration. Mount link mappings are
    * in sources, targets at their respective index locations.
    */
-  static void addMountLinksToConf(String mountTable, String[] sources,
+  public static void addMountLinksToConf(String mountTable, String[] sources,
       String[] targets, Configuration config) throws URISyntaxException {
     for (int i = 0; i < sources.length; i++) {
       String src = sources[i];

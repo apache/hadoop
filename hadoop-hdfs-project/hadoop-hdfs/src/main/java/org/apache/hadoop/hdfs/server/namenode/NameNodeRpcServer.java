@@ -184,7 +184,7 @@ import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.RetryCache;
@@ -281,7 +281,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
                   DFS_NAMENODE_HANDLER_COUNT_DEFAULT);
 
     RPC.setProtocolEngine(conf, ClientNamenodeProtocolPB.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
 
     ClientNamenodeProtocolServerSideTranslatorPB 
        clientProtocolServerTranslator = 
@@ -405,7 +405,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     InetSocketAddress lifelineRpcAddr = nn.getLifelineRpcServerAddress(conf);
     if (lifelineRpcAddr != null) {
       RPC.setProtocolEngine(conf, HAServiceProtocolPB.class,
-          ProtobufRpcEngine.class);
+          ProtobufRpcEngine2.class);
       String bindHost = nn.getLifelineRpcServerBindHost(conf);
       if (bindHost == null) {
         bindHost = lifelineRpcAddr.getHostName();

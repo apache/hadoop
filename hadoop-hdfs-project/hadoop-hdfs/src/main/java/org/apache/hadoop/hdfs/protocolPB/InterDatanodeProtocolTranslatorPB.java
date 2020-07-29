@@ -35,7 +35,7 @@ import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlo
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.ipc.ProtobufHelper;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RpcClientUtil;
@@ -62,7 +62,7 @@ public class InterDatanodeProtocolTranslatorPB implements
       int socketTimeout)
       throws IOException {
     RPC.setProtocolEngine(conf, InterDatanodeProtocolPB.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     rpcProxy = RPC.getProxy(InterDatanodeProtocolPB.class,
         RPC.getProtocolVersion(InterDatanodeProtocolPB.class), addr, ugi, conf,
         factory, socketTimeout);

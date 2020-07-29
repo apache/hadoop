@@ -448,4 +448,10 @@ public abstract class FilterFs extends AbstractFileSystem {
       throws IOException {
     return myFs.hasPathCapability(path, capability);
   }
+
+  @Override
+  public MultipartUploaderBuilder createMultipartUploader(final Path basePath)
+      throws IOException {
+    return myFs.createMultipartUploader(basePath);
+  }
 }

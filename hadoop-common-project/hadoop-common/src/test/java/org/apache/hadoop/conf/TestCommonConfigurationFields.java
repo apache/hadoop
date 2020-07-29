@@ -124,6 +124,25 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPrefixToSkipCompare.add("fs.adl.");
     xmlPropsToSkipCompare.add("fs.AbstractFileSystem.adl.impl");
 
+    // ViewfsOverloadScheme target fs impl property keys are dynamically
+    // constructed and they are advanced props.
+    xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.abfs.impl");
+    xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.abfss.impl");
+    xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.file.impl");
+    xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.ftp.impl");
+    xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.hdfs.impl");
+    xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.http.impl");
+    xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.https.impl");
+    xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.ofs.impl");
+    xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.o3fs.impl");
+    xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.oss.impl");
+    xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.s3a.impl");
+    xmlPropsToSkipCompare.
+        add("fs.viewfs.overload.scheme.target.swebhdfs.impl");
+    xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.webhdfs.impl");
+    xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.wasb.impl");
+    xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.swift.impl");
+
     // Azure properties are in a different class
     // - org.apache.hadoop.fs.azure.AzureNativeFileSystemStore
     // - org.apache.hadoop.fs.azure.SASKeyGeneratorImpl

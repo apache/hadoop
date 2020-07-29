@@ -20,8 +20,7 @@ package org.apache.hadoop.fs;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Collections;
 import java.util.NoSuchElementException;
 import java.util.StringTokenizer;
 
@@ -65,9 +64,7 @@ public class Stat extends Shell {
     this.blockSize = blockSize;
     this.dereference = deref;
     // LANG = C setting
-    Map<String, String> env = new HashMap<String, String>();
-    env.put("LANG", "C");
-    setEnvironment(env);
+    setEnvironment(Collections.singletonMap("LANG", "C"));
   }
 
   public FileStatus getFileStatus() throws IOException {

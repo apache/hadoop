@@ -22,6 +22,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.UserMetricsInfo;
 
@@ -60,7 +61,38 @@ public class MetricsOverviewTable extends HtmlBlock {
     ClusterMetricsInfo clusterMetrics = new ClusterMetricsInfo(this.rm);
     
     DIV<Hamlet> div = html.div().$class("metrics");
-    
+
+    long usedMemoryBytes = 0;
+    long totalMemoryBytes = 0;
+    long reservedMemoryBytes = 0;
+    long usedVCores = 0;
+    long totalVCores = 0;
+    long reservedVCores = 0;
+    if (clusterMetrics.getCrossPartitionMetricsAvailable()) {
+      ResourceInfo usedAllPartitions =
+          clusterMetrics.getTotalUsedResourcesAcrossPartition();
+      ResourceInfo totalAllPartitions =
+          clusterMetrics.getTotalClusterResourcesAcrossPartition();
+      ResourceInfo reservedAllPartitions =
+          clusterMetrics.getTotalReservedResourcesAcrossPartition();
+      usedMemoryBytes = usedAllPartitions.getMemorySize() * BYTES_IN_MB;
+      totalMemoryBytes = totalAllPartitions.getMemorySize() * BYTES_IN_MB;
+      reservedMemoryBytes = reservedAllPartitions.getMemorySize() * BYTES_IN_MB;
+      usedVCores = usedAllPartitions.getvCores();
+      totalVCores = totalAllPartitions.getvCores();
+      reservedVCores = reservedAllPartitions.getvCores();
+      // getTotalUsedResourcesAcrossPartition includes reserved resources.
+      usedMemoryBytes -= reservedMemoryBytes;
+      usedVCores -= reservedVCores;
+    } else {
+      usedMemoryBytes = clusterMetrics.getAllocatedMB() * BYTES_IN_MB;
+      totalMemoryBytes = clusterMetrics.getTotalMB() * BYTES_IN_MB;
+      reservedMemoryBytes = clusterMetrics.getReservedMB() * BYTES_IN_MB;
+      usedVCores = clusterMetrics.getAllocatedVirtualCores();
+      totalVCores = clusterMetrics.getTotalVirtualCores();
+      reservedVCores = clusterMetrics.getReservedVirtualCores();
+    }
+
     div.h3("Cluster Metrics").
     table("#metricsoverview").
     thead().$class("ui-widget-header").
@@ -89,13 +121,14 @@ public class MetricsOverviewTable extends HtmlBlock {
                 clusterMetrics.getAppsFailed() + clusterMetrics.getAppsKilled()
                 )
             ).
-        td(String.valueOf(clusterMetrics.getContainersAllocated())).
-        td(StringUtils.byteDesc(clusterMetrics.getAllocatedMB() * BYTES_IN_MB)).
-        td(StringUtils.byteDesc(clusterMetrics.getTotalMB() * BYTES_IN_MB)).
-        td(StringUtils.byteDesc(clusterMetrics.getReservedMB() * BYTES_IN_MB)).
-        td(String.valueOf(clusterMetrics.getAllocatedVirtualCores())).
-        td(String.valueOf(clusterMetrics.getTotalVirtualCores())).
-        td(String.valueOf(clusterMetrics.getReservedVirtualCores())).
+        td(String.valueOf(
+            clusterMetrics.getTotalAllocatedContainersAcrossPartition())).
+        td(StringUtils.byteDesc(usedMemoryBytes)).
+        td(StringUtils.byteDesc(totalMemoryBytes)).
+        td(StringUtils.byteDesc(reservedMemoryBytes)).
+        td(String.valueOf(usedVCores)).
+        td(String.valueOf(totalVCores)).
+        td(String.valueOf(reservedVCores)).
         __().
         __().__();
 

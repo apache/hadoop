@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
@@ -26,6 +27,8 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineW
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.util.function.Supplier;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -97,16 +100,28 @@ public class TestRMHATimelineCollectors extends RMHATestBase {
     assertEquals(collectorAddr2,
         results1.get(app2.getApplicationId()).getCollectorAddr());
 
-    Map<ApplicationId, AppCollectorData> results2
-        = nm2.nodeHeartbeat(true).getAppCollectors();
     // addr of app1 should be collectorAddr1 since it's registering (no time
-    // stamp).
-    assertEquals(collectorAddr1,
-        results2.get(app1.getApplicationId()).getCollectorAddr());
-    // addr of app2 should be collectorAddr22 since its version number is
+    // stamp). and addr of app2 should be collectorAddr22 since its version
+    // number is
     // greater.
-    assertEquals(collectorAddr22,
-        results2.get(app2.getApplicationId()).getCollectorAddr());
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        try {
+          Map<ApplicationId, AppCollectorData> results2 = nm2
+              .nodeHeartbeat(true).getAppCollectors();
+          if (null != results2) {
+            return collectorAddr1 == results2.get(app1.getApplicationId())
+                .getCollectorAddr()
+                && collectorAddr22 == results2.get(app2.getApplicationId())
+                    .getCollectorAddr();
+          }
+          return false;
+        } catch (Exception e) {
+          return false;
+        }
+      }
+    }, 300, 10000);
 
     // Now nm1 should get updated collector list
     nm1.getRegisteringCollectors().clear();

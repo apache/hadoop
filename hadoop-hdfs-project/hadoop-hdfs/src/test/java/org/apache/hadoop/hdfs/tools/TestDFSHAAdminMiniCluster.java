@@ -189,13 +189,13 @@ public class TestDFSHAAdminMiniCluster {
     tmpFile.deleteOnExit();
     if (Shell.WINDOWS) {
       conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY,
-          "shell(echo %target_nameserviceid%.%target_namenodeid% " +
-              "%target_port% %dfs_ha_namenode_id% > " +
+          "shell(echo %source_nameserviceid%.%source_namenodeid% " +
+              "%source_port% %dfs_ha_namenode_id% > " +
               tmpFile.getAbsolutePath() + ")");
     } else {
       conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY,
-          "shell(echo -n $target_nameserviceid.$target_namenodeid " +
-          "$target_port $dfs_ha_namenode_id > " +
+          "shell(echo -n $source_nameserviceid.$source_namenodeid " +
+          "$source_port $dfs_ha_namenode_id > " +
           tmpFile.getAbsolutePath() + ")");
     }
 

@@ -72,9 +72,12 @@ public class DataNodeUGIProvider {
     UserGroupInformation ugi;
 
     try {
-      if (UserGroupInformation.isSecurityEnabled()) {
-        final Token<DelegationTokenIdentifier> token = params.delegationToken();
+      final Token<DelegationTokenIdentifier> token = params.delegationToken();
 
+      // Create nonTokenUGI when token is null regardless of security.
+      // This makes it possible to access the data stored in secure DataNode
+      // through insecure Namenode.
+      if (UserGroupInformation.isSecurityEnabled() && token != null) {
         ugi = ugiCache.get(buildTokenCacheKey(token),
             new Callable<UserGroupInformation>() {
               @Override
@@ -134,7 +137,8 @@ public class DataNodeUGIProvider {
     return key;
   }
 
-  private UserGroupInformation nonTokenUGI(String usernameFromQuery,
+  @VisibleForTesting
+  UserGroupInformation nonTokenUGI(String usernameFromQuery,
       String doAsUserFromQuery, String remoteUser) throws IOException {
 
     UserGroupInformation ugi = UserGroupInformation

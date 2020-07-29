@@ -21,7 +21,7 @@ package org.apache.hadoop.yarn.api.impl.pb.client;
 import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -106,7 +106,7 @@ public class ContainerManagementProtocolPBClientImpl implements ContainerManagem
   public ContainerManagementProtocolPBClientImpl(long clientVersion,
       InetSocketAddress addr, Configuration conf) throws IOException {
     RPC.setProtocolEngine(conf, ContainerManagementProtocolPB.class,
-      ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
 
     int expireIntvl = conf.getInt(NM_COMMAND_TIMEOUT, DEFAULT_COMMAND_TIMEOUT);

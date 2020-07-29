@@ -500,8 +500,13 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
 
   public static final String DFS_NAMENODE_SNAPSHOT_MAX_LIMIT =
       "dfs.namenode.snapshot.max.limit";
-
   public static final int DFS_NAMENODE_SNAPSHOT_MAX_LIMIT_DEFAULT = 65536;
+
+  public static final String DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED =
+      "dfs.namenode.snapshot.deletion.ordered";
+  public static final boolean DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED_DEFAULT
+      = false;
+
   public static final String DFS_NAMENODE_SNAPSHOT_SKIPLIST_SKIP_INTERVAL =
       "dfs.namenode.snapshot.skiplist.interval";
   public static final int DFS_NAMENODE_SNAPSHOT_SKIPLIST_SKIP_INTERVAL_DEFAULT =
@@ -606,6 +611,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_DATANODE_LOCK_FAIR_KEY =
       "dfs.datanode.lock.fair";
   public static final boolean DFS_DATANODE_LOCK_FAIR_DEFAULT = true;
+  public static final String DFS_DATANODE_LOCK_READ_WRITE_ENABLED_KEY =
+      "dfs.datanode.lock.read.write.enabled";
+  public static final Boolean DFS_DATANODE_LOCK_READ_WRITE_ENABLED_DEFAULT =
+      true;
   public static final String  DFS_DATANODE_LOCK_REPORTING_THRESHOLD_MS_KEY =
       "dfs.datanode.lock-reporting-threshold-ms";
   public static final long

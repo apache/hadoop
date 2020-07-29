@@ -68,7 +68,7 @@ public class ContainerPBImpl extends Container {
     viaProto = true;
   }
   
-  public ContainerProto getProto() {
+  synchronized public ContainerProto getProto() {
   
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
@@ -142,7 +142,7 @@ public class ContainerPBImpl extends Container {
   }
 
   @Override
-  public ContainerId getId() {
+  synchronized public ContainerId getId() {
     ContainerProtoOrBuilder p = viaProto ? proto : builder;
     if (this.containerId != null) {
       return this.containerId;
@@ -176,7 +176,7 @@ public class ContainerPBImpl extends Container {
   }
 
   @Override
-  public void setId(ContainerId id) {
+  synchronized public void setId(ContainerId id) {
     maybeInitBuilder();
     if (id == null)
       builder.clearId();

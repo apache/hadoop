@@ -358,7 +358,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
    * @throws SnapshotException If snapshotName is not null or empty, but there
    *           is no snapshot matching the name.
    */
-  private Snapshot getSnapshotByName(INodeDirectory snapshotRoot,
+  public Snapshot getSnapshotByName(INodeDirectory snapshotRoot,
       String snapshotName) throws SnapshotException {
     Snapshot s = null;
     if (snapshotName != null && !snapshotName.isEmpty()) {
