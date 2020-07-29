@@ -44,6 +44,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBucketOverrides;
 import static org.apache.hadoop.fs.s3a.tools.MarkerTool.*;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_NOT_ACCEPTABLE;
+import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_NOT_FOUND;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_USAGE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -68,13 +69,13 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
   /** FS which mixes markers; only created in some tests. */
   private S3AFileSystem mixedFS;
 
-  private int expectedFiles;
+  private int expectedFileCount;
 
-  private int expectMarkersUnderDir1;
+  private int expectedMarkersUnderDir1;
 
-  private int expectMarkersUnderDir2;
+  private int expectedMarkersUnderDir2;
 
-  private int expectMarkers;
+  private int expectedMarkers;
 
   @Override
   protected Configuration createConfiguration() {
@@ -110,39 +111,6 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
   }
 
   /**
-   * Create a new FS with given marker policy and path.
-   * This filesystem MUST be closed in test teardown.
-   * @param markerPolicy markers
-   * @param authPath authoritative path. If null: no path.
-   * @return a new FS.
-   */
-  private S3AFileSystem createFS(String markerPolicy,
-      String authPath) throws Exception {
-    S3AFileSystem testFS = getFileSystem();
-    Configuration conf = new Configuration(testFS.getConf());
-    URI testFSUri = testFS.getUri();
-    String bucketName = getTestBucketName(conf);
-    removeBucketOverrides(bucketName, conf,
-        DIRECTORY_MARKER_POLICY,
-        S3_METADATA_STORE_IMPL,
-        BULK_DELETE_PAGE_SIZE,
-        AUTHORITATIVE_PATH);
-    if (authPath != null) {
-      conf.set(AUTHORITATIVE_PATH, authPath);
-    }
-    // Use a very small page size to force the paging
-    // code to be tested.
-    conf.setInt(BULK_DELETE_PAGE_SIZE, 4);
-    conf.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL);
-    conf.set(DIRECTORY_MARKER_POLICY, markerPolicy);
-    S3AFileSystem fs2 = new S3AFileSystem();
-    fs2.initialize(testFSUri, conf);
-    LOG.info("created new filesystem with policy {} and auth path {}: {}",
-        markerPolicy, authPath, fs2);
-    return fs2;
-  }
-
-  /**
    * FS which deletes markers.
    */
   public S3AFileSystem getDeletingFS() {
@@ -173,161 +141,44 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
     this.mixedFS = mixedFS;
   }
 
-  private static Path mkpath(Path base, final String name) {
-    return name.isEmpty() ? base : new Path(base, name);
-  }
-
-  /**
-   * Tracker of created paths.
-   */
-  private static class CreatedPaths {
-
-    private Path base;
-
-    private List<Path> files = new ArrayList<>();
-
-    private List<Path> dirs = new ArrayList<>();
-
-    private List<Path> emptyDirs = new ArrayList<>();
-
-    private List<String> filesUnderBase = new ArrayList<>();
-
-    private List<String> dirsUnderBase = new ArrayList<>();
-
-    private List<String> emptyDirsUnderBase = new ArrayList<>();
-
-
-    private Path mkdir(FileSystem fs, String name)
-        throws IOException {
-      Path dir = mkpath(base, name);
-      fs.mkdirs(dir);
-      dirs.add(dir);
-      dirsUnderBase.add(name);
-      return dir;
-    }
-
-    private Path emptydir(FileSystem fs, String name)
-        throws IOException {
-      Path dir = mkpath(base, name);
-      fs.mkdirs(dir);
-      emptyDirs.add(dir);
-      emptyDirsUnderBase.add(name);
-      return dir;
-    }
-
-    private Path mkfile(FileSystem fs, String name)
-        throws IOException {
-      Path file = mkpath(base, name);
-      ContractTestUtils.touch(fs, file);
-      files.add(file);
-      filesUnderBase.add(name);
-      return file;
-    }
-  }
-
-  /**
-   * Create the "standard" test paths.
-   * @param fs filesystem
-   * @param base base dir
-   * @return the details on what was created.
-   */
-  private CreatedPaths createPaths(FileSystem fs, Path base)
-      throws IOException {
-    CreatedPaths r = new CreatedPaths();
-    r.base = base;
-    // the directories under which we will create files,
-    // so expect to have markers
-    r.mkdir(fs, "");
-    r.mkdir(fs, "dir1");
-    r.mkdir(fs, "dir2");
-    r.mkdir(fs, "dir2/dir3");
-
-    // create the empty dirs
-    r.emptydir(fs, "empty");
-    r.emptydir(fs, "dir2/empty");
-
-    // files
-    r.mkfile(fs, "dir1/file1");
-    r.mkfile(fs, "dir2/file2");
-    r.mkfile(fs, "dir2/dir3/file3");
-
-    expectedFiles = 3;
-    expectMarkersUnderDir1 = 1;
-    expectMarkersUnderDir2 = 2;
-    expectMarkers = expectMarkersUnderDir1 + expectMarkersUnderDir2;
-    return r;
-  }
-
-  private MarkerTool.ScanResult markerTool(
-      final FileSystem sourceFS,
-      final Path path,
-      final boolean doPurge,
-      final int expectedMarkerCount)
-      throws IOException {
-    return markerTool(0, sourceFS, path, doPurge, expectedMarkerCount);
-  }
-
-  @SuppressWarnings("IOResourceOpenedButNotSafelyClosed")
-  private MarkerTool.ScanResult markerTool(
-      final int exitCode,
-      final FileSystem sourceFS,
-      final Path path,
-      final boolean doPurge,
-      final int expectedMarkerCount) throws IOException {
-    MarkerTool tool = new MarkerTool(sourceFS.getConf());
-    tool.setVerbose(true);
-
-    MarkerTool.ScanResult result = tool.execute(sourceFS, path, doPurge,
-        expectedMarkerCount);
-    Assertions.assertThat(result.getExitCode())
-        .describedAs("Exit code of marker(%s, %s, %d) -> %s",
-            path, doPurge, expectedMarkerCount, result)
-        .isEqualTo(exitCode);
-    return result;
-  }
-
-  void verifyRenamed(final Path dest,
-      final CreatedPaths createdPaths) throws IOException {
-    // all leaf directories exist
-    for (String p : createdPaths.emptyDirsUnderBase) {
-      assertIsDirectory(mkpath(dest, p));
-    }
-    // non-empty dirs
-    for (String p : createdPaths.dirsUnderBase) {
-      assertIsDirectory(mkpath(dest, p));
-    }
-    // all files exist
-    for (String p : createdPaths.filesUnderBase) {
-      assertIsFile(mkpath(dest, p));
-    }
-  }
 
   @Test
-  public void testAuditPruneMarkersLegacyDir() throws Throwable {
+  public void testCleanMarkersLegacyDir() throws Throwable {
+    describe("Clean markers under a deleting FS -expect none");
     CreatedPaths createdPaths = createPaths(getDeletingFS(), methodPath());
     markerTool(getDeletingFS(), createdPaths.base, false, 0);
     markerTool(getDeletingFS(), createdPaths.base, true, 0);
   }
 
   @Test
-  public void testAuditPruneMarkersKeepingDir() throws Throwable {
+  public void testCleanMarkersKeepingDir() throws Throwable {
+    describe("Audit then clean markers under a deleting FS "
+        + "-expect markers to be found and then cleaned up");
     CreatedPaths createdPaths = createPaths(getKeepingFS(), methodPath());
 
     // audit will find the expected entries
     int expectedMarkerCount = createdPaths.dirs.size();
     S3AFileSystem fs = getDeletingFS();
+    LOG.info("Auditing a directory with retained markers -expect failure");
     markerTool(EXIT_NOT_ACCEPTABLE, fs,
         createdPaths.base, false, 0);
 
+    LOG.info("Auditing a directory expecting retained markers");
     markerTool(fs, createdPaths.base, false,
         expectedMarkerCount);
-    // we know a purge didn't take place
+
+    // we require that a purge didn't take place, so run the
+    // audit again.
+    LOG.info("Auditing a directory expecting retained markers");
     markerTool(fs, createdPaths.base, false,
         expectedMarkerCount);
+
+    LOG.info("Purging a directory of retained markers");
     // purge cleans up
     assertMarkersDeleted(expectedMarkerCount,
         markerTool(fs, createdPaths.base, true, expectedMarkerCount));
     // and a rerun doesn't find markers
+    LOG.info("Auditing a directory with retained markers -expect success");
     assertMarkersDeleted(0,
         markerTool(fs, createdPaths.base, true, 0));
   }
@@ -346,8 +197,7 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
     // audit will find three entries
     int expectedMarkerCount = createdPaths.dirs.size();
 
-    markerTool(fs, source, false,
-        expectedMarkerCount);
+    markerTool(fs, source, false, expectedMarkerCount);
     fs.rename(source, dest);
     assertIsDirectory(dest);
 
@@ -355,7 +205,6 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
     markerTool(fs, dest, false, 0);
     LOG.info("Auditing destination paths");
     verifyRenamed(dest, createdPaths);
-
   }
 
   /**
@@ -371,14 +220,17 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
     Path dir2 = new Path(source, "dir2");
     S3AFileSystem mixedFSDir2 = createFS(DIRECTORY_MARKER_POLICY_AUTHORITATIVE,
         dir2.toUri().toString());
+    // line up for close in teardown
+    setMixedFS(mixedFSDir2);
     // some of these paths will retain markers, some will not
     CreatedPaths createdPaths = createPaths(mixedFSDir2, source);
 
     // markers are only under dir2
-    markerTool(mixedFSDir2, mkpath(source, "dir1"), false, 0);
-    markerTool(mixedFSDir2, source, false, expectMarkersUnderDir2);
+    markerTool(mixedFSDir2, topath(source, "dir1"), false, 0);
+    markerTool(mixedFSDir2, source, false, expectedMarkersUnderDir2);
 
     // if we now rename, all will be good
+    LOG.info("Executing rename");
     mixedFSDir2.rename(source, dest);
     assertIsDirectory(dest);
 
@@ -388,7 +240,7 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
     Assertions.assertThat(scanResult)
         .describedAs("Scan result %s", scanResult)
         .extracting(s -> s.getTracker().getFilesFound())
-        .isEqualTo(expectedFiles);
+        .isEqualTo(expectedFileCount);
     verifyRenamed(dest, createdPaths);
   }
 
@@ -413,7 +265,20 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
   }
 
   @Test
+  public void testRunWrongBucket() throws Throwable {
+    runToFailure(EXIT_NOT_FOUND, NAME, AUDIT,
+        "s3a://this-bucket-does-not-exist-hopefully");
+  }
+
+  @Test
+  public void testRunWrongPath() throws Throwable {
+    runToFailure(EXIT_NOT_FOUND, NAME, AUDIT,
+        methodPath().toString());
+  }
+
+  @Test
   public void testRunVerboseAudit() throws Throwable {
+    describe("Run a verbose audit");
     CreatedPaths createdPaths = createPaths(getKeepingFS(), methodPath());
     run(NAME,
         V,
@@ -425,6 +290,265 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
         createdPaths.base.toString());
   }
 
+  private static Path topath(Path base, final String name) {
+    return name.isEmpty() ? base : new Path(base, name);
+  }
+
+  /**
+   * Create a new FS with given marker policy and path.
+   * This filesystem MUST be closed in test teardown.
+   * @param markerPolicy markers
+   * @param authPath authoritative path. If null: no path.
+   * @return a new FS.
+   */
+  private S3AFileSystem createFS(String markerPolicy,
+      String authPath) throws Exception {
+    S3AFileSystem testFS = getFileSystem();
+    Configuration conf = new Configuration(testFS.getConf());
+    URI testFSUri = testFS.getUri();
+    String bucketName = getTestBucketName(conf);
+    removeBucketOverrides(bucketName, conf,
+        DIRECTORY_MARKER_POLICY,
+        S3_METADATA_STORE_IMPL,
+        BULK_DELETE_PAGE_SIZE,
+        AUTHORITATIVE_PATH);
+    if (authPath != null) {
+      conf.set(AUTHORITATIVE_PATH, authPath);
+    }
+    // Use a very small page size to force the paging
+    // code to be tested.
+    conf.setInt(BULK_DELETE_PAGE_SIZE, 2);
+    conf.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL);
+    conf.set(DIRECTORY_MARKER_POLICY, markerPolicy);
+    S3AFileSystem fs2 = new S3AFileSystem();
+    fs2.initialize(testFSUri, conf);
+    LOG.info("created new filesystem with policy {} and auth path {}: {}",
+        markerPolicy, authPath, fs2);
+    return fs2;
+  }
+
+  /**
+   * Tracker of created paths.
+   */
+  private static final class CreatedPaths {
+
+    private final FileSystem fs;
+
+    private final Path base;
+
+    private List<Path> files = new ArrayList<>();
+
+    private List<Path> dirs = new ArrayList<>();
+
+    private List<Path> emptyDirs = new ArrayList<>();
+
+    private List<String> filesUnderBase = new ArrayList<>();
+
+    private List<String> dirsUnderBase = new ArrayList<>();
+
+    private List<String> emptyDirsUnderBase = new ArrayList<>();
+
+    /**
+     * Constructor.
+     * @param fs filesystem.
+     * @param base base directory for all creation operations.
+     */
+    private CreatedPaths(final FileSystem fs,
+        final Path base) {
+      this.fs = fs;
+      this.base = base;
+    }
+
+    /**
+     * Make a set of directories.
+     * @param names varargs list of paths under the base.
+     * @return number of entries created.
+     * @throws IOException failure
+     */
+    private int dirs(String... names) throws IOException {
+      for (String name : names) {
+        mkdir(name);
+      }
+      return names.length;
+    }
+
+    /**
+     * Create a single directory under the base.
+     * @param name name/relative names of the directory
+     * @return the path of the new entry.
+     */
+    private Path mkdir(String name) throws IOException {
+      Path dir = topath(base, name);
+      fs.mkdirs(dir);
+      dirs.add(dir);
+      dirsUnderBase.add(name);
+      return dir;
+    }
+
+    /**
+     * Make a set of empty directories.
+     * @param names varargs list of paths under the base.
+     * @return number of entries created.
+     * @throws IOException failure
+     */
+    private int emptydirs(String... names) throws IOException {
+      for (String name : names) {
+        emptydir(name);
+      }
+      return names.length;
+    }
+
+    /**
+     * Create an empty directory.
+     * @param name name under the base dir
+     * @return the path
+     * @throws IOException failure
+     */
+    private Path emptydir(String name) throws IOException {
+      Path dir = topath(base, name);
+      fs.mkdirs(dir);
+      emptyDirs.add(dir);
+      emptyDirsUnderBase.add(name);
+      return dir;
+    }
+
+    /**
+     * Make a set of files.
+     * @param names varargs list of paths under the base.
+     * @return number of entries created.
+     * @throws IOException failure
+     */
+    private int files(String... names) throws IOException {
+      for (String name : names) {
+        mkfile(name);
+      }
+      return names.length;
+    }
+
+    /**
+     * Create a 0-byte file.
+     * @param name name under the base dir
+     * @return the path
+     * @throws IOException failure
+     */
+    private Path mkfile(String name)
+        throws IOException {
+      Path file = topath(base, name);
+      ContractTestUtils.touch(fs, file);
+      files.add(file);
+      filesUnderBase.add(name);
+      return file;
+    }
+  }
+
+  /**
+   * Create the "standard" test paths.
+   * @param fs filesystem
+   * @param base base dir
+   * @return the details on what was created.
+   */
+  private CreatedPaths createPaths(FileSystem fs, Path base)
+      throws IOException {
+    CreatedPaths r = new CreatedPaths(fs, base);
+    // the directories under which we will create files,
+    // so expect to have markers
+    r.mkdir("");
+
+    // create the empty dirs
+    r.emptydir("empty");
+
+    // dir 1 has a file underneath
+    r.mkdir("dir1");
+    expectedFileCount = r.files("dir1/file1");
+
+    expectedMarkersUnderDir1 = 1;
+
+
+    // dir2 has a subdir
+    r.dirs("dir2", "dir2/dir3");
+    // an empty subdir
+    r.emptydir("dir2/empty2");
+
+    // and a file under itself and dir3
+    expectedFileCount += r.files(
+        "dir2/file2",
+        "dir2/dir3/file3");
+
+
+    // wrap up the expectations.
+    expectedMarkersUnderDir2 = 2;
+    expectedMarkers = expectedMarkersUnderDir1 + expectedMarkersUnderDir2;
+    return r;
+  }
+
+  /**
+   * Execute the marker tool, expecting the execution to succeed.
+   * @param sourceFS filesystem to use
+   * @param path path to scan
+   * @param doPurge should markers be purged
+   * @param expectedMarkers number of markers expected
+   * @return the result
+   */
+  private MarkerTool.ScanResult markerTool(
+      final FileSystem sourceFS,
+      final Path path,
+      final boolean doPurge,
+      final int expectedMarkers)
+      throws IOException {
+    return markerTool(0, sourceFS, path, doPurge, expectedMarkers);
+  }
+
+  /**
+   * Execute the marker tool, expecting the execution to
+   * return a specific exit code.
+   *
+   * @param sourceFS filesystem to use
+   * @param exitCode exit code to expect.
+   * @param path path to scan
+   * @param doPurge should markers be purged
+   * @param expectedMarkers number of markers expected
+   * @return the result
+   */
+  @SuppressWarnings("IOResourceOpenedButNotSafelyClosed")
+  private MarkerTool.ScanResult markerTool(
+      final int exitCode,
+      final FileSystem sourceFS,
+      final Path path,
+      final boolean doPurge,
+      final int expectedMarkers) throws IOException {
+    MarkerTool tool = new MarkerTool(sourceFS.getConf());
+    tool.setVerbose(LOG.isDebugEnabled());
+
+    MarkerTool.ScanResult result = tool.execute(sourceFS, path, doPurge,
+        expectedMarkers);
+    Assertions.assertThat(result.getExitCode())
+        .describedAs("Exit code of marker(%s, %s, %d) -> %s",
+            path, doPurge, expectedMarkers, result)
+        .isEqualTo(exitCode);
+    return result;
+  }
+
+  /**
+   * Verify that all the paths renamed from the source exist
+   * under the destination, including all empty directories.
+   * @param dest destination to look under.
+   * @param createdPaths list of created paths.
+   */
+  void verifyRenamed(final Path dest,
+      final CreatedPaths createdPaths) throws IOException {
+    // all leaf directories exist
+    for (String p : createdPaths.emptyDirsUnderBase) {
+      assertIsDirectory(topath(dest, p));
+    }
+    // non-empty dirs
+    for (String p : createdPaths.dirsUnderBase) {
+      assertIsDirectory(topath(dest, p));
+    }
+    // all files exist
+    for (String p : createdPaths.filesUnderBase) {
+      assertIsFile(topath(dest, p));
+    }
+  }
   /**
    * Run a S3GuardTool command from a varags list and the
    * configuration returned by {@code getConfiguration()}.

@@ -107,6 +107,12 @@ public final class DirectoryPolicyImpl
     }
   }
 
+
+  @Override
+  public MarkerPolicy getMarkerPolicy() {
+    return markerPolicy;
+  }
+
   @Override
   public String describe() {
     return markerPolicy.toString();

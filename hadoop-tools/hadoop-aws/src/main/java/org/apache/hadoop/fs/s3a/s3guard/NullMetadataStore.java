@@ -173,7 +173,7 @@ public class NullMetadataStore implements MetadataStore {
         final StoreContext storeContext,
         final Path source,
         final Path dest, MetadataStore metadataStore) {
-      super("null tracker", storeContext, metadataStore, source, dest, null);
+      super("NullRenameTracker", storeContext, metadataStore, source, dest, null);
     }
 
     @Override

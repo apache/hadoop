@@ -33,6 +33,12 @@ public interface DirectoryPolicy {
   boolean keepDirectoryMarkers(Path path);
 
   /**
+   * Get the marker policy.
+   * @return policy.
+   */
+  MarkerPolicy getMarkerPolicy();
+
+  /**
    * Describe the policy for marker tools and logs.
    * @return description of the current policy.
    */

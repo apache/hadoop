@@ -185,18 +185,40 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
 
   /**
    * Queue an object for deletion.
+   * <p></p>
+   * This object will be deleted when the next page of objects to delete
+   * is posted to S3. Therefore, the COPY must have finished
+   * before that deletion operation takes place.
+   * This is managed by
+   * <ol>
+   *   <li>
+   *     The delete operation only being executed once all active
+   *     copies have completed.
+   *   </li>
+   *   <li>
+   *     Only queuing objects here whose copy operation has
+   *     been submitted and so is in that thread pool.
+   *   </li>
+   * </ol>
+   * This method must only be called from the primary thread
    * @param path path to the object
-   * @param s
    * @param key key of the object.
+   * @param version object version.
    */
   private void queueToDelete(Path path, String key, String version) {
+    LOG.debug("Queueing to delete {}", path);
     pathsToDelete.add(path);
     keysToDelete.add(new DeleteObjectsRequest.KeyVersion(key, version));
   }
 
   /**
    * Queue a list of markers for deletion.
+   * <p></p>
    * no-op if the list is empty.
+   * <p></p>
+   * See {@link #queueToDelete(Path, String, String)} for
+   * details on safe use of this method.
+   *
    * @param markersToDelete markers
    */
   private void queueToDelete(
@@ -366,8 +388,6 @@ Are   * @throws IOException failure
       // the source object to copy as a path.
       Path childSourcePath = storeContext.keyToPath(key);
 
-      // mark for deletion on a successful copy.
-      queueToDelete(childSourcePath, key, child.getVersionId());
       List<DirMarkerTracker.Marker> markersToDelete;
 
       boolean isMarker = key.endsWith("/");
@@ -379,7 +399,7 @@ Are   * @throws IOException failure
             childSourcePath, key, child);
       } else {
         // it is a file.
-        // note that it has been found -ths may find a list of parent
+        // note that it has been found -this may find a list of parent
         // markers which may now be deleted.
         markersToDelete = dirMarkerTracker.fileFound(
             childSourcePath, key, child);
@@ -389,6 +409,8 @@ Are   * @throws IOException failure
             dstKey + key.substring(srcKey.length());
         Path childDestPath = storeContext.keyToPath(newDestKey);
 
+        // mark the source file for deletion on a successful copy.
+        queueToDelete(childSourcePath, key, child.getVersionId());
           // now begin the single copy
         CompletableFuture<Path> copy = initiateCopy(child, key,
             childSourcePath, newDestKey, childDestPath);
@@ -483,6 +505,7 @@ Are   * @throws IOException failure
           dstKey + key.substring(srcKey.length());
       Path childDestPath = storeContext.keyToPath(newDestKey);
       LOG.debug("copying dir marker from {} to {}", key, newDestKey);
+
       activeCopies.add(
           initiateCopy(
               entry.getStatus(),
@@ -559,6 +582,7 @@ Are   * @throws IOException failure
       copyResult = callbacks.copyFile(srcKey, destinationKey,
           srcAttributes, readContext);
     }
+
     if (objectRepresentsDirectory(srcKey, len)) {
       renameTracker.directoryMarkerCopied(
           sourceFile,
@@ -597,6 +621,16 @@ Are   * @throws IOException failure
     List<Path> undeletedObjects = new ArrayList<>();
     try {
       // remove the keys
+
+      // first list what is being deleted for the interest of anyone
+      // who is trying to debug while objects are no longer there.
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Initiating delete operation for {} objects", keys.size());
+        for (DeleteObjectsRequest.KeyVersion key : keys) {
+          LOG.debug(" {} {}", key.getKey(),
+              key.getVersion() != null ? key.getVersion() : "");
+        }
+      }
       // this will update the metastore on a failure, but on
       // a successful operation leaves the store as is.
       callbacks.removeKeys(

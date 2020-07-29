@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.tools;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
@@ -39,19 +40,22 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StorageStatistics;
-import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
+import org.apache.hadoop.fs.s3a.UnknownStoreException;
 import org.apache.hadoop.fs.s3a.impl.DirMarkerTracker;
+import org.apache.hadoop.fs.s3a.impl.DirectoryPolicy;
 import org.apache.hadoop.fs.s3a.impl.OperationCallbacks;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool;
 import org.apache.hadoop.fs.shell.CommandFormat;
+import org.apache.hadoop.service.launcher.LauncherExitCodes;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.OperationDuration;
 
+import static org.apache.hadoop.fs.s3a.Constants.AUTHORITATIVE_PATH;
 import static org.apache.hadoop.fs.s3a.Constants.BULK_DELETE_PAGE_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.BULK_DELETE_PAGE_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Invoker.once;
@@ -224,8 +228,14 @@ public final class MarkerTool extends S3GuardTool {
     storeContext = fs.createStoreContext();
     operationCallbacks = fs.getOperationCallbacks();
 
-    println(out, "Directory Marker Policy is %s",
-        fs.getDirectoryPolicy().describe());
+    DirectoryPolicy.MarkerPolicy policy = fs.getDirectoryMarkerPolicy();
+    println(out, "The store's directory marker policy is \"%s\"",
+        policy);
+    if (policy == DirectoryPolicy.MarkerPolicy.Authoritative) {
+      // in auth mode, note the auth paths.
+      String authPath = fs.getConf().getTrimmed(AUTHORITATIVE_PATH, "unset");
+      println(out, "Authoritative path list is %s", authPath);
+    }
 
     ScanResult result = once("action", path.toString(),
         () -> scan(path, doPurge, expectedMarkerCount));
@@ -277,14 +287,28 @@ public final class MarkerTool extends S3GuardTool {
    * @param doPurge purge?
    * @param expectedMarkerCount expected marker count
    * @return scan+purge result.
-   * @throws IOException
-   * @throws ExitUtil.ExitException
+   * @throws IOException IO failure
+   * @throws ExitUtil.ExitException explicitly raised failure
    */
   private ScanResult scan(
       final Path path,
       final boolean doPurge,
       final int expectedMarkerCount)
       throws IOException, ExitUtil.ExitException {
+    // initial safety check: does the path exist
+    try {
+      getFilesystem().getFileStatus(path);
+    } catch (UnknownStoreException ex) {
+      // bucket doesn't exist.
+      // replace the stack trace with an error code.
+      throw new ExitUtil.ExitException(LauncherExitCodes.EXIT_NOT_FOUND,
+          ex.toString(), ex);
+
+    } catch (FileNotFoundException ex) {
+      throw new ExitUtil.ExitException(LauncherExitCodes.EXIT_NOT_FOUND,
+          "Not found: " + path, ex);
+
+    }
     ScanResult result = new ScanResult();
 
     DirMarkerTracker tracker = new DirMarkerTracker();
@@ -292,6 +316,7 @@ public final class MarkerTool extends S3GuardTool {
     try (DurationInfo ignored =
              new DurationInfo(LOG, "marker scan %s", path)) {
       scanDirectoryTree(path, tracker);
+
     }
     // scan done. what have we got?
     Map<Path, DirMarkerTracker.Marker> surplusMarkers

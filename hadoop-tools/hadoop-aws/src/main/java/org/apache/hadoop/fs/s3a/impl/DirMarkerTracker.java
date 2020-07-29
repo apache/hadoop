@@ -229,6 +229,14 @@ public class DirMarkerTracker {
       return status;
     }
 
+    /**
+     * Get the version ID of the status object; may be null.
+     * @return a version ID, if known.
+     */
+    public String getVersionId() {
+      return status.getVersionId();
+    }
+
     @Override
     public String toString() {
       return "Marker{" +
