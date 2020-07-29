@@ -3150,7 +3150,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /**
-   * Get the snapshot root of a given file or directory if it exists. e.g. if /snapdir1 is a snapshottable directory and path given is /snapdir1/
+   * Get the snapshot root of a given file or directory if it exists.
+   * e.g. if /snapdir1 is a snapshottable directory and path given is
+   * /snapdir1/path/to/file, this method would return /snapdir1
    * @param path Path to a file or a directory.
    * @return Not null if found in a snapshot root directory.
    * @throws IOException
