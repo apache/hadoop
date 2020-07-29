@@ -3289,7 +3289,9 @@ public class DistributedFileSystem extends FileSystem
     // Snapshot root, not null if the path is inside a snapshottable directory
     String ssRoot = null;
     try {
-      ssRoot = dfs.getSnapshotRoot(path);
+      if (dfs.isSnapshotTrashrootEnabled()) {
+        ssRoot = dfs.getSnapshotRoot(path);
+      }
     } catch (IOException ioe) {
       DFSClient.LOG.warn("Exception while checking whether the path is in a "
           + "snapshot", ioe);

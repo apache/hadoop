@@ -27,6 +27,8 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SERV
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SERVER_DEFAULTS_VALIDITY_PERIOD_MS_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED_DEFAULT;
 
 import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
@@ -247,6 +249,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   private static volatile ThreadPoolExecutor STRIPED_READ_THREAD_POOL;
   private final long serverDefaultsValidityPeriod;
 
+  private final boolean snapshotTrashrootEnabled;
+
   /**
    * Disabled stop DeadNodeDetectorThread for the testing when MiniDFSCluster
    * start.
@@ -412,6 +416,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     this.saslClient = new SaslDataTransferClient(
         conf, DataTransferSaslUtil.getSaslPropertiesResolver(conf),
         TrustedChannelResolver.getInstance(conf), nnFallbackToSimpleAuth);
+
+    this.snapshotTrashrootEnabled = conf.getBoolean(
+        DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED,
+        DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED_DEFAULT);
   }
 
   /**
@@ -3147,6 +3155,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    */
   boolean isHDFSEncryptionEnabled() throws IOException {
     return getKeyProviderUri() != null;
+  }
+
+  boolean isSnapshotTrashrootEnabled() {
+    return snapshotTrashrootEnabled;
   }
 
   /**
