@@ -287,7 +287,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
         .getSnapshotByName(dir, snapshotName)
         .getRoot();
 
-    if (snapshotRoot.isMarkedAsDeleted()) {
+    if (!snapshotRoot.isMarkedAsDeleted()) {
       throw new IllegalStateException("Failed to gcDeletedSnapshot "
           + snapshotName + " from " + dir.getFullPathName()
           + ": snapshot is not marked as deleted");
@@ -417,7 +417,8 @@ public class SnapshotManager implements SnapshotStatsMXBean {
             + " is not the first snapshot (=" + first + ")");
       }
     }
-    srcRoot.removeSnapshot(reclaimContext, snapshotName, now);
+    srcRoot.removeSnapshot(reclaimContext, snapshotName, now,
+        fsdir.isSnapshotDeletionOrdered());
     numSnapshots.getAndDecrement();
   }
 

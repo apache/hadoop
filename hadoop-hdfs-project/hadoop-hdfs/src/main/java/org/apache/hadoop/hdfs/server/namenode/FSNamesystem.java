@@ -975,7 +975,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       this.dtSecretManager = createDelegationTokenSecretManager(conf);
       this.dir = new FSDirectory(this, conf);
       this.snapshotManager = new SnapshotManager(conf, dir);
-      this.snapshotDeletionGc = new SnapshotDeletionGc(this, conf);
+      this.snapshotDeletionGc = dir.isSnapshotDeletionOrdered()?
+          new SnapshotDeletionGc(this, conf): null;
 
       this.cacheManager = new CacheManager(this, conf, blockManager);
       // Init ErasureCodingPolicyManager instance.
@@ -1363,7 +1364,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       dir.enableQuotaChecks();
       dir.ezManager.startReencryptThreads();
 
-      snapshotDeletionGc.schedule();
+      if (snapshotDeletionGc != null) {
+        snapshotDeletionGc.schedule();
+      }
 
       if (haEnabled) {
         // Renew all of the leases before becoming active.
