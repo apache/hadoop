@@ -112,6 +112,7 @@ import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.NamenodeProtocolService;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ClientNamenodeProtocol;
@@ -1128,6 +1129,12 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   public SnapshottableDirectoryStatus[] getSnapshottableDirListing()
       throws IOException {
     return clientProto.getSnapshottableDirListing();
+  }
+
+  @Override // ClientProtocol
+  public SnapshotStatus[] getSnapshotListing(String snapshotRoot)
+      throws IOException {
+    return clientProto.getSnapshotListing(snapshotRoot);
   }
 
   @Override // ClientProtocol

@@ -158,6 +158,16 @@ Usage: `hdfs lsSnapshottableDir [-help]`
 
 Get the list of snapshottable directories. When this is run as a super user, it returns all snapshottable directories. Otherwise it returns those directories that are owned by the current user.
 
+### `lsSnapshot`
+
+Usage: `hdfs lsSnapshot [-help]`
+
+| COMMAND\_OPTION | Description |
+|:---- |:---- |
+| `-help` | print help |
+
+Get the list of snapshots for a snapshottable directory.
+
 ### `jmxget`
 
 Usage: `hdfs jmxget [-localVM ConnectorURL | -port port | -server mbeanserver | -service service]`
