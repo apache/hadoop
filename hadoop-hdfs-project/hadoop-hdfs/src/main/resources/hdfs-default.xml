@@ -5093,12 +5093,21 @@
   </description>
 </property>
 <property>
-  <name>dfs.namenode.snapshot.max.limit</name>
+  <name>dfs.namenode.snapshot.max.limit.per.snapshottable.directory</name>
   <value>65536</value>
   <description>
     Limits the maximum number of snapshots allowed per snapshottable
     directory.If the configuration is not set, the default limit
     for maximum no of snapshots allowed is 65536.
+  </description>
+</property>
+<property>
+  <name>dfs.namenode.snapshot.max.limit</name>
+  <value>268435456</value>
+  <description>
+    Limits the maximum number of snapshots allowed on the entire filesystem.
+    If the configuration is not set, the default limit
+    for maximum no of snapshots allowed is 268435456.
   </description>
 </property>
 

@@ -498,9 +498,17 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int
       DFS_NAMENODE_SNAPSHOT_DIFF_LISTING_LIMIT_DEFAULT = 1000;
 
-  public static final String DFS_NAMENODE_SNAPSHOT_MAX_LIMIT =
-      "dfs.namenode.snapshot.max.limit";
-  public static final int DFS_NAMENODE_SNAPSHOT_MAX_LIMIT_DEFAULT = 65536;
+  public static final String
+      DFS_NAMENODE_SNAPSHOT_MAX_LIMIT_PER_SNAPSHOTTABLE_DIRECTORY =
+      "dfs.namenode.snapshot.max.limit.per.snapshottable.directory";
+  public static final int
+      DFS_NAMENODE_SNAPSHOT_MAX_LIMIT_PER_SNAPSHOTTABLE_DIRECTORY_DEFAULT
+      = 65536;
+  public static final String
+      DFS_NAMENODE_SNAPSHOT_MAX_LIMIT = "dfs.namenode.snapshot.max.limit";
+  // defualt value is same as maxSnapshotId allowed ((1 << 28) - 1)
+  public static final int
+      DFS_NAMENODE_SNAPSHOT_MAX_LIMIT_DEFAULT = 268435456;
 
   public static final String DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED =
       "dfs.namenode.snapshot.deletion.ordered";
