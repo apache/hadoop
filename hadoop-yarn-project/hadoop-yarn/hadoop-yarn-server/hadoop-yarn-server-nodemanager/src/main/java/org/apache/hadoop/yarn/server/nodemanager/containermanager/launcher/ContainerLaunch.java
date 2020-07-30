@@ -1556,6 +1556,9 @@ public class ContainerLaunch implements Callable<Integer> {
 
     addToEnvMap(environment, nmVars, Environment.PWD.name(), pwd.toString());
 
+    addToEnvMap(environment, nmVars, Environment.LOCALIZATION_COUNTERS.name(),
+        container.localizationCountersAsString());
+
     if (!Shell.WINDOWS) {
       addToEnvMap(environment, nmVars, "JVM_PID", "$$");
     }

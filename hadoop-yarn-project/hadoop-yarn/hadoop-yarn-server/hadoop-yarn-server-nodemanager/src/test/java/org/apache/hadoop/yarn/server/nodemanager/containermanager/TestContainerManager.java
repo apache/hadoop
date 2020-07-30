@@ -20,6 +20,10 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 
 import org.apache.hadoop.yarn.server.api.AuxiliaryLocalPathHandler;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
+import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
+import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
+import static org.apache.hadoop.test.MetricsAsserts.assertGaugeGt;
+import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -38,6 +42,7 @@ import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -45,8 +50,10 @@ import java.util.Map;
 
 import java.util.function.Supplier;
 import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -316,6 +323,39 @@ public class TestContainerManager extends BaseContainerManagerTest {
     BufferedReader reader = new BufferedReader(new FileReader(targetFile));
     Assert.assertEquals("Hello World!", reader.readLine());
     Assert.assertEquals(null, reader.readLine());
+
+    //
+    // check the localization counter
+    //
+    long targetFileSize =
+        FileUtil.getDU(targetFile.getCanonicalFile().getParentFile());
+    MetricsRecordBuilder rb = getMetrics("NodeManagerMetrics");
+    assertCounter("LocalizedCacheMissBytes", targetFileSize, rb);
+    assertCounter("LocalizedCacheHitBytes", 0L, rb);
+    assertCounter("LocalizedCacheMissFiles", 1L, rb);
+    assertCounter("LocalizedCacheHitFiles", 0L, rb);
+    assertGaugeGt("LocalizationDurationMillisAvgTime", 0, rb);
+    assertGauge("LocalizedCacheHitBytesRatio", 0, rb);
+    assertGauge("LocalizedCacheHitFilesRatio", 0, rb);
+
+    // test cache being used
+    final ContainerId cid1 = createContainerId(1);
+    containerManager.startContainers(StartContainersRequest.newInstance(
+        Collections.singletonList(
+            StartContainerRequest.newInstance(
+                containerLaunchContext,
+                createContainerToken(cid1, DUMMY_RM_IDENTIFIER,
+                    context.getNodeId(),
+                    user,
+                    context.getContainerTokenSecretManager())))));
+    waitForContainerState(containerManager, cid1, ContainerState.COMPLETE);
+    rb = getMetrics("NodeManagerMetrics");
+    assertCounter("LocalizedCacheMissBytes", targetFileSize, rb);
+    assertCounter("LocalizedCacheHitBytes", targetFileSize, rb);
+    assertCounter("LocalizedCacheMissFiles", 1L, rb);
+    assertCounter("LocalizedCacheHitFiles", 1L, rb);
+    assertGauge("LocalizedCacheHitBytesRatio", 50, rb);
+    assertGauge("LocalizedCacheHitFilesRatio", 50, rb);
   }
 
   @Test (timeout = 10000L)

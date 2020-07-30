@@ -119,4 +119,14 @@ public interface Container extends EventHandler<ContainerEvent> {
    * @return true/false based on container's state
    */
   boolean isContainerInFinalStates();
+
+  /**
+   * Vector of localization counters to be passed from NM to application
+   * container via environment variable {@code $LOCALIZATION_COUNTERS}. See
+   * {@link org.apache.hadoop.yarn.api.ApplicationConstants.Environment#LOCALIZATION_COUNTERS}
+   *
+   * @return coma-separated counter values
+   */
+  String localizationCountersAsString();
+
 }
