@@ -156,10 +156,54 @@ public class Diff<K, E extends Diff.Element<K>> {
     this.deleted = deleted;
   }
 
+
   /** @return the created list, which is never null. */
   public List<E> getList(final ListType type) {
-    final List<E> list = type == ListType.CREATED? created: deleted;
-    return list == null? Collections.<E>emptyList(): list;
+    final List<E> list = type == ListType.CREATED ? created : deleted;
+    return list == null ? Collections.<E>emptyList() : list;
+  }
+
+  public List<E> getCreatedUnmodifiable() {
+    return created != null? Collections.unmodifiableList(created)
+        : Collections.<E>emptyList();
+  }
+
+  public E setCreated(int index, E element) {
+    final E old = created.set(index, element);
+    if (old.compareTo(element.getKey()) != 0) {
+      throw new AssertionError("Element mismatched: element=" + element
+          + " but old=" + old);
+    }
+    return old;
+  }
+
+  public boolean removeCreated(final E element) {
+    if (created != null) {
+      final int i = search(created, element.getKey());
+      if (i >= 0 && created.get(i) == element) {
+        created.remove(i);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  public void clearCreated() {
+    if (created != null) {
+      created.clear();
+    }
+  }
+
+  public List<E> getDeletedUnmodifiable() {
+    return deleted != null? Collections.unmodifiableList(deleted)
+        : Collections.<E>emptyList();
+  }
+
+  public boolean containsDeleted(final K key) {
+    if (deleted != null) {
+      return search(deleted, key) >= 0;
+    }
+    return false;
   }
 
   public int searchIndex(final ListType type, final K name) {
