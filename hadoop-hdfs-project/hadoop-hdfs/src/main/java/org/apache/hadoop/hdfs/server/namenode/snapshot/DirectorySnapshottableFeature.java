@@ -239,7 +239,8 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
    */
   public Snapshot removeSnapshot(
       INode.ReclaimContext reclaimContext, INodeDirectory snapshotRoot,
-      String snapshotName, long now) throws SnapshotException {
+      String snapshotName, long now, SnapshotManager snapshotManager)
+      throws SnapshotException {
     final int i = searchSnapshot(DFSUtil.string2Bytes(snapshotName));
     if (i < 0) {
       throw new SnapshotException("Cannot delete snapshot " + snapshotName
@@ -248,6 +249,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
     } else {
       final Snapshot snapshot = snapshotsByNames.get(i);
       int prior = Snapshot.findLatestSnapshot(snapshotRoot, snapshot.getId());
+      snapshotManager.assertPrior(snapshotRoot, snapshotName, prior);
       snapshotRoot.cleanSubtree(reclaimContext, snapshot.getId(), prior);
       // remove from snapshotsByNames after successfully cleaning the subtree
       snapshotsByNames.remove(i);

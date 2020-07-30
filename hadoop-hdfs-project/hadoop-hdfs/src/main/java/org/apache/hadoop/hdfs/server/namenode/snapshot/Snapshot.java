@@ -40,6 +40,8 @@ import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
 import org.apache.hadoop.security.AccessControlException;
 
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SNAPSHOT_DELETED;
+
 /** Snapshot of a sub-tree in the namesystem. */
 @InterfaceAudience.Private
 public class Snapshot implements Comparable<byte[]> {
@@ -154,6 +156,11 @@ public class Snapshot implements Comparable<byte[]> {
             }
             return false;
           }).collect(Collectors.toList()).toArray(new Feature[0]));
+    }
+
+    boolean isMarkedAsDeleted() {
+      final XAttrFeature f = getXAttrFeature();
+      return f != null && f.getXAttr(XATTR_SNAPSHOT_DELETED) != null;
     }
 
     @Override

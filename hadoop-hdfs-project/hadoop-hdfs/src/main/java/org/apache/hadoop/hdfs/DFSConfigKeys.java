@@ -502,11 +502,6 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.namenode.snapshot.max.limit";
   public static final int DFS_NAMENODE_SNAPSHOT_MAX_LIMIT_DEFAULT = 65536;
 
-  public static final String DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED =
-      "dfs.namenode.snapshot.deletion.ordered";
-  public static final boolean DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED_DEFAULT
-      = false;
-
   public static final String DFS_NAMENODE_SNAPSHOT_SKIPLIST_SKIP_INTERVAL =
       "dfs.namenode.snapshot.skiplist.interval";
   public static final int DFS_NAMENODE_SNAPSHOT_SKIPLIST_SKIP_INTERVAL_DEFAULT =

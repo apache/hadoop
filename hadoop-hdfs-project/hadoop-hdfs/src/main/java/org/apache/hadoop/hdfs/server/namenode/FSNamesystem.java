@@ -109,6 +109,7 @@ import static org.apache.hadoop.ha.HAServiceProtocol.HAServiceState.OBSERVER;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 
 import com.google.common.collect.Maps;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotDeletionGc;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import org.apache.hadoop.hdfs.protocol.BatchedDirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsPartialListing;
@@ -493,6 +494,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   FSDirectory dir;
   private BlockManager blockManager;
   private final SnapshotManager snapshotManager;
+  private final SnapshotDeletionGc snapshotDeletionGc;
   private final CacheManager cacheManager;
   private final DatanodeStatistics datanodeStatistics;
 
@@ -974,6 +976,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       this.dtSecretManager = createDelegationTokenSecretManager(conf);
       this.dir = new FSDirectory(this, conf);
       this.snapshotManager = new SnapshotManager(conf, dir);
+      this.snapshotDeletionGc = snapshotManager.isSnapshotDeletionOrdered()?
+          new SnapshotDeletionGc(this, conf): null;
+
       this.cacheManager = new CacheManager(this, conf, blockManager);
       // Init ErasureCodingPolicyManager instance.
       ErasureCodingPolicyManager.getInstance().init(conf);
@@ -1359,6 +1364,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       // Enable quota checks.
       dir.enableQuotaChecks();
       dir.ezManager.startReencryptThreads();
+
+      if (snapshotDeletionGc != null) {
+        snapshotDeletionGc.schedule();
+      }
 
       if (haEnabled) {
         // Renew all of the leases before becoming active.
@@ -5480,6 +5489,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * Shutdown FSNamesystem.
    */
   void shutdown() {
+    if (snapshotDeletionGc != null) {
+      snapshotDeletionGc.cancel();
+    }
     if (snapshotManager != null) {
       snapshotManager.shutdown();
     }
@@ -7196,6 +7208,30 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       removeBlocks(blocksToBeDeleted);
     }
     logAuditEvent(true, operationName, rootPath, null, null);
+  }
+
+  public void gcDeletedSnapshot(String snapshotRoot, String snapshotName)
+      throws IOException {
+    final String operationName = "gcDeletedSnapshot";
+    String rootPath = null;
+    final INode.BlocksMapUpdateInfo blocksToBeDeleted;
+
+    checkOperation(OperationCategory.WRITE);
+    writeLock();
+    try {
+      checkOperation(OperationCategory.WRITE);
+      rootPath = Snapshot.getSnapshotPath(snapshotRoot, snapshotName);
+      checkNameNodeSafeMode("Cannot gcDeletedSnapshot for " + rootPath);
+
+      final long now = Time.now();
+      final INodesInPath iip = dir.resolvePath(null, snapshotRoot, DirOp.WRITE);
+      snapshotManager.assertMarkedAsDeleted(iip, snapshotName);
+      blocksToBeDeleted = FSDirSnapshotOp.deleteSnapshot(
+          dir, snapshotManager, iip, snapshotName, now);
+    } finally {
+      writeUnlock(operationName, getLockReportInfoSupplier(rootPath));
+    }
+    removeBlocks(blocksToBeDeleted);
   }
 
   /**
