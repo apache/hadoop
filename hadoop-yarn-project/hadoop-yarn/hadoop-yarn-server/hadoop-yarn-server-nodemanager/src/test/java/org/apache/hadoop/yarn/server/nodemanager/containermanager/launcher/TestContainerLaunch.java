@@ -865,6 +865,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
         .newContainerId(ApplicationAttemptId.newInstance(appId, 1), 1);
     when(container.getContainerId()).thenReturn(containerId);
     when(container.getUser()).thenReturn("test");
+    when(container.localizationCountersAsString()).thenReturn("");
     String relativeContainerLogDir = ContainerLaunch.getRelativeContainerLogDir(
         appId.toString(), containerId.toString());
     Path containerLogDir =

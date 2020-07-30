@@ -46,6 +46,7 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
@@ -100,6 +101,14 @@ import org.apache.hadoop.yarn.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 public class ContainerImpl implements Container {
+  private enum LocalizationCounter {
+    // 1-to-1 correspondence with MR TaskCounter.LOCALIZED_*
+    BYTES_MISSED,
+    BYTES_CACHED,
+    FILES_MISSED,
+    FILES_CACHED,
+    MILLIS;
+  }
 
   private static final class ReInitializationContext {
     private final ContainerLaunchContext newLaunchContext;
@@ -153,6 +162,9 @@ public class ContainerImpl implements Container {
   private final NMStateStoreService stateStore;
   private final Credentials credentials;
   private final NodeManagerMetrics metrics;
+  private final long[] localizationCounts =
+      new long[LocalizationCounter.values().length];
+
   private volatile ContainerLaunchContext launchContext;
   private volatile ContainerTokenIdentifier containerTokenIdentifier;
   private final ContainerId containerId;
@@ -1211,6 +1223,12 @@ public class ContainerImpl implements Container {
       }
 
       container.containerLocalizationStartTime = clock.getTime();
+      // duration = end - start;
+      // record in RequestResourcesTransition: -start
+      // add in LocalizedTransition: +end
+      //
+      container.localizationCounts[LocalizationCounter.MILLIS.ordinal()]
+          = -Time.monotonicNow();
 
       // Send requests for public, private resources
       Map<String, LocalResource> cntrRsrc;
@@ -1259,6 +1277,21 @@ public class ContainerImpl implements Container {
         return ContainerState.LOCALIZING;
       }
 
+      final long localizedSize = rsrcEvent.getSize();
+      if (localizedSize > 0) {
+        container.localizationCounts
+        [LocalizationCounter.BYTES_MISSED.ordinal()] += localizedSize;
+        container.localizationCounts
+        [LocalizationCounter.FILES_MISSED.ordinal()]++;
+      } else if (localizedSize < 0) {
+        // cached: recorded negative, restore the sign
+        container.localizationCounts
+        [LocalizationCounter.BYTES_CACHED.ordinal()] -= localizedSize;
+        container.localizationCounts
+        [LocalizationCounter.FILES_CACHED.ordinal()]++;
+      }
+      container.metrics.localizationCacheHitMiss(localizedSize);
+
       // check to see if this resource should be uploaded to the shared cache
       // as well
       if (shouldBeUploadedToSharedCache(container, resourceRequest)) {
@@ -1269,6 +1302,14 @@ public class ContainerImpl implements Container {
         return ContainerState.LOCALIZING;
       }
 
+      // duration = end - start;
+      // record in RequestResourcesTransition: -start
+      // add in LocalizedTransition: +end
+      //
+      container.localizationCounts[LocalizationCounter.MILLIS.ordinal()]
+          += Time.monotonicNow();
+      container.metrics.localizationComplete(
+          container.localizationCounts[LocalizationCounter.MILLIS.ordinal()]);
       container.dispatcher.getEventHandler().handle(
           new ContainerLocalizationEvent(LocalizationEventType.
               CONTAINER_RESOURCES_LOCALIZED, container));
@@ -2300,5 +2341,15 @@ public class ContainerImpl implements Container {
           + " is invalid. Expected class " + runtimeClass.getCanonicalName());
     }
     return runtimeClass.cast(containerRuntimeData);
+  }
+
+  @Override
+  public String localizationCountersAsString() {
+    StringBuilder result =
+        new StringBuilder(String.valueOf(localizationCounts[0]));
+    for (int i = 1; i < localizationCounts.length; i++) {
+      result.append(',').append(localizationCounts[i]);
+    }
+    return result.toString();
   }
 }
