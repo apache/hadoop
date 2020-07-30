@@ -1527,6 +1527,9 @@ public class ContainerLaunch implements Callable<Integer> {
     
     putEnvIfAbsent(environment, Environment.HADOOP_CONF_DIR.name());
 
+    environment.put(Environment.LOCALIZATION_COUNTERS.name(),
+        container.localizationCountersAsString());
+
     if (!Shell.WINDOWS) {
       environment.put("JVM_PID", "$$");
     }

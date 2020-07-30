@@ -122,6 +122,11 @@ public class MockContainer implements Container {
   }
 
   @Override
+  public String localizationCountersAsString() {
+    return "";
+  }
+
+  @Override
   public ResourceSet getResourceSet() {
     return null;
   }

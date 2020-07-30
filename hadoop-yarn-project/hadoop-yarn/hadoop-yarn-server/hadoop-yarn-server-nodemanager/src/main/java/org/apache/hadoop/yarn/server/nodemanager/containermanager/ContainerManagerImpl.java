@@ -209,7 +209,7 @@ public class ContainerManagerImpl extends CompositeService implements
   private final ResourceLocalizationService rsrcLocalizationSrvc;
   private final AbstractContainersLauncher containersLauncher;
   private final AuxServices auxiliaryServices;
-  private final NodeManagerMetrics metrics;
+  @VisibleForTesting final NodeManagerMetrics metrics;
 
   protected final NodeStatusUpdater nodeStatusUpdater;
 
