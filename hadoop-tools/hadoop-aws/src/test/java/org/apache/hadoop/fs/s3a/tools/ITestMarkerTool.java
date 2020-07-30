@@ -510,7 +510,7 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
    * @return the result
    */
   @SuppressWarnings("IOResourceOpenedButNotSafelyClosed")
-  private MarkerTool.ScanResult markerTool(
+  public static MarkerTool.ScanResult markerTool(
       final int exitCode,
       final FileSystem sourceFS,
       final Path path,

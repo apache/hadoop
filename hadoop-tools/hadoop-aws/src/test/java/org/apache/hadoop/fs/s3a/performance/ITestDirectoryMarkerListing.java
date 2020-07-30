@@ -129,6 +129,8 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
 
   private Path markerPeer;
 
+  private String markerPeerKey;
+
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
@@ -153,6 +155,17 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
     createTestObjects(new Path(methodPath(), "base"));
   }
 
+  @Override
+  public void teardown() throws Exception {
+    if (s3client != null) {
+      delete(markerKey);
+      delete(markerKeySlash);
+      delete(markerPeerKey);
+      delete(fileKeyUnderMarker);
+    }
+    super.teardown();
+  }
+
   /**
    * Create the test objects under the given path, setting
    * various fields in the process.
@@ -165,6 +178,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
     // peer path has the same initial name to make sure there
     // is no confusion there.
     markerPeer = new Path(basePath, MARKER_PEER);
+    markerPeerKey = fs.pathToKey(markerPeer);
     markerKey = fs.pathToKey(markerDir);
     markerKeySlash = markerKey + "/";
     fileKeyUnderMarker = markerKeySlash + FILENAME;
@@ -323,6 +337,31 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
 
   /*
   =================================================================
+    Delete.
+  =================================================================
+  */
+
+  @Test
+  public void testDelete() throws Throwable {
+    S3AFileSystem fs = getFileSystem();
+    // a non recursive delete MUST fail because
+    // it is not empty
+    intercept(PathIsNotEmptyDirectoryException.class, () ->
+        fs.delete(markerDir, false));
+    // file is still there
+    head(fileKeyUnderMarker);
+
+    // recursive delete MUST succeed
+    fs.delete(markerDir, true);
+    // and the markers are gone
+    head404(fileKeyUnderMarker);
+    head404(markerKeySlash);
+    // just for completeness
+    fs.delete(basePath, true);
+  }
+
+  /*
+  =================================================================
     Rename.
   =================================================================
   */
@@ -371,18 +410,17 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
 
   /**
    * Rename under a marker.
-   * What does happen here?
+   * The marker must no longer exist.
    */
   @Test
   public void testRenameUnderMarker() throws Throwable {
     describe("directory rename");
-    Path base = methodPath();
     S3AFileSystem fs = getFileSystem();
     String name = "sourceFile";
-    Path src = new Path(methodPath(), name);
+    Path src = new Path(basePath, name);
     String srcKey = toKey(src);
-    put(srcKey, "source");
-
+    put(srcKey, name);
+    head(srcKey);
 
     Path dest = markerDir;
     // renamed into the dest dir
@@ -395,29 +433,31 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
     }
   }
 
-  /*
-  =================================================================
-    Delete.
-  =================================================================
-  */
-
+  /**
+   * This test creates an empty dir and renames it over the directory marker.
+   * If the dest was considered to be empty, the rename would fail.
+   */
   @Test
-  public void testDelete() throws Throwable {
+  public void testRenameEmptyDirOverMarker() throws Throwable {
+    describe("rename an empty directory over the marker");
     S3AFileSystem fs = getFileSystem();
-    // a non recursive delete MUST fail because
-    // it is not empty
-    intercept(PathIsNotEmptyDirectoryException.class, () ->
-        fs.delete(markerDir, false));
-    // file is still there
-    head(fileKeyUnderMarker);
-
-    // recursive delete MUST succeed
-    fs.delete(markerDir, true);
-    // and the markers are gone
-    head404(fileKeyUnderMarker);
-    head404(markerKeySlash);
-    // just for completeness
-    fs.delete(basePath, true);
+    String name = "sourceDir";
+    Path src = new Path(basePath, name);
+    fs.mkdirs(src);
+    assertIsDirectory(src);
+    String srcKey = toKey(src) + "/";
+    head(srcKey);
+    Path dest = markerDir;
+    // renamed into the dest dir
+    assertFalse("rename(" + src + ", " + dest + ") should have failed",
+        getFileSystem().rename(src, dest));
+    // source is still there
+    assertIsDirectory(src);
+    head(srcKey);
+    // and a non-recursive delete lets us verify it is considered
+    // an empty dir
+    assertDeleted(src, false);
+    assertTestObjectsExist();
   }
 
   /*
@@ -443,16 +483,28 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
     exec("PUT " + key, () ->
         s3client.putObject(bucket, key, content));
   }
-
+  /**
+   * Delete an object.
+   * @param key key
+   * @param content string
+   */
+  private void delete(final String key) throws Exception {
+    exec("DELETE " + key, () -> {
+      s3client.deleteObject(bucket, key);
+      return "deleted " + key;
+    });
+  }
 
   /**
    * Issue a HEAD request.
    * @param key
-   * @return the metadata
+   * @return a description of the object.
    */
-  private ObjectMetadata head(final String key) throws Exception {
-    return exec("HEAD " + key, () ->
+  private String head(final String key) throws Exception {
+    ObjectMetadata md = exec("HEAD " + key, () ->
         s3client.getObjectMetadata(bucket, key));
+    return String.format("Object %s of length %d",
+        key, md.getInstanceLength());
   }
 
   /**
@@ -599,7 +651,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
    */
   private void assertRenamed(final Path src, final Path dest)
       throws IOException {
-    assertTrue("rename(" + src + ", " + dest + ")",
+    assertTrue("rename(" + src + ", " + dest + ") failed",
         getFileSystem().rename(src, dest));
   }
 

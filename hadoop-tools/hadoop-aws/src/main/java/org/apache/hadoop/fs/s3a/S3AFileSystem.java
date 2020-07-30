@@ -117,6 +117,8 @@ import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
 import org.apache.hadoop.fs.s3a.impl.statistics.S3AMultipartUploaderStatisticsImpl;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.select.InternalSelectConstants;
+import org.apache.hadoop.fs.s3a.tools.MarkerToolOperations;
+import org.apache.hadoop.fs.s3a.tools.MarkerToolOperationsImpl;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.DelegationTokenIssuer;
@@ -4980,12 +4982,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Get the operation callbacks for this FS.
+   * Create a marker tools operations binding for this store.
    * @return callbacks for operations.
    */
   @InterfaceAudience.Private
-  public OperationCallbacks getOperationCallbacks() {
-    return operationCallbacks;
+  public MarkerToolOperations createMarkerToolOperations() {
+    return new MarkerToolOperationsImpl(operationCallbacks);
   }
 
   /**

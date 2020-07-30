@@ -330,7 +330,8 @@ public class InconsistentAmazonS3Client extends AmazonS3Client {
     } else {
       Path actualParentPath = new Path(child).getParent();
       Path expectedParentPath = new Path(parent);
-      return actualParentPath.equals(expectedParentPath);
+      // children which are directory markers are excluded here
+      return actualParentPath.equals(expectedParentPath) && !child.endsWith("/");
     }
   }
 

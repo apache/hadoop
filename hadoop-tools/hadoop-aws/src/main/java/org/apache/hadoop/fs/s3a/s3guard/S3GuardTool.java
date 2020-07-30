@@ -30,6 +30,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -50,6 +51,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.s3a.MultipartUtils;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
@@ -508,6 +510,25 @@ public abstract class S3GuardTool extends Configured implements Tool,
    */
   public abstract int run(String[] args, PrintStream out) throws Exception,
       ExitUtil.ExitException;
+
+  /**
+   * Dump the filesystem Storage Statistics if the FS is not null.
+   * @param stream output stream
+   */
+  protected void dumpFileSystemStatistics(PrintStream stream) {
+    FileSystem fs = getFilesystem();
+    if (fs == null) {
+      return;
+    }
+    println(stream, "Storage Statistics for %s", fs.getUri());
+    StorageStatistics st = fs.getStorageStatistics();
+    Iterator<StorageStatistics.LongStatistic> it
+        = st.getLongStatistics();
+    while (it.hasNext()) {
+      StorageStatistics.LongStatistic next = it.next();
+      println(stream, "%s\t%s", next.getName(), next.getValue());
+    }
+  }
 
   /**
    * Create the metadata store.

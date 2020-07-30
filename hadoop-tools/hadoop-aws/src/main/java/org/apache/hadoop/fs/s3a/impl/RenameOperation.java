@@ -224,7 +224,20 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
   private void queueToDelete(
       List<DirMarkerTracker.Marker> markersToDelete) {
     markersToDelete.forEach(m ->
-        queueToDelete(m.getPath(), m.getKey(), m.getStatus().getVersionId()));
+        queueToDelete(m));
+  }
+
+  /**
+   * Queue a single marker for deletion.
+   * <p></p>
+   * See {@link #queueToDelete(Path, String, String)} for
+   * details on safe use of this method.
+   *
+   * @param marker markers
+   */
+  private void queueToDelete(final DirMarkerTracker.Marker marker) {
+    queueToDelete(marker.getPath(), marker.getKey(),
+        marker.getStatus().getVersionId());
   }
 
   /**
@@ -454,7 +467,6 @@ Are   * @throws IOException failure
         completeActiveCopies("batch threshold reached");
       }
     }
-
   }
 
   /**
@@ -513,6 +525,7 @@ Are   * @throws IOException failure
               source,
               newDestKey,
               childDestPath));
+      queueToDelete(entry);
       // end of loop
       endOfLoopActions();
     }
@@ -622,8 +635,8 @@ Are   * @throws IOException failure
     try {
       // remove the keys
 
-      // first list what is being deleted for the interest of anyone
-      // who is trying to debug while objects are no longer there.
+      // list what is being deleted for the interest of anyone
+      // who is trying to debug why objects are no longer there.
       if (LOG.isDebugEnabled()) {
         LOG.debug("Initiating delete operation for {} objects", keys.size());
         for (DeleteObjectsRequest.KeyVersion key : keys) {
@@ -642,7 +655,7 @@ Are   * @throws IOException failure
       // and clear the list.
     } catch (AmazonClientException | IOException e) {
       // Failed.
-      // Notify the rename operation.
+      // Notify the rename tracker.
       // removeKeys will have already purged the metastore of
       // all keys it has known to delete; this is just a final
       // bit of housekeeping and a chance to tune exception

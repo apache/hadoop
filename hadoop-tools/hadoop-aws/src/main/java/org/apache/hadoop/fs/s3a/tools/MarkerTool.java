@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -39,14 +38,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
 import org.apache.hadoop.fs.s3a.UnknownStoreException;
 import org.apache.hadoop.fs.s3a.impl.DirMarkerTracker;
 import org.apache.hadoop.fs.s3a.impl.DirectoryPolicy;
-import org.apache.hadoop.fs.s3a.impl.OperationCallbacks;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool;
 import org.apache.hadoop.fs.shell.CommandFormat;
@@ -76,14 +73,22 @@ import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_USAGE;
  */
 public final class MarkerTool extends S3GuardTool {
 
-  private static final Logger LOG =
-      LoggerFactory.getLogger(MarkerTool.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MarkerTool.class);
 
+  /**
+   * Name of this tool: {@value}.
+   */
   public static final String NAME = "markers";
 
+  /**
+   * Purpose of this tool: {@value}.
+   */
   public static final String PURPOSE =
       "View and manipulate S3 directory markers";
 
+  /**
+   * Usage string: {@value}.
+   */
   private static final String USAGE = NAME
       + " [-" + VERBOSE + "]"
       + " (audit | report | clean)"
@@ -118,23 +123,43 @@ public final class MarkerTool extends S3GuardTool {
 
   /**
    * Constant to use when there is no limit on the number of
-   * markers expected.
+   * markers expected: {@value}.
    */
   private static final int UNLIMITED = -1;
 
   /** Will be overridden in run(), but during tests needs to avoid NPEs. */
   private PrintStream out = System.out;
 
+  /**
+   * Verbosity flag.
+   */
   private boolean verbose;
 
+  /**
+   * Should the scan also purge surplus markers?
+   */
   private boolean purge;
 
+  /**
+   * How many markers are expected;
+   * {@link #UNLIMITED} means no limit.
+   */
   private int expected;
 
-  private OperationCallbacks operationCallbacks;
-
+  /**
+   * Store context.
+   */
   private StoreContext storeContext;
 
+  /**
+   * Operations during the scan.
+   */
+  private MarkerToolOperations operations;
+
+  /**
+   * Constructor.
+   * @param conf
+   */
   public MarkerTool(final Configuration conf) {
     super(conf, OPT_VERBOSE);
   }
@@ -153,7 +178,7 @@ public final class MarkerTool extends S3GuardTool {
   public void resetBindings() {
     super.resetBindings();
     storeContext = null;
-    operationCallbacks = null;
+    operations = null;
   }
 
   @Override
@@ -205,6 +230,9 @@ public final class MarkerTool extends S3GuardTool {
         path,
         purge,
         expected);
+    if (verbose) {
+      dumpFileSystemStatistics(out);
+    }
     return result.exitCode;
   }
 
@@ -226,22 +254,33 @@ public final class MarkerTool extends S3GuardTool {
       throws IOException {
     S3AFileSystem fs = bindFilesystem(sourceFS);
     storeContext = fs.createStoreContext();
-    operationCallbacks = fs.getOperationCallbacks();
+    operations = fs.createMarkerToolOperations();
 
     DirectoryPolicy.MarkerPolicy policy = fs.getDirectoryMarkerPolicy();
     println(out, "The store's directory marker policy is \"%s\"",
         policy);
     if (policy == DirectoryPolicy.MarkerPolicy.Authoritative) {
       // in auth mode, note the auth paths.
-      String authPath = fs.getConf().getTrimmed(AUTHORITATIVE_PATH, "unset");
+      String authPath = storeContext.getConfiguration()
+          .getTrimmed(AUTHORITATIVE_PATH, "unset");
       println(out, "Authoritative path list is %s", authPath);
     }
+    // validate the FS
+    try {
+      getFilesystem().getFileStatus(path);
+    } catch (UnknownStoreException ex) {
+      // bucket doesn't exist.
+      // replace the stack trace with an error code.
+      throw new ExitUtil.ExitException(LauncherExitCodes.EXIT_NOT_FOUND,
+          ex.toString(), ex);
 
+    } catch (FileNotFoundException ex) {
+      throw new ExitUtil.ExitException(LauncherExitCodes.EXIT_NOT_FOUND,
+          "Not found: " + path, ex);
+
+    }
     ScanResult result = once("action", path.toString(),
         () -> scan(path, doPurge, expectedMarkerCount));
-    if (verbose) {
-      dumpFileSystemStatistics(fs);
-    }
     return result;
   }
 
@@ -250,10 +289,19 @@ public final class MarkerTool extends S3GuardTool {
    */
   static final class ScanResult {
 
+    /**
+     * Exit code to return if an exception was not raised.
+     */
     private int exitCode;
 
+    /**
+     * The tracker.
+     */
     private DirMarkerTracker tracker;
 
+    /**
+     * Scan summary.
+     */
     private MarkerPurgeSummary purgeSummary;
 
     @Override
@@ -296,19 +344,7 @@ public final class MarkerTool extends S3GuardTool {
       final int expectedMarkerCount)
       throws IOException, ExitUtil.ExitException {
     // initial safety check: does the path exist
-    try {
-      getFilesystem().getFileStatus(path);
-    } catch (UnknownStoreException ex) {
-      // bucket doesn't exist.
-      // replace the stack trace with an error code.
-      throw new ExitUtil.ExitException(LauncherExitCodes.EXIT_NOT_FOUND,
-          ex.toString(), ex);
 
-    } catch (FileNotFoundException ex) {
-      throw new ExitUtil.ExitException(LauncherExitCodes.EXIT_NOT_FOUND,
-          "Not found: " + path, ex);
-
-    }
     ScanResult result = new ScanResult();
 
     DirMarkerTracker tracker = new DirMarkerTracker();
@@ -316,8 +352,8 @@ public final class MarkerTool extends S3GuardTool {
     try (DurationInfo ignored =
              new DurationInfo(LOG, "marker scan %s", path)) {
       scanDirectoryTree(path, tracker);
-
     }
+
     // scan done. what have we got?
     Map<Path, DirMarkerTracker.Marker> surplusMarkers
         = tracker.getSurplusMarkers();
@@ -386,29 +422,28 @@ public final class MarkerTool extends S3GuardTool {
    */
   private void scanDirectoryTree(final Path path,
       final DirMarkerTracker tracker) throws IOException {
-    RemoteIterator<S3AFileStatus> listing = operationCallbacks
+    RemoteIterator<S3AFileStatus> listing = operations
         .listObjects(path, storeContext.pathToKey(path));
     while (listing.hasNext()) {
       S3AFileStatus status = listing.next();
-      Path p = status.getPath();
-      S3ALocatedFileStatus lfs = new S3ALocatedFileStatus(
+      Path statusPath = status.getPath();
+      S3ALocatedFileStatus locatedStatus = new S3ALocatedFileStatus(
           status, null);
-      String key = storeContext.pathToKey(p);
+      String key = storeContext.pathToKey(statusPath);
       if (status.isDirectory()) {
         if (verbose) {
           println(out, "Directory Marker %s", key);
         }
         LOG.debug("{}", key);
-        tracker.markerFound(p,
+        tracker.markerFound(statusPath,
             key + "/",
-            lfs);
+            locatedStatus);
       } else {
-        tracker.fileFound(p,
+        tracker.fileFound(statusPath,
             key,
-            lfs);
+            locatedStatus);
       }
     }
-
   }
 
   /**
@@ -500,7 +535,7 @@ public final class MarkerTool extends S3GuardTool {
           end);
       List<Path> undeleted = new ArrayList<>();
       OperationDuration duration = new OperationDuration();
-      operationCallbacks.removeKeys(page, true, undeleted, null, false);
+      operations.removeKeys(page, true, undeleted, null, false);
       duration.finished();
       summary.deleteRequests++;
       summary.totalDeleteRequestDuration += duration.value();
@@ -509,24 +544,6 @@ public final class MarkerTool extends S3GuardTool {
     }
     summary.markersDeleted = size;
     return summary;
-  }
-
-  /**
-   * Dump the filesystem Storage Statistics.
-   * @param fs filesystem; can be null
-   */
-  private void dumpFileSystemStatistics(FileSystem fs) {
-    if (fs == null) {
-      return;
-    }
-    println(out, "Storage Statistics");
-    StorageStatistics st = fs.getStorageStatistics();
-    Iterator<StorageStatistics.LongStatistic> it
-        = st.getLongStatistics();
-    while (it.hasNext()) {
-      StorageStatistics.LongStatistic next = it.next();
-      println(out, "%s\t%s", next.getName(), next.getValue());
-    }
   }
 
   public boolean isVerbose() {
