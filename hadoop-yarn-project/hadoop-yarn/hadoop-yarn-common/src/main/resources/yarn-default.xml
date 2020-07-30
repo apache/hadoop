@@ -364,6 +364,12 @@
   </property>
 
   <property>
+    <description>Enables YARN Autoscaling Recommendation API</description>
+    <name>yarn.cluster.scaling.recommendation.enable</name>
+    <value>true</value>
+  </property>
+
+  <property>
     <description>The address of the RM admin interface.</description>
     <name>yarn.resourcemanager.admin.address</name>
     <value>${yarn.resourcemanager.hostname}:8033</value>
