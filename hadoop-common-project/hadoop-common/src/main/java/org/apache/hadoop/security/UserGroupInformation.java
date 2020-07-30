@@ -529,6 +529,10 @@ public class UserGroupInformation {
     user.setLogin(login);
   }
   
+  /**
+   * Set the last login time for logged in user
+   * @param time the number of milliseconds since the beginning of time
+   */
   private void setLastLogin(long now) {
     user.setLastLogin(now);
   }

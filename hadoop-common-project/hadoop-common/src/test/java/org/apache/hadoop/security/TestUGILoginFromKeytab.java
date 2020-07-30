@@ -119,7 +119,9 @@ public class TestUGILoginFromKeytab {
 
     User user = getUser(ugi.getSubject());
     Assert.assertNotNull(user.getLogin());
-    Assert.assertTrue("User last login time is not set correctly",
+ 
+    Assert.assertTrue("User login time is less than before login time, "
+        + "beforeLoginTime:" + beforeLogin + " userLoginTime:" + user.getLastLogin(),
 	    user.getLastLogin() > beforeLogin);
   }
 
@@ -143,9 +145,9 @@ public class TestUGILoginFromKeytab {
     final long firstLogin = user.getLastLogin();
     final LoginContext login1 = user.getLogin();
     Assert.assertNotNull(login1);
-    
-    // Sleep for 1 sec to have a difference between first and second login
-    Thread.sleep(1000);
+
+    // Sleep for 2 secs to have a difference between first and second login
+    Thread.sleep(2000);
 
     ugi.reloginFromKeytab();
     final long secondLogin = user.getLastLogin();
