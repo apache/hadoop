@@ -528,6 +528,10 @@ public class UserGroupInformation {
   private void setLogin(LoginContext login) {
     user.setLogin(login);
   }
+  
+  private void setLastLogin(long now) {
+    user.setLastLogin(now);
+  }
 
   /**
    * Create a UserGroupInformation for the given subject.
@@ -1968,6 +1972,7 @@ public class UserGroupInformation {
       if (subject == null) {
         params.put(LoginParam.PRINCIPAL, ugi.getUserName());
         ugi.setLogin(login);
+        ugi.setLastLogin(Time.now());
       }
       return ugi;
     } catch (LoginException le) {
