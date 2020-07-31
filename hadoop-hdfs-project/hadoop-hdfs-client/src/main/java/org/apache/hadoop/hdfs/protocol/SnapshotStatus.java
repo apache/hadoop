@@ -174,6 +174,9 @@ public class SnapshotStatus {
     return Math.max(n, String.valueOf(value).length());
   }
 
+  /**
+   * To be used to for collection of snapshot jmx.
+   */
   public static class Bean {
     private final String path;
     private final int snapshotID;
@@ -181,15 +184,19 @@ public class SnapshotStatus {
     private final short permission;
     private final String owner;
     private final String group;
+    private final boolean isDeleted;
+
 
     public Bean(String path, int snapshotID, long
-        modificationTime, short permission, String owner, String group) {
+        modificationTime, short permission, String owner, String group,
+                boolean isDeleted) {
       this.path = path;
       this.snapshotID = snapshotID;
       this.modificationTime = modificationTime;
       this.permission = permission;
       this.owner = owner;
       this.group = group;
+      this.isDeleted = isDeleted;
     }
 
     public String getPath() {
@@ -216,8 +223,8 @@ public class SnapshotStatus {
       return group;
     }
 
-    public boolean isDELETED () {
-      return isDELETED();
+    public boolean isDeleted() {
+      return isDeleted;
     }
   }
 
