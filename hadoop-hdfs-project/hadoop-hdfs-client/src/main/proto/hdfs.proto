@@ -574,6 +574,7 @@ message SnapshotStatusProto {
   // Fields specific for snapshot directory
   required uint32 snapshotID = 2;
   required bytes parent_fullpath = 3;
+  required bool isDeleted = 4;
 }
 
 

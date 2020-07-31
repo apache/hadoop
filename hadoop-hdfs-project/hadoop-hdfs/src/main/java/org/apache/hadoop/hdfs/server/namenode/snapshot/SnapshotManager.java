@@ -599,7 +599,8 @@ public class SnapshotManager implements SnapshotStatsMXBean {
           // It is expensive to build the snapshot tree for the directory
           // and determine the child count.
           dir.getChildrenNum(Snapshot.CURRENT_STATE_ID),
-          s.getId(), DFSUtil.string2Bytes(dir.getParent().getFullPathName()));
+          s.getId(), s.getRoot().isMarkedAsDeleted(),
+          DFSUtil.string2Bytes(dir.getParent().getFullPathName()));
 
     }
     return statuses;
