@@ -263,6 +263,7 @@ if (HADOOP_BUILD)
     ${CMAKE_THREAD_LIBS_INIT}
   )
   set_target_properties(hdfspp PROPERTIES SOVERSION ${LIBHDFSPP_VERSION})
+  hadoop_dual_output_directory(hdfspp ${OUT_DIR})
 else (HADOOP_BUILD)
   add_library(hdfspp_static STATIC ${EMPTY_FILE_CC} ${LIBHDFSPP_ALL_OBJECTS})
   target_link_libraries(hdfspp_static
