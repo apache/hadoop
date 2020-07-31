@@ -545,16 +545,22 @@ public class ClientNamenodeProtocolTranslatorPB implements
         .newBuilder()
         .setSrc(src)
         .setFileId(fileId)
-        .setBlk(PBHelperClient.convert(blk))
-        .addAllExistings(PBHelperClient.convert(existings))
         .addAllExistingStorageUuids(Arrays.asList(existingStorageIDs))
-        .addAllExcludes(PBHelperClient.convert(excludes))
         .setNumAdditionalNodes(numAdditionalNodes)
-        .setClientName(clientName)
-        .build();
+        .setClientName(clientName);
+
+    if (blk != null) {
+      req.setBlk(PBHelperClient.convert(blk));
+    }
+    if (existings != null) {
+      req.addAllExistings(PBHelperClient.convert(existings));
+    }
+    if (excludes != null) {
+      req.addAllExcludes(PBHelperClient.convert(excludes));
+    }
     try {
       return PBHelperClient.convertLocatedBlockProto(
-          rpcProxy.getAdditionalDatanode(null, req).getBlock());
+          rpcProxy.getAdditionalDatanode(null, req.build()).getBlock());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
