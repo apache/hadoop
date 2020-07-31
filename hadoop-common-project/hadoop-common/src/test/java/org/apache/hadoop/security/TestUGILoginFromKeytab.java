@@ -101,9 +101,9 @@ public class TestUGILoginFromKeytab {
       executor.shutdownNow();
     }
   }
-  
+
   /**
-   * Login from keytab using the MiniKDC
+   * Login from keytab using the MiniKDC.
    */
   @Test
   public void testUGILoginFromKeytab() throws Exception {
@@ -122,7 +122,7 @@ public class TestUGILoginFromKeytab {
  
     Assert.assertTrue("User login time is less than before login time, "
         + "beforeLoginTime:" + beforeLogin + " userLoginTime:" + user.getLastLogin(),
-	    user.getLastLogin() > beforeLogin);
+            user.getLastLogin() > beforeLogin);
   }
 
   /**
