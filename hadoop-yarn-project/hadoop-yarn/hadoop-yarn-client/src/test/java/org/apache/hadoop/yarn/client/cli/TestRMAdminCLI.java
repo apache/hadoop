@@ -775,11 +775,6 @@ public class TestRMAdminCLI {
           "Usage: yarn rmadmin [-getServiceState <serviceId>]", dataErr, 0);
       testError(new String[] { "-help", "-checkHealth" },
           "Usage: yarn rmadmin [-checkHealth <serviceId>]", dataErr, 0);
-      testError(new String[] { "-help", "-failover" },
-          "Usage: yarn rmadmin " +
-              "[-failover [--forcefence] [--forceactive] " +
-              "<serviceId> <serviceId>]",
-          dataErr, 0);
 
       testError(new String[] { "-help", "-badParameter" },
           "Usage: yarn rmadmin", dataErr, 0);
@@ -1062,7 +1057,7 @@ public class TestRMAdminCLI {
     ByteArrayOutputStream errOutBytes = new ByteArrayOutputStream();
     rmAdminCLIWithHAEnabled.setErrOut(new PrintStream(errOutBytes));
     try {
-      String[] args = { "-failover" };
+      String[] args = { "-transitionToActive" };
       assertEquals(-1, rmAdminCLIWithHAEnabled.run(args));
       String errOut = new String(errOutBytes.toByteArray(), Charsets.UTF_8);
       errOutBytes.reset();
