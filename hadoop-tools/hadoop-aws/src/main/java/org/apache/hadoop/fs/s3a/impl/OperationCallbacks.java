@@ -40,8 +40,7 @@ import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 
 /**
- * These are all the callbacks which the {@link RenameOperation},
- * {@link org.apache.hadoop.fs.s3a.Listing }
+ * These are all the callbacks which the {@link RenameOperation}
  * and {@link DeleteOperation } operations need,
  * derived from the appropriate S3AFileSystem methods.
  */

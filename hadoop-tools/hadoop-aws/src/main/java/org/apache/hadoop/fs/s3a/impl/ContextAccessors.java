@@ -82,26 +82,4 @@ public interface ContextAccessors {
    * @return possibly new path.
    */
   Path makeQualified(Path path);
-
-  /**
-   * Return the number of bytes that large input files should be optimally
-   * be split into to minimize I/O time.  The given path will be used to
-   * locate the actual filesystem.  The full path does not have to exist.
-   * @param path path of file
-   * @return the default block size for the path's filesystem
-   */
-  long getDefaultBlockSize(Path path);
-
-  /**
-   * Get the maximum key count.
-   * @return a value, valid after initialization
-   */
-  int getMaxKeys();
-
-  /**
-   * Get the updated time provider for the current fs instance.
-   * @return implementation of {@link ITtlTimeProvider}
-   */
-  ITtlTimeProvider getUpdatedTtlTimeProvider();
-
 }

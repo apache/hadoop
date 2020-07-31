@@ -237,8 +237,6 @@ public class TestPartialDeleteFailures {
         .setUseListV1(false)
         .setContextAccessors(CONTEXT_ACCESSORS)
         .setTimeProvider(new S3Guard.TtlTimeProvider(conf))
-        .setOperationCallbacks(new MinimalOperationCallbacks())
-        .setListingOperationCallbacks(new MinimalListingOperationCallbacks())
         .build();
   }
 
@@ -268,6 +266,26 @@ public class TestPartialDeleteFailures {
             String key,
             String delimiter) {
       return null;
+    }
+
+    @Override
+    public long getDefaultBlockSize(Path path) {
+      return 0;
+    }
+
+    @Override
+    public int getMaxKeys() {
+      return 0;
+    }
+
+    @Override
+    public ITtlTimeProvider getUpdatedTtlTimeProvider() {
+      return null;
+    }
+
+    @Override
+    public boolean allowAuthoritative(Path p) {
+      return false;
     }
   }
   private static class MinimalOperationCallbacks implements OperationCallbacks {
@@ -381,21 +399,6 @@ public class TestPartialDeleteFailures {
     @Override
     public Path makeQualified(final Path path) {
       return path;
-    }
-
-    @Override
-    public long getDefaultBlockSize(Path path) {
-      return 0;
-    }
-
-    @Override
-    public int getMaxKeys() {
-      return 0;
-    }
-
-    @Override
-    public ITtlTimeProvider getUpdatedTtlTimeProvider() {
-      return null;
     }
   }
   /**

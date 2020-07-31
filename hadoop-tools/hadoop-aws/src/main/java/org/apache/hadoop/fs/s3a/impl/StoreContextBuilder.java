@@ -170,18 +170,6 @@ public class StoreContextBuilder {
     return this;
   }
 
-  public StoreContextBuilder setOperationCallbacks(
-          OperationCallbacks operationCallbacks) {
-    this.operationCallbacks = operationCallbacks;
-    return this;
-  }
-
-  public StoreContextBuilder setListingOperationCallbacks(
-          ListingOperationCallbacks listingOperationCallbacks) {
-    this.listingOperationCallbacks = listingOperationCallbacks;
-    return this;
-  }
-
   @SuppressWarnings("deprecation")
   public StoreContext build() {
     return new StoreContext(fsURI,
@@ -200,8 +188,6 @@ public class StoreContextBuilder {
         metadataStore,
         useListV1,
         contextAccessors,
-        timeProvider,
-        operationCallbacks,
-        listingOperationCallbacks);
+        timeProvider);
   }
 }

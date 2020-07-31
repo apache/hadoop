@@ -149,7 +149,6 @@ import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
 import org.apache.hadoop.fs.s3a.select.SelectBinding;
 import org.apache.hadoop.fs.s3a.select.SelectConstants;
 import org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata;
-import org.apache.hadoop.fs.s3a.s3guard.MetadataStoreListFilesIterator;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.PathMetadata;
 import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
@@ -294,8 +293,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private final S3AFileSystem.OperationCallbacksImpl
       operationCallbacks = new OperationCallbacksImpl();
 
-  private final S3AFileSystem.ListingOperationCallbacksImpl
-      listingOperationCallbacks = new ListingOperationCallbacksImpl();
+  private final ListingOperationCallbacks listingOperationCallbacks =
+          new ListingOperationCallbacksImpl();
 
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
@@ -458,7 +457,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       pageSize = intOption(getConf(), BULK_DELETE_PAGE_SIZE,
           BULK_DELETE_PAGE_SIZE_DEFAULT, 0);
-      listing = new Listing(createStoreContext());
+      listing = new Listing(listingOperationCallbacks, createStoreContext());
     } catch (AmazonClientException e) {
       // amazon client exception: stop all services then throw the translation
       stopAllServices();
@@ -591,6 +590,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   public S3AInstrumentation getInstrumentation() {
     return instrumentation;
+  }
+
+  /**
+   * Get current listing instance.
+   * @return this instance's listing.
+   */
+  public Listing getListing() {
+    return listing;
   }
 
   /**
@@ -1630,6 +1637,26 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     @Override
     public S3ListRequest createListObjectsRequest(String key, String delimiter) {
       return S3AFileSystem.this.createListObjectsRequest(key, delimiter);
+    }
+
+    @Override
+    public long getDefaultBlockSize(Path path) {
+      return S3AFileSystem.this.getDefaultBlockSize(path);
+    }
+
+    @Override
+    public int getMaxKeys() {
+      return S3AFileSystem.this.getMaxKeys();
+    }
+
+    @Override
+    public ITtlTimeProvider getUpdatedTtlTimeProvider() {
+      return S3AFileSystem.this.ttlTimeProvider;
+    }
+
+    @Override
+    public boolean allowAuthoritative(final Path p) {
+      return S3AFileSystem.this.allowAuthoritative(p);
     }
   }
 
@@ -4765,8 +4792,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .setUseListV1(useListV1)
         .setContextAccessors(new ContextAccessorsImpl())
         .setTimeProvider(getTtlTimeProvider())
-        .setOperationCallbacks(operationCallbacks)
-        .setListingOperationCallbacks(listingOperationCallbacks)
         .build();
   }
 
@@ -4801,19 +4826,5 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       return S3AFileSystem.this.makeQualified(path);
     }
 
-    @Override
-    public long getDefaultBlockSize(Path path) {
-      return S3AFileSystem.this.getDefaultBlockSize(path);
-    }
-
-    @Override
-    public int getMaxKeys() {
-      return S3AFileSystem.this.getMaxKeys();
-    }
-
-    @Override
-    public ITtlTimeProvider getUpdatedTtlTimeProvider() {
-      return S3AFileSystem.this.ttlTimeProvider;
-    }
   }
 }

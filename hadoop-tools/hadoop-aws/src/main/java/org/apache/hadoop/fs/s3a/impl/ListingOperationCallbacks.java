@@ -3,11 +3,13 @@ package org.apache.hadoop.fs.s3a.impl;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
 import org.apache.hadoop.fs.s3a.S3ListRequest;
 import org.apache.hadoop.fs.s3a.S3ListResult;
+import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
 
 /**
  * These are all the callbacks which
@@ -56,12 +58,43 @@ public interface ListingOperationCallbacks {
           throws IOException;
   /**
    * Create a {@code ListObjectsRequest} request against this bucket,
-   * with the maximum keys returned in a query set by {@link ContextAccessors#getMaxKeys()}.
+   * with the maximum keys returned in a query set by {@link this.getMaxKeys()}.
    * @param key key for request
    * @param delimiter any delimiter
    * @return the request
    */
-  public S3ListRequest createListObjectsRequest(
+  S3ListRequest createListObjectsRequest(
           String key,
           String delimiter);
+
+
+  /**
+   * Return the number of bytes that large input files should be optimally
+   * be split into to minimize I/O time.  The given path will be used to
+   * locate the actual filesystem.  The full path does not have to exist.
+   * @param path path of file
+   * @return the default block size for the path's filesystem
+   */
+  long getDefaultBlockSize(Path path);
+
+  /**
+   * Get the maximum key count.
+   * @return a value, valid after initialization
+   */
+  int getMaxKeys();
+
+  /**
+   * Get the updated time provider for the current fs instance.
+   * @return implementation of {@link ITtlTimeProvider}
+   */
+  ITtlTimeProvider getUpdatedTtlTimeProvider();
+
+  /**
+   * Is the path for this instance considered authoritative on the client,
+   * that is: will listing/status operations only be handled by the metastore,
+   * with no fallback to S3.
+   * @param p path
+   * @return true iff the path is authoritative on the client.
+   */
+  boolean allowAuthoritative(Path p);
 }
