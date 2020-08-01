@@ -2415,6 +2415,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       boolean quiet)
       throws MultiObjectDeleteException, AmazonClientException,
       IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Initiating delete operation for {} objects",
+          keysToDelete.size());
+      for (DeleteObjectsRequest.KeyVersion key : keysToDelete) {
+        LOG.debug(" {} {}", key.getKey(),
+            key.getVersion() != null ? key.getVersion() : "");
+      }
+    }
     DeleteObjectsResult result = null;
     if (keysToDelete.isEmpty()) {
       // exit fast if there are no keys to delete

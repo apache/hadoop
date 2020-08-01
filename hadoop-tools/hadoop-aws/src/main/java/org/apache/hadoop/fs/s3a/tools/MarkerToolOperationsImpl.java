@@ -56,7 +56,8 @@ public class MarkerToolOperationsImpl implements MarkerToolOperations {
   }
 
   @Override
-  public DeleteObjectsResult removeKeys(final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
+  public DeleteObjectsResult removeKeys(
+      final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
       final boolean deleteFakeDir,
       final List<Path> undeletedObjectsOnFailure,
       final BulkOperationState operationState,

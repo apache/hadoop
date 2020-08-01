@@ -25,11 +25,15 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.AbstractFSContractTestBase;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
+import org.apache.hadoop.fs.s3a.impl.DirectoryPolicy;
+import org.apache.hadoop.fs.s3a.tools.ITestMarkerTool;
+import org.apache.hadoop.fs.s3a.tools.MarkerTool;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
@@ -62,6 +66,23 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
   @Override
   public void teardown() throws Exception {
     Thread.currentThread().setName("teardown");
+    // Perform an audit of the directory tree with the marker tool
+    S3AFileSystem fs = getFileSystem();
+    if (fs != null &&
+        fs.getDirectoryMarkerPolicy() == DirectoryPolicy.MarkerPolicy.Delete
+        && fs.isDirectory(methodPath())) {
+      try {
+        MarkerTool.ScanResult result = MarkerTool.execMarkerTool(fs,
+            methodPath(), true, 0);
+        if (result.getExitCode() != 0) {
+          LOG.warn("Marker Tool Exit Code indicated failure {}", result);
+        }
+      } catch (FileNotFoundException ignored) {
+      } catch (Exception e) {
+        LOG.warn("Marker Tool Failure", e);
+      }
+    }
+
     super.teardown();
     describe("closing file system");
     IOUtils.closeStream(getFileSystem());

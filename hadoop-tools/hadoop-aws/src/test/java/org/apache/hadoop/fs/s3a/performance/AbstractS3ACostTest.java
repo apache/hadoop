@@ -560,7 +560,7 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
    * @param expected expected value.
    * @return the diff.
    */
-  protected OperationCostValidator.ExpectedProbe raw(
+  protected OperationCostValidator.ExpectedProbe whenRraw(
       final Statistic stat, final int expected) {
     return probe(isRaw(), stat, expected);
   }
@@ -571,7 +571,7 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
    * @param expected expected value.
    * @return the diff.
    */
-  protected OperationCostValidator.ExpectedProbe guarded(
+  protected OperationCostValidator.ExpectedProbe whenGuarded(
       final Statistic stat,
       final int expected) {
     return probe(isGuarded(), stat, expected);
@@ -583,7 +583,7 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
    * @param expected expected value.
    * @return the diff.
    */
-  protected OperationCostValidator.ExpectedProbe authoritative(
+  protected OperationCostValidator.ExpectedProbe whenAuthoritative(
       final Statistic stat,
       final int expected) {
     return probe(isAuthoritative(), stat, expected);
@@ -595,31 +595,31 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
    * @param expected expected value.
    * @return the diff.
    */
-  protected OperationCostValidator.ExpectedProbe nonauth(
+  protected OperationCostValidator.ExpectedProbe whenNonauth(
       final Statistic stat,
       final int expected) {
     return probe(isNonAuth(), stat, expected);
   }
 
   /**
-   * A metric diff which must hold when the fs is keeping markers
+   * A metric diff which must hold when the fs is keeping markers.
    * @param stat metric source
    * @param expected expected value.
    * @return the diff.
    */
-  protected OperationCostValidator.ExpectedProbe keeping(
+  protected OperationCostValidator.ExpectedProbe whenKeeping(
       final Statistic stat,
       final int expected) {
     return probe(isKeepingMarkers(), stat, expected);
   }
 
   /**
-   * A metric diff which must hold when the fs is keeping markers
+   * A metric diff which must hold when the fs is keeping markers.
    * @param stat metric source
    * @param expected expected value.
    * @return the diff.
    */
-  protected OperationCostValidator.ExpectedProbe deleting(
+  protected OperationCostValidator.ExpectedProbe whenDeleting(
       final Statistic stat,
       final int expected) {
     return probe(isDeleting(), stat, expected);
@@ -635,7 +635,8 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
     Assertions.assertThat(status.isEmptyDirectory())
         .describedAs(dynamicDescription(() ->
             "FileStatus says directory is not empty: " + status
-                + "\n" + ContractTestUtils.ls(getFileSystem(), status.getPath())))
+                + "\n" + ContractTestUtils.ls(
+                    getFileSystem(), status.getPath())))
         .isEqualTo(expected);
   }
 }

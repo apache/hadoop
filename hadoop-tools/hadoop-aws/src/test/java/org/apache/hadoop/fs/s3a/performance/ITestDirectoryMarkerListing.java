@@ -244,7 +244,8 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
   public void testListStatusBaseDirRecursive() throws Throwable {
     List<FileStatus> statuses = toList(
         getFileSystem().listFiles(basePath, true));
-    assertContainsExactlyStatusOfPaths(statuses, filePathUnderMarker, markerPeer);
+    assertContainsExactlyStatusOfPaths(statuses, filePathUnderMarker,
+        markerPeer);
   }
 
   @Test
@@ -467,7 +468,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
   */
 
   /**
-   * Assert the test objects exist
+   * Assert the test objects exist.
    */
   private void assertTestObjectsExist() throws Exception {
     head(fileKeyUnderMarker);
@@ -579,7 +580,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
   }
 
   /**
-   * Assert the status object refers to a path at the given name
+   * Assert the status object refers to a path at the given name.
    * @param path path
    * @param stat status object
    */

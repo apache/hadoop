@@ -287,7 +287,7 @@ public final class MarkerTool extends S3GuardTool {
   /**
    * Result of the scan operation.
    */
-  static final class ScanResult {
+  public static final class ScanResult {
 
     /**
      * Exit code to return if an exception was not raised.
@@ -552,5 +552,27 @@ public final class MarkerTool extends S3GuardTool {
 
   public void setVerbose(final boolean verbose) {
     this.verbose = verbose;
+  }
+
+  /**
+   * Execute the marker tool, with no checks on return codes.
+   *
+   * @param sourceFS filesystem to use
+   * @param path path to scan
+   * @param doPurge should markers be purged
+   * @param expectedMarkers number of markers expected
+   * @return the result
+   */
+  @SuppressWarnings("IOResourceOpenedButNotSafelyClosed")
+  public static MarkerTool.ScanResult execMarkerTool(
+      final FileSystem sourceFS,
+      final Path path,
+      final boolean doPurge,
+      final int expectedMarkers) throws IOException {
+    MarkerTool tool = new MarkerTool(sourceFS.getConf());
+    tool.setVerbose(LOG.isDebugEnabled());
+
+    return tool.execute(sourceFS, path, doPurge,
+        expectedMarkers);
   }
 }

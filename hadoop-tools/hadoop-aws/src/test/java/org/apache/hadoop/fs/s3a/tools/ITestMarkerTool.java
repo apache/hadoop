@@ -39,6 +39,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.ExitUtil;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBucketOverrides;
@@ -105,8 +106,12 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
 
   @Override
   public void teardown() throws Exception {
+    // do this ourselves to avoid the marker checks in the superclass getting
+    // upset that even when the test FS delete markers, surplus markers are found
+    deleteTestDirInTeardown();
     super.teardown();
-    IOUtils.cleanupWithLogger(LOG, getKeepingFS(), getMixedFS(), getDeletingFS());
+    IOUtils.cleanupWithLogger(LOG, getKeepingFS(),
+        getMixedFS(), getDeletingFS());
 
   }
 
@@ -509,17 +514,15 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
    * @param expectedMarkers number of markers expected
    * @return the result
    */
-  @SuppressWarnings("IOResourceOpenedButNotSafelyClosed")
   public static MarkerTool.ScanResult markerTool(
       final int exitCode,
       final FileSystem sourceFS,
       final Path path,
       final boolean doPurge,
       final int expectedMarkers) throws IOException {
-    MarkerTool tool = new MarkerTool(sourceFS.getConf());
-    tool.setVerbose(LOG.isDebugEnabled());
 
-    MarkerTool.ScanResult result = tool.execute(sourceFS, path, doPurge,
+    MarkerTool.ScanResult result = MarkerTool.execMarkerTool(sourceFS, path,
+        doPurge,
         expectedMarkers);
     Assertions.assertThat(result.getExitCode())
         .describedAs("Exit code of marker(%s, %s, %d) -> %s",
@@ -557,7 +560,9 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
    * @throws Exception any exception
    */
   protected int run(String... args) throws Exception {
-    return S3GuardTool.run(getConfiguration(), args);
+    Configuration conf = new Configuration(getConfiguration());
+    disableFilesystemCaching(conf);
+    return S3GuardTool.run(conf, args);
   }
 
   /**

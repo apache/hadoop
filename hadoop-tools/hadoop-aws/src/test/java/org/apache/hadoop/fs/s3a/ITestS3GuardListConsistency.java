@@ -574,8 +574,8 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
         postDeleteDelimited.getCommonPrefixes());
     LOG.info("Executing Deep listing");
     ListObjectsV2Result postDeleteUndelimited = listObjectsV2(fs, key, null);
-    assertObjectSummariesEqual("InconsistentAmazonS3Client added back objects incorrectly " +
-            "in a recursive listing",
+    assertObjectSummariesEqual("InconsistentAmazonS3Client added back objects"
+            + " incorrectly in a recursive listing",
         preDeleteUndelimited, postDeleteUndelimited,
         stripTombstones);
 
@@ -596,7 +596,8 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
         stringify(actual.getObjectSummaries(), stripTombstones));
   }
 
-  List<String> stringify(List<S3ObjectSummary> objects, boolean stripTombstones) {
+  List<String> stringify(List<S3ObjectSummary> objects,
+      boolean stripTombstones) {
     return objects.stream()
         .filter(s -> !stripTombstones || !(s.getKey().endsWith("/")))
         .map(s -> s.getKey())

@@ -103,12 +103,12 @@ public class ITestS3ARenameCost extends AbstractS3ACostTest {
         always(DIRECTORIES_CREATED, 0),
         always(DIRECTORIES_DELETED, 0),
         // keeping: only the core delete operation is issued.
-        keeping(OBJECT_DELETE_REQUESTS, DELETE_OBJECT_REQUEST),
-        keeping(FAKE_DIRECTORIES_DELETED, 0),
+        whenKeeping(OBJECT_DELETE_REQUESTS, DELETE_OBJECT_REQUEST),
+        whenKeeping(FAKE_DIRECTORIES_DELETED, 0),
         // deleting: delete any fake marker above the destination.
-        deleting(OBJECT_DELETE_REQUESTS,
+        whenDeleting(OBJECT_DELETE_REQUESTS,
             DELETE_OBJECT_REQUEST + DELETE_MARKER_REQUEST),
-        deleting(FAKE_DIRECTORIES_DELETED, directoriesInPath(destDir)));
+        whenDeleting(FAKE_DIRECTORIES_DELETED, directoriesInPath(destDir)));
 
     assertIsFile(destFilePath);
     assertIsDirectory(srcDir);
@@ -175,9 +175,9 @@ public class ITestS3ARenameCost extends AbstractS3ACostTest {
 
       // delete that destination file, assert only the file delete was issued
       verifyMetrics(() -> {
-            fs.delete(dest, false);
-            return "after fs.delete(/dest) " + getMetricSummary();
-          },
+        fs.delete(dest, false);
+        return "after fs.delete(/dest) " + getMetricSummary();
+      },
           always(DIRECTORIES_CREATED, 0),
           always(DIRECTORIES_DELETED, 0),
           always(FAKE_DIRECTORIES_DELETED, 0),

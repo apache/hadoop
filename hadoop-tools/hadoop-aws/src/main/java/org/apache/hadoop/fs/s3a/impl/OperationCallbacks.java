@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.List;

@@ -129,8 +129,8 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
             fs.listFiles(file, true),
         rawHeadList(GETFILESTATUS_SINGLE_FILE_H,
             LIST_LOCATED_STATUS_L),
-        authoritative(OBJECT_LIST_REQUESTS, 0),
-        nonauth(OBJECT_LIST_REQUESTS,
+        whenAuthoritative(OBJECT_LIST_REQUESTS, 0),
+        whenNonauth(OBJECT_LIST_REQUESTS,
             LIST_FILES_L));
   }
 
@@ -268,7 +268,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
       verifyMetrics(() -> {
         s3a.copyFromLocalFile(false, true, localPath, remotePath);
         return "copy";
-        },
+      },
           always(INVOCATION_COPY_FROM_LOCAL_FILE, 1),
           always(OBJECT_PUT_REQUESTS, 1),
           always(OBJECT_PUT_BYTES, len));

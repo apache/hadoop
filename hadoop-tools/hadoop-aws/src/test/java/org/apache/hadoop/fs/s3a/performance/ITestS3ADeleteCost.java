@@ -96,18 +96,18 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
         // if deleting markers, look for the parent too
         probe(rawAndDeleting, OBJECT_METADATA_REQUESTS,
             FILESTATUS_FILE_PROBE_H + FILESTATUS_DIR_PROBE_H),
-        raw(OBJECT_LIST_REQUESTS,
+        whenRraw(OBJECT_LIST_REQUESTS,
             FILESTATUS_FILE_PROBE_L + FILESTATUS_DIR_PROBE_L),
         always(DIRECTORIES_DELETED, 0),
         always(FILES_DELETED, 1),
 
         // keeping: create no parent dirs or delete parents
-        keeping(DIRECTORIES_CREATED, 0),
-        keeping(OBJECT_DELETE_REQUESTS, DELETE_OBJECT_REQUEST),
+        whenKeeping(DIRECTORIES_CREATED, 0),
+        whenKeeping(OBJECT_DELETE_REQUESTS, DELETE_OBJECT_REQUEST),
 
         // deleting: create a parent and delete any of its parents
-        deleting(DIRECTORIES_CREATED, 1),
-        deleting(OBJECT_DELETE_REQUESTS,
+        whenDeleting(DIRECTORIES_CREATED, 1),
+        whenDeleting(OBJECT_DELETE_REQUESTS,
             DELETE_OBJECT_REQUEST
                 + DELETE_MARKER_REQUEST)
     );
@@ -129,11 +129,11 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
     },
         always(DIRECTORIES_CREATED, 1),
         always(DIRECTORIES_DELETED, 0),
-        keeping(OBJECT_DELETE_REQUESTS, 0),
-        keeping(FAKE_DIRECTORIES_DELETED, 0),
-        deleting(OBJECT_DELETE_REQUESTS, DELETE_MARKER_REQUEST),
+        whenKeeping(OBJECT_DELETE_REQUESTS, 0),
+        whenKeeping(FAKE_DIRECTORIES_DELETED, 0),
+        whenDeleting(OBJECT_DELETE_REQUESTS, DELETE_MARKER_REQUEST),
         // delete all possible fake dirs above the subdirectory
-        deleting(FAKE_DIRECTORIES_DELETED, directoriesInPath(subDir) - 1));
+        whenDeleting(FAKE_DIRECTORIES_DELETED, directoriesInPath(subDir) - 1));
   }
 
   @Test
@@ -154,11 +154,11 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
         always(DIRECTORIES_CREATED, 0),
         always(DIRECTORIES_DELETED, 0),
         // keeping: no delete operations.
-        keeping(OBJECT_DELETE_REQUESTS, 0),
-        keeping(FAKE_DIRECTORIES_DELETED, 0),
+        whenKeeping(OBJECT_DELETE_REQUESTS, 0),
+        whenKeeping(FAKE_DIRECTORIES_DELETED, 0),
         // delete all possible fake dirs above the file
-        deleting(OBJECT_DELETE_REQUESTS, 1),
-        deleting(FAKE_DIRECTORIES_DELETED, directoriesInPath(srcDir)));
+        whenDeleting(OBJECT_DELETE_REQUESTS, 1),
+        whenDeleting(FAKE_DIRECTORIES_DELETED, directoriesInPath(srcDir)));
   }
 
 }
