@@ -19,7 +19,6 @@ package org.apache.hadoop.fs.viewfs;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
@@ -32,7 +31,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
 import org.apache.commons.collections.map.LRUMap;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -43,7 +41,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,15 +49,15 @@ import org.slf4j.LoggerFactory;
  * It is used to implement ViewFs and ViewFileSystem.
  * In order to use it the caller must subclass it and implement
  * the abstract methods {@link #getTargetFileSystem(INodeDir)}, etc.
- * <p>
+ *
  * The mountable is initialized from the config variables as
  * specified in {@link ViewFs}
  *
  * @param <T> is AbstractFileSystem or FileSystem
- *            <p>
- *            The two main methods are
- *            {@link #InodeTree(Configuration, String)} // constructor
- *            {@link #resolve(String, boolean)}
+ *
+ * The two main methods are
+ * {@link #InodeTree(Configuration, String)} // constructor
+ * {@link #resolve(String, boolean)}
  */
 
 @InterfaceAudience.Private
@@ -100,7 +97,6 @@ abstract class InodeTree<T> {
 
   /**
    * Breaks file path into component names.
-   *
    * @param path
    * @return array of names component names
    */
@@ -110,7 +106,6 @@ abstract class InodeTree<T> {
 
   /**
    * Internal class for INode tree.
-   *
    * @param <T>
    */
   abstract static class INode<T> {
@@ -135,7 +130,6 @@ abstract class InodeTree<T> {
 
   /**
    * Internal class to represent an internal dir of the mount table.
-   *
    * @param <T>
    */
   static class INodeDir<T> extends INode<T> {
@@ -257,12 +251,12 @@ abstract class InodeTree<T> {
   /**
    * An internal class to represent a mount link.
    * A mount link can be single dir link or a merge dir link.
-   * <p>
+
    * A merge dir link is  a merge (junction) of links to dirs:
    * example : merge of 2 dirs
-   * /users -> hdfs:nn1//users
-   * /users -> hdfs:nn2//users
-   * <p>
+   *     /users -> hdfs:nn1//users
+   *     /users -> hdfs:nn2//users
+   *
    * For a merge, each target is checked to be dir when created but if target
    * is changed later it is then ignored (a dir with null entries)
    */
@@ -353,20 +347,20 @@ abstract class InodeTree<T> {
 
     // Now process the last component
     // Add the link in 2 cases: does not exist or a link exists
-    String iPath = srcPaths[i]; // last component
+    String iPath = srcPaths[i];// last component
     if (curInode.resolveInternal(iPath) != null) {
       //  directory/link already exists
       StringBuilder strB = new StringBuilder(srcPaths[0]);
       for (int j = 1; j <= i; ++j) {
         strB.append('/').append(srcPaths[j]);
       }
-      throw new FileAlreadyExistsException(
-          "Path " + strB + " already exists as dir; cannot create link here");
+      throw new FileAlreadyExistsException("Path " + strB +
+          " already exists as dir; cannot create link here");
     }
 
     final INodeLink<T> newLink;
-    final String fullPath =
-        curInode.fullPath + (curInode == root ? "" : "/") + iPath;
+    final String fullPath = curInode.fullPath + (curInode == root ? "" : "/")
+        + iPath;
     switch (linkType) {
     case SINGLE:
       newLink = new INodeLink<T>(fullPath, aUgi,
@@ -379,10 +373,10 @@ abstract class InodeTree<T> {
       throw new IllegalArgumentException("Unexpected linkType: " + linkType);
     case MERGE:
     case NFLY:
-      final URI[] targetUris =
-          StringUtils.stringToURI(StringUtils.getStrings(target));
+      final URI[] targetUris = StringUtils.stringToURI(
+          StringUtils.getStrings(target));
       newLink = new INodeLink<T>(fullPath, aUgi,
-          getTargetFileSystem(settings, targetUris), targetUris);
+            getTargetFileSystem(settings, targetUris), targetUris);
       break;
     default:
       throw new IllegalArgumentException(linkType + ": Infeasible linkType");
@@ -394,7 +388,6 @@ abstract class InodeTree<T> {
   /**
    * The user of this class must subclass and implement the following
    * 3 abstract methods.
-   *
    * @throws IOException
    */
   protected abstract T getTargetFileSystem(URI uri)
@@ -428,7 +421,6 @@ abstract class InodeTree<T> {
   /**
    * An internal class representing the ViewFileSystem mount table
    * link entries and their attributes.
-   *
    * @see LinkType
    */
   private static class LinkEntry {
@@ -479,10 +471,9 @@ abstract class InodeTree<T> {
   }
 
   /**
-   * Create Inode Tree from the specified mount-table specified in Config.
-   *
-   * @param config   - the mount table keys are prefixed with
-   *                 FsConstants.CONFIG_VIEWFS_PREFIX
+   * Create Inode Tree from the specified mount-table specified in Config
+   * @param config - the mount table keys are prefixed with
+   *       FsConstants.CONFIG_VIEWFS_PREFIX
    * @param viewName - the name of the mount table - if null use defaultMT name
    * @throws UnsupportedFileSystemException
    * @throws URISyntaxException
@@ -609,12 +600,6 @@ abstract class InodeTree<T> {
       }
     }
 
-    if (!gotMountTableEntry) {
-      throw new IOException(
-          "ViewFs: Cannot initialize: Empty Mount table in config for "
-              + "viewfs://" + mountTableName + "/");
-    }
-
     if (isMergeSlashConfigured) {
       Preconditions.checkNotNull(mergeSlashTarget);
       root = new INodeLink<T>(mountTableName, ugi,
@@ -622,51 +607,37 @@ abstract class InodeTree<T> {
           new URI(mergeSlashTarget));
       mountPoints.add(new MountPoint<T>("/", (INodeLink<T>) root));
       rootFallbackLink = null;
-      return;
-    }
-
-    root = new INodeDir<T>("/", UserGroupInformation.getCurrentUser());
-    getRootDir().setInternalDirFs(getTargetFileSystem(getRootDir()));
-    getRootDir().setRoot(true);
-    INodeLink<T> fallbackLink = null;
-    for (LinkEntry le : linkEntries) {
-      switch (le.getLinkType()) {
-      case SINGLE_FALLBACK:
-        if (fallbackLink != null) {
-          throw new IOException("Mount table " + mountTableName
-              + " has already been configured with a link fallback. "
-              + "Multiple fallback links for the same mount table is "
-              + "not allowed.");
+    } else {
+      root = new INodeDir<T>("/", UserGroupInformation.getCurrentUser());
+      getRootDir().setInternalDirFs(getTargetFileSystem(getRootDir()));
+      getRootDir().setRoot(true);
+      INodeLink<T> fallbackLink = null;
+      for (LinkEntry le : linkEntries) {
+        switch (le.getLinkType()) {
+        case SINGLE_FALLBACK:
+          if (fallbackLink != null) {
+            throw new IOException("Mount table " + mountTableName + " has already been configured with a link fallback. "
+                + "Multiple fallback links for the same mount table is " + "not allowed.");
+          }
+          fallbackLink = new INodeLink<T>(mountTableName, ugi,
+              getTargetFileSystem(new URI(le.getTarget())), new URI(le.getTarget()));
+          break;
+        case REGEX:
+          LOGGER.info("Add regex mount point:" + le.getSrc() + ", target:" + le.getTarget() + ", interceptor settings:" + le.getSettings());
+          RegexMountPoint regexMountPoint =
+              new RegexMountPoint<T>(this, le.getSrc(), le.getTarget(), le.getSettings());
+          regexMountPoint.initialize();
+          regexMountPointList.add(regexMountPoint);
+          break;
+        default:
+          createLink(le.getSrc(), le.getTarget(), le.getLinkType(),
+              le.getSettings(), le.getUgi(), le.getConfig());
         }
-        fallbackLink = new INodeLink<T>(mountTableName, ugi,
-            getTargetFileSystem(new URI(le.getTarget())),
-            new URI(le.getTarget()));
-        break;
-      case REGEX:
-        LOGGER.info("Add regex mount point:" + le.getSrc() + ", target:" + le
-            .getTarget() + ", interceptor settings:" + le.getSettings());
-        RegexMountPoint regexMountPoint =
-            new RegexMountPoint<T>(this, le.getSrc(), le.getTarget(),
-                le.getSettings());
-        regexMountPoint.initialize();
-        regexMountPointList.add(regexMountPoint);
-        break;
-      default:
-        createLink(le.getSrc(), le.getTarget(), le.getLinkType(),
-            le.getSettings(), le.getUgi(), le.getConfig());
       }
       rootFallbackLink = fallbackLink;
       getRootDir().addFallbackLink(rootFallbackLink);
     }
-    rootFallbackLink = fallbackLink;
 
-    pathResolutionCacheCapacity = config
-        .getInt(Constants.CONFIG_VIEWFS_PATH_RESOLUTION_CACHE_CAPACITY,
-            Constants.CONFIG_VIEWFS_PATH_RESOLUTION_CACHE_CAPACITY_DEFAULT);
-    if (pathResolutionCacheCapacity > 0) {
-      pathResolutionCache = new LRUMap(pathResolutionCacheCapacity);
-      cacheRWLock = new ReentrantReadWriteLock();
-    }
     if (!gotMountTableEntry) {
       if (!initingUriAsFallbackOnNoMounts) {
         throw new IOException(
@@ -681,6 +652,13 @@ abstract class InodeTree<T> {
           new INodeLink<T>(mountTableName, ugi, getTargetFileSystem(theUri),
               theUri);
       getRootDir().addFallbackLink(rootFallbackLink);
+    }
+    pathResolutionCacheCapacity = config
+        .getInt(Constants.CONFIG_VIEWFS_PATH_RESOLUTION_CACHE_CAPACITY,
+            Constants.CONFIG_VIEWFS_PATH_RESOLUTION_CACHE_CAPACITY_DEFAULT);
+    if (pathResolutionCacheCapacity > 0) {
+      pathResolutionCache = new LRUMap(pathResolutionCacheCapacity);
+      cacheRWLock = new ReentrantReadWriteLock();
     }
   }
 
@@ -741,7 +719,7 @@ abstract class InodeTree<T> {
    * Resolve returns ResolveResult.
    * The caller can continue the resolution of the remainingPath
    * in the targetFileSystem.
-   * <p>
+   *
    * If the input pathname leads to link to another file system then
    * the targetFileSystem is the one denoted by the link (except it is
    * file system chrooted to link target.
@@ -923,8 +901,22 @@ abstract class InodeTree<T> {
       return new ResolveResult<T>(resultKind, targetFs, resolvedPathStr,
           remainingPath);
     } catch (IOException ex) {
+      LOGGER.error(String.format(
+          "Got Exception while build resolve result."
+              + " ResultKind:%s, resolvedPathStr:%s,"
+              + " targetOfResolvedPathStr:%s, remainingPath:%s,"
+              + " will return null.",
+          resultKind, resolvedPathStr, targetOfResolvedPathStr, remainingPath),
+          ex);
       return null;
     } catch (URISyntaxException uex) {
+      LOGGER.error(String.format(
+          "Got Exception while build resolve result."
+              + " ResultKind:%s, resolvedPathStr:%s,"
+              + " targetOfResolvedPathStr:%s, remainingPath:%s,"
+              + " will return null.",
+          resultKind, resolvedPathStr, targetOfResolvedPathStr, remainingPath),
+          uex);
       return null;
     }
   }
