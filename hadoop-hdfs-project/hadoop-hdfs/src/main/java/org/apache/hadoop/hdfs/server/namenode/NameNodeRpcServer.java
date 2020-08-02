@@ -1100,10 +1100,8 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public boolean truncate(String src, long newLength, String clientName)
       throws IOException {
     checkNNStartup();
-    if(stateChangeLog.isDebugEnabled()) {
-      stateChangeLog.debug("*DIR* NameNode.truncate: " + src + " to " +
-          newLength);
-    }
+    stateChangeLog
+        .debug("*DIR* NameNode.truncate: " + src + " to " + newLength);
     String clientMachine = getClientMachine();
     try {
       return namesystem.truncate(

@@ -2270,7 +2270,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     requireEffectiveLayoutVersionForFeature(Feature.TRUNCATE);
     FSDirTruncateOp.TruncateResult r = null;
     try {
-      NameNode.stateChangeLog.debug(
+      NameNode.stateChangeLog.info(
           "DIR* NameSystem.truncate: src={} newLength={}", src, newLength);
       if (newLength < 0) {
         throw new HadoopIllegalArgumentException(
