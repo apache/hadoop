@@ -1711,6 +1711,7 @@ public class PBHelperClient {
         status.getFileId(),
         status.getChildrenNum(),
         sdirStatusProto.getSnapshotID(),
+        sdirStatusProto.getIsDeleted(),
         sdirStatusProto.getParentFullpath().toByteArray());
   }
 
@@ -2425,6 +2426,7 @@ public class PBHelperClient {
             .newBuilder()
             .setSnapshotID(status.getSnapshotID())
             .setParentFullpath(parentFullPathBytes)
+            .setIsDeleted(status.isDeleted())
             .setDirStatus(fs);
     return builder.build();
   }

@@ -30,7 +30,10 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import static org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager.
+    DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
@@ -51,6 +54,7 @@ public class TestListSnapshot {
   @Before
   public void setUp() throws Exception {
     conf = new Configuration();
+    conf.setBoolean(DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED, true);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION)
         .build();
     cluster.waitActive();
@@ -128,7 +132,15 @@ public class TestListSnapshot {
         snapshotStatuses[2].getFullPath());
     hdfs.deleteSnapshot(dir1, "s2");
     snapshotStatuses = hdfs.getSnapshotListing(dir1);
-    // There are now 2 snapshots for dir1
+    // There are now 2 active snapshots for dir1 and one is marked deleted
+    assertEquals(3, snapshotStatuses.length);
+    assertTrue(snapshotStatuses[2].isDeleted());
+    assertFalse(snapshotStatuses[1].isDeleted());
+    assertFalse(snapshotStatuses[0].isDeleted());
+    // delete the 1st snapshot
+    hdfs.deleteSnapshot(dir1, "s0");
+    snapshotStatuses = hdfs.getSnapshotListing(dir1);
+    // There are now 2 snapshots now as the 1st one is deleted in order
     assertEquals(2, snapshotStatuses.length);
   }
 }

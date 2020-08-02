@@ -41,6 +41,11 @@ public class SnapshotStatus {
   private final int snapshotID;
 
   /**
+   * Whether the snapshot is deleted or not.
+   */
+  private final boolean isDeleted;
+
+  /**
    * Full path of the parent.
    */
   private byte[] parentFullPath;
@@ -50,7 +55,7 @@ public class SnapshotStatus {
                         EnumSet<HdfsFileStatus.Flags> flags,
                         String owner, String group, byte[] localName,
                         long inodeId, int childrenNum, int snapshotID,
-                        byte[] parentFullPath) {
+                        boolean isDeleted, byte[] parentFullPath) {
     this.dirStatus = new HdfsFileStatus.Builder()
         .isdir(true)
         .mtime(modificationTime)
@@ -64,13 +69,7 @@ public class SnapshotStatus {
         .children(childrenNum)
         .build();
     this.snapshotID = snapshotID;
-    this.parentFullPath = parentFullPath;
-  }
-
-  public SnapshotStatus(HdfsFileStatus dirStatus,
-                        int snapshotNumber, byte[] parentFullPath) {
-    this.dirStatus = dirStatus;
-    this.snapshotID = snapshotNumber;
+    this.isDeleted = isDeleted;
     this.parentFullPath = parentFullPath;
   }
 
@@ -87,6 +86,13 @@ public class SnapshotStatus {
    */
   public int getSnapshotID() {
     return snapshotID;
+  }
+
+  /**
+   * @return whether snapshot is deleted
+   */
+  public boolean isDeleted() {
+    return isDeleted;
   }
 
   /**
@@ -143,6 +149,7 @@ public class SnapshotStatus {
         + "%" + maxLen + "s "
         + "%s " // mod time
         + "%" + maxSnapshotID + "s "
+        + "%s " // deletion status
         + "%s"; // path
     SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm");
 
@@ -155,6 +162,7 @@ public class SnapshotStatus {
           String.valueOf(status.dirStatus.getLen()),
           dateFormat.format(new Date(status.dirStatus.getModificationTime())),
           status.snapshotID,
+          status.isDeleted ? "DELETED" : "ACTIVE",
           getSnapshotPath(DFSUtilClient.bytes2String(status.parentFullPath),
               status.dirStatus.getLocalName())
       );
@@ -166,6 +174,9 @@ public class SnapshotStatus {
     return Math.max(n, String.valueOf(value).length());
   }
 
+  /**
+   * To be used to for collection of snapshot jmx.
+   */
   public static class Bean {
     private final String path;
     private final int snapshotID;
@@ -173,15 +184,19 @@ public class SnapshotStatus {
     private final short permission;
     private final String owner;
     private final String group;
+    private final boolean isDeleted;
+
 
     public Bean(String path, int snapshotID, long
-        modificationTime, short permission, String owner, String group) {
+        modificationTime, short permission, String owner, String group,
+                boolean isDeleted) {
       this.path = path;
       this.snapshotID = snapshotID;
       this.modificationTime = modificationTime;
       this.permission = permission;
       this.owner = owner;
       this.group = group;
+      this.isDeleted = isDeleted;
     }
 
     public String getPath() {
@@ -206,6 +221,10 @@ public class SnapshotStatus {
 
     public String getGroup() {
       return group;
+    }
+
+    public boolean isDeleted() {
+      return isDeleted;
     }
   }
 
