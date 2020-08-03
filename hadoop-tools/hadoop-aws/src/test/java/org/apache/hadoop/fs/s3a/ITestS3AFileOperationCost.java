@@ -43,7 +43,7 @@ import java.util.EnumSet;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
-import static org.apache.hadoop.fs.s3a.performance.HeadListCosts.*;
+import static org.apache.hadoop.fs.s3a.performance.OperationCost.*;
 import static org.apache.hadoop.test.GenericTestUtils.getTestDir;
 
 /**
@@ -88,9 +88,10 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     Path file = file(methodPath());
     S3AFileSystem fs = getFileSystem();
     verifyMetrics(() -> fs.listLocatedStatus(file),
-        rawHeadList(FILESTATUS_FILE_PROBE_H, LIST_LOCATED_STATUS_L),
-        authHeadList(0, LIST_LOCATED_STATUS_L),
-        nonauthHeadList(0, LIST_LOCATED_STATUS_L));
+        whenRaw(FILE_STATUS_FILE_PROBE
+            .plus(LIST_LOCATED_STATUS_LIST_OP)),
+        whenAuthoritative(LIST_LOCATED_STATUS_LIST_OP),
+        whenNonauth(LIST_LOCATED_STATUS_LIST_OP));;
   }
 
   @Test
@@ -100,10 +101,10 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     S3AFileSystem fs = getFileSystem();
     verifyMetrics(() ->
             fs.listLocatedStatus(dir),
-        rawHeadList(FILESTATUS_FILE_PROBE_H,
-            LIST_LOCATED_STATUS_L + GETFILESTATUS_DIR_L),
-        authHeadList(0, 0),
-        nonauthHeadList(0, LIST_LOCATED_STATUS_L));
+        whenRaw(LIST_LOCATED_STATUS_LIST_OP
+            .plus(GET_FILE_STATUS_ON_EMPTY_DIR)),
+        whenAuthoritative(NO_IO),
+        whenNonauth(LIST_LOCATED_STATUS_LIST_OP));
   }
 
   @Test
@@ -114,9 +115,9 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     Path file = file(new Path(dir, "file.txt"));
     verifyMetrics(() ->
           fs.listLocatedStatus(dir),
-        rawHeadList(0, LIST_LOCATED_STATUS_L),
-        authHeadList(0, 0),
-        nonauthHeadList(0, LIST_LOCATED_STATUS_L));
+        whenRaw(LIST_LOCATED_STATUS_LIST_OP),
+        whenAuthoritative(NO_IO),
+        whenNonauth(LIST_LOCATED_STATUS_LIST_OP));
   }
 
   @Test
@@ -127,11 +128,10 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     touch(fs, file);
     verifyMetrics(() ->
             fs.listFiles(file, true),
-        rawHeadList(GETFILESTATUS_SINGLE_FILE_H,
-            LIST_LOCATED_STATUS_L),
-        whenAuthoritative(OBJECT_LIST_REQUESTS, 0),
-        whenNonauth(OBJECT_LIST_REQUESTS,
-            LIST_FILES_L));
+        whenRaw(LIST_LOCATED_STATUS_LIST_OP
+            .plus(GET_FILE_STATUS_ON_FILE)),
+        whenAuthoritative(NO_IO),
+        whenNonauth(LIST_LOCATED_STATUS_LIST_OP));
   }
 
   @Test
@@ -143,10 +143,10 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     fs.mkdirs(dir);
     verifyMetrics(() ->
             fs.listFiles(dir, true),
-        rawHeadList(GETFILESTATUS_EMPTY_DIR_H,
-            LIST_FILES_L + GETFILESTATUS_EMPTY_DIR_L),
-        authHeadList(0, 0),
-        nonauthHeadList(0, LIST_FILES_L));
+        whenRaw(LIST_FILES_LIST_OP
+            .plus(GET_FILE_STATUS_ON_EMPTY_DIR)),
+        whenAuthoritative(NO_IO),
+        whenNonauth(LIST_FILES_LIST_OP));
   }
 
   @Test
@@ -159,9 +159,9 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     touch(fs, file);
     verifyMetrics(() ->
             fs.listFiles(dir, true),
-        rawHeadList(0, LIST_FILES_L),
-        authHeadList(0, 0),
-        nonauthHeadList(0, LIST_FILES_L));
+        whenRaw(LIST_FILES_LIST_OP),
+        whenAuthoritative(NO_IO),
+        whenNonauth(LIST_FILES_LIST_OP));
   }
 
   @Test
@@ -171,10 +171,8 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     S3AFileSystem fs = getFileSystem();
     verifyMetricsIntercepting(FileNotFoundException.class, "",
         () -> fs.listFiles(dir, true),
-        rawHeadList(GETFILESTATUS_FNFE_H,
-            GETFILESTATUS_FNFE_L + LIST_FILES_L)
-
-    );
+        whenRaw(LIST_FILES_LIST_OP
+            .plus(GET_FILE_STATUS_FNFE)));
   }
 
   @Test
@@ -183,11 +181,9 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     Path simpleFile = file(methodPath());
     S3AFileStatus status = verifyRawInnerGetFileStatus(simpleFile, true,
         StatusProbeEnum.ALL,
-        GETFILESTATUS_SINGLE_FILE_H,
-        GETFILESTATUS_SINGLE_FILE_L);
+        GET_FILE_STATUS_ON_FILE);
     assertTrue("not a file: " + status, status.isFile());
   }
-
 
   @Test
   public void testCostOfGetFileStatusOnEmptyDir() throws Throwable {
@@ -195,21 +191,17 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     Path dir = dir(methodPath());
     S3AFileStatus status = verifyRawInnerGetFileStatus(dir, true,
         StatusProbeEnum.ALL,
-        GETFILESTATUS_MARKER_H,
-        GETFILESTATUS_EMPTY_DIR_L);
+        GET_FILE_STATUS_ON_DIR_MARKER);
     assertSame("not empty: " + status, Tristate.TRUE,
         status.isEmptyDirectory());
     // but now only ask for the directories and the file check is skipped.
     verifyRawInnerGetFileStatus(dir, false,
         StatusProbeEnum.DIRECTORIES,
-        FILESTATUS_DIR_PROBE_H,
-        GETFILESTATUS_EMPTY_DIR_L);
+        FILE_STATUS_DIR_PROBE);
 
     // now look at isFile/isDir against the same entry
-    isDir(dir, true, FILESTATUS_DIR_PROBE_H,
-        GETFILESTATUS_EMPTY_DIR_L);
-    isFile(dir, false,
-        FILESTATUS_FILE_PROBE_H, FILESTATUS_FILE_PROBE_L);
+    isDir(dir, true, FILE_STATUS_DIR_PROBE);
+    isFile(dir, false, FILE_STATUS_FILE_PROBE);
   }
 
   @Test
@@ -217,8 +209,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     describe("performing getFileStatus on a missing file");
     interceptRawGetFileStatusFNFE(methodPath(), false,
         StatusProbeEnum.ALL,
-        GETFILESTATUS_FNFE_H,
-        GETFILESTATUS_FNFE_L);
+        GET_FILE_STATUS_FNFE);
   }
 
   @Test
@@ -227,11 +218,9 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     Path path = methodPath();
     // now look at isFile/isDir against the same entry
     isDir(path, false,
-        FILESTATUS_DIR_PROBE_H,
-        FILESTATUS_DIR_PROBE_L);
+        FILE_STATUS_DIR_PROBE);
     isFile(path, false,
-        FILESTATUS_FILE_PROBE_H,
-        FILESTATUS_FILE_PROBE_L);
+        FILE_STATUS_FILE_PROBE);
   }
 
   @Test
@@ -240,8 +229,8 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     Path dir = dir(methodPath());
     file(new Path(dir, "simple.txt"));
     S3AFileStatus status = verifyRawInnerGetFileStatus(dir, true,
-            StatusProbeEnum.ALL,
-        GETFILESTATUS_DIR_H, GETFILESTATUS_DIR_L);
+        StatusProbeEnum.ALL,
+        GET_FILE_STATUS_ON_DIR);
     assertEmptyDirStatus(status, Tristate.FALSE);
   }
   @Test
@@ -291,32 +280,31 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     // head probe fails
     interceptRawGetFileStatusFNFE(emptydir, false,
         StatusProbeEnum.HEAD_ONLY,
-        FILESTATUS_FILE_PROBE_H,
-        FILESTATUS_FILE_PROBE_L);
+        FILE_STATUS_FILE_PROBE);
 
     // a LIST will find it and declare as empty
     S3AFileStatus status = verifyRawInnerGetFileStatus(emptydir, true,
-        StatusProbeEnum.LIST_ONLY, 0,
-        GETFILESTATUS_EMPTY_DIR_L);
+        StatusProbeEnum.LIST_ONLY,
+        FILE_STATUS_DIR_PROBE);
     assertEmptyDirStatus(status, Tristate.TRUE);
 
     // skip all probes and expect no operations to take place
     interceptRawGetFileStatusFNFE(emptydir, false,
         EnumSet.noneOf(StatusProbeEnum.class),
-        0, 0);
+        NO_IO);
 
     // now add a trailing slash to the key and use the
     // deep internal s3GetFileStatus method call.
     String emptyDirTrailingSlash = fs.pathToKey(emptydir.getParent())
         + "/" + emptydir.getName() +  "/";
     // A HEAD request does not probe for keys with a trailing /
-    interceptRawHeadList(FileNotFoundException.class, "",
-        0, 0, () ->
+    interceptRaw(FileNotFoundException.class, "",
+        NO_IO, () ->
         fs.s3GetFileStatus(emptydir, emptyDirTrailingSlash,
             StatusProbeEnum.HEAD_ONLY, null, false));
 
     // but ask for a directory marker and you get the entry
-    status = verifyRawHeadList(0, GETFILESTATUS_EMPTY_DIR_L, () ->
+    status = verifyRaw(FILE_STATUS_DIR_PROBE, () ->
         fs.s3GetFileStatus(emptydir,
             emptyDirTrailingSlash,
             StatusProbeEnum.LIST_ONLY,
@@ -333,9 +321,9 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     Path testFile = methodPath();
     // when overwrite is false, the path is checked for existence.
     create(testFile, false,
-        CREATE_FILE_NO_OVERWRITE_H, CREATE_FILE_NO_OVERWRITE_L);
+        CREATE_FILE_NO_OVERWRITE);
     // but when true: only the directory checks take place.
-    create(testFile, true, CREATE_FILE_OVERWRITE_H, CREATE_FILE_OVERWRITE_L);
+    create(testFile, true, CREATE_FILE_OVERWRITE);
   }
 
   @Test
@@ -346,8 +334,8 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
 
     // now there is a file there, an attempt with overwrite == false will
     // fail on the first HEAD.
-    interceptRawHeadList(FileAlreadyExistsException.class, "",
-        FILESTATUS_FILE_PROBE_H, 0,
+    interceptRaw(FileAlreadyExistsException.class, "",
+        FILE_STATUS_FILE_PROBE,
         () -> file(testFile, false));
   }
 
@@ -359,8 +347,8 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
 
     // now there is a file there, an attempt with overwrite == false will
     // fail on the first HEAD.
-    interceptRawHeadList(FileAlreadyExistsException.class, "",
-        GETFILESTATUS_MARKER_H, GETFILESTATUS_EMPTY_DIR_L,
+    interceptRaw(FileAlreadyExistsException.class, "",
+        GET_FILE_STATUS_ON_DIR_MARKER,
         () -> file(testFile, false));
   }
 
@@ -377,18 +365,20 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
 
     // builder defaults to looking for parent existence (non-recursive)
     buildFile(testFile, false,  false,
-        FILESTATUS_FILE_PROBE_H,   // destination file
-        FILESTATUS_DIR_PROBE_L * 2);    // destination file and parent dir
+        GET_FILE_STATUS_FNFE       // destination file
+            .plus(FILE_STATUS_DIR_PROBE)); // parent dir
     // recursive = false and overwrite=true:
     // only make sure the dest path isn't a directory.
     buildFile(testFile, true, true,
-        FILESTATUS_DIR_PROBE_H, FILESTATUS_DIR_PROBE_L);
+        FILE_STATUS_DIR_PROBE
+    );
 
     // now there is a file there, an attempt with overwrite == false will
     // fail on the first HEAD.
-    interceptRawHeadList(FileAlreadyExistsException.class, "",
-        FILESTATUS_FILE_PROBE_H, 0, () ->
-            buildFile(testFile, false, true, FILESTATUS_FILE_PROBE_H, 0));
+    interceptRaw(FileAlreadyExistsException.class, "",
+        GET_FILE_STATUS_ON_FILE, () ->
+            buildFile(testFile, false, true,
+                GET_FILE_STATUS_ON_FILE));
   }
 
   @Test
@@ -408,8 +398,8 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     fs.globStatus(basePath.suffix("/*"));
     // 2 head + 1 list from getFileStatus on path,
     // plus 1 list to match the glob pattern
-    verifyRawHeadList(GETFILESTATUS_DIR_H,
-        GETFILESTATUS_DIR_L + 1, () ->
+    verifyRaw(
+        GET_FILE_STATUS_ON_DIR.plus(LIST_OPERATION), () ->
         fs.globStatus(basePath.suffix("/*")));
   }
 
@@ -428,10 +418,8 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     // unguarded: 2 head + 1 list from getFileStatus on path,
     // plus 1 list to match the glob pattern
     // no additional operations from symlink resolution
-    verifyRawHeadList(
-        GETFILESTATUS_DIR_H,
-        GETFILESTATUS_DIR_L + 1, () ->
-        fs.globStatus(basePath.suffix("/*")));
+    verifyRaw(GET_FILE_STATUS_ON_DIR.plus(LIST_OPERATION), () ->
+            fs.globStatus(basePath.suffix("/*")));
   }
 
 

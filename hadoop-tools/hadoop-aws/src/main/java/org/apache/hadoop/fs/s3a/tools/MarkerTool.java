@@ -38,6 +38,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
@@ -253,10 +254,12 @@ public final class MarkerTool extends S3GuardTool {
       final int expectedMarkerCount)
       throws IOException {
     S3AFileSystem fs = bindFilesystem(sourceFS);
+
+    // extract the callbacks needed for the rest of the work
     storeContext = fs.createStoreContext();
     operations = fs.createMarkerToolOperations();
-
-    DirectoryPolicy.MarkerPolicy policy = fs.getDirectoryMarkerPolicy();
+    DirectoryPolicy.MarkerPolicy policy = fs.getDirectoryMarkerPolicy()
+        .getMarkerPolicy();
     println(out, "The store's directory marker policy is \"%s\"",
         policy);
     if (policy == DirectoryPolicy.MarkerPolicy.Authoritative) {
@@ -265,7 +268,7 @@ public final class MarkerTool extends S3GuardTool {
           .getTrimmed(AUTHORITATIVE_PATH, "unset");
       println(out, "Authoritative path list is %s", authPath);
     }
-    // validate the FS
+    // initial safety check: does the path exist?
     try {
       getFilesystem().getFileStatus(path);
     } catch (UnknownStoreException ex) {
@@ -279,8 +282,8 @@ public final class MarkerTool extends S3GuardTool {
           "Not found: " + path, ex);
 
     }
-    ScanResult result = once("action", path.toString(),
-        () -> scan(path, doPurge, expectedMarkerCount));
+
+    ScanResult result = scan(path, doPurge, expectedMarkerCount);
     return result;
   }
 
@@ -303,6 +306,9 @@ public final class MarkerTool extends S3GuardTool {
      * Scan summary.
      */
     private MarkerPurgeSummary purgeSummary;
+
+    private ScanResult() {
+    }
 
     @Override
     public String toString() {
@@ -330,7 +336,7 @@ public final class MarkerTool extends S3GuardTool {
   }
 
   /**
-   * Do the scan.
+   * Do the scan/purge.
    * @param path path to scan.
    * @param doPurge purge?
    * @param expectedMarkerCount expected marker count
@@ -338,16 +344,16 @@ public final class MarkerTool extends S3GuardTool {
    * @throws IOException IO failure
    * @throws ExitUtil.ExitException explicitly raised failure
    */
+  @Retries.RetryTranslated
   private ScanResult scan(
       final Path path,
       final boolean doPurge,
       final int expectedMarkerCount)
       throws IOException, ExitUtil.ExitException {
-    // initial safety check: does the path exist
 
     ScanResult result = new ScanResult();
 
-    DirMarkerTracker tracker = new DirMarkerTracker();
+    DirMarkerTracker tracker = new DirMarkerTracker(path);
     result.tracker = tracker;
     try (DurationInfo ignored =
              new DurationInfo(LOG, "marker scan %s", path)) {
@@ -398,8 +404,7 @@ public final class MarkerTool extends S3GuardTool {
       int deletePageSize = storeContext.getConfiguration()
           .getInt(BULK_DELETE_PAGE_SIZE,
               BULK_DELETE_PAGE_SIZE_DEFAULT);
-      result.purgeSummary = purgeMarkers(tracker,
-          deletePageSize);
+      result.purgeSummary = purgeMarkers(tracker, deletePageSize);
     }
     result.exitCode = EXIT_SUCCESS;
     return result;
@@ -418,10 +423,12 @@ public final class MarkerTool extends S3GuardTool {
    * Scan a directory tree.
    * @param path path to scan
    * @param tracker tracker to update
-   * @throws IOException
+   * @throws IOException IO failure
    */
+  @Retries.RetryTranslated
   private void scanDirectoryTree(final Path path,
       final DirMarkerTracker tracker) throws IOException {
+
     RemoteIterator<S3AFileStatus> listing = operations
         .listObjects(path, storeContext.pathToKey(path));
     while (listing.hasNext()) {
@@ -494,10 +501,9 @@ public final class MarkerTool extends S3GuardTool {
    * @param tracker tracker with the details
    * @param deletePageSize page size of deletes
    * @return summary
-   * @throws MultiObjectDeleteException
-   * @throws AmazonClientException
-   * @throws IOException
+   * @throws IOException IO failure
    */
+  @Retries.RetryTranslated
   private MarkerPurgeSummary purgeMarkers(DirMarkerTracker tracker,
       int deletePageSize)
       throws MultiObjectDeleteException, AmazonClientException, IOException {
@@ -535,7 +541,9 @@ public final class MarkerTool extends S3GuardTool {
           end);
       List<Path> undeleted = new ArrayList<>();
       OperationDuration duration = new OperationDuration();
-      operations.removeKeys(page, true, undeleted, null, false);
+      once("Remove S3 Keys",
+          tracker.getBasePath().toString(), () ->
+              operations.removeKeys(page, true, undeleted, null, false));
       duration.finished();
       summary.deleteRequests++;
       summary.totalDeleteRequestDuration += duration.value();

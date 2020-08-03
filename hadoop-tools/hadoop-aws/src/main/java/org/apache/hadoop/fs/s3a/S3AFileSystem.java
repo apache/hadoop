@@ -4033,8 +4033,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Get the directory marker policy of this filesystem.
    * @return the marker policy.
    */
-  public DirectoryPolicy.MarkerPolicy getDirectoryMarkerPolicy() {
-    return directoryPolicy.getMarkerPolicy();
+  public DirectoryPolicy getDirectoryMarkerPolicy() {
+    return directoryPolicy;
   }
 
   @Override

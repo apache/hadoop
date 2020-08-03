@@ -29,9 +29,7 @@ import java.util.stream.Collectors;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ObjectMetadata;
-import org.junit.FixMethodOrder;
 import org.junit.Test;
-import org.junit.runners.MethodSorters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,7 +43,6 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AUtils;
-import org.apache.hadoop.fs.s3a.impl.DirectoryPolicy;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
@@ -77,7 +74,6 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * <p></p>
  * The tests work with unguarded buckets only.
  */
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
 
   private static final Logger LOG =
@@ -109,7 +105,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
    * <p></p>
    * The full marker-optimized releases: no.
    */
-  private boolean renameDeletesParentMarkers = false;
+  private boolean isDeletingMarkers = false;
 
   private Path markerDir;
 
@@ -141,6 +137,11 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
     return conf;
   }
 
+  /**
+   * The setup phase includes create the set of test files directories
+   * under the met
+   * @throws Exception
+   */
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -150,9 +151,11 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
     s3client = fs.getAmazonS3ClientForTesting("markers");
 
     bucket = fs.getBucket();
-    renameDeletesParentMarkers = fs.getDirectoryMarkerPolicy()
-        == DirectoryPolicy.MarkerPolicy.Delete;
-    createTestObjects(new Path(methodPath(), "base"));
+    Path base = new Path(methodPath(), "base");
+    isDeletingMarkers = !fs.getDirectoryMarkerPolicy()
+        .keepDirectoryMarkers(methodPath());
+
+    createTestObjects(base);
   }
 
   @Override
@@ -427,7 +430,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
     // renamed into the dest dir
     assertRenamed(src, dest);
     assertIsFile(new Path(dest, name));
-    if (renameDeletesParentMarkers) {
+    if (isDeletingMarkers) {
       head404(markerKeySlash);
     } else {
       head(markerKeySlash);

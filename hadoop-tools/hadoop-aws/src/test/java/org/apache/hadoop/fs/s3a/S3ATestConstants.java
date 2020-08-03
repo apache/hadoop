@@ -218,4 +218,10 @@ public interface S3ATestConstants {
    */
   String S3GUARD_DDB_TEST_TABLE_NAME_KEY =
       "fs.s3a.s3guard.ddb.test.table";
+
+  /**
+   * Test option to enable audits of the method path after
+   * every test case.
+   */
+  String DIRECTORY_MARKER_AUDIT = "fs.s3a.directory.marker.audit";
 }

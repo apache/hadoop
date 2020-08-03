@@ -34,7 +34,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 
 import static org.apache.hadoop.fs.s3a.Statistic.*;
-import static org.apache.hadoop.fs.s3a.performance.HeadListCosts.*;
+import static org.apache.hadoop.fs.s3a.performance.OperationCost.*;
 
 /**
  * Use metrics to assert about the cost of file API calls.
@@ -98,8 +98,7 @@ public class ITestS3ARenameCost extends AbstractS3ACostTest {
     // as srcFile2 exists, the parent dir of srcFilePath must not be created.
     verifyMetrics(() ->
             execRename(srcFilePath, destFilePath),
-        rawHeadList(RENAME_SINGLE_FILE_RENAME_H,
-            RENAME_SINGLE_FILE_RENAME_DIFFERENT_DIR_L),
+        whenRaw(RENAME_SINGLE_FILE_DIFFERENT_DIR),
         always(DIRECTORIES_CREATED, 0),
         always(DIRECTORIES_DELETED, 0),
         // keeping: only the core delete operation is issued.
@@ -136,8 +135,7 @@ public class ITestS3ARenameCost extends AbstractS3ACostTest {
     Path destFile = new Path(parent2, "dest");
     verifyMetrics(() ->
             execRename(sourceFile, destFile),
-        rawHeadList(RENAME_SINGLE_FILE_RENAME_H,
-            RENAME_SINGLE_FILE_RENAME_SAME_DIR_L),
+        whenRaw(RENAME_SINGLE_FILE_SAME_DIR),
         always(OBJECT_COPY_REQUESTS, 1),
         always(DIRECTORIES_CREATED, 0),
         always(OBJECT_DELETE_REQUESTS, DELETE_OBJECT_REQUEST),
@@ -145,8 +143,8 @@ public class ITestS3ARenameCost extends AbstractS3ACostTest {
   }
 
   @Test
-  public void testCostOfRootRename() throws Throwable {
-    describe("assert that a root directory rename doesn't"
+  public void testCostOfRootFileRename() throws Throwable {
+    describe("assert that a root file rename doesn't"
         + " do much in terms of parent dir operations");
     S3AFileSystem fs = getFileSystem();
 
@@ -159,9 +157,9 @@ public class ITestS3ARenameCost extends AbstractS3ACostTest {
         fs.rename(src, dest);
         return "after fs.rename(/src,/dest) " + getMetricSummary();
       },
-          // TWO HEAD for exists, one for source MD in copy
-          rawHeadList(RENAME_SINGLE_FILE_RENAME_H,
-              GETFILESTATUS_FNFE_L),
+          whenRaw(FILE_STATUS_FILE_PROBE
+              .plus(GET_FILE_STATUS_FNFE)
+              .plus(COPY_OP)),
           // here we expect there to be no fake directories
           always(DIRECTORIES_CREATED, 0),
           // one for the renamed file only
@@ -172,10 +170,25 @@ public class ITestS3ARenameCost extends AbstractS3ACostTest {
           // no fake directories are deleted: This is root
           always(FAKE_DIRECTORIES_DELETED, 0),
           always(FILES_DELETED, 1));
+    } finally {
+      fs.delete(src, false);
+      fs.delete(dest, false);
+    }
+  }
 
+  @Test
+  public void testCostOfRootFileDelete() throws Throwable {
+    describe("assert that a root file delete doesn't"
+        + " do much in terms of parent dir operations");
+    S3AFileSystem fs = getFileSystem();
+
+    // unique name, so that even when run in parallel tests, there's no conflict
+    String uuid = UUID.randomUUID().toString();
+    Path src = file(new Path("/src-" + uuid));
+    try {
       // delete that destination file, assert only the file delete was issued
       verifyMetrics(() -> {
-        fs.delete(dest, false);
+        fs.delete(src, false);
         return "after fs.delete(/dest) " + getMetricSummary();
       },
           always(DIRECTORIES_CREATED, 0),
@@ -183,14 +196,11 @@ public class ITestS3ARenameCost extends AbstractS3ACostTest {
           always(FAKE_DIRECTORIES_DELETED, 0),
           always(FILES_DELETED, 1),
           always(OBJECT_DELETE_REQUESTS, DELETE_OBJECT_REQUEST),
-          rawHeadList(FILESTATUS_FILE_PROBE_H,
-              0)); /* no need to look at parent. */
+          whenRaw(FILE_STATUS_FILE_PROBE)); /* no need to look at parent. */
 
     } finally {
       fs.delete(src, false);
-      fs.delete(dest, false);
     }
   }
-
 
 }

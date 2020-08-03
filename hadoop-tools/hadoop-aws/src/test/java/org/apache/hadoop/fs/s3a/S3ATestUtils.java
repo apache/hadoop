@@ -618,6 +618,8 @@ public final class S3ATestUtils {
     // add this so that even on tests where the FS is shared,
     // the FS is always "magic"
     conf.setBoolean(MAGIC_COMMITTER_ENABLED, true);
+
+    // directory marker policy
     String directoryRetention = getTestProperty(
         conf,
         DIRECTORY_MARKER_POLICY,

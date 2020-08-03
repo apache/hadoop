@@ -58,6 +58,8 @@ public class DirMarkerTracker {
   private final Map<Path, Marker> surplusMarkers
       = new TreeMap<>();
 
+  private final Path basePath;
+
   /**
    * last parent directory checked.
    */
@@ -71,6 +73,24 @@ public class DirMarkerTracker {
   private int filesFound;
 
   private int markersFound;
+
+  /**
+   * Construct.
+   * Base path is currently only used for information rather than validating
+   * paths supplied in other mathods.
+   * @param basePath base path of track
+   */
+  public DirMarkerTracker(final Path basePath) {
+    this.basePath = basePath;
+  }
+
+  /**
+   * Get the base path of the tracker.
+   * @return the path
+   */
+  public Path getBasePath() {
+    return basePath;
+  }
 
   /**
    * A marker has been found; this may or may not be a leaf.
@@ -209,7 +229,7 @@ public class DirMarkerTracker {
      */
     private final S3ALocatedFileStatus status;
 
-    public Marker(final Path path,
+    private Marker(final Path path,
         final String key,
         final S3ALocatedFileStatus status) {
       this.path = path;

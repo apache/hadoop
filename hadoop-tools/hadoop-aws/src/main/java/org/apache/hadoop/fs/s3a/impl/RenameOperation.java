@@ -378,11 +378,12 @@ Are   * @throws IOException failure
       // TODO: dir marker policy doesn't always need to do this.
       callbacks.deleteObjectAtPath(destStatus.getPath(), dstKey, false, null);
     }
+    Path parentPath = storeContext.keyToPath(srcKey);
+
     // Track directory markers so that we know which leaf directories need to be
     // recreated
-    DirMarkerTracker dirMarkerTracker = new DirMarkerTracker();
+    DirMarkerTracker dirMarkerTracker = new DirMarkerTracker(parentPath);
 
-    Path parentPath = storeContext.keyToPath(srcKey);
     final RemoteIterator<S3ALocatedFileStatus> iterator =
         callbacks.listFilesAndEmptyDirectories(parentPath,
             sourceStatus,

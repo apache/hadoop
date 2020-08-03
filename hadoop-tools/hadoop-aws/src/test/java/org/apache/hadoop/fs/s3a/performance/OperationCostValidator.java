@@ -35,6 +35,8 @@ import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
 
 import static java.util.Objects.requireNonNull;
+import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_LIST_REQUESTS;
+import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_METADATA_REQUESTS;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -275,7 +277,8 @@ public final class OperationCostValidator {
   }
 
   /**
-   * Create a probe of a statistic which is always enabled.
+   * Create a probe of a statistic which is enabled whenever the expected
+   * value is greater than zero.
    * @param statistic statistic to check.
    * @param expected expected value.
    * @return a probe.
@@ -283,7 +286,7 @@ public final class OperationCostValidator {
   public static ExpectedProbe probe(
       final Statistic statistic,
       final int expected) {
-    return probe(true, statistic, expected);
+    return probe(expected >= 0, statistic, expected);
   }
 
   /**
@@ -314,6 +317,20 @@ public final class OperationCostValidator {
     return enabled
         ? new ProbeList(Arrays.asList(plist))
         : EMPTY_PROBE;
+  }
+
+  /**
+   * Expect the exact head and list requests of the operation
+   * cost supplied.
+   * @param enabled is the probe enabled?
+   * @param cost expected cost.
+   * @return a probe.
+   */
+  public static ExpectedProbe expect(
+      boolean enabled, OperationCost cost) {
+    return probes(enabled,
+        probe(OBJECT_METADATA_REQUESTS, cost.head()),
+        probe(OBJECT_LIST_REQUESTS, cost.list()));
   }
 
   /**

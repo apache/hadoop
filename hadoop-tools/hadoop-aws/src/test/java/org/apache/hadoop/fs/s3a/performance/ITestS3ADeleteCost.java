@@ -35,13 +35,12 @@ import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 
 import static org.apache.hadoop.fs.s3a.Statistic.*;
-import static org.apache.hadoop.fs.s3a.performance.HeadListCosts.*;
+import static org.apache.hadoop.fs.s3a.performance.OperationCost.*;
 import static org.apache.hadoop.fs.s3a.performance.OperationCostValidator.probe;
-
 
 /**
  * Use metrics to assert about the cost of file API calls.
- * Parameterized on guarded vs raw. and directory marker keep vs delete
+ * Parameterized on guarded vs raw. and directory marker keep vs delete.
  */
 @RunWith(Parameterized.class)
 public class ITestS3ADeleteCost extends AbstractS3ACostTest {
@@ -73,10 +72,11 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
   /**
    * This creates a directory with a child and then deletes it.
    * The parent dir must be found and declared as empty.
+   * <p>When deleting markers, that forces the recreation of a new marker.</p>
    */
   @Test
-  public void testDeleteFile() throws Throwable {
-    describe("performing getFileStatus on newly emptied directory");
+  public void testDeleteSingleFileInDir() throws Throwable {
+    describe("delete a file");
     S3AFileSystem fs = getFileSystem();
     // creates the marker
     Path dir = dir(methodPath());
@@ -91,12 +91,13 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
           return "after fs.delete(simpleFile) " + getMetricSummary();
         },
         // delete file. For keeping: that's it
+
         probe(rawAndKeeping, OBJECT_METADATA_REQUESTS,
             FILESTATUS_FILE_PROBE_H),
         // if deleting markers, look for the parent too
         probe(rawAndDeleting, OBJECT_METADATA_REQUESTS,
             FILESTATUS_FILE_PROBE_H + FILESTATUS_DIR_PROBE_H),
-        whenRraw(OBJECT_LIST_REQUESTS,
+        whenRaw(OBJECT_LIST_REQUESTS,
             FILESTATUS_FILE_PROBE_L + FILESTATUS_DIR_PROBE_L),
         always(DIRECTORIES_DELETED, 0),
         always(FILES_DELETED, 1),
@@ -113,8 +114,52 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
     );
     // there is an empty dir for a parent
     S3AFileStatus status = verifyRawInnerGetFileStatus(dir, true,
-        StatusProbeEnum.ALL, GETFILESTATUS_DIR_H, GETFILESTATUS_DIR_L);
+        StatusProbeEnum.ALL, GET_FILE_STATUS_ON_DIR);
     assertEmptyDirStatus(status, Tristate.TRUE);
+  }
+
+  /**
+   * This creates a directory with a two files and then deletes one of the
+   * files.
+   */
+  @Test
+  public void testDeleteFileInDir() throws Throwable {
+    describe("delete a file in a directory with multiple files");
+    S3AFileSystem fs = getFileSystem();
+    // creates the marker
+    Path dir = dir(methodPath());
+    // file creation may have deleted that marker, but it may
+    // still be there
+    Path file1 = file(new Path(dir, "file1.txt"));
+    Path file2 = file(new Path(dir, "file2.txt"));
+
+    boolean rawAndKeeping = isRaw() && isDeleting();
+    boolean rawAndDeleting = isRaw() && isDeleting();
+    verifyMetrics(() -> {
+          fs.delete(file1, false);
+          return "after fs.delete(file1simpleFile) " + getMetricSummary();
+        },
+        // delete file. For keeping: that's it
+
+        probe(rawAndKeeping, OBJECT_METADATA_REQUESTS,
+            FILESTATUS_FILE_PROBE_H),
+        // if deleting markers, look for the parent too
+        probe(rawAndDeleting, OBJECT_METADATA_REQUESTS,
+            FILESTATUS_FILE_PROBE_H + FILESTATUS_DIR_PROBE_H),
+        whenRaw(OBJECT_LIST_REQUESTS,
+            FILESTATUS_FILE_PROBE_L + FILESTATUS_DIR_PROBE_L),
+        always(DIRECTORIES_DELETED, 0),
+        always(FILES_DELETED, 1),
+
+        // no need to create a parent
+        always(DIRECTORIES_CREATED, 0),
+
+        // keeping: create no parent dirs or delete parents
+        whenKeeping(OBJECT_DELETE_REQUESTS, DELETE_OBJECT_REQUEST),
+
+        // deleting: create a parent and delete any of its parents
+        whenDeleting(OBJECT_DELETE_REQUESTS,
+            DELETE_OBJECT_REQUEST));
   }
 
   @Test

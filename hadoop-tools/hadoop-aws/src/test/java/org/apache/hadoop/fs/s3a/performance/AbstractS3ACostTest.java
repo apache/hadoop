@@ -40,9 +40,9 @@ import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
-import static org.apache.hadoop.fs.s3a.performance.HeadListCosts.*;
+import static org.apache.hadoop.fs.s3a.performance.OperationCost.*;
+import static org.apache.hadoop.fs.s3a.performance.OperationCostValidator.expect;
 import static org.apache.hadoop.fs.s3a.performance.OperationCostValidator.probe;
-import static org.apache.hadoop.fs.s3a.performance.OperationCostValidator.probes;
 import static org.apache.hadoop.test.AssertExtensions.dynamicDescription;
 
 /**
@@ -212,17 +212,15 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
    * @param path path
    * @param overwrite overwrite flag
    * @param recursive true == skip parent existence check
-   * @param head expected head count
-   * @param list expected list count
+   * @param cost expected cost
    * @return path to new object.
    */
   protected Path buildFile(Path path,
       boolean overwrite,
       boolean recursive,
-      int head,
-      int list) throws Exception {
+      OperationCost cost) throws Exception {
     resetStatistics();
-    verifyRawHeadList(head, list, () -> {
+    verifyRaw(cost, () -> {
       FSDataOutputStreamBuilder builder = getFileSystem().createFile(path)
           .overwrite(overwrite);
       if (recursive) {
@@ -272,22 +270,20 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
    * @return path to new object.
    */
   protected Path create(Path path) throws Exception {
-    return create(path, true,
-        CREATE_FILE_OVERWRITE_H,
-        CREATE_FILE_OVERWRITE_L);
+    return create(path, true, CREATE_FILE_OVERWRITE);
   }
 
   /**
    * Create then close the file.
    * @param path path
    * @param overwrite overwrite flag
-   * @param head expected head count
-   * @param list expected list count
+   * @param cost expected cost
+
    * @return path to new object.
    */
   protected Path create(Path path, boolean overwrite,
-      int head, int list) throws Exception {
-    return verifyRawHeadList(head, list, () ->
+      OperationCost cost) throws Exception {
+    return verifyRaw(cost, () ->
         file(path, overwrite));
   }
 
@@ -368,113 +364,116 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
    * @return the exception caught.
    * @throws Exception any other exception
    */
-  protected <T, E extends Throwable> E interceptRawHeadList(
+  protected <T, E extends Throwable> E interceptRaw(
       Class<E> clazz,
       String text,
-      int head,
-      int list,
+      OperationCost cost,
       Callable<T> eval) throws Exception {
-    return verifyMetricsIntercepting(clazz, text, eval,
-        rawHeadList(head, list));
+    return verifyMetricsIntercepting(clazz, text, eval, whenRaw(cost));
   }
 
   /**
-   * Create the probes to expect a given set of head and list requests.
-   * @param enabled is the probe enabled?
-   * @param head expected HEAD count
-   * @param list expected LIST count
-   * @return a probe list
+   * Declare the expected cost on any FS.
+   * @param cost costs to expect
+   * @return a probe.
    */
-  private OperationCostValidator.ExpectedProbe
-      expectHeadList(boolean enabled, int head, int list) {
-    return probes(enabled,
-        probe(OBJECT_METADATA_REQUESTS, head),
-        probe(OBJECT_LIST_REQUESTS, list));
+  protected OperationCostValidator.ExpectedProbe always(
+      OperationCost cost) {
+    return expect(true, cost);
   }
 
   /**
-   * Create the probes to expect a given set of head and list requests.
-   * @param head expected HEAD count
-   * @param list expected LIST count
-   * @return a probe list
+   * Declare the expected cost on a raw FS.
+   * @param cost costs to expect
+   * @return a probe.
    */
-  private OperationCostValidator.ExpectedProbe
-      alwaysHeadList(int head, int list) {
-    return expectHeadList(true, head, list);
+  protected OperationCostValidator.ExpectedProbe whenRaw(
+      OperationCost cost) {
+    return expect(isRaw(), cost);
   }
 
   /**
-   * Declare the expected head and list requests on a raw FS.
-   * @param head expected HEAD count
-   * @param list expected LIST count
-   * @return a probe list
+   * Declare the expected cost on a guarded FS.
+   * @param cost costs to expect
+   * @return a probe.
    */
-  protected OperationCostValidator.ExpectedProbe
-      rawHeadList(int head, int list) {
-    return expectHeadList(isRaw(), head, list);
+  protected OperationCostValidator.ExpectedProbe whenGuarded(
+      OperationCost cost) {
+    return expect(isGuarded(), cost);
   }
 
   /**
-   * Declare the expected head and list requests on an authoritative FS.
-   * @param head expected HEAD count
-   * @param list expected LIST count
-   * @return a probe list
+   * Declare the expected cost on a guarded auth FS.
+   * @param cost costs to expect
+   * @return a probe.
    */
-  protected OperationCostValidator.ExpectedProbe
-      authHeadList(int head, int list) {
-    return expectHeadList(isAuthoritative(), head, list);
+  protected OperationCostValidator.ExpectedProbe whenAuthoritative(
+      OperationCost cost) {
+    return expect(isAuthoritative(), cost);
+  }
+
+
+  /**
+   * Declare the expected cost on a guarded nonauth FS.
+   * @param cost costs to expect
+   * @return a probe.
+   */
+  protected OperationCostValidator.ExpectedProbe whenNonauth(
+      OperationCost cost) {
+    return expect(isNonAuth(), cost);
+  }
+
+
+  /**
+   * A metric diff which must hold when the fs is keeping markers.
+   * @param cost expected cost
+   * @return the diff.
+   */
+  protected OperationCostValidator.ExpectedProbe whenKeeping(
+      OperationCost cost) {
+    return expect(isKeepingMarkers(), cost);
   }
 
   /**
-   * Declare the expected head and list requests on a
-   * non authoritative FS.
-   * @param head expected HEAD count
-   * @param list expected LIST count
-   * @return a probe list
+   * A metric diff which must hold when the fs is keeping markers.
+   * @param cost expected cost
+   * @return the diff.
    */
-  protected OperationCostValidator.ExpectedProbe
-      nonauthHeadList(int head, int list) {
-    return expectHeadList(isNonAuth(), head, list);
+  protected OperationCostValidator.ExpectedProbe whenDeleting(
+      OperationCost cost) {
+    return expect(isDeleting(), cost);
   }
 
   /**
    * Execute a closure expecting a specific number of HEAD/LIST calls
    * on <i>raw</i> S3 stores only.
-   * @param head expected head request count.
-   * @param list expected list request count.
+   * @param cost expected cost
    * @param eval closure to evaluate
    * @param <T> return type of closure
    * @return the result of the evaluation
    */
-  protected <T> T verifyRawHeadList(
-      int head,
-      int list,
+  protected <T> T verifyRaw(
+      OperationCost cost,
       Callable<T> eval) throws Exception {
-    return verifyMetrics(eval,
-        rawHeadList(head, list));
+    return verifyMetrics(eval, whenRaw(cost));
   }
 
   /**
-   * Execute {@link S3AFileSystem#innerGetFileStatus(Path, boolean, Set)}
+   * Execute {@code S3AFileSystem#innerGetFileStatus(Path, boolean, Set)}
    * for the given probes.
-   * expect the specific HEAD/LIST count.
-   * <p>
-   *   Raw FS only.
-   * </p>
+   * expect the specific HEAD/LIST count with a raw FS.
    * @param path path
    * @param needEmptyDirectoryFlag look for empty directory
    * @param probes file status probes to perform
-   * @param head expected head calls
-   * @param list expected list calls
+   * @param cost expected cost
    * @return the status
    */
   public S3AFileStatus verifyRawInnerGetFileStatus(
       Path path,
       boolean needEmptyDirectoryFlag,
       Set<StatusProbeEnum> probes,
-      int head,
-      int list) throws Exception {
-    return verifyRawHeadList(head, list, () ->
+      OperationCost cost) throws Exception {
+    return verifyRaw(cost, () ->
         innerGetFileStatus(getFileSystem(),
             path,
             needEmptyDirectoryFlag,
@@ -482,27 +481,22 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
   }
 
   /**
-   * Execute {@link S3AFileSystem#innerGetFileStatus(Path, boolean, Set)}
+   * Execute {@code S3AFileSystem#innerGetFileStatus(Path, boolean, Set)}
    * for the given probes -expect a FileNotFoundException,
-   * and the specific HEAD/LIST count.
-   * <p>
-   *   Raw FS only.
-   * </p>
+   * and the specific HEAD/LIST count with a raw FS.
    * @param path path
    * @param needEmptyDirectoryFlag look for empty directory
    * @param probes file status probes to perform
-   * @param head expected head calls
-   * @param list expected list calls
-   * @return the status
+   * @param cost expected cost
    */
+
   public void interceptRawGetFileStatusFNFE(
       Path path,
       boolean needEmptyDirectoryFlag,
       Set<StatusProbeEnum> probes,
-      int head,
-      int list) throws Exception {
-    interceptRawHeadList(FileNotFoundException.class, "",
-        head, list, () ->
+      OperationCost cost) throws Exception {
+    interceptRaw(FileNotFoundException.class, "",
+        cost, () ->
             innerGetFileStatus(getFileSystem(),
                 path,
                 needEmptyDirectoryFlag,
@@ -514,12 +508,12 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
    * Metrics are only checked on unguarded stores.
    * @param path path
    * @param expected expected outcome
-   * @param head head count (unguarded)
-   * @param list listCount (unguarded)
+   * @param cost expected cost on a Raw FS.
    */
-  protected void isDir(Path path, boolean expected,
-      int head, int list) throws Exception {
-    boolean b = verifyRawHeadList(head, list, () ->
+  protected void isDir(Path path,
+      boolean expected,
+      OperationCost cost) throws Exception {
+    boolean b = verifyRaw(cost, () ->
         getFileSystem().isDirectory(path));
     Assertions.assertThat(b)
         .describedAs("isDirectory(%s)", path)
@@ -531,12 +525,12 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
    * Metrics are only checked on unguarded stores.
    * @param path path
    * @param expected expected outcome
-   * @param head head count (unguarded)
-   * @param list listCount (unguarded)
+   * @param cost expected cost on a Raw FS.
    */
-  protected void isFile(Path path, boolean expected,
-      int head, int list) throws Exception {
-    boolean b = verifyRawHeadList(head, list, () ->
+  protected void isFile(Path path,
+      boolean expected,
+      OperationCost cost) throws Exception {
+    boolean b = verifyRaw(cost, () ->
         getFileSystem().isFile(path));
     Assertions.assertThat(b)
         .describedAs("isFile(%s)", path)
@@ -560,7 +554,7 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
    * @param expected expected value.
    * @return the diff.
    */
-  protected OperationCostValidator.ExpectedProbe whenRraw(
+  protected OperationCostValidator.ExpectedProbe whenRaw(
       final Statistic stat, final int expected) {
     return probe(isRaw(), stat, expected);
   }
@@ -627,6 +621,7 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
 
   /**
    * Assert the empty directory status of a file is as expected.
+   * The raised assertion message includes a list of the path.
    * @param status status to probe.
    * @param expected expected value
    */
