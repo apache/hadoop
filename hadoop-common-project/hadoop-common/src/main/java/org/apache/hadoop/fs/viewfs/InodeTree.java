@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import org.apache.commons.collections.map.LRUMap;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -496,6 +497,11 @@ abstract class InodeTree<T> {
 
     final String mountTablePrefix =
         Constants.CONFIG_VIEWFS_PREFIX + "." + mountTableName + ".";
+    final String linkPrefix = Constants.CONFIG_VIEWFS_LINK + ".";
+    final String linkFallbackPrefix = Constants.CONFIG_VIEWFS_LINK_FALLBACK;
+    final String linkMergePrefix = Constants.CONFIG_VIEWFS_LINK_MERGE + ".";
+    final String linkMergeSlashPrefix =
+        Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH;
     boolean gotMountTableEntry = false;
     final UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     for (Entry<String, String> si : config) {
@@ -503,62 +509,53 @@ abstract class InodeTree<T> {
       if (!key.startsWith(mountTablePrefix)) {
         continue;
       }
+
       gotMountTableEntry = true;
+      LinkType linkType;
       String src = key.substring(mountTablePrefix.length());
-      if (src.startsWith(Constants.CONFIG_VIEWFS_HOMEDIR)) {
-        // ignore - we set home dir from config
-        continue;
-      }
-      LinkType linkType = checkAndParseLinkType(src);
-      final String target = si.getValue();
-      String linkKeyPath = null;
       String settings = null;
-      switch (linkType) {
-      case SINGLE:
-        final String linkPrefix = Constants.CONFIG_VIEWFS_LINK + ".";
-        linkKeyPath = src.substring(linkPrefix.length());
-        linkEntries.add(
-            new LinkEntry(linkKeyPath, target, linkType, settings, ugi,
-                config));
-        break;
-      case SINGLE_FALLBACK:
-        final String linkFallbackPrefix = Constants.CONFIG_VIEWFS_LINK_FALLBACK;
-        linkKeyPath = src.substring(linkFallbackPrefix.length());
-        linkEntries.add(
-            new LinkEntry(linkKeyPath, target, linkType, settings, ugi,
-                config));
-        break;
-      case MERGE:
-        final String linkMergePrefix = Constants.CONFIG_VIEWFS_LINK_MERGE + ".";
-        linkKeyPath = src.substring(linkMergePrefix.length());
-        linkEntries.add(
-            new LinkEntry(linkKeyPath, target, linkType, settings, ugi,
-                config));
-        break;
-      case MERGE_SLASH:
-        if (isMergeSlashConfigured) {
-          throw new IOException("Mount table " + mountTableName
-              + " has already been configured with a merge slash link. "
-              + "Multiple merge slash links for the same mount table is "
-              + "not allowed.");
+      if (src.startsWith(linkPrefix)) {
+        src = src.substring(linkPrefix.length());
+        if (src.equals(SlashPath.toString())) {
+          throw new UnsupportedFileSystemException("Unexpected mount table "
+              + "link entry '" + key + "'. Use "
+              + Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH  + " instead!");
         }
-        isMergeSlashConfigured = true;
-        mergeSlashTarget = target;
-        break;
-      case NFLY:
-        final String linkNflyPrefix = Constants.CONFIG_VIEWFS_LINK_NFLY + ".";
-        String settingAndKeyPathStr = src.substring(linkNflyPrefix.length());
+        linkType = LinkType.SINGLE;
+      } else if (src.startsWith(linkFallbackPrefix)) {
+        if (src.length() != linkFallbackPrefix.length()) {
+          throw new IOException("ViewFs: Mount points initialization error." +
+              " Invalid " + Constants.CONFIG_VIEWFS_LINK_FALLBACK +
+              " entry in config: " + src);
+        }
+        linkType = LinkType.SINGLE_FALLBACK;
+      } else if (src.startsWith(linkMergePrefix)) { // A merge link
+        src = src.substring(linkMergePrefix.length());
+        linkType = LinkType.MERGE;
+      } else if (src.startsWith(linkMergeSlashPrefix)) {
+        // This is a LinkMergeSlash entry. This entry should
+        // not have any additional source path.
+        if (src.length() != linkMergeSlashPrefix.length()) {
+          throw new IOException("ViewFs: Mount points initialization error." +
+              " Invalid " + Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH +
+              " entry in config: " + src);
+        }
+        linkType = LinkType.MERGE_SLASH;
+      } else if (src.startsWith(Constants.CONFIG_VIEWFS_LINK_NFLY)) {
+        // prefix.settings.src
+        src = src.substring(Constants.CONFIG_VIEWFS_LINK_NFLY.length() + 1);
         // settings.src
-        settings = settingAndKeyPathStr
-            .substring(0, settingAndKeyPathStr.indexOf('.'));
+        settings = src.substring(0, src.indexOf('.'));
         // settings
+
         // settings.src
-        linkKeyPath = settingAndKeyPathStr.substring(settings.length() + 1);
-        linkEntries.add(
-            new LinkEntry(linkKeyPath, target, linkType, settings, ugi,
-                config));
-        break;
-      case REGEX:
+        src = src.substring(settings.length() + 1);
+        // src
+
+        linkType = LinkType.NFLY;
+      } else if (src.startsWith(Constants.CONFIG_VIEWFS_LINK_REGEX)) {
+        final String target = si.getValue();
+        String linkKeyPath = null;
         final String linkRegexPrefix = Constants.CONFIG_VIEWFS_LINK_REGEX + ".";
         // settings#.linkKey
         String settingsAndLinkKeyPath = src.substring(linkRegexPrefix.length());
@@ -578,27 +575,44 @@ abstract class InodeTree<T> {
               settings.length() + RegexMountPoint.SETTING_SRCREGEX_SEP
                   .length());
         }
+        linkType = LinkType.REGEX;
         linkEntries.add(
             new LinkEntry(linkKeyPath, target, linkType, settings, ugi,
                 config));
-        break;
-      default:
-        throw new IOException("ViewFs: Cannot initialize: Invalid entry in "
-            + "Mount table in config: " + src);
+        continue;
+      } else if (src.startsWith(Constants.CONFIG_VIEWFS_HOMEDIR)) {
+        // ignore - we set home dir from config
+        continue;
+      } else {
+        throw new IOException("ViewFs: Cannot initialize: Invalid entry in " +
+            "Mount table in config: " + src);
       }
-      if (isMergeSlashConfigured) {
-        if (linkType != LinkType.MERGE_SLASH) {
+
+      final String target = si.getValue();
+      if (linkType != LinkType.MERGE_SLASH) {
+        if (isMergeSlashConfigured) {
           throw new IOException("Mount table " + mountTableName
               + " has already been configured with a merge slash link. "
               + "A regular link should not be added.");
         }
+        linkEntries.add(
+            new LinkEntry(src, target, linkType, settings, ugi, config));
+      } else {
         if (!linkEntries.isEmpty()) {
           throw new IOException("Mount table " + mountTableName
               + " has already been configured with regular links. "
               + "A merge slash link should not be configured.");
         }
+        if (isMergeSlashConfigured) {
+          throw new IOException("Mount table " + mountTableName
+              + " has already been configured with a merge slash link. "
+              + "Multiple merge slash links for the same mount table is "
+              + "not allowed.");
+        }
+        isMergeSlashConfigured = true;
+        mergeSlashTarget = target;
       }
-    }
+    } // End of for loop.
 
     if (isMergeSlashConfigured) {
       Preconditions.checkNotNull(mergeSlashTarget);
@@ -616,19 +630,22 @@ abstract class InodeTree<T> {
         switch (le.getLinkType()) {
         case SINGLE_FALLBACK:
           if (fallbackLink != null) {
-            throw new IOException("Mount table " + mountTableName + " has already been configured with a link fallback. "
-                + "Multiple fallback links for the same mount table is " + "not allowed.");
+            throw new IOException("Mount table " + mountTableName
+                + " has already been configured with a link fallback. "
+                + "Multiple fallback links for the same mount table is "
+                + "not allowed.");
           }
           fallbackLink = new INodeLink<T>(mountTableName, ugi,
-              getTargetFileSystem(new URI(le.getTarget())), new URI(le.getTarget()));
-          break;
+              getTargetFileSystem(new URI(le.getTarget())),
+              new URI(le.getTarget()));
+          continue;
         case REGEX:
           LOGGER.info("Add regex mount point:" + le.getSrc() + ", target:" + le.getTarget() + ", interceptor settings:" + le.getSettings());
           RegexMountPoint regexMountPoint =
               new RegexMountPoint<T>(this, le.getSrc(), le.getTarget(), le.getSettings());
           regexMountPoint.initialize();
           regexMountPointList.add(regexMountPoint);
-          break;
+          continue;
         default:
           createLink(le.getSrc(), le.getTarget(), le.getLinkType(),
               le.getSettings(), le.getUgi(), le.getConfig());
@@ -659,59 +676,6 @@ abstract class InodeTree<T> {
     if (pathResolutionCacheCapacity > 0) {
       pathResolutionCache = new LRUMap(pathResolutionCacheCapacity);
       cacheRWLock = new ReentrantReadWriteLock();
-    }
-  }
-
-  /**
-   * Get link type of mount point.
-   *
-   * @param src
-   * @return link type of current mount point
-   * @throws UnsupportedFileSystemException
-   * @throws IOException
-   */
-  protected LinkType checkAndParseLinkType(String src)
-      throws UnsupportedFileSystemException, IOException {
-    String linkStr = src;
-    int dotIndex = src.indexOf(".");
-    if (dotIndex != -1) {
-      linkStr = linkStr.substring(0, dotIndex);
-    }
-    switch (linkStr) {
-    case Constants.CONFIG_VIEWFS_LINK:
-      String linkPrefixStr = Constants.CONFIG_VIEWFS_LINK + ".";
-      String linkKey = src.substring(linkPrefixStr.length());
-      if (linkKey.equals(SlashPath.toString())) {
-        throw new UnsupportedFileSystemException(
-            "Unexpected mount table " + "link entry '" + src + "'. Use "
-                + Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH + " instead!");
-      }
-      return LinkType.SINGLE;
-    case Constants.CONFIG_VIEWFS_LINK_FALLBACK:
-      if (src.length() != Constants.CONFIG_VIEWFS_LINK_FALLBACK.length()) {
-        throw new IOException(
-            "ViewFs: Mount points initialization error." + " Invalid "
-                + Constants.CONFIG_VIEWFS_LINK_FALLBACK + " entry in config: "
-                + src);
-      }
-      return LinkType.SINGLE_FALLBACK;
-    case Constants.CONFIG_VIEWFS_LINK_MERGE:
-      return LinkType.MERGE;
-    case Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH:
-      if (src.length() != Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH.length()) {
-        throw new IOException(
-            "ViewFs: Mount points initialization error." + " Invalid "
-                + Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH
-                + " entry in config: " + src);
-      }
-      return LinkType.MERGE_SLASH;
-    case Constants.CONFIG_VIEWFS_LINK_NFLY:
-      return LinkType.NFLY;
-    case Constants.CONFIG_VIEWFS_LINK_REGEX:
-      return LinkType.REGEX;
-    default:
-      throw new IOException("ViewFs: Cannot initialize: Invalid entry in "
-          + "Mount table in config: " + src);
     }
   }
 
@@ -765,10 +729,9 @@ abstract class InodeTree<T> {
       String[] path = breakIntoPathComponents(p);
       if (path.length <= 1) { // special case for when path is "/"
         T targetFs = root.isInternalDir() ?
-            getRootDir().getInternalDirFs() :
-            getRootLink().getTargetFileSystem();
-        resolveResult = new ResolveResult<T>(ResultKind.INTERNAL_DIR, targetFs,
-            root.fullPath, SlashPath);
+            getRootDir().getInternalDirFs() : getRootLink().getTargetFileSystem();
+        resolveResult = new ResolveResult<T>(ResultKind.INTERNAL_DIR,
+            targetFs, root.fullPath, SlashPath);
         return resolveResult;
       }
 
