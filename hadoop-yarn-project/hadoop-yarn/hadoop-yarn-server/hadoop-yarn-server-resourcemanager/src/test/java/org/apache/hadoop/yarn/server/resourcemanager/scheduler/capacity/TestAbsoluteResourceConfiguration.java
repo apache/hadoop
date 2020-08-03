@@ -525,6 +525,57 @@ public class TestAbsoluteResourceConfiguration {
   }
 
   @Test
+  public void testValidateAbsoluteResourceConfig() throws Exception {
+    /**
+     * Queue structure is as follows. root / a / \ a1 a2
+     *
+     * Test below cases: 1) Test ConfigType when resource is [memory=0]
+     */
+
+    // create conf with basic queue configuration.
+    CapacitySchedulerConfiguration csConf =
+        new CapacitySchedulerConfiguration();
+    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
+        new String[] {QUEUEA, QUEUEB});
+    csConf.setQueues(QUEUEA_FULL, new String[] {QUEUEA1, QUEUEA2});
+
+    // Set default capacities like normal configuration.
+    csConf.setCapacity(QUEUEA_FULL, "[memory=125]");
+    csConf.setCapacity(QUEUEB_FULL, "[memory=0]");
+    csConf.setCapacity(QUEUEA1_FULL, "[memory=100]");
+    csConf.setCapacity(QUEUEA2_FULL, "[memory=25]");
+
+    // Update min/max resource to queueA
+    csConf.setMinimumResourceRequirement("", QUEUEA_FULL, QUEUE_A_MINRES);
+    csConf.setMaximumResourceRequirement("", QUEUEA_FULL, QUEUE_A_MAXRES);
+
+    csConf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+
+    @SuppressWarnings("resource")
+    MockRM rm = new MockRM(csConf);
+    rm.start();
+
+    // Add few nodes
+    rm.registerNode("127.0.0.1:1234", 125 * GB, 20);
+
+    // Set [memory=0] to one of the queue and see if reinitialization
+    // doesnt throw exception saying "Parent queue 'root.A' and
+    // child queue 'root.A.A2' should use either percentage
+    // based capacityconfiguration or absolute resource together for label"
+    csConf.setCapacity(QUEUEA1_FULL, "[memory=125]");
+    csConf.setCapacity(QUEUEA2_FULL, "[memory=0]");
+
+    // Get queue object to verify min/max resource configuration.
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+    try {
+      cs.reinitialize(csConf, rm.getRMContext());
+    } catch (IOException e) {
+      Assert.fail(e.getMessage());
+    }
+  }
+
+  @Test
   public void testEffectiveResourceAfterReducingClusterResource()
       throws Exception {
     // create conf with basic queue configuration.
