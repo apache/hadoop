@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.s3a.impl.AbstractStoreOperation;
 import org.apache.hadoop.fs.s3a.impl.ListingOperationCallbacks;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata;
@@ -68,7 +69,7 @@ import static org.apache.hadoop.fs.s3a.auth.RoleModel.pathToKey;
  * Place for the S3A listing classes; keeps all the small classes under control.
  */
 @InterfaceAudience.Private
-public class Listing {
+public class Listing extends AbstractStoreOperation {
 
   private static final Logger LOG = S3AFileSystem.LOG;
 
@@ -77,12 +78,10 @@ public class Listing {
 
   private final ListingOperationCallbacks listingOperationCallbacks;
 
-  private final StoreContext storeContext;
-
   public Listing(ListingOperationCallbacks listingOperationCallbacks,
                  StoreContext storeContext) {
+    super(storeContext);
     this.listingOperationCallbacks = listingOperationCallbacks;
-    this.storeContext = storeContext;
   }
 
   /**
@@ -202,7 +201,7 @@ public class Listing {
     boolean allowAuthoritative = listingOperationCallbacks
             .allowAuthoritative(path);
     if (recursive) {
-      final PathMetadata pm = storeContext
+      final PathMetadata pm = getStoreContext()
               .getMetadataStore()
               .get(path, true);
       if (pm != null) {
@@ -217,7 +216,7 @@ public class Listing {
       }
       MetadataStoreListFilesIterator metadataStoreListFilesIterator =
               new MetadataStoreListFilesIterator(
-                      storeContext.getMetadataStore(),
+                      getStoreContext().getMetadataStore(),
                       pm,
                       allowAuthoritative);
       tombstones = metadataStoreListFilesIterator.listTombstones();
@@ -240,7 +239,7 @@ public class Listing {
     } else {
       DirListingMetadata meta =
               S3Guard.listChildrenWithTtl(
-                      storeContext.getMetadataStore(),
+                      getStoreContext().getMetadataStore(),
                       path,
                       listingOperationCallbacks.getUpdatedTtlTimeProvider(),
                       allowAuthoritative);
@@ -283,7 +282,7 @@ public class Listing {
     boolean allowAuthoritative = listingOperationCallbacks
             .allowAuthoritative(dir);
     DirListingMetadata meta =
-            S3Guard.listChildrenWithTtl(storeContext.getMetadataStore(),
+            S3Guard.listChildrenWithTtl(getStoreContext().getMetadataStore(),
                     dir,
                     listingOperationCallbacks
                             .getUpdatedTtlTimeProvider(),
@@ -350,9 +349,9 @@ public class Listing {
    * value.
    *
    * If the status value is null, the iterator declares that it has no data.
-   * This iterator is used to handle {@link S3AFileSystem#listStatus(Path)} calls
-   * where the path handed in refers to a file, not a directory: this is the
-   * iterator returned.
+   * This iterator is used to handle {@link S3AFileSystem#listStatus(Path)}
+   * calls where the path handed in refers to a file, not a directory:
+   * this is the iterator returned.
    */
   static final class SingleStatusRemoteIterator
       implements RemoteIterator<S3ALocatedFileStatus> {
@@ -622,7 +621,7 @@ public class Listing {
       // objects
       for (S3ObjectSummary summary : objects.getObjectSummaries()) {
         String key = summary.getKey();
-        Path keyPath = storeContext.getContextAccessors().keyToPath(key);
+        Path keyPath = getStoreContext().getContextAccessors().keyToPath(key);
         if (LOG.isDebugEnabled()) {
           LOG.debug("{}: {}", keyPath, stringify(summary));
         }
@@ -630,7 +629,7 @@ public class Listing {
         if (acceptor.accept(keyPath, summary) && filter.accept(keyPath)) {
           S3AFileStatus status = createFileStatus(keyPath, summary,
                   listingOperationCallbacks.getDefaultBlockSize(keyPath),
-                  storeContext.getUsername(),
+                  getStoreContext().getUsername(),
               summary.getETag(), null);
           LOG.debug("Adding: {}", status);
           stats.add(status);
@@ -643,10 +642,12 @@ public class Listing {
 
       // prefixes: always directories
       for (String prefix : objects.getCommonPrefixes()) {
-        Path keyPath = storeContext.getContextAccessors().keyToPath(prefix);
+        Path keyPath = getStoreContext()
+                .getContextAccessors()
+                .keyToPath(prefix);
         if (acceptor.accept(keyPath, prefix) && filter.accept(keyPath)) {
           S3AFileStatus status = new S3AFileStatus(Tristate.FALSE, keyPath,
-              storeContext.getUsername());
+              getStoreContext().getUsername());
           LOG.debug("Adding directory: {}", status);
           added++;
           stats.add(status);

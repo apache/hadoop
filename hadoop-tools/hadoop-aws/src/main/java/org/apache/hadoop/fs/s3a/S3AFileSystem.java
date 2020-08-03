@@ -1610,7 +1610,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
   }
 
-  protected class ListingOperationCallbacksImpl implements ListingOperationCallbacks {
+  protected class ListingOperationCallbacksImpl implements
+          ListingOperationCallbacks {
 
     @Override
     @Retries.RetryRaw
@@ -1630,12 +1631,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
 
     @Override
-    public S3ALocatedFileStatus toLocatedFileStatus(S3AFileStatus status) throws IOException {
+    public S3ALocatedFileStatus toLocatedFileStatus(
+            S3AFileStatus status)
+            throws IOException {
       return S3AFileSystem.this.toLocatedFileStatus(status);
     }
 
     @Override
-    public S3ListRequest createListObjectsRequest(String key, String delimiter) {
+    public S3ListRequest createListObjectsRequest(
+            String key,
+            String delimiter) {
       return S3AFileSystem.this.createListObjectsRequest(key, delimiter);
     }
 

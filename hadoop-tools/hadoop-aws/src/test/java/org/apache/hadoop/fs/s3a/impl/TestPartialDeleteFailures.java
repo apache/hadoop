@@ -240,7 +240,8 @@ public class TestPartialDeleteFailures {
         .build();
   }
 
-  private static class MinimalListingOperationCallbacks implements ListingOperationCallbacks {
+  private static class MinimalListingOperationCallbacks
+          implements ListingOperationCallbacks {
     @Override
     public S3ListResult listObjects(S3ListRequest request)
             throws IOException {
@@ -288,7 +289,8 @@ public class TestPartialDeleteFailures {
       return false;
     }
   }
-  private static class MinimalOperationCallbacks implements OperationCallbacks {
+  private static class MinimalOperationCallbacks
+          implements OperationCallbacks {
     @Override
     public S3ObjectAttributes createObjectAttributes(
             Path path,
@@ -355,7 +357,8 @@ public class TestPartialDeleteFailures {
             List<Path> undeletedObjectsOnFailure,
             BulkOperationState operationState,
             boolean quiet)
-            throws MultiObjectDeleteException, AmazonClientException, IOException {
+            throws MultiObjectDeleteException, AmazonClientException,
+            IOException {
       return null;
     }
 
@@ -476,7 +479,8 @@ public class TestPartialDeleteFailures {
 
     @Override
     public void deletePaths(final Collection<Path> paths,
-        @Nullable final BulkOperationState operationState) throws IOException {
+        @Nullable final BulkOperationState operationState)
+            throws IOException {
       deleted.addAll(paths);
     }
 
