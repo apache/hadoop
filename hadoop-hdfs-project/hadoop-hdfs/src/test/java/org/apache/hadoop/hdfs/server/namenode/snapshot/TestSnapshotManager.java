@@ -60,7 +60,7 @@ public class TestSnapshotManager {
   @Test (timeout=10000)
   public void testMaxSnapshotLimit() throws Exception {
     Configuration conf = new Configuration();
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_GLOBAL_LIMIT,
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_FILESYSTEM_LIMIT,
         testMaxSnapshotIDLimit);
     conf.setInt(DFSConfigKeys.
             DFS_NAMENODE_SNAPSHOT_MAX_LIMIT,

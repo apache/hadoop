@@ -99,8 +99,8 @@ public class SnapshotManager implements SnapshotStatsMXBean {
 
   private boolean allowNestedSnapshots = false;
   private int snapshotCounter = 0;
-  private final int maxSnapshotLimitPerDirectory;
   private final int maxSnapshotLimit;
+  private final int maxSnapshotFSLimit;
   
   /** All snapshottable directories in the namesystem. */
   private final Map<Long, INodeDirectory> snapshottables =
@@ -119,23 +119,23 @@ public class SnapshotManager implements SnapshotStatsMXBean {
         DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_ALLOW_SNAP_ROOT_DESCENDANT,
         DFSConfigKeys.
             DFS_NAMENODE_SNAPSHOT_DIFF_ALLOW_SNAP_ROOT_DESCENDANT_DEFAULT);
-    this.maxSnapshotLimitPerDirectory = conf.getInt(
+    this.maxSnapshotLimit = conf.getInt(
         DFSConfigKeys.
             DFS_NAMENODE_SNAPSHOT_MAX_LIMIT,
         DFSConfigKeys.
             DFS_NAMENODE_SNAPSHOT_MAX_LIMIT_DEFAULT);
-    this.maxSnapshotLimit = conf.getInt(
-        DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_GLOBAL_LIMIT,
-        DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_GLOBAL_LIMIT_DEFAULT);
+    this.maxSnapshotFSLimit = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_FILESYSTEM_LIMIT,
+        DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_FILESYSTEM_LIMIT_DEFAULT);
     LOG.info("Loaded config captureOpenFiles: " + captureOpenFiles
         + ", skipCaptureAccessTimeOnlyChange: "
         + skipCaptureAccessTimeOnlyChange
         + ", snapshotDiffAllowSnapRootDescendant: "
         + snapshotDiffAllowSnapRootDescendant
+        + ", maxSnapshotFSLimit: "
+        + maxSnapshotFSLimit
         + ", maxSnapshotLimit: "
-        + maxSnapshotLimit
-        + ", maxSnapshotLimitPerDirectory: "
-        + maxSnapshotLimitPerDirectory);
+        + maxSnapshotLimit);
 
     final int maxLevels = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_SKIPLIST_MAX_LEVELS,
@@ -143,11 +143,11 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     final int skipInterval = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_SKIPLIST_SKIP_INTERVAL,
         DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_SKIPLIST_SKIP_INTERVAL_DEFAULT);
-    if (maxSnapshotLimitPerDirectory > maxSnapshotLimit) {
+    if (maxSnapshotLimit > maxSnapshotFSLimit) {
       final String errMsg = DFSConfigKeys.
           DFS_NAMENODE_SNAPSHOT_MAX_LIMIT
           + " cannot be greater than " +
-          DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_GLOBAL_LIMIT;
+          DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_FILESYSTEM_LIMIT;
       throw new SnapshotException(errMsg);
     }
     DirectoryDiffListFactory.init(skipInterval, maxLevels, LOG);
@@ -349,16 +349,16 @@ public class SnapshotManager implements SnapshotStatsMXBean {
           "snapshot IDs and ID rollover is not supported.");
     }
     int n = numSnapshots.get();
-    if (n == maxSnapshotLimit) {
+    if (n >= maxSnapshotFSLimit) {
       // We have reached the maximum snapshot limit
       throw new SnapshotException(
           "Failed to create snapshot: there are already " + (n + 1)
               + " snapshot(s) and the max snapshot limit is "
-              + maxSnapshotLimit);
+              + maxSnapshotFSLimit);
     }
 
     srcRoot.addSnapshot(snapshotCounter, snapshotName, leaseManager,
-        this.captureOpenFiles, maxSnapshotLimitPerDirectory, mtime);
+        this.captureOpenFiles, maxSnapshotLimit, mtime);
       
     //create success, update id
     snapshotCounter++;
