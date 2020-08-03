@@ -108,7 +108,8 @@
    */
   function view_perm_details(e, filename, abs_path, perms) {
     $('.explorer-perm-links').popover('destroy');
-    e.popover({html: true, content: $('#explorer-popover-perm-info').html(), trigger: 'focus'})
+   setTimeout(function() {
+    e.popover({html: true,sanitize: false, content: $('#explorer-popover-perm-info').html(), trigger: 'focus'})
       .on('shown.bs.popover', function(e) {
         var popover = $(this), parent = popover.parent();
         //Convert octal to binary permissions
@@ -122,6 +123,7 @@
         });
       })
       .popover('show');
+      }, 100);
   }
 
   // Use WebHDFS to set permissions on an absolute path
