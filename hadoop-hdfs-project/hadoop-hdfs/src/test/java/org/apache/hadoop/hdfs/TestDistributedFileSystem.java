@@ -2268,4 +2268,58 @@ public class TestDistributedFileSystem {
       }
     }
   }
+
+  @Test
+  public void testGetTrashRootsOnSnapshottableDirWithEncryptionZone()
+      throws IOException, NoSuchAlgorithmException {
+    Configuration conf = getTestConfiguration();
+    conf.setBoolean(DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED, true);
+    // Set encryption zone config
+    File tmpDir = GenericTestUtils.getTestDir(UUID.randomUUID().toString());
+    final Path jksPath = new Path(tmpDir.toString(), "test.jks");
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
+        JavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri());
+    MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    // Create key for EZ
+    final KeyProvider provider =
+        cluster.getNameNode().getNamesystem().getProvider();
+    final KeyProvider.Options options = KeyProvider.options(conf);
+    provider.createKey("key", options);
+    provider.flush();
+
+    try {
+      DistributedFileSystem dfs = cluster.getFileSystem();
+      Path testDir = new Path("/ssgtr/test2/");
+      dfs.mkdirs(testDir);
+      dfs.createEncryptionZone(testDir, "key");
+
+      // Create trash inside test directory
+      Path testDirTrash = new Path(testDir, FileSystem.TRASH_PREFIX);
+      Path testDirTrashCurrUser = new Path(testDirTrash,
+          UserGroupInformation.getCurrentUser().getShortUserName());
+      dfs.mkdirs(testDirTrashCurrUser);
+
+      Collection<FileStatus> trashRoots = dfs.getTrashRoots(false);
+      assertEquals(1, trashRoots.size());
+      FileStatus firstFileStatus = trashRoots.iterator().next();
+      String pathStr = firstFileStatus.getPath().toUri().getPath();
+      String testDirStr = testDir.toUri().getPath();
+      assertTrue(pathStr.startsWith(testDirStr));
+
+      dfs.allowSnapshot(testDir);
+
+      Collection<FileStatus> trashRootsAfter = dfs.getTrashRoots(false);
+      // getTrashRoots should give the same result
+      assertEquals(trashRoots, trashRootsAfter);
+
+      // Cleanup
+      dfs.disallowSnapshot(testDir);
+      dfs.delete(testDir, true);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
 }
