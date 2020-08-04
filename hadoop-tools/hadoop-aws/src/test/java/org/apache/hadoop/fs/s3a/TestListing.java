@@ -68,7 +68,7 @@ public class TestListing extends AbstractS3AMockTest {
     Path[] allFiles = {parent, liveChild, deletedChild};
     Path[] liveFiles = {parent, liveChild};
 
-    Listing listing = new Listing(fs);
+    Listing listing = fs.getListing();
     Collection<FileStatus> statuses = new ArrayList<>();
     statuses.add(blankFileStatus(parent));
     statuses.add(blankFileStatus(liveChild));
