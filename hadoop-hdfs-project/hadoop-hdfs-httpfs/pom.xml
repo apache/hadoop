@@ -119,10 +119,6 @@
           <artifactId>servlet-api-2.5</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>com.amazonaws</groupId>
-          <artifactId>aws-java-sdk-s3</artifactId>
-        </exclusion>
-        <exclusion>
           <groupId>org.eclipse.jdt</groupId>
           <artifactId>core</artifactId>
         </exclusion>
@@ -152,10 +148,6 @@
         <exclusion>
           <groupId>org.eclipse.jetty</groupId>
           <artifactId>servlet-api-2.5</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.amazonaws</groupId>
-          <artifactId>aws-java-sdk-s3</artifactId>
         </exclusion>
         <exclusion>
           <groupId>org.eclipse.jdt</groupId>
