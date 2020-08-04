@@ -2144,4 +2144,36 @@ public class TestDistributedFileSystem {
       LambdaTestUtils.intercept(IOException.class, "", () -> str.close());
     }
   }
+
+  @Test
+  public void testGetTrashRoot() throws IOException {
+    Configuration conf = getTestConfiguration();
+    conf.setBoolean("dfs.namenode.snapshot.trashroot.enabled", true);
+    MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    try {
+      DistributedFileSystem dfs = cluster.getFileSystem();
+      Path file0path = new Path("/ssgtr/test1/file-0");
+      dfs.create(file0path);
+      Path testDir = new Path("/ssgtr/test1/");
+
+      Path trBeforeAllowSnapshot = dfs.getTrashRoot(file0path);
+      String trBeforeAllowSnapshotStr = trBeforeAllowSnapshot.toUri().getPath();
+      // The trash root should be in user home directory
+      String homeDirStr = dfs.getHomeDirectory().toUri().getPath();
+      assertTrue(trBeforeAllowSnapshotStr.startsWith(homeDirStr));
+
+      dfs.allowSnapshot(testDir);
+
+      Path trAfterAllowSnapshot = dfs.getTrashRoot(file0path);
+      String trAfterAllowSnapshotStr = trAfterAllowSnapshot.toUri().getPath();
+      // The trash root should now be in the snapshot root
+      String testDirStr = testDir.toUri().getPath();
+      assertTrue(trAfterAllowSnapshotStr.startsWith(testDirStr));
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
 }
