@@ -482,6 +482,11 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final boolean DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES_DEFAULT =
       HdfsClientConfigKeys.DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES_DEFAULT;
 
+  public static final String DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED =
+      HdfsClientConfigKeys.DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED;
+  public static final boolean DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED_DEFAULT =
+      HdfsClientConfigKeys.DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED_DEFAULT;
+
   public static final String DFS_NAMENODE_SNAPSHOT_SKIP_CAPTURE_ACCESSTIME_ONLY_CHANGE = "dfs.namenode.snapshot.skip.capture.accesstime-only-change";
   public static final boolean DFS_NAMENODE_SNAPSHOT_SKIP_CAPTURE_ACCESSTIME_ONLY_CHANGE_DEFAULT = false;
 

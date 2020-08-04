@@ -249,8 +249,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   private static volatile ThreadPoolExecutor STRIPED_READ_THREAD_POOL;
   private final long serverDefaultsValidityPeriod;
 
-  private final boolean snapshotTrashrootEnabled;
-
   /**
    * Disabled stop DeadNodeDetectorThread for the testing when MiniDFSCluster
    * start.
@@ -416,10 +414,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     this.saslClient = new SaslDataTransferClient(
         conf, DataTransferSaslUtil.getSaslPropertiesResolver(conf),
         TrustedChannelResolver.getInstance(conf), nnFallbackToSimpleAuth);
-
-    this.snapshotTrashrootEnabled = conf.getBoolean(
-        DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED,
-        DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED_DEFAULT);
   }
 
   /**
@@ -3157,8 +3151,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     return getKeyProviderUri() != null;
   }
 
-  boolean isSnapshotTrashrootEnabled() {
-    return snapshotTrashrootEnabled;
+  boolean isSnapshotTrashRootEnabled() throws IOException {
+    return getServerDefaults().getSnapshotTrashRootEnabled();
   }
 
   /**
