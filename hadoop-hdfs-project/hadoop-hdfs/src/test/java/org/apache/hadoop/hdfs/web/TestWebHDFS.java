@@ -1103,6 +1103,8 @@ public class TestWebHDFS {
         () -> webHdfs.setQuotaByStorageType(path, StorageType.SSD, -100));
     LambdaTestUtils.intercept(IllegalArgumentException.class,
         () -> webHdfs.setQuotaByStorageType(path, StorageType.RAM_DISK, 100));
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        () -> webHdfs.setQuotaByStorageType(path, StorageType.NVDIMM, -100));
   }
 
 

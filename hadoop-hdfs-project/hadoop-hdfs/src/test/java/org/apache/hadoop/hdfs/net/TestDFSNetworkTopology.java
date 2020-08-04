@@ -64,37 +64,42 @@ public class TestDFSNetworkTopology {
     final String[] racks = {
         "/l1/d1/r1", "/l1/d1/r1", "/l1/d1/r2", "/l1/d1/r2", "/l1/d1/r2",
 
-        "/l1/d2/r3", "/l1/d2/r3", "/l1/d2/r3",
+        "/l1/d2/r3", "/l1/d2/r3", "/l1/d2/r3", "/l1/d2/r3",
 
         "/l2/d3/r1", "/l2/d3/r2", "/l2/d3/r3", "/l2/d3/r4", "/l2/d3/r5",
 
         "/l2/d4/r1", "/l2/d4/r1", "/l2/d4/r1", "/l2/d4/r1", "/l2/d4/r1",
-        "/l2/d4/r1", "/l2/d4/r1"};
+        "/l2/d4/r1", "/l2/d4/r1", "/l2/d4/r2",
+        "/l3/d5/r1", "/l3/d5/r1", "/l3/d5/r2"};
     final String[] hosts = {
         "host1", "host2", "host3", "host4", "host5",
-        "host6", "host7", "host8",
-        "host9", "host10", "host11", "host12", "host13",
-        "host14", "host15", "host16", "host17", "host18", "host19", "host20"};
+        "host6", "host7", "host8", "host9",
+        "host10", "host11", "host12", "host13", "host14",
+        "host15", "host16", "host17", "host18", "host19", "host20",
+        "host21", "host22", "host23", "host24", "host25"};
     final StorageType[] types = {
         StorageType.ARCHIVE, StorageType.DISK, StorageType.ARCHIVE,
         StorageType.DISK, StorageType.DISK,
 
         StorageType.DISK, StorageType.RAM_DISK, StorageType.SSD,
+        StorageType.NVDIMM,
 
         StorageType.DISK, StorageType.RAM_DISK, StorageType.DISK,
         StorageType.ARCHIVE, StorageType.ARCHIVE,
 
         StorageType.DISK, StorageType.DISK, StorageType.RAM_DISK,
         StorageType.RAM_DISK, StorageType.ARCHIVE, StorageType.ARCHIVE,
-        StorageType.SSD};
+        StorageType.SSD, StorageType.NVDIMM,
+
+        StorageType.NVDIMM, StorageType.ARCHIVE, StorageType.DISK};
     final DatanodeStorageInfo[] storages =
-        DFSTestUtil.createDatanodeStorageInfos(20, racks, hosts, types);
+        DFSTestUtil.createDatanodeStorageInfos(25, racks, hosts, types);
     dataNodes = DFSTestUtil.toDatanodeDescriptor(storages);
     for (int i = 0; i < dataNodes.length; i++) {
       CLUSTER.add(dataNodes[i]);
     }
-    dataNodes[9].setDecommissioned();
     dataNodes[10].setDecommissioned();
+    dataNodes[11].setDecommissioned();
   }
 
   /**
@@ -120,10 +125,11 @@ public class TestDFSNetworkTopology {
     HashMap<String, EnumMap<StorageType, Integer>> d2info =
         d2.getChildrenStorageInfo();
     assertEquals(1, d2info.keySet().size());
-    assertTrue(d2info.get("r3").size() == 3);
+    assertTrue(d2info.get("r3").size() == 4);
     assertEquals(1, (int)d2info.get("r3").get(StorageType.DISK));
     assertEquals(1, (int)d2info.get("r3").get(StorageType.RAM_DISK));
     assertEquals(1, (int)d2info.get("r3").get(StorageType.SSD));
+    assertEquals(1, (int)d2info.get("r3").get(StorageType.NVDIMM));
 
     DFSTopologyNodeImpl d3 =
         (DFSTopologyNodeImpl) CLUSTER.getNode("/l2/d3");
@@ -140,11 +146,23 @@ public class TestDFSNetworkTopology {
         (DFSTopologyNodeImpl) CLUSTER.getNode("/l2/d4");
     HashMap<String, EnumMap<StorageType, Integer>> d4info =
         d4.getChildrenStorageInfo();
-    assertEquals(1, d4info.keySet().size());
+    assertEquals(2, d4info.keySet().size());
     assertEquals(2, (int)d4info.get("r1").get(StorageType.DISK));
     assertEquals(2, (int)d4info.get("r1").get(StorageType.RAM_DISK));
     assertEquals(2, (int)d4info.get("r1").get(StorageType.ARCHIVE));
     assertEquals(1, (int)d4info.get("r1").get(StorageType.SSD));
+    assertEquals(1, (int)d4info.get("r2").get(StorageType.NVDIMM));
+
+    DFSTopologyNodeImpl d5 =
+        (DFSTopologyNodeImpl) CLUSTER.getNode("/l3/d5");
+    System.out.println(d5);
+    HashMap<String, EnumMap<StorageType, Integer>> d5info =
+        d5.getChildrenStorageInfo();
+    assertEquals(2, d5info.keySet().size());
+    assertEquals(1, (int)d5info.get("r1").get(StorageType.ARCHIVE));
+    assertEquals(1, (int)d5info.get("r1").get(StorageType.NVDIMM));
+    assertEquals(1, (int)d5info.get("r2").get(StorageType.DISK));
+
 
     DFSTopologyNodeImpl l1 =
         (DFSTopologyNodeImpl) CLUSTER.getNode("/l1");
@@ -152,12 +170,13 @@ public class TestDFSNetworkTopology {
         l1.getChildrenStorageInfo();
     assertEquals(2, l1info.keySet().size());
     assertTrue(l1info.get("d1").size() == 2
-        && l1info.get("d2").size() == 3);
+        && l1info.get("d2").size() == 4);
     assertEquals(2, (int)l1info.get("d1").get(StorageType.ARCHIVE));
     assertEquals(3, (int)l1info.get("d1").get(StorageType.DISK));
     assertEquals(1, (int)l1info.get("d2").get(StorageType.DISK));
     assertEquals(1, (int)l1info.get("d2").get(StorageType.RAM_DISK));
     assertEquals(1, (int)l1info.get("d2").get(StorageType.SSD));
+    assertEquals(1, (int)l1info.get("d2").get(StorageType.NVDIMM));
 
     // checking level = 1 nodes
     DFSTopologyNodeImpl l2 =
@@ -165,7 +184,7 @@ public class TestDFSNetworkTopology {
     HashMap<String, EnumMap<StorageType, Integer>> l2info =
         l2.getChildrenStorageInfo();
     assertTrue(l2info.get("d3").size() == 3
-        && l2info.get("d4").size() == 4);
+        && l2info.get("d4").size() == 5);
     assertEquals(2, l2info.keySet().size());
     assertEquals(2, (int)l2info.get("d3").get(StorageType.DISK));
     assertEquals(2, (int)l2info.get("d3").get(StorageType.ARCHIVE));
@@ -174,6 +193,17 @@ public class TestDFSNetworkTopology {
     assertEquals(2, (int)l2info.get("d4").get(StorageType.ARCHIVE));
     assertEquals(2, (int)l2info.get("d4").get(StorageType.RAM_DISK));
     assertEquals(1, (int)l2info.get("d4").get(StorageType.SSD));
+    assertEquals(1, (int)l2info.get("d4").get(StorageType.NVDIMM));
+
+    DFSTopologyNodeImpl l3 =
+        (DFSTopologyNodeImpl) CLUSTER.getNode("/l3");
+    HashMap<String, EnumMap<StorageType, Integer>> l3info =
+        l3.getChildrenStorageInfo();
+    assertTrue(l3info.get("d5").size() == 3);
+    assertEquals(1, l3info.keySet().size());
+    assertEquals(1, (int)l3info.get("d5").get(StorageType.NVDIMM));
+    assertEquals(1, (int)l3info.get("d5").get(StorageType.ARCHIVE));
+    assertEquals(1, (int)l3info.get("d5").get(StorageType.DISK));
   }
 
   /**
@@ -182,15 +212,16 @@ public class TestDFSNetworkTopology {
    */
   @Test
   public void testAddAndRemoveTopology() throws Exception {
-    String[] newRack = {"/l1/d1/r1", "/l1/d1/r3", "/l1/d3/r3", "/l1/d3/r3"};
-    String[] newHost = {"nhost1", "nhost2", "nhost3", "nhost4"};
+    String[] newRack = {"/l1/d1/r1", "/l1/d1/r3", "/l1/d3/r3", "/l1/d3/r3",
+        "/l1/d3/r4"};
+    String[] newHost = {"nhost1", "nhost2", "nhost3", "nhost4", "nhost5"};
     String[] newips = {"30.30.30.30", "31.31.31.31", "32.32.32.32",
-        "33.33.33.33"};
+        "33.33.33.33", "33.33.33.34"};
     StorageType[] newTypes = {StorageType.DISK, StorageType.SSD,
-        StorageType.SSD, StorageType.SSD};
-    DatanodeDescriptor[] newDD = new DatanodeDescriptor[4];
+        StorageType.SSD, StorageType.SSD, StorageType.NVDIMM};
+    DatanodeDescriptor[] newDD = new DatanodeDescriptor[5];
 
-    for (int i = 0; i<4; i++) {
+    for (int i = 0; i<5; i++) {
       DatanodeStorageInfo dsi = DFSTestUtil.createDatanodeStorageInfo(
           "s" + newHost[i], newips[i], newRack[i], newHost[i],
           newTypes[i], null);
@@ -215,9 +246,10 @@ public class TestDFSNetworkTopology {
         (DFSTopologyNodeImpl) CLUSTER.getNode("/l1/d3");
     HashMap<String, EnumMap<StorageType, Integer>> d3info =
         d3.getChildrenStorageInfo();
-    assertEquals(1, d3info.keySet().size());
-    assertTrue(d3info.get("r3").size() == 1);
+    assertEquals(2, d3info.keySet().size());
+    assertTrue(d3info.get("r3").size() == 1 && d3info.get("r4").size() ==1);
     assertEquals(2, (int)d3info.get("r3").get(StorageType.SSD));
+    assertEquals(1, (int)d3info.get("r4").get(StorageType.NVDIMM));
 
     DFSTopologyNodeImpl l1 =
         (DFSTopologyNodeImpl) CLUSTER.getNode("/l1");
@@ -225,7 +257,7 @@ public class TestDFSNetworkTopology {
         l1.getChildrenStorageInfo();
     assertEquals(3, l1info.keySet().size());
     assertTrue(l1info.get("d1").size() == 3 &&
-        l1info.get("d2").size() == 3 && l1info.get("d3").size() == 1);
+        l1info.get("d2").size() == 4 && l1info.get("d3").size() == 2);
     assertEquals(4, (int)l1info.get("d1").get(StorageType.DISK));
     assertEquals(2, (int)l1info.get("d1").get(StorageType.ARCHIVE));
     assertEquals(1, (int)l1info.get("d1").get(StorageType.SSD));
@@ -233,8 +265,9 @@ public class TestDFSNetworkTopology {
     assertEquals(1, (int)l1info.get("d2").get(StorageType.RAM_DISK));
     assertEquals(1, (int)l1info.get("d2").get(StorageType.DISK));
     assertEquals(2, (int)l1info.get("d3").get(StorageType.SSD));
+    assertEquals(1, (int)l1info.get("d3").get(StorageType.NVDIMM));
 
-    for (int i = 0; i<4; i++) {
+    for (int i = 0; i<5; i++) {
       CLUSTER.remove(newDD[i]);
     }
 
@@ -257,12 +290,13 @@ public class TestDFSNetworkTopology {
         nl1.getChildrenStorageInfo();
     assertEquals(2, nl1info.keySet().size());
     assertTrue(l1info.get("d1").size() == 2
-        && l1info.get("d2").size() == 3);
+        && l1info.get("d2").size() == 4);
     assertEquals(2, (int)nl1info.get("d1").get(StorageType.ARCHIVE));
     assertEquals(3, (int)nl1info.get("d1").get(StorageType.DISK));
     assertEquals(1, (int)l1info.get("d2").get(StorageType.DISK));
     assertEquals(1, (int)l1info.get("d2").get(StorageType.RAM_DISK));
     assertEquals(1, (int)l1info.get("d2").get(StorageType.SSD));
+    assertEquals(1, (int)l1info.get("d2").get(StorageType.NVDIMM));
 
     assertNull(CLUSTER.getNode("/l1/d3"));
   }
@@ -278,6 +312,7 @@ public class TestDFSNetworkTopology {
     Set<String> archiveUnderL1 = Sets.newHashSet("host1", "host3");
     Set<String> ramdiskUnderL1 = Sets.newHashSet("host7");
     Set<String> ssdUnderL1 = Sets.newHashSet("host8");
+    Set<String> nvdimmUnderL1 = Sets.newHashSet("host9");
     for (int i = 0; i < 10; i++) {
       n = CLUSTER.chooseRandomWithStorageType("/l1", null, null,
           StorageType.DISK);
@@ -324,8 +359,8 @@ public class TestDFSNetworkTopology {
           StorageType.ARCHIVE);
       assertTrue(n instanceof DatanodeDescriptor);
       dd = (DatanodeDescriptor) n;
-      assertTrue(dd.getHostName().equals("host12") ||
-          dd.getHostName().equals("host13"));
+      assertTrue(dd.getHostName().equals("host13") ||
+          dd.getHostName().equals("host14"));
     }
 
     // test exclude nodes
@@ -334,7 +369,7 @@ public class TestDFSNetworkTopology {
           StorageType.ARCHIVE);
       assertTrue(n instanceof DatanodeDescriptor);
       dd = (DatanodeDescriptor) n;
-      assertTrue(dd.getHostName().equals("host13"));
+      assertTrue(dd.getHostName().equals("host14"));
     }
 
     // test exclude scope
@@ -343,7 +378,7 @@ public class TestDFSNetworkTopology {
           StorageType.ARCHIVE);
       assertTrue(n instanceof DatanodeDescriptor);
       dd = (DatanodeDescriptor) n;
-      assertTrue(dd.getHostName().equals("host13"));
+      assertTrue(dd.getHostName().equals("host14"));
     }
 
     // test exclude scope + excluded node with expected null return node
@@ -408,8 +443,8 @@ public class TestDFSNetworkTopology {
           "/l2/d3", null, StorageType.ARCHIVE);
       assertTrue(n instanceof DatanodeDescriptor);
       dd = (DatanodeDescriptor) n;
-      assertTrue(dd.getHostName().equals("host12") ||
-          dd.getHostName().equals("host13"));
+      assertTrue(dd.getHostName().equals("host13") ||
+          dd.getHostName().equals("host14"));
     }
 
     for (int i = 0; i<10; i++) {
@@ -417,7 +452,7 @@ public class TestDFSNetworkTopology {
           "/l2/d3", excluded, StorageType.ARCHIVE);
       assertTrue(n instanceof DatanodeDescriptor);
       dd = (DatanodeDescriptor) n;
-      assertTrue(dd.getHostName().equals("host13"));
+      assertTrue(dd.getHostName().equals("host14"));
     }
 
     // search with given scope being exclude scope
@@ -431,7 +466,7 @@ public class TestDFSNetworkTopology {
       assertTrue(n instanceof DatanodeDescriptor);
       dd = (DatanodeDescriptor) n;
       assertTrue(dd.getHostName().equals("host7") ||
-          dd.getHostName().equals("host10"));
+          dd.getHostName().equals("host11"));
     }
 
     // similar to above, except that we also exclude host10 here. so it should
@@ -542,8 +577,8 @@ public class TestDFSNetworkTopology {
           "/l2/d3", null, StorageType.ARCHIVE);
       assertTrue(n instanceof DatanodeDescriptor);
       dd = (DatanodeDescriptor) n;
-      assertTrue(dd.getHostName().equals("host12") ||
-          dd.getHostName().equals("host13"));
+      assertTrue(dd.getHostName().equals("host13") ||
+          dd.getHostName().equals("host14"));
     }
 
     for (int i = 0; i<10; i++) {
@@ -551,7 +586,7 @@ public class TestDFSNetworkTopology {
           "/l2/d3", excluded, StorageType.ARCHIVE);
       assertTrue(n instanceof DatanodeDescriptor);
       dd = (DatanodeDescriptor) n;
-      assertTrue(dd.getHostName().equals("host13"));
+      assertTrue(dd.getHostName().equals("host14"));
     }
 
     // search with given scope being exclude scope
@@ -565,7 +600,7 @@ public class TestDFSNetworkTopology {
       assertTrue(n instanceof DatanodeDescriptor);
       dd = (DatanodeDescriptor) n;
       assertTrue(dd.getHostName().equals("host7") ||
-          dd.getHostName().equals("host10"));
+          dd.getHostName().equals("host11"));
     }
 
     // similar to above, except that we also exclude host10 here. so it should
