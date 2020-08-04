@@ -24,7 +24,6 @@ import java.nio.file.AccessDeniedException;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Retries;
-import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
 
 /**
  * An interface to implement for providing accessors to

@@ -70,10 +70,6 @@ public class StoreContextBuilder {
 
   private ITtlTimeProvider timeProvider;
 
-  private OperationCallbacks operationCallbacks;
-
-  private ListingOperationCallbacks listingOperationCallbacks;
-
   public StoreContextBuilder setFsURI(final URI fsURI) {
     this.fsURI = fsURI;
     return this;
