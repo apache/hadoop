@@ -24,6 +24,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INode;
@@ -35,32 +36,54 @@ import org.apache.hadoop.util.Time;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
+
 
 /**
  * Testing snapshot manager functionality.
  */
 public class TestSnapshotManager {
-  private static final int testMaxSnapshotLimit = 7;
+  private static final int testMaxSnapshotIDLimit = 7;
 
   /**
-   * Test that the global limit on snapshots is honored.
+   * Test that the global limit on snapshot Ids is honored.
    */
   @Test (timeout=10000)
-  public void testSnapshotLimits() throws Exception {
-    // Setup mock objects for SnapshotManager.createSnapshot.
-    //
+  public void testSnapshotIDLimits() throws Exception {
+    testMaxSnapshotLimit(testMaxSnapshotIDLimit, "rollover",
+        new Configuration(), testMaxSnapshotIDLimit);
+  }
+
+  /**
+   * Tests that the global limit on snapshots is honored.
+   */
+  @Test (timeout=10000)
+  public void testMaxSnapshotLimit() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_FILESYSTEM_LIMIT,
+        testMaxSnapshotIDLimit);
+    conf.setInt(DFSConfigKeys.
+            DFS_NAMENODE_SNAPSHOT_MAX_LIMIT,
+        testMaxSnapshotIDLimit);
+    testMaxSnapshotLimit(testMaxSnapshotIDLimit,"max snapshot limit" ,
+        conf, testMaxSnapshotIDLimit * 2);
+  }
+
+  private void testMaxSnapshotLimit(int maxSnapshotLimit, String errMsg,
+                                    Configuration conf, int maxSnapID)
+      throws IOException {
     LeaseManager leaseManager = mock(LeaseManager.class);
     INodeDirectory ids = mock(INodeDirectory.class);
     FSDirectory fsdir = mock(FSDirectory.class);
     INodesInPath iip = mock(INodesInPath.class);
 
-    SnapshotManager sm = spy(new SnapshotManager(new Configuration(), fsdir));
+    SnapshotManager sm = spy(new SnapshotManager(conf, fsdir));
     doReturn(ids).when(sm).getSnapshottableRoot(any());
-    doReturn(testMaxSnapshotLimit).when(sm).getMaxSnapshotID();
+    doReturn(maxSnapID).when(sm).getMaxSnapshotID();
 
     // Create testMaxSnapshotLimit snapshots. These should all succeed.
     //
-    for (Integer i = 0; i < testMaxSnapshotLimit; ++i) {
+    for (Integer i = 0; i < maxSnapshotLimit; ++i) {
       sm.createSnapshot(leaseManager, iip, "dummy", i.toString(), Time.now());
     }
 
@@ -73,7 +96,7 @@ public class TestSnapshotManager {
       Assert.fail("Expected SnapshotException not thrown");
     } catch (SnapshotException se) {
       Assert.assertTrue(
-          StringUtils.toLowerCase(se.getMessage()).contains("rollover"));
+          StringUtils.toLowerCase(se.getMessage()).contains(errMsg));
     }
 
     // Delete a snapshot to free up a slot.
@@ -83,22 +106,26 @@ public class TestSnapshotManager {
     // Attempt to create a snapshot again. It should still fail due
     // to snapshot ID rollover.
     //
+
     try {
       sm.createSnapshot(leaseManager, iip, "dummy", "shouldFailSnapshot2",
           Time.now());
-      Assert.fail("Expected SnapshotException not thrown");
+      // in case the snapshot ID limit is hit, further creation of snapshots
+      // even post deletions of snapshots won't succeed
+      if (maxSnapID < maxSnapshotLimit) {
+        Assert.fail("CreateSnapshot should succeed");
+      }
     } catch (SnapshotException se) {
       Assert.assertTrue(
-          StringUtils.toLowerCase(se.getMessage()).contains("rollover"));
+          StringUtils.toLowerCase(se.getMessage()).contains(errMsg));
     }
   }
-
   /**
    *  Snapshot is identified by INODE CURRENT_STATE_ID.
    *  So maximum allowable snapshotID should be less than CURRENT_STATE_ID
    */
   @Test
-  public void testValidateSnapshotIDWidth() {
+  public void testValidateSnapshotIDWidth() throws Exception {
     FSDirectory fsdir = mock(FSDirectory.class);
     SnapshotManager snapshotManager = new SnapshotManager(new Configuration(),
         fsdir);
