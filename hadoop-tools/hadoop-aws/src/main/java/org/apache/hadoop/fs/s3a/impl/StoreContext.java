@@ -210,6 +210,10 @@ public class StoreContext {
     return useListV1;
   }
 
+  public ContextAccessors getContextAccessors() {
+    return contextAccessors;
+  }
+
   /**
    * Convert a key to a fully qualified path.
    * @param key input key
