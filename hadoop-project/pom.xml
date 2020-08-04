@@ -2401,7 +2401,7 @@
             <artifactId>maven-javadoc-plugin</artifactId>
             <configuration>
               <skip>${javadoc.skip.jdk11}</skip>
-              <source>8</source>
+              <detectJavaApiLink>false</detectJavaApiLink>
               <additionalOptions>
                 <!-- TODO: remove -html4 option to generate html5 docs when we stop supporting JDK8 -->
                 <additionalOption>-html4</additionalOption>
