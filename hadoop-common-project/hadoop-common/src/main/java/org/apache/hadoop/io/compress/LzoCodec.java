@@ -27,8 +27,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.compress.lzo.LzoCompressor;
 import org.apache.hadoop.io.compress.lzo.LzoDecompressor;
-import org.apache.hadoop.io.compress.lzo.LzoInputStream;
-import org.apache.hadoop.io.compress.lzo.LzoOutputStream;
 
 /**
  * This class creates lzo compressors/decompressors.
@@ -86,7 +84,11 @@ public class LzoCodec implements Configurable, CompressionCodec {
     int bufferSize = conf.getInt(
         CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZO_BUFFERSIZE_KEY,
         CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZO_BUFFERSIZE_DEFAULT);
-    return new LzoOutputStream(out, bufferSize);
+    io.airlift.compress.lzo.LzoCodec codec = new io.airlift.compress.lzo.LzoCodec();
+    Configuration lzoConf = new Configuration(this.conf);
+    lzoConf.setInt(CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZO_BUFFERSIZE_KEY, bufferSize);
+    codec.setConf(lzoConf);
+    return codec.createOutputStream(out);
   }
 
   /**
@@ -142,7 +144,11 @@ public class LzoCodec implements Configurable, CompressionCodec {
     int bufferSize = conf.getInt(
             CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZO_BUFFERSIZE_KEY,
             CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZO_BUFFERSIZE_DEFAULT);
-    return new LzoInputStream(in, bufferSize);
+    io.airlift.compress.lzo.LzoCodec codec = new io.airlift.compress.lzo.LzoCodec();
+    Configuration lzoConf = new Configuration(this.conf);
+    lzoConf.setInt(CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZO_BUFFERSIZE_KEY, bufferSize);
+    codec.setConf(lzoConf);
+    return codec.createInputStream(in);
   }
 
   /**

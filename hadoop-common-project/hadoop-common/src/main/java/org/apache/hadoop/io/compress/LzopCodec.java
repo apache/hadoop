@@ -79,11 +79,15 @@ public class LzopCodec implements Configurable, CompressionCodec {
    */
   @Override
   public CompressionOutputStream createOutputStream(OutputStream out,
-                                                    Compressor compressor) throws IOException {
+      Compressor compressor) throws IOException {
     int bufferSize = conf.getInt(
             CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZO_BUFFERSIZE_KEY,
             CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZO_BUFFERSIZE_DEFAULT);
-    return new LzopOutputStream(out, bufferSize);
+    io.airlift.compress.lzo.LzopCodec codec = new io.airlift.compress.lzo.LzopCodec();
+    Configuration lzoConf = new Configuration(this.conf);
+    lzoConf.setInt(CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZO_BUFFERSIZE_KEY, bufferSize);
+    codec.setConf(lzoConf);
+    return codec.createOutputStream(out);
   }
 
   /**
@@ -135,11 +139,15 @@ public class LzopCodec implements Configurable, CompressionCodec {
    */
   @Override
   public CompressionInputStream createInputStream(InputStream in,
-                                                  Decompressor decompressor) throws IOException {
+      Decompressor decompressor) throws IOException {
     int bufferSize = conf.getInt(
             CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZO_BUFFERSIZE_KEY,
             CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZO_BUFFERSIZE_DEFAULT);
-    return new LzopInputStream(in, bufferSize);
+    io.airlift.compress.lzo.LzopCodec codec = new io.airlift.compress.lzo.LzopCodec();
+    Configuration lzoConf = new Configuration(this.conf);
+    lzoConf.setInt(CommonConfigurationKeys.IO_COMPRESSION_CODEC_LZO_BUFFERSIZE_KEY, bufferSize);
+    codec.setConf(lzoConf);
+    return codec.createInputStream(in);
   }
 
   /**
