@@ -323,7 +323,7 @@ public class AzureBlobFileSystem extends FileSystem {
       abfsStore.rename(qualifiedSrcPath, qualifiedDstPath);
       return true;
     } catch(AzureBlobFileSystemException ex) {
-      LOG.debug("Rename operation failed", ex);
+      LOG.debug("Rename operation failed. ", ex);
       checkException(
               src,
               ex,
