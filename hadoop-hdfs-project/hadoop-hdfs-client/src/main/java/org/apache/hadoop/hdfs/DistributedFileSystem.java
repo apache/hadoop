@@ -3379,24 +3379,26 @@ public class DistributedFileSystem extends FileSystem
       // Get snapshottable directory trash roots
       if (dfs.isSnapshotTrashRootEnabled()) {
         SnapshottableDirectoryStatus[] lst = dfs.getSnapshottableDirListing();
-        for (SnapshottableDirectoryStatus dirStatus : lst) {
-          String ssDir = dirStatus.getFullPath().toString();
-          Path ssTrashRoot = new Path(ssDir, FileSystem.TRASH_PREFIX);
-          if (!exists(ssTrashRoot)) {
-            continue;
-          }
-          if (allUsers) {
-            for (FileStatus candidate : listStatus(ssTrashRoot)) {
-              if (exists(candidate.getPath())) {
-                ret.add(candidate);
-              }
+        if (lst != null) {
+          for (SnapshottableDirectoryStatus dirStatus : lst) {
+            String ssDir = dirStatus.getFullPath().toString();
+            Path ssTrashRoot = new Path(ssDir, FileSystem.TRASH_PREFIX);
+            if (!exists(ssTrashRoot)) {
+              continue;
             }
-          } else {
-            Path userTrash = new Path(DFSUtilClient.getSnapshotTrashRoot(
-                ssDir, dfs.ugi));
-            try {
-              ret.add(getFileStatus(userTrash));
-            } catch (FileNotFoundException ignored) {
+            if (allUsers) {
+              for (FileStatus candidate : listStatus(ssTrashRoot)) {
+                if (exists(candidate.getPath())) {
+                  ret.add(candidate);
+                }
+              }
+            } else {
+              Path userTrash = new Path(DFSUtilClient.getSnapshotTrashRoot(
+                  ssDir, dfs.ugi));
+              try {
+                ret.add(getFileStatus(userTrash));
+              } catch (FileNotFoundException ignored) {
+              }
             }
           }
         }
