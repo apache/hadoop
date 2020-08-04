@@ -121,8 +121,7 @@ public class ITestS3ARenameCost extends AbstractS3ACostTest {
    */
   @Test
   public void testRenameSameDirectory() throws Throwable {
-    describe("rename a file to a different directory, "
-        + "keeping the source dir present");
+    describe("rename a file to the same directory");
 
     Path baseDir = dir(methodPath());
     final Path sourceFile = file(new Path(baseDir, "source.txt"));

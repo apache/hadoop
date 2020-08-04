@@ -67,6 +67,7 @@ import com.amazonaws.services.s3.model.MultipartUpload;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
+
 import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
 import com.amazonaws.services.s3.model.SSECustomerKey;
 import com.amazonaws.services.s3.model.UploadPartRequest;
@@ -2668,7 +2669,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     entryPoint(INVOCATION_LIST_STATUS);
 
     List<S3AFileStatus> result;
-    entryPoint(INVOCATION_GET_FILE_STATUS);
     final S3AFileStatus fileStatus = innerGetFileStatus(path, false,
         StatusProbeEnum.ALL);
 

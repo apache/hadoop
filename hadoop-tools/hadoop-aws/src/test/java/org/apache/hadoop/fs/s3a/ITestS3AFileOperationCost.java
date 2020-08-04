@@ -91,7 +91,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
         whenRaw(FILE_STATUS_FILE_PROBE
             .plus(LIST_LOCATED_STATUS_LIST_OP)),
         whenAuthoritative(LIST_LOCATED_STATUS_LIST_OP),
-        whenNonauth(LIST_LOCATED_STATUS_LIST_OP));;
+        whenNonauth(LIST_LOCATED_STATUS_LIST_OP));
   }
 
   @Test

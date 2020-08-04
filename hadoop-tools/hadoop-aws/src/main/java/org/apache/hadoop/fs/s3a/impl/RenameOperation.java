@@ -274,11 +274,15 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
         storeContext,
         sourcePath, sourceStatus, destPath);
 
+    // The path to whichever file or directory is created by the
+    // rename. When deleting markers all parents of
+    // this path will need their markers pruned.
+    Path destCreated = destPath;
 
     // Ok! Time to start
     try {
       if (sourceStatus.isFile()) {
-        renameFileToDest();
+        destCreated = renameFileToDest();
       } else {
         recursiveDirectoryRename();
       }
@@ -303,15 +307,17 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
     // Tell the metastore this fact and let it complete its changes
     renameTracker.completeRename();
 
-    callbacks.finishRename(sourcePath, destPath);
+    callbacks.finishRename(sourcePath, destCreated);
     return bytesCopied.get();
   }
 
   /**
-   * The source is a file: rename it to the destination.
+   * The source is a file: rename it to the destination, which
+   * will be under the current destination path if that is a directory.
+   * @return the path of the object created.
    * @throws IOException failure
    */
-  protected void renameFileToDest() throws IOException {
+  protected Path renameFileToDest() throws IOException {
     final StoreContext storeContext = getStoreContext();
     // the source is a file.
     Path copyDestinationPath = destPath;
@@ -344,6 +350,7 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
     callbacks.deleteObjectAtPath(sourcePath, sourceKey, true, null);
     // and update the tracker
     renameTracker.sourceObjectsDeleted(Lists.newArrayList(sourcePath));
+    return copyDestinationPath;
   }
 
   /**

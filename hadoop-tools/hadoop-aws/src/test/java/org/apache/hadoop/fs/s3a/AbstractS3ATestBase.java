@@ -37,6 +37,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestDynamoTablePrefix;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestPropertyBool;
+import static org.apache.hadoop.fs.s3a.S3AUtils.E_FS_CLOSED;
 
 /**
  * An extension of the contract test base set up for S3A tests.
@@ -68,22 +69,23 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
     // if logging at debug
     S3AFileSystem fs = getFileSystem();
     if (fs != null) {
-
-      boolean audit = getTestPropertyBool(fs.getConf(),
-          DIRECTORY_MARKER_AUDIT, false);
-      Path methodPath = methodPath();
-      if (audit
-          && !fs.getDirectoryMarkerPolicy().keepDirectoryMarkers(methodPath)
-          && fs.isDirectory(methodPath)) {
-        try {
-          MarkerTool.ScanResult result = MarkerTool.execMarkerTool(fs,
-              methodPath, true, 0);
-
-          if (result.getExitCode() != 0) {
-            fail("Audit of " + methodPath + " failed: " + result);
-          }
-        } catch (FileNotFoundException ignored) {
-        } catch (Exception e) {
+      try {
+        boolean audit = getTestPropertyBool(fs.getConf(),
+            DIRECTORY_MARKER_AUDIT, false);
+        Path methodPath = methodPath();
+        if (audit
+            && !fs.getDirectoryMarkerPolicy().keepDirectoryMarkers(methodPath)
+            && fs.isDirectory(methodPath)) {
+            MarkerTool.ScanResult result = MarkerTool.execMarkerTool(fs,
+                methodPath, true, 0);
+            if (result.getExitCode() != 0) {
+              fail("Audit of " + methodPath + " failed: " + result);
+            }
+        }
+      } catch (FileNotFoundException ignored) {
+      } catch (Exception e) {
+        // If is this is not due to the FS being closed: log.
+        if (!e.toString().contains(E_FS_CLOSED)) {
           LOG.warn("Marker Tool Failure", e);
         }
       }

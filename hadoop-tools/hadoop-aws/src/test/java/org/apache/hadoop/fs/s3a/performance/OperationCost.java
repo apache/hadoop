@@ -50,7 +50,7 @@ public final class OperationCost {
    * No IO takes place.
    */
   public static final OperationCost NO_IO =
-      new OperationCost(0,0);
+      new OperationCost(0, 0);
 
 
   /** A HEAD operation. */
@@ -76,7 +76,8 @@ public final class OperationCost {
       FILE_STATUS_FILE_PROBE.plus(FILE_STATUS_DIR_PROBE);
 
   /** getFileStatus() on a file which exists. */
-  public static final OperationCost GET_FILE_STATUS_ON_FILE = FILE_STATUS_FILE_PROBE;
+  public static final OperationCost GET_FILE_STATUS_ON_FILE =
+      FILE_STATUS_FILE_PROBE;
 
   /** List costs for getFileStatus() on a non-empty directory: {@value}. */
   public static final OperationCost GET_FILE_STATUS_ON_DIR =
@@ -115,32 +116,34 @@ public final class OperationCost {
 
 
   /**
+   * Metadata cost of a copy operation, as used during rename.
+   */
+  public static final OperationCost COPY_OP =
+      new OperationCost(1, 0);
+
+  /**
    * Cost of renaming a file to a different directory.
    * <p></p>
    * LIST on dest not found, look for dest dir, and then, at
    * end of rename, whether a parent dir needs to be created.
    */
   public static final OperationCost RENAME_SINGLE_FILE_DIFFERENT_DIR =
-      FILE_STATUS_FILE_PROBE              // source file
+      FILE_STATUS_FILE_PROBE              // source file probe
           .plus(GET_FILE_STATUS_FNFE)     // dest does not exist
           .plus(FILE_STATUS_DIR_PROBE)    // parent dir of dest
-          .plus(FILE_STATUS_DIR_PROBE);    // recreate source parent dir?
+          .plus(FILE_STATUS_DIR_PROBE)    // recreate source parent dir?
+          .plus(COPY_OP);                 // metadata read on copy
 
   /**
    * Cost of renaming a file to the same directory
    * <p></p>
    * No need to look for parent directories, so only file
-   * existence checks.
+   * existence checks and the copy.
    */
   public static final OperationCost RENAME_SINGLE_FILE_SAME_DIR =
-      FILE_STATUS_FILE_PROBE              // source file
-          .plus(GET_FILE_STATUS_FNFE);    // dest must not exist
-
-  /**
-   * Metadata cost of a copy operation, as used during rename.
-   */
-  public static final OperationCost COPY_OP =
-      new OperationCost(1, 0);
+      FILE_STATUS_FILE_PROBE              // source file probe
+          .plus(GET_FILE_STATUS_FNFE)     // dest must not exist
+          .plus(COPY_OP);                 // metadata read on copy
 
   /**
    * create(overwrite = true) does not look for the file existing.

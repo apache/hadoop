@@ -106,8 +106,8 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
 
   @Override
   public void teardown() throws Exception {
-    // do this ourselves to avoid the marker checks in the superclass getting
-    // upset that even when the test FS delete markers, surplus markers are found
+    // do this ourselves to avoid audits teardown failing
+    // when surplus markers are found
     deleteTestDirInTeardown();
     super.teardown();
     IOUtils.cleanupWithLogger(LOG, getKeepingFS(),
@@ -491,16 +491,16 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
    * @param sourceFS filesystem to use
    * @param path path to scan
    * @param doPurge should markers be purged
-   * @param expectedMarkers number of markers expected
+   * @param expectedMarkerCount number of markers expected
    * @return the result
    */
   private MarkerTool.ScanResult markerTool(
       final FileSystem sourceFS,
       final Path path,
       final boolean doPurge,
-      final int expectedMarkers)
+      final int expectedMarkerCount)
       throws IOException {
-    return markerTool(0, sourceFS, path, doPurge, expectedMarkers);
+    return markerTool(0, sourceFS, path, doPurge, expectedMarkerCount);
   }
 
   /**

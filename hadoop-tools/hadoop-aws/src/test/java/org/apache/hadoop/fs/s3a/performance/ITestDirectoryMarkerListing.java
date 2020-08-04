@@ -22,6 +22,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
@@ -30,6 +31,8 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,6 +48,11 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
+import static org.apache.hadoop.fs.s3a.Constants.AUTHORITATIVE_PATH;
+import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY;
+import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_DELETE;
+import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_KEEP;
+import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
@@ -72,8 +80,10 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * <p></p>
  * Similarly: JUnit assertions over AssertJ.
  * <p></p>
- * The tests work with unguarded buckets only.
+ * The tests work with unguarded buckets only -the bucket settings are changed
+ * appropriately.
  */
+@RunWith(Parameterized.class)
 public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
 
   private static final Logger LOG =
@@ -88,6 +98,17 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
   private static final String MARKER_PEER = "markerpeer";
 
   /**
+   * Parameterization.
+   */
+  @Parameterized.Parameters(name = "{0}")
+  public static Collection<Object[]> params() {
+    return Arrays.asList(new Object[][]{
+        {"keep-markers",  true},
+        {"delete-markers", false},
+    });
+  }
+
+  /**
    * Does rename copy markers?
    * Value: {@value}
    * <p></p>
@@ -98,49 +119,102 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
   private static final boolean RENAME_COPIES_MARKERS = false;
 
   /**
-   * Does rename copy markers?
-   * Value: {@value}
-   * <p></p>
-   * Older releases: yes.
-   * <p></p>
-   * The full marker-optimized releases: no.
+   * Test configuration name.
    */
-  private boolean isDeletingMarkers = false;
+  private final String name;
 
+  /**
+   * Does this test configuration keep markers?
+   */
+  private final boolean keepMarkers;
+
+  /**
+   * Is this FS deleting markers?
+   */
+  private final boolean isDeletingMarkers;
+
+  /**
+   * Path to a directory which has a marker.
+   */
   private Path markerDir;
 
+  /**
+   * Key to the object representing {@link #markerDir}.
+   */
   private String markerKey;
 
+  /**
+   * Key to the object representing {@link #markerDir} with
+   * a trailing / added. This references the actual object
+   * which has been created.
+   */
   private String markerKeySlash;
 
+  /**
+   * bucket of tests.
+   */
   private String bucket;
 
+  /**
+   * S3 Client of the FS.
+   */
   private AmazonS3 s3client;
 
-  private String fileKeyUnderMarker;
-
+  /**
+   * Path to a file under the marker.
+   */
   private Path filePathUnderMarker;
 
+  /**
+   * Key to a file under the marker.
+   */
+  private String fileKeyUnderMarker;
+
+  /**
+   * base path for the test files; the marker dir goes under this.
+   */
   private Path basePath;
 
+  /**
+   * Path to a file a peer of markerDir.
+   */
   private Path markerPeer;
 
+  /**
+   * Key to a file a peer of markerDir.
+   */
   private String markerPeerKey;
+
+  public ITestDirectoryMarkerListing(final String name,
+      final boolean keepMarkers) {
+    this.name = name;
+    this.keepMarkers = keepMarkers;
+    this.isDeletingMarkers = !keepMarkers;
+  }
 
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     String bucketName = getTestBucketName(conf);
 
+    // Turn off S3Guard
     removeBaseAndBucketOverrides(bucketName, conf,
-        S3_METADATA_STORE_IMPL);
+        S3_METADATA_STORE_IMPL,
+        METADATASTORE_AUTHORITATIVE,
+        AUTHORITATIVE_PATH);
+
+    // directory marker options
+    removeBaseAndBucketOverrides(bucketName, conf,
+        DIRECTORY_MARKER_POLICY);
+    conf.set(DIRECTORY_MARKER_POLICY,
+        keepMarkers
+            ? DIRECTORY_MARKER_POLICY_KEEP
+            : DIRECTORY_MARKER_POLICY_DELETE);
     return conf;
   }
 
   /**
-   * The setup phase includes create the set of test files directories
-   * under the met
-   * @throws Exception
+   * The setup phase includes creating the test objects.
    */
   @Override
   public void setup() throws Exception {
@@ -152,19 +226,21 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
 
     bucket = fs.getBucket();
     Path base = new Path(methodPath(), "base");
-    isDeletingMarkers = !fs.getDirectoryMarkerPolicy()
-        .keepDirectoryMarkers(methodPath());
 
     createTestObjects(base);
   }
 
+  /**
+   * Teardown deletes the objects created before
+   * the superclass does the directory cleanup.
+   */
   @Override
   public void teardown() throws Exception {
     if (s3client != null) {
-      delete(markerKey);
-      delete(markerKeySlash);
-      delete(markerPeerKey);
-      delete(fileKeyUnderMarker);
+      deleteObject(markerKey);
+      deleteObject(markerKeySlash);
+      deleteObject(markerPeerKey);
+      deleteObject(fileKeyUnderMarker);
     }
     super.teardown();
   }
@@ -200,15 +276,15 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
 
   @Test
   public void testMarkerExists() throws Throwable {
-    describe("Create the test markers for the suite");
+    describe("Verify the marker exists");
     head(markerKeySlash);
     assertIsDirectory(markerDir);
   }
 
   @Test
   public void testObjectUnderMarker() throws Throwable {
+    describe("verify the file under the marker dir exists");
     assertIsFile(filePathUnderMarker);
-    assertIsDirectory(markerDir);
     head(fileKeyUnderMarker);
   }
 
@@ -253,18 +329,20 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
 
   @Test
   public void testGlobStatusBaseDirRecursive() throws Throwable {
+    Path escapedPath = new Path(escape(basePath.toUri().getPath()));
     List<FileStatus> statuses =
         exec("glob", () ->
-            toList(getFileSystem().globStatus(new Path(basePath, "*"))));
+            toList(getFileSystem().globStatus(new Path(escapedPath, "*"))));
     assertContainsExactlyStatusOfPaths(statuses, markerDir, markerPeer);
     assertIsFileAtPath(markerPeer, statuses.get(1));
   }
 
   @Test
   public void testGlobStatusMarkerDir() throws Throwable {
+    Path escapedPath = new Path(escape(markerDir.toUri().getPath()));
     List<FileStatus> statuses =
         exec("glob", () ->
-            toList(getFileSystem().globStatus(new Path(markerDir, "*"))));
+            toList(getFileSystem().globStatus(new Path(escapedPath, "*"))));
     assertContainsFileUnderMarkerOnly(statuses);
   }
 
@@ -379,7 +457,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
    */
   @Test
   public void testRenameBase() throws Throwable {
-    describe("directory rename");
+    describe("rename base directory");
 
     Path src = basePath;
     Path dest = new Path(methodPath(), "dest");
@@ -413,23 +491,73 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
   }
 
   /**
-   * Rename under a marker.
-   * The marker must no longer exist.
+   * Rename a file under a marker by passing in the marker
+   * directory as the destination; the final path is derived
+   * from the original filename.
+   * <p></p>
+   * After the rename:
+   * <ol>
+   *   <li>The data must be at the derived destination path.</li>
+   *   <li>The source file must not exist.</li>
+   *   <li>The parent dir of the source file must exist.</li>
+   *   <li>The marker above the destination file must not exist.</li>
+   * </ol>
    */
   @Test
-  public void testRenameUnderMarker() throws Throwable {
-    describe("directory rename");
+  public void testRenameUnderMarkerDir() throws Throwable {
+    describe("directory rename under an existing marker");
     S3AFileSystem fs = getFileSystem();
     String name = "sourceFile";
-    Path src = new Path(basePath, name);
+    Path srcDir = new Path(basePath, "srcdir");
+    mkdirs(srcDir);
+    Path src = new Path(srcDir, name);
     String srcKey = toKey(src);
     put(srcKey, name);
     head(srcKey);
 
+    // set the destination to be the marker directory.
     Path dest = markerDir;
-    // renamed into the dest dir
+    // rename the source file under the dest dir.
     assertRenamed(src, dest);
     assertIsFile(new Path(dest, name));
+    assertIsDirectory(srcDir);
+    if (isDeletingMarkers) {
+      head404(markerKeySlash);
+    } else {
+      head(markerKeySlash);
+    }
+  }
+
+  /**
+   * Rename file under a marker, giving the full path to the destination
+   * file.
+   * <p></p>
+   * After the rename:
+   * <ol>
+   *   <li>The data must be at the explicit destination path.</li>
+   *   <li>The source file must not exist.</li>
+   *   <li>The parent dir of the source file must exist.</li>
+   *   <li>The marker above the destination file must not exist.</li>
+   * </ol>
+   */
+  @Test
+  public void testRenameUnderMarkerWithPath() throws Throwable {
+    describe("directory rename under an existing marker");
+    S3AFileSystem fs = getFileSystem();
+    String name = "sourceFile";
+    Path srcDir = new Path(basePath, "srcdir");
+    mkdirs(srcDir);
+    Path src = new Path(srcDir, name);
+    String srcKey = toKey(src);
+    put(srcKey, name);
+    head(srcKey);
+
+    // set the destination to be the final file
+    Path dest = new Path(markerDir, "destFile");
+    // rename the source file to the destination file
+    assertRenamed(src, dest);
+    assertIsFile(dest);
+    assertIsDirectory(srcDir);
     if (isDeletingMarkers) {
       head404(markerKeySlash);
     } else {
@@ -492,7 +620,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
    * @param key key
    * @param content string
    */
-  private void delete(final String key) throws Exception {
+  private void deleteObject(final String key) throws Exception {
     exec("DELETE " + key, () -> {
       s3client.deleteObject(bucket, key);
       return "deleted " + key;
@@ -562,9 +690,14 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
   private <T extends FileStatus> void assertContainsExactlyStatusOfPaths(
       List<T> statuses, Path... paths) {
 
-    String summary = statuses.stream()
+    String actual = statuses.stream()
         .map(Object::toString)
         .collect(Collectors.joining(";"));
+    String expected = Arrays.stream(paths)
+        .map(Object::toString)
+        .collect(Collectors.joining(";"));
+    String summary = "expected [" + expected + "]"
+        + " actual = [" + actual + "]";
     assertEquals("mismatch in size of listing " + summary,
         paths.length, statuses.size());
     for (int i = 0; i < statuses.size(); i++) {
@@ -659,8 +792,31 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
         getFileSystem().rename(src, dest));
   }
 
-  private String toKey(final Path destMarkerDir) {
-    return getFileSystem().pathToKey(destMarkerDir);
+  /**
+   * Convert a path to a key; does not add any trailing / .
+   * @param path path in
+   * @return key out
+   */
+  private String toKey(final Path path) {
+    return getFileSystem().pathToKey(path);
+  }
+
+  /**
+   * Escape paths before handing to globStatus; this is needed as
+   * parameterized runs produce paths with [] in them.
+   * @param pathstr source path string
+   * @return an escaped path string
+   */
+  private String escape(String pathstr) {
+    StringBuilder r = new StringBuilder();
+    for (char c : pathstr.toCharArray()) {
+      String ch = Character.toString(c);
+      if ("?*[{".contains(ch)) {
+        r.append("\\");
+      }
+      r.append(ch);
+    }
+    return r.toString();
   }
 
 }

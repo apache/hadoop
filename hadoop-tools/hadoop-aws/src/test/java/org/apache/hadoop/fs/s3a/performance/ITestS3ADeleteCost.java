@@ -136,11 +136,10 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
     boolean rawAndKeeping = isRaw() && isDeleting();
     boolean rawAndDeleting = isRaw() && isDeleting();
     verifyMetrics(() -> {
-          fs.delete(file1, false);
-          return "after fs.delete(file1simpleFile) " + getMetricSummary();
-        },
+      fs.delete(file1, false);
+        return "after fs.delete(file1simpleFile) " + getMetricSummary();
+      },
         // delete file. For keeping: that's it
-
         probe(rawAndKeeping, OBJECT_METADATA_REQUESTS,
             FILESTATUS_FILE_PROBE_H),
         // if deleting markers, look for the parent too
