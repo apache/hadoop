@@ -3165,6 +3165,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    */
   String getSnapshotRoot(Path path) throws IOException {
     SnapshottableDirectoryStatus[] dirStatusList = getSnapshottableDirListing();
+    if (dirStatusList == null) {
+      return null;
+    }
     for (SnapshottableDirectoryStatus dirStatus : dirStatusList) {
       String currDir = dirStatus.getFullPath().toString();
       if (path.toUri().getPath().startsWith(currDir)) {
