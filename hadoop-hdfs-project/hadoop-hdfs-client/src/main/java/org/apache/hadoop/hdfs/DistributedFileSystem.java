@@ -3274,6 +3274,7 @@ public class DistributedFileSystem extends FileSystem
    * Get the root directory of Trash for a path in HDFS.
    * 1. File in encryption zone returns /ez1/.Trash/username
    * 2. File in snapshottable directory returns /snapdir1/.Trash/username
+   *    if dfs.namenode.snapshot.trashroot.enabled is set to true.
    * 3. In other cases, or encountered exception when checking the encryption
    *    zone or when checking snapshot root of the path, returns
    *    /users/username/.Trash
@@ -3294,7 +3295,7 @@ public class DistributedFileSystem extends FileSystem
       }
     } catch (IOException ioe) {
       DFSClient.LOG.warn("Exception while checking whether the path is in a "
-          + "snapshot", ioe);
+          + "snapshottable directory", ioe);
     }
 
     try {
@@ -3308,11 +3309,8 @@ public class DistributedFileSystem extends FileSystem
     }
 
     if (ssRoot != null) {
-      String ssTrashRootStr =
-          (ssRoot.equals("/") ? ssRoot : ssRoot + Path.SEPARATOR)
-              + FileSystem.TRASH_PREFIX + Path.SEPARATOR
-              + dfs.ugi.getShortUserName();
-      return this.makeQualified(new Path(ssTrashRootStr));
+      return this.makeQualified(
+          new Path(DFSUtilClient.getSnapshotTrashRoot(ssRoot, dfs.ugi)));
     }
 
     String parentSrc = path.isRoot()?
@@ -3332,9 +3330,14 @@ public class DistributedFileSystem extends FileSystem
 
   /**
    * Get all the trash roots of HDFS for current user or for all the users.
-   * 1. File deleted from non-encryption zone /user/username/.Trash
-   * 2. File deleted from encryption zones
+   * 1. File deleted from encryption zones
    *    e.g., ez1 rooted at /ez1 has its trash root at /ez1/.Trash/$USER
+   * 2. File deleted from snapshottable directories
+   *    if dfs.namenode.snapshot.trashroot.enabled is set to true.
+   *    e.g., snapshottable directory /snapdir1 has its trash root
+   *    at /snapdir1/.Trash/$USER
+   * 3. File deleted from other directories
+   *    /user/username/.Trash
    * @param allUsers return trashRoots of all users if true, used by emptier
    * @return trash roots of HDFS
    */
@@ -3371,6 +3374,37 @@ public class DistributedFileSystem extends FileSystem
     } catch (IOException e){
       DFSClient.LOG.warn("Cannot get all encrypted trash roots", e);
     }
+
+    try {
+      // Get snapshottable directory trash roots
+      if (dfs.isSnapshotTrashRootEnabled()) {
+        SnapshottableDirectoryStatus[] lst = dfs.getSnapshottableDirListing();
+        for (SnapshottableDirectoryStatus dirStatus : lst) {
+          String ssDir = dirStatus.getFullPath().toString();
+          Path ssTrashRoot = new Path(ssDir, FileSystem.TRASH_PREFIX);
+          if (!exists(ssTrashRoot)) {
+            continue;
+          }
+          if (allUsers) {
+            for (FileStatus candidate : listStatus(ssTrashRoot)) {
+              if (exists(candidate.getPath())) {
+                ret.add(candidate);
+              }
+            }
+          } else {
+            Path userTrash = new Path(DFSUtilClient.getSnapshotTrashRoot(
+                ssDir, dfs.ugi));
+            try {
+              ret.add(getFileStatus(userTrash));
+            } catch (FileNotFoundException ignored) {
+            }
+          }
+        }
+      }
+    } catch (IOException e) {
+      DFSClient.LOG.warn("Cannot get snapshot trash roots", e);
+    }
+
     return ret;
   }
 
