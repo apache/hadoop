@@ -44,6 +44,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBucketOverrides;
 import static org.apache.hadoop.fs.s3a.tools.MarkerTool.*;
+import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_INTERRUPTED;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_NOT_ACCEPTABLE;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_NOT_FOUND;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_USAGE;
@@ -59,7 +60,7 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
       LoggerFactory.getLogger(ITestMarkerTool.class);
 
   /** the -verbose option. */
-  private static final String V = "-" + OPT_VERBOSE;
+  private static final String V = "-" + VERBOSE;
 
   /** FS which keeps markers. */
   private S3AFileSystem keepingFS;
@@ -156,6 +157,17 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
   }
 
   @Test
+  public void testCleanMarkersFileLimit() throws Throwable {
+    describe("Clean markers under a keeping FS -with file limit");
+    CreatedPaths createdPaths = createPaths(getKeepingFS(), methodPath());
+
+    // audit will find the expected entries
+    int expectedMarkerCount = createdPaths.dirs.size();
+    markerTool(EXIT_INTERRUPTED, getDeletingFS(),
+        createdPaths.base, false, 0, 1);
+  }
+
+  @Test
   public void testCleanMarkersKeepingDir() throws Throwable {
     describe("Audit then clean markers under a deleting FS "
         + "-expect markers to be found and then cleaned up");
@@ -166,7 +178,7 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
     S3AFileSystem fs = getDeletingFS();
     LOG.info("Auditing a directory with retained markers -expect failure");
     markerTool(EXIT_NOT_ACCEPTABLE, fs,
-        createdPaths.base, false, 0);
+        createdPaths.base, false, 0, UNLIMITED);
 
     LOG.info("Auditing a directory expecting retained markers");
     markerTool(fs, createdPaths.base, false,
@@ -288,6 +300,21 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
     run(NAME,
         V,
         REPORT,
+        createdPaths.base.toString());
+    run(NAME,
+        V,
+        AUDIT,
+        createdPaths.base.toString());
+  }
+
+  @Test
+  public void testRunLimitedAudit() throws Throwable {
+    describe("Adurit");
+    CreatedPaths createdPaths = createPaths(getKeepingFS(), methodPath());
+    runToFailure(EXIT_INTERRUPTED,
+        V,
+        "-" + OPT_LIMIT, "2",
+        CLEAN,
         createdPaths.base.toString());
     run(NAME,
         V,
@@ -500,7 +527,8 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
       final boolean doPurge,
       final int expectedMarkerCount)
       throws IOException {
-    return markerTool(0, sourceFS, path, doPurge, expectedMarkerCount);
+    return markerTool(0, sourceFS, path, doPurge, expectedMarkerCount,
+        UNLIMITED);
   }
 
   /**
@@ -512,6 +540,7 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
    * @param path path to scan
    * @param doPurge should markers be purged
    * @param expectedMarkers number of markers expected
+HiMan   * @param limit limit of files to scan; -1 for 'unlimited'
    * @return the result
    */
   public static MarkerTool.ScanResult markerTool(
@@ -519,11 +548,15 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
       final FileSystem sourceFS,
       final Path path,
       final boolean doPurge,
-      final int expectedMarkers) throws IOException {
+      final int expectedMarkers,
+      final int limit) throws IOException {
 
-    MarkerTool.ScanResult result = MarkerTool.execMarkerTool(sourceFS, path,
+    MarkerTool.ScanResult result = MarkerTool.execMarkerTool(
+        sourceFS,
+        path,
         doPurge,
-        expectedMarkers);
+        expectedMarkers,
+        limit);
     Assertions.assertThat(result.getExitCode())
         .describedAs("Exit code of marker(%s, %s, %d) -> %s",
             path, doPurge, expectedMarkers, result)

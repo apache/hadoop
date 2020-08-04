@@ -57,20 +57,16 @@ import static org.apache.hadoop.fs.s3a.Constants.AUTHORITATIVE_PATH;
 import static org.apache.hadoop.fs.s3a.Constants.BULK_DELETE_PAGE_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.BULK_DELETE_PAGE_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Invoker.once;
+import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_INTERRUPTED;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_NOT_ACCEPTABLE;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_SUCCESS;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_USAGE;
 
 /**
- * Handle directory-related command-line options in the
- * s3guard tool.
- * <pre>
- *   scan: scan for markers
- *   clean: clean up marker entries.
- * </pre>
+ * Audit and S3 bucket for directory markers.
+ * <p></p>
  * This tool does not go anywhere near S3Guard; its scan bypasses any
  * metastore as we are explicitly looking for marker objects.
- *
  */
 public final class MarkerTool extends S3GuardTool {
 
@@ -112,9 +108,9 @@ public final class MarkerTool extends S3GuardTool {
   public static final String REPORT = "report";
 
   /**
-   * Verbose option: {@value}.
+   * Limit of objects to scan: {@value}.
    */
-  public static final String OPT_VERBOSE = "verbose";
+  public static final String OPT_LIMIT = "limit";
 
   /**
    * Error text when too few arguments are found.
@@ -126,7 +122,7 @@ public final class MarkerTool extends S3GuardTool {
    * Constant to use when there is no limit on the number of
    * markers expected: {@value}.
    */
-  private static final int UNLIMITED = -1;
+  public static final int UNLIMITED = -1;
 
   /** Will be overridden in run(), but during tests needs to avoid NPEs. */
   private PrintStream out = System.out;
@@ -162,7 +158,9 @@ public final class MarkerTool extends S3GuardTool {
    * @param conf
    */
   public MarkerTool(final Configuration conf) {
-    super(conf, OPT_VERBOSE);
+    super(conf, VERBOSE);
+    CommandFormat format = getCommandFormat();
+    format.addOptionWithValue(OPT_LIMIT);
   }
 
   @Override
@@ -223,14 +221,20 @@ public final class MarkerTool extends S3GuardTool {
       throw new ExitUtil.ExitException(EXIT_USAGE,
           "Unknown action: " + action);
     }
-
+    int limit = UNLIMITED;
+    String limitOpt = getCommandFormat()
+        .getOptValue(OPT_LIMIT);
+    if (limitOpt != null && !limitOpt.isEmpty()) {
+      limit = Integer.parseInt(limitOpt);
+    }
     final String file = parsedArgs.get(1);
     final Path path = new Path(file);
     ScanResult result = execute(
         path.getFileSystem(getConf()),
         path,
         purge,
-        expected);
+        expected,
+        limit);
     if (verbose) {
       dumpFileSystemStatistics(out);
     }
@@ -243,6 +247,7 @@ public final class MarkerTool extends S3GuardTool {
    * @param path path to scan.
    * @param doPurge purge?
    * @param expectedMarkerCount expected marker count
+   * @param limit limit of files to scan; -1 for 'unlimited'
    * @return scan+purge result.
    * @throws IOException failure
    */
@@ -251,7 +256,8 @@ public final class MarkerTool extends S3GuardTool {
       final FileSystem sourceFS,
       final Path path,
       final boolean doPurge,
-      final int expectedMarkerCount)
+      final int expectedMarkerCount,
+      final int limit)
       throws IOException {
     S3AFileSystem fs = bindFilesystem(sourceFS);
 
@@ -280,10 +286,9 @@ public final class MarkerTool extends S3GuardTool {
     } catch (FileNotFoundException ex) {
       throw new ExitUtil.ExitException(LauncherExitCodes.EXIT_NOT_FOUND,
           "Not found: " + path, ex);
-
     }
 
-    ScanResult result = scan(path, doPurge, expectedMarkerCount);
+    ScanResult result = scan(path, doPurge, expectedMarkerCount, limit);
     return result;
   }
 
@@ -340,6 +345,7 @@ public final class MarkerTool extends S3GuardTool {
    * @param path path to scan.
    * @param doPurge purge?
    * @param expectedMarkerCount expected marker count
+   * @param limit limit of files to scan; -1 for 'unlimited'
    * @return scan+purge result.
    * @throws IOException IO failure
    * @throws ExitUtil.ExitException explicitly raised failure
@@ -348,16 +354,21 @@ public final class MarkerTool extends S3GuardTool {
   private ScanResult scan(
       final Path path,
       final boolean doPurge,
-      final int expectedMarkerCount)
+      final int expectedMarkerCount,
+      final int limit)
       throws IOException, ExitUtil.ExitException {
 
     ScanResult result = new ScanResult();
 
+    // Mission Accomplished
+    result.exitCode = EXIT_SUCCESS;
+    // Now do the work.
     DirMarkerTracker tracker = new DirMarkerTracker(path);
     result.tracker = tracker;
+    boolean completed;
     try (DurationInfo ignored =
              new DurationInfo(LOG, "marker scan %s", path)) {
-      scanDirectoryTree(path, tracker);
+      completed = scanDirectoryTree(path, tracker, limit);
     }
 
     // scan done. what have we got?
@@ -397,7 +408,6 @@ public final class MarkerTool extends S3GuardTool {
       println(out, "Surplus markers were found -failing audit");
 
       result.exitCode = EXIT_NOT_ACCEPTABLE;
-      return result;
     }
 
     if (doPurge) {
@@ -406,8 +416,14 @@ public final class MarkerTool extends S3GuardTool {
               BULK_DELETE_PAGE_SIZE_DEFAULT);
       result.purgeSummary = purgeMarkers(tracker, deletePageSize);
     }
-    result.exitCode = EXIT_SUCCESS;
-    return result;
+
+
+    // now one little check for whether a limit was reached.
+    if (!completed) {
+      println(out, "Listing limit reached before completing the scan");
+      result.exitCode = EXIT_INTERRUPTED;
+    }
+   return result;
   }
 
   /**
@@ -423,15 +439,21 @@ public final class MarkerTool extends S3GuardTool {
    * Scan a directory tree.
    * @param path path to scan
    * @param tracker tracker to update
+   * @param limit limit of files to scan; -1 for 'unlimited'
+   * @return true if the scan completedly scanned the entire tree
    * @throws IOException IO failure
    */
   @Retries.RetryTranslated
-  private void scanDirectoryTree(final Path path,
-      final DirMarkerTracker tracker) throws IOException {
+  private boolean scanDirectoryTree(
+      final Path path,
+      final DirMarkerTracker tracker,
+      final int limit) throws IOException {
 
+    int count = 0;
     RemoteIterator<S3AFileStatus> listing = operations
         .listObjects(path, storeContext.pathToKey(path));
     while (listing.hasNext()) {
+      count++;
       S3AFileStatus status = listing.next();
       Path statusPath = status.getPath();
       S3ALocatedFileStatus locatedStatus = new S3ALocatedFileStatus(
@@ -450,7 +472,15 @@ public final class MarkerTool extends S3GuardTool {
             key,
             locatedStatus);
       }
+      if ((count % 1000) == 0) {
+        println(out, "Scanned %,d objects", count);
+      }
+      if (limit > 0 || count >= limit) {
+        println(out, "Limit of scanned reached - %,d objects", limit);
+        return false;
+      }
     }
+    return true;
   }
 
   /**
@@ -569,6 +599,7 @@ public final class MarkerTool extends S3GuardTool {
    * @param path path to scan
    * @param doPurge should markers be purged
    * @param expectedMarkers number of markers expected
+   * @param limit limit of files to scan; -1 for 'unlimited'
    * @return the result
    */
   @SuppressWarnings("IOResourceOpenedButNotSafelyClosed")
@@ -576,11 +607,12 @@ public final class MarkerTool extends S3GuardTool {
       final FileSystem sourceFS,
       final Path path,
       final boolean doPurge,
-      final int expectedMarkers) throws IOException {
+      final int expectedMarkers,
+      final int limit) throws IOException {
     MarkerTool tool = new MarkerTool(sourceFS.getConf());
     tool.setVerbose(LOG.isDebugEnabled());
 
     return tool.execute(sourceFS, path, doPurge,
-        expectedMarkers);
+        expectedMarkers, limit);
   }
 }

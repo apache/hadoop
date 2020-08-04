@@ -237,12 +237,17 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
     } finally {
       d.close();
     }
+    if (result != 0) {
+      LOG.warn("Exit code from job was {}", result);
+    }
     dumpOutputTree(dest);
+    // in case the success file arrives even though the exit code is negative
+    // (logs imply it can happen), dumpt it first.
+    validateSuccessFile(dest, committerName(), getFileSystem(), stage,
+        minimumFileCount);
     assertEquals(stage
         + "(" + StringUtils.join(", ", args) + ")"
         + " failed", 0, result);
-    validateSuccessFile(dest, committerName(), getFileSystem(), stage,
-        minimumFileCount);
     completedStage(stage, d);
   }
 

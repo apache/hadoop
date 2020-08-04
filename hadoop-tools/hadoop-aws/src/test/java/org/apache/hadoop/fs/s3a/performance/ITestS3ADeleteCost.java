@@ -68,6 +68,15 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
     super(s3guard, keepMarkers, authoritative);
   }
 
+  @Override
+  public void teardown() throws Exception {
+    if (isKeepingMarkers()) {
+      // do this ourselves to avoid audits teardown failing
+      // when surplus markers are found
+      deleteTestDirInTeardown();
+    }
+    super.teardown();
+  }
 
   /**
    * This creates a directory with a child and then deletes it.

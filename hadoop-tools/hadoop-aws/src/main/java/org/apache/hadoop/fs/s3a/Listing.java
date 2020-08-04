@@ -209,8 +209,12 @@ public class Listing extends AbstractStoreOperation {
 
     String key = maybeAddTrailingSlash(pathToKey(path));
     String delimiter = recursive ? null : "/";
-    LOG.debug("Requesting all entries under {} with delimiter '{}'",
-            key, delimiter);
+    if (recursive) {
+      LOG.debug("Recursive list of all entries under {}", key);
+    } else {
+      LOG.debug("Requesting all entries under {} with delimiter '{}'",
+          key, delimiter);
+    }
     final RemoteIterator<S3AFileStatus> cachedFilesIterator;
     final Set<Path> tombstones;
     boolean allowAuthoritative = listingOperationCallbacks

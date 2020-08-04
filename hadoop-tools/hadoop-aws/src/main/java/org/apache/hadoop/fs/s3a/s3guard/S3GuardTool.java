@@ -60,6 +60,7 @@ import org.apache.hadoop.fs.s3a.auth.RolePolicies;
 import org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants;
+import org.apache.hadoop.fs.s3a.impl.DirectoryPolicy;
 import org.apache.hadoop.fs.s3a.select.SelectTool;
 import org.apache.hadoop.fs.s3a.tools.MarkerTool;
 import org.apache.hadoop.fs.shell.CommandFormat;
@@ -1207,6 +1208,7 @@ public abstract class S3GuardTool extends Configured implements Tool,
     public static final String NONAUTH_FLAG = "nonauth";
     public static final String ENCRYPTION_FLAG = "encryption";
     public static final String MAGIC_FLAG = "magic";
+    public static final String MARKERS_FLAG = "markers";
 
     public static final String PURPOSE = "provide/check S3Guard information"
         + " about a specific bucket";
@@ -1219,7 +1221,9 @@ public abstract class S3GuardTool extends Configured implements Tool,
         + "  -" + NONAUTH_FLAG + " - Require the S3Guard mode to be \"non-authoritative\"\n"
         + "  -" + MAGIC_FLAG + " - Require the S3 filesystem to be support the \"magic\" committer\n"
         + "  -" + ENCRYPTION_FLAG
-        + " -require {none, sse-s3, sse-kms} - Require encryption policy";
+        + " (none, sse-s3, sse-kms) - Require encryption policy\n"
+        + "  -" + MARKERS_FLAG
+        + " (keep, delete, authoritative) - directory markers policy\n";
 
     /**
      * Output when the client cannot get the location of a bucket.
@@ -1233,6 +1237,7 @@ public abstract class S3GuardTool extends Configured implements Tool,
       super(conf, GUARDED_FLAG, UNGUARDED_FLAG, AUTH_FLAG, NONAUTH_FLAG, MAGIC_FLAG);
       CommandFormat format = getCommandFormat();
       format.addOptionWithValue(ENCRYPTION_FLAG);
+      format.addOptionWithValue(MARKERS_FLAG);
     }
 
     @Override
@@ -1417,6 +1422,25 @@ public abstract class S3GuardTool extends Configured implements Tool,
                 fsUri, desiredEncryption, encryption);
       }
 
+      // directory markers
+      DirectoryPolicy markerPolicy = fs.getDirectoryMarkerPolicy();
+      String desc = markerPolicy.describe();
+      println(out, "%nDirectory marker policy is %s", desc);
+
+      DirectoryPolicy.MarkerPolicy mp = markerPolicy.getMarkerPolicy();
+      String desiredMarker = getCommandFormat()
+          .getOptValue(MARKERS_FLAG);
+      desiredMarker = desiredMarker == null
+          ? ""
+          : desiredMarker.trim().toLowerCase(Locale.ENGLISH);
+      if (!desiredMarker.isEmpty()
+          && !desiredMarker.equals(mp.toString())) {
+        throw badState("Bucket %s: required marker policy is %s"
+                + " but actual policy is %s",
+            fsUri, desiredMarker, mp);
+      }
+
+      // and finally flush the output and report a success.
       out.flush();
       return SUCCESS;
     }

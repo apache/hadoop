@@ -242,6 +242,9 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
       deleteObject(markerPeerKey);
       deleteObject(fileKeyUnderMarker);
     }
+    // do this ourselves to avoid audits teardown failing
+    // when surplus markers are found
+    deleteTestDirInTeardown();
     super.teardown();
   }
 
