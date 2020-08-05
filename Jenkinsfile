@@ -36,6 +36,7 @@ pipeline {
         YETUS='yetus'
         // Branch or tag name.  Yetus release tags are 'rel/X.Y.Z'
         YETUS_VERSION='rel/0.12.0'
+        MAVEN_OPTS='-Xms256m -Xmx1536m -Dhttps.protocols=TLSv1.2 -Dhttps.cipherSuites=TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256'
     }
 
     parameters {
