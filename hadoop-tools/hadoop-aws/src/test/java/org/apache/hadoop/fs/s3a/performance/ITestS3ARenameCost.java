@@ -38,6 +38,7 @@ import static org.apache.hadoop.fs.s3a.performance.OperationCost.*;
 
 /**
  * Use metrics to assert about the cost of file API calls.
+ * <p></p>
  * Parameterized on guarded vs raw. and directory marker keep vs delete
  */
 @RunWith(Parameterized.class)
@@ -99,15 +100,16 @@ public class ITestS3ARenameCost extends AbstractS3ACostTest {
     verifyMetrics(() ->
             execRename(srcFilePath, destFilePath),
         whenRaw(RENAME_SINGLE_FILE_DIFFERENT_DIR),
-        always(DIRECTORIES_CREATED, 0),
-        always(DIRECTORIES_DELETED, 0),
+        with(DIRECTORIES_CREATED, 0),
+        with(DIRECTORIES_DELETED, 0),
         // keeping: only the core delete operation is issued.
-        whenKeeping(OBJECT_DELETE_REQUESTS, DELETE_OBJECT_REQUEST),
-        whenKeeping(FAKE_DIRECTORIES_DELETED, 0),
+        withWhenKeeping(OBJECT_DELETE_REQUESTS, DELETE_OBJECT_REQUEST),
+        withWhenKeeping(FAKE_DIRECTORIES_DELETED, 0),
         // deleting: delete any fake marker above the destination.
-        whenDeleting(OBJECT_DELETE_REQUESTS,
+        withWhenDeleting(OBJECT_DELETE_REQUESTS,
             DELETE_OBJECT_REQUEST + DELETE_MARKER_REQUEST),
-        whenDeleting(FAKE_DIRECTORIES_DELETED, directoriesInPath(destDir)));
+        withWhenDeleting(FAKE_DIRECTORIES_DELETED,
+            directoriesInPath(destDir)));
 
     assertIsFile(destFilePath);
     assertIsDirectory(srcDir);
@@ -135,10 +137,10 @@ public class ITestS3ARenameCost extends AbstractS3ACostTest {
     verifyMetrics(() ->
             execRename(sourceFile, destFile),
         whenRaw(RENAME_SINGLE_FILE_SAME_DIR),
-        always(OBJECT_COPY_REQUESTS, 1),
-        always(DIRECTORIES_CREATED, 0),
-        always(OBJECT_DELETE_REQUESTS, DELETE_OBJECT_REQUEST),
-        always(FAKE_DIRECTORIES_DELETED, 0));
+        with(OBJECT_COPY_REQUESTS, 1),
+        with(DIRECTORIES_CREATED, 0),
+        with(OBJECT_DELETE_REQUESTS, DELETE_OBJECT_REQUEST),
+        with(FAKE_DIRECTORIES_DELETED, 0));
   }
 
   @Test
@@ -160,15 +162,15 @@ public class ITestS3ARenameCost extends AbstractS3ACostTest {
               .plus(GET_FILE_STATUS_FNFE)
               .plus(COPY_OP)),
           // here we expect there to be no fake directories
-          always(DIRECTORIES_CREATED, 0),
+          with(DIRECTORIES_CREATED, 0),
           // one for the renamed file only
-          always(OBJECT_DELETE_REQUESTS,
+          with(OBJECT_DELETE_REQUESTS,
               DELETE_OBJECT_REQUEST),
           // no directories are deleted: This is root
-          always(DIRECTORIES_DELETED, 0),
+          with(DIRECTORIES_DELETED, 0),
           // no fake directories are deleted: This is root
-          always(FAKE_DIRECTORIES_DELETED, 0),
-          always(FILES_DELETED, 1));
+          with(FAKE_DIRECTORIES_DELETED, 0),
+          with(FILES_DELETED, 1));
     } finally {
       fs.delete(src, false);
       fs.delete(dest, false);
@@ -190,11 +192,11 @@ public class ITestS3ARenameCost extends AbstractS3ACostTest {
         fs.delete(src, false);
         return "after fs.delete(/dest) " + getMetricSummary();
       },
-          always(DIRECTORIES_CREATED, 0),
-          always(DIRECTORIES_DELETED, 0),
-          always(FAKE_DIRECTORIES_DELETED, 0),
-          always(FILES_DELETED, 1),
-          always(OBJECT_DELETE_REQUESTS, DELETE_OBJECT_REQUEST),
+          with(DIRECTORIES_CREATED, 0),
+          with(DIRECTORIES_DELETED, 0),
+          with(FAKE_DIRECTORIES_DELETED, 0),
+          with(FILES_DELETED, 1),
+          with(OBJECT_DELETE_REQUESTS, DELETE_OBJECT_REQUEST),
           whenRaw(FILE_STATUS_FILE_PROBE)); /* no need to look at parent. */
 
     } finally {

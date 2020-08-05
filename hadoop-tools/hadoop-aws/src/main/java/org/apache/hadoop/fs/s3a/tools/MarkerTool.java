@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.tools;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -51,7 +52,6 @@ import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.service.launcher.LauncherExitCodes;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.ExitUtil;
-import org.apache.hadoop.util.OperationDuration;
 
 import static org.apache.hadoop.fs.s3a.Constants.AUTHORITATIVE_PATH;
 import static org.apache.hadoop.fs.s3a.Constants.BULK_DELETE_PAGE_SIZE;
@@ -84,15 +84,6 @@ public final class MarkerTool extends S3GuardTool {
       "View and manipulate S3 directory markers";
 
   /**
-   * Usage string: {@value}.
-   */
-  private static final String USAGE = NAME
-      + " [-" + VERBOSE + "]"
-      + " (audit | report | clean)"
-      + " <PATH>\n"
-      + "\t" + PURPOSE + "\n\n";
-
-  /**
    * Audit sub-command: {@value}.
    */
   public static final String AUDIT = "audit";
@@ -103,14 +94,20 @@ public final class MarkerTool extends S3GuardTool {
   public static final String CLEAN = "clean";
 
   /**
-   * Report Sub-command: {@value}.
+   * Expected number of markers to find: {@value}.
    */
-  public static final String REPORT = "report";
+  public static final String OPT_EXPECTED = "expected";
 
   /**
    * Limit of objects to scan: {@value}.
    */
   public static final String OPT_LIMIT = "limit";
+
+  /**
+   * Only consider markers found in non-authoritative paths
+   * as failures: {@value}.
+   */
+  public static final String OPT_NONAUTH = "nonauth";
 
   /**
    * Error text when too few arguments are found.
@@ -120,9 +117,27 @@ public final class MarkerTool extends S3GuardTool {
 
   /**
    * Constant to use when there is no limit on the number of
-   * markers expected: {@value}.
+   * objects listed: {@value}.
+   * <p></p>
+   * The value is 0 and not -1 because it allows for the limit to be
+   * set on the command line {@code -limit 0}.
+   * The command line parser rejects {@code -limit -1} as the -1
+   * is interpreted as the (unknown) option "-1".
    */
-  public static final int UNLIMITED = -1;
+  public static final int UNLIMITED_LISTING = 0;
+
+
+  /**
+   * Usage string: {@value}.
+   */
+  private static final String USAGE = NAME
+      + " [-" + OPT_EXPECTED + " <count>]"
+      + " [-" + OPT_LIMIT + " <limit>]"
+      + " [-" + OPT_NONAUTH + "]"
+      + " [-" + VERBOSE + "]"
+      + " (audit | clean)"
+      + " <PATH>\n"
+      + "\t" + PURPOSE + "\n\n";
 
   /** Will be overridden in run(), but during tests needs to avoid NPEs. */
   private PrintStream out = System.out;
@@ -131,17 +146,6 @@ public final class MarkerTool extends S3GuardTool {
    * Verbosity flag.
    */
   private boolean verbose;
-
-  /**
-   * Should the scan also purge surplus markers?
-   */
-  private boolean purge;
-
-  /**
-   * How many markers are expected;
-   * {@link #UNLIMITED} means no limit.
-   */
-  private int expected;
 
   /**
    * Store context.
@@ -158,7 +162,7 @@ public final class MarkerTool extends S3GuardTool {
    * @param conf
    */
   public MarkerTool(final Configuration conf) {
-    super(conf, VERBOSE);
+    super(conf, VERBOSE, OPT_NONAUTH);
     CommandFormat format = getCommandFormat();
     format.addOptionWithValue(OPT_LIMIT);
   }
@@ -199,9 +203,19 @@ public final class MarkerTool extends S3GuardTool {
     CommandFormat commandFormat = getCommandFormat();
     verbose = commandFormat.getOpt(VERBOSE);
 
-    expected = UNLIMITED;
+    // How many markers are expected?
+    int expected = 0;
+    String value = getCommandFormat()
+        .getOptValue(OPT_EXPECTED);
+    if (value != null && !value.isEmpty()) {
+      expected = Integer.parseInt(value);
+    }
+    // Should the scan also purge surplus markers?
+    boolean purge;
+
     // argument 0 is the action
     String action = parsedArgs.get(0);
+
     switch (action) {
     case AUDIT:
       // audit. no purge; fail if any marker is found
@@ -212,29 +226,32 @@ public final class MarkerTool extends S3GuardTool {
       // clean -purge the markers
       purge = true;
       break;
-    case REPORT:
-      // report -no purge
-      purge = false;
-      break;
     default:
       errorln(getUsage());
       throw new ExitUtil.ExitException(EXIT_USAGE,
           "Unknown action: " + action);
     }
-    int limit = UNLIMITED;
-    String limitOpt = getCommandFormat()
+    int limit = UNLIMITED_LISTING;
+    value = getCommandFormat()
         .getOptValue(OPT_LIMIT);
-    if (limitOpt != null && !limitOpt.isEmpty()) {
-      limit = Integer.parseInt(limitOpt);
+    if (value != null && !value.isEmpty()) {
+      limit = Integer.parseInt(value);
     }
     final String file = parsedArgs.get(1);
-    final Path path = new Path(file);
+    Path path = new Path(file);
+    URI uri = path.toUri();
+    if (uri.getPath().isEmpty()) {
+      // fix up empty URI for better CLI experience
+      path = new Path(path, "/");
+    }
+    FileSystem fs = path.getFileSystem(getConf());
     ScanResult result = execute(
-        path.getFileSystem(getConf()),
+        fs,
         path,
         purge,
         expected,
-        limit);
+        limit,
+        commandFormat.getOpt(OPT_NONAUTH));
     if (verbose) {
       dumpFileSystemStatistics(out);
     }
@@ -248,6 +265,7 @@ public final class MarkerTool extends S3GuardTool {
    * @param doPurge purge?
    * @param expectedMarkerCount expected marker count
    * @param limit limit of files to scan; -1 for 'unlimited'
+   * @param nonAuth
    * @return scan+purge result.
    * @throws IOException failure
    */
@@ -257,26 +275,34 @@ public final class MarkerTool extends S3GuardTool {
       final Path path,
       final boolean doPurge,
       final int expectedMarkerCount,
-      final int limit)
+      final int limit,
+      final boolean nonAuth)
       throws IOException {
     S3AFileSystem fs = bindFilesystem(sourceFS);
 
     // extract the callbacks needed for the rest of the work
     storeContext = fs.createStoreContext();
     operations = fs.createMarkerToolOperations();
-    DirectoryPolicy.MarkerPolicy policy = fs.getDirectoryMarkerPolicy()
+    // filesystem policy.
+    // if the -nonauth option is set, this is used to filter
+    // out surplus markers from the results.
+    DirectoryPolicy activePolicy = fs.getDirectoryMarkerPolicy();
+    DirectoryPolicy.MarkerPolicy policy = activePolicy
         .getMarkerPolicy();
-    println(out, "The store's directory marker policy is \"%s\"",
+    println(out, "The directory marker policy of %s is \"%s\"",
+        storeContext.getFsURI(),
         policy);
+    String authPath = storeContext.getConfiguration()
+        .getTrimmed(AUTHORITATIVE_PATH, "");
     if (policy == DirectoryPolicy.MarkerPolicy.Authoritative) {
       // in auth mode, note the auth paths.
-      String authPath = storeContext.getConfiguration()
-          .getTrimmed(AUTHORITATIVE_PATH, "unset");
-      println(out, "Authoritative path list is %s", authPath);
+      println(out, "Authoritative path list is \"%s\"", authPath);
     }
+    // qualify the path
+    Path target = path.makeQualified(fs.getUri(),new Path("/"));
     // initial safety check: does the path exist?
     try {
-      getFilesystem().getFileStatus(path);
+      getFilesystem().getFileStatus(target);
     } catch (UnknownStoreException ex) {
       // bucket doesn't exist.
       // replace the stack trace with an error code.
@@ -285,10 +311,15 @@ public final class MarkerTool extends S3GuardTool {
 
     } catch (FileNotFoundException ex) {
       throw new ExitUtil.ExitException(LauncherExitCodes.EXIT_NOT_FOUND,
-          "Not found: " + path, ex);
+          "Not found: " + target, ex);
     }
 
-    ScanResult result = scan(path, doPurge, expectedMarkerCount, limit);
+    // the default filter policy is that all entries should be deleted
+    DirectoryPolicy filterPolicy = nonAuth
+        ? activePolicy
+        : null;
+    ScanResult result = scan(target, doPurge, expectedMarkerCount, limit,
+        filterPolicy);
     return result;
   }
 
@@ -343,19 +374,21 @@ public final class MarkerTool extends S3GuardTool {
   /**
    * Do the scan/purge.
    * @param path path to scan.
-   * @param doPurge purge?
+   * @param clean purge?
    * @param expectedMarkerCount expected marker count
-   * @param limit limit of files to scan; -1 for 'unlimited'
-   * @return scan+purge result.
+   * @param limit limit of files to scan; 0 for 'unlimited'
+   * @param filterPolicy filter policy on a nonauth scan; may be null
+   * @return result.
    * @throws IOException IO failure
    * @throws ExitUtil.ExitException explicitly raised failure
    */
   @Retries.RetryTranslated
   private ScanResult scan(
       final Path path,
-      final boolean doPurge,
+      final boolean clean,
       final int expectedMarkerCount,
-      final int limit)
+      final int limit,
+      final DirectoryPolicy filterPolicy)
       throws IOException, ExitUtil.ExitException {
 
     ScanResult result = new ScanResult();
@@ -370,27 +403,30 @@ public final class MarkerTool extends S3GuardTool {
              new DurationInfo(LOG, "marker scan %s", path)) {
       completed = scanDirectoryTree(path, tracker, limit);
     }
-
+    int objectsFound = tracker.getObjectsFound();
+    println(out, "Listed %d object%s under %s%n",
+        objectsFound,
+        suffix(objectsFound),
+        path);
     // scan done. what have we got?
     Map<Path, DirMarkerTracker.Marker> surplusMarkers
         = tracker.getSurplusMarkers();
     Map<Path, DirMarkerTracker.Marker> leafMarkers
         = tracker.getLeafMarkers();
-    int size = surplusMarkers.size();
-    if (size == 0) {
+    int surplus = surplusMarkers.size();
+    if (surplus == 0) {
       println(out, "No surplus directory markers were found under %s", path);
     } else {
       println(out, "Found %d surplus directory marker%s under %s",
-          size,
-          suffix(size),
+          surplus,
+          suffix(surplus),
           path);
 
       for (Path markers : surplusMarkers.keySet()) {
         println(out, "    %s", markers);
       }
-
     }
-    if (verbose && !leafMarkers.isEmpty()) {
+    if (!leafMarkers.isEmpty()) {
       println(out, "Found %d empty directory 'leaf' marker%s under %s",
           leafMarkers.size(),
           suffix(leafMarkers.size()),
@@ -400,21 +436,40 @@ public final class MarkerTool extends S3GuardTool {
       }
       println(out, "These are required to indicate empty directories");
     }
-    if (size > expectedMarkerCount) {
-      // failure
-      if (expectedMarkerCount > UNLIMITED) {
-        println(out, "Expected %d marker%s", expectedMarkerCount, suffix(size));
-      }
-      println(out, "Surplus markers were found -failing audit");
 
-      result.exitCode = EXIT_NOT_ACCEPTABLE;
-    }
-
-    if (doPurge) {
+    if (clean) {
+      // clean: remove the markers, do not worry about their
+      // presence when reporting success/failiure
       int deletePageSize = storeContext.getConfiguration()
           .getInt(BULK_DELETE_PAGE_SIZE,
               BULK_DELETE_PAGE_SIZE_DEFAULT);
       result.purgeSummary = purgeMarkers(tracker, deletePageSize);
+    } else {
+      // this is an audit, so validate the marker count
+
+      if (filterPolicy != null) {
+        // if a filter policy is supplied, filter out all markers
+        // under the auth path
+        List<Path> allowed = tracker.removeAllowedMarkers(filterPolicy);
+        int allowedMarkers =  allowed.size();
+        println(out, "%nIgnoring %d marker%s in authoritative paths",
+            allowedMarkers, suffix(allowedMarkers));
+        if (verbose) {
+          allowed.forEach(p -> println(out, p.toString()));
+        }
+        // recalculate the marker size
+        surplus = surplusMarkers.size();
+      }
+      if (surplus > expectedMarkerCount) {
+        // failure
+        if (expectedMarkerCount > 0) {
+          println(out, "Expected %d marker%s", expectedMarkerCount,
+              suffix(surplus));
+        }
+        println(out, "Surplus markers were found -failing audit");
+
+        result.exitCode = EXIT_NOT_ACCEPTABLE;
+      }
     }
 
 
@@ -461,7 +516,7 @@ public final class MarkerTool extends S3GuardTool {
       String key = storeContext.pathToKey(statusPath);
       if (status.isDirectory()) {
         if (verbose) {
-          println(out, "Directory Marker %s", key);
+          println(out, "  Directory Marker %s", key);
         }
         LOG.debug("{}", key);
         tracker.markerFound(statusPath,
@@ -475,8 +530,8 @@ public final class MarkerTool extends S3GuardTool {
       if ((count % 1000) == 0) {
         println(out, "Scanned %,d objects", count);
       }
-      if (limit > 0 || count >= limit) {
-        println(out, "Limit of scanned reached - %,d objects", limit);
+      if (limit > 0 && count >= limit) {
+        println(out, "Limit of scan reached - %,d object%s", limit, suffix(limit));
         return false;
       }
     }
@@ -534,8 +589,9 @@ public final class MarkerTool extends S3GuardTool {
    * @throws IOException IO failure
    */
   @Retries.RetryTranslated
-  private MarkerPurgeSummary purgeMarkers(DirMarkerTracker tracker,
-      int deletePageSize)
+  private MarkerPurgeSummary purgeMarkers(
+      final DirMarkerTracker tracker,
+      final int deletePageSize)
       throws MultiObjectDeleteException, AmazonClientException, IOException {
 
     MarkerPurgeSummary summary = new MarkerPurgeSummary();
@@ -548,9 +604,10 @@ public final class MarkerTool extends S3GuardTool {
         markers.values().stream()
             .map(p -> new DeleteObjectsRequest.KeyVersion(p.getKey()))
             .collect(Collectors.toList());
-    // as an array list so .sublist is straightforward
-    List<DeleteObjectsRequest.KeyVersion> markerKeys = new ArrayList<>(
-        collect);
+    // build an array list for ease of creating the lists of
+    // keys in each page through the subList() method.
+    List<DeleteObjectsRequest.KeyVersion> markerKeys =
+        new ArrayList<>(collect);
 
     // now randomize. Why so? if the list spans multiple S3 partitions,
     // it should reduce the IO load on each part.
@@ -560,9 +617,12 @@ public final class MarkerTool extends S3GuardTool {
       pages += 1;
     }
     if (verbose) {
-      println(out, "%d markers to delete in %d pages of %d keys/page",
-          size, pages, deletePageSize);
+      println(out, "%n%d marker%s to delete in %d page%s of %d keys/page",
+          size, suffix(size),
+          pages, suffix(pages),
+          deletePageSize);
     }
+    DurationInfo durationInfo = new DurationInfo(LOG, "Deleting markers");
     int start = 0;
     while (start < size) {
       // end is one past the end of the page
@@ -570,16 +630,15 @@ public final class MarkerTool extends S3GuardTool {
       List<DeleteObjectsRequest.KeyVersion> page = markerKeys.subList(start,
           end);
       List<Path> undeleted = new ArrayList<>();
-      OperationDuration duration = new OperationDuration();
       once("Remove S3 Keys",
           tracker.getBasePath().toString(), () ->
               operations.removeKeys(page, true, undeleted, null, false));
-      duration.finished();
       summary.deleteRequests++;
-      summary.totalDeleteRequestDuration += duration.value();
       // and move to the start of the next page
       start = end;
     }
+    durationInfo.close();
+    summary.totalDeleteRequestDuration = durationInfo.value();
     summary.markersDeleted = size;
     return summary;
   }
@@ -600,6 +659,7 @@ public final class MarkerTool extends S3GuardTool {
    * @param doPurge should markers be purged
    * @param expectedMarkers number of markers expected
    * @param limit limit of files to scan; -1 for 'unlimited'
+   * @param nonAuth only use nonauth path count for failure rules
    * @return the result
    */
   @SuppressWarnings("IOResourceOpenedButNotSafelyClosed")
@@ -608,11 +668,11 @@ public final class MarkerTool extends S3GuardTool {
       final Path path,
       final boolean doPurge,
       final int expectedMarkers,
-      final int limit) throws IOException {
+      final int limit, boolean nonAuth) throws IOException {
     MarkerTool tool = new MarkerTool(sourceFS.getConf());
     tool.setVerbose(LOG.isDebugEnabled());
 
     return tool.execute(sourceFS, path, doPurge,
-        expectedMarkers, limit);
+        expectedMarkers, limit, nonAuth);
   }
 }

@@ -543,7 +543,7 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
    * @param expected expected value.
    * @return the diff.
    */
-  protected OperationCostValidator.ExpectedProbe always(
+  protected OperationCostValidator.ExpectedProbe with(
       final Statistic stat, final int expected) {
     return probe(stat, expected);
   }
@@ -554,7 +554,7 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
    * @param expected expected value.
    * @return the diff.
    */
-  protected OperationCostValidator.ExpectedProbe whenRaw(
+  protected OperationCostValidator.ExpectedProbe withWhenRaw(
       final Statistic stat, final int expected) {
     return probe(isRaw(), stat, expected);
   }
@@ -565,7 +565,7 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
    * @param expected expected value.
    * @return the diff.
    */
-  protected OperationCostValidator.ExpectedProbe whenGuarded(
+  protected OperationCostValidator.ExpectedProbe withWhenGuarded(
       final Statistic stat,
       final int expected) {
     return probe(isGuarded(), stat, expected);
@@ -577,7 +577,7 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
    * @param expected expected value.
    * @return the diff.
    */
-  protected OperationCostValidator.ExpectedProbe whenAuthoritative(
+  protected OperationCostValidator.ExpectedProbe withWhenAuthoritative(
       final Statistic stat,
       final int expected) {
     return probe(isAuthoritative(), stat, expected);
@@ -589,7 +589,7 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
    * @param expected expected value.
    * @return the diff.
    */
-  protected OperationCostValidator.ExpectedProbe whenNonauth(
+  protected OperationCostValidator.ExpectedProbe withWhenNonauth(
       final Statistic stat,
       final int expected) {
     return probe(isNonAuth(), stat, expected);
@@ -601,7 +601,7 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
    * @param expected expected value.
    * @return the diff.
    */
-  protected OperationCostValidator.ExpectedProbe whenKeeping(
+  protected OperationCostValidator.ExpectedProbe withWhenKeeping(
       final Statistic stat,
       final int expected) {
     return probe(isKeepingMarkers(), stat, expected);
@@ -613,7 +613,7 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
    * @param expected expected value.
    * @return the diff.
    */
-  protected OperationCostValidator.ExpectedProbe whenDeleting(
+  protected OperationCostValidator.ExpectedProbe withWhenDeleting(
       final Statistic stat,
       final int expected) {
     return probe(isDeleting(), stat, expected);

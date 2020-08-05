@@ -46,6 +46,18 @@ public final class DirectoryPolicyImpl
   public static final String UNKNOWN_MARKER_POLICY = "Unknown value of "
       + DIRECTORY_MARKER_POLICY + ": ";
 
+  /**
+   * Keep all markers.
+   */
+  public static final DirectoryPolicy KEEP = new DirectoryPolicyImpl(
+      MarkerPolicy.Keep, (p) -> false);
+
+  /**
+   * Delete all markers.
+   */
+  public static final DirectoryPolicy DELETE = new DirectoryPolicyImpl(
+      MarkerPolicy.Delete, (p) -> false);
+
   private static final Logger LOG = LoggerFactory.getLogger(
       DirectoryPolicyImpl.class);
 
@@ -60,38 +72,16 @@ public final class DirectoryPolicyImpl
    */
   private final Predicate<Path> authoritativeness;
 
+
   /**
    * Constructor.
-   * @param conf config
-   * @param authoritativeness Callback to evaluate authoritativeness of a
-   * path.
+   * @param markerPolicy marker policy
+   * @param authoritativeness function for authoritativeness
    */
-  public DirectoryPolicyImpl(
-      final Configuration conf,
+  public DirectoryPolicyImpl(final MarkerPolicy markerPolicy,
       final Predicate<Path> authoritativeness) {
+    this.markerPolicy = markerPolicy;
     this.authoritativeness = authoritativeness;
-    String option = conf.getTrimmed(DIRECTORY_MARKER_POLICY,
-        DEFAULT_DIRECTORY_MARKER_POLICY);
-    MarkerPolicy p;
-    switch (option.toLowerCase(Locale.ENGLISH)) {
-    case DIRECTORY_MARKER_POLICY_DELETE:
-      // backwards compatible.
-      p = MarkerPolicy.Delete;
-      LOG.debug("Directory markers will be deleted");
-      break;
-    case DIRECTORY_MARKER_POLICY_KEEP:
-      p = MarkerPolicy.Keep;
-      LOG.info("Directory markers will be kept");
-      break;
-    case DIRECTORY_MARKER_POLICY_AUTHORITATIVE:
-      p = MarkerPolicy.Authoritative;
-      LOG.info("Directory markers will be kept on authoritative"
-          + " paths");
-      break;
-    default:
-      throw new IllegalArgumentException(UNKNOWN_MARKER_POLICY + option);
-    }
-    this.markerPolicy = p;
   }
 
   @Override
@@ -106,7 +96,6 @@ public final class DirectoryPolicyImpl
       return false;
     }
   }
-
 
   @Override
   public MarkerPolicy getMarkerPolicy() {
@@ -125,5 +114,40 @@ public final class DirectoryPolicyImpl
     sb.append("policy='").append(markerPolicy).append('\'');
     sb.append('}');
     return sb.toString();
+  }
+
+  /**
+   * Create/Get the policy for this configuration.
+   * @param conf config
+   * @param authoritativeness Callback to evaluate authoritativeness of a
+   * path.
+   * @return a policy
+   */
+  public static DirectoryPolicy getDirectoryPolicy(
+      final Configuration conf,
+      final Predicate<Path> authoritativeness) {
+    DirectoryPolicy policy;
+    String option = conf.getTrimmed(DIRECTORY_MARKER_POLICY,
+        DEFAULT_DIRECTORY_MARKER_POLICY);
+    switch (option.toLowerCase(Locale.ENGLISH)) {
+    case DIRECTORY_MARKER_POLICY_DELETE:
+      // backwards compatible.
+      LOG.debug("Directory markers will be deleted");
+      policy = DELETE;
+      break;
+    case DIRECTORY_MARKER_POLICY_KEEP:
+      LOG.info("Directory markers will be kept");
+      policy = KEEP;
+      break;
+    case DIRECTORY_MARKER_POLICY_AUTHORITATIVE:
+      LOG.info("Directory markers will be kept on authoritative"
+          + " paths");
+      policy = new DirectoryPolicyImpl(MarkerPolicy.Authoritative,
+          authoritativeness);
+      break;
+    default:
+      throw new IllegalArgumentException(UNKNOWN_MARKER_POLICY + option);
+    }
+    return policy;
   }
 }

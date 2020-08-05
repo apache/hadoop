@@ -258,9 +258,9 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
         s3a.copyFromLocalFile(false, true, localPath, remotePath);
         return "copy";
       },
-          always(INVOCATION_COPY_FROM_LOCAL_FILE, 1),
-          always(OBJECT_PUT_REQUESTS, 1),
-          always(OBJECT_PUT_BYTES, len));
+          with(INVOCATION_COPY_FROM_LOCAL_FILE, 1),
+          with(OBJECT_PUT_REQUESTS, 1),
+          with(OBJECT_PUT_BYTES, len));
       verifyFileContents(s3a, remotePath, data);
       // print final stats
       LOG.info("Filesystem {}", s3a);
@@ -365,20 +365,19 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
 
     // builder defaults to looking for parent existence (non-recursive)
     buildFile(testFile, false,  false,
-        GET_FILE_STATUS_FNFE       // destination file
-            .plus(FILE_STATUS_DIR_PROBE)); // parent dir
+        GET_FILE_STATUS_FNFE                // destination file
+            .plus(FILE_STATUS_DIR_PROBE));  // parent dir
     // recursive = false and overwrite=true:
     // only make sure the dest path isn't a directory.
     buildFile(testFile, true, true,
-        FILE_STATUS_DIR_PROBE
-    );
+        FILE_STATUS_DIR_PROBE);
 
     // now there is a file there, an attempt with overwrite == false will
     // fail on the first HEAD.
     interceptRaw(FileAlreadyExistsException.class, "",
-        GET_FILE_STATUS_ON_FILE, () ->
-            buildFile(testFile, false, true,
-                GET_FILE_STATUS_ON_FILE));
+        GET_FILE_STATUS_ON_FILE,
+        () -> buildFile(testFile, false, true,
+            GET_FILE_STATUS_ON_FILE));
   }
 
   @Test
@@ -398,9 +397,9 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     fs.globStatus(basePath.suffix("/*"));
     // 2 head + 1 list from getFileStatus on path,
     // plus 1 list to match the glob pattern
-    verifyRaw(
-        GET_FILE_STATUS_ON_DIR.plus(LIST_OPERATION), () ->
-        fs.globStatus(basePath.suffix("/*")));
+    verifyRaw(GET_FILE_STATUS_ON_DIR
+        .plus(LIST_OPERATION),
+        () -> fs.globStatus(basePath.suffix("/*")));
   }
 
   @Test
@@ -418,8 +417,9 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     // unguarded: 2 head + 1 list from getFileStatus on path,
     // plus 1 list to match the glob pattern
     // no additional operations from symlink resolution
-    verifyRaw(GET_FILE_STATUS_ON_DIR.plus(LIST_OPERATION), () ->
-            fs.globStatus(basePath.suffix("/*")));
+    verifyRaw(GET_FILE_STATUS_ON_DIR
+        .plus(LIST_OPERATION),
+        () -> fs.globStatus(basePath.suffix("/*")));
   }
 
 

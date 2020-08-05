@@ -22,16 +22,14 @@ package org.apache.hadoop.fs.s3a.performance;
  * Declaration of the costs of head and list calls for various FS IO
  * operations.
  * <p></p>
- * An instance declares the number of head/list calls expected for
+ * An instance declares the number of head and list calls expected for
  * various operations -with a {@link #plus(OperationCost)}
  * method to add operation costs together to produce an
  * aggregate cost. These can then be validated in tests
  * via {@link OperationCostValidator}.
- * <p></p>
  *
  */
 public final class OperationCost {
-
 
   /** Head costs for getFileStatus() directory probe: {@value}. */
   public static final int FILESTATUS_DIR_PROBE_H = 0;
@@ -47,11 +45,20 @@ public final class OperationCost {
   public static final int FILESTATUS_FILE_PROBE_L = 0;
 
   /**
+   * Delete cost when deleting an object.
+   */
+  public static final int DELETE_OBJECT_REQUEST = 1;
+
+  /**
+   * Delete cost when deleting a marker.
+   */
+  public static final int DELETE_MARKER_REQUEST = DELETE_OBJECT_REQUEST;
+
+  /**
    * No IO takes place.
    */
   public static final OperationCost NO_IO =
       new OperationCost(0, 0);
-
 
   /** A HEAD operation. */
   public static final OperationCost HEAD_OPERATION = new OperationCost(1, 0);
@@ -95,28 +102,17 @@ public final class OperationCost {
   public static final OperationCost GET_FILE_STATUS_FNFE =
       FILE_STATUS_ALL_PROBES;
 
-  /**
-   * Delete cost when deleting an object.
-   */
-  public static final int DELETE_OBJECT_REQUEST = 1;
-
-  /**
-   * Delete cost when deleting a marker.
-   */
-  public static final int DELETE_MARKER_REQUEST = DELETE_OBJECT_REQUEST;
-
-
-  /** listLocatedStatus always does a list. */
+  /** listLocatedStatus always does a LIST. */
   public static final OperationCost LIST_LOCATED_STATUS_LIST_OP =
       new OperationCost(0, 1);
 
-  /** listFiles always does a list. */
+  /** listFiles always does a LIST. */
   public static final OperationCost LIST_FILES_LIST_OP =
       new OperationCost(0, 1);
 
-
   /**
    * Metadata cost of a copy operation, as used during rename.
+   * This happens even if the store is guarded.
    */
   public static final OperationCost COPY_OP =
       new OperationCost(1, 0);

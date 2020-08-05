@@ -40,6 +40,7 @@ import static org.apache.hadoop.fs.s3a.performance.OperationCostValidator.probe;
 
 /**
  * Use metrics to assert about the cost of file API calls.
+ * <p></p>
  * Parameterized on guarded vs raw. and directory marker keep vs delete.
  */
 @RunWith(Parameterized.class)
@@ -99,25 +100,23 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
           fs.delete(simpleFile, false);
           return "after fs.delete(simpleFile) " + getMetricSummary();
         },
-        // delete file. For keeping: that's it
-
         probe(rawAndKeeping, OBJECT_METADATA_REQUESTS,
             FILESTATUS_FILE_PROBE_H),
         // if deleting markers, look for the parent too
         probe(rawAndDeleting, OBJECT_METADATA_REQUESTS,
             FILESTATUS_FILE_PROBE_H + FILESTATUS_DIR_PROBE_H),
-        whenRaw(OBJECT_LIST_REQUESTS,
+        withWhenRaw(OBJECT_LIST_REQUESTS,
             FILESTATUS_FILE_PROBE_L + FILESTATUS_DIR_PROBE_L),
-        always(DIRECTORIES_DELETED, 0),
-        always(FILES_DELETED, 1),
+        with(DIRECTORIES_DELETED, 0),
+        with(FILES_DELETED, 1),
 
         // keeping: create no parent dirs or delete parents
-        whenKeeping(DIRECTORIES_CREATED, 0),
-        whenKeeping(OBJECT_DELETE_REQUESTS, DELETE_OBJECT_REQUEST),
+        withWhenKeeping(DIRECTORIES_CREATED, 0),
+        withWhenKeeping(OBJECT_DELETE_REQUESTS, DELETE_OBJECT_REQUEST),
 
         // deleting: create a parent and delete any of its parents
-        whenDeleting(DIRECTORIES_CREATED, 1),
-        whenDeleting(OBJECT_DELETE_REQUESTS,
+        withWhenDeleting(DIRECTORIES_CREATED, 1),
+        withWhenDeleting(OBJECT_DELETE_REQUESTS,
             DELETE_OBJECT_REQUEST
                 + DELETE_MARKER_REQUEST)
     );
@@ -154,19 +153,19 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
         // if deleting markers, look for the parent too
         probe(rawAndDeleting, OBJECT_METADATA_REQUESTS,
             FILESTATUS_FILE_PROBE_H + FILESTATUS_DIR_PROBE_H),
-        whenRaw(OBJECT_LIST_REQUESTS,
+        withWhenRaw(OBJECT_LIST_REQUESTS,
             FILESTATUS_FILE_PROBE_L + FILESTATUS_DIR_PROBE_L),
-        always(DIRECTORIES_DELETED, 0),
-        always(FILES_DELETED, 1),
+        with(DIRECTORIES_DELETED, 0),
+        with(FILES_DELETED, 1),
 
         // no need to create a parent
-        always(DIRECTORIES_CREATED, 0),
+        with(DIRECTORIES_CREATED, 0),
 
         // keeping: create no parent dirs or delete parents
-        whenKeeping(OBJECT_DELETE_REQUESTS, DELETE_OBJECT_REQUEST),
+        withWhenKeeping(OBJECT_DELETE_REQUESTS, DELETE_OBJECT_REQUEST),
 
         // deleting: create a parent and delete any of its parents
-        whenDeleting(OBJECT_DELETE_REQUESTS,
+        withWhenDeleting(OBJECT_DELETE_REQUESTS,
             DELETE_OBJECT_REQUEST));
   }
 
@@ -180,13 +179,14 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
       mkdirs(subDir);
       return "after mkdir(subDir) " + getMetricSummary();
     },
-        always(DIRECTORIES_CREATED, 1),
-        always(DIRECTORIES_DELETED, 0),
-        whenKeeping(OBJECT_DELETE_REQUESTS, 0),
-        whenKeeping(FAKE_DIRECTORIES_DELETED, 0),
-        whenDeleting(OBJECT_DELETE_REQUESTS, DELETE_MARKER_REQUEST),
+        with(DIRECTORIES_CREATED, 1),
+        with(DIRECTORIES_DELETED, 0),
+        withWhenKeeping(OBJECT_DELETE_REQUESTS, 0),
+        withWhenKeeping(FAKE_DIRECTORIES_DELETED, 0),
+        withWhenDeleting(OBJECT_DELETE_REQUESTS, DELETE_MARKER_REQUEST),
         // delete all possible fake dirs above the subdirectory
-        whenDeleting(FAKE_DIRECTORIES_DELETED, directoriesInPath(subDir) - 1));
+        withWhenDeleting(FAKE_DIRECTORIES_DELETED,
+            directoriesInPath(subDir) - 1));
   }
 
   @Test
@@ -204,14 +204,15 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
       file(new Path(srcDir, "source.txt"));
       return "after touch(fs, srcFilePath) " + getMetricSummary();
     },
-        always(DIRECTORIES_CREATED, 0),
-        always(DIRECTORIES_DELETED, 0),
+        with(DIRECTORIES_CREATED, 0),
+        with(DIRECTORIES_DELETED, 0),
         // keeping: no delete operations.
-        whenKeeping(OBJECT_DELETE_REQUESTS, 0),
-        whenKeeping(FAKE_DIRECTORIES_DELETED, 0),
+        withWhenKeeping(OBJECT_DELETE_REQUESTS, 0),
+        withWhenKeeping(FAKE_DIRECTORIES_DELETED, 0),
         // delete all possible fake dirs above the file
-        whenDeleting(OBJECT_DELETE_REQUESTS, 1),
-        whenDeleting(FAKE_DIRECTORIES_DELETED, directoriesInPath(srcDir)));
+        withWhenDeleting(OBJECT_DELETE_REQUESTS, 1),
+        withWhenDeleting(FAKE_DIRECTORIES_DELETED,
+            directoriesInPath(srcDir)));
   }
 
 }

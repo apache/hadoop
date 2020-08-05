@@ -466,7 +466,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         S3Guard.logS3GuardDisabled(LOG, warnLevel, bucket);
       }
       // directory policy, which may look at authoritative paths
-      directoryPolicy = new DirectoryPolicyImpl(conf,
+      directoryPolicy = DirectoryPolicyImpl.getDirectoryPolicy(conf,
           this::allowAuthoritative);
       LOG.debug("Directory marker retention policy is {}", directoryPolicy);
 
@@ -2533,7 +2533,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       final boolean quiet)
       throws MultiObjectDeleteException, AmazonClientException, IOException {
     undeletedObjectsOnFailure.clear();
-    try (DurationInfo ignored = new DurationInfo(LOG, false, "Deleting")) {
+    try (DurationInfo ignored = new DurationInfo(LOG, false,
+        "Deleting %d keys", keysToDelete.size())) {
       return removeKeysS3(keysToDelete, deleteFakeDir, quiet);
     } catch (MultiObjectDeleteException ex) {
       LOG.debug("Partial delete failure");

@@ -161,10 +161,9 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
     describe("Clean markers under a keeping FS -with file limit");
     CreatedPaths createdPaths = createPaths(getKeepingFS(), methodPath());
 
-    // audit will find the expected entries
-    int expectedMarkerCount = createdPaths.dirs.size();
+    // audit will be interrupted
     markerTool(EXIT_INTERRUPTED, getDeletingFS(),
-        createdPaths.base, false, 0, 1);
+        createdPaths.base, false, 0, 1, false);
   }
 
   @Test
@@ -178,7 +177,7 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
     S3AFileSystem fs = getDeletingFS();
     LOG.info("Auditing a directory with retained markers -expect failure");
     markerTool(EXIT_NOT_ACCEPTABLE, fs,
-        createdPaths.base, false, 0, UNLIMITED);
+        createdPaths.base, false, 0, UNLIMITED_LISTING, false);
 
     LOG.info("Auditing a directory expecting retained markers");
     markerTool(fs, createdPaths.base, false,
@@ -246,6 +245,13 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
     markerTool(mixedFSDir2, topath(source, "dir1"), false, 0);
     markerTool(mixedFSDir2, source, false, expectedMarkersUnderDir2);
 
+    // full scan of source will fail
+    markerTool(EXIT_NOT_ACCEPTABLE,
+        mixedFSDir2, source, false, 0, 0, false);
+
+    // but add the -nonauth option and the markers under dir2 are skipped
+    markerTool(0, mixedFSDir2, source, false, 0, 0, true);
+
     // if we now rename, all will be good
     LOG.info("Executing rename");
     mixedFSDir2.rename(source, dest);
@@ -299,7 +305,7 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
     CreatedPaths createdPaths = createPaths(getKeepingFS(), methodPath());
     run(NAME,
         V,
-        REPORT,
+        AUDIT,
         createdPaths.base.toString());
     run(NAME,
         V,
@@ -312,6 +318,7 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
     describe("Adurit");
     CreatedPaths createdPaths = createPaths(getKeepingFS(), methodPath());
     runToFailure(EXIT_INTERRUPTED,
+        NAME,
         V,
         "-" + OPT_LIMIT, "2",
         CLEAN,
@@ -354,8 +361,8 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
     conf.set(DIRECTORY_MARKER_POLICY, markerPolicy);
     S3AFileSystem fs2 = new S3AFileSystem();
     fs2.initialize(testFSUri, conf);
-    LOG.info("created new filesystem with policy {} and auth path {}: {}",
-        markerPolicy, authPath, fs2);
+    LOG.info("created new filesystem with policy {} and auth path {}",
+        markerPolicy, authPath);
     return fs2;
   }
 
@@ -528,7 +535,7 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
       final int expectedMarkerCount)
       throws IOException {
     return markerTool(0, sourceFS, path, doPurge, expectedMarkerCount,
-        UNLIMITED);
+        UNLIMITED_LISTING, false);
   }
 
   /**
@@ -540,7 +547,8 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
    * @param path path to scan
    * @param doPurge should markers be purged
    * @param expectedMarkers number of markers expected
-HiMan   * @param limit limit of files to scan; -1 for 'unlimited'
+   * @param limit limit of files to scan; -1 for 'unlimited'
+   * @param nonAuth only use nonauth path count for failure rules
    * @return the result
    */
   public static MarkerTool.ScanResult markerTool(
@@ -549,14 +557,15 @@ HiMan   * @param limit limit of files to scan; -1 for 'unlimited'
       final Path path,
       final boolean doPurge,
       final int expectedMarkers,
-      final int limit) throws IOException {
+      final int limit,
+      final boolean nonAuth) throws IOException {
 
     MarkerTool.ScanResult result = MarkerTool.execMarkerTool(
         sourceFS,
         path,
         doPurge,
         expectedMarkers,
-        limit);
+        limit, nonAuth);
     Assertions.assertThat(result.getExitCode())
         .describedAs("Exit code of marker(%s, %s, %d) -> %s",
             path, doPurge, expectedMarkers, result)
@@ -609,7 +618,12 @@ HiMan   * @param limit limit of files to scan; -1 for 'unlimited'
       throws Exception {
     ExitUtil.ExitException ex =
         intercept(ExitUtil.ExitException.class,
-            () -> run(args));
+            () -> {
+              int ec = run(args);
+              if (ec != 0) {
+                throw new ExitUtil.ExitException(ec, "exit code " + ec);
+              }
+            });
     if (ex.status != status) {
       throw ex;
     }

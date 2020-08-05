@@ -27,12 +27,12 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
-import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY;
-
+/**
+ * Unit tests for directory marker policies.
+ */
 @RunWith(Parameterized.class)
 public class TestDirectoryMarkerPolicy extends AbstractHadoopTestBase {
 
@@ -80,9 +80,7 @@ public class TestDirectoryMarkerPolicy extends AbstractHadoopTestBase {
   private DirectoryPolicyImpl retention(
       DirectoryPolicy.MarkerPolicy markerPolicy,
       Predicate<Path> authoritativeness) {
-    Configuration c = new Configuration(false);
-    c.set(DIRECTORY_MARKER_POLICY, markerPolicy.name());
-    return new DirectoryPolicyImpl(c, authoritativeness);
+    return new DirectoryPolicyImpl(markerPolicy, authoritativeness);
   }
 
   private static final Predicate<Path> AUTH_PATH_ONLY =

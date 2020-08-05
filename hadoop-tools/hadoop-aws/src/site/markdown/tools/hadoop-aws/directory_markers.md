@@ -12,7 +12,7 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 
-# Altering the S3A Directory Marker Behavior
+# Controlling the S3A Directory Marker Behavior
 
 ## <a name="compatibility"></a> Critical: this is not backwards compatible!
 
@@ -248,31 +248,169 @@ will be retained.
 Syntax
 
 ```
-> bin/hadoop s3guard markers 
-markers [-verbose] [-expected <count>] (audit || report || clean) <PATH>
-    view and manipulate S3 directory markers
+> hadoop s3guard markers
+  markers [-expected <count>] [-limit <limit>] [-nonauth] [-verbose] (audit | clean) <PATH>
+    View and manipulate S3 directory markers
 ```
 
-### `markers report`
+*Options*
 
-Scan the path and simply report on the markers found.
+| option | meaning |
+|--------|---------|
+|  `-expected <count>]`   |  Expected number of markers to find (primarily for testing)  |
+|  `-limit <count>]`      |   Limit on number of objects to scan |
+|  `-nonauth`             | Only consider markers in non-authoritative paths as errors  |
+|  `-verbose`             | Verbose output  |
 
-### `markers audit`
+*Exit Codes*
+
+| Code  | Meaning |
+|-------|---------|
+| 0     | Success |
+| 2     | Usage   |
+| 3     | interrupted -the value of `-limit` was reached |
+| 46    | Markers were found (see HTTP "406", "unacceptable") |
+
+All other non-zero status code also indicate errors of some form or other. 
+
+###  <a name="marker-tool-report"></a>`markers report`
 
 Audit the path and fail if any markers were found.
 
-### `markers clean`
-
-The `markers clean` command will clean the directory tree of all surplus markers
 
 ```
-> hadoop s3guard markers clean s3a://ireland-bucket/
+> hadoop s3guard markers -limit 8000 audit s3a://landsat-pds/
 
-2020-07-28 18:58:36,612 [main] INFO  tools.MarkerTool (DurationInfo.java:<init>(77)) - Starting: marker scan s3a://ireland-bucket/
-2020-07-28 18:58:37,516 [main] INFO  tools.MarkerTool (DurationInfo.java:close(98)) - marker scan s3a://ireland-bucket/: duration 0:00.906s
-No surplus directory markers were found under s3a://ireland-bucket/
+The directory marker policy of s3a://landsat-pds is "Delete"
+2020-08-05 13:42:56,079 [main] INFO  tools.MarkerTool (DurationInfo.java:<init>(77)) - Starting: marker scan s3a://landsat-pds/
+Scanned 1,000 objects
+Scanned 2,000 objects
+Scanned 3,000 objects
+Scanned 4,000 objects
+Scanned 5,000 objects
+Scanned 6,000 objects
+Scanned 7,000 objects
+Scanned 8,000 objects
+Limit of scan reached - 8,000 objects
+2020-08-05 13:43:01,184 [main] INFO  tools.MarkerTool (DurationInfo.java:close(98)) - marker scan s3a://landsat-pds/: duration 0:05.107s
+No surplus directory markers were found under s3a://landsat-pds/
+Listing limit reached before completing the scan
+2020-08-05 13:43:01,187 [main] INFO  util.ExitUtil (ExitUtil.java:terminate(210)) - Exiting with status 3:
+```
+
+Here the scan reached its object limit before completing the audit; the exit code of 3, "interrupted" indicates this.
+
+
+Example: a verbose audit of a bucket whose policy if authoritative -it is not an error if markers
+are found under the path `/tables`.
+
+```
+> bin/hadoop s3guard markers audit s3a://london/
+  2020-08-05 18:29:16,473 [main] INFO  impl.DirectoryPolicyImpl (DirectoryPolicyImpl.java:getDirectoryPolicy(143)) - Directory markers will be kept on authoritative paths
+  The directory marker policy of s3a://london is "Authoritative"
+  Authoritative path list is "/tables"
+  2020-08-05 18:29:19,186 [main] INFO  tools.MarkerTool (DurationInfo.java:<init>(77)) - Starting: marker scan s3a://london/
+  2020-08-05 18:29:21,610 [main] INFO  tools.MarkerTool (DurationInfo.java:close(98)) - marker scan s3a://london/: duration 0:02.425s
+  Listed 8 objects under s3a://london/
+  
+  Found 3 surplus directory markers under s3a://london/
+      s3a://london/tables
+      s3a://london/tables/tables-4
+      s3a://london/tables/tables-4/tables-5
+  Found 5 empty directory 'leaf' markers under s3a://london/
+      s3a://london/tables/tables-2
+      s3a://london/tables/tables-3
+      s3a://london/tables/tables-4/tables-5/06
+      s3a://london/tables2
+      s3a://london/tables3
+  These are required to indicate empty directories
+  Surplus markers were found -failing audit
+  2020-08-05 18:29:21,614 [main] INFO  util.ExitUtil (ExitUtil.java:terminate(210)) - Exiting with status 46: 
+```
+
+This fails because surplus markers were found. This S3A bucket would *NOT* be safe for older Hadoop versions
+to use.
+
+The `-nonauth` option does not treat markers under authoritative paths as errors:
+
+
+```
+bin/hadoop s3guard markers -nonauth audit s3a://london/
+2020-08-05 18:31:16,255 [main] INFO  impl.DirectoryPolicyImpl (DirectoryPolicyImpl.java:getDirectoryPolicy(143)) - Directory markers will be kept on authoritative paths
+The directory marker policy of s3a://london is "Authoritative"
+Authoritative path list is "/tables"
+2020-08-05 18:31:19,210 [main] INFO  tools.MarkerTool (DurationInfo.java:<init>(77)) - Starting: marker scan s3a://london/
+2020-08-05 18:31:22,240 [main] INFO  tools.MarkerTool (DurationInfo.java:close(98)) - marker scan s3a://london/: duration 0:03.031s
+Listed 8 objects under s3a://london/
+
+Found 3 surplus directory markers under s3a://london/
+    s3a://london/tables
+    s3a://london/tables/tables-4
+    s3a://london/tables/tables-4/tables-5
+Found 5 empty directory 'leaf' markers under s3a://london/
+    s3a://london/tables/tables-2
+    s3a://london/tables/tables-3
+    s3a://london/tables/tables-4/tables-5/06
+    s3a://london/tables2
+    s3a://london/tables3
+These are required to indicate empty directories
+
+Ignoring 3 markers in authoritative paths
+```
+
+All of this S3A bucket _other_ than the authoritative path `/tables` will be safe for
+incompatible Hadoop releases to to use.
+
+
+###  <a name="marker-tool-clean"></a>`markers clean`
+
+The `markers clean` command will clean the directory tree of all surplus markers.
+The `-verbose` option prints more detail on the operation as well as some IO statistics
+
+```
+> hadoop s3guard markers -verbose clean s3a://london/
+
+2020-08-05 18:33:25,303 [main] INFO  impl.DirectoryPolicyImpl (DirectoryPolicyImpl.java:getDirectoryPolicy(143)) - Directory markers will be kept on authoritative paths
+The directory marker policy of s3a://london is "Authoritative"
+Authoritative path list is "/tables"
+2020-08-05 18:33:28,511 [main] INFO  tools.MarkerTool (DurationInfo.java:<init>(77)) - Starting: marker scan s3a://london/
+  Directory Marker tables
+  Directory Marker tables/tables-2
+  Directory Marker tables/tables-3
+  Directory Marker tables/tables-4
+  Directory Marker tables/tables-4/tables-5
+  Directory Marker tables/tables-4/tables-5/06
+  Directory Marker tables2
+  Directory Marker tables3
+2020-08-05 18:33:31,685 [main] INFO  tools.MarkerTool (DurationInfo.java:close(98)) - marker scan s3a://london/: duration 0:03.175s
+Listed 8 objects under s3a://london/
+
+Found 3 surplus directory markers under s3a://london/
+    s3a://london/tables
+    s3a://london/tables/tables-4
+    s3a://london/tables/tables-4/tables-5
+Found 5 empty directory 'leaf' markers under s3a://london/
+    s3a://london/tables/tables-2
+    s3a://london/tables/tables-3
+    s3a://london/tables/tables-4/tables-5/06
+    s3a://london/tables2
+    s3a://london/tables3
+These are required to indicate empty directories
+
+3 markers to delete in 1 page of 250 keys/page
+2020-08-05 18:33:31,688 [main] INFO  tools.MarkerTool (DurationInfo.java:<init>(77)) - Starting: Deleting markers
+2020-08-05 18:33:31,812 [main] INFO  tools.MarkerTool (DurationInfo.java:close(98)) - Deleting markers: duration 0:00.124s
+
+Storage Statistics for s3a://london
+
+op_get_file_status	1
+object_delete_requests	1
+object_list_requests	2
 ```
 
 The `markers clean` command _does not_ delete markers above empty directories -only those which have
 files underneath. If invoked on a path, it will clean up the directory tree into a state
 where it is safe for older versions of Hadoop to interact with.
+
+Note that if invoked with a `-limit` value, surplus markers found during the scan will be removed,
+even though the scan will be considered a failure due to the limit being reached.

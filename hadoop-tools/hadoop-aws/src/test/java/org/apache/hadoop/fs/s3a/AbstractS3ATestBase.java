@@ -38,7 +38,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestDynamoTablePrefix;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestPropertyBool;
 import static org.apache.hadoop.fs.s3a.S3AUtils.E_FS_CLOSED;
-import static org.apache.hadoop.fs.s3a.tools.MarkerTool.UNLIMITED;
+import static org.apache.hadoop.fs.s3a.tools.MarkerTool.UNLIMITED_LISTING;
 
 /**
  * An extension of the contract test base set up for S3A tests.
@@ -78,10 +78,9 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
             && !fs.getDirectoryMarkerPolicy().keepDirectoryMarkers(methodPath)
             && fs.isDirectory(methodPath)) {
             MarkerTool.ScanResult result = MarkerTool.execMarkerTool(fs,
-                methodPath, true, 0, UNLIMITED);
-            if (result.getExitCode() != 0) {
-              fail("Audit of " + methodPath + " failed: " + result);
-            }
+                methodPath, true, 0, UNLIMITED_LISTING, false);
+          assertEquals("Audit of " + methodPath + " failed: " + result,
+              0, result.getExitCode());
         }
       } catch (FileNotFoundException ignored) {
       } catch (Exception e) {

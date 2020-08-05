@@ -19,9 +19,13 @@
 package org.apache.hadoop.fs.s3a.impl;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
@@ -45,6 +49,9 @@ import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
  * returned in a listing.
  */
 public class DirMarkerTracker {
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DirMarkerTracker.class);
 
   /**
    * all leaf markers.
@@ -70,9 +77,20 @@ public class DirMarkerTracker {
    */
   private int scanCount;
 
+  /**
+   * How many files were found.
+   */
   private int filesFound;
 
+  /**
+   * How many markers were found.
+   */
   private int markersFound;
+
+  /**
+   * How many objects of any kind were found?
+   */
+  private int objectsFound;
 
   /**
    * Construct.
@@ -131,9 +149,10 @@ public class DirMarkerTracker {
    * @param source listing source
    * @return the surplus markers found.
    */
-  public List<Marker> pathFound(Path path,
+  private List<Marker> pathFound(Path path,
       final String key,
       final S3ALocatedFileStatus source) {
+    objectsFound++;
     List<Marker> removed = new ArrayList<>();
 
     // all parent entries are superfluous
@@ -188,6 +207,15 @@ public class DirMarkerTracker {
     return lastDirChecked;
   }
 
+
+  /**
+   * How many objects were found.
+   * @return count
+   */
+  public int getObjectsFound() {
+    return objectsFound;
+  }
+
   public int getScanCount() {
     return scanCount;
   }
@@ -209,6 +237,30 @@ public class DirMarkerTracker {
         ", filesFound=" + filesFound +
         ", scanCount=" + scanCount +
         '}';
+  }
+
+  /**
+   * Scan the surplus marker list and remove from it all where the directory
+   * policy says "keep". This is useful when auditing
+   * @param policy policy to use when auditing markers for
+   * inclusion/exclusion.
+   * @return list of markers stripped
+   */
+  public List<Path> removeAllowedMarkers(DirectoryPolicy policy) {
+    List<Path> removed = new ArrayList<>();
+    Iterator<Map.Entry<Path, Marker>> entries = surplusMarkers.entrySet().iterator();
+    while (entries.hasNext()) {
+      Map.Entry<Path, Marker> entry = entries.next();
+      Path path = entry.getKey();
+      if (policy.keepDirectoryMarkers(path)) {
+        // there's a match
+        // remove it from the map.
+        entries.remove();
+        LOG.debug("Removing {}", entry.getValue());
+        removed.add(path);
+      }
+    }
+    return removed;
   }
 
   /**

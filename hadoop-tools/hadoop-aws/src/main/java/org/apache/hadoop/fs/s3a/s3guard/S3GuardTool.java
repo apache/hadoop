@@ -514,6 +514,7 @@ public abstract class S3GuardTool extends Configured implements Tool,
 
   /**
    * Dump the filesystem Storage Statistics if the FS is not null.
+   * Only non-zero statistics are printed.
    * @param stream output stream
    */
   protected void dumpFileSystemStatistics(PrintStream stream) {
@@ -521,14 +522,18 @@ public abstract class S3GuardTool extends Configured implements Tool,
     if (fs == null) {
       return;
     }
-    println(stream, "Storage Statistics for %s", fs.getUri());
+    println(stream, "%nStorage Statistics for %s%n", fs.getUri());
     StorageStatistics st = fs.getStorageStatistics();
     Iterator<StorageStatistics.LongStatistic> it
         = st.getLongStatistics();
     while (it.hasNext()) {
       StorageStatistics.LongStatistic next = it.next();
-      println(stream, "%s\t%s", next.getName(), next.getValue());
+      long value = next.getValue();
+      if (value != 0) {
+        println(stream, "%s\t%s", next.getName(), value);
+      }
     }
+    println(stream, "");
   }
 
   /**
