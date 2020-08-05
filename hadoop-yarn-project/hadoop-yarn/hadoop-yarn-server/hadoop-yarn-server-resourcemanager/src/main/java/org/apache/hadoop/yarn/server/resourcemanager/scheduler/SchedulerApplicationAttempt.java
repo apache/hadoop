@@ -1126,8 +1126,8 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
           getRunningAggregateAppResourceUsage();
       Resource usedResourceClone = Resources.clone(
           attemptResourceUsage.getAllUsed());
-      Resource reservedResourceClone = Resources.clone(
-          attemptResourceUsage.getReserved());
+      Resource reservedResourceClone =
+          Resources.clone(attemptResourceUsage.getAllReserved());
       Resource cluster = rmContext.getScheduler().getClusterResource();
       ResourceCalculator calc =
           rmContext.getScheduler().getResourceCalculator();

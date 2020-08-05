@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Scheduli
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -318,6 +319,43 @@ public class TestSchedulerApplicationAttempt {
         0.0f);
     assertEquals(0.0f, app.getResourceUsageReport().getClusterUsagePercentage(),
         0.0f);
+  }
+
+  @Test
+  public void testAllResourceUsage() throws Exception {
+    FifoScheduler scheduler = mock(FifoScheduler.class);
+    when(scheduler.getClusterResource()).thenReturn(Resource.newInstance(0, 0));
+    when(scheduler.getResourceCalculator())
+        .thenReturn(new DefaultResourceCalculator());
+
+    ApplicationAttemptId appAttId = createAppAttemptId(0, 0);
+    RMContext rmContext = mock(RMContext.class);
+    when(rmContext.getEpoch()).thenReturn(3L);
+    when(rmContext.getScheduler()).thenReturn(scheduler);
+    when(rmContext.getYarnConfiguration()).thenReturn(conf);
+
+    final String user = "user1";
+    Queue queue = createQueue("test", null);
+    SchedulerApplicationAttempt app = new SchedulerApplicationAttempt(appAttId,
+        user, queue, queue.getAbstractUsersManager(), rmContext);
+
+    // Resource request
+    Resource requestedResource = Resource.newInstance(1536, 2);
+    app.attemptResourceUsage.incUsed("X", requestedResource);
+    app.attemptResourceUsage.incUsed("Y", requestedResource);
+    Resource r2 = Resource.newInstance(1024, 1);
+    app.attemptResourceUsage.incReserved("X", r2);
+    app.attemptResourceUsage.incReserved("Y", r2);
+
+    assertTrue("getUsedResources expected " + Resource.newInstance(3072, 4)
+                + " but was " + app.getResourceUsageReport().getUsedResources(),
+        Resources.equals(Resource.newInstance(3072, 4),
+        app.getResourceUsageReport().getUsedResources()));
+    assertTrue("getReservedResources expected " + Resource.newInstance(2048, 2)
+               + " but was "
+               + app.getResourceUsageReport().getReservedResources(),
+        Resources.equals(Resource.newInstance(2048, 2),
+        app.getResourceUsageReport().getReservedResources()));
   }
 
   @Test
