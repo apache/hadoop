@@ -21,6 +21,7 @@ package org.apache.hadoop.security;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.minikdc.MiniKdc;
+import org.apache.hadoop.util.Time;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -64,11 +65,35 @@ public class TestUGILoginFromKeytab {
   }
 
   /**
+   * Login from keytab using the MiniKDC.
+   */
+  @Test
+  public void testUGILoginFromKeytab() throws Exception {
+    long beforeLogin = Time.now();
+    String principal = "foo";
+    File keytab = new File(workDir, "foo.keytab");
+    kdc.createPrincipal(keytab, principal);
+
+    UserGroupInformation.loginUserFromKeytab(principal, keytab.getPath());
+    UserGroupInformation ugi = UserGroupInformation.getLoginUser();
+    Assert.assertTrue("UGI should be configured to login from keytab",
+        ugi.isFromKeytab());
+
+    User user = ugi.getSubject().getPrincipals(User.class).iterator().next();
+    Assert.assertNotNull(user.getLogin());
+
+    Assert.assertTrue(
+        "User login time is less than before login time, " + "beforeLoginTime:"
+            + beforeLogin + " userLoginTime:" + user.getLastLogin(),
+        user.getLastLogin() > beforeLogin);
+  }
+
+  /**
    * Login from keytab using the MiniKDC and verify the UGI can successfully
    * relogin from keytab as well. This will catch regressions like HADOOP-10786.
    */
   @Test
-  public void testUGILoginFromKeytab() throws Exception {
+  public void testUGIReloginFromKeytab() throws Exception {
     UserGroupInformation.setShouldRenewImmediatelyForTests(true);
     String principal = "foo";
     File keytab = new File(workDir, "foo.keytab");
@@ -82,6 +107,8 @@ public class TestUGILoginFromKeytab {
     // Verify relogin from keytab.
     User user = ugi.getSubject().getPrincipals(User.class).iterator().next();
     final long firstLogin = user.getLastLogin();
+    // Sleep for 2 secs to have a difference between first and second login
+    Thread.sleep(2000);
     ugi.reloginFromKeytab();
     final long secondLogin = user.getLastLogin();
     Assert.assertTrue("User should have been able to relogin from keytab",
