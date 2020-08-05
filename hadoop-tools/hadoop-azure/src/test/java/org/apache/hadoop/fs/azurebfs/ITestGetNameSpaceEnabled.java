@@ -32,8 +32,6 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
-import org.apache.hadoop.fs.azurebfs.services.AuthType;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
@@ -46,7 +44,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.D
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_IS_HNS_ENABLED;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -142,26 +139,6 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
             "\"The specified filesystem does not exist.\", 404",
             ()-> {
               fs.getFileStatus(new Path("/")); // Run a dummy FS call
-            });
-  }
-
-  @Test
-  public void testFailedRequestWhenCredentialsNotCorrect() throws Exception {
-    Assume.assumeTrue(this.getAuthType() == AuthType.SharedKey);
-    Configuration config = this.getRawConfiguration();
-    config.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, false);
-    String accountName = this.getAccountName();
-    String configkKey = FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME + "." + accountName;
-    // Provide a wrong sharedKey
-    String secret = config.get(configkKey);
-    secret = (char) (secret.charAt(0) + 1) + secret.substring(1);
-    config.set(configkKey, secret);
-
-    AzureBlobFileSystem fs = this.getFileSystem(config);
-    intercept(AbfsRestOperationException.class,
-            "\"Server failed to authenticate the request. Make sure the value of Authorization header is formed correctly including the signature.\", 403",
-            ()-> {
-              fs.getIsNamespaceEnabled();
             });
   }
 
