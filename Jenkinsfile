@@ -144,6 +144,7 @@ pipeline {
                         # Dockerfile since we don't want to use the auto-pulled version.
                         YETUS_ARGS+=("--docker")
                         YETUS_ARGS+=("--dockerfile=${DOCKERFILE}")
+                        YETUS_ARGS+=("--mvn-custom-repos")
 
                         # effectively treat dev-suport as a custom maven module
                         YETUS_ARGS+=("--skip-dirs=dev-support")
