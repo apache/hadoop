@@ -119,6 +119,29 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>3.1.2</version>
+        <executions>
+          <execution>
+            <id>copy</id>
+            <goals>
+              <goal>copy</goal>
+            </goals>
+            <configuration>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>com.cloudera.yarnoncloud</groupId>
+                  <artifactId>hadoop-yarn-cloud-resourcemanager</artifactId>
+                  <version>${t9000-core.version}</version>
+                  <outputDirectory>${project.build.directory}/${project.artifactId}-${project.version}/share/hadoop/yarn/</outputDirectory>
+                </artifactItem>
+              </artifactItems>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 
