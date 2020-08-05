@@ -108,6 +108,8 @@ public class AMRMProxyService extends CompositeService implements
   private Map<ApplicationId, RequestInterceptorChainWrapper> applPipelineMap;
   private RegistryOperations registry;
   private AMRMProxyMetrics metrics;
+  private FederationStateStoreFacade federationFacade;
+  private boolean federationEnabled = false;
 
   /**
    * Creates an instance of the service.
@@ -144,7 +146,10 @@ public class AMRMProxyService extends CompositeService implements
           RegistryOperations.class);
       addService(this.registry);
     }
-
+    this.federationFacade = FederationStateStoreFacade.getInstance();
+    this.federationEnabled =
+        conf.getBoolean(YarnConfiguration.FEDERATION_ENABLED,
+            YarnConfiguration.DEFAULT_FEDERATION_ENABLED);
     super.serviceInit(conf);
   }
 
@@ -389,13 +394,22 @@ public class AMRMProxyService extends CompositeService implements
       throws IOException, YarnException {
     long startTime = clock.getTime();
     try {
-      LOG.info("Callback received for initializing request "
-          + "processing pipeline for an AM");
       ContainerTokenIdentifier containerTokenIdentifierForKey =
           BuilderUtils.newContainerTokenIdentifier(request.getContainerToken());
       ApplicationAttemptId appAttemptId =
           containerTokenIdentifierForKey.getContainerID()
               .getApplicationAttemptId();
+      ApplicationId applicationID = appAttemptId.getApplicationId();
+      // Checking if application is there in federation state store only
+      // if federation is enabled. If
+      // application is submitted to router then it adds it in statestore.
+      // if application is not found in statestore that means its
+      // submitted to RM
+      if (!checkIfAppExistsInStateStore(applicationID)) {
+        return;
+      }
+      LOG.info("Callback received for initializing request "
+          + "processing pipeline for an AM");
       Credentials credentials = YarnServerSecurityUtils
           .parseCredentials(request.getContainerLaunchContext());
 
@@ -770,6 +784,21 @@ public class AMRMProxyService extends CompositeService implements
 
       return this.applPipelineMap.get(appAttemptId.getApplicationId());
     }
+  }
+
+  boolean checkIfAppExistsInStateStore(ApplicationId applicationID) {
+    if (!federationEnabled) {
+      return true;
+    }
+
+    try {
+      // Check if app is there in state store. If app is not there then it
+      // throws Exception
+      this.federationFacade.getApplicationHomeSubCluster(applicationID);
+    } catch (YarnException ex) {
+      return false;
+    }
+    return true;
   }
 
   @SuppressWarnings("unchecked")

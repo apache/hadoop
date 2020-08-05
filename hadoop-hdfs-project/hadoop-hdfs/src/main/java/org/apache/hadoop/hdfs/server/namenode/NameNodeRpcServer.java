@@ -132,6 +132,7 @@ import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ClientNamenodeProtocol;
@@ -1099,10 +1100,8 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public boolean truncate(String src, long newLength, String clientName)
       throws IOException {
     checkNNStartup();
-    if(stateChangeLog.isDebugEnabled()) {
-      stateChangeLog.debug("*DIR* NameNode.truncate: " + src + " to " +
-          newLength);
-    }
+    stateChangeLog
+        .debug("*DIR* NameNode.truncate: " + src + " to " + newLength);
     String clientMachine = getClientMachine();
     try {
       return namesystem.truncate(
@@ -2001,6 +2000,16 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     SnapshottableDirectoryStatus[] status = namesystem
         .getSnapshottableDirListing();
     metrics.incrListSnapshottableDirOps();
+    return status;
+  }
+
+  @Override // Client Protocol
+  public SnapshotStatus[] getSnapshotListing(String snapshotRoot)
+      throws IOException {
+    checkNNStartup();
+    SnapshotStatus[] status = namesystem
+        .getSnapshotListing(snapshotRoot);
+    metrics.incrListSnapshotsOps();
     return status;
   }
 

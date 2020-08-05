@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Time;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -102,11 +103,34 @@ public class TestUGILoginFromKeytab {
   }
 
   /**
+   * Login from keytab using the MiniKDC.
+   */
+  @Test
+  public void testUGILoginFromKeytab() throws Exception {
+    long beforeLogin = Time.now();
+    String principal = "foo";
+    File keytab = new File(workDir, "foo.keytab");
+    kdc.createPrincipal(keytab, principal);
+
+    UserGroupInformation.loginUserFromKeytab(principal, keytab.getPath());
+    UserGroupInformation ugi = UserGroupInformation.getLoginUser();
+    Assert.assertTrue("UGI should be configured to login from keytab",
+        ugi.isFromKeytab());
+
+    User user = getUser(ugi.getSubject());
+    Assert.assertNotNull(user.getLogin());
+ 
+    Assert.assertTrue("User login time is less than before login time, "
+        + "beforeLoginTime:" + beforeLogin + " userLoginTime:" + user.getLastLogin(),
+            user.getLastLogin() > beforeLogin);
+  }
+
+  /**
    * Login from keytab using the MiniKDC and verify the UGI can successfully
    * relogin from keytab as well. This will catch regressions like HADOOP-10786.
    */
   @Test
-  public void testUGILoginFromKeytab() throws Exception {
+  public void testUGIReLoginFromKeytab() throws Exception {
     String principal = "foo";
     File keytab = new File(workDir, "foo.keytab");
     kdc.createPrincipal(keytab, principal);
@@ -121,6 +145,9 @@ public class TestUGILoginFromKeytab {
     final long firstLogin = user.getLastLogin();
     final LoginContext login1 = user.getLogin();
     Assert.assertNotNull(login1);
+
+    // Sleep for 2 secs to have a difference between first and second login
+    Thread.sleep(2000);
 
     ugi.reloginFromKeytab();
     final long secondLogin = user.getLastLogin();

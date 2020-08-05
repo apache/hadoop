@@ -35,7 +35,7 @@ pipeline {
         DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile"
         YETUS='yetus'
         // Branch or tag name.  Yetus release tags are 'rel/X.Y.Z'
-        YETUS_VERSION='rel/0.12.0'
+        YETUS_VERSION='master'
     }
 
     parameters {
@@ -158,6 +158,9 @@ pipeline {
                         YETUS_ARGS+=("--java-home=/usr/lib/jvm/java-8-openjdk-amd64")
                         YETUS_ARGS+=("--multijdkdirs=/usr/lib/jvm/java-11-openjdk-amd64")
                         YETUS_ARGS+=("--multijdktests=compile")
+
+                        # custom javadoc goals
+                        YETUS_ARGS+=("--mvn-javadoc-goals=process-sources,javadoc:javadoc-no-fork")
 
                         "${TESTPATCHBIN}" "${YETUS_ARGS[@]}"
                         '''

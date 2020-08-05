@@ -22,6 +22,7 @@
       <Class name="org.apache.hadoop.hdfs.util.StripedBlockUtil$ChunkByteArray"/>
       <Class name="org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing$DiffReportListingEntry"/>
       <Class name="org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing"/>
+      <Class name="org.apache.hadoop.hdfs.protocol.SnapshotStatus"/>
     </Or>
     <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2" />
   </Match>
