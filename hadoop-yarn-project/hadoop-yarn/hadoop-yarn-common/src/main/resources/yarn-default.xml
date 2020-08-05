@@ -3444,10 +3444,26 @@
     <description>
     Used to specify custom scheduler page
     </description>
-    <name>hadoop.http.rmwebapp.scheduler.page.class</name>
+    <name>yarn.http.rmwebapp.scheduler.page.class</name>
     <value></value>
   </property>
 
+  <property>
+    <description>
+    Used to specify custom DAO classes used by custom web services.
+    </description>
+    <name>yarn.http.rmwebapp.custom.dao.classes</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+    Used to specify custom DAO classes used by custom web services which requires
+    root unwrapping.
+    </description>
+    <name>yarn.http.rmwebapp.custom.unwrapped.dao.classes</name>
+    <value></value>
+  </property>
 
   <property>
     <description>The Node Label script to run. Script output Line starting with
