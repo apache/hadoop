@@ -19,7 +19,11 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import org.junit.Ignore;
+import org.junit.Rule;
 
+import org.apache.hadoop.fs.azurebfs.rules.AuthTestsRule;
+import org.apache.hadoop.fs.azurebfs.rules.AuthTypesTestable;
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.FSMainOperationsBaseTest;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.contract.ABFSContractTestBinding;
@@ -27,12 +31,16 @@ import org.apache.hadoop.fs.azurebfs.contract.ABFSContractTestBinding;
 /**
  * Test AzureBlobFileSystem main operations.
  * */
-public class ITestAzureBlobFileSystemMainOperation extends FSMainOperationsBaseTest {
+public class ITestAzureBlobFileSystemMainOperation
+    extends FSMainOperationsBaseTest implements AuthTypesTestable {
 
   private static final String TEST_ROOT_DIR =
           "/tmp/TestAzureBlobFileSystemMainOperations";
 
   private final ABFSContractTestBinding binding;
+
+  @Rule
+  public AuthTestsRule authTestsRule = new AuthTestsRule(this);
 
   public ITestAzureBlobFileSystemMainOperation () throws Exception {
     super(TEST_ROOT_DIR);
@@ -75,4 +83,20 @@ public class ITestAzureBlobFileSystemMainOperation extends FSMainOperationsBaseT
     // Permission Checks:
     // https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/HdfsPermissionsGuide.html
   }
+
+  @Override
+  public void setAuthType(AuthType authType) {
+    binding.setAuthType(authType);
+  }
+
+  @Override
+  public AbfsConfiguration getConfiguration() {
+    return binding.getConfiguration();
+  }
+
+  @Override
+  public void initFSEndpointForNewFS() throws Exception {
+    binding.initFSEndpointForNewFS();
+  }
+
 }

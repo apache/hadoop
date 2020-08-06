@@ -17,17 +17,27 @@
  */
 package org.apache.hadoop.fs.azurebfs.contract;
 
+import org.junit.Ignore;
+import org.junit.Rule;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+import org.apache.hadoop.fs.azurebfs.rules.AuthTestsRule;
+import org.apache.hadoop.fs.azurebfs.rules.AuthTypesTestable;
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.contract.AbstractContractRootDirectoryTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.junit.Ignore;
 
 /**
  * Contract test for root directory operation.
  */
-public class ITestAbfsFileSystemContractRootDirectory extends AbstractContractRootDirectoryTest {
+public class ITestAbfsFileSystemContractRootDirectory
+    extends AbstractContractRootDirectoryTest implements AuthTypesTestable {
   private final boolean isSecure;
   private final ABFSContractTestBinding binding;
+
+  @Rule
+  public AuthTestsRule authTestsRule = new AuthTestsRule(this);
 
   public ITestAbfsFileSystemContractRootDirectory() throws Exception {
     binding = new ABFSContractTestBinding();
@@ -54,4 +64,20 @@ public class ITestAbfsFileSystemContractRootDirectory extends AbstractContractRo
   @Ignore("ABFS always return false when non-recursively remove root dir")
   public void testRmNonEmptyRootDirNonRecursive() throws Throwable {
   }
+
+  @Override
+  public void setAuthType(AuthType authType) {
+    binding.setAuthType(authType);
+  }
+
+  @Override
+  public AbfsConfiguration getConfiguration() {
+    return binding.getConfiguration();
+  }
+
+  @Override
+  public void initFSEndpointForNewFS() throws Exception {
+    binding.initFSEndpointForNewFS();
+  }
+
 }

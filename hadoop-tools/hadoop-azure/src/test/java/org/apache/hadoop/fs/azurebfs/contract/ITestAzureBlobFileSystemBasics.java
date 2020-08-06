@@ -19,14 +19,19 @@ package org.apache.hadoop.fs.azurebfs.contract;
 
 import java.io.IOException;
 
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Rule;
+import org.junit.Test;
+
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+import org.apache.hadoop.fs.azurebfs.rules.AuthTestsRule;
+import org.apache.hadoop.fs.azurebfs.rules.AuthTypesTestable;
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
-
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -34,8 +39,12 @@ import static org.junit.Assert.assertTrue;
 /**
  * Basic Contract test for Azure BlobFileSystem.
  */
-public class ITestAzureBlobFileSystemBasics extends FileSystemContractBaseTest {
+public class ITestAzureBlobFileSystemBasics extends FileSystemContractBaseTest
+    implements AuthTypesTestable {
   private final ABFSContractTestBinding binding;
+
+  @Rule
+  public AuthTestsRule authTestsRule = new AuthTestsRule(this);
 
   public ITestAzureBlobFileSystemBasics() throws Exception {
     // If all contract tests are running in parallel, some root level tests in FileSystemContractBaseTest will fail
@@ -102,4 +111,20 @@ public class ITestAzureBlobFileSystemBasics extends FileSystemContractBaseTest {
   @Ignore("Not implemented in ABFS yet")
   public void testMkdirsWithUmask() throws Exception {
   }
+
+  @Override
+  public void setAuthType(AuthType authType) {
+    binding.setAuthType(authType);
+  }
+
+  @Override
+  public AbfsConfiguration getConfiguration() {
+    return binding.getConfiguration();
+  }
+
+  @Override
+  public void initFSEndpointForNewFS() throws Exception {
+    binding.initFSEndpointForNewFS();
+  }
+
 }

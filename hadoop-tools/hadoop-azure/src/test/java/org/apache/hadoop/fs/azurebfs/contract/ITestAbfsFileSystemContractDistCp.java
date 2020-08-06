@@ -18,16 +18,25 @@
 
 package org.apache.hadoop.fs.azurebfs.contract;
 
+import org.junit.Assume;
+import org.junit.Rule;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+import org.apache.hadoop.fs.azurebfs.rules.AuthTestsRule;
+import org.apache.hadoop.fs.azurebfs.rules.AuthTypesTestable;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.tools.contract.AbstractContractDistCpTest;
-import org.junit.Assume;
 
 /**
  * Contract test for distCp operation.
  */
-public class ITestAbfsFileSystemContractDistCp extends AbstractContractDistCpTest {
+public class ITestAbfsFileSystemContractDistCp
+    extends AbstractContractDistCpTest implements AuthTypesTestable {
   private final ABFSContractTestBinding binding;
+
+  @Rule
+  public AuthTestsRule authTestsRule = new AuthTestsRule(this);
 
   public ITestAbfsFileSystemContractDistCp() throws Exception {
     binding = new ABFSContractTestBinding();
@@ -49,4 +58,20 @@ public class ITestAbfsFileSystemContractDistCp extends AbstractContractDistCpTes
   protected AbfsFileSystemContract createContract(Configuration conf) {
     return new AbfsFileSystemContract(conf, false);
   }
+
+  @Override
+  public void setAuthType(AuthType authType) {
+    binding.setAuthType(authType);
+  }
+
+  @Override
+  public AbfsConfiguration getConfiguration() {
+    return binding.getConfiguration();
+  }
+
+  @Override
+  public void initFSEndpointForNewFS() throws Exception {
+    binding.initFSEndpointForNewFS();
+  }
+
 }

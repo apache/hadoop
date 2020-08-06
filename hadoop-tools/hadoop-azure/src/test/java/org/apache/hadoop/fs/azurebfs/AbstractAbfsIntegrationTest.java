@@ -23,7 +23,6 @@ import java.net.URI;
 import java.util.*;
 import java.util.concurrent.Callable;
 
-import org.apache.hadoop.fs.azurebfs.rules.AuthTestsRule;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -32,6 +31,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azurebfs.rules.AuthTestsRule;
+import org.apache.hadoop.fs.azurebfs.rules.AuthTypesTestable;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -50,12 +51,13 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 
+import static org.junit.Assume.assumeTrue;
+
 import static org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.WASB_ACCOUNT_NAME_DOMAIN_SUFFIX;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.*;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.FILE_SYSTEM_NOT_FOUND;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.*;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assume.assumeTrue;
 
 /**
  * Base for AzureBlobFileSystem Integration tests.
@@ -63,10 +65,10 @@ import static org.junit.Assume.assumeTrue;
  * <I>Important: This is for integration tests only.</I>
  */
 public abstract class AbstractAbfsIntegrationTest extends
-        AbstractAbfsTestWithTimeout {
+        AbstractAbfsTestWithTimeout implements AuthTypesTestable {
 
   @Rule
-  public AuthTestsRule myRule = new AuthTestsRule(this);
+  public AuthTestsRule authTestsRule = new AuthTestsRule(this);
 
   private static final Logger LOG =
       LoggerFactory.getLogger(AbstractAbfsIntegrationTest.class);
@@ -89,6 +91,7 @@ public abstract class AbstractAbfsIntegrationTest extends
     initFSEndpointForNewFS();
   }
 
+  @Override
   public void initFSEndpointForNewFS() throws Exception {
     fileSystemName = TEST_CONTAINER_PREFIX + UUID.randomUUID().toString();
     rawConfig = new Configuration();
@@ -110,11 +113,11 @@ public abstract class AbstractAbfsIntegrationTest extends
 
     if (authType == AuthType.SharedKey) {
       assumeTrue("Not set: " + FS_AZURE_ACCOUNT_KEY,
-              abfsConfig.get(FS_AZURE_ACCOUNT_KEY) != null);
+          abfsConfig.get(FS_AZURE_ACCOUNT_KEY) != null);
       // Update credentials
     } else {
       assumeTrue("Not set: " + FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME,
-              abfsConfig.get(FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME) != null);
+          abfsConfig.get(FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME) != null);
     }
 
     final String abfsUrl = this.getFileSystemName() + "@" + this.getAccountName();
@@ -318,6 +321,7 @@ public abstract class AbstractAbfsIntegrationTest extends
     return abfsConfig.get(FS_AZURE_ACCOUNT_KEY);
   }
 
+  @Override
   public AbfsConfiguration getConfiguration() {
     return abfsConfig;
   }
@@ -330,9 +334,9 @@ public abstract class AbstractAbfsIntegrationTest extends
     return this.authType;
   }
 
-  public void setAuthTypeForTest(AuthType authType) {
+  @Override
+  public void setAuthType(AuthType authType) {
     this.authType = authType;
-    fileSystemName += '1';
   }
 
   public String getAbfsScheme() {
@@ -458,11 +462,4 @@ public abstract class AbstractAbfsIntegrationTest extends
     return expectedValue;
   }
 
-  public Collection<AuthType> authTypesToTest() {
-    final List authTypes = new ArrayList();
-    authTypes.add(AuthType.OAuth);
-    authTypes.add(AuthType.SharedKey);
-    //authTypes.add(AuthType.SAS);
-    return authTypes;
-  }
 }

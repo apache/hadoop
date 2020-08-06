@@ -1,15 +1,14 @@
 package org.apache.hadoop.fs.azurebfs.rules;
 
-import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 
 public class AuthTestsRule implements TestRule {
 
-    private AbstractAbfsIntegrationTest testObj;
+    private AuthTypesTestable testObj;
 
-    public AuthTestsRule(AbstractAbfsIntegrationTest testObj){
+    public AuthTestsRule(AuthTypesTestable testObj){
         this.testObj = testObj;
     }
 

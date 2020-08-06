@@ -20,16 +20,26 @@ package org.apache.hadoop.fs.azurebfs.contract;
 
 import java.io.IOException;
 
+import org.junit.Rule;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+import org.apache.hadoop.fs.azurebfs.rules.AuthTestsRule;
+import org.apache.hadoop.fs.azurebfs.rules.AuthTypesTestable;
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.contract.AbstractContractUnbufferTest;
 
 /**
  * Contract test for unbuffer operation.
  */
-public class ITestAbfsContractUnbuffer extends AbstractContractUnbufferTest {
+public class ITestAbfsContractUnbuffer extends AbstractContractUnbufferTest implements
+    AuthTypesTestable {
   private final boolean isSecure;
   private final ABFSContractTestBinding binding;
+
+  @Rule
+  public AuthTestsRule authTestsRule = new AuthTestsRule(this);
 
   public ITestAbfsContractUnbuffer() throws Exception {
     binding = new ABFSContractTestBinding();
@@ -74,4 +84,20 @@ public class ITestAbfsContractUnbuffer extends AbstractContractUnbufferTest {
       stream.unbuffer();
     }
   }
+
+  @Override
+  public void setAuthType(AuthType authType) {
+    binding.setAuthType(authType);
+  }
+
+  @Override
+  public AbfsConfiguration getConfiguration() {
+    return binding.getConfiguration();
+  }
+
+  @Override
+  public void initFSEndpointForNewFS() throws Exception {
+    binding.initFSEndpointForNewFS();
+  }
+
 }

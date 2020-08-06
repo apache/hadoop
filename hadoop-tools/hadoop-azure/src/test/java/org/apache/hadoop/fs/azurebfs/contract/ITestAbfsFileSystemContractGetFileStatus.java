@@ -17,16 +17,26 @@
  */
 package org.apache.hadoop.fs.azurebfs.contract;
 
+import org.junit.Rule;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+import org.apache.hadoop.fs.azurebfs.rules.AuthTestsRule;
+import org.apache.hadoop.fs.azurebfs.rules.AuthTypesTestable;
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.contract.AbstractContractGetFileStatusTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 
 /**
  * Contract test for getFileStatus operation.
  */
-public class ITestAbfsFileSystemContractGetFileStatus extends AbstractContractGetFileStatusTest {
+public class ITestAbfsFileSystemContractGetFileStatus
+    extends AbstractContractGetFileStatusTest implements AuthTypesTestable {
   private final boolean isSecure;
   private final ABFSContractTestBinding binding;
+
+  @Rule
+  public AuthTestsRule authTestsRule = new AuthTestsRule(this);
 
   public ITestAbfsFileSystemContractGetFileStatus() throws Exception {
     binding = new ABFSContractTestBinding();
@@ -48,4 +58,20 @@ public class ITestAbfsFileSystemContractGetFileStatus extends AbstractContractGe
   protected AbstractFSContract createContract(final Configuration conf) {
     return new AbfsFileSystemContract(conf, this.isSecure);
   }
+
+  @Override
+  public void setAuthType(AuthType authType) {
+    binding.setAuthType(authType);
+  }
+
+  @Override
+  public AbfsConfiguration getConfiguration() {
+    return binding.getConfiguration();
+  }
+
+  @Override
+  public void initFSEndpointForNewFS() throws Exception {
+    binding.initFSEndpointForNewFS();
+  }
+
 }
