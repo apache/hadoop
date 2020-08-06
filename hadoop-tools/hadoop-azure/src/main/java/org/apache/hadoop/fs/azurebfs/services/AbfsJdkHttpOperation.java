@@ -68,11 +68,12 @@ public class AbfsJdkHttpOperation extends AbfsHttpOperation {
   public AbfsJdkHttpOperation(final URL url,
       final String method,
       final List<AbfsHttpHeader> requestHeaders,
+      final AbfsClientContext abfsClientContext,
       final Duration connectionTimeout,
       final Duration readTimeout,
       final AbfsClient abfsClient)
       throws IOException {
-    super(LOG, url, method, requestHeaders, connectionTimeout, readTimeout, abfsClient);
+    super(LOG, url, method, requestHeaders, abfsClientContext, connectionTimeout, readTimeout, abfsClient);
 
     this.connection = openConnection();
     if (this.connection instanceof HttpsURLConnection) {

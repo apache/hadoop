@@ -41,6 +41,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.D
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_MAX_BACKOFF_INTERVAL;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_MAX_RETRY_ATTEMPTS;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_MIN_BACKOFF_INTERVAL;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_OBJECT_MAPPER_THREAD_LOCAL_ENABLED;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_READ_AHEAD_RANGE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_READ_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_WRITE_BUFFER_SIZE;
@@ -167,6 +168,9 @@ public class TestAbfsConfigurationFieldsValidation {
     Assertions.assertThat(abfsConfiguration.getHttpReadTimeout())
             .describedAs("Default value of http read timeout should be initialized")
             .isEqualTo(DEFAULT_HTTP_READ_TIMEOUT);
+    Assertions.assertThat(abfsConfiguration.isObjectMapperThreadLocalEnabled())
+            .describedAs("Default value of object mapper thread local should be initialized")
+            .isEqualTo(DEFAULT_OBJECT_MAPPER_THREAD_LOCAL_ENABLED);
   }
 
   @Test

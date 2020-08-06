@@ -159,7 +159,8 @@ public class TestApacheHttpClientFallback extends AbstractAbfsTestWithTimeout {
         new URL("http://localhost"),
         new ArrayList<>(),
         null,
-        configuration
+        configuration,
+        client.getAbfsClientContext()
     ));
 
     Mockito.doReturn(null).when(op).getClientLatency();

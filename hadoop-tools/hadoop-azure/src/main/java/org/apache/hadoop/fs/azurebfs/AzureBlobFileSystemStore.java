@@ -1810,6 +1810,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             new StaticRetryPolicy(abfsConfiguration))
         .withAbfsCounters(abfsCounters)
         .withAbfsPerfTracker(abfsPerfTracker)
+        .withObjectMapperThreadLocal(abfsConfiguration.isObjectMapperThreadLocalEnabled())
         .build();
   }
 

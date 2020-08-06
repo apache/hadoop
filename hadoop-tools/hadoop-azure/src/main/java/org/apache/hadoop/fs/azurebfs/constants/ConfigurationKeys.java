@@ -347,6 +347,11 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_LOCAL_USER_SP_MAPPING_FILE_PATH = "fs.azure.identity.transformer.local.service.principal.mapping.file.path";
   /** Key for Local Group to Service Group file location. */
   public static final String FS_AZURE_LOCAL_GROUP_SG_MAPPING_FILE_PATH = "fs.azure.identity.transformer.local.service.group.mapping.file.path";
+
+  /** For AbfsHttpOperation a choice to use ThreadLocal rather than a new
+   instance for ObjectMapper. **/
+  public static final String FS_AZURE_OBJECT_MAPPER_THREAD_LOCAL_ENABLED =
+      "fs.azure.objectmapper.threadlocal.enabled";
   /**
    * Optional config to enable a lock free pread which will bypass buffer in AbfsInputStream.
    * This is not a config which can be set at cluster level. It can be used as

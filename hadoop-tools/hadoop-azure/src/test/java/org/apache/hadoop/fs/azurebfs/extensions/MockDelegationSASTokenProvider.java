@@ -28,11 +28,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClientContext;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClientContextBuilder;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpHeader;
 import org.apache.hadoop.fs.azurebfs.services.AbfsJdkHttpOperation;
 import org.apache.hadoop.fs.azurebfs.utils.Base64;
@@ -53,9 +56,12 @@ public class MockDelegationSASTokenProvider implements SASTokenProvider {
   public static final String TEST_OWNER = "325f1619-4205-432f-9fce-3fd594325ce5";
   public static final String CORRELATION_ID = "66ff4ffc-ff17-417e-a2a9-45db8c5b0b5c";
   public static final String NO_AGENT_PATH = "NoAgentPath";
+  private AbfsConfiguration abfsConfiguration;
+  private AbfsClientContext abfsClientContext;
 
   @Override
-  public void initialize(Configuration configuration, String accountName) throws IOException {
+  public void initialize(Configuration configuration, String accountName)
+      throws IOException {
     String appID = configuration.get(TestConfigurationKeys.FS_AZURE_TEST_APP_ID);
     String appSecret = configuration.get(TestConfigurationKeys.FS_AZURE_TEST_APP_SECRET);
     String sktid = configuration.get(TestConfigurationKeys.FS_AZURE_TEST_APP_SERVICE_PRINCIPAL_TENANT_ID);
@@ -63,6 +69,13 @@ public class MockDelegationSASTokenProvider implements SASTokenProvider {
     String skt = SASGenerator.ISO_8601_FORMATTER.format(Instant.now().minus(SASGenerator.FIVE_MINUTES));
     String ske = SASGenerator.ISO_8601_FORMATTER.format(Instant.now().plus(SASGenerator.ONE_DAY));
     String skv = SASGenerator.AuthenticationVersion.Dec19.toString();
+    try {
+      abfsConfiguration = new AbfsConfiguration(configuration, accountName);
+    } catch (IllegalAccessException e) {
+      throw new IOException(e);
+    }
+    abfsClientContext = new AbfsClientContextBuilder().
+        withObjectMapperThreadLocal(abfsConfiguration.isObjectMapperThreadLocalEnabled()).build();
 
     byte[] key = getUserDelegationKey(accountName, appID, appSecret, sktid, skt, ske, skv);
 
@@ -107,7 +120,7 @@ public class MockDelegationSASTokenProvider implements SASTokenProvider {
     requestBody.append(ske);
     requestBody.append("</Expiry></KeyInfo>");
 
-    AbfsJdkHttpOperation op = new AbfsJdkHttpOperation(url, method, requestHeaders,
+    AbfsJdkHttpOperation op = new AbfsJdkHttpOperation(url, method, requestHeaders, abfsClientContext,
         Duration.ofMillis(DEFAULT_HTTP_CONNECTION_TIMEOUT), Duration.ofMillis(DEFAULT_HTTP_READ_TIMEOUT), null);
 
     byte[] requestBuffer = requestBody.toString().getBytes(StandardCharsets.UTF_8.toString());

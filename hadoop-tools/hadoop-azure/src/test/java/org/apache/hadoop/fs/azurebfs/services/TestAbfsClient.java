@@ -164,7 +164,8 @@ public class TestAbfsClient {
                     answer.getArgument(1),
                     answer.getArgument(2),
                     answer.getArgument(3),
-                    abfsClient.getAbfsConfiguration()
+                    abfsClient.getAbfsConfiguration(),
+                    abfsClient.getAbfsClientContext()
                 ));
             Mockito.doAnswer((answer1) -> {
                   mockIntercept.answer(op, answer1);

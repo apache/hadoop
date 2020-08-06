@@ -196,6 +196,7 @@ public abstract class AbfsClient implements Closeable {
   private AbfsApacheHttpClient abfsApacheHttpClient;
   private static boolean isNamespaceEnabled = false;
 
+  private final AbfsClientContext abfsClientContext;
   /**
    * logging the rename failure if metadata is in an incomplete state.
    */
@@ -258,6 +259,7 @@ public abstract class AbfsClient implements Closeable {
     this.userAgent = initializeUserAgent(abfsConfiguration, sslProviderName);
     this.abfsPerfTracker = abfsClientContext.getAbfsPerfTracker();
     this.abfsCounters = abfsClientContext.getAbfsCounters();
+    this.abfsClientContext = abfsClientContext;
 
     ThreadFactory tf =
         new ThreadFactoryBuilder().setNameFormat("AbfsClient Lease Ops").setDaemon(true).build();
@@ -1469,6 +1471,10 @@ public abstract class AbfsClient implements Closeable {
     return abfsConfiguration;
   }
 
+  protected AbfsClientContext getAbfsClientContext() {
+    return abfsClientContext;
+  }
+
   public int getNumLeaseThreads() {
     return abfsConfiguration.getNumLeaseThreads();
   }
@@ -1647,7 +1653,8 @@ public abstract class AbfsClient implements Closeable {
         bufferOffset,
         bufferLength,
         sasTokenForReuse,
-        abfsConfiguration);
+        abfsConfiguration,
+        abfsClientContext);
   }
 
   /**
@@ -1670,7 +1677,8 @@ public abstract class AbfsClient implements Closeable {
         httpMethod,
         url,
         requestHeaders,
-        abfsConfiguration
+        abfsConfiguration,
+        abfsClientContext
     );
   }
 
@@ -1694,7 +1702,7 @@ public abstract class AbfsClient implements Closeable {
         this,
         httpMethod,
         url,
-        requestHeaders, sasTokenForReuse, abfsConfiguration);
+        requestHeaders, sasTokenForReuse, abfsConfiguration, abfsClientContext);
   }
 
   @VisibleForTesting
@@ -1861,4 +1869,6 @@ public abstract class AbfsClient implements Closeable {
         entry.eTag(),
         encryptionContext);
   }
+
+
 }

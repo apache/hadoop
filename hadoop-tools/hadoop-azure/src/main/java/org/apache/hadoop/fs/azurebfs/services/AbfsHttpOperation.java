@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -90,6 +91,17 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
   private long recvResponseTimeMs;
   private boolean shouldMask = false;
   private boolean connectionDisconnectedOnError = false;
+  private final boolean isObjectMapperThreadLocalEnabled;
+  //ThreadLocal for ObjectMapper to reuse the ObjectMapper instance.
+  private static ThreadLocal<ObjectMapper> objMapperThreadLocal =
+      new ThreadLocal<ObjectMapper>() {
+        @Override
+        protected ObjectMapper initialValue() {
+          return new ObjectMapper();
+        }
+      };
+  //Static singleton instance of ObjectMapper for shared use.
+  private static final ObjectMapper sharedObjectMapper = new ObjectMapper();
 
   /**Request headers to be sent in the request.*/
   private final List<AbfsHttpHeader> requestHeaders;
@@ -122,12 +134,15 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
       final URL url,
       final String method,
       final List<AbfsHttpHeader> requestHeaders,
+      final AbfsClientContext abfsClientContext,
       final Duration connectionTimeout,
       final Duration readTimeout, AbfsClient abfsClient) {
     this.log = log;
     this.url = url;
     this.method = method;
     this.requestHeaders = requestHeaders;
+    this.isObjectMapperThreadLocalEnabled =
+        abfsClientContext.isObjectMapperThreadLocalEnabled();
     this.connectionTimeout = (int) connectionTimeout.toMillis();
     this.readTimeout = (int) readTimeout.toMillis();
     this.client = abfsClient;
@@ -147,6 +162,7 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     this.method = method;
     this.statusCode = httpStatus;
     this.requestHeaders = new ArrayList<>();
+    this.isObjectMapperThreadLocalEnabled = false;
     this.connectionTimeout = 0;
     this.readTimeout = 0;
   }
@@ -317,6 +333,21 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     }
     maskedUrl = UriUtils.getMaskedUrl(url);
     return maskedUrl;
+  }
+
+  /**
+   * Method to get ObjectMapper either by the ThreadLocal or by using a
+   * static instance of it which can be set via the Abfs configuration
+   * FS_AZURE_OBJECT_MAPPER_THREAD_LOCAL_ENABLED.
+   *
+   * @return ObjectMapper instance.
+   */
+  private ObjectMapper getObjectMapper() {
+    if (isObjectMapperThreadLocalEnabled) {
+      return objMapperThreadLocal.get();
+    } else {
+      return sharedObjectMapper;
+    }
   }
 
   public final String getMaskedEncodedUrl() {
@@ -523,6 +554,15 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
       }
       listResultStream = new ByteArrayInputStream(buffer.toByteArray());
     }
+/* MERGE: this didn't apply at all
+    final ObjectMapper objectMapper = getObjectMapper();
+    try {
+      this.listResultSchema = objectMapper.readValue(stream,
+          ListResultSchema.class);
+    } catch (IOException ex) {
+      log.error("Unable to deserialize list results", ex);
+      throw ex;
+    }*/
   }
 
   public List<String> getBlockIdList() {

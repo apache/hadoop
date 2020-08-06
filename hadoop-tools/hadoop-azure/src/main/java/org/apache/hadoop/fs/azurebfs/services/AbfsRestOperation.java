@@ -106,8 +106,10 @@ public class AbfsRestOperation {
   private long maxRetryCount = 0L;
   private final int maxIoRetries;
   private AbfsHttpOperation result;
-  private final AbfsCounters abfsCounters;
   private AbfsBackoffMetrics abfsBackoffMetrics;
+  private AbfsCounters abfsCounters;
+  private final AbfsClientContext abfsClientContext;
+
   /**
    * This variable contains the reason of last API call within the same
    * AbfsRestOperation object.
@@ -197,9 +199,10 @@ public class AbfsRestOperation {
                     final String method,
                     final URL url,
                     final List<AbfsHttpHeader> requestHeaders,
-                    final AbfsConfiguration abfsConfiguration) {
-    this(operationType, client, method, url, requestHeaders, null, abfsConfiguration
-    );
+                    final AbfsConfiguration abfsConfiguration,
+                    final AbfsClientContext abfsClientContext) {
+    this(operationType, client, method, url, requestHeaders, null, abfsConfiguration,
+        abfsClientContext);
   }
 
   /**
@@ -217,7 +220,8 @@ public class AbfsRestOperation {
                     final URL url,
                     final List<AbfsHttpHeader> requestHeaders,
                     final String sasToken,
-                    final AbfsConfiguration abfsConfiguration) {
+                    final AbfsConfiguration abfsConfiguration,
+                    final AbfsClientContext abfsClientContext) {
     this.operationType = operationType;
     this.client = client;
     this.method = method;
@@ -232,6 +236,7 @@ public class AbfsRestOperation {
       this.abfsBackoffMetrics = abfsCounters.getAbfsBackoffMetrics();
     }
     this.maxIoRetries = abfsConfiguration.getMaxIoRetries();
+    this.abfsClientContext = abfsClientContext;
     this.intercept = client.getIntercept();
     this.abfsConfiguration = abfsConfiguration;
     this.retryPolicy = client.getExponentialRetryPolicy();
@@ -260,9 +265,10 @@ public class AbfsRestOperation {
                     int bufferOffset,
                     int bufferLength,
                     String sasToken,
-                    final AbfsConfiguration abfsConfiguration) {
-    this(operationType, client, method, url, requestHeaders, sasToken, abfsConfiguration
-    );
+                    final AbfsConfiguration abfsConfiguration,
+                    AbfsClientContext abfsClientContext) {
+    this(operationType, client, method, url, requestHeaders, sasToken, abfsConfiguration,
+        abfsClientContext);
     this.buffer = buffer;
     this.bufferOffset = bufferOffset;
     this.bufferLength = bufferLength;
@@ -604,14 +610,14 @@ public class AbfsRestOperation {
 
   @VisibleForTesting
   AbfsJdkHttpOperation createAbfsHttpOperation() throws IOException {
-    return new AbfsJdkHttpOperation(url, method, requestHeaders,
+    return new AbfsJdkHttpOperation(url, method, requestHeaders, abfsClientContext,
         Duration.ofMillis(client.getAbfsConfiguration().getHttpConnectionTimeout()),
         Duration.ofMillis(client.getAbfsConfiguration().getHttpReadTimeout()), client);
   }
 
   @VisibleForTesting
   AbfsAHCHttpOperation createAbfsAHCHttpOperation() throws IOException {
-    return new AbfsAHCHttpOperation(url, method, requestHeaders,
+    return new AbfsAHCHttpOperation(url, method, requestHeaders, abfsClientContext,
         Duration.ofMillis(client.getAbfsConfiguration().getHttpConnectionTimeout()),
         Duration.ofMillis(client.getAbfsConfiguration().getHttpReadTimeout()),
         client.getAbfsApacheHttpClient(), client);

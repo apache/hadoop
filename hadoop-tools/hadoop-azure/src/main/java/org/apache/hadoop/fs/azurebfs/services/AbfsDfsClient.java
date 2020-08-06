@@ -1099,7 +1099,8 @@ public class AbfsDfsClient extends AbfsClient {
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
         AbfsRestOperationType.DeletePath, this,
-        HTTP_METHOD_DELETE, url, requestHeaders, getAbfsConfiguration());
+        HTTP_METHOD_DELETE, url, requestHeaders, getAbfsConfiguration(),
+        getAbfsClientContext());
     try {
       op.execute(tracingContext);
     } catch (AzureBlobFileSystemException e) {

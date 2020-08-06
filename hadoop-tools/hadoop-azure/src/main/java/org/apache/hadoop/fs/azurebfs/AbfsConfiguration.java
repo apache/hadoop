@@ -385,6 +385,10 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_SAS_TOKEN_RENEW_PERIOD_FOR_STREAMS_IN_SECONDS)
   private long sasTokenRenewPeriodForStreamsInSeconds;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_OBJECT_MAPPER_THREAD_LOCAL_ENABLED,
+      DefaultValue = DEFAULT_OBJECT_MAPPER_THREAD_LOCAL_ENABLED)
+  private boolean enableObjectMapperThreadLocal;
+
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
       FS_AZURE_ENABLE_ABFS_LIST_ITERATOR, DefaultValue = DEFAULT_ENABLE_ABFS_LIST_ITERATOR)
   private boolean enableAbfsListIterator;
@@ -1364,6 +1368,10 @@ public class AbfsConfiguration{
 
   public int getReadAheadRange() {
     return this.readAheadRange;
+  }
+
+  public boolean isObjectMapperThreadLocalEnabled() {
+    return this.enableObjectMapperThreadLocal;
   }
 
   int validateInt(Field field) throws IllegalAccessException, InvalidConfigurationValueException {

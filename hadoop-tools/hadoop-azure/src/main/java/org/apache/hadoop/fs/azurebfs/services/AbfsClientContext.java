@@ -28,17 +28,20 @@ public class AbfsClientContext {
   private final StaticRetryPolicy staticRetryPolicy;
   private final AbfsPerfTracker abfsPerfTracker;
   private final AbfsCounters abfsCounters;
+  private final boolean objectMapperThreadLocalEnabled;
 
   AbfsClientContext(
       ExponentialRetryPolicy exponentialRetryPolicy,
       StaticRetryPolicy staticRetryPolicy,
       AbfsPerfTracker abfsPerfTracker,
-      AbfsCounters abfsCounters) {
+      AbfsCounters abfsCounters,
+      boolean objectMapperThreadLocalEnabled) {
     this.exponentialRetryPolicy = exponentialRetryPolicy;
 
     this.staticRetryPolicy = staticRetryPolicy;
     this.abfsPerfTracker = abfsPerfTracker;
     this.abfsCounters = abfsCounters;
+    this.objectMapperThreadLocalEnabled = objectMapperThreadLocalEnabled;
   }
 
   public ExponentialRetryPolicy getExponentialRetryPolicy() {
@@ -55,5 +58,9 @@ public class AbfsClientContext {
 
   AbfsCounters getAbfsCounters() {
     return abfsCounters;
+  }
+
+  public boolean isObjectMapperThreadLocalEnabled() {
+    return objectMapperThreadLocalEnabled;
   }
 }

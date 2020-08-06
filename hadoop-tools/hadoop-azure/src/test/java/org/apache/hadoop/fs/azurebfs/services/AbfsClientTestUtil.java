@@ -91,7 +91,8 @@ public final class AbfsClientTestUtil {
         HTTP_METHOD_GET,
         null,
         new ArrayList<>(),
-        spiedClient.getAbfsConfiguration()
+        spiedClient.getAbfsConfiguration(),
+        spiedClient.getAbfsClientContext()
     ));
     ListResponseData listResponseData1 = Mockito.spy(new ListResponseData());
     listResponseData1.setRenamePendingJsonPaths(null);
@@ -155,7 +156,8 @@ public final class AbfsClientTestUtil {
         PutBlockList, spiedClient, HTTP_METHOD_PUT,
         url,
         requestHeaders, buffer, 0, buffer.length, null,
-        spiedClient.getAbfsConfiguration()));
+        spiedClient.getAbfsConfiguration(),
+        spiedClient.getAbfsClientContext()));
 
     Mockito.doReturn(abfsRestOperation)
         .when(spiedClient)

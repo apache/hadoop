@@ -560,7 +560,8 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         method,
         url,
         requestHeaders,
-        abfsConfiguration);
+        abfsConfiguration,
+        client.getAbfsClientContext());
   }
 
   public static AccessTokenProvider getAccessTokenProvider(AbfsClient client) {
@@ -658,7 +659,8 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         url,
         requestHeaders, buffer,
         appendRequestParameters.getoffset(),
-        appendRequestParameters.getLength(), null, abfsConfig));
+        appendRequestParameters.getLength(), null, abfsConfig,
+        abfsClient.getAbfsClientContext()));
 
     Mockito.doAnswer(answer -> {
       AbfsHttpOperation httpOperation = Mockito.spy((AbfsHttpOperation) answer.callRealMethod());
