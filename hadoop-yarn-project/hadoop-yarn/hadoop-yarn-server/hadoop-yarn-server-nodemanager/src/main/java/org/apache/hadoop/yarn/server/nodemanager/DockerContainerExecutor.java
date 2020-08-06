@@ -23,21 +23,16 @@ import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang.math.RandomUtils;
@@ -50,7 +45,6 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -329,77 +323,6 @@ public class DockerContainerExecutor extends ContainerExecutor {
       }
     }
     return 0;
-  }
-
-  /**
-   * Filter the environment variables that may conflict with the ones set in
-   * the docker image and write them out to an OutputStream.
-   * @throws IOException if there's an issue writing out the launch file.
-   */
-  @Override
-  public void writeLaunchEnv(OutputStream out, Map<String, String> environment,
-      Map<Path, List<String>> resources, List<String> command, Path logDir,
-      String user) throws IOException {
-    ContainerLaunch.ShellScriptBuilder sb =
-      ContainerLaunch.ShellScriptBuilder.create();
-
-    //Remove environments that may conflict with the ones in Docker image.
-    Set<String> exclusionSet = new HashSet<>();
-    exclusionSet.add(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME);
-    exclusionSet.add(ApplicationConstants.Environment.HADOOP_YARN_HOME.name());
-    exclusionSet.add(ApplicationConstants.Environment.HADOOP_COMMON_HOME.name());
-    exclusionSet.add(ApplicationConstants.Environment.HADOOP_HDFS_HOME.name());
-    exclusionSet.add(ApplicationConstants.Environment.HADOOP_CONF_DIR.name());
-    exclusionSet.add(ApplicationConstants.Environment.JAVA_HOME.name());
-
-    if (environment != null) {
-      for (Map.Entry<String,String> env : environment.entrySet()) {
-        if (!exclusionSet.contains(env.getKey())) {
-          sb.env(env.getKey(), env.getValue());
-        }
-      }
-    }
-    if (resources != null) {
-      for (Map.Entry<Path,List<String>> entry : resources.entrySet()) {
-        for (String linkName : entry.getValue()) {
-          if (new Path(linkName).getName().equals(WILDCARD)) {
-            // If this is a wildcarded path, link to everything in the
-            // directory from the working directory
-            for (File wildLink : readDirAsUser(user, entry.getKey())) {
-              sb.symlink(new Path(wildLink.toString()),
-                  new Path(wildLink.getName()));
-            }
-          } else {
-            sb.symlink(entry.getKey(), new Path(linkName));
-          }
-        }
-      }
-    }
-
-    // dump debugging information if configured
-    if (getConf() != null && getConf().getBoolean(
-        YarnConfiguration.NM_LOG_CONTAINER_DEBUG_INFO,
-        YarnConfiguration.DEFAULT_NM_LOG_CONTAINER_DEBUG_INFO)) {
-      sb.copyDebugInformation(new Path(ContainerLaunch.CONTAINER_SCRIPT),
-          new Path(logDir, ContainerLaunch.CONTAINER_SCRIPT));
-      sb.listDebugInformation(new Path(logDir, DIRECTORY_CONTENTS));
-    }
-
-    sb.command(command);
-
-    try (PrintStream pout = new PrintStream(out, false, "UTF-8")) {
-      sb.write(pout);
-    }
-
-    if (LOG.isDebugEnabled()) {
-      ByteArrayOutputStream baos = new ByteArrayOutputStream();
-
-      try (PrintStream ps = new PrintStream(baos, false, "UTF-8")) {
-        sb.write(ps);
-      }
-
-      LOG.debug("Script: " + baos.toString("UTF-8"));
-    }
   }
 
   private boolean saneDockerImage(String containerImageName) {

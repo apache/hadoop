@@ -38,6 +38,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -214,6 +215,9 @@ public class ContainerLaunch implements Callable<Integer> {
       }
       // /////////////////////////// End of variable expansion
 
+      // Use this to track variables that are added to the environment by nm.
+      LinkedHashSet<String> nmEnvVars = new LinkedHashSet<String>();
+
       FileContext lfs = FileContext.getLocalFSFileContext();
 
       Path nmPrivateContainerScriptPath = dirsHandler.getLocalPathForWrite(
@@ -261,7 +265,7 @@ public class ContainerLaunch implements Callable<Integer> {
         appDirs.add(new Path(appsdir, appIdStr));
       }
       // Set the token location too.
-      environment.put(
+      addToEnvMap(environment, nmEnvVars,
           ApplicationConstants.CONTAINER_TOKEN_FILE_ENV_NAME,
           new Path(containerWorkDir,
               FINAL_CONTAINER_TOKENS_FILE).toUri().getPath());
@@ -272,13 +276,14 @@ public class ContainerLaunch implements Callable<Integer> {
                   EnumSet.of(CREATE, OVERWRITE))) {
         // Sanitize the container's environment
         sanitizeEnv(environment, containerWorkDir, appDirs, userLocalDirs,
-            containerLogDirs,
-          localResources, nmPrivateClasspathJarDir);
+            containerLogDirs, localResources, nmPrivateClasspathJarDir,
+            nmEnvVars);
+
 
         // Write out the environment
         exec.writeLaunchEnv(containerScriptOutStream, environment,
             localResources, launchContext.getCommands(),
-            containerLogDir, user);
+            containerLogDir, user, nmEnvVars);
       }
       // /////////// End of writing out container-script
 
@@ -1038,6 +1043,9 @@ public class ContainerLaunch implements Callable<Integer> {
 
     public abstract void env(String key, String value) throws IOException;
 
+    public abstract void whitelistedEnv(String key, String value)
+        throws IOException;
+
     public abstract void echo(String echoStr) throws IOException;
 
     public final void symlink(Path src, Path dst) throws IOException {
@@ -1224,6 +1232,11 @@ public class ContainerLaunch implements Callable<Integer> {
     }
 
     @Override
+    public void whitelistedEnv(String key, String value) throws IOException {
+      line("export ", key, "=${", key, ":-", "\"", value, "\"}");
+    }
+
+    @Override
     public void echo(final String echoStr) throws IOException {
       line("echo \"" + echoStr + "\"");
     }
@@ -1387,6 +1400,11 @@ public class ContainerLaunch implements Callable<Integer> {
     }
 
     @Override
+    public void whitelistedEnv(String key, String value) throws IOException {
+      env(key, value);
+    }
+
+    @Override
     public void echo(final String echoStr) throws IOException {
       lineWithLenCheck("@echo \"", echoStr, "\"");
     }
@@ -1481,63 +1499,73 @@ public class ContainerLaunch implements Callable<Integer> {
       putEnvIfNotNull(environment, variable, System.getenv(variable));
     }
   }
-  
+
+  private static void addToEnvMap(
+      Map<String, String> envMap, Set<String> envSet,
+      String envName, String envValue) {
+    envMap.put(envName, envValue);
+    envSet.add(envName);
+  }
+
   public void sanitizeEnv(Map<String, String> environment, Path pwd,
       List<Path> appDirs, List<String> userLocalDirs, List<String>
-      containerLogDirs,
-      Map<Path, List<String>> resources,
-      Path nmPrivateClasspathJarDir) throws IOException {
+      containerLogDirs, Map<Path, List<String>> resources,
+      Path nmPrivateClasspathJarDir,
+      Set<String> nmVars) throws IOException {
     /**
      * Non-modifiable environment variables
      */
 
-    environment.put(Environment.CONTAINER_ID.name(), container
-        .getContainerId().toString());
+    addToEnvMap(environment, nmVars, Environment.CONTAINER_ID.name(),
+        container.getContainerId().toString());
 
-    environment.put(Environment.NM_PORT.name(),
+    addToEnvMap(environment, nmVars, Environment.NM_PORT.name(),
       String.valueOf(this.context.getNodeId().getPort()));
 
-    environment.put(Environment.NM_HOST.name(), this.context.getNodeId()
-      .getHost());
+    addToEnvMap(environment, nmVars, Environment.NM_HOST.name(),
+        this.context.getNodeId().getHost());
 
-    environment.put(Environment.NM_HTTP_PORT.name(),
+    addToEnvMap(environment, nmVars, Environment.NM_HTTP_PORT.name(),
       String.valueOf(this.context.getHttpPort()));
 
-    environment.put(Environment.LOCAL_DIRS.name(),
+    addToEnvMap(environment, nmVars, Environment.LOCAL_DIRS.name(),
         StringUtils.join(",", appDirs));
 
-    environment.put(Environment.LOCAL_USER_DIRS.name(), StringUtils.join(",",
-        userLocalDirs));
+    addToEnvMap(environment, nmVars, Environment.LOCAL_USER_DIRS.name(),
+        StringUtils.join(",", userLocalDirs));
 
-    environment.put(Environment.LOG_DIRS.name(),
+    addToEnvMap(environment, nmVars, Environment.LOG_DIRS.name(),
       StringUtils.join(",", containerLogDirs));
 
-    environment.put(Environment.USER.name(), container.getUser());
-    
-    environment.put(Environment.LOGNAME.name(), container.getUser());
+    addToEnvMap(environment, nmVars, Environment.USER.name(),
+        container.getUser());
 
-    environment.put(Environment.HOME.name(),
+    addToEnvMap(environment, nmVars, Environment.LOGNAME.name(),
+        container.getUser());
+
+    addToEnvMap(environment, nmVars, Environment.HOME.name(),
         conf.get(
             YarnConfiguration.NM_USER_HOME_DIR, 
             YarnConfiguration.DEFAULT_NM_USER_HOME_DIR
             )
         );
-    
-    environment.put(Environment.PWD.name(), pwd.toString());
-    
-    putEnvIfAbsent(environment, Environment.HADOOP_CONF_DIR.name());
 
-    environment.put(Environment.LOCALIZATION_COUNTERS.name(),
+    addToEnvMap(environment, nmVars, Environment.PWD.name(), pwd.toString());
+
+    addToEnvMap(environment, nmVars, Environment.LOCALIZATION_COUNTERS.name(),
         container.localizationCountersAsString());
 
     if (!Shell.WINDOWS) {
-      environment.put("JVM_PID", "$$");
+      addToEnvMap(environment, nmVars, "JVM_PID", "$$");
     }
 
     // variables here will be forced in, even if the container has specified them.
-    Apps.setEnvFromInputString(environment, conf.get(
-      YarnConfiguration.NM_ADMIN_USER_ENV,
-      YarnConfiguration.DEFAULT_NM_ADMIN_USER_ENV), File.pathSeparator);
+    String nmAdminUserEnv = conf.get(
+        YarnConfiguration.NM_ADMIN_USER_ENV,
+        YarnConfiguration.DEFAULT_NM_ADMIN_USER_ENV);
+    Apps.setEnvFromInputString(environment, nmAdminUserEnv, File.pathSeparator);
+    nmVars.addAll(Apps.getEnvVarsFromInputString(nmAdminUserEnv,
+        File.pathSeparator));
 
     // TODO: Remove Windows check and use this approach on all platforms after
     // additional testing.  See YARN-358.
@@ -1640,6 +1668,7 @@ public class ContainerLaunch implements Callable<Integer> {
         .getAuxServiceMetaData().entrySet()) {
       AuxiliaryServiceHelper.setServiceDataIntoEnv(
           meta.getKey(), meta.getValue(), environment);
+      nmVars.add(AuxiliaryServiceHelper.getPrefixServiceName(meta.getKey()));
     }
   }
 

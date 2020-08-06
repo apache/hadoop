@@ -48,6 +48,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -194,9 +195,10 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
 
       DefaultContainerExecutor executor = new DefaultContainerExecutor();
       executor.setConf(conf);
+      LinkedHashSet<String> nmVars = new LinkedHashSet<>();
       executor.writeLaunchEnv(fos, env, resources, commands,
           new Path(localLogDir.getAbsolutePath()), "user",
-          tempFile.getName());
+          tempFile.getName(), nmVars);
       fos.flush();
       fos.close();
       FileUtil.setExecutable(tempFile, true);
@@ -269,8 +271,9 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       }
       DefaultContainerExecutor executor = new DefaultContainerExecutor();
       executor.setConf(conf);
+      LinkedHashSet<String> nmVars = new LinkedHashSet<>();
       executor.writeLaunchEnv(fos, env, resources, commands,
-          new Path(localLogDir.getAbsolutePath()), "user");
+          new Path(localLogDir.getAbsolutePath()), "user", nmVars);
       fos.flush();
       fos.close();
       FileUtil.setExecutable(tempFile, true);
@@ -332,8 +335,9 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     conf.set(YarnConfiguration.NM_ENV_WHITELIST,
         "HADOOP_MAPRED_HOME,HADOOP_YARN_HOME");
     defaultContainerExecutor.setConf(conf);
+    LinkedHashSet<String> nmVars = new LinkedHashSet<>();
     defaultContainerExecutor.writeLaunchEnv(fos, env, resources, commands,
-        new Path(localLogDir.getAbsolutePath()), "user");
+        new Path(localLogDir.getAbsolutePath()), "user", nmVars);
     String shellContent =
         new String(Files.readAllBytes(Paths.get(shellFile.getAbsolutePath())),
             StandardCharsets.UTF_8);
@@ -346,7 +350,8 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     Assert.assertFalse(shellContent.contains("HADOOP_HDFS_HOME"));
     // Available in env and in whitelist
     Assert.assertTrue(shellContent.contains(
-        "export HADOOP_YARN_HOME=\"nodemanager_yarn_home\""));
+        "export HADOOP_YARN_HOME=${HADOOP_YARN_HOME:-\"nodemanager_yarn_home\"}"
+      ));
     fos.flush();
     fos.close();
   }
@@ -381,8 +386,9 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     conf.set(YarnConfiguration.NM_ENV_WHITELIST,
         "HADOOP_MAPRED_HOME,HADOOP_YARN_HOME");
     lce.setConf(conf);
+    LinkedHashSet<String> nmVars = new LinkedHashSet<>();
     lce.writeLaunchEnv(fos, env, resources, commands,
-        new Path(localLogDir.getAbsolutePath()), "user");
+        new Path(localLogDir.getAbsolutePath()), "user", nmVars);
     String shellContent =
         new String(Files.readAllBytes(Paths.get(shellFile.getAbsolutePath())),
             StandardCharsets.UTF_8);
@@ -391,12 +397,105 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     // Whitelisted variable overridden by container
     Assert.assertTrue(shellContent.contains(
         "export HADOOP_MAPRED_HOME=\"/opt/hadoopbuild\""));
-    // Verify no whitelisted variables inherited from NM env
+    // Available in env but not in whitelist
     Assert.assertFalse(shellContent.contains("HADOOP_HDFS_HOME"));
-    Assert.assertFalse(shellContent.contains("HADOOP_YARN_HOME"));
+    // Available in env and in whitelist
+    Assert.assertTrue(shellContent.contains(
+        "export HADOOP_YARN_HOME=${HADOOP_YARN_HOME:-\"nodemanager_yarn_home\"}"
+    ));
     fos.flush();
     fos.close();
   }
+
+  @Test(timeout = 20000)
+  public void testWriteEnvOrder() throws Exception {
+    // Valid only for unix
+    assumeFalse(Shell.WINDOWS);
+    List<String> commands = new ArrayList<String>();
+
+    // Setup user-defined environment
+    Map<String, String> env = new HashMap<String, String>();
+    env.put("USER_VAR_1", "1");
+    env.put("USER_VAR_2", "2");
+    env.put("NM_MODIFIED_VAR_1", "nm 1");
+    env.put("NM_MODIFIED_VAR_2", "nm 2");
+
+    // These represent vars explicitly set by NM
+    LinkedHashSet<String> trackedNmVars = new LinkedHashSet<>();
+    trackedNmVars.add("NM_MODIFIED_VAR_1");
+    trackedNmVars.add("NM_MODIFIED_VAR_2");
+
+    // Setup Nodemanager environment
+    final Map<String, String> nmEnv = new HashMap<>();
+    nmEnv.put("WHITELIST_VAR_1", "wl 1");
+    nmEnv.put("WHITELIST_VAR_2", "wl 2");
+    nmEnv.put("NON_WHITELIST_VAR_1", "nwl 1");
+    nmEnv.put("NON_WHITELIST_VAR_2", "nwl 2");
+    DefaultContainerExecutor defaultContainerExecutor =
+        new DefaultContainerExecutor() {
+          @Override
+          protected String getNMEnvVar(String varname) {
+            return nmEnv.get(varname);
+          }
+        };
+
+    // Setup conf with whitelisted variables
+    ArrayList<String> whitelistVars = new ArrayList<>();
+    whitelistVars.add("WHITELIST_VAR_1");
+    whitelistVars.add("WHITELIST_VAR_2");
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.NM_ENV_WHITELIST,
+        whitelistVars.get(0) + "," + whitelistVars.get(1));
+
+    // These are in the NM env, but not in the whitelist.
+    ArrayList<String> nonWhiteListEnv = new ArrayList<>();
+    nonWhiteListEnv.add("NON_WHITELIST_VAR_1");
+    nonWhiteListEnv.add("NON_WHITELIST_VAR_2");
+
+    // Write the launch script
+    File shellFile = Shell.appendScriptExtension(tmpDir, "hello");
+    Map<Path, List<String>> resources = new HashMap<Path, List<String>>();
+    FileOutputStream fos = new FileOutputStream(shellFile);
+    defaultContainerExecutor.setConf(conf);
+    defaultContainerExecutor.writeLaunchEnv(fos, env, resources, commands,
+        new Path(localLogDir.getAbsolutePath()), "user", trackedNmVars);
+    fos.flush();
+    fos.close();
+
+    // Examine the script
+    String shellContent =
+        new String(Files.readAllBytes(Paths.get(shellFile.getAbsolutePath())),
+            StandardCharsets.UTF_8);
+    // First make sure everything is there that's supposed to be
+    for (String envVar : env.keySet()) {
+      Assert.assertTrue(shellContent.contains(envVar + "="));
+    }
+    for (String wlVar : whitelistVars) {
+      Assert.assertTrue(shellContent.contains(wlVar + "="));
+    }
+    for (String nwlVar : nonWhiteListEnv) {
+      Assert.assertFalse(shellContent.contains(nwlVar + "="));
+    }
+    // Explicitly Set NM vars should be before user vars
+    for (String nmVar : trackedNmVars) {
+      for (String userVar : env.keySet()) {
+        // Need to skip nm vars and whitelist vars
+        if (!trackedNmVars.contains(userVar) &&
+            !whitelistVars.contains(userVar)) {
+          Assert.assertTrue(shellContent.indexOf(nmVar + "=") <
+              shellContent.indexOf(userVar + "="));
+        }
+      }
+    }
+    // Whitelisted vars should be before explicitly set NM vars
+    for (String wlVar : whitelistVars) {
+      for (String nmVar : trackedNmVars) {
+        Assert.assertTrue(shellContent.indexOf(wlVar + "=") <
+            shellContent.indexOf(nmVar + "="));
+      }
+    }
+  }
+
 
   @Test (timeout = 20000)
   public void testInvalidEnvSyntaxDiagnostics() throws IOException  {
@@ -418,8 +517,9 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       List<String> commands = new ArrayList<String>();
       DefaultContainerExecutor executor = new DefaultContainerExecutor();
       executor.setConf(conf);
+      LinkedHashSet<String> nmVars = new LinkedHashSet<>();
       executor.writeLaunchEnv(fos, env, resources, commands,
-          new Path(localLogDir.getAbsolutePath()), "user");
+          new Path(localLogDir.getAbsolutePath()), "user", nmVars);
       fos.flush();
       fos.close();
 
@@ -501,8 +601,9 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       commands.add(command);
       ContainerExecutor exec = new DefaultContainerExecutor();
       exec.setConf(conf);
+      LinkedHashSet<String> nmVars = new LinkedHashSet<>();
       exec.writeLaunchEnv(fos, env, resources, commands,
-          new Path(localLogDir.getAbsolutePath()), "user");
+          new Path(localLogDir.getAbsolutePath()), "user", nmVars);
       fos.flush();
       fos.close();
 
@@ -593,7 +694,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     Path nmp = new Path(testDir);
 
     launch.sanitizeEnv(userSetEnv, pwd, appDirs, userLocalDirs, containerLogs,
-        resources, nmp);
+        resources, nmp, Collections.<String>emptySet());
 
     List<String> result =
       getJarManifestClasspath(userSetEnv.get(Environment.CLASSPATH.name()));
@@ -612,7 +713,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
         dispatcher, exec, null, container, dirsHandler, containerManager);
 
     launch.sanitizeEnv(userSetEnv, pwd, appDirs, userLocalDirs, containerLogs,
-        resources, nmp);
+        resources, nmp, Collections.<String>emptySet());
 
     result =
       getJarManifestClasspath(userSetEnv.get(Environment.CLASSPATH.name()));
@@ -1537,9 +1638,10 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
         FileOutputStream fos = new FileOutputStream(tempFile);
         ContainerExecutor exec = new DefaultContainerExecutor();
         exec.setConf(conf);
+        LinkedHashSet<String> nmVars = new LinkedHashSet<>();
         exec.writeLaunchEnv(fos, env, resources, commands,
             new Path(localLogDir.getAbsolutePath()), "user",
-            tempFile.getName());
+            tempFile.getName(), nmVars);
         fos.flush();
         fos.close();
         FileUtil.setExecutable(tempFile, true);
@@ -1771,8 +1873,9 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       List<String> commands = new ArrayList<String>();
       DefaultContainerExecutor executor = new DefaultContainerExecutor();
       executor.setConf(new Configuration());
+      LinkedHashSet<String> nmVars = new LinkedHashSet<>();
       executor.writeLaunchEnv(fos, env, resources, commands,
-          new Path(localLogDir.getAbsolutePath()), user);
+          new Path(localLogDir.getAbsolutePath()), user, nmVars);
       fos.flush();
       fos.close();
 
@@ -1814,8 +1917,9 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       List<String> commands = new ArrayList<String>();
       DefaultContainerExecutor executor = new DefaultContainerExecutor();
       executor.setConf(new Configuration());
+      LinkedHashSet<String> nmVars = new LinkedHashSet<>();
       executor.writeLaunchEnv(fos, env, resources, commands,
-          new Path(localLogDir.getAbsolutePath()), user);
+          new Path(localLogDir.getAbsolutePath()), user, nmVars);
       fos.flush();
       fos.close();
 
@@ -2103,6 +2207,8 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
           @Override protected void link(Path src, Path dst)
               throws IOException {}
           @Override public void env(String key, String value)
+              throws IOException {}
+          @Override public void whitelistedEnv(String key, String value)
               throws IOException {}
           @Override public void copyDebugInformation(Path src, Path dst)
               throws IOException {}
