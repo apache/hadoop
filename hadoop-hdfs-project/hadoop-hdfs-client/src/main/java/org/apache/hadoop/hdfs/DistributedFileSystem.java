@@ -3288,12 +3288,19 @@ public class DistributedFileSystem extends FileSystem
   public Path getTrashRoot(Path path) {
     statistics.incrementReadOps(1);
     storageStatistics.incrementOpCounter(OpType.GET_TRASH_ROOT);
+    if (path == null) {
+      return super.getTrashRoot(path);
+    }
 
-    // Snapshot root, not null if the path is inside a snapshottable directory
-    String ssRoot = null;
+    // Snapshottable directory trash root, not null if path is inside a
+    // snapshottable directory and isSnapshotTrashRootEnabled is true from NN.
+    String ssTrashRoot = null;
     try {
       if (dfs.isSnapshotTrashRootEnabled()) {
-        ssRoot = dfs.getSnapshotRoot(path);
+        String ssRoot = dfs.getSnapshotRoot(path);
+        if (ssRoot != null) {
+          ssTrashRoot = DFSUtilClient.getSnapshotTrashRoot(ssRoot, dfs.ugi);
+        }
       }
     } catch (IOException ioe) {
       DFSClient.LOG.warn("Exception while checking whether the path is in a "
@@ -3301,33 +3308,51 @@ public class DistributedFileSystem extends FileSystem
     }
 
     try {
-      if ((path == null) ||
-          (!dfs.isHDFSEncryptionEnabled() && ssRoot == null)) {
-        return super.getTrashRoot(path);
+      if (!dfs.isHDFSEncryptionEnabled()) {
+        if (ssTrashRoot == null) {
+          // the path is not in a snapshottable directory and EZ is not enabled
+          return super.getTrashRoot(path);
+        } else {
+          return this.makeQualified(new Path(ssTrashRoot));
+        }
       }
     } catch (IOException ioe) {
       DFSClient.LOG.warn("Exception while checking whether encryption zone is "
           + "supported", ioe);
     }
 
-    if (ssRoot != null) {
-      return this.makeQualified(
-          new Path(DFSUtilClient.getSnapshotTrashRoot(ssRoot, dfs.ugi)));
-    }
-
-    String parentSrc = path.isRoot()?
-        path.toUri().getPath():path.getParent().toUri().getPath();
+    // HDFS encryption is enabled on the cluster at this point, does not
+    // necessary mean the given path is in an EZ hence the check.
+    String parentSrc = path.isRoot() ?
+        path.toUri().getPath() : path.getParent().toUri().getPath();
+    String ezTrashRoot = null;
     try {
       EncryptionZone ez = dfs.getEZForPath(parentSrc);
       if ((ez != null)) {
-        return this.makeQualified(
-            new Path(DFSUtilClient.getEZTrashRoot(ez, dfs.ugi)));
+        ezTrashRoot = DFSUtilClient.getEZTrashRoot(ez, dfs.ugi);
       }
     } catch (IOException e) {
       DFSClient.LOG.warn("Exception in checking the encryption zone for the " +
           "path " + parentSrc + ". " + e.getMessage());
     }
-    return super.getTrashRoot(path);
+
+    if (ssTrashRoot == null) {
+      if (ezTrashRoot == null) {
+        // The path is neither in a snapshottable directory nor in an EZ
+        return super.getTrashRoot(path);
+      } else {
+        return this.makeQualified(new Path(ezTrashRoot));
+      }
+    } else {
+      if (ezTrashRoot == null) {
+        return this.makeQualified(new Path(ssTrashRoot));
+      } else {
+        // The path is in EZ and in a snapshottable directory
+        return this.makeQualified(new Path(
+            ssTrashRoot.length() > ezTrashRoot.length() ?
+                ssTrashRoot : ezTrashRoot));
+      }
+    }
   }
 
   /**

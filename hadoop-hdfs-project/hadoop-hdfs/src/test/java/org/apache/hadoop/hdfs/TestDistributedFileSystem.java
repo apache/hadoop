@@ -2270,7 +2270,7 @@ public class TestDistributedFileSystem {
   }
 
   @Test
-  public void testGetTrashRootsOnSnapshottableDirWithEncryptionZone()
+  public void testGetTrashRootsOnSnapshottableDirWithEZ()
       throws IOException, NoSuchAlgorithmException {
     Configuration conf = getTestConfiguration();
     conf.setBoolean(DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED, true);
@@ -2312,6 +2312,119 @@ public class TestDistributedFileSystem {
       Collection<FileStatus> trashRootsAfter = dfs.getTrashRoots(false);
       // getTrashRoots should give the same result
       assertEquals(trashRoots, trashRootsAfter);
+
+      // Cleanup
+      dfs.disallowSnapshot(testDir);
+      dfs.delete(testDir, true);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test
+  public void testGetTrashRootOnSnapshottableDirInEZ()
+      throws IOException, NoSuchAlgorithmException {
+    Configuration conf = getTestConfiguration();
+    conf.setBoolean(DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED, true);
+    // Set EZ config
+    File tmpDir = GenericTestUtils.getTestDir(UUID.randomUUID().toString());
+    final Path jksPath = new Path(tmpDir.toString(), "test.jks");
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
+        JavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri());
+    MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    // Create key for EZ
+    final KeyProvider provider =
+        cluster.getNameNode().getNamesystem().getProvider();
+    final KeyProvider.Options options = KeyProvider.options(conf);
+    provider.createKey("key", options);
+    provider.flush();
+
+    try {
+      DistributedFileSystem dfs = cluster.getFileSystem();
+
+      Path testDir = new Path("/ssgtr/test3ez/");
+      dfs.mkdirs(testDir);
+      dfs.createEncryptionZone(testDir, "key");
+      Path testSubD = new Path(testDir, "sssubdir");
+      Path file1Path = new Path(testSubD, "file1");
+      dfs.create(file1Path);
+
+      final Path trBefore = dfs.getTrashRoot(file1Path);
+      final String trBeforeStr = trBefore.toUri().getPath();
+      // The trash root should be directly under testDir
+      final Path testDirTrash = new Path(testDir, FileSystem.TRASH_PREFIX);
+      final String testDirTrashStr = testDirTrash.toUri().getPath();
+      assertTrue(trBeforeStr.startsWith(testDirTrashStr));
+
+      dfs.allowSnapshot(testSubD);
+      final Path trAfter = dfs.getTrashRoot(file1Path);
+      final String trAfterStr = trAfter.toUri().getPath();
+      // The trash is now located in the dir inside
+      final Path testSubDirTrash = new Path(testSubD, FileSystem.TRASH_PREFIX);
+      final String testSubDirTrashStr = testSubDirTrash.toUri().getPath();
+      assertTrue(trAfterStr.startsWith(testSubDirTrashStr));
+
+      // Cleanup
+      dfs.disallowSnapshot(testSubD);
+      dfs.delete(testDir, true);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test
+  public void testGetTrashRootOnEZInSnapshottableDir()
+      throws IOException, NoSuchAlgorithmException {
+    Configuration conf = getTestConfiguration();
+    conf.setBoolean(DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED, true);
+    // Set EZ config
+    File tmpDir = GenericTestUtils.getTestDir(UUID.randomUUID().toString());
+    final Path jksPath = new Path(tmpDir.toString(), "test.jks");
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
+        JavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri());
+    MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    // Create key for EZ
+    final KeyProvider provider =
+        cluster.getNameNode().getNamesystem().getProvider();
+    final KeyProvider.Options options = KeyProvider.options(conf);
+    provider.createKey("key", options);
+    provider.flush();
+
+    try {
+      DistributedFileSystem dfs = cluster.getFileSystem();
+
+      Path testDir = new Path("/ssgtr/test3ss/");
+      dfs.mkdirs(testDir);
+      dfs.allowSnapshot(testDir);
+      Path testSubD = new Path(testDir, "ezsubdir");
+      dfs.mkdirs(testSubD);
+      Path file1Path = new Path(testSubD, "file1");
+      dfs.create(file1Path);
+
+      final Path trBefore = dfs.getTrashRoot(file1Path);
+      final String trBeforeStr = trBefore.toUri().getPath();
+      // The trash root should be directly under testDir
+      final Path testDirTrash = new Path(testDir, FileSystem.TRASH_PREFIX);
+      final String testDirTrashStr = testDirTrash.toUri().getPath();
+      assertTrue(trBeforeStr.startsWith(testDirTrashStr));
+
+      // Need to remove the file inside the dir to establish EZ
+      dfs.delete(file1Path, false);
+      dfs.createEncryptionZone(testSubD, "key");
+      dfs.create(file1Path);
+
+      final Path trAfter = dfs.getTrashRoot(file1Path);
+      final String trAfterStr = trAfter.toUri().getPath();
+      // The trash is now located in the dir inside
+      final Path testSubDirTrash = new Path(testSubD, FileSystem.TRASH_PREFIX);
+      final String testSubDirTrashStr = testSubDirTrash.toUri().getPath();
+      assertTrue(trAfterStr.startsWith(testSubDirTrashStr));
 
       // Cleanup
       dfs.disallowSnapshot(testDir);
