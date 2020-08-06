@@ -20,14 +20,14 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.Hashtable;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.Callable;
 
+import org.apache.hadoop.fs.azurebfs.rules.AuthTestsRule;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,6 +65,9 @@ import static org.junit.Assume.assumeTrue;
 public abstract class AbstractAbfsIntegrationTest extends
         AbstractAbfsTestWithTimeout {
 
+  @Rule
+  public AuthTestsRule myRule = new AuthTestsRule(this);
+
   private static final Logger LOG =
       LoggerFactory.getLogger(AbstractAbfsIntegrationTest.class);
 
@@ -83,6 +86,10 @@ public abstract class AbstractAbfsIntegrationTest extends
   private boolean usingFilesystemForSASTests = false;
 
   protected AbstractAbfsIntegrationTest() throws Exception {
+    initFSEndpointForNewFS();
+  }
+
+  public void initFSEndpointForNewFS() throws Exception {
     fileSystemName = TEST_CONTAINER_PREFIX + UUID.randomUUID().toString();
     rawConfig = new Configuration();
     rawConfig.addResource(TEST_CONFIGURATION_FILE_NAME);
@@ -103,11 +110,11 @@ public abstract class AbstractAbfsIntegrationTest extends
 
     if (authType == AuthType.SharedKey) {
       assumeTrue("Not set: " + FS_AZURE_ACCOUNT_KEY,
-          abfsConfig.get(FS_AZURE_ACCOUNT_KEY) != null);
+              abfsConfig.get(FS_AZURE_ACCOUNT_KEY) != null);
       // Update credentials
     } else {
       assumeTrue("Not set: " + FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME,
-          abfsConfig.get(FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME) != null);
+              abfsConfig.get(FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME) != null);
     }
 
     final String abfsUrl = this.getFileSystemName() + "@" + this.getAccountName();
@@ -138,7 +145,6 @@ public abstract class AbstractAbfsIntegrationTest extends
       this.isIPAddress = false;
     }
   }
-
 
   @Before
   public void setup() throws Exception {
@@ -324,6 +330,11 @@ public abstract class AbstractAbfsIntegrationTest extends
     return this.authType;
   }
 
+  public void setAuthTypeForTest(AuthType authType) {
+    this.authType = authType;
+    fileSystemName += '1';
+  }
+
   public String getAbfsScheme() {
     return this.abfsScheme;
   }
@@ -445,5 +456,13 @@ public abstract class AbstractAbfsIntegrationTest extends
     assertEquals("Mismatch in " + statistic.getStatName(), expectedValue,
         (long) metricMap.get(statistic.getStatName()));
     return expectedValue;
+  }
+
+  public Collection<AuthType> authTypesToTest() {
+    final List authTypes = new ArrayList();
+    authTypes.add(AuthType.OAuth);
+    authTypes.add(AuthType.SharedKey);
+    //authTypes.add(AuthType.SAS);
+    return authTypes;
   }
 }
