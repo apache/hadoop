@@ -403,7 +403,7 @@ public class RawLocalFileSystem extends FileSystem {
       throw new IOException("Mkdirs failed to create " + parent.toString());
     }
     return new FSDataOutputStream(new BufferedIOStatisticsOutputStream(
-        createOutputStreamWithMode(f, false, permission), bufferSize),
+        createOutputStreamWithMode(f, false, permission), bufferSize, true),
         statistics);
   }
   
@@ -425,7 +425,7 @@ public class RawLocalFileSystem extends FileSystem {
       throw new FileAlreadyExistsException("File already exists: " + f);
     }
     return new FSDataOutputStream(new BufferedIOStatisticsOutputStream(
-        createOutputStreamWithMode(f, false, permission), bufferSize),
+        createOutputStreamWithMode(f, false, permission), bufferSize, true),
             statistics);
   }
 

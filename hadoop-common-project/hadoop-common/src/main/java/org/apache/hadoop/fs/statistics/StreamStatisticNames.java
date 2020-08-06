@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.statistics;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
@@ -35,6 +36,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  *   </li>
  * </ul>
  */
+@InterfaceAudience.Public
 @InterfaceStability.Evolving
 public final class StreamStatisticNames {
 

@@ -49,8 +49,8 @@ public interface IOStatistics {
   Map<String, Long> gauges();
 
   /**
-   * Map of minumums.
-   * @return the current map of minumums.
+   * Map of minimums.
+   * @return the current map of minimums.
    */
   Map<String, Long> minimums();
 
@@ -66,4 +66,13 @@ public interface IOStatistics {
    */
   Map<String, MeanStatistic> meanStatistics();
 
+  /**
+   * Value when a minimum value has never been set.
+   */
+  long MIN_UNSET_VALUE = -1;
+
+  /**
+   * Value when a max value has never been set.
+   */
+  long MAX_UNSET_VALUE = -1;
 }

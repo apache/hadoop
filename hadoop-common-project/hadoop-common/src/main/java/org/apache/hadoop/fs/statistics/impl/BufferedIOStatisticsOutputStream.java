@@ -45,14 +45,37 @@ public class BufferedIOStatisticsOutputStream
     extends BufferedOutputStream
     implements IOStatisticsSource, Syncable, StreamCapabilities {
 
+  /**
+   * Should calls to Syncable downgrade to flush if the underlying
+   * stream does not support it?
+   * While that breaks a core contract requirement of Syncable:
+   * "Sync.sync() guarantees durability", downgrading is
+   * the default behavior of FsDataOutputStream.
+   */
+  private final boolean downgradeSyncable;
 
-  public BufferedIOStatisticsOutputStream(final OutputStream out) {
+  /**
+   * Construct with default buffer size.
+   * @param out output stream to buffer
+   * @param downgradeSyncable should Syncable calls downgrade?
+   */
+  public BufferedIOStatisticsOutputStream(final OutputStream out,
+      final boolean downgradeSyncable) {
     super(out);
+    this.downgradeSyncable = downgradeSyncable;
   }
 
+  /**
+   * Construct with custom buffer size.
+   *
+   * @param out output stream to buffer
+   * @param size buffer.
+   * @param downgradeSyncable should Syncable calls downgrade?
+   */
   public BufferedIOStatisticsOutputStream(final OutputStream out,
-      final int size) {
+      final int size, final boolean downgradeSyncable) {
     super(out, size);
+    this.downgradeSyncable = downgradeSyncable;
   }
 
   @Override
@@ -80,6 +103,10 @@ public class BufferedIOStatisticsOutputStream
   /**
    * If the inner stream is Syncable, flush the buffer and then
    * invoke the inner stream's hflush() operation.
+   * <p></p>
+   * Otherwise: throw an exception, unless the stream was constructed with
+   * {@link #downgradeSyncable} set to true, in which case the stream
+   * is just flushed.
    * @throws IOException IO Problem
    * @throws UnsupportedOperationException if the inner class is not syncable
    */
@@ -89,14 +116,22 @@ public class BufferedIOStatisticsOutputStream
       flush();
       ((Syncable) out).hflush();
     } else {
-      throw new UnsupportedOperationException("hflush not supported by "
-          + out);
+      if (!downgradeSyncable) {
+        throw new UnsupportedOperationException("hflush not supported by "
+            + out);
+      } else {
+        flush();
+      }
     }
   }
 
   /**
    * If the inner stream is Syncable, flush the buffer and then
    * invoke the inner stream's hsync() operation.
+   * <p></p>
+   * Otherwise: throw an exception, unless the stream was constructed with
+   * {@link #downgradeSyncable} set to true, in which case the stream
+   * is just flushed.
    * @throws IOException IO Problem
    * @throws UnsupportedOperationException if the inner class is not syncable
    */
@@ -106,8 +141,12 @@ public class BufferedIOStatisticsOutputStream
       flush();
       ((Syncable) out).hsync();
     } else {
-      throw new UnsupportedOperationException("hsync not supported by "
-          + out);
+      if (!downgradeSyncable) {
+        throw new UnsupportedOperationException("hsync not supported by "
+            + out);
+      } else {
+        flush();
+      }
     }
   }
 }

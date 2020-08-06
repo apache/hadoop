@@ -191,6 +191,7 @@ public class DefaultS3ClientFactory extends Configured
    * @param pathStyleAccess enable path style access?
    * @return new AmazonS3 client
    */
+  @SuppressWarnings("deprecation")
   private AmazonS3 classicAmazonS3Client(
       AWSCredentialsProvider credentials,
       ClientConfiguration awsConf,

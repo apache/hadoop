@@ -33,6 +33,8 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.MeanStatistic;
 
+import static org.apache.hadoop.fs.statistics.IOStatistics.MIN_UNSET_VALUE;
+
 /**
  * Support for implementing IOStatistics interfaces.
  */
@@ -50,6 +52,7 @@ public final class IOStatisticsBinding {
 
   /**
    * Create  IOStatistics from a storage statistics instance.
+   * <p></p>
    * This will be updated as the storage statistics change.
    * @param storageStatistics source data.
    * @return an IO statistics source.
@@ -94,7 +97,7 @@ public final class IOStatisticsBinding {
   }
 
   /**
-   * Create an a builder for an {@link IOStatisticsStore}.
+   * Create a builder for an {@link IOStatisticsStore}.
    *
    * @return a builder instance.
    */
@@ -138,7 +141,7 @@ public final class IOStatisticsBinding {
    * @param copyFn function to copy entries
    * @return the destination.
    */
-  public static <E> Map<String, E> copyMap(
+  private static <E> Map<String, E> copyMap(
       Map<String, E> dest,
       Map<String, E> source,
       Function<E, E> copyFn) {
@@ -162,8 +165,9 @@ public final class IOStatisticsBinding {
   }
 
   /**
-   * Take a snapshot of a supplied map, were the copy option simply
+   * Take a snapshot of a supplied map, where the copy option simply
    * uses the existing value.
+   * <p></p>
    * For this to be safe, the map must refer to immutable objects.
    * @param source source map
    * @param <E> type of values.
@@ -192,7 +196,7 @@ public final class IOStatisticsBinding {
   }
 
   /**
-   * Aggregate two maps so that the destination
+   * Aggregate two maps so that the destination.
    * @param <E> type of values
    * @param dest destination map.
    * @param other other map
@@ -235,11 +239,36 @@ public final class IOStatisticsBinding {
   }
 
 
+  /**
+   * Aggregate two minimum values.
+   * @param l left
+   * @param r right
+   * @return the new minimum.
+   */
   public static Long aggregateMinimums(Long l, Long r) {
-    return Math.min(l, r);
+    if (l == MIN_UNSET_VALUE) {
+      return r;
+    } else if (r == MIN_UNSET_VALUE) {
+      return l;
+    } else {
+      return Math.min(l, r);
+    }
   }
+
+  /**
+   * Aggregate two maximum values.
+   * @param l left
+   * @param r right
+   * @return the new minimum.
+   */
   public static Long aggregateMaximums(Long l, Long r) {
-    return Math.max(l, r);
+    if (l == MIN_UNSET_VALUE) {
+      return r;
+    } else if (r == MIN_UNSET_VALUE) {
+      return l;
+    } else {
+      return Math.max(l, r);
+    }
   }
 
   /**
@@ -290,11 +319,19 @@ public final class IOStatisticsBinding {
     boolean done;
     do {
       long current = dest.get();
-      if (sample < current) {
+      if (current == MIN_UNSET_VALUE || sample < current) {
         done = dest.compareAndSet(current, sample);
       } else {
         done = true;
       }
     } while (!done);
+  }
+
+  /**
+   * Get the stub duration tracker.
+   * @return the stub tracker.
+   */
+  public static DurationTracker stubDurationTracker() {
+    return StubDurationTracker.STUB_DURATION_TRACKER;
   }
 }

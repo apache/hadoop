@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.s3a.s3guard.MetastoreInstrumentation;
 import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
+import org.apache.hadoop.fs.statistics.impl.DurationTracker;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricStringBuilder;
@@ -57,7 +58,6 @@ import org.apache.hadoop.metrics2.lib.MutableQuantiles;
 
 import java.io.Closeable;
 import java.net.URI;
-import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -736,17 +736,19 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     /**
      * Record a forward seek, adding a seek operation, a forward
      * seek operation, and any bytes skipped.
-     * @param bytesForward
+     * @param skipped
      * @param bytesRead number of bytes skipped by reading from the stream.
  * If the seek was implemented by a close + reopen, set this to zero.
      */
     @Override
-    public void seekForwards(final long bytesForward,
+    public void seekForwards(final long skipped,
         long bytesRead) {
       increment(StreamStatisticNames.STREAM_READ_SEEK_OPERATIONS);
       increment(StreamStatisticNames.STREAM_READ_SEEK_FORWARD_OPERATIONS);
-      increment(StreamStatisticNames.STREAM_READ_SEEK_BYTES_SKIPPED,
-          bytesForward);
+      if (skipped > 0) {
+        increment(StreamStatisticNames.STREAM_READ_SEEK_BYTES_SKIPPED,
+            skipped);
+      }
       if (bytesRead > 0) {
         increment(StreamStatisticNames.STREAM_READ_SEEK_BYTES_READ,
             bytesRead);
@@ -1054,9 +1056,10 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     }
 
     @Override
-    public void getRequestCompleted(final Duration duration) {
-      getIOStatistics().addTimedOperation(OP_HTTP_GET_REQUEST, duration);
+    public DurationTracker initiateGetRequest() {
+      return getIOStatistics().trackDuration(OP_HTTP_GET_REQUEST);
     }
+
   }
 
   /**

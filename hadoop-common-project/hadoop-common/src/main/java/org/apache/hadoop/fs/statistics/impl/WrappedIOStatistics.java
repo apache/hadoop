@@ -98,7 +98,7 @@ public class WrappedIOStatistics extends AbstractIOStatisticsImpl {
   }
 
   /**
-   * return the statistics dump of the wrapped statistics
+   * Return the statistics dump of the wrapped statistics.
    * @return the statistics for logging.
    */
   @Override

@@ -35,6 +35,8 @@ import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MAX;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MEAN;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MIN;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.aggregateMaximums;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.aggregateMinimums;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.dynamicIOStatistics;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.maybeUpdateMaximum;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.maybeUpdateMinimum;
@@ -100,14 +102,14 @@ final class IOStatisticsStoreImpl extends WrappedIOStatistics
     }
     if (maximums != null) {
       for (String key : maximums) {
-        AtomicLong maximum = new AtomicLong();
+        AtomicLong maximum = new AtomicLong(MAX_UNSET_VALUE);
         maximumMap.put(key, maximum);
         builder.withAtomicLongMaximum(key, maximum);
       }
     }
     if (minimums != null) {
       for (String key : minimums) {
-        AtomicLong minimum = new AtomicLong(Long.MAX_VALUE);
+        AtomicLong minimum = new AtomicLong(MIN_UNSET_VALUE);
         minimumMap.put(key, minimum);
         builder.withAtomicLongMinimum(key, minimum);
       }
@@ -288,13 +290,13 @@ final class IOStatisticsStoreImpl extends WrappedIOStatistics
     minimumMap.entrySet().forEach(e -> {
       AtomicLong dest = e.getValue();
       long sourceValue = lookup(statistics.minimums(), e.getKey());
-      dest.set(Math.min(dest.get(), sourceValue));
+      dest.set(aggregateMinimums(dest.get(), sourceValue));
     });
     // max: max of current and source
     maximumMap.entrySet().forEach(e -> {
       AtomicLong dest = e.getValue();
       long sourceValue = lookup(statistics.maximums(), e.getKey());
-      dest.set(Math.max(dest.get(), sourceValue));
+      dest.set(aggregateMaximums(dest.get(), sourceValue));
     });
     // the most complex
     meanStatisticMap.entrySet().forEach(e -> {
@@ -400,7 +402,6 @@ final class IOStatisticsStoreImpl extends WrappedIOStatistics
    */
   @Override
   public void addTimedOperation(String prefix, long durationMillis) {
-    incrementCounter(prefix);
     addMeanStatisticSample(prefix + SUFFIX_MEAN, durationMillis);
     addMinimumSample(prefix + SUFFIX_MIN, durationMillis);
     addMaximumSample(prefix + SUFFIX_MAX, durationMillis);
@@ -413,12 +414,17 @@ final class IOStatisticsStoreImpl extends WrappedIOStatistics
 
   /**
    * Track the duration of a single statistic through a
-   * {@link SingleStatisticDurationTracker}.
+   * {@link StatisticDurationTracker}.
    * @param prefix statistic prefix
    * @return a tracker instance.
    */
   @Override
   public DurationTracker trackDuration(final String prefix) {
-    return new SingleStatisticDurationTracker(this, prefix);
+    return new StatisticDurationTracker(this, prefix);
+  }
+
+  @Override
+  public DurationTracker trackDuration(final String prefix, final int count) {
+    return new StatisticDurationTracker(this, prefix, count);
   }
 }

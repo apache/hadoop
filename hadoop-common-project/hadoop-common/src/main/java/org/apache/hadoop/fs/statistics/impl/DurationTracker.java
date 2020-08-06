@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.statistics.impl;
 /**
  * Interface to be implemented by objects which can track duration.
  * It extends AutoCloseable to fit into a try-with-resources statement,
- * but then strips out the {@link throws Exception} aspect of the signature
+ * but then strips out the {@code throws Exception} aspect of the signature
  * so it doesn't force code to add extra handling for any failures.
  */
 public interface DurationTracker extends AutoCloseable {

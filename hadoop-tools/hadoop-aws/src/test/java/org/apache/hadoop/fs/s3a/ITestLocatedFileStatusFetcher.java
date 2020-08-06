@@ -110,7 +110,10 @@ public class ITestLocatedFileStatusFetcher extends AbstractS3ATestBase {
    */
   public static final byte[] HELLO = "hello".getBytes(StandardCharsets.UTF_8);
 
-  private static final int EXPECTED_LIST_COUNT =4;
+  /**
+   * How many list calls are expected in a run which collects them: {@value}.
+   */
+  private static final int EXPECTED_LIST_COUNT = 4;
 
   private final String name;
 
@@ -269,7 +272,6 @@ public class ITestLocatedFileStatusFetcher extends AbstractS3ATestBase {
             subdir2File1,
             subdir2File2);
     assertListCount(fetcher, EXPECTED_LIST_COUNT);
-
   }
 
   /**

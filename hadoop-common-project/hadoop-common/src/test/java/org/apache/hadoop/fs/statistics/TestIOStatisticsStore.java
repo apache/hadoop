@@ -25,16 +25,21 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.statistics.impl.DurationTracker;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 import org.apache.hadoop.util.JsonSerialization;
 
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatMaximumStatistic;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatMeanStatistic;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatMeanStatisticMatches;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatMinimumStatistic;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyCounterStatisticValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyGaugeStatisticValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyMaximumStatisticValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyMinimumStatisticValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_HTTP_LIST_REQUEST;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 
 public class TestIOStatisticsStore extends AbstractHadoopTestBase {
@@ -65,6 +70,7 @@ public class TestIOStatisticsStore extends AbstractHadoopTestBase {
         .withMinimums(MIN)
         .withMaximums(MAX)
         .withMeanStatistics(MEAN)
+        .withDurationTracking(OP_HTTP_LIST_REQUEST)
         .build();
   }
 
@@ -129,7 +135,6 @@ public class TestIOStatisticsStore extends AbstractHadoopTestBase {
     stats.addMeanStatisticSample(MEAN, 9);
     assertThatMeanStatisticMatches(stats, MEAN, 2, 10)
         .matches(p -> p.mean() == 5, "mean");
-
   }
 
   @Test
@@ -156,5 +161,30 @@ public class TestIOStatisticsStore extends AbstractHadoopTestBase {
 
   }
 
+  /**
+   * Duration tracking.
+   */
+  @Test
+  public void testDuration() throws Throwable {
+    DurationTracker tracker =
+        stats.trackDuration(OP_HTTP_LIST_REQUEST);
+    verifyCounterStatisticValue(stats, OP_HTTP_LIST_REQUEST, 1L);
+    Thread.sleep(1000);
+    tracker.close();
+    try (DurationTracker ignored =
+             stats.trackDuration(OP_HTTP_LIST_REQUEST)) {
+      Thread.sleep(1000);
+    }
+    LOG.info("Statistics: {}", stats);
+    verifyCounterStatisticValue(stats, OP_HTTP_LIST_REQUEST, 2L);
+    assertThatMinimumStatistic(stats, OP_HTTP_LIST_REQUEST + ".min")
+        .isGreaterThan(0);
+    assertThatMaximumStatistic(stats, OP_HTTP_LIST_REQUEST + ".max")
+        .isGreaterThan(0);
+    assertThatMeanStatistic(stats, OP_HTTP_LIST_REQUEST + ".mean")
+        .hasFieldOrPropertyWithValue("samples", 2L)
+        .matches(s -> s.getSum() > 0)
+        .matches(s -> s.mean() > 0.0);
+  }
 
 }

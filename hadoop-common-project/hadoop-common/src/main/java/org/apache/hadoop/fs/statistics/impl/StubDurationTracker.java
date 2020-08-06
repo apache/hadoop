@@ -18,36 +18,19 @@
 
 package org.apache.hadoop.fs.statistics.impl;
 
-import org.apache.hadoop.util.OperationDuration;
-
 /**
- * Track the duration of an object; when closed the
- * statistics are updated.
+ * A simple stub duration tracker which can be issued in interfaces
+ * and other places where full duration tracking is not implemented.
  */
-public class SingleStatisticDurationTracker extends OperationDuration
-    implements DurationTracker {
+final class StubDurationTracker implements DurationTracker {
 
-  private final IOStatisticsStore iostats;
+  static final DurationTracker STUB_DURATION_TRACKER = new StubDurationTracker();
 
-  private final String prefix;
-
-  /**
-   * Constructor.
-   * @param iostats statistics to update
-   * @param prefix prefix of values.
-   */
-  public SingleStatisticDurationTracker(final IOStatisticsStore iostats,
-      final String prefix) {
-    this.iostats = iostats;
-    this.prefix = prefix;
+  private StubDurationTracker() {
   }
 
-  /**
-   * Set the finished time and then update the statistics.
-   */
   @Override
   public void close() {
-    finished();
-    iostats.addTimedOperation(prefix, asDuration());
+
   }
 }

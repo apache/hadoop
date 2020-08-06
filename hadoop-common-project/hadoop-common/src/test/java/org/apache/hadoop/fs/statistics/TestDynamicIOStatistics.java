@@ -39,6 +39,7 @@ import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertCounte
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyCounterStatisticValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringifyIOStatistics;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToString;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.ENTRY_PATTERN;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.NULL_SOURCE;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.dynamicIOStatistics;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.emptyStatistics;
@@ -163,7 +164,7 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
     // take the snapshot
     final Iterator<Map.Entry<String, Long>> it =
         statistics.counters().entrySet().iterator();
-    // reset the counters
+    // increment the counters
     incrementAllCounters();
     // now assert that all the iterator values are of value 1
     while (it.hasNext()) {
@@ -224,14 +225,14 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
 
   @Test
   public void testDemandStringification() throws Throwable {
-    String counterPattern = "(along=(type=counter, (%d))";
+    String counterPattern = ENTRY_PATTERN;
     // this is not yet evaluated
     Object demand = demandStringifyIOStatistics(statistics);
     // nor is this.
     Object demandSource = IOStatisticsLogging.demandStringifyIOStatisticsSource(statsSource);
 
     // show it evaluates
-    String formatted1 = String.format(counterPattern, aLong.get());
+    String formatted1 = String.format(counterPattern, ALONG, aLong.get());
     assertThat(demand
         .toString())
         .contains(formatted1);
@@ -243,7 +244,7 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
     incrementAllCounters();
     incrementAllCounters();
     // there are new values to expect
-    String formatted2 = String.format(counterPattern, aLong.get());
+    String formatted2 = String.format(counterPattern, ALONG, aLong.get());
     assertThat(demand
         .toString())
         .doesNotContain(formatted1)
@@ -276,7 +277,7 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
   /**
    * Increment all the counters from their current value.
    */
-  public void incrementAllCounters() {
+  private void incrementAllCounters() {
     aLong.incrementAndGet();
     aInt.incrementAndGet();
     evalLong += 1;

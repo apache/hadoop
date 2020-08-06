@@ -247,7 +247,7 @@ public class LocatedFileStatusFetcher implements IOStatisticsSource {
    * @return IO stats accrued.
    */
   @Override
-  public IOStatistics getIOStatistics() {
+  public synchronized IOStatistics getIOStatistics() {
     return iostats;
   }
 
@@ -257,16 +257,19 @@ public class LocatedFileStatusFetcher implements IOStatisticsSource {
    */
   private void addResultStatistics(IOStatistics stats) {
     if (stats != null) {
+      // demand creation of IO statistics.
       synchronized (this) {
+        LOG.debug("Adding IOStatistics: {}", stats);
         if (iostats == null) {
           // demand create the statistics
-          iostats = snapshotIOStatistics();
+          iostats = snapshotIOStatistics(stats);
+        } else {
+          iostats.aggregate(stats);
         }
       }
-      LOG.debug("Adding IOStatistics: {}", stats);
-      iostats.aggregate(stats);
     }
   }
+
   /**
    * Retrieves block locations for the given @link {@link FileStatus}, and adds
    * additional paths to the process queue if required.

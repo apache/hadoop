@@ -18,9 +18,8 @@
 
 package org.apache.hadoop.fs.s3a.impl.statistics;
 
-import java.time.Duration;
-
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+import org.apache.hadoop.fs.statistics.impl.DurationTracker;
 
 /**
  * Statistics updated by an input stream during its actual operation.
@@ -39,11 +38,11 @@ public interface S3AInputStreamStatistics extends AutoCloseable,
   /**
    * Record a forward seek, adding a seek operation, a forward
    * seek operation, and any bytes skipped.
-   * @param bytesForward bytes moved forward
+   * @param skipped bytes moved forward in stream
    * @param bytesRead number of bytes skipped by reading from the stream.
  * If the seek was implemented by a close + reopen, set this to zero.
    */
-  void seekForwards(long bytesForward, long bytesRead);
+  void seekForwards(long skipped, long bytesRead);
 
   /**
    * The inner stream was opened.
@@ -189,8 +188,9 @@ public interface S3AInputStreamStatistics extends AutoCloseable,
   Long lookupGaugeValue(String name);
 
   /**
-   * A GET request completed.
-   * @param duration duration of the operaton.
+   * Initiate a GET request.
+   * @return duration tracker;
    */
-  void getRequestCompleted(Duration duration);
+  DurationTracker initiateGetRequest();
+
 }

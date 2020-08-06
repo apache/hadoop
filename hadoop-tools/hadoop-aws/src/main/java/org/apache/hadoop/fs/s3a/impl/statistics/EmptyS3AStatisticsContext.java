@@ -25,8 +25,10 @@ import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.s3guard.MetastoreInstrumentation;
 import org.apache.hadoop.fs.s3a.s3guard.MetastoreInstrumentationImpl;
 import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.impl.DurationTracker;
 
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.emptyStatistics;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.stubDurationTracker;
 
 /**
  * Special statistics context, all of whose context operations are no-ops.
@@ -100,7 +102,7 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     }
 
     @Override
-    public void seekForwards(final long bytesForward,
+    public void seekForwards(final long skipped,
         final long bytesRead) {
 
     }
@@ -281,8 +283,10 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     }
 
     @Override
-    public void getRequestCompleted(final Duration duration) {
+    public DurationTracker initiateGetRequest() {
+      return stubDurationTracker();
     }
+
   }
 
   private static final class EmptyCommitterStatistics

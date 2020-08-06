@@ -30,7 +30,8 @@ import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import static com.google.common.base.Preconditions.checkState;
 
 /**
- * Builder of Dynamic IO Statistics which serve up up longs.
+ * Builder of {@link DynamicIOStatistics}.
+ * <p></p>
  * Instantiate through
  * {@link IOStatisticsBinding#dynamicIOStatistics()}.
  */
@@ -53,7 +54,6 @@ public class DynamicIOStatisticsBuilder {
     instance = null;
     return stats;
   }
-
 
   /**
    * Get the statistics instance.
@@ -155,40 +155,40 @@ public class DynamicIOStatisticsBuilder {
   }
 
   /**
-   * Add a new evaluator to the minumum statistics.
+   * Add a new evaluator to the minimum statistics.
    * @param key key of this statistic
    * @param eval evaluator for the statistic
    * @return the builder.
    */
-  public DynamicIOStatisticsBuilder withLongFunctionMinumum(String key,
+  public DynamicIOStatisticsBuilder withLongFunctionMinimum(String key,
       ToLongFunction<String> eval) {
     activeInstance().addMinimumFunction(key, eval::applyAsLong);
     return this;
   }
 
   /**
-   * Add a minumum statistic to dynamically return the
+   * Add a minimum statistic to dynamically return the
    * latest value of the source.
    * @param key key of this statistic
-   * @param source atomic long minumum
+   * @param source atomic long minimum
    * @return the builder.
    */
   public DynamicIOStatisticsBuilder withAtomicLongMinimum(String key,
       AtomicLong source) {
-    withLongFunctionMinumum(key, s -> source.get());
+    withLongFunctionMinimum(key, s -> source.get());
     return this;
   }
 
   /**
-   * Add a minumum statistic to dynamically return the
+   * Add a minimum statistic to dynamically return the
    * latest value of the source.
    * @param key key of this statistic
-   * @param source atomic int minumum
+   * @param source atomic int minimum
    * @return the builder.
    */
-  public DynamicIOStatisticsBuilder withAtomicIntegerMinumum(String key,
+  public DynamicIOStatisticsBuilder withAtomicIntegerMinimum(String key,
       AtomicInteger source) {
-    withLongFunctionMinumum(key, s -> source.get());
+    withLongFunctionMinimum(key, s -> source.get());
     return this;
   }
 
@@ -233,6 +233,7 @@ public class DynamicIOStatisticsBuilder {
 
   /**
    * Add a new evaluator to the mean statistics.
+   * <p></p>
    * This is a function which must return the mean and the sample count.
    * @param key key of this statistic
    * @param eval evaluator for the statistic
@@ -243,6 +244,5 @@ public class DynamicIOStatisticsBuilder {
     activeInstance().addMeanStatisticFunction(key, eval);
     return this;
   }
-
 
 }

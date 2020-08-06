@@ -246,4 +246,17 @@ public interface IOStatisticsStore extends IOStatistics,
    * @return an object to close after an operation completes.
    */
   DurationTracker trackDuration(String prefix);
+
+  /**
+   * Initiate a duration tracking operation by creating/returning
+   * an object whose {@code close()} call will
+   * invoke {@link #addTimedOperation(String, Duration)} to
+   * update the statistics.
+   * <p></p>
+   * The expected use is within a try-with-resources clause.
+   * @param prefix statistic prefix
+   * @param count  #of times to increment the matching counter.
+   * @return an object to close after an operation completes.
+   */
+  DurationTracker trackDuration(String prefix, int count);
 }

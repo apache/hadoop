@@ -790,6 +790,10 @@ public class Listing extends AbstractStoreOperation {
       iostats = iostatisticsStore()
           .withDurationTracking(OP_HTTP_LIST_REQUEST)
           .build();
+      try (DurationTracker ignored =
+               iostats.trackDuration(OP_HTTP_LIST_REQUEST)) {
+        // TODO
+      }
     }
 
     /**
@@ -836,7 +840,6 @@ public class Listing extends AbstractStoreOperation {
           // need to request a new set of objects.
           LOG.debug("[{}], Requesting next {} objects under {}",
               listingCount, maxKeys, listPath);
-          iostats.incrementCounter(OP_HTTP_LIST_REQUEST);
           try (DurationTracker ignored =
                    iostats.trackDuration(OP_HTTP_LIST_REQUEST)) {
             // TODO

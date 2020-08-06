@@ -23,6 +23,9 @@ import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * A mean statistic represented as the sum and the sample count;
  * the mean is calculated on demand.
@@ -47,12 +50,14 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
  *   <li>{@link #clear()} </li>
  *   <li>{@link #setSamplesAndSum(long, long)}</li>
  *   <li>{@link #set(MeanStatistic)}</li>
+ *   <li>{@link #setSamples(long)} and {@link #setSum(long)}</li>
  * </ol>
  * So is the {@link #mean()} method. This ensures that when
  * used to aggregated statistics, the aggregate value and sample
  * count are set and evaluated consistently.
- * No other operations are synchronized.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public final class MeanStatistic implements Serializable, Cloneable {
 
   private static final long serialVersionUID = 567888327998615425L;
@@ -135,7 +140,7 @@ public final class MeanStatistic implements Serializable, Cloneable {
   public synchronized void setSamplesAndSum(long sampleCount,
       long newSum) {
     setSamples(sampleCount);
-    sum = sampleCount;
+    sum = newSum;
   }
 
   /**
@@ -151,7 +156,7 @@ public final class MeanStatistic implements Serializable, Cloneable {
    * Set the sum.
    * @param sum new sum
    */
-  public void setSum(final long sum) {
+  public synchronized void setSum(final long sum) {
     this.sum = sum;
   }
 
@@ -165,7 +170,7 @@ public final class MeanStatistic implements Serializable, Cloneable {
    * into an entry.
    * @param samples sample count.
    */
-  public void setSamples(final long samples) {
+  public synchronized void setSamples(final long samples) {
     if (samples < 0) {
       this.samples = 0;
     } else {
@@ -259,7 +264,7 @@ public final class MeanStatistic implements Serializable, Cloneable {
 
   @Override
   public String toString() {
-    return String.format("sum=%d, samples=%d, mean=%3f",
+    return String.format("(sum=%d, samples=%d, mean=%.4f)",
         sum, samples, mean());
   }
 

@@ -47,10 +47,9 @@ public final class IOStatisticsSupport {
     return new IOStatisticsSnapshot(statistics);
   }
 
-
   /**
-   * Create a snapsnot statistics instance ready to aggregate data.
-   * <p>
+   * Create a snapshot statistics instance ready to aggregate data.
+   * <p></p>
    * The instance can be serialized, and its
    * {@code toString()} method lists all the values.
    * @return an empty snapshot

@@ -73,7 +73,6 @@ final class IOStatisticsStoreBuilderImpl implements
     return this;
   }
 
-
   @Override
   public IOStatisticsStoreBuilderImpl withDurationTracking(
       final String... prefixes) {
