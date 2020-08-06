@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.DateUtils;
@@ -120,6 +121,16 @@ public class LeafQueue extends AbstractCSQueue {
   private volatile ResourceLimits cachedResourceLimitsForHeadroom = null;
 
   private volatile OrderingPolicy<FiCaSchedulerApp> orderingPolicy = null;
+
+  // Map<Partition, Map<SchedulingMode, Map<User, CachedUserLimit>>>
+  // Not thread safe: only the last level is a ConcurrentMap
+  @VisibleForTesting
+  Map<String, Map<SchedulingMode, ConcurrentMap<String, CachedUserLimit>>>
+      userLimitsCache = new HashMap<>();
+
+  // Not thread safe
+  @VisibleForTesting
+  long currentUserLimitCacheVersion = 0;
 
   // record all ignore partition exclusivityRMContainer, this will be used to do
   // preemption, key is the partition of the RMContainer allocated on
@@ -1066,6 +1077,45 @@ public class LeafQueue extends AbstractCSQueue {
     return null;
   }
 
+  private ConcurrentMap<String, CachedUserLimit> getUserLimitCache(String partition,
+          SchedulingMode schedulingMode) {
+    synchronized (userLimitsCache) {
+      long latestVersion = usersManager.getLatestVersionOfUsersState();
+
+      if (latestVersion != this.currentUserLimitCacheVersion) {
+        // User limits cache needs invalidating
+        this.currentUserLimitCacheVersion = latestVersion;
+        userLimitsCache.clear();
+
+        Map<SchedulingMode, ConcurrentMap<String, CachedUserLimit>> uLCByPartition =
+            new HashMap<>();
+        userLimitsCache.put(partition, uLCByPartition);
+
+        ConcurrentMap<String, CachedUserLimit> uLCBySchedulingMode = new ConcurrentHashMap<>();
+        uLCByPartition.put(schedulingMode, uLCBySchedulingMode);
+
+        return uLCBySchedulingMode;
+      }
+
+      // User limits cache does not need invalidating
+      Map<SchedulingMode, ConcurrentMap<String, CachedUserLimit>> uLCByPartition =
+              userLimitsCache.get(partition);
+      if (uLCByPartition == null) {
+        uLCByPartition = new HashMap<>();
+        userLimitsCache.put(partition, uLCByPartition);
+      }
+
+      ConcurrentMap<String, CachedUserLimit> uLCBySchedulingMode =
+          uLCByPartition.get(schedulingMode);
+      if (uLCBySchedulingMode == null) {
+        uLCBySchedulingMode = new ConcurrentHashMap<>();
+        uLCByPartition.put(schedulingMode, uLCBySchedulingMode);
+      }
+
+      return uLCBySchedulingMode;
+    }
+  }
+
   @Override
   public CSAssignment assignContainers(Resource clusterResource,
       CandidateNodeSet<FiCaSchedulerNode> candidates,
@@ -1112,7 +1162,8 @@ public class LeafQueue extends AbstractCSQueue {
       return CSAssignment.NULL_ASSIGNMENT;
     }
 
-    Map<String, CachedUserLimit> userLimits = new HashMap<>();
+    ConcurrentMap<String, CachedUserLimit> userLimits =
+        this.getUserLimitCache(candidates.getPartition(), schedulingMode);
     boolean needAssignToQueueCheck = true;
     IteratorSelector sel = new IteratorSelector();
     sel.setPartition(candidates.getPartition());
@@ -1157,7 +1208,12 @@ public class LeafQueue extends AbstractCSQueue {
           cachedUserLimit);
       if (cul == null) {
         cul = new CachedUserLimit(userLimit);
-        userLimits.put(application.getUser(), cul);
+        CachedUserLimit retVal = userLimits.putIfAbsent(application.getUser(), cul);
+        if (retVal != null) {
+          // another thread updated the user limit cache before us
+          cul = retVal;
+          userLimit = cul.userLimit;
+        }
       }
       // Check user limit
       boolean userAssignable = true;
@@ -2234,8 +2290,8 @@ public class LeafQueue extends AbstractCSQueue {
 
   static class CachedUserLimit {
     final Resource userLimit;
-    boolean canAssign = true;
-    Resource reservation = Resources.none();
+    volatile boolean canAssign = true;
+    volatile Resource reservation = Resources.none();
 
     CachedUserLimit(Resource userLimit) {
       this.userLimit = userLimit;
