@@ -2406,6 +2406,9 @@ public class YarnConfiguration extends Configuration {
   public static final String YARN_HTTP_WEBAPP_CUSTOM_UNWRAPPED_DAO_CLASSES =
       "yarn.http.rmwebapp.custom.unwrapped.dao.classes";
 
+  public static final String YARN_WEBAPP_CUSTOM_WEBSERVICE_CLASS =
+      "yarn.webapp.custom.webservice.class";
+
   /**
    * Whether or not users are allowed to request that Docker containers honor
    * the debug deletion delay. This is useful for troubleshooting Docker
