@@ -244,10 +244,6 @@ public interface HdfsClientConfigKeys {
       "dfs.namenode.snapshot.capture.openfiles";
   boolean DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES_DEFAULT = false;
 
-  String DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED =
-      "dfs.namenode.snapshot.trashroot.enabled";
-  boolean DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED_DEFAULT = false;
-
   String DFS_PROVIDED_ALIASMAP_INMEMORY_RPC_ADDRESS =
       "dfs.provided.aliasmap.inmemory.dnrpc-address";
 
