@@ -111,16 +111,9 @@ public interface S3AInputStreamStatistics extends AutoCloseable,
   ChangeTrackerStatistics getChangeTrackerStatistics();
 
   /**
-   * Merge the statistics into the filesystem's instrumentation instance.
-   * <p>
-   * Takes a diff between the current version of the stats and the
-   * version of the stats when merge was last called, and merges the diff
-   * into the instrumentation instance. Used to periodically merge the
-   * stats into the fs-wide stats
-   * <p>
-   * <b>Behavior is undefined if called on a closed instance.</b>
+   * A stream unbuffer() call has been made.
    */
-  void merge(boolean isClosed);
+  void unbuffered();
 
   long getCloseOperations();
 

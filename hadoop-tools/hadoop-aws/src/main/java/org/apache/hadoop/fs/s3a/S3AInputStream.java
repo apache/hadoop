@@ -847,7 +847,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     try {
       closeStream("unbuffer()", contentRangeFinish, false);
     } finally {
-      streamStatistics.merge(false);
+      streamStatistics.unbuffered();
     }
   }
 

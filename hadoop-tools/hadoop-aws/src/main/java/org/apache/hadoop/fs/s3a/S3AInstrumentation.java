@@ -709,6 +709,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
           .withDurationTracking(OP_HTTP_GET_REQUEST)
           .build();
       setIOStatistics(st);
+      // create initial snapshot of merged statistics
       mergedStats = snapshotIOStatistics(st);
     }
 
@@ -891,6 +892,11 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       return sb.toString();
     }
 
+    @Override
+    public void unbuffered() {
+      merge(false);
+    }
+
     /**
      * Merge the statistics into the filesystem's instrumentation instance.
      * Takes a diff between the current version of the stats and the
@@ -900,8 +906,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
      * <p></p>
      * <b>Behavior is undefined if called on a closed instance.</b>
      */
-    @Override
-    public void merge(boolean isClosed) {
+    private void merge(boolean isClosed) {
 
       LOG.debug("Merging statistics into FS statistics in {}: {}",
           (isClosed ? "close()" : "unbuffer()"),

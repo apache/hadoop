@@ -154,7 +154,7 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     }
 
     @Override
-    public void merge(final boolean isClosed) {
+    public void unbuffered() {
 
     }
 
