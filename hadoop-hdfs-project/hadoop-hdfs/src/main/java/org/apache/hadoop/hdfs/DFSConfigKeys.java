@@ -517,11 +517,6 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int
       DFS_NAMENODE_SNAPSHOT_SKIPLIST_MAX_SKIP_LEVELS_DEFAULT = 0;
 
-  public static final String DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED =
-      "dfs.namenode.snapshot.trashroot.enabled";
-  public static final boolean DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED_DEFAULT =
-      false;
-
   // Whether to enable datanode's stale state detection and usage for reads
   public static final String DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_KEY = "dfs.namenode.avoid.read.stale.datanode";
   public static final boolean DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_READ_DEFAULT = false;

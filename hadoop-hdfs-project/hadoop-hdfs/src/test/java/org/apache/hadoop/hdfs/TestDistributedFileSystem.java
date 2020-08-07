@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.FS_CLIENT_TOPOLOGY_RESOLUTION_ENABLED;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_FILE_CLOSE_NUM_COMMITTED_ALLOWED_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_CONTEXT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -2150,7 +2149,7 @@ public class TestDistributedFileSystem {
   @Test
   public void testGetTrashRoot() throws IOException {
     Configuration conf = getTestConfiguration();
-    conf.setBoolean(DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED, true);
+    conf.setBoolean("dfs.namenode.snapshot.trashroot.enabled", true);
     MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     try {
@@ -2191,7 +2190,7 @@ public class TestDistributedFileSystem {
   @Test
   public void testGetTrashRoots() throws IOException {
     Configuration conf = getTestConfiguration();
-    conf.setBoolean(DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED, true);
+    conf.setBoolean("dfs.namenode.snapshot.trashroot.enabled", true);
     MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     try {
@@ -2273,7 +2272,7 @@ public class TestDistributedFileSystem {
   public void testGetTrashRootsOnSnapshottableDirWithEZ()
       throws IOException, NoSuchAlgorithmException {
     Configuration conf = getTestConfiguration();
-    conf.setBoolean(DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED, true);
+    conf.setBoolean("dfs.namenode.snapshot.trashroot.enabled", true);
     // Set encryption zone config
     File tmpDir = GenericTestUtils.getTestDir(UUID.randomUUID().toString());
     final Path jksPath = new Path(tmpDir.toString(), "test.jks");
@@ -2327,7 +2326,7 @@ public class TestDistributedFileSystem {
   public void testGetTrashRootOnSnapshottableDirInEZ()
       throws IOException, NoSuchAlgorithmException {
     Configuration conf = getTestConfiguration();
-    conf.setBoolean(DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED, true);
+    conf.setBoolean("dfs.namenode.snapshot.trashroot.enabled", true);
     // Set EZ config
     File tmpDir = GenericTestUtils.getTestDir(UUID.randomUUID().toString());
     final Path jksPath = new Path(tmpDir.toString(), "test.jks");
@@ -2385,7 +2384,7 @@ public class TestDistributedFileSystem {
   public void testGetTrashRootOnEZInSnapshottableDir()
       throws IOException, NoSuchAlgorithmException {
     Configuration conf = getTestConfiguration();
-    conf.setBoolean(DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED, true);
+    conf.setBoolean("dfs.namenode.snapshot.trashroot.enabled", true);
     // Set EZ config
     File tmpDir = GenericTestUtils.getTestDir(UUID.randomUUID().toString());
     final Path jksPath = new Path(tmpDir.toString(), "test.jks");
