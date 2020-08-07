@@ -245,7 +245,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       new DFSHedgedReadMetrics();
   private static ThreadPoolExecutor HEDGED_READ_THREAD_POOL;
   private static volatile ThreadPoolExecutor STRIPED_READ_THREAD_POOL;
-  private final int smallBufferSize;
   private final long serverDefaultsValidityPeriod;
 
   /**
@@ -327,7 +326,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     this.stats = stats;
     this.socketFactory = NetUtils.getSocketFactory(conf, ClientProtocol.class);
     this.dtpReplaceDatanodeOnFailure = ReplaceDatanodeOnFailure.get(conf);
-    this.smallBufferSize = DFSUtilClient.getSmallBufferSize(conf);
     this.dtpReplaceDatanodeOnFailureReplication = (short) conf
         .getInt(HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.
                 MIN_REPLICATION,
