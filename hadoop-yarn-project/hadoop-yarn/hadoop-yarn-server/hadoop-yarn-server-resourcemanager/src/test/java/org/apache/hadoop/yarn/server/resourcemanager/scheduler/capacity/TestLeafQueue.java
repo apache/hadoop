@@ -1126,13 +1126,17 @@ public class TestLeafQueue {
   public void testUserLimitCacheActiveUsersChanged() throws Exception {
     // Setup some nodes
     String host_0 = "127.0.0.1";
-    FiCaSchedulerNode node_0 = TestUtils.getMockNode(host_0, DEFAULT_RACK, 0, 6*GB);
+    FiCaSchedulerNode node_0 =
+        TestUtils.getMockNode(host_0, DEFAULT_RACK, 0, 6*GB);
     String host_1 = "127.0.0.2";
-    FiCaSchedulerNode node_1 = TestUtils.getMockNode(host_1, DEFAULT_RACK, 0, 6*GB);
+    FiCaSchedulerNode node_1 =
+        TestUtils.getMockNode(host_1, DEFAULT_RACK, 0, 6*GB);
     String host_2 = "127.0.0.3";
-    FiCaSchedulerNode node_2 = TestUtils.getMockNode(host_2, DEFAULT_RACK, 0, 6*GB);
+    FiCaSchedulerNode node_2 =
+        TestUtils.getMockNode(host_2, DEFAULT_RACK, 0, 6*GB);
     String host_3 = "127.0.0.4";
-    FiCaSchedulerNode node_3 = TestUtils.getMockNode(host_3, DEFAULT_RACK, 0, 6*GB);
+    FiCaSchedulerNode node_3 =
+        TestUtils.getMockNode(host_3, DEFAULT_RACK, 0, 6*GB);
 
     Map<NodeId, FiCaSchedulerNode> nodes =
         ImmutableMap.of(
@@ -1172,8 +1176,10 @@ public class TestLeafQueue {
 
     // initial check
     assertEquals(0, leafQueue.userLimitsCache.size());
-    assertEquals(0, leafQueue.getUsersManager().preComputedAllUserLimit.size());
-    assertEquals(0, leafQueue.getUsersManager().preComputedActiveUserLimit.size());
+    assertEquals(0,
+        leafQueue.getUsersManager().preComputedAllUserLimit.size());
+    assertEquals(0,
+        leafQueue.getUsersManager().preComputedActiveUserLimit.size());
 
     // 4 users
     final String user_0 = "user_0";

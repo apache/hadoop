@@ -24,7 +24,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
@@ -91,8 +90,12 @@ public class UsersManager implements AbstractUsersManager {
       new HashMap<String, Set<ApplicationId>>();
 
   // Pre-computed list of user-limits.
-  Map<String, Map<SchedulingMode, Resource>> preComputedActiveUserLimit = new HashMap<>();
-  Map<String, Map<SchedulingMode, Resource>> preComputedAllUserLimit = new HashMap<>();
+  @VisibleForTesting
+  Map<String, Map<SchedulingMode, Resource>> preComputedActiveUserLimit =
+      new HashMap<>();
+  @VisibleForTesting
+  Map<String, Map<SchedulingMode, Resource>> preComputedAllUserLimit =
+      new HashMap<>();
 
   private float activeUsersTimesWeights = 0.0f;
   private float allUsersTimesWeights = 0.0f;

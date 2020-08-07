@@ -1077,8 +1077,9 @@ public class LeafQueue extends AbstractCSQueue {
     return null;
   }
 
-  private ConcurrentMap<String, CachedUserLimit> getUserLimitCache(String partition,
-          SchedulingMode schedulingMode) {
+  private ConcurrentMap<String, CachedUserLimit> getUserLimitCache(
+      String partition,
+      SchedulingMode schedulingMode) {
     synchronized (userLimitsCache) {
       long latestVersion = usersManager.getLatestVersionOfUsersState();
 
@@ -1087,19 +1088,20 @@ public class LeafQueue extends AbstractCSQueue {
         this.currentUserLimitCacheVersion = latestVersion;
         userLimitsCache.clear();
 
-        Map<SchedulingMode, ConcurrentMap<String, CachedUserLimit>> uLCByPartition =
-            new HashMap<>();
+        Map<SchedulingMode, ConcurrentMap<String, CachedUserLimit>>
+            uLCByPartition = new HashMap<>();
         userLimitsCache.put(partition, uLCByPartition);
 
-        ConcurrentMap<String, CachedUserLimit> uLCBySchedulingMode = new ConcurrentHashMap<>();
+        ConcurrentMap<String, CachedUserLimit> uLCBySchedulingMode =
+            new ConcurrentHashMap<>();
         uLCByPartition.put(schedulingMode, uLCBySchedulingMode);
 
         return uLCBySchedulingMode;
       }
 
       // User limits cache does not need invalidating
-      Map<SchedulingMode, ConcurrentMap<String, CachedUserLimit>> uLCByPartition =
-              userLimitsCache.get(partition);
+      Map<SchedulingMode, ConcurrentMap<String, CachedUserLimit>>
+          uLCByPartition = userLimitsCache.get(partition);
       if (uLCByPartition == null) {
         uLCByPartition = new HashMap<>();
         userLimitsCache.put(partition, uLCByPartition);
@@ -1208,7 +1210,8 @@ public class LeafQueue extends AbstractCSQueue {
           cachedUserLimit);
       if (cul == null) {
         cul = new CachedUserLimit(userLimit);
-        CachedUserLimit retVal = userLimits.putIfAbsent(application.getUser(), cul);
+        CachedUserLimit retVal =
+            userLimits.putIfAbsent(application.getUser(), cul);
         if (retVal != null) {
           // another thread updated the user limit cache before us
           cul = retVal;
