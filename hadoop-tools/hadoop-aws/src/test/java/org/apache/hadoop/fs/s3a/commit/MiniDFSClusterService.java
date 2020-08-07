@@ -39,7 +39,6 @@ public class MiniDFSClusterService extends AbstractService {
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
-    conf.setBoolean("dfs.webhdfs.enabled", false);
     super.serviceInit(conf);
   }
 
