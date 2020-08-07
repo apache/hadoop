@@ -1199,6 +1199,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       if (rmNode.originalTotalCapability != null) {
         rmNode.totalCapability = rmNode.originalTotalCapability;
         rmNode.originalTotalCapability = null;
+        rmNode.updatedCapability = true;
       }
       LOG.info("Node " + rmNode.nodeId + " in DECOMMISSIONING is " +
           "recommissioned back to RUNNING.");
