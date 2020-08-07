@@ -61,6 +61,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.StringJoiner;
 
 import static org.apache.hadoop.fs.impl.FutureIOSupport.awaitFuture;
 import static org.apache.hadoop.fs.s3a.Constants.S3N_FOLDER_SUFFIX;
@@ -710,6 +711,14 @@ public class Listing extends AbstractStoreOperation {
     public IOStatistics getIOStatistics() {
       return source.getIOStatistics();
     }
+
+    @Override
+    public String toString() {
+      return new StringJoiner(", ",
+          FileStatusListingIterator.class.getSimpleName() + "[", "]")
+          .add(" ").add(source.toString())
+          .toString();
+    }
   }
 
   /**
@@ -977,6 +986,13 @@ public class Listing extends AbstractStoreOperation {
       return IOStatisticsSupport.retrieveIOStatistics(statusIterator);
     }
 
+    @Override
+    public String toString() {
+      return new StringJoiner(", ",
+          LocatedFileStatusIterator.class.getSimpleName() + "[", "]")
+          .add(" ").add(statusIterator.toString())
+          .toString();
+    }
   }
 
   /**
@@ -1041,6 +1057,15 @@ public class Listing extends AbstractStoreOperation {
     public IOStatistics getIOStatistics() {
       return IOStatisticsSupport.retrieveIOStatistics(iterator);
     }
+
+    @Override
+    public String toString() {
+      return new StringJoiner(", ",
+          TombstoneReconcilingIterator.class.getSimpleName() + "[", "]")
+          .add(" ").add(iterator.toString())
+          .toString();
+    }
+
   }
 
   /**

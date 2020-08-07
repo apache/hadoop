@@ -55,6 +55,11 @@ import org.apache.hadoop.classification.InterfaceStability;
  * So is the {@link #mean()} method. This ensures that when
  * used to aggregated statistics, the aggregate value and sample
  * count are set and evaluated consistently.
+ * <p>
+ *   Other methods marked as synchronized because Findbugs overreacts
+ *   to the idea that some operations to update sum and sample count
+ *   are synchronized, but that things like equals are not.
+ * </p>
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -126,7 +131,9 @@ public final class MeanStatistic implements Serializable, Cloneable {
     return samples == 0;
   }
 
-
+  /**
+   * Set the values to 0.
+   */
   public void clear() {
     setSamplesAndSum(0, 0);
   }
@@ -140,7 +147,7 @@ public final class MeanStatistic implements Serializable, Cloneable {
   public synchronized void setSamplesAndSum(long sampleCount,
       long newSum) {
     setSamples(sampleCount);
-    sum = newSum;
+    setSum(newSum);
   }
 
   /**
@@ -227,12 +234,12 @@ public final class MeanStatistic implements Serializable, Cloneable {
    * @return a hash value
    */
   @Override
-  public int hashCode() {
+  public synchronized int hashCode() {
     return Objects.hash(sum, samples);
   }
 
   @Override
-  public boolean equals(final Object o) {
+  public synchronized boolean equals(final Object o) {
     if (this == o) {
       return true;
     }

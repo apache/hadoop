@@ -21,6 +21,7 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.StringJoiner;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -268,6 +269,17 @@ public class LocatedFileStatusFetcher implements IOStatisticsSource {
         }
       }
     }
+  }
+
+  @Override
+  public String toString() {
+    final IOStatistics ioStatistics = getIOStatistics();
+    StringJoiner stringJoiner = new StringJoiner(", ",
+        LocatedFileStatusFetcher.class.getSimpleName() + "[", "]");
+    if (ioStatistics != null) {
+      stringJoiner.add("IOStatistics=" + ioStatistics);
+    }
+    return stringJoiner.toString();
   }
 
   /**

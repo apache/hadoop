@@ -24,7 +24,8 @@ package org.apache.hadoop.fs.statistics.impl;
  */
 final class StubDurationTracker implements DurationTracker {
 
-  static final DurationTracker STUB_DURATION_TRACKER = new StubDurationTracker();
+  static final DurationTracker STUB_DURATION_TRACKER =
+      new StubDurationTracker();
 
   private StubDurationTracker() {
   }

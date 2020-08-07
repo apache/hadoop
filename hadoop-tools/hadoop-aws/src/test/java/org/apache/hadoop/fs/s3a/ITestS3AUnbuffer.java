@@ -22,7 +22,6 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.impl.statistics.S3AInputStreamStatistics;
-import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 import org.apache.hadoop.io.IOUtils;
 
 import org.assertj.core.api.Assertions;
@@ -100,9 +99,10 @@ public class ITestS3AUnbuffer extends AbstractS3ATestBase {
     int firstBytesToRead = 8;
 
     int secondBytesToRead = 1;
-    long expectedFinalBytesRead = firstBytesToRead + secondBytesToRead;
+    long expectedFinalBytesRead;
+    long expectedTotalBytesRead;
 
-    Object streamStatsStr = "uninited";
+    Object streamStatsStr;
     try {
       inputStream = fs.open(dest);
       streamStatsStr = demandStringifyIOStatisticsSource(inputStream);
@@ -119,16 +119,18 @@ public class ITestS3AUnbuffer extends AbstractS3ATestBase {
 
       // Validate that calling unbuffer twice in a row updates the statistics
       // correctly
+      bytesReadInClose.reset();
+      bytesRead.reset();
       readAndAssertBytesRead(inputStream, secondBytesToRead);
-
       inputStream.unbuffer();
       LOG.info("stream statistics after second read {}", streamStatsStr);
-
-      bytesRead.assertDiffEquals(expectedFinalBytesRead);
+      bytesRead.assertDiffEquals(secondBytesToRead);
       final long bytesInClose = bytesReadInClose.diff();
+      expectedFinalBytesRead = firstBytesToRead + secondBytesToRead;
+      expectedTotalBytesRead = expectedFinalBytesRead
+          + bytesInUnbuffer + bytesInClose;
 
-      totalBytesRead.assertDiffEquals(expectedFinalBytesRead
-          + bytesInUnbuffer + bytesInClose);
+      totalBytesRead.assertDiffEquals(expectedTotalBytesRead);
     } finally {
       LOG.info("Closing stream");
       IOUtils.closeStream(inputStream);
@@ -136,8 +138,7 @@ public class ITestS3AUnbuffer extends AbstractS3ATestBase {
     LOG.info("stream statistics after close {}", streamStatsStr);
 
     // Validate that closing the file does not further change the statistics
-    bytesRead.assertDiffEquals(expectedFinalBytesRead);
-    totalBytesRead.assertDiffEquals(FILE_LENGTH);
+    totalBytesRead.assertDiffEquals(expectedTotalBytesRead);
 
     // Validate that the input stream stats are correct when the file is closed
     S3AInputStreamStatistics streamStatistics = ((S3AInputStream) inputStream
@@ -145,8 +146,9 @@ public class ITestS3AUnbuffer extends AbstractS3ATestBase {
         .getS3AStreamStatistics();
     Assertions.assertThat(streamStatistics)
         .describedAs("Stream statistics %s", streamStatistics)
-        .hasFieldOrPropertyWithValue("bytesRead", expectedFinalBytesRead)
-        .hasFieldOrPropertyWithValue("totalBytesRead", (long)FILE_LENGTH);
+        .hasFieldOrPropertyWithValue("bytesRead",
+            expectedFinalBytesRead)
+        .hasFieldOrPropertyWithValue("totalBytesRead", expectedTotalBytesRead);
     assertEquals("S3AInputStream statistics were not updated properly in "
         + streamStatsStr,
         expectedFinalBytesRead,

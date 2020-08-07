@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.extractStatistics;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyCounterStatisticValue;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringifyIOStatisticsSource;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_BYTES;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_WRITE_BYTES;
 
@@ -120,7 +121,7 @@ public abstract class AbstractContractStreamIOStatisticsTest
     fs.mkdirs(path.getParent());
     boolean writesInBlocks = streamWritesInBlocks();
     try (FSDataOutputStream out = fs.create(path, true)) {
-      Object demandStatsString = IOStatisticsLogging.demandStringifyIOStatisticsSource(out);
+      Object demandStatsString = demandStringifyIOStatisticsSource(out);
       // before a write, no bytes
       final byte[] bytes = ContractTestUtils.toAsciiByteArray(
           "statistically-speaking");

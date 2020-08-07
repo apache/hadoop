@@ -37,7 +37,7 @@ import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStat
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class BufferedFSInputStream extends BufferedInputStream
-implements Seekable, PositionedReadable, HasFileDescriptor,
+    implements Seekable, PositionedReadable, HasFileDescriptor,
     IOStatisticsSource, StreamCapabilities {
   /**
    * Creates a <code>BufferedFSInputStream</code>

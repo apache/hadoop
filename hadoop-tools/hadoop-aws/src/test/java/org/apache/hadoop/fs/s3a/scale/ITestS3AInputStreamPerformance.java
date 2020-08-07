@@ -393,7 +393,8 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
     logTimePerIOP("line read", timer, lines);
     logStreamStatistics();
     assertNotNull("No IOStatistics through line reader", readerStatistics);
-    LOG.info("statistics from reader {}", ioStatisticsToString(readerStatistics));
+    LOG.info("statistics from reader {}",
+        ioStatisticsToString(readerStatistics));
   }
 
   private void logStreamStatistics() {
@@ -515,8 +516,10 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
             streamStatistics.getBytesSkippedOnSeek()));
     logStreamStatistics();
     IOStatistics iostats = in.getIOStatistics();
-    long maxHttpGet = lookupMaximumStatistic(iostats, OP_HTTP_GET_REQUEST + SUFFIX_MAX);
-    assertThatMinimumStatistic(iostats, OP_HTTP_GET_REQUEST + SUFFIX_MIN)
+    long maxHttpGet = lookupMaximumStatistic(iostats,
+        OP_HTTP_GET_REQUEST + SUFFIX_MAX);
+    assertThatMinimumStatistic(iostats,
+        OP_HTTP_GET_REQUEST + SUFFIX_MIN)
         .isGreaterThan(0)
         .isLessThan(maxHttpGet);
     MeanStatistic getMeanStat = lookupMeanStatistic(iostats,

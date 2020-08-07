@@ -81,7 +81,8 @@ public class ITestS3AMetrics extends AbstractS3ATestBase {
     MutableCounterLong read = (MutableCounterLong)
         instrumentation.getRegistry()
         .get(statName);
-    assertEquals("Stream statistics were not merged", expectedBytesRead, read.value());
+    assertEquals("Stream statistics were not merged", expectedBytesRead,
+        read.value());
   }
 
 

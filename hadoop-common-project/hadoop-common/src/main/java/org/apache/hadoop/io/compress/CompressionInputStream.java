@@ -38,8 +38,8 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSupport;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public abstract class CompressionInputStream extends InputStream implements Seekable,
-    IOStatisticsSource {
+public abstract class CompressionInputStream extends InputStream
+    implements Seekable, IOStatisticsSource {
   /**
    * The input stream to be compressed. 
    */

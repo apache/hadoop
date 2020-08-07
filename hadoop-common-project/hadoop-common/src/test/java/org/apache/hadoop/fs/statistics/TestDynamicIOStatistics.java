@@ -38,6 +38,7 @@ import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertCounte
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertCounterStatisticIsUntracked;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyCounterStatisticValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringifyIOStatistics;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringifyIOStatisticsSource;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToString;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.ENTRY_PATTERN;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.NULL_SOURCE;
@@ -229,7 +230,7 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
     // this is not yet evaluated
     Object demand = demandStringifyIOStatistics(statistics);
     // nor is this.
-    Object demandSource = IOStatisticsLogging.demandStringifyIOStatisticsSource(statsSource);
+    Object demandSource = demandStringifyIOStatisticsSource(statsSource);
 
     // show it evaluates
     String formatted1 = String.format(counterPattern, ALONG, aLong.get());
@@ -257,7 +258,7 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
 
   @Test
   public void testNullSourceStringification() throws Throwable {
-    assertThat(IOStatisticsLogging.demandStringifyIOStatisticsSource((IOStatisticsSource) null)
+    assertThat(demandStringifyIOStatisticsSource((IOStatisticsSource) null)
         .toString())
         .isEqualTo(NULL_SOURCE);
   }

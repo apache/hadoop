@@ -1121,7 +1121,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
      * Aggregate statistics of all supplied by
      * committed uploads.
      */
-    IOStatisticsSnapshot ioStatistics = new IOStatisticsSnapshot();
+    private IOStatisticsSnapshot ioStatistics = new IOStatisticsSnapshot();
 
     /**
      * Construct from a source FS and list of files.
@@ -1186,7 +1186,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
 
     /**
      * Callback when a pendingset has been committed,
-     * including any source statistics.,
+     * including any source statistics.
      * @param sourceStatistics any source statistics
      */
     public void pendingsetCommitted(final IOStatistics sourceStatistics) {

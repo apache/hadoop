@@ -41,7 +41,6 @@ import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.statistics.impl.DurationTracker;
-import org.apache.hadoop.util.DurationInfo;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -709,7 +708,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       sb.append(" contentRangeFinish=").append(contentRangeFinish);
       sb.append(" remainingInCurrentRequest=")
           .append(remainingInCurrentRequest());
-      sb.append(changeTracker);
+      sb.append(" ").append(changeTracker);
       sb.append('\n').append(s);
       sb.append('}');
       return sb.toString();

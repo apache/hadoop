@@ -487,7 +487,8 @@ class S3ABlockOutputStream extends OutputStream implements
     if (block != null) {
       sb.append(", activeBlock=").append(block);
     }
-    sb.append(IOStatisticsLogging.ioStatisticsSourceToString(this));
+    sb.append(" Statistics=")
+        .append(IOStatisticsLogging.ioStatisticsSourceToString(this));
     sb.append('}');
     return sb.toString();
   }

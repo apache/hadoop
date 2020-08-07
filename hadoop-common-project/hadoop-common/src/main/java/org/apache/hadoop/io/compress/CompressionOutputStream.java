@@ -33,7 +33,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSupport;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public abstract class CompressionOutputStream extends OutputStream
-  implements IOStatisticsSource {
+    implements IOStatisticsSource {
   /**
    * The output stream to be compressed. 
    */

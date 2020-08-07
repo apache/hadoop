@@ -301,7 +301,8 @@ final class IOStatisticsStoreImpl extends WrappedIOStatistics
     // the most complex
     meanStatisticMap.entrySet().forEach(e -> {
       MeanStatistic current = e.getValue();
-      MeanStatistic sourceValue = lookup(statistics.meanStatistics(), e.getKey());
+      MeanStatistic sourceValue = lookup(
+          statistics.meanStatistics(), e.getKey());
       current.add(sourceValue);
     });
     return true;

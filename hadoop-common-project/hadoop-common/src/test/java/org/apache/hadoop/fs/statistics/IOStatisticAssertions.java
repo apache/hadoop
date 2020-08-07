@@ -27,7 +27,6 @@ import java.io.Serializable;
 import java.util.Map;
 
 import org.assertj.core.api.AbstractLongAssert;
-import org.assertj.core.api.Assertions;
 import org.assertj.core.api.ObjectAssert;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -244,7 +243,7 @@ public final class IOStatisticAssertions {
       final Map<String, E> map) {
     final E statistic = lookupStatistic(type, key, map);
     return assertThat(statistic)
-        .describedAs("%s named %s" , type, key);
+        .describedAs("%s named %s", type, key);
   }
 
   /**
@@ -261,7 +260,7 @@ public final class IOStatisticAssertions {
       final Map<String, Long> map) {
     final long statistic = lookupStatistic(type, key, map);
     return assertThat(statistic)
-        .describedAs("%s named %s" , type, key);
+        .describedAs("%s named %s", type, key);
   }
 
   /**
@@ -332,7 +331,7 @@ public final class IOStatisticAssertions {
   /**
    * Start an assertion chain on
    * a required mean statistic with the initial validation on the
-   * sample count and sum
+   * sample count and sum.
    * @param stats statistics source
    * @param key statistic key
    * @return an ongoing assertion
@@ -435,7 +434,8 @@ public final class IOStatisticAssertions {
    * @param ioStatisticsSource source
    * @return the statistics, guaranteed to be non null
    */
-  private static IOStatistics extractStatistics(final IOStatisticsSource ioStatisticsSource) {
+  private static IOStatistics extractStatistics(
+      final IOStatisticsSource ioStatisticsSource) {
     IOStatistics statistics = ioStatisticsSource.getIOStatistics();
     assertThat(statistics)
         .describedAs("Statistics from %s", ioStatisticsSource)
