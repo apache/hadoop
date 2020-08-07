@@ -933,14 +933,20 @@ public class ShuffleHandler extends AuxiliaryService {
           sendError(ctx, METHOD_NOT_ALLOWED);
           return;
       }
-      // Check whether the shuffle version is compatible
-      if (!ShuffleHeader.DEFAULT_HTTP_HEADER_NAME.equals(
-          request.headers() != null ?
-              request.headers().get(ShuffleHeader.HTTP_HEADER_NAME) : null)
-          || !ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION.equals(
-              request.headers() != null ?
-                  request.headers()
-                      .get(ShuffleHeader.HTTP_HEADER_VERSION) : null)) {
+
+      boolean isCompatible = request.headers() != null;
+      ShuffleHeader.HeaderVersionProtocol headerVersionProtocol = null;
+      if (isCompatible) {
+        headerVersionProtocol =
+            ShuffleHeader.getHeaderVersionProtocol(
+                request.headers().get(ShuffleHeader.HTTP_HEADER_VERSION),
+                request.headers().get(ShuffleHeader.HTTP_HEADER_TARGET_VERSION));
+        // Check whether the shuffle version is compatible
+        isCompatible =
+            headerVersionProtocol.isHeaderCompatible(
+                request.headers().get(ShuffleHeader.HTTP_HEADER_NAME));
+      }
+      if (!isCompatible) {
         sendError(ctx, "Incompatible shuffle request version", BAD_REQUEST);
       }
       final Map<String,List<String>> q =
@@ -995,7 +1001,7 @@ public class ShuffleHandler extends AuxiliaryService {
       HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
       try {
         verifyRequest(jobId, ctx, request, response,
-            new URL("http", "", this.port, reqUri));
+            new URL("http", "", this.port, reqUri), headerVersionProtocol);
       } catch (IOException e) {
         LOG.warn("Shuffle failure ", e);
         sendError(ctx, e.getMessage(), UNAUTHORIZED);
@@ -1013,7 +1019,7 @@ public class ShuffleHandler extends AuxiliaryService {
 
       try {
         populateHeaders(mapIds, jobId, user, reduceId, request,
-          response, keepAliveParam, mapOutputInfoMap);
+          response, keepAliveParam, mapOutputInfoMap, headerVersionProtocol);
       } catch(IOException e) {
         ch.write(response);
         LOG.error("Shuffle error in populating headers :", e);
@@ -1106,7 +1112,12 @@ public class ShuffleHandler extends AuxiliaryService {
     }
 
     protected MapOutputInfo getMapOutputInfo(String mapId, int reduce,
-        String jobId, String user) throws IOException {
+            String jobId, String user) throws IOException {
+      return getMapOutputInfo(mapId, reduce, jobId, user, ShuffleHeader.DEFAULT_VERSION_PROTOCOL);
+    }
+
+    protected MapOutputInfo getMapOutputInfo(String mapId, int reduce,
+        String jobId, String user, ShuffleHeader.HeaderVersionProtocol protocol) throws IOException {
       AttemptPathInfo pathInfo;
       try {
         AttemptPathIdentifier identifier = new AttemptPathIdentifier(
@@ -1135,13 +1146,14 @@ public class ShuffleHandler extends AuxiliaryService {
       }
 
       MapOutputInfo outputInfo = new MapOutputInfo(pathInfo.dataPath, info);
+      outputInfo.setHeaderVersion(protocol.getCompatibleVersion());
       return outputInfo;
     }
 
     protected void populateHeaders(List<String> mapIds, String jobId,
         String user, int reduce, HttpRequest request, HttpResponse response,
-        boolean keepAliveParam, Map<String, MapOutputInfo> mapOutputInfoMap)
-        throws IOException {
+        boolean keepAliveParam, Map<String, MapOutputInfo> mapOutputInfoMap,
+        ShuffleHeader.HeaderVersionProtocol protocol) throws IOException {
 
       long contentLength = 0;
       for (String mapId : mapIds) {
@@ -1151,8 +1163,12 @@ public class ShuffleHandler extends AuxiliaryService {
         }
 
         ShuffleHeader header =
-            new ShuffleHeader(mapId, outputInfo.indexRecord.partLength,
-            outputInfo.indexRecord.rawLength, reduce);
+            new ShuffleHeader(
+                mapId,
+                outputInfo.indexRecord.partLength,
+                outputInfo.indexRecord.rawLength,
+                reduce,
+                protocol.getCompatibleVersion());
         DataOutputBuffer dob = new DataOutputBuffer();
         header.write(dob);
 
@@ -1197,15 +1213,29 @@ public class ShuffleHandler extends AuxiliaryService {
     class MapOutputInfo {
       final Path mapOutputFileName;
       final IndexRecord indexRecord;
+      private ShuffleHeader.HeaderVersion headerVersion;
 
       MapOutputInfo(Path mapOutputFileName, IndexRecord indexRecord) {
         this.mapOutputFileName = mapOutputFileName;
         this.indexRecord = indexRecord;
       }
+
+      public void setHeaderVersion(ShuffleHeader.HeaderVersion headerVersion) {
+        this.headerVersion = headerVersion;
+      }
+
+      public ShuffleHeader.HeaderVersion getHeaderVersion() {
+        return headerVersion;
+      }
     }
 
-    protected void verifyRequest(String appid, ChannelHandlerContext ctx,
-        HttpRequest request, HttpResponse response, URL requestUri)
+    protected void verifyRequest(
+        String appid,
+        ChannelHandlerContext ctx,
+        HttpRequest request,
+        HttpResponse response,
+        URL requestUri,
+        ShuffleHeader.HeaderVersionProtocol versionProtocol)
         throws IOException {
       SecretKey tokenSecret = secretManager.retrieveTokenSecret(appid);
       if (null == tokenSecret) {
@@ -1238,7 +1268,7 @@ public class ShuffleHandler extends AuxiliaryService {
       response.headers().set(ShuffleHeader.HTTP_HEADER_NAME,
           ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
       response.headers().set(ShuffleHeader.HTTP_HEADER_VERSION,
-          ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
+              versionProtocol.getCompatibleVersion().getVersionStr());
       if (LOG.isDebugEnabled()) {
         int len = reply.length();
         LOG.debug("Fetcher request verfied. enc_str=" + enc_str + ";reply=" +
@@ -1251,7 +1281,8 @@ public class ShuffleHandler extends AuxiliaryService {
         throws IOException {
       final IndexRecord info = mapOutputInfo.indexRecord;
       final ShuffleHeader header =
-        new ShuffleHeader(mapId, info.partLength, info.rawLength, reduce);
+          new ShuffleHeader(
+              mapId, info.partLength, info.rawLength, reduce, mapOutputInfo.getHeaderVersion());
       final DataOutputBuffer dob = new DataOutputBuffer();
       header.write(dob);
       ch.write(wrappedBuffer(dob.getData(), 0, dob.getLength()));

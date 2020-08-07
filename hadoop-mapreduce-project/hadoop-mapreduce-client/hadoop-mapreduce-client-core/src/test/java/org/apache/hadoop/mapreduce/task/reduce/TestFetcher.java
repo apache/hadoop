@@ -716,6 +716,26 @@ public class TestFetcher {
     verify(immo).abort();
   }
 
+  @Test(timeout = 10000)
+  public void testHeaderVersionCompatible() {
+    // client [1.0.0, 1.1.0, 1.1.1], server  [1.0.0, 1.1.0]
+    // compatible: 1.1.0
+    ShuffleHeader.HeaderVersionProtocol protocol =
+        ShuffleHeader.getHeaderVersionProtocol("1.0.0", "1.1.1");
+    assertTrue(protocol.isHeaderCompatible(ShuffleHeader.DEFAULT_HTTP_HEADER_NAME));
+    assertEquals(protocol.getCompatibleVersion().getVersionStr(), "1.1.0");
+    // client [1.0.0, 1.1.0], server  [1.0.0, 1.1.0]
+    // compatible: 1.1.0
+    protocol = ShuffleHeader.getHeaderVersionProtocol("1.0.0", "1.1.0");
+    assertTrue(protocol.isHeaderCompatible(ShuffleHeader.DEFAULT_HTTP_HEADER_NAME));
+    assertEquals(protocol.getCompatibleVersion().getVersionStr(), "1.1.0");
+    // client [1.0.0, 1.0.0], server  [1.0.0, 1.1.0]
+    // compatible: 1.0.0
+    protocol = ShuffleHeader.getHeaderVersionProtocol("1.0.0", "1.0.0");
+    assertTrue(protocol.isHeaderCompatible(ShuffleHeader.DEFAULT_HTTP_HEADER_NAME));
+    assertEquals(protocol.getCompatibleVersion().getVersionStr(), "1.0.0");
+  }
+
   public static class FakeFetcher<K,V> extends Fetcher<K,V> {
 
     // If connection need to be reopen.
