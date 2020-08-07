@@ -2364,8 +2364,12 @@ public class TestDistributedFileSystem {
       final String trAfterStr = trAfter.toUri().getPath();
       // The trash is now located in the dir inside
       final Path testSubDirTrash = new Path(testSubD, FileSystem.TRASH_PREFIX);
-      final String testSubDirTrashStr = testSubDirTrash.toUri().getPath();
-      assertTrue(trAfterStr.startsWith(testSubDirTrashStr));
+      UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+      final Path testSubDirUserTrash = new Path(testSubDirTrash,
+          ugi.getShortUserName());
+      final String testSubDirUserTrashStr =
+          testSubDirUserTrash.toUri().getPath();
+      assertEquals(testSubDirUserTrashStr, trAfterStr);
 
       // Cleanup
       dfs.disallowSnapshot(testSubD);
@@ -2423,8 +2427,12 @@ public class TestDistributedFileSystem {
       final String trAfterStr = trAfter.toUri().getPath();
       // The trash is now located in the dir inside
       final Path testSubDirTrash = new Path(testSubD, FileSystem.TRASH_PREFIX);
-      final String testSubDirTrashStr = testSubDirTrash.toUri().getPath();
-      assertTrue(trAfterStr.startsWith(testSubDirTrashStr));
+      UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+      final Path testSubDirUserTrash = new Path(testSubDirTrash,
+          ugi.getShortUserName());
+      final String testSubDirUserTrashStr =
+          testSubDirUserTrash.toUri().getPath();
+      assertEquals(testSubDirUserTrashStr, trAfterStr);
 
       // Cleanup
       dfs.disallowSnapshot(testDir);
