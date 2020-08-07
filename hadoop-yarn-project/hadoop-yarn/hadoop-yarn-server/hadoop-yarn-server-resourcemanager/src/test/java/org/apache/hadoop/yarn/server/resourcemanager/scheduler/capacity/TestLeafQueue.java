@@ -950,10 +950,15 @@ public class TestLeafQueue {
             TestUtils.spyHook);
     queues = newQueues;
     root.reinitialize(newRoot, csContext.getClusterResource());
+    root.updateClusterResource(clusterResource,
+        new ResourceLimits(clusterResource));
 
     // Mock the queue
     LeafQueue leafQueue = stubLeafQueue((LeafQueue) queues.get(A));
-    leafQueue.setUserLimitFactor(0.1f);
+
+    // Set user limit factor so some users are at their limit and the
+    // user limit cache has more than just a few entries
+    leafQueue.setUserLimitFactor(10 / nodeSize);
 
     // Flag to let allocation threads know to stop
     AtomicBoolean stopThreads = new AtomicBoolean(false);
@@ -966,34 +971,40 @@ public class TestLeafQueue {
         @Override
         public void run() {
           try {
+            boolean alwaysNull = true;
             while (!stopThreads.get()) {
-              CSAssignment assignment =
-                  leafQueue.assignContainers(clusterResource,
-                      nodes[random.nextInt(numNodes)],
-                      new ResourceLimits(clusterResource),
-                      SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
-              applyCSAssignment(clusterResource, assignment, leafQueue, nodesMap,
-                  leafQueue.applicationAttemptMap);
+              CSAssignment assignment = leafQueue.assignContainers(
+                  clusterResource,
+                  nodes[random.nextInt(numNodes)],
+                  new ResourceLimits(clusterResource),
+                  SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
+              applyCSAssignment(clusterResource, assignment, leafQueue,
+                  nodesMap, leafQueue.applicationAttemptMap);
+
+              if (assignment != CSAssignment.NULL_ASSIGNMENT) {
+                alwaysNull = false;
+              }
               Thread.sleep(500);
             }
 
             // One more assignment but not committing so that the
             // user limits cache is updated to the latest version
-            leafQueue.assignContainers(clusterResource,
+            CSAssignment assignment = leafQueue.assignContainers(
+                clusterResource,
                 nodes[random.nextInt(numNodes)],
                 new ResourceLimits(clusterResource),
                 SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY);
+
+            if (alwaysNull && assignment == CSAssignment.NULL_ASSIGNMENT) {
+              LOG.error("Thread only got null assignments");
+              errorInThreads.set(true);
+            }
           } catch (Exception e) {
-            LOG.error("Exiting because of " + e);
+            LOG.error("Thread exiting because of exception", e);
             errorInThreads.set(true);
           }
         }
       }, "Scheduling Thread " + i);
-    }
-
-    // Start threads
-    for (int i = 0; i < numAllocationThreads; i++) {
-      threads[i].start();
     }
 
     // Set up users and some apps
@@ -1005,10 +1016,6 @@ public class TestLeafQueue {
         new ArrayList<>(10);
     List<FiCaSchedulerApp> apps = new ArrayList<>(10);
     Priority priority = TestUtils.createMockPriority(1);
-
-    // Set user limit factor so some users are at their limit and the
-    // user limit cache has more than just a few entries
-    leafQueue.setUserLimitFactor(10 / nodeSize);
 
     // Start up 10 apps to begin with
     int appId;
@@ -1027,6 +1034,11 @@ public class TestLeafQueue {
 
       applicationAttemptIds.add(applicationAttemptId);
       apps.add(app);
+    }
+
+    // Start threads
+    for (int i = 0; i < numAllocationThreads; i++) {
+      threads[i].start();
     }
 
     final long startTime = Time.monotonicNow();
@@ -1063,7 +1075,7 @@ public class TestLeafQueue {
         applicationAttemptIds.remove(i);
       }
 
-      if ((Time.monotonicNow() - startTime) > runTime) {
+      if (errorInThreads.get() || (Time.monotonicNow() - startTime) > runTime) {
         break;
       }
     }
@@ -1080,7 +1092,7 @@ public class TestLeafQueue {
     assertFalse(errorInThreads.get());
 
     // check there is only one partition in the user limits cache
-    assertEquals(leafQueue.userLimitsCache.size(), 1);
+    assertEquals( 1, leafQueue.userLimitsCache.size());
 
     Map<SchedulingMode, ConcurrentMap<String, LeafQueue.CachedUserLimit>>
         uLCByPartition = leafQueue.userLimitsCache.get(nodes[0].getPartition());
@@ -1152,6 +1164,8 @@ public class TestLeafQueue {
             TestUtils.spyHook);
     queues = newQueues;
     root.reinitialize(newRoot, csContext.getClusterResource());
+    root.updateClusterResource(clusterResource,
+        new ResourceLimits(clusterResource));
 
     // Mock the queue
     LeafQueue leafQueue = stubLeafQueue((LeafQueue)queues.get(A));
