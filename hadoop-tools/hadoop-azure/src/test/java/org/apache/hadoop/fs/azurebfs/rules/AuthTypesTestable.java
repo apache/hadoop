@@ -5,6 +5,10 @@ import org.apache.hadoop.fs.azurebfs.services.AuthType;
 
 public interface AuthTypesTestable {
 
+  default boolean isAuthTypeTestsEnabled(){
+    return true;
+  }
+
   void setAuthType(AuthType authType);
 
   AbfsConfiguration getConfiguration();

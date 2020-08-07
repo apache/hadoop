@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Random;
 
+import org.junit.Before;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -46,8 +47,12 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
 
   public ITestAzureBlobFileSystemE2E() throws Exception {
     super();
-    AbfsConfiguration configuration = this.getConfiguration();
-    configuration.set(ConfigurationKeys.FS_AZURE_READ_AHEAD_QUEUE_DEPTH, "0");
+  }
+
+  @Before
+  public void setup() throws Exception {
+    super.getRawConfiguration().set(ConfigurationKeys.FS_AZURE_READ_AHEAD_QUEUE_DEPTH, "0");
+    super.setup();
   }
 
   @Test

@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.List;
 
 import org.junit.Assume;
+import org.junit.Before;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -52,13 +53,17 @@ public class ITestAzureBlobFileSystemCheckAccess
     extends AbstractAbfsIntegrationTest {
 
   private static final String TEST_FOLDER_PATH = "CheckAccessTestFolder";
-  private final FileSystem superUserFs;
+  private FileSystem superUserFs;
   private FileSystem testUserFs;
-  private final String testUserGuid;
-  private final boolean isCheckAccessEnabled;
-  private final boolean isHNSEnabled;
+  private String testUserGuid;
+  private boolean isCheckAccessEnabled;
+  private boolean isHNSEnabled;
 
   public ITestAzureBlobFileSystemCheckAccess() throws Exception {
+  }
+
+  @Before
+  public void init() throws Exception {
     super.setup();
     this.superUserFs = getFileSystem();
     testUserGuid = getConfiguration()

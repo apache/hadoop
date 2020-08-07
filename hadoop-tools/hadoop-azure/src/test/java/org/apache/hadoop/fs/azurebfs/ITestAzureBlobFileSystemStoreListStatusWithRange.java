@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.Arrays;
 
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -94,6 +95,10 @@ public class ITestAzureBlobFileSystemStoreListStatusWithRange extends
 
   public ITestAzureBlobFileSystemStoreListStatusWithRange() throws Exception {
     super();
+  }
+
+  @Before
+  public void setup() throws Exception {
     if (this.getFileSystem() == null) {
       super.createFileSystem();
     }
@@ -102,6 +107,7 @@ public class ITestAzureBlobFileSystemStoreListStatusWithRange extends
     prepareTestFiles();
     // Sort the names for verification, ABFS service should return the results in order.
     Arrays.sort(SORTED_ENTRY_NAMES);
+    super.setup();
   }
 
   @Test

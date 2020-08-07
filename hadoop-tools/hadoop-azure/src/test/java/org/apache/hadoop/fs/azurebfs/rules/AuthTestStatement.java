@@ -38,6 +38,14 @@ public class AuthTestStatement extends Statement {
 
     @Override
     public void evaluate() throws Throwable {
+        if(testObj.isAuthTypeTestsEnabled()){
+            testForAuthTypes();
+        }else{
+            base.evaluate();
+        }
+    }
+
+    private void testForAuthTypes() throws Throwable {
         String testMethod = description.getTestClass() + "#" + description.getMethodName() + "-";
         String test = "";
         try {
