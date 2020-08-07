@@ -1407,6 +1407,9 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
           if (newResource != null) {
             updateNMResource(newResource);
             LOG.debug("Node's resource is updated to {}", newResource);
+            if (!totalResource.equals(newResource)) {
+              LOG.info("Node's resource is updated to {}", newResource);
+            }
           }
           if (timelineServiceV2Enabled) {
             updateTimelineCollectorData(response);
