@@ -87,11 +87,11 @@ public final class DistributedScheduler extends AbstractRequestInterceptor {
 
   public void init(AMRMProxyApplicationContext applicationContext) {
     super.init(applicationContext);
-    initLocal(applicationContext.getNMCotext().getNodeStatusUpdater()
+    initLocal(applicationContext.getNMContext().getNodeStatusUpdater()
         .getRMIdentifier(),
         applicationContext.getApplicationAttemptId(),
-        applicationContext.getNMCotext().getContainerAllocator(),
-        applicationContext.getNMCotext().getNMTokenSecretManager(),
+        applicationContext.getNMContext().getContainerAllocator(),
+        applicationContext.getNMContext().getNMTokenSecretManager(),
         applicationContext.getUser());
   }
 
