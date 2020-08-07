@@ -3289,7 +3289,7 @@ public class DistributedFileSystem extends FileSystem
     statistics.incrementReadOps(1);
     storageStatistics.incrementOpCounter(OpType.GET_TRASH_ROOT);
     if (path == null) {
-      return super.getTrashRoot(path);
+      return super.getTrashRoot(null);
     }
 
     // Snapshottable directory trash root, not null if path is inside a
