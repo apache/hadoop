@@ -23,6 +23,7 @@ import java.lang.reflect.Field;
 import java.util.List;
 
 import com.google.common.collect.Lists;
+import org.apache.hadoop.fs.azurebfs.rules.AuthTypesToTest;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
@@ -76,7 +77,7 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   @Before
-  public void init() throws Exception {
+  public void setup() throws Exception {
     super.setup();
     this.superUserFs = getFileSystem();
     testUserGuid = getConfiguration()
@@ -123,6 +124,7 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   @Test(expected = FileNotFoundException.class)
+  @AuthTypesToTest(values = {AuthType.OAuth})
   public void testCheckAccessForNonExistentFile() throws Exception {
     checkPrerequisites();
     Path nonExistentFile = setupTestDirectoryAndUserAccess(
@@ -176,6 +178,8 @@ public class ITestAzureBlobFileSystemCheckAccess
 
     //  When the driver does not know if the account is HNS enabled or not it
     //  makes a server call and fails
+    setupTestDirectoryAndUserAccess("/",
+        FsAction.NONE);
     intercept(AccessControlException.class,
         "\"This request is not authorized to perform this operation using "
             + "this permission.\", 403",
@@ -197,6 +201,7 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   @Test
+  @AuthTypesToTest(values = {AuthType.OAuth})
   public void testFsActionNONE() throws Exception {
     checkPrerequisites();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test2.txt",
@@ -211,6 +216,7 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   @Test
+  @AuthTypesToTest(values = {AuthType.OAuth})
   public void testFsActionEXECUTE() throws Exception {
     checkPrerequisites();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test3.txt",
@@ -226,6 +232,7 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   @Test
+  @AuthTypesToTest(values = {AuthType.OAuth})
   public void testFsActionREAD() throws Exception {
     checkPrerequisites();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test4.txt",
@@ -241,6 +248,7 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   @Test
+  @AuthTypesToTest(values = {AuthType.OAuth})
   public void testFsActionWRITE() throws Exception {
     checkPrerequisites();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test5.txt",
@@ -256,6 +264,7 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   @Test
+  @AuthTypesToTest(values = {AuthType.OAuth})
   public void testFsActionREADEXECUTE() throws Exception {
     checkPrerequisites();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test6.txt",
@@ -271,6 +280,7 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   @Test
+  @AuthTypesToTest(values = {AuthType.OAuth})
   public void testFsActionWRITEEXECUTE() throws Exception {
     checkPrerequisites();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test7.txt",
@@ -286,6 +296,7 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   @Test
+  @AuthTypesToTest(values = {AuthType.OAuth})
   public void testFsActionALL() throws Exception {
     checkPrerequisites();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test8.txt",
@@ -304,6 +315,7 @@ public class ITestAzureBlobFileSystemCheckAccess
         isHNSEnabled);
     Assume.assumeTrue(FS_AZURE_ENABLE_CHECK_ACCESS + " is false",
         isCheckAccessEnabled);
+    Assume.assumeTrue(getAuthType() == AuthType.OAuth);
     checkIfConfigIsSet(FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_ID);
     checkIfConfigIsSet(FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_SECRET);
     checkIfConfigIsSet(FS_AZURE_BLOB_FS_CHECKACCESS_TEST_USER_GUID);

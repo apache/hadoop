@@ -1,6 +1,7 @@
 package org.apache.hadoop.fs.azurebfs.rules;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
@@ -29,6 +30,14 @@ public class AuthTestStatement extends Statement {
     }
 
     private Collection<AuthType> authTypesToTest() {
+        AuthTypesToTest authTypesToTest = description
+            .getAnnotation(AuthTypesToTest.class);
+        if (authTypesToTest != null) {
+            AuthType[] values = authTypesToTest.values();
+            if (values != null && values.length > 0) {
+                return Arrays.asList(values);
+            }
+        }
         final List authTypes = new ArrayList();
         authTypes.add(AuthType.OAuth);
         authTypes.add(AuthType.SharedKey);

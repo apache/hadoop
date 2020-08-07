@@ -94,6 +94,7 @@ public abstract class AbstractAbfsIntegrationTest extends
   @Override
   public void initFSEndpointForNewFS() throws Exception {
     fileSystemName = TEST_CONTAINER_PREFIX + UUID.randomUUID().toString();
+
     rawConfig = new Configuration();
     rawConfig.addResource(TEST_CONFIGURATION_FILE_NAME);
 
@@ -103,7 +104,7 @@ public abstract class AbstractAbfsIntegrationTest extends
       accountName = rawConfig.get(FS_AZURE_ABFS_ACCOUNT_NAME);
     }
     assumeTrue("Not set: " + FS_AZURE_ABFS_ACCOUNT_NAME,
-            accountName != null && !accountName.isEmpty());
+        accountName != null && !accountName.isEmpty());
 
     abfsConfig = new AbfsConfiguration(rawConfig, accountName);
 
