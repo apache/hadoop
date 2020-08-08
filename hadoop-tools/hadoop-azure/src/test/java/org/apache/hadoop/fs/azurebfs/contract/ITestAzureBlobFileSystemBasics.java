@@ -19,6 +19,7 @@ package org.apache.hadoop.fs.azurebfs.contract;
 
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
@@ -118,8 +119,8 @@ public class ITestAzureBlobFileSystemBasics extends FileSystemContractBaseTest
   }
 
   @Override
-  public AbfsConfiguration getConfiguration() {
-    return binding.getConfiguration();
+  public Configuration getInitialConfiguration() {
+    return binding.getInitialConfiguration();
   }
 
   @Override

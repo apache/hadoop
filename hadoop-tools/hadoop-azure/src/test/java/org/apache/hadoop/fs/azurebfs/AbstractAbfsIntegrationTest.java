@@ -20,7 +20,9 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.*;
+import java.util.Hashtable;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 
 import org.junit.After;
@@ -88,15 +90,13 @@ public abstract class AbstractAbfsIntegrationTest extends
   private boolean usingFilesystemForSASTests = false;
 
   protected AbstractAbfsIntegrationTest() throws Exception {
-    initFSEndpointForNewFS();
+    rawConfig = new Configuration();
+    rawConfig.addResource(TEST_CONFIGURATION_FILE_NAME);
   }
 
   @Override
   public void initFSEndpointForNewFS() throws Exception {
     fileSystemName = TEST_CONTAINER_PREFIX + UUID.randomUUID().toString();
-
-    rawConfig = new Configuration();
-    rawConfig.addResource(TEST_CONFIGURATION_FILE_NAME);
 
     this.accountName = rawConfig.get(FS_AZURE_ACCOUNT_NAME);
     if (accountName == null) {
@@ -322,9 +322,13 @@ public abstract class AbstractAbfsIntegrationTest extends
     return abfsConfig.get(FS_AZURE_ACCOUNT_KEY);
   }
 
-  @Override
   public AbfsConfiguration getConfiguration() {
     return abfsConfig;
+  }
+
+  @Override
+  public Configuration getInitialConfiguration() {
+    return rawConfig;
   }
 
   public Configuration getRawConfiguration() {

@@ -124,7 +124,7 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   @Test(expected = FileNotFoundException.class)
-  @AuthTypesToTest(values = {AuthType.OAuth})
+  @AuthTypesToTest(authTypes = {AuthType.OAuth})
   public void testCheckAccessForNonExistentFile() throws Exception {
     checkPrerequisites();
     Path nonExistentFile = setupTestDirectoryAndUserAccess(
@@ -201,7 +201,7 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   @Test
-  @AuthTypesToTest(values = {AuthType.OAuth})
+  @AuthTypesToTest(authTypes = {AuthType.OAuth})
   public void testFsActionNONE() throws Exception {
     checkPrerequisites();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test2.txt",
@@ -216,7 +216,7 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   @Test
-  @AuthTypesToTest(values = {AuthType.OAuth})
+  @AuthTypesToTest(authTypes = {AuthType.OAuth})
   public void testFsActionEXECUTE() throws Exception {
     checkPrerequisites();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test3.txt",
@@ -232,7 +232,7 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   @Test
-  @AuthTypesToTest(values = {AuthType.OAuth})
+  @AuthTypesToTest(authTypes = {AuthType.OAuth})
   public void testFsActionREAD() throws Exception {
     checkPrerequisites();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test4.txt",
@@ -248,7 +248,7 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   @Test
-  @AuthTypesToTest(values = {AuthType.OAuth})
+  @AuthTypesToTest(authTypes = {AuthType.OAuth})
   public void testFsActionWRITE() throws Exception {
     checkPrerequisites();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test5.txt",
@@ -264,7 +264,7 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   @Test
-  @AuthTypesToTest(values = {AuthType.OAuth})
+  @AuthTypesToTest(authTypes = {AuthType.OAuth})
   public void testFsActionREADEXECUTE() throws Exception {
     checkPrerequisites();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test6.txt",
@@ -280,7 +280,7 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   @Test
-  @AuthTypesToTest(values = {AuthType.OAuth})
+  @AuthTypesToTest(authTypes = {AuthType.OAuth})
   public void testFsActionWRITEEXECUTE() throws Exception {
     checkPrerequisites();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test7.txt",
@@ -296,7 +296,7 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   @Test
-  @AuthTypesToTest(values = {AuthType.OAuth})
+  @AuthTypesToTest(authTypes = {AuthType.OAuth})
   public void testFsActionALL() throws Exception {
     checkPrerequisites();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test8.txt",

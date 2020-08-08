@@ -66,8 +66,8 @@ public class ITestAbfsFileSystemContractSeek extends AbstractContractSeekTest
   }
 
   @Override
-  public AbfsConfiguration getConfiguration() {
-    return binding.getConfiguration();
+  public Configuration getInitialConfiguration() {
+    return binding.getInitialConfiguration();
   }
 
   @Override

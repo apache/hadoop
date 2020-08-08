@@ -23,6 +23,7 @@ import java.util.UUID;
 
 import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.junit.Assume;
+import org.junit.Before;
 import org.junit.Test;
 import org.assertj.core.api.Assertions;
 
@@ -57,7 +58,13 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
 
   private boolean isUsingXNSAccount;
   public ITestGetNameSpaceEnabled() throws Exception {
-    isUsingXNSAccount = getConfiguration().getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
+  }
+
+  @Before
+  public void setup() throws Exception {
+    super.setup();
+    isUsingXNSAccount = getConfiguration()
+        .getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
   }
 
   @Test

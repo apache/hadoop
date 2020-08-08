@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.azurebfs.contract;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
@@ -32,19 +33,34 @@ import org.junit.Assume;
  * Bind ABFS contract tests to the Azure test setup/teardown.
  */
 public class ABFSContractTestBinding extends AbstractAbfsIntegrationTest {
-  private final URI testUri;
+  private URI testUri;
+  private final boolean useExistingFileSystem;
 
   public ABFSContractTestBinding() throws Exception {
     this(true);
   }
 
   public ABFSContractTestBinding(
-      final boolean useExistingFileSystem) throws Exception{
-    if (useExistingFileSystem) {
+      final boolean useExistingFileSystem) throws Exception {
+      this.useExistingFileSystem = useExistingFileSystem;
+  }
+
+  public boolean isSecureMode() {
+    return this.getAuthType() == AuthType.SharedKey ? false : true;
+  }
+
+  @Override
+  public void initFSEndpointForNewFS() throws Exception {
+    super.initFSEndpointForNewFS();
+    setTestUri();
+  }
+
+  private void setTestUri() throws URISyntaxException {
+    if (this.useExistingFileSystem) {
       AbfsConfiguration configuration = getConfiguration();
       String testUrl = configuration.get(TestConfigurationKeys.FS_AZURE_CONTRACT_TEST_URI);
       Assume.assumeTrue("Contract tests are skipped because of missing config property :"
-      + TestConfigurationKeys.FS_AZURE_CONTRACT_TEST_URI, testUrl != null);
+          + TestConfigurationKeys.FS_AZURE_CONTRACT_TEST_URI, testUrl != null);
 
       if (getAuthType() != AuthType.SharedKey) {
         testUrl = testUrl.replaceFirst(FileSystemUriSchemes.ABFS_SCHEME, FileSystemUriSchemes.ABFS_SECURE_SCHEME);
@@ -61,7 +77,4 @@ public class ABFSContractTestBinding extends AbstractAbfsIntegrationTest {
     }
   }
 
-  public boolean isSecureMode() {
-    return this.getAuthType() == AuthType.SharedKey ? false : true;
-  }
 }

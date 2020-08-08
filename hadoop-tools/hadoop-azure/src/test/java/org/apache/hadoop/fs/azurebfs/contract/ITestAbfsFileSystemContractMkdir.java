@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.azurebfs.contract;
 import org.junit.Rule;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.rules.AuthTestsRule;
 import org.apache.hadoop.fs.azurebfs.rules.AuthTypesTestable;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
@@ -66,8 +65,8 @@ public class ITestAbfsFileSystemContractMkdir extends AbstractContractMkdirTest
   }
 
   @Override
-  public AbfsConfiguration getConfiguration() {
-    return binding.getConfiguration();
+  public Configuration getInitialConfiguration() {
+    return binding.getInitialConfiguration();
   }
 
   @Override

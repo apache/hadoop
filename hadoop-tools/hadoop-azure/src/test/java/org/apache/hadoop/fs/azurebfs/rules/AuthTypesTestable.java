@@ -1,17 +1,16 @@
 package org.apache.hadoop.fs.azurebfs.rules;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 
-public interface AuthTypesTestable {
+import java.net.URISyntaxException;
 
-  default boolean isAuthTypeTestsEnabled(){
-    return true;
-  }
+public interface AuthTypesTestable {
 
   void setAuthType(AuthType authType);
 
-  AbfsConfiguration getConfiguration();
+  Configuration getInitialConfiguration();
 
   void initFSEndpointForNewFS() throws Exception;
 }

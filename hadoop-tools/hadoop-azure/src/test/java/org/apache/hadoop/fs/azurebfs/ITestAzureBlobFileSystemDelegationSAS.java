@@ -64,6 +64,10 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
       LoggerFactory.getLogger(ITestAzureBlobFileSystemDelegationSAS.class);
 
   public ITestAzureBlobFileSystemDelegationSAS() throws Exception {
+  }
+
+  @Override
+  public void setup() throws Exception {
     // These tests rely on specific settings in azure-auth-keys.xml:
     String sasProvider = getRawConfiguration().get(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE);
     Assume.assumeTrue(MockDelegationSASTokenProvider.class.getCanonicalName().equals(sasProvider));
@@ -74,10 +78,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
     // The test uses shared key to create a random filesystem and then creates another
     // instance of this filesystem using SAS authorization.
     Assume.assumeTrue(this.getAuthType() == AuthType.SharedKey);
-  }
 
-  @Override
-  public void setup() throws Exception {
     boolean isHNSEnabled = this.getConfiguration().getBoolean(
         TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
     Assume.assumeTrue(isHNSEnabled);

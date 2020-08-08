@@ -23,6 +23,8 @@ package org.apache.hadoop.fs.azurebfs.constants;
  */
 public final class TestConfigurationKeys {
   public static final String FS_AZURE_ACCOUNT_NAME = "fs.azure.account.name";
+  public static final String FS_AZURE_ABFS_HNS_ACCOUNT_NAME = "fs.azure.hns.abfs.account.name";
+  public static final String FS_AZURE_ABFS_NONHNS_ACCOUNT_NAME = "fs.azure.nonhns.abfs.account.name";
   public static final String FS_AZURE_ABFS_ACCOUNT_NAME = "fs.azure.abfs.account.name";
   public static final String FS_AZURE_ACCOUNT_KEY = "fs.azure.account.key";
   public static final String FS_AZURE_CONTRACT_TEST_URI = "fs.contract.test.fs.abfs";
