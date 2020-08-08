@@ -58,8 +58,8 @@ public class WebPageUtils {
     if (isResourceManager) {
       // Update following line if any column added in RM page before column 11
       sb.append("\n, {'sType':'num-ignore-str', 'aTargets': [11, 12, 13, 14, 15] }");
-      // set progress column index to 18
-      progressIndex = "[18]";
+      // set progress column index to 20
+      progressIndex = "[20]";
     } else if (isFairSchedulerPage) {
       // Update following line if any column added in scheduler page before column 11
       sb.append("\n, {'sType':'num-ignore-str', 'aTargets': [11, 12, 13, 14, 15] }");
