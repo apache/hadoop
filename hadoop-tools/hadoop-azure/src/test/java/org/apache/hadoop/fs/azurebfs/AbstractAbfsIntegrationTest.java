@@ -339,11 +339,6 @@ public abstract class AbstractAbfsIntegrationTest extends
     return this.authType;
   }
 
-  @Override
-  public void setAuthType(AuthType authType) {
-    this.authType = authType;
-  }
-
   public String getAbfsScheme() {
     return this.abfsScheme;
   }

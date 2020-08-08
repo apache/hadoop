@@ -102,7 +102,6 @@ public class AbfsTestStatement extends Statement {
 
   private void setAuthTypeConfigs(final String authType) {
     Configuration conf = testObj.getInitialConfiguration();
-    testObj.setAuthType(AuthType.valueOf(authType));
     conf.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, authType);
   }
 

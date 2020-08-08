@@ -57,11 +57,6 @@ public class ITestAbfsFileSystemContractSecureDistCp
   }
 
   @Override
-  public void setAuthType(AuthType authType) {
-    binding.setAuthType(authType);
-  }
-
-  @Override
   public Configuration getInitialConfiguration() {
     return binding.getInitialConfiguration();
   }

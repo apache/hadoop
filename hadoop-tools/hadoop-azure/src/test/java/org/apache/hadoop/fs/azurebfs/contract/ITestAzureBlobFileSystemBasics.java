@@ -113,11 +113,6 @@ public class ITestAzureBlobFileSystemBasics extends FileSystemContractBaseTest
   }
 
   @Override
-  public void setAuthType(AuthType authType) {
-    binding.setAuthType(authType);
-  }
-
-  @Override
   public Configuration getInitialConfiguration() {
     return binding.getInitialConfiguration();
   }
