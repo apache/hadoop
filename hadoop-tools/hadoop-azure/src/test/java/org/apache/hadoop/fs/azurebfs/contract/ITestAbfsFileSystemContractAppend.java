@@ -22,9 +22,8 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
-import org.apache.hadoop.fs.azurebfs.rules.AuthTestsRule;
-import org.apache.hadoop.fs.azurebfs.rules.AuthTypesTestable;
+import org.apache.hadoop.fs.azurebfs.rules.AbfsTestsRule;
+import org.apache.hadoop.fs.azurebfs.rules.AbfsTestable;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.contract.AbstractContractAppendTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
@@ -35,12 +34,12 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
  * Contract test for open operation.
  */
 public class ITestAbfsFileSystemContractAppend
-    extends AbstractContractAppendTest implements AuthTypesTestable {
+    extends AbstractContractAppendTest implements AbfsTestable {
   private final boolean isSecure;
   private final ABFSContractTestBinding binding;
 
   @Rule
-  public AuthTestsRule authTestsRule = new AuthTestsRule(this);
+  public AbfsTestsRule abfsTestsRule = new AbfsTestsRule(this);
 
   public ITestAbfsFileSystemContractAppend() throws Exception {
     binding = new ABFSContractTestBinding();

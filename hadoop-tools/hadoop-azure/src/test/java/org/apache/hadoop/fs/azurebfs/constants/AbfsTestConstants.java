@@ -1,6 +1,5 @@
 package org.apache.hadoop.fs.azurebfs.constants;
 
-import org.apache.hadoop.fs.azurebfs.rules.AccountType;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 
 public class AbfsTestConstants {

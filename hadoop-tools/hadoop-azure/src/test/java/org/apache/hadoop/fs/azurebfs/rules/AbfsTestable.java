@@ -6,9 +6,7 @@ import org.apache.hadoop.fs.azurebfs.services.AuthType;
 
 import java.net.URISyntaxException;
 
-public interface AuthTypesTestable {
-
-  void setAuthType(AuthType authType);
+public interface AbfsTestable {
 
   Configuration getInitialConfiguration();
 

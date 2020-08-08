@@ -21,9 +21,8 @@ import org.junit.Ignore;
 import org.junit.Rule;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
-import org.apache.hadoop.fs.azurebfs.rules.AuthTestsRule;
-import org.apache.hadoop.fs.azurebfs.rules.AuthTypesTestable;
+import org.apache.hadoop.fs.azurebfs.rules.AbfsTestsRule;
+import org.apache.hadoop.fs.azurebfs.rules.AbfsTestable;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.contract.AbstractContractRootDirectoryTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
@@ -32,12 +31,12 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
  * Contract test for root directory operation.
  */
 public class ITestAbfsFileSystemContractRootDirectory
-    extends AbstractContractRootDirectoryTest implements AuthTypesTestable {
+    extends AbstractContractRootDirectoryTest implements AbfsTestable {
   private final boolean isSecure;
   private final ABFSContractTestBinding binding;
 
   @Rule
-  public AuthTestsRule authTestsRule = new AuthTestsRule(this);
+  public AbfsTestsRule abfsTestsRule = new AbfsTestsRule(this);
 
   public ITestAbfsFileSystemContractRootDirectory() throws Exception {
     binding = new ABFSContractTestBinding();

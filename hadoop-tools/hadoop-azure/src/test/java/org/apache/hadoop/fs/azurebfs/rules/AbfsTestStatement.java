@@ -2,14 +2,11 @@ package org.apache.hadoop.fs.azurebfs.rules;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
-import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
+import org.apache.hadoop.fs.azurebfs.constants.AccountType;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 import org.slf4j.Logger;
@@ -24,17 +21,17 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_A
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT;
 
-public class AuthTestStatement extends Statement {
+public class AbfsTestStatement extends Statement {
 
   private static final Logger LOG = LoggerFactory
-      .getLogger(AuthTestStatement.class);
+      .getLogger(AbfsTestStatement.class);
 
   private final Statement base;
   private final Description description;
-  private final AuthTypesTestable testObj;
+  private final AbfsTestable testObj;
 
-  public AuthTestStatement(Statement base, Description description,
-      AuthTypesTestable testObj) {
+  public AbfsTestStatement(Statement base, Description description,
+      AbfsTestable testObj) {
     this.base = base;
     this.description = description;
     this.testObj = testObj;
@@ -67,11 +64,11 @@ public class AuthTestStatement extends Statement {
   }
 
   private List<String> authTypesToTest() {
-    AuthTypesToTest authTypesToTest = description
-        .getAnnotation(AuthTypesToTest.class);
+    AbfsConfigsToTest abfsConfigsToTest = description
+        .getAnnotation(AbfsConfigsToTest.class);
     List<AuthType> authTypes = new ArrayList();
-    if (authTypesToTest != null) {
-      AuthType[] values = authTypesToTest.authTypes();
+    if (abfsConfigsToTest != null) {
+      AuthType[] values = abfsConfigsToTest.authTypes();
       if (values != null && values.length > 0) {
         authTypes = Arrays.asList(values);
       }
@@ -86,11 +83,11 @@ public class AuthTestStatement extends Statement {
   }
 
   private List<String> accountTypesToTest() {
-    AuthTypesToTest authTypesToTest = description
-        .getAnnotation(AuthTypesToTest.class);
+    AbfsConfigsToTest abfsConfigsToTest = description
+        .getAnnotation(AbfsConfigsToTest.class);
     List<AccountType> accountTypes = new ArrayList();
-    if (authTypesToTest != null) {
-      AccountType[] values = authTypesToTest.accountTypes();
+    if (abfsConfigsToTest != null) {
+      AccountType[] values = abfsConfigsToTest.accountTypes();
       if (values != null && values.length > 0) {
         accountTypes = Arrays.asList(values);
       }

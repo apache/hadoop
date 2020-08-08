@@ -21,9 +21,8 @@ package org.apache.hadoop.fs.azurebfs.contract;
 import org.junit.Rule;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
-import org.apache.hadoop.fs.azurebfs.rules.AuthTestsRule;
-import org.apache.hadoop.fs.azurebfs.rules.AuthTypesTestable;
+import org.apache.hadoop.fs.azurebfs.rules.AbfsTestsRule;
+import org.apache.hadoop.fs.azurebfs.rules.AbfsTestable;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.contract.AbstractContractDeleteTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
@@ -32,12 +31,12 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
  * Contract test for delete operation.
  */
 public class ITestAbfsFileSystemContractDelete
-    extends AbstractContractDeleteTest implements AuthTypesTestable {
+    extends AbstractContractDeleteTest implements AbfsTestable {
   private final boolean isSecure;
   private final ABFSContractTestBinding binding;
 
   @Rule
-  public AuthTestsRule authTestsRule = new AuthTestsRule(this);
+  public AbfsTestsRule abfsTestsRule = new AbfsTestsRule(this);
 
   public ITestAbfsFileSystemContractDelete() throws Exception {
     binding = new ABFSContractTestBinding();

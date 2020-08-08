@@ -57,11 +57,11 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
 
   public ITestAzureBlobFileSystemAuthorization() throws Exception {
     // The mock SAS token provider relies on the account key to generate SAS.
-    Assume.assumeTrue(this.getAuthType() == AuthType.SharedKey);
   }
 
   @Override
   public void setup() throws Exception {
+    Assume.assumeTrue(this.getAuthType() == AuthType.SharedKey);
     boolean isHNSEnabled = this.getConfiguration().getBoolean(
         TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
     Assume.assumeTrue(isHNSEnabled);

@@ -28,9 +28,8 @@ import org.junit.Test;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
-import org.apache.hadoop.fs.azurebfs.rules.AuthTestsRule;
-import org.apache.hadoop.fs.azurebfs.rules.AuthTypesTestable;
+import org.apache.hadoop.fs.azurebfs.rules.AbfsTestsRule;
+import org.apache.hadoop.fs.azurebfs.rules.AbfsTestable;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 
@@ -41,11 +40,11 @@ import static org.junit.Assert.assertTrue;
  * Basic Contract test for Azure BlobFileSystem.
  */
 public class ITestAzureBlobFileSystemBasics extends FileSystemContractBaseTest
-    implements AuthTypesTestable {
+    implements AbfsTestable {
   private final ABFSContractTestBinding binding;
 
   @Rule
-  public AuthTestsRule authTestsRule = new AuthTestsRule(this);
+  public AbfsTestsRule abfsTestsRule = new AbfsTestsRule(this);
 
   public ITestAzureBlobFileSystemBasics() throws Exception {
     // If all contract tests are running in parallel, some root level tests in FileSystemContractBaseTest will fail

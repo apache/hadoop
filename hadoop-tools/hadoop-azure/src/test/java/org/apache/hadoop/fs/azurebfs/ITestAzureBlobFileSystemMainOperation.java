@@ -22,8 +22,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.junit.Ignore;
 import org.junit.Rule;
 
-import org.apache.hadoop.fs.azurebfs.rules.AuthTestsRule;
-import org.apache.hadoop.fs.azurebfs.rules.AuthTypesTestable;
+import org.apache.hadoop.fs.azurebfs.rules.AbfsTestsRule;
+import org.apache.hadoop.fs.azurebfs.rules.AbfsTestable;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.FSMainOperationsBaseTest;
 import org.apache.hadoop.fs.FileSystem;
@@ -33,7 +33,7 @@ import org.apache.hadoop.fs.azurebfs.contract.ABFSContractTestBinding;
  * Test AzureBlobFileSystem main operations.
  * */
 public class ITestAzureBlobFileSystemMainOperation
-    extends FSMainOperationsBaseTest implements AuthTypesTestable {
+    extends FSMainOperationsBaseTest implements AbfsTestable {
 
   private static final String TEST_ROOT_DIR =
           "/tmp/TestAzureBlobFileSystemMainOperations";
@@ -41,7 +41,7 @@ public class ITestAzureBlobFileSystemMainOperation
   private final ABFSContractTestBinding binding;
 
   @Rule
-  public AuthTestsRule authTestsRule = new AuthTestsRule(this);
+  public AbfsTestsRule abfsTestsRule = new AbfsTestsRule(this);
 
   public ITestAzureBlobFileSystemMainOperation () throws Exception {
     super(TEST_ROOT_DIR);

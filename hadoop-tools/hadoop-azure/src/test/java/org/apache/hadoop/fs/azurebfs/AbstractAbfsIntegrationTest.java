@@ -33,8 +33,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.azurebfs.rules.AuthTestsRule;
-import org.apache.hadoop.fs.azurebfs.rules.AuthTypesTestable;
+import org.apache.hadoop.fs.azurebfs.rules.AbfsTestsRule;
+import org.apache.hadoop.fs.azurebfs.rules.AbfsTestable;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -67,10 +67,10 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * <I>Important: This is for integration tests only.</I>
  */
 public abstract class AbstractAbfsIntegrationTest extends
-        AbstractAbfsTestWithTimeout implements AuthTypesTestable {
+        AbstractAbfsTestWithTimeout implements AbfsTestable {
 
   @Rule
-  public AuthTestsRule authTestsRule = new AuthTestsRule(this);
+  public AbfsTestsRule abfsTestsRule = new AbfsTestsRule(this);
 
   private static final Logger LOG =
       LoggerFactory.getLogger(AbstractAbfsIntegrationTest.class);

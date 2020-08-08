@@ -21,9 +21,8 @@ package org.apache.hadoop.fs.azurebfs.contract;
 import org.junit.Rule;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
-import org.apache.hadoop.fs.azurebfs.rules.AuthTestsRule;
-import org.apache.hadoop.fs.azurebfs.rules.AuthTypesTestable;
+import org.apache.hadoop.fs.azurebfs.rules.AbfsTestsRule;
+import org.apache.hadoop.fs.azurebfs.rules.AbfsTestable;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.tools.contract.AbstractContractDistCpTest;
 
@@ -31,11 +30,11 @@ import org.apache.hadoop.tools.contract.AbstractContractDistCpTest;
  * Contract test for secure distCP operation.
  */
 public class ITestAbfsFileSystemContractSecureDistCp
-    extends AbstractContractDistCpTest implements AuthTypesTestable {
+    extends AbstractContractDistCpTest implements AbfsTestable {
   private final ABFSContractTestBinding binding;
 
   @Rule
-  public AuthTestsRule authTestsRule = new AuthTestsRule(this);
+  public AbfsTestsRule abfsTestsRule = new AbfsTestsRule(this);
 
   public ITestAbfsFileSystemContractSecureDistCp() throws Exception {
     binding = new ABFSContractTestBinding();
