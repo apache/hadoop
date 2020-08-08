@@ -69,8 +69,10 @@ public class RMAppsBlock extends AppsBlock {
           .th(".runningcontainer", "Running Containers")
           .th(".allocatedCpu", "Allocated CPU VCores")
           .th(".allocatedMemory", "Allocated Memory MB")
+          .th(".allocatedGpu", "Allocated GPUs")
           .th(".reservedCpu", "Reserved CPU VCores")
           .th(".reservedMemory", "Reserved Memory MB")
+          .th(".reservedGpu", "Reserved GPUs")
           .th(".queuePercentage", "% of Queue")
           .th(".clusterPercentage", "% of Cluster")
           .th(".progress", "Progress")
@@ -104,6 +106,7 @@ public class RMAppsBlock extends AppsBlock {
       String blacklistedNodesCount = "N/A";
       RMApp rmApp = rm.getRMContext().getRMApps()
           .get(appAttemptId.getApplicationId());
+      boolean isAppInCompletedState = false;
       if (rmApp != null) {
         RMAppAttempt appAttempt = rmApp.getRMAppAttempt(appAttemptId);
         Set<String> nodes =
@@ -111,6 +114,7 @@ public class RMAppsBlock extends AppsBlock {
         if (nodes != null) {
           blacklistedNodesCount = String.valueOf(nodes.size());
         }
+        isAppInCompletedState = rmApp.isAppInCompletedStates();
       }
       String percent = StringUtils.format("%.1f", app.getProgress());
       appsTableData
@@ -152,11 +156,17 @@ public class RMAppsBlock extends AppsBlock {
         .append(app.getAllocatedMemoryMB() == -1 ? "N/A" :
             String.valueOf(app.getAllocatedMemoryMB()))
         .append("\",\"")
+        .append((isAppInCompletedState && app.getAllocatedGpus() <= 0)
+            ? UNAVAILABLE : String.valueOf(app.getAllocatedGpus()))
+        .append("\",\"")
         .append(app.getReservedCpuVcores() == -1 ? "N/A" : String
             .valueOf(app.getReservedCpuVcores()))
         .append("\",\"")
         .append(app.getReservedMemoryMB() == -1 ? "N/A" :
             String.valueOf(app.getReservedMemoryMB()))
+        .append("\",\"")
+        .append((isAppInCompletedState && app.getReservedGpus() <= 0)
+            ? UNAVAILABLE : String.valueOf(app.getReservedGpus()))
         .append("\",\"")
         .append(queuePercent)
         .append("\",\"")
