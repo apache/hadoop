@@ -178,7 +178,7 @@ public abstract class INodeWithAdditionalFields extends INode
   }
 
   @Override
-  final PermissionStatus getPermissionStatus(int snapshotId) {
+  public final PermissionStatus getPermissionStatus(int snapshotId) {
     return new PermissionStatus(getUserName(snapshotId), getGroupName(snapshotId),
         getFsPermission(snapshotId));
   }

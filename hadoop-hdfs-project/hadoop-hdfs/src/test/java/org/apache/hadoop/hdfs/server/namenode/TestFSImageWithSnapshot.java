@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.DiffList;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
+import org.apache.hadoop.hdfs.server.namenode.visitor.NamespacePrintVisitor;
 import org.apache.hadoop.hdfs.util.Canceler;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
@@ -46,6 +47,7 @@ import org.slf4j.event.Level;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -607,6 +609,11 @@ public class TestFSImageWithSnapshot {
     final String b =
         fsn.getFSDirectory().getINode("/").dumpTreeRecursively().toString();
     output.println(b);
+
+    final StringWriter out = new StringWriter();
+    final NamespacePrintVisitor v = new NamespacePrintVisitor(new PrintWriter(out, true));
+    fsn.getFSDirectory().getINode("/").accept(v, Snapshot.CURRENT_STATE_ID);
+    Assert.assertEquals(b, out.getBuffer().toString());
     return b;
   }
 
