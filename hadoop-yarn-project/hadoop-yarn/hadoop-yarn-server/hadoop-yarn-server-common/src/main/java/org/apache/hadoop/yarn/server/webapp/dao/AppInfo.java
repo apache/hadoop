@@ -30,8 +30,10 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.util.Times;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 
 @Public
 @Evolving
@@ -63,8 +65,10 @@ public class AppInfo {
   protected int priority;
   private long allocatedCpuVcores;
   private long allocatedMemoryMB;
+  private long allocatedGpus;
   private long reservedCpuVcores;
   private long reservedMemoryMB;
+  private long reservedGpus;
   protected boolean unmanagedApplication;
   private String appNodeLabelExpression;
   private String amNodeLabelExpression;
@@ -110,6 +114,16 @@ public class AppInfo {
         reservedCpuVcores = usageReport.getReservedResources().
             getVirtualCores();
         reservedMemoryMB = usageReport.getReservedResources().getMemorySize();
+        Integer gpuIndex = ResourceUtils.getResourceTypeIndex()
+            .get(ResourceInformation.GPU_URI);
+        allocatedGpus = -1;
+        reservedGpus = -1;
+        if (gpuIndex != null) {
+          allocatedGpus = usageReport.getUsedResources()
+              .getResourceValue(ResourceInformation.GPU_URI);
+          reservedGpus = usageReport.getReservedResources()
+              .getResourceValue(ResourceInformation.GPU_URI);
+        }
       }
       aggregateResourceAllocation = usageReport.getMemorySeconds()
           + " MB-seconds, " + usageReport.getVcoreSeconds()
@@ -175,12 +189,20 @@ public class AppInfo {
     return allocatedMemoryMB;
   }
 
+  public long getAllocatedGpus() {
+    return allocatedGpus;
+  }
+
   public long getReservedCpuVcores() {
     return reservedCpuVcores;
   }
 
   public long getReservedMemoryMB() {
     return reservedMemoryMB;
+  }
+
+  public long getReservedGpus() {
+    return reservedGpus;
   }
 
   public float getProgress() {

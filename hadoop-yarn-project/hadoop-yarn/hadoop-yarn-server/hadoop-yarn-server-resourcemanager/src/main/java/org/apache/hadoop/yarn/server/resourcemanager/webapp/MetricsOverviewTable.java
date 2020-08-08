@@ -19,14 +19,15 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.UserMetricsInfo;
 
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
@@ -62,35 +63,34 @@ public class MetricsOverviewTable extends HtmlBlock {
     
     DIV<Hamlet> div = html.div().$class("metrics");
 
-    long usedMemoryBytes = 0;
-    long totalMemoryBytes = 0;
-    long reservedMemoryBytes = 0;
-    long usedVCores = 0;
-    long totalVCores = 0;
-    long reservedVCores = 0;
+    Resource usedResources;
+    Resource totalResources;
+    Resource reservedResources;
+    int allocatedContainers;
     if (clusterMetrics.getCrossPartitionMetricsAvailable()) {
-      ResourceInfo usedAllPartitions =
-          clusterMetrics.getTotalUsedResourcesAcrossPartition();
-      ResourceInfo totalAllPartitions =
-          clusterMetrics.getTotalClusterResourcesAcrossPartition();
-      ResourceInfo reservedAllPartitions =
-          clusterMetrics.getTotalReservedResourcesAcrossPartition();
-      usedMemoryBytes = usedAllPartitions.getMemorySize() * BYTES_IN_MB;
-      totalMemoryBytes = totalAllPartitions.getMemorySize() * BYTES_IN_MB;
-      reservedMemoryBytes = reservedAllPartitions.getMemorySize() * BYTES_IN_MB;
-      usedVCores = usedAllPartitions.getvCores();
-      totalVCores = totalAllPartitions.getvCores();
-      reservedVCores = reservedAllPartitions.getvCores();
+      allocatedContainers =
+          clusterMetrics.getTotalAllocatedContainersAcrossPartition();
+      usedResources =
+          clusterMetrics.getTotalUsedResourcesAcrossPartition().getResource();
+      totalResources =
+          clusterMetrics.getTotalClusterResourcesAcrossPartition()
+          .getResource();
+      reservedResources =
+          clusterMetrics.getTotalReservedResourcesAcrossPartition()
+          .getResource();
       // getTotalUsedResourcesAcrossPartition includes reserved resources.
-      usedMemoryBytes -= reservedMemoryBytes;
-      usedVCores -= reservedVCores;
+      Resources.subtractFrom(usedResources, reservedResources);
     } else {
-      usedMemoryBytes = clusterMetrics.getAllocatedMB() * BYTES_IN_MB;
-      totalMemoryBytes = clusterMetrics.getTotalMB() * BYTES_IN_MB;
-      reservedMemoryBytes = clusterMetrics.getReservedMB() * BYTES_IN_MB;
-      usedVCores = clusterMetrics.getAllocatedVirtualCores();
-      totalVCores = clusterMetrics.getTotalVirtualCores();
-      reservedVCores = clusterMetrics.getReservedVirtualCores();
+      allocatedContainers = clusterMetrics.getContainersAllocated();
+      usedResources = Resource.newInstance(
+          clusterMetrics.getAllocatedMB() * BYTES_IN_MB,
+          (int) clusterMetrics.getAllocatedVirtualCores());
+      totalResources = Resource.newInstance(
+          clusterMetrics.getTotalMB() * BYTES_IN_MB,
+          (int) clusterMetrics.getTotalVirtualCores());
+      reservedResources = Resource.newInstance(
+          clusterMetrics.getReservedMB() * BYTES_IN_MB,
+          (int) clusterMetrics.getReservedVirtualCores());
     }
 
     div.h3("Cluster Metrics").
@@ -102,12 +102,9 @@ public class MetricsOverviewTable extends HtmlBlock {
         th().$class("ui-state-default")._("Apps Running")._().
         th().$class("ui-state-default")._("Apps Completed")._().
         th().$class("ui-state-default")._("Containers Running")._().
-        th().$class("ui-state-default")._("Memory Used")._().
-        th().$class("ui-state-default")._("Memory Total")._().
-        th().$class("ui-state-default")._("Memory Reserved")._().
-        th().$class("ui-state-default")._("VCores Used")._().
-        th().$class("ui-state-default")._("VCores Total")._().
-        th().$class("ui-state-default")._("VCores Reserved")._().
+        th().$class("ui-state-default")._("Used Resources")._().
+        th().$class("ui-state-default")._("Total Resources")._().
+        th().$class("ui-state-default")._("Reserved Resources")._().
       _().
     _().
     tbody().$class("ui-widget-content").
@@ -121,14 +118,10 @@ public class MetricsOverviewTable extends HtmlBlock {
                 clusterMetrics.getAppsFailed() + clusterMetrics.getAppsKilled()
                 )
             ).
-        td(String.valueOf(
-            clusterMetrics.getTotalAllocatedContainersAcrossPartition())).
-        td(StringUtils.byteDesc(usedMemoryBytes)).
-        td(StringUtils.byteDesc(totalMemoryBytes)).
-        td(StringUtils.byteDesc(reservedMemoryBytes)).
-        td(String.valueOf(usedVCores)).
-        td(String.valueOf(totalVCores)).
-        td(String.valueOf(reservedVCores)).
+        td(String.valueOf(allocatedContainers)).
+        td(usedResources.toString()).
+        td(totalResources.toString()).
+        td(reservedResources.toString()).
       _().
     _()._();
 

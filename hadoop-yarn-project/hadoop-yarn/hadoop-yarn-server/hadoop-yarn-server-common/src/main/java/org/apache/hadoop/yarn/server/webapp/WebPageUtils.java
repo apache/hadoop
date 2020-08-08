@@ -56,7 +56,7 @@ public class WebPageUtils {
         .append(", 'mRender': renderHadoopDate }");
     if (isResourceManager) {
       sb.append("\n, {'sType':'num-ignore-str', 'aTargets': [11, 12, 13, 14, 15] }");
-      progressIndex = "[18]";
+      progressIndex = "[20]";
     } else if (isFairSchedulerPage) {
       sb.append("\n, {'sType':'num-ignore-str', 'aTargets': [11, 12, 13, 14, 15] }");
       progressIndex = "[16]";
