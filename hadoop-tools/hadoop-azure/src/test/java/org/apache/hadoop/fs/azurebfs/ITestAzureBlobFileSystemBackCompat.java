@@ -23,6 +23,8 @@ import com.microsoft.azure.storage.blob.CloudBlobClient;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
 import com.microsoft.azure.storage.blob.CloudBlockBlob;
 
+import org.apache.hadoop.fs.azurebfs.constants.AccountType;
+import org.apache.hadoop.fs.azurebfs.rules.AbfsConfigsToTest;
 import org.junit.Assume;
 import org.junit.Test;
 
@@ -40,6 +42,7 @@ public class ITestAzureBlobFileSystemBackCompat extends
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testBlobBackCompat() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     Assume.assumeFalse("This test does not support namespace enabled account",

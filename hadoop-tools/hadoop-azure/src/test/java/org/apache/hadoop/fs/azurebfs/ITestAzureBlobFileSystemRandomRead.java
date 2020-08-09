@@ -22,6 +22,9 @@ import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.Callable;
 
+import org.apache.hadoop.fs.azurebfs.constants.AccountType;
+import org.apache.hadoop.fs.azurebfs.rules.AbfsConfigsToTest;
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.junit.Assume;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -95,6 +98,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
    * @throws IOException
    */
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.NonHNS)
   public void testRandomRead() throws Exception {
     Assume.assumeFalse("This test does not support namespace enabled account",
             this.getFileSystem().getIsNamespaceEnabled());
@@ -412,6 +416,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.NonHNS)
   public void testRandomReadPerformance() throws Exception {
     Assume.assumeFalse("This test does not support namespace enabled account",
             this.getFileSystem().getIsNamespaceEnabled());

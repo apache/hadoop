@@ -119,6 +119,7 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   @Test(expected = NullPointerException.class)
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testCheckAccessForFileWithNullFsAction() throws Exception {
     Assume.assumeTrue(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT + " is false",
         isHNSEnabled);
@@ -127,6 +128,8 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   @Test(expected = FileNotFoundException.class)
+  @AbfsConfigsToTest(authTypes = AuthType.OAuth,
+      accountTypes = AccountType.NonHNS)
   public void testCheckAccessForNonExistentFile() throws Exception {
     checkPrerequisites();
     Path nonExistentFile = setupTestDirectoryAndUserAccess(

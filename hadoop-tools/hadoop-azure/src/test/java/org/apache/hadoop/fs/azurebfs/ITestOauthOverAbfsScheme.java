@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs;
 import java.lang.reflect.Field;
 import java.net.URL;
 
+import org.apache.hadoop.fs.azurebfs.rules.AbfsConfigsToTest;
 import org.junit.Assume;
 import org.junit.Test;
 
@@ -40,6 +41,7 @@ public class ITestOauthOverAbfsScheme extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(authTypes = AuthType.OAuth)
   public void testOauthOverSchemeAbfs() throws Exception {
     String[] urlWithoutScheme = this.getTestUrl().split(":");
     String fsUrl;

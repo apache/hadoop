@@ -24,6 +24,8 @@ import java.io.FileNotFoundException;
 import java.util.List;
 import java.util.UUID;
 
+import org.apache.hadoop.fs.azurebfs.constants.AccountType;
+import org.apache.hadoop.fs.azurebfs.rules.AbfsConfigsToTest;
 import org.junit.Assume;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -86,6 +88,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testModifyAclEntries() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -119,6 +122,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testModifyAclEntriesOnlyAccess() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -143,6 +147,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testModifyAclEntriesOnlyDefault() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -166,6 +171,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testModifyAclEntriesMinimal() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -184,6 +190,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testModifyAclEntriesMinimalDefault() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -204,6 +211,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testModifyAclEntriesCustomMask() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -223,6 +231,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testModifyAclEntriesStickyBit() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -253,6 +262,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test(expected=FileNotFoundException.class)
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testModifyAclEntriesPathNotFound() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -267,6 +277,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test (expected=Exception.class)
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testModifyAclEntriesDefaultOnFile() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -279,6 +290,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testModifyAclEntriesWithDefaultMask() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -303,6 +315,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testModifyAclEntriesWithAccessMask() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -324,6 +337,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test(expected=PathIOException.class)
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testModifyAclEntriesWithDuplicateEntries() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -340,6 +354,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testRemoveAclEntries() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -368,6 +383,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testRemoveAclEntriesOnlyAccess() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -393,6 +409,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testRemoveAclEntriesOnlyDefault() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -420,6 +437,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testRemoveAclEntriesMinimal() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -443,6 +461,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testRemoveAclEntriesMinimalDefault() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -471,6 +490,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testRemoveAclEntriesStickyBit() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -499,6 +519,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test(expected=FileNotFoundException.class)
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testRemoveAclEntriesPathNotFound() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -510,6 +531,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test(expected=PathIOException.class)
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testRemoveAclEntriesAccessMask() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -524,6 +546,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test(expected=PathIOException.class)
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testRemoveAclEntriesDefaultMask() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -538,6 +561,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test(expected=PathIOException.class)
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testRemoveAclEntriesWithDuplicateEntries() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -554,6 +578,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testRemoveDefaultAcl() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -576,6 +601,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testRemoveDefaultAclOnlyAccess() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -598,6 +624,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testRemoveDefaultAclOnlyDefault() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -614,6 +641,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testRemoveDefaultAclMinimal() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -627,6 +655,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testRemoveDefaultAclStickyBit() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -649,6 +678,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test(expected=FileNotFoundException.class)
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testRemoveDefaultAclPathNotFound() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -658,6 +688,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testRemoveAcl() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -680,6 +711,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testRemoveAclMinimalAcl() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -694,6 +726,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testRemoveAclStickyBit() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -714,6 +747,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testRemoveAclOnlyDefault() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -733,6 +767,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test(expected=FileNotFoundException.class)
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testRemoveAclPathNotFound() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -742,6 +777,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testSetAcl() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -768,6 +804,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testSetAclOnlyAccess() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -789,6 +826,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testSetAclOnlyDefault() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -809,6 +847,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testSetAclMinimal() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -833,6 +872,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testSetAclMinimalDefault() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -853,6 +893,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testSetAclCustomMask() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -875,6 +916,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testSetAclStickyBit() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -901,6 +943,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test(expected=FileNotFoundException.class)
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testSetAclPathNotFound() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -915,6 +958,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test(expected=Exception.class)
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testSetAclDefaultOnFile() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -927,6 +971,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testSetAclDoesNotChangeDefaultMask() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -951,6 +996,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test(expected=PathIOException.class)
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testSetAclWithDuplicateEntries() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -963,6 +1009,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testSetPermission() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -990,6 +1037,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testSetPermissionOnlyAccess() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -1012,6 +1060,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testSetPermissionOnlyDefault() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -1036,6 +1085,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testDefaultAclNewFile() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -1055,6 +1105,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   @Ignore // wait umask fix to be deployed
   public void testOnlyAccessAclNewFile() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
@@ -1073,6 +1124,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testDefaultMinimalAclNewFile() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -1092,6 +1144,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testDefaultAclNewDir() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -1118,6 +1171,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testOnlyAccessAclNewDir() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -1135,6 +1189,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testDefaultMinimalAclNewDir() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -1157,6 +1212,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testDefaultAclNewFileWithMode() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -1179,6 +1235,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testDefaultAclNewDirWithMode() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -1203,6 +1260,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testDefaultAclRenamedFile() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -1225,6 +1283,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testDefaultAclRenamedDir() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -1246,6 +1305,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testEnsureAclOperationWorksForRoot() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     assumeTrue(fs.getIsNamespaceEnabled());
@@ -1271,6 +1331,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.NonHNS)
   public void testSetOwnerForNonNamespaceEnabledAccount() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     Assume.assumeTrue(!fs.getIsNamespaceEnabled());
@@ -1288,6 +1349,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.NonHNS)
   public void testSetPermissionForNonNamespaceEnabledAccount() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     Assume.assumeTrue(!fs.getIsNamespaceEnabled());
@@ -1307,6 +1369,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.NonHNS)
   public void testModifyAclEntriesForNonNamespaceEnabledAccount() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     Assume.assumeTrue(!fs.getIsNamespaceEnabled());
@@ -1324,6 +1387,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.NonHNS)
   public void testRemoveAclEntriesEntriesForNonNamespaceEnabledAccount() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     Assume.assumeTrue(!fs.getIsNamespaceEnabled());
@@ -1341,6 +1405,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.NonHNS)
   public void testRemoveDefaultAclForNonNamespaceEnabledAccount() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     Assume.assumeTrue(!fs.getIsNamespaceEnabled());
@@ -1355,6 +1420,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.NonHNS)
   public void testRemoveAclForNonNamespaceEnabledAccount() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     Assume.assumeTrue(!fs.getIsNamespaceEnabled());
@@ -1369,6 +1435,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.NonHNS)
   public void testSetAclForNonNamespaceEnabledAccount() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     Assume.assumeTrue(!fs.getIsNamespaceEnabled());
@@ -1386,6 +1453,7 @@ public class ITestAzureBlobFilesystemAcl extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.NonHNS)
   public void testGetAclStatusForNonNamespaceEnabledAccount() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     Assume.assumeTrue(!fs.getIsNamespaceEnabled());

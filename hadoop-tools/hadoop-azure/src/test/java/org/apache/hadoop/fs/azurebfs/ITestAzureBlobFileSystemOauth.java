@@ -22,7 +22,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
 
+import org.apache.hadoop.fs.azurebfs.rules.AbfsConfigsToTest;
 import org.junit.Assume;
+import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,12 +61,18 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
       LoggerFactory.getLogger(ITestAbfsStreamStatistics.class);
 
   public ITestAzureBlobFileSystemOauth() throws Exception {
+  }
+
+  @Before
+  public void setup() {
     Assume.assumeTrue(this.getAuthType() == AuthType.OAuth);
   }
+
   /*
   * BLOB DATA CONTRIBUTOR should have full access to the container and blobs in the container.
   * */
   @Test
+  @AbfsConfigsToTest(authTypes = AuthType.OAuth)
   public void testBlobDataContributor() throws Exception {
     String clientId = this.getConfiguration().get(TestConfigurationKeys.FS_AZURE_BLOB_DATA_CONTRIBUTOR_CLIENT_ID);
     Assume.assumeTrue("Contributor client id not provided", clientId != null);
@@ -118,6 +126,7 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
    * BLOB DATA READER should have only READ access to the container and blobs in the container.
    * */
   @Test
+  @AbfsConfigsToTest(authTypes = AuthType.OAuth)
   public void testBlobDataReader() throws Exception {
     String clientId = this.getConfiguration().get(TestConfigurationKeys.FS_AZURE_BLOB_DATA_READER_CLIENT_ID);
     Assume.assumeTrue("Reader client id not provided", clientId != null);

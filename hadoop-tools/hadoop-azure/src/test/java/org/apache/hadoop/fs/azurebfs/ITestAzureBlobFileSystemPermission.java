@@ -23,6 +23,8 @@ import java.util.Collection;
 import java.util.UUID;
 
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.azurebfs.constants.AccountType;
+import org.apache.hadoop.fs.azurebfs.rules.AbfsConfigsToTest;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
@@ -73,6 +75,7 @@ public class ITestAzureBlobFileSystemPermission extends AbstractAbfsIntegrationT
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testFilePermission() throws Exception {
 
     final AzureBlobFileSystem fs = this.getFileSystem();
@@ -90,6 +93,7 @@ public class ITestAzureBlobFileSystemPermission extends AbstractAbfsIntegrationT
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testFolderPermission() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     Assume.assumeTrue(fs.getIsNamespaceEnabled());

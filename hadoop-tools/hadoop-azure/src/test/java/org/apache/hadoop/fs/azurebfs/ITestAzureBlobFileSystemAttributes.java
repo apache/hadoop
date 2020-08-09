@@ -23,6 +23,8 @@ import java.util.EnumSet;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.XAttrSetFlag;
+import org.apache.hadoop.fs.azurebfs.constants.AccountType;
+import org.apache.hadoop.fs.azurebfs.rules.AbfsConfigsToTest;
 import org.junit.Assume;
 import org.junit.Test;
 
@@ -40,6 +42,7 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testSetGetXAttr() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
     Assume.assumeTrue(fs.getIsNamespaceEnabled());
@@ -65,6 +68,7 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testSetGetXAttrCreateReplace() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
     Assume.assumeTrue(fs.getIsNamespaceEnabled());
@@ -82,6 +86,7 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testSetGetXAttrReplace() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
     Assume.assumeTrue(fs.getIsNamespaceEnabled());

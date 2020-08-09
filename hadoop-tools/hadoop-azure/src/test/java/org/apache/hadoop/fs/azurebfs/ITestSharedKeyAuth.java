@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.azurebfs;
 
+import org.apache.hadoop.fs.azurebfs.rules.AbfsConfigsToTest;
 import org.junit.Assume;
 import org.junit.Test;
 
@@ -36,6 +37,7 @@ public class ITestSharedKeyAuth extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(authTypes = AuthType.SharedKey)
   public void testWithWrongSharedKey() throws Exception {
     Assume.assumeTrue(this.getAuthType() == AuthType.SharedKey);
     Configuration config = this.getRawConfiguration();

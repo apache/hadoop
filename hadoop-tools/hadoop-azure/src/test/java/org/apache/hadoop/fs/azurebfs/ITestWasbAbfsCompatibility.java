@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
+import org.apache.hadoop.fs.azurebfs.constants.AccountType;
+import org.apache.hadoop.fs.azurebfs.rules.AbfsConfigsToTest;
 import org.junit.Assume;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -53,6 +55,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.NonHNS)
   public void testListFileStatus() throws Exception {
     // crate file using abfs
     AzureBlobFileSystem fs = getFileSystem();
@@ -86,6 +89,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.NonHNS)
   public void testReadFile() throws Exception {
     boolean[] createFileWithAbfs = new boolean[]{false, true, false, true};
     boolean[] readFileWithAbfs = new boolean[]{false, true, true, false};
@@ -126,6 +130,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.NonHNS)
   public void testDir() throws Exception {
     boolean[] createDirWithAbfs = new boolean[]{false, true, false, true};
     boolean[] readDirWithAbfs = new boolean[]{false, true, true, false};
@@ -163,6 +168,7 @@ public class ITestWasbAbfsCompatibility extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.NonHNS)
   public void testSetWorkingDirectory() throws Exception {
     //create folders
     AzureBlobFileSystem abfs = getFileSystem();
