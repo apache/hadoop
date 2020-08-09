@@ -25,6 +25,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
+import org.apache.hadoop.fs.azurebfs.constants.AccountType;
+import org.apache.hadoop.fs.azurebfs.rules.AbfsConfigsToTest;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
@@ -87,6 +89,8 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   }
 
   @Test
+  @AbfsConfigsToTest(authTypes = {AuthType.SharedKey}, accountTypes = {
+      AccountType.HNS})
   // Test filesystem operations access, create, mkdirs, setOwner, getFileStatus
   public void testCheckAccess() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
@@ -143,6 +147,8 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   }
 
   @Test
+  @AbfsConfigsToTest(authTypes = {AuthType.SharedKey}, accountTypes = {
+      AccountType.HNS})
   // Test filesystem operations create, create with overwrite, append and open.
   // Test output stream operation write, flush and close
   // Test input stream operation, read
@@ -203,6 +209,8 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   }
 
   @Test
+  @AbfsConfigsToTest(authTypes = {AuthType.SharedKey}, accountTypes = {
+      AccountType.HNS})
   // Test rename file and rename folder
   public void testRename() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
@@ -228,6 +236,8 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   }
 
   @Test
+  @AbfsConfigsToTest(authTypes = {AuthType.SharedKey}, accountTypes = {
+      AccountType.HNS})
   // Test delete file and delete folder
   public void testDelete() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
@@ -249,6 +259,8 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   }
 
   @Test
+  @AbfsConfigsToTest(authTypes = {AuthType.SharedKey}, accountTypes = {
+      AccountType.HNS})
   // Test delete folder recursive
   public void testDeleteRecursive() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
@@ -268,6 +280,8 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   }
 
   @Test
+  @AbfsConfigsToTest(authTypes = {AuthType.SharedKey}, accountTypes = {
+      AccountType.HNS})
   // Test list on file, directory and root path
   public void testList() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
@@ -287,6 +301,8 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   }
 
   @Test
+  @AbfsConfigsToTest(authTypes = {AuthType.SharedKey}, accountTypes = {
+      AccountType.HNS})
   // Test filesystem operations setAcl, getAclStatus, removeAcl
   // setPermissions and getFileStatus
   public void testAcl() throws Exception {
@@ -317,6 +333,8 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   }
 
   @Test
+  @AbfsConfigsToTest(authTypes = {AuthType.SharedKey}, accountTypes = {
+      AccountType.HNS})
   // Test getFileStatus and getAclStatus operations on root path
   public void testRootPath() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
@@ -369,6 +387,8 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   }
 
   @Test
+  @AbfsConfigsToTest(authTypes = {AuthType.SharedKey}, accountTypes = {
+      AccountType.HNS})
   // Test filesystem operations getXAttr and setXAttr
   public void testProperties() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();

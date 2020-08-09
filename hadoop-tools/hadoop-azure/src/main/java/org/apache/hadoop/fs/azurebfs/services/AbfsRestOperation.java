@@ -213,6 +213,7 @@ public class AbfsRestOperation {
       // initialize the HTTP request and open the connection
       httpOperation = new AbfsHttpOperation(url, method, requestHeaders);
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
+      System.out.println("FS: " + url+", Auth: "+client.getAuthType());
 
       switch(client.getAuthType()) {
         case Custom:

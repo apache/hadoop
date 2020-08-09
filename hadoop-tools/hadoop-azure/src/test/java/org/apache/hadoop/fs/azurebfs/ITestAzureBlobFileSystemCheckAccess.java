@@ -23,6 +23,7 @@ import java.lang.reflect.Field;
 import java.util.List;
 
 import com.google.common.collect.Lists;
+import org.apache.hadoop.fs.azurebfs.constants.AccountType;
 import org.apache.hadoop.fs.azurebfs.rules.AbfsConfigsToTest;
 import org.junit.Assume;
 import org.junit.Before;
@@ -77,7 +78,8 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   @Before
-  @AbfsConfigsToTest(authTypes = {AuthType.OAuth})
+  @AbfsConfigsToTest(authTypes = {AuthType.OAuth},
+      accountTypes = AccountType.HNS)
   public void setup() throws Exception {
     super.setup();
     this.superUserFs = getFileSystem();
@@ -134,6 +136,7 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
   public void testWhenCheckAccessConfigIsOff() throws Exception {
     Assume.assumeTrue(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT + " is false",
         isHNSEnabled);
@@ -166,6 +169,8 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   @Test
+  @AbfsConfigsToTest(authTypes = AuthType.OAuth,
+      accountTypes = AccountType.NonHNS)
   public void testCheckAccessForAccountWithoutNS() throws Exception {
     Assume.assumeFalse(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT + " is true",
         getConfiguration()
@@ -178,8 +183,6 @@ public class ITestAzureBlobFileSystemCheckAccess
 
     //  When the driver does not know if the account is HNS enabled or not it
     //  makes a server call and fails
-    setupTestDirectoryAndUserAccess("/",
-        FsAction.NONE);
     intercept(AccessControlException.class,
         "\"This request is not authorized to perform this operation using "
             + "this permission.\", 403",
@@ -201,7 +204,8 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   @Test
-  @AbfsConfigsToTest(authTypes = {AuthType.OAuth})
+  @AbfsConfigsToTest(authTypes = AuthType.OAuth,
+      accountTypes = AccountType.HNS)
   public void testFsActionNONE() throws Exception {
     checkPrerequisites();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test2.txt",
@@ -216,7 +220,8 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   @Test
-  @AbfsConfigsToTest(authTypes = {AuthType.OAuth})
+  @AbfsConfigsToTest(authTypes = {AuthType.OAuth},
+      accountTypes = AccountType.HNS)
   public void testFsActionEXECUTE() throws Exception {
     checkPrerequisites();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test3.txt",
@@ -232,7 +237,8 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   @Test
-  @AbfsConfigsToTest(authTypes = {AuthType.OAuth})
+  @AbfsConfigsToTest(authTypes = {AuthType.OAuth},
+      accountTypes = AccountType.HNS)
   public void testFsActionREAD() throws Exception {
     checkPrerequisites();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test4.txt",
@@ -248,7 +254,8 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   @Test
-  @AbfsConfigsToTest(authTypes = {AuthType.OAuth})
+  @AbfsConfigsToTest(authTypes = {AuthType.OAuth},
+      accountTypes = AccountType.HNS)
   public void testFsActionWRITE() throws Exception {
     checkPrerequisites();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test5.txt",
@@ -264,7 +271,8 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   @Test
-  @AbfsConfigsToTest(authTypes = {AuthType.OAuth})
+  @AbfsConfigsToTest(authTypes = {AuthType.OAuth},
+      accountTypes = AccountType.HNS)
   public void testFsActionREADEXECUTE() throws Exception {
     checkPrerequisites();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test6.txt",
@@ -280,7 +288,8 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   @Test
-  @AbfsConfigsToTest(authTypes = {AuthType.OAuth})
+  @AbfsConfigsToTest(authTypes = {AuthType.OAuth},
+      accountTypes = AccountType.HNS)
   public void testFsActionWRITEEXECUTE() throws Exception {
     checkPrerequisites();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test7.txt",
@@ -296,7 +305,8 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   @Test
-  @AbfsConfigsToTest(authTypes = {AuthType.OAuth})
+  @AbfsConfigsToTest(authTypes = {AuthType.OAuth},
+      accountTypes = AccountType.HNS)
   public void testFsActionALL() throws Exception {
     checkPrerequisites();
     Path testFilePath = setupTestDirectoryAndUserAccess("/test8.txt",

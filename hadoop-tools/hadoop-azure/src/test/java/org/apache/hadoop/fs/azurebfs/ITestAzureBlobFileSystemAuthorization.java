@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.UUID;
 
+import org.apache.hadoop.fs.azurebfs.constants.AccountType;
+import org.apache.hadoop.fs.azurebfs.rules.AbfsConfigsToTest;
 import org.junit.Assume;
 import org.junit.Test;
 
@@ -72,6 +74,8 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = {AccountType.HNS},
+      authTypes = {AuthType.SharedKey})
   public void testSASTokenProviderInitializeException() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
 
@@ -87,6 +91,8 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = {AccountType.HNS},
+      authTypes = {AuthType.SharedKey})
   public void testSASTokenProviderEmptySASToken() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
 
@@ -104,6 +110,8 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = {AccountType.HNS},
+      authTypes = {AuthType.SharedKey})
   public void testSASTokenProviderNullSASToken() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
 
@@ -119,6 +127,8 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = {AccountType.HNS},
+      authTypes = {AuthType.SharedKey})
   public void testOpenFileWithInvalidPath() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     intercept(IllegalArgumentException.class,
@@ -128,134 +138,184 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = {AccountType.HNS},
+      authTypes = {AuthType.SharedKey})
   public void testOpenFileAuthorized() throws Exception {
     runTest(FileSystemOperations.Open, false);
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = {AccountType.HNS},
+      authTypes = {AuthType.SharedKey})
   public void testOpenFileUnauthorized() throws Exception {
     runTest(FileSystemOperations.Open, true);
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = {AccountType.HNS},
+      authTypes = {AuthType.SharedKey})
   public void testCreateFileAuthorized() throws Exception {
     runTest(FileSystemOperations.CreatePath, false);
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = {AccountType.HNS},
+      authTypes = {AuthType.SharedKey})
   public void testCreateFileUnauthorized() throws Exception {
     runTest(FileSystemOperations.CreatePath, true);
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = {AccountType.HNS},
+      authTypes = {AuthType.SharedKey})
   public void testAppendFileAuthorized() throws Exception {
     runTest(FileSystemOperations.Append, false);
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = {AccountType.HNS},
+      authTypes = {AuthType.SharedKey})
   public void testAppendFileUnauthorized() throws Exception {
     runTest(FileSystemOperations.Append, true);
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = {AccountType.HNS},
+      authTypes = {AuthType.SharedKey})
   public void testRenameAuthorized() throws Exception {
     runTest(FileSystemOperations.RenamePath, false);
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = {AccountType.HNS},
+      authTypes = {AuthType.SharedKey})
   public void testRenameUnauthorized() throws Exception {
     runTest(FileSystemOperations.RenamePath, true);
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = {AccountType.HNS},
+      authTypes = {AuthType.SharedKey})
   public void testDeleteFileAuthorized() throws Exception {
     runTest(FileSystemOperations.DeletePath, false);
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = {AccountType.HNS},
+      authTypes = {AuthType.SharedKey})
   public void testDeleteFileUnauthorized() throws Exception {
     runTest(FileSystemOperations.DeletePath, true);
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = {AccountType.HNS},
+      authTypes = {AuthType.SharedKey})
   public void testListStatusAuthorized() throws Exception {
     runTest(FileSystemOperations.ListPaths, false);
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = {AccountType.HNS},
+      authTypes = {AuthType.SharedKey})
   public void testListStatusUnauthorized() throws Exception {
     runTest(FileSystemOperations.ListPaths, true);
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = {AccountType.HNS},
+      authTypes = {AuthType.SharedKey})
   public void testMkDirsAuthorized() throws Exception {
     runTest(FileSystemOperations.Mkdir, false);
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = {AccountType.HNS},
+      authTypes = {AuthType.SharedKey})
   public void testMkDirsUnauthorized() throws Exception {
     runTest(FileSystemOperations.Mkdir, true);
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = {AccountType.HNS},
+      authTypes = {AuthType.SharedKey})
   public void testGetFileStatusAuthorized() throws Exception {
     runTest(FileSystemOperations.GetPathStatus, false);
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = {AccountType.HNS},
+      authTypes = {AuthType.SharedKey})
   public void testGetFileStatusUnauthorized() throws Exception {
     runTest(FileSystemOperations.GetPathStatus, true);
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = {AccountType.HNS},
+      authTypes = {AuthType.SharedKey})
   public void testSetOwnerUnauthorized() throws Exception {
     Assume.assumeTrue(this.getFileSystem().getIsNamespaceEnabled());
     runTest(FileSystemOperations.SetOwner, true);
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = {AccountType.HNS},
+      authTypes = {AuthType.SharedKey})
   public void testSetPermissionUnauthorized() throws Exception {
     Assume.assumeTrue(this.getFileSystem().getIsNamespaceEnabled());
     runTest(FileSystemOperations.SetPermissions, true);
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = {AccountType.HNS},
+      authTypes = {AuthType.SharedKey})
   public void testModifyAclEntriesUnauthorized() throws Exception {
     Assume.assumeTrue(this.getFileSystem().getIsNamespaceEnabled());
     runTest(FileSystemOperations.ModifyAclEntries, true);
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = {AccountType.HNS},
+      authTypes = {AuthType.SharedKey})
   public void testRemoveAclEntriesUnauthorized() throws Exception {
     Assume.assumeTrue(this.getFileSystem().getIsNamespaceEnabled());
     runTest(FileSystemOperations.RemoveAclEntries, true);
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = {AccountType.HNS},
+      authTypes = {AuthType.SharedKey})
   public void testRemoveDefaultAclUnauthorized() throws Exception {
     Assume.assumeTrue(this.getFileSystem().getIsNamespaceEnabled());
     runTest(FileSystemOperations.RemoveDefaultAcl, true);
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = {AccountType.HNS},
+      authTypes = {AuthType.SharedKey})
   public void testRemoveAclUnauthorized() throws Exception {
     Assume.assumeTrue(this.getFileSystem().getIsNamespaceEnabled());
     runTest(FileSystemOperations.RemoveAcl, true);
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = {AccountType.HNS},
+      authTypes = {AuthType.SharedKey})
   public void testSetAclUnauthorized() throws Exception {
     Assume.assumeTrue(this.getFileSystem().getIsNamespaceEnabled());
     runTest(FileSystemOperations.SetAcl, true);
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = {AccountType.HNS},
+      authTypes = {AuthType.SharedKey})
   public void testGetAclStatusAuthorized() throws Exception {
     Assume.assumeTrue(this.getFileSystem().getIsNamespaceEnabled());
     runTest(FileSystemOperations.GetAcl, false);
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = {AccountType.HNS},
+      authTypes = {AuthType.SharedKey})
   public void testGetAclStatusUnauthorized() throws Exception {
     Assume.assumeTrue(this.getFileSystem().getIsNamespaceEnabled());
     runTest(FileSystemOperations.GetAcl, true);

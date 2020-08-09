@@ -21,7 +21,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.UUID;
 
+import org.apache.hadoop.fs.azurebfs.constants.AccountType;
 import org.apache.hadoop.fs.azurebfs.enums.Trilean;
+import org.apache.hadoop.fs.azurebfs.rules.AbfsConfigsToTest;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
@@ -68,6 +70,7 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = {AccountType.HNS})
   public void testXNSAccount() throws IOException {
     Assume.assumeTrue("Skip this test because the account being used for test is a non XNS account",
             isUsingXNSAccount);
@@ -76,6 +79,7 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(accountTypes = {AccountType.NonHNS})
   public void testNonXNSAccount() throws IOException {
     Assume.assumeFalse("Skip this test because the account being used for test is a XNS account",
             isUsingXNSAccount);
