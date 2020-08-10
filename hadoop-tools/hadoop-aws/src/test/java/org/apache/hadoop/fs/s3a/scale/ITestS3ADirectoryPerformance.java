@@ -28,7 +28,6 @@ import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
-import org.apache.hadoop.io.IOUtils;
 
 import org.junit.Test;
 import org.assertj.core.api.Assertions;
@@ -57,8 +56,6 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(
       ITestS3ADirectoryPerformance.class);
-
-  private S3AFileSystem fs;
 
   @Test
   public void testListOperations() throws Throwable {
@@ -163,22 +160,27 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
   public void testMultiPagesListingPerformanceAndCorrectness() throws Throwable {
     describe("Check performance and correctness for multi page listing " +
             "using different listing api");
-    Path dir = path(this.getMethodName());
-    Configuration conf = getConfigurationWithConfiguredBatchSize(10);
-    fs = (S3AFileSystem) FileSystem.get(dir.toUri(), conf);
-    assume("Test is only for raw fs", !fs.hasMetadataStore());
-    fs.create(dir);
+    final Path dir = methodPath();
+    final int batchSize = 10;
+    final int numOfPutRequests = 1000;
+    final int eachFileProcessingTime = 10;
+    final int numOfPutThreads = 50;
+    final Configuration conf = getConfigurationWithConfiguredBatchSize(batchSize);
     final InputStream im = new InputStream() {
       @Override
       public int read() throws IOException {
         return -1;
       }
     };
-    final int numOfPutRequests = 500;
     final List<String> originalListOfFiles = new ArrayList<>();
     List<Callable<PutObjectResult>> putObjectRequests = new ArrayList<>();
-    ExecutorService executorService = Executors.newFixedThreadPool(50);
-    try {
+    ExecutorService executorService = Executors
+            .newFixedThreadPool(numOfPutThreads);
+
+    NanoTimer uploadTimer = new NanoTimer();
+    try(S3AFileSystem fs = (S3AFileSystem) FileSystem.get(dir.toUri(), conf)) {
+      fs.create(dir);
+      assume("Test is only for raw fs", !fs.hasMetadataStore());
       for (int i=0; i<numOfPutRequests; i++) {
         Path file = new Path(dir, String.format("file-%03d", i));
         originalListOfFiles.add(file.toString());
@@ -187,41 +189,49 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
                 fs.pathToKey(file),
                 im,
                 om);
-        putObjectRequests.add(() -> fs.putObjectDirect(put));
+        putObjectRequests.add(() ->
+                fs.getWriteOperationHelper().putObject(put));
       }
       executorService.invokeAll(putObjectRequests);
+      uploadTimer.end("uploading %d files with a parallelism of %d",
+              numOfPutRequests, numOfPutThreads);
+
+      RemoteIterator<LocatedFileStatus> resIterator = fs.listFiles(dir, true);
+      List<String> listUsingListFiles = new ArrayList<>();
+      NanoTimer timeUsingListFiles = new NanoTimer();
+      while(resIterator.hasNext()) {
+        listUsingListFiles.add(resIterator.next().getPath().toString());
+        Thread.sleep(eachFileProcessingTime);
+      }
+      timeUsingListFiles.end("listing %d files using listFiles() api with " +
+                      "batch size of %d including %dms of processing time" +
+                      " for each file",
+              numOfPutRequests, batchSize, eachFileProcessingTime);
+
+      Assertions.assertThat(listUsingListFiles)
+              .describedAs("Listing results using listFiles() must" +
+                      "match with original list of files")
+              .hasSameElementsAs(originalListOfFiles)
+              .hasSize(numOfPutRequests);
+      List<String> listUsingListStatus = new ArrayList<>();
+      NanoTimer timeUsingListStatus = new NanoTimer();
+      FileStatus[] fileStatuses = fs.listStatus(dir);
+      for(FileStatus fileStatus : fileStatuses) {
+        listUsingListStatus.add(fileStatus.getPath().toString());
+        Thread.sleep(eachFileProcessingTime);
+      }
+      timeUsingListStatus.end("listing %d files using listStatus() api with " +
+                      "batch size of %d including %dms of processing time" +
+                      " for each file",
+              numOfPutRequests, batchSize, eachFileProcessingTime);
+      Assertions.assertThat(listUsingListStatus)
+              .describedAs("Listing results using listStatus() must" +
+                      "match with original list of files")
+              .hasSameElementsAs(originalListOfFiles)
+              .hasSize(numOfPutRequests);
     } finally {
       executorService.shutdown();
     }
-    RemoteIterator<LocatedFileStatus> locatedFileStatusRemoteIterator =
-            fs.listFiles(dir, true);
-    List<String> listUsingListFiles = new ArrayList<>();
-    NanoTimer timeUsingListFiles = new NanoTimer();
-    while(locatedFileStatusRemoteIterator.hasNext()) {
-      listUsingListFiles.add(locatedFileStatusRemoteIterator.next().getPath().toString());
-      Thread.sleep(10);
-    }
-    timeUsingListFiles.end("Time in listing %d using listFiles() api including " +
-            "10ms of processing time for each file", numOfPutRequests);
-    Assertions.assertThat(listUsingListFiles)
-            .describedAs("Listing results using listFiles() must" +
-                    "match with original list of files")
-            .hasSameElementsAs(originalListOfFiles)
-            .hasSize(numOfPutRequests);
-    List<String> listUsingListStatus = new ArrayList<>();
-    NanoTimer timeUsingListStatus = new NanoTimer();
-    FileStatus[] fileStatuses = fs.listStatus(dir);
-    for(FileStatus fileStatus : fileStatuses) {
-      listUsingListStatus.add(fileStatus.getPath().toString());
-      Thread.sleep(10);
-    }
-    timeUsingListStatus.end("Time in listing %d using listStatus() api including " +
-            "10ms of processing time for each file", numOfPutRequests);
-    Assertions.assertThat(listUsingListStatus)
-            .describedAs("Listing results using listStatus() must" +
-                    "match with original list of files")
-            .hasSameElementsAs(originalListOfFiles)
-            .hasSize(numOfPutRequests);
   }
 
   private Configuration getConfigurationWithConfiguredBatchSize(int batchSize) {
@@ -281,11 +291,5 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
     LOG.info("metadata per operation {}", metadataRequests.diff() / attempts);
     LOG.info("listObjects: {}", listRequests);
     LOG.info("listObjects: per operation {}", listRequests.diff() / attempts);
-  }
-
-  @Override
-  public void teardown() throws Exception {
-    IOUtils.cleanupWithLogger(LOG, fs);
-    super.teardown();
   }
 }

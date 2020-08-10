@@ -792,8 +792,6 @@ public class Listing extends AbstractStoreOperation {
           // Calculating the result of last async list call.
           objects = awaitFuture(s3ListResultFuture);
           // Requesting next batch of results.
-          LOG.debug("[{}], Requesting next {} objects under {}",
-              listingCount, maxKeys, listPath);
           fetchNextBatchAsyncIfPresent();
           listingCount++;
           LOG.debug("New listing status: {}", this);
@@ -812,6 +810,8 @@ public class Listing extends AbstractStoreOperation {
      */
     private void fetchNextBatchAsyncIfPresent() throws IOException {
       if (objects.isTruncated()) {
+        LOG.debug("[{}], Requesting next {} objects under {}",
+                listingCount, maxKeys, listPath);
         s3ListResultFuture = listingOperationCallbacks
                 .continueListObjectsAsync(request, objects);
       }

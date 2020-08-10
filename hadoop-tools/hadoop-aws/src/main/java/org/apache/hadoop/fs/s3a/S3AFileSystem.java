@@ -1618,7 +1618,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     public CompletableFuture<S3ListResult> listObjectsAsync(
             S3ListRequest request)
             throws IOException {
-      return S3AFileSystem.this.listObjectsAsync(request);
+      return submit(
+              unboundedThreadPool,
+              () -> listObjects(request));
     }
 
     @Override
@@ -1627,7 +1629,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             S3ListRequest request,
             S3ListResult prevResult)
             throws IOException {
-      return S3AFileSystem.this.continueListObjectsAsync(request, prevResult);
+      return submit(
+              unboundedThreadPool,
+              () -> continueListObjects(request, prevResult));
     }
 
     @Override
@@ -1956,14 +1960,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
   }
 
-  protected CompletableFuture<S3ListResult> listObjectsAsync(S3ListRequest request) {
-    return submit(
-            unboundedThreadPool,
-            () -> {
-              return listObjects(request);
-            });
-  }
-
   /**
    * Validate the list arguments with this bucket's settings.
    * @param request the request to validate
@@ -2006,17 +2002,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             }
           });
     }
-  }
-
-  protected CompletableFuture<S3ListResult> continueListObjectsAsync(
-          S3ListRequest request,
-          S3ListResult prevResult) throws IOException {
-    return submit(
-            unboundedThreadPool,
-            () -> {
-              return continueListObjects(request, prevResult);
-            }
-    );
   }
 
   /**
@@ -2265,7 +2250,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   @VisibleForTesting
   @Retries.OnceRaw("For PUT; post-PUT actions are RetryTranslated")
-  public PutObjectResult putObjectDirect(PutObjectRequest putObjectRequest)
+  PutObjectResult putObjectDirect(PutObjectRequest putObjectRequest)
       throws AmazonClientException, MetadataPersistenceException {
     long len = getPutRequestLength(putObjectRequest);
     LOG.debug("PUT {} bytes to {}", len, putObjectRequest.getKey());
