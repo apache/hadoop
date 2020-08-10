@@ -56,6 +56,14 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private final String eTag;                  // eTag of the path when InputStream are created
   private final boolean tolerateOobAppends; // whether tolerate Oob Appends
   private final boolean readAheadEnabled; // whether enable readAhead;
+  /*
+   * By default the pread API will do a seek + read as in FSInputStream. This will fill read data
+   * size considering the bufferSize being passed. The read data will be kept in a buffer. When this
+   * is enabled, the pread API will read only the specified amount of data from the given offset and
+   * the buffer will not come into use at all.
+   * @see #read(long, byte[], int, int)
+   */
+  private boolean enablePread;
 
   // SAS tokens can be re-used until they expire
   private CachedSASToken cachedSasToken;
@@ -85,6 +93,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.bufferSize = abfsInputStreamContext.getReadBufferSize();
     this.readAheadQueueDepth = abfsInputStreamContext.getReadAheadQueueDepth();
     this.tolerateOobAppends = abfsInputStreamContext.isTolerateOobAppends();
+    this.enablePread = abfsInputStreamContext.isPreadEnabled();
     this.eTag = eTag;
     this.readAheadEnabled = true;
     this.cachedSasToken = new CachedSASToken(
@@ -94,6 +103,28 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   public String getPath() {
     return path;
+  }
+
+  @Override
+  public int read(long position, byte[] buffer, int offset, int length) throws IOException {
+    if (!enablePread) {
+      return super.read(position, buffer, offset, length);
+    }
+    validatePositionedReadArgs(position, buffer, offset, length);
+    if (length == 0) {
+      return 0;
+    }
+    if (streamStatistics != null) {
+      streamStatistics.readOperationStarted(offset, length);
+    }
+    int bytesRead = readRemote(position, buffer, offset, length);
+    if (statistics != null) {
+      statistics.incrementBytesRead(bytesRead);
+    }
+    if (streamStatistics != null) {
+      streamStatistics.bytesRead(bytesRead);
+    }
+    return bytesRead;
   }
 
   @Override
@@ -501,6 +532,11 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   @VisibleForTesting
   public AbfsInputStreamStatistics getStreamStatistics() {
     return streamStatistics;
+  }
+
+  @VisibleForTesting
+  void setEnablePread(boolean enablePread) {
+    this.enablePread = enablePread;
   }
 
   /**

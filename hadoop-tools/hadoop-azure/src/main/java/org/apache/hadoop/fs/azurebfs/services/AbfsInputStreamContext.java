@@ -29,6 +29,8 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
 
   private boolean tolerateOobAppends;
 
+  private boolean preadEnabled;
+
   private AbfsInputStreamStatistics streamStatistics;
 
   public AbfsInputStreamContext(final long sasTokenRenewPeriodForStreamsInSeconds) {
@@ -54,6 +56,11 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
     return this;
   }
 
+  public AbfsInputStreamContext withPreadEnabled(final boolean preadEnabled) {
+    this.preadEnabled = preadEnabled;
+    return this;
+  }
+
   public AbfsInputStreamContext withStreamStatistics(
       final AbfsInputStreamStatistics streamStatistics) {
     this.streamStatistics = streamStatistics;
@@ -75,6 +82,10 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
 
   public boolean isTolerateOobAppends() {
     return tolerateOobAppends;
+  }
+
+  public boolean isPreadEnabled() {
+    return preadEnabled;
   }
 
   public AbfsInputStreamStatistics getStreamStatistics() {

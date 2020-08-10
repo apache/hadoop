@@ -239,6 +239,10 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_SAS_TOKEN_RENEW_PERIOD_FOR_STREAMS_IN_SECONDS)
   private long sasTokenRenewPeriodForStreamsInSeconds;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_PREAD,
+      DefaultValue = DEFAULT_ENABLE_PREAD)
+  private boolean enablePread;
+
   public AbfsConfiguration(final Configuration rawConfig, String accountName)
       throws IllegalAccessException, InvalidConfigurationValueException, IOException {
     this.rawConfig = ProviderUtils.excludeIncompatibleCredentialProviders(
@@ -640,6 +644,10 @@ public class AbfsConfiguration{
     return this.trackLatency;
   }
 
+  public boolean isPreadEnabled() {
+    return this.enablePread;
+  }
+
   public AccessTokenProvider getTokenProvider() throws TokenAccessProviderException {
     AuthType authType = getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey);
     if (authType == AuthType.OAuth) {
@@ -860,6 +868,11 @@ public class AbfsConfiguration{
   @VisibleForTesting
   void setIsNamespaceEnabledAccount(String isNamespaceEnabledAccount) {
     this.isNamespaceEnabledAccount = isNamespaceEnabledAccount;
+  }
+
+  @VisibleForTesting
+  void setEnablePread(boolean enablePread) {
+    this.enablePread = enablePread;
   }
 
   private String getTrimmedPasswordString(String key, String defaultValue) throws IOException {
