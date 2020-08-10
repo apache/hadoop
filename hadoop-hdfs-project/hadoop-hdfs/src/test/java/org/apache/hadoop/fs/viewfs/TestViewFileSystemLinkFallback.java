@@ -759,7 +759,11 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
       cluster.shutdownNameNodes(); // Stopping fallback server
       // /user1/test1 does not exist in mount internal dir tree, it would
       // attempt to create in fallback.
-      assertFalse(vfs.mkdirs(nextLevelToInternalDir));
+      try {
+        vfs.mkdirs(nextLevelToInternalDir);
+        fail("dir creation should fail.");
+      } catch (IOException ioe) {
+      }
       cluster.restartNameNodes();
       // should return true succeed when fallback fs is back to normal.
       assertTrue(vfs.mkdirs(nextLevelToInternalDir));
