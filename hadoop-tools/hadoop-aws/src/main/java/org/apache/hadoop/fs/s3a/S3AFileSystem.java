@@ -1021,6 +1021,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
     }
     // TODO S3Guard HADOOP-13761: retries when source paths are not visible yet
     // TODO S3Guard: performance: mark destination dirs as authoritative
+    // The path to whichever file or directory is created by the
+    // rename. When deleting markers all parents of
+    // this path will need their markers pruned.
+    Path destCreated = dst;
 
     // Ok! Time to start
     if (srcStatus.isFile()) {
@@ -1031,9 +1035,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
         String filename =
             srcKey.substring(pathToKey(src.getParent()).length()+1);
         newDstKey = newDstKey + filename;
+        destCreated = keyToQualifiedPath(newDstKey);
+
         copyFile(srcKey, newDstKey, length);
         S3Guard.addMoveFile(metadataStore, srcPaths, dstMetas, src,
-            keyToQualifiedPath(newDstKey), length, getDefaultBlockSize(dst),
+            destCreated, length, getDefaultBlockSize(dst),
             username);
       } else {
         copyFile(srcKey, dstKey, srcStatus.getLen());
@@ -1115,9 +1121,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
 
     metadataStore.move(srcPaths, dstMetas);
 
-    if (!src.getParent().equals(dst.getParent())) {
+    if (!src.getParent().equals(destCreated.getParent())) {
       LOG.debug("source & dest parents are different; fix up dir markers");
-      deleteUnnecessaryFakeDirectories(dst.getParent());
+      deleteUnnecessaryFakeDirectories(destCreated.getParent());
       maybeCreateFakeParentDirectory(src);
     }
     return true;
