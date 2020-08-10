@@ -1615,19 +1615,19 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
     @Override
     @Retries.RetryRaw
-    public S3ListResult listObjects(
+    public CompletableFuture<S3ListResult> listObjectsAsync(
             S3ListRequest request)
             throws IOException {
-      return S3AFileSystem.this.listObjects(request);
+      return S3AFileSystem.this.listObjectsAsync(request);
     }
 
     @Override
     @Retries.RetryRaw
-    public S3ListResult continueListObjects(
+    public CompletableFuture<S3ListResult> continueListObjectsAsync(
             S3ListRequest request,
             S3ListResult prevResult)
             throws IOException {
-      return S3AFileSystem.this.continueListObjects(request, prevResult);
+      return S3AFileSystem.this.continueListObjectsAsync(request, prevResult);
     }
 
     @Override
@@ -1956,6 +1956,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
   }
 
+  protected CompletableFuture<S3ListResult> listObjectsAsync(S3ListRequest request) {
+    return submit(
+            unboundedThreadPool,
+            () -> {
+              return listObjects(request);
+            });
+  }
+
   /**
    * Validate the list arguments with this bucket's settings.
    * @param request the request to validate
@@ -1998,6 +2006,17 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             }
           });
     }
+  }
+
+  protected CompletableFuture<S3ListResult> continueListObjectsAsync(
+          S3ListRequest request,
+          S3ListResult prevResult) throws IOException {
+    return submit(
+            unboundedThreadPool,
+            () -> {
+              return continueListObjects(request, prevResult);
+            }
+    );
   }
 
   /**
@@ -2244,8 +2263,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * not be saved to the metadata store and
    * fs.s3a.metadatastore.fail.on.write.error=true
    */
+  @VisibleForTesting
   @Retries.OnceRaw("For PUT; post-PUT actions are RetryTranslated")
-  PutObjectResult putObjectDirect(PutObjectRequest putObjectRequest)
+  public PutObjectResult putObjectDirect(PutObjectRequest putObjectRequest)
       throws AmazonClientException, MetadataPersistenceException {
     long len = getPutRequestLength(putObjectRequest);
     LOG.debug("PUT {} bytes to {}", len, putObjectRequest.getKey());

@@ -18,14 +18,34 @@
 
 package org.apache.hadoop.fs.s3a.scale;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.io.IOUtils;
+
 import org.junit.Test;
+import org.assertj.core.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.services.s3.model.PutObjectResult;
 
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
@@ -37,6 +57,8 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(
       ITestS3ADirectoryPerformance.class);
+
+  private S3AFileSystem fs;
 
   @Test
   public void testListOperations() throws Throwable {
@@ -138,6 +160,78 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
   }
 
   @Test
+  public void testMultiPagesListingPerformanceAndCorrectness() throws Throwable {
+    describe("Check performance and correctness for multi page listing " +
+            "using different listing api");
+    Path dir = path(this.getMethodName());
+    Configuration conf = getConfigurationWithConfiguredBatchSize(10);
+    fs = (S3AFileSystem) FileSystem.get(dir.toUri(), conf);
+    assume("Test is only for raw fs", !fs.hasMetadataStore());
+    fs.create(dir);
+    final InputStream im = new InputStream() {
+      @Override
+      public int read() throws IOException {
+        return -1;
+      }
+    };
+    final int numOfPutRequests = 500;
+    final List<String> originalListOfFiles = new ArrayList<>();
+    List<Callable<PutObjectResult>> putObjectRequests = new ArrayList<>();
+    ExecutorService executorService = Executors.newFixedThreadPool(50);
+    try {
+      for (int i=0; i<numOfPutRequests; i++) {
+        Path file = new Path(dir, String.format("file-%03d", i));
+        originalListOfFiles.add(file.toString());
+        ObjectMetadata om = fs.newObjectMetadata(0L);
+        PutObjectRequest put = new PutObjectRequest(fs.getBucket(),
+                fs.pathToKey(file),
+                im,
+                om);
+        putObjectRequests.add(() -> fs.putObjectDirect(put));
+      }
+      executorService.invokeAll(putObjectRequests);
+    } finally {
+      executorService.shutdown();
+    }
+    RemoteIterator<LocatedFileStatus> locatedFileStatusRemoteIterator =
+            fs.listFiles(dir, true);
+    List<String> listUsingListFiles = new ArrayList<>();
+    NanoTimer timeUsingListFiles = new NanoTimer();
+    while(locatedFileStatusRemoteIterator.hasNext()) {
+      listUsingListFiles.add(locatedFileStatusRemoteIterator.next().getPath().toString());
+      Thread.sleep(10);
+    }
+    timeUsingListFiles.end("Time in listing %d using listFiles() api including " +
+            "10ms of processing time for each file", numOfPutRequests);
+    Assertions.assertThat(listUsingListFiles)
+            .describedAs("Listing results using listFiles() must" +
+                    "match with original list of files")
+            .hasSameElementsAs(originalListOfFiles)
+            .hasSize(numOfPutRequests);
+    List<String> listUsingListStatus = new ArrayList<>();
+    NanoTimer timeUsingListStatus = new NanoTimer();
+    FileStatus[] fileStatuses = fs.listStatus(dir);
+    for(FileStatus fileStatus : fileStatuses) {
+      listUsingListStatus.add(fileStatus.getPath().toString());
+      Thread.sleep(10);
+    }
+    timeUsingListStatus.end("Time in listing %d using listStatus() api including " +
+            "10ms of processing time for each file", numOfPutRequests);
+    Assertions.assertThat(listUsingListStatus)
+            .describedAs("Listing results using listStatus() must" +
+                    "match with original list of files")
+            .hasSameElementsAs(originalListOfFiles)
+            .hasSize(numOfPutRequests);
+  }
+
+  private Configuration getConfigurationWithConfiguredBatchSize(int batchSize) {
+    Configuration conf = new Configuration(getFileSystem().getConf());
+    S3ATestUtils.disableFilesystemCaching(conf);
+    conf.setInt(Constants.MAX_PAGING_KEYS, batchSize);
+    return conf;
+  }
+
+  @Test
   public void testTimeToStatEmptyDirectory() throws Throwable {
     describe("Time to stat an empty directory");
     Path path = path("empty");
@@ -189,4 +283,9 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
     LOG.info("listObjects: per operation {}", listRequests.diff() / attempts);
   }
 
+  @Override
+  public void teardown() throws Exception {
+    IOUtils.cleanupWithLogger(LOG, fs);
+    super.teardown();
+  }
 }
