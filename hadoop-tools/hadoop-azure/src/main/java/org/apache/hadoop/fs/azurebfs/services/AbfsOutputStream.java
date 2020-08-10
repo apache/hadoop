@@ -36,6 +36,7 @@ import java.util.concurrent.TimeUnit;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.io.ElasticByteBufferPool;
@@ -62,6 +63,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   private byte[] buffer;
   private int bufferIndex;
   private final int maxConcurrentRequestCount;
+  private final int maxRequestsThatCanBeQueued;
 
   private ConcurrentLinkedDeque<WriteOperation> writeOperations;
   private final ThreadPoolExecutor threadExecutor;
@@ -82,7 +84,8 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
       final long position,
       final int bufferSize,
       final boolean supportFlush,
-      final boolean disableOutputStreamFlush) {
+      final boolean disableOutputStreamFlush,
+      final AbfsConfiguration conf) {
     this.client = client;
     this.path = path;
     this.position = position;
@@ -96,7 +99,8 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     this.bufferIndex = 0;
     this.writeOperations = new ConcurrentLinkedDeque<>();
 
-    this.maxConcurrentRequestCount = 4 * Runtime.getRuntime().availableProcessors();
+    this.maxConcurrentRequestCount = conf.getWriteMaxConcurrentRequestCount();
+    this.maxRequestsThatCanBeQueued = conf.getMaxWriteRequestsToQueue();
 
     this.threadExecutor
         = new ThreadPoolExecutor(maxConcurrentRequestCount,
@@ -287,7 +291,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     final long offset = position;
     position += bytesLength;
 
-    if (threadExecutor.getQueue().size() >= maxConcurrentRequestCount * 2) {
+    if (threadExecutor.getQueue().size() >= maxRequestsThatCanBeQueued) {
       waitForTaskToComplete();
     }
 
