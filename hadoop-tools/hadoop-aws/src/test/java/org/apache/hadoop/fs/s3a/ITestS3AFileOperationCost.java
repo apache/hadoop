@@ -35,7 +35,7 @@ import java.util.concurrent.Callable;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
-import static org.apache.hadoop.fs.s3a.test.costs.HeadListCosts.*;
+import static org.apache.hadoop.fs.s3a.performance.OperationCost.*;
 import static org.apache.hadoop.test.GenericTestUtils.getTestDir;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -91,9 +91,9 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
         Tristate.TRUE);
 
     if (!fs.hasMetadataStore()) {
-      metadataRequests.assertDiffEquals(GETFILESTATUS_EMPTY_DIR_H);
+      metadataRequests.assertDiffEquals(GET_FILE_STATUS_ON_EMPTY_DIR.head());
     }
-    listRequests.assertDiffEquals(GETFILESTATUS_EMPTY_DIR_L);
+    listRequests.assertDiffEquals(GET_FILE_STATUS_ON_EMPTY_DIR.list());
   }
 
   @Test
@@ -104,8 +104,8 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     resetMetricDiffs();
     intercept(FileNotFoundException.class,
         () -> fs.getFileStatus(path));
-    metadataRequests.assertDiffEquals(GETFILESTATUS_FNFE_H);
-    listRequests.assertDiffEquals(GETFILESTATUS_FNFE_L);
+    metadataRequests.assertDiffEquals(GET_FILE_STATUS_FNFE.head());
+    listRequests.assertDiffEquals(GET_FILE_STATUS_FNFE.list());
   }
 
   @Test
@@ -116,8 +116,8 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
     resetMetricDiffs();
     intercept(FileNotFoundException.class,
         () -> fs.getFileStatus(path));
-    metadataRequests.assertDiffEquals(GETFILESTATUS_FNFE_H);
-    listRequests.assertDiffEquals(GETFILESTATUS_FNFE_L);
+    metadataRequests.assertDiffEquals(GET_FILE_STATUS_FNFE.head());
+    listRequests.assertDiffEquals(GET_FILE_STATUS_FNFE.list());
   }
 
   @Test
@@ -138,8 +138,8 @@ public class ITestS3AFileOperationCost extends AbstractS3ATestBase {
           + "\n" + fsState);
     }
     if (!fs.hasMetadataStore()) {
-      metadataRequests.assertDiffEquals(GETFILESTATUS_FNFE_H);
-      listRequests.assertDiffEquals(GETFILESTATUS_FNFE_L);
+      metadataRequests.assertDiffEquals(GET_FILE_STATUS_FNFE.head());
+      listRequests.assertDiffEquals(GET_FILE_STATUS_FNFE.list());
     }
   }
 
