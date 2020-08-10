@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -759,11 +760,9 @@ public class TestViewFileSystemLinkFallback extends ViewFileSystemBaseTest {
       cluster.shutdownNameNodes(); // Stopping fallback server
       // /user1/test1 does not exist in mount internal dir tree, it would
       // attempt to create in fallback.
-      try {
+      intercept(IOException.class, () -> {
         vfs.mkdirs(nextLevelToInternalDir);
-        fail("dir creation should fail.");
-      } catch (IOException ioe) {
-      }
+      });
       cluster.restartNameNodes();
       // should return true succeed when fallback fs is back to normal.
       assertTrue(vfs.mkdirs(nextLevelToInternalDir));
