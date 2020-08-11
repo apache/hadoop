@@ -20,10 +20,10 @@ package org.apache.hadoop.fs.azurebfs;
 import java.lang.reflect.Field;
 import java.net.URL;
 
-import org.apache.hadoop.fs.azurebfs.rules.AbfsConfigsToTest;
 import org.junit.Assume;
 import org.junit.Test;
 
+import org.apache.hadoop.fs.azurebfs.rules.AbfsConfigsToTest;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;

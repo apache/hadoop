@@ -26,7 +26,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.azurebfs.rules.AbfsTestsRule;
 import org.apache.hadoop.fs.azurebfs.rules.AbfsTestable;
-import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.contract.AbstractContractUnbufferTest;
 
 /**

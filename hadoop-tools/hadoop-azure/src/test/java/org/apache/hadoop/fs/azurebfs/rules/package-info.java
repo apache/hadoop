@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,23 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 package org.apache.hadoop.fs.azurebfs.rules;
-
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
-import org.apache.hadoop.fs.azurebfs.constants.AccountType;
-import org.apache.hadoop.fs.azurebfs.services.AuthType;
-
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.METHOD)
-public @interface AbfsConfigsToTest {
-
-  AuthType[] authTypes() default {AuthType.OAuth, AuthType.SharedKey
-      //AuthType.SAS
-  };
-
-  AccountType[] accountTypes() default {AccountType.HNS, AccountType.NonHNS};
-}
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;

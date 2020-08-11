@@ -25,14 +25,13 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
-import org.apache.hadoop.fs.azurebfs.constants.AccountType;
-import org.apache.hadoop.fs.azurebfs.rules.AbfsConfigsToTest;
-import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.azurebfs.constants.AccountType;
+import org.apache.hadoop.fs.azurebfs.rules.AbfsConfigsToTest;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;

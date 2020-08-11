@@ -19,18 +19,17 @@ package org.apache.hadoop.fs.azurebfs.contract;
 
 import java.io.IOException;
 
-import org.apache.hadoop.conf.Configuration;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.rules.AbfsTestsRule;
 import org.apache.hadoop.fs.azurebfs.rules.AbfsTestable;
-import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 
 import static org.junit.Assert.assertEquals;

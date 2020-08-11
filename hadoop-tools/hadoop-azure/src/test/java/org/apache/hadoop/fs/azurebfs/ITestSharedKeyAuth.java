@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.fs.azurebfs;
 
-import org.apache.hadoop.fs.azurebfs.rules.AbfsConfigsToTest;
 import org.junit.Assume;
 import org.junit.Test;
 
+import org.apache.hadoop.fs.azurebfs.rules.AbfsConfigsToTest;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;

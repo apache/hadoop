@@ -22,13 +22,12 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.UUID;
 
-import org.apache.hadoop.fs.azurebfs.constants.AccountType;
-import org.apache.hadoop.fs.azurebfs.rules.AbfsConfigsToTest;
 import org.junit.Assume;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
-
+import org.apache.hadoop.fs.azurebfs.constants.AccountType;
+import org.apache.hadoop.fs.azurebfs.rules.AbfsConfigsToTest;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;

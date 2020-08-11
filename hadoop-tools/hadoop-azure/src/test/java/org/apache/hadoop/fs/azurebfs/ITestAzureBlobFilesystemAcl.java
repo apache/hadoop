@@ -18,18 +18,17 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
-import com.google.common.collect.Lists;
-
 import java.io.FileNotFoundException;
 import java.util.List;
 import java.util.UUID;
 
-import org.apache.hadoop.fs.azurebfs.constants.AccountType;
-import org.apache.hadoop.fs.azurebfs.rules.AbfsConfigsToTest;
 import org.junit.Assume;
 import org.junit.Ignore;
 import org.junit.Test;
+import com.google.common.collect.Lists;
 
+import org.apache.hadoop.fs.azurebfs.constants.AccountType;
+import org.apache.hadoop.fs.azurebfs.rules.AbfsConfigsToTest;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;

@@ -22,15 +22,15 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.UUID;
 
-import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.fs.azurebfs.constants.AccountType;
-import org.apache.hadoop.fs.azurebfs.rules.AbfsConfigsToTest;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.azurebfs.constants.AccountType;
+import org.apache.hadoop.fs.azurebfs.rules.AbfsConfigsToTest;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;

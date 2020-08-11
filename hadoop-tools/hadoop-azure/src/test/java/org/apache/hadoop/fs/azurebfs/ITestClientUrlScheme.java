@@ -22,7 +22,6 @@ import java.lang.reflect.Field;
 import java.net.URL;
 import java.util.Arrays;
 
-import org.apache.hadoop.fs.azurebfs.rules.AbfsConfigsToTest;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
@@ -30,6 +29,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import org.apache.hadoop.fs.azurebfs.rules.AbfsConfigsToTest;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;

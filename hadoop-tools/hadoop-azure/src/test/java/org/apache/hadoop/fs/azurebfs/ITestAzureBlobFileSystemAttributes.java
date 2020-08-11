@@ -21,12 +21,13 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 import java.util.EnumSet;
 
+import org.junit.Assume;
+import org.junit.Test;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.azurebfs.constants.AccountType;
 import org.apache.hadoop.fs.azurebfs.rules.AbfsConfigsToTest;
-import org.junit.Assume;
-import org.junit.Test;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
