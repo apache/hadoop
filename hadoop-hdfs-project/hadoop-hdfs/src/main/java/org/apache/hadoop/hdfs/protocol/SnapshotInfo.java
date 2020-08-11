@@ -83,7 +83,6 @@ public class SnapshotInfo {
 
   public static class Bean {
     private final int snapshotID;
-    private final String snapshotName;
     private final String snapshotDirectory;
     private final long modificationTime;
     private final short permission;
@@ -91,11 +90,10 @@ public class SnapshotInfo {
     private final String group;
     private final String status;
 
-    public Bean(int snapshotID, String snapshotName, String snapshotDirectory,
+    public Bean(int snapshotID, String snapshotDirectory,
         long modificationTime, short permission, String owner, String group,
                 boolean isMarkedAsDeleted) {
       this.snapshotID = snapshotID;
-      this.snapshotName = snapshotName;
       this.snapshotDirectory = snapshotDirectory;
       this.modificationTime = modificationTime;
       this.permission = permission;
@@ -106,10 +104,6 @@ public class SnapshotInfo {
 
     public int getSnapshotID() {
       return snapshotID;
-    }
-
-    public String getSnapshotName() {
-      return snapshotName;
     }
 
     public String getSnapshotDirectory() {

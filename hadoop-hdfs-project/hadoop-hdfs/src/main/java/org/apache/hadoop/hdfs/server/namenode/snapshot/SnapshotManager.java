@@ -755,7 +755,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     Snapshot.Root dir = s.getRoot();
     return new SnapshotInfo.Bean(
         s.getId(),
-        dir.getLocalName(), dir.getFullPathName(),
+        dir.getFullPathName(),
         dir.getModificationTime(),
         Short.parseShort(Integer.toOctalString(dir.getFsPermissionShort())),
         dir.getUserName(),

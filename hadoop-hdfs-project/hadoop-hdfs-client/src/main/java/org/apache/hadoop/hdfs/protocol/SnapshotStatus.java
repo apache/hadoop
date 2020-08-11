@@ -174,60 +174,6 @@ public class SnapshotStatus {
     return Math.max(n, String.valueOf(value).length());
   }
 
-  /**
-   * To be used to for collection of snapshot jmx.
-   */
-  public static class Bean {
-    private final String path;
-    private final int snapshotID;
-    private final long modificationTime;
-    private final short permission;
-    private final String owner;
-    private final String group;
-    private final boolean isDeleted;
-
-
-    public Bean(String path, int snapshotID, long
-        modificationTime, short permission, String owner, String group,
-                boolean isDeleted) {
-      this.path = path;
-      this.snapshotID = snapshotID;
-      this.modificationTime = modificationTime;
-      this.permission = permission;
-      this.owner = owner;
-      this.group = group;
-      this.isDeleted = isDeleted;
-    }
-
-    public String getPath() {
-      return path;
-    }
-
-    public int getSnapshotID() {
-      return snapshotID;
-    }
-
-    public long getModificationTime() {
-      return modificationTime;
-    }
-
-    public short getPermission() {
-      return permission;
-    }
-
-    public String getOwner() {
-      return owner;
-    }
-
-    public String getGroup() {
-      return group;
-    }
-
-    public boolean isDeleted() {
-      return isDeleted;
-    }
-  }
-
   static String getSnapshotPath(String snapshottableDir,
                                 String snapshotRelativePath) {
     String parentFullPathStr =
