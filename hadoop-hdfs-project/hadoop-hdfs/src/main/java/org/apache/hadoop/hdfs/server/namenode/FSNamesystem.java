@@ -382,6 +382,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   public static final org.slf4j.Logger LOG = LoggerFactory
       .getLogger(FSNamesystem.class.getName());
+
+  // The following are private configurations
+  static final String DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED =
+      "dfs.namenode.snapshot.trashroot.enabled";
+  static final boolean DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED_DEFAULT = false;
+
   private final MetricsRegistry registry = new MetricsRegistry("FSNamesystem");
   @Metric final MutableRatesWithAggregation detailedLockHoldTimeMetrics =
       registry.newRatesWithAggregation("detailedLockHoldTimeMetrics");
@@ -902,7 +908,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           conf.getTrimmed(
               CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
               ""),
-          blockManager.getStoragePolicySuite().getDefaultPolicy().getId());
+          blockManager.getStoragePolicySuite().getDefaultPolicy().getId(),
+          conf.getBoolean(DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED,
+              DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED_DEFAULT));
 
       this.maxFsObjects = conf.getLong(DFS_NAMENODE_MAX_OBJECTS_KEY, 
                                        DFS_NAMENODE_MAX_OBJECTS_DEFAULT);
