@@ -47,7 +47,6 @@ import org.slf4j.event.Level;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -610,10 +609,8 @@ public class TestFSImageWithSnapshot {
         fsn.getFSDirectory().getINode("/").dumpTreeRecursively().toString();
     output.println(b);
 
-    final StringWriter out = new StringWriter();
-    final NamespacePrintVisitor v = new NamespacePrintVisitor(new PrintWriter(out, true));
-    fsn.getFSDirectory().getINode("/").accept(v, Snapshot.CURRENT_STATE_ID);
-    Assert.assertEquals(b, out.getBuffer().toString());
+    final String s = NamespacePrintVisitor.print2Sting(fsn);
+    Assert.assertEquals(b, s);
     return b;
   }
 

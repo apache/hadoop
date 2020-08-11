@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode.visitor;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.DirectoryWithQuotaFeature;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
@@ -27,13 +28,19 @@ import org.apache.hadoop.hdfs.server.namenode.INodeReference;
 import org.apache.hadoop.hdfs.server.namenode.INodeSymlink;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectorySnapshottableFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshotFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.io.StringWriter;
 
 /**
- * To print the tree recursively for testing.
+ * To print the namespace tree recursively for testing.
  *
  *      \- foo   (INodeDirectory@33dd2717)
  *        \- sub1   (INodeDirectory@442172)
@@ -47,14 +54,49 @@ public class NamespacePrintVisitor implements NamespaceVisitor {
   static final String NON_LAST_ITEM = "+-";
   static final String LAST_ITEM = "\\-";
 
+  /** Print the tree from the given root to a {@link File}. */
+  public static void print2File(INode root, File f) throws IOException {
+    try(final PrintWriter out = new PrintWriter(new FileWriter(f), true)) {
+      new NamespacePrintVisitor(out).print(root);
+    }
+  }
+
+  /** @return string of the tree in the given {@link FSNamesystem}. */
+  public static String print2Sting(FSNamesystem ns) {
+    return print2Sting(ns.getFSDirectory().getRoot());
+  }
+
+  /** @return string of the tree from the given root. */
+  public static String print2Sting(INode root) {
+    final StringWriter out = new StringWriter();
+    new NamespacePrintVisitor(new PrintWriter(out)).print(root);
+    return out.getBuffer().toString();
+  }
+
+  /**
+   * Print the tree in the given {@link FSNamesystem}
+   * to the given {@link PrintStream}.
+   */
+  public static void print(FSNamesystem ns, PrintStream out) {
+    new NamespacePrintVisitor(new PrintWriter(out)).print(ns);
+  }
+
   private final PrintWriter out;
   private final StringBuffer prefix = new StringBuffer();
 
-  public NamespacePrintVisitor(PrintWriter out) {
+  private NamespacePrintVisitor(PrintWriter out) {
     this.out = out;
   }
 
-  void print(INode iNode, int snapshot) {
+  private void print(FSNamesystem namesystem) {
+    print(namesystem.getFSDirectory().getRoot());
+  }
+
+  private void print(INode root) {
+    root.accept(this, Snapshot.CURRENT_STATE_ID);
+  }
+
+  private void printINode(INode iNode, int snapshot) {
     out.print(prefix);
     out.print(" ");
     final String name = iNode.getLocalName();
@@ -68,10 +110,10 @@ public class NamespacePrintVisitor implements NamespaceVisitor {
 
   @Override
   public void visitFile(INodeFile file, int snapshot) {
-    print(file, snapshot);
+    printINode(file, snapshot);
 
     out.print(", fileSize=" + file.computeFileSize(snapshot));
-    // only compare the first block
+    // print only the first block, if it exists
     out.print(", blocks=");
     final BlockInfo[] blocks = file.getBlocks();
     out.print(blocks.length == 0 ? null: blocks[0]);
@@ -92,14 +134,14 @@ public class NamespacePrintVisitor implements NamespaceVisitor {
 
   @Override
   public void visitSymlink(INodeSymlink symlink, int snapshot) {
-    print(symlink, snapshot);
+    printINode(symlink, snapshot);
     out.print(" ~> ");
     out.println(symlink.getSymlinkString());
   }
 
   @Override
   public void visitReference(INodeReference ref, int snapshot) {
-    print(ref, snapshot);
+    printINode(ref, snapshot);
 
     if (ref instanceof INodeReference.DstReference) {
       out.print(", dstSnapshotId=" + ref.getDstSnapshotId());
@@ -122,7 +164,7 @@ public class NamespacePrintVisitor implements NamespaceVisitor {
 
   @Override
   public void visitDirectory(INodeDirectory dir, int snapshot) {
-    print(dir, snapshot);
+    printINode(dir, snapshot);
 
     out.print(", childrenSize=" + dir.getChildrenList(snapshot).size());
     final DirectoryWithQuotaFeature q = dir.getDirectoryWithQuotaFeature();
@@ -161,7 +203,7 @@ public class NamespacePrintVisitor implements NamespaceVisitor {
     out.print(snapshottable.getSnapshotQuota());
 
     int n = 0;
-    for(DirectoryWithSnapshotFeature.DirectoryDiff diff : snapshottable.getDiffs()) {
+    for(DirectoryDiff diff : snapshottable.getDiffs()) {
       if (diff.isSnapshotRoot()) {
         n++;
       }

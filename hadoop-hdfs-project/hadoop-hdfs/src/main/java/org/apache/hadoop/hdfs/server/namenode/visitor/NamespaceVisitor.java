@@ -154,9 +154,8 @@ public interface NamespaceVisitor {
 
   /** @return the children as {@link Element}s. */
   static Iterable<Element> getChildren(INodeDirectory dir, int snapshot) {
+    final Iterator<INode> i = dir.getChildrenList(snapshot).iterator();
     return new Iterable<Element>() {
-      final Iterator<INode> i = dir.getChildrenList(snapshot).iterator();
-
       @Override
       public Iterator<Element> iterator() {
         return new Iterator<Element>() {
@@ -182,16 +181,16 @@ public interface NamespaceVisitor {
   /** @return the snapshots as {@link Element}s. */
   static Iterable<Element> getSnapshots(
       DirectorySnapshottableFeature snapshottable) {
+    final Iterator<DirectoryWithSnapshotFeature.DirectoryDiff> i
+        = snapshottable.getDiffs().iterator();
     return new Iterable<Element>() {
       @Override
       public Iterator<Element> iterator() {
         return new Iterator<Element>() {
-          final Iterator<DirectoryWithSnapshotFeature.DirectoryDiff> i
-              = snapshottable.getDiffs().iterator();
           private DirectoryWithSnapshotFeature.DirectoryDiff next = findNext();
 
           private DirectoryWithSnapshotFeature.DirectoryDiff findNext() {
-            for(; i.hasNext(); ) {
+            for(; i.hasNext();) {
               final DirectoryWithSnapshotFeature.DirectoryDiff diff = i.next();
               if (diff.isSnapshotRoot()) {
                 return diff;
