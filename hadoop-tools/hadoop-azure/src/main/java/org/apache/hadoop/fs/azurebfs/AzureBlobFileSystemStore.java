@@ -894,13 +894,9 @@ public class AzureBlobFileSystemStore {
           + " used is not namespace enabled");
       return;
     }
-    //try (AbfsPerfInfo perfInfo = startTracking("access", "checkAccess")) {
       String relativePath =
           AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path, true);
-      final AbfsRestOperation op = this.client
-          .checkAccess(relativePath, mode.SYMBOL);
-    // perfInfo.registerResult(op.getResult()).registerSuccess(true);
-    //}
+      this.client.checkAccess(relativePath, mode.SYMBOL);
   }
 
   public boolean isAtomicRenameKey(String key) {
