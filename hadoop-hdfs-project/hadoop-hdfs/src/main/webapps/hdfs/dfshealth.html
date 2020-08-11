@@ -285,15 +285,25 @@
   <thead>
     <tr>
       <th>Snapshot ID</th>
+      <th>Snapshot Name</th>
       <th>Snapshot Directory</th>
       <th>Modification Time</th>
+      <th>Permission</th>
+      <th>Owner</th>
+      <th>Group</th>
+      <th>Status</th>
     </tr>
   </thead>
   {#Snapshots}
   <tr>
     <td>{snapshotID}</td>
+    <td>{snapshotName}</td>
     <td>{snapshotDirectory}</td>
     <td>{modificationTime|date_tostring}</td>
+    <td>{permission|helper_to_permission}</td>
+    <td>{owner}</td>
+    <td>{group}</td>
+    <td>{status}</td>
   </tr>
   {/Snapshots}
 </table>
