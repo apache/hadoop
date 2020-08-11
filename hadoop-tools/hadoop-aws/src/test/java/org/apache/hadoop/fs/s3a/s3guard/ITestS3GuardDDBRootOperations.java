@@ -55,6 +55,8 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.applyLocatedFiles;
  * integration tests.
  * <p>
  * The tests only run if DynamoDB is the metastore.
+ * <p></p>
+ * The marker policy is fixed to "delete"
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class ITestS3GuardDDBRootOperations extends AbstractS3ATestBase {
@@ -87,15 +89,17 @@ public class ITestS3GuardDDBRootOperations extends AbstractS3ATestBase {
     String bucketName = getTestBucketName(conf);
     disableFilesystemCaching(conf);
 
-    // set a sleep time of 0 on pruning, for speedier test runs.
-    removeBucketOverrides(bucketName, conf, ENABLE_MULTI_DELETE,
+    removeBucketOverrides(bucketName, conf,
+        S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_KEY,
+        ENABLE_MULTI_DELETE,
         DIRECTORY_MARKER_POLICY);
+    conf.set(DIRECTORY_MARKER_POLICY,
+        DIRECTORY_MARKER_POLICY_DELETE);
+    // set a sleep time of 0 on pruning, for speedier test runs.
     conf.setTimeDuration(
         S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_KEY,
         0,
         TimeUnit.MILLISECONDS);
-    conf.set(DIRECTORY_MARKER_POLICY,
-             DIRECTORY_MARKER_POLICY_DELETE);
     return conf;
   }
 

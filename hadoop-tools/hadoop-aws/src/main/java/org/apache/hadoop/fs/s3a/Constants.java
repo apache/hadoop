@@ -985,8 +985,34 @@ public final class Constants {
       "authoritative";
 
   /**
-   * Default retention policy.
+   * Default retention policy: {@value}.
    */
   public static final String DEFAULT_DIRECTORY_MARKER_POLICY =
       DIRECTORY_MARKER_POLICY_DELETE;
+
+
+  /**
+   * Probe to indicate that a path keeps directory markers.
+   * returned in {@code PathCapabilities}
+   * Value: {@value}.
+   */
+  public static final String STORE_CAPABILITY_DIRECTORY_MARKER_AWARE
+      = "fs.s3a.capability.directory.marker.aware";
+
+  /**
+   * Probe to indicate that a path keeps directory markers.
+   * returned in {@code PathCapabilities}
+   * Value: {@value}.
+   */
+  public static final String STORE_CAPABILITY_DIRECTORY_MARKER_KEEP
+      = "fs.s3a.capability.directory.marker.keep";
+
+  /**
+   * Probe to indicate that a path keeps directory markers.
+   * returned in {@code PathCapabilities}
+   * Value: {@value}.
+   */
+  public static final String STORE_CAPABILITY_DIRECTORY_MARKER_DELETE
+      = "fs.s3a.capability.directory.marker.delete";
+
 }

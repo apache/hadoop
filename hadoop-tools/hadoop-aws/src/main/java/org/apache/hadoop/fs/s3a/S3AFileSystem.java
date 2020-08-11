@@ -4633,6 +4633,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     case CommonPathCapabilities.FS_MULTIPART_UPLOADER:
       return true;
 
+    /*
+     * Marker policy is dynamically determined for the given path.
+     */
+    case STORE_CAPABILITY_DIRECTORY_MARKER_AWARE:
+      return true;
+      case STORE_CAPABILITY_DIRECTORY_MARKER_KEEP:
+      return directoryPolicy.keepDirectoryMarkers(p);
+    case STORE_CAPABILITY_DIRECTORY_MARKER_DELETE:
+      return !directoryPolicy.keepDirectoryMarkers(p);
+
     default:
       return super.hasPathCapability(p, capability);
     }

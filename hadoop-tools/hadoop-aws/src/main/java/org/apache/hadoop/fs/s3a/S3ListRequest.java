@@ -26,6 +26,9 @@ import com.amazonaws.services.s3.model.ListObjectsV2Request;
  */
 public final class S3ListRequest {
 
+  /**
+   * Format for the toString() method: {@value}.
+   */
   private static final String DESCRIPTION
       = "List %s:/%s delimiter=%s keys=%d requester pays=%s";
 

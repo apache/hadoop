@@ -57,19 +57,31 @@ import static org.apache.hadoop.fs.s3a.impl.InternalConstants.RENAME_PARALLEL_LI
 /**
  * A parallelized rename operation which updates the metastore in the
  * process, through whichever {@link RenameTracker} the store provides.
+ * <p></p>
  * The parallel execution is in groups of size
  * {@link InternalConstants#RENAME_PARALLEL_LIMIT}; it is only
  * after one group completes that the next group is initiated.
+ * <p></p>
  * Once enough files have been copied that they meet the
  * {@link InternalConstants#MAX_ENTRIES_TO_DELETE} threshold, a delete
  * is initiated.
  * If it succeeds, the rename continues with the next group of files.
- *
+ * <p></p>
  * The RenameTracker has the task of keeping the metastore up to date
  * as the rename proceeds.
- *
+ * <p></p>
+ * Directory Markers which have child entries are never copied; only those
+ * which represent empty directories are copied in the rename.
+ * The {@link DirMarkerTracker} tracks which markers must be copied, and
+ * which can simply be deleted from the source.
+ * As a result: rename always purges all non-leaf directory markers from
+ * the copied tree. This is to ensure that even if a directory tree
+ * is copied from an authoritative path to a non-authoritative one
+ * there is never any contamination of the non-auth path with markers.
+ * <p></p>
  * The rename operation implements the classic HDFS rename policy of
  * rename(file, dir) renames the file under the directory.
+ * <p></p>
  *
  * There is <i>no</i> validation of input and output paths.
  * Callers are required to themselves verify that destination is not under
@@ -189,7 +201,7 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
    * This object will be deleted when the next page of objects to delete
    * is posted to S3. Therefore, the COPY must have finished
    * before that deletion operation takes place.
-   * This is managed by
+   * This is managed by:
    * <ol>
    *   <li>
    *     The delete operation only being executed once all active
@@ -200,7 +212,7 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
    *     been submitted and so is in that thread pool.
    *   </li>
    * </ol>
-   * This method must only be called from the primary thread
+   * This method must only be called from the primary thread.
    * @param path path to the object
    * @param key key of the object.
    * @param version object version.
@@ -282,6 +294,10 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
     // Ok! Time to start
     try {
       if (sourceStatus.isFile()) {
+        // rename the file. The destination path will be different
+        // from that passed in if the destination is a directory;
+        // the final value is needed to completely delete parent markers
+        // when they are not being retained.
         destCreated = renameFileToDest();
       } else {
         recursiveDirectoryRename();
@@ -382,14 +398,17 @@ Are   * @throws IOException failure
       // marker.
       LOG.debug("Deleting fake directory marker at destination {}",
           destStatus.getPath());
-      // TODO: dir marker policy doesn't always need to do this.
+      // Although the dir marker policy doesn't always need to do this,
+      // it's simplest just to be consistent here.
       callbacks.deleteObjectAtPath(destStatus.getPath(), dstKey, false, null);
     }
+
     Path parentPath = storeContext.keyToPath(srcKey);
 
     // Track directory markers so that we know which leaf directories need to be
     // recreated
-    DirMarkerTracker dirMarkerTracker = new DirMarkerTracker(parentPath);
+    DirMarkerTracker dirMarkerTracker = new DirMarkerTracker(parentPath,
+        false);
 
     final RemoteIterator<S3ALocatedFileStatus> iterator =
         callbacks.listFilesAndEmptyDirectories(parentPath,
@@ -460,6 +479,7 @@ Are   * @throws IOException failure
 
   /**
    * Operations to perform at the end of every loop iteration.
+   * <p></p>
    * This may block the thread waiting for copies to complete
    * and/or delete a page of data.
    */
@@ -491,6 +511,9 @@ Are   * @throws IOException failure
    * data it is at risk of destruction at any point.
    * If there are lots of empty directory rename operations taking place,
    * the decision to copy the source may need revisiting.
+   * Be advised though: the costs of the copy not withstanding,
+   * it is a lot easier to have one single type of scheduled copy operation
+   * than have copy and touch calls being scheduled.
    * <p></p>
    * The duration returned is the time to initiate all copy/delete operations,
    * including any blocking waits for active copies and paged deletes
@@ -603,7 +626,6 @@ Are   * @throws IOException failure
       copyResult = callbacks.copyFile(srcKey, destinationKey,
           srcAttributes, readContext);
     }
-
     if (objectRepresentsDirectory(srcKey, len)) {
       renameTracker.directoryMarkerCopied(
           sourceFile,

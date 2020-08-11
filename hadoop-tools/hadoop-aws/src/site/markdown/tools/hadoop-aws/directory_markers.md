@@ -16,8 +16,8 @@
 
 ## <a name="compatibility"></a> Critical: this is not backwards compatible!
 
-This document shows how the performance of S3 IO, especially applications
-writing many files (hive) or working with versioned S3 buckets can
+This document shows how the performance of S3 I/O, especially applications
+creating many files (for example Apache Hive) or working with versioned S3 buckets can
 increase performance by changing the S3A directory marker retention policy.
 
 Changing the policy from the default value, `"delete"` _is not backwards compatible_.
@@ -90,10 +90,11 @@ file tree" in which files are always stored in "directories"
 * All files MUST be in a directory "the parent directory"
 * All directories other than the root directory must be in another directory.
 * If a directory contains no files or directories, it is "empty"
-* When a directory is _listed_, all files and directories in it are enumerated and returned to the caller
+* When a directory is _listed_, all files and directories in it are enumerated
+  and returned to the caller
 
 
-The S3A connector mocks this entire metaphor by grouping all objects which have
+The S3A connector emulates this metaphor by grouping all objects which have
 the same prefix as if they are in the same directory tree.
 
 If there are two objects `a/b/file1` and `a/b/file2` then S3A pretends that there is a
@@ -125,14 +126,17 @@ The original Hadoop `s3n://` connector created a Directory Marker -any path endi
 in `_$folder$` was considered to be a sign that a directory existed. A call to
 `mkdir(s3n://bucket/a/b)` would create a new marker object `a/b_$folder$` .
 
-The S3A also has directory markers, but it just appends a / to the directory
-name, so `mkdir(s3a://bucket/a/b)` would create a new marker object `a/b/` .
+The S3A also has directory markers, but it just appends a "/" to the directory
+name, so `mkdir(s3a://bucket/a/b)` will create a new marker object `a/b/` .
+
 When a file is created under a path, the directory marker is deleted. And when a
 file is deleted, if it was the last file in the directory, the marker is
 recreated.
 
 And, historically, When a path is listed, if a marker to that path is found, *it
 has been interpreted as an empty directory.*
+
+It is that little detail which is the cause of the incompatibility issues.
 
 ## <a name="problem"></a> Scale issues related to directory markers
 
@@ -182,10 +186,10 @@ This can have adverse effects on those large directories, again.
 
 ## <a name="solutions"></a> How to avoid marker-related problems.
 
-###  Presto: there are no directories
+###  Presto: every path is a directory
 
-In the Presto S3 connectors: `mkdirs()` is a no-op. Instead, whenever you list
-any path which isn't an object or a prefix of one more more objects, you get an
+In the Presto S3 connectors: `mkdirs()` is a no-op. Instead, whenever it list
+any path which isn't an object or a prefix of one more more objects, it gets an
 empty listing. That is:;  by default, every path is an empty directory.
 
 Provided no code probes for a directory existing and fails if it is there, this
@@ -195,6 +199,10 @@ because they know how their file uses data in S3.
 
 ###  Hadoop 3.3.1+: marker deletion is now optional
 
+From Hadoop 3.3.1 onwards, th S3A client can be configured to skip deleting
+directory markers when creating files under paths. This removes all scalability
+problems caused by deleting these markers -however, it is achieved at the expense
+of backwards compatibility.
 
 ## <a name="marker-retention"></a> Controlling marker retention with `fs.s3a.directory.marker.retention` 
 
@@ -209,8 +217,7 @@ not deleted. This is *not* backwards compatible
 
 *New* `authoritative`: directory markers are deleted _except for files created
 in "authoritative" directories_.
-This is backwards compatible _outside
-authoritative directories_.
+This is backwards compatible _outside authoritative directories_.
 
 Until now, the notion of an "authoritative"
 directory has only been used as a performance optimization for deployments
@@ -248,18 +255,22 @@ will be retained.
 Syntax
 
 ```
-> hadoop s3guard markers
-  markers [-expected <count>] [-limit <limit>] [-nonauth] [-verbose] (audit | clean) <PATH>
-    View and manipulate S3 directory markers
+> hadoop s3guard markers -verbose -nonauth 
+markers (-audit | -clean) [-expected <count>] [-out <filename>] [-limit <limit>] [-nonauth] [-verbose] <PATH>
+        View and manipulate S3 directory markers
+
 ```
 
 *Options*
 
-| option | meaning |
-|--------|---------|
-|  `-expected <count>]`   |  Expected number of markers to find (primarily for testing)  |
-|  `-limit <count>]`      |   Limit on number of objects to scan |
+| Option                  | Meaning                 |
+|-------------------------|-------------------------|
+|  `-audit`               | Audit the path for surplus markers |
+|  `-clean`               | Clean all surplus markers under a path |
+|  `-expected <count>]`   | Expected number of markers to find (primarily for testing)  |
+|  `-limit <count>]`      | Limit the number of objects to scan |
 |  `-nonauth`             | Only consider markers in non-authoritative paths as errors  |
+|  `-out <filename>`      | Save a list of all markers found to the nominated file  |
 |  `-verbose`             | Verbose output  |
 
 *Exit Codes*
@@ -267,19 +278,19 @@ Syntax
 | Code  | Meaning |
 |-------|---------|
 | 0     | Success |
-| 2     | Usage   |
 | 3     | interrupted -the value of `-limit` was reached |
+| 42     | Usage   |
 | 46    | Markers were found (see HTTP "406", "unacceptable") |
 
 All other non-zero status code also indicate errors of some form or other. 
 
-###  <a name="marker-tool-report"></a>`markers report`
+###  <a name="marker-tool-report"></a>`markers -audit`
 
-Audit the path and fail if any markers were found.
+Audit the path and fail if any markers were found. 
 
 
 ```
-> hadoop s3guard markers -limit 8000 audit s3a://landsat-pds/
+> hadoop s3guard markers -limit 8000 -audit s3a://landsat-pds/
 
 The directory marker policy of s3a://landsat-pds is "Delete"
 2020-08-05 13:42:56,079 [main] INFO  tools.MarkerTool (DurationInfo.java:<init>(77)) - Starting: marker scan s3a://landsat-pds/
@@ -305,7 +316,8 @@ Example: a verbose audit of a bucket whose policy if authoritative -it is not an
 are found under the path `/tables`.
 
 ```
-> bin/hadoop s3guard markers audit s3a://london/
+> bin/hadoop s3guard markers -audit s3a://london/
+
   2020-08-05 18:29:16,473 [main] INFO  impl.DirectoryPolicyImpl (DirectoryPolicyImpl.java:getDirectoryPolicy(143)) - Directory markers will be kept on authoritative paths
   The directory marker policy of s3a://london is "Authoritative"
   Authoritative path list is "/tables"
@@ -313,16 +325,16 @@ are found under the path `/tables`.
   2020-08-05 18:29:21,610 [main] INFO  tools.MarkerTool (DurationInfo.java:close(98)) - marker scan s3a://london/: duration 0:02.425s
   Listed 8 objects under s3a://london/
   
-  Found 3 surplus directory markers under s3a://london/
-      s3a://london/tables
-      s3a://london/tables/tables-4
-      s3a://london/tables/tables-4/tables-5
-  Found 5 empty directory 'leaf' markers under s3a://london/
-      s3a://london/tables/tables-2
-      s3a://london/tables/tables-3
-      s3a://london/tables/tables-4/tables-5/06
-      s3a://london/tables2
-      s3a://london/tables3
+Found 3 surplus directory markers under s3a://london/
+    s3a://london/tables
+    s3a://london/tables/tables-4
+    s3a://london/tables/tables-4/tables-5
+Found 5 empty directory 'leaf' markers under s3a://london/
+    s3a://london/tables/tables-2
+    s3a://london/tables/tables-3
+    s3a://london/tables/tables-4/tables-5/06
+    s3a://london/tables2
+    s3a://london/tables3
   These are required to indicate empty directories
   Surplus markers were found -failing audit
   2020-08-05 18:29:21,614 [main] INFO  util.ExitUtil (ExitUtil.java:terminate(210)) - Exiting with status 46: 
@@ -335,7 +347,8 @@ The `-nonauth` option does not treat markers under authoritative paths as errors
 
 
 ```
-bin/hadoop s3guard markers -nonauth audit s3a://london/
+bin/hadoop s3guard markers -nonauth -audit s3a://london/
+
 2020-08-05 18:31:16,255 [main] INFO  impl.DirectoryPolicyImpl (DirectoryPolicyImpl.java:getDirectoryPolicy(143)) - Directory markers will be kept on authoritative paths
 The directory marker policy of s3a://london is "Authoritative"
 Authoritative path list is "/tables"
@@ -344,15 +357,15 @@ Authoritative path list is "/tables"
 Listed 8 objects under s3a://london/
 
 Found 3 surplus directory markers under s3a://london/
-    s3a://london/tables
-    s3a://london/tables/tables-4
-    s3a://london/tables/tables-4/tables-5
+    s3a://london/tables/
+    s3a://london/tables/tables-4/
+    s3a://london/tables/tables-4/tables-5/
 Found 5 empty directory 'leaf' markers under s3a://london/
-    s3a://london/tables/tables-2
-    s3a://london/tables/tables-3
-    s3a://london/tables/tables-4/tables-5/06
-    s3a://london/tables2
-    s3a://london/tables3
+    s3a://london/tables/tables-2/
+    s3a://london/tables/tables-3/
+    s3a://london/tables/tables-4/tables-5/06/
+    s3a://london/tables2/
+    s3a://london/tables3/
 These are required to indicate empty directories
 
 Ignoring 3 markers in authoritative paths
@@ -368,33 +381,33 @@ The `markers clean` command will clean the directory tree of all surplus markers
 The `-verbose` option prints more detail on the operation as well as some IO statistics
 
 ```
-> hadoop s3guard markers -verbose clean s3a://london/
+> hadoop s3guard markers -verbose -clean s3a://london/
 
 2020-08-05 18:33:25,303 [main] INFO  impl.DirectoryPolicyImpl (DirectoryPolicyImpl.java:getDirectoryPolicy(143)) - Directory markers will be kept on authoritative paths
 The directory marker policy of s3a://london is "Authoritative"
 Authoritative path list is "/tables"
 2020-08-05 18:33:28,511 [main] INFO  tools.MarkerTool (DurationInfo.java:<init>(77)) - Starting: marker scan s3a://london/
   Directory Marker tables
-  Directory Marker tables/tables-2
-  Directory Marker tables/tables-3
-  Directory Marker tables/tables-4
-  Directory Marker tables/tables-4/tables-5
-  Directory Marker tables/tables-4/tables-5/06
-  Directory Marker tables2
-  Directory Marker tables3
+  Directory Marker tables/tables-2/
+  Directory Marker tables/tables-3/
+  Directory Marker tables/tables-4/
+  Directory Marker tables/tables-4/tables-5/
+  Directory Marker tables/tables-4/tables-5/06/
+  Directory Marker tables2/
+  Directory Marker tables3/
 2020-08-05 18:33:31,685 [main] INFO  tools.MarkerTool (DurationInfo.java:close(98)) - marker scan s3a://london/: duration 0:03.175s
 Listed 8 objects under s3a://london/
 
 Found 3 surplus directory markers under s3a://london/
-    s3a://london/tables
-    s3a://london/tables/tables-4
-    s3a://london/tables/tables-4/tables-5
+    s3a://london/tables/
+    s3a://london/tables/tables-4/
+    s3a://london/tables/tables-4/tables-5/
 Found 5 empty directory 'leaf' markers under s3a://london/
-    s3a://london/tables/tables-2
-    s3a://london/tables/tables-3
-    s3a://london/tables/tables-4/tables-5/06
-    s3a://london/tables2
-    s3a://london/tables3
+    s3a://london/tables/tables-2/
+    s3a://london/tables/tables-3/
+    s3a://london/tables/tables-4/tables-5/06/
+    s3a://london/tables2/
+    s3a://london/tables3/
 These are required to indicate empty directories
 
 3 markers to delete in 1 page of 250 keys/page
@@ -408,9 +421,94 @@ object_delete_requests	1
 object_list_requests	2
 ```
 
-The `markers clean` command _does not_ delete markers above empty directories -only those which have
+The `markers -clean` command _does not_ delete markers above empty directories -only those which have
 files underneath. If invoked on a path, it will clean up the directory tree into a state
 where it is safe for older versions of Hadoop to interact with.
 
 Note that if invoked with a `-limit` value, surplus markers found during the scan will be removed,
 even though the scan will be considered a failure due to the limit being reached.
+
+## Advanced Topics
+
+
+### Probing for retention via `PathCapabilities` and `StreamCapabilities`
+
+An instance of the filesystem can be probed for its directory marker retention ability/
+policy can be probed for through the `org.apache.hadoop.fs.PathCapabilities` interface,
+which all FileSystem instances have implemented since Hadoop 3.2.
+
+
+| Probe                   | Meaning                 |
+|-------------------------|-------------------------|
+| `fs.s3a.capability.directory.marker.aware`  | Does the filesystem support surplus directory markers? |
+| `fs.s3a.capability.directory.marker.keep`   | Does the path retain directory markers? |
+| `fs.s3a.capability.directory.marker.delete` | Does the path delete directory markers? |
+
+
+The probe `fs.s3a.capability.directory.marker.aware` allows for a filesystem to be
+probed to determine if its file listing policy is "aware" of directory marker retention
+-that is: it can safely work with S3 buckets where markers have not been deleted.
+
+The other two probes dynamically query the marker retention behavior of a specific path.
+
+The S3AFileSystem also implements the `org.apache.hadoop.fs.StreamCapabilities` interface, which
+can be used to probe for marker awareness via the `fs.s3a.capability.directory.marker.aware` capability.
+
+Again, this will be true if-and-only-if the S3A connector is safe to work with S3A buckets/paths where
+directories are retained.
+
+*If an S3A instance, probed by `PathCapabilities` or `StreamCapabilities` for the capability 
+`fs.s3a.capability.directory.marker.aware` and it returns false, *it is not safe to be used with
+S3A paths where markers have been retained*.
+
+This is programmatic probe -however it can be accessed on the command line via the
+external [`cloudstore`](https://github.com/steveloughran/cloudstore) tool:
+
+```
+> hadoop jar cloudstore-1.0.jar pathcapability fs.s3a.capability.directory.marker.aware  s3a://london/
+Probing s3a://london/ for capability fs.s3a.capability.directory.marker.aware
+
+Using filesystem s3a://london
+Path s3a://london/ has capability fs.s3a.capability.directory.marker.aware
+```
+
+If the exit code of the command is 0, then the hadoop-aws release is safe to work with buckets
+where markers have not been deleted.
+
+The same tool can be used to dynamically probe for the policy.
+
+Take a bucket with a retention policy of "authoritative" -only paths under `/tables` will have markers retained.
+
+```xml
+  <property>
+    <name>fs.s3a.bucket.london.directory.marker.retention</name>
+    <value>authoritative</value>
+  </property>
+  <property>
+    <name>fs.s3a.bucket.london.authoritative.path</name>
+    <value>/tables</value>
+  </property>```
+```
+
+With this policy the path capability `fs.s3a.capability.directory.marker.keep` will hold under
+the path `s3a://london/tables`
+
+```
+bin/hadoop jar cloudstore-1.0.jar pathcapability fs.s3a.capability.directory.marker.keep s3a://london/tables
+Probing s3a://london/tables for capability fs.s3a.capability.directory.marker.keep
+2020-08-11 22:03:31,658 [main] INFO  impl.DirectoryPolicyImpl (DirectoryPolicyImpl.java:getDirectoryPolicy(143)) - Directory markers will be kept on authoritative paths
+Using filesystem s3a://london
+Path s3a://london/tables has capability fs.s3a.capability.directory.marker.keep
+```
+
+However it will not hold for other paths, so indicating that older Hadoop versions will be safe
+to work with data written there by this S3A client.
+
+```
+bin/hadoop jar $CLOUDSTORE pathcapability fs.s3a.capability.directory.marker.keep s3a://london/tempdir
+Probing s3a://london/tempdir for capability fs.s3a.capability.directory.marker.keep
+2020-08-11 22:06:56,300 [main] INFO  impl.DirectoryPolicyImpl (DirectoryPolicyImpl.java:getDirectoryPolicy(143)) - Directory markers will be kept on authoritative paths
+Using filesystem s3a://london
+Path s3a://london/tempdir lacks capability fs.s3a.capability.directory.marker.keep
+2020-08-11 22:06:56,308 [main] INFO  util.ExitUtil (ExitUtil.java:terminate(210)) - Exiting with status -1: 
+```

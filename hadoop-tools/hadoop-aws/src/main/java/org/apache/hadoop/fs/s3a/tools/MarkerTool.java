@@ -19,8 +19,10 @@
 package org.apache.hadoop.fs.s3a.tools;
 
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.Writer;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -35,6 +37,7 @@ import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -59,6 +62,7 @@ import static org.apache.hadoop.fs.s3a.Constants.BULK_DELETE_PAGE_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Invoker.once;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_INTERRUPTED;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_NOT_ACCEPTABLE;
+import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_NOT_FOUND;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_SUCCESS;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_USAGE;
 
@@ -86,17 +90,32 @@ public final class MarkerTool extends S3GuardTool {
   /**
    * Audit sub-command: {@value}.
    */
-  public static final String AUDIT = "audit";
+  public static final String OPT_AUDIT = "audit";
 
   /**
    * Clean Sub-command: {@value}.
    */
-  public static final String CLEAN = "clean";
+  public static final String OPT_CLEAN = "clean";
+
+  /**
+   * Audit sub-command: {@value}.
+   */
+  public static final String AUDIT = "-" + OPT_AUDIT;
+
+  /**
+   * Clean Sub-command: {@value}.
+   */
+  public static final String CLEAN = "-" + OPT_CLEAN;
 
   /**
    * Expected number of markers to find: {@value}.
    */
   public static final String OPT_EXPECTED = "expected";
+
+  /**
+   * Name of a file to save the list of markers to: {@value}.
+   */
+  public static final String OPT_OUT = "out";
 
   /**
    * Limit of objects to scan: {@value}.
@@ -113,7 +132,7 @@ public final class MarkerTool extends S3GuardTool {
    * Error text when too few arguments are found.
    */
   @VisibleForTesting
-  static final String TOO_FEW_ARGUMENTS = "Too few arguments";
+  static final String E_ARGUMENTS = "Wrong number of arguments: %d";
 
   /**
    * Constant to use when there is no limit on the number of
@@ -131,11 +150,14 @@ public final class MarkerTool extends S3GuardTool {
    * Usage string: {@value}.
    */
   private static final String USAGE = NAME
+      + " (-" + OPT_AUDIT
+      + " | -" + OPT_CLEAN + ")"
       + " [-" + OPT_EXPECTED + " <count>]"
+      + " [-" + OPT_OUT + " <filename>]"
       + " [-" + OPT_LIMIT + " <limit>]"
       + " [-" + OPT_NONAUTH + "]"
       + " [-" + VERBOSE + "]"
-      + " (audit | clean)"
+
       + " <PATH>\n"
       + "\t" + PURPOSE + "\n\n";
 
@@ -159,12 +181,18 @@ public final class MarkerTool extends S3GuardTool {
 
   /**
    * Constructor.
-   * @param conf
+   * @param conf configuration
    */
   public MarkerTool(final Configuration conf) {
-    super(conf, VERBOSE, OPT_NONAUTH);
+    super(conf,
+        OPT_AUDIT,
+        OPT_CLEAN,
+        VERBOSE,
+        OPT_NONAUTH);
     CommandFormat format = getCommandFormat();
+    format.addOptionWithValue(OPT_EXPECTED);
     format.addOptionWithValue(OPT_LIMIT);
+    format.addOptionWithValue(OPT_OUT);
   }
 
   @Override
@@ -195,50 +223,43 @@ public final class MarkerTool extends S3GuardTool {
       errorln(getUsage());
       throw new ExitUtil.ExitException(EXIT_USAGE, e.getMessage(), e);
     }
-    if (parsedArgs.size() < 2) {
+    if (parsedArgs.size() != 1) {
       errorln(getUsage());
-      throw new ExitUtil.ExitException(EXIT_USAGE, TOO_FEW_ARGUMENTS);
+      println(out, "Supplied arguments: ["
+          + parsedArgs.stream()
+          .collect(Collectors.joining(", "))
+          + "]");
+      throw new ExitUtil.ExitException(EXIT_USAGE,
+          String.format(E_ARGUMENTS, parsedArgs.size()));
     }
     // read arguments
-    CommandFormat commandFormat = getCommandFormat();
-    verbose = commandFormat.getOpt(VERBOSE);
+    CommandFormat command = getCommandFormat();
+    verbose = command.getOpt(VERBOSE);
 
     // How many markers are expected?
     int expected = 0;
-    String value = getCommandFormat()
-        .getOptValue(OPT_EXPECTED);
+    String value = command.getOptValue(OPT_EXPECTED);
     if (value != null && !value.isEmpty()) {
       expected = Integer.parseInt(value);
     }
-    // Should the scan also purge surplus markers?
-    boolean purge;
 
-    // argument 0 is the action
-    String action = parsedArgs.get(0);
-
-    switch (action) {
-    case AUDIT:
-      // audit. no purge; fail if any marker is found
-      purge = false;
-      expected = 0;
-      break;
-    case CLEAN:
-      // clean -purge the markers
-      purge = true;
-      break;
-    default:
+    // determine the action
+    boolean audit = command.getOpt(OPT_AUDIT);
+    boolean clean = command.getOpt(OPT_CLEAN);
+    if (audit == clean) {
+      // either both are set or neither are set
+      // this is equivalent to (not audit xor clean)
       errorln(getUsage());
       throw new ExitUtil.ExitException(EXIT_USAGE,
-          "Unknown action: " + action);
+          "Exactly one of " + AUDIT + " and " + CLEAN);
     }
     int limit = UNLIMITED_LISTING;
-    value = getCommandFormat()
-        .getOptValue(OPT_LIMIT);
+    value = command.getOptValue(OPT_LIMIT);
     if (value != null && !value.isEmpty()) {
       limit = Integer.parseInt(value);
     }
-    final String file = parsedArgs.get(1);
-    Path path = new Path(file);
+    final String dir = parsedArgs.get(0);
+    Path path = new Path(dir);
     URI uri = path.toUri();
     if (uri.getPath().isEmpty()) {
       // fix up empty URI for better CLI experience
@@ -248,12 +269,28 @@ public final class MarkerTool extends S3GuardTool {
     ScanResult result = execute(
         fs,
         path,
-        purge,
+        clean,
         expected,
         limit,
-        commandFormat.getOpt(OPT_NONAUTH));
+        command.getOpt(OPT_NONAUTH));
     if (verbose) {
       dumpFileSystemStatistics(out);
+    }
+
+    // and finally see if the output should be saved to a file
+    String saveFile = command.getOptValue(OPT_OUT);
+    if (saveFile != null && !saveFile.isEmpty()) {
+      println(out, "Saving result to %s", saveFile);
+      try (Writer writer = new FileWriter(saveFile)) {
+        final List<String> surplus = result.getTracker()
+            .getSurplusMarkers()
+            .keySet()
+            .stream()
+            .map(p-> p.toString() + "/")
+            .sorted()
+            .collect(Collectors.toList());
+        IOUtils.writeLines(surplus, "\n", writer);
+      }
     }
     return result.exitCode;
   }
@@ -265,7 +302,7 @@ public final class MarkerTool extends S3GuardTool {
    * @param doPurge purge?
    * @param expectedMarkerCount expected marker count
    * @param limit limit of files to scan; -1 for 'unlimited'
-   * @param nonAuth
+   * @param nonAuth consider only markers in nonauth paths as errors
    * @return scan+purge result.
    * @throws IOException failure
    */
@@ -306,11 +343,11 @@ public final class MarkerTool extends S3GuardTool {
     } catch (UnknownStoreException ex) {
       // bucket doesn't exist.
       // replace the stack trace with an error code.
-      throw new ExitUtil.ExitException(LauncherExitCodes.EXIT_NOT_FOUND,
+      throw new ExitUtil.ExitException(EXIT_NOT_FOUND,
           ex.toString(), ex);
 
     } catch (FileNotFoundException ex) {
-      throw new ExitUtil.ExitException(LauncherExitCodes.EXIT_NOT_FOUND,
+      throw new ExitUtil.ExitException(EXIT_NOT_FOUND,
           "Not found: " + target, ex);
     }
 
@@ -396,7 +433,7 @@ public final class MarkerTool extends S3GuardTool {
     // Mission Accomplished
     result.exitCode = EXIT_SUCCESS;
     // Now do the work.
-    DirMarkerTracker tracker = new DirMarkerTracker(path);
+    DirMarkerTracker tracker = new DirMarkerTracker(path, true);
     result.tracker = tracker;
     boolean completed;
     try (DurationInfo ignored =
@@ -423,7 +460,7 @@ public final class MarkerTool extends S3GuardTool {
           path);
 
       for (Path markers : surplusMarkers.keySet()) {
-        println(out, "    %s", markers);
+        println(out, "    %s/", markers);
       }
     }
     if (!leafMarkers.isEmpty()) {
@@ -432,7 +469,7 @@ public final class MarkerTool extends S3GuardTool {
           suffix(leafMarkers.size()),
           path);
       for (Path markers : leafMarkers.keySet()) {
-        println(out, "    %s", markers);
+        println(out, "    %s/", markers);
       }
       println(out, "These are required to indicate empty directories");
     }
@@ -516,7 +553,7 @@ public final class MarkerTool extends S3GuardTool {
       String key = storeContext.pathToKey(statusPath);
       if (status.isDirectory()) {
         if (verbose) {
-          println(out, "  Directory Marker %s", key);
+          println(out, "  Directory Marker %s/", key);
         }
         LOG.debug("{}", key);
         tracker.markerFound(statusPath,

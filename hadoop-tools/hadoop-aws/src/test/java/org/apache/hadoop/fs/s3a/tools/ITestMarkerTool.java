@@ -18,10 +18,14 @@
 
 package org.apache.hadoop.fs.s3a.tools;
 
+import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
@@ -37,6 +41,7 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.StringUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
@@ -60,7 +65,7 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
       LoggerFactory.getLogger(ITestMarkerTool.class);
 
   /** the -verbose option. */
-  private static final String V = "-" + VERBOSE;
+  private static final String V = m(VERBOSE);
 
   /** FS which keeps markers. */
   private S3AFileSystem keepingFS;
@@ -71,13 +76,30 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
   /** FS which mixes markers; only created in some tests. */
   private S3AFileSystem mixedFS;
 
+  /**
+   * How many files to expect.
+   */
   private int expectedFileCount;
 
+  /**
+   * How many markers to expect under dir1.
+   */
   private int expectedMarkersUnderDir1;
 
+  /**
+   * How many markers to expect under dir2.
+   */
   private int expectedMarkersUnderDir2;
 
+  /**
+   * How many markers to expect across both dirs
+   */
   private int expectedMarkers;
+
+  /**
+   * How many markers to expect including the base directory
+   */
+  private int expectedMarkersWithBaseDir;
 
   @Override
   protected Configuration createConfiguration() {
@@ -289,44 +311,114 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
 
   @Test
   public void testRunWrongBucket() throws Throwable {
-    runToFailure(EXIT_NOT_FOUND, NAME, AUDIT,
+    runToFailure(EXIT_NOT_FOUND, NAME,
+        AUDIT,
         "s3a://this-bucket-does-not-exist-hopefully");
   }
 
+  /**
+   * Run with a path that doesn't exist.
+   */
   @Test
-  public void testRunWrongPath() throws Throwable {
-    runToFailure(EXIT_NOT_FOUND, NAME, AUDIT,
-        methodPath().toString());
+  public void testRunUnknownPath() throws Throwable {
+    runToFailure(EXIT_NOT_FOUND, NAME,
+        AUDIT,
+        methodPath());
+  }
+
+  /**
+   * Having both -audit and -clean on the command line is an error.
+   */
+  @Test
+  public void testRunTooManyActions() throws Throwable {
+    runToFailure(EXIT_USAGE, NAME,
+        AUDIT, CLEAN,
+        methodPath());
   }
 
   @Test
-  public void testRunVerboseAudit() throws Throwable {
-    describe("Run a verbose audit");
+  public void testRunAuditWithExpectedMarkers() throws Throwable {
+    describe("Run a verbose audit expecting some markers");
+    // a run under the keeping FS will create paths
     CreatedPaths createdPaths = createPaths(getKeepingFS(), methodPath());
-    run(NAME,
-        V,
+    final File audit = tempAuditFile();
+    run(NAME, V,
         AUDIT,
-        createdPaths.base.toString());
-    run(NAME,
-        V,
+        m(OPT_LIMIT), 0,
+        m(OPT_OUT), audit,
+        m(OPT_EXPECTED), expectedMarkersWithBaseDir,
+        createdPaths.base);
+    expectMarkersInOutput(audit, expectedMarkersWithBaseDir);
+  }
+
+  @Test
+  public void testRunAuditWithExcessMarkers() throws Throwable {
+    describe("Run a verbose audit failing as surplus markers were found");
+    // a run under the keeping FS will create paths
+    CreatedPaths createdPaths = createPaths(getKeepingFS(), methodPath());
+    final File audit = tempAuditFile();
+    runToFailure(EXIT_NOT_ACCEPTABLE, NAME, V,
         AUDIT,
-        createdPaths.base.toString());
+        m(OPT_OUT), audit,
+        createdPaths.base);
+    expectMarkersInOutput(audit, expectedMarkersWithBaseDir);
   }
 
   @Test
   public void testRunLimitedAudit() throws Throwable {
-    describe("Adurit");
+    describe("Audit with a limited number of files (2)");
     CreatedPaths createdPaths = createPaths(getKeepingFS(), methodPath());
     runToFailure(EXIT_INTERRUPTED,
-        NAME,
-        V,
-        "-" + OPT_LIMIT, "2",
+        NAME, V,
+        m(OPT_LIMIT), 2,
         CLEAN,
-        createdPaths.base.toString());
-    run(NAME,
-        V,
+        createdPaths.base);
+    run(NAME, V,
         AUDIT,
-        createdPaths.base.toString());
+        createdPaths.base);
+  }
+
+  /**
+   * Get a filename for a temp file.
+   * The generated file is deleted.
+   *
+   * @return a file path for a output file
+   */
+  private File tempAuditFile() throws IOException {
+    final File audit = File.createTempFile("audit", ".txt");
+    audit.delete();
+    return audit;
+  }
+
+  /**
+   * Read the audit output and verify it has the expected number of lines.
+   * @param auditFile audit file to read
+   * @param expected expected line count
+   */
+  private void expectMarkersInOutput(final File auditFile,
+      final int expected)
+      throws IOException {
+    final List<String> lines = readOutput(auditFile);
+    Assertions.assertThat(lines)
+        .describedAs("Content of %s", auditFile)
+        .hasSize(expected);
+  }
+
+  /**
+   * Read the output file in. Logs the contents at info.
+   * @param outputFile audit output file.
+   * @return the lines
+   */
+  public List<String> readOutput(final File outputFile)
+      throws IOException {
+    try (FileReader reader = new FileReader(outputFile)) {
+      final List<String> lines =
+          org.apache.commons.io.IOUtils.readLines(reader);
+
+      LOG.info("contents of output file {}\n{}", outputFile,
+          StringUtils.join("\n", lines));
+      return lines;
+    }
   }
 
   private static Path topath(Path base, final String name) {
@@ -517,6 +609,7 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
     // wrap up the expectations.
     expectedMarkersUnderDir2 = 2;
     expectedMarkers = expectedMarkersUnderDir1 + expectedMarkersUnderDir2;
+    expectedMarkersWithBaseDir = expectedMarkers + 1;
     return r;
   }
 
@@ -601,10 +694,13 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
    * @return the return code
    * @throws Exception any exception
    */
-  protected int run(String... args) throws Exception {
+  protected int run(Object... args) throws Exception {
     Configuration conf = new Configuration(getConfiguration());
+    final String[] argList = Arrays.stream(args)
+        .map(Object::toString)
+        .collect(Collectors.toList()).toArray(new String[0]);
     disableFilesystemCaching(conf);
-    return S3GuardTool.run(conf, args);
+    return S3GuardTool.run(conf, argList);
   }
 
   /**
@@ -614,7 +710,7 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
    * @param args argument list
    * @throws Exception any exception
    */
-  protected void runToFailure(int status, String... args)
+  protected void runToFailure(int status, Object... args)
       throws Exception {
     ExitUtil.ExitException ex =
         intercept(ExitUtil.ExitException.class,
@@ -629,4 +725,12 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
     }
   }
 
+  /**
+   * Add a - prefix to a string
+   * @param s string to prefix
+   * @return a string for passing into the CLI
+   */
+  private static String m(String s) {
+    return "-" + s;
+  }
 }

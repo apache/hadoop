@@ -21,9 +21,12 @@ package org.apache.hadoop.fs.s3a.impl;
 import java.util.EnumSet;
 import java.util.Set;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Enum of probes which can be made of S3.
  */
+@InterfaceAudience.Private
 public enum StatusProbeEnum {
 
   /** The actual path. */
@@ -52,6 +55,4 @@ public enum StatusProbeEnum {
   /** Skip the HEAD and only look for directories. */
   public static final Set<StatusProbeEnum> DIRECTORIES =
       LIST_ONLY;
-
-
 }

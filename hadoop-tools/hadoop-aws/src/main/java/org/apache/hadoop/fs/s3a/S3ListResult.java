@@ -131,7 +131,8 @@ public class S3ListResult {
   }
 
   /**
-   * Does this listing have prefixes or objects?
+   * Does this listing have prefixes or objects after entries with
+   * tombstones have been stripped?
    * @param accessors callback for key to path mapping.
    * @param tombstones Set of tombstone markers, or null if not applicable.
    * @return true if the reconciled list is non-empty
@@ -189,7 +190,7 @@ public class S3ListResult {
   }
 
   /**
-   * dump the result at debug level only.
+   * Dmp the result at debug level.
    * @param log log to use
    */
   public void logAtDebug(Logger log) {

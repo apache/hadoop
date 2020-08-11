@@ -65,7 +65,16 @@ public class DirMarkerTracker {
   private final Map<Path, Marker> surplusMarkers
       = new TreeMap<>();
 
+  /**
+   * Base path of the tracking operation.
+   */
   private final Path basePath;
+
+  /**
+   * Should surplus markers be recorded in
+   * the {@link #surplusMarkers} map?
+   */
+  private final boolean recordSurplusMarkers;
 
   /**
    * last parent directory checked.
@@ -94,12 +103,16 @@ public class DirMarkerTracker {
 
   /**
    * Construct.
-   * Base path is currently only used for information rather than validating
-   * paths supplied in other mathods.
+   * <p></p>
+   * The base path is currently only used for information rather than
+   * validating paths supplied in other methods.
    * @param basePath base path of track
+   * @param recordSurplusMarkers save surplus markers to a map?
    */
-  public DirMarkerTracker(final Path basePath) {
+  public DirMarkerTracker(final Path basePath,
+      boolean recordSurplusMarkers) {
     this.basePath = basePath;
+    this.recordSurplusMarkers = recordSurplusMarkers;
   }
 
   /**
@@ -112,6 +125,7 @@ public class DirMarkerTracker {
 
   /**
    * A marker has been found; this may or may not be a leaf.
+   * <p></p>
    * Trigger a move of all markers above it into the surplus map.
    * @param path marker path
    * @param key object key
@@ -142,8 +156,9 @@ public class DirMarkerTracker {
   }
 
   /**
-   * A path has been found. Trigger a move of all
-   * markers above it into the surplus map.
+   * A path has been found.
+   * <p></p>
+   * Declare all markers above it as surplus
    * @param path marker path
    * @param key object key
    * @param source listing source
@@ -167,7 +182,13 @@ public class DirMarkerTracker {
   }
 
   /**
-   * Remove all markers from the path and its parents.
+   * Remove all markers from the path and its parents from the
+   * {@link #leafMarkers} map.
+   * <p></p>
+   * if {@link #recordSurplusMarkers} is true, the marker is
+   * moved to the surplus map. Not doing this is simply an
+   * optimisation designed to reduce risk of excess memory consumption
+   * when renaming (hypothetically) large directory trees.
    * @param path path to start at
    * @param removed list of markers removed; is built up during the
    * recursive operation.
@@ -182,13 +203,15 @@ public class DirMarkerTracker {
     final Marker value = leafMarkers.remove(path);
     if (value != null) {
       // marker is surplus
-      surplusMarkers.put(path, value);
       removed.add(value);
+      if (recordSurplusMarkers) {
+        surplusMarkers.put(path, value);
+      }
     }
   }
 
   /**
-   * get the map of leaf markers.
+   * Get the map of leaf markers.
    * @return all leaf markers.
    */
   public Map<Path, Marker> getLeafMarkers() {
@@ -196,7 +219,9 @@ public class DirMarkerTracker {
   }
 
   /**
-   * get the map of surplus markers.
+   * Get the map of surplus markers.
+   * <p></p>
+   * Empty if they were not being recorded.
    * @return all surplus markers.
    */
   public Map<Path, Marker> getSurplusMarkers() {

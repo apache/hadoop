@@ -66,16 +66,29 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
   @Override
   public void teardown() throws Exception {
     Thread.currentThread().setName("teardown");
-    // Perform an audit of the directory tree with the marker tool
-    // if logging at debug
-    S3AFileSystem fs = getFileSystem();
+
+    maybeAuditTestPath();
+
+    super.teardown();
+    describe("closing file system");
+    IOUtils.closeStream(getFileSystem());
+  }
+
+  /**
+   * Audit the FS under {@link #methodPath()} if
+   * the test option {@link #DIRECTORY_MARKER_AUDIT} is
+   * true.
+   */
+  public void maybeAuditTestPath() {
+    final S3AFileSystem fs = getFileSystem();
     if (fs != null) {
       try {
         boolean audit = getTestPropertyBool(fs.getConf(),
             DIRECTORY_MARKER_AUDIT, false);
         Path methodPath = methodPath();
         if (audit
-            && !fs.getDirectoryMarkerPolicy().keepDirectoryMarkers(methodPath)
+            && !fs.getDirectoryMarkerPolicy()
+            .keepDirectoryMarkers(methodPath)
             && fs.isDirectory(methodPath)) {
             MarkerTool.ScanResult result = MarkerTool.execMarkerTool(fs,
                 methodPath, true, 0, UNLIMITED_LISTING, false);
@@ -90,10 +103,6 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
         }
       }
     }
-
-    super.teardown();
-    describe("closing file system");
-    IOUtils.closeStream(getFileSystem());
   }
 
   @Override

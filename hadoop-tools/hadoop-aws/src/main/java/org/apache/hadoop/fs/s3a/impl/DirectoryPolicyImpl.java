@@ -40,10 +40,14 @@ import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_KEEP;
 public final class DirectoryPolicyImpl
     implements DirectoryPolicy {
 
+  private static final Logger LOG = LoggerFactory.getLogger(
+      DirectoryPolicyImpl.class);
+
   /**
    * Error string when unable to parse the marker policy option.
    */
-  public static final String UNKNOWN_MARKER_POLICY = "Unknown value of "
+  public static final String UNKNOWN_MARKER_POLICY =
+      "Unknown policy in "
       + DIRECTORY_MARKER_POLICY + ": ";
 
   /**
@@ -58,9 +62,6 @@ public final class DirectoryPolicyImpl
   public static final DirectoryPolicy DELETE = new DirectoryPolicyImpl(
       MarkerPolicy.Delete, (p) -> false);
 
-  private static final Logger LOG = LoggerFactory.getLogger(
-      DirectoryPolicyImpl.class);
-
   /**
    * Chosen marker policy.
    */
@@ -71,7 +72,6 @@ public final class DirectoryPolicyImpl
    * path.
    */
   private final Predicate<Path> authoritativeness;
-
 
   /**
    * Constructor.
