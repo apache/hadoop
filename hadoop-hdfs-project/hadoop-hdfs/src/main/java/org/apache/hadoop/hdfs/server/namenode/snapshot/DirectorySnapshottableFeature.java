@@ -173,7 +173,8 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
    * Add a snapshot.
    * @param snapshotRoot Root of the snapshot.
    * @param name Name of the snapshot.
-   * @param mtime The snapshot creation time set by Time.now().
+   * @param leaseManager
+   * @param captureOpenFiles
    * @throws SnapshotException Throw SnapshotException when there is a snapshot
    *           with the same name already exists or snapshot quota exceeds
    */
