@@ -22,6 +22,7 @@ import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.util.StringUtils;
 
 @InterfaceAudience.Private
@@ -110,7 +111,7 @@ public final class HdfsConstants {
    * period, no other client can write to the file. The writing client can
    * periodically renew the lease. When the file is closed, the lease is
    * revoked. The lease duration is bound by this soft limit and a
-   * {@link HdfsConstants#LEASE_HARDLIMIT_PERIOD hard limit}. Until the
+   * {@link HdfsClientConfigKeys#DFS_LEASE_HARDLIMIT_KEY }. Until the
    * soft limit expires, the writer has sole write access to the file. If the
    * soft limit expires and the client fails to close the file or renew the
    * lease, another client can preempt the lease.
