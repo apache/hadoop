@@ -67,7 +67,7 @@ public class NamespacePrintVisitor implements NamespaceVisitor {
   }
 
   @Override
-  public void visit(INodeFile file, int snapshot) {
+  public void visitFile(INodeFile file, int snapshot) {
     print(file, snapshot);
 
     out.print(", fileSize=" + file.computeFileSize(snapshot));
@@ -91,14 +91,14 @@ public class NamespacePrintVisitor implements NamespaceVisitor {
   }
 
   @Override
-  public void visit(INodeSymlink symlink, int snapshot) {
+  public void visitSymlink(INodeSymlink symlink, int snapshot) {
     print(symlink, snapshot);
     out.print(" ~> ");
     out.println(symlink.getSymlinkString());
   }
 
   @Override
-  public void visit(INodeReference ref, int snapshot) {
+  public void visitReference(INodeReference ref, int snapshot) {
     print(ref, snapshot);
 
     if (ref instanceof INodeReference.DstReference) {
@@ -107,15 +107,21 @@ public class NamespacePrintVisitor implements NamespaceVisitor {
       out.print(", " + ((INodeReference.WithCount)ref).getCountDetails());
     }
     out.println();
+  }
 
+  @Override
+  public void preVisitReferred(INode referred) {
     prefix.setLength(prefix.length() - 2);
     prefix.append("  ->");
-    ref.getReferredINode().accept(this, snapshot);
+  }
+
+  @Override
+  public void postVisitReferred(INode referred) {
     prefix.setLength(prefix.length() - 2);
   }
 
   @Override
-  public void visit(INodeDirectory dir, int snapshot) {
+  public void visitDirectory(INodeDirectory dir, int snapshot) {
     print(dir, snapshot);
 
     out.print(", childrenSize=" + dir.getChildrenList(snapshot).size());
@@ -143,7 +149,7 @@ public class NamespacePrintVisitor implements NamespaceVisitor {
   }
 
   @Override
-  public void visit(INodeDirectory dir,
+  public void visitSnapshottable(INodeDirectory dir,
       DirectorySnapshottableFeature snapshottable) {
     out.println();
     out.print(prefix);
@@ -168,12 +174,12 @@ public class NamespacePrintVisitor implements NamespaceVisitor {
   }
 
   @Override
-  public void preVisitNextLevel(int index, boolean isLast) {
+  public void preVisitSub(Element sub, int index, boolean isLast) {
     prefix.append(isLast? LAST_ITEM : NON_LAST_ITEM);
   }
 
   @Override
-  public void postVisitNextLevel(int index, boolean isLast) {
+  public void postVisitSub(Element sub, int index, boolean isLast) {
     prefix.setLength(prefix.length() - 2);
   }
 }

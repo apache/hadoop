@@ -372,7 +372,7 @@ public abstract class INodeReference extends INode {
 
   @Override
   public void accept(NamespaceVisitor visitor, int snapshot) {
-    visitor.visit(this, snapshot);
+    visitor.visitReferenceRecursively(this, snapshot);
   }
 
   public int getDstSnapshotId() {

@@ -999,7 +999,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
 
   @Override
   public void accept(NamespaceVisitor visitor, int snapshot) {
-    visitor.visitRecursively(this, snapshot);
+    visitor.visitDirectoryRecursively(this, snapshot);
   }
 
   public final int getChildrenNum(final int snapshotId) {

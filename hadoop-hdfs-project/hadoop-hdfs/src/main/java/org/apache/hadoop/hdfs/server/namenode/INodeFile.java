@@ -1114,7 +1114,7 @@ public class INodeFile extends INodeWithAdditionalFields
 
   @Override
   public void accept(NamespaceVisitor visitor, int snapshot) {
-    visitor.visit(this, snapshot);
+    visitor.visitFile(this, snapshot);
   }
 
   /**

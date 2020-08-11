@@ -111,7 +111,7 @@ public class INodeSymlink extends INodeWithAdditionalFields {
 
   @Override
   public void accept(NamespaceVisitor visitor, int snapshot) {
-    visitor.visit(this, snapshot);
+    visitor.visitSymlink(this, snapshot);
   }
 
   @Override

@@ -32,21 +32,112 @@ import java.util.Iterator;
  * For visiting namespace trees.
  */
 public interface NamespaceVisitor {
-  void visit(INodeFile file, int snapshot);
+  /** For visiting any {@link INode}. */
+  interface INodeVisitor {
+    INodeVisitor DEFAULT = new INodeVisitor() {};
 
-  void visit(INodeSymlink symlink, int snapshot);
+    /** Visiting the given {@link INode}. */
+    default void visit(INode iNode, int snapshot) {
+    }
+  }
 
-  void visit(INodeReference reference, int snapshot);
+  /** @return the default (non-recursive) {@link INodeVisitor}. */
+  default INodeVisitor getDefaultVisitor() {
+    return INodeVisitor.DEFAULT;
+  }
 
-  void visit(INodeDirectory directory, int snapshot);
+  /** Visiting the given {@link INodeFile}. */
+  default void visitFile(INodeFile file, int snapshot) {
+    getDefaultVisitor().visit(file, snapshot);
+  }
 
-  void visit(INodeDirectory dir, DirectorySnapshottableFeature snapshottable);
+  /** Visiting the given {@link INodeSymlink}. */
+  default void visitSymlink(INodeSymlink symlink, int snapshot) {
+    getDefaultVisitor().visit(symlink, snapshot);
+  }
 
-  void preVisitNextLevel(int index, boolean isLast);
+  /** Visiting the given {@link INodeReference} (non-recursively). */
+  default void visitReference(INodeReference ref, int snapshot) {
+    getDefaultVisitor().visit(ref, snapshot);
+  }
 
-  void postVisitNextLevel(int index, boolean isLast);
+  /** First visit the given {@link INodeReference} and then the referred. */
+  default void visitReferenceRecursively(INodeReference ref, int snapshot) {
+    visitReference(ref, snapshot);
 
-  default void visitRecursively(Iterable<Element> subs) {
+    final INode referred = ref.getReferredINode();
+    preVisitReferred(referred);
+    referred.accept(this, snapshot);
+    postVisitReferred(referred);
+  }
+
+  /** Right before visiting the given referred {@link INode}. */
+  default void preVisitReferred(INode referred) {
+  }
+
+  /** Right after visiting the given referred {@link INode}. */
+  default void postVisitReferred(INode referred) {
+  }
+
+  /** Visiting the given {@link INodeDirectory} (non-recursively). */
+  default void visitDirectory(INodeDirectory dir, int snapshot) {
+    getDefaultVisitor().visit(dir, snapshot);
+  }
+
+  /**
+   * First visit the given {@link INodeDirectory};
+   * then the children;
+   * and then, if snapshottable, the snapshots. */
+  default void visitDirectoryRecursively(INodeDirectory dir, int snapshot) {
+    visitDirectory(dir, snapshot);
+    visitSubs(getChildren(dir, snapshot));
+
+    if (snapshot == Snapshot.CURRENT_STATE_ID) {
+      final DirectorySnapshottableFeature snapshottable
+          = dir.getDirectorySnapshottableFeature();
+      if (snapshottable != null) {
+        visitSnapshottable(dir, snapshottable);
+        visitSubs(getSnapshots(snapshottable));
+      }
+    }
+  }
+
+  /**
+   * Right before visiting the given sub {@link Element}.
+   * The sub element may be a child of an {@link INodeDirectory}
+   * or a snapshot in {@link DirectorySnapshottableFeature}.
+   *
+   * @param sub the element to be visited.
+   * @param index the index of the sub element.
+   * @param isLast is the sub element the last element?
+   */
+  default void preVisitSub(Element sub, int index, boolean isLast) {
+  }
+
+  /**
+   * Right after visiting the given sub {@link Element}.
+   * The sub element may be a child of an {@link INodeDirectory}
+   * or a snapshot in {@link DirectorySnapshottableFeature}.
+   *
+   * @param sub the element just visited.
+   * @param index the index of the sub element.
+   * @param isLast is the sub element the last element?
+   */
+  default void postVisitSub(Element sub, int index, boolean isLast) {
+  }
+
+  /** Visiting a {@link DirectorySnapshottableFeature}. */
+  default void visitSnapshottable(INodeDirectory dir,
+      DirectorySnapshottableFeature snapshottable) {
+  }
+
+  /**
+   * Visiting the sub {@link Element}s recursively.
+   *
+   * @param subs the children of an {@link INodeDirectory}
+   *             or the snapshots in {@link DirectorySnapshottableFeature}.
+   */
+  default void visitSubs(Iterable<Element> subs) {
     if (subs == null) {
       return;
     }
@@ -54,27 +145,14 @@ public interface NamespaceVisitor {
     for(final Iterator<Element> i = subs.iterator(); i.hasNext();) {
       final Element e = i.next();
       final boolean isList = !i.hasNext();
-      preVisitNextLevel(index, isList);
+      preVisitSub(e, index, isList);
       e.getInode().accept(this, e.getSnapshotId());
-      postVisitNextLevel(index, isList);
+      postVisitSub(e, index, isList);
       index++;
     }
   }
 
-  default void visitRecursively(INodeDirectory dir, int snapshot) {
-    visit(dir, snapshot);
-    visitRecursively(getChildren(dir, snapshot));
-
-    if (snapshot == Snapshot.CURRENT_STATE_ID) {
-      final DirectorySnapshottableFeature snapshottable
-          = dir.getDirectorySnapshottableFeature();
-      if (snapshottable != null) {
-        visit(dir, snapshottable);
-        visitRecursively(getSnapshots(snapshottable));
-      }
-    }
-  }
-
+  /** @return the children as {@link Element}s. */
   static Iterable<Element> getChildren(INodeDirectory dir, int snapshot) {
     return new Iterable<Element>() {
       final Iterator<INode> i = dir.getChildrenList(snapshot).iterator();
@@ -101,6 +179,7 @@ public interface NamespaceVisitor {
     };
   }
 
+  /** @return the snapshots as {@link Element}s. */
   static Iterable<Element> getSnapshots(
       DirectorySnapshottableFeature snapshottable) {
     return new Iterable<Element>() {
@@ -149,16 +228,16 @@ public interface NamespaceVisitor {
     private final int snapshotId;
     private final INode inode;
 
-    public Element(int snapshot, INode inode) {
+    Element(int snapshot, INode inode) {
       this.snapshotId = snapshot;
       this.inode = inode;
     }
 
-    public INode getInode() {
+    INode getInode() {
       return inode;
     }
 
-    public int getSnapshotId() {
+    int getSnapshotId() {
       return snapshotId;
     }
   }
