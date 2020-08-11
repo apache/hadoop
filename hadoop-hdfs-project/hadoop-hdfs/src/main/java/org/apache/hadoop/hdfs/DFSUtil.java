@@ -39,7 +39,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_TRUSTSTORE_P
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetAddress;
@@ -1777,7 +1776,6 @@ public class DFSUtil {
    *                                was found.
    * @throws ParentNotDirectoryException
    * @throws UnresolvedLinkException
-   * @throws FileNotFoundException
    */
   public static void checkProtectedDescendants(
       FSDirectory fsd, INodesInPath iip)

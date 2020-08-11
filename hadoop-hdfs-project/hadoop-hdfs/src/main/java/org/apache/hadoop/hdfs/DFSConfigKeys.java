@@ -682,7 +682,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       600;
   /**
    * The maximum number of getBlocks RPCs data movement utilities can make to
-   * a NameNode per second. Values <= 0 disable throttling. This affects
+   * a NameNode per second. Values &lt;= 0 disable throttling. This affects
    * anything that uses a NameNodeConnector, i.e., the Balancer, Mover,
    * and StoragePolicySatisfier.
    */
