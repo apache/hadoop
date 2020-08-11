@@ -81,6 +81,7 @@ import com.google.common.collect.Multimap;
 import org.apache.hadoop.hdfs.server.common.blockaliasmap.BlockAliasMap;
 import org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.InMemoryLevelDBAliasMapClient;
 import org.apache.hadoop.hdfs.server.namenode.ImageServlet;
+import org.apache.hadoop.hdfs.server.namenode.visitor.NamespacePrintVisitor;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.slf4j.Logger;
@@ -2783,6 +2784,11 @@ public class MiniDFSCluster implements AutoCloseable {
       LOG.info("Have namenode " + i + ", info:" + getNN(i));
       LOG.info(" has namenode: " + getNN(i).nameNode);
     }
+  }
+
+  public void printTree(String message) {
+    System.out.println("PRINT_TREE: " + message);
+    NamespacePrintVisitor.print(getNamesystem(), System.out);
   }
 
   private synchronized boolean shouldWait(DatanodeInfo[] dnInfo,

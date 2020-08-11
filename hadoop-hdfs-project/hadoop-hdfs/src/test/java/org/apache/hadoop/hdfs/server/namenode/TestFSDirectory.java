@@ -18,11 +18,8 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
-
-import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.StringReader;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
@@ -117,32 +114,6 @@ public class TestFSDirectory {
     }
   }
 
-  /** Dump the tree, make some changes, and then dump the tree again. */
-  @Test
-  public void testDumpTree() throws Exception {
-    final INode root = fsdir.getINode("/");
-
-    LOG.info("Original tree");
-    final StringBuffer b1 = root.dumpTreeRecursively();
-    System.out.println("b1=" + b1);
-
-    final BufferedReader in = new BufferedReader(new StringReader(b1.toString()));
-    
-    String line = in.readLine();
-    checkClassName(line);
-
-    for(; (line = in.readLine()) != null; ) {
-      line = line.trim();
-      if (!line.isEmpty() && !line.contains("snapshot")) {
-        assertTrue("line=" + line,
-            line.startsWith(INodeDirectory.DUMPTREE_LAST_ITEM)
-                || line.startsWith(INodeDirectory.DUMPTREE_EXCEPT_LAST_ITEM)
-        );
-        checkClassName(line);
-      }
-    }
-  }
-  
   @Test
   public void testSkipQuotaCheck() throws Exception {
     try {
@@ -176,14 +147,6 @@ public class TestFSDirectory {
       hdfs.delete(file6, false); // cleanup, in case the test failed in the middle.
       hdfs.setQuota(sub2, Long.MAX_VALUE, Long.MAX_VALUE);
     }
-  }
-  
-  static void checkClassName(String line) {
-    int i = line.lastIndexOf('(');
-    int j = line.lastIndexOf('@');
-    final String classname = line.substring(i+1, j);
-    assertTrue(classname.startsWith(INodeFile.class.getSimpleName())
-        || classname.startsWith(INodeDirectory.class.getSimpleName()));
   }
   
   @Test

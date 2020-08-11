@@ -54,6 +54,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.QuotaCounts;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiffList;
+import org.apache.hadoop.hdfs.server.namenode.visitor.NamespacePrintVisitor;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
@@ -210,15 +211,13 @@ public class TestSnapshotDeletion {
     INodeDirectory dirNode = getDir(fsdir, dirPath);
     assertTrue(dirNode.isQuotaSet());
     QuotaCounts q = dirNode.getDirectoryWithQuotaFeature().getSpaceConsumed();
-    assertEquals(dirNode.dumpTreeRecursively().toString(), expectedNs,
-        q.getNameSpace());
-    assertEquals(dirNode.dumpTreeRecursively().toString(), expectedDs,
-        q.getStorageSpace());
+    final String s = NamespacePrintVisitor.print2Sting(dirNode);
+    assertEquals(s, expectedNs, q.getNameSpace());
+    assertEquals(s, expectedDs, q.getStorageSpace());
     QuotaCounts counts = dirNode.computeQuotaUsage(fsdir.getBlockStoragePolicySuite(), false);
-    assertEquals(dirNode.dumpTreeRecursively().toString(), expectedNs,
-        counts.getNameSpace());
-    assertEquals(dirNode.dumpTreeRecursively().toString(), expectedDs,
-        counts.getStorageSpace());
+    final String t = NamespacePrintVisitor.print2Sting(dirNode);
+    assertEquals(t, expectedNs, counts.getNameSpace());
+    assertEquals(t, expectedDs, counts.getStorageSpace());
   }
   
   /**

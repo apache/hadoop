@@ -20,11 +20,9 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
@@ -35,6 +33,7 @@ import org.apache.hadoop.hdfs.server.datanode.checker.DatasetVolumeChecker;
 import org.apache.hadoop.hdfs.server.datanode.checker.ThrottledAsyncChecker;
 import org.apache.hadoop.hdfs.server.namenode.*;
 import org.apache.hadoop.hdfs.server.namenode.top.metrics.TopMetrics;
+import org.apache.hadoop.hdfs.server.namenode.visitor.NamespacePrintVisitor;
 import org.apache.hadoop.http.HttpRequestLog;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.ipc.ProtobufRpcEngine2.Server;
@@ -186,7 +185,6 @@ public class SnapshotTestHelper {
    * {@link INodeFile}: fileSize, block list. Check {@link BlockInfo#toString()}
    * and {@link BlockUnderConstructionFeature#toString()} for detailed information.
    * </pre>
-   * @see INode#dumpTreeRecursively()
    */
   public static void compareDumpedTreeInFile(File file1, File file2,
       boolean compareQuota) throws IOException {
@@ -269,10 +267,7 @@ public class SnapshotTestHelper {
   }
 
   public static void dumpTree2File(FSDirectory fsdir, File f) throws IOException{
-    final PrintWriter out = new PrintWriter(new FileWriter(f, false), true);
-    fsdir.getINode("/").dumpTreeRecursively(out, new StringBuilder(),
-        Snapshot.CURRENT_STATE_ID);
-    out.close();
+    NamespacePrintVisitor.print2File(fsdir.getRoot(), f);
   }
 
   /**
@@ -469,19 +464,6 @@ public class SnapshotTestHelper {
       public int hashCode() {
         return nodePath.hashCode();
       }
-    }
-  }
-  
-  public static void dumpTree(String message, MiniDFSCluster cluster
-      ) throws UnresolvedLinkException {
-    System.out.println("XXX " + message);
-    try {
-      cluster.getNameNode().getNamesystem().getFSDirectory().getINode("/"
-          ).dumpTreeRecursively(System.out);
-    } catch (UnresolvedLinkException ule) {
-      throw ule;
-    } catch (IOException ioe) {
-      throw new RuntimeException(ioe);
     }
   }
 }

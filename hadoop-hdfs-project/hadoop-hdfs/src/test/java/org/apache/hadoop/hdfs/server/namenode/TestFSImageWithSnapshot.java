@@ -601,17 +601,14 @@ public class TestFSImageWithSnapshot {
   private final PrintWriter output = new PrintWriter(System.out, true);
   private int printTreeCount = 0;
 
-  String printTree(String label) throws Exception {
+  String printTree(String label) {
     output.println();
     output.println();
     output.println("***** " + printTreeCount++ + ": " + label);
-    final String b =
-        fsn.getFSDirectory().getINode("/").dumpTreeRecursively().toString();
-    output.println(b);
 
     final String s = NamespacePrintVisitor.print2Sting(fsn);
-    Assert.assertEquals(b, s);
-    return b;
+    output.println(s);
+    return s;
   }
 
   @Test (timeout=60000)

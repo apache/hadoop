@@ -18,10 +18,8 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.FileNotFoundException;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -42,7 +40,6 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.security.AccessControlException;
 
@@ -898,105 +895,6 @@ public class INodeDirectory extends INodeWithAdditionalFields
         && getXAttrFeature() == other.getXAttrFeature();
   }
   
-  /*
-   * The following code is to dump the tree recursively for testing.
-   * 
-   *      \- foo   (INodeDirectory@33dd2717)
-   *        \- sub1   (INodeDirectory@442172)
-   *          +- file1   (INodeFile@78392d4)
-   *          +- file2   (INodeFile@78392d5)
-   *          +- sub11   (INodeDirectory@8400cff)
-   *            \- file3   (INodeFile@78392d6)
-   *          \- z_file4   (INodeFile@45848712)
-   */
-  static final String DUMPTREE_EXCEPT_LAST_ITEM = "+-"; 
-  static final String DUMPTREE_LAST_ITEM = "\\-";
-  @VisibleForTesting
-  @Override
-  public void dumpTreeRecursively(PrintWriter out, StringBuilder prefix,
-      final int snapshot) {
-    super.dumpTreeRecursively(out, prefix, snapshot);
-    out.print(", childrenSize=" + getChildrenList(snapshot).size());
-    final DirectoryWithQuotaFeature q = getDirectoryWithQuotaFeature();
-    if (q != null) {
-      out.print(", " + q);
-    }
-    if (this instanceof Snapshot.Root) {
-      out.print(", snapshotId=" + snapshot);
-    }
-    out.println();
-
-    if (prefix.length() >= 2) {
-      prefix.setLength(prefix.length() - 2);
-      prefix.append("  ");
-    }
-
-    final DirectoryWithSnapshotFeature snapshotFeature =
-        getDirectoryWithSnapshotFeature();
-    if (snapshotFeature != null) {
-      out.print(prefix);
-      out.print(snapshotFeature);
-    }
-    out.println();
-    dumpTreeRecursively(out, prefix, new Iterable<SnapshotAndINode>() {
-      final Iterator<INode> i = getChildrenList(snapshot).iterator();
-      
-      @Override
-      public Iterator<SnapshotAndINode> iterator() {
-        return new Iterator<SnapshotAndINode>() {
-          @Override
-          public boolean hasNext() {
-            return i.hasNext();
-          }
-
-          @Override
-          public SnapshotAndINode next() {
-            return new SnapshotAndINode(snapshot, i.next());
-          }
-
-          @Override
-          public void remove() {
-            throw new UnsupportedOperationException();
-          }
-        };
-      }
-    });
-
-    final DirectorySnapshottableFeature s = getDirectorySnapshottableFeature();
-    if (s != null) {
-      s.dumpTreeRecursively(this, out, prefix, snapshot);
-    }
-  }
-
-  /**
-   * Dump the given subtrees.
-   * @param prefix The prefix string that each line should print.
-   * @param subs The subtrees.
-   */
-  @VisibleForTesting
-  public static void dumpTreeRecursively(PrintWriter out,
-      StringBuilder prefix, Iterable<SnapshotAndINode> subs) {
-    if (subs != null) {
-      for(final Iterator<SnapshotAndINode> i = subs.iterator(); i.hasNext();) {
-        final SnapshotAndINode pair = i.next();
-        prefix.append(i.hasNext()? DUMPTREE_EXCEPT_LAST_ITEM: DUMPTREE_LAST_ITEM);
-        pair.inode.dumpTreeRecursively(out, prefix, pair.snapshotId);
-        prefix.setLength(prefix.length() - 2);
-      }
-    }
-  }
-
-  /** A pair of Snapshot and INode objects. */
-  public static class SnapshotAndINode {
-    public final int snapshotId;
-    public final INode inode;
-
-    public SnapshotAndINode(int snapshot, INode inode) {
-      this.snapshotId = snapshot;
-      this.inode = inode;
-    }
-  }
-
   @Override
   public void accept(NamespaceVisitor visitor, int snapshot) {
     visitor.visitDirectoryRecursively(this, snapshot);

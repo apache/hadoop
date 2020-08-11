@@ -177,8 +177,8 @@ public class TestNestedSnapshots {
     Assert.assertTrue(se.getMessage().contains(substring));
   }
 
-  private static void print(String message) throws UnresolvedLinkException {
-    SnapshotTestHelper.dumpTree(message, cluster);
+  private static void print(String message) {
+    cluster.printTree(message);
   }
 
   private static void assertFile(Path s1, Path s2, Path file,

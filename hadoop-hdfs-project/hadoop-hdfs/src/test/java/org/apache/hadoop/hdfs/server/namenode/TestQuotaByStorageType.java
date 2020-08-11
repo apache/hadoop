@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.server.namenode;
   import static org.junit.Assert.assertTrue;
   import static org.junit.Assert.fail;
 
+import org.apache.hadoop.hdfs.server.namenode.visitor.NamespacePrintVisitor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -207,7 +208,7 @@ public class TestQuotaByStorageType {
 
     QuotaCounts counts = fnode.computeQuotaUsage(
         fsn.getBlockManager().getStoragePolicySuite(), true);
-    assertEquals(fnode.dumpTreeRecursively().toString(), 0,
+    assertEquals(NamespacePrintVisitor.print2Sting(fnode), 0,
         counts.getTypeSpaces().get(StorageType.SSD));
 
     ContentSummary cs = dfs.getContentSummary(foo);
@@ -466,9 +467,9 @@ public class TestQuotaByStorageType {
     // Validate the computeQuotaUsage()
     QuotaCounts counts = fnode.computeQuotaUsage(
         fsn.getBlockManager().getStoragePolicySuite(), true);
-    assertEquals(fnode.dumpTreeRecursively().toString(), 1,
+    assertEquals(NamespacePrintVisitor.print2Sting(fnode), 1,
         counts.getNameSpace());
-    assertEquals(fnode.dumpTreeRecursively().toString(), 0,
+    assertEquals(NamespacePrintVisitor.print2Sting(fnode), 0,
         counts.getStorageSpace());
   }
 
@@ -578,7 +579,7 @@ public class TestQuotaByStorageType {
 
     QuotaCounts counts1 = sub1Node.computeQuotaUsage(
         fsn.getBlockManager().getStoragePolicySuite(), true);
-    assertEquals(sub1Node.dumpTreeRecursively().toString(), file1Len,
+    assertEquals(NamespacePrintVisitor.print2Sting(sub1Node), file1Len,
         counts1.getTypeSpaces().get(StorageType.SSD));
 
     ContentSummary cs1 = dfs.getContentSummary(sub1);
@@ -596,7 +597,7 @@ public class TestQuotaByStorageType {
 
     QuotaCounts counts2 = sub1Node.computeQuotaUsage(
         fsn.getBlockManager().getStoragePolicySuite(), true);
-    assertEquals(sub1Node.dumpTreeRecursively().toString(), 0,
+    assertEquals(NamespacePrintVisitor.print2Sting(sub1Node), 0,
         counts2.getTypeSpaces().get(StorageType.SSD));
 
     ContentSummary cs2 = dfs.getContentSummary(sub1);
