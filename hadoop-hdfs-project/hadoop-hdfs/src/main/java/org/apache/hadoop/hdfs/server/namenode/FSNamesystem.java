@@ -7023,7 +7023,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   public SnapshotStatus[] getSnapshotListing(String snapshotRoot)
       throws IOException {
-    final String operationName = "listSnapshotDirectory";
+    final String operationName = "ListSnapshot";
     SnapshotStatus[] status;
     checkOperation(OperationCategory.READ);
     boolean success = false;
