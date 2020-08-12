@@ -7235,7 +7235,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       final INodesInPath iip = dir.resolvePath(null, snapshotRoot, DirOp.WRITE);
       snapshotManager.assertMarkedAsDeleted(iip, snapshotName);
       blocksToBeDeleted = FSDirSnapshotOp.deleteSnapshot(
-          dir, snapshotManager, iip, snapshotName, now);
+          dir, snapshotManager, iip, snapshotName, now, snapshotRoot, false);
     } finally {
       writeUnlock(operationName, getLockReportInfoSupplier(rootPath));
     }
