@@ -7040,10 +7040,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         readUnlock(operationName, getLockReportInfoSupplier(null));
       }
     } catch (AccessControlException ace) {
-      logAuditEvent(success, "listSnapshots", snapshotRoot);
+      logAuditEvent(success, operationName, snapshotRoot);
       throw ace;
     }
-    logAuditEvent(success, "listSnapshots", snapshotRoot);
+    logAuditEvent(success, operationName, snapshotRoot);
     return status;
   }
   /**
