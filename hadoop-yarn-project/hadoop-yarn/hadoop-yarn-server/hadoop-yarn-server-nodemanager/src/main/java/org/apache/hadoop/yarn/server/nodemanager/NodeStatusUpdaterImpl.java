@@ -716,13 +716,13 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         removedContainers.add(containerId);
         iter.remove();
       }
+      pendingCompletedContainers.remove(containerId);
     }
 
     if (!removedContainers.isEmpty()) {
       LOG.info("Removed completed containers from NM context: "
           + removedContainers);
     }
-    pendingCompletedContainers.clear();
   }
 
   private void trackAppsForKeepAlive(List<ApplicationId> appIds) {
@@ -1296,7 +1296,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     @Override
     @SuppressWarnings("unchecked")
     public void run() {
-      int lastHeartbeatID = 0;
+      int nextHeartbeatID = 0;
+      NodeHeartbeatRequest nextHeartbeatRequest = null;
       while (!isStopped) {
         // Send heartbeat
         try {
@@ -1305,17 +1306,22 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
               nodeLabelsHandler.getNodeLabelsForHeartbeat();
           Set<NodeAttribute> nodeAttributesForHeartbeat =
                   nodeAttributesHandler.getNodeAttributesForHeartbeat();
-          NodeStatus nodeStatus = getNodeStatus(lastHeartbeatID);
+          // YARN-10393. Will only generate new request when heartbeatId
+          // changes.
           NodeHeartbeatRequest request =
-              NodeHeartbeatRequest.newInstance(nodeStatus,
-                  NodeStatusUpdaterImpl.this.context
-                      .getContainerTokenSecretManager().getCurrentKey(),
-                  NodeStatusUpdaterImpl.this.context
-                      .getNMTokenSecretManager().getCurrentKey(),
-                  nodeLabelsForHeartbeat,
-                  nodeAttributesForHeartbeat,
-                  NodeStatusUpdaterImpl.this.context
-                      .getRegisteringCollectors());
+              nextHeartbeatRequest != null ?
+                  nextHeartbeatRequest :
+                  NodeHeartbeatRequest.newInstance(
+                      getNodeStatus(nextHeartbeatID),
+                      NodeStatusUpdaterImpl.this.context
+                          .getContainerTokenSecretManager().getCurrentKey(),
+                      NodeStatusUpdaterImpl.this.context
+                          .getNMTokenSecretManager().getCurrentKey(),
+                      nodeLabelsForHeartbeat,
+                      nodeAttributesForHeartbeat,
+                      NodeStatusUpdaterImpl.this.context
+                          .getRegisteringCollectors());
+          nextHeartbeatRequest = request;
 
           if (logAggregationEnabled) {
             // pull log aggregation status for application running in this NM
@@ -1351,7 +1357,11 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
                 .getContainersToBeRemovedFromNM());
 
             logAggregationReportForAppsTempList.clear();
-            lastHeartbeatID = response.getResponseId();
+            if (nextHeartbeatID < response.getResponseId()) {
+              // YARN-10393. Clear it to generate a new request on next loop.
+              nextHeartbeatRequest = null;
+              nextHeartbeatID = response.getResponseId();
+            }
             List<ContainerId> containersToCleanup = response
                 .getContainersToCleanup();
             if (!containersToCleanup.isEmpty()) {

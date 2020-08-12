@@ -660,6 +660,7 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
         createContainerStatus(4, ContainerState.RUNNING);
     private final ContainerStatus containerStatus5 =
         createContainerStatus(5, ContainerState.COMPLETE);
+    private NodeHeartbeatResponse lastHeartbeatResponse = null;
 
     public MyResourceTracker4(Context context) {
       // create app Credentials
@@ -684,6 +685,7 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
     @Override
     public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
         throws YarnException, IOException {
+
       List<ContainerId> finishedContainersPulledByAM = new ArrayList
           <ContainerId>();
       try {
@@ -722,13 +724,15 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
           List<ContainerStatus> statuses =
               request.getNodeStatus().getContainersStatuses();
           if (heartBeatID == 2) {
-            // NM should send completed containers again, since the last
+            // NM should send the last heart beat, since the last
             // heartbeat is lost.
-            Assert.assertEquals(4, statuses.size());
-          } else {
-            // NM should not send completed containers again, since the last
-            // heartbeat is successful.
             Assert.assertEquals(2, statuses.size());
+            Assert.assertEquals(1, request.getNodeStatus().getResponseId());
+          } else {
+            // NM should send completed containers generated between
+            // heartbeat 1 and responseId 3;
+            Assert.assertEquals(4, statuses.size());
+            Assert.assertEquals(2, request.getNodeStatus().getResponseId());
           }
           Assert.assertEquals(4, context.getContainers().size());
 
@@ -762,20 +766,23 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
           }
           if (heartBeatID == 2) {
             Assert.assertTrue(container2Exist && container3Exist
-                && container4Exist && container5Exist);
+                && !container4Exist && !container5Exist);
           } else {
             // NM do not send completed containers again
-            Assert.assertTrue(container2Exist && !container3Exist
-                && container4Exist && !container5Exist);
+            Assert.assertTrue(container2Exist && container3Exist
+                && container4Exist && container5Exist);
           }
 
           if (heartBeatID == 3) {
             finishedContainersPulledByAM.add(containerStatus3.getContainerId());
           }
         } else if (heartBeatID == 4) {
+          // responseId should be 3 as one heart response from RM to NM lost.
+          Assert.assertEquals(3, request.getNodeStatus().getResponseId());
           List<ContainerStatus> statuses =
               request.getNodeStatus().getContainersStatuses();
-          Assert.assertEquals(2, statuses.size());
+          // Container 5 is still in request as it was not acked.
+          Assert.assertEquals(3, statuses.size());
           // Container 3 is acked by AM, hence removed from context
           Assert.assertEquals(3, context.getContainers().size());
 
@@ -794,10 +801,12 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
       } finally {
         heartBeatID++;
       }
-      NodeStatus nodeStatus = request.getNodeStatus();
-      nodeStatus.setResponseId(heartBeatID);
+      int nextResponseId = lastHeartbeatResponse == null ?
+          1 : lastHeartbeatResponse.getResponseId() + 1;
+      // NodeStatus nodeStatus = request.getNodeStatus();
+      // nodeStatus.setResponseId(nextResponseId);
       NodeHeartbeatResponse nhResponse =
-          YarnServerBuilderUtils.newNodeHeartbeatResponse(heartBeatID,
+          YarnServerBuilderUtils.newNodeHeartbeatResponse(nextResponseId,
             heartBeatNodeAction, null, null, null, null, 1000L);
       nhResponse.addContainersToBeRemovedFromNM(finishedContainersPulledByAM);
       Map<ApplicationId, ByteBuffer> appCredentials =
@@ -809,6 +818,7 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
       appCredentials.put(ApplicationId.newInstance(1234, 1), byteBuffer1);
       nhResponse.setSystemCredentialsForApps(
           YarnServerBuilderUtils.convertToProtoFormat(appCredentials));
+      lastHeartbeatResponse = nhResponse;
       return nhResponse;
     }
 
@@ -1889,6 +1899,7 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
 
     @Override
     public ConcurrentMap<ContainerId, Container> getContainers() {
+      LOG.info("Heartbeat id:" + heartBeatID);
       if (heartBeatID == 0) {
         return containers;
       } else if (heartBeatID == 1) {
