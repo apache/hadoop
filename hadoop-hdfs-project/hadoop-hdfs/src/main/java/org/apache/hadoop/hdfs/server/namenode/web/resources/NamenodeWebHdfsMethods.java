@@ -1345,19 +1345,61 @@ public class NamenodeWebHdfsMethods {
     }
   }
 
+  /**
+   * Get the snapshot root of a given file or directory if it exists.
+   * e.g. if /snapdir1 is a snapshottable directory and path given is
+   * /snapdir1/path/to/file, this method would return /snapdir1
+   * @param pathStr String of path to a file or a directory.
+   * @return Not null if found in a snapshot root directory.
+   * @throws IOException
+   */
+  String getSnapshotRoot(String pathStr) throws IOException {
+    SnapshottableDirectoryStatus[] dirStatusList =
+        getRpcClientProtocol().getSnapshottableDirListing();
+    if (dirStatusList == null) {
+      return null;
+    }
+    for (SnapshottableDirectoryStatus dirStatus : dirStatusList) {
+      String currDir = dirStatus.getFullPath().toString();
+      if (pathStr.startsWith(currDir)) {
+        return currDir;
+      }
+    }
+    return null;
+  }
+
   private String getTrashRoot(Configuration conf, String fullPath)
       throws IOException {
-    UserGroupInformation ugi= UserGroupInformation.getCurrentUser();
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     String parentSrc = getParent(fullPath);
+    String ssTrashRoot = null;
+    boolean isSnapshotTrashRootEnabled = getRpcClientProtocol()
+        .getServerDefaults().getSnapshotTrashRootEnabled();
+    if (isSnapshotTrashRootEnabled) {
+      String ssRoot = getSnapshotRoot(fullPath);
+      ssTrashRoot = DFSUtilClient.getSnapshotTrashRoot(ssRoot, ugi);
+    }
     EncryptionZone ez = getRpcClientProtocol().getEZForPath(
         parentSrc != null ? parentSrc : fullPath);
-    String trashRoot;
+    String ezTrashRoot = null;
     if (ez != null) {
-      trashRoot = DFSUtilClient.getEZTrashRoot(ez, ugi);
-    } else {
-      trashRoot = DFSUtilClient.getTrashRoot(conf, ugi);
+      ezTrashRoot = DFSUtilClient.getEZTrashRoot(ez, ugi);
     }
-    return trashRoot;
+    // Choose the longest path
+    if (ssTrashRoot == null) {
+      if (ezTrashRoot == null) {
+        return DFSUtilClient.getTrashRoot(conf, ugi);
+      } else {
+        return ezTrashRoot;
+      }
+    } else {
+      if (ezTrashRoot == null) {
+        return ssTrashRoot;
+      } else {
+        return ssTrashRoot.length() > ezTrashRoot.length() ?
+            ssTrashRoot : ezTrashRoot;
+      }
+    }
   }
 
   /**
