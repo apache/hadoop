@@ -1570,6 +1570,34 @@ public class TestWebHDFS {
   }
 
   @Test
+  public void testGetSnapshotTrashRoot() throws Exception {
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    conf.setBoolean("dfs.namenode.snapshot.trashroot.enabled", true);
+    final String currentUser =
+        UserGroupInformation.getCurrentUser().getShortUserName();
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+    final WebHdfsFileSystem webFS = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
+        WebHdfsConstants.WEBHDFS_SCHEME);
+    Path ssDir1 = new Path("/ssDir1");
+    assertTrue(webFS.mkdirs(ssDir1));
+
+    Path trashPath = webFS.getTrashRoot(ssDir1);
+    Path expectedPath = new Path(FileSystem.USER_HOME_PREFIX,
+        new Path(currentUser, FileSystem.TRASH_PREFIX));
+    assertEquals(expectedPath.toUri().getPath(), trashPath.toUri().getPath());
+    // Enable snapshot
+    webFS.allowSnapshot(ssDir1);
+    Path trashPathAfter = webFS.getTrashRoot(ssDir1);
+    Path expectedPathAfter = new Path(ssDir1,
+        new Path(FileSystem.TRASH_PREFIX, currentUser));
+    assertEquals(expectedPathAfter.toUri().getPath(),
+        trashPathAfter.toUri().getPath());
+    // Cleanup
+    webFS.disallowSnapshot(ssDir1);
+    webFS.delete(ssDir1, true);
+  }
+
+  @Test
   public void testGetEZTrashRoot() throws Exception {
     final Configuration conf = WebHdfsTestUtil.createConf();
     FileSystemTestHelper fsHelper = new FileSystemTestHelper();
