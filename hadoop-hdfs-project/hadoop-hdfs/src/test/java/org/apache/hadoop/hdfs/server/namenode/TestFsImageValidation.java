@@ -26,6 +26,8 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 public class TestFsImageValidation {
   static final Logger LOG = LoggerFactory.getLogger(
       TestFsImageValidation.class);
@@ -43,13 +45,11 @@ public class TestFsImageValidation {
    * by the environment variable FS_IMAGE_FILE.
    */
   @Test
-  public void testINodeReference() throws Exception {
+  public void testValidation() throws Exception {
     FsImageValidation.initLogLevels();
 
     try {
-      final Configuration conf = new Configuration();
-      final FsImageValidation validation = FsImageValidation.newInstance();
-      final int errorCount = validation.checkINodeReference(conf);
+      final int errorCount = FsImageValidation.newInstance().run();
       Assert.assertEquals("Error Count: " + errorCount, 0, errorCount);
     } catch (HadoopIllegalArgumentException e) {
       LOG.warn("The environment variable {} is not set: {}",
