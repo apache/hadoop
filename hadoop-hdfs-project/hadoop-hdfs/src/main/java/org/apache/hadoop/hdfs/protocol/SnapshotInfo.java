@@ -85,20 +85,13 @@ public class SnapshotInfo {
     private final int snapshotID;
     private final String snapshotDirectory;
     private final long modificationTime;
-    private final short permission;
-    private final String owner;
-    private final String group;
     private final String status;
 
     public Bean(int snapshotID, String snapshotDirectory,
-        long modificationTime, short permission, String owner, String group,
-                boolean isMarkedAsDeleted) {
+        long modificationTime, boolean isMarkedAsDeleted) {
       this.snapshotID = snapshotID;
       this.snapshotDirectory = snapshotDirectory;
       this.modificationTime = modificationTime;
-      this.permission = permission;
-      this.owner = owner;
-      this.group = group;
       this.status = isMarkedAsDeleted ? "DELETED" : "ACTIVE";
     }
 
@@ -112,18 +105,6 @@ public class SnapshotInfo {
 
     public long getModificationTime() {
       return modificationTime;
-    }
-
-    public short getPermission() {
-      return permission;
-    }
-
-    public String getOwner() {
-      return owner;
-    }
-
-    public String getGroup() {
-      return group;
     }
 
     public String getStatus() {

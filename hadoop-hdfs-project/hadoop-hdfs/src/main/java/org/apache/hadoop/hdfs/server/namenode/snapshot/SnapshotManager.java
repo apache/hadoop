@@ -757,9 +757,6 @@ public class SnapshotManager implements SnapshotStatsMXBean {
         s.getId(),
         dir.getFullPathName(),
         dir.getModificationTime(),
-        Short.parseShort(Integer.toOctalString(dir.getFsPermissionShort())),
-        dir.getUserName(),
-        dir.getGroupName(),
         dir.isMarkedAsDeleted()
         );
   }
