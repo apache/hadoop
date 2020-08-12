@@ -366,7 +366,7 @@
   <property>
     <description>Enables YARN Autoscaling Recommendation API</description>
     <name>yarn.cluster.scaling.recommendation.enable</name>
-    <value>true</value>
+    <value>false</value>
   </property>
 
   <property>
