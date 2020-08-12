@@ -1377,7 +1377,9 @@ public class NamenodeWebHdfsMethods {
         .getServerDefaults().getSnapshotTrashRootEnabled();
     if (isSnapshotTrashRootEnabled) {
       String ssRoot = getSnapshotRoot(fullPath);
-      ssTrashRoot = DFSUtilClient.getSnapshotTrashRoot(ssRoot, ugi);
+      if (ssRoot != null) {
+        ssTrashRoot = DFSUtilClient.getSnapshotTrashRoot(ssRoot, ugi);
+      }
     }
     EncryptionZone ez = getRpcClientProtocol().getEZForPath(
         parentSrc != null ? parentSrc : fullPath);
