@@ -173,12 +173,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStati
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterScalingInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterScalingMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CustomResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FairSchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FifoSchedulerInfo;
@@ -186,7 +183,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInf
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewReservation;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInstanceTypeList;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntry;
@@ -414,75 +410,6 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   public ClusterMetricsInfo getClusterMetricsInfo() {
     initForReadableEndpoints();
     return new ClusterMetricsInfo(this.rm);
-  }
-
-  @POST
-  @Path(RMWSConsts.SCALING)
-  @Consumes({ MediaType.APPLICATION_JSON})
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8})
-  @Override
-  public ClusterScalingInfo getClusterScalingInfo(
-      @HeaderParam(RMWSConsts.SCALING_CUSTOM_HEADER_KEY)
-          String apiVersion,
-      @QueryParam(RMWSConsts.UPSCALING_FACTOR_IN_NODE_RESOURCE_TYPES_KEY)
-          String upscalingFactorInNodeResourceTypes,
-      @QueryParam(RMWSConsts.DOWNSCALING_FACTOR_IN_NODE_COUNT)
-          String downscalingFactorInNodeCount,
-      NodeInstanceTypeList instanceTypeList) {
-    if (this.clusterScalingRecommendationEnable) {
-      initForReadableEndpoints();
-      String defaultVersion = RMWSConsts.SCALING_CUSTOM_HEADER_VERSION_V1;
-      if (apiVersion != null && !apiVersion.equals(defaultVersion)) {
-        throw new BadRequestException("Requested " + RMWSConsts.SCALING_CUSTOM_HEADER_KEY +
-            ": " + apiVersion + " is not supported!");
-      }
-      if (instanceTypeList == null) {
-        throw new BadRequestException("Node instance types are needed!");
-      }
-
-      int neededDownscalingNodeSize = -1;
-      if (downscalingFactorInNodeCount != null) {
-        try {
-          neededDownscalingNodeSize = Integer.valueOf(downscalingFactorInNodeCount);
-        } catch (NumberFormatException e) {
-          throw new BadRequestException("Invalid '" +
-              RMWSConsts.DOWNSCALING_FACTOR_IN_NODE_COUNT + "' value: " +
-              downscalingFactorInNodeCount);
-        }
-      }
-      return new ClusterScalingInfo(this.rm,
-          upscalingFactorInNodeResourceTypes,
-          neededDownscalingNodeSize,
-          instanceTypeList.rebuild());
-    } else {
-      throw new BadRequestException("Cluster Autoscaling Recommendation" +
-          " Engine API is not enabled. Please enable " +
-          YarnConfiguration.CLUSTER_SCALING_RECOMMENDATION_ENABLE);
-    }
-  }
-
-  @GET
-  @Path(RMWSConsts.SCALING_METRICS)
-  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
-       MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
-  @Override
-  public ClusterScalingMetrics getClusterScalingMetrics(
-      @HeaderParam(RMWSConsts.SCALING_CUSTOM_HEADER_KEY)
-      String apiVersion) {
-    if (this.clusterScalingRecommendationEnable) {
-      initForReadableEndpoints();
-      String defaultVersion = RMWSConsts.SCALING_CUSTOM_HEADER_VERSION_V1;
-      if (apiVersion != null && !apiVersion.equals(defaultVersion)) {
-        throw new BadRequestException("Requested "
-            + RMWSConsts.SCALING_CUSTOM_HEADER_KEY
-            + ": " + apiVersion + " is not supported!");
-      }
-      return new ClusterScalingMetrics(this.rm);
-    } else {
-      throw new BadRequestException("Cluster Autoscaling Recommendation" +
-          " Engine API is not enabled. Please enable " +
-          YarnConfiguration.CLUSTER_SCALING_RECOMMENDATION_ENABLE);
-    }
   }
 
   @GET

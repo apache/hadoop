@@ -61,15 +61,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStatisticsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterScalingInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterScalingMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInstanceTypeList;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntryList;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
@@ -299,19 +296,6 @@ public class RouterWebServices implements RMWebServiceProtocol {
     init();
     RequestInterceptorChainWrapper pipeline = getInterceptorChain(null);
     return pipeline.getRootInterceptor().getClusterMetricsInfo();
-  }
-
-  @Override
-  public ClusterScalingInfo getClusterScalingInfo(String apiVersion,
-      String upscalingFactorInNodeResourceTypes,
-      String downscalingFactorInNodeCount,
-      NodeInstanceTypeList instanceTypeList) {
-    return null;
-  }
-
-  @Override
-  public ClusterScalingMetrics getClusterScalingMetrics(String apiVersion) {
-    return null;
   }
 
   @GET

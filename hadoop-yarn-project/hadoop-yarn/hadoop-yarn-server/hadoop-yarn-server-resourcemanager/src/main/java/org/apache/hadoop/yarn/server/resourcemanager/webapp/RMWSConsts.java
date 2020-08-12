@@ -77,17 +77,6 @@ public final class RMWSConsts {
   /** Path for {@code RMWebServiceProtocol#updateNodeResource}. */
   public static final String NODE_RESOURCE = "/nodes/{nodeId}/resource";
 
-  public static final String SCALING_CUSTOM_HEADER_KEY = "api-version";
-  public static final String SCALING_CUSTOM_HEADER_VERSION_V1 = "v1";
-
-  public static final String SCALING = "/scaling";
-  public static final String UPSCALING_FACTOR_IN_NODE_RESOURCE_TYPES_KEY =
-      "upscaling-factor-in-node-resource-types";
-  public static final String DOWNSCALING_FACTOR_IN_NODE_COUNT =
-      "downscaling-factor-in-node-count";
-
-  public static final String SCALING_METRICS = "/scaling-metrics";
-
   /**
    * Path for {@code RMWebServiceProtocol#getApps} and
    * {@code RMWebServiceProtocol#getApp}.
