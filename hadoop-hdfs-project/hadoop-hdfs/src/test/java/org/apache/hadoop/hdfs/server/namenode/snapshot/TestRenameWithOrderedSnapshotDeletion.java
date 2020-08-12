@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.namenode;
+package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -30,9 +30,8 @@ import org.junit.Test;
 
 import java.io.IOException;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.
-    DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED;
-
+import static org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager.DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED;
+import static org.apache.hadoop.hdfs.server.namenode.FSNamesystem.DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED;
 /**
  * Test Rename with ordered snapshot deletion.
  */
@@ -46,6 +45,7 @@ public class TestRenameWithOrderedSnapshotDeletion {
   public void setUp() throws Exception {
     final Configuration conf = new Configuration();
     conf.setBoolean(DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED, true);
+    conf.setBoolean(DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED, true);
 
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
     cluster.waitActive();

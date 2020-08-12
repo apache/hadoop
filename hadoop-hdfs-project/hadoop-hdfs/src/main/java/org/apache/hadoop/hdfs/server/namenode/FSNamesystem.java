@@ -384,9 +384,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       .getLogger(FSNamesystem.class.getName());
 
   // The following are private configurations
-  static final String DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED =
+  public static final String DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED =
       "dfs.namenode.snapshot.trashroot.enabled";
-  static final boolean DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED_DEFAULT = false;
+  public static final boolean DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED_DEFAULT
+      = false;
 
   private final MetricsRegistry registry = new MetricsRegistry("FSNamesystem");
   @Metric final MutableRatesWithAggregation detailedLockHoldTimeMetrics =
@@ -468,6 +469,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private final UserGroupInformation fsOwner;
   private final String supergroup;
   private final boolean standbyShouldCheckpoint;
+  private final boolean isSnapshotTrashRootEnabled;
   private final int snapshotDiffReportLimit;
   private final int blockDeletionIncrement;
 
@@ -882,6 +884,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       // Get the checksum type from config
       String checksumTypeStr = conf.get(DFS_CHECKSUM_TYPE_KEY,
           DFS_CHECKSUM_TYPE_DEFAULT);
+      this.isSnapshotTrashRootEnabled = conf.getBoolean(
+          DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED,
+          DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED_DEFAULT);
       DataChecksum.Type checksumType;
       try {
          checksumType = DataChecksum.Type.valueOf(checksumTypeStr);
@@ -909,8 +914,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
               CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
               ""),
           blockManager.getStoragePolicySuite().getDefaultPolicy().getId(),
-          conf.getBoolean(DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED,
-              DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED_DEFAULT));
+          isSnapshotTrashRootEnabled);
 
       this.maxFsObjects = conf.getLong(DFS_NAMENODE_MAX_OBJECTS_KEY, 
                                        DFS_NAMENODE_MAX_OBJECTS_DEFAULT);
@@ -1052,6 +1056,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   public int getMaxListOpenFilesResponses() {
     return maxListOpenFilesResponses;
+  }
+
+  boolean isSnapshotTrashRootEnabled() {
+    return isSnapshotTrashRootEnabled;
   }
 
   void lockRetryCache() {

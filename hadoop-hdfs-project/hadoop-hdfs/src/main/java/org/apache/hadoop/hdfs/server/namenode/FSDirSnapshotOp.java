@@ -363,9 +363,10 @@ class FSDirSnapshotOp {
       INodesInPath srcIIP, INodesInPath dstIIP) throws IOException {
     // Ensure rename out of a snapshottable root is not permitted if ordered
     // snapshot deletion feature is enabled
-    if (fsd.isSnapshotDeletionOrdered()) {
-      SnapshotManager snapshotManager = fsd.getFSNamesystem().
-          getSnapshotManager();
+    SnapshotManager snapshotManager = fsd.getFSNamesystem().
+        getSnapshotManager();
+    if (snapshotManager.isSnapshotDeletionOrdered() && fsd.getFSNamesystem()
+        .isSnapshotTrashRootEnabled()) {
       String errMsg = "Source " + srcIIP.getPath() +
           " and dest " + dstIIP.getPath() + " are not under " +
           "the same snapshot root.";
