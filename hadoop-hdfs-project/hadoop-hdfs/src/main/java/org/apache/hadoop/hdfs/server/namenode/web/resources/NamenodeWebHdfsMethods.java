@@ -1372,7 +1372,7 @@ public class NamenodeWebHdfsMethods {
       throws IOException {
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     String parentSrc = getParent(fullPath);
-    String ssTrashRoot = null;
+    String ssTrashRoot = "";
     boolean isSnapshotTrashRootEnabled = getRpcClientProtocol()
         .getServerDefaults().getSnapshotTrashRootEnabled();
     if (isSnapshotTrashRootEnabled) {
@@ -1381,24 +1381,16 @@ public class NamenodeWebHdfsMethods {
     }
     EncryptionZone ez = getRpcClientProtocol().getEZForPath(
         parentSrc != null ? parentSrc : fullPath);
-    String ezTrashRoot = null;
+    String ezTrashRoot = "";
     if (ez != null) {
       ezTrashRoot = DFSUtilClient.getEZTrashRoot(ez, ugi);
     }
     // Choose the longest path
-    if (ssTrashRoot == null) {
-      if (ezTrashRoot == null) {
-        return DFSUtilClient.getTrashRoot(conf, ugi);
-      } else {
-        return ezTrashRoot;
-      }
+    if (ssTrashRoot.isEmpty() && ezTrashRoot.isEmpty()) {
+      return DFSUtilClient.getTrashRoot(conf, ugi);
     } else {
-      if (ezTrashRoot == null) {
-        return ssTrashRoot;
-      } else {
-        return ssTrashRoot.length() > ezTrashRoot.length() ?
-            ssTrashRoot : ezTrashRoot;
-      }
+      return ssTrashRoot.length() > ezTrashRoot.length() ?
+          ssTrashRoot : ezTrashRoot;
     }
   }
 
