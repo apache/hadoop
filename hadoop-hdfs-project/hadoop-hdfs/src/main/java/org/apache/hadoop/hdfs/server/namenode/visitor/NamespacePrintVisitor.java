@@ -32,10 +32,6 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeat
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshotFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
@@ -50,16 +46,9 @@ import java.io.StringWriter;
  *            \- file3   (INodeFile@78392d6)
  *          \- z_file4   (INodeFile@45848712)
  */
-public class NamespacePrintVisitor implements NamespaceVisitor {
+public final class NamespacePrintVisitor implements NamespaceVisitor {
   static final String NON_LAST_ITEM = "+-";
   static final String LAST_ITEM = "\\-";
-
-  /** Print the tree from the given root to a {@link File}. */
-  public static void print2File(INode root, File f) throws IOException {
-    try(final PrintWriter out = new PrintWriter(new FileWriter(f), true)) {
-      new NamespacePrintVisitor(out).print(root);
-    }
-  }
 
   /** @return string of the tree in the given {@link FSNamesystem}. */
   public static String print2Sting(FSNamesystem ns) {
@@ -73,23 +62,11 @@ public class NamespacePrintVisitor implements NamespaceVisitor {
     return out.getBuffer().toString();
   }
 
-  /**
-   * Print the tree in the given {@link FSNamesystem}
-   * to the given {@link PrintStream}.
-   */
-  public static void print(FSNamesystem ns, PrintStream out) {
-    new NamespacePrintVisitor(new PrintWriter(out)).print(ns);
-  }
-
   private final PrintWriter out;
   private final StringBuffer prefix = new StringBuffer();
 
   private NamespacePrintVisitor(PrintWriter out) {
     this.out = out;
-  }
-
-  private void print(FSNamesystem namesystem) {
-    print(namesystem.getFSDirectory().getRoot());
   }
 
   private void print(INode root) {
