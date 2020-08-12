@@ -20,9 +20,14 @@ package org.apache.hadoop.fs.s3a.impl;
 
 import org.apache.hadoop.fs.Path;
 
+import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_AUTHORITATIVE;
+import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_DELETE;
+import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_KEEP;
+
 /**
  * Interface for Directory Marker policies to implement.
  */
+
 public interface DirectoryPolicy {
 
   /**
@@ -54,14 +59,14 @@ public interface DirectoryPolicy {
      * <p></p>
      * This is the classic S3A policy,
      */
-    Delete,
+    Delete(DIRECTORY_MARKER_POLICY_DELETE),
 
     /**
      * Keep markers.
      * <p></p>
      * This is <i>Not backwards compatible</i>.
      */
-    Keep,
+    Keep(DIRECTORY_MARKER_POLICY_KEEP),
 
     /**
      * Keep markers in authoritative paths only.
@@ -69,6 +74,24 @@ public interface DirectoryPolicy {
      * This is <i>Not backwards compatible</i> within the
      * auth paths, but is outside these.
      */
-    Authoritative
+    Authoritative(DIRECTORY_MARKER_POLICY_AUTHORITATIVE);
+
+    /**
+     * The name of the option as allowed in configuration files
+     * and marker-aware tooling.
+     */
+    private final String optionName;
+
+    MarkerPolicy(final String optionName) {
+      this.optionName = optionName;
+    }
+
+    /**
+     * Get the option name.
+     * @return name of the option
+     */
+    public String getOptionName() {
+      return optionName;
+    }
   }
 }

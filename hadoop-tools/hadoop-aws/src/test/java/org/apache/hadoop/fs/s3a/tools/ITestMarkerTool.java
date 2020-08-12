@@ -19,13 +19,9 @@
 package org.apache.hadoop.fs.s3a.tools;
 
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
-import java.net.URI;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
@@ -36,45 +32,28 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool;
-import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.util.ExitUtil;
-import org.apache.hadoop.util.StringUtils;
 
-import static org.apache.hadoop.fs.s3a.Constants.*;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBucketOverrides;
+import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_AUTHORITATIVE;
+import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_DELETE;
+import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_KEEP;
+import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.BucketInfo.BUCKET_INFO;
+import static org.apache.hadoop.fs.s3a.s3guard.S3GuardToolTestHelper.runS3GuardCommand;
+import static org.apache.hadoop.fs.s3a.s3guard.S3GuardToolTestHelper.runS3GuardCommandToFailure;
 import static org.apache.hadoop.fs.s3a.tools.MarkerTool.*;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_INTERRUPTED;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_NOT_ACCEPTABLE;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_NOT_FOUND;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_USAGE;
-import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test the marker tool and use it to compare the behavior
  * of keeping vs legacy S3A FS instances.
  */
-public class ITestMarkerTool extends AbstractS3ATestBase {
+public class ITestMarkerTool extends AbstractMarkerToolTest {
 
-  private static final Logger LOG =
+  protected static final Logger LOG =
       LoggerFactory.getLogger(ITestMarkerTool.class);
-
-  /** the -verbose option. */
-  private static final String V = m(VERBOSE);
-
-  /** FS which keeps markers. */
-  private S3AFileSystem keepingFS;
-
-  /** FS which deletes markers. */
-  private S3AFileSystem deletingFS;
-
-  /** FS which mixes markers; only created in some tests. */
-  private S3AFileSystem mixedFS;
 
   /**
    * How many files to expect.
@@ -100,74 +79,6 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
    * How many markers to expect including the base directory
    */
   private int expectedMarkersWithBaseDir;
-
-  @Override
-  protected Configuration createConfiguration() {
-    Configuration conf = super.createConfiguration();
-    String bucketName = getTestBucketName(conf);
-    removeBaseAndBucketOverrides(bucketName, conf,
-        S3A_BUCKET_PROBE,
-        DIRECTORY_MARKER_POLICY,
-        S3_METADATA_STORE_IMPL,
-        METADATASTORE_AUTHORITATIVE,
-        AUTHORITATIVE_PATH);
-    // base FS is legacy
-    conf.set(DIRECTORY_MARKER_POLICY, DIRECTORY_MARKER_POLICY_DELETE);
-    conf.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL);
-
-    // turn off bucket probes for a bit of speedup in the connectors we create.
-    conf.setInt(S3A_BUCKET_PROBE, 0);
-    return conf;
-  }
-
-  @Override
-  public void setup() throws Exception {
-    super.setup();
-    setKeepingFS(createFS(DIRECTORY_MARKER_POLICY_KEEP, null));
-    setDeletingFS(createFS(DIRECTORY_MARKER_POLICY_DELETE, null));
-  }
-
-  @Override
-  public void teardown() throws Exception {
-    // do this ourselves to avoid audits teardown failing
-    // when surplus markers are found
-    deleteTestDirInTeardown();
-    super.teardown();
-    IOUtils.cleanupWithLogger(LOG, getKeepingFS(),
-        getMixedFS(), getDeletingFS());
-
-  }
-
-  /**
-   * FS which deletes markers.
-   */
-  public S3AFileSystem getDeletingFS() {
-    return deletingFS;
-  }
-
-  public void setDeletingFS(final S3AFileSystem deletingFS) {
-    this.deletingFS = deletingFS;
-  }
-
-  /**
-   * FS which keeps markers.
-   */
-  private S3AFileSystem getKeepingFS() {
-    return keepingFS;
-  }
-
-  private void setKeepingFS(S3AFileSystem keepingFS) {
-    this.keepingFS = keepingFS;
-  }
-
-  /** only created on demand. */
-  private S3AFileSystem getMixedFS() {
-    return mixedFS;
-  }
-
-  private void setMixedFS(S3AFileSystem mixedFS) {
-    this.mixedFS = mixedFS;
-  }
 
 
   @Test
@@ -264,7 +175,7 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
     CreatedPaths createdPaths = createPaths(mixedFSDir2, source);
 
     // markers are only under dir2
-    markerTool(mixedFSDir2, topath(source, "dir1"), false, 0);
+    markerTool(mixedFSDir2, toPath(source, "dir1"), false, 0);
     markerTool(mixedFSDir2, source, false, expectedMarkersUnderDir2);
 
     // full scan of source will fail
@@ -304,14 +215,17 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
         .isEqualTo(expected);
   }
 
+  /**
+   * Marker tool with no args.
+   */
   @Test
   public void testRunNoArgs() throws Throwable {
-    runToFailure(EXIT_USAGE, NAME);
+    runToFailure(EXIT_USAGE, MARKERS);
   }
 
   @Test
   public void testRunWrongBucket() throws Throwable {
-    runToFailure(EXIT_NOT_FOUND, NAME,
+    runToFailure(EXIT_NOT_FOUND, MARKERS,
         AUDIT,
         "s3a://this-bucket-does-not-exist-hopefully");
   }
@@ -321,7 +235,7 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
    */
   @Test
   public void testRunUnknownPath() throws Throwable {
-    runToFailure(EXIT_NOT_FOUND, NAME,
+    runToFailure(EXIT_NOT_FOUND, MARKERS,
         AUDIT,
         methodPath());
   }
@@ -331,7 +245,7 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
    */
   @Test
   public void testRunTooManyActions() throws Throwable {
-    runToFailure(EXIT_USAGE, NAME,
+    runToFailure(EXIT_USAGE, MARKERS,
         AUDIT, CLEAN,
         methodPath());
   }
@@ -342,7 +256,7 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
     // a run under the keeping FS will create paths
     CreatedPaths createdPaths = createPaths(getKeepingFS(), methodPath());
     final File audit = tempAuditFile();
-    run(NAME, V,
+    run(MARKERS, V,
         AUDIT,
         m(OPT_LIMIT), 0,
         m(OPT_OUT), audit,
@@ -357,7 +271,7 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
     // a run under the keeping FS will create paths
     CreatedPaths createdPaths = createPaths(getKeepingFS(), methodPath());
     final File audit = tempAuditFile();
-    runToFailure(EXIT_NOT_ACCEPTABLE, NAME, V,
+    runToFailure(EXIT_NOT_ACCEPTABLE, MARKERS, V,
         AUDIT,
         m(OPT_OUT), audit,
         createdPaths.base);
@@ -369,93 +283,75 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
     describe("Audit with a limited number of files (2)");
     CreatedPaths createdPaths = createPaths(getKeepingFS(), methodPath());
     runToFailure(EXIT_INTERRUPTED,
-        NAME, V,
+        MARKERS, V,
         m(OPT_LIMIT), 2,
         CLEAN,
         createdPaths.base);
-    run(NAME, V,
+    run(MARKERS, V,
         AUDIT,
         createdPaths.base);
   }
 
   /**
-   * Get a filename for a temp file.
-   * The generated file is deleted.
-   *
-   * @return a file path for a output file
+   * Run an audit against the landsat bucket.
+   * <p></p>
+   * This tests paging/scale against a larger bucket without
+   * worrying about setup costs.
    */
-  private File tempAuditFile() throws IOException {
-    final File audit = File.createTempFile("audit", ".txt");
-    audit.delete();
-    return audit;
+  @Test
+  public void testRunLimitedLandsatAudit() throws Throwable {
+    describe("Audit a few thousand landsat objects");
+    final File audit = tempAuditFile();
+
+    run(MARKERS,
+        AUDIT,
+        m(OPT_LIMIT), 3000,
+        m(OPT_OUT), audit,
+        LANDSAT_BUCKET);
+    readOutput(audit);
   }
 
-  /**
-   * Read the audit output and verify it has the expected number of lines.
-   * @param auditFile audit file to read
-   * @param expected expected line count
-   */
-  private void expectMarkersInOutput(final File auditFile,
-      final int expected)
-      throws IOException {
-    final List<String> lines = readOutput(auditFile);
-    Assertions.assertThat(lines)
-        .describedAs("Content of %s", auditFile)
-        .hasSize(expected);
+  @Test
+  public void testBucketInfoKeepingOnDeleting() throws Throwable {
+    describe("Run bucket info with the keeping config on the deleting fs");
+    runS3GuardCommandToFailure(uncachedFSConfig(getDeletingFS()),
+        EXIT_NOT_ACCEPTABLE,
+        BUCKET_INFO,
+        m(MARKERS), DIRECTORY_MARKER_POLICY_KEEP,
+        methodPath());
   }
 
-  /**
-   * Read the output file in. Logs the contents at info.
-   * @param outputFile audit output file.
-   * @return the lines
-   */
-  public List<String> readOutput(final File outputFile)
-      throws IOException {
-    try (FileReader reader = new FileReader(outputFile)) {
-      final List<String> lines =
-          org.apache.commons.io.IOUtils.readLines(reader);
-
-      LOG.info("contents of output file {}\n{}", outputFile,
-          StringUtils.join("\n", lines));
-      return lines;
-    }
+  @Test
+  public void testBucketInfoKeepingOnKeeping() throws Throwable {
+    describe("Run bucket info with the keeping config on the keeping fs");
+    runS3GuardCommand(uncachedFSConfig(getKeepingFS()),
+        BUCKET_INFO,
+        m(MARKERS), DIRECTORY_MARKER_POLICY_KEEP,
+        methodPath());
   }
 
-  private static Path topath(Path base, final String name) {
-    return name.isEmpty() ? base : new Path(base, name);
+  @Test
+  public void testBucketInfoDeletingOnDeleting() throws Throwable {
+    describe("Run bucket info with the deleting config on the deleting fs");
+    runS3GuardCommand(uncachedFSConfig(getDeletingFS()),
+        BUCKET_INFO,
+        m(MARKERS), DIRECTORY_MARKER_POLICY_DELETE,
+        methodPath());
   }
 
-  /**
-   * Create a new FS with given marker policy and path.
-   * This filesystem MUST be closed in test teardown.
-   * @param markerPolicy markers
-   * @param authPath authoritative path. If null: no path.
-   * @return a new FS.
-   */
-  private S3AFileSystem createFS(String markerPolicy,
-      String authPath) throws Exception {
-    S3AFileSystem testFS = getFileSystem();
-    Configuration conf = new Configuration(testFS.getConf());
-    URI testFSUri = testFS.getUri();
-    String bucketName = getTestBucketName(conf);
-    removeBucketOverrides(bucketName, conf,
-        DIRECTORY_MARKER_POLICY,
-        S3_METADATA_STORE_IMPL,
-        BULK_DELETE_PAGE_SIZE,
-        AUTHORITATIVE_PATH);
-    if (authPath != null) {
-      conf.set(AUTHORITATIVE_PATH, authPath);
-    }
-    // Use a very small page size to force the paging
-    // code to be tested.
-    conf.setInt(BULK_DELETE_PAGE_SIZE, 2);
-    conf.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL);
-    conf.set(DIRECTORY_MARKER_POLICY, markerPolicy);
-    S3AFileSystem fs2 = new S3AFileSystem();
-    fs2.initialize(testFSUri, conf);
-    LOG.info("created new filesystem with policy {} and auth path {}",
-        markerPolicy, authPath);
-    return fs2;
+  @Test
+  public void testBucketInfoAuthOnAuth() throws Throwable {
+    describe("Run bucket info with the auth FS");
+    Path base = methodPath();
+
+    S3AFileSystem authFS = createFS(DIRECTORY_MARKER_POLICY_AUTHORITATIVE,
+        base.toUri().toString());
+    // line up for close in teardown
+    setMixedFS(authFS);
+    runS3GuardCommand(uncachedFSConfig(authFS),
+        BUCKET_INFO,
+        m(MARKERS), DIRECTORY_MARKER_POLICY_AUTHORITATIVE,
+        methodPath());
   }
 
   /**
@@ -509,7 +405,7 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
      * @return the path of the new entry.
      */
     private Path mkdir(String name) throws IOException {
-      Path dir = topath(base, name);
+      Path dir = toPath(base, name);
       fs.mkdirs(dir);
       dirs.add(dir);
       dirsUnderBase.add(name);
@@ -536,7 +432,7 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
      * @throws IOException failure
      */
     private Path emptydir(String name) throws IOException {
-      Path dir = topath(base, name);
+      Path dir = toPath(base, name);
       fs.mkdirs(dir);
       emptyDirs.add(dir);
       emptyDirsUnderBase.add(name);
@@ -564,7 +460,7 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
      */
     private Path mkfile(String name)
         throws IOException {
-      Path file = topath(base, name);
+      Path file = toPath(base, name);
       ContractTestUtils.touch(fs, file);
       files.add(file);
       filesUnderBase.add(name);
@@ -614,59 +510,6 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
   }
 
   /**
-   * Execute the marker tool, expecting the execution to succeed.
-   * @param sourceFS filesystem to use
-   * @param path path to scan
-   * @param doPurge should markers be purged
-   * @param expectedMarkerCount number of markers expected
-   * @return the result
-   */
-  private MarkerTool.ScanResult markerTool(
-      final FileSystem sourceFS,
-      final Path path,
-      final boolean doPurge,
-      final int expectedMarkerCount)
-      throws IOException {
-    return markerTool(0, sourceFS, path, doPurge, expectedMarkerCount,
-        UNLIMITED_LISTING, false);
-  }
-
-  /**
-   * Execute the marker tool, expecting the execution to
-   * return a specific exit code.
-   *
-   * @param sourceFS filesystem to use
-   * @param exitCode exit code to expect.
-   * @param path path to scan
-   * @param doPurge should markers be purged
-   * @param expectedMarkers number of markers expected
-   * @param limit limit of files to scan; -1 for 'unlimited'
-   * @param nonAuth only use nonauth path count for failure rules
-   * @return the result
-   */
-  public static MarkerTool.ScanResult markerTool(
-      final int exitCode,
-      final FileSystem sourceFS,
-      final Path path,
-      final boolean doPurge,
-      final int expectedMarkers,
-      final int limit,
-      final boolean nonAuth) throws IOException {
-
-    MarkerTool.ScanResult result = MarkerTool.execMarkerTool(
-        sourceFS,
-        path,
-        doPurge,
-        expectedMarkers,
-        limit, nonAuth);
-    Assertions.assertThat(result.getExitCode())
-        .describedAs("Exit code of marker(%s, %s, %d) -> %s",
-            path, doPurge, expectedMarkers, result)
-        .isEqualTo(exitCode);
-    return result;
-  }
-
-  /**
    * Verify that all the paths renamed from the source exist
    * under the destination, including all empty directories.
    * @param dest destination to look under.
@@ -676,61 +519,16 @@ public class ITestMarkerTool extends AbstractS3ATestBase {
       final CreatedPaths createdPaths) throws IOException {
     // all leaf directories exist
     for (String p : createdPaths.emptyDirsUnderBase) {
-      assertIsDirectory(topath(dest, p));
+      assertIsDirectory(toPath(dest, p));
     }
     // non-empty dirs
     for (String p : createdPaths.dirsUnderBase) {
-      assertIsDirectory(topath(dest, p));
+      assertIsDirectory(toPath(dest, p));
     }
     // all files exist
     for (String p : createdPaths.filesUnderBase) {
-      assertIsFile(topath(dest, p));
-    }
-  }
-  /**
-   * Run a S3GuardTool command from a varags list and the
-   * configuration returned by {@code getConfiguration()}.
-   * @param args argument list
-   * @return the return code
-   * @throws Exception any exception
-   */
-  protected int run(Object... args) throws Exception {
-    Configuration conf = new Configuration(getConfiguration());
-    final String[] argList = Arrays.stream(args)
-        .map(Object::toString)
-        .collect(Collectors.toList()).toArray(new String[0]);
-    disableFilesystemCaching(conf);
-    return S3GuardTool.run(conf, argList);
-  }
-
-  /**
-   * Run a S3GuardTool command from a varags list, catch any raised
-   * ExitException and verify the status code matches that expected.
-   * @param status expected status code of the exception
-   * @param args argument list
-   * @throws Exception any exception
-   */
-  protected void runToFailure(int status, Object... args)
-      throws Exception {
-    ExitUtil.ExitException ex =
-        intercept(ExitUtil.ExitException.class,
-            () -> {
-              int ec = run(args);
-              if (ec != 0) {
-                throw new ExitUtil.ExitException(ec, "exit code " + ec);
-              }
-            });
-    if (ex.status != status) {
-      throw ex;
+      assertIsFile(toPath(dest, p));
     }
   }
 
-  /**
-   * Add a - prefix to a string
-   * @param s string to prefix
-   * @return a string for passing into the CLI
-   */
-  private static String m(String s) {
-    return "-" + s;
-  }
 }

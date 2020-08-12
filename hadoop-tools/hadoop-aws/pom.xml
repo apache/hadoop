@@ -197,6 +197,8 @@
                     <exclude>**/ITestDynamoDBMetadataStoreScale.java</exclude>
                     <!-- Terasort MR jobs spawn enough processes that they use up all RAM -->
                     <exclude>**/ITestTerasort*.java</exclude>
+                    <!-- Root marker tool tests -->
+                    <exclude>**/ITestMarkerToolRootOperations.java</exclude>
                     <!-- operations across the metastore -->
                     <exclude>**/ITestS3GuardDDBRootOperations.java</exclude>
                   </excludes>
@@ -241,6 +243,10 @@
                     <!--  the local FS. Running them sequentially guarantees isolation -->
                     <!-- and that they don't conflict with the other MR jobs for RAM -->
                     <include>**/ITestTerasort*.java</include>
+                    <!-- Root marker tool tests -->
+                    <!-- MUST be run before the other root ops so there's
+                     more likelihood of files in the bucket -->
+                    <include>**/ITestMarkerToolRootOperations.java</include>
                     <!-- operations across the metastore -->
                     <include>**/ITestS3AContractRootDir.java</include>
                     <include>**/ITestS3GuardDDBRootOperations.java</include>

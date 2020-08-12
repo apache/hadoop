@@ -38,6 +38,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -52,7 +54,6 @@ import org.apache.hadoop.fs.s3a.impl.DirectoryPolicy;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool;
 import org.apache.hadoop.fs.shell.CommandFormat;
-import org.apache.hadoop.service.launcher.LauncherExitCodes;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.ExitUtil;
 
@@ -72,6 +73,8 @@ import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_USAGE;
  * This tool does not go anywhere near S3Guard; its scan bypasses any
  * metastore as we are explicitly looking for marker objects.
  */
+@InterfaceAudience.LimitedPrivate("management tools")
+@InterfaceStability.Unstable
 public final class MarkerTool extends S3GuardTool {
 
   private static final Logger LOG = LoggerFactory.getLogger(MarkerTool.class);
@@ -79,7 +82,7 @@ public final class MarkerTool extends S3GuardTool {
   /**
    * Name of this tool: {@value}.
    */
-  public static final String NAME = "markers";
+  public static final String MARKERS = "markers";
 
   /**
    * Purpose of this tool: {@value}.
@@ -149,7 +152,7 @@ public final class MarkerTool extends S3GuardTool {
   /**
    * Usage string: {@value}.
    */
-  private static final String USAGE = NAME
+  private static final String USAGE = MARKERS
       + " (-" + OPT_AUDIT
       + " | -" + OPT_CLEAN + ")"
       + " [-" + OPT_EXPECTED + " <count>]"
@@ -202,7 +205,7 @@ public final class MarkerTool extends S3GuardTool {
 
   @Override
   public String getName() {
-    return NAME;
+    return MARKERS;
   }
 
   @Override

@@ -37,6 +37,7 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import com.amazonaws.services.s3.model.MultipartUpload;
 import com.google.common.annotations.VisibleForTesting;
@@ -45,6 +46,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
@@ -61,6 +64,7 @@ import org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants;
 import org.apache.hadoop.fs.s3a.impl.DirectoryPolicy;
+import org.apache.hadoop.fs.s3a.impl.DirectoryPolicyImpl;
 import org.apache.hadoop.fs.s3a.select.SelectTool;
 import org.apache.hadoop.fs.s3a.tools.MarkerTool;
 import org.apache.hadoop.fs.shell.CommandFormat;
@@ -83,7 +87,11 @@ import static org.apache.hadoop.service.launcher.LauncherExitCodes.*;
 
 /**
  * CLI to manage S3Guard Metadata Store.
+ * <p></p>
+ * Some management tools invoke this class directly.
  */
+@InterfaceAudience.LimitedPrivate("management tools")
+@InterfaceStability.Evolving
 public abstract class S3GuardTool extends Configured implements Tool,
     Closeable {
   private static final Logger LOG = LoggerFactory.getLogger(S3GuardTool.class);
@@ -107,7 +115,7 @@ public abstract class S3GuardTool extends Configured implements Tool,
       "\t" + Diff.NAME + " - " + Diff.PURPOSE + "\n" +
       "\t" + Fsck.NAME + " - " + Fsck.PURPOSE + "\n" +
       "\t" + Import.NAME + " - " + Import.PURPOSE + "\n" +
-      "\t" + MarkerTool.NAME + " - " + MarkerTool.PURPOSE + "\n" +
+      "\t" + MarkerTool.MARKERS + " - " + MarkerTool.PURPOSE + "\n" +
       "\t" + Prune.NAME + " - " + Prune.PURPOSE + "\n" +
       "\t" + SetCapacity.NAME + " - " + SetCapacity.PURPOSE + "\n" +
       "\t" + SelectTool.NAME + " - " + SelectTool.PURPOSE + "\n" +
@@ -1206,7 +1214,8 @@ public abstract class S3GuardTool extends Configured implements Tool,
    * Get info about a bucket and its S3Guard integration status.
    */
   public static class BucketInfo extends S3GuardTool {
-    public static final String NAME = "bucket-info";
+    public static final String BUCKET_INFO = "bucket-info";
+    public static final String NAME = BUCKET_INFO;
     public static final String GUARDED_FLAG = "guarded";
     public static final String UNGUARDED_FLAG = "unguarded";
     public static final String AUTH_FLAG = "auth";
@@ -1214,9 +1223,11 @@ public abstract class S3GuardTool extends Configured implements Tool,
     public static final String ENCRYPTION_FLAG = "encryption";
     public static final String MAGIC_FLAG = "magic";
     public static final String MARKERS_FLAG = "markers";
+    public static final String MARKERS_AWARE = "aware";
 
     public static final String PURPOSE = "provide/check S3Guard information"
         + " about a specific bucket";
+
     private static final String USAGE = NAME + " [OPTIONS] s3a://BUCKET\n"
         + "\t" + PURPOSE + "\n\n"
         + "Common options:\n"
@@ -1228,7 +1239,7 @@ public abstract class S3GuardTool extends Configured implements Tool,
         + "  -" + ENCRYPTION_FLAG
         + " (none, sse-s3, sse-kms) - Require encryption policy\n"
         + "  -" + MARKERS_FLAG
-        + " (keep, delete, authoritative) - directory markers policy\n";
+        + " (aware, keep, delete, authoritative) - directory markers policy\n";
 
     /**
      * Output when the client cannot get the location of a bucket.
@@ -1237,6 +1248,12 @@ public abstract class S3GuardTool extends Configured implements Tool,
     public static final String LOCATION_UNKNOWN =
         "Location unknown -caller lacks "
             + RolePolicies.S3_GET_BUCKET_LOCATION + " permission";
+
+
+    @VisibleForTesting
+    public static final String IS_MARKER_AWARE =
+        "The S3A connector is compatible with buckets where"
+            + " directory markers are not deleted";
 
     public BucketInfo(Configuration conf) {
       super(conf, GUARDED_FLAG, UNGUARDED_FLAG, AUTH_FLAG, NONAUTH_FLAG, MAGIC_FLAG);
@@ -1428,26 +1445,54 @@ public abstract class S3GuardTool extends Configured implements Tool,
       }
 
       // directory markers
-      DirectoryPolicy markerPolicy = fs.getDirectoryMarkerPolicy();
-      String desc = markerPolicy.describe();
-      println(out, "%nDirectory marker policy is %s", desc);
-
-      DirectoryPolicy.MarkerPolicy mp = markerPolicy.getMarkerPolicy();
-      String desiredMarker = getCommandFormat()
-          .getOptValue(MARKERS_FLAG);
-      desiredMarker = desiredMarker == null
-          ? ""
-          : desiredMarker.trim().toLowerCase(Locale.ENGLISH);
-      if (!desiredMarker.isEmpty()
-          && !desiredMarker.equals(mp.toString())) {
-        throw badState("Bucket %s: required marker policy is %s"
-                + " but actual policy is %s",
-            fsUri, desiredMarker, mp);
-      }
+      processMarkerOption(out, fs,
+          getCommandFormat().getOptValue(MARKERS_FLAG));
 
       // and finally flush the output and report a success.
       out.flush();
       return SUCCESS;
+    }
+
+    /**
+     * Validate the marker options.
+     * @param out output stream
+     * @param fs filesystem
+     * @param path test path
+     * @param marker desired marker option -may be null.
+     */
+    private void processMarkerOption(final PrintStream out,
+        final S3AFileSystem fs,
+        final String marker) {
+      DirectoryPolicy markerPolicy = fs.getDirectoryMarkerPolicy();
+      String desc = markerPolicy.describe();
+      println(out, "%nThe directory marker policy is \"%s\"%n", desc);
+
+      DirectoryPolicy.MarkerPolicy mp = markerPolicy.getMarkerPolicy();
+
+      String desiredMarker = marker == null
+          ? ""
+          : marker.trim();
+      final String optionName = mp.getOptionName();
+      if (!desiredMarker.isEmpty()) {
+        if (MARKERS_AWARE.equalsIgnoreCase(desiredMarker)) {
+          // simple awareness test -provides a way to validate compatibility
+          // on the command line
+          println(out, IS_MARKER_AWARE);
+          String pols = DirectoryPolicyImpl.availablePolicies()
+              .stream()
+              .map(DirectoryPolicy.MarkerPolicy::getOptionName)
+              .collect(Collectors.joining(", "));
+          println(out, "Available Policies: %s", pols);
+
+        } else {
+          // compare with current policy
+          if (!optionName.equalsIgnoreCase(desiredMarker)) {
+            throw badState("Bucket %s: required marker policy is \"%s\""
+                    + " but actual policy is \"%s\"",
+                fs.getUri(), desiredMarker, optionName);
+          }
+        }
+      }
     }
 
     private String printOption(PrintStream out,
@@ -2053,7 +2098,7 @@ public abstract class S3GuardTool extends Configured implements Tool,
     case Diff.NAME:
       command = new Diff(conf);
       break;
-    case MarkerTool.NAME:
+    case MarkerTool.MARKERS:
       command = new MarkerTool(conf);
       break;
     case Prune.NAME:

@@ -19,7 +19,9 @@
 package org.apache.hadoop.fs.s3a.impl;
 
 
+import java.util.EnumSet;
 import java.util.Locale;
+import java.util.Set;
 import java.util.function.Predicate;
 
 import org.slf4j.Logger;
@@ -49,6 +51,12 @@ public final class DirectoryPolicyImpl
   public static final String UNKNOWN_MARKER_POLICY =
       "Unknown policy in "
       + DIRECTORY_MARKER_POLICY + ": ";
+
+  /**
+   * All available policies.
+   */
+  private static final Set<MarkerPolicy> AVAILABLE_POLICIES =
+      EnumSet.allOf(MarkerPolicy.class);
 
   /**
    * Keep all markers.
@@ -104,14 +112,14 @@ public final class DirectoryPolicyImpl
 
   @Override
   public String describe() {
-    return markerPolicy.toString();
+    return markerPolicy.getOptionName();
   }
 
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder(
         "DirectoryMarkerRetention{");
-    sb.append("policy='").append(markerPolicy).append('\'');
+    sb.append("policy='").append(markerPolicy.getOptionName()).append('\'');
     sb.append('}');
     return sb.toString();
   }
@@ -150,4 +158,14 @@ public final class DirectoryPolicyImpl
     }
     return policy;
   }
+
+
+  /**
+   * Enumerate all available policies.
+   * @return set of the policies.
+   */
+  public static Set<MarkerPolicy> availablePolicies() {
+    return AVAILABLE_POLICIES;
+  }
+
 }

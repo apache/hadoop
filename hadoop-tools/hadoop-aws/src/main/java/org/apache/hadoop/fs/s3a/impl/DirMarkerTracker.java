@@ -47,6 +47,9 @@ import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
  * directory of the last file added is cached. This allows for a
  * quick bailout when many children of the same directory are
  * returned in a listing.
+ * <p></p>
+ * Consult the directory_markers document for details on this feature,
+ * including terminology.
  */
 public class DirMarkerTracker {
 
