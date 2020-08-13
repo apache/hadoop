@@ -136,8 +136,7 @@ public class AppsBlock extends HtmlBlock {
 
     try {
       fetchData();
-    }
-    catch( Exception e) {
+    } catch (YarnException | IOException | InterruptedException e) {
       String message = "Failed to read the applications.";
       LOG.error(message, e);
       html.p().__(message).__();
