@@ -49,6 +49,7 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.Objects;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -264,10 +265,19 @@ public class FsImageValidation {
   }
 
   static class INodeMapValidation {
+    static Iterable<INodeWithAdditionalFields> iterate(INodeMap map) {
+      return new Iterable<INodeWithAdditionalFields>() {
+        @Override
+        public Iterator<INodeWithAdditionalFields> iterator() {
+          return map.getMapIterator();
+        }
+      };
+    }
+
     static void run(FSDirectory fsdir, AtomicInteger errorCount) {
       final int initErrorCount = errorCount.get();
       final Counts counts = INodeCountVisitor.countTree(fsdir.getRoot());
-      for (INodeWithAdditionalFields i : fsdir.getINodeMap()) {
+      for (INodeWithAdditionalFields i : iterate(fsdir.getINodeMap())) {
         if (counts.getCount(i) == 0) {
           Cli.printError(errorCount, "%s (%d) is inaccessible (%s)",
               i, i.getId(), i.getFullPathName());
@@ -340,7 +350,8 @@ public class FsImageValidation {
     static synchronized void printError(AtomicInteger errorCount,
         String format, Object... args) {
       final int count = errorCount.incrementAndGet();
-      final String s = "FSIMAGE_ERROR " + count + ": " + String.format(format, args);
+      final String s = "FSIMAGE_ERROR " + count + ": "
+          + String.format(format, args);
       System.out.println(s);
       LOG.info(s);
     }

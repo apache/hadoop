@@ -32,7 +32,7 @@ import com.google.common.base.Preconditions;
  * Storing all the {@link INode}s and maintaining the mapping between INode ID
  * and INode.  
  */
-public final class INodeMap implements Iterable<INodeWithAdditionalFields> {
+public class INodeMap {
   
   static INodeMap newInstance(INodeDirectory rootDir) {
     // Compute the map capacity by allocating 1% of total memory
@@ -47,11 +47,6 @@ public final class INodeMap implements Iterable<INodeWithAdditionalFields> {
   private final GSet<INode, INodeWithAdditionalFields> map;
   
   public Iterator<INodeWithAdditionalFields> getMapIterator() {
-    return iterator();
-  }
-
-  @Override
-  public Iterator<INodeWithAdditionalFields> iterator() {
     return map.iterator();
   }
 
