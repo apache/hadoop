@@ -180,7 +180,7 @@ public class TestCopyCommitter {
     }
 
   }
-  
+ 
   @Test
   public void testPreserveStatusWithAtomicCommit() throws IOException {
     TaskAttemptContext taskAttemptContext = getTaskAttemptContext(config);
