@@ -746,16 +746,19 @@ public class SnapshotManager implements SnapshotStatsMXBean {
         d.getDirectorySnapshottableFeature().getNumSnapshots(),
         d.getDirectorySnapshottableFeature().getSnapshotQuota(),
         d.getModificationTime(),
-        Short.valueOf(Integer.toOctalString(
-            d.getFsPermissionShort())),
+        Short.parseShort(Integer.toOctalString(d.getFsPermissionShort())),
         d.getUserName(),
         d.getGroupName());
   }
 
   public static SnapshotInfo.Bean toBean(Snapshot s) {
+    Snapshot.Root dir = s.getRoot();
     return new SnapshotInfo.Bean(
-        s.getRoot().getLocalName(), s.getRoot().getFullPathName(),
-        s.getRoot().getModificationTime());
+        s.getId(),
+        dir.getFullPathName(),
+        dir.getModificationTime(),
+        dir.isMarkedAsDeleted()
+        );
   }
 
   private List<INodeDirectory> getSnapshottableDirsForGc() {
