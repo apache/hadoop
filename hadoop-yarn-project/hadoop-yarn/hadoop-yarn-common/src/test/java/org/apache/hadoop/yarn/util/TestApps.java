@@ -17,6 +17,7 @@
 */
 package org.apache.hadoop.yarn.util;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Shell;
 import org.junit.Test;
 
@@ -25,6 +26,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class TestApps {
   @Test
@@ -57,5 +60,138 @@ public class TestApps {
         File.pathSeparator);
     assertEquals("=", environment.get("e1"));
     assertEquals("a1=a2", environment.get("e2"));
+  }
+
+  @Test
+  public void testSetEnvFromInputProperty() {
+    Configuration conf = new Configuration(false);
+    Map<String, String> env = new HashMap<>();
+    String propName = "mapreduce.map.env";
+    String defaultPropName = "mapreduce.child.env";
+    // Setup environment input properties
+    conf.set(propName, "env1=env1_val,env2=env2_val,env3=env3_val");
+    conf.set(propName + ".env4", "env4_val");
+    conf.set(propName + ".env2", "new_env2_val");
+    // Setup some default values - we shouldn't see these values
+    conf.set(defaultPropName, "env1=def1_val,env2=def2_val,env3=def3_val");
+    String defaultPropValue = conf.get(defaultPropName);
+    // These should never be referenced.
+    conf.set(defaultPropName + ".env4", "def4_val");
+    conf.set(defaultPropName + ".env2", "new_def2_val");
+    Apps.setEnvFromInputProperty(env, propName, defaultPropValue, conf,
+        File.pathSeparator);
+    // Check values from string
+    assertEquals("env1_val", env.get("env1"));
+    assertEquals("env3_val", env.get("env3"));
+    // Check individual value
+    assertEquals("env4_val", env.get("env4"));
+    // Check individual value that eclipses one in string
+    assertEquals("new_env2_val", env.get("env2"));
+  }
+
+  @Test
+  public void testSetEnvFromInputPropertyDefault() {
+    Configuration conf = new Configuration(false);
+    Map<String, String> env = new HashMap<>();
+    String propName = "mapreduce.map.env";
+    String defaultPropName = "mapreduce.child.env";
+    // Setup environment input properties
+    conf.set(propName, "env1=env1_val,env2=env2_val,env3=env3_val");
+    conf.set(propName + ".env4", "env4_val");
+    conf.set(propName + ".env2", "new_env2_val");
+    // Setup some default values
+    conf.set(defaultPropName, "env1=def1_val,env2=def2_val,env3=def3_val");
+    String defaultPropValue = conf.get(defaultPropName);
+    // These should never be referenced.
+    conf.set(defaultPropName + ".env4", "def4_val");
+    conf.set(defaultPropName + ".env2", "new_def2_val");
+
+    // Test using default value for the string.
+    // Individually specified env properties do not have defaults,
+    // so this should just get things from the defaultPropName string.
+    String bogusProp = propName + "bogus";
+    Apps.setEnvFromInputProperty(env, bogusProp, defaultPropValue, conf,
+        File.pathSeparator);
+    // Check values from string
+    assertEquals("def1_val", env.get("env1"));
+    assertEquals("def2_val", env.get("env2"));
+    assertEquals("def3_val", env.get("env3"));
+    // Check individual value is not set.
+    assertNull(env.get("env4"));
+  }
+
+  @Test
+  public void testSetEnvFromInputPropertyOverrideDefault() {
+    Configuration conf = new Configuration(false);
+    Map<String, String> env = new HashMap<>();
+
+    // Try using default value, but specify some individual values using
+    // the main propName, but no main value, so it should get values from
+    // the default string, and then the individual values.
+    String propName = "mapreduce.reduce.env";
+    conf.set(propName + ".env2", "new2_val");
+    conf.set(propName + ".env4", "new4_val");
+    // Setup some default values - we shouldn't see these values
+    String defaultPropName = "mapreduce.child.env";
+    conf.set(defaultPropName, "env1=def1_val,env2=def2_val,env3=def3_val");
+    String defaultPropValue = conf.get(defaultPropName);
+    // These should never be referenced.
+    conf.set(defaultPropName + ".env4", "def4_val");
+    conf.set(defaultPropName + ".env2", "new_def2_val");
+    Apps.setEnvFromInputProperty(env, propName, defaultPropValue, conf,
+        File.pathSeparator);
+
+    // Check values from string
+    assertEquals("def1_val", env.get("env1"));
+    assertEquals("def3_val", env.get("env3"));
+    // Check individual value
+    assertEquals("new4_val", env.get("env4"));
+    // Check individual value that eclipses one in string
+    assertEquals("new2_val", env.get("env2"));
+  }
+
+  @Test
+  public void testSetEnvFromInputPropertyCommas() {
+    Configuration conf = new Configuration(false);
+    Map<String, String> env = new HashMap<>();
+    String propName = "mapreduce.reduce.env";
+    conf.set(propName, "env1=env1_val,env2=env2_val,env3=env3_val");
+    conf.set(propName + ".env2", "new2_val1,new2_val2,new2_val3");
+    conf.set(propName + ".env4", "new4_valwith=equals");
+    // Setup some default values - we shouldn't see these values
+    String defaultPropName = "mapreduce.child.env";
+    conf.set(defaultPropName, "env1=def1_val,env2=def2_val,env3=def3_val");
+    String defaultPropValue = conf.get(defaultPropName);
+
+    Apps.setEnvFromInputProperty(env, propName, defaultPropValue, conf,
+        File.pathSeparator);
+    // Check values from string
+    assertEquals("env1_val", env.get("env1"));
+    assertEquals("env3_val", env.get("env3"));
+    // Check individual value
+    assertEquals("new4_valwith=equals", env.get("env4"));
+    // Check individual value that eclipses one in string
+    assertEquals("new2_val1,new2_val2,new2_val3", env.get("env2"));
+  }
+
+  @Test
+  public void testSetEnvFromInputPropertyNull() {
+    Configuration conf = new Configuration(false);
+    Map<String, String> env = new HashMap<>();
+    String propName = "mapreduce.map.env";
+    String defaultPropName = "mapreduce.child.env";
+    // Setup environment input properties
+    conf.set(propName, "env1=env1_val,env2=env2_val,env3=env3_val");
+    conf.set(propName + ".env4", "env4_val");
+    conf.set(propName + ".env2", "new_env2_val");
+    // Setup some default values - we shouldn't see these values
+    conf.set(defaultPropName, "env1=def1_val,env2=def2_val,env3=def3_val");
+    String defaultPropValue = conf.get(defaultPropName);
+    // These should never be referenced.
+    conf.set(defaultPropName + ".env4", "def4_val");
+    conf.set(defaultPropName + ".env2", "new_def2_val");
+    // Try with null inputs
+    Apps.setEnvFromInputProperty(env, "bogus1", null, conf, File.pathSeparator);
+    assertTrue(env.isEmpty());
   }
 }

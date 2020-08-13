@@ -312,6 +312,15 @@ public class JobConf extends Configuration {
    *   <li> B=$X:c This is inherit tasktracker's X env variable on Linux. </li>
    *   <li> B=%X%;c This is inherit tasktracker's X env variable on Windows. </li>
    * </ul>
+   *
+   * You can also add environment variables individually by appending
+   * <code>.VARNAME</code> to this configuration key, where VARNAME is
+   * the name of the environment variable.
+   *
+   * Example:
+   * <ul>
+   *   <li>mapreduce.map.env.VARNAME=value</li>
+   * </ul>
    */
   public static final String MAPRED_MAP_TASK_ENV = JobContext.MAP_ENV;
   
@@ -327,6 +336,15 @@ public class JobConf extends Configuration {
    *   <li> A=foo - This will set the env variable A to foo. </li>
    *   <li> B=$X:c This is inherit tasktracker's X env variable on Linux. </li>
    *   <li> B=%X%;c This is inherit tasktracker's X env variable on Windows. </li>
+   * </ul>
+   *
+   * You can also add environment variables individually by appending
+   * <code>.VARNAME</code> to this configuration key, where VARNAME is
+   * the name of the environment variable.
+   *
+   * Example:
+   * <ul>
+   *   <li>mapreduce.reduce.env.VARNAME=value</li>
    * </ul>
    */
   public static final String MAPRED_REDUCE_TASK_ENV = JobContext.REDUCE_ENV;
