@@ -105,9 +105,7 @@ public class S3AScaleTestBase extends AbstractS3ATestBase {
    * @return the configuration.
    */
   private synchronized Configuration demandCreateConfiguration() {
-    if (conf == null) {
-      conf = createScaleConfiguration();
-    }
+    conf = createScaleConfiguration();
     return conf;
   }
 
