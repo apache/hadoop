@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -373,13 +372,17 @@ public class FsImageValidation {
     } else if (path.isDirectory()) {
       final File[] images = path.listFiles(
           Util.newFilenameFilter(NameNodeFile.IMAGE));
-      Objects.requireNonNull(images);
-      Preconditions.checkState(images.length > 0);
+      if (images == null || images.length == 0) {
+        Cli.warn("%s not found in %s", FSImage.class.getSimpleName(),
+            path.getAbsolutePath());
+        return;
+      }
 
       Arrays.sort(images, Collections.reverseOrder());
       for (int i = 0; i < images.length; i++) {
         final File image = images[i];
-        Cli.println("%d) image=%s", i, image);
+        Cli.println("%s %d) %s", FSImage.class.getSimpleName(),
+            i, image.getAbsolutePath());
         FsImageValidation.validate(image, errorCount);
       }
     }
