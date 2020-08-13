@@ -1450,26 +1450,33 @@ public class Job extends JobContextImpl implements JobContext, AutoCloseable {
    */
   private static void setSharedCacheUploadPolicies(Configuration conf,
       Map<String, Boolean> policies, boolean areFiles) {
-    if (policies != null) {
-      StringBuilder sb = new StringBuilder();
-      Iterator<Map.Entry<String, Boolean>> it = policies.entrySet().iterator();
-      Map.Entry<String, Boolean> e;
-      if (it.hasNext()) {
-        e = it.next();
-        sb.append(e.getKey() + DELIM + e.getValue());
-      } else {
-        // policies is an empty map, just skip setting the parameter
-        return;
-      }
-      while (it.hasNext()) {
-        e = it.next();
-        sb.append("," + e.getKey() + DELIM + e.getValue());
-      }
-      String confParam =
-          areFiles ? MRJobConfig.CACHE_FILES_SHARED_CACHE_UPLOAD_POLICIES
-              : MRJobConfig.CACHE_ARCHIVES_SHARED_CACHE_UPLOAD_POLICIES;
-      conf.set(confParam, sb.toString());
+    String confParam = areFiles ?
+        MRJobConfig.CACHE_FILES_SHARED_CACHE_UPLOAD_POLICIES :
+        MRJobConfig.CACHE_ARCHIVES_SHARED_CACHE_UPLOAD_POLICIES;
+    conf.set(confParam, populateSharedCacheUploadPolicies(policies));
+  }
+
+  private static String populateSharedCacheUploadPolicies(
+      Map<String, Boolean> policies) {
+    // If policies are an empty map or null, we will set EMPTY_STRING.
+    // In other words, cleaning up existing policies. This is useful when we
+    // try to clean up shared cache upload policies for non-application
+    // master tasks. See YARN-10398 for details.
+    if (policies == null || policies.size() == 0) {
+      return "";
     }
+    StringBuilder sb = new StringBuilder();
+    Iterator<Map.Entry<String, Boolean>> it = policies.entrySet().iterator();
+    Map.Entry<String, Boolean> e;
+    if (it.hasNext()) {
+      e = it.next();
+      sb.append(e.getKey() + DELIM + e.getValue());
+    }
+    while (it.hasNext()) {
+      e = it.next();
+      sb.append("," + e.getKey() + DELIM + e.getValue());
+    }
+    return sb.toString();
   }
 
   /**
