@@ -25,7 +25,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * For validating {@link org.apache.hadoop.hdfs.server.namenode.FSImage}s
+ * For validating {@link org.apache.hadoop.hdfs.server.namenode.FSImage}s.
  */
 public class INodeCountVisitor implements NamespaceVisitor {
   public interface Counts {
