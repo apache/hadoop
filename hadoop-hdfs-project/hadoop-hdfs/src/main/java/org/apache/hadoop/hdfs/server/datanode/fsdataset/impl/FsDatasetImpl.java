@@ -29,6 +29,7 @@ import java.io.InputStream;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -246,7 +247,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   final DataNode datanode;
   private final DataNodeMetrics dataNodeMetrics;
   final DataStorage dataStorage;
-  private final FsVolumeList volumes;
+  final FsVolumeList volumes;
   final Map<String, DatanodeStorage> storageMap;
   final FsDatasetAsyncDiskService asyncDiskService;
   final Daemon lazyWriter;
@@ -365,7 +366,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
             RoundRobinVolumeChoosingPolicy.class,
             VolumeChoosingPolicy.class), conf);
     volumes = new FsVolumeList(volumeFailureInfos, datanode.getBlockScanner(),
-        blockChooserImpl);
+        blockChooserImpl, conf);
     asyncDiskService = new FsDatasetAsyncDiskService(datanode, this);
     asyncLazyPersistService = new RamDiskAsyncLazyPersistService(datanode, conf);
     deletingBlock = new HashMap<String, Set<Long>>();
@@ -932,7 +933,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
   }
 
-  static File moveBlockFiles(Block b, ReplicaInfo replicaInfo, File destdir)
+  static File[] moveBlockFiles(Block b, ReplicaInfo replicaInfo, File destdir)
       throws IOException {
     final File dstfile = new File(destdir, b.getBlockName());
     final File dstmeta = FsDatasetUtil.getMetaFile(dstfile, b.getGenerationStamp());
@@ -954,7 +955,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           + " to " + dstmeta + " and " + replicaInfo.getBlockURI()
           + " to " + dstfile);
     }
-    return dstfile;
+    return new File[]{dstfile, dstmeta};
   }
 
   /**
@@ -1037,12 +1038,23 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
 
     FsVolumeReference volumeRef = null;
+    boolean useSameDevice = false;
     try (AutoCloseableLock lock = datasetReadLock.acquire()) {
-      volumeRef = volumes.getNextVolume(targetStorageType, targetStorageId,
-          block.getNumBytes());
+      if (volumes.enableSameDiskTiering && replicaInfo.getVolume() instanceof FsVolumeImpl) {
+        volumeRef = volumes.getVolumeOnSameDevice((FsVolumeImpl) replicaInfo.getVolume());
+        useSameDevice = true;
+      }
+      if (volumeRef == null) {
+        volumeRef = volumes.getNextVolume(targetStorageType, targetStorageId,
+            block.getNumBytes());
+      }
     }
     try {
-      moveBlock(block, replicaInfo, volumeRef);
+      if (useSameDevice) {
+        moveBlockToSameMount(block, replicaInfo, volumeRef);
+      } else {
+        moveBlock(block, replicaInfo, volumeRef);
+      }
     } finally {
       if (volumeRef != null) {
         volumeRef.close();
@@ -1051,6 +1063,25 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
     // Replace the old block if any to reschedule the scanning.
     return replicaInfo;
+  }
+
+  /**
+   * Fallback to moveBlock if failed.
+   *
+   * @param block       - Extended Block
+   * @param replicaInfo - ReplicaInfo
+   * @param volumeRef   - Volume Ref - Closed by caller.
+   * @return newReplicaInfo
+   * @throws IOException
+   */
+  @VisibleForTesting
+  ReplicaInfo moveBlockToSameMount(ExtendedBlock block, ReplicaInfo replicaInfo,
+      FsVolumeReference volumeRef) throws IOException {
+    FsVolumeImpl impl = (FsVolumeImpl) volumeRef.getVolume();
+    ReplicaInfo newReplicaInfo = impl.renameBlockToTmpLocation(block, replicaInfo, conf);
+    finalizeNewReplica(newReplicaInfo, block);
+    removeOldReplica(replicaInfo, newReplicaInfo, block.getBlockPoolId());
+    return newReplicaInfo;
   }
 
   /**

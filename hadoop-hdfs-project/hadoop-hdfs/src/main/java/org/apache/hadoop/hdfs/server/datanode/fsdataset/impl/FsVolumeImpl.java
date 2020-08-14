@@ -134,6 +134,8 @@ public class FsVolumeImpl implements FsVolumeSpi {
   private final FileIoProvider fileIoProvider;
   private final DataNodeVolumeMetrics metrics;
   private URI baseURI;
+  private boolean enableSameDiskTiering;
+  private String device;
 
   /**
    * Per-volume worker pool that processes new blocks to cache.
@@ -190,6 +192,16 @@ public class FsVolumeImpl implements FsVolumeSpi {
     }
     this.conf = conf;
     this.fileIoProvider = fileIoProvider;
+    this.enableSameDiskTiering =
+        conf.getBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING,
+            DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING_DEFAULT);
+    if (enableSameDiskTiering) {
+      this.device = usage.getMount();
+    }
+  }
+
+  String getDevice() {
+    return device;
   }
 
   protected ThreadPoolExecutor initializeCacheExecutor(File parent) {
@@ -418,6 +430,14 @@ public class FsVolumeImpl implements FsVolumeSpi {
         remaining = cachedCapacity - getReserved();
       } else {
         remaining = usage.getCapacity() - getReserved();
+        if (enableSameDiskTiering) {
+          double reservedForArchive = conf.getDouble(DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE, DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT);
+          if (storageType == StorageType.ARCHIVE) {
+            remaining = (long) (remaining * reservedForArchive);
+          } else {
+            remaining = (long) (remaining * (1 - reservedForArchive));
+          }
+        }
       }
       return Math.max(remaining, 0L);
     }
@@ -452,6 +472,15 @@ public class FsVolumeImpl implements FsVolumeSpi {
   }
 
   long getActualNonDfsUsed() throws IOException {
+    if (enableSameDiskTiering) {
+      FsVolumeSpi spi = dataset.volumes.getVolumeOnSameDevice(this).getVolume();
+      if (spi instanceof FsVolumeImpl) {
+        FsVolumeImpl volume = (FsVolumeImpl) dataset.volumes.getVolumeOnSameDevice(this);
+        if (volume != null) {
+          return usage.getUsed() - getDfsUsed() - volume.getDfsUsed();
+        }
+      }
+    }
     return usage.getUsed() - getDfsUsed();
   }
 
@@ -1247,7 +1276,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
     // move block files to the rbw directory
     BlockPoolSlice bpslice = getBlockPoolSlice(b.getBlockPoolId());
     final File dest = FsDatasetImpl.moveBlockFiles(b.getLocalBlock(), temp,
-        bpslice.getRbwDir());
+        bpslice.getRbwDir())[0];
     // create RBW
     final LocalReplicaInPipeline rbw = new ReplicaBuilder(ReplicaState.RBW)
         .setBlockId(blockId)
@@ -1457,6 +1486,24 @@ public class FsVolumeImpl implements FsVolumeSpi {
         block.getGenerationStamp(), replicaInfo,
         getTmpDir(block.getBlockPoolId()),
         replicaInfo.isOnTransientStorage(), smallBufferSize, conf);
+
+    ReplicaInfo newReplicaInfo = new ReplicaBuilder(ReplicaState.TEMPORARY)
+        .setBlockId(replicaInfo.getBlockId())
+        .setGenerationStamp(replicaInfo.getGenerationStamp())
+        .setFsVolume(this)
+        .setDirectoryToUse(blockFiles[0].getParentFile())
+        .setBytesToReserve(0)
+        .build();
+    newReplicaInfo.setNumBytes(blockFiles[1].length());
+    return newReplicaInfo;
+  }
+
+  public ReplicaInfo renameBlockToTmpLocation(ExtendedBlock block,
+      ReplicaInfo replicaInfo,
+      Configuration conf) throws IOException {
+
+    File[] blockFiles = FsDatasetImpl.moveBlockFiles(block.getLocalBlock(), replicaInfo,
+        getTmpDir(block.getBlockPoolId()));
 
     ReplicaInfo newReplicaInfo = new ReplicaBuilder(ReplicaState.TEMPORARY)
         .setBlockId(replicaInfo.getBlockId())
