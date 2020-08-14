@@ -436,6 +436,9 @@ Building on CentOS 8
   $ sudo dnf group install --with-optional 'Development Tools'
   $ sudo dnf install java-1.8.0-openjdk-devel maven
 
+* Install python2 for building documentation.
+  $ sudo dnf install python2
+
 * Install Protocol Buffers v3.7.1.
   $ git clone https://github.com/protocolbuffers/protobuf
   $ cd protobuf
