@@ -67,6 +67,7 @@ public class TestRenameWithOrderedSnapshotDeletion {
     final Path sub0 = new Path(snapshottableDir, "sub0");
     final Path sub1 = new Path(snapshottableDir, "sub1");
     hdfs.mkdirs(sub0);
+    hdfs.mkdirs(dir2);
     final Path file1 = new Path(dir1, "file1");
     final Path file2 = new Path(sub0, "file2");
     hdfs.mkdirs(snapshottableDir);
@@ -90,7 +91,7 @@ public class TestRenameWithOrderedSnapshotDeletion {
     // rename dirs outside snapshottable root should work
     hdfs.rename(dir2, dir1);
     // rename dir into snapshottable root should fail
-    validateRename(dir2, snapshottableDir);
+    validateRename(dir1, snapshottableDir);
     // rename dir outside snapshottable root should fail
     validateRename(sub0, dir2);
     // rename dir within snapshottable root should work
@@ -100,6 +101,7 @@ public class TestRenameWithOrderedSnapshotDeletion {
   private void validateRename(Path src, Path dest) {
     try {
       hdfs.rename(src, dest);
+      Assert.fail("Expected exception not thrown.");
     } catch (IOException ioe) {
       Assert.assertTrue(ioe.getMessage().contains("are not under the" +
           " same snapshot root."));

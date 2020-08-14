@@ -380,11 +380,11 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     final INodeDirectory dir;
     if (inode instanceof INodeDirectory) {
       dir = INodeDirectory.valueOf(inode, path);
-      if (dir.isSnapshottable()) {
-        return dir;
-      }
     } else {
       dir = INodeDirectory.valueOf(iip.getINode(-2), iip.getParentPath());
+    }
+    if (dir.isSnapshottable()) {
+      return dir;
     }
     for (INodeDirectory snapRoot : this.snapshottables.values()) {
       if (dir.isAncestorDirectory(snapRoot)) {
