@@ -168,8 +168,8 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
       throws Exception {
     final Configuration conf = getConfiguration();
     ExitUtil.ExitException ex =
-        intercept(ExitUtil.ExitException.class,
-              () -> runS3GuardCommand(conf, args));
+        intercept(ExitUtil.ExitException.class, () ->
+            runS3GuardCommand(conf, args));
     if (ex.status != status) {
       throw ex;
     }

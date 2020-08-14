@@ -90,8 +90,8 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
             && !fs.getDirectoryMarkerPolicy()
             .keepDirectoryMarkers(methodPath)
             && fs.isDirectory(methodPath)) {
-            MarkerTool.ScanResult result = MarkerTool.execMarkerTool(fs,
-                methodPath, true, 0, UNLIMITED_LISTING, false);
+          MarkerTool.ScanResult result = MarkerTool.execMarkerTool(fs,
+              methodPath, true, 0, UNLIMITED_LISTING, false);
           assertEquals("Audit of " + methodPath + " failed: " + result,
               0, result.getExitCode());
         }

@@ -3118,6 +3118,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       @Nullable final Set<Path> tombstones,
       final boolean needEmptyDirectoryFlag) throws IOException {
     LOG.debug("S3GetFileStatus {}", path);
+    // either you aren't looking for the directory flag, or you are,
+    // and if you are, the probe list must contain list.
     Preconditions.checkArgument(!needEmptyDirectoryFlag
         || probes.contains(StatusProbeEnum.List),
         "s3GetFileStatus(%s) wants to know if a directory is empty but"
@@ -4614,7 +4616,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
     final Path p = makeQualified(path);
-    switch (validatePathCapabilityArgs(p, capability)) {
+    String cap = validatePathCapabilityArgs(p, capability);
+    switch (cap) {
 
     case CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER:
     case CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER_OLD:
@@ -4633,18 +4636,24 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     case CommonPathCapabilities.FS_MULTIPART_UPLOADER:
       return true;
 
-    /*
-     * Marker policy is dynamically determined for the given path.
-     */
+    // this client is safe to use with buckets
+    // containing directory markers anywhere in
+    // the hierarchy
     case STORE_CAPABILITY_DIRECTORY_MARKER_AWARE:
       return true;
-      case STORE_CAPABILITY_DIRECTORY_MARKER_KEEP:
-      return directoryPolicy.keepDirectoryMarkers(p);
-    case STORE_CAPABILITY_DIRECTORY_MARKER_DELETE:
-      return !directoryPolicy.keepDirectoryMarkers(p);
+
+    /*
+     * Marker policy capabilities are handed off.
+     */
+    case STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_KEEP:
+    case STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_DELETE:
+    case STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_AUTHORITATIVE:
+    case STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_KEEP:
+    case STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_DELETE:
+      return getDirectoryMarkerPolicy().hasPathCapability(path, cap);
 
     default:
-      return super.hasPathCapability(p, capability);
+      return super.hasPathCapability(p, cap);
     }
   }
 
@@ -4659,7 +4668,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Override
   public boolean hasCapability(String capability) {
     try {
-      return hasPathCapability(workingDir, capability);
+      return hasPathCapability(new Path("/"), capability);
     } catch (IOException ex) {
       // should never happen, so log and downgrade.
       LOG.debug("Ignoring exception on hasCapability({}})", capability, ex);

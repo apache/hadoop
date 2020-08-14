@@ -30,6 +30,9 @@ import org.junit.runners.Parameterized;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
+import static org.apache.hadoop.fs.s3a.Constants.STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_DELETE;
+import static org.apache.hadoop.fs.s3a.Constants.STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_KEEP;
+
 /**
  * Unit tests for directory marker policies.
  */
@@ -53,11 +56,14 @@ public class TestDirectoryMarkerPolicy extends AbstractHadoopTestBase {
             DirectoryPolicy.MarkerPolicy.Authoritative,
             AUTH_PATH_ONLY,
             false, true
-        }});
+        }
+    });
   }
 
-  private final DirectoryPolicyImpl retention;
+  private final DirectoryPolicy directoryPolicy;
+
   private final boolean expectNonAuthDelete;
+
   private final boolean expectAuthDelete;
 
   public TestDirectoryMarkerPolicy(
@@ -65,7 +71,7 @@ public class TestDirectoryMarkerPolicy extends AbstractHadoopTestBase {
       final Predicate<Path> authoritativeness,
       final boolean expectNonAuthDelete,
       final boolean expectAuthDelete) {
-    this.retention = retention(markerPolicy, authoritativeness);
+    this.directoryPolicy = newPolicy(markerPolicy, authoritativeness);
     this.expectNonAuthDelete = expectNonAuthDelete;
     this.expectAuthDelete = expectAuthDelete;
   }
@@ -77,7 +83,7 @@ public class TestDirectoryMarkerPolicy extends AbstractHadoopTestBase {
    * a path is authoritative.
    * @return the retention policy.
    */
-  private DirectoryPolicyImpl retention(
+  private DirectoryPolicy newPolicy(
       DirectoryPolicy.MarkerPolicy markerPolicy,
       Predicate<Path> authoritativeness) {
     return new DirectoryPolicyImpl(markerPolicy, authoritativeness);
@@ -91,28 +97,67 @@ public class TestDirectoryMarkerPolicy extends AbstractHadoopTestBase {
   };
 
   private final Path nonAuthPath = new Path("s3a://bucket/nonauth/data");
+
   private final Path authPath = new Path("s3a://bucket/auth/data1");
+
   private final Path deepAuth = new Path("s3a://bucket/auth/d1/d2/data2");
 
-  private void assertRetention(Path path, boolean retain) {
-    Assertions.assertThat(retention.keepDirectoryMarkers(path))
-        .describedAs("Retention of path %s by %s", path, retention)
+  /**
+   * Assert that a path has a retention outcome.
+   * @param path path
+   * @param retain should the marker be retained
+   */
+  private void assertMarkerRetention(Path path, boolean retain) {
+    Assertions.assertThat(directoryPolicy.keepDirectoryMarkers(path))
+        .describedAs("Retention of path %s by %s", path, directoryPolicy)
         .isEqualTo(retain);
+  }
+
+  /**
+   * Assert that a path has a capability.
+   */
+  private void assertPathCapability(Path path,
+      String capability,
+      boolean outcome) {
+    Assertions.assertThat(directoryPolicy)
+        .describedAs("%s support for capability %s by path %s"
+                + " expected as %s",
+            directoryPolicy, capability, path, outcome)
+        .matches(p -> p.hasPathCapability(path, capability) == outcome,
+            "pathCapability");
   }
 
   @Test
   public void testNonAuthPath() throws Throwable {
-    assertRetention(nonAuthPath, expectNonAuthDelete);
+    assertMarkerRetention(nonAuthPath, expectNonAuthDelete);
+    assertPathCapability(nonAuthPath,
+        STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_DELETE,
+        !expectNonAuthDelete);
+    assertPathCapability(nonAuthPath,
+        STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_KEEP,
+        expectNonAuthDelete);
   }
 
   @Test
   public void testAuthPath() throws Throwable {
-    assertRetention(authPath, expectAuthDelete);
+    assertMarkerRetention(authPath, expectAuthDelete);
+    assertPathCapability(authPath,
+        STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_DELETE,
+        !expectAuthDelete);
+    assertPathCapability(authPath,
+        STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_KEEP,
+        expectAuthDelete);
   }
 
   @Test
   public void testDeepAuthPath() throws Throwable {
-    assertRetention(deepAuth, expectAuthDelete);
+    assertMarkerRetention(deepAuth, expectAuthDelete);
+    assertPathCapability(deepAuth,
+        STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_DELETE,
+        !expectAuthDelete);
+    assertPathCapability(deepAuth,
+        STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_KEEP,
+        expectAuthDelete);
   }
 
 }

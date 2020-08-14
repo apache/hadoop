@@ -30,6 +30,8 @@ import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_KEEP;
 
 public interface DirectoryPolicy {
 
+
+
   /**
    * Should a directory marker be retained?
    * @param path path a file/directory is being created with.
@@ -48,6 +50,17 @@ public interface DirectoryPolicy {
    * @return description of the current policy.
    */
   String describe();
+
+  /**
+   * Does a specific path have the relevant option.
+   * This is to be forwarded from the S3AFileSystem.hasPathCapability
+   * But only for those capabilities related to markers*
+   * @param path path
+   * @param capability capability
+   * @return true if the capability is supported, false if not
+   * @throws IllegalArgumentException if the capability is unknown.
+   */
+  boolean hasPathCapability(Path path, String capability);
 
   /**
    * Supported retention policies.

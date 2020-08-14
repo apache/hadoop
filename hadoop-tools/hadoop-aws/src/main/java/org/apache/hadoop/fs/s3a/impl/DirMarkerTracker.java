@@ -276,7 +276,8 @@ public class DirMarkerTracker {
    */
   public List<Path> removeAllowedMarkers(DirectoryPolicy policy) {
     List<Path> removed = new ArrayList<>();
-    Iterator<Map.Entry<Path, Marker>> entries = surplusMarkers.entrySet().iterator();
+    Iterator<Map.Entry<Path, Marker>> entries =
+        surplusMarkers.entrySet().iterator();
     while (entries.hasNext()) {
       Map.Entry<Path, Marker> entry = entries.next();
       Path path = entry.getKey();

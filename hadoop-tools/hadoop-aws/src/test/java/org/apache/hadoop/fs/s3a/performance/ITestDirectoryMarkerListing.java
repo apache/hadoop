@@ -509,20 +509,19 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
   @Test
   public void testRenameUnderMarkerDir() throws Throwable {
     describe("directory rename under an existing marker");
-    S3AFileSystem fs = getFileSystem();
-    String name = "sourceFile";
+    String file = "sourceFile";
     Path srcDir = new Path(basePath, "srcdir");
     mkdirs(srcDir);
-    Path src = new Path(srcDir, name);
+    Path src = new Path(srcDir, file);
     String srcKey = toKey(src);
-    put(srcKey, name);
+    put(srcKey, file);
     head(srcKey);
 
     // set the destination to be the marker directory.
     Path dest = markerDir;
     // rename the source file under the dest dir.
     assertRenamed(src, dest);
-    assertIsFile(new Path(dest, name));
+    assertIsFile(new Path(dest, file));
     assertIsDirectory(srcDir);
     if (isDeletingMarkers) {
       head404(markerKeySlash);
@@ -547,12 +546,12 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
   public void testRenameUnderMarkerWithPath() throws Throwable {
     describe("directory rename under an existing marker");
     S3AFileSystem fs = getFileSystem();
-    String name = "sourceFile";
+    String file = "sourceFile";
     Path srcDir = new Path(basePath, "srcdir");
     mkdirs(srcDir);
-    Path src = new Path(srcDir, name);
+    Path src = new Path(srcDir, file);
     String srcKey = toKey(src);
-    put(srcKey, name);
+    put(srcKey, file);
     head(srcKey);
 
     // set the destination to be the final file
@@ -576,8 +575,8 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
   public void testRenameEmptyDirOverMarker() throws Throwable {
     describe("rename an empty directory over the marker");
     S3AFileSystem fs = getFileSystem();
-    String name = "sourceDir";
-    Path src = new Path(basePath, name);
+    String dir = "sourceDir";
+    Path src = new Path(basePath, dir);
     fs.mkdirs(src);
     assertIsDirectory(src);
     String srcKey = toKey(src) + "/";

@@ -48,7 +48,7 @@ import static org.apache.hadoop.fs.s3a.tools.MarkerTool.UNLIMITED_LISTING;
 
 /**
  * Class for marker tool tests -sets up keeping/deleting filesystems,
- * has methods to invoke
+ * has methods to invoke.
  */
 public class AbstractMarkerToolTest extends AbstractS3ATestBase {
 
@@ -322,7 +322,7 @@ public class AbstractMarkerToolTest extends AbstractS3ATestBase {
   }
 
   /**
-   * Add a - prefix to a string
+   * Add a "-" prefix to a string.
    * @param s string to prefix
    * @return a string for passing into the CLI
    */

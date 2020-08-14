@@ -35,6 +35,12 @@ import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY;
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_AUTHORITATIVE;
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_DELETE;
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_KEEP;
+import static org.apache.hadoop.fs.s3a.Constants.STORE_CAPABILITY_DIRECTORY_MARKER_AWARE;
+import static org.apache.hadoop.fs.s3a.Constants.STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_DELETE;
+import static org.apache.hadoop.fs.s3a.Constants.STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_KEEP;
+import static org.apache.hadoop.fs.s3a.Constants.STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_AUTHORITATIVE;
+import static org.apache.hadoop.fs.s3a.Constants.STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_DELETE;
+import static org.apache.hadoop.fs.s3a.Constants.STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_KEEP;
 
 /**
  * Implementation of directory policy.
@@ -125,6 +131,42 @@ public final class DirectoryPolicyImpl
   }
 
   /**
+   * Return path policy for store and paths.
+   * @param path path
+   * @param capability capability
+   * @return true if a capability is active
+   */
+  @Override
+  public boolean hasPathCapability(final Path path, final String capability) {
+
+    switch (capability) {
+    /*
+     * Marker policy is dynamically determined for the given path.
+     */
+    case STORE_CAPABILITY_DIRECTORY_MARKER_AWARE:
+      return true;
+
+    case STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_KEEP:
+      return markerPolicy == MarkerPolicy.Keep;
+
+    case STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_DELETE:
+      return markerPolicy == MarkerPolicy.Delete;
+
+    case STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_AUTHORITATIVE:
+      return markerPolicy == MarkerPolicy.Authoritative;
+
+    case STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_KEEP:
+      return keepDirectoryMarkers(path);
+
+    case STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_DELETE:
+      return !keepDirectoryMarkers(path);
+
+    default:
+      throw new IllegalArgumentException("Unknown capability " + capability);
+    }
+  }
+
+  /**
    * Create/Get the policy for this configuration.
    * @param conf config
    * @param authoritativeness Callback to evaluate authoritativeness of a
@@ -158,7 +200,6 @@ public final class DirectoryPolicyImpl
     }
     return policy;
   }
-
 
   /**
    * Enumerate all available policies.

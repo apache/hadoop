@@ -992,27 +992,53 @@ public final class Constants {
 
 
   /**
-   * Probe to indicate that a path keeps directory markers.
-   * returned in {@code PathCapabilities}
+   * {@code PathCapabilities} probe to verify that an S3A Filesystem
+   * has the changes needed to safely work with buckets where
+   * directoy markers have not been deleted.
    * Value: {@value}.
    */
   public static final String STORE_CAPABILITY_DIRECTORY_MARKER_AWARE
       = "fs.s3a.capability.directory.marker.aware";
 
   /**
-   * Probe to indicate that a path keeps directory markers.
-   * returned in {@code PathCapabilities}
+   * {@code PathCapabilities} probe to indicate that the filesystem
+   * keeps directory markers.
    * Value: {@value}.
    */
-  public static final String STORE_CAPABILITY_DIRECTORY_MARKER_KEEP
-      = "fs.s3a.capability.directory.marker.keep";
+  public static final String STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_KEEP
+      = "fs.s3a.capability.directory.marker.policy.keep";
 
   /**
-   * Probe to indicate that a path keeps directory markers.
-   * returned in {@code PathCapabilities}
+   * {@code PathCapabilities} probe to indicate that the filesystem
+   * deletes directory markers.
    * Value: {@value}.
    */
-  public static final String STORE_CAPABILITY_DIRECTORY_MARKER_DELETE
-      = "fs.s3a.capability.directory.marker.delete";
+  public static final String STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_DELETE
+      = "fs.s3a.capability.directory.marker.policy.delete";
+
+  /**
+   * {@code PathCapabilities} probe to indicate that the filesystem
+   * keeps directory markers in authoritative paths only.
+   * Value: {@value}.
+   */
+  public static final String
+      STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_AUTHORITATIVE =
+      "fs.s3a.capability.directory.marker.policy.authoritative";
+
+  /**
+   * {@code PathCapabilities} probe to indicate that a path
+   * keeps directory markers.
+   * Value: {@value}.
+   */
+  public static final String STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_KEEP
+      = "fs.s3a.capability.directory.marker.action.keep";
+
+  /**
+   * {@code PathCapabilities} probe to indicate that a path
+   * deletes directory markers.
+   * Value: {@value}.
+   */
+  public static final String STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_DELETE
+      = "fs.s3a.capability.directory.marker.action.delete";
 
 }

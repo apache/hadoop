@@ -72,7 +72,7 @@ found.
 ### <a name="recovery"></a> If an application has updated a directory tree incompatibly-- what can be done?
 
 There's a tool on the hadoop command line, [marker tool](#marker-tool) which can audit
-a bucket/path for markers, and clean up any which were found.
+a bucket/path for markers, and clean up any markers which were found.
 It can be used to make a bucket compatible with older applications.
 
 Now that this is all clear, let's explain the problem.
@@ -147,7 +147,7 @@ has been interpreted as an empty directory.*
 
 It is that little detail which is the cause of the incompatibility issues.
 
-## <a name="problem"></a> Scale issues related to directory markers
+## <a name="problem"></a> The Problem with Directory Markers
 
 Creating, deleting and the listing directory markers adds overhead and can slow
 down applications.
@@ -548,15 +548,23 @@ which all FileSystem classes have supported since Hadoop 3.3.
 | Probe                   | Meaning                 |
 |-------------------------|-------------------------|
 | `fs.s3a.capability.directory.marker.aware`  | Does the filesystem support surplus directory markers? |
-| `fs.s3a.capability.directory.marker.keep`   | Does the path retain directory markers? |
-| `fs.s3a.capability.directory.marker.delete` | Does the path delete directory markers? |
+| `fs.s3a.capability.directory.marker.policy.keep`   | Is the bucket policy "keep"? |
+| `fs.s3a.capability.directory.marker.policy.delete` | Is the bucket policy "delete" |
+| `fs.s3a.capability.directory.marker.policy.authoritative` | Is the bucket policy "authoritative" |
+| `fs.s3a.capability.directory.marker.action.keep`   | Does the path retain directory markers? |
+| `fs.s3a.capability.directory.marker.action.delete` | Does the path delete directory markers? |
 
 
 The probe `fs.s3a.capability.directory.marker.aware` allows for a filesystem to be
 probed to determine if its file listing policy is "aware" of directory marker retention
--that is: it can safely work with S3 buckets where markers have not been deleted.
+-that is: can this s3a client safely work with S3 buckets where markers have not been deleted.
 
-The other two probes dynamically query the marker retention behavior of a specific path.
+The `fs.s3a.capability.directory.marker.policy.` probes return the active policy for the bucket.
+
+The two `fs.s3a.capability.directory.marker.action.` probes dynamically query the marker
+retention behavior of a specific path.
+That is: if a file was created at that location, would ancestor directory markers
+be kept or deleted? 
 
 The `S3AFileSystem` class also implements the `org.apache.hadoop.fs.StreamCapabilities` interface, which
 can be used to probe for marker awareness via the `fs.s3a.capability.directory.marker.aware` capability.
@@ -598,28 +606,28 @@ Take a bucket with a retention policy of "authoritative" -only paths under `/tab
   </property>```
 ```
 
-With this policy the path capability `fs.s3a.capability.directory.marker.keep` will hold under
+With this policy the path capability `fs.s3a.capability.directory.marker.action.keep` will hold under
 the path `s3a://london/tables`
 
 ```
-bin/hadoop jar cloudstore-1.0.jar pathcapability fs.s3a.capability.directory.marker.keep s3a://london/tables
-Probing s3a://london/tables for capability fs.s3a.capability.directory.marker.keep
+bin/hadoop jar cloudstore-1.0.jar pathcapability fs.s3a.capability.directory.marker.action.keep s3a://london/tables
+Probing s3a://london/tables for capability fs.s3a.capability.directory.marker.action.keep
 2020-08-11 22:03:31,658 [main] INFO  impl.DirectoryPolicyImpl (DirectoryPolicyImpl.java:getDirectoryPolicy(143))
  - Directory markers will be kept on authoritative paths
 Using filesystem s3a://london
-Path s3a://london/tables has capability fs.s3a.capability.directory.marker.keep
+Path s3a://london/tables has capability fs.s3a.capability.directory.marker.action.keep
 ```
 
 However it will not hold for other paths, so indicating that older Hadoop versions will be safe
 to work with data written there by this S3A client.
 
 ```
-bin/hadoop jar cloudstore-1.0.jar pathcapability fs.s3a.capability.directory.marker.keep s3a://london/tempdir
-Probing s3a://london/tempdir for capability fs.s3a.capability.directory.marker.keep
+bin/hadoop jar cloudstore-1.0.jar pathcapability fs.s3a.capability.directory.marker.action.keep s3a://london/tempdir
+Probing s3a://london/tempdir for capability fs.s3a.capability.directory.marker.action.keep
 2020-08-11 22:06:56,300 [main] INFO  impl.DirectoryPolicyImpl (DirectoryPolicyImpl.java:getDirectoryPolicy(143))
  - Directory markers will be kept on authoritative paths
 Using filesystem s3a://london
-Path s3a://london/tempdir lacks capability fs.s3a.capability.directory.marker.keep
+Path s3a://london/tempdir lacks capability fs.s3a.capability.directory.marker.action.keep
 2020-08-11 22:06:56,308 [main] INFO  util.ExitUtil (ExitUtil.java:terminate(210)) - Exiting with status -1: 
 ```
 

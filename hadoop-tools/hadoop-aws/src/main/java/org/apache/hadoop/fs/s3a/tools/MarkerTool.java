@@ -19,11 +19,13 @@
 package org.apache.hadoop.fs.s3a.tools;
 
 import java.io.FileNotFoundException;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.Writer;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -284,7 +286,10 @@ public final class MarkerTool extends S3GuardTool {
     String saveFile = command.getOptValue(OPT_OUT);
     if (saveFile != null && !saveFile.isEmpty()) {
       println(out, "Saving result to %s", saveFile);
-      try (Writer writer = new FileWriter(saveFile)) {
+      try (Writer writer =
+               new OutputStreamWriter(
+                   new FileOutputStream(saveFile),
+                   StandardCharsets.UTF_8)) {
         final List<String> surplus = result.getTracker()
             .getSurplusMarkers()
             .keySet()
@@ -339,7 +344,7 @@ public final class MarkerTool extends S3GuardTool {
       println(out, "Authoritative path list is \"%s\"", authPath);
     }
     // qualify the path
-    Path target = path.makeQualified(fs.getUri(),new Path("/"));
+    Path target = path.makeQualified(fs.getUri(), new Path("/"));
     // initial safety check: does the path exist?
     try {
       getFilesystem().getFileStatus(target);
@@ -512,13 +517,12 @@ public final class MarkerTool extends S3GuardTool {
       }
     }
 
-
     // now one little check for whether a limit was reached.
     if (!completed) {
       println(out, "Listing limit reached before completing the scan");
       result.exitCode = EXIT_INTERRUPTED;
     }
-   return result;
+    return result;
   }
 
   /**
@@ -571,7 +575,8 @@ public final class MarkerTool extends S3GuardTool {
         println(out, "Scanned %,d objects", count);
       }
       if (limit > 0 && count >= limit) {
-        println(out, "Limit of scan reached - %,d object%s", limit, suffix(limit));
+        println(out, "Limit of scan reached - %,d object%s",
+            limit, suffix(limit));
         return false;
       }
     }

@@ -28,7 +28,6 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
@@ -71,12 +70,12 @@ public class ITestMarkerTool extends AbstractMarkerToolTest {
   private int expectedMarkersUnderDir2;
 
   /**
-   * How many markers to expect across both dirs
+   * How many markers to expect across both dirs?
    */
   private int expectedMarkers;
 
   /**
-   * How many markers to expect including the base directory
+   * How many markers to expect including the base directory?
    */
   private int expectedMarkersWithBaseDir;
 

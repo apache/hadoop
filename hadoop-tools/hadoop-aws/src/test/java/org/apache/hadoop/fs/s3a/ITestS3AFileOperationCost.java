@@ -45,6 +45,7 @@ import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.*;
 import static org.apache.hadoop.test.GenericTestUtils.getTestDir;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Use metrics to assert about the cost of file API calls.
@@ -314,6 +315,14 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     assertEmptyDirStatus(status, Tristate.TRUE);
   }
 
+  @Test
+  public void testNeedEmptyDirectoryProbeRequiresList() throws Throwable {
+    S3AFileSystem fs = getFileSystem();
+
+    intercept(IllegalArgumentException.class, "", () ->
+            fs.s3GetFileStatus(new Path("/something"), "/something",
+                StatusProbeEnum.HEAD_ONLY, null, true));
+  }
   @Test
   public void testCreateCost() throws Throwable {
     describe("Test file creation cost -raw only");
