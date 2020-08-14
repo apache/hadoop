@@ -268,13 +268,21 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
               .setQueueLength(waitQueueLength)
               .setNodeLabels(rmNode.getNodeLabels())
               .setQueueCapacity(opportQueueCapacity));
-      LOG.info("Inserting ClusterNode [" + rmNode.getNodeID() + "] " +
-          "with queue wait time [" + estimatedQueueWaitTime + "] and " +
-          "wait queue length [" + waitQueueLength + "]");
+      LOG.info(
+          "Inserting ClusterNode [{}] with queue wait time [{}] and "
+              + "wait queue length [{}]",
+          rmNode.getNode(),
+          estimatedQueueWaitTime,
+          waitQueueLength
+      );
     } else {
-      LOG.warn("IGNORING ClusterNode [" + rmNode.getNodeID() + "] " +
-          "with queue wait time [" + estimatedQueueWaitTime + "] and " +
-          "wait queue length [" + waitQueueLength + "]");
+      LOG.warn(
+          "IGNORING ClusterNode [{}] with queue wait time [{}] and "
+              + "wait queue length [{}]",
+          rmNode.getNode(),
+          estimatedQueueWaitTime,
+          waitQueueLength
+      );
     }
   }
 
