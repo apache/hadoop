@@ -393,8 +393,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     }
     return null;
   }
-
-
+  
   public boolean isDescendantOfSnapshotRoot(INodeDirectory dir) {
     if (dir.isSnapshottable()) {
       return true;
