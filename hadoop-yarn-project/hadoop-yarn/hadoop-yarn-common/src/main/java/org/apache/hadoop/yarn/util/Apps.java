@@ -24,6 +24,7 @@ import static org.apache.hadoop.yarn.util.StringHelper.sjoin;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -32,6 +33,7 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
@@ -80,31 +82,110 @@ public class Apps {
     throw new YarnRuntimeException(join("Error parsing ", name, ": ", s));
   }
 
+  private static void setEnvFromString(Map<String, String> env,
+      String envVar, String varString, String classPathSeparator) {
+    Matcher m = VAR_SUBBER.matcher(varString);
+    StringBuffer sb = new StringBuffer();
+    while (m.find()) {
+      String var = m.group(1);
+      // do variable substitution of $var from passed in environment or from
+      // system environment and default to empty string if undefined in both.
+      String replace = env.get(var);
+      if (replace == null) {
+        replace = System.getenv(var);
+      }
+      if (replace == null) {
+        replace = "";
+      }
+      m.appendReplacement(sb, Matcher.quoteReplacement(replace));
+    }
+    m.appendTail(sb);
+    addToEnvironment(env, envVar, sb.toString(), classPathSeparator);
+  }
+
   public static void setEnvFromInputString(Map<String, String> env,
       String envString,  String classPathSeparator) {
     if (envString != null && envString.length() > 0) {
       Matcher varValMatcher = VARVAL_SPLITTER.matcher(envString);
       while (varValMatcher.find()) {
         String envVar = varValMatcher.group(1);
-        Matcher m = VAR_SUBBER.matcher(varValMatcher.group(2));
-        StringBuffer sb = new StringBuffer();
-        while (m.find()) {
-          String var = m.group(1);
-          // replace $env with the child's env constructed by tt's
-          String replace = env.get(var);
-          // if this key is not configured by the tt for the child .. get it
-          // from the tt's env
-          if (replace == null)
-            replace = System.getenv(var);
-          // the env key is note present anywhere .. simply set it
-          if (replace == null)
-            replace = "";
-          m.appendReplacement(sb, Matcher.quoteReplacement(replace));
-        }
-        m.appendTail(sb);
-        addToEnvironment(env, envVar, sb.toString(), classPathSeparator);
+        String varString = varValMatcher.group(2);
+        setEnvFromString(env, envVar, varString, classPathSeparator);
       }
     }
+  }
+
+  /**
+   * Set environment from string without doing any variable substitution.
+   * Used internally to avoid double expansion.
+   * @param env environment to set
+   * @param envString comma-separated k=v pairs.
+   * @param classPathSeparator Separator to use when appending to an existing
+   *                           environment variable.
+   */
+  private static void setEnvFromInputStringNoExpand(Map<String, String> env,
+      String envString,  String classPathSeparator) {
+    if (envString != null && envString.length() > 0) {
+      Matcher varValMatcher = VARVAL_SPLITTER.matcher(envString);
+      while (varValMatcher.find()) {
+        String envVar = varValMatcher.group(1);
+        String varString = varValMatcher.group(2);
+        addToEnvironment(env, envVar, varString, classPathSeparator);
+      }
+    }
+  }
+
+  /**
+   * Set environment variables from map of input properties.
+   * @param env environment to update
+   * @param inputMap environment variable property keys and values
+   * @param classPathSeparator separator to use when appending to an existing
+   *                           environment variable
+   */
+  private static void setEnvFromInputStringMap(Map<String, String> env,
+      Map<String, String> inputMap, String classPathSeparator) {
+    for(Map.Entry<String, String> inputVar: inputMap.entrySet()) {
+      String envVar = inputVar.getKey();
+      String varString = inputVar.getValue();
+      setEnvFromString(env, envVar, varString, classPathSeparator);
+    }
+  }
+
+  /**
+   * Set environment variables from the given environment input property.
+   * For example, given the property mapreduce.map.env, this method
+   * will extract environment variables from:
+   *    the comma-separated string value of mapreduce.map.env, and
+   *    the values of any properties of the form mapreduce.map.env.VAR_NAME
+   * Variables specified via the latter syntax take precedence over those
+   * specified using the former syntax.
+   * @param env the environment to update
+   * @param propName the name of the property
+   * @param defaultPropValue the default value for propName
+   * @param conf configuration containing properties
+   * @param classPathSeparator Separator used when appending to an existing var
+   */
+  public static void setEnvFromInputProperty(Map<String, String> env,
+      String propName, String defaultPropValue, Configuration conf,
+      String classPathSeparator) {
+
+    String envString = conf.get(propName, defaultPropValue);
+
+    // Get k,v pairs from string into a tmp env. Note that we don't want
+    // to expand the env var values, because we will do that below -
+    // don't want to do it twice.
+    Map<String, String> tmpEnv = new HashMap<String, String>();
+    Apps.setEnvFromInputStringNoExpand(tmpEnv, envString, classPathSeparator);
+
+    // Get map of props with prefix propName.
+    // (e.g., map.reduce.env.ENV_VAR_NAME=value)
+    Map<String, String> inputMap = conf.getPropsWithPrefix(propName + ".");
+
+    // Entries from map should override entries from input string.
+    tmpEnv.putAll(inputMap);
+
+    // Add them to the environment
+    setEnvFromInputStringMap(env, tmpEnv, classPathSeparator);
   }
 
   /**

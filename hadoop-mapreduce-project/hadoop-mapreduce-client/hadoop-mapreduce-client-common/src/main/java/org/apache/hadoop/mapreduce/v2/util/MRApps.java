@@ -708,6 +708,16 @@ public class MRApps extends Apps {
     Apps.setEnvFromInputString(env, envString, classPathSeparator);
   }
 
+  public static void setEnvFromInputProperty(Map<String, String> env,
+      String propName, String defaultPropValue, Configuration conf) {
+    String classPathSeparator =
+        conf.getBoolean(MRConfig.MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM,
+            MRConfig.DEFAULT_MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM)
+            ? ApplicationConstants.CLASS_PATH_SEPARATOR : File.pathSeparator;
+    Apps.setEnvFromInputProperty(env, propName, defaultPropValue, conf,
+        classPathSeparator);
+  }
+
   @Public
   @Unstable
   public static void addToEnvironment(Map<String, String> environment,
