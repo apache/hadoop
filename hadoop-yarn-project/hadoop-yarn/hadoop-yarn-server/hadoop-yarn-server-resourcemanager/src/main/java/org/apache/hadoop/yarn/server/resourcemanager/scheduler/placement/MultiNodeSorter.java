@@ -90,7 +90,7 @@ public class MultiNodeSorter<N extends SchedulerNode> extends AbstractService {
           "Invalid policy name:" + policyName + e.getMessage());
     }
     this.multiNodePolicy = (MultiNodeLookupPolicy<N>) ReflectionUtils
-        .newInstance(policyClass, null);
+        .newInstance(policyClass, rmContext.getYarnConfiguration());
   }
 
   @Override
