@@ -269,15 +269,15 @@ class FSDirSnapshotOp {
     // time of snapshot deletion
     final long now = Time.now();
     final INode.BlocksMapUpdateInfo collectedBlocks = deleteSnapshot(
-        fsd, snapshotManager, iip, snapshotName, now);
-    fsd.getEditLog().logDeleteSnapshot(snapshotRoot, snapshotName,
-        logRetryCache, now);
+        fsd, snapshotManager, iip, snapshotName, now, snapshotRoot,
+        logRetryCache);
     return collectedBlocks;
   }
 
   static INode.BlocksMapUpdateInfo deleteSnapshot(
       FSDirectory fsd, SnapshotManager snapshotManager, INodesInPath iip,
-      String snapshotName, long now) throws IOException {
+      String snapshotName, long now, String snapshotRoot, boolean logRetryCache)
+      throws IOException {
     INode.BlocksMapUpdateInfo collectedBlocks = new INode.BlocksMapUpdateInfo();
     ChunkedArrayList<INode> removedINodes = new ChunkedArrayList<>();
     INode.ReclaimContext context = new INode.ReclaimContext(
@@ -293,6 +293,8 @@ class FSDirSnapshotOp {
       fsd.writeUnlock();
     }
     removedINodes.clear();
+    fsd.getEditLog().logDeleteSnapshot(snapshotRoot, snapshotName,
+        logRetryCache, now);
     return collectedBlocks;
   }
 
