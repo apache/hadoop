@@ -2,9 +2,9 @@
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
   You may obtain a copy of the License at
-  
+
    http://www.apache.org/licenses/LICENSE-2.0
-  
+
   Unless required by applicable law or agreed to in writing, software
   distributed under the License is distributed on an "AS IS" BASIS,
   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -93,8 +93,8 @@ In normal Unix-style filesystems, the "filesystem" is really a "directory and
 file tree" in which files are always stored in "directories"
 
 
-* A directory may contain 0 or more files.
-* A directory may contain 0 or more directories "subdirectories"
+* A directory may contain zero or more files.
+* A directory may contain zero or more directories "subdirectories"
 * At the base of a filesystem is the "root directory"
 * All files MUST be in a directory "the parent directory"
 * All directories other than the root directory must be in another directory.
@@ -128,7 +128,7 @@ Lots of code contains a big assumption here: after you create a directory it
 exists. They also assume that after files in a directory are deleted, the
 directory still exists.
 
-Given filesystem mimics directories just by aggregating objects which share a
+Given the S3A connector mimics directories just by aggregating objects which share a
 prefix, how can you have empty directories?
 
 The original Hadoop `s3n://` connector created a Directory Marker -any path ending
@@ -192,12 +192,13 @@ The tombstone markers have follow-on consequences -it makes listings against
 S3 versioned buckets slower.
 This can have adverse effects on those large directories, again.
 
-## <a name="solutions"></a> How to avoid marker-related problems.
+## <a name="solutions"></a> Strategies to avoid marker-related problems.
 
 ###  Presto: every path is a directory
 
-In the Presto S3 connectors: `mkdirs()` is a no-op. Instead, whenever it lists
-any path which isn't an object or a prefix of one more more objects, it returns an
+In the Presto [S3 connector](https://prestodb.io/docs/current/connector/hive.html#amazon-s3-configuration),
+`mkdirs()` is a no-op.
+Whenever it lists any path which isn't an object or a prefix of one more more objects, it returns an
 empty listing. That is:;  by default, every path is an empty directory.
 
 Provided no code probes for a directory existing and fails if it is there, this
@@ -207,7 +208,7 @@ because they know how their file uses data in S3.
 
 ###  Hadoop 3.3.1+: marker deletion is now optional
 
-From Hadoop 3.3.1 onwards, th S3A client can be configured to skip deleting
+From Hadoop 3.3.1 onwards, the S3A client can be configured to skip deleting
 directory markers when creating files under paths. This removes all scalability
 problems caused by deleting these markers -however, it is achieved at the expense
 of backwards compatibility.
@@ -220,8 +221,9 @@ markers are managed when new files are created
 *Default* `delete`: a request is issued to delete any parental directory markers
 whenever a file or directory is created.
 
-*New* `keep`: No delete request is issued. Any directory markers which exist are
-not deleted. This is *not* backwards compatible
+*New* `keep`: No delete request is issued.
+Any directory markers which exist are not deleted.
+This is *not* backwards compatible
 
 *New* `authoritative`: directory markers are deleted _except for files created
 in "authoritative" directories_.
@@ -230,12 +232,13 @@ This is backwards compatible _outside authoritative directories_.
 Until now, the notion of an "authoritative"
 directory has only been used as a performance optimization for deployments
 where it is known that all Applications are using the same S3Guard metastore
-when writing and reading data. In such a deployment, if it is also known that
-all applications are using a compatible version of the s3a connector, then they
+when writing and reading data.
+In such a deployment, if it is also known that all applications are using a
+compatible version of the s3a connector, then they
 can switch to the higher-performance mode for those specific directories.
 
 Only the default setting, `fs.s3a.directory.marker.retention = delete` is compatible with
-existing Hadoop releases.
+every shipping Hadoop releases.
 
 ##  <a name="authoritative"></a> Directory Markers and S3Guard
 
@@ -264,7 +267,7 @@ line of bucket policies via the `-marker` option
 | `-markers aware` | the hadoop release is "aware" of directory markers |
 | `-markers delete` | directory markers are deleted |
 | `-markers keep` | directory markers are kept (not backwards compatible) |
-| `-markers authoritative` | directory markers are kept in authoritative paths|
+| `-markers authoritative` | directory markers are kept in authoritative paths |
 
 All releases of Hadoop which have been updated to be marker aware will support the `-markers aware` option.
 
@@ -386,7 +389,7 @@ markers (-audit | -clean) [-expected <count>] [-out <filename>] [-limit <limit>]
 |-------|---------|
 | 0     | Success |
 | 3     | interrupted -the value of `-limit` was reached |
-| 42     | Usage   |
+| 42    | Usage   |
 | 46    | Markers were found (see HTTP "406", "unacceptable") |
 
 All other non-zero status code also indicate errors of some form or other. 
@@ -417,7 +420,6 @@ Listing limit reached before completing the scan
 ```
 
 Here the scan reached its object limit before completing the audit; the exit code of 3, "interrupted" indicates this.
-
 
 Example: a verbose audit of a bucket whose policy if authoritative -it is not an error if markers
 are found under the path `/tables`.
@@ -451,7 +453,6 @@ This fails because surplus markers were found. This S3A bucket would *NOT* be sa
 to use.
 
 The `-nonauth` option does not treat markers under authoritative paths as errors:
-
 
 ```
 bin/hadoop s3guard markers -nonauth -audit s3a://london/
@@ -548,11 +549,11 @@ which all FileSystem classes have supported since Hadoop 3.3.
 | Probe                   | Meaning                 |
 |-------------------------|-------------------------|
 | `fs.s3a.capability.directory.marker.aware`  | Does the filesystem support surplus directory markers? |
+| `fs.s3a.capability.directory.marker.policy.delete` | Is the bucket policy "delete"? |
 | `fs.s3a.capability.directory.marker.policy.keep`   | Is the bucket policy "keep"? |
-| `fs.s3a.capability.directory.marker.policy.delete` | Is the bucket policy "delete" |
-| `fs.s3a.capability.directory.marker.policy.authoritative` | Is the bucket policy "authoritative" |
-| `fs.s3a.capability.directory.marker.action.keep`   | Does the path retain directory markers? |
-| `fs.s3a.capability.directory.marker.action.delete` | Does the path delete directory markers? |
+| `fs.s3a.capability.directory.marker.policy.authoritative` | Is the bucket policy "authoritative"? |
+| `fs.s3a.capability.directory.marker.action.delete` | If a file was created at this path, would directory markers be deleted? |
+| `fs.s3a.capability.directory.marker.action.keep`   | If a file was created at this path, would directory markers be retained? |
 
 
 The probe `fs.s3a.capability.directory.marker.aware` allows for a filesystem to be
@@ -684,7 +685,7 @@ and some applications.
 
 * [HADOOP-13230](https://issues.apache.org/jira/browse/HADOOP-13230). _S3A to optionally retain directory markers_
 
-* [HADOOP-16090](https://issues.apache.org/jira/browse/HADOOP-16090).. _S3A Client to add explicit support for versioned stores._
+* [HADOOP-16090](https://issues.apache.org/jira/browse/HADOOP-16090). _S3A Client to add explicit support for versioned stores._
 
 * [HADOOP-16823](https://issues.apache.org/jira/browse/HADOOP-16823). _Large DeleteObject requests are their own Thundering Herd_
 
