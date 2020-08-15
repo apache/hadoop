@@ -36,7 +36,8 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 
-public class TestViewDistributedFileSystemContract extends TestHDFSFileSystemContract{
+public class TestViewDistributedFileSystemContract
+    extends TestHDFSFileSystemContract {
   private static MiniDFSCluster cluster;
   private static String defaultWorkingDirectory;
   private static Configuration conf = new HdfsConfiguration();

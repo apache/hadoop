@@ -35,11 +35,12 @@ public class TestViewDistributedFileSystem extends TestDistributedFileSystem{
   public void testStatistics() throws IOException {
     FileSystem.getStatistics(HdfsConstants.HDFS_URI_SCHEME,
         ViewDistributedFileSystem.class).reset();
-    @SuppressWarnings("unchecked") ThreadLocal<FileSystem.Statistics.StatisticsData>
-        data = (ThreadLocal<FileSystem.Statistics.StatisticsData>) Whitebox
-        .getInternalState(FileSystem
-            .getStatistics(HdfsConstants.HDFS_URI_SCHEME,
-                ViewDistributedFileSystem.class), "threadData");
+    @SuppressWarnings("unchecked")
+    ThreadLocal<FileSystem.Statistics.StatisticsData> data =
+        (ThreadLocal<FileSystem.Statistics.StatisticsData>) Whitebox
+            .getInternalState(FileSystem
+                .getStatistics(HdfsConstants.HDFS_URI_SCHEME,
+                    ViewDistributedFileSystem.class), "threadData");
     data.set(null);
     super.testStatistics();
   }

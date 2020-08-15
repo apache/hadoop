@@ -138,9 +138,10 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
               " back to regular DFS initialization. Please" + " re-initialize" +
               " the fs after updating mount point.",
           ioe.getMessage());
-      // Re-initialize, so that initDFSClient will initialize DFSClient to work
-      // same as DistributedFileSystem.
-      super.initialize(uri, conf);
+      // Previous super.initialize would have skipped the dfsclient init as we
+      // planned to initialize vfs. Since vfs init failed, let's init dfsClient
+      // now.
+      super.initDFSClient(uri, conf);
       return;
     }
     setConf(conf);
@@ -151,14 +152,15 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     // fs.
     defaultDFS = (DistributedFileSystem) this.vfs.getFallbackFileSystem();
     Preconditions
-        .checkNotNull("In ViewHDFS fallback link is mandatory.", defaultDFS);
+        .checkNotNull(defaultDFS, "In ViewHDFS fallback link is mandatory.");
     // Please don't access internal dfs directly except in tests.
     dfs = defaultDFS.dfs;
   }
 
   @Override
   DFSClient initDFSClient(URI uri, Configuration conf) throws IOException {
-    if(this.vfs==null) {
+    if (this.vfs == null) {
+      // There is not vfs, so let's initialise regular DFSClient.
       return super.initDFSClient(uri, conf);
     }
     return null;
@@ -167,12 +169,12 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
   public ViewDistributedFileSystem() {
   }
 
-  private ViewFileSystemOverloadScheme tryInitializeMountingViewFs(URI uri,
+  private ViewFileSystemOverloadScheme tryInitializeMountingViewFs(URI theUri,
       Configuration conf) throws IOException {
-    ViewFileSystemOverloadScheme vfs = new ViewFileSystemOverloadScheme();
-    vfs.setSupportAutoAddingFallbackOnNoMounts(false);
-    vfs.initialize(uri, conf);
-    return vfs;
+    ViewFileSystemOverloadScheme viewFs = new ViewFileSystemOverloadScheme();
+    viewFs.setSupportAutoAddingFallbackOnNoMounts(false);
+    viewFs.initialize(theUri, conf);
+    return viewFs;
   }
 
   @Override
@@ -216,13 +218,14 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     return this.vfs.getHomeDirectory();
   }
 
-  @Override
   /**
    * Returns only default cluster getHedgedReadMetrics.
-   */ public DFSHedgedReadMetrics getHedgedReadMetrics() {
-     if(this.vfs==null){
-       return super.getHedgedReadMetrics();
-     }
+   */
+  @Override
+  public DFSHedgedReadMetrics getHedgedReadMetrics() {
+    if (this.vfs == null) {
+      return super.getHedgedReadMetrics();
+    }
     return defaultDFS.getHedgedReadMetrics();
   }
 
@@ -379,9 +382,10 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
 
   void checkDFS(FileSystem fs, String methodName) {
     if (!(fs instanceof DistributedFileSystem)) {
-      throw new UnsupportedOperationException(
-          "This API:" + methodName + " is specific to DFS. Can't run on other fs:" + fs
-              .getUri());
+      String msg = new StringBuilder("This API:").append(methodName)
+          .append(" is specific to DFS. Can't run on other fs:")
+          .append(fs.getUri()).toString();
+      throw new UnsupportedOperationException(msg);
     }
   }
 
@@ -918,9 +922,9 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
 
   @Override
   public FileStatus getFileLinkStatus(final Path f) throws IOException {
-     if(this.vfs==null){
-       return super.getFileLinkStatus(f);
-     }
+    if (this.vfs == null) {
+      return super.getFileLinkStatus(f);
+    }
     ViewFileSystemOverloadScheme.MountPathInfo<FileSystem> mountPathInfo =
         this.vfs.getMountPathInfo(f, getConf());
     return mountPathInfo.getTargetFs()
@@ -1117,10 +1121,11 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
   public RemoteIterator<SnapshotDiffReportListing> snapshotDiffReportListingRemoteIterator(
       final Path snapshotDir, final String fromSnapshot,
       final String toSnapshot) throws IOException {
-     if(this.vfs ==null){
-       return super.snapshotDiffReportListingRemoteIterator(snapshotDir, fromSnapshot,
-           toSnapshot);
-     }
+    if (this.vfs == null) {
+      return super
+          .snapshotDiffReportListingRemoteIterator(snapshotDir, fromSnapshot,
+              toSnapshot);
+    }
     ViewFileSystemOverloadScheme.MountPathInfo<FileSystem> mountPathInfo =
         this.vfs.getMountPathInfo(snapshotDir, getConf());
     checkDFS(mountPathInfo.getTargetFs(),
@@ -1246,7 +1251,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       return;
     }
     throw new UnsupportedOperationException(
-        "listCacheDirectives is not supported in ViewDFS");
+        "addCachePool is not supported in ViewDFS");
   }
 
   @Override
@@ -1256,7 +1261,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       return;
     }
     throw new UnsupportedOperationException(
-        "listCacheDirectives is not supported in ViewDFS");
+        "modifyCachePool is not supported in ViewDFS");
   }
 
   @Override
@@ -1266,7 +1271,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       return;
     }
     throw new UnsupportedOperationException(
-        "listCacheDirectives is not supported in ViewDFS");
+        "removeCachePool is not supported in ViewDFS");
   }
 
   @Override
@@ -1275,28 +1280,44 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       return super.listCachePools();
     }
     throw new UnsupportedOperationException(
-        "listCacheDirectives is not supported in ViewDFS");
+        "listCachePools is not supported in ViewDFS");
   }
 
   @Override
   public void modifyAclEntries(Path path, List<AclEntry> aclSpec)
       throws IOException {
+    if (this.vfs == null) {
+      super.modifyAclEntries(path, aclSpec);
+      return;
+    }
     this.vfs.modifyAclEntries(path, aclSpec);
   }
 
   @Override
   public void removeAclEntries(Path path, List<AclEntry> aclSpec)
       throws IOException {
+    if (this.vfs == null) {
+      super.removeAclEntries(path, aclSpec);
+      return;
+    }
     this.vfs.removeAclEntries(path, aclSpec);
   }
 
   @Override
   public void removeDefaultAcl(Path path) throws IOException {
+    if (this.vfs == null) {
+      super.removeDefaultAcl(path);
+      return;
+    }
     this.vfs.removeDefaultAcl(path);
   }
 
   @Override
   public void removeAcl(Path path) throws IOException {
+    if (this.vfs == null) {
+      super.removeAcl(path);
+      return;
+    }
     this.vfs.removeAcl(path);
   }
 
@@ -1659,6 +1680,9 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
 
   @Override
   public Collection<FileStatus> getTrashRoots(boolean allUsers) {
+    if (this.vfs == null) {
+      return super.getTrashRoots(allUsers);
+    }
     List<FileStatus> trashRoots = new ArrayList<>();
     for (FileSystem fs : getChildFileSystems()) {
       trashRoots.addAll(fs.getTrashRoots(allUsers));
@@ -1674,16 +1698,16 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
   }
 
   Statistics getFsStatistics() {
-    if(this.vfs ==null){
+    if (this.vfs == null) {
       return super.getFsStatistics();
     }
     return statistics;
   }
 
   DFSOpsCountStatistics getDFSOpsCountStatistics() {
-     if(this.vfs ==null){
-       return super.getDFSOpsCountStatistics();
-     }
+    if (this.vfs == null) {
+      return super.getDFSOpsCountStatistics();
+    }
     return defaultDFS.getDFSOpsCountStatistics();
   }
 
@@ -1841,7 +1865,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
 
   public ViewFileSystem.MountPoint[] getMountPoints() {
     if (this.vfs == null) {
-      return getMountPoints();
+      return null;
     }
     return this.vfs.getMountPoints();
   }

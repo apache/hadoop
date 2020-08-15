@@ -200,8 +200,8 @@ public class DistributedFileSystem extends FileSystem
           });
   }
 
-  DFSClient initDFSClient(URI uri, Configuration conf) throws IOException {
-    return new DFSClient(uri, conf, statistics);
+  DFSClient initDFSClient(URI theUri, Configuration conf) throws IOException {
+    return new DFSClient(theUri, conf, statistics);
   }
 
   @Override

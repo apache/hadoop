@@ -119,13 +119,15 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
    * adding fallback on no mounts.
    */
   public boolean supportAutoAddingFallbackOnNoMounts() {
-    return supportAutoAddingFallbackOnNoMounts;
+    return this.supportAutoAddingFallbackOnNoMounts;
   }
 
+  /**
+   * Sets whether to add fallback automatically when no mount points found.
+   */
   public boolean setSupportAutoAddingFallbackOnNoMounts(
-      boolean supportAutoAddingFallbackOnNoMounts) {
-    return this.supportAutoAddingFallbackOnNoMounts =
-        supportAutoAddingFallbackOnNoMounts;
+      boolean addAutoFallbackOnNoMounts) {
+    return this.supportAutoAddingFallbackOnNoMounts = addAutoFallbackOnNoMounts;
   }
 
   @Override
@@ -294,8 +296,8 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
     }
   }
 
-  public MountPathInfo<FileSystem> getMountPathInfo(Path path, Configuration conf)
-      throws IOException {
+  public MountPathInfo<FileSystem> getMountPathInfo(Path path,
+      Configuration conf) throws IOException {
     InodeTree.ResolveResult<FileSystem> res;
     try {
       res = fsState.resolve(getUriPath(path), true);
@@ -314,24 +316,28 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
     }
   }
 
-  public class MountPathInfo<T>{
+  public static class MountPathInfo<T> {
     private Path pathOnTarget;
     private T targetFs;
-    public MountPathInfo(Path pathOnTarget, String resolvedPath, T targetFs){
+
+    public MountPathInfo(Path pathOnTarget, String resolvedPath, T targetFs) {
       this.pathOnTarget = pathOnTarget;
       this.targetFs = targetFs;
     }
-    public Path getPathOnTarget(){
+
+    public Path getPathOnTarget() {
       return this.pathOnTarget;
     }
 
-    public T getTargetFs(){
+    public T getTargetFs() {
       return this.targetFs;
     }
   }
 
   public FileSystem getFallbackFileSystem() {
-    if(fsState.getRootFallbackLink()==null) return null;
+    if (fsState.getRootFallbackLink() == null) {
+      return null;
+    }
     return ((ChRootedFileSystem) fsState.getRootFallbackLink().targetFileSystem)
         .getMyFs();
   }

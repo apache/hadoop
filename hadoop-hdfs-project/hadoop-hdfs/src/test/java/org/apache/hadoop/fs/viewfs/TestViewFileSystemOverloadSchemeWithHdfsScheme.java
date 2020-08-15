@@ -81,18 +81,16 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
    */
   @Before
   public void setUp() throws IOException {
-    Configuration conf = getNewConf();
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY,
-        true);
-    conf.setInt(
+    Configuration config = getNewConf();
+    config.setInt(
         CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 1);
-    conf.set(String.format(FS_IMPL_PATTERN_KEY, HDFS_SCHEME),
+    config.set(String.format(FS_IMPL_PATTERN_KEY, HDFS_SCHEME),
         ViewFileSystemOverloadScheme.class.getName());
-    conf.setBoolean(CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME,
+    config.setBoolean(CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME,
         CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME_DEFAULT);
-    setConf(conf);
+    setConf(config);
     defaultFSURI =
-        URI.create(conf.get(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY));
+        URI.create(config.get(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY));
     localTargetDir = new File(TEST_ROOT_DIR, "/root/");
     localTargetDir.mkdirs();
     Assert.assertEquals(HDFS_SCHEME, defaultFSURI.getScheme()); // hdfs scheme.
@@ -224,7 +222,7 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
    * hdfs://localhost:xxx/local --> file://TEST_ROOT_DIR/root/
    * ListStatus on / should list the mount links.
    */
-  @Test(timeout = 30000000)
+  @Test(timeout = 30000)
   public void testListStatusOnRootShouldListAllMountLinks() throws Exception {
     final Path hdfsTargetPath = new Path(defaultFSURI + HDFS_USER_FOLDER);
     addMountLinks(defaultFSURI.getAuthority(),
@@ -669,48 +667,6 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
       fs.mkdirs(testDirOnRoot);
       fs.delete(testDirOnRoot, true);
     }
-  }
-
-  @Test
-  public void testMountTableNameShouldIgnorePortFromURI1() throws Exception {
-    final Path hdfsTargetPath = new Path(defaultFSURI + HDFS_USER_FOLDER);
-    conf = new Configuration(getNewConf());
-    addMountLinks(defaultFSURI.getHost(),
-        new String[] {HDFS_USER_FOLDER, LOCAL_FOLDER,
-            Constants.CONFIG_VIEWFS_LINK_FALLBACK},
-        new String[] {hdfsTargetPath.toUri().toString(),
-            localTargetDir.toURI().toString(),
-            hdfsTargetPath.toUri().toString()}, conf);
-    conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY,
-        defaultFSURI.toString());
-    conf.set(String.format(FS_IMPL_PATTERN_KEY, HDFS_SCHEME),
-        ViewFileSystemOverloadScheme.class.getName());
-    conf.set(String
-        .format(FsConstants.FS_VIEWFS_OVERLOAD_SCHEME_TARGET_FS_IMPL_PATTERN,
-            HDFS_SCHEME), DistributedFileSystem.class.getName());
-    conf.setBoolean(CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME, true);
-
-    Path testDirOnRoot = new Path("/test");
-    URI uriWithoutPort = new URI("hdfs://" + defaultFSURI.getHost());
-    //Initialize with out port
-    try (FileSystem fs = FileSystem
-        .get(uriWithoutPort, conf)) {
-      fs.mkdirs(testDirOnRoot);
-      fs.delete(testDirOnRoot, true);
-    }
-
-    //Initialize with port
-    try (FileSystem fs = FileSystem.get(defaultFSURI, conf)) {
-      fs.mkdirs(testDirOnRoot);
-      fs.delete(testDirOnRoot, true);
-    }
-
-
-    FileSystem fs = FileSystem.get(defaultFSURI, conf);
-
-    Path p = fs.resolvePath(new Path(LOCAL_FOLDER));
-
-
   }
 
   private void writeString(final FileSystem nfly, final String testString,
