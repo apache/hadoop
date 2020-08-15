@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
  */
 public class ITestAbfsFileSystemContractMkdir extends AbstractContractMkdirTest
     implements AbfsTestable {
-  private final boolean isSecure;
+  private boolean isSecure;
   private final ABFSContractTestBinding binding;
 
   @Rule
@@ -39,23 +39,24 @@ public class ITestAbfsFileSystemContractMkdir extends AbstractContractMkdirTest
 
   public ITestAbfsFileSystemContractMkdir() throws Exception {
     binding = new ABFSContractTestBinding();
-    this.isSecure = binding.isSecureMode();
   }
 
   @Override
   public void setup() throws Exception {
     binding.setup();
+    this.isSecure = binding.isSecureMode();
     super.setup();
   }
 
   @Override
-  protected Configuration createConfiguration() {
-    return binding.getRawConfiguration();
+  public void teardown() throws Exception {
+    binding.teardown();
+    super.teardown();
   }
 
   @Override
   protected AbstractFSContract createContract(final Configuration conf) {
-    return new AbfsFileSystemContract(conf, isSecure);
+    return new AbfsFileSystemContract(conf, isSecure, binding);
   }
 
   @Override

@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.util.Hashtable;
 
+import org.apache.hadoop.fs.azurebfs.rules.AbfsConfigsToTest;
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -59,6 +61,7 @@ public class ITestFileSystemProperties extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(authTypes = {AuthType.OAuth, AuthType.SharedKey})
   public void testBase64FileSystemProperties() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
 
@@ -107,6 +110,7 @@ public class ITestFileSystemProperties extends AbstractAbfsIntegrationTest {
   }
 
   @Test
+  @AbfsConfigsToTest(authTypes = {AuthType.OAuth, AuthType.SharedKey})
   public void testSetFileSystemProperties() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
     final Hashtable<String, String> properties = new Hashtable<>();

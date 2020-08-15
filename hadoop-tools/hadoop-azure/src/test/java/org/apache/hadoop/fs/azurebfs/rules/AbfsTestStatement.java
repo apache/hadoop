@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,6 +22,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
+import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
+import org.apache.hadoop.fs.azurebfs.extensions.MockDelegationSASTokenProvider;
+import org.junit.Assume;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 import org.slf4j.Logger;
@@ -32,10 +36,12 @@ import org.apache.hadoop.fs.azurebfs.constants.AccountType;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SAS_TOKEN_PROVIDER_TYPE;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_HNS_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_NONHNS_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ACCOUNT_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_CONTRACT_TEST_URI;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT;
 
 public class AbfsTestStatement extends Statement {
@@ -46,6 +52,9 @@ public class AbfsTestStatement extends Statement {
   private final Statement base;
   private final Description description;
   private final AbfsTestable testObj;
+
+  private String accountType;
+  private String authType;
 
   public AbfsTestStatement(Statement base, Description description,
       AbfsTestable testObj) {
@@ -67,17 +76,26 @@ public class AbfsTestStatement extends Statement {
     String test = "";
     try {
       for (List<String> testConfigCombination : testConfigCombinations) {
-        test = testMethod + testConfigCombination;
-        LOG.debug("Test : {}", test);
-        setAccountTypeConfigs(testConfigCombination.get(0));
-        setAuthTypeConfigs(testConfigCombination.get(1));
-        testObj.initFSEndpointForNewFS();
-        base.evaluate();
+        this.accountType = testConfigCombination.get(0);
+        this.authType = testConfigCombination.get(1);
+        if(isValidConfigCombination()) {
+          test = testMethod + testConfigCombination;
+          LOG.error("\n\nTest : {}", test);
+          setAccountTypeConfigs(this.accountType);
+          setAuthTypeConfigs(this.authType);
+        //  testObj.initFSEndpointForNewFS();
+          base.evaluate();
+        }
       }
     } catch (Exception e) {
       LOG.debug(test + " failed. ", e);
       throw e;
     }
+  }
+
+  private boolean isValidConfigCombination() {
+    return !(AccountType.NonHNS.name().equalsIgnoreCase(accountType)
+        && AuthType.SAS.name().equalsIgnoreCase(authType));
   }
 
   private List<String> authTypesToTest() {
@@ -92,10 +110,11 @@ public class AbfsTestStatement extends Statement {
     }
     if (authTypes != null && authTypes.size() < 1) {
       authTypes.add(AuthType.OAuth);
-      authTypes.add(AuthType.SharedKey);
-      //authTypes.add(AuthType.SAS);
+      authTypes.add(AuthType.SharedKey);//authTypes.add(AuthType.SAS);
     }
-    return authTypes.stream().map(authType -> authType.name())
+    return authTypes.stream()
+        .filter(authType -> !testObj.excludeAuthTypes().contains(authType))
+        .map(authType -> authType.name())
         .collect(Collectors.toList());
   }
 
@@ -117,7 +136,7 @@ public class AbfsTestStatement extends Statement {
         .collect(Collectors.toList());
   }
 
-  private void setAuthTypeConfigs(final String authType) {
+  private void setAuthTypeConfigs(final String authType) throws Exception {
     Configuration conf = testObj.getInitialConfiguration();
     conf.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, authType);
   }
@@ -126,7 +145,7 @@ public class AbfsTestStatement extends Statement {
     String accountName;
     boolean isHNSEnabled;
     Configuration conf = testObj.getInitialConfiguration();
-    if (accountType == AccountType.HNS.name()) {
+    if (accountType.equalsIgnoreCase(AccountType.HNS.name())) {
       accountName = conf.get(FS_AZURE_ABFS_HNS_ACCOUNT_NAME);
       isHNSEnabled = true;
     } else {

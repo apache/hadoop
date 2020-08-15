@@ -51,7 +51,8 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
 
   @Before
   public void setup() throws Exception {
-    super.getRawConfiguration().set(ConfigurationKeys.FS_AZURE_READ_AHEAD_QUEUE_DEPTH, "0");
+    super.getInitialConfiguration()
+        .set(ConfigurationKeys.FS_AZURE_READ_AHEAD_QUEUE_DEPTH, "0");
     super.setup();
   }
 

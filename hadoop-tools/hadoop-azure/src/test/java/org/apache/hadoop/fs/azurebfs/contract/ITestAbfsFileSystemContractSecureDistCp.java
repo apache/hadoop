@@ -18,12 +18,16 @@
 
 package org.apache.hadoop.fs.azurebfs.contract;
 
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.junit.Rule;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.rules.AbfsTestsRule;
 import org.apache.hadoop.fs.azurebfs.rules.AbfsTestable;
 import org.apache.hadoop.tools.contract.AbstractContractDistCpTest;
+
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Contract test for secure distCP operation.
@@ -52,7 +56,7 @@ public class ITestAbfsFileSystemContractSecureDistCp
 
   @Override
   protected AbfsFileSystemContract createContract(Configuration conf) {
-    return new AbfsFileSystemContract(conf, true);
+    return new AbfsFileSystemContract(conf, true, binding);
   }
 
   @Override
@@ -63,6 +67,11 @@ public class ITestAbfsFileSystemContractSecureDistCp
   @Override
   public void initFSEndpointForNewFS() throws Exception {
     binding.initFSEndpointForNewFS();
+  }
+
+  @Override
+  public List<AuthType> excludeAuthTypes() {
+    return Arrays.asList(new AuthType[] {AuthType.SharedKey});
   }
 
 }

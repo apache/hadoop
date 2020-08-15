@@ -67,28 +67,8 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   public ITestAzureBlobFileSystemDelegationSAS() throws Exception {
   }
 
-  @Override
-  public void setup() throws Exception {
-    // These tests rely on specific settings in azure-auth-keys.xml:
-    String sasProvider = getRawConfiguration().get(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE);
-    Assume.assumeTrue(MockDelegationSASTokenProvider.class.getCanonicalName().equals(sasProvider));
-    Assume.assumeNotNull(getRawConfiguration().get(TestConfigurationKeys.FS_AZURE_TEST_APP_ID));
-    Assume.assumeNotNull(getRawConfiguration().get(TestConfigurationKeys.FS_AZURE_TEST_APP_SECRET));
-    Assume.assumeNotNull(getRawConfiguration().get(TestConfigurationKeys.FS_AZURE_TEST_APP_SERVICE_PRINCIPAL_TENANT_ID));
-    Assume.assumeNotNull(getRawConfiguration().get(TestConfigurationKeys.FS_AZURE_TEST_APP_SERVICE_PRINCIPAL_OBJECT_ID));
-    // The test uses shared key to create a random filesystem and then creates another
-    // instance of this filesystem using SAS authorization.
-    Assume.assumeTrue(this.getAuthType() == AuthType.SharedKey);
-
-    boolean isHNSEnabled = this.getConfiguration().getBoolean(
-        TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
-    Assume.assumeTrue(isHNSEnabled);
-    createFilesystemForSASTests();
-    super.setup();
-  }
-
   @Test
-  @AbfsConfigsToTest(authTypes = {AuthType.SharedKey}, accountTypes = {
+  @AbfsConfigsToTest(authTypes = {AuthType.SAS}, accountTypes = {
       AccountType.HNS})
   // Test filesystem operations access, create, mkdirs, setOwner, getFileStatus
   public void testCheckAccess() throws Exception {
@@ -146,7 +126,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   }
 
   @Test
-  @AbfsConfigsToTest(authTypes = {AuthType.SharedKey}, accountTypes = {
+  @AbfsConfigsToTest(authTypes = {AuthType.SAS}, accountTypes = {
       AccountType.HNS})
   // Test filesystem operations create, create with overwrite, append and open.
   // Test output stream operation write, flush and close
@@ -208,7 +188,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   }
 
   @Test
-  @AbfsConfigsToTest(authTypes = {AuthType.SharedKey}, accountTypes = {
+  @AbfsConfigsToTest(authTypes = {AuthType.SAS}, accountTypes = {
       AccountType.HNS})
   // Test rename file and rename folder
   public void testRename() throws Exception {
@@ -235,7 +215,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   }
 
   @Test
-  @AbfsConfigsToTest(authTypes = {AuthType.SharedKey}, accountTypes = {
+  @AbfsConfigsToTest(authTypes = {AuthType.SAS}, accountTypes = {
       AccountType.HNS})
   // Test delete file and delete folder
   public void testDelete() throws Exception {
@@ -258,7 +238,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   }
 
   @Test
-  @AbfsConfigsToTest(authTypes = {AuthType.SharedKey}, accountTypes = {
+  @AbfsConfigsToTest(authTypes = {AuthType.SAS}, accountTypes = {
       AccountType.HNS})
   // Test delete folder recursive
   public void testDeleteRecursive() throws Exception {
@@ -279,7 +259,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   }
 
   @Test
-  @AbfsConfigsToTest(authTypes = {AuthType.SharedKey}, accountTypes = {
+  @AbfsConfigsToTest(authTypes = {AuthType.SAS}, accountTypes = {
       AccountType.HNS})
   // Test list on file, directory and root path
   public void testList() throws Exception {
@@ -300,7 +280,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   }
 
   @Test
-  @AbfsConfigsToTest(authTypes = {AuthType.SharedKey}, accountTypes = {
+  @AbfsConfigsToTest(authTypes = {AuthType.SAS}, accountTypes = {
       AccountType.HNS})
   // Test filesystem operations setAcl, getAclStatus, removeAcl
   // setPermissions and getFileStatus
@@ -332,7 +312,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   }
 
   @Test
-  @AbfsConfigsToTest(authTypes = {AuthType.SharedKey}, accountTypes = {
+  @AbfsConfigsToTest(authTypes = {AuthType.SAS}, accountTypes = {
       AccountType.HNS})
   // Test getFileStatus and getAclStatus operations on root path
   public void testRootPath() throws Exception {
@@ -386,7 +366,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
   }
 
   @Test
-  @AbfsConfigsToTest(authTypes = {AuthType.SharedKey}, accountTypes = {
+  @AbfsConfigsToTest(authTypes = {AuthType.SAS}, accountTypes = {
       AccountType.HNS})
   // Test filesystem operations getXAttr and setXAttr
   public void testProperties() throws Exception {

@@ -37,7 +37,7 @@ public class ABFSContractTestBinding extends AbstractAbfsIntegrationTest {
   private final boolean useExistingFileSystem;
 
   public ABFSContractTestBinding() throws Exception {
-    this(true);
+    this(false);
   }
 
   public ABFSContractTestBinding(

@@ -98,7 +98,7 @@ public class ITestAbfsDelegationTokens extends AbstractAbfsIntegrationTest {
   @Override
   public void setup() throws Exception {
     // create the FS
-    Configuration conf = getRawConfiguration();
+    Configuration conf = getInitialConfiguration();
     cluster.bindConfToCluster(conf);
     conf.setBoolean(HADOOP_SECURITY_TOKEN_SERVICE_USE_IP,
         false);

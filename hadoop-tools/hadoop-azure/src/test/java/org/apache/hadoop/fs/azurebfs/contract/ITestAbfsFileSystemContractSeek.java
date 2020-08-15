@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
  */
 public class ITestAbfsFileSystemContractSeek extends AbstractContractSeekTest
     implements AbfsTestable {
-  private final boolean isSecure;
+  private boolean isSecure;
   private final ABFSContractTestBinding binding;
 
   @Rule
@@ -39,13 +39,19 @@ public class ITestAbfsFileSystemContractSeek extends AbstractContractSeekTest
 
   public ITestAbfsFileSystemContractSeek() throws Exception {
     binding = new ABFSContractTestBinding();
-    this.isSecure = binding.isSecureMode();
   }
 
   @Override
   public void setup() throws Exception {
     binding.setup();
+    this.isSecure = binding.isSecureMode();
     super.setup();
+  }
+
+  @Override
+  public void teardown() throws Exception {
+    binding.teardown();
+    super.teardown();
   }
 
   @Override
@@ -55,7 +61,7 @@ public class ITestAbfsFileSystemContractSeek extends AbstractContractSeekTest
 
   @Override
   protected AbstractFSContract createContract(final Configuration conf) {
-    return new AbfsFileSystemContract(conf, isSecure);
+    return new AbfsFileSystemContract(conf, isSecure, binding);
   }
 
   @Override

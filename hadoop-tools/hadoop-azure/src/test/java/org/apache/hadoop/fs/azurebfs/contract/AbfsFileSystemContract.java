@@ -19,10 +19,13 @@
 package org.apache.hadoop.fs.azurebfs.contract;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.fs.contract.AbstractBondedFSContract;
+
+import java.io.IOException;
 
 /**
  * Azure BlobFileSystem Contract. Test paths are created using any maven fork
@@ -33,12 +36,24 @@ public class AbfsFileSystemContract extends AbstractBondedFSContract {
 
   public static final String CONTRACT_XML = "abfs.xml";
   private final boolean isSecure;
+  private ABFSContractTestBinding binding;
 
-  protected AbfsFileSystemContract(final Configuration conf, boolean secure) {
+  protected AbfsFileSystemContract(final Configuration conf, boolean secure,
+      ABFSContractTestBinding binding) {
     super(conf);
     //insert the base features
     addConfResource(CONTRACT_XML);
     this.isSecure = secure;
+    this.binding = binding;
+  }
+
+  @Override
+  public void init() {
+  }
+
+  @Override
+  public FileSystem getTestFileSystem() throws IOException {
+    return binding.getFileSystem();
   }
 
   @Override

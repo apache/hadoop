@@ -33,11 +33,14 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
     AbstractAbfsIntegrationTest {
 
   public ITestAzureBlobFileSystemInitAndCreate() throws Exception {
+    super();
   }
 
   @Override
-  public void setup() {
-    this.getConfiguration().unset(ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION);
+  public void setup() throws Exception {
+    initAbfsConfig();
+    initFSEndpointForNewFS();
+    getRawConfiguration().unset(ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION);
   }
 
   @Override

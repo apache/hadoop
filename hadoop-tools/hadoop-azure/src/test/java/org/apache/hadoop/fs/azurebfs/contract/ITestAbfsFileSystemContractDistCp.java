@@ -27,6 +27,9 @@ import org.apache.hadoop.fs.azurebfs.rules.AbfsTestable;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.tools.contract.AbstractContractDistCpTest;
 
+import java.util.Arrays;
+import java.util.List;
+
 /**
  * Contract test for distCp operation.
  */
@@ -55,7 +58,7 @@ public class ITestAbfsFileSystemContractDistCp
 
   @Override
   protected AbfsFileSystemContract createContract(Configuration conf) {
-    return new AbfsFileSystemContract(conf, false);
+    return new AbfsFileSystemContract(conf, false, binding);
   }
 
   @Override
@@ -66,6 +69,11 @@ public class ITestAbfsFileSystemContractDistCp
   @Override
   public void initFSEndpointForNewFS() throws Exception {
     binding.initFSEndpointForNewFS();
+  }
+
+  @Override
+  public List<AuthType> excludeAuthTypes() {
+    return Arrays.asList(new AuthType[] {AuthType.OAuth, AuthType.SAS});
   }
 
 }

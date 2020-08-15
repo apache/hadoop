@@ -99,6 +99,7 @@ public class ITestAzureBlobFileSystemStoreListStatusWithRange extends
 
   @Before
   public void setup() throws Exception {
+    super.setup();
     if (this.getFileSystem() == null) {
       super.createFileSystem();
     }
@@ -107,7 +108,6 @@ public class ITestAzureBlobFileSystemStoreListStatusWithRange extends
     prepareTestFiles();
     // Sort the names for verification, ABFS service should return the results in order.
     Arrays.sort(SORTED_ENTRY_NAMES);
-    super.setup();
   }
 
   @Test

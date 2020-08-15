@@ -30,7 +30,7 @@ import org.apache.hadoop.fs.azurebfs.services.AuthType;
 public @interface AbfsConfigsToTest {
 
   AuthType[] authTypes() default {AuthType.OAuth, AuthType.SharedKey
-      //AuthType.SAS
+      //, AuthType.SAS
   };
 
   AccountType[] accountTypes() default {AccountType.HNS, AccountType.NonHNS};

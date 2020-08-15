@@ -33,7 +33,7 @@ import org.apache.hadoop.fs.contract.AbstractContractUnbufferTest;
  */
 public class ITestAbfsContractUnbuffer extends AbstractContractUnbufferTest implements
     AbfsTestable {
-  private final boolean isSecure;
+  private boolean isSecure;
   private final ABFSContractTestBinding binding;
 
   @Rule
@@ -41,23 +41,29 @@ public class ITestAbfsContractUnbuffer extends AbstractContractUnbufferTest impl
 
   public ITestAbfsContractUnbuffer() throws Exception {
     binding = new ABFSContractTestBinding();
-    this.isSecure = binding.isSecureMode();
   }
 
   @Override
   public void setup() throws Exception {
     binding.setup();
+    this.isSecure = binding.isSecureMode();
     super.setup();
   }
 
   @Override
+  public void teardown() throws Exception {
+    binding.teardown();
+    super.teardown();
+  }
+
+  @Override
   protected Configuration createConfiguration() {
-    return binding.getRawConfiguration();
+    return new Configuration();
   }
 
   @Override
   protected AbfsFileSystemContract createContract(Configuration conf) {
-    return new AbfsFileSystemContract(conf, isSecure);
+    return new AbfsFileSystemContract(conf, isSecure, binding);
   }
 
   /**

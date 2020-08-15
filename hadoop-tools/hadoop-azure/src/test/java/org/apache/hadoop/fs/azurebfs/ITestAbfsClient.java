@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ACCOUNT_KEY;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_TIMEOUT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -52,6 +53,10 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
   public ITestAbfsClient() throws Exception {
     super();
+  }
+
+  protected int getTestTimeoutMillis() {
+    return 3 * TEST_TIMEOUT;
   }
 
   @Ignore("HADOOP-16845: Invalid continuation tokens are ignored by the ADLS "

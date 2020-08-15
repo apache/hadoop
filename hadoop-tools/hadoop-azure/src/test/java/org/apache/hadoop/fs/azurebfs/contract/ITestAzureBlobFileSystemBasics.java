@@ -51,6 +51,9 @@ public class ITestAzureBlobFileSystemBasics extends FileSystemContractBaseTest
     binding = new ABFSContractTestBinding(false);
   }
 
+  protected int getGlobalTimeout() {
+    return 3 * super.getGlobalTimeout();
+  }
 
   @Before
   public void setUp() throws Exception {

@@ -27,6 +27,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.hadoop.fs.azurebfs.constants.AccountType;
+import org.apache.hadoop.fs.azurebfs.rules.AbfsConfigsToTest;
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -35,6 +38,7 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_TIMEOUT;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
@@ -53,7 +57,13 @@ public class ITestAzureBlobFileSystemListStatus extends
     super();
   }
 
+  protected int getTestTimeoutMillis() {
+    return 3 * super.getTestTimeoutMillis();
+  }
+
   @Test
+  @AbfsConfigsToTest(authTypes = {AuthType.OAuth}, accountTypes =
+      AccountType.NonHNS)
   public void testListPath() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
     final List<Future<Void>> tasks = new ArrayList<>();

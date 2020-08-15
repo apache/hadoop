@@ -25,8 +25,11 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
+import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
+import org.apache.hadoop.fs.azurebfs.extensions.MockDelegationSASTokenProvider;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Rule;
 import org.slf4j.Logger;
@@ -98,17 +101,7 @@ public abstract class AbstractAbfsIntegrationTest extends
   public void initFSEndpointForNewFS() throws Exception {
     fileSystemName = TEST_CONTAINER_PREFIX + UUID.randomUUID().toString();
 
-    this.accountName = rawConfig.get(FS_AZURE_ACCOUNT_NAME);
-    if (accountName == null) {
-      // check if accountName is set using different config key
-      accountName = rawConfig.get(FS_AZURE_ABFS_ACCOUNT_NAME);
-    }
-    assumeTrue("Not set: " + FS_AZURE_ABFS_ACCOUNT_NAME,
-    accountName != null && !accountName.isEmpty());
-
-    abfsConfig = new AbfsConfiguration(rawConfig, accountName);
-
-    authType = abfsConfig.getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey);
+    /*authType = abfsConfig.getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey);*/
     abfsScheme = authType == AuthType.SharedKey ? FileSystemUriSchemes.ABFS_SCHEME
             : FileSystemUriSchemes.ABFS_SECURE_SCHEME;
 
@@ -150,8 +143,29 @@ public abstract class AbstractAbfsIntegrationTest extends
     }
   }
 
+  protected void initAbfsConfig() throws IOException, IllegalAccessException {
+    this.accountName = rawConfig.get(FS_AZURE_ACCOUNT_NAME);
+    if (accountName == null) {
+      // check if accountName is set using different config key
+      accountName = rawConfig.get(FS_AZURE_ABFS_ACCOUNT_NAME);
+    }
+    assumeTrue("Not set: " + FS_AZURE_ABFS_ACCOUNT_NAME,
+        accountName != null && !accountName.isEmpty());
+
+    abfsConfig = new AbfsConfiguration(rawConfig, accountName);
+  }
+
   @Before
   public void setup() throws Exception {
+    initAbfsConfig();
+    authType = abfsConfig.getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME,
+        AuthType.SharedKey);
+
+    if (authType == AuthType.SAS) {
+      setupForSAS();
+    } else{
+      initFSEndpointForNewFS();
+    }
     //Create filesystem first to make sure getWasbFileSystem() can return an existing filesystem.
     createFileSystem();
 
@@ -179,6 +193,30 @@ public abstract class AbstractAbfsIntegrationTest extends
       wasb = new NativeAzureFileSystem(azureNativeFileSystemStore);
       wasb.initialize(wasbUri, rawConfig);
     }
+  }
+
+  public void setupForSAS() throws Exception {
+    getRawConfiguration().set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME,
+        AuthType.SharedKey.name());
+    authType = AuthType.SharedKey;
+    initFSEndpointForNewFS();
+
+    // SAS tests rely on specific settings in azure-auth-keys.xml:
+    String sasProvider = getRawConfiguration().get(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE);
+    Assume.assumeTrue(MockDelegationSASTokenProvider.class.getCanonicalName().equals(sasProvider));
+    Assume.assumeNotNull(getRawConfiguration().get(TestConfigurationKeys.FS_AZURE_TEST_APP_ID));
+    Assume.assumeNotNull(getRawConfiguration().get(TestConfigurationKeys.FS_AZURE_TEST_APP_SECRET));
+    Assume.assumeNotNull(getRawConfiguration().get(TestConfigurationKeys.FS_AZURE_TEST_APP_SERVICE_PRINCIPAL_TENANT_ID));
+    Assume.assumeNotNull(getRawConfiguration().get(TestConfigurationKeys.FS_AZURE_TEST_APP_SERVICE_PRINCIPAL_OBJECT_ID));
+    // The test uses shared key to create a random filesystem and then creates another
+    // instance of this filesystem using SAS authorization.
+    Assume.assumeTrue(this.getAuthType() == AuthType.SharedKey);
+
+    boolean isHNSEnabled = this.getConfiguration().getBoolean(
+        TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
+    Assume.assumeTrue(isHNSEnabled);
+    createFilesystemForSASTests();
+    //initFSEndpointForNewFS();
   }
 
   @After
@@ -217,6 +255,7 @@ public abstract class AbstractAbfsIntegrationTest extends
     } finally {
       IOUtils.closeStream(abfs);
       abfs = null;
+      usingFilesystemForSASTests = false;
     }
   }
 
@@ -246,7 +285,7 @@ public abstract class AbstractAbfsIntegrationTest extends
     useConfiguredFileSystem = true;
   }
 
-  protected void createFilesystemForSASTests() throws Exception {
+  public void createFilesystemForSASTests() throws Exception {
     // The SAS tests do not have permission to create a filesystem
     // so first create temporary instance of the filesystem using SharedKey
     // then re-use the filesystem it creates with SAS auth instead of SharedKey.
@@ -298,7 +337,7 @@ public abstract class AbstractAbfsIntegrationTest extends
     this.testUrl = testUrl;
   }
 
-  protected String getTestUrl() {
+  public String getTestUrl() {
     return testUrl;
   }
 
