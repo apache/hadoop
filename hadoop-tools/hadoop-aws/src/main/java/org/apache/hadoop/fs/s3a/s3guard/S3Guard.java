@@ -160,6 +160,54 @@ public final class S3Guard {
 
 
   /**
+   * We update the metastore for the specific case of S3 value == S3Guard value
+   * so as to place a more recent modtime in the store.
+   * because if not, we will continue to probe S3 whenever we look for this
+   * object, even we only do this if confident the S3 status is the same
+   * as the one in the store (i.e. it is not an older version)
+   * @param metadataStore MetadataStore to {@code put()} into.
+   * @param pm current data
+   * @param s3AFileStatus status to store
+   * @param timeProvider Time provider to use when writing entries
+   * @return true if the entry was updated.
+   * @throws IOException if metadata store update failed
+   */
+  @RetryTranslated
+  public static boolean refreshEntry(
+      MetadataStore metadataStore,
+      PathMetadata pm,
+      S3AFileStatus s3AFileStatus,
+      ITtlTimeProvider timeProvider) throws IOException {
+    // the modtime of the data is the same as/older than the s3guard value
+    // either an old object has been found, or the existing one was retrieved
+    // in both cases -return s3guard value
+    S3AFileStatus msStatus = pm.getFileStatus();
+
+    // first check: size
+    boolean sizeMatch = msStatus.getLen() == s3AFileStatus.getLen();
+
+    // etags are expected on all objects, but handle the situation
+    // that a third party store doesn't serve them.
+    String s3Etag = s3AFileStatus.getETag();
+    String pmEtag = msStatus.getETag();
+    boolean etagsMatch = s3Etag != null && s3Etag.equals(pmEtag);
+
+    // version ID: only in some stores, and will be missing in the metastore
+    // if the entry was created through a list operation.
+    String s3VersionId = s3AFileStatus.getVersionId();
+    String pmVersionId = msStatus.getVersionId();
+    boolean versionsMatchOrMissingInMetastore =
+        pmVersionId == null || pmVersionId.equals(s3VersionId);
+    if (sizeMatch && etagsMatch && versionsMatchOrMissingInMetastore) {
+      // update the store, return the new value
+      LOG.debug("Refreshing the metastore entry/timestamp");
+      putAndReturn(metadataStore, s3AFileStatus, timeProvider);
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * Helper function which puts a given S3AFileStatus into the MetadataStore and
    * returns the same S3AFileStatus. Instrumentation monitors the put operation.
    * @param ms MetadataStore to {@code put()} into.
@@ -314,14 +362,14 @@ public final class S3Guard {
    * @return Final result of directory listing.
    * @throws IOException if metadata store update failed
    */
-  public static FileStatus[] dirListingUnion(MetadataStore ms, Path path,
+  public static S3AFileStatus[] dirListingUnion(MetadataStore ms, Path path,
       List<S3AFileStatus> backingStatuses, DirListingMetadata dirMeta,
       boolean isAuthoritative, ITtlTimeProvider timeProvider)
       throws IOException {
 
     // Fast-path for NullMetadataStore
     if (isNullMetadataStore(ms)) {
-      return backingStatuses.toArray(new FileStatus[backingStatuses.size()]);
+      return backingStatuses.toArray(new S3AFileStatus[backingStatuses.size()]);
     }
 
     assertQualified(path);
@@ -927,8 +975,10 @@ public final class S3Guard {
       if (!pathMetadata.isExpired(ttl, timeProvider.getNow())) {
         return pathMetadata;
       } else {
-        LOG.debug("PathMetadata TTl for {} is expired in metadata store.",
-            path);
+        LOG.debug("PathMetadata TTl for {} is expired in metadata store"
+                + " -removing entry", path);
+        // delete the tombstone
+        ms.forgetMetadata(path);
         return null;
       }
     }
@@ -940,6 +990,8 @@ public final class S3Guard {
    * List children; mark the result as non-auth if the TTL has expired.
    * If the allowAuthoritative flag is true, return without filtering or
    * checking for TTL expiry.
+   * If false: the expiry scan takes place and the
+   * TODO: should we always purge tombstones? Even in auth?
    * @param ms metastore
    * @param path path to look up.
    * @param timeProvider nullable time provider
@@ -968,9 +1020,15 @@ public final class S3Guard {
 
     // filter expired entries
     if (dlm != null) {
-      dlm.removeExpiredEntriesFromListing(
+      List<PathMetadata> expired = dlm.removeExpiredEntriesFromListing(
           timeProvider.getMetadataTtl(),
           timeProvider.getNow());
+      // now purge the tombstones
+      for (PathMetadata metadata : expired) {
+        if (metadata.isDeleted()) {
+          ms.forgetMetadata(metadata.getFileStatus().getPath());
+        }
+      }
     }
 
     return dlm;

@@ -410,8 +410,7 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
 
 
     // this is HEAD + "/" on S3; get on S3Guard auth when the path exists,
-    accessDeniedIf(!s3guard, () ->
-        readonlyFS.listStatus(emptyDir));
+    readonlyFS.listStatus(emptyDir);
 
     // a recursive list of the no-read-directory works because
     // there is no directory marker, it becomes a LIST call.
@@ -421,14 +420,9 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
     // and so working.
     readonlyFS.getFileStatus(noReadDir);
 
-    // empty dir checks work when guarded because even in non-auth mode
-    // there are no checks for directories being out of date
-    // without S3, the HEAD path + "/" is blocked
-    accessDeniedIf(!s3guard, () ->
-        readonlyFS.getFileStatus(emptyDir));
-
+    readonlyFS.getFileStatus(emptyDir);
     // now look at a file; the outcome depends on the mode.
-    accessDeniedIf(!guardedInAuthMode, () ->
+    accessDeniedIf(!s3guard, () ->
         readonlyFS.getFileStatus(subdirFile));
 
     // irrespective of mode, the attempt to read the data will fail.
@@ -443,7 +437,7 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
     // This means that permissions on the file do not get checked.
     // See: HADOOP-16464.
     Optional<FSDataInputStream> optIn = accessDeniedIf(
-        !guardedInAuthMode, () -> readonlyFS.open(emptyFile));
+        !s3guard, () -> readonlyFS.open(emptyFile));
     if (optIn.isPresent()) {
       try (FSDataInputStream is = optIn.get()) {
         Assertions.assertThat(is.read())
@@ -461,17 +455,17 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
     describe("Glob Status operations");
     // baseline: the real filesystem on a subdir
     globFS(getFileSystem(), subdirFile, null, false, 1);
-    // a file fails if not in auth mode
-    globFS(readonlyFS, subdirFile, null, !guardedInAuthMode, 1);
+    // a file fails if not guarded
+    globFS(readonlyFS, subdirFile, null, !s3guard, 1);
     // empty directories don't fail.
-    FileStatus[] st = globFS(readonlyFS, emptyDir, null, !s3guard, 1);
+    FileStatus[] st = globFS(readonlyFS, emptyDir, null, false, 1);
     if (s3guard) {
       assertStatusPathEquals(emptyDir, st);
     }
 
     st = globFS(readonlyFS,
         noReadWildcard,
-        null, !s3guard, 2);
+        null, false, 2);
     if (s3guard) {
       Assertions.assertThat(st)
           .extracting(FileStatus::getPath)
@@ -481,12 +475,12 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
     // there is precisely one .docx file (subdir2File2.docx)
     globFS(readonlyFS,
         new Path(noReadDir, "*/*.docx"),
-        null, !s3guard, 1);
+        null, false, 1);
 
     // there are no .doc files.
     globFS(readonlyFS,
         new Path(noReadDir, "*/*.doc"),
-        null, !s3guard, 0);
+        null, false, 0);
     globFS(readonlyFS, noReadDir,
         EVERYTHING, false, 1);
     // and a filter without any wildcarded pattern only finds
@@ -513,17 +507,14 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
             true,
             HIDDEN_FILE_FILTER,
             true);
-    accessDeniedIf(!s3guard,
-        () -> fetcher.getFileStatuses())
-        .ifPresent(stats -> {
-          Assertions.assertThat(stats)
-              .describedAs("result of located scan").flatExtracting(FileStatus::getPath)
-              .containsExactlyInAnyOrder(
-                  emptyFile,
-                  subdirFile,
-                  subdir2File1,
-                  subdir2File2);
-        });
+    Assertions.assertThat(fetcher.getFileStatuses())
+        .describedAs("result of located scan")
+        .flatExtracting(FileStatus::getPath)
+        .containsExactlyInAnyOrder(
+            emptyFile,
+            subdirFile,
+            subdir2File1,
+            subdir2File2);
   }
 
   /**
@@ -542,15 +533,11 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
             true,
             EVERYTHING,
             true);
-    accessDeniedIf(!s3guard,
-        () -> fetcher.getFileStatuses())
-        .ifPresent(stats -> {
-          Assertions.assertThat(stats)
-              .describedAs("result of located scan")
-              .isNotNull()
-              .flatExtracting(FileStatus::getPath)
-              .containsExactlyInAnyOrder(subdirFile, subdir2File1);
-        });
+    Assertions.assertThat(fetcher.getFileStatuses())
+        .describedAs("result of located scan")
+        .isNotNull()
+        .flatExtracting(FileStatus::getPath)
+        .containsExactlyInAnyOrder(subdirFile, subdir2File1);
   }
 
   /**
@@ -567,7 +554,7 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
         true,
         TEXT_FILE,
         true);
-    accessDeniedIf(!guardedInAuthMode,
+    accessDeniedIf(!s3guard,
         () -> fetcher.getFileStatuses())
         .ifPresent(stats -> {
           Assertions.assertThat(stats)
@@ -631,19 +618,16 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
    */
   public void checkDeleteOperations() throws Throwable {
     describe("Testing delete operations");
-
-    if (!authMode) {
-      // unguarded or non-auth S3Guard to fail on HEAD + /
-      accessDenied(() -> readonlyFS.delete(emptyDir, true));
+    readonlyFS.delete(emptyDir, true);
+    if (!s3guard) {
       // to fail on HEAD
       accessDenied(() -> readonlyFS.delete(emptyFile, true));
     } else {
-      // auth mode checks DDB for status and then issues the DELETE
-      readonlyFS.delete(emptyDir, true);
+      // checks DDB for status and then issues the DELETE
       readonlyFS.delete(emptyFile, true);
     }
 
-    // this will succeed for both as there is no subdir marker.
+    // this will succeed for both
     readonlyFS.delete(subDir, true);
     // after which  it is not there
     fileNotFound(() -> readonlyFS.getFileStatus(subDir));

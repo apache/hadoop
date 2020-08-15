@@ -25,6 +25,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -118,6 +119,10 @@ public class DirListingMetadata extends ExpirableMetadata {
     return Collections.unmodifiableCollection(listMap.values());
   }
 
+  /**
+   * List all tombstones.
+   * @return all tombstones in the listing.
+   */
   public Set<Path> listTombstones() {
     Set<Path> tombstones = new HashSet<>();
     for (PathMetadata meta : listMap.values()) {
@@ -128,6 +133,12 @@ public class DirListingMetadata extends ExpirableMetadata {
     return tombstones;
   }
 
+  /**
+   * Get the directory listing excluding tombstones.
+   * Returns a new DirListingMetadata instances, without the tombstones -the
+   * lastUpdated field is copied from this instance.
+   * @return a new DirListingMetadata without the tombstones.
+   */
   public DirListingMetadata withoutTombstones() {
     Collection<PathMetadata> filteredList = new ArrayList<>();
     for (PathMetadata meta : listMap.values()) {
@@ -143,6 +154,7 @@ public class DirListingMetadata extends ExpirableMetadata {
    * @return number of entries tracked.  This is not the same as the number
    * of entries in the actual directory unless {@link #isAuthoritative()} is
    * true.
+   * It will also include any tombstones.
    */
   public int numEntries() {
     return listMap.size();
@@ -251,19 +263,24 @@ public class DirListingMetadata extends ExpirableMetadata {
    * Remove expired entries from the listing based on TTL.
    * @param ttl the ttl time
    * @param now the current time
+   * @return the expired values.
    */
-  public synchronized void removeExpiredEntriesFromListing(long ttl,
-      long now) {
+  public synchronized List<PathMetadata> removeExpiredEntriesFromListing(
+      long ttl, long now) {
+    List<PathMetadata> expired = new ArrayList<>();
     final Iterator<Map.Entry<Path, PathMetadata>> iterator =
         listMap.entrySet().iterator();
     while (iterator.hasNext()) {
       final Map.Entry<Path, PathMetadata> entry = iterator.next();
       // we filter iff the lastupdated is not 0 and the entry is expired
-      if (entry.getValue().getLastUpdated() != 0
-          && (entry.getValue().getLastUpdated() + ttl) <= now) {
+      PathMetadata metadata = entry.getValue();
+      if (metadata.getLastUpdated() != 0
+          && (metadata.getLastUpdated() + ttl) <= now) {
+        expired.add(metadata);
         iterator.remove();
       }
     }
+    return expired;
   }
 
   /**
