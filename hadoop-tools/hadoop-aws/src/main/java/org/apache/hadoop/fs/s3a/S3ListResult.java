@@ -18,11 +18,18 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import org.slf4j.Logger;
 
-import java.util.List;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
 
 /**
  * API version-independent container for S3 List responses.
@@ -92,6 +99,110 @@ public class S3ListResult {
     } else {
       return v2Result.getCommonPrefixes();
     }
+  }
 
+  /**
+   * Is the list of object summaries empty
+   * after accounting for tombstone markers (if provided)?
+   * @param accessors callback for key to path mapping.
+   * @param tombstones Set of tombstone markers, or null if not applicable.
+   * @return false if summaries contains objects not accounted for by
+   * tombstones.
+   */
+  public boolean isEmptyOfObjects(
+      final ContextAccessors accessors,
+      final Set<Path> tombstones) {
+    if (tombstones == null) {
+      return getObjectSummaries().isEmpty();
+    }
+    return isEmptyOfKeys(accessors,
+        objectSummaryKeys(),
+        tombstones);
+  }
+
+  /**
+   * Get the list of keys in the object summary.
+   * @return a possibly empty list
+   */
+  private List<String> objectSummaryKeys() {
+    return getObjectSummaries().stream()
+        .map(S3ObjectSummary::getKey)
+        .collect(Collectors.toList());
+  }
+
+  /**
+   * Does this listing have prefixes or objects after entries with
+   * tombstones have been stripped?
+   * @param accessors callback for key to path mapping.
+   * @param tombstones Set of tombstone markers, or null if not applicable.
+   * @return true if the reconciled list is non-empty
+   */
+  public boolean hasPrefixesOrObjects(
+      final ContextAccessors accessors,
+      final Set<Path> tombstones) {
+
+    return !isEmptyOfKeys(accessors, getCommonPrefixes(), tombstones)
+        || !isEmptyOfObjects(accessors, tombstones);
+  }
+
+  /**
+   * Helper function to determine if a collection of keys is empty
+   * after accounting for tombstone markers (if provided).
+   * @param accessors callback for key to path mapping.
+   * @param keys Collection of path (prefixes / directories or keys).
+   * @param tombstones Set of tombstone markers, or null if not applicable.
+   * @return true if the list is considered empty.
+   */
+  public boolean isEmptyOfKeys(
+      final ContextAccessors accessors,
+      final Collection<String> keys,
+      final Set<Path> tombstones) {
+    if (tombstones == null) {
+      return keys.isEmpty();
+    }
+    for (String key : keys) {
+      Path qualified = accessors.keyToPath(key);
+      if (!tombstones.contains(qualified)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Does this listing represent an empty directory?
+   * @param contextAccessors callback for key to path mapping.
+   * @param dirKey directory key
+   * @param tombstones Set of tombstone markers, or null if not applicable.
+   * @return true if the list is considered empty.
+   */
+  public boolean representsEmptyDirectory(
+      final ContextAccessors contextAccessors,
+      final String dirKey,
+      final Set<Path> tombstones) {
+    // If looking for an empty directory, the marker must exist but
+    // no children.
+    // So the listing must contain the marker entry only as an object,
+    // and prefixes is null
+    List<String> keys = objectSummaryKeys();
+    return keys.size() == 1 && keys.contains(dirKey)
+        && getCommonPrefixes().isEmpty();
+  }
+
+  /**
+   * Dmp the result at debug level.
+   * @param log log to use
+   */
+  public void logAtDebug(Logger log) {
+    Collection<String> prefixes = getCommonPrefixes();
+    Collection<S3ObjectSummary> summaries = getObjectSummaries();
+    log.debug("Prefix count = {}; object count={}",
+        prefixes.size(), summaries.size());
+    for (S3ObjectSummary summary : summaries) {
+      log.debug("Summary: {} {}", summary.getKey(), summary.getSize());
+    }
+    for (String prefix : prefixes) {
+      log.debug("Prefix: {}", prefix);
+    }
   }
 }
