@@ -259,12 +259,13 @@ public class ViewFileSystem extends FileSystem {
   }
 
   /**
-   * Returns the ViewFileSystem type.
-   * @return <code>viewfs</code>
+   * Returns false as it does not support to add fallback link automatically on
+   * no mounts.
    */
-  String getType() {
-    return FsConstants.VIEWFS_TYPE;
+  boolean supportAutoAddingFallbackOnNoMounts() {
+    return false;
   }
+
 
   /**
    * Called after a new FileSystem instance is constructed.
@@ -293,7 +294,7 @@ public class ViewFileSystem extends FileSystem {
     try {
       myUri = new URI(getScheme(), authority, "/", null, null);
       boolean initingUriAsFallbackOnNoMounts =
-          !FsConstants.VIEWFS_TYPE.equals(getType());
+          supportAutoAddingFallbackOnNoMounts();
       fsState = new InodeTree<FileSystem>(conf, tableName, myUri,
           initingUriAsFallbackOnNoMounts) {
         @Override

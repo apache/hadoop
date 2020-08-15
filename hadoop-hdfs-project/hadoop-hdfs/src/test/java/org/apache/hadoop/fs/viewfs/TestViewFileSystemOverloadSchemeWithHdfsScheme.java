@@ -39,10 +39,13 @@ import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME;
@@ -58,7 +61,7 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
   private static final String FS_IMPL_PATTERN_KEY = "fs.%s.impl";
   private static final String HDFS_SCHEME = "hdfs";
   private Configuration conf = null;
-  private MiniDFSCluster cluster = null;
+  private static MiniDFSCluster cluster = null;
   private URI defaultFSURI;
   private File localTargetDir;
   private static final String TEST_ROOT_DIR = PathUtils
@@ -66,33 +69,54 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
   private static final String HDFS_USER_FOLDER = "/HDFSUser";
   private static final String LOCAL_FOLDER = "/local";
 
+  @BeforeClass
+  public static void init() throws IOException {
+    cluster =
+        new MiniDFSCluster.Builder(new Configuration()).numDataNodes(2).build();
+    cluster.waitClusterUp();
+  }
+
   /**
    * Sets up the configurations and starts the MiniDFSCluster.
    */
   @Before
-  public void startCluster() throws IOException {
-    conf = new Configuration();
+  public void setUp() throws IOException {
+    Configuration conf = getNewConf();
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY,
         true);
     conf.setInt(
         CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 1);
     conf.set(String.format(FS_IMPL_PATTERN_KEY, HDFS_SCHEME),
         ViewFileSystemOverloadScheme.class.getName());
-    conf.set(String.format(
-        FsConstants.FS_VIEWFS_OVERLOAD_SCHEME_TARGET_FS_IMPL_PATTERN,
-        HDFS_SCHEME), DistributedFileSystem.class.getName());
     conf.setBoolean(CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME,
         CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME_DEFAULT);
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-    cluster.waitClusterUp();
+    setConf(conf);
     defaultFSURI =
         URI.create(conf.get(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY));
     localTargetDir = new File(TEST_ROOT_DIR, "/root/");
+    localTargetDir.mkdirs();
     Assert.assertEquals(HDFS_SCHEME, defaultFSURI.getScheme()); // hdfs scheme.
   }
 
   @After
-  public void tearDown() throws IOException {
+  public void cleanUp() throws IOException {
+    if (cluster != null) {
+      FileSystem fs = new DistributedFileSystem();
+      fs.initialize(defaultFSURI, conf);
+      try {
+        FileStatus[] statuses = fs.listStatus(new Path("/"));
+        for (FileStatus st : statuses) {
+          Assert.assertTrue(fs.delete(st.getPath(), true));
+        }
+      } finally {
+        fs.close();
+      }
+      FileSystem.closeAll();
+    }
+  }
+
+  @AfterClass
+  public static void tearDown() throws IOException {
     if (cluster != null) {
       FileSystem.closeAll();
       cluster.shutdown();
@@ -132,9 +156,9 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
     // /local/test
     Path localDir = new Path(LOCAL_FOLDER + "/test");
 
-    try (ViewFileSystemOverloadScheme fs
-        = (ViewFileSystemOverloadScheme) FileSystem.get(conf)) {
-      Assert.assertEquals(2, fs.getMountPoints().length);
+    try (FileSystem fs
+        =  FileSystem.get(conf)) {
+      Assert.assertEquals(2, fs.getChildFileSystems().length);
       fs.createNewFile(hdfsFile); // /HDFSUser/testfile
       fs.mkdirs(localDir); // /local/test
     }
@@ -166,8 +190,13 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
    * hdfs://localhost:xxx/HDFSUser --> nonexistent://NonExistent/User/
    * It should fail to add non existent fs link.
    */
-  @Test(expected = IOException.class, timeout = 30000)
+  @Test(timeout = 30000)
   public void testMountLinkWithNonExistentLink() throws Exception {
+    testMountLinkWithNonExistentLink(true);
+  }
+
+  public void testMountLinkWithNonExistentLink(boolean expectFsInitFailure)
+      throws Exception {
     final String userFolder = "/User";
     final Path nonExistTargetPath =
         new Path("nonexistent://NonExistent" + userFolder);
@@ -176,10 +205,17 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
      * Below addLink will create following mount points
      * hdfs://localhost:xxx/User --> nonexistent://NonExistent/User/
      */
-    addMountLinks(defaultFSURI.getAuthority(), new String[] {userFolder },
-        new String[] {nonExistTargetPath.toUri().toString() }, conf);
-    FileSystem.get(conf);
-    Assert.fail("Expected to fail with non existent link");
+    addMountLinks(defaultFSURI.getAuthority(), new String[] {userFolder},
+        new String[] {nonExistTargetPath.toUri().toString()}, conf);
+    if (expectFsInitFailure) {
+      LambdaTestUtils.intercept(IOException.class, () -> {
+        FileSystem.get(conf);
+      });
+    } else {
+      try (FileSystem fs = FileSystem.get(conf)) {
+        Assert.assertEquals("hdfs", fs.getScheme());
+      }
+    }
   }
 
   /**
@@ -188,7 +224,7 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
    * hdfs://localhost:xxx/local --> file://TEST_ROOT_DIR/root/
    * ListStatus on / should list the mount links.
    */
-  @Test(timeout = 30000)
+  @Test(timeout = 30000000)
   public void testListStatusOnRootShouldListAllMountLinks() throws Exception {
     final Path hdfsTargetPath = new Path(defaultFSURI + HDFS_USER_FOLDER);
     addMountLinks(defaultFSURI.getAuthority(),
@@ -271,14 +307,10 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
 
     // check for viewfs path without authority
     Path viewFsRootPath = new Path("viewfs:/");
-    try {
-      viewFsRootPath.getFileSystem(conf);
-      Assert.fail(
-          "Mount table with authority default should not be initialized");
-    } catch (IOException e) {
-      assertTrue(e.getMessage().contains(
-          "Empty Mount table in config for viewfs://default/"));
-    }
+    LambdaTestUtils.intercept(IOException.class,
+        "Empty Mount table in config for viewfs://default", () -> {
+          viewFsRootPath.getFileSystem(conf);
+        });
 
     // set the name of the default mount table here and
     // subsequent calls should succeed.
@@ -334,18 +366,25 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
    *
    * It cannot find any mount link. ViewFS expects a mount point from root.
    */
-  @Test(expected = NotInMountpointException.class, timeout = 30000)
-  public void testCreateOnRootShouldFailWhenMountLinkConfigured()
-      throws Exception {
+  @Test(timeout = 30000)
+  public void testCreateOnRoot() throws Exception {
+    testCreateOnRoot(false);
+  }
+
+  public void testCreateOnRoot(boolean fallbackExist) throws Exception {
     final Path hdfsTargetPath = new Path(defaultFSURI + HDFS_USER_FOLDER);
     addMountLinks(defaultFSURI.getAuthority(),
-        new String[] {HDFS_USER_FOLDER, LOCAL_FOLDER },
+        new String[] {HDFS_USER_FOLDER, LOCAL_FOLDER},
         new String[] {hdfsTargetPath.toUri().toString(),
-            localTargetDir.toURI().toString() },
-        conf);
+            localTargetDir.toURI().toString()}, conf);
     try (FileSystem fs = FileSystem.get(conf)) {
-      fs.createNewFile(new Path("/newFileOnRoot"));
-      Assert.fail("It should fail as root is read only in viewFS.");
+      if (fallbackExist) {
+        Assert.assertTrue(fs.createNewFile(new Path("/newFileOnRoot")));
+      } else {
+        LambdaTestUtils.intercept(NotInMountpointException.class, () -> {
+          fs.createNewFile(new Path("/newFileOnRoot"));
+        });
+      }
     }
   }
 
@@ -433,15 +472,13 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
         conf);
 
     // 1. Only 1 hdfs child file system should be there with cache.
-    try (ViewFileSystemOverloadScheme vfs =
-        (ViewFileSystemOverloadScheme) FileSystem.get(conf)) {
+    try (FileSystem vfs = FileSystem.get(conf)) {
       Assert.assertEquals(1, vfs.getChildFileSystems().length);
     }
 
     // 2. Two hdfs file systems should be there if no cache.
     conf.setBoolean(Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE, false);
-    try (ViewFileSystemOverloadScheme vfs =
-        (ViewFileSystemOverloadScheme) FileSystem.get(conf)) {
+    try (FileSystem vfs = FileSystem.get(conf)) {
       Assert.assertEquals(2, vfs.getChildFileSystems().length);
     }
   }
@@ -466,8 +503,7 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
 
     conf.setBoolean(Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE, false);
     // Two hdfs file systems should be there if no cache.
-    try (ViewFileSystemOverloadScheme vfs =
-        (ViewFileSystemOverloadScheme) FileSystem.get(conf)) {
+    try (FileSystem vfs = FileSystem.get(conf)) {
       Assert.assertEquals(2, vfs.getChildFileSystems().length);
     }
   }
@@ -494,8 +530,7 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
     // Only one local file system should be there if no InnerCache, but fs
     // cache should work.
     conf.setBoolean(Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE, false);
-    try (ViewFileSystemOverloadScheme vfs =
-        (ViewFileSystemOverloadScheme) FileSystem.get(conf)) {
+    try (FileSystem vfs = FileSystem.get(conf)) {
       Assert.assertEquals(1, vfs.getChildFileSystems().length);
     }
   }
@@ -636,6 +671,48 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
     }
   }
 
+  @Test
+  public void testMountTableNameShouldIgnorePortFromURI1() throws Exception {
+    final Path hdfsTargetPath = new Path(defaultFSURI + HDFS_USER_FOLDER);
+    conf = new Configuration(getNewConf());
+    addMountLinks(defaultFSURI.getHost(),
+        new String[] {HDFS_USER_FOLDER, LOCAL_FOLDER,
+            Constants.CONFIG_VIEWFS_LINK_FALLBACK},
+        new String[] {hdfsTargetPath.toUri().toString(),
+            localTargetDir.toURI().toString(),
+            hdfsTargetPath.toUri().toString()}, conf);
+    conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY,
+        defaultFSURI.toString());
+    conf.set(String.format(FS_IMPL_PATTERN_KEY, HDFS_SCHEME),
+        ViewFileSystemOverloadScheme.class.getName());
+    conf.set(String
+        .format(FsConstants.FS_VIEWFS_OVERLOAD_SCHEME_TARGET_FS_IMPL_PATTERN,
+            HDFS_SCHEME), DistributedFileSystem.class.getName());
+    conf.setBoolean(CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME, true);
+
+    Path testDirOnRoot = new Path("/test");
+    URI uriWithoutPort = new URI("hdfs://" + defaultFSURI.getHost());
+    //Initialize with out port
+    try (FileSystem fs = FileSystem
+        .get(uriWithoutPort, conf)) {
+      fs.mkdirs(testDirOnRoot);
+      fs.delete(testDirOnRoot, true);
+    }
+
+    //Initialize with port
+    try (FileSystem fs = FileSystem.get(defaultFSURI, conf)) {
+      fs.mkdirs(testDirOnRoot);
+      fs.delete(testDirOnRoot, true);
+    }
+
+
+    FileSystem fs = FileSystem.get(defaultFSURI, conf);
+
+    Path p = fs.resolvePath(new Path(LOCAL_FOLDER));
+
+
+  }
+
   private void writeString(final FileSystem nfly, final String testString,
       final Path testFile) throws IOException {
     try (FSDataOutputStream fsDos = nfly.create(testFile)) {
@@ -655,5 +732,19 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
    */
   public Configuration getConf() {
     return this.conf;
+  }
+
+  /**
+   * @return configuration.
+   */
+  public Configuration getNewConf() {
+    return new Configuration(cluster.getConfiguration(0));
+  }
+
+  /**
+   * sets configuration.
+   */
+  public void setConf(Configuration config) {
+    conf = config;
   }
 }

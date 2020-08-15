@@ -727,11 +727,6 @@ public class NameNode extends ReconfigurableBase implements
           intervals);
       }
     }
-    // Currently NN uses FileSystem.get to initialize DFS in startTrashEmptier.
-    // If fs.hdfs.impl was overridden by core-site.xml, we may get other
-    // filesystem. To make sure we get DFS, we are setting fs.hdfs.impl to DFS.
-    // HDFS-15450
-    conf.set(FS_HDFS_IMPL_KEY, DistributedFileSystem.class.getName());
 
     UserGroupInformation.setConfiguration(conf);
     loginAsNameNodeUser(conf);

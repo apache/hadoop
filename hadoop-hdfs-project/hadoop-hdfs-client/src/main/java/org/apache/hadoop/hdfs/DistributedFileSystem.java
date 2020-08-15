@@ -186,7 +186,7 @@ public class DistributedFileSystem extends FileSystem
       throw new IOException("Incomplete HDFS URI, no host: "+ uri);
     }
 
-    this.dfs = new DFSClient(uri, conf, statistics);
+    this.dfs = initDFSClient(uri, conf);
     this.uri = URI.create(uri.getScheme()+"://"+uri.getAuthority());
     this.workingDir = getHomeDirectory();
 
@@ -198,6 +198,10 @@ public class DistributedFileSystem extends FileSystem
               return new DFSOpsCountStatistics();
             }
           });
+  }
+
+  DFSClient initDFSClient(URI uri, Configuration conf) throws IOException {
+    return new DFSClient(uri, conf, statistics);
   }
 
   @Override
