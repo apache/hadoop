@@ -231,7 +231,8 @@ public class DistributedFileSystem extends FileSystem
 
   @Override
   public Path getHomeDirectory() {
-    return makeQualified(new Path(DFSUtilClient.getHomeDirectory(getConf(), dfs.ugi)));
+    return makeQualified(
+        new Path(DFSUtilClient.getHomeDirectory(getConf(), dfs.ugi)));
   }
 
   /**
@@ -1513,10 +1514,14 @@ public class DistributedFileSystem extends FileSystem
   @Override
   public void close() throws IOException {
     try {
-      dfs.closeOutputStreams(false);
+      if (dfs != null) {
+        dfs.closeOutputStreams(false);
+      }
       super.close();
     } finally {
-      dfs.close();
+      if (dfs != null) {
+        dfs.close();
+      }
     }
   }
 

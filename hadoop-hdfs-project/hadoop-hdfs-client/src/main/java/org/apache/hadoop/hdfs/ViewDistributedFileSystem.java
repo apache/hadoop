@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs;
 
-import com.google.common.base.Preconditions;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -73,6 +72,7 @@ import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.DelegationTokenIssuer;
 import org.apache.hadoop.security.token.Token;
@@ -86,8 +86,10 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -114,9 +116,10 @@ import java.util.Map;
  * without any path in arguments( ex: isInSafeMode), will be delegated to
  * default filesystem only, that is the configured fallback link. If you want to
  * make these API calls on specific child filesystem, you may want to initialize
- * them separately and call. In ViewDistributedFileSystem, linkFallBack is
- * mandatory when you ass mount links and it must be to your base cluster,
- * usually your current fs.defaultFS if that's pointing to hdfs.
+ * them separately and call. In ViewDistributedFileSystem, we strongly recommend
+ * to configure linkFallBack when you add mount links and it's recommended to
+ * point be to your base cluster, usually your current fs.defaultFS if that's
+ * pointing to hdfs.
  */
 public class ViewDistributedFileSystem extends DistributedFileSystem {
   private static final Logger LOGGER =
@@ -152,10 +155,8 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     // support only for base cluster filesystem. Only that APIs will use this
     // fs.
     defaultDFS = (DistributedFileSystem) this.vfs.getFallbackFileSystem();
-    Preconditions
-        .checkNotNull(defaultDFS, "In ViewHDFS fallback link is mandatory.");
     // Please don't access internal dfs client directly except in tests.
-    dfs = defaultDFS.dfs;
+    dfs = (defaultDFS != null) ? defaultDFS.dfs : null;
     super.setWorkingDirectory(this.vfs.getHomeDirectory());
   }
 
@@ -228,6 +229,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.getHedgedReadMetrics();
     }
+    checkDefaultDFS(defaultDFS, "getHedgedReadMetrics");
     return defaultDFS.getHedgedReadMetrics();
   }
 
@@ -391,6 +393,15 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     }
   }
 
+  void checkDefaultDFS(FileSystem fs, String methodName) {
+    if (fs == null) {
+      String msg = new StringBuilder("This API:").append(methodName).append(
+          " cannot be supported without default cluster(that is linkFallBack).")
+          .toString();
+      throw new UnsupportedOperationException(msg);
+    }
+  }
+
   @Override
   // DFS specific API
   protected HdfsDataOutputStream primitiveCreate(Path f,
@@ -475,6 +486,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.getBytesWithFutureGenerationStamps();
     }
+    checkDefaultDFS(defaultDFS, "getBytesWithFutureGenerationStamps");
     return defaultDFS.getBytesWithFutureGenerationStamps();
   }
 
@@ -695,6 +707,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.getClient();
     }
+    checkDefaultDFS(defaultDFS, "getClient");
     return defaultDFS.getClient();
   }
 
@@ -711,6 +724,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.getMissingBlocksCount();
     }
+    checkDefaultDFS(defaultDFS, "getMissingBlocksCount");
     return defaultDFS.getMissingBlocksCount();
   }
 
@@ -719,6 +733,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.getPendingDeletionBlocksCount();
     }
+    checkDefaultDFS(defaultDFS, "getPendingDeletionBlocksCount");
     return defaultDFS.getPendingDeletionBlocksCount();
   }
 
@@ -727,6 +742,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.getMissingReplOneBlocksCount();
     }
+    checkDefaultDFS(defaultDFS, "getMissingReplOneBlocksCount");
     return defaultDFS.getMissingReplOneBlocksCount();
   }
 
@@ -735,6 +751,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.getLowRedundancyBlocksCount();
     }
+    checkDefaultDFS(defaultDFS, "getLowRedundancyBlocksCount");
     return defaultDFS.getLowRedundancyBlocksCount();
   }
 
@@ -743,6 +760,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.getCorruptBlocksCount();
     }
+    checkDefaultDFS(defaultDFS, "getCorruptBlocksCount");
     return defaultDFS.getLowRedundancyBlocksCount();
   }
 
@@ -763,6 +781,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.getDataNodeStats();
     }
+    checkDefaultDFS(defaultDFS, "getDataNodeStats");
     return defaultDFS.getDataNodeStats();
   }
 
@@ -772,6 +791,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.getDataNodeStats(type);
     }
+    checkDefaultDFS(defaultDFS, "getDataNodeStats");
     return defaultDFS.getDataNodeStats(type);
   }
 
@@ -781,6 +801,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.setSafeMode(action);
     }
+    checkDefaultDFS(defaultDFS, "setSafeMode");
     return defaultDFS.setSafeMode(action);
   }
 
@@ -790,6 +811,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.setSafeMode(action, isChecked);
     }
+    checkDefaultDFS(defaultDFS, "setSafeMode");
     return defaultDFS.setSafeMode(action, isChecked);
   }
 
@@ -798,6 +820,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.saveNamespace(timeWindow, txGap);
     }
+    checkDefaultDFS(defaultDFS, "saveNamespace");
     return defaultDFS.saveNamespace(timeWindow, txGap);
   }
 
@@ -807,6 +830,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       super.saveNamespace();
       return;
     }
+    checkDefaultDFS(defaultDFS, "saveNamespace");
     defaultDFS.saveNamespace();
   }
 
@@ -815,6 +839,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.rollEdits();
     }
+    checkDefaultDFS(defaultDFS, "rollEdits");
     return defaultDFS.rollEdits();
   }
 
@@ -823,6 +848,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.restoreFailedStorage(arg);
     }
+    checkDefaultDFS(defaultDFS, "restoreFailedStorage");
     return defaultDFS.restoreFailedStorage(arg);
   }
 
@@ -832,6 +858,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       super.refreshNodes();
       return;
     }
+    checkDefaultDFS(defaultDFS, "refreshNodes");
     defaultDFS.refreshNodes();
   }
 
@@ -841,6 +868,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       super.finalizeUpgrade();
       return;
     }
+    checkDefaultDFS(defaultDFS, "finalizeUpgrade");
     defaultDFS.finalizeUpgrade();
   }
 
@@ -849,6 +877,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.upgradeStatus();
     }
+    checkDefaultDFS(defaultDFS, "upgradeStatus");
     return defaultDFS.upgradeStatus();
   }
 
@@ -858,6 +887,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.rollingUpgrade(action);
     }
+    checkDefaultDFS(defaultDFS, "rollingUpgrade");
     return defaultDFS.rollingUpgrade(action);
   }
 
@@ -867,6 +897,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       super.metaSave(pathname);
       return;
     }
+    checkDefaultDFS(defaultDFS, "metaSave");
     defaultDFS.metaSave(pathname);
   }
 
@@ -875,6 +906,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.getServerDefaults();
     }
+    checkDefaultDFS(defaultDFS, "getServerDefaults");
     //TODO: Need to revisit.
     return defaultDFS.getServerDefaults();
   }
@@ -1005,6 +1037,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       super.setBalancerBandwidth(bandwidth);
       return;
     }
+    checkDefaultDFS(defaultDFS, "setBalancerBandwidth");
     defaultDFS.setBalancerBandwidth(bandwidth);
   }
 
@@ -1013,6 +1046,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.getCanonicalServiceName();
     }
+    checkDefaultDFS(defaultDFS, "getCanonicalServiceName");
     return defaultDFS.getCanonicalServiceName();
   }
 
@@ -1039,6 +1073,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.isInSafeMode();
     }
+    checkDefaultDFS(defaultDFS, "isInSafeMode");
     return defaultDFS.isInSafeMode();
   }
 
@@ -1082,7 +1117,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
   public void renameSnapshot(Path path, String snapshotOldName,
       String snapshotNewName) throws IOException {
     if (this.vfs == null) {
-      super.renameSnapshot(path, snapshotOldName, snapshotOldName);
+      super.renameSnapshot(path, snapshotOldName, snapshotNewName);
       return;
     }
     this.vfs.renameSnapshot(path, snapshotOldName, snapshotNewName);
@@ -1095,6 +1130,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.getSnapshottableDirListing();
     }
+    checkDefaultDFS(defaultDFS, "getSnapshottableDirListing");
     return defaultDFS.getSnapshottableDirListing();
   }
 
@@ -1129,15 +1165,14 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
   @Override
   public SnapshotDiffReport getSnapshotDiffReport(final Path snapshotDir,
       final String fromSnapshot, final String toSnapshot) throws IOException {
-    if(this.vfs ==null){
-      return super.getSnapshotDiffReport(snapshotDir, fromSnapshot,
-          toSnapshot);
+    if (this.vfs == null) {
+      return super.getSnapshotDiffReport(snapshotDir, fromSnapshot, toSnapshot);
     }
     ViewFileSystemOverloadScheme.MountPathInfo<FileSystem> mountPathInfo =
         this.vfs.getMountPathInfo(snapshotDir, getConf());
     checkDFS(mountPathInfo.getTargetFs(), "getSnapshotDiffReport");
     return ((DistributedFileSystem) mountPathInfo.getTargetFs())
-        .getSnapshotDiffReport(snapshotDir, fromSnapshot,
+        .getSnapshotDiffReport(mountPathInfo.getPathOnTarget(), fromSnapshot,
             toSnapshot);
   }
 
@@ -1218,10 +1253,8 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       super.removeCacheDirective(id);
       return;
     }
-    //defaultDFS.removeCacheDirective(id);
-    //TODO: ? this can create issues in default cluster
-    // if user intention is to call on specific mount.
-    throw new UnsupportedOperationException();
+    checkDefaultDFS(defaultDFS, "removeCacheDirective");
+    defaultDFS.removeCacheDirective(id);
   }
 
   @Override
@@ -1246,6 +1279,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       super.addCachePool(info);
       return;
     }
+    checkDefaultDFS(defaultDFS, "addCachePool");
     defaultDFS.addCachePool(info);
   }
 
@@ -1255,6 +1289,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       super.modifyCachePool(info);
       return;
     }
+    checkDefaultDFS(defaultDFS, "modifyCachePool");
     defaultDFS.modifyCachePool(info);
   }
 
@@ -1264,6 +1299,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       super.removeCachePool(poolName);
       return;
     }
+    checkDefaultDFS(defaultDFS, "removeCachePool");
     defaultDFS.removeCachePool(poolName);
   }
 
@@ -1272,6 +1308,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.listCachePools();
     }
+    checkDefaultDFS(defaultDFS, "listCachePools");
     return defaultDFS.listCachePools();
   }
 
@@ -1502,6 +1539,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.getKeyProviderUri();
     }
+    checkDefaultDFS(defaultDFS, "getKeyProviderUri");
     return defaultDFS.getKeyProviderUri();
   }
 
@@ -1510,6 +1548,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.getKeyProvider();
     }
+    checkDefaultDFS(defaultDFS, "getKeyProvider");
     return defaultDFS.getKeyProvider();
   }
 
@@ -1581,13 +1620,40 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
         .getErasureCodingPolicy(mountPathInfo.getPathOnTarget());
   }
 
+  /**
+   * Gets all erasure coding policies from all available child file systems.
+   */
   @Override
   public Collection<ErasureCodingPolicyInfo> getAllErasureCodingPolicies()
       throws IOException {
     if (this.vfs == null) {
       return super.getAllErasureCodingPolicies();
     }
-    return defaultDFS.getAllErasureCodingPolicies();
+    FileSystem[] childFss = getChildFileSystems();
+    List<ErasureCodingPolicyInfo> results = new ArrayList<>();
+    List<IOException> failedExceptions = new ArrayList<>();
+    boolean isDFSExistsInChilds = false;
+    for (FileSystem fs : childFss) {
+      if (!(fs instanceof DistributedFileSystem)) {
+        continue;
+      }
+      isDFSExistsInChilds = true;
+      DistributedFileSystem dfs = (DistributedFileSystem) fs;
+      try {
+        results.addAll(dfs.getAllErasureCodingPolicies());
+      } catch (IOException ioe) {
+        failedExceptions.add(ioe);
+      }
+    }
+
+    if (!isDFSExistsInChilds) {
+      throw new UnsupportedOperationException(
+          "No DFS available in child file systems.");
+    }
+    if (failedExceptions.size() > 0) {
+      throw MultipleIOException.createIOException(failedExceptions);
+    }
+    return results;
   }
 
   @Override
@@ -1595,7 +1661,30 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.getAllErasureCodingCodecs();
     }
-    return defaultDFS.getAllErasureCodingCodecs();
+    FileSystem[] childFss = getChildFileSystems();
+    Map<String, String> results = new HashMap<>();
+    List<IOException> failedExceptions = new ArrayList<>();
+    boolean isDFSExistsInChilds = false;
+    for (FileSystem fs : childFss) {
+      if (!(fs instanceof DistributedFileSystem)) {
+        continue;
+      }
+      isDFSExistsInChilds = true;
+      DistributedFileSystem dfs = (DistributedFileSystem) fs;
+      try {
+        results.putAll(dfs.getAllErasureCodingCodecs());
+      } catch (IOException ioe) {
+        failedExceptions.add(ioe);
+      }
+    }
+    if (!isDFSExistsInChilds) {
+      throw new UnsupportedOperationException(
+          "No DFS available in child file systems.");
+    }
+    if (failedExceptions.size() > 0) {
+      throw MultipleIOException.createIOException(failedExceptions);
+    }
+    return results;
   }
 
   @Override
@@ -1604,7 +1693,29 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.addErasureCodingPolicies(policies);
     }
-    return defaultDFS.addErasureCodingPolicies(policies);
+    List<IOException> failedExceptions = new ArrayList<>();
+    List<AddErasureCodingPolicyResponse> results = new ArrayList<>();
+    boolean isDFSExistsInChilds = false;
+    for (FileSystem fs : getChildFileSystems()) {
+      if (!(fs instanceof DistributedFileSystem)) {
+        continue;
+      }
+      isDFSExistsInChilds = true;
+      DistributedFileSystem dfs = (DistributedFileSystem) fs;
+      try {
+        results.addAll(Arrays.asList(dfs.addErasureCodingPolicies(policies)));
+      } catch (IOException ioe) {
+        failedExceptions.add(ioe);
+      }
+    }
+    if (!isDFSExistsInChilds) {
+      throw new UnsupportedOperationException(
+          "No DFS available in child file systems.");
+    }
+    if (failedExceptions.size() > 0) {
+      throw MultipleIOException.createIOException(failedExceptions);
+    }
+    return results.toArray(new AddErasureCodingPolicyResponse[results.size()]);
   }
 
   @Override
@@ -1614,7 +1725,29 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       super.removeErasureCodingPolicy(ecPolicyName);
       return;
     }
-    defaultDFS.removeErasureCodingPolicy(ecPolicyName);
+
+    List<IOException> failedExceptions = new ArrayList<>();
+    boolean isDFSExistsInChilds = false;
+
+    for (FileSystem fs : getChildFileSystems()) {
+      if (!(fs instanceof DistributedFileSystem)) {
+        continue;
+      }
+      isDFSExistsInChilds = true;
+      DistributedFileSystem dfs = (DistributedFileSystem) fs;
+      try {
+        dfs.removeErasureCodingPolicy(ecPolicyName);
+      } catch (IOException ioe) {
+        failedExceptions.add(ioe);
+      }
+    }
+    if (!isDFSExistsInChilds) {
+      throw new UnsupportedOperationException(
+          "No DFS available in child file systems.");
+    }
+    if (failedExceptions.size() > 0) {
+      throw MultipleIOException.createIOException(failedExceptions);
+    }
   }
 
   @Override
@@ -1624,7 +1757,28 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       super.enableErasureCodingPolicy(ecPolicyName);
       return;
     }
-    defaultDFS.enableErasureCodingPolicy(ecPolicyName);
+    List<IOException> failedExceptions = new ArrayList<>();
+    boolean isDFSExistsInChilds = false;
+
+    for (FileSystem fs : getChildFileSystems()) {
+      if (!(fs instanceof DistributedFileSystem)) {
+        continue;
+      }
+      isDFSExistsInChilds = true;
+      DistributedFileSystem dfs = (DistributedFileSystem) fs;
+      try {
+        dfs.enableErasureCodingPolicy(ecPolicyName);
+      } catch (IOException ioe) {
+        failedExceptions.add(ioe);
+      }
+    }
+    if (!isDFSExistsInChilds) {
+      throw new UnsupportedOperationException(
+          "No DFS available in child file systems.");
+    }
+    if (failedExceptions.size() > 0) {
+      throw MultipleIOException.createIOException(failedExceptions);
+    }
   }
 
   @Override
@@ -1634,12 +1788,32 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       super.disableErasureCodingPolicy(ecPolicyName);
       return;
     }
-    defaultDFS.disableErasureCodingPolicy(ecPolicyName);
+    List<IOException> failedExceptions = new ArrayList<>();
+    boolean isDFSExistsInChilds = false;
+
+    for (FileSystem fs : getChildFileSystems()) {
+      if (!(fs instanceof DistributedFileSystem)) {
+        continue;
+      }
+      isDFSExistsInChilds = true;
+      DistributedFileSystem dfs = (DistributedFileSystem) fs;
+      try {
+        dfs.disableErasureCodingPolicy(ecPolicyName);
+      } catch (IOException ioe) {
+        failedExceptions.add(ioe);
+      }
+    }
+    if (!isDFSExistsInChilds) {
+      throw new UnsupportedOperationException(
+          "No DFS available in child file systems.");
+    }
+    if (failedExceptions.size() > 0) {
+      throw MultipleIOException.createIOException(failedExceptions);
+    }
   }
 
   @Override
   public void unsetErasureCodingPolicy(final Path path) throws IOException {
-
     if (this.vfs == null) {
       super.unsetErasureCodingPolicy(path);
       return;
@@ -1658,8 +1832,32 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.getECTopologyResultForPolicies(policyNames);
     }
-    throw new UnsupportedOperationException(
-        "unsetErasureCodingPolicy is not supported in ViewDFS");
+
+    List<IOException> failedExceptions = new ArrayList<>();
+    ECTopologyVerifierResult result = null;
+    for (FileSystem fs : getChildFileSystems()) {
+      if (!(fs instanceof DistributedFileSystem)) {
+        continue;
+      }
+      DistributedFileSystem dfs = (DistributedFileSystem) fs;
+      try {
+        result = dfs.getECTopologyResultForPolicies(policyNames);
+        if (!result.isSupported()) {
+          // whenever we see negative result.
+          return result;
+        }
+      } catch (IOException ioe) {
+        failedExceptions.add(ioe);
+      }
+    }
+    if (result == null) {
+      throw new IOException("No DFS available in child filesystems");
+    }
+    if (failedExceptions.size() > 0) {
+      throw MultipleIOException.createIOException(failedExceptions);
+    }
+    // Let's just return the last one.
+    return result;
   }
 
   @Override
@@ -1727,6 +1925,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.listOpenFiles();
     }
+    checkDefaultDFS(defaultDFS, "listOpenFiles");
     return defaultDFS.listOpenFiles();
   }
 
@@ -1738,6 +1937,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.listOpenFiles(openFilesTypes);
     }
+    checkDefaultDFS(defaultDFS, "listOpenFiles");
     return defaultDFS.listOpenFiles(openFilesTypes);
   }
 
@@ -1748,11 +1948,16 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.listOpenFiles(openFilesTypes, path);
     }
-    return defaultDFS.listOpenFiles(openFilesTypes, path);
+    Path absF = fixRelativePart(new Path(path));
+    ViewFileSystemOverloadScheme.MountPathInfo<FileSystem> mountPathInfo =
+        this.vfs.getMountPathInfo(absF, getConf());
+    checkDFS(mountPathInfo.getTargetFs(), "listOpenFiles");
+    return ((DistributedFileSystem) mountPathInfo.getTargetFs())
+        .listOpenFiles(openFilesTypes,
+            mountPathInfo.getPathOnTarget().toString());
   }
 
   @Override
-  //WOrks only if it's DFS.
   public HdfsDataOutputStreamBuilder appendFile(Path path) {
     if (this.vfs == null) {
       return super.appendFile(path);
@@ -1761,7 +1966,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     try {
       mountPathInfo = this.vfs.getMountPathInfo(path, getConf());
     } catch (IOException e) {
-      // TODO: can we return null here?
+      LOGGER.warn("Failed to resolve the path as mount path", e);
       return null;
     }
     checkDFS(mountPathInfo.getTargetFs(), "appendFile");
@@ -1778,7 +1983,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     return this.vfs.hasPathCapability(path, capability);
   }
 
-  //Below API provided implementation in ViewFS but not there in DFS.
+  //Below API provided implementations are in ViewFS but not there in DFS.
   @Override
   public Path resolvePath(final Path f) throws IOException {
     if (this.vfs == null) {
@@ -1875,6 +2080,6 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.getUsed();
     }
-    return defaultDFS.getUsed();
+    return this.vfs.getUsed();
   }
 }
