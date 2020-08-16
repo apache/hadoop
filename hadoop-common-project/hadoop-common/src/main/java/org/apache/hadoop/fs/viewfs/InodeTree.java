@@ -599,11 +599,10 @@ abstract class InodeTree<T> {
 
     if (!gotMountTableEntry) {
       if (!initingUriAsFallbackOnNoMounts) {
-        String msg = new StringBuilder(
+        throw new IOException(new StringBuilder(
             "ViewFs: Cannot initialize: Empty Mount table in config for ")
             .append(theUri.getScheme()).append("://").append(mountTableName)
-            .append("/").toString();
-        throw new IOException(msg);
+            .append("/").toString());
       }
       StringBuilder msg =
           new StringBuilder("Empty mount table detected for ").append(theUri)

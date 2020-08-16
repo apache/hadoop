@@ -133,17 +133,18 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     try {
       this.vfs = tryInitializeMountingViewFs(uri, conf);
     } catch (IOException ioe) {
-      LOGGER.debug(
-          "Mount tree initialization failed with the reason => {}. Falling" +
-              " back to regular DFS initialization. Please" + " re-initialize" +
-              " the fs after updating mount point.",
-          ioe.getMessage());
-      // Previous super.initialize would have skipped the dfsclient init as we
-      // planned to initialize vfs. Since vfs init failed, let's init dfsClient
-      // now.
+      LOGGER.debug(new StringBuilder("Mount tree initialization failed with ")
+          .append("the reason => {}. Falling back to regular DFS")
+          .append(" initialization. Please re-initialize the fs after updating")
+          .append(" mount point.").toString(), ioe.getMessage());
+      // Previous super.initialize would have skipped the dfsclient init and
+      // setWorkingDirectory as we planned to initialize vfs. Since vfs init
+      // failed, let's init dfsClient now.
       super.initDFSClient(uri, conf);
+      super.setWorkingDirectory(super.getHomeDirectory());
       return;
     }
+
     setConf(conf);
     // A child DFS with the current initialized URI. This must be same as
     // fallback fs. The fallback must point to root of your filesystems.
@@ -153,17 +154,15 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     defaultDFS = (DistributedFileSystem) this.vfs.getFallbackFileSystem();
     Preconditions
         .checkNotNull(defaultDFS, "In ViewHDFS fallback link is mandatory.");
-    // Please don't access internal dfs directly except in tests.
+    // Please don't access internal dfs client directly except in tests.
     dfs = defaultDFS.dfs;
+    super.setWorkingDirectory(this.vfs.getHomeDirectory());
   }
 
   @Override
-  DFSClient initDFSClient(URI uri, Configuration conf) throws IOException {
-    if (this.vfs == null) {
-      // There is not vfs, so let's initialise regular DFSClient.
-      return super.initDFSClient(uri, conf);
-    }
-    return null;
+  void initDFSClient(URI uri, Configuration conf) throws IOException {
+    // Since we plan to initialize vfs in this class, we will not need to
+    // initialize DFS client.
   }
 
   public ViewDistributedFileSystem() {
@@ -212,6 +211,9 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
 
   @Override
   public Path getHomeDirectory() {
+    if (super.dfs == null) {
+      return null;
+    }
     if (this.vfs == null) {
       return super.getHomeDirectory();
     }
@@ -504,9 +506,6 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.rename(src, dst);
     }
-    if (getMountPoints().length == 0) {
-      return this.defaultDFS.rename(src, dst);
-    }
     return this.vfs.rename(src, dst);
   }
 
@@ -691,6 +690,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
   }
 
   @InterfaceAudience.Private
+  @Override
   public DFSClient getClient() {
     if (this.vfs == null) {
       return super.getClient();
@@ -711,8 +711,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.getMissingBlocksCount();
     }
-    throw new UnsupportedOperationException(
-        "getMissingBlocksCount is not supported in ViewDFS");
+    return defaultDFS.getMissingBlocksCount();
   }
 
   @Override
@@ -720,8 +719,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.getPendingDeletionBlocksCount();
     }
-    throw new UnsupportedOperationException(
-        "getPendingDeletionBlocksCount is not supported in ViewDFS");
+    return defaultDFS.getPendingDeletionBlocksCount();
   }
 
   @Override
@@ -729,8 +727,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.getMissingReplOneBlocksCount();
     }
-    throw new UnsupportedOperationException(
-        "getMissingReplOneBlocksCount is not supported in ViewDFS");
+    return defaultDFS.getMissingReplOneBlocksCount();
   }
 
   @Override
@@ -738,8 +735,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.getLowRedundancyBlocksCount();
     }
-    throw new UnsupportedOperationException(
-        "getLowRedundancyBlocksCount is not supported in ViewDFS");
+    return defaultDFS.getLowRedundancyBlocksCount();
   }
 
   @Override
@@ -747,8 +743,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.getCorruptBlocksCount();
     }
-    throw new UnsupportedOperationException(
-        "getCorruptBlocksCount is not supported in ViewDFS");
+    return defaultDFS.getLowRedundancyBlocksCount();
   }
 
   @Override
@@ -903,12 +898,8 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       return;
     }
 
-    // Mounting ViewHDFS behavior
-    // TODO: revisit
-    ViewFileSystemOverloadScheme.MountPathInfo<FileSystem> mountPathInfo =
-        this.vfs.getMountPathInfo(target, getConf());
-    mountPathInfo.getTargetFs()
-        .createSymlink(mountPathInfo.getPathOnTarget(), link, createParent);
+    throw new UnsupportedOperationException(
+        "createSymlink is not supported in ViewHDFS");
   }
 
   @Override
@@ -916,7 +907,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.supportsSymlinks();
     }
-    // TODO: we can enabled later if we want to support symlinks.
+    // we can enabled later if we want to support symlinks.
     return false;
   }
 
@@ -1035,7 +1026,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     try {
       mountPathInfo = this.vfs.getMountPathInfo(new Path(uri), getConf());
     } catch (IOException e) {
-      //LOG.error("Failed to resolve the uri as mount path", e);
+      LOGGER.warn("Failed to resolve the uri as mount path", e);
       return null;
     }
     checkDFS(mountPathInfo.getTargetFs(), "canonicalizeUri");
@@ -1200,7 +1191,6 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     ViewFileSystemOverloadScheme.MountPathInfo<FileSystem> mountPathInfo =
         this.vfs.getMountPathInfo(info.getPath(), getConf());
     checkDFS(mountPathInfo.getTargetFs(), "modifyCacheDirective");
-
     ((DistributedFileSystem) mountPathInfo.getTargetFs()).modifyCacheDirective(
         new CacheDirectiveInfo.Builder(info)
             .setPath(mountPathInfo.getPathOnTarget()).build());
@@ -1240,18 +1230,23 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.listCacheDirectives(filter);
     }
-    throw new UnsupportedOperationException(
-        "listCacheDirectives is not supported in ViewDFS");
+    ViewFileSystemOverloadScheme.MountPathInfo<FileSystem> mountPathInfo =
+        this.vfs.getMountPathInfo(filter.getPath(), getConf());
+    checkDFS(mountPathInfo.getTargetFs(), "modifyCacheDirective");
+
+    return ((DistributedFileSystem) mountPathInfo.getTargetFs())
+        .listCacheDirectives(new CacheDirectiveInfo.Builder(filter)
+            .setPath(mountPathInfo.getPathOnTarget()).build());
   }
 
+  //Currently Cache pool APIs supported only in default cluster.
   @Override
   public void addCachePool(CachePoolInfo info) throws IOException {
     if (this.vfs == null) {
       super.addCachePool(info);
       return;
     }
-    throw new UnsupportedOperationException(
-        "addCachePool is not supported in ViewDFS");
+    defaultDFS.addCachePool(info);
   }
 
   @Override
@@ -1260,8 +1255,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       super.modifyCachePool(info);
       return;
     }
-    throw new UnsupportedOperationException(
-        "modifyCachePool is not supported in ViewDFS");
+    defaultDFS.modifyCachePool(info);
   }
 
   @Override
@@ -1270,8 +1264,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       super.removeCachePool(poolName);
       return;
     }
-    throw new UnsupportedOperationException(
-        "removeCachePool is not supported in ViewDFS");
+    defaultDFS.removeCachePool(poolName);
   }
 
   @Override
@@ -1279,8 +1272,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.listCachePools();
     }
-    throw new UnsupportedOperationException(
-        "listCachePools is not supported in ViewDFS");
+    return defaultDFS.listCachePools();
   }
 
   @Override

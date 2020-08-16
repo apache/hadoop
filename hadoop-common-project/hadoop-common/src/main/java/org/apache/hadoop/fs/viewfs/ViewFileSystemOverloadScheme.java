@@ -125,9 +125,9 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
   /**
    * Sets whether to add fallback automatically when no mount points found.
    */
-  public boolean setSupportAutoAddingFallbackOnNoMounts(
+  public void setSupportAutoAddingFallbackOnNoMounts(
       boolean addAutoFallbackOnNoMounts) {
-    return this.supportAutoAddingFallbackOnNoMounts = addAutoFallbackOnNoMounts;
+    this.supportAutoAddingFallbackOnNoMounts = addAutoFallbackOnNoMounts;
   }
 
   @Override
