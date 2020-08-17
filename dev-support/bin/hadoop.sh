@@ -405,36 +405,10 @@ function personality_modules
   fi
 
   extra="-Ptest-patch ${extra}"
-  OZONE_CHANGED=false
-  CORE_HADOOP_CHANGED=false
-  for module in "${CHANGED_MODULES[@]}"
-  do
-    if [[ "$module" =~ "hdds" ]]; then
-      OZONE_CHANGED=true
-    elif [[ "$module" =~ "ozone" ]]; then
-      OZONE_CHANGED=true
-    else
-      CORE_HADOOP_CHANGED=true
-    fi
+  for module in $(hadoop_order ${ordering}); do
+    # shellcheck disable=SC2086
+    personality_enqueue_module ${module} ${extra}
   done
-
-  if [ "$OZONE_CHANGED" = true ]; then
-    extra="-Phdds ${extra}"
-  fi
-
-  if [ "$CORE_HADOOP_CHANGED" = false ] && [ "$OZONE_CHANGED" = true ]; then
-    if [ "$testtype" != "mvnsite" ] && [ "$testtype" != "shadedclient" ]; then
-      #shellcheck disable=SC2086
-      personality_enqueue_module hadoop-hdds ${extra}
-      #shellcheck disable=SC2086
-      personality_enqueue_module hadoop-ozone ${extra}
-    fi
-  else
-    for module in $(hadoop_order ${ordering}); do
-      # shellcheck disable=SC2086
-      personality_enqueue_module ${module} ${extra}
-    done
-  fi
 }
 
 ## @description  Add tests based upon personality needs
