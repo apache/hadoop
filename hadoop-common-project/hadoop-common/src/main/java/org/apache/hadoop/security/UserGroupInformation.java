@@ -1239,7 +1239,7 @@ public class UserGroupInformation {
    * happened already. The Subject field of this UserGroupInformation object is
    * updated to have the new credentials.
    *
-   * @param ignoreTimeElapsed Fore re-login irrespective of the time of last
+   * @param ignoreTimeElapsed Force re-login irrespective of the time of last
    *                          login
    * @throws IOException
    * @throws KerberosAuthException on a failure
