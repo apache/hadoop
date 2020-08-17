@@ -413,7 +413,13 @@ public class ITestAzureBlobFileSystemRandomRead extends
   }
 
   @Test
-  @Ignore("HADOOP-16915")
+  @Ignore("ABFS accounts are primarily for customers to use with HNS property enabled. A non-HNS enabled ABFS account" +
+          "will not provide much value add in comparison to WASB account. The test case" +
+          "ITestAzureBlobFileSystemRandomRead#testRandomReadPerformance that tries to compare non-HNS to WASB" +
+          "performance hence isn't significant and can deviate in the perf in minor ways over time. Non-HNS not being a" +
+          "primary use case for ABFS, ignoring this test which currently fails randomly as it crosses test perf" +
+          "threshold." +
+          "https://issues.apache.org/jira/browse/HADOOP-16915")
   public void testRandomReadPerformance() throws Exception {
     Assume.assumeFalse("This test does not support namespace enabled account",
             this.getFileSystem().getIsNamespaceEnabled());
