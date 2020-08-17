@@ -32,7 +32,7 @@ function personality_globals
   #shellcheck disable=SC2034
   PATCH_NAMING_RULE="https://wiki.apache.org/hadoop/HowToContribute"
   #shellcheck disable=SC2034
-  JIRA_ISSUE_RE='^(HADOOP|YARN|MAPREDUCE|HDFS|HDDS|SUBMARINE)-[0-9]+$'
+  JIRA_ISSUE_RE='^(HADOOP|YARN|MAPREDUCE|HDFS)-[0-9]+$'
   #shellcheck disable=SC2034
   GITHUB_REPO_DEFAULT="apache/hadoop"
 
