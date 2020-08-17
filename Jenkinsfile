@@ -96,6 +96,7 @@ pipeline {
                         YETUS_ARGS+=("--basedir=${WORKSPACE}/${SOURCEDIR}")
 
                         # our project defaults come from a personality file
+                        YETUS_ARGS+=("--project=hadoop")
                         YETUS_ARGS+=("--personality=${WORKSPACE}/${SOURCEDIR}/dev-support/bin/hadoop.sh")
 
                         # lots of different output formats
