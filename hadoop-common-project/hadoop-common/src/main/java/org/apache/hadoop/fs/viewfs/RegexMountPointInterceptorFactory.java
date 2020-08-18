@@ -36,7 +36,7 @@ final class RegexMountPointInterceptorFactory {
    * e.g. replaceresolveddstpath:word1,word2.
    *
    * @param interceptorSettingsString
-   * @return
+   * @return Return interceptor based on setting or null on bad/unknown config.
    */
   public static RegexMountPointInterceptor create(
       String interceptorSettingsString) {

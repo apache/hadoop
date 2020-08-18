@@ -246,16 +246,15 @@ public class TestViewFileSystemLinkRegex extends ViewFileSystemBaseTest {
    */
   @Test
   public void testConfLinkRegexIndexMapping() throws Exception {
-    // CHECKSTYLE:OFF
     //  Config:
     //   <property>
     //     <name>
-    //     fs.viewfs.mounttable.TestViewFileSystemLinkRegexCluster.linkRegex.^/(\w+)</name>
+    //     fs.viewfs.mounttable.TestViewFileSystemLinkRegexCluster
+    //     .linkRegex.^/(\w+)</name>
     //     <value>/targetTestRoot/$1</value>
     //   </property>
     // Dir path to test: /testConfLinkRegexIndexMapping1
     // Expect path: /targetTestRoot/testConfLinkRegexIndexMapping1
-    // CHECKSTYLE:ON
     String regexStr = "^/(\\w+)";
     String dstPathStr = targetTestRoot + "$1";
     Path srcPath = new Path("/testConfLinkRegexIndexMapping1");
@@ -266,16 +265,15 @@ public class TestViewFileSystemLinkRegex extends ViewFileSystemBaseTest {
         regexStr, dstPathStr, null,
         srcPath, expectedResolveResult, 3);
 
-    // CHECKSTYLE:OFF
     // Config:
     //   <property>
-    //     <name>fs.viewfs.mounttable.TestViewFileSystemLinkRegexCluster.linkRegex.^/(\w+)</name>
+    //     <name>fs.viewfs.mounttable.TestViewFileSystemLinkRegexCluster
+    //     .linkRegex.^/(\w+)</name>
     //     <value>/targetTestRoot/${1}</value>
     //   </property>
     // Dir path to test: /testConfLinkRegexIndexMapping2
     // Expect path: /targetTestRoot/testConfLinkRegexIndexMapping2
 
-    // CHECKSTYLE:ON
     dstPathStr = targetTestRoot + "${1}";
     srcPath = new Path("/testConfLinkRegexIndexMapping2");
     expectedResolveResult =
@@ -286,15 +284,14 @@ public class TestViewFileSystemLinkRegex extends ViewFileSystemBaseTest {
         regexStr, dstPathStr, null,
         srcPath, expectedResolveResult, 4);
 
-    // CHECKSTYLE:OFF
     // Config:
     //   <property>
-    //     <name>fs.viewfs.mounttable.TestViewFileSystemLinkRegexCluster.linkRegex.^/(\w+)</name>
+    //     <name>fs.viewfs.mounttable.TestViewFileSystemLinkRegexCluster
+    //     .linkRegex.^/(\w+)</name>
     //     <value>/targetTestRoot/$1</value>
     //   </property>
     // Dir path to test: /testConfLinkRegexIndexMapping3/dir1
     // Expect path: /targetTestRoot/testConfLinkRegexIndexMapping3/dir1
-    // CHECKSTYLE:ON
     dstPathStr = targetTestRoot + "$1";
     srcPath = new Path("/testConfLinkRegexIndexMapping3/dir1");
     expectedResolveResult = new Path(
@@ -304,15 +301,14 @@ public class TestViewFileSystemLinkRegex extends ViewFileSystemBaseTest {
         regexStr, dstPathStr, null,
         srcPath, expectedResolveResult, 5);
 
-    // CHECKSTYLE:OFF
     // Config:
     //   <property>
-    //     <name>fs.viewfs.mounttable.TestViewFileSystemLinkRegexCluster.linkRegex.^/(\w+)</name>
+    //     <name>fs.viewfs.mounttable.TestViewFileSystemLinkRegexCluster
+    //     .linkRegex.^/(\w+)</name>
     //     <value>/targetTestRoot/${1}/</value>
     //   </property>
     // Dir path to test: /testConfLinkRegexIndexMapping4/dir1
     // Expect path: /targetTestRoot/testConfLinkRegexIndexMapping4/dir1
-    // CHECKSTYLE:ON
     dstPathStr = targetTestRoot + "${1}/";
     srcPath = new Path("/testConfLinkRegexIndexMapping4/dir1");
     expectedResolveResult = new Path(
@@ -329,15 +325,14 @@ public class TestViewFileSystemLinkRegex extends ViewFileSystemBaseTest {
    */
   @Test
   public void testConfLinkRegexNamedGroupMapping() throws Exception {
-    // CHECKSTYLE:OFF
     // Config:
     //   <property>
-    //     <name>fs.viewfs.mounttable.TestViewFileSystemLinkRegexCluster.linkRegex.^/(?<firstDir>\w+)</name>
+    //     <name>fs.viewfs.mounttable.TestViewFileSystemLinkRegexCluster
+    //     .linkRegex.^/(?<firstDir>\w+)</name>
     //     <value>/targetTestRoot/$firstDir</value>
     //   </property>
     // Dir path to test: /testConfLinkRegexNamedGroupMapping1
     // Expect path: /targetTestRoot/testConfLinkRegexNamedGroupMapping1
-    // CHECKSTYLE:ON
     URI viewFsUri = new URI(
         FsConstants.VIEWFS_SCHEME, CLUSTER_NAME, "/", null, null);
     String regexStr = "^/(?<firstDir>\\w+)";
@@ -350,19 +345,19 @@ public class TestViewFileSystemLinkRegex extends ViewFileSystemBaseTest {
         regexStr, dstPathStr, null,
         srcPath, expectedResolveResult, 3);
 
-    // CHECKSTYLE:OFF
     // Config:
     //   <property>
-    //     <name>fs.viewfs.mounttable.TestViewFileSystemLinkRegexCluster.linkRegex.^/(?<firstDir>\w+)</name>
+    //     <name>fs.viewfs.mounttable.TestViewFileSystemLinkRegexCluster
+    //     .linkRegex.^/(?<firstDir>\w+)</name>
     //     <value>/targetTestRoot/${firstDir}</value>
     //   </property>
     // Dir path to test: /testConfLinkRegexNamedGroupMapping2
     // Expect path: /targetTestRoot/testConfLinkRegexNamedGroupMapping2
-    // CHECKSTYLE:ON
     dstPathStr = targetTestRoot + "${firstDir}";
     srcPath = new Path("/testConfLinkRegexNamedGroupMapping2");
     expectedResolveResult = new Path(
-        dstPathStr.replace("${firstDir}", "testConfLinkRegexNamedGroupMapping2"));
+        dstPathStr.replace(
+            "${firstDir}", "testConfLinkRegexNamedGroupMapping2"));
     testRegexMountpoint(
         new Configuration(conf),
         regexStr, dstPathStr, null,
@@ -375,17 +370,16 @@ public class TestViewFileSystemLinkRegex extends ViewFileSystemBaseTest {
    */
   @Test
   public void testConfLinkRegexFixedDestMapping() throws Exception {
-    // CHECKSTYLE:OFF
     // Config:
     //   <property>
-    //     <name>fs.viewfs.mounttable.TestViewFileSystemLinkRegexCluster.linkRegex.^/(?<firstDir>\w+)</name>
+    //     <name>fs.viewfs.mounttable.TestViewFileSystemLinkRegexCluster
+    //     .linkRegex.^/(?<firstDir>\w+)</name>
     //     <value>/targetTestRoot/${firstDir}</value>
     //   </property>
     // Dir path to test: /misc1
     // Expect path: /targetTestRoot/testConfLinkRegexFixedDestMappingFile
     // Dir path to test: /misc2
     // Expect path: /targetTestRoot/testConfLinkRegexFixedDestMappingFile
-    // CHECKSTYLE:ON
     String regexStr = "^/\\w+";
     String dstPathStr =
         targetTestRoot + "testConfLinkRegexFixedDestMappingFile";
@@ -406,15 +400,14 @@ public class TestViewFileSystemLinkRegex extends ViewFileSystemBaseTest {
    */
   @Test
   public void testConfLinkRegexWithSingleInterceptor() throws Exception {
-    // CHECKSTYLE:OFF
     // Config:
     //   <property>
-    //     <name>fs.viewfs.mounttable.TestViewFileSystemLinkRegexCluster.linkRegex.replaceresolveddstpath:_:-#.^/user/(?<username>\w+)</name>
+    //     <name>fs.viewfs.mounttable.TestViewFileSystemLinkRegexCluster
+    //     .linkRegex.replaceresolveddstpath:_:-#.^/user/(?<username>\w+)</name>
     //     <value>/targetTestRoot/$username</value>
     //   </property>
     // Dir path to test: /user/hadoop_user1/hadoop_dir1
     // Expect path: /targetTestRoot/hadoop-user1/hadoop_dir1
-    // CHECKSTYLE:ON
 
     String regexStr = "^/user/(?<username>\\w+)";
     String dstPathStr = targetTestRoot + "$username";
@@ -435,17 +428,19 @@ public class TestViewFileSystemLinkRegex extends ViewFileSystemBaseTest {
    */
   @Test
   public void testConfLinkRegexWithInterceptors() throws Exception {
-    // CHECKSTYLE:OFF
     // Config:
     //   <property>
-    //     <name>fs.viewfs.mounttable.TestViewFileSystemLinkRegexCluster.linkRegex.replaceresolveddstpath:_:-;replaceresolveddstpath:hadoop:hdfs#.^/user/(?<username>\w+)</name>
+    //     <name>fs.viewfs.mounttable.TestViewFileSystemLinkRegexCluster
+    //     .linkRegex
+    //     .replaceresolveddstpath:_:-;
+    //     replaceresolveddstpath:hadoop:hdfs#.^/user/(?<username>\w+)</name>
     //     <value>/targetTestRoot/$username</value>
     //   </property>
     // Dir path to test: /user/hadoop_user1/hadoop_dir1
     // Expect path: /targetTestRoot/hdfs-user1/hadoop_dir1
-    // CHECKSTYLE:ON
     URI viewFsUri =
-        new URI(FsConstants.VIEWFS_SCHEME, CLUSTER_NAME, "/", null, null);
+        new URI(
+            FsConstants.VIEWFS_SCHEME, CLUSTER_NAME, "/", null, null);
     String regexStr = "^/user/(?<username>\\w+)/";
     String dstPathStr = targetTestRoot + "$username";
     // Replace "_" with "-"

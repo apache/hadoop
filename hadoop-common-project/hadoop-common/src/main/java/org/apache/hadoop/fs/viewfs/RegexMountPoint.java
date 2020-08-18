@@ -286,21 +286,4 @@ class RegexMountPoint<T> {
     return null;
   }
 
-  /**
-   * Convert interceptor to string.
-   *
-   * @param interceptorList - the interceptor list to be applied.
-   * @return
-   */
-  public static String convertInterceptorsToString(
-      List<RegexMountPointInterceptor> interceptorList) {
-    StringBuffer stringBuffer = new StringBuffer();
-    for (int index = 0; index < interceptorList.size(); ++index) {
-      stringBuffer.append(interceptorList.get(index).toString());
-      if (index < interceptorList.size() - 1) {
-        stringBuffer.append(INTERCEPTOR_SEP);
-      }
-    }
-    return stringBuffer.toString();
-  }
 }

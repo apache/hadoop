@@ -59,7 +59,8 @@ class RegexMountPointResolvedDstPathReplaceInterceptor
     return srcRegexPattern;
   }
 
-  @Override public void initialize() throws IOException {
+  @Override
+  public void initialize() throws IOException {
     try {
       srcRegexPattern = Pattern.compile(srcRegexString);
     } catch (PatternSyntaxException ex) {
@@ -69,12 +70,12 @@ class RegexMountPointResolvedDstPathReplaceInterceptor
   }
 
   /**
-   * Intercept source before resolution.
+   * Source won't be changed in the interceptor.
    *
-   * @param source
-   * @return
+   * @return source param string passed in.
    */
-  @Override public String interceptSource(String source) {
+  @Override
+  public String interceptSource(String source) {
     return source;
   }
 
@@ -86,26 +87,30 @@ class RegexMountPointResolvedDstPathReplaceInterceptor
    *
    * @return intercepted string
    */
-  @Override public String interceptResolvedDestPathStr(
+  @Override
+  public String interceptResolvedDestPathStr(
       String parsedDestPathStr) {
     Matcher matcher = srcRegexPattern.matcher(parsedDestPathStr);
     return matcher.replaceAll(replaceString);
   }
 
   /**
-   * Intercept remaining path.
+   * The interceptRemainingPath will just return the remainingPath passed in.
    *
-   * @return intercepted path
+   * @return remaining path pass in
    */
-  @Override public Path interceptRemainingPath(Path remainingPath) {
+  @Override
+  public Path interceptRemainingPath(Path remainingPath) {
     return remainingPath;
   }
 
-  @Override public RegexMountPointInterceptorType getType() {
+  @Override
+  public RegexMountPointInterceptorType getType() {
     return REPLACE_RESOLVED_DST_PATH;
   }
 
-  @Override public String serializeToString() {
+  @Override
+  public String serializeToString() {
     return REPLACE_RESOLVED_DST_PATH.getConfigName()
         + RegexMountPoint.INTERCEPTOR_INTERNAL_SEP + srcRegexString
         + RegexMountPoint.INTERCEPTOR_INTERNAL_SEP + replaceString;
@@ -116,8 +121,7 @@ class RegexMountPointResolvedDstPathReplaceInterceptor
    * replaceresolvedpath:wordToReplace:replaceString
    * Note that we'll assume there's no ':' in the regex for the moment.
    *
-   * @param serializedString
-   * @return
+   * @return Interceptor instance or null on bad config.
    */
   public static RegexMountPointResolvedDstPathReplaceInterceptor
       deserializeFromString(String serializedString) {
