@@ -106,7 +106,7 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
   public boolean isAppendBlob() {
     return isAppendBlob;
   }
-  
+
   public int getWriteMaxConcurrentRequestCount() {
     return this.writeMaxConcurrentRequestCount;
   }
