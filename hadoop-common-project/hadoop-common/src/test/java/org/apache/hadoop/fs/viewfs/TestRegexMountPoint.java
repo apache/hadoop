@@ -70,6 +70,12 @@ public class TestRegexMountPoint {
 
       @Override
       protected TestRegexMountPointFileSystem getTargetFileSystem(
+          final URI uri, boolean enableCache) {
+        return new TestRegexMountPointFileSystem(uri);
+      }
+
+      @Override
+      protected TestRegexMountPointFileSystem getTargetFileSystem(
           final INodeDir<TestRegexMountPointFileSystem> dir) {
         return new TestRegexMountPointFileSystem(null);
       }
@@ -82,11 +88,13 @@ public class TestRegexMountPoint {
     };
   }
 
-  @After public void tearDown() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     inodeTree = null;
   }
 
-  @Test public void testGetVarListInString() throws IOException {
+  @Test
+  public void testGetVarListInString() throws IOException {
     String srcRegex = "/(\\w+)";
     String target = "/$0/${1}/$1/${2}/${2}";
     RegexMountPoint regexMountPoint =
@@ -103,7 +111,8 @@ public class TestRegexMountPoint {
     Assert.assertTrue(varMap.get("2").contains("${2}"));
   }
 
-  @Test public void testResolve() throws IOException {
+  @Test
+  public void testResolve() throws IOException {
     String regexStr = "^/user/(?<username>\\w+)";
     String dstPathStr = "/namenode1/testResolve/$username";
     String settingsStr = null;
@@ -126,7 +135,8 @@ public class TestRegexMountPoint {
     Assert.assertTrue(resolveResult.remainingPath.toString().equals("/file1"));
   }
 
-  @Test public void testResolveWithInterceptor() throws IOException {
+  @Test
+  public void testResolveWithInterceptor() throws IOException {
     String regexStr = "^/user/(?<username>\\w+)";
     String dstPathStr = "/namenode1/testResolve/$username";
     // Replace "_" with "-"

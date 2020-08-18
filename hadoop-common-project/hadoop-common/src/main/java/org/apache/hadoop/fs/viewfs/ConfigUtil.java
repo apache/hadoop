@@ -169,10 +169,10 @@ public class ConfigUtil {
 
   /**
    * Add a LinkRegex to the config for the specified mount table.
-   * @param conf
-   * @param mountTableName
-   * @param srcRegex
-   * @param targetStr
+   * @param conf - get mountable config from this conf
+   * @param mountTableName - the mountable name of the regex config item
+   * @param srcRegex - the src path regex expression that applies to this config
+   * @param targetStr - the string of target path
    */
   public static void addLinkRegex(
       Configuration conf, final String mountTableName,
@@ -182,11 +182,12 @@ public class ConfigUtil {
 
   /**
    * Add a LinkRegex to the config for the specified mount table.
-   * @param conf
-   * @param mountTableName
-   * @param srcRegex
-   * @param targetStr
-   * @param interceptorSettings
+   * @param conf - get mountable config from this conf
+   * @param mountTableName - the mountable name of the regex config item
+   * @param srcRegex - the src path regex expression that applies to this config
+   * @param targetStr - the string of target path
+   * @param interceptorSettings - the serialized interceptor string to be
+   *                            applied while resolving the mapping
    */
   public static void addLinkRegex(
       Configuration conf, final String mountTableName, final String srcRegex,

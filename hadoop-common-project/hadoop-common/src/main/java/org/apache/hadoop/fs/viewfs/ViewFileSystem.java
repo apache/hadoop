@@ -300,13 +300,20 @@ public class ViewFileSystem extends FileSystem {
         @Override
         protected FileSystem getTargetFileSystem(final URI uri)
           throws URISyntaxException, IOException {
-            FileSystem fs;
-            if (enableInnerCache) {
-              fs = innerCache.get(uri, config);
-            } else {
-              fs = fsGetter.get(uri, config);
-            }
-            return new ChRootedFileSystem(fs, uri);
+          return getTargetFileSystem(uri, enableInnerCache);
+        }
+
+        @Override
+        protected FileSystem getTargetFileSystem(
+            final URI uri, boolean enableCache)
+            throws URISyntaxException, IOException {
+          FileSystem fs;
+          if (enableCache) {
+            fs = innerCache.get(uri, config);
+          } else {
+            fs = fsGetter.get(uri, config);
+          }
+          return new ChRootedFileSystem(fs, uri);
         }
 
         @Override

@@ -36,7 +36,8 @@ public class TestRegexMountPointResolvedDstPathReplaceInterceptor {
         + RegexMountPoint.INTERCEPTOR_INTERNAL_SEP + replaceString;
   }
 
-  @Test public void testDeserializeFromStringNormalCase() throws IOException {
+  @Test
+  public void testDeserializeFromStringNormalCase() throws IOException {
     String srcRegex = "-";
     String replaceString = "_";
     String serializedString = createSerializedString(srcRegex, replaceString);
@@ -51,7 +52,8 @@ public class TestRegexMountPointResolvedDstPathReplaceInterceptor {
         interceptor.getSrcRegexPattern().toString().equals(srcRegex));
   }
 
-  @Test public void testDeserializeFromStringBadCase() throws IOException {
+  @Test
+  public void testDeserializeFromStringBadCase() throws IOException {
     String srcRegex = "-";
     String replaceString = "_";
     String serializedString = createSerializedString(srcRegex, replaceString);
@@ -62,7 +64,8 @@ public class TestRegexMountPointResolvedDstPathReplaceInterceptor {
     Assert.assertEquals(interceptor, null);
   }
 
-  @Test public void testSerialization() {
+  @Test
+  public void testSerialization() {
     String srcRegex = "word1";
     String replaceString = "word2";
     String serializedString = createSerializedString(srcRegex, replaceString);
@@ -72,7 +75,8 @@ public class TestRegexMountPointResolvedDstPathReplaceInterceptor {
     Assert.assertEquals(interceptor.serializeToString(), serializedString);
   }
 
-  @Test public void testInterceptSource() {
+  @Test
+  public void testInterceptSource() {
     String srcRegex = "word1";
     String replaceString = "word2";
     RegexMountPointResolvedDstPathReplaceInterceptor interceptor =
@@ -82,7 +86,8 @@ public class TestRegexMountPointResolvedDstPathReplaceInterceptor {
     sourcePath = interceptor.interceptSource(sourcePath);
   }
 
-  @Test public void testInterceptResolve() throws IOException {
+  @Test
+  public void testInterceptResolve() throws IOException {
     String pathAfterResolution = "/user-hadoop";
     Path remainingPath = new Path("/ad-data");
 

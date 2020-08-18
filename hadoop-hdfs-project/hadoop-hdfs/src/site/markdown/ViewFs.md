@@ -371,19 +371,15 @@ Regex Pattern Based Mount Points
 
 The view file system mount points were a Key-Value based mapping system. It is not friendly for user cases which mapping config could be abstracted to rules. E.g. Users want to provide a GCS bucket per user and there might be thousands of users in total. The old key-value based approach won't work well for several reasons:
 
-1. The mount table is used by FileSystem clients. There's a cost to spread the config to all clients and we should avoid it if possible. The [View File System Overload Scheme Guide](./ViewFsOverloadScheme.html) could help the distribution by central mount table management. But the mount table still have to be updated on every change. The change could be greatly avoided if provide a rule-based mount table..
+1. The mount table is used by FileSystem clients. There's a cost to spread the config to all clients and we should avoid it if possible. The [View File System Overload Scheme Guide](./ViewFsOverloadScheme.html) could help the distribution by central mount table management. But the mount table still have to be updated on every change. The change could be greatly avoided if provide a rule-based mount table.
 
 2. The client have to understand all the KVs in the mount table. This is not ideal when the mountable grows to thousands of items. E.g. thousands of file systems might be initialized even users only need one. And the config itself will become bloated at scale.
 
 ### Understand the Difference
 
 In the key-value based mount table, view file system treats every mount point as a partition. There's several file system APIs which will lead to operation on all partitions. E.g. there's an HDFS cluster with multiple mount. Users want to run “hadoop fs -put file viewfs://hdfs.namenode.apache.org/tmp/” cmd to copy data from local disk to our HDFS cluster. The cmd will trigger ViewFileSystem to call setVerifyChecksum() method which will initialize the file system for every mount point.
-For a regex-base rule mount table entry, we couldn't know what's corresponding path until parsing. So the regex based mount table entry will be ignored on such cases and the file system will be created upon accessing. The inner cache of ViewFs is also not available for regex-base mount points now as it assumes target file system doesn't change after viewfs initialization. Please disable it if you want to use regex-base mount table. We also need to change the rename strategy to SAME_FILESYSTEM_ACROSS_MOUNTPOINT for the same reason.
+For a regex-base rule mount table entry, we couldn't know what's corresponding path until parsing. So the regex based mount table entry will be ignored on such cases. The file system will be created upon accessing. The inner cache of ViewFs is also not available for regex-base mount points now as it assumes target file system doesn't change after viewfs initialization.
 ```xml
-<property>
-    <name>fs.viewfs.enable.inner.cache</name>
-    <value>false</value>
-</property>
 <property>
     <name>fs.viewfs.rename.strategy</name>
     <value>SAME_FILESYSTEM_ACROSS_MOUNTPOINT</value>

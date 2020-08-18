@@ -47,6 +47,12 @@ public class TestViewFsConfig {
       }
 
       @Override
+      protected Foo getTargetFileSystem(
+          final URI uri, boolean enableCache) {
+        return null;
+      }
+
+      @Override
       protected Foo getTargetFileSystem(final INodeDir<Foo> dir) {
         return null;
       }

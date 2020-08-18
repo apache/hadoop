@@ -25,7 +25,8 @@ import org.junit.Test;
  */
 public class TestRegexMountPointInterceptorFactory {
 
-  @Test public void testCreateNormalCase() {
+  @Test
+  public void testCreateNormalCase() {
     String replaceInterceptorStr =
         RegexMountPointInterceptorType.REPLACE_RESOLVED_DST_PATH.getConfigName()
             + Character.toString(RegexMountPoint.INTERCEPTOR_INTERNAL_SEP)
@@ -38,7 +39,8 @@ public class TestRegexMountPointInterceptorFactory {
             instanceof RegexMountPointResolvedDstPathReplaceInterceptor);
   }
 
-  @Test public void testCreateBadCase() {
+  @Test
+  public void testCreateBadCase() {
     String replaceInterceptorStr =
         RegexMountPointInterceptorType.REPLACE_RESOLVED_DST_PATH.getConfigName()
             + "___" + Character

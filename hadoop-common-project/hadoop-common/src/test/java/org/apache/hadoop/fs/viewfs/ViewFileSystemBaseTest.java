@@ -1418,8 +1418,7 @@ abstract public class ViewFileSystemBaseTest {
       fos.write(expected.getBytes());
     }
     ConfigUtil.addLink(conf,
-        "/internalDir/internalDir2/linkToLocalFile",
-        localFile.toURI());
+        "/internalDir/internalDir2/linkToLocalFile", localFile.toURI());
 
     try (FileSystem fs = FileSystem.get(FsConstants.VIEWFS_URI, conf)) {
       ContentSummary summaryAfter =
@@ -1436,7 +1435,6 @@ abstract public class ViewFileSystemBaseTest {
   @Test
   public void testMountPointCache() throws Exception {
     conf.setInt(Constants.CONFIG_VIEWFS_PATH_RESOLUTION_CACHE_CAPACITY, 1);
-    conf.setBoolean("fs.viewfs.impl.disable.cache", true);
     FileSystem fileSystem = FileSystem.get(FsConstants.VIEWFS_URI, conf);
     ViewFileSystem viewfs = (ViewFileSystem) fileSystem;
     Path resolvedPath1 = new Path(targetTestRoot, "dir3/file1");

@@ -243,7 +243,7 @@ abstract class InodeTree<T> {
     /**
      * Link entry which source are regex exrepssions and target refer matched
      * group from source
-     * Config prefix: fs.viewfs.mounttable.<mnt_tbl_name>.linkMerge
+     * Config prefix: fs.viewfs.mounttable.<mnt_tbl_name>.linkRegex
      * Refer: {@link Constants#CONFIG_VIEWFS_LINK_REGEX}
      */
     REGEX;
@@ -392,6 +392,9 @@ abstract class InodeTree<T> {
    * @throws IOException
    */
   protected abstract T getTargetFileSystem(URI uri)
+      throws UnsupportedFileSystemException, URISyntaxException, IOException;
+
+  protected abstract T getTargetFileSystem(URI uri, boolean enableCache)
       throws UnsupportedFileSystemException, URISyntaxException, IOException;
 
   protected abstract T getTargetFileSystem(INodeDir<T> dir)
@@ -844,6 +847,10 @@ abstract class InodeTree<T> {
   /**
    * Walk through all regex mount points to see
    * whether the path match any regex expressions.
+   *  E.g. link: ^/user/(?<username>\\w+) => s3://$user.apache.com/_${user}
+   *  srcPath: is /user/hadoop/dir1
+   *  resolveLastComponent: true
+   *  then return value is s3://hadoop.apache.com/_hadoop
    *
    * @param srcPath
    * @param resolveLastComponent
@@ -874,7 +881,8 @@ abstract class InodeTree<T> {
       ResultKind resultKind, String resolvedPathStr,
       String targetOfResolvedPathStr, Path remainingPath) {
     try {
-      T targetFs = getTargetFileSystem(new URI(targetOfResolvedPathStr));
+      T targetFs = getTargetFileSystem(
+          new URI(targetOfResolvedPathStr), false);
       return new ResolveResult<T>(resultKind, targetFs, resolvedPathStr,
           remainingPath);
     } catch (IOException ex) {
@@ -911,8 +919,8 @@ abstract class InodeTree<T> {
       final Boolean resolveLastComponent,
       final ResolveResult<T> resolveResult) {
     try {
-      cacheRWLock.writeLock().lock();
       String key = getResolveCacheKeyStr(pathStr, resolveLastComponent);
+      cacheRWLock.writeLock().lock();
       pathResolutionCache.put(key, resolveResult);
     } finally {
       cacheRWLock.writeLock().unlock();
@@ -925,8 +933,8 @@ abstract class InodeTree<T> {
       return null;
     }
     try {
-      cacheRWLock.readLock().lock();
       String key = getResolveCacheKeyStr(pathStr, resolveLastComponent);
+      cacheRWLock.readLock().lock();
       return (ResolveResult<T>) pathResolutionCache.get(key);
     } finally {
       cacheRWLock.readLock().unlock();
@@ -938,7 +946,8 @@ abstract class InodeTree<T> {
     return path + ",resolveLastComp" + resolveLastComp;
   }
 
-  @VisibleForTesting public LRUMap getPathResolutionCache() {
+  @VisibleForTesting
+  public LRUMap getPathResolutionCache() {
     return pathResolutionCache;
   }
 

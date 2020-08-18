@@ -60,6 +60,8 @@ class RegexMountPoint<T> {
   public static final Pattern VAR_PATTERN_IN_DEST =
       Pattern.compile("\\$((\\{\\w+\\})|(\\w+))");
 
+  // Same var might have different representations.
+  // e.g.
   // key => $key or key = > ${key}
   private Map<String, Set<String>> varInDestPathMap;
 
@@ -115,7 +117,7 @@ class RegexMountPoint<T> {
   /**
    * Get $var1 and $var2 style variables in string.
    *
-   * @param input
+   * @param input - the string to be process.
    * @return
    */
   public static Map<String, Set<String>> getVarListInString(String input) {
@@ -155,24 +157,21 @@ class RegexMountPoint<T> {
 
   /**
    * Get resolved path from regex mount points.
-   * @param srcPath
-   * @param resolveLastComponent
-   * @return
+   *  E.g. link: ^/user/(?<username>\\w+) => s3://$user.apache.com/_${user}
+   *  srcPath: is /user/hadoop/dir1
+   *  resolveLastComponent: true
+   *  then return value is s3://hadoop.apache.com/_hadoop
+   * @param srcPath - the src path to resolve
+   * @param resolveLastComponent - whether resolve the path after last `/`
+   * @return mapped path of the mount point.
    */
   public InodeTree.ResolveResult<T> resolve(final String srcPath,
       final boolean resolveLastComponent) {
-    String pathStrToResolve = srcPath;
-    if (!resolveLastComponent) {
-      int lastSlashIndex = srcPath.lastIndexOf(SlashPath.toString());
-      if (lastSlashIndex == -1) {
-        return null;
-      }
-      pathStrToResolve = srcPath.substring(0, lastSlashIndex);
-    }
+    String pathStrToResolve = getPathToResolve(srcPath, resolveLastComponent);
     for (RegexMountPointInterceptor interceptor : interceptorList) {
       pathStrToResolve = interceptor.interceptSource(pathStrToResolve);
     }
-    LOGGER.debug("Path to resolve:" + pathStrToResolve + ",srcPattern:"
+    LOGGER.debug("Path to resolve:" + pathStrToResolve + ", srcPattern:"
         + getSrcPathRegex());
     Matcher srcMatcher = getSrcPattern().matcher(pathStrToResolve);
     String parsedDestPath = getDstPath();
@@ -182,37 +181,18 @@ class RegexMountPoint<T> {
       resolvedPathStr = pathStrToResolve.substring(0, srcMatcher.end());
       Map<String, Set<String>> varMap = getVarInDestPathMap();
       for (Map.Entry<String, Set<String>> entry : varMap.entrySet()) {
-        String groupNameOrIndexStr = entry.getKey();
-        String groupValue = null;
-        if (groupNameOrIndexStr.matches("\\d+")) {
-          // group index
-          int groupIndex = Integer.parseUnsignedInt(groupNameOrIndexStr);
-          if (groupIndex >= 0 && groupIndex <= srcMatcher.groupCount()) {
-            groupValue = srcMatcher.group(groupIndex);
-          }
-        } else {
-          // named group in regex
-          groupValue = srcMatcher.group(groupNameOrIndexStr);
-        }
-        if (groupValue == null) {
-          continue;
-        }
-        Set<String> varNameListToReplace = entry.getValue();
-        for (String varName : varNameListToReplace) {
-          parsedDestPath = parsedDestPath.replace(varName, groupValue);
-          LOGGER.debug("parsedDestPath value is:" + parsedDestPath);
-        }
+        String regexGroupNameOrIndexStr = entry.getKey();
+        Set<String> groupRepresentationStrSetInDest = entry.getValue();
+        parsedDestPath = replaceRegexCaptureGroupInPath(
+            parsedDestPath, srcMatcher,
+            regexGroupNameOrIndexStr, groupRepresentationStrSetInDest);
       }
       ++mappedCount;
     }
     if (0 == mappedCount) {
       return null;
     }
-    String remainingPathStr = srcPath.substring(resolvedPathStr.length());
-    if (!remainingPathStr.startsWith("/")) {
-      remainingPathStr = "/" + remainingPathStr;
-    }
-    Path remainingPath = new Path(remainingPathStr);
+    Path remainingPath = getRemainingPathStr(srcPath, resolvedPathStr);
     for (RegexMountPointInterceptor interceptor : interceptorList) {
       parsedDestPath = interceptor.interceptResolvedDestPathStr(parsedDestPath);
       remainingPath =
@@ -224,10 +204,92 @@ class RegexMountPoint<T> {
     return resolveResult;
   }
 
+  private Path getRemainingPathStr(
+      String srcPath,
+      String resolvedPathStr) {
+    String remainingPathStr = srcPath.substring(resolvedPathStr.length());
+    if (!remainingPathStr.startsWith("/")) {
+      remainingPathStr = "/" + remainingPathStr;
+    }
+    return new Path(remainingPathStr);
+  }
+
+  private String getPathToResolve(
+      String srcPath, boolean resolveLastComponent) {
+    if (resolveLastComponent) {
+      return srcPath;
+    }
+    int lastSlashIndex = srcPath.lastIndexOf(SlashPath.toString());
+    if (lastSlashIndex == -1) {
+      return null;
+    }
+    return srcPath.substring(0, lastSlashIndex);
+  }
+
+  /**
+   * Use capture group named regexGroupNameOrIndexStr in mather to replace
+   * parsedDestPath.
+   * E.g. link: ^/user/(?<username>\\w+) => s3://$user.apache.com/_${user}
+   * srcMatcher is from /user/hadoop.
+   * Then the params will be like following.
+   * parsedDestPath: s3://$user.apache.com/_${user},
+   * regexGroupNameOrIndexStr: user
+   * groupRepresentationStrSetInDest: {user:$user; user:${user}}
+   * return value will be s3://hadoop.apache.com/_hadoop
+   * @param parsedDestPath
+   * @param srcMatcher
+   * @param regexGroupNameOrIndexStr
+   * @param groupRepresentationStrSetInDest
+   * @return return parsedDestPath while ${var},$var replaced or
+   * parsedDestPath nothing found.
+   */
+  private String replaceRegexCaptureGroupInPath(
+      String parsedDestPath,
+      Matcher srcMatcher,
+      String regexGroupNameOrIndexStr,
+      Set<String> groupRepresentationStrSetInDest) {
+    String groupValue = getRegexGroupValueFromMather(
+        srcMatcher, regexGroupNameOrIndexStr);
+    if (groupValue == null) {
+      return parsedDestPath;
+    }
+    for (String varName : groupRepresentationStrSetInDest) {
+      parsedDestPath = parsedDestPath.replace(varName, groupValue);
+      LOGGER.debug("parsedDestPath value is:" + parsedDestPath);
+    }
+    return parsedDestPath;
+  }
+
+  /**
+   * Get matched capture group value from regex matched string. E.g.
+   * Regex: ^/user/(?<username>\\w+), regexGroupNameOrIndexStr: userName
+   * then /user/hadoop should return hadoop while call
+   * getRegexGroupValueFromMather(matcher, usersName)
+   * or getRegexGroupValueFromMather(matcher, 1)
+   *
+   * @param srcMatcher - the matcher to be use
+   * @param regexGroupNameOrIndexStr - the regex group name or index
+   * @return - Null if no matched group named regexGroupNameOrIndexStr found.
+   */
+  private String getRegexGroupValueFromMather(
+      Matcher srcMatcher, String regexGroupNameOrIndexStr) {
+    if (regexGroupNameOrIndexStr.matches("\\d+")) {
+      // group index
+      int groupIndex = Integer.parseUnsignedInt(regexGroupNameOrIndexStr);
+      if (groupIndex >= 0 && groupIndex <= srcMatcher.groupCount()) {
+        return srcMatcher.group(groupIndex);
+      }
+    } else {
+      // named group in regex
+      return srcMatcher.group(regexGroupNameOrIndexStr);
+    }
+    return null;
+  }
+
   /**
    * Convert interceptor to string.
    *
-   * @param interceptorList
+   * @param interceptorList - the interceptor list to be applied.
    * @return
    */
   public static String convertInterceptorsToString(
