@@ -788,7 +788,7 @@ to 100 MB). The default value will be 8388608 (8 MB).
 `fs.azure.write.max.concurrent.requests`: To set the maximum concurrent
  write requests from an AbfsOutputStream instance  to server at any point of
  time. Effectively this will be the threadpool size within the
- AbfsOutputStream instance. Set the value in between 1 and 8.
+ AbfsOutputStream instance. Set the value in between 1 to 8 both inclusive.
 
 `fs.azure.write.max.requests.to.queue`: To set the maximum write requests
  that can be queued. Memory consumption of AbfsOutputStream instance can be

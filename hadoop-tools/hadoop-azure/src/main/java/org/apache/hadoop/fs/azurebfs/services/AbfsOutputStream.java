@@ -547,6 +547,16 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     return writeOperations.size();
   }
 
+  @VisibleForTesting
+  int getMaxConcurrentRequestCount() {
+    return this.maxConcurrentRequestCount;
+  }
+
+  @VisibleForTesting
+  int getMaxRequestsThatCanBeQueued() {
+    return maxRequestsThatCanBeQueued;
+  }
+
   /**
    * Appending AbfsOutputStream statistics to base toString().
    *
