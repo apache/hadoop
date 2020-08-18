@@ -296,6 +296,10 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
     }
   }
 
+  /**
+   * Gets the mount path info, which contains the target file system and
+   * remaining path to pass to the target file system.
+   */
   public MountPathInfo<FileSystem> getMountPathInfo(Path path,
       Configuration conf) throws IOException {
     InodeTree.ResolveResult<FileSystem> res;
@@ -316,6 +320,10 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
     }
   }
 
+  /**
+   * A class to maintain the target file system and a path to pass to the target
+   * file system.
+   */
   public static class MountPathInfo<T> {
     private Path pathOnTarget;
     private T targetFs;
@@ -334,6 +342,10 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
     }
   }
 
+  /**
+   * @return Gets the fallback file system configured. Usually, this will be the
+   * default cluster.
+   */
   public FileSystem getFallbackFileSystem() {
     if (fsState.getRootFallbackLink() == null) {
       return null;

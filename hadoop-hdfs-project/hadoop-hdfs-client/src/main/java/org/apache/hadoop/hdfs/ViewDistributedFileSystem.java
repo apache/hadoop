@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.fs.BlockLocation;
@@ -92,6 +93,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 /**
  * The ViewDistributedFileSystem is an extended class to DistributedFileSystem
@@ -121,6 +123,8 @@ import java.util.Map;
  * point be to your base cluster, usually your current fs.defaultFS if that's
  * pointing to hdfs.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class ViewDistributedFileSystem extends DistributedFileSystem {
   private static final Logger LOGGER =
       LoggerFactory.getLogger(ViewDistributedFileSystem.class);
@@ -496,6 +500,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.getStoragePolicies();
     }
+    checkDefaultDFS(defaultDFS, "getStoragePolicies");
     return defaultDFS.getStoragePolicies();
   }
 
@@ -1223,12 +1228,39 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       super.modifyCacheDirective(info);
       return;
     }
-    ViewFileSystemOverloadScheme.MountPathInfo<FileSystem> mountPathInfo =
-        this.vfs.getMountPathInfo(info.getPath(), getConf());
-    checkDFS(mountPathInfo.getTargetFs(), "modifyCacheDirective");
-    ((DistributedFileSystem) mountPathInfo.getTargetFs()).modifyCacheDirective(
-        new CacheDirectiveInfo.Builder(info)
-            .setPath(mountPathInfo.getPathOnTarget()).build());
+    if (info.getPath() != null) {
+      ViewFileSystemOverloadScheme.MountPathInfo<FileSystem> mountPathInfo =
+          this.vfs.getMountPathInfo(info.getPath(), getConf());
+      checkDFS(mountPathInfo.getTargetFs(), "modifyCacheDirective");
+      ((DistributedFileSystem) mountPathInfo.getTargetFs())
+          .modifyCacheDirective(new CacheDirectiveInfo.Builder(info)
+              .setPath(mountPathInfo.getPathOnTarget()).build());
+      return;
+    }
+
+    // No path available in CacheDirectiveInfo, Let's shoot to all child fs.
+    List<IOException> failedExceptions = new ArrayList<>();
+    boolean isDFSExistsInChilds = false;
+
+    for (FileSystem fs : getChildFileSystems()) {
+      if (!(fs instanceof DistributedFileSystem)) {
+        continue;
+      }
+      isDFSExistsInChilds = true;
+      DistributedFileSystem dfs = (DistributedFileSystem) fs;
+      try {
+        dfs.modifyCacheDirective(info);
+      } catch (IOException ioe) {
+        failedExceptions.add(ioe);
+      }
+    }
+    if (!isDFSExistsInChilds) {
+      throw new UnsupportedOperationException(
+          "No DFS available in child file systems.");
+    }
+    if (failedExceptions.size() > 0) {
+      throw MultipleIOException.createIOException(failedExceptions);
+    }
   }
 
   @Override
@@ -1238,13 +1270,37 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       super.modifyCacheDirective(info, flags);
       return;
     }
-    ViewFileSystemOverloadScheme.MountPathInfo<FileSystem> mountPathInfo =
-        this.vfs.getMountPathInfo(info.getPath(), getConf());
-    checkDFS(mountPathInfo.getTargetFs(), "modifyCacheDirective");
-
-    ((DistributedFileSystem) mountPathInfo.getTargetFs()).modifyCacheDirective(
-        new CacheDirectiveInfo.Builder(info)
-            .setPath(mountPathInfo.getPathOnTarget()).build(), flags);
+    if (info.getPath() != null) {
+      ViewFileSystemOverloadScheme.MountPathInfo<FileSystem> mountPathInfo =
+          this.vfs.getMountPathInfo(info.getPath(), getConf());
+      checkDFS(mountPathInfo.getTargetFs(), "modifyCacheDirective");
+      ((DistributedFileSystem) mountPathInfo.getTargetFs())
+          .modifyCacheDirective(new CacheDirectiveInfo.Builder(info)
+              .setPath(mountPathInfo.getPathOnTarget()).build(), flags);
+      return;
+    }
+    // No path available in CacheDirectiveInfo, Let's shoot to all child fs.
+    List<IOException> failedExceptions = new ArrayList<>();
+    boolean isDFSExistsInChilds = false;
+    for (FileSystem fs : getChildFileSystems()) {
+      if (!(fs instanceof DistributedFileSystem)) {
+        continue;
+      }
+      isDFSExistsInChilds = true;
+      DistributedFileSystem dfs = (DistributedFileSystem) fs;
+      try {
+        dfs.modifyCacheDirective(info, flags);
+      } catch (IOException ioe) {
+        failedExceptions.add(ioe);
+      }
+    }
+    if (!isDFSExistsInChilds) {
+      throw new UnsupportedOperationException(
+          "No DFS available in child file systems.");
+    }
+    if (failedExceptions.size() > 0) {
+      throw MultipleIOException.createIOException(failedExceptions);
+    }
   }
 
   @Override
@@ -1253,8 +1309,28 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       super.removeCacheDirective(id);
       return;
     }
-    checkDefaultDFS(defaultDFS, "removeCacheDirective");
-    defaultDFS.removeCacheDirective(id);
+    List<IOException> failedExceptions = new ArrayList<>();
+    boolean isDFSExistsInChilds = false;
+
+    for (FileSystem fs : getChildFileSystems()) {
+      if (!(fs instanceof DistributedFileSystem)) {
+        continue;
+      }
+      isDFSExistsInChilds = true;
+      DistributedFileSystem dfs = (DistributedFileSystem) fs;
+      try {
+        dfs.removeCacheDirective(id);
+      } catch (IOException ioe) {
+        failedExceptions.add(ioe);
+      }
+    }
+    if (!isDFSExistsInChilds) {
+      throw new UnsupportedOperationException(
+          "No DFS available in child file systems.");
+    }
+    if (failedExceptions.size() > 0) {
+      throw MultipleIOException.createIOException(failedExceptions);
+    }
   }
 
   @Override
@@ -1263,13 +1339,54 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.listCacheDirectives(filter);
     }
-    ViewFileSystemOverloadScheme.MountPathInfo<FileSystem> mountPathInfo =
-        this.vfs.getMountPathInfo(filter.getPath(), getConf());
-    checkDFS(mountPathInfo.getTargetFs(), "modifyCacheDirective");
 
-    return ((DistributedFileSystem) mountPathInfo.getTargetFs())
-        .listCacheDirectives(new CacheDirectiveInfo.Builder(filter)
-            .setPath(mountPathInfo.getPathOnTarget()).build());
+    if (filter != null && filter.getPath() != null) {
+      ViewFileSystemOverloadScheme.MountPathInfo<FileSystem> mountPathInfo =
+          this.vfs.getMountPathInfo(filter.getPath(), getConf());
+      checkDFS(mountPathInfo.getTargetFs(), "listCacheDirectives");
+      return ((DistributedFileSystem) mountPathInfo.getTargetFs())
+          .listCacheDirectives(new CacheDirectiveInfo.Builder(filter)
+              .setPath(mountPathInfo.getPathOnTarget()).build());
+    }
+
+    // No path available in filter. Let's try to shoot to all child fs.
+    final List<RemoteIterator<CacheDirectiveEntry>> iters = new ArrayList<>();
+    for (FileSystem fs : getChildFileSystems()) {
+      if (fs instanceof DistributedFileSystem) {
+        iters.add(((DistributedFileSystem) fs).listCacheDirectives(filter));
+      }
+    }
+    if (iters.size() == 0) {
+      throw new UnsupportedOperationException(
+          "No DFS found in child fs. This API can't be supported in non DFS");
+    }
+
+    return new RemoteIterator<CacheDirectiveEntry>() {
+      int currIdx = 0;
+      RemoteIterator<CacheDirectiveEntry> currIter = iters.get(currIdx++);
+
+      @Override
+      public boolean hasNext() throws IOException {
+        if (currIter.hasNext()) {
+          return true;
+        }
+        while (currIdx < iters.size()) {
+          currIter = iters.get(currIdx++);
+          if (currIter.hasNext()) {
+            return true;
+          }
+        }
+        return false;
+      }
+
+      @Override
+      public CacheDirectiveEntry next() throws IOException {
+        if (hasNext()) {
+          return currIter.next();
+        }
+        throw new NoSuchElementException("No more elements");
+      }
+    };
   }
 
   //Currently Cache pool APIs supported only in default cluster.
@@ -1279,8 +1396,28 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       super.addCachePool(info);
       return;
     }
-    checkDefaultDFS(defaultDFS, "addCachePool");
-    defaultDFS.addCachePool(info);
+    List<IOException> failedExceptions = new ArrayList<>();
+    boolean isDFSExistsInChilds = false;
+
+    for (FileSystem fs : getChildFileSystems()) {
+      if (!(fs instanceof DistributedFileSystem)) {
+        continue;
+      }
+      isDFSExistsInChilds = true;
+      DistributedFileSystem dfs = (DistributedFileSystem) fs;
+      try {
+        dfs.addCachePool(info);
+      } catch (IOException ioe) {
+        failedExceptions.add(ioe);
+      }
+    }
+    if (!isDFSExistsInChilds) {
+      throw new UnsupportedOperationException(
+          "No DFS available in child file systems.");
+    }
+    if (failedExceptions.size() > 0) {
+      throw MultipleIOException.createIOException(failedExceptions);
+    }
   }
 
   @Override
@@ -1289,8 +1426,28 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       super.modifyCachePool(info);
       return;
     }
-    checkDefaultDFS(defaultDFS, "modifyCachePool");
-    defaultDFS.modifyCachePool(info);
+    List<IOException> failedExceptions = new ArrayList<>();
+    boolean isDFSExistsInChilds = false;
+
+    for (FileSystem fs : getChildFileSystems()) {
+      if (!(fs instanceof DistributedFileSystem)) {
+        continue;
+      }
+      isDFSExistsInChilds = true;
+      DistributedFileSystem dfs = (DistributedFileSystem) fs;
+      try {
+        dfs.modifyCachePool(info);
+      } catch (IOException ioe) {
+        failedExceptions.add(ioe);
+      }
+    }
+    if (!isDFSExistsInChilds) {
+      throw new UnsupportedOperationException(
+          "No DFS available in child file systems.");
+    }
+    if (failedExceptions.size() > 0) {
+      throw MultipleIOException.createIOException(failedExceptions);
+    }
   }
 
   @Override
@@ -1299,8 +1456,28 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       super.removeCachePool(poolName);
       return;
     }
-    checkDefaultDFS(defaultDFS, "removeCachePool");
-    defaultDFS.removeCachePool(poolName);
+    List<IOException> failedExceptions = new ArrayList<>();
+    boolean isDFSExistsInChilds = false;
+
+    for (FileSystem fs : getChildFileSystems()) {
+      if (!(fs instanceof DistributedFileSystem)) {
+        continue;
+      }
+      isDFSExistsInChilds = true;
+      DistributedFileSystem dfs = (DistributedFileSystem) fs;
+      try {
+        dfs.removeCachePool(poolName);
+      } catch (IOException ioe) {
+        failedExceptions.add(ioe);
+      }
+    }
+    if (!isDFSExistsInChilds) {
+      throw new UnsupportedOperationException(
+          "No DFS available in child file systems.");
+    }
+    if (failedExceptions.size() > 0) {
+      throw MultipleIOException.createIOException(failedExceptions);
+    }
   }
 
   @Override
@@ -1308,8 +1485,44 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.listCachePools();
     }
-    checkDefaultDFS(defaultDFS, "listCachePools");
-    return defaultDFS.listCachePools();
+
+    List<DistributedFileSystem> childDFSs = new ArrayList<>();
+    for (FileSystem fs : getChildFileSystems()) {
+      if (fs instanceof DistributedFileSystem) {
+        childDFSs.add((DistributedFileSystem) fs);
+      }
+    }
+    if (childDFSs.size() == 0) {
+      throw new UnsupportedOperationException(
+          "No DFS found in child fs. This API can't be supported in non DFS");
+    }
+    return new RemoteIterator<CachePoolEntry>() {
+      int curDfsIdx = 0;
+      RemoteIterator<CachePoolEntry> currIter =
+          childDFSs.get(curDfsIdx++).listCachePools();
+
+      @Override
+      public boolean hasNext() throws IOException {
+        if (currIter.hasNext()) {
+          return true;
+        }
+        while (curDfsIdx < childDFSs.size()) {
+          currIter = childDFSs.get(curDfsIdx++).listCachePools();
+          if (currIter.hasNext()) {
+            return true;
+          }
+        }
+        return false;
+      }
+
+      @Override
+      public CachePoolEntry next() throws IOException {
+        if (hasNext()) {
+          return currIter.next();
+        }
+        throw new java.util.NoSuchElementException("No more entries");
+      }
+    };
   }
 
   @Override
@@ -1393,14 +1606,18 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
         .getEZForPath(mountPathInfo.getPathOnTarget());
   }
 
+  /**
+   * Returns the results from default DFS (fallback). If you want the results
+   * from specific clusters, please invoke them on child fs instance directly.
+   */
   @Override
   public RemoteIterator<EncryptionZone> listEncryptionZones()
       throws IOException {
     if (this.vfs == null) {
       return super.listEncryptionZones();
     }
-    throw new UnsupportedOperationException(
-        "listEncryptionZones is not supported in ViewDFS");
+    checkDefaultDFS(defaultDFS, "listEncryptionZones");
+    return defaultDFS.listEncryptionZones();
   }
 
   @Override
@@ -1417,14 +1634,18 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
         .reencryptEncryptionZone(mountPathInfo.getPathOnTarget(), action);
   }
 
+  /**
+   * Returns the results from default DFS (fallback). If you want the results
+   * from specific clusters, please invoke them on child fs instance directly.
+   */
   @Override
   public RemoteIterator<ZoneReencryptionStatus> listReencryptionStatus()
       throws IOException {
     if (this.vfs == null) {
       return super.listReencryptionStatus();
     }
-    throw new UnsupportedOperationException(
-        "listReencryptionStatus is not supported in ViewDFS");
+    checkDefaultDFS(defaultDFS, "listReencryptionStatus");
+    return defaultDFS.listReencryptionStatus();
   }
 
   @Override
@@ -1567,8 +1788,8 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.getInotifyEventStream();
     }
-    throw new UnsupportedOperationException(
-        "getInotifyEventStream is not supported in ViewDFS");
+    checkDefaultDFS(defaultDFS, "getInotifyEventStream");
+    return defaultDFS.getInotifyEventStream();
   }
 
   @Override
@@ -1577,8 +1798,8 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     if (this.vfs == null) {
       return super.getInotifyEventStream();
     }
-    throw new UnsupportedOperationException(
-        "getInotifyEventStream is not supported in ViewDFS");
+    checkDefaultDFS(defaultDFS, "getInotifyEventStream");
+    return defaultDFS.getInotifyEventStream();
   }
 
   @Override
@@ -1851,7 +2072,8 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       }
     }
     if (result == null) {
-      throw new IOException("No DFS available in child filesystems");
+      throw new UnsupportedOperationException(
+          "No DFS available in child filesystems");
     }
     if (failedExceptions.size() > 0) {
       throw MultipleIOException.createIOException(failedExceptions);
