@@ -425,6 +425,9 @@ public class NodeQueueLoadMonitor implements ClusterMonitor {
       Arrays.sort(nodes, (Comparator)comparator);
       for (int j=0; j < nodes.length; j++) {
         ClusterNode cNode = (ClusterNode)nodes[j];
+        // Only add node to the result list when either condition is met:
+        // 1. we don't exclude full nodes
+        // 2. we do exclude full nodes, but the current node is not full
         if (!excludeFullNodes || !cNode.isQueueFull()) {
           retList.add(cNode);
         }
