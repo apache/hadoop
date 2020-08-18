@@ -56,7 +56,6 @@ public class JsonObjectMapperWriter<T> implements Closeable {
     // register the module with the object-mapper
     mapper.registerModule(module);
 
-    mapper.getJsonFactory();
     writer = mapper.getJsonFactory().createJsonGenerator(
         output, JsonEncoding.UTF8);
     if (prettyPrint) {
