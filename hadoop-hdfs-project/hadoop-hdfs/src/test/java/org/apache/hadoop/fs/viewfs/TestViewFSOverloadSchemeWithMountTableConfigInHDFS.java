@@ -37,8 +37,8 @@ public class TestViewFSOverloadSchemeWithMountTableConfigInHDFS
 
   @Before
   @Override
-  public void startCluster() throws IOException {
-    super.startCluster();
+  public void setUp() throws IOException {
+    super.setUp();
     String mountTableDir =
         URI.create(getConf().get(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY))
             .toString() + "/MountTable/";

@@ -142,7 +142,7 @@ public class TestDistributedFileSystem {
   
   private boolean noXmlDefaults = false;
   
-  private HdfsConfiguration getTestConfiguration() {
+  HdfsConfiguration getTestConfiguration() {
     HdfsConfiguration conf;
     if (noXmlDefaults) {
       conf = new HdfsConfiguration(false);
@@ -813,7 +813,7 @@ public class TestDistributedFileSystem {
 
   @Test
   public void testStatistics2() throws IOException, NoSuchAlgorithmException {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = getTestConfiguration();
     conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
         StoragePolicySatisfierMode.EXTERNAL.toString());
     File tmpDir = GenericTestUtils.getTestDir(UUID.randomUUID().toString());
@@ -1475,7 +1475,7 @@ public class TestDistributedFileSystem {
 
   @Test(timeout=60000)
   public void testFileCloseStatus() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = getTestConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     DistributedFileSystem fs = cluster.getFileSystem();
     try {
@@ -1495,7 +1495,7 @@ public class TestDistributedFileSystem {
 
   @Test
   public void testCreateWithStoragePolicy() throws Throwable {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = getTestConfiguration();
     try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .storageTypes(
             new StorageType[] {StorageType.DISK, StorageType.ARCHIVE,
@@ -1534,7 +1534,7 @@ public class TestDistributedFileSystem {
 
   @Test(timeout=60000)
   public void testListFiles() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = getTestConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     
     try {
@@ -1557,7 +1557,7 @@ public class TestDistributedFileSystem {
 
   @Test
   public void testListStatusOfSnapshotDirs() throws IOException {
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new HdfsConfiguration())
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(getTestConfiguration())
         .build();
     try {
       DistributedFileSystem dfs = cluster.getFileSystem();
@@ -1577,7 +1577,7 @@ public class TestDistributedFileSystem {
   @Test(timeout=10000)
   public void testDFSClientPeerReadTimeout() throws IOException {
     final int timeout = 1000;
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = getTestConfiguration();
     conf.setInt(HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, timeout);
 
     // only need cluster to create a dfs client to get a peer
@@ -1611,7 +1611,7 @@ public class TestDistributedFileSystem {
 
   @Test(timeout=60000)
   public void testGetServerDefaults() throws IOException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = getTestConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     try {
       cluster.waitActive();
@@ -1626,7 +1626,7 @@ public class TestDistributedFileSystem {
   @Test(timeout=10000)
   public void testDFSClientPeerWriteTimeout() throws IOException {
     final int timeout = 1000;
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = getTestConfiguration();
     conf.setInt(HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, timeout);
 
     // only need cluster to create a dfs client to get a peer
@@ -1663,7 +1663,7 @@ public class TestDistributedFileSystem {
 
   @Test(timeout = 30000)
   public void testTotalDfsUsed() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = getTestConfiguration();
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
@@ -1850,7 +1850,7 @@ public class TestDistributedFileSystem {
 
   @Test
   public void testSuperUserPrivilege() throws Exception {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = getTestConfiguration();
     File tmpDir = GenericTestUtils.getTestDir(UUID.randomUUID().toString());
     final Path jksPath = new Path(tmpDir.toString(), "test.jks");
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
@@ -1903,7 +1903,7 @@ public class TestDistributedFileSystem {
 
   @Test
   public void testListingStoragePolicyNonSuperUser() throws Exception {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = getTestConfiguration();
     try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build()) {
       cluster.waitActive();
       final DistributedFileSystem dfs = cluster.getFileSystem();
@@ -2055,7 +2055,7 @@ public class TestDistributedFileSystem {
   @Test
   public void testStorageFavouredNodes()
       throws IOException, InterruptedException, TimeoutException {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = getTestConfiguration();
     try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .storageTypes(new StorageType[] {StorageType.SSD, StorageType.DISK})
         .numDataNodes(3).storagesPerDatanode(2).build()) {
@@ -2080,7 +2080,7 @@ public class TestDistributedFileSystem {
 
   @Test
   public void testGetECTopologyResultForPolicies() throws Exception {
-    Configuration conf = new HdfsConfiguration();
+    Configuration conf = getTestConfiguration();
     try (MiniDFSCluster cluster = DFSTestUtil.setupCluster(conf, 9, 3, 0)) {
       DistributedFileSystem dfs = cluster.getFileSystem();
       dfs.enableErasureCodingPolicy("RS-6-3-1024k");
@@ -2111,7 +2111,7 @@ public class TestDistributedFileSystem {
 
   @Test
   public void testECCloseCommittedBlock() throws Exception {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf = getTestConfiguration();
     conf.setInt(DFS_NAMENODE_FILE_CLOSE_NUM_COMMITTED_ALLOWED_KEY, 1);
     try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(3).build()) {
