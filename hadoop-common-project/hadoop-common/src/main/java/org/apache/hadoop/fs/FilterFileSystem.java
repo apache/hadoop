@@ -691,4 +691,11 @@ public class FilterFileSystem extends FileSystem {
   public FSDataOutputStreamBuilder appendFile(Path path) {
     return fs.appendFile(path);
   }
+
+  @Override
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+    return fs.hasPathCapability(path, capability);
+  }
+
 }

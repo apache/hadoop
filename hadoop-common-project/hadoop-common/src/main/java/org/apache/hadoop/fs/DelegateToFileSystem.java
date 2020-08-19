@@ -261,4 +261,11 @@ public abstract class DelegateToFileSystem extends AbstractFileSystem {
   public List<Token<?>> getDelegationTokens(String renewer) throws IOException {
     return Arrays.asList(fsImpl.addDelegationTokens(renewer, null));
   }
+
+  @Override
+  public boolean hasPathCapability(final Path path,
+      final String capability)
+      throws IOException {
+    return fsImpl.hasPathCapability(path, capability);
+  }
 }

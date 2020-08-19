@@ -24,7 +24,9 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.fs.CommonPathCapabilities.FS_CONCAT;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertFileHasLength;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertHasPathCapabilities;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
@@ -91,6 +93,11 @@ public abstract class AbstractContractConcatTest extends AbstractFSContractTestB
     createFile(getFileSystem(), target, false, block);
     handleExpectedException(intercept(Exception.class,
         () -> getFileSystem().concat(target, new Path[]{target})));
+  }
+
+  @Test
+  public void testFileSystemDeclaresCapability() throws Throwable {
+    assertHasPathCapabilities(getFileSystem(), target, FS_CONCAT);
   }
 
 }

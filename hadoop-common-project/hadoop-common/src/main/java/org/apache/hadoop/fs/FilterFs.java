@@ -428,4 +428,10 @@ public abstract class FilterFs extends AbstractFileSystem {
       throws IOException {
     return myFs.getAllStoragePolicies();
   }
+
+  public boolean hasPathCapability(final Path path,
+      final String capability)
+      throws IOException {
+    return myFs.hasPathCapability(path, capability);
+  }
 }
