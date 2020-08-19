@@ -184,7 +184,8 @@ public class TestCopyCommitter {
   @Test
   public void testPreserveStatusWithAtomicCommit() throws IOException {
     TaskAttemptContext taskAttemptContext = getTaskAttemptContext(config);
-    JobContext jobContext = new JobContextImpl(taskAttemptContext.getConfiguration(),
+    JobContext jobContext = new JobContextImpl(
+                            taskAttemptContext.getConfiguration(),
                             taskAttemptContext.getTaskAttemptID().getJobID());
     Configuration conf = jobContext.getConfiguration();
     String sourceBase;
