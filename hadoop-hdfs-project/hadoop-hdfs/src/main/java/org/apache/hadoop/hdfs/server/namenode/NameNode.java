@@ -41,7 +41,6 @@ import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
@@ -727,11 +726,6 @@ public class NameNode extends ReconfigurableBase implements
           intervals);
       }
     }
-    // Currently NN uses FileSystem.get to initialize DFS in startTrashEmptier.
-    // If fs.hdfs.impl was overridden by core-site.xml, we may get other
-    // filesystem. To make sure we get DFS, we are setting fs.hdfs.impl to DFS.
-    // HDFS-15450
-    conf.set(FS_HDFS_IMPL_KEY, DistributedFileSystem.class.getName());
 
     UserGroupInformation.setConfiguration(conf);
     loginAsNameNodeUser(conf);
