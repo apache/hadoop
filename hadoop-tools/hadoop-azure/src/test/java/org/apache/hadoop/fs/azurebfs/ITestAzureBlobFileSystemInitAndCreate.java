@@ -38,7 +38,7 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
 
   @Override
   public void setup() throws Exception {
-    initAbfsConfig();
+    initAbfsConfigAndAuthType();
     initFSEndpointForNewFS();
     getRawConfiguration().unset(ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION);
   }
