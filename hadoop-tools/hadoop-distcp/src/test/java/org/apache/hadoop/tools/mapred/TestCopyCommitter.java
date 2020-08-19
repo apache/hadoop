@@ -180,7 +180,7 @@ public class TestCopyCommitter {
     }
 
   }
- 
+
   @Test
   public void testPreserveStatusWithAtomicCommit() throws IOException {
     TaskAttemptContext taskAttemptContext = getTaskAttemptContext(config);
@@ -217,7 +217,6 @@ public class TestCopyCommitter {
       TestDistCpUtils.delete(fs, "/tmp1");
       conf.unset(DistCpConstants.CONF_LABEL_PRESERVE_STATUS);
     }
-
   }
 
   @Test

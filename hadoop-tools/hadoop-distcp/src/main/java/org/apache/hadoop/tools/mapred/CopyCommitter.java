@@ -318,10 +318,8 @@ public class CopyCommitter extends FileOutputCommitter {
     SequenceFile.Reader sourceReader = new SequenceFile.Reader(conf,
                                       SequenceFile.Reader.file(sourceListing));
     long totalLen = clusterFS.getFileStatus(sourceListing).getLen();
-    //
     // For Atomic Copy the Final & Work Path are different & atomic copy has
     // already moved it to final path.
-    //
     Path targetRoot =
             new Path(conf.get(DistCpConstants.CONF_LABEL_TARGET_FINAL_PATH));
 
