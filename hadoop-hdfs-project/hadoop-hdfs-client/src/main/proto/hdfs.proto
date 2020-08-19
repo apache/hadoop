@@ -526,6 +526,7 @@ message FsServerDefaultsProto {
   optional ChecksumTypeProto checksumType = 8 [default = CHECKSUM_CRC32];
   optional string keyProviderUri = 9;
   optional uint32 policyId = 10 [default = 0];
+  optional bool snapshotTrashRootEnabled = 11 [default = false];
 }
 
 
@@ -564,10 +565,32 @@ message SnapshottableDirectoryStatusProto {
 }
 
 /**
+ * Status of a snapshot directory: besides the normal information for
+ * a directory status, also include snapshot ID, and
+ * the full path of the parent directory.
+ */
+message SnapshotStatusProto {
+  required HdfsFileStatusProto dirStatus = 1;
+
+  // Fields specific for snapshot directory
+  required uint32 snapshotID = 2;
+  required bytes parent_fullpath = 3;
+  required bool isDeleted = 4;
+}
+
+
+/**
  * Snapshottable directory listing
  */
 message SnapshottableDirectoryListingProto {
   repeated SnapshottableDirectoryStatusProto snapshottableDirListing = 1;
+}
+
+/**
+ * Snapshot listing
+ */
+message SnapshotListingProto {
+  repeated SnapshotStatusProto snapshotListing = 1;
 }
 
 /**

@@ -133,6 +133,17 @@ abstract class AbstractINodeDiffList<N extends INode,
     diff.setPosterior(first);
   }
 
+  /** @return the first diff. */
+  final D getFirst() {
+    return diffs == null || diffs.isEmpty()? null: diffs.get(0);
+  }
+
+  /** @return the first snapshot INode. */
+  final A getFirstSnapshotINode() {
+    final D first = getFirst();
+    return first == null? null: first.getSnapshotINode();
+  }
+
   /** @return the last diff. */
   public final D getLast() {
     if (diffs == null) {

@@ -727,6 +727,18 @@ public interface ClientProtocol {
   SnapshottableDirectoryStatus[] getSnapshottableDirListing()
       throws IOException;
 
+  /**
+   * Get listing of all the snapshots for a snapshottable directory.
+   *
+   * @return Information about all the snapshots for a snapshottable directory
+   * @throws IOException If an I/O error occurred
+   */
+  @Idempotent
+  @ReadOnly(isCoordinated = true)
+  SnapshotStatus[] getSnapshotListing(String snapshotRoot)
+      throws IOException;
+
+
   ///////////////////////////////////////
   // System issues and management
   ///////////////////////////////////////

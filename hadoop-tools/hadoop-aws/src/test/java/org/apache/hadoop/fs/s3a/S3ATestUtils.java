@@ -618,6 +618,14 @@ public final class S3ATestUtils {
     // add this so that even on tests where the FS is shared,
     // the FS is always "magic"
     conf.setBoolean(MAGIC_COMMITTER_ENABLED, true);
+
+    // directory marker policy
+    String directoryRetention = getTestProperty(
+        conf,
+        DIRECTORY_MARKER_POLICY,
+        DEFAULT_DIRECTORY_MARKER_POLICY);
+    conf.set(DIRECTORY_MARKER_POLICY, directoryRetention);
+
     return conf;
   }
 
@@ -882,7 +890,8 @@ public final class S3ATestUtils {
   public static S3AFileStatus getStatusWithEmptyDirFlag(
       final S3AFileSystem fs,
       final Path dir) throws IOException {
-    return fs.innerGetFileStatus(dir, true, StatusProbeEnum.ALL);
+    return fs.innerGetFileStatus(dir, true,
+        StatusProbeEnum.ALL);
   }
 
   /**
@@ -1440,5 +1449,27 @@ public final class S3ATestUtils {
         .filter(n -> n.startsWith("surefire"))
         .collect(Collectors.toCollection(TreeSet::new));
     return threads;
+  }
+
+  /**
+   * Call the package-private {@code innerGetFileStatus()} method
+   * on the passed in FS.
+   * @param fs filesystem
+   * @param path path
+   * @param needEmptyDirectoryFlag look for empty directory
+   * @param probes file status probes to perform
+   * @return the status
+   * @throws IOException
+   */
+  public static S3AFileStatus innerGetFileStatus(
+      S3AFileSystem fs,
+      Path path,
+      boolean needEmptyDirectoryFlag,
+      Set<StatusProbeEnum> probes) throws IOException {
+
+    return fs.innerGetFileStatus(
+        path,
+        needEmptyDirectoryFlag,
+        probes);
   }
 }

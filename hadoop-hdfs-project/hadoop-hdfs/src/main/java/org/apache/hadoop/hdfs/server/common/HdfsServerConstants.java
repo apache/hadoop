@@ -366,7 +366,7 @@ public interface HdfsServerConstants {
       "security.hdfs.unreadable.by.superuser";
   String XATTR_ERASURECODING_POLICY =
       "system.hdfs.erasurecoding.policy";
-  String SNAPSHOT_XATTR_NAME = "system.hdfs.snapshot.deleted";
+  String XATTR_SNAPSHOT_DELETED = "system.hdfs.snapshot.deleted";
 
   String XATTR_SATISFY_STORAGE_POLICY = "user.hdfs.sps";
 

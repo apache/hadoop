@@ -121,9 +121,6 @@ public class TestHdfsConfigFields extends TestConfigurationFieldsBase {
     // Used oddly by DataNode to create new config String
     xmlPropsToSkipCompare.add("hadoop.hdfs.configuration.version");
 
-    // Skip comparing in branch-2.  Removed in trunk with HDFS-7985.
-    xmlPropsToSkipCompare.add("dfs.webhdfs.enabled");
-
     // Some properties have moved to HdfsClientConfigKeys
     xmlPropsToSkipCompare.add("dfs.client.short.circuit.replica.stale.threshold.ms");
 

@@ -173,7 +173,8 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
    * Add a snapshot.
    * @param snapshotRoot Root of the snapshot.
    * @param name Name of the snapshot.
-   * @param mtime The snapshot creation time set by Time.now().
+   * @param leaseManager
+   * @param captureOpenFiles
    * @throws SnapshotException Throw SnapshotException when there is a snapshot
    *           with the same name already exists or snapshot quota exceeds
    */
@@ -239,7 +240,8 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
    */
   public Snapshot removeSnapshot(
       INode.ReclaimContext reclaimContext, INodeDirectory snapshotRoot,
-      String snapshotName, long now) throws SnapshotException {
+      String snapshotName, long now, SnapshotManager snapshotManager)
+      throws SnapshotException {
     final int i = searchSnapshot(DFSUtil.string2Bytes(snapshotName));
     if (i < 0) {
       throw new SnapshotException("Cannot delete snapshot " + snapshotName
@@ -248,6 +250,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
     } else {
       final Snapshot snapshot = snapshotsByNames.get(i);
       int prior = Snapshot.findLatestSnapshot(snapshotRoot, snapshot.getId());
+      snapshotManager.assertPrior(snapshotRoot, snapshotName, prior);
       snapshotRoot.cleanSubtree(reclaimContext, snapshot.getId(), prior);
       // remove from snapshotsByNames after successfully cleaning the subtree
       snapshotsByNames.remove(i);

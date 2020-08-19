@@ -84,6 +84,14 @@ public class AbstractAutoCreatedLeafQueue extends LeafQueue {
         label);
   }
 
+  @Override
+  protected boolean checkConfigTypeIsAbsoluteResource(String queuePath,
+      String label) {
+    return super.checkConfigTypeIsAbsoluteResource(csContext.getConfiguration()
+        .getAutoCreatedQueueTemplateConfPrefix(this.getParent().getQueuePath()),
+        label);
+  }
+
   /**
    * This methods to change capacity for a queue and adjusts its
    * absoluteCapacity

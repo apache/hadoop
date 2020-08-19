@@ -501,11 +501,12 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_NAMENODE_SNAPSHOT_MAX_LIMIT =
       "dfs.namenode.snapshot.max.limit";
   public static final int DFS_NAMENODE_SNAPSHOT_MAX_LIMIT_DEFAULT = 65536;
-
-  public static final String DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED =
-      "dfs.namenode.snapshot.deletion.ordered";
-  public static final boolean DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED_DEFAULT
-      = false;
+  public static final String
+      DFS_NAMENODE_SNAPSHOT_FILESYSTEM_LIMIT =
+      "dfs.namenode.snapshot.filesystem.limit";
+  // default value is same as snapshot quota set for a snapshottable directory
+  public static final int
+      DFS_NAMENODE_SNAPSHOT_FILESYSTEM_LIMIT_DEFAULT = 65536;
 
   public static final String DFS_NAMENODE_SNAPSHOT_SKIPLIST_SKIP_INTERVAL =
       "dfs.namenode.snapshot.skiplist.interval";
@@ -684,7 +685,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       600;
   /**
    * The maximum number of getBlocks RPCs data movement utilities can make to
-   * a NameNode per second. Values <= 0 disable throttling. This affects
+   * a NameNode per second. Values &lt;= 0 disable throttling. This affects
    * anything that uses a NameNodeConnector, i.e., the Balancer, Mover,
    * and StoragePolicySatisfier.
    */

@@ -2398,7 +2398,16 @@ public class YarnConfiguration extends Configuration {
       "yarn.http.rmwebapp.external.classes";
 
   public static final String YARN_HTTP_WEBAPP_SCHEDULER_PAGE =
-      "hadoop.http.rmwebapp.scheduler.page.class";
+      "yarn.http.rmwebapp.scheduler.page.class";
+
+  public static final String YARN_HTTP_WEBAPP_CUSTOM_DAO_CLASSES =
+      "yarn.http.rmwebapp.custom.dao.classes";
+
+  public static final String YARN_HTTP_WEBAPP_CUSTOM_UNWRAPPED_DAO_CLASSES =
+      "yarn.http.rmwebapp.custom.unwrapped.dao.classes";
+
+  public static final String YARN_WEBAPP_CUSTOM_WEBSERVICE_CLASS =
+      "yarn.webapp.custom.webservice.class";
 
   /**
    * Whether or not users are allowed to request that Docker containers honor

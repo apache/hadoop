@@ -35,6 +35,7 @@
     <file.encoding>UTF-8</file.encoding>
     <downloadSources>true</downloadSources>
     <hadoop.tmp.dir>${project.build.directory}/test</hadoop.tmp.dir>
+    <javadoc.skip.jdk11>true</javadoc.skip.jdk11>
 
     <!-- are scale tests enabled ? -->
     <fs.s3a.scale.test.enabled>unset</fs.s3a.scale.test.enabled>
@@ -51,6 +52,10 @@
     <!-- Set a longer timeout for integration test (in milliseconds) -->
     <test.integration.timeout>200000</test.integration.timeout>
 
+    <!--   should directory marker retention be audited? -->
+    <fs.s3a.directory.marker.audit>false</fs.s3a.directory.marker.audit>
+    <!--    marker retention policy -->
+    <fs.s3a.directory.marker.retention></fs.s3a.directory.marker.retention>
   </properties>
 
   <profiles>
@@ -122,6 +127,9 @@
                 <fs.s3a.scale.test.huge.filesize>${fs.s3a.scale.test.huge.filesize}</fs.s3a.scale.test.huge.filesize>
                 <fs.s3a.scale.test.huge.huge.partitionsize>${fs.s3a.scale.test.huge.partitionsize}</fs.s3a.scale.test.huge.huge.partitionsize>
                 <fs.s3a.scale.test.timeout>${fs.s3a.scale.test.timeout}</fs.s3a.scale.test.timeout>
+                <!-- Markers-->
+                <fs.s3a.directory.marker.retention>${fs.s3a.directory.marker.retention}</fs.s3a.directory.marker.retention>
+                <fs.s3a.directory.marker.audit>${fs.s3a.directory.marker.audit}</fs.s3a.directory.marker.audit>
               </systemPropertyVariables>
             </configuration>
           </plugin>
@@ -162,6 +170,7 @@
                     <fs.s3a.s3guard.test.enabled>${fs.s3a.s3guard.test.enabled}</fs.s3a.s3guard.test.enabled>
                     <fs.s3a.s3guard.test.authoritative>${fs.s3a.s3guard.test.authoritative}</fs.s3a.s3guard.test.authoritative>
                     <fs.s3a.s3guard.test.implementation>${fs.s3a.s3guard.test.implementation}</fs.s3a.s3guard.test.implementation>
+                    <fs.s3a.directory.marker.retention>${fs.s3a.directory.marker.retention}</fs.s3a.directory.marker.retention>
 
                     <test.default.timeout>${test.integration.timeout}</test.default.timeout>
                   </systemPropertyVariables>
@@ -188,6 +197,8 @@
                     <exclude>**/ITestDynamoDBMetadataStoreScale.java</exclude>
                     <!-- Terasort MR jobs spawn enough processes that they use up all RAM -->
                     <exclude>**/ITestTerasort*.java</exclude>
+                    <!-- Root marker tool tests -->
+                    <exclude>**/ITestMarkerToolRootOperations.java</exclude>
                     <!-- operations across the metastore -->
                     <exclude>**/ITestS3GuardDDBRootOperations.java</exclude>
                   </excludes>
@@ -214,6 +225,9 @@
                     <fs.s3a.s3guard.test.enabled>${fs.s3a.s3guard.test.enabled}</fs.s3a.s3guard.test.enabled>
                     <fs.s3a.s3guard.test.implementation>${fs.s3a.s3guard.test.implementation}</fs.s3a.s3guard.test.implementation>
                     <fs.s3a.s3guard.test.authoritative>${fs.s3a.s3guard.test.authoritative}</fs.s3a.s3guard.test.authoritative>
+                    <!-- Markers-->
+                    <fs.s3a.directory.marker.retention>${fs.s3a.directory.marker.retention}</fs.s3a.directory.marker.retention>
+                    <fs.s3a.directory.marker.audit>${fs.s3a.directory.marker.audit}</fs.s3a.directory.marker.audit>
                   </systemPropertyVariables>
                   <!-- Do a sequential run for tests that cannot handle -->
                   <!-- parallel execution. -->
@@ -229,6 +243,10 @@
                     <!--  the local FS. Running them sequentially guarantees isolation -->
                     <!-- and that they don't conflict with the other MR jobs for RAM -->
                     <include>**/ITestTerasort*.java</include>
+                    <!-- Root marker tool tests -->
+                    <!-- MUST be run before the other root ops so there's
+                     more likelihood of files in the bucket -->
+                    <include>**/ITestMarkerToolRootOperations.java</include>
                     <!-- operations across the metastore -->
                     <include>**/ITestS3AContractRootDir.java</include>
                     <include>**/ITestS3GuardDDBRootOperations.java</include>
@@ -268,6 +286,9 @@
                     <fs.s3a.s3guard.test.enabled>${fs.s3a.s3guard.test.enabled}</fs.s3a.s3guard.test.enabled>
                     <fs.s3a.s3guard.test.implementation>${fs.s3a.s3guard.test.implementation}</fs.s3a.s3guard.test.implementation>
                     <fs.s3a.s3guard.test.authoritative>${fs.s3a.s3guard.test.authoritative}</fs.s3a.s3guard.test.authoritative>
+                    <!-- Markers-->
+                    <fs.s3a.directory.marker.retention>${fs.s3a.directory.marker.retention}</fs.s3a.directory.marker.retention>
+                    <fs.s3a.directory.marker.audit>${fs.s3a.directory.marker.audit}</fs.s3a.directory.marker.audit>
                   </systemPropertyVariables>
                   <forkedProcessTimeoutInSeconds>${fs.s3a.scale.test.timeout}</forkedProcessTimeoutInSeconds>
                 </configuration>
@@ -328,6 +349,44 @@
       </activation>
       <properties >
         <fs.s3a.s3guard.test.authoritative>true</fs.s3a.s3guard.test.authoritative>
+      </properties>
+    </profile>
+
+    <!-- Directory marker retention options, all from the -Dmarkers value-->
+    <profile>
+      <id>keep-markers</id>
+      <activation>
+        <property>
+          <name>markers</name>
+          <value>keep</value>
+        </property>
+      </activation>
+      <properties >
+        <fs.s3a.directory.marker.retention>keep</fs.s3a.directory.marker.retention>
+      </properties>
+    </profile>
+    <profile>
+      <id>delete-markers</id>
+      <activation>
+        <property>
+          <name>markers</name>
+          <value>delete</value>
+        </property>
+      </activation>
+      <properties >
+        <fs.s3a.directory.marker.retention>delete</fs.s3a.directory.marker.retention>
+      </properties>
+    </profile>
+    <profile>
+      <id>auth-markers</id>
+      <activation>
+        <property>
+          <name>markers</name>
+          <value>authoritative</value>
+        </property>
+      </activation>
+      <properties >
+        <fs.s3a.directory.marker.retention>authoritative</fs.s3a.directory.marker.retention>
       </properties>
     </profile>
 

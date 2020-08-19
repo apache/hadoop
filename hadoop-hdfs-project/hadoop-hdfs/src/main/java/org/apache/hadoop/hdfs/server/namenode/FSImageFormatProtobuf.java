@@ -447,6 +447,7 @@ public final class FSImageFormatProtobuf {
           } else {
             inodeLoader.loadINodeDirectorySection(in);
           }
+          inodeLoader.waitBlocksMapAndNameCacheUpdateFinished();
           break;
         case FILES_UNDERCONSTRUCTION:
           inodeLoader.loadFilesUnderConstructionSection(in);

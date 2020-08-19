@@ -2265,6 +2265,7 @@ appAttempts:
 | logsLink | string | The http link to the app attempt logs |
 | containerId | string | The id of the container for the app attempt |
 | startTime | long | The start time of the attempt (in ms since epoch) |
+| appAttemptState | string | The state of the application attempt - valid values are members of the RMAppAttemptState enum: NEW, SUBMITTED, SCHEDULED, ALLOCATED, LAUNCHED, FAILED, RUNNING, FINISHING, FINISHED, KILLED, ALLOCATED_SAVING, LAUNCHED_UNMANAGED_SAVING, FINAL_SAVING |
 
 ### Response Examples
 
@@ -2293,7 +2294,8 @@ Response Body:
             "startTime" : 1326381444693,
             "id" : 1,
             "logsLink" : "http://host.domain.com:8042/node/containerlogs/container_1326821518301_0005_01_000001/user1",
-            "containerId" : "container_1326821518301_0005_01_000001"
+            "containerId" : "container_1326821518301_0005_01_000001",
+            "appAttemptState" : "RUNNING"
          }
       ]
    }
@@ -2326,6 +2328,7 @@ Response Body:
     <startTime>1326381444693</startTime>
     <containerId>container_1326821518301_0005_01_000001</containerId>
     <logsLink>http://host.domain.com:8042/node/containerlogs/container_1326821518301_0005_01_000001/user1</logsLink>
+    <appAttemptState>RUNNING</appAttemptState>
   </appAttempt>
 </appAttempts>
 ```

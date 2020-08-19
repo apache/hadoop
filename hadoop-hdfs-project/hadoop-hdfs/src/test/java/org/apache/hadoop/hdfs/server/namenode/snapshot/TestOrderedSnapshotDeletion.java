@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.namenode;
+package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -26,9 +26,10 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
+import org.apache.hadoop.hdfs.server.namenode.INode;
+import org.apache.hadoop.hdfs.server.namenode.XAttrFeature;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -37,9 +38,8 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Map;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.
-    DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED;
-import static org.junit.Assert.assertNull;
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SNAPSHOT_DELETED;
+import static org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager.DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -71,7 +71,7 @@ public class TestOrderedSnapshotDeletion {
   }
 
   @Test(timeout = 60000)
-  public void testConf() throws Exception {
+  public void testOrderedSnapshotDeletion() throws Exception {
     DistributedFileSystem hdfs = cluster.getFileSystem();
     hdfs.mkdirs(snapshottableDir);
     hdfs.allowSnapshot(snapshottableDir);
@@ -96,22 +96,54 @@ public class TestOrderedSnapshotDeletion {
     hdfs.deleteSnapshot(snapshottableDir, "s2");
   }
 
+  static void assertMarkedAsDeleted(Path snapshotRoot, MiniDFSCluster cluster)
+      throws IOException {
+    // Check if the path exists
+    Assert.assertNotNull(cluster.getFileSystem().getFileStatus(snapshotRoot));
+
+    // Check xAttr for snapshotRoot
+    final INode inode = cluster.getNamesystem().getFSDirectory()
+        .getINode(snapshotRoot.toString());
+    final XAttrFeature f = inode.getXAttrFeature();
+    final XAttr xAttr = f.getXAttr(XATTR_SNAPSHOT_DELETED);
+    Assert.assertNotNull(xAttr);
+    Assert.assertEquals(XATTR_SNAPSHOT_DELETED.substring("system.".length()),
+        xAttr.getName());
+    Assert.assertEquals(XAttr.NameSpace.SYSTEM, xAttr.getNameSpace());
+    Assert.assertNull(xAttr.getValue());
+
+    // Check inode
+    Assert.assertTrue(inode instanceof Snapshot.Root);
+    Assert.assertTrue(((Snapshot.Root)inode).isMarkedAsDeleted());
+  }
+
+  static void assertNotMarkedAsDeleted(Path snapshotRoot,
+      MiniDFSCluster cluster) throws IOException {
+    // Check if the path exists
+    Assert.assertNotNull(cluster.getFileSystem().getFileStatus(snapshotRoot));
+
+    // Check xAttr for snapshotRoot
+    final INode inode = cluster.getNamesystem().getFSDirectory()
+        .getINode(snapshotRoot.toString());
+    final XAttrFeature f = inode.getXAttrFeature();
+    if (f != null) {
+      final XAttr xAttr = f.getXAttr(XATTR_SNAPSHOT_DELETED);
+      Assert.assertNull(xAttr);
+    }
+
+    // Check inode
+    Assert.assertTrue(inode instanceof Snapshot.Root);
+    Assert.assertFalse(((Snapshot.Root)inode).isMarkedAsDeleted());
+  }
+
   void assertXAttrSet(String snapshot,
                       DistributedFileSystem hdfs, XAttr newXattr)
       throws IOException {
     hdfs.deleteSnapshot(snapshottableDir, snapshot);
     // Check xAttr for parent directory
-    FSNamesystem namesystem = cluster.getNamesystem();
     Path snapshotRoot = SnapshotTestHelper.getSnapshotRoot(snapshottableDir,
         snapshot);
-    INode inode = namesystem.getFSDirectory().getINode(snapshotRoot.toString());
-    XAttrFeature f = inode.getXAttrFeature();
-    XAttr xAttr = f.getXAttr(HdfsServerConstants.SNAPSHOT_XATTR_NAME);
-    assertTrue("Snapshot xAttr should exist", xAttr != null);
-    assertTrue(xAttr.getName().equals(HdfsServerConstants.SNAPSHOT_XATTR_NAME.
-        replace("system.", "")));
-    assertTrue(xAttr.getNameSpace().equals(XAttr.NameSpace.SYSTEM));
-    assertNull(xAttr.getValue());
+    assertMarkedAsDeleted(snapshotRoot, cluster);
 
     // Make sure its not user visible
     if (cluster.getNameNode().getConf().getBoolean(DFSConfigKeys.
