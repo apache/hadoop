@@ -1119,18 +1119,8 @@ public class ParentQueue extends AbstractCSQueue {
     if (childQueue instanceof LeafQueue) {
       LeafQueue leafQueue = (LeafQueue) childQueue;
       CapacitySchedulerConfiguration conf = csContext.getConfiguration();
-      int maxApplications =
-              conf.getMaximumApplicationsPerQueue(childQueue.getQueuePath());
-      if (maxApplications < 0) {
-        int maxGlobalPerQueueApps = conf.getGlobalMaximumApplicationsPerQueue();
-        if (maxGlobalPerQueueApps > 0) {
-          maxApplications = (int) (maxGlobalPerQueueApps *
-                  childQueue.getQueueCapacities().getAbsoluteCapacity(label));
-        } else {
-          maxApplications = (int) (conf.getMaximumSystemApplications()
-                  * childQueue.getQueueCapacities().getAbsoluteCapacity(label));
-        }
-      }
+      int maxApplications = (int) (conf.getMaximumSystemApplications()
+          * childQueue.getQueueCapacities().getAbsoluteCapacity(label));
       leafQueue.setMaxApplications(maxApplications);
 
       int maxApplicationsPerUser = Math.min(maxApplications,
