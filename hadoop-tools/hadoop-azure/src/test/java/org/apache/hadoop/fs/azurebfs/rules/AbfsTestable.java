@@ -26,18 +26,7 @@ import java.util.List;
 public interface AbfsTestable {
 
   Configuration getInitialConfiguration();
-
-  void initFSEndpointForNewFS() throws Exception;
-
   default List<AuthType> excludeAuthTypes() {
     return new ArrayList<>();
   }
-
-  /*
-
-  default String getContractTestUrl() {
-    return "";
-  }
-*/
-
 }

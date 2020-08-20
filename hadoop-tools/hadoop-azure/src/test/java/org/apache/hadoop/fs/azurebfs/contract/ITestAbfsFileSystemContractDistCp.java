@@ -67,11 +67,6 @@ public class ITestAbfsFileSystemContractDistCp
   }
 
   @Override
-  public void initFSEndpointForNewFS() throws Exception {
-    binding.initFSEndpointForNewFS();
-  }
-
-  @Override
   public List<AuthType> excludeAuthTypes() {
     return Arrays.asList(new AuthType[] {AuthType.OAuth, AuthType.SAS});
   }

@@ -48,6 +48,11 @@ public class ITestAbfsFileSystemContractGetFileStatus
   }
 
   @Override
+  protected int getTestTimeoutMillis() {
+    return 3 * 180000;
+  }
+
+  @Override
   public void teardown() throws Exception {
     binding.teardown();
     super.teardown();
@@ -61,11 +66,6 @@ public class ITestAbfsFileSystemContractGetFileStatus
   @Override
   public Configuration getInitialConfiguration() {
     return binding.getInitialConfiguration();
-  }
-
-  @Override
-  public void initFSEndpointForNewFS() throws Exception {
-    binding.initFSEndpointForNewFS();
   }
 
 }

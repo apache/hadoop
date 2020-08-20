@@ -97,8 +97,7 @@ public abstract class AbstractAbfsIntegrationTest extends
     rawConfig.addResource(TEST_CONFIGURATION_FILE_NAME);
   }
 
-  @Override
-  public void initFSEndpointForNewFS() throws Exception {
+  protected void initFSEndpointForNewFS() throws Exception {
     fileSystemName = TEST_CONTAINER_PREFIX + UUID.randomUUID().toString();
 
     /*authType = abfsConfig.getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey);*/
@@ -153,17 +152,19 @@ public abstract class AbstractAbfsIntegrationTest extends
         accountName != null && !accountName.isEmpty());
 
     abfsConfig = new AbfsConfiguration(rawConfig, accountName);
+    authType = abfsConfig.getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME,
+        AuthType.SharedKey);
   }
 
   @Before
   public void setup() throws Exception {
     initAbfsConfig();
-    authType = abfsConfig.getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME,
-        AuthType.SharedKey);
 
-    if (authType == AuthType.SAS) {
-      setupForSAS();
-    } else{
+    String sasProvider = getRawConfiguration().get(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE);
+    if (authType == AuthType.SAS && MockDelegationSASTokenProvider.class
+        .getCanonicalName().equals(sasProvider)) {
+      setupForDelegationSAS();
+    } else if (authType != AuthType.SAS) {
       initFSEndpointForNewFS();
     }
     //Create filesystem first to make sure getWasbFileSystem() can return an existing filesystem.
@@ -195,7 +196,7 @@ public abstract class AbstractAbfsIntegrationTest extends
     }
   }
 
-  public void setupForSAS() throws Exception {
+  public void setupForDelegationSAS() throws Exception {
     getRawConfiguration().set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME,
         AuthType.SharedKey.name());
     authType = AuthType.SharedKey;

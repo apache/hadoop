@@ -69,9 +69,4 @@ public class ITestAbfsFileSystemContractSeek extends AbstractContractSeekTest
     return binding.getInitialConfiguration();
   }
 
-  @Override
-  public void initFSEndpointForNewFS() throws Exception {
-    binding.initFSEndpointForNewFS();
-  }
-
 }

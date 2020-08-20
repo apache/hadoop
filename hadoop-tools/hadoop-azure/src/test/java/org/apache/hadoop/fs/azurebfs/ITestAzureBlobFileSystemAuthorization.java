@@ -62,6 +62,8 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
 
   @Override
   public void setup() throws Exception {
+    initAbfsConfig();
+    initFSEndpointForNewFS();
     Assume.assumeTrue(this.getAuthType() == AuthType.SharedKey);
     boolean isHNSEnabled = this.getConfiguration().getBoolean(
         TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
