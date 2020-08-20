@@ -476,8 +476,16 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
     // 2. Two hdfs file systems should be there if no cache.
     conf.setBoolean(Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE, false);
     try (FileSystem vfs = FileSystem.get(conf)) {
-      Assert.assertEquals(2, vfs.getChildFileSystems().length);
+      Assert.assertEquals(isFallBackExist(conf) ? 3 : 2,
+          vfs.getChildFileSystems().length);
     }
+  }
+
+  // HDFS-15529: if any extended tests added fallback, then getChildFileSystems
+  // will include fallback as well.
+  private boolean isFallBackExist(Configuration conf) {
+    return conf.get(ConfigUtil.getConfigViewFsPrefix(defaultFSURI
+        .getAuthority()) + "." + Constants.CONFIG_VIEWFS_LINK_FALLBACK) != null;
   }
 
   /**
@@ -501,7 +509,8 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
     conf.setBoolean(Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE, false);
     // Two hdfs file systems should be there if no cache.
     try (FileSystem vfs = FileSystem.get(conf)) {
-      Assert.assertEquals(2, vfs.getChildFileSystems().length);
+      Assert.assertEquals(isFallBackExist(conf) ? 3 : 2,
+          vfs.getChildFileSystems().length);
     }
   }
 
@@ -528,7 +537,8 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
     // cache should work.
     conf.setBoolean(Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE, false);
     try (FileSystem vfs = FileSystem.get(conf)) {
-      Assert.assertEquals(1, vfs.getChildFileSystems().length);
+      Assert.assertEquals(isFallBackExist(conf) ? 2 : 1,
+          vfs.getChildFileSystems().length);
     }
   }
 
