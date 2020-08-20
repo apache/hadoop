@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.LogVerificationAppender;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.server.common.Util;
@@ -45,6 +46,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.ThreadUtil;
+import org.apache.log4j.spi.LoggingEvent;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -286,6 +288,49 @@ public class TestStandbyCheckpoints {
         dirs, Collections.<String>emptySet());
     // Restore 2 back to standby
     cluster.transitionToStandby(2);
+  }
+
+  /**
+   * Tests that a null FSImage is handled gracefully by the ImageServlet.
+   * If putImage is called while a NameNode is still starting up, the FSImage
+   * may not have been initialized yet. See HDFS-15290.
+   */
+  @Test(timeout = 30000)
+  public void testCheckpointBeforeNameNodeInitializationIsComplete()
+      throws Exception {
+    final LogVerificationAppender appender = new LogVerificationAppender();
+    final org.apache.log4j.Logger logger = org.apache.log4j.Logger
+        .getRootLogger();
+    logger.addAppender(appender);
+
+    // Transition 2 to observer
+    cluster.transitionToObserver(2);
+    doEdits(0, 10);
+    // After a rollEditLog, Standby(nn1)'s next checkpoint would be
+    // ahead of observer(nn2).
+    nns[0].getRpcServer().rollEditLog();
+
+    NameNode nn2 = nns[2];
+    FSImage nnFSImage = NameNodeAdapter.getAndSetFSImageInHttpServer(nn2, null);
+
+    // After standby creating a checkpoint, it will try to push the image to
+    // active and all observer, updating it's own txid to the most recent.
+    HATestUtil.waitForCheckpoint(cluster, 1, ImmutableList.of(12));
+    HATestUtil.waitForCheckpoint(cluster, 0, ImmutableList.of(12));
+
+    NameNodeAdapter.getAndSetFSImageInHttpServer(nn2, nnFSImage);
+    cluster.transitionToStandby(2);
+    logger.removeAppender(appender);
+
+    for (LoggingEvent event : appender.getLog()) {
+      String message = event.getRenderedMessage();
+      if (message.contains("PutImage failed") &&
+          message.contains("FSImage has not been set in the NameNode.")) {
+        //Logs have the expected exception.
+        return;
+      }
+    }
+    fail("Expected exception not present in logs.");
   }
 
   /**
