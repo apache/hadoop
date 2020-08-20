@@ -87,6 +87,8 @@ import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
+import org.apache.hadoop.fs.s3a.impl.DirectoryPolicy;
+import org.apache.hadoop.fs.s3a.impl.DirectoryPolicyImpl;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
@@ -209,6 +211,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   private MagicCommitIntegration committerIntegration;
 
   private AWSCredentialProviderList credentials;
+
+  /**
+   * Directory policy.
+   */
+  private DirectoryPolicy directoryPolicy;
 
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
@@ -351,6 +358,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
         LOG.debug("Using metadata store {}, authoritative={}",
             getMetadataStore(), allowAuthoritative);
       }
+      // directory policy, which may look at authoritative paths
+      directoryPolicy = DirectoryPolicyImpl.getDirectoryPolicy(conf,
+          this::allowAuthoritative);
+      LOG.debug("Directory marker retention policy is {}", directoryPolicy);
       initMultipartUploads(conf);
     } catch (AmazonClientException e) {
       throw translateException("initializing ", new Path(name), e);
@@ -3362,6 +3373,25 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
       // capability depends on FS configuration
       return getConf().getBoolean(ETAG_CHECKSUM_ENABLED,
           ETAG_CHECKSUM_ENABLED_DEFAULT);
+
+    case CommonPathCapabilities.FS_MULTIPART_UPLOADER:
+      return true;
+
+    // this client is safe to use with buckets
+    // containing directory markers anywhere in
+    // the hierarchy
+    case STORE_CAPABILITY_DIRECTORY_MARKER_AWARE:
+      return true;
+
+    /*
+     * Marker policy capabilities are handed off.
+     */
+    case STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_KEEP:
+    case STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_DELETE:
+    case STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_AUTHORITATIVE:
+    case STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_KEEP:
+    case STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_DELETE:
+      return getDirectoryMarkerPolicy().hasPathCapability(path, cap);
 
     default:
       return super.hasPathCapability(p, capability);
