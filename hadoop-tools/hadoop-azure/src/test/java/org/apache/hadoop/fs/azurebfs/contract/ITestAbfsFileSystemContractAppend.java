@@ -58,11 +58,6 @@ public class ITestAbfsFileSystemContractAppend
   }
 
   @Override
-  protected Configuration createConfiguration() {
-    return new Configuration();
-  }
-
-  @Override
   protected AbstractFSContract createContract(final Configuration conf) {
     return new AbfsFileSystemContract(conf, isSecure, binding);
   }

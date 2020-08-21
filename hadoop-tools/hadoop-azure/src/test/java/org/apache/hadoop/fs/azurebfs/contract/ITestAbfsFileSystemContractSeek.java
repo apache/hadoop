@@ -55,11 +55,6 @@ public class ITestAbfsFileSystemContractSeek extends AbstractContractSeekTest
   }
 
   @Override
-  protected Configuration createConfiguration() {
-    return binding.getRawConfiguration();
-  }
-
-  @Override
   protected AbstractFSContract createContract(final Configuration conf) {
     return new AbfsFileSystemContract(conf, isSecure, binding);
   }

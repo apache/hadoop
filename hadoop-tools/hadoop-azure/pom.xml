@@ -551,6 +551,8 @@
                   </includes>
                   <excludes>
                     <exclude>**/azurebfs/contract/ITest*.java</exclude>
+                    <exclude>**/azurebfs/ITestAzureBlobFileSystemFlush.java</exclude>
+                    <exclude>**/azurebfs/ITestAzureBlobFileSystemRandomRead.java</exclude>
                     <exclude>**/azurebfs/ITestAzureBlobFileSystemE2EScale.java</exclude>
                     <exclude>**/azurebfs/ITestAbfsReadWriteAndSeek.java</exclude>
                     <exclude>**/azurebfs/ITestAzureBlobFileSystemListStatus.java</exclude>
@@ -590,6 +592,8 @@
                   </systemPropertyVariables>
                   <includes>
                     <include>**/azurebfs/contract/ITest*.java</include>
+                    <include>**/azurebfs/ITestAzureBlobFileSystemFlush.java</include>
+                    <include>**/azurebfs/ITestAzureBlobFileSystemRandomRead.java</include>
                     <include>**/azurebfs/ITestAzureBlobFileSystemE2EScale.java</include>
                     <include>**/azurebfs/ITestAbfsReadWriteAndSeek.java</include>
                     <include>**/azurebfs/ITestAzureBlobFileSystemListStatus.java</include>
