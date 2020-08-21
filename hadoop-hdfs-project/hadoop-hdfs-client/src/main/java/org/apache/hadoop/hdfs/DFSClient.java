@@ -150,6 +150,7 @@ import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
+import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtoUtil;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.hdfs.protocol.datatransfer.ReplaceDatanodeOnFailure;
@@ -244,7 +245,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       new DFSHedgedReadMetrics();
   private static ThreadPoolExecutor HEDGED_READ_THREAD_POOL;
   private static volatile ThreadPoolExecutor STRIPED_READ_THREAD_POOL;
-  private final int smallBufferSize;
   private final long serverDefaultsValidityPeriod;
 
   /**
@@ -326,7 +326,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     this.stats = stats;
     this.socketFactory = NetUtils.getSocketFactory(conf, ClientProtocol.class);
     this.dtpReplaceDatanodeOnFailure = ReplaceDatanodeOnFailure.get(conf);
-    this.smallBufferSize = DFSUtilClient.getSmallBufferSize(conf);
     this.dtpReplaceDatanodeOnFailureReplication = (short) conf
         .getInt(HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.
                 MIN_REPLICATION,
@@ -1242,7 +1241,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
   /**
    * Same as {@link #create(String, FsPermission, EnumSet, boolean, short, long,
-   * addition of Progressable, int, ChecksumOpt, InetSocketAddress[], String)}
+   * Progressable, int, ChecksumOpt, InetSocketAddress[], String)}
    * with the storagePolicy that is used to specify a specific storage policy
    * instead of inheriting any policy from this new file's parent directory.
    * This policy will be persisted in HDFS. A value of null means inheriting
@@ -2191,6 +2190,24 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   /**
+   * Get listing of all the snapshots for a snapshottable directory.
+   *
+   * @return Information about all the snapshots for a snapshottable directory
+   * @throws IOException If an I/O error occurred
+   * @see ClientProtocol#getSnapshotListing(String)
+   */
+  public SnapshotStatus[] getSnapshotListing(String snapshotRoot)
+      throws IOException {
+    checkOpen();
+    try (TraceScope ignored = tracer.newScope("getSnapshotListing")) {
+      return namenode.getSnapshotListing(snapshotRoot);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException();
+    }
+  }
+
+
+  /**
    * Allow snapshot on a directory.
    *
    * @see ClientProtocol#allowSnapshot(String snapshotRoot)
@@ -3130,6 +3147,32 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    */
   boolean isHDFSEncryptionEnabled() throws IOException {
     return getKeyProviderUri() != null;
+  }
+
+  boolean isSnapshotTrashRootEnabled() throws IOException {
+    return getServerDefaults().getSnapshotTrashRootEnabled();
+  }
+
+  /**
+   * Get the snapshot root of a given file or directory if it exists.
+   * e.g. if /snapdir1 is a snapshottable directory and path given is
+   * /snapdir1/path/to/file, this method would return /snapdir1
+   * @param path Path to a file or a directory.
+   * @return Not null if found in a snapshot root directory.
+   * @throws IOException
+   */
+  String getSnapshotRoot(Path path) throws IOException {
+    SnapshottableDirectoryStatus[] dirStatusList = getSnapshottableDirListing();
+    if (dirStatusList == null) {
+      return null;
+    }
+    for (SnapshottableDirectoryStatus dirStatus : dirStatusList) {
+      String currDir = dirStatus.getFullPath().toString();
+      if (path.toUri().getPath().startsWith(currDir)) {
+        return currDir;
+      }
+    }
+    return null;
   }
 
   /**

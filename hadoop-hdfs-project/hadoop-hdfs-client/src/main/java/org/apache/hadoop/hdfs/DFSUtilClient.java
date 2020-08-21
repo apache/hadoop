@@ -1040,4 +1040,16 @@ public class DFSUtilClient {
     return (ezpath.equals("/") ? ezpath : ezpath + Path.SEPARATOR)
         + FileSystem.TRASH_PREFIX + Path.SEPARATOR + ugi.getShortUserName();
   }
+
+  /**
+   * Returns trash root in a snapshottable directory.
+   * @param ssRoot String of path to a snapshottable directory root.
+   * @param ugi user of trash owner.
+   * @return unqualified path of trash root.
+   */
+  public static String getSnapshotTrashRoot(String ssRoot,
+      UserGroupInformation ugi) {
+    return (ssRoot.equals("/") ? ssRoot : ssRoot + Path.SEPARATOR)
+        + FileSystem.TRASH_PREFIX + Path.SEPARATOR + ugi.getShortUserName();
+  }
 }

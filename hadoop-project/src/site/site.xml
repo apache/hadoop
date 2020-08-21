@@ -41,11 +41,6 @@
       <item name="git" href="https://gitbox.apache.org/repos/asf/hadoop.git" />
     </links>
 
-    <breadcrumbs position="left">
-      <item name="Apache" href="http://www.apache.org/" />
-      <item name="Hadoop" href="http://hadoop.apache.org/"/>
-    </breadcrumbs>
-
     <menu name="General" inherit="top">
       <item name="Overview" href="index.html"/>
       <item name="Single Node Setup" href="hadoop-project-dist/hadoop-common/SingleCluster.html"/>

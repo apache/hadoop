@@ -34,10 +34,12 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
+import org.apache.hadoop.hdfs.server.namenode.visitor.NamespaceVisitor;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectorySnapshottableFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiffList;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -294,11 +296,11 @@ public class INodeDirectory extends INodeWithAdditionalFields
    * @param snapshotName Name of the snapshot.
    * @param mtime The snapshot deletion time set by Time.now().
    */
-  public Snapshot removeSnapshot(
-      ReclaimContext reclaimContext, String snapshotName, long mtime)
+  public Snapshot removeSnapshot(ReclaimContext reclaimContext,
+      String snapshotName, long mtime, SnapshotManager snapshotManager)
       throws SnapshotException {
     return getDirectorySnapshottableFeature().removeSnapshot(
-        reclaimContext, this, snapshotName, mtime);
+        reclaimContext, this, snapshotName, mtime, snapshotManager);
   }
 
   /**
@@ -993,6 +995,11 @@ public class INodeDirectory extends INodeWithAdditionalFields
       this.snapshotId = snapshot;
       this.inode = inode;
     }
+  }
+
+  @Override
+  public void accept(NamespaceVisitor visitor, int snapshot) {
+    visitor.visitDirectoryRecursively(this, snapshot);
   }
 
   public final int getChildrenNum(final int snapshotId) {

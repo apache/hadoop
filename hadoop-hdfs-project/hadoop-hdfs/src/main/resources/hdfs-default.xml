@@ -5101,6 +5101,15 @@
     for maximum no of snapshots allowed is 65536.
   </description>
 </property>
+<property>
+  <name>dfs.namenode.snapshot.filesystem.limit</name>
+  <value>65536</value>
+  <description>
+    Limits the maximum number of snapshots allowed on the entire filesystem.
+    If the configuration is not set, the default limit
+    for maximum no of snapshots allowed is 65536.
+  </description>
+</property>
 
 <property>
   <name>dfs.namenode.snapshot.skiplist.max.levels</name>

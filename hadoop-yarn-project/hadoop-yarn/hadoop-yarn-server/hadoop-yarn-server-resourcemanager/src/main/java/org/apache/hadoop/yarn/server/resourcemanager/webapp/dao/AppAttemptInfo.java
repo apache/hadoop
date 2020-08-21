@@ -26,6 +26,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
@@ -45,6 +46,7 @@ public class AppAttemptInfo {
   private String nodesBlacklistedBySystem;
   protected String appAttemptId;
   private String exportPorts;
+  private RMAppAttemptState appAttemptState;
 
   public AppAttemptInfo() {
   }
@@ -89,6 +91,7 @@ public class AppAttemptInfo {
         }
       }
       this.appAttemptId = attempt.getAppAttemptId().toString();
+      this.appAttemptState = attempt.getAppAttemptState();
     }
   }
 
@@ -114,5 +117,9 @@ public class AppAttemptInfo {
 
   public String getAppAttemptId() {
     return this.appAttemptId;
+  }
+
+  public RMAppAttemptState getAppAttemptState() {
+    return this.appAttemptState;
   }
 }

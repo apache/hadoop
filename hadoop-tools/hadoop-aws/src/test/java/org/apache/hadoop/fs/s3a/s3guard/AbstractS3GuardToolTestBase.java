@@ -60,10 +60,14 @@ import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_NAME_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_METASTORE_NULL;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.fs.s3a.S3AUtils.clearBucketOption;
+import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.BucketInfo.IS_MARKER_AWARE;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.E_BAD_STATE;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.INVALID_ARGUMENT;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.SUCCESS;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardToolTestHelper.exec;
+import static org.apache.hadoop.fs.s3a.s3guard.S3GuardToolTestHelper.runS3GuardCommand;
+import static org.apache.hadoop.fs.s3a.tools.MarkerTool.MARKERS;
+import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_NOT_ACCEPTABLE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -124,7 +128,7 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
   public static String expectSuccess(
       String message,
       S3GuardTool tool,
-      String... args) throws Exception {
+      Object... args) throws Exception {
     ByteArrayOutputStream buf = new ByteArrayOutputStream();
     exec(SUCCESS, message, tool, buf, args);
     return buf.toString();
@@ -137,9 +141,9 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
    * @return the return code
    * @throws Exception any exception
    */
-  protected int run(Configuration conf, String... args)
+  protected int run(Configuration conf, Object... args)
       throws Exception {
-    return S3GuardTool.run(conf, args);
+    return runS3GuardCommand(conf, args);
   }
 
   /**
@@ -149,8 +153,8 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
    * @return the return code
    * @throws Exception any exception
    */
-  protected int run(String... args) throws Exception {
-    return S3GuardTool.run(getConfiguration(), args);
+  protected int run(Object... args) throws Exception {
+    return runS3GuardCommand(getConfiguration(), args);
   }
 
   /**
@@ -160,11 +164,12 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
    * @param args argument list
    * @throws Exception any exception
    */
-  protected void runToFailure(int status, String... args)
+  protected void runToFailure(int status, Object... args)
       throws Exception {
+    final Configuration conf = getConfiguration();
     ExitUtil.ExitException ex =
-        intercept(ExitUtil.ExitException.class,
-            () -> run(args));
+        intercept(ExitUtil.ExitException.class, () ->
+            runS3GuardCommand(conf, args));
     if (ex.status != status) {
       throw ex;
     }
@@ -445,6 +450,44 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
         info.contains("S3A Client"));
   }
 
+  /**
+   * Verify that the {@code -markers aware} option works.
+   * This test case is in this class for ease of backporting.
+   */
+  @Test
+  public void testBucketInfoMarkerAware() throws Throwable {
+    final Configuration conf = getConfiguration();
+    URI fsUri = getFileSystem().getUri();
+
+    // run a bucket info command and look for
+    // confirmation that it got the output from DDB diags
+    S3GuardTool.BucketInfo infocmd = toClose(new S3GuardTool.BucketInfo(conf));
+    String info = exec(infocmd, S3GuardTool.BucketInfo.NAME,
+        "-" + MARKERS, S3GuardTool.BucketInfo.MARKERS_AWARE,
+        fsUri.toString());
+
+    assertTrue("Output should contain information about S3A client " + info,
+        info.contains(IS_MARKER_AWARE));
+  }
+
+  /**
+   * Verify that the {@code -markers} option fails on unknown options.
+   * This test case is in this class for ease of backporting.
+   */
+  @Test
+  public void testBucketInfoMarkerPolicyUnknown() throws Throwable {
+    final Configuration conf = getConfiguration();
+    URI fsUri = getFileSystem().getUri();
+
+    // run a bucket info command and look for
+    // confirmation that it got the output from DDB diags
+    S3GuardTool.BucketInfo infocmd = toClose(new S3GuardTool.BucketInfo(conf));
+    intercept(ExitUtil.ExitException.class, ""+ EXIT_NOT_ACCEPTABLE, () ->
+        exec(infocmd, S3GuardTool.BucketInfo.NAME,
+            "-" + MARKERS, "unknown",
+            fsUri.toString()));
+  }
+
   @Test
   public void testSetCapacityFailFastIfNotGuarded() throws Exception{
     Configuration conf = getConfiguration();
@@ -654,4 +697,5 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
     assertEquals("Mismatched s3 outputs: " + actualOut, filesOnS3, actualOnS3);
     assertFalse("Diff contained duplicates", duplicates);
   }
+
 }

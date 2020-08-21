@@ -104,6 +104,7 @@ import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_IGNORE_PORT_IN
 @InterfaceStability.Evolving
 public class ViewFileSystemOverloadScheme extends ViewFileSystem {
   private URI myUri;
+  private boolean supportAutoAddingFallbackOnNoMounts = true;
   public ViewFileSystemOverloadScheme() throws IOException {
     super();
   }
@@ -114,11 +115,19 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
   }
 
   /**
-   * Returns the ViewFileSystem type.
-   * @return <code>viewfs</code>
+   * By default returns false as ViewFileSystemOverloadScheme supports auto
+   * adding fallback on no mounts.
    */
-  String getType() {
-    return FsConstants.VIEWFSOS_TYPE;
+  public boolean supportAutoAddingFallbackOnNoMounts() {
+    return this.supportAutoAddingFallbackOnNoMounts;
+  }
+
+  /**
+   * Sets whether to add fallback automatically when no mount points found.
+   */
+  public void setSupportAutoAddingFallbackOnNoMounts(
+      boolean addAutoFallbackOnNoMounts) {
+    this.supportAutoAddingFallbackOnNoMounts = addAutoFallbackOnNoMounts;
   }
 
   @Override
@@ -285,6 +294,64 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
       throw new NotInMountpointException(path,
           "No link found for the given path.");
     }
+  }
+
+  /**
+   * Gets the mount path info, which contains the target file system and
+   * remaining path to pass to the target file system.
+   */
+  public MountPathInfo<FileSystem> getMountPathInfo(Path path,
+      Configuration conf) throws IOException {
+    InodeTree.ResolveResult<FileSystem> res;
+    try {
+      res = fsState.resolve(getUriPath(path), true);
+      FileSystem fs = res.isInternalDir() ?
+          (fsState.getRootFallbackLink() != null ?
+              ((ChRootedFileSystem) fsState
+                  .getRootFallbackLink().targetFileSystem).getMyFs() :
+              fsGetter().get(path.toUri(), conf)) :
+          ((ChRootedFileSystem) res.targetFileSystem).getMyFs();
+      return new MountPathInfo<FileSystem>(res.remainingPath, res.resolvedPath,
+          fs);
+    } catch (FileNotFoundException e) {
+      // No link configured with passed path.
+      throw new NotInMountpointException(path,
+          "No link found for the given path.");
+    }
+  }
+
+  /**
+   * A class to maintain the target file system and a path to pass to the target
+   * file system.
+   */
+  public static class MountPathInfo<T> {
+    private Path pathOnTarget;
+    private T targetFs;
+
+    public MountPathInfo(Path pathOnTarget, String resolvedPath, T targetFs) {
+      this.pathOnTarget = pathOnTarget;
+      this.targetFs = targetFs;
+    }
+
+    public Path getPathOnTarget() {
+      return this.pathOnTarget;
+    }
+
+    public T getTargetFs() {
+      return this.targetFs;
+    }
+  }
+
+  /**
+   * @return Gets the fallback file system configured. Usually, this will be the
+   * default cluster.
+   */
+  public FileSystem getFallbackFileSystem() {
+    if (fsState.getRootFallbackLink() == null) {
+      return null;
+    }
+    return ((ChRootedFileSystem) fsState.getRootFallbackLink().targetFileSystem)
+        .getMyFs();
   }
 
 }

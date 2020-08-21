@@ -75,7 +75,11 @@ public class ITestS3ABucketExistence extends AbstractS3ATestBase {
 
     // the exception must not be caught and marked down to an FNFE
     expectUnknownStore(() -> fs.exists(src));
-    expectUnknownStore(() -> fs.isFile(src));
+    // now that isFile() only does a HEAD, it will get a 404 without
+    // the no-such-bucket error.
+    assertFalse("isFile(" + src + ")"
+            + " was expected to complete by returning false",
+        fs.isFile(src));
     expectUnknownStore(() -> fs.isDirectory(src));
     expectUnknownStore(() -> fs.mkdirs(src));
     expectUnknownStore(() -> fs.delete(src));

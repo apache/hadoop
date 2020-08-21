@@ -166,7 +166,7 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
       this.isSnapshotRoot = true;
     }
     
-    boolean isSnapshotRoot() {
+    public boolean isSnapshotRoot() {
       return isSnapshotRoot;
     }
 

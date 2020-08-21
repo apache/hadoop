@@ -156,7 +156,7 @@ public class TestSnapshotDeletion {
     assertEquals(2, cluster.getNamesystem().getSnapshotManager()
         .getNumSnapshottableDirs());
     assertEquals(2, cluster.getNamesystem().getSnapshotManager()
-        .getSnapshottableDirs().length);
+        .getSnapshottableDirs().size());
 
     // delete /foo
     hdfs.delete(foo, true);
@@ -165,7 +165,7 @@ public class TestSnapshotDeletion {
     assertEquals(0, cluster.getNamesystem().getSnapshotManager()
         .getNumSnapshottableDirs());
     assertEquals(0, cluster.getNamesystem().getSnapshotManager()
-        .getSnapshottableDirs().length);
+        .getSnapshottableDirs().size());
     hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
     hdfs.saveNamespace();
     hdfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);

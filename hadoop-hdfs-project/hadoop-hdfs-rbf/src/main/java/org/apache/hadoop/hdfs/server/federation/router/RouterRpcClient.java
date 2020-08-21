@@ -849,6 +849,45 @@ public class RouterRpcClient {
       final List<? extends RemoteLocationContext> locations,
       final RemoteMethod remoteMethod, Class<T> expectedResultClass,
       Object expectedResultValue) throws IOException {
+    return (T) invokeSequential(remoteMethod, locations, expectedResultClass,
+        expectedResultValue).getResult();
+  }
+
+  /**
+   * Invokes sequential proxy calls to different locations. Continues to invoke
+   * calls until the success condition is met, or until all locations have been
+   * attempted.
+   *
+   * The success condition may be specified by:
+   * <ul>
+   * <li>An expected result class
+   * <li>An expected result value
+   * </ul>
+   *
+   * If no expected result class/values are specified, the success condition is
+   * a call that does not throw a remote exception.
+   *
+   * This returns RemoteResult, which contains the invoked location as well
+   * as the result.
+   *
+   * @param <R> The type of the remote location.
+   * @param <T> The type of the remote method return.
+   * @param remoteMethod The remote method and parameters to invoke.
+   * @param locations List of locations/nameservices to call concurrently.
+   * @param expectedResultClass In order to be considered a positive result, the
+   *          return type must be of this class.
+   * @param expectedResultValue In order to be considered a positive result, the
+   *          return value must equal the value of this object.
+   * @return The result of the first successful call, or if no calls are
+   *         successful, the result of the first RPC call executed, along with
+   *         the invoked location in form of RemoteResult.
+   * @throws IOException if the success condition is not met, return the first
+   *                     remote exception generated.
+   */
+  public <R extends RemoteLocationContext, T> RemoteResult invokeSequential(
+      final RemoteMethod remoteMethod, final List<R> locations,
+      Class<T> expectedResultClass, Object expectedResultValue)
+      throws IOException {
 
     final UserGroupInformation ugi = RouterRpcServer.getRemoteUser();
     final Method m = remoteMethod.getMethod();
@@ -867,9 +906,9 @@ public class RouterRpcClient {
         if (isExpectedClass(expectedResultClass, result) &&
             isExpectedValue(expectedResultValue, result)) {
           // Valid result, stop here
-          @SuppressWarnings("unchecked")
-          T ret = (T)result;
-          return ret;
+          @SuppressWarnings("unchecked") R location = (R) loc;
+          @SuppressWarnings("unchecked") T ret = (T) result;
+          return new RemoteResult<>(location, ret);
         }
         if (firstResult == null) {
           firstResult = result;
@@ -907,9 +946,8 @@ public class RouterRpcClient {
       throw thrownExceptions.get(0);
     }
     // Return the first result, whether it is the value or not
-    @SuppressWarnings("unchecked")
-    T ret = (T)firstResult;
-    return ret;
+    @SuppressWarnings("unchecked") T ret = (T) firstResult;
+    return new RemoteResult<>(locations.get(0), ret);
   }
 
   /**

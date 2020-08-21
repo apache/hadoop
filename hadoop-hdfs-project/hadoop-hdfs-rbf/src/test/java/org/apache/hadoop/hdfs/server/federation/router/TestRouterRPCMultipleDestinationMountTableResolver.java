@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
@@ -490,6 +491,38 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
     // Test single directory destination. Should be false for the directory.
     setupOrderMountPath(DestinationOrder.HASH);
     assertFalse(client.isMultiDestDirectory("/mount/dir"));
+  }
+
+  /**
+   * Verifies the snapshot location returned after snapshot operations is in
+   * accordance to the mount path.
+   */
+  @Test
+  public void testSnapshotPathResolution() throws Exception {
+    // Create a mount entry with non isPathAll order, so as to call
+    // invokeSequential.
+    Map<String, String> destMap = new HashMap<>();
+    destMap.put("ns0", "/tmp_ns0");
+    destMap.put("ns1", "/tmp_ns1");
+    nnFs0.mkdirs(new Path("/tmp_ns0"));
+    nnFs1.mkdirs(new Path("/tmp_ns1"));
+    MountTable addEntry = MountTable.newInstance("/mountSnap", destMap);
+    addEntry.setDestOrder(DestinationOrder.HASH);
+    assertTrue(addMountTable(addEntry));
+    // Create the actual directory in the destination second in sequence of
+    // invokeSequential.
+    nnFs0.mkdirs(new Path("/tmp_ns0/snapDir"));
+    Path snapDir = new Path("/mountSnap/snapDir");
+    Path snapshotPath = new Path("/mountSnap/snapDir/.snapshot/snap");
+    routerFs.allowSnapshot(snapDir);
+    // Verify the snapshot path returned after createSnapshot is as per mount
+    // path.
+    Path snapshot = routerFs.createSnapshot(snapDir, "snap");
+    assertEquals(snapshotPath, snapshot);
+    // Verify the snapshot path returned as part of snapshotListing is as per
+    // mount path.
+    SnapshotStatus[] snapshots = routerFs.getSnapshotListing(snapDir);
+    assertEquals(snapshotPath, snapshots[0].getFullPath());
   }
 
   @Test

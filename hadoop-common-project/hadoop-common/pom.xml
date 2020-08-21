@@ -35,6 +35,7 @@
     <is.hadoop.common.component>true</is.hadoop.common.component>
     <wsce.config.dir>../etc/hadoop</wsce.config.dir>
     <wsce.config.file>wsce-site.xml</wsce.config.file>
+    <javadoc.skip.jdk11>true</javadoc.skip.jdk11>
   </properties>
 
 

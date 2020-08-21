@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+import org.apache.hadoop.hdfs.server.namenode.visitor.NamespaceVisitor;
 
 /**
  * An {@link INode} representing a symbolic link.
@@ -104,7 +105,13 @@ public class INodeSymlink extends INodeWithAdditionalFields {
   public void dumpTreeRecursively(PrintWriter out, StringBuilder prefix,
       final int snapshot) {
     super.dumpTreeRecursively(out, prefix, snapshot);
-    out.println();
+    out.print(" ~> ");
+    out.println(getSymlinkString());
+  }
+
+  @Override
+  public void accept(NamespaceVisitor visitor, int snapshot) {
+    visitor.visitSymlink(this, snapshot);
   }
 
   @Override

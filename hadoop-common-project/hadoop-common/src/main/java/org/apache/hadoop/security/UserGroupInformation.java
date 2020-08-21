@@ -530,6 +530,14 @@ public class UserGroupInformation {
   }
 
   /**
+   * Set the last login time for logged in user
+   * @param loginTime the number of milliseconds since the beginning of time
+   */
+  private void setLastLogin(long loginTime) {
+    user.setLastLogin(loginTime);
+  }
+
+  /**
    * Create a UserGroupInformation for the given subject.
    * This does not change the subject or acquire new credentials.
    *
@@ -1968,6 +1976,7 @@ public class UserGroupInformation {
       if (subject == null) {
         params.put(LoginParam.PRINCIPAL, ugi.getUserName());
         ugi.setLogin(login);
+        ugi.setLastLogin(Time.now());
       }
       return ugi;
     } catch (LoginException le) {

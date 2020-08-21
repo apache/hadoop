@@ -662,6 +662,27 @@ public class TestAMRMProxyService extends BaseAMRMProxyTest {
     Assert.assertEquals(0, state.getAppContexts().size());
   }
 
+  @Test
+  public void testCheckIfAppExistsInStateStore()
+      throws IOException, YarnException {
+    ApplicationId appId = ApplicationId.newInstance(0, 0);
+    Configuration conf = createConfiguration();
+    conf.setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);
+
+    createAndStartAMRMProxyService(conf);
+
+    Assert.assertEquals(false,
+        getAMRMProxyService().checkIfAppExistsInStateStore(appId));
+
+    Configuration distConf = createConfiguration();
+    conf.setBoolean(YarnConfiguration.DIST_SCHEDULING_ENABLED, true);
+
+    createAndStartAMRMProxyService(distConf);
+
+    Assert.assertEquals(true,
+        getAMRMProxyService().checkIfAppExistsInStateStore(appId));
+  }
+
   /**
    * A mock intercepter implementation that uses the same mockRM instance across
    * restart.
