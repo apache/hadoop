@@ -89,6 +89,7 @@ import org.apache.hadoop.hdfs.inotify.EventBatchList;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
+import org.apache.hadoop.hdfs.protocol.BatchOpsException;
 import org.apache.hadoop.hdfs.protocol.BatchedDirectoryListing;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
@@ -543,7 +544,8 @@ public class NameNodeRpcServer implements NamenodeProtocols {
         QuotaByStorageTypeExceededException.class,
         AclException.class,
         FSLimitException.PathComponentTooLongException.class,
-        FSLimitException.MaxDirectoryItemsExceededException.class);
+        FSLimitException.MaxDirectoryItemsExceededException.class,
+        BatchOpsException.class);
 
     clientRpcServer.addSuppressedLoggingExceptions(StandbyException.class,
         UnresolvedPathException.class);
@@ -1095,6 +1097,27 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     }
     metrics.incrFilesRenamed();
   }
+
+  @Override // ClientProtocol
+  public void batchRename(String[] srcs, String[] dsts,
+      Options.Rename... options) throws IOException {
+    if(stateChangeLog.isDebugEnabled()) {
+      stateChangeLog.debug("*DIR* NameNode.batchRename: "
+          + Arrays.toString(srcs) + " to " + Arrays.toString(dsts));
+    }
+    namesystem.checkOperation(OperationCategory.WRITE);
+    CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
+    if (cacheEntry != null && cacheEntry.isSuccess()) {
+      return; // Return previous response
+    }
+    try {
+      namesystem.batchRename(srcs, dsts, cacheEntry != null);
+    } finally {
+      RetryCache.setState(cacheEntry, true);
+    }
+    metrics.incrFilesRenamed();
+  }
+
 
   @Override // ClientProtocol
   public boolean truncate(String src, long newLength, String clientName)

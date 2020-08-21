@@ -732,6 +732,14 @@ public class NamenodeWebHdfsMethods {
         return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
       }
     }
+    case BATCH_RENAME:
+    {
+      validateOpParams(op, destination);
+      final EnumSet<Options.Rename> s = renameOptions.getValue();
+      cp.batchRename(fullpath.split(":"), destination.getValue().split(":"),
+          s.toArray(new Options.Rename[s.size()]));
+      return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
+    }
     case SETREPLICATION:
     {
       final boolean b = cp.setReplication(fullpath, replication.getValue(conf));

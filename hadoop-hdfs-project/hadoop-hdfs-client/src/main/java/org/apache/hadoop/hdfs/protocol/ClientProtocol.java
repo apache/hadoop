@@ -583,6 +583,19 @@ public interface ClientProtocol {
   void rename2(String src, String dst, Options.Rename... options)
       throws IOException;
 
+
+  /**
+   * Rename an batch items in the file system namespace.
+   * @param srcs existing files or directories name.216
+   * @param dsts new names.
+   * @param options Rename options
+   *
+   * @throws IOException an I/O error occurred
+   */
+  @AtMostOnce
+  void batchRename(String[] srcs, String[] dsts,
+      Options.Rename... options) throws IOException;
+
   /**
    * Truncate file src to new size.
    * <ul>

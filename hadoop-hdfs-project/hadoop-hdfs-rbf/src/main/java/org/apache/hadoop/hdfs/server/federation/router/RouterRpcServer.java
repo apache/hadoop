@@ -832,6 +832,12 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   }
 
   @Override // ClientProtocol
+  public void batchRename(String[] srcs, String[] dsts,
+                      final Options.Rename... options) throws IOException {
+    clientProto.batchRename(srcs, dsts, options);
+  }
+
+  @Override // ClientProtocol
   public void concat(String trg, String[] src) throws IOException {
     clientProto.concat(trg, src);
   }

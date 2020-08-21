@@ -139,4 +139,11 @@ public final class CommonPathCapabilities {
   public static final String FS_MULTIPART_UPLOADER =
       "fs.capability.multipart.uploader";
 
+  /**
+   * Does the store support multipart uploading?
+   * Value: {@value}.
+   */
+  public static final String FS_BATCH_RENAME =
+      "fs.capability.batch.rename";
+
 }

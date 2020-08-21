@@ -114,7 +114,8 @@ public class DFSOpsCountStatistics extends StorageStatistics {
     GET_SNAPSHOT_LIST("op_get_snapshot_list"),
     TRUNCATE(CommonStatisticNames.OP_TRUNCATE),
     UNSET_EC_POLICY("op_unset_ec_policy"),
-    UNSET_STORAGE_POLICY("op_unset_storage_policy");
+    UNSET_STORAGE_POLICY("op_unset_storage_policy"),
+    BATCH_RENAME("op_batch_rename");
 
     private static final Map<String, OpType> SYMBOL_MAP =
         new HashMap<>(OpType.values().length);

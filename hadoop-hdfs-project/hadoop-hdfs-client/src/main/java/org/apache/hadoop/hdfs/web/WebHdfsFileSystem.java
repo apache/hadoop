@@ -40,6 +40,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Base64.Decoder;
 import java.util.Collection;
@@ -61,9 +62,9 @@ import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderTokenIssuer;
+import org.apache.hadoop.fs.BatchOperations;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.DelegationTokenRenewer;
@@ -76,9 +77,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.GlobalStorageStatistics;
 import org.apache.hadoop.fs.GlobalStorageStatistics.StorageStatisticsProvider;
+import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.MultipartUploaderBuilder;
 import org.apache.hadoop.fs.QuotaUsage;
-import org.apache.hadoop.fs.PathCapabilities;
 import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.impl.FileSystemMultipartUploaderBuilder;
@@ -144,7 +145,8 @@ import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapa
 /** A FileSystem for HDFS over the web. */
 public class WebHdfsFileSystem extends FileSystem
     implements DelegationTokenRenewer.Renewable,
-    TokenAspect.TokenManagementDelegator, KeyProviderTokenIssuer {
+    TokenAspect.TokenManagementDelegator, KeyProviderTokenIssuer,
+    BatchOperations {
   public static final Logger LOG = LoggerFactory
       .getLogger(WebHdfsFileSystem.class);
   /** WebHdfs version. */
@@ -1180,6 +1182,34 @@ public class WebHdfsFileSystem extends FileSystem
     final HttpOpParam.Op op = PutOpParam.Op.RENAME;
     new FsPathRunner(op, src,
         new DestinationParam(makeQualified(dst).toUri().getPath()),
+        new RenameOptionSetParam(options)
+    ).run();
+  }
+
+  protected String[] getBatchPathName(String[] files) throws IOException{
+    List<String> ret = new ArrayList<>();
+    for(String f :  files) {
+      if(!f.startsWith(Path.SEPARATOR)) {
+        throw new InvalidPathException("Path is not absolute! " + f);
+      }
+      ret.add(makeQualified(new Path(f)).toUri().getPath());
+    }
+    return ret.toArray(new String[ret.size()]);
+  }
+
+  @Override
+  public void batchRename(final String[] srcs, final String[] dsts,
+      final Options.Rename... options) throws IOException {
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.BATCH_RENAME);
+    final HttpOpParam.Op op = PutOpParam.Op.BATCH_RENAME;
+    if (srcs.length != dsts.length) {
+      throw new InvalidPathException("mismatch batch path src: " +
+          Arrays.toString(srcs) + " dst: " + Arrays.toString(dsts));
+    }
+    new FsPathRunner(op,
+        new Path(StringUtils.join(":", getBatchPathName(srcs))),
+        new DestinationParam(StringUtils.join(":", getBatchPathName(dsts))),
         new RenameOptionSetParam(options)
     ).run();
   }

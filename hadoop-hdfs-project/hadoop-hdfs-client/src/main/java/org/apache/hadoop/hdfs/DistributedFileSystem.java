@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderTokenIssuer;
 import org.apache.hadoop.fs.BatchListingOperations;
+import org.apache.hadoop.fs.BatchOperations;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.CacheFlag;
@@ -50,6 +51,7 @@ import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.GlobalStorageStatistics;
 import org.apache.hadoop.fs.GlobalStorageStatistics.StorageStatisticsProvider;
+import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.InvalidPathHandleException;
 import org.apache.hadoop.fs.PartialListing;
 import org.apache.hadoop.fs.MultipartUploaderBuilder;
@@ -147,7 +149,7 @@ import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapa
 @InterfaceAudience.LimitedPrivate({ "MapReduce", "HBase" })
 @InterfaceStability.Unstable
 public class DistributedFileSystem extends FileSystem
-    implements KeyProviderTokenIssuer, BatchListingOperations {
+    implements KeyProviderTokenIssuer, BatchListingOperations, BatchOperations{
   private Path workingDir;
   private URI uri;
 
@@ -963,6 +965,25 @@ public class DistributedFileSystem extends FileSystem
         }
       }.resolve(this, absDst);
     }
+  }
+
+  protected String[] getBatchPathName(String[] files) {
+    List<String> ret = new ArrayList<>();
+    for(String f :  files) {
+      ret.add(getPathName(new Path(f)));
+    }
+    return ret.toArray(new String[ret.size()]);
+  }
+
+  @Override
+  public void batchRename(final String[] srcs, final String[] dsts,
+      final Options.Rename... options) throws IOException {
+    if (srcs.length != dsts.length) {
+      throw new InvalidPathException("mismatch batch path src: " +
+          Arrays.toString(srcs) + " dst: " + Arrays.toString(dsts));
+    }
+    statistics.incrementWriteOps(1);
+    dfs.batchRename(getBatchPathName(srcs), getBatchPathName(dsts));
   }
 
   @Override
