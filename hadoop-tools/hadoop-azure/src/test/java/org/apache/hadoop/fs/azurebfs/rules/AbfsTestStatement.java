@@ -83,7 +83,6 @@ public class AbfsTestStatement extends Statement {
           LOG.error("\n\nTest : {}", test);
           setAccountTypeConfigs(this.accountType);
           setAuthTypeConfigs(this.authType);
-        //  testObj.initFSEndpointForNewFS();
           base.evaluate();
         }
       }

@@ -40,7 +40,7 @@ public class ITestAzureBlobFileSystemBackCompat extends
   }
 
   @Test
-  @AbfsConfigsToTest(accountTypes = AccountType.HNS)
+  @AbfsConfigsToTest(accountTypes = AccountType.NonHNS)
   public void testBlobBackCompat() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     Assume.assumeFalse("This test does not support namespace enabled account",

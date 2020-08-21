@@ -20,7 +20,9 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.lang.reflect.Field;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import org.junit.Assert;
 import org.junit.Assume;
@@ -69,14 +71,17 @@ public class ITestClientUrlScheme extends AbstractAbfsIntegrationTest{
   }
 
   @Before
-  public void setup() {
+  public void setup() throws Exception {
     // authentication like OAUTH must use HTTPS
-    Assume.assumeTrue("ITestClientUrlScheme is skipped because auth type is not SharedKey",
-        getAuthType() == AuthType.SharedKey);
+    initAbfsConfig();
+    initFSEndpointForNewFS();
+  }
+
+  public List<AuthType> excludeAuthTypes() {
+    return Arrays.asList(AuthType.OAuth, AuthType.SAS);
   }
 
   @Test
-  @AbfsConfigsToTest(authTypes = AuthType.SharedKey)
   public void testClientUrlScheme() throws Exception {
     String[] urlWithoutScheme = this.getTestUrl().split(":");
     String fsUrl;

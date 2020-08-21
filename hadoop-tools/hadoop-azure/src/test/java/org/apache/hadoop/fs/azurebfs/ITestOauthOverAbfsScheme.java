@@ -19,8 +19,11 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.lang.reflect.Field;
 import java.net.URL;
+import java.util.Arrays;
+import java.util.List;
 
 import org.junit.Assume;
+import org.junit.Before;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.azurebfs.rules.AbfsConfigsToTest;
@@ -36,12 +39,19 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 public class ITestOauthOverAbfsScheme extends AbstractAbfsIntegrationTest {
 
   public ITestOauthOverAbfsScheme() throws Exception {
+  }
+
+  @Before
+  public void setup() throws Exception {
+    super.setup();
     Assume.assumeTrue("ITestOauthOverAbfsScheme is skipped because auth type is not OAuth",
-            getAuthType() == AuthType.OAuth);
+        getAuthType() == AuthType.OAuth);
+  }
+  public List<AuthType> excludeAuthTypes() {
+    return Arrays.asList(AuthType.SharedKey, AuthType.SAS);
   }
 
   @Test
-  @AbfsConfigsToTest(authTypes = AuthType.OAuth)
   public void testOauthOverSchemeAbfs() throws Exception {
     String[] urlWithoutScheme = this.getTestUrl().split(":");
     String fsUrl;

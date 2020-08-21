@@ -129,7 +129,7 @@ public class ITestAzureBlobFileSystemCheckAccess
 
   @Test(expected = FileNotFoundException.class)
   @AbfsConfigsToTest(authTypes = AuthType.OAuth,
-      accountTypes = AccountType.NonHNS)
+      accountTypes = AccountType.HNS)
   public void testCheckAccessForNonExistentFile() throws Exception {
     checkPrerequisites();
     Path nonExistentFile = setupTestDirectoryAndUserAccess(
