@@ -49,7 +49,7 @@ public class ITestAbfsFileSystemContractGetFileStatus
 
   @Override
   protected int getTestTimeoutMillis() {
-    return 3 * 180000;
+    return 3 * super.getTestTimeoutMillis();
   }
 
   @Override

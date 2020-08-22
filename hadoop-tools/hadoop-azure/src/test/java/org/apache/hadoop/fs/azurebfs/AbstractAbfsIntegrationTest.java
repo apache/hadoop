@@ -92,9 +92,15 @@ public abstract class AbstractAbfsIntegrationTest extends
   private boolean useConfiguredFileSystem = false;
   private boolean usingFilesystemForSASTests = false;
 
-  protected AbstractAbfsIntegrationTest() throws Exception {
-    rawConfig = new Configuration();
-    rawConfig.addResource(TEST_CONFIGURATION_FILE_NAME);
+  protected AbstractAbfsIntegrationTest() {
+    initRawConfig();
+  }
+
+  private void initRawConfig() {
+    if (rawConfig == null) {
+      rawConfig = new Configuration();
+      rawConfig.addResource(TEST_CONFIGURATION_FILE_NAME);
+    }
   }
 
   protected void initFSEndpointForNewFS() throws Exception {
@@ -217,7 +223,6 @@ public abstract class AbstractAbfsIntegrationTest extends
         TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
     Assume.assumeTrue(isHNSEnabled);
     createFilesystemForSASTests();
-    //initFSEndpointForNewFS();
   }
 
   @After
@@ -255,6 +260,7 @@ public abstract class AbstractAbfsIntegrationTest extends
       LOG.warn("During cleanup: {}", e, e);
     } finally {
       IOUtils.closeStream(abfs);
+      rawConfig = null;
       abfs = null;
       usingFilesystemForSASTests = false;
     }
@@ -368,6 +374,7 @@ public abstract class AbstractAbfsIntegrationTest extends
 
   @Override
   public Configuration getInitialConfiguration() {
+    initRawConfig();
     return rawConfig;
   }
 

@@ -214,8 +214,6 @@ public class AbfsRestOperation {
       httpOperation = new AbfsHttpOperation(url, method, requestHeaders);
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
 
-      LOG.error("{}.{}", client.getAuthType(), url);
-
       switch(client.getAuthType()) {
         case Custom:
         case OAuth:

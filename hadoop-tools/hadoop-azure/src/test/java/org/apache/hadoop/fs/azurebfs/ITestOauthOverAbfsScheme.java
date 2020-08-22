@@ -26,7 +26,6 @@ import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 
-import org.apache.hadoop.fs.azurebfs.rules.AbfsConfigsToTest;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;

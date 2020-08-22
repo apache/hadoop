@@ -78,8 +78,6 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   @Before
-  @AbfsConfigsToTest(authTypes = {AuthType.OAuth},
-      accountTypes = AccountType.HNS)
   public void setup() throws Exception {
     super.setup();
     this.superUserFs = getFileSystem();

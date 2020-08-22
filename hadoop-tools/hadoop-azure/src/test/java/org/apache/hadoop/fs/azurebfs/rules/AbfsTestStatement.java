@@ -20,131 +20,150 @@ package org.apache.hadoop.fs.azurebfs.rules;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
-import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
-import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
-import org.apache.hadoop.fs.azurebfs.extensions.MockDelegationSASTokenProvider;
-import org.junit.Assume;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.constants.AccountType;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SAS_TOKEN_PROVIDER_TYPE;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_HNS_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_NONHNS_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ACCOUNT_NAME;
-import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_CONTRACT_TEST_URI;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
 
 public class AbfsTestStatement extends Statement {
 
   private static final Logger LOG = LoggerFactory
       .getLogger(AbfsTestStatement.class);
 
+  private static final String COMBINATION_SEPARATOR = "\\|";
+  private static final String CONFIGS_SEPARATOR = "-";
+  private static final int ACCOUNT_TYPE_INDEX = 0;
+  private static final int AUTH_TYPE_INDEX = 1;
+  private static final List<List<String>> TEST_COMBINATIONS;
+  private static final List<String> SUPPORTED_AUTH_TYPES;
+  private static final List<String> SUPPORTED_ACCOUNT_TYPES;
+
+  static {
+    SUPPORTED_AUTH_TYPES = new ArrayList<>();
+    SUPPORTED_AUTH_TYPES.add(AuthType.OAuth.name());
+    SUPPORTED_AUTH_TYPES.add(AuthType.SharedKey.name());
+    SUPPORTED_ACCOUNT_TYPES = new ArrayList<>();
+    SUPPORTED_ACCOUNT_TYPES.add(AccountType.HNS.name());
+    SUPPORTED_ACCOUNT_TYPES.add(AccountType.NonHNS.name());
+
+    TEST_COMBINATIONS = new ArrayList<>();
+    Configuration rawConfig = new Configuration();
+    rawConfig.addResource(TEST_CONFIGURATION_FILE_NAME);
+    String testConfigCombinationsStr = rawConfig
+        .get(TestConfigurationKeys.FS_AZURE_TEST_COMBINATIONS);
+    String[] confCombinations = testConfigCombinationsStr.trim()
+        .split(COMBINATION_SEPARATOR);
+    for (String confCombinationStr : confCombinations) {
+      String[] confs = confCombinationStr.trim().split(CONFIGS_SEPARATOR);
+      String accountType = confs[ACCOUNT_TYPE_INDEX];
+      String authType = confs[AUTH_TYPE_INDEX];
+      if (SUPPORTED_AUTH_TYPES.contains(authType) && SUPPORTED_ACCOUNT_TYPES
+          .contains(accountType)) {
+        TEST_COMBINATIONS.add(Arrays.asList(accountType, authType));
+      }
+    }
+  }
+
   private final Statement base;
-  private final Description description;
   private final AbfsTestable testObj;
+  private final List<String> authTypesToTest;
+  private final List<String> accountTypesToTest;
+  private final List<String> authTypesToExclude;
 
   private String accountType;
   private String authType;
 
-  public AbfsTestStatement(Statement base, Description description,
-      AbfsTestable testObj) {
+  public AbfsTestStatement(final Statement base, final Description description,
+      final AbfsTestable testObj) {
     this.base = base;
-    this.description = description;
     this.testObj = testObj;
+    this.authTypesToExclude = new ArrayList<>();
+    List<AuthType> authTypesToExclude = testObj.excludeAuthTypes();
+    if (!authTypesToExclude.isEmpty()) {
+      for (AuthType authType : authTypesToExclude) {
+        this.authTypesToExclude.add(authType.name());
+      }
+    }
+    AbfsConfigsToTest abfsConfigsToTest = description
+        .getAnnotation(AbfsConfigsToTest.class);
+    if (abfsConfigsToTest == null) {
+      this.accountTypesToTest = SUPPORTED_ACCOUNT_TYPES;
+      this.authTypesToTest = SUPPORTED_AUTH_TYPES;
+      return;
+    }
+    AuthType[] authTypesToTestArr = abfsConfigsToTest.authTypes();
+    if (authTypesToTestArr != null && authTypesToTestArr.length > 0) {
+      this.authTypesToTest = new ArrayList<>();
+      for (AuthType authType : authTypesToTestArr) {
+        this.authTypesToTest.add(authType.name());
+      }
+    } else {
+      this.authTypesToTest = SUPPORTED_AUTH_TYPES;
+    }
+    AccountType[] accountTypesToTestArr = abfsConfigsToTest.accountTypes();
+    if (accountTypesToTestArr != null && accountTypesToTestArr.length > 0) {
+      this.accountTypesToTest = new ArrayList<>();
+      for (AccountType accountType : accountTypesToTestArr) {
+        this.accountTypesToTest.add(accountType.name());
+      }
+    } else {
+      this.accountTypesToTest = SUPPORTED_ACCOUNT_TYPES;
+    }
   }
 
   @Override
   public void evaluate() throws Throwable {
-    String testMethod =
-        description.getTestClass() + "#" + description.getMethodName() + "-";
-
-    List<List<String>> testsConfigs = new ArrayList<>();
-    testsConfigs.add(accountTypesToTest());
-    testsConfigs.add(authTypesToTest());
-    List<List<String>> testConfigCombinations = cartesianProduct(testsConfigs);
-
-    String test = "";
-    try {
-      for (List<String> testConfigCombination : testConfigCombinations) {
-        this.accountType = testConfigCombination.get(0);
-        this.authType = testConfigCombination.get(1);
-        if(isValidConfigCombination()) {
-          test = testMethod + testConfigCombination;
-          LOG.error("\n\nTest : {}", test);
-          setAccountTypeConfigs(this.accountType);
-          setAuthTypeConfigs(this.authType);
-          base.evaluate();
-        }
-      }
-    } catch (Exception e) {
-      LOG.debug(test + " failed. ", e);
-      throw e;
+    for (List<String> testConfigCombination : getTestConfigCombinations()) {
+      this.accountType = testConfigCombination.get(ACCOUNT_TYPE_INDEX);
+      this.authType = testConfigCombination.get(AUTH_TYPE_INDEX);
+      LOG.error("Test : {}", testConfigCombination);
+      setAccountTypeConfigs();
+      setAuthTypeConfigs();
+      base.evaluate();
     }
   }
 
-  private boolean isValidConfigCombination() {
-    return !(AccountType.NonHNS.name().equalsIgnoreCase(accountType)
-        && AuthType.SAS.name().equalsIgnoreCase(authType));
-  }
-
-  private List<String> authTypesToTest() {
-    AbfsConfigsToTest abfsConfigsToTest = description
-        .getAnnotation(AbfsConfigsToTest.class);
-    List<AuthType> authTypes = new ArrayList();
-    if (abfsConfigsToTest != null) {
-      AuthType[] values = abfsConfigsToTest.authTypes();
-      if (values != null && values.length > 0) {
-        authTypes = Arrays.asList(values);
+  private List<List<String>> getTestConfigCombinations() {
+    if (accountTypesToTest.isEmpty() && authTypesToTest.isEmpty()
+        && authTypesToExclude.isEmpty()) {
+      return TEST_COMBINATIONS;
+    }
+    List<List<String>> result = new ArrayList<>();
+    for (List<String> confCombination : TEST_COMBINATIONS) {
+      String accountType = confCombination.get(ACCOUNT_TYPE_INDEX);
+      String authType = confCombination.get(AUTH_TYPE_INDEX);
+      if (this.accountTypesToTest.contains(accountType) && this.authTypesToTest
+          .contains(authType) && !this.authTypesToExclude.contains(authType)) {
+        result.add(confCombination);
       }
     }
-    if (authTypes != null && authTypes.size() < 1) {
-      authTypes.add(AuthType.OAuth);
-      authTypes.add(AuthType.SharedKey);//authTypes.add(AuthType.SAS);
-    }
-    return authTypes.stream()
-        .filter(authType -> !testObj.excludeAuthTypes().contains(authType))
-        .map(authType -> authType.name())
-        .collect(Collectors.toList());
+    return result;
   }
 
-  private List<String> accountTypesToTest() {
-    AbfsConfigsToTest abfsConfigsToTest = description
-        .getAnnotation(AbfsConfigsToTest.class);
-    List<AccountType> accountTypes = new ArrayList();
-    if (abfsConfigsToTest != null) {
-      AccountType[] values = abfsConfigsToTest.accountTypes();
-      if (values != null && values.length > 0) {
-        accountTypes = Arrays.asList(values);
-      }
-    }
-    if (accountTypes != null && accountTypes.size() < 1) {
-      accountTypes.add(AccountType.HNS);
-      accountTypes.add(AccountType.NonHNS);
-    }
-    return accountTypes.stream().map(accountType -> accountType.name())
-        .collect(Collectors.toList());
-  }
-
-  private void setAuthTypeConfigs(final String authType) throws Exception {
+  private void setAuthTypeConfigs() {
     Configuration conf = testObj.getInitialConfiguration();
-    conf.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, authType);
+    conf.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, this.authType);
   }
 
-  private void setAccountTypeConfigs(final String accountType) {
+  private void setAccountTypeConfigs() {
     String accountName;
     boolean isHNSEnabled;
     Configuration conf = testObj.getInitialConfiguration();
-    if (accountType.equalsIgnoreCase(AccountType.HNS.name())) {
+    if (this.accountType.equalsIgnoreCase(AccountType.HNS.name())) {
       accountName = conf.get(FS_AZURE_ABFS_HNS_ACCOUNT_NAME);
       isHNSEnabled = true;
     } else {
@@ -154,28 +173,6 @@ public class AbfsTestStatement extends Statement {
     conf.set(FS_AZURE_ABFS_ACCOUNT_NAME, accountName);
     conf.set(FS_AZURE_ACCOUNT_NAME, accountName);
     conf.setBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, isHNSEnabled);
-  }
-
-  private static <T> List<List<T>> cartesianProduct(List<List<T>> lists) {
-    List<List<T>> result = Arrays.asList(Arrays.asList());
-    for (List<T> currentList : lists) {
-      result = appendElements(result, currentList);
-    }
-    return result;
-  }
-
-  private static <T> List<List<T>> appendElements(List<List<T>> tempResult,
-      final List<T> currentList) {
-    List<List<T>> newCombinations = new ArrayList<>();
-    for (List<T> combination : tempResult) {
-      for (T currListElement : currentList) {
-        List<T> combinationWithElementFromCurrList = new ArrayList<>(
-            combination);
-        combinationWithElementFromCurrList.add(currListElement);
-        newCombinations.add(combinationWithElementFromCurrList);
-      }
-    }
-    return newCombinations;
   }
 
 }
