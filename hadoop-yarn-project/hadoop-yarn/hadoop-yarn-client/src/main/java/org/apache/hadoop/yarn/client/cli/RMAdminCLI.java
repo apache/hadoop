@@ -346,7 +346,8 @@ public class RMAdminCLI extends HAAdmin {
     try {
       adminProtocol.refreshQueues(request);
     } catch (Exception e) {
-      System.out.println("Unable to issue queue refresh due to exception: " + e.toString());
+      System.out.println("Unable to issue queue refresh due to exception: "
+          + e.toString());
       throw e;
     }
     System.out.println("Queue refresh issued successfully.");
@@ -473,7 +474,8 @@ public class RMAdminCLI extends HAAdmin {
     return 0;
   }
 
-  private int handleRefreshClusterMaxPriority() throws IOException, YarnException {
+  private int handleRefreshClusterMaxPriority()
+      throws IOException, YarnException {
     // Refresh cluster max priority
     ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
     RefreshClusterMaxPriorityRequest request =
