@@ -216,9 +216,12 @@ public class TestRMAdminCLI {
   
   @Test
   public void testRefreshQueues() throws Exception {
+    ByteArrayOutputStream dataOut = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(dataOut));
     String[] args = { "-refreshQueues" };
     assertEquals(0, rmAdminCLI.run(args));
     verify(admin).refreshQueues(any(RefreshQueuesRequest.class));
+    assertTrue(dataOut.toString().contains("success"));
   }
 
   @Test
