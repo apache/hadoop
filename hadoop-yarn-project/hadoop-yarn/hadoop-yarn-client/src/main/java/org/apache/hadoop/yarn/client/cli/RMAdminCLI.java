@@ -338,7 +338,7 @@ public class RMAdminCLI extends HAAdmin {
         ResourceManagerAdministrationProtocol.class);
   }
 
-  private int refreshQueues() throws IOException, YarnException {
+  private int handleRefreshQueues() throws IOException, YarnException {
     // Refresh the queue properties
     ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
     RefreshQueuesRequest request = 
@@ -416,7 +416,7 @@ public class RMAdminCLI extends HAAdmin {
     return 0;
   }
 
-  private int refreshNodesResources() throws IOException, YarnException {
+  private int handleRefreshNodesResources() throws IOException, YarnException {
     // Refresh the resources at the Nodemanager
     ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
     RefreshNodesResourcesRequest request =
@@ -429,7 +429,7 @@ public class RMAdminCLI extends HAAdmin {
     return refreshNodes(false);
   }
 
-  private int refreshUserToGroupsMappings() throws IOException,
+  private int handleRefreshUserToGroupsMappings() throws IOException,
       YarnException {
     // Refresh the user-to-groups mappings
     ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
@@ -439,7 +439,7 @@ public class RMAdminCLI extends HAAdmin {
     return 0;
   }
   
-  private int refreshSuperUserGroupsConfiguration() throws IOException,
+  private int handleRefreshSuperUserGroupsConfiguration() throws IOException,
       YarnException {
     // Refresh the super-user groups
     ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
@@ -449,7 +449,7 @@ public class RMAdminCLI extends HAAdmin {
     return 0;
   }
   
-  private int refreshAdminAcls() throws IOException, YarnException {
+  private int handleRefreshAdminAcls() throws IOException, YarnException {
     // Refresh the admin acls
     ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
     RefreshAdminAclsRequest request = 
@@ -458,7 +458,7 @@ public class RMAdminCLI extends HAAdmin {
     return 0;
   }
   
-  private int refreshServiceAcls() throws IOException, YarnException {
+  private int handleRefreshServiceAcls() throws IOException, YarnException {
     // Refresh the service acls
     ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
     RefreshServiceAclsRequest request = 
@@ -467,7 +467,7 @@ public class RMAdminCLI extends HAAdmin {
     return 0;
   }
 
-  private int refreshClusterMaxPriority() throws IOException, YarnException {
+  private int handleRefreshClusterMaxPriority() throws IOException, YarnException {
     // Refresh cluster max priority
     ResourceManagerAdministrationProtocol adminProtocol = createAdminProtocol();
     RefreshClusterMaxPriorityRequest request =
@@ -752,21 +752,21 @@ public class RMAdminCLI extends HAAdmin {
 
     try {
       if ("-refreshQueues".equals(cmd)) {
-        exitCode = refreshQueues();
+        exitCode = handleRefreshQueues();
       } else if ("-refreshNodes".equals(cmd)) {
         exitCode = handleRefreshNodes(args, cmd, isHAEnabled);
       } else if ("-refreshNodesResources".equals(cmd)) {
-        exitCode = refreshNodesResources();
+        exitCode = handleRefreshNodesResources();
       } else if ("-refreshUserToGroupsMappings".equals(cmd)) {
-        exitCode = refreshUserToGroupsMappings();
+        exitCode = handleRefreshUserToGroupsMappings();
       } else if ("-refreshSuperUserGroupsConfiguration".equals(cmd)) {
-        exitCode = refreshSuperUserGroupsConfiguration();
+        exitCode = handleRefreshSuperUserGroupsConfiguration();
       } else if ("-refreshAdminAcls".equals(cmd)) {
-        exitCode = refreshAdminAcls();
+        exitCode = handleRefreshAdminAcls();
       } else if ("-refreshServiceAcl".equals(cmd)) {
-        exitCode = refreshServiceAcls();
+        exitCode = handleRefreshServiceAcls();
       } else if ("-refreshClusterMaxPriority".equals(cmd)) {
-        exitCode = refreshClusterMaxPriority();
+        exitCode = handleRefreshClusterMaxPriority();
       } else if ("-getGroups".equals(cmd)) {
         String[] usernames = Arrays.copyOfRange(args, i, args.length);
         exitCode = getGroups(usernames);
