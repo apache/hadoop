@@ -346,7 +346,7 @@ public class RMAdminCLI extends HAAdmin {
     try {
       adminProtocol.refreshQueues(request);
     } catch (Exception e) {
-      System.out.println("Unable to issue queue refresh due to exception: " + e.getMessage());
+      System.out.println("Unable to issue queue refresh due to exception: " + e.toString());
       throw e;
     }
     System.out.println("Queue refresh issued successfully.");
