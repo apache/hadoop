@@ -30,7 +30,7 @@ import java.util.List;
 
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-public interface BatchOperations {
+public interface BatchRename {
 
   /**
    * Batched rename API that rename a batch of files.
@@ -39,6 +39,6 @@ public interface BatchOperations {
    * @param dsts target file list.
    * @throws IOException failure exception.
    */
-   void batchRename(List<String> srcs, List<String> dsts,
-       Options.Rename... options) throws IOException;
+  void batchRename(List<String> srcs, List<String> dsts,
+      Options.Rename... options) throws IOException;
 }

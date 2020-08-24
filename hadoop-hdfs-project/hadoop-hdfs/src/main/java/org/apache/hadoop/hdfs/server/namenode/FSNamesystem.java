@@ -97,7 +97,7 @@ import static org.apache.hadoop.hdfs.DFSUtil.isParentEntry;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.text.CaseUtils;
-import org.apache.hadoop.hdfs.protocol.BatchRename;
+import org.apache.hadoop.hdfs.protocol.BatchRenameException;
 import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
@@ -3334,7 +3334,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     for (int i = 0; i < srcs.size(); i++) {
       infos.add(new RenameInfo(srcs.get(i), dsts.get(i)));
     }
-    BatchRename breakException = null;
+    BatchRenameException breakException = null;
     int cnt = 0;
     try {
       writeLock();
@@ -3349,7 +3349,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             cnt++;
           } catch (IOException ioe) {
             if (cnt > 0) {
-              breakException = new BatchRename(cnt, infos.size(), ioe);
+              breakException = new BatchRenameException(cnt, infos.size(), ioe);
               break;
             } else {
               throw ioe;

@@ -18,11 +18,11 @@
 package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.BatchOperations;
+import org.apache.hadoop.fs.BatchRename;
 import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.apache.hadoop.hdfs.protocol.BatchRename;
+import org.apache.hadoop.hdfs.protocol.BatchRenameException;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
@@ -89,7 +89,7 @@ public class TestBatchRename {
     return files;
   }
 
-  private void testBatchRename(BatchOperations batchFS) throws Exception {
+  private void testBatchRename(BatchRename batchFS) throws Exception {
     Path testDir = new Path(root, "testBatchRename");
     dfs.mkdirs(testDir);
 
@@ -118,7 +118,7 @@ public class TestBatchRename {
     testBatchRename(webHdfs);
   }
 
-  private void testInvalidInput(BatchOperations batchFS) throws Exception {
+  private void testInvalidInput(BatchRename batchFS) throws Exception {
     List<String> srcs = new ArrayList<>();
     srcs.add("/testInvalidInput_Mismatch");
     List<String> dsts = new ArrayList<>();
@@ -134,7 +134,7 @@ public class TestBatchRename {
   }
 
    // rename /src_1:/src_2(not existing) to /dst_1:/dst_2
-  private void testPartialSuccess1(BatchOperations batchFS) throws Exception {
+  private void testPartialSuccess1(BatchRename batchFS) throws Exception {
     Path testDir = new Path(root, "partial_success");
     dfs.mkdirs(testDir);
 
@@ -144,7 +144,7 @@ public class TestBatchRename {
         2, 0, testDir, "dst");
     try {
       batchFS.batchRename(srcs, dsts);
-    } catch (BatchRename e) {
+    } catch (BatchRenameException e) {
       long index = e.getIndex();
       assertEquals("Partial success number mismatch!", 1, index);
       long total = e.getTotal();
@@ -169,7 +169,7 @@ public class TestBatchRename {
   }
 
    // rename src_1:src_1/subdir to /dst_1:/dst_2
-  private void testPartialSuccess2(BatchOperations batchFS) throws Exception {
+  private void testPartialSuccess2(BatchRename batchFS) throws Exception {
     Path testDir = new Path(root, "partial_success");
     List<String> srcs = new ArrayList<>();
     Path src1 = new Path(testDir, "src_1");
@@ -183,7 +183,7 @@ public class TestBatchRename {
         2, 0, testDir, "dst");
     try {
       batchFS.batchRename(srcs, dsts);
-    } catch (BatchRename e) {
+    } catch (BatchRenameException e) {
       long index = e.getIndex();
       assertEquals("Partial success number mismatch!", 1, index);
       long total = e.getTotal();
@@ -206,7 +206,7 @@ public class TestBatchRename {
   }
 
   // rename src_1:src_2 /dst_1:/dst_1
-  private void testPartialSuccess3(BatchOperations batchFS) throws Exception {
+  private void testPartialSuccess3(BatchRename batchFS) throws Exception {
     Path testDir = new Path(root, "partial_success_3");
     List<String> srcs =  generateBatchFiles(
         2, 2, testDir, "src");
@@ -216,7 +216,7 @@ public class TestBatchRename {
 
     try {
       batchFS.batchRename(srcs, dsts);
-    } catch (BatchRename e) {
+    } catch (BatchRenameException e) {
       long index = e.getIndex();
       assertEquals("Partial success number mismatch!", 1, index);
       long total = e.getTotal();

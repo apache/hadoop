@@ -105,7 +105,7 @@ import org.apache.hadoop.hdfs.client.impl.LeaseRenewer;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
-import org.apache.hadoop.hdfs.protocol.BatchRename;
+import org.apache.hadoop.hdfs.protocol.BatchRenameException;
 import org.apache.hadoop.hdfs.protocol.BatchedDirectoryListing;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
@@ -1626,7 +1626,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
           DSQuotaExceededException.class,
           UnresolvedPathException.class,
           SnapshotAccessControlException.class,
-          BatchRename.class);
+          BatchRenameException.class);
     }
   }
 

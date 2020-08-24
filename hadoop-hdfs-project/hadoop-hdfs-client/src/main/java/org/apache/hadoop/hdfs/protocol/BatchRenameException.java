@@ -28,26 +28,26 @@ import java.io.IOException;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public final class BatchRename extends IOException {
+public final class BatchRenameException extends IOException {
   private static final long serialVersionUID = -1881850913029509889L;
   private static final String TAG_INDEX = "index";
   private static final String TAG_TOTAL = "total";
   private static final String TAG_REASON = "reason";
 
   /**
-   * Used by RemoteException to instantiate an BatchRename.
+   * Used by RemoteException to instantiate an BatchRenameException.
    */
-  public BatchRename(String msg) {
+  public BatchRenameException(String msg) {
     super(msg);
   }
 
-  public BatchRename(long index, long total, Throwable cause) {
+  public BatchRenameException(long index, long total, Throwable cause) {
     this(index, total, (cause != null) ? cause.getClass().getName() + ": " +
         cause.getMessage() : "Unknown reason");
   }
 
-  public BatchRename(long index, long total,
-                     String cause) {
+  public BatchRenameException(long index, long total,
+                              String cause) {
     super("Batch operation partial success. " +
         getTagHeader(TAG_INDEX) + index + getTagTailer(TAG_INDEX) +
         getTagHeader(TAG_TOTAL) + total + getTagTailer(TAG_TOTAL) +
