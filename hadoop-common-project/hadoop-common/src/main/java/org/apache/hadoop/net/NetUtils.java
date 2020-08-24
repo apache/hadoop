@@ -191,15 +191,8 @@ public class NetUtils {
           helpText);
     }
     target = target.trim();
-    boolean hasScheme = target.contains("://");    
-    URI uri = null;
-    try {
-      uri = hasScheme ? URI.create(target) : URI.create("dummyscheme://"+target);
-    } catch (IllegalArgumentException e) {
-      throw new IllegalArgumentException(
-          "Does not contain a valid host:port authority: " + target + helpText
-      );
-    }
+    boolean hasScheme = target.contains("://");
+    URI uri = createURIWithCache(target, hasScheme, helpText);
 
     String host = uri.getHost();
     int port = uri.getPort();
@@ -207,7 +200,7 @@ public class NetUtils {
       port = defaultPort;
     }
     String path = uri.getPath();
-    
+
     if ((host == null) || (port < 0) ||
         (!hasScheme && path != null && !path.isEmpty()))
     {
@@ -216,6 +209,29 @@ public class NetUtils {
       );
     }
     return createSocketAddrForHost(host, port);
+  }
+
+  private static final Map<String, URI> URI_CACHE = new ConcurrentHashMap<>();
+
+  private static URI createURIWithCache(String target,
+                                        boolean hasScheme,
+                                        String helpText) {
+    URI uri = URI_CACHE.get(target);
+    if (uri != null) {
+      return uri;
+    }
+
+    try {
+      uri = hasScheme ? URI.create(target) :
+              URI.create("dummyscheme://" + target);
+    } catch (IllegalArgumentException e) {
+      throw new IllegalArgumentException(
+          "Does not contain a valid host:port authority: " + target + helpText
+      );
+    }
+
+    URI_CACHE.put(target, uri);
+    return uri;
   }
 
   /**
