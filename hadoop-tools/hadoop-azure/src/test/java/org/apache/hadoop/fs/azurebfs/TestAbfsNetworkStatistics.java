@@ -18,14 +18,15 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
-import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Map;
 
 import org.junit.Test;
 
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
 
-public class TestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
+public class TestAbfsNetworkStatistics extends AbstractAbfsTestWithTimeout {
 
   private static final int LARGE_OPERATIONS = 1000;
 
@@ -37,12 +38,12 @@ public class TestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
    * {@code AbfsClientThrottlingAnalyzer}.
    */
   @Test
-  public void testAbfsThrottlingStatistics() throws IOException {
+  public void testAbfsThrottlingStatistics() throws URISyntaxException {
     describe("Test to check correct values of read throttle and write "
         + "throttle statistics in Abfs");
 
     AbfsCounters statistics =
-        new AbfsCountersImpl(getFileSystem().getUri());
+        new AbfsCountersImpl(new URI("www.dummyuri.com/test"));
 
     /*
      * Calling the throttle methods to check correct summation and values of
@@ -64,4 +65,20 @@ public class TestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
     assertAbfsStatistics(AbfsStatistic.WRITE_THROTTLES, LARGE_OPERATIONS,
         metricMap);
   }
+
+  /**
+   * Custom assertion for AbfsStatistics which have statistics, expected
+   * value and map of statistics and value as its parameters.
+   * @param statistic the AbfsStatistics which needs to be asserted.
+   * @param expectedValue the expected value of the statistics.
+   * @param metricMap map of (String, Long) with statistics name as key and
+   *                  statistics value as map value.
+   */
+  private long assertAbfsStatistics(AbfsStatistic statistic,
+      long expectedValue, Map<String, Long> metricMap) {
+    assertEquals("Mismatch in " + statistic.getStatName(), expectedValue,
+        (long) metricMap.get(statistic.getStatName()));
+    return expectedValue;
+  }
+
 }

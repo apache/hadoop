@@ -28,19 +28,31 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
+
 /**
  * Unit test TestExponentialRetryPolicy.
  */
-public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
+public class TestExponentialRetryPolicy {
 
   private final int maxRetryCount = 30;
   private final int noRetryCount = 0;
   private final int retryCount = new Random().nextInt(maxRetryCount);
   private final int retryCountBeyondMax = maxRetryCount + 1;
 
+  private final String accountName = "dummyaccountname";
+  private final Configuration rawConfig;
+  private final AbfsConfiguration abfsConfig;
 
   public TestExponentialRetryPolicy() throws Exception {
     super();
+    rawConfig = new Configuration();
+    rawConfig.addResource(TEST_CONFIGURATION_FILE_NAME);
+    abfsConfig = new AbfsConfiguration(rawConfig, accountName);
+  }
+
+  private Configuration getRawConfiguration() {
+    return abfsConfig.getRawConfiguration();
   }
 
   @Test

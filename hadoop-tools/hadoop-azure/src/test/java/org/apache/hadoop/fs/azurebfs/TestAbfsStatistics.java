@@ -19,6 +19,8 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Map;
 
 import org.junit.Test;
@@ -28,7 +30,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
 /**
  * Unit tests for Abfs common counters.
  */
-public class TestAbfsStatistics extends AbstractAbfsIntegrationTest {
+public class TestAbfsStatistics extends AbstractAbfsTestWithTimeout {
 
   private static final int LARGE_OPS = 100;
 
@@ -39,11 +41,11 @@ public class TestAbfsStatistics extends AbstractAbfsIntegrationTest {
    * Tests for op_get_delegation_token and error_ignore counter values.
    */
   @Test
-  public void testInitializeStats() throws IOException {
+  public void testInitializeStats() throws URISyntaxException {
     describe("Testing the counter values after Abfs is initialised");
 
     AbfsCounters instrumentation =
-        new AbfsCountersImpl(getFileSystem().getUri());
+        new AbfsCountersImpl(new URI("www.dummyuri.com/test"));
 
     //Testing summation of the counter values.
     for (int i = 0; i < LARGE_OPS; i++) {
@@ -58,4 +60,20 @@ public class TestAbfsStatistics extends AbstractAbfsIntegrationTest {
     assertAbfsStatistics(AbfsStatistic.ERROR_IGNORED, LARGE_OPS, metricMap);
 
   }
+
+  /**
+   * Custom assertion for AbfsStatistics which have statistics, expected
+   * value and map of statistics and value as its parameters.
+   * @param statistic the AbfsStatistics which needs to be asserted.
+   * @param expectedValue the expected value of the statistics.
+   * @param metricMap map of (String, Long) with statistics name as key and
+   *                  statistics value as map value.
+   */
+  private long assertAbfsStatistics(AbfsStatistic statistic,
+      long expectedValue, Map<String, Long> metricMap) {
+    assertEquals("Mismatch in " + statistic.getStatName(), expectedValue,
+        (long) metricMap.get(statistic.getStatName()));
+    return expectedValue;
+  }
+
 }

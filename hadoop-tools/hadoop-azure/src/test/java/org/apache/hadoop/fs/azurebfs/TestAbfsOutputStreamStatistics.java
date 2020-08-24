@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStreamStatisticsImpl;
  * Unit tests for AbfsOutputStream statistics.
  */
 public class TestAbfsOutputStreamStatistics
-    extends AbstractAbfsIntegrationTest {
+    extends AbstractAbfsTestWithTimeout {
 
   private static final int LOW_RANGE_FOR_RANDOM_VALUE = 49;
   private static final int HIGH_RANGE_FOR_RANDOM_VALUE = 9999;

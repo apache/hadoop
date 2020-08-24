@@ -22,7 +22,7 @@ import org.junit.Test;
 
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamStatisticsImpl;
 
-public class TestAbfsInputStreamStatistics extends AbstractAbfsIntegrationTest {
+public class TestAbfsInputStreamStatistics extends AbstractAbfsTestWithTimeout {
 
   private static final int OPERATIONS = 100;
 

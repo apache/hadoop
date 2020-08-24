@@ -20,6 +20,9 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -42,13 +45,14 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_
 /**
  * Unit test AbfsInputStream.
  */
-public class TestAbfsInputStream extends
-    AbstractAbfsIntegrationTest {
+public class TestAbfsInputStream {
 
   private static final int ONE_KB = 1 * 1024;
   private static final int TWO_KB = 2 * 1024;
   private static final int THREE_KB = 3 * 1024;
   private static final int REDUCED_READ_BUFFER_AGE_THRESHOLD = 3000; // 3 sec
+
+  private final String accountName = "dummyaccountname";
 
   private AbfsRestOperation getMockRestOp() {
     AbfsRestOperation op = mock(AbfsRestOperation.class);
@@ -59,13 +63,14 @@ public class TestAbfsInputStream extends
     return op;
   }
 
-  private AbfsClient getMockAbfsClient() {
+  private AbfsClient getMockAbfsClient()
+      throws IOException, IllegalAccessException {
     // Mock failure for client.read()
     AbfsClient client = mock(AbfsClient.class);
     AbfsPerfTracker tracker = new AbfsPerfTracker(
         "test",
-        this.getAccountName(),
-        this.getConfiguration());
+        accountName,
+        new AbfsConfiguration(new Configuration(), accountName));
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
 
     return client;

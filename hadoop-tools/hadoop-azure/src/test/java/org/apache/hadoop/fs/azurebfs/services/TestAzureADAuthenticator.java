@@ -19,11 +19,11 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
-import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_OAUTH_TOKEN_FETCH_RETRY_COUNT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_OAUTH_TOKEN_FETCH_RETRY_DELTA_BACKOFF;
@@ -33,17 +33,31 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.D
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MAX_ATTEMPTS;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MAX_BACKOFF_INTERVAL;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MIN_BACKOFF_INTERVAL;
-import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ACCOUNT_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
 
-public class TestAzureADAuthenticator extends AbstractAbfsIntegrationTest {
+public class TestAzureADAuthenticator {
 
   private static final int TEST_RETRY_COUNT = 10;
   private static final int TEST_MIN_BACKOFF = 20;
   private static final int TEST_MAX_BACKOFF = 30;
   private static final int TEST_DELTA_BACKOFF = 40;
 
+  private final String accountName = "dummyaccountname";
+  private final Configuration rawConfig;
+  private final AbfsConfiguration abfsConfig;
+
   public TestAzureADAuthenticator() throws Exception {
-    super();
+    rawConfig = new Configuration();
+    rawConfig.addResource(TEST_CONFIGURATION_FILE_NAME);
+    abfsConfig = new AbfsConfiguration(rawConfig, accountName);
+  }
+
+  private AbfsConfiguration getConfiguration() {
+    return abfsConfig;
+  }
+
+  private Configuration getRawConfiguration() {
+    return abfsConfig.getRawConfiguration();
   }
 
   @Test
@@ -53,7 +67,6 @@ public class TestAzureADAuthenticator extends AbstractAbfsIntegrationTest {
     getConfiguration().unset(AZURE_OAUTH_TOKEN_FETCH_RETRY_MAX_BACKOFF);
     getConfiguration().unset(AZURE_OAUTH_TOKEN_FETCH_RETRY_DELTA_BACKOFF);
 
-    String accountName = getConfiguration().get(FS_AZURE_ACCOUNT_NAME);
     AbfsConfiguration abfsConfig = new AbfsConfiguration(getRawConfiguration(),
         accountName);
 
@@ -96,7 +109,6 @@ public class TestAzureADAuthenticator extends AbstractAbfsIntegrationTest {
     getConfiguration().set(AZURE_OAUTH_TOKEN_FETCH_RETRY_DELTA_BACKOFF,
         String.valueOf(TEST_DELTA_BACKOFF));
 
-    String accountName = getConfiguration().get(FS_AZURE_ACCOUNT_NAME);
     AbfsConfiguration abfsConfig = new AbfsConfiguration(getRawConfiguration(),
         accountName);
 
