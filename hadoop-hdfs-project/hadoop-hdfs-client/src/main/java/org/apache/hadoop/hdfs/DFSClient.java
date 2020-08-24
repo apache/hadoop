@@ -1241,7 +1241,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
   /**
    * Same as {@link #create(String, FsPermission, EnumSet, boolean, short, long,
-   * addition of Progressable, int, ChecksumOpt, InetSocketAddress[], String)}
+   * Progressable, int, ChecksumOpt, InetSocketAddress[], String)}
    * with the storagePolicy that is used to specify a specific storage policy
    * instead of inheriting any policy from this new file's parent directory.
    * This policy will be persisted in HDFS. A value of null means inheriting
@@ -3147,6 +3147,32 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    */
   boolean isHDFSEncryptionEnabled() throws IOException {
     return getKeyProviderUri() != null;
+  }
+
+  boolean isSnapshotTrashRootEnabled() throws IOException {
+    return getServerDefaults().getSnapshotTrashRootEnabled();
+  }
+
+  /**
+   * Get the snapshot root of a given file or directory if it exists.
+   * e.g. if /snapdir1 is a snapshottable directory and path given is
+   * /snapdir1/path/to/file, this method would return /snapdir1
+   * @param path Path to a file or a directory.
+   * @return Not null if found in a snapshot root directory.
+   * @throws IOException
+   */
+  String getSnapshotRoot(Path path) throws IOException {
+    SnapshottableDirectoryStatus[] dirStatusList = getSnapshottableDirListing();
+    if (dirStatusList == null) {
+      return null;
+    }
+    for (SnapshottableDirectoryStatus dirStatus : dirStatusList) {
+      String currDir = dirStatus.getFullPath().toString();
+      if (path.toUri().getPath().startsWith(currDir)) {
+        return currDir;
+      }
+    }
+    return null;
   }
 
   /**

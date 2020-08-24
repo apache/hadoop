@@ -2166,6 +2166,21 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     set(prefix, resourceString.toString());
   }
 
+  public boolean checkConfigTypeIsAbsoluteResource(String label, String queue,
+      Set<String> resourceTypes) {
+    String propertyName = getNodeLabelPrefix(queue, label) + CAPACITY;
+    String resourceString = get(propertyName);
+    if (resourceString == null || resourceString.isEmpty()) {
+      return false;
+    }
+
+    Matcher matcher = RESOURCE_PATTERN.matcher(resourceString);
+    if (matcher.find()) {
+      return true;
+    }
+    return false;
+  }
+
   private Resource internalGetLabeledResourceRequirementForQueue(String queue,
       String label, Set<String> resourceTypes, String suffix) {
     String propertyName = getNodeLabelPrefix(queue, label) + suffix;

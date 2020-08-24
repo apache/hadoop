@@ -382,6 +382,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   public static final org.slf4j.Logger LOG = LoggerFactory
       .getLogger(FSNamesystem.class.getName());
+
+  // The following are private configurations
+  public static final String DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED =
+      "dfs.namenode.snapshot.trashroot.enabled";
+  public static final boolean DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED_DEFAULT
+      = false;
+
   private final MetricsRegistry registry = new MetricsRegistry("FSNamesystem");
   @Metric final MutableRatesWithAggregation detailedLockHoldTimeMetrics =
       registry.newRatesWithAggregation("detailedLockHoldTimeMetrics");
@@ -462,6 +469,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private final UserGroupInformation fsOwner;
   private final String supergroup;
   private final boolean standbyShouldCheckpoint;
+  private final boolean isSnapshotTrashRootEnabled;
   private final int snapshotDiffReportLimit;
   private final int blockDeletionIncrement;
 
@@ -876,6 +884,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       // Get the checksum type from config
       String checksumTypeStr = conf.get(DFS_CHECKSUM_TYPE_KEY,
           DFS_CHECKSUM_TYPE_DEFAULT);
+      this.isSnapshotTrashRootEnabled = conf.getBoolean(
+          DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED,
+          DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED_DEFAULT);
       DataChecksum.Type checksumType;
       try {
          checksumType = DataChecksum.Type.valueOf(checksumTypeStr);
@@ -902,7 +913,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           conf.getTrimmed(
               CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
               ""),
-          blockManager.getStoragePolicySuite().getDefaultPolicy().getId());
+          blockManager.getStoragePolicySuite().getDefaultPolicy().getId(),
+          isSnapshotTrashRootEnabled);
 
       this.maxFsObjects = conf.getLong(DFS_NAMENODE_MAX_OBJECTS_KEY, 
                                        DFS_NAMENODE_MAX_OBJECTS_DEFAULT);
@@ -1044,6 +1056,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   public int getMaxListOpenFilesResponses() {
     return maxListOpenFilesResponses;
+  }
+
+  boolean isSnapshotTrashRootEnabled() {
+    return isSnapshotTrashRootEnabled;
   }
 
   void lockRetryCache() {
@@ -7023,7 +7039,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   public SnapshotStatus[] getSnapshotListing(String snapshotRoot)
       throws IOException {
-    final String operationName = "listSnapshotDirectory";
+    final String operationName = "ListSnapshot";
     SnapshotStatus[] status;
     checkOperation(OperationCategory.READ);
     boolean success = false;
@@ -7040,10 +7056,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         readUnlock(operationName, getLockReportInfoSupplier(null));
       }
     } catch (AccessControlException ace) {
-      logAuditEvent(success, "listSnapshots", snapshotRoot);
+      logAuditEvent(success, operationName, snapshotRoot);
       throw ace;
     }
-    logAuditEvent(success, "listSnapshots", snapshotRoot);
+    logAuditEvent(success, operationName, snapshotRoot);
     return status;
   }
   /**
@@ -7227,7 +7243,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       final INodesInPath iip = dir.resolvePath(null, snapshotRoot, DirOp.WRITE);
       snapshotManager.assertMarkedAsDeleted(iip, snapshotName);
       blocksToBeDeleted = FSDirSnapshotOp.deleteSnapshot(
-          dir, snapshotManager, iip, snapshotName, now);
+          dir, snapshotManager, iip, snapshotName, now, snapshotRoot, false);
     } finally {
       writeUnlock(operationName, getLockReportInfoSupplier(rootPath));
     }

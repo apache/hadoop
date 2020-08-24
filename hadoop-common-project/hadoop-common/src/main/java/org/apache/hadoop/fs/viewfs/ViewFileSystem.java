@@ -259,12 +259,13 @@ public class ViewFileSystem extends FileSystem {
   }
 
   /**
-   * Returns the ViewFileSystem type.
-   * @return <code>viewfs</code>
+   * Returns false as it does not support to add fallback link automatically on
+   * no mounts.
    */
-  String getType() {
-    return FsConstants.VIEWFS_TYPE;
+  boolean supportAutoAddingFallbackOnNoMounts() {
+    return false;
   }
+
 
   /**
    * Called after a new FileSystem instance is constructed.
@@ -293,7 +294,7 @@ public class ViewFileSystem extends FileSystem {
     try {
       myUri = new URI(getScheme(), authority, "/", null, null);
       boolean initingUriAsFallbackOnNoMounts =
-          !FsConstants.VIEWFS_TYPE.equals(getType());
+          supportAutoAddingFallbackOnNoMounts();
       fsState = new InodeTree<FileSystem>(conf, tableName, myUri,
           initingUriAsFallbackOnNoMounts) {
         @Override
@@ -1421,7 +1422,7 @@ public class ViewFileSystem extends FileSystem {
 
     @Override
     public boolean mkdirs(Path dir, FsPermission permission)
-        throws AccessControlException, FileAlreadyExistsException {
+        throws IOException {
       if (theInternalDir.isRoot() && dir == null) {
         throw new FileAlreadyExistsException("/ already exits");
       }
@@ -1451,7 +1452,7 @@ public class ViewFileSystem extends FileSystem {
                     .append(linkedFallbackFs.getUri());
             LOG.debug(msg.toString(), e);
           }
-          return false;
+          throw e;
         }
       }
 
@@ -1459,8 +1460,7 @@ public class ViewFileSystem extends FileSystem {
     }
 
     @Override
-    public boolean mkdirs(Path dir)
-        throws AccessControlException, FileAlreadyExistsException {
+    public boolean mkdirs(Path dir) throws IOException {
       return mkdirs(dir, null);
     }
 
