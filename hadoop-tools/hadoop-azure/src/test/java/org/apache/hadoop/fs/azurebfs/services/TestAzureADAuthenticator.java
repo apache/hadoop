@@ -19,10 +19,10 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 
-import org.apache.hadoop.conf.Configuration;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_OAUTH_TOKEN_FETCH_RETRY_COUNT;

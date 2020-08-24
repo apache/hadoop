@@ -23,6 +23,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.FixMethodOrder;
 import org.junit.Rule;
@@ -62,7 +63,8 @@ public class ITestPageBlobInputStream extends AbstractWasbTestBase {
    * Long test timeout.
    */
   @Rule
-  public Timeout testTimeout = new Timeout(10 * 60 * 1000);
+  public Timeout testTimeout = new Timeout(10 * 60 * 1000,
+      TimeUnit.MILLISECONDS);
   private FileStatus testFileStatus;
   private Path hugefile;
 

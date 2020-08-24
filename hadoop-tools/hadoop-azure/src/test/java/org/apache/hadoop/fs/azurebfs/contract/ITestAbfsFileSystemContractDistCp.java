@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.fs.azurebfs.contract;
 
+import java.util.Arrays;
+import java.util.List;
+
 import org.junit.Assume;
 import org.junit.Rule;
 
@@ -26,9 +29,6 @@ import org.apache.hadoop.fs.azurebfs.rules.AbfsTestsRule;
 import org.apache.hadoop.fs.azurebfs.rules.AbfsTestable;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.tools.contract.AbstractContractDistCpTest;
-
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * Contract test for distCp operation.

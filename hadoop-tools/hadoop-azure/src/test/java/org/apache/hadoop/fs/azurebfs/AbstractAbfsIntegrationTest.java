@@ -25,8 +25,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
-import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
-import org.apache.hadoop.fs.azurebfs.extensions.MockDelegationSASTokenProvider;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -36,6 +34,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
+import org.apache.hadoop.fs.azurebfs.extensions.MockDelegationSASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.rules.AbfsTestsRule;
 import org.apache.hadoop.fs.azurebfs.rules.AbfsTestable;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -56,13 +56,12 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 
-import static org.junit.Assume.assumeTrue;
-
 import static org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.WASB_ACCOUNT_NAME_DOMAIN_SUFFIX;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.*;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.FILE_SYSTEM_NOT_FOUND;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.*;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.junit.Assume.assumeTrue;
 
 /**
  * Base for AzureBlobFileSystem Integration tests.
@@ -103,10 +102,23 @@ public abstract class AbstractAbfsIntegrationTest extends
     }
   }
 
+  protected void initAbfsConfig() throws IOException, IllegalAccessException {
+    this.accountName = rawConfig.get(FS_AZURE_ACCOUNT_NAME);
+    if (accountName == null) {
+      // check if accountName is set using different config key
+      accountName = rawConfig.get(FS_AZURE_ABFS_ACCOUNT_NAME);
+    }
+    assumeTrue("Not set: " + FS_AZURE_ABFS_ACCOUNT_NAME,
+        accountName != null && !accountName.isEmpty());
+
+    abfsConfig = new AbfsConfiguration(rawConfig, accountName);
+    authType = abfsConfig.getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME,
+        AuthType.SharedKey);
+  }
+
   protected void initFSEndpointForNewFS() throws Exception {
     fileSystemName = TEST_CONTAINER_PREFIX + UUID.randomUUID().toString();
 
-    /*authType = abfsConfig.getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey);*/
     abfsScheme = authType == AuthType.SharedKey ? FileSystemUriSchemes.ABFS_SCHEME
             : FileSystemUriSchemes.ABFS_SECURE_SCHEME;
 
@@ -146,20 +158,6 @@ public abstract class AbstractAbfsIntegrationTest extends
     } else {
       this.isIPAddress = false;
     }
-  }
-
-  protected void initAbfsConfig() throws IOException, IllegalAccessException {
-    this.accountName = rawConfig.get(FS_AZURE_ACCOUNT_NAME);
-    if (accountName == null) {
-      // check if accountName is set using different config key
-      accountName = rawConfig.get(FS_AZURE_ABFS_ACCOUNT_NAME);
-    }
-    assumeTrue("Not set: " + FS_AZURE_ABFS_ACCOUNT_NAME,
-        accountName != null && !accountName.isEmpty());
-
-    abfsConfig = new AbfsConfiguration(rawConfig, accountName);
-    authType = abfsConfig.getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME,
-        AuthType.SharedKey);
   }
 
   @Before

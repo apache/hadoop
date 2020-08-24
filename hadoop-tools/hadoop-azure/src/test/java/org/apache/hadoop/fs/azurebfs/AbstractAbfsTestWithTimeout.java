@@ -18,6 +18,7 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.Assert;
 import org.junit.Before;
@@ -51,7 +52,8 @@ public class AbstractAbfsTestWithTimeout extends Assert {
    * This is driven by the value returned by {@link #getTestTimeoutMillis()}.
    */
   @Rule
-  public Timeout testTimeout = new Timeout(getTestTimeoutMillis());
+  public Timeout testTimeout = new Timeout(getTestTimeoutMillis(),
+      TimeUnit.MILLISECONDS);
 
   /**
    * Name the junit thread for the class. This will overridden

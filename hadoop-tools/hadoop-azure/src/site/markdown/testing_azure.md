@@ -593,7 +593,7 @@ namespace is enabled for the storage account.  Furthermore, the metadata and dat
 produced by ADLS Gen 2 REST API can be consumed by Blob REST API, and vice versa.
 
 In order to test ABFS, please add the following configuration to your
-`src/test/resources/azure-auth-keys.xml` file. Note that ABFS tests include
+`src/test/resources/azure-auth-keys.xml` file. Note that the ABFS tests include
 compatibility tests which require WASB credentials, in addition to the ABFS
 credentials.
 
@@ -615,6 +615,7 @@ separated with `-`. An example value would be
 `HNS-SharedKey|HNS-OAuth|NonHNS-SharedKey`. Account names for both HNS and
 NonHNS has to be specified within the configuration file using the keys
 `fs.azure.hns.abfs.account.name` and `fs.azure.nonhns.abfs.account.name`.
+SharedKey and the OAuth credentials for these accounts has to be specified.
 
 ###How to write test cases to run against all the configured combinations
 A test written in a test class is run with all the combinations configured if
@@ -625,62 +626,14 @@ method level annotation AbfsConfigsToTest. If a hadoop contract test class
 needs to exclude certain auth types, the same cannot be done with the
 AbfsConfigsToTest annotation, as the tests are present in the hadoop-common
 module. The same can be achieved by implementing the excludeAuthTypes method
-of the AbfsTestable interface.  
-
-Some integration tests require additional configurations for the same to run.
-The same is explained below. These configurations have to be provided to ensure
-the execution of maximum test cases.
-
-###OAuth tests with Blob Data contributor role and Blob Data Reader role
-Two AAD clients need to be created. One with Blob Data contributor role and
-the other with BlobData Reader roleon both HNS and NonHNS accounts. The test AAD
-clients and secret needs to be configured manually through Azure Portal then
-save their properties in configuration files.
-```xml
-<property>
-  <name>fs.azure.account.oauth2.contributor.client.id</name>
-  <value>{AAD Client id with RBAC Blob Data Cotributer}</value>
-</property>
-<property>
-  <name>fs.azure.account.oauth2.contributor.client.secret</name>
-  <value>{AAD Client secret with RBAC Blob Data Cotributer}</value>
-</property>
-<property>
-  <name>fs.azure.account.oauth2.reader.client.id</name>
-  <value>{AAD Client id with RBAC Blob Data Reader}</value>
-</property>
-<property>
-  <name>fs.azure.account.oauth2.reader.client.secret</name>
-  <value>{AAD Client secret with RBAC Blob Data Reader}</value>
-</property>
-```
-
-###Check access test cases
-The following configurations are required for check access tests. Check
-access tests are done with OAuth auth type with an AAD client having no RBAC
-role. So an AAD client and secret needs to be configured manually through Azure
-Portal then save their properties in configuration files.
-```xml
-<property>
-  <name>fs.azure.account.test.oauth2.client.id</name>
-  <value>{AAD client with no RBAC on the storage accounts}</value>
-</property>
-<property>
-  <name>fs.azure.account.test.oauth2.client.secret</name>
-  <value>{AAD client secret}</value>
-</property>
-<property>
-  <name>fs.azure.check.access.testuser.guid</name>
-  <value>{AAD client guid}</value>
-</property>
-```
+of the AbfsTestable interface.
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 <configuration xmlns:xi="http://www.w3.org/2001/XInclude">
   <property>
-    <name>fs.azure.abfs.account.name</name>
+    <name>fs.azure.{hns/nonhns}.abfs.account.name</name>
     <value>{ACCOUNT_NAME}.dfs.core.windows.net</value>
   </property>
 
@@ -713,7 +666,21 @@ Portal then save their properties in configuration files.
 </configuration>
 ```
 
+To run OAuth and ACL test cases you must use a storage account with the
+hierarchical namespace enabled, and set the following configuration settings:
+
 ```xml
+<!--=========================== AUTHENTICATION  OPTIONS ===================-->
+<!--ATTENTION:
+      TO RUN ABFS & WASB COMPATIBILITY TESTS, YOU MUST SET AUTH TYPE AS SharedKey.
+      OAUTH IS INTRODUCED TO ABFS ONLY.-->
+<property>
+  <name>fs.azure.account.auth.type.{YOUR_ABFS_ACCOUNT_NAME}</name>
+  <value>{AUTH TYPE}</value>
+  <description>The authorization type can be SharedKey, OAuth, Custom or SAS. The
+  default is SharedKey.</description>
+</property>
+
 <!--=============================   FOR OAUTH   ===========================-->
 <!--IF AUTH TYPE IS SET AS OAUTH, FOLLOW THE STEPS BELOW-->
 <!--NOTICE: AAD client and tenant related properties can be obtained through Azure Portal-->
@@ -858,7 +825,6 @@ Portal then save their properties in configuration files.
    -->
 
 ```
-###Delegation SAS test cases
 To run Delegation SAS test cases you must use a storage account with the
 hierarchical namespace enabled and set the following configuration settings:
 
@@ -929,111 +895,8 @@ hierarchical namespace enabled and set the following configuration settings:
      <value>{client secret}</value>
      <description>The application's secret, also known as the client secret.</description>
    </property>
-```
 
-Finally the configuration file should have the following configurations
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
 
-<configuration>
-
-	<property>
-		<name>fs.azure.test.combinations</name>
-		<description>{accounttype1}-{authType1}|{accounttype1}-{authType1}
-		</description>
-		<value>
-			HNS-SharedKey|
-			HNS-OAuth|
-			NonHNS-SharedKey
-		</value>
-	</property>
-
-	<!--============= ITestAzureBlobFileSystemOauth ===============-->
-	<property>
-		<name>fs.azure.account.oauth2.contributor.client.id</name>
-		<value>{AAD Client id with RBAC Blob Data Cotributer}</value>
-	</property>
-	<property>
-		<name>fs.azure.account.oauth2.contributor.client.secret</name>
-		<value>{AAD Client secret with RBAC Blob Data Cotributer}</value>
-	</property>
-	<property>
-		<name>fs.azure.account.oauth2.reader.client.id</name>
-		<value>{AAD Client id with RBAC Blob Data Reader}</value>
-	</property>
-	<property>
-		<name>fs.azure.account.oauth2.reader.client.secret</name>
-		<value>{AAD Client secret with RBAC Blob Data Reader}</value>
-	</property>
-
-	<!--=============== Account to be used ===============-->
-	<property>
-		<name>fs.azure.nonhns.abfs.account.name--</name>
-		<value>{NON HNS ACCOUNT NAME}.dfs.core.windows.net</value>
-	</property>
-	<property>
-		<name>fs.azure.hns.abfs.account.name--</name>
-		<value>{HNS ACCOUNT NAME}.dfs.core.windows.net</value>
-	</property>
-
-	<!--=============== WASB Configs ===============-->
-	<property>
-		<name>fs.azure.wasb.account.name</name>
-		<value>{WASB ACCOUNT NAME}.blob.core.windows.net</value>
-	</property>
-	<property>
-		<name>fs.azure.account.key.{WASB ACCOUNT NAME}.blob.core.windows.net</name>
-		<value>{ACCOUNT KEY}</value>
-	</property>
-	<property>
-		<name>fs.contract.test.fs.wasb</name>
-		<value>wasb://{WASB CONTAINER NAME}@{WASB ACCOUNT NAME}.blob.core.windows.net</value>
-	</property>
-
-	<!--========== SAS Configs ===========-->	
-	<property>
-		<name>fs.azure.sas.token.provider.type</name>
-		<value>org.apache.hadoop.fs.azurebfs.extensions.MockDelegationSASTokenProvider</value>
-		<description>The fully qualified class name of the SAS token provider implementation.</description>
-	</property>
-	<property>
-		<name>fs.azure.test.app.service.principal.tenant.id</name>
-		<value>{TID}</value>
-		<description>Tenant ID for the application's service principal.</description>
-	</property>
-	<property>
-		<name>fs.azure.test.app.service.principal.object.id</name>
-		<value>{OID}</value>
-		<description>Object ID for the application's service principal.</description>
-	</property>
-	<property>
-		<name>fs.azure.test.app.id</name>
-		<value>{app id}</value>
-		<description>The application's ID, also known as the client id.</description>
-	</property>
-	<property>
-		<name>fs.azure.test.app.secret</name>
-		<value>{client secret}</value>
-		<description>The application's secret, also known as the client secret.</description>
-	</property>
-
-	<!--========== Check access ===========-->
-	<property>
-		<name>fs.azure.account.test.oauth2.client.id</name>
-		<value>{AAD client with no RBAC on the storage accounts}</value>
-	</property>
-	<property>
-		<name>fs.azure.account.test.oauth2.client.secret</name>
-		<value>{AAD client secret}</value>
-	</property>
-	<property>
-		<name>fs.azure.check.access.testuser.guid</name>
-		<value>{AAD client guid}</value>
-	</property>
-
-	<!--============= OAuth credentials needs to be provided for both the HNS and NonHNS account ===============-->
-
-</configuration>
 ```
 
 If running tests against an endpoint that uses the URL format

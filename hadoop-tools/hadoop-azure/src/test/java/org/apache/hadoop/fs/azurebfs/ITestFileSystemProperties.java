@@ -20,10 +20,10 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.util.Hashtable;
 
-import org.apache.hadoop.fs.azurebfs.rules.AbfsConfigsToTest;
-import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.junit.Test;
 
+import org.apache.hadoop.fs.azurebfs.rules.AbfsConfigsToTest;
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;

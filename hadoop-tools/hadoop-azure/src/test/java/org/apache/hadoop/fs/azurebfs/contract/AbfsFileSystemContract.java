@@ -18,14 +18,14 @@
 
 package org.apache.hadoop.fs.azurebfs.contract;
 
+import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.fs.contract.AbstractBondedFSContract;
-
-import java.io.IOException;
 
 /**
  * Azure BlobFileSystem Contract. Test paths are created using any maven fork

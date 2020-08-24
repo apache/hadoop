@@ -27,6 +27,8 @@ import org.junit.rules.Timeout;
 
 import org.apache.hadoop.fs.azure.integration.AzureTestConstants;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  * Base class for any Wasb test with timeouts & named threads.
  * This class does not attempt to bind to Azure.
@@ -43,7 +45,8 @@ public class AbstractWasbTestWithTimeout extends Assert {
    * This is driven by the value returned by {@link #getTestTimeoutMillis()}.
    */
   @Rule
-  public Timeout testTimeout = new Timeout(getTestTimeoutMillis());
+  public Timeout testTimeout = new Timeout(getTestTimeoutMillis(),
+      TimeUnit.MILLISECONDS);
 
   /**
    * Name the junit thread for the class. This will overridden

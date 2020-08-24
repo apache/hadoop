@@ -15,6 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/**
+ * This package contains the classes, junit Rule and annotation to facilitate
+ * running tests with different account types and auth types combinations.
+ */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 package org.apache.hadoop.fs.azurebfs.rules;
