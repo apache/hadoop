@@ -244,7 +244,8 @@ public class TestPartialDeleteFailures {
   private static class MinimalListingOperationCallbacks
           implements ListingOperationCallbacks {
     @Override
-    public CompletableFuture<S3ListResult> listObjectsAsync(S3ListRequest request)
+    public CompletableFuture<S3ListResult> listObjectsAsync(
+            S3ListRequest request)
             throws IOException {
       return null;
     }

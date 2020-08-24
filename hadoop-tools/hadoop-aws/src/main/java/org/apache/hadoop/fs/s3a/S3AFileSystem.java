@@ -1618,9 +1618,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     public CompletableFuture<S3ListResult> listObjectsAsync(
             S3ListRequest request)
             throws IOException {
-      return submit(
-              unboundedThreadPool,
-              () -> listObjects(request));
+      return submit(unboundedThreadPool,
+        () -> listObjects(request));
     }
 
     @Override
@@ -1629,9 +1628,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             S3ListRequest request,
             S3ListResult prevResult)
             throws IOException {
-      return submit(
-              unboundedThreadPool,
-              () -> continueListObjects(request, prevResult));
+      return submit(unboundedThreadPool,
+        () -> continueListObjects(request, prevResult));
     }
 
     @Override

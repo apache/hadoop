@@ -66,7 +66,6 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.objectRepresentsDirectory;
 import static org.apache.hadoop.fs.s3a.S3AUtils.stringify;
 import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.pathToKey;
-import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
 
 /**
  * Place for the S3A listing classes; keeps all the small classes under control.

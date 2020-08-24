@@ -157,7 +157,8 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
   }
 
   @Test
-  public void testMultiPagesListingPerformanceAndCorrectness() throws Throwable {
+  public void testMultiPagesListingPerformanceAndCorrectness()
+          throws Throwable {
     describe("Check performance and correctness for multi page listing " +
             "using different listing api");
     final Path dir = methodPath();
@@ -165,7 +166,8 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
     final int numOfPutRequests = 1000;
     final int eachFileProcessingTime = 10;
     final int numOfPutThreads = 50;
-    final Configuration conf = getConfigurationWithConfiguredBatchSize(batchSize);
+    final Configuration conf =
+            getConfigurationWithConfiguredBatchSize(batchSize);
     final InputStream im = new InputStream() {
       @Override
       public int read() throws IOException {
