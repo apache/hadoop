@@ -85,6 +85,7 @@ import org.apache.hadoop.fs.azurebfs.oauth2.IdentityTransformerInterface;
 import org.apache.hadoop.fs.azurebfs.services.AbfsAclHelper;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientContext;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClientContextBuilder;
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
@@ -1216,6 +1217,17 @@ public class AzureBlobFileSystemStore implements Closeable {
     return isKeyForDirectorySet(key, azureAtomicRenameDirSet);
   }
 
+  /**
+   * A on-off operation to initialize AbfsClient for AzureBlobFileSystem
+   * Operations.
+   *
+   * @param uri            Uniform resource identifier for Abfs.
+   * @param fileSystemName Name of the fileSystem being used.
+   * @param accountName    Name of the account being used to access Azure
+   *                       data store.
+   * @param isSecure       Tells if https is being used or http.
+   * @throws IOException
+   */
   private void initializeClient(URI uri, String fileSystemName,
       String accountName, boolean isSecure)
       throws IOException {
@@ -1280,7 +1292,7 @@ public class AzureBlobFileSystemStore implements Closeable {
    * @return an instance of AbfsClientContext.
    */
   private AbfsClientContext populateAbfsClientContext() {
-    return new AbfsClientContext()
+    return new AbfsClientContextBuilder()
         .withExponentialRetryPolicy(
             new ExponentialRetryPolicy(abfsConfiguration.getMaxIoRetries()))
         .withAbfsCounters(abfsCounters)
