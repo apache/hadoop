@@ -1298,7 +1298,7 @@ public class UserGroupInformation {
     synchronized(login.getSubjectLock()) {
       // another racing thread may have beat us to the relogin.
       if (login == getLogin()) {
-	unprotectedRelogin(login, ignoreTimeElapsed);
+        unprotectedRelogin(login, ignoreTimeElapsed);
       }
     }
   }
