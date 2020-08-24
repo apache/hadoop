@@ -20,11 +20,14 @@ package org.apache.hadoop.ipc;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
@@ -108,6 +111,13 @@ public class DecayRpcScheduler implements RpcScheduler,
   public static final String IPC_FCQ_DECAYSCHEDULER_THRESHOLDS_KEY =
       "faircallqueue.decay-scheduler.thresholds";
 
+  /**
+   *  Service users will always be scheduled into the highest-priority queue.
+   *  They are specified as a comma-separated list.
+   */
+  public static final String IPC_DECAYSCHEDULER_SERVICE_USERS_KEY =
+      "decay-scheduler.service-users";
+
   // Specifies the identity to use when the IdentityProvider cannot handle
   // a schedulable.
   public static final String DECAYSCHEDULER_UNKNOWN_IDENTITY =
@@ -178,6 +188,7 @@ public class DecayRpcScheduler implements RpcScheduler,
   private static final double PRECISION = 0.0001;
   private MetricsProxy metricsProxy;
   private final CostProvider costProvider;
+  private Set<String> serviceUsernames;
 
   /**
    * This TimerTask will call decayCurrentCosts until
@@ -229,6 +240,7 @@ public class DecayRpcScheduler implements RpcScheduler,
         conf);
     this.backOffResponseTimeThresholds =
         parseBackOffResponseTimeThreshold(ns, conf, numLevels);
+    this.serviceUsernames = this.parseServiceUsernames(ns, conf);
 
     // Setup response time metrics
     responseTimeTotalInCurrWindow = new AtomicLongArray(numLevels);
@@ -359,6 +371,12 @@ public class DecayRpcScheduler implements RpcScheduler,
     return decimals;
   }
 
+  private Set<String> parseServiceUsernames(String ns, Configuration conf) {
+    Collection<String> collection = conf.getStringCollection(
+        ns + "." + IPC_DECAYSCHEDULER_SERVICE_USERS_KEY);
+    return new HashSet<>(collection);
+  }
+
   /**
    * Generate default thresholds if user did not specify. Strategy is
    * to halve each time, since queue usage tends to be exponential.
@@ -483,6 +501,12 @@ public class DecayRpcScheduler implements RpcScheduler,
 
     for (Map.Entry<Object, List<AtomicLong>> entry : callCosts.entrySet()) {
       Object id = entry.getKey();
+      // The priority for service users is always 0
+      if (isServiceUser((String)id)) {
+        nextCache.put(id, 0);
+        continue;
+      }
+
       AtomicLong value = entry.getValue().get(0);
 
       long snapshot = value.get();
@@ -573,6 +597,11 @@ public class DecayRpcScheduler implements RpcScheduler,
       }
     }
 
+    // The priority for service users is always 0
+    if (isServiceUser((String)identity)) {
+      return 0;
+    }
+
     // Cache was no good, compute it
     List<AtomicLong> costList = callCosts.get(identity);
     long currentCost = costList == null ? 0 : costList.get(0).get();
@@ -596,6 +625,10 @@ public class DecayRpcScheduler implements RpcScheduler,
     }
 
     return cachedOrComputedPriorityLevel(identity);
+  }
+
+  private boolean isServiceUser(String username) {
+    return this.serviceUsernames.contains(username);
   }
 
   @Override
@@ -696,6 +729,11 @@ public class DecayRpcScheduler implements RpcScheduler,
   @VisibleForTesting
   double[] getThresholds() {
     return thresholds;
+  }
+
+  @VisibleForTesting
+  Set<String> getServiceUsernames() {
+    return serviceUsernames;
   }
 
   @VisibleForTesting
