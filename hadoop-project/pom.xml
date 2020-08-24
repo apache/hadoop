@@ -79,7 +79,7 @@
     <httpcore.version>4.4.10</httpcore.version>
 
     <!-- SLF4J/LOG4J version -->
-    <slf4j.version>1.7.25</slf4j.version>
+    <slf4j.version>1.7.30</slf4j.version>
     <log4j.version>1.2.17</log4j.version>
 
     <!-- com.google.re2j version -->
