@@ -145,13 +145,10 @@ public final class DirectoryPolicyImpl
   /**
    * Create/Get the policy for this configuration.
    * @param conf config
-   * @param authoritativeness Callback to evaluate authoritativeness of a
-   * path.
    * @return a policy
    */
   public static DirectoryPolicy getDirectoryPolicy(
-      final Configuration conf,
-      final Predicate<Path> authoritativeness) {
+      final Configuration conf) {
     String option = conf.getTrimmed(DIRECTORY_MARKER_POLICY,
         DEFAULT_DIRECTORY_MARKER_POLICY)
         .toLowerCase(Locale.ENGLISH);

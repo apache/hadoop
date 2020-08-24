@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -41,6 +42,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
@@ -53,6 +56,7 @@ import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
+import org.apache.hadoop.fs.s3a.impl.DirectoryPolicy;
 import org.apache.hadoop.fs.s3a.impl.DirectoryPolicyImpl;
 import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.util.ExitUtil;
@@ -67,6 +71,8 @@ import static org.apache.hadoop.service.launcher.LauncherExitCodes.*;
 /**
  * CLI to manage S3Guard Metadata Store.
  */
+@InterfaceAudience.LimitedPrivate("management tools")
+@InterfaceStability.Evolving
 public abstract class S3GuardTool extends Configured implements Tool {
   private static final Logger LOG = LoggerFactory.getLogger(S3GuardTool.class);
 
@@ -1046,6 +1052,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
     public static final String NONAUTH_FLAG = "nonauth";
     public static final String ENCRYPTION_FLAG = "encryption";
     public static final String MAGIC_FLAG = "magic";
+    public static final String MARKERS_FLAG = "markers";
+    public static final String MARKERS_AWARE = "aware";
 
     public static final String PURPOSE = "provide/check S3Guard information"
         + " about a specific bucket";

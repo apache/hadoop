@@ -359,8 +359,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
             getMetadataStore(), allowAuthoritative);
       }
       // directory policy, which may look at authoritative paths
-      directoryPolicy = DirectoryPolicyImpl.getDirectoryPolicy(conf,
-          this::allowAuthoritative);
+      directoryPolicy = DirectoryPolicyImpl.getDirectoryPolicy(conf);
       LOG.debug("Directory marker retention policy is {}", directoryPolicy);
       initMultipartUploads(conf);
     } catch (AmazonClientException e) {
@@ -2906,6 +2905,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
     return getConf().getLongBytes(FS_S3A_BLOCK_SIZE, DEFAULT_BLOCKSIZE);
   }
 
+  /**
+   * Get the directory marker policy of this filesystem.
+   * @return the marker policy.
+   */
+  public DirectoryPolicy getDirectoryMarkerPolicy() {
+    return directoryPolicy;
+  }
+
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder(
@@ -2941,6 +2948,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
     sb.append(", boundedExecutor=").append(boundedThreadPool);
     sb.append(", unboundedExecutor=").append(unboundedThreadPool);
     sb.append(", credentials=").append(credentials);
+    sb.append(", ").append(directoryPolicy);
     sb.append(", statistics {")
         .append(statistics)
         .append("}");
@@ -3362,7 +3370,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
     final Path p = makeQualified(path);
-    switch (validatePathCapabilityArgs(p, capability)) {
+    String cap = validatePathCapabilityArgs(p, capability);
+    switch (cap) {
 
     case CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER:
     case CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER_OLD:
@@ -3374,8 +3383,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
       return getConf().getBoolean(ETAG_CHECKSUM_ENABLED,
           ETAG_CHECKSUM_ENABLED_DEFAULT);
 
-    case CommonPathCapabilities.FS_MULTIPART_UPLOADER:
-      return true;
 
     // this client is safe to use with buckets
     // containing directory markers anywhere in
@@ -3394,7 +3401,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
       return getDirectoryMarkerPolicy().hasPathCapability(path, cap);
 
     default:
-      return super.hasPathCapability(p, capability);
+      return super.hasPathCapability(p, cap);
     }
   }
 
