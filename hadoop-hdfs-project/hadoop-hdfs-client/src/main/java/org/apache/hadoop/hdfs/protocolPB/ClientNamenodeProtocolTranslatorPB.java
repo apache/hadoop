@@ -639,8 +639,8 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public void batchRename(String[] srcs, String[] dsts, Rename... options)
-      throws IOException {
+  public void batchRename(List<String> srcs, List<String> dsts,
+      Rename... options) throws IOException {
     boolean overwrite = false;
     boolean toTrash = false;
     if (options != null) {
@@ -654,8 +654,8 @@ public class ClientNamenodeProtocolTranslatorPB implements
       }
     }
     BatchRenameRequestProto req = BatchRenameRequestProto.newBuilder()
-        .addAllSrcs(Arrays.asList(srcs))
-        .addAllDsts(Arrays.asList(dsts))
+        .addAllSrcs(srcs)
+        .addAllDsts(dsts)
         .setOverwriteDest(overwrite)
         .setMoveToTrash(toTrash).build();
     try {

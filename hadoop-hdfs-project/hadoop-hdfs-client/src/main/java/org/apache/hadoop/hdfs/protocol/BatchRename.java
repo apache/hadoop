@@ -28,27 +28,27 @@ import java.io.IOException;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public final class BatchOpsException extends IOException {
-  private static final long serialVersionUID = 1L;
+public final class BatchRename extends IOException {
+  private static final long serialVersionUID = -1881850913029509889L;
   private static final String TAG_INDEX = "index";
   private static final String TAG_TOTAL = "total";
   private static final String TAG_REASON = "reason";
 
   /**
-   * Used by RemoteException to instantiate an BatchOpsException.
+   * Used by RemoteException to instantiate an BatchRename.
    */
-  public BatchOpsException(String msg) {
+  public BatchRename(String msg) {
     super(msg);
   }
 
-  public BatchOpsException(long index, long total, Throwable cause) {
-    this(index, total,
-        cause.getClass().getName() + ": " + cause.getMessage());
+  public BatchRename(long index, long total, Throwable cause) {
+    this(index, total, (cause != null) ? cause.getClass().getName() + ": " +
+        cause.getMessage() : "Unknown reason");
   }
 
-  public BatchOpsException(long index, long total,
-                           String cause) {
-    super("Batch operation break! " +
+  public BatchRename(long index, long total,
+                     String cause) {
+    super("Batch operation partial success. " +
         getTagHeader(TAG_INDEX) + index + getTagTailer(TAG_INDEX) +
         getTagHeader(TAG_TOTAL) + total + getTagTailer(TAG_TOTAL) +
         getTagHeader(TAG_REASON) + cause + getTagTailer(TAG_REASON));

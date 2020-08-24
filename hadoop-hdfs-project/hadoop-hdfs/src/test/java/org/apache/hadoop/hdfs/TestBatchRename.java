@@ -21,7 +21,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BatchOperations;
 import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.protocol.BatchOpsException;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.hdfs.protocol.BatchRename;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
@@ -78,9 +79,10 @@ public class TestBatchRename {
       Path p = new Path(dir, tag + "_" + i);
       if (createNum-- > 0) {
         DFSTestUtil.createFile(dfs, p, 10, (short) 1, 0);
-        assertTrue(dfs.exists(p));
+        ContractTestUtils.assertPathExists(dfs,"Source file not created", p);
       } else {
-        assertFalse(dfs.exists(p));
+        ContractTestUtils.assertPathsDoNotExist(dfs,
+            "Destination file is existing", p);
       }
       files.add(p.toString());
     }
@@ -89,22 +91,23 @@ public class TestBatchRename {
 
   private void testBatchRename(BatchOperations batchFS) throws Exception {
     Path testDir = new Path(root, "testBatchRename");
-    assertTrue(dfs.mkdirs(testDir));
+    dfs.mkdirs(testDir);
 
     List<String> srcs = generateBatchFiles(
         2, 2, testDir, "src");
     List<String> dsts =generateBatchFiles(
         2, 0, testDir, "dst");
 
-    batchFS.batchRename(
-        srcs.toArray(new String[srcs.size()]),
-        dsts.toArray(new String[dsts.size()]));
+    batchFS.batchRename(srcs, dsts);
 
     for (String f : srcs) {
-      assertFalse(dfs.exists(new Path(f)));
+      ContractTestUtils.assertPathsDoNotExist(dfs,
+          "Source file not renamed", new Path(f));
     }
     for (String f : dsts) {
       assertTrue(dfs.exists(new Path(f)));
+      ContractTestUtils.assertPathExists(dfs,
+          "Destination file not created", new Path(f));
       dfs.delete(new Path(f), true);
     }
   }
@@ -121,9 +124,7 @@ public class TestBatchRename {
     List<String> dsts = new ArrayList<>();
     LambdaTestUtils.intercept(InvalidPathException.class,
         "mismatch batch path",
-        () -> batchFS.batchRename(
-            srcs.toArray(new String[srcs.size()]),
-            dsts.toArray(new String[dsts.size()])));
+        () -> batchFS.batchRename(srcs, dsts));
   }
 
   @Test
@@ -135,32 +136,33 @@ public class TestBatchRename {
    // rename /src_1:/src_2(not existing) to /dst_1:/dst_2
   private void testPartialSuccess1(BatchOperations batchFS) throws Exception {
     Path testDir = new Path(root, "partial_success");
-    assertTrue(dfs.mkdirs(testDir));
+    dfs.mkdirs(testDir);
 
     List<String> srcs =  generateBatchFiles(
         2, 1, testDir, "src");
     List<String> dsts = generateBatchFiles(
         2, 0, testDir, "dst");
     try {
-      batchFS.batchRename(
-          srcs.toArray(new String[srcs.size()]),
-          dsts.toArray(new String[dsts.size()]));
-    } catch (BatchOpsException e) {
+      batchFS.batchRename(srcs, dsts);
+    } catch (BatchRename e) {
       long index = e.getIndex();
-      assertEquals(1, index);
+      assertEquals("Partial success number mismatch!", 1, index);
       long total = e.getTotal();
-      assertEquals(2, total);
+      assertEquals("Total number mismatch!", 2, total);
 
       String reason = e.getReason();
-      assertTrue(reason.contains("FileNotFoundException"));
+      assertTrue("Error message mismatch",
+          reason.contains("FileNotFoundException"));
 
       for (int i = 0; i < index; i++) {
         Path p = new Path(testDir, "src_" + i);
-        assertFalse(dfs.exists(p));
+        ContractTestUtils.assertPathsDoNotExist(dfs,
+            "Source file not renamed", p);
       }
       for (int i = 0; i < index; i++) {
         Path p = new Path(testDir, "dst_" + i);
-        assertTrue(dfs.exists(p));
+        ContractTestUtils.assertPathExists(dfs,
+            "Destination file not created", p);
         dfs.delete(p, true);
       }
     }
@@ -171,32 +173,33 @@ public class TestBatchRename {
     Path testDir = new Path(root, "partial_success");
     List<String> srcs = new ArrayList<>();
     Path src1 = new Path(testDir, "src_1");
-    assertTrue(dfs.mkdirs(src1));
+    dfs.mkdirs(src1);
     srcs.add(src1.toString());
     Path src1Subdir = new Path(src1, "subdir");
-    assertTrue(dfs.mkdirs(src1Subdir));
+    dfs.mkdirs(src1Subdir);
     srcs.add(src1Subdir.toString());
 
     List<String> dsts = generateBatchFiles(
         2, 0, testDir, "dst");
     try {
-      batchFS.batchRename(
-          srcs.toArray(new String[srcs.size()]),
-          dsts.toArray(new String[dsts.size()]));
-    } catch (BatchOpsException e) {
+      batchFS.batchRename(srcs, dsts);
+    } catch (BatchRename e) {
       long index = e.getIndex();
-      assertEquals(1, index);
+      assertEquals("Partial success number mismatch!", 1, index);
       long total = e.getTotal();
-      assertEquals(2, total);
+      assertEquals("Total number mismatch!", 2, total);
       String reason = e.getReason();
-      assertTrue(reason.contains("FileNotFoundException"));
+      assertTrue("Error message mismatch",
+          reason.contains("FileNotFoundException"));
       for (int i = 0; i < index; i++) {
         Path p = new Path(testDir, "src_" + i);
-        assertFalse(dfs.exists(p));
+        ContractTestUtils.assertPathsDoNotExist(dfs,
+            "Source file not renamed", p);
       }
       for (int i = 0; i < index; i++) {
         Path p = new Path(testDir, "dst_" + i);
-        assertTrue(dfs.exists(p));
+        ContractTestUtils.assertPathExists(dfs,
+            "Destination file not created", p);
         dfs.delete(p, true);
       }
     }
@@ -212,23 +215,24 @@ public class TestBatchRename {
     dsts.add(dsts.get(0));
 
     try {
-      batchFS.batchRename(
-          srcs.toArray(new String[srcs.size()]),
-          dsts.toArray(new String[dsts.size()]));
-    } catch (BatchOpsException e) {
+      batchFS.batchRename(srcs, dsts);
+    } catch (BatchRename e) {
       long index = e.getIndex();
-      assertEquals(1, index);
+      assertEquals("Partial success number mismatch!", 1, index);
       long total = e.getTotal();
-      assertEquals(2, total);
+      assertEquals("Total number mismatch!", 2, total);
       String reason = e.getReason();
-      assertTrue(reason.contains("FileAlreadyExistsException"));
+      assertTrue("Error message mismatch!",
+          reason.contains("FileAlreadyExistsException"));
       for (int i = 0; i < index; i++) {
         Path p = new Path(testDir, "src_" + i);
-        assertFalse(dfs.exists(p));
+        ContractTestUtils.assertPathsDoNotExist(dfs,
+            "Source file not renamed", p);
       }
       for (int i = 0; i < index; i++) {
         Path p = new Path(testDir, "dst_" + i);
-        assertTrue(dfs.exists(p));
+        ContractTestUtils.assertPathExists(dfs,
+            "Destination file not created", p);
         dfs.delete(p, true);
       }
     }
@@ -252,8 +256,8 @@ public class TestBatchRename {
     dsts.add("hdfs://namenode/f2");
     LambdaTestUtils.intercept(InvalidPathException.class,
         "Path is not absolute",
+        "Error message mismatch when rename invalid path o WebFS!",
         () -> webHdfs.batchRename(
-            srcs.toArray(new String[srcs.size()]),
-            dsts.toArray(new String[dsts.size()])));
+            srcs, dsts));
   }
 }

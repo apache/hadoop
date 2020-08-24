@@ -736,9 +736,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     List<String> dsts = req.getDstsList();
     try {
       server.batchRename(
-          srcs.toArray(new String[srcs.size()]),
-          dsts.toArray(new String[dsts.size()]),
-          optionList.toArray(new Rename[optionList.size()]));
+          srcs, dsts, optionList.toArray(new Rename[optionList.size()]));
     } catch (IOException e) {
       throw new ServiceException(e);
     }

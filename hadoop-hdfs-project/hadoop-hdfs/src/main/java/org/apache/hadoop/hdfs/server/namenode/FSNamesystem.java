@@ -97,7 +97,7 @@ import static org.apache.hadoop.hdfs.DFSUtil.isParentEntry;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.text.CaseUtils;
-import org.apache.hadoop.hdfs.protocol.BatchOpsException;
+import org.apache.hadoop.hdfs.protocol.BatchRename;
 import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
@@ -3321,7 +3321,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /** Batch rename src to dst. */
-  void batchRename(final String[] srcs, final String[] dsts,
+  void batchRename(List<String>  srcs, List<String>  dsts,
                    boolean logRetryCache, Options.Rename... options)
       throws IOException {
     final String operationName = "batchRename";
@@ -3331,16 +3331,16 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     FSPermissionChecker.setOperationType(operationName);
 
     List<RenameInfo> infos = new ArrayList<>();
-    for (int i = 0; i < srcs.length; i++) {
-      infos.add(new RenameInfo(srcs[i], dsts[i]));
+    for (int i = 0; i < srcs.size(); i++) {
+      infos.add(new RenameInfo(srcs.get(i), dsts.get(i)));
     }
-    BatchOpsException breakException = null;
+    BatchRename breakException = null;
     int cnt = 0;
     try {
       writeLock();
       try {
         checkOperation(OperationCategory.WRITE);
-        checkNameNodeSafeMode("Cannot rename " + Arrays.toString(srcs));
+        checkNameNodeSafeMode("Cannot rename " + String.join(",", srcs));
         for (RenameInfo info : infos) {
           try {
             res = FSDirRenameOp.renameToInt(dir, pc, info.getSrc(),
@@ -3349,7 +3349,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             cnt++;
           } catch (IOException ioe) {
             if (cnt > 0) {
-              breakException = new BatchOpsException(cnt, infos.size(), ioe);
+              breakException = new BatchRename(cnt, infos.size(), ioe);
               break;
             } else {
               throw ioe;
@@ -3359,13 +3359,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       } finally {
         FileStatus status = res != null ? res.auditStat : null;
         writeUnlock(operationName,
-            getLockReportInfoSupplier(Arrays.toString(srcs),
-                Arrays.toString(srcs), status));
+            getLockReportInfoSupplier(String.join(",", srcs),
+                String.join(",", dsts), status));
       }
     } catch (AccessControlException e) {
       logAuditEvent(false, operationName + " (options=" +
               Arrays.toString(options) + ")",
-          Arrays.toString(srcs), Arrays.toString(srcs), null);
+          String.join(",", srcs), String.join(",", dsts), null);
       throw e;
     }
     getEditLog().logSync();
@@ -3385,7 +3385,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
     if (breakException != null) {
       LOG.warn("batchRename "+ cnt + "/" + infos.size() + " success. from " +
-          Arrays.toString(srcs) + " to " + Arrays.toString(dsts),
+              String.join(",", srcs) + " to " + String.join(",", dsts),
           breakException);
       throw breakException;
     }

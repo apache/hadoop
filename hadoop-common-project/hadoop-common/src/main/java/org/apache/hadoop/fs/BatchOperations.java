@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 import java.io.IOException;
+import java.util.List;
 
 /**
  * Interface filesystems MAY implement to offer a batched operations.
@@ -38,6 +39,6 @@ public interface BatchOperations {
    * @param dsts target file list.
    * @throws IOException failure exception.
    */
-   void batchRename(String[] srcs, String[] dsts, Options.Rename... options)
-       throws IOException;
+   void batchRename(List<String> srcs, List<String> dsts,
+       Options.Rename... options) throws IOException;
 }

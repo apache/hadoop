@@ -1186,7 +1186,8 @@ public class WebHdfsFileSystem extends FileSystem
     ).run();
   }
 
-  protected String[] getBatchPathName(String[] files) throws IOException{
+  protected List<String> getBatchPathName(List<String> files)
+      throws IOException{
     List<String> ret = new ArrayList<>();
     for(String f :  files) {
       if(!f.startsWith(Path.SEPARATOR)) {
@@ -1194,18 +1195,18 @@ public class WebHdfsFileSystem extends FileSystem
       }
       ret.add(makeQualified(new Path(f)).toUri().getPath());
     }
-    return ret.toArray(new String[ret.size()]);
+    return ret;
   }
 
   @Override
-  public void batchRename(final String[] srcs, final String[] dsts,
+  public void batchRename(List<String> srcs, List<String> dsts,
       final Options.Rename... options) throws IOException {
     statistics.incrementWriteOps(1);
     storageStatistics.incrementOpCounter(OpType.BATCH_RENAME);
     final HttpOpParam.Op op = PutOpParam.Op.BATCH_RENAME;
-    if (srcs.length != dsts.length) {
+    if (srcs.size() != dsts.size()) {
       throw new InvalidPathException("mismatch batch path src: " +
-          Arrays.toString(srcs) + " dst: " + Arrays.toString(dsts));
+          String.join(",", srcs) + " dst: " + String.join(",", dsts));
     }
     new FsPathRunner(op,
         new Path(StringUtils.join(":", getBatchPathName(srcs))),

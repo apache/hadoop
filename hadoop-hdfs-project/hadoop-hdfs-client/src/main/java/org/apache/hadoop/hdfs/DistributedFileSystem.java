@@ -967,20 +967,20 @@ public class DistributedFileSystem extends FileSystem
     }
   }
 
-  protected String[] getBatchPathName(String[] files) {
+  protected List<String> getBatchPathName(List<String> files) {
     List<String> ret = new ArrayList<>();
     for(String f :  files) {
       ret.add(getPathName(new Path(f)));
     }
-    return ret.toArray(new String[ret.size()]);
+    return ret;
   }
 
   @Override
-  public void batchRename(final String[] srcs, final String[] dsts,
+  public void batchRename(List<String> srcs, List<String> dsts,
       final Options.Rename... options) throws IOException {
-    if (srcs.length != dsts.length) {
+    if (srcs.size() != dsts.size()) {
       throw new InvalidPathException("mismatch batch path src: " +
-          Arrays.toString(srcs) + " dst: " + Arrays.toString(dsts));
+          String.join(",", srcs) + " dst: " + String.join(",", dsts));
     }
     statistics.incrementWriteOps(1);
     dfs.batchRename(getBatchPathName(srcs), getBatchPathName(dsts));
