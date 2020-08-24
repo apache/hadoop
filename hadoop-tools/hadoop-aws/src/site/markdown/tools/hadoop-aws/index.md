@@ -26,8 +26,8 @@
 1. This release can safely list/index/read S3 buckets where "empty directory"
 markers are retained.
 
-1. This release can be configured to retain these directory makers at the
-expense of being backwards incompatible.
+1. This release does not support the switching to directory marker
+policies of "keep" and "authoritative" -the 
 
 Consult [Controlling the S3A Directory Marker Behavior](directory_markers.html) for
 full details.

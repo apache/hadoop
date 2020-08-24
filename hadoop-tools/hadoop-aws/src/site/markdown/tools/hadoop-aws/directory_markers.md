@@ -25,10 +25,11 @@ This Hadoop release is compatible with versions of Hadoop which
 can be configured to retain directory markers above files. 
 
 It does not support any options to change the marker retention
-policy to anything other than the historical "delete" policy.
+policy to anything other than the historical `delete` policy.
 
 If the S3A filesystem is configured via 
-`fs.s3a.directory.marker.retention` to use a different policy,
+`fs.s3a.directory.marker.retention` to use a different policy
+(i.e `keep` or `authoritative`),
 a message will be logged at INFO and the connector will
 revert to the "delete" policy.
 
@@ -55,6 +56,9 @@ All releases of Hadoop which have been updated to be marker aware will support t
 
 1. Updated releases which do not support switching marker retention policy will also support the
 `-markers delete` option.
+
+1. As this is such a a release, the other marker options
+(`-markers keep` and  `-markers authoritative`)] will always fail.
 
 
 Example: `s3guard bucket-info -markers aware` on a compatible release.
@@ -142,7 +146,7 @@ The directory marker policy is "delete"
 
 An instance of the filesystem can be probed for its directory marker retention ability/
 policy can be probed for through the `org.apache.hadoop.fs.PathCapabilities` interface,
-which all FileSystem classes have supported since Hadoop 3.3.
+which all FileSystem classes have supported since Hadoop 3.2.
 
 
 | Probe                   | Meaning                 |
