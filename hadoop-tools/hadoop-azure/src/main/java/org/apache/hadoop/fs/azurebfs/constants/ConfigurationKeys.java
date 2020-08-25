@@ -67,6 +67,10 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_ENABLE_AUTOTHROTTLING = "fs.azure.enable.autothrottling";
   public static final String FS_AZURE_ALWAYS_USE_HTTPS = "fs.azure.always.use.https";
   public static final String FS_AZURE_ATOMIC_RENAME_KEY = "fs.azure.atomic.rename.key";
+  /** HDFS FS defaults overwrite behaviour to true which leads to race conditions at backend with parallel operations
+   * issued to same path. This config provides a means to override the default overwrite flag.
+   */
+  public static final String FS_AZURE_DISABLE_DEFAULT_CREATE_OVERWRITE = "fs.azure.disable.default.create.overwrite";
   /** Provides a config to provide comma separated path prefixes on which Appendblob based files are created
    *  Default is empty. **/
   public static final String FS_AZURE_APPEND_BLOB_KEY = "fs.azure.appendblob.directories";

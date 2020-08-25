@@ -22,10 +22,14 @@ import java.io.FileNotFoundException;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.util.EnumSet;
+import java.util.UUID;
 
 import org.junit.Test;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -33,6 +37,8 @@ import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CONNECTIONS_MADE;
 
 /**
  * Test create operation.
@@ -188,4 +194,83 @@ public class ITestAzureBlobFileSystemCreate extends
         });
   }
 
+  @Test
+  public void testDefaultCreateOverwriteFileTest() throws Throwable {
+    testCreateFileOverwrite(true);
+    testCreateFileOverwrite(false);
+  }
+
+  public void testCreateFileOverwrite(boolean defaultDisableCreateOverwrite)
+      throws Throwable {
+    final AzureBlobFileSystem currentFs = getFileSystem();
+    Configuration config = new Configuration(this.getRawConfiguration());
+    config.set("fs.azure.disable.default.create.overwrite",
+        Boolean.toString(defaultDisableCreateOverwrite));
+
+    final AzureBlobFileSystem fs =
+        (AzureBlobFileSystem) FileSystem.newInstance(currentFs.getUri(),
+            config);
+
+    long totalConnectionMadeBeforeTest = fs.getInstrumentationMap()
+        .get(CONNECTIONS_MADE.getStatName());
+
+    int createRequestCount = 0;
+    final Path nonOverwriteFile = new Path("/NonOverwriteTest_FileName_"
+        + UUID.randomUUID().toString());
+
+    // Case 1: Not Overwrite - File does not pre-exist
+    // create should be successful
+    fs.create(nonOverwriteFile, false);
+
+    // One request to server to create path should be issued
+    createRequestCount++;
+
+    assertAbfsStatistics(
+        CONNECTIONS_MADE,
+        totalConnectionMadeBeforeTest + createRequestCount,
+        fs.getInstrumentationMap());
+
+    // Case 2: Not Overwrite - File pre-exists
+    intercept(FileAlreadyExistsException.class,
+        () -> fs.create(nonOverwriteFile,false));
+
+    // One request to server to create path should be issued
+    createRequestCount++;
+
+    assertAbfsStatistics(
+        CONNECTIONS_MADE,
+        totalConnectionMadeBeforeTest + createRequestCount,
+        fs.getInstrumentationMap());
+
+    final Path overwriteFilePath = new Path("/OverwriteTest_FileName_"
+        + UUID.randomUUID().toString());
+
+    // Case 3: Overwrite - File does not pre-exist
+    // create should be successful
+    fs.create(overwriteFilePath, true);
+
+    // One request to server to create path should be issued
+    createRequestCount++;
+
+    assertAbfsStatistics(
+        CONNECTIONS_MADE,
+        totalConnectionMadeBeforeTest + createRequestCount,
+        fs.getInstrumentationMap());
+
+    // Case 4: Overwrite - File pre-exists
+    fs.create(overwriteFilePath, true);
+
+    if (defaultDisableCreateOverwrite) {
+      // Two requests will be sent to server to create path, one without overwrite
+      // and another with overwrite should be issued.
+      createRequestCount += 2;
+    } else {
+      createRequestCount++;
+    }
+
+    assertAbfsStatistics(
+        CONNECTIONS_MADE,
+        totalConnectionMadeBeforeTest + createRequestCount,
+        fs.getInstrumentationMap());
+  }
 }

@@ -40,6 +40,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException;
 import org.apache.hadoop.fs.azurebfs.extensions.ExtensionHelper;
@@ -263,10 +264,62 @@ public class AbfsClient implements Closeable {
     return op;
   }
 
-  public AbfsRestOperation createPath(final String path, final boolean isFile, final boolean overwrite,
-                                      final String permission, final String umask,
-                                      final boolean isAppendBlob) throws AzureBlobFileSystemException {
+  public AbfsRestOperation createPath(final String path,
+      final boolean isFile,
+      final boolean overwrite,
+      final String permission,
+      final String umask,
+      final boolean isAppendBlob) throws AzureBlobFileSystemException {
+    boolean isFirstAttemptToCreateWithoutOverwrite = false;
+
+    String operation = isFile
+        ? SASTokenProvider.CREATE_FILE_OPERATION
+        : SASTokenProvider.CREATE_DIRECTORY_OPERATION;
+
+    // attemptFileCreateWithoutOverwriteFirst
+    if (isFile && overwrite
+        && abfsConfiguration.isDefaultCreateOverwriteDisabled()) {
+      isFirstAttemptToCreateWithoutOverwrite = true;
+    }
+
+    AbfsRestOperation op = null;
+    // Query builder
+    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
+    abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE,
+        operation.equals(SASTokenProvider.CREATE_FILE_OPERATION)
+            ? FILE
+            : DIRECTORY);
+    if (isAppendBlob) {
+      abfsUriQueryBuilder.addQuery(QUERY_PARAM_BLOBTYPE, APPEND_BLOB_TYPE);
+    }
+
+    appendSASTokenToQuery(path, operation, abfsUriQueryBuilder);
+
+    try {
+      op = createPath(path, abfsUriQueryBuilder,
+          (isFirstAttemptToCreateWithoutOverwrite ? false : overwrite),
+          permission, umask);
+    } catch (AbfsRestOperationException e) {
+      if ((e.getStatusCode() == HttpURLConnection.HTTP_CONFLICT)
+          && isFirstAttemptToCreateWithoutOverwrite) {
+        // was a first attempt made to create without overwrite. Now try again
+        // with overwrite now.
+        op = createPath(path, abfsUriQueryBuilder, true, permission, umask);
+      } else {
+        throw e;
+      }
+    }
+
+    return op;
+  }
+
+  private AbfsRestOperation createPath(final String path,
+      AbfsUriQueryBuilder abfsUriQueryBuilder,
+      final boolean overwrite,
+      final String permission,
+      final String umask) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
+
     if (!overwrite) {
       requestHeaders.add(new AbfsHttpHeader(IF_NONE_MATCH, AbfsHttpConstants.STAR));
     }
@@ -278,17 +331,6 @@ public class AbfsClient implements Closeable {
     if (umask != null && !umask.isEmpty()) {
       requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_UMASK, umask));
     }
-
-    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
-    abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, isFile ? FILE : DIRECTORY);
-    if (isAppendBlob) {
-      abfsUriQueryBuilder.addQuery(QUERY_PARAM_BLOBTYPE, APPEND_BLOB_TYPE);
-    }
-
-    String operation = isFile
-        ? SASTokenProvider.CREATE_FILE_OPERATION
-        : SASTokenProvider.CREATE_DIRECTORY_OPERATION;
-    appendSASTokenToQuery(path, operation, abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
