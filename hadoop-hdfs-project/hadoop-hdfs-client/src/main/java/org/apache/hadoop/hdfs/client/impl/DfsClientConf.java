@@ -129,6 +129,7 @@ public class DfsClientConf {
   private final int blockWriteLocateFollowingMaxDelayMs;
   private final long defaultBlockSize;
   private final long prefetchSize;
+  private final boolean uriCacheEnable;
   private final short defaultReplication;
   private final String taskId;
   private final FsPermission uMask;
@@ -240,6 +241,8 @@ public class DfsClientConf {
         Write.EXCLUDE_NODES_CACHE_EXPIRY_INTERVAL_DEFAULT);
     prefetchSize = conf.getLong(Read.PREFETCH_SIZE_KEY,
         10 * defaultBlockSize);
+    uriCacheEnable = conf.getBoolean(Read.URI_CACHE_KEY,
+        Read.URI_CACHE_DEFAULT);
     numCachedConnRetry = conf.getInt(DFS_CLIENT_CACHED_CONN_RETRY_KEY,
         DFS_CLIENT_CACHED_CONN_RETRY_DEFAULT);
     numBlockWriteRetry = conf.getInt(
@@ -553,6 +556,13 @@ public class DfsClientConf {
    */
   public long getPrefetchSize() {
     return prefetchSize;
+  }
+
+  /**
+   * @return the uriCacheEnable
+   */
+  public boolean isUriCacheEnable() {
+    return uriCacheEnable;
   }
 
   /**

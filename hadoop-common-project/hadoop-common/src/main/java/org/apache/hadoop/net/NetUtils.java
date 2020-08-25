@@ -177,11 +177,33 @@ public class NetUtils {
    *                    include a port number
    * @param configName the name of the configuration from which
    *                   <code>target</code> was loaded. This is used in the
-   *                   exception message in the case that parsing fails. 
+   *                   exception message in the case that parsing fails.
    */
   public static InetSocketAddress createSocketAddr(String target,
                                                    int defaultPort,
                                                    String configName) {
+    return createSocketAddr(target, defaultPort, configName, false);
+  }
+
+  /**
+   * Create an InetSocketAddress from the given target string and
+   * default port. If the string cannot be parsed correctly, the
+   * <code>configName</code> parameter is used as part of the
+   * exception message, allowing the user to better diagnose
+   * the misconfiguration.
+   *
+   * @param target a string of either "host" or "host:port"
+   * @param defaultPort the default port if <code>target</code> does not
+   *                    include a port number
+   * @param configName the name of the configuration from which
+   *                   <code>target</code> was loaded. This is used in the
+   *                   exception message in the case that parsing fails.
+   * @param useCacheIfPresent Whether use cache when create URI
+   */
+  public static InetSocketAddress createSocketAddr(String target,
+                                                   int defaultPort,
+                                                   String configName,
+                                                   boolean useCacheIfPresent) {
     String helpText = "";
     if (configName != null) {
       helpText = " (configuration property '" + configName + "')";
@@ -192,7 +214,7 @@ public class NetUtils {
     }
     target = target.trim();
     boolean hasScheme = target.contains("://");
-    URI uri = createURIWithCache(target, hasScheme, helpText);
+    URI uri = createURI(target, hasScheme, helpText, useCacheIfPresent);
 
     String host = uri.getHost();
     int port = uri.getPort();
@@ -202,8 +224,7 @@ public class NetUtils {
     String path = uri.getPath();
 
     if ((host == null) || (port < 0) ||
-        (!hasScheme && path != null && !path.isEmpty()))
-    {
+        (!hasScheme && path != null && !path.isEmpty())) {
       throw new IllegalArgumentException(
           "Does not contain a valid host:port authority: " + target + helpText
       );
@@ -213,12 +234,16 @@ public class NetUtils {
 
   private static final Map<String, URI> URI_CACHE = new ConcurrentHashMap<>();
 
-  private static URI createURIWithCache(String target,
-                                        boolean hasScheme,
-                                        String helpText) {
-    URI uri = URI_CACHE.get(target);
-    if (uri != null) {
-      return uri;
+  private static URI createURI(String target,
+                               boolean hasScheme,
+                               String helpText,
+                               boolean useCacheIfPresent) {
+    URI uri;
+    if (useCacheIfPresent) {
+      uri = URI_CACHE.get(target);
+      if (uri != null) {
+        return uri;
+      }
     }
 
     try {
@@ -230,7 +255,9 @@ public class NetUtils {
       );
     }
 
-    URI_CACHE.put(target, uri);
+    if (useCacheIfPresent) {
+      URI_CACHE.put(target, uri);
+    }
     return uri;
   }
 
