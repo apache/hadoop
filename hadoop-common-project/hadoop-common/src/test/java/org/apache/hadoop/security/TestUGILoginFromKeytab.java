@@ -31,6 +31,8 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 
+import javax.security.auth.login.LoginContext;
+
 /**
  * Verify UGI login from keytab. Check that the UGI is
  * configured to use keytab to catch regressions like
@@ -113,6 +115,41 @@ public class TestUGILoginFromKeytab {
     final long secondLogin = user.getLastLogin();
     Assert.assertTrue("User should have been able to relogin from keytab",
         secondLogin > firstLogin);
+  }
+
+  /**
+   * Force re-login from keytab using the MiniKDC and verify the UGI can
+   * successfully relogin from keytab as well.
+   */
+  @Test
+  public void testUGIForceReLoginFromKeytab() throws Exception {
+    UserGroupInformation.setShouldRenewImmediatelyForTests(true);
+    String principal = "foo";
+    File keytab = new File(workDir, "foo.keytab");
+    kdc.createPrincipal(keytab, principal);
+
+    UserGroupInformation.loginUserFromKeytab(principal, keytab.getPath());
+    UserGroupInformation ugi = UserGroupInformation.getLoginUser();
+    Assert.assertTrue("UGI should be configured to login from keytab",
+        ugi.isFromKeytab());
+
+    // Verify relogin from keytab.
+    User user = ugi.getSubject().getPrincipals(User.class).iterator().next();
+    final long firstLogin = user.getLastLogin();
+    final LoginContext login1 = user.getLogin();
+    Assert.assertNotNull(login1);
+
+    // Sleep for 2 secs to have a difference between first and second login
+    Thread.sleep(2000);
+
+    // Force relogin from keytab
+    ugi.reloginFromKeytab(true);
+    final long secondLogin = user.getLastLogin();
+    final LoginContext login2 = user.getLogin();
+    Assert.assertTrue("User should have been able to relogin from keytab",
+        secondLogin > firstLogin);
+    Assert.assertNotNull(login2);
+    Assert.assertNotSame(login1, login2);
   }
 
 }
