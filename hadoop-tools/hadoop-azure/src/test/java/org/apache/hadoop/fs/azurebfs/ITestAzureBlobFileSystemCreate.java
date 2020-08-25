@@ -21,19 +21,47 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.FilterOutputStream;
+import java.io.OutputStream;
+import java.lang.reflect.Field;
 import java.util.EnumSet;
+import java.util.UUID;
 
+import java.util.concurrent.Callable;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Test;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.test.GenericTestUtils;
 
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConcurrentWriteOperationDetectedException;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.TestAbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
+import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
+
+import static java.net.HttpURLConnection.HTTP_CONFLICT;
+import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
+import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
+import static java.net.HttpURLConnection.HTTP_OK;
+import static java.net.HttpURLConnection.HTTP_PRECON_FAILED;
+
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CONNECTIONS_MADE;
 
 /**
  * Test create operation.
@@ -202,4 +230,257 @@ public class ITestAzureBlobFileSystemCreate extends
     });
   }
 
+  /**
+   * Tests if the number of connections made for:
+   * 1. create overwrite=false of a file that doesnt pre-exist
+   * 2. create overwrite=false of a file that pre-exists
+   * 3. create overwrite=true of a file that doesnt pre-exist
+   * 4. create overwrite=true of a file that pre-exists
+   * matches the expectation when run against both combinations of
+   * fs.azure.enable.conditional.create.overwrite=true and
+   * fs.azure.enable.conditional.create.overwrite=false
+   * @throws Throwable
+   */
+  @Test
+  public void testDefaultCreateOverwriteFileTest() throws Throwable {
+    testCreateFileOverwrite(true);
+    testCreateFileOverwrite(false);
+  }
+
+  public void testCreateFileOverwrite(boolean enableConditionalCreateOverwrite)
+      throws Throwable {
+    final AzureBlobFileSystem currentFs = getFileSystem();
+    Configuration config = new Configuration(this.getRawConfiguration());
+    config.set("fs.azure.enable.conditional.create.overwrite",
+        Boolean.toString(enableConditionalCreateOverwrite));
+
+    final AzureBlobFileSystem fs =
+        (AzureBlobFileSystem) FileSystem.newInstance(currentFs.getUri(),
+            config);
+
+    long totalConnectionMadeBeforeTest = fs.getInstrumentationMap()
+        .get(CONNECTIONS_MADE.getStatName());
+
+    int createRequestCount = 0;
+    final Path nonOverwriteFile = new Path("/NonOverwriteTest_FileName_"
+        + UUID.randomUUID().toString());
+
+    // Case 1: Not Overwrite - File does not pre-exist
+    // create should be successful
+    fs.create(nonOverwriteFile, false);
+
+    // One request to server to create path should be issued
+    createRequestCount++;
+
+    assertAbfsStatistics(
+        CONNECTIONS_MADE,
+        totalConnectionMadeBeforeTest + createRequestCount,
+        fs.getInstrumentationMap());
+
+    // Case 2: Not Overwrite - File pre-exists
+    intercept(FileAlreadyExistsException.class, new Callable<FSDataOutputStream>() {
+      @Override
+      public FSDataOutputStream call() throws Exception {
+        return fs.create(nonOverwriteFile, false);
+      }
+    });
+
+    // One request to server to create path should be issued
+    createRequestCount++;
+
+    assertAbfsStatistics(
+        CONNECTIONS_MADE,
+        totalConnectionMadeBeforeTest + createRequestCount,
+        fs.getInstrumentationMap());
+
+    final Path overwriteFilePath = new Path("/OverwriteTest_FileName_"
+        + UUID.randomUUID().toString());
+
+    // Case 3: Overwrite - File does not pre-exist
+    // create should be successful
+    fs.create(overwriteFilePath, true);
+
+    // One request to server to create path should be issued
+    createRequestCount++;
+
+    assertAbfsStatistics(
+        CONNECTIONS_MADE,
+        totalConnectionMadeBeforeTest + createRequestCount,
+        fs.getInstrumentationMap());
+
+    // Case 4: Overwrite - File pre-exists
+    fs.create(overwriteFilePath, true);
+
+    if (enableConditionalCreateOverwrite) {
+      // Three requests will be sent to server to create path,
+      // 1. create without overwrite
+      // 2. GetFileStatus to get eTag
+      // 3. create with overwrite
+      createRequestCount += 3;
+    } else {
+      createRequestCount++;
+    }
+
+    assertAbfsStatistics(
+        CONNECTIONS_MADE,
+        totalConnectionMadeBeforeTest + createRequestCount,
+        fs.getInstrumentationMap());
+  }
+
+  /**
+   * Test negative scenarios with Create overwrite=false as default
+   * With create overwrite=true ending in 3 calls:
+   * A. Create overwrite=false
+   * B. GFS
+   * C. Create overwrite=true
+   *
+   * Scn1: A fails with HTTP409, leading to B which fails with HTTP404,
+   *        detect parallel access
+   * Scn2: A fails with HTTP409, leading to B which fails with HTTP500,
+   *        fail create with HTTP500
+   * Scn3: A fails with HTTP409, leading to B and then C,
+   *        which fails with HTTP412, detect parallel access
+   * Scn4: A fails with HTTP409, leading to B and then C,
+   *        which fails with HTTP500, fail create with HTTP500
+   * Scn5: A fails with HTTP500, fail create with HTTP500
+   */
+  @Test
+  public void testNegativeScenariosForCreateOverwriteDisabled()
+      throws Throwable {
+
+    final AzureBlobFileSystem currentFs = getFileSystem();
+    Configuration config = new Configuration(this.getRawConfiguration());
+    config.set("fs.azure.enable.conditional.create.overwrite",
+        Boolean.toString(true));
+
+    final AzureBlobFileSystem fs =
+        (AzureBlobFileSystem) FileSystem.newInstance(currentFs.getUri(),
+            config);
+
+    // Get mock AbfsClient with current config
+    AbfsClient
+        mockClient
+        = TestAbfsClient.getMockAbfsClient(
+        fs.getAbfsStore().getClient(),
+        fs.getAbfsStore().getAbfsConfiguration());
+
+    AzureBlobFileSystemStore abfsStore = fs.getAbfsStore();
+    abfsStore = setAzureBlobSystemStoreField(abfsStore, "client", mockClient);
+
+    AbfsRestOperation successOp = mock(
+        AbfsRestOperation.class);
+    AbfsHttpOperation http200Op = mock(
+        AbfsHttpOperation.class);
+    when(http200Op.getStatusCode()).thenReturn(HTTP_OK);
+    when(successOp.getResult()).thenReturn(http200Op);
+
+    AbfsRestOperationException conflictResponseEx
+        = getMockAbfsRestOperationException(HTTP_CONFLICT);
+    AbfsRestOperationException serverErrorResponseEx
+        = getMockAbfsRestOperationException(HTTP_INTERNAL_ERROR);
+    AbfsRestOperationException fileNotFoundResponseEx
+        = getMockAbfsRestOperationException(HTTP_NOT_FOUND);
+    AbfsRestOperationException preConditionResponseEx
+        = getMockAbfsRestOperationException(HTTP_PRECON_FAILED);
+
+    doThrow(conflictResponseEx) // Scn1: GFS fails with Http404
+        .doThrow(conflictResponseEx) // Scn2: GFS fails with Http500
+        .doThrow(
+            conflictResponseEx) // Scn3: create overwrite=true fails with Http412
+        .doThrow(
+            conflictResponseEx) // Scn4: create overwrite=true fails with Http500
+        .doThrow(
+            serverErrorResponseEx) // Scn5: create overwrite=false fails with Http500
+        .when(mockClient)
+        .createPath(any(String.class), eq(true), eq(false), any(String.class),
+            any(String.class), (String) eq(null));
+
+    doThrow(fileNotFoundResponseEx) // Scn1: GFS fails with Http404
+        .doThrow(serverErrorResponseEx) // Scn2: GFS fails with Http500
+        .doReturn(successOp) // Scn3: create overwrite=true fails with Http412
+        .doReturn(successOp) // Scn4: create overwrite=true fails with Http500
+        .when(mockClient)
+        .getPathStatus(any(String.class));
+
+    doThrow(
+        preConditionResponseEx) // Scn3: create overwrite=true fails with Http412
+        .doThrow(
+            serverErrorResponseEx) // Scn4: create overwrite=true fails with Http500
+        .when(mockClient)
+        .createPath(any(String.class), eq(true), eq(true), any(String.class),
+            any(String.class), (String) eq(null));
+
+    // Scn1: GFS fails with Http404
+    // Sequence of events expected:
+    // 1. create overwrite=false - fail with conflict
+    // 2. GFS - fail with File Not found
+    // Create will fail with ConcurrentWriteOperationDetectedException
+    validateCreateFileException(ConcurrentWriteOperationDetectedException.class,
+        abfsStore);
+
+    // Scn2: GFS fails with Http500
+    // Sequence of events expected:
+    // 1. create overwrite=false - fail with conflict
+    // 2. GFS - fail with Server error
+    // Create will fail with 500
+    validateCreateFileException(AbfsRestOperationException.class, abfsStore);
+
+    // Scn3: create overwrite=true fails with Http412
+    // Sequence of events expected:
+    // 1. create overwrite=false - fail with conflict
+    // 2. GFS - pass
+    // 3. create overwrite=true - fail with Pre-Condition
+    // Create will fail with ConcurrentWriteOperationDetectedException
+    validateCreateFileException(ConcurrentWriteOperationDetectedException.class,
+        abfsStore);
+
+    // Scn4: create overwrite=true fails with Http500
+    // Sequence of events expected:
+    // 1. create overwrite=false - fail with conflict
+    // 2. GFS - pass
+    // 3. create overwrite=true - fail with Server error
+    // Create will fail with 500
+    validateCreateFileException(AbfsRestOperationException.class, abfsStore);
+
+    // Scn5: create overwrite=false fails with Http500
+    // Sequence of events expected:
+    // 1. create overwrite=false - fail with server error
+    // Create will fail with 500
+    validateCreateFileException(AbfsRestOperationException.class, abfsStore);
+  }
+
+  private AzureBlobFileSystemStore setAzureBlobSystemStoreField(
+      final AzureBlobFileSystemStore abfsStore,
+      final String fieldName,
+      Object fieldObject) throws Exception {
+
+    Field abfsClientField = AzureBlobFileSystemStore.class.getDeclaredField(
+        fieldName);
+    abfsClientField.setAccessible(true);
+    Field modifiersField = Field.class.getDeclaredField("modifiers");
+    modifiersField.setAccessible(true);
+    modifiersField.setInt(abfsClientField,
+        abfsClientField.getModifiers() & ~java.lang.reflect.Modifier.FINAL);
+    abfsClientField.set(abfsStore, fieldObject);
+    return abfsStore;
+  }
+
+  private <E extends Throwable> void validateCreateFileException(final Class<E> exceptionClass, final AzureBlobFileSystemStore abfsStore)
+      throws Exception {
+    final FsPermission permission = new FsPermission(FsAction.ALL, FsAction.ALL,
+        FsAction.ALL);
+    final FsPermission umask = new FsPermission(FsAction.NONE, FsAction.NONE,
+        FsAction.NONE);
+    final Path testPath = new Path("testFile");
+    intercept(exceptionClass, new Callable<OutputStream>() {
+      @Override
+      public OutputStream call() throws Exception {
+        return abfsStore.createFile(testPath, true, permission, umask);
+      }
+    });
+  }
+
+  private AbfsRestOperationException getMockAbfsRestOperationException(int status) {
+    return new AbfsRestOperationException(status, "", "", new Exception());
+  }
 }
