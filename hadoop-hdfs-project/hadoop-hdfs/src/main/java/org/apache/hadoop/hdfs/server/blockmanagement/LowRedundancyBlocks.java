@@ -382,17 +382,18 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
     } else {
       // Try to remove the block from all queues if the block was
       // not found in the queue for the given priority level.
+      boolean found = false;
       for (int i = 0; i < LEVEL; i++) {
         if (i != priLevel && priorityQueues.get(i).remove(block)) {
           NameNode.blockStateChangeLog.debug(
               "BLOCK* NameSystem.LowRedundancyBlock.remove: Removing block" +
                   " {} from priority queue {}", block, i);
           decrementBlockStat(block, i, oldExpectedReplicas);
-          return true;
+          found = true;
         }
       }
+      return found;
     }
-    return false;
   }
 
   private void decrementBlockStat(BlockInfo blockInfo, int priLevel,
