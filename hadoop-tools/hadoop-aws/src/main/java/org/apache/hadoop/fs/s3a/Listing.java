@@ -70,7 +70,8 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.objectRepresentsDirectory;
 import static org.apache.hadoop.fs.s3a.S3AUtils.stringify;
 import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.pathToKey;
-import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_HTTP_LIST_REQUEST;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_CONTINUE_LIST_REQUEST;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 
 /**
@@ -675,7 +676,7 @@ public class Listing extends AbstractStoreOperation {
     public String toString() {
       return new StringJoiner(", ",
           FileStatusListingIterator.class.getSimpleName() + "[", "]")
-          .add(" ").add(source.toString())
+          .add(source.toString())
           .toString();
     }
   }
@@ -759,7 +760,8 @@ public class Listing extends AbstractStoreOperation {
       this.request = request;
       this.objectsPrev = null;
       this.iostats = iostatisticsStore()
-          .withDurationTracking(OP_HTTP_LIST_REQUEST)
+          .withDurationTracking(OBJECT_LIST_REQUEST)
+          .withDurationTracking(OBJECT_CONTINUE_LIST_REQUEST)
           .build();
       this.listingContext = new ListingOperationCallbacks.ListingContext(
           iostats);

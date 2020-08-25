@@ -160,10 +160,17 @@ public final class StoreStatisticNames {
       = "op_http_get_request";
 
   /**
-   * A store's equivalent of a paged LIST request was made: {@value}.
+   * A store's equivalent of a paged LIST request was initiated: {@value}.
    */
-  public static final String OP_HTTP_LIST_REQUEST
-      = "op_http_list_request";
+  public static final String OBJECT_LIST_REQUEST
+      = "object_list_request";
+
+  /**
+   * Number of continued object listings made.
+   * Value :{@value}.
+   */
+  public static final String OBJECT_CONTINUE_LIST_REQUEST =
+      "object_continue_list_request";
 
   /**
    * A store's equivalent of a DELETE request was made: {@value}.
@@ -172,6 +179,62 @@ public final class StoreStatisticNames {
    */
   public static final String OP_HTTP_DELETE_REQUEST
       = "op_http_delete_request";
+
+  /**
+   * Object multipart upload initiated.
+   * Value :{@value}.
+   */
+  public static final String OBJECT_MULTIPART_UPLOAD_INITIATED =
+      "object_multipart_initiated";
+
+  /**
+   * Object multipart upload aborted.
+   * Value :{@value}.
+   */
+  public static final String OBJECT_MULTIPART_UPLOAD_ABORTED =
+      "object_multipart_aborted";
+
+  /**
+   * Object put/multipart upload count.
+   * Value :{@value}.
+   */
+  public static final String OBJECT_PUT_REQUEST =
+      "object_put_request";
+
+  /**
+   * Object put/multipart upload completed count.
+   * Value :{@value}.
+   */
+  public static final String OBJECT_PUT_REQUEST_COMPLETED =
+      "object_put_request_completed";
+
+  /**
+   * Current number of active put requests.
+   * Value :{@value}.
+   */
+  public static final String OBJECT_PUT_REQUEST_ACTIVE =
+      "object_put_request_active";
+
+  /**
+   * number of bytes uploaded.
+   * Value :{@value}.
+   */
+  public static final String OBJECT_PUT_BYTES =
+      "object_put_bytes";
+
+  /**
+   * number of bytes queued for upload/being actively uploaded.
+   * Value :{@value}.
+   */
+  public static final String OBJECT_PUT_BYTES_PENDING =
+      "object_put_bytes_pending";
+
+  /**
+   * Count of S3 Select (or similar) requests issued.
+   * Value :{@value}.
+   */
+  public static final String OBJECT_SELECT_REQUESTS =
+      "object_select_requests";
 
   /**
    * Suffix to use for a minimum value when

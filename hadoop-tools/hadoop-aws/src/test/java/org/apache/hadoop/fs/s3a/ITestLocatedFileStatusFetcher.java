@@ -48,7 +48,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBucketOverrides;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatCounterStatistic;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.extractStatistics;
-import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_HTTP_LIST_REQUEST;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
 import static org.apache.hadoop.mapreduce.lib.input.FileInputFormat.LIST_STATUS_NUM_THREADS;
 
 /**
@@ -208,7 +208,7 @@ public class ITestLocatedFileStatusFetcher extends AbstractS3ATestBase {
     IOStatistics iostats = extractStatistics(fetcher);
     LOG.info("Statistics of fetcher: {}", iostats);
     assertThatCounterStatistic(iostats,
-        OP_HTTP_LIST_REQUEST)
+        OBJECT_LIST_REQUEST)
         .describedAs("stats of %s", iostats)
         .isEqualTo(expectedListCount);
   }

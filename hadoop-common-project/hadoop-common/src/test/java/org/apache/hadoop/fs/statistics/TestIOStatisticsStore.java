@@ -39,7 +39,7 @@ import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyGaugeS
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyMaximumStatisticValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyMinimumStatisticValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
-import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_HTTP_LIST_REQUEST;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 
 public class TestIOStatisticsStore extends AbstractHadoopTestBase {
@@ -70,7 +70,7 @@ public class TestIOStatisticsStore extends AbstractHadoopTestBase {
         .withMinimums(MIN)
         .withMaximums(MAX)
         .withMeanStatistics(MEAN)
-        .withDurationTracking(OP_HTTP_LIST_REQUEST)
+        .withDurationTracking(OBJECT_LIST_REQUEST)
         .build();
   }
 
@@ -167,21 +167,21 @@ public class TestIOStatisticsStore extends AbstractHadoopTestBase {
   @Test
   public void testDuration() throws Throwable {
     DurationTracker tracker =
-        stats.trackDuration(OP_HTTP_LIST_REQUEST);
-    verifyCounterStatisticValue(stats, OP_HTTP_LIST_REQUEST, 1L);
+        stats.trackDuration(OBJECT_LIST_REQUEST);
+    verifyCounterStatisticValue(stats, OBJECT_LIST_REQUEST, 1L);
     Thread.sleep(1000);
     tracker.close();
     try (DurationTracker ignored =
-             stats.trackDuration(OP_HTTP_LIST_REQUEST)) {
+             stats.trackDuration(OBJECT_LIST_REQUEST)) {
       Thread.sleep(1000);
     }
     LOG.info("Statistics: {}", stats);
-    verifyCounterStatisticValue(stats, OP_HTTP_LIST_REQUEST, 2L);
-    assertThatMinimumStatistic(stats, OP_HTTP_LIST_REQUEST + ".min")
+    verifyCounterStatisticValue(stats, OBJECT_LIST_REQUEST, 2L);
+    assertThatMinimumStatistic(stats, OBJECT_LIST_REQUEST + ".min")
         .isGreaterThan(0);
-    assertThatMaximumStatistic(stats, OP_HTTP_LIST_REQUEST + ".max")
+    assertThatMaximumStatistic(stats, OBJECT_LIST_REQUEST + ".max")
         .isGreaterThan(0);
-    assertThatMeanStatistic(stats, OP_HTTP_LIST_REQUEST + ".mean")
+    assertThatMeanStatistic(stats, OBJECT_LIST_REQUEST + ".mean")
         .hasFieldOrPropertyWithValue("samples", 2L)
         .matches(s -> s.getSum() > 0)
         .matches(s -> s.mean() > 0.0);

@@ -109,26 +109,37 @@ public enum Statistic {
       "Calls of rename()"),
   OBJECT_COPY_REQUESTS("object_copy_requests", "Object copy requests"),
   OBJECT_DELETE_REQUESTS("object_delete_requests", "Object delete requests"),
-  OBJECT_LIST_REQUESTS("object_list_requests",
+  OBJECT_LIST_REQUESTS(StoreStatisticNames.OBJECT_LIST_REQUEST,
       "Number of object listings made"),
-  OBJECT_CONTINUE_LIST_REQUESTS("object_continue_list_requests",
+  OBJECT_CONTINUE_LIST_REQUESTS(
+      StoreStatisticNames.OBJECT_CONTINUE_LIST_REQUEST,
       "Number of continued object listings made"),
-  OBJECT_METADATA_REQUESTS("object_metadata_requests",
+  OBJECT_METADATA_REQUESTS(
+      StoreStatisticNames.OP_HTTP_HEAD_REQUEST,
       "Number of requests for object metadata"),
-  OBJECT_MULTIPART_UPLOAD_INITIATED("object_multipart_initiated",
+  OBJECT_MULTIPART_UPLOAD_INITIATED(
+      StoreStatisticNames.OBJECT_MULTIPART_UPLOAD_INITIATED,
       "Object multipart upload initiated"),
-  OBJECT_MULTIPART_UPLOAD_ABORTED("object_multipart_aborted",
+  OBJECT_MULTIPART_UPLOAD_ABORTED(
+      StoreStatisticNames.OBJECT_MULTIPART_UPLOAD_ABORTED,
       "Object multipart upload aborted"),
-  OBJECT_PUT_REQUESTS("object_put_requests",
+  OBJECT_PUT_REQUESTS(
+      StoreStatisticNames.OBJECT_PUT_REQUEST,
       "Object put/multipart upload count"),
-  OBJECT_PUT_REQUESTS_COMPLETED("object_put_requests_completed",
+  OBJECT_PUT_REQUESTS_COMPLETED(
+      StoreStatisticNames.OBJECT_PUT_REQUEST_COMPLETED,
       "Object put/multipart upload completed count"),
-  OBJECT_PUT_REQUESTS_ACTIVE("object_put_requests_active",
+  OBJECT_PUT_REQUESTS_ACTIVE(
+      StoreStatisticNames.OBJECT_PUT_REQUEST_ACTIVE,
       "Current number of active put requests"),
-  OBJECT_PUT_BYTES("object_put_bytes", "number of bytes uploaded"),
-  OBJECT_PUT_BYTES_PENDING("object_put_bytes_pending",
+  OBJECT_PUT_BYTES(
+      StoreStatisticNames.OBJECT_PUT_BYTES,
+      "number of bytes uploaded"),
+  OBJECT_PUT_BYTES_PENDING(
+      StoreStatisticNames.OBJECT_PUT_BYTES_PENDING,
       "number of bytes queued for upload/being actively uploaded"),
-  OBJECT_SELECT_REQUESTS("object_select_requests",
+  OBJECT_SELECT_REQUESTS(
+      StoreStatisticNames.OBJECT_SELECT_REQUESTS,
       "Count of S3 Select requests issued"),
   STREAM_READ_ABORTED(
       StreamStatisticNames.STREAM_READ_ABORTED,
@@ -199,7 +210,7 @@ public enum Statistic {
       StreamStatisticNames.STREAM_WRITE_EXCEPTIONS,
       "Count of stream write failures reported"),
   STREAM_WRITE_EXCEPTIONS_COMPLETING_UPLOADS(
-      "stream_write_exceptions_completing_uploads",
+      StreamStatisticNames.STREAM_WRITE_EXCEPTIONS_COMPLETING_UPLOADS,
       "failures when finalizing a multipart upload"),
   STREAM_WRITE_BLOCK_UPLOADS(
       StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS,
@@ -220,15 +231,17 @@ public enum Statistic {
   STREAM_WRITE_BLOCK_UPLOADS_DATA_PENDING(
       StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS_DATA_PENDING,
       "Gauge of block/partitions data uploads queued to be written"),
-  STREAM_WRITE_TOTAL_TIME("stream_write_total_time",
+  STREAM_WRITE_TOTAL_TIME(
+      StreamStatisticNames.STREAM_WRITE_TOTAL_TIME,
       "Count of total time taken for uploads to complete"),
   STREAM_WRITE_TOTAL_DATA("stream_write_total_data",
-      "Count of total data uploaded in block output"),
+      "Count of total data uploaded"),
   STREAM_WRITE_BYTES(
       StreamStatisticNames.STREAM_WRITE_BYTES,
       "Count of bytes written to output stream"
           + " (including all not yet uploaded"),
-  STREAM_WRITE_QUEUE_DURATION("stream_write_queue_duration",
+  STREAM_WRITE_QUEUE_DURATION(
+      StreamStatisticNames.STREAM_WRITE_QUEUE_DURATION,
       "Total queue duration of all block uploads"),
 
   // S3guard committer stats

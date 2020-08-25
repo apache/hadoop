@@ -133,6 +133,10 @@ public final class StreamStatisticNames {
   public static final String STREAM_WRITE_EXCEPTIONS =
       "stream_write_exceptions";
 
+  /** Failures when finalizing a multipart upload: {@value}. */
+  public static final String STREAM_WRITE_EXCEPTIONS_COMPLETING_UPLOADS =
+      "stream_write_exceptions_completing_upload";
+
   /** {@value}. */
   public static final String STREAM_WRITE_BLOCK_UPLOADS
       = "stream_write_block_uploads";
@@ -157,15 +161,24 @@ public final class StreamStatisticNames {
   public static final String STREAM_WRITE_BLOCK_UPLOADS_DATA_PENDING =
       "stream_write_block_uploads_data_pending";
 
-  /** {@value}. */
+  /**
+   * "Count of bytes written to output stream including all not yet uploaded.
+   * {@value}.
+   */
   public static final String STREAM_WRITE_BYTES
       = "stream_write_bytes";
 
-  /** {@value}. */
+  /**
+   * Count of total time taken for uploads to complete.
+   * {@value}.
+   */
   public static final String STREAM_WRITE_TOTAL_TIME
       = "stream_write_total_time";
 
-  /** {@value}. */
+  /**
+   * Total queue duration of all block uploads.
+   * {@value}.
+   */
   public static final String STREAM_WRITE_QUEUE_DURATION
       = "stream_write_queue_duration";
 

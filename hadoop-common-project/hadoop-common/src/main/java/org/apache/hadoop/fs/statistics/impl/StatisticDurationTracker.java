@@ -26,40 +26,48 @@ import org.apache.hadoop.util.OperationDuration;
  * When closed the
  * min/max/mean statistics are updated.
  * <p></p>
- * In the constructor, the counter with name of 'prefix' is
+ * In the constructor, the counter with name of 'key' is
  * incremented -default is by 1, but can be set to other
  * values, including 0.
  */
 public class StatisticDurationTracker extends OperationDuration
     implements DurationTracker {
 
+  /**
+   * statistics to update.
+   */
   private final IOStatisticsStore iostats;
 
-  private final String prefix;
+  /**
+   * Key to use as prefix of values.
+   */
+  private final String key;
 
   /**
    * Constructor -increments the counter by 1.
    * @param iostats statistics to update
-   * @param prefix prefix of values.
+   * @param key prefix of values.
    */
   public StatisticDurationTracker(final IOStatisticsStore iostats,
-      final String prefix) {
-    this(iostats, prefix, 1);
+      final String key) {
+    this(iostats, key, 1);
   }
 
   /**
    * Constructor.
+   * If the supplied count is greater than xero, the counter
+   * of the key name is updated.
    * @param iostats statistics to update
-   * @param prefix prefix of values.
+   * @param key Key to use as prefix of values.
    * @param count  #of times to increment the matching counter.
    */
   public StatisticDurationTracker(final IOStatisticsStore iostats,
-      final String prefix,
+      final String key,
       final int count) {
     this.iostats = iostats;
-    this.prefix = prefix;
+    this.key = key;
     if (count > 0) {
-      iostats.incrementCounter(prefix, count);
+      iostats.incrementCounter(key, count);
     }
   }
 
@@ -69,6 +77,6 @@ public class StatisticDurationTracker extends OperationDuration
   @Override
   public void close() {
     finished();
-    iostats.addTimedOperation(prefix, asDuration());
+    iostats.addTimedOperation(key, asDuration());
   }
 }

@@ -195,7 +195,8 @@ import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AWS_SDK_METRICS_EN
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.fixBucketRegion;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.logDnsLookup;
-import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_HTTP_LIST_REQUEST;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_CONTINUE_LIST_REQUEST;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**
@@ -1706,7 +1707,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         () -> {
           try (DurationTracker ignored =
                    listingContext.getIostatistics()
-                       .trackDuration(OP_HTTP_LIST_REQUEST)) {
+                       .trackDuration(OBJECT_LIST_REQUEST)) {
             return listObjects(request);
           }
       });
@@ -1723,7 +1724,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         () -> {
           try (DurationTracker ignored =
                    listingContext.getIostatistics()
-                       .trackDuration(OP_HTTP_LIST_REQUEST)) {
+                       .trackDuration(OBJECT_CONTINUE_LIST_REQUEST)) {
             return continueListObjects(request, prevResult);
           }
       });
