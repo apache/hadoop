@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.hs.HistoryContext;
 import org.apache.hadoop.mapreduce.v2.hs.MockHistoryContext;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
@@ -48,9 +49,13 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogAggregationType;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogFileInfo;
 import org.apache.hadoop.yarn.logaggregation.TestContainerLogsUtils;
+import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
+import org.apache.hadoop.yarn.logaggregation.filecontroller.ifile.LogAggregationIndexedFileController;
 import org.apache.hadoop.yarn.server.webapp.LogServlet;
 import org.apache.hadoop.yarn.server.webapp.YarnWebServiceParams;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerLogsInfo;
+import org.apache.hadoop.yarn.server.webapp.dao.RemoteLogPathEntry;
+import org.apache.hadoop.yarn.server.webapp.dao.RemoteLogPaths;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
@@ -68,6 +73,8 @@ import javax.ws.rs.core.MediaType;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -76,6 +83,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -115,6 +124,9 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
 
   private static final String USER = "fakeUser";
   private static final String FILE_NAME = "syslog";
+
+  private static final String REMOTE_LOG_DIR_SUFFIX = "test-logs";
+  private static final String[] FILE_FORMATS = {"IFile", "TFile"};
 
   private static final String NM_WEBADDRESS_1 = "test-nm-web-address-1:9999";
   private static final NodeId NM_ID_1 = NodeId.newInstance("fakeHost1", 9951);
@@ -156,6 +168,17 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
   }
 
   private static class WebServletModule extends ServletModule {
+    private Configuration newConf;
+
+    WebServletModule() {
+      super();
+    }
+
+    WebServletModule(Configuration newConf) {
+      super();
+      this.newConf = newConf;
+    }
+
     @Override
     protected void configureServlets() {
       MockHistoryContext appContext = new MockHistoryContext(0, 1, 2, 1);
@@ -199,8 +222,9 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
         fail("Failed to setup WebServletModule class");
       }
 
+      Configuration usedConf = newConf == null ? conf : newConf;
       HsWebServices hsWebServices =
-          new HsWebServices(appContext, conf, webApp, mockProtocol);
+          new HsWebServices(appContext, usedConf, webApp, mockProtocol);
       try {
         LogServlet logServlet = hsWebServices.getLogServlet();
         logServlet = spy(logServlet);
@@ -577,6 +601,92 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
   }
 
   @Test
+  public void testRemoteLogDirWithUser() {
+    createReconfiguredServlet();
+
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1")
+        .path("history").path("remote-log-dir")
+        .queryParam(YarnWebServiceParams.REMOTE_USER,
+            USER)
+        .accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+    RemoteLogPaths res = response.
+        getEntity(new GenericType<RemoteLogPaths>(){});
+
+    List<String> collectedControllerNames = new ArrayList<>();
+    for (RemoteLogPathEntry entry: res.getPaths()) {
+      String path = String.format("%s/%s/bucket-%s-%s",
+          YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR, USER,
+          REMOTE_LOG_DIR_SUFFIX, entry.getFileController().toLowerCase());
+      collectedControllerNames.add(entry.getFileController());
+      assertEquals(entry.getPath(), path);
+    }
+
+    assertTrue(collectedControllerNames.containsAll(
+        Arrays.asList(FILE_FORMATS)));
+  }
+
+  @Test
+  public void testRemoteLogDir() {
+    createReconfiguredServlet();
+    UserGroupInformation ugi = UserGroupInformation.
+        createRemoteUser(USER);
+    UserGroupInformation.setLoginUser(ugi);
+
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1")
+        .path("history").path("remote-log-dir")
+        .accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+    RemoteLogPaths res = response.
+        getEntity(new GenericType<RemoteLogPaths>(){});
+
+    List<String> collectedControllerNames = new ArrayList<>();
+    for (RemoteLogPathEntry entry: res.getPaths()) {
+      String path = String.format("%s/%s/bucket-%s-%s",
+          YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR, USER,
+          REMOTE_LOG_DIR_SUFFIX, entry.getFileController().toLowerCase());
+      collectedControllerNames.add(entry.getFileController());
+      assertEquals(entry.getPath(), path);
+    }
+
+    assertTrue(collectedControllerNames.containsAll(
+        Arrays.asList(FILE_FORMATS)));
+  }
+
+  @Test
+  public void testRemoteLogDirWithUserAndAppId() {
+    createReconfiguredServlet();
+
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1")
+        .path("history").path("remote-log-dir")
+        .queryParam(YarnWebServiceParams.REMOTE_USER,
+            USER)
+        .queryParam(YarnWebServiceParams.APP_ID,
+            APPID_1.toString())
+        .accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+    RemoteLogPaths res = response.
+        getEntity(new GenericType<RemoteLogPaths>(){});
+
+    List<String> collectedControllerNames = new ArrayList<>();
+    for (RemoteLogPathEntry entry: res.getPaths()) {
+      String path = String.format("%s/%s/bucket-%s-%s/0001/%s",
+          YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR, USER,
+          REMOTE_LOG_DIR_SUFFIX, entry.getFileController().toLowerCase(),
+          APPID_1.toString());
+      collectedControllerNames.add(entry.getFileController());
+      assertEquals(entry.getPath(), path);
+    }
+
+    assertTrue(collectedControllerNames.containsAll(
+        Arrays.asList(FILE_FORMATS)));
+  }
+
+
+  @Test
   public void testNonExistingAppId() {
     ApplicationId nonExistingApp = ApplicationId.newInstance(99, 99);
 
@@ -762,5 +872,21 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
       return conn.getHeaderField("Location");
     }
     return null;
+  }
+
+  private void createReconfiguredServlet() {
+    Configuration newConf = new YarnConfiguration();
+    newConf.setStrings(YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS,
+        FILE_FORMATS);
+    newConf.setClass(String.format(
+        YarnConfiguration.LOG_AGGREGATION_FILE_CONTROLLER_FMT, "IFile"),
+        LogAggregationIndexedFileController.class,
+        LogAggregationFileController.class);
+    newConf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
+        YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR);
+    newConf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX,
+        REMOTE_LOG_DIR_SUFFIX);
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new WebServletModule(newConf)));
   }
 }

@@ -158,6 +158,14 @@ public abstract class LogAggregationFileController {
   }
 
   /**
+   * Get the name of the file controller.
+   * @return name of the file controller.
+   */
+  public String getFileControllerName() {
+    return this.fileControllerName;
+  }
+
+  /**
    * Initialize the writer.
    * @param context the {@link LogAggregationFileControllerContext}
    * @throws IOException if fails to initialize the writer
