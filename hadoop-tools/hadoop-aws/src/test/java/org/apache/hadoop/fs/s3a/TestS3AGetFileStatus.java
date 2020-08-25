@@ -76,11 +76,15 @@ public class TestS3AGetFileStatus extends AbstractS3AMockTest {
     String key = path.toUri().getPath().substring(1);
     when(s3.getObjectMetadata(argThat(correctGetMetadataRequest(BUCKET, key))))
       .thenThrow(NOT_FOUND);
-    ObjectMetadata meta = new ObjectMetadata();
-    meta.setContentLength(0L);
-    when(s3.getObjectMetadata(argThat(
-        correctGetMetadataRequest(BUCKET, key + "/"))
-    )).thenReturn(meta);
+    String keyDir = key + "/";
+    ListObjectsV2Result listResult = new ListObjectsV2Result();
+    S3ObjectSummary objectSummary = new S3ObjectSummary();
+    objectSummary.setKey(keyDir);
+    objectSummary.setSize(0L);
+    listResult.getObjectSummaries().add(objectSummary);
+    when(s3.listObjectsV2(argThat(
+        matchListV2Request(BUCKET, keyDir))
+    )).thenReturn(listResult);
     FileStatus stat = fs.getFileStatus(path);
     assertNotNull(stat);
     assertEquals(fs.makeQualified(path), stat.getPath());
@@ -176,4 +180,28 @@ public class TestS3AGetFileStatus extends AbstractS3AMockTest {
       }
     };
   }
+  
+  private Matcher<ListObjectsV2Request> matchListV2Request(
+      String bucket, String key) {
+    return new BaseMatcher<ListObjectsV2Request>() {
+
+      @Override
+      public void describeTo(Description description) {
+        description.appendText("bucket and key match");
+      }
+
+      @Override
+      public boolean matches(Object o) {
+        if(o instanceof ListObjectsV2Request) {
+          ListObjectsV2Request request =
+              (ListObjectsV2Request)o;
+          return request.getBucketName().equals(bucket)
+              && request.getPrefix().equals(key);
+        }
+        return false;
+      }
+    };
+  }
+
+
 }
