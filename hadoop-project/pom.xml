@@ -76,7 +76,7 @@
 
     <!-- httpcomponents versions -->
     <httpclient.version>4.5.12</httpclient.version>
-    <httpcore.version>4.4.10</httpcore.version>
+    <httpcore.version>4.4.13</httpcore.version>
 
     <!-- SLF4J/LOG4J version -->
     <slf4j.version>1.7.30</slf4j.version>
