@@ -55,7 +55,9 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
+import static org.apache.hadoop.fs.impl.FutureIOSupport.awaitFuture;
 import static org.apache.hadoop.fs.s3a.Constants.S3N_FOLDER_SUFFIX;
 import static org.apache.hadoop.fs.s3a.S3AUtils.ACCEPT_ALL;
 import static org.apache.hadoop.fs.s3a.S3AUtils.createFileStatus;
@@ -740,6 +742,16 @@ public class Listing extends AbstractStoreOperation {
     private int maxKeys;
 
     /**
+     * Future to store current batch listing result.
+     */
+    private CompletableFuture<S3ListResult> s3ListResultFuture;
+
+    /**
+     * Result of previous batch.
+     */
+    private S3ListResult objectsPrev;
+
+    /**
      * Constructor -calls `listObjects()` on the request to populate the
      * initial set of results/fail if there was a problem talking to the bucket.
      * @param listPath path of the listing
@@ -752,8 +764,10 @@ public class Listing extends AbstractStoreOperation {
         S3ListRequest request) throws IOException {
       this.listPath = listPath;
       this.maxKeys = listingOperationCallbacks.getMaxKeys();
-      this.objects = listingOperationCallbacks.listObjects(request);
+      this.s3ListResultFuture = listingOperationCallbacks
+              .listObjectsAsync(request);
       this.request = request;
+      this.objectsPrev = null;
     }
 
     /**
@@ -764,7 +778,8 @@ public class Listing extends AbstractStoreOperation {
      */
     @Override
     public boolean hasNext() throws IOException {
-      return firstListing || objects.isTruncated();
+      return firstListing ||
+              (objectsPrev != null && objectsPrev.isTruncated());
     }
 
     /**
@@ -780,29 +795,44 @@ public class Listing extends AbstractStoreOperation {
     @Retries.RetryTranslated
     public S3ListResult next() throws IOException {
       if (firstListing) {
-        // on the first listing, don't request more data.
-        // Instead just clear the firstListing flag so that it future calls
-        // will request new data.
+        // clear the firstListing flag for future calls.
         firstListing = false;
+        // Calculating the result of last async list call.
+        objects = awaitFuture(s3ListResultFuture);
+        fetchNextBatchAsyncIfPresent();
       } else {
         try {
-          if (!objects.isTruncated()) {
+          if (objectsPrev!= null && !objectsPrev.isTruncated()) {
             // nothing more to request: fail.
             throw new NoSuchElementException("No more results in listing of "
-                + listPath);
+                    + listPath);
           }
-          // need to request a new set of objects.
-          LOG.debug("[{}], Requesting next {} objects under {}",
-              listingCount, maxKeys, listPath);
-          objects = listingOperationCallbacks
-                  .continueListObjects(request, objects);
+          // Calculating the result of last async list call.
+          objects = awaitFuture(s3ListResultFuture);
+          // Requesting next batch of results.
+          fetchNextBatchAsyncIfPresent();
           listingCount++;
           LOG.debug("New listing status: {}", this);
         } catch (AmazonClientException e) {
           throw translateException("listObjects()", listPath, e);
         }
       }
-      return objects;
+      // Storing the current result to be used by hasNext() call.
+      objectsPrev = objects;
+      return objectsPrev;
+    }
+
+    /**
+     * If there are more listings present, call for next batch async.
+     * @throws IOException
+     */
+    private void fetchNextBatchAsyncIfPresent() throws IOException {
+      if (objects.isTruncated()) {
+        LOG.debug("[{}], Requesting next {} objects under {}",
+                listingCount, maxKeys, listPath);
+        s3ListResultFuture = listingOperationCallbacks
+                .continueListObjectsAsync(request, objects);
+      }
     }
 
     @Override

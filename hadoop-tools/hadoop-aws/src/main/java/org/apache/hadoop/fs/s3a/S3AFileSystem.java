@@ -1649,19 +1649,21 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
     @Override
     @Retries.RetryRaw
-    public S3ListResult listObjects(
+    public CompletableFuture<S3ListResult> listObjectsAsync(
             S3ListRequest request)
             throws IOException {
-      return S3AFileSystem.this.listObjects(request);
+      return submit(unboundedThreadPool,
+        () -> listObjects(request));
     }
 
     @Override
     @Retries.RetryRaw
-    public S3ListResult continueListObjects(
+    public CompletableFuture<S3ListResult> continueListObjectsAsync(
             S3ListRequest request,
             S3ListResult prevResult)
             throws IOException {
-      return S3AFileSystem.this.continueListObjects(request, prevResult);
+      return submit(unboundedThreadPool,
+        () -> continueListObjects(request, prevResult));
     }
 
     @Override
@@ -2279,6 +2281,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * not be saved to the metadata store and
    * fs.s3a.metadatastore.fail.on.write.error=true
    */
+  @VisibleForTesting
   @Retries.OnceRaw("For PUT; post-PUT actions are RetryTranslated")
   PutObjectResult putObjectDirect(PutObjectRequest putObjectRequest)
       throws AmazonClientException, MetadataPersistenceException {

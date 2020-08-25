@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -38,7 +39,7 @@ import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
 public interface ListingOperationCallbacks {
 
   /**
-   * Initiate a {@code listObjects} operation, incrementing metrics
+   * Initiate a {@code listObjectsAsync} operation, incrementing metrics
    * in the process.
    *
    * Retry policy: retry untranslated.
@@ -47,7 +48,7 @@ public interface ListingOperationCallbacks {
    * @throws IOException if the retry invocation raises one (it shouldn't).
    */
   @Retries.RetryRaw
-  S3ListResult listObjects(
+  CompletableFuture<S3ListResult> listObjectsAsync(
           S3ListRequest request)
           throws IOException;
 
@@ -60,7 +61,7 @@ public interface ListingOperationCallbacks {
    * @throws IOException none, just there for retryUntranslated.
    */
   @Retries.RetryRaw
-  S3ListResult continueListObjects(
+  CompletableFuture<S3ListResult> continueListObjectsAsync(
           S3ListRequest request,
           S3ListResult prevResult)
           throws IOException;
