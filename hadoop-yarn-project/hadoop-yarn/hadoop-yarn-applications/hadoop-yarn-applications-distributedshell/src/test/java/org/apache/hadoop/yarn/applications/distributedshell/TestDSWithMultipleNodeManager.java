@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.applications.distributedshell;
 import java.io.IOException;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.Iterator;
@@ -29,32 +31,83 @@ import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.client.api.YarnClient;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
+
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import com.google.common.collect.ImmutableMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Test for Distributed Shell With Multiple Node Managers.
+ * Parameter 0 tests with Single Node Placement and
+ * parameter 1 tests with Multiple Node Placement.
+ */
+@RunWith(value = Parameterized.class)
 public class TestDSWithMultipleNodeManager {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestDSWithMultipleNodeManager.class);
 
   static final int NUM_NMS = 2;
   TestDistributedShell distShellTest;
+  private final Boolean multiNodePlacementEnabled;
+  private static final String POLICY_CLASS_NAME =
+      "org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement."
+      + "ResourceUsageMultiNodeLookupPolicy";
+
+
+  @Parameterized.Parameters
+  public static Collection<Boolean> getParams() {
+    return Arrays.asList(false, true);
+  }
+
+  public TestDSWithMultipleNodeManager(Boolean multiNodePlacementEnabled) {
+    this.multiNodePlacementEnabled = multiNodePlacementEnabled;
+  }
+
+  private YarnConfiguration getConfiguration(
+      boolean multiNodePlacementConfigs) {
+    YarnConfiguration conf = new YarnConfiguration();
+    if (multiNodePlacementConfigs) {
+      conf.set(CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS,
+          DominantResourceCalculator.class.getName());
+      conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+          ResourceScheduler.class);
+      conf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICIES,
+          "resource-based");
+      conf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME,
+          "resource-based");
+      String policyName =
+          CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME
+          + ".resource-based" + ".class";
+      conf.set(policyName, POLICY_CLASS_NAME);
+      conf.setBoolean(
+          CapacitySchedulerConfiguration.MULTI_NODE_PLACEMENT_ENABLED, true);
+    }
+    return conf;
+  }
 
   @Before
   public void setup() throws Exception {
     distShellTest = new TestDistributedShell();
-    distShellTest.setupInternal(NUM_NMS);
+    distShellTest.setupInternal(NUM_NMS,
+        getConfiguration(multiNodePlacementEnabled));
   }
 
   @After

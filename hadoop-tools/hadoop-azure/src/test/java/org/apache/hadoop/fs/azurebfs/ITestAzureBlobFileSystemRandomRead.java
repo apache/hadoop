@@ -23,6 +23,7 @@ import java.util.Random;
 import java.util.concurrent.Callable;
 
 import org.junit.Assume;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -415,6 +416,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
   }
 
   @Test
+  @Ignore("HADOOP-16915")
   @AbfsConfigsToTest(accountTypes = AccountType.NonHNS)
   public void testRandomReadPerformance() throws Exception {
     Assume.assumeFalse("This test does not support namespace enabled account",
