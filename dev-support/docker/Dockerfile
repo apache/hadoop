@@ -170,7 +170,7 @@ RUN curl -L -s -S \
 ######
 # Intel ISA-L 2.29.0
 ######
-# hadolint ignore=DL3003
+# hadolint ignore=DL3003,DL3008
 RUN mkdir -p /opt/isa-l-src \
     && apt-get -q update \
     && apt-get install -y --no-install-recommends automake yasm \
