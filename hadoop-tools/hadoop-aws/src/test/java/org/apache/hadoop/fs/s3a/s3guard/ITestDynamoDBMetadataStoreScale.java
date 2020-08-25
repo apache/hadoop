@@ -49,6 +49,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.functional.RuntimeIOException;
 import org.apache.hadoop.fs.impl.WrappedIOException;
 import org.apache.hadoop.fs.s3a.AWSServiceThrottledException;
 import org.apache.hadoop.fs.s3a.Invoker;
@@ -532,7 +533,7 @@ public class ITestDynamoDBMetadataStoreScale
         LOG.info("Deleting {}", p);
         list.add(p);
       });
-    } catch (WrappedIOException e) {
+    } catch (RuntimeIOException e) {
       // the iterator may have overloaded; swallow if so.
       if (!(e.getCause() instanceof AWSServiceThrottledException)) {
         throw e;

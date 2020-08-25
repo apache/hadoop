@@ -79,8 +79,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.fs.impl.FunctionsRaisingIOE;
-import org.apache.hadoop.fs.impl.WrappedIOException;
+import org.apache.hadoop.fs.functional.FunctionsRaisingIOE;
+import org.apache.hadoop.fs.functional.RuntimeIOException;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.AWSServiceThrottledException;
 import org.apache.hadoop.fs.s3a.Constants;
@@ -827,7 +827,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
       for (Item item : wrapWithRetries(items)) {
         metas.add(itemToPathMetadata(item, username));
       }
-    } catch (WrappedIOException e) {
+    } catch (RuntimeIOException e) {
       // failure in the iterators; unwrap.
       throw e.getCause();
     }

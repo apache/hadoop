@@ -126,6 +126,7 @@ import org.apache.hadoop.fs.s3a.tools.MarkerToolOperations;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperationsImpl;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+import org.apache.hadoop.fs.statistics.impl.DurationTracker;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
@@ -194,6 +195,7 @@ import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AWS_SDK_METRICS_EN
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.fixBucketRegion;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.logDnsLookup;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_HTTP_LIST_REQUEST;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**
@@ -1698,20 +1700,33 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     @Override
     @Retries.RetryRaw
     public CompletableFuture<S3ListResult> listObjectsAsync(
-            S3ListRequest request)
+        S3ListRequest request, ListingContext listingContext)
             throws IOException {
       return submit(unboundedThreadPool,
-        () -> listObjects(request));
+        () -> {
+          try (DurationTracker ignored =
+                   listingContext.getIostatistics()
+                       .trackDuration(OP_HTTP_LIST_REQUEST)) {
+            return listObjects(request);
+          }
+      });
     }
 
     @Override
     @Retries.RetryRaw
     public CompletableFuture<S3ListResult> continueListObjectsAsync(
-            S3ListRequest request,
-            S3ListResult prevResult)
+        S3ListRequest request,
+        S3ListResult prevResult,
+        ListingContext listingContext)
             throws IOException {
       return submit(unboundedThreadPool,
-        () -> continueListObjects(request, prevResult));
+        () -> {
+          try (DurationTracker ignored =
+                   listingContext.getIostatistics()
+                       .trackDuration(OP_HTTP_LIST_REQUEST)) {
+            return continueListObjects(request, prevResult);
+          }
+      });
     }
 
     @Override
@@ -4429,7 +4444,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       if (status != null && status.isFile()) {
         // simple case: File
         LOG.debug("Path is a file: {}", path);
-        return new Listing.SingleStatusRemoteIterator(
+        return listing.createSingleStatusIterator(
             toLocatedFileStatus(status));
       }
       // Assuming the path to be a directory
@@ -4449,7 +4464,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                 ? status
                 : (S3AFileStatus) getFileStatus(path);
         if (fileStatus.isFile()) {
-          return new Listing.SingleStatusRemoteIterator(
+          return listing.createSingleStatusIterator(
                   toLocatedFileStatus(fileStatus));
         }
       }
@@ -4508,7 +4523,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               if (fileStatus.isFile()) {
                 // simple case: File
                 LOG.debug("Path is a file");
-                return new Listing.SingleStatusRemoteIterator(
+                return listing.createSingleStatusIterator(
                         filter.accept(path)
                                 ? toLocatedFileStatus(fileStatus)
                                 : null);
@@ -4518,43 +4533,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             return locatedFileStatusIteratorForDir;
           });
     return toLocatedFileStatusIterator(iterator);
-  }
-
-  /**
-   * Generate list located status for a directory.
-   * Also performing tombstone reconciliation for guarded directories.
-   * @param dir directory to check.
-   * @param filter a path filter.
-   * @return an iterator that traverses statuses of the given dir.
-   * @throws IOException in case of failure.
-   */
-  private RemoteIterator<S3ALocatedFileStatus> getLocatedFileStatusIteratorForDir(
-          Path dir, PathFilter filter) throws IOException {
-    final String key = maybeAddTrailingSlash(pathToKey(dir));
-    final Listing.FileStatusAcceptor acceptor =
-        new Listing.AcceptAllButSelfAndS3nDirs(dir);
-    boolean allowAuthoritative = allowAuthoritative(dir);
-    DirListingMetadata meta =
-        S3Guard.listChildrenWithTtl(metadataStore, dir,
-            ttlTimeProvider, allowAuthoritative);
-    Set<Path> tombstones = meta != null
-            ? meta.listTombstones()
-            : null;
-    final RemoteIterator<S3AFileStatus> cachedFileStatusIterator =
-        listing.createProvidedFileStatusIterator(
-            S3Guard.dirMetaToStatuses(meta), filter, acceptor);
-    return (allowAuthoritative && meta != null
-        && meta.isAuthoritative())
-        ? listing.createLocatedFileStatusIterator(
-        cachedFileStatusIterator)
-        : listing.createTombstoneReconcilingIterator(
-            listing.createLocatedFileStatusIterator(
-            listing.createFileStatusListingIterator(dir,
-                createListObjectsRequest(key, "/"),
-                filter,
-                acceptor,
-                cachedFileStatusIterator)),
-            tombstones);
   }
 
   /**

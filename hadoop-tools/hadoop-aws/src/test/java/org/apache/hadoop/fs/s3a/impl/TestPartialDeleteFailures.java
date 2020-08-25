@@ -245,7 +245,8 @@ public class TestPartialDeleteFailures {
           implements ListingOperationCallbacks {
     @Override
     public CompletableFuture<S3ListResult> listObjectsAsync(
-            S3ListRequest request)
+            S3ListRequest request,
+            ListingContext listingContext)
             throws IOException {
       return null;
     }
@@ -253,7 +254,8 @@ public class TestPartialDeleteFailures {
     @Override
     public CompletableFuture<S3ListResult> continueListObjectsAsync(
             S3ListRequest request,
-            S3ListResult prevResult)
+            S3ListResult prevResult,
+            ListingContext listingContext)
             throws IOException {
       return null;
     }

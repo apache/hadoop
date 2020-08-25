@@ -32,6 +32,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSBuilder;
+import org.apache.hadoop.fs.functional.FunctionsRaisingIOE;
+import org.apache.hadoop.fs.functional.RuntimeIOException;
 
 /**
  * Support for future IO and the FS Builder subclasses.
@@ -145,8 +147,8 @@ public final class FutureIOSupport {
     Throwable cause = e.getCause();
     if (cause instanceof IOException) {
       return (IOException) cause;
-    } else if (cause instanceof WrappedIOException) {
-      return ((WrappedIOException) cause).getCause();
+    } else if (cause instanceof RuntimeIOException) {
+      return ((RuntimeIOException) cause).getCause();
     } else if (cause instanceof CompletionException) {
       return unwrapInnerException(cause);
     } else if (cause instanceof ExecutionException) {
