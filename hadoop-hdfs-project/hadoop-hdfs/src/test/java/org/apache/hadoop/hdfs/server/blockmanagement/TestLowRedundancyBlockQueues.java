@@ -276,4 +276,15 @@ public class TestLowRedundancyBlockQueues {
     }
     fail("Block " + block + " not found in level " + level);
   }
+
+  @Test
+  public void testRemoveBlockInManyQueues() {
+    LowRedundancyBlocks neededReconstruction = new LowRedundancyBlocks();
+    BlockInfo block = new BlockInfoContiguous(new Block(), (short)1024);
+    neededReconstruction.add(block, 2, 0, 1, 3);
+    neededReconstruction.add(block, 0, 0, 0, 3);
+    neededReconstruction.remove(block, LowRedundancyBlocks.LEVEL);
+    assertFalse("Should not contain the block.",
+        neededReconstruction.contains(block));
+  }
 }
