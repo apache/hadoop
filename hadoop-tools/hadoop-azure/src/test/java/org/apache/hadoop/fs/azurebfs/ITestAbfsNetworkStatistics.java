@@ -110,8 +110,17 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
     connectionsMade++;
     requestsSent++;
 
+
     try (AbfsOutputStream out = createAbfsOutputStreamWithFlushEnabled(fs,
         sendRequestPath)) {
+
+      // Is a file overwrite case
+      long createRequestCalls = 1;
+      long createTriggeredGFSForETag = 0;
+      if (this.getConfiguration().isConditionalCreateOverwriteEnabled()) {
+        createRequestCalls += 1;
+        createTriggeredGFSForETag = 1;
+      }
 
       for (int i = 0; i < LARGE_OPERATIONS; i++) {
         out.write(testNetworkStatsString.getBytes());
@@ -141,17 +150,20 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
        * wrote each time).
        *
        */
+
+      connectionsMade += createRequestCalls + createTriggeredGFSForETag;
+      requestsSent += createRequestCalls;
       if (fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(sendRequestPath).toString())) {
         // no network calls are made for hflush in case of appendblob
         assertAbfsStatistics(CONNECTIONS_MADE,
-            connectionsMade + 1 + LARGE_OPERATIONS, metricMap);
+            connectionsMade + LARGE_OPERATIONS, metricMap);
         assertAbfsStatistics(SEND_REQUESTS,
-            requestsSent + 1 + LARGE_OPERATIONS, metricMap);
+            requestsSent + LARGE_OPERATIONS, metricMap);
       } else {
         assertAbfsStatistics(CONNECTIONS_MADE,
-            connectionsMade + 1 + LARGE_OPERATIONS * 2, metricMap);
+            connectionsMade + LARGE_OPERATIONS * 2, metricMap);
         assertAbfsStatistics(SEND_REQUESTS,
-            requestsSent + 1 + LARGE_OPERATIONS * 2, metricMap);
+            requestsSent + LARGE_OPERATIONS * 2, metricMap);
       }
       assertAbfsStatistics(AbfsStatistic.BYTES_SENT,
           bytesSent + LARGE_OPERATIONS * (testNetworkStatsString.getBytes().length),
@@ -237,13 +249,21 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
     try {
 
       /*
-       * Creating a file and writing buffer into it. Also recording the
-       * buffer for future read() call.
+       * Creating a file and writing buffer into it.
+       * This is a file recreate, so it will trigger
+       * 2 extra calls if create overwrite is off by default.
+       * Also recording the buffer for future read() call.
        * This creating outputStream and writing requires 2 *
        * (LARGE_OPERATIONS) get requests.
        */
       StringBuilder largeBuffer = new StringBuilder();
       out = fs.create(getResponsePath);
+
+      long createRequestCalls = 1;
+      if (this.getConfiguration().isConditionalCreateOverwriteEnabled()) {
+        createRequestCalls += 2;
+      }
+
       for (int i = 0; i < LARGE_OPERATIONS; i++) {
         out.write(testResponseString.getBytes());
         out.hflush();
@@ -268,7 +288,8 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
        *
        * get_response : get_responses(Last assertion) + 1
        * (OutputStream) + 2 * LARGE_OPERATIONS(Writing and flushing
-       * LARGE_OPERATIONS times) + 1(open()) + 1(read()).
+       * LARGE_OPERATIONS times) + 1(open()) + 1(read()) +
+       * 1 (createOverwriteTriggeredGetForeTag).
        *
        * bytes_received : bytes_received(Last assertion) + LARGE_OPERATIONS *
        * bytes wrote each time (bytes_received is equal to bytes wrote in the
@@ -284,7 +305,8 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
             getResponses + 3 + LARGE_OPERATIONS, metricMap);
       } else {
         assertAbfsStatistics(AbfsStatistic.GET_RESPONSES,
-            getResponses + 3 + 2 * LARGE_OPERATIONS, metricMap);
+            getResponses + 2 + createRequestCalls + 2 * LARGE_OPERATIONS,
+            metricMap);
       }
 
     } finally {

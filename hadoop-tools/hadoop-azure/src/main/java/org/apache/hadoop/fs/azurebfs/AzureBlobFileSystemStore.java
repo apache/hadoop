@@ -66,6 +66,7 @@ import org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConcurrentWriteOperationDetectedException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.FileSystemOperationUnhandledException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidFileSystemPropertyException;
@@ -464,10 +465,32 @@ public class AzureBlobFileSystemStore implements Closeable {
         isAppendBlob = true;
       }
 
-      final AbfsRestOperation op = client.createPath(relativePath, true, overwrite,
-              isNamespaceEnabled ? getOctalNotation(permission) : null,
-              isNamespaceEnabled ? getOctalNotation(umask) : null,
-              isAppendBlob);
+      // if "fs.azure.enable.conditional.create.overwrite" is enabled and
+      // is a create request with overwrite=true, create will follow different
+      // flow.
+      boolean triggerConditionalCreateOverwrite = false;
+      if (overwrite
+          && abfsConfiguration.isConditionalCreateOverwriteEnabled()) {
+        triggerConditionalCreateOverwrite = true;
+      }
+
+      AbfsRestOperation op;
+      if (triggerConditionalCreateOverwrite) {
+        op = conditionalCreateOverwriteFile(relativePath,
+            statistics,
+            isNamespaceEnabled ? getOctalNotation(permission) : null,
+            isNamespaceEnabled ? getOctalNotation(umask) : null,
+            isAppendBlob
+        );
+
+      } else {
+        op = client.createPath(relativePath, true,
+            overwrite,
+            isNamespaceEnabled ? getOctalNotation(permission) : null,
+            isNamespaceEnabled ? getOctalNotation(umask) : null,
+            isAppendBlob,
+            null);
+      }
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
 
       return new AbfsOutputStream(
@@ -477,6 +500,74 @@ public class AzureBlobFileSystemStore implements Closeable {
           0,
           populateAbfsOutputStreamContext(isAppendBlob));
     }
+  }
+
+  /**
+   * Conditional create overwrite flow ensures that create overwrites is done
+   * only if there is match for eTag of existing file.
+   * @param relativePath
+   * @param statistics
+   * @param permission
+   * @param umask
+   * @param isAppendBlob
+   * @return
+   * @throws AzureBlobFileSystemException
+   */
+  private AbfsRestOperation conditionalCreateOverwriteFile(final String relativePath,
+      final FileSystem.Statistics statistics,
+      final String permission,
+      final String umask,
+      final boolean isAppendBlob) throws AzureBlobFileSystemException {
+    AbfsRestOperation op;
+
+    try {
+      // Trigger a create with overwrite=false first so that eTag fetch can be
+      // avoided for cases when no pre-existing file is present (major portion
+      // of create file traffic falls into the case of no pre-existing file).
+      op = client.createPath(relativePath, true,
+          false, permission, umask, isAppendBlob, null);
+    } catch (AbfsRestOperationException e) {
+      if (e.getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
+        // File pre-exists, fetch eTag
+        try {
+          op = client.getPathStatus(relativePath, false);
+        } catch (AbfsRestOperationException ex) {
+          if (ex.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
+            // Is a parallel access case, as file which was found to be
+            // present went missing by this request.
+            throw new ConcurrentWriteOperationDetectedException(
+                "Parallel access to the create path detected. Failing request "
+                    + "to honor single writer semantics");
+          } else {
+            throw ex;
+          }
+        }
+
+        String eTag = op.getResult()
+            .getResponseHeader(HttpHeaderConfigurations.ETAG);
+
+        try {
+          // overwrite only if eTag matches with the file properties fetched befpre
+          op = client.createPath(relativePath, true,
+              true, permission, umask, isAppendBlob, eTag);
+        } catch (AbfsRestOperationException ex) {
+          if (ex.getStatusCode() == HttpURLConnection.HTTP_PRECON_FAILED) {
+            // Is a parallel access case, as file with eTag was just queried
+            // and precondition failure can happen only when another file with
+            // different etag got created.
+            throw new ConcurrentWriteOperationDetectedException(
+                "Parallel access to the create path detected. Failing request "
+                    + "to honor single writer semantics");
+          } else {
+            throw ex;
+          }
+        }
+      } else {
+        throw e;
+      }
+    }
+
+    return op;
   }
 
   private AbfsOutputStreamContext populateAbfsOutputStreamContext(boolean isAppendBlob) {
@@ -508,7 +599,7 @@ public class AzureBlobFileSystemStore implements Closeable {
 
       final AbfsRestOperation op = client.createPath(getRelativePath(path), false, true,
               isNamespaceEnabled ? getOctalNotation(permission) : null,
-              isNamespaceEnabled ? getOctalNotation(umask) : null, false);
+              isNamespaceEnabled ? getOctalNotation(umask) : null, false, null);
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
     }
   }
