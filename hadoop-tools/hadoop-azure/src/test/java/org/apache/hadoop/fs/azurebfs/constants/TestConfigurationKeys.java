@@ -23,8 +23,17 @@ package org.apache.hadoop.fs.azurebfs.constants;
  */
 public final class TestConfigurationKeys {
   public static final String FS_AZURE_ACCOUNT_NAME = "fs.azure.account.name";
+  /** The configs combinations to run the tests against should be configured
+   * with this config. Each combination has to be separated with a `|`. The
+   * first config to mention in should be the account type (HNS and NonHNS).
+   * Second one being the authorisation type (OAuth, SharedKey). The
+   * configuration values has to be separated with `-`. An example value
+   * would be `HNS-SharedKey|HNS-OAuth|NonHNS-SharedKey`.
+   */
   public static final String FS_AZURE_TEST_COMBINATIONS = "fs.azure.test.combinations";
+  /** accountname with HNS support */
   public static final String FS_AZURE_ABFS_HNS_ACCOUNT_NAME = "fs.azure.hns.abfs.account.name";
+  /** accountname without HNS support */
   public static final String FS_AZURE_ABFS_NONHNS_ACCOUNT_NAME = "fs.azure.nonhns.abfs.account.name";
   public static final String FS_AZURE_ABFS_ACCOUNT_NAME = "fs.azure.abfs.account.name";
   public static final String FS_AZURE_ACCOUNT_KEY = "fs.azure.account.key";
