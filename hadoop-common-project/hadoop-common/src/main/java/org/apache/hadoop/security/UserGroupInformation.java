@@ -1233,7 +1233,26 @@ public class UserGroupInformation {
     reloginFromKeytab(false);
   }
 
-  private void reloginFromKeytab(boolean checkTGT) throws IOException {
+  /**
+   * Force re-Login a user in from a keytab file. Loads a user identity from a
+   * keytab file and logs them in. They become the currently logged-in user.
+   * This method assumes that {@link #loginUserFromKeytab(String, String)} had
+   * happened already. The Subject field of this UserGroupInformation object is
+   * updated to have the new credentials.
+   *
+   * @param ignoreTimeElapsed Force re-login irrespective of the time of last
+   *                          login
+   * @throws IOException
+   * @throws KerberosAuthException on a failure
+   */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
+  public void reloginFromKeytab(boolean ignoreTimeElapsed) throws IOException {
+    reloginFromKeytab(false, ignoreTimeElapsed);
+  }
+
+  private void reloginFromKeytab(boolean checkTGT, boolean ignoreTimeElapsed)
+      throws IOException {
     if (!shouldRelogin() || !isFromKeytab()) {
       return;
     }
@@ -1248,7 +1267,7 @@ public class UserGroupInformation {
         return;
       }
     }
-    relogin(login);
+    relogin(login, ignoreTimeElapsed);
   }
 
   /**
@@ -1269,25 +1288,27 @@ public class UserGroupInformation {
     if (login == null) {
       throw new KerberosAuthException(MUST_FIRST_LOGIN);
     }
-    relogin(login);
+    relogin(login, false);
   }
 
-  private void relogin(HadoopLoginContext login) throws IOException {
+  private void relogin(HadoopLoginContext login, boolean ignoreTimeElapsed)
+      throws IOException {
     // ensure the relogin is atomic to avoid leaving credentials in an
     // inconsistent state.  prevents other ugi instances, SASL, and SPNEGO
     // from accessing or altering credentials during the relogin.
     synchronized(login.getSubjectLock()) {
       // another racing thread may have beat us to the relogin.
       if (login == getLogin()) {
-        unprotectedRelogin(login);
+        unprotectedRelogin(login, ignoreTimeElapsed);
       }
     }
   }
 
-  private void unprotectedRelogin(HadoopLoginContext login) throws IOException {
+  private void unprotectedRelogin(HadoopLoginContext login,
+      boolean ignoreTimeElapsed) throws IOException {
     assert Thread.holdsLock(login.getSubjectLock());
     long now = Time.now();
-    if (!hasSufficientTimeElapsed(now)) {
+    if (!hasSufficientTimeElapsed(now) && !ignoreTimeElapsed) {
       return;
     }
     // register most recent relogin attempt
