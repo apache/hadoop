@@ -1217,7 +1217,7 @@ public class UserGroupInformation {
    * method assumes that {@link #loginUserFromKeytab(String, String)} had
    * happened already. The Subject field of this UserGroupInformation object is
    * updated to have the new credentials.
-   * 
+   *
    * @throws IOException
    * @throws KerberosAuthException on a failure
    */
@@ -1233,7 +1233,7 @@ public class UserGroupInformation {
    * This method assumes that {@link #loginUserFromKeytab(String, String)} had
    * happened already. The Subject field of this UserGroupInformation object is
    * updated to have the new credentials.
-   * 
+   *
    * @param ignoreTimeElapsed Force re-login irrespective of the time of last
    *                          login
    * @throws IOException
