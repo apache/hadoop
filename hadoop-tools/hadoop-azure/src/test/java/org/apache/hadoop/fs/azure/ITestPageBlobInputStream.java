@@ -51,6 +51,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 public class ITestPageBlobInputStream extends AbstractWasbTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(
       ITestPageBlobInputStream.class);
+  private static final int ONE_MINUTE = 60 * 1000;
   private static final int KILOBYTE = 1024;
   private static final int MEGABYTE = KILOBYTE * KILOBYTE;
   private static final int TEST_FILE_SIZE = 6 * MEGABYTE;
@@ -63,7 +64,7 @@ public class ITestPageBlobInputStream extends AbstractWasbTestBase {
    * Long test timeout.
    */
   @Rule
-  public Timeout testTimeout = new Timeout(10 * 60 * 1000,
+  public Timeout testTimeout = new Timeout(10 * ONE_MINUTE,
       TimeUnit.MILLISECONDS);
   private FileStatus testFileStatus;
   private Path hugefile;
