@@ -472,4 +472,95 @@ public final class Constants {
   public static final String FAIL_INJECT_INCONSISTENCY_PROBABILITY =
       "fs.s3a.failinject.inconsistency.probability";
 
+  /**
+   * Policy for directory markers.
+   * This is a new feature of HADOOP-13230 which addresses
+   * some scale, performance and permissions issues -but
+   * at the risk of backwards compatibility.
+   * <p></p>
+   * This Hadoop release only supports the original "delete"
+   * policy.
+   */
+  public static final String DIRECTORY_MARKER_POLICY =
+      "fs.s3a.directory.marker.retention";
+
+  /**
+   * Delete directory markers. This is the backwards compatible option.
+   * Value: {@value}.
+   */
+  public static final String DIRECTORY_MARKER_POLICY_DELETE =
+      "delete";
+
+  /**
+   * Retain directory markers (unsupported in this release).
+   * Value: {@value}.
+   */
+  public static final String DIRECTORY_MARKER_POLICY_KEEP =
+      "keep";
+
+  /**
+   * Retain directory markers in authoritative directory trees only
+   *  (unsupported in this release).
+   * Value: {@value}.
+   */
+  public static final String DIRECTORY_MARKER_POLICY_AUTHORITATIVE =
+      "authoritative";
+
+  /**
+   * Default retention policy: {@value}.
+   */
+  public static final String DEFAULT_DIRECTORY_MARKER_POLICY =
+      DIRECTORY_MARKER_POLICY_DELETE;
+
+
+  /**
+   * {@code PathCapabilities} probe to verify that an S3A Filesystem
+   * has the changes needed to safely work with buckets where
+   * directoy markers have not been deleted.
+   * Value: {@value}.
+   */
+  public static final String STORE_CAPABILITY_DIRECTORY_MARKER_AWARE
+      = "fs.s3a.capability.directory.marker.aware";
+
+  /**
+   * {@code PathCapabilities} probe to indicate that the filesystem
+   * keeps directory markers.
+   * Value: {@value}.
+   */
+  public static final String STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_KEEP
+      = "fs.s3a.capability.directory.marker.policy.keep";
+
+  /**
+   * {@code PathCapabilities} probe to indicate that the filesystem
+   * deletes directory markers.
+   * Value: {@value}.
+   */
+  public static final String STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_DELETE
+      = "fs.s3a.capability.directory.marker.policy.delete";
+
+  /**
+   * {@code PathCapabilities} probe to indicate that the filesystem
+   * keeps directory markers in authoritative paths only.
+   * Value: {@value}.
+   */
+  public static final String
+      STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_AUTHORITATIVE =
+      "fs.s3a.capability.directory.marker.policy.authoritative";
+
+  /**
+   * {@code PathCapabilities} probe to indicate that a path/S3GuardTool
+   * keeps directory markers.
+   * Value: {@value}.
+   */
+  public static final String STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_KEEP
+      = "fs.s3a.capability.directory.marker.action.keep";
+
+  /**
+   * {@code PathCapabilities} probe to indicate that a path
+   * deletes directory markers.
+   * Value: {@value}.
+   */
+  public static final String STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_DELETE
+      = "fs.s3a.capability.directory.marker.action.delete";
+
 }
