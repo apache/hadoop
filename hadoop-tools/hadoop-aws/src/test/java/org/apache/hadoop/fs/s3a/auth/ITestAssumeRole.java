@@ -613,7 +613,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
               name + CommitConstants.PENDING_SUFFIX), true);
           assertTrue(src.delete());
         }));
-    progress.assertCount("Process counter is not expected",
+    progress.assertCount("progress counter is not expected",
         range);
 
     try {
