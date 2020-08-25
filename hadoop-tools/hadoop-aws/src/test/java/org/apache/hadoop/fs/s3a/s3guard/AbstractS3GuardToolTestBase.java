@@ -481,4 +481,40 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
     assertEquals("Mismatched s3 outputs: " + actualOut, filesOnS3, actualOnS3);
     assertFalse("Diff contained duplicates", duplicates);
   }
+
+  @Test
+  public void testLandsatBucketMarkerAware() throws Throwable {
+    describe("verify that -markers aware succeeds");
+    run(S3GuardTool.BucketInfo.NAME,
+        "-" + S3GuardTool.BucketInfo.MARKERS_FLAG,
+        S3GuardTool.BucketInfo.MARKERS_AWARE,
+        getLandsatCSVFile());
+  }
+
+  @Test
+  public void testLandsatBucketMarkerDelete() throws Throwable {
+    describe("verify that -markers delete succeeds");
+    run(S3GuardTool.BucketInfo.NAME,
+        "-" + S3GuardTool.BucketInfo.MARKERS_FLAG, "delete",
+        getLandsatCSVFile());
+  }
+
+  @Test
+  public void testLandsatBucketMarkerKeepFails() throws Throwable {
+    describe("verify that -markers keep fails");
+    runToFailure(E_BAD_STATE,
+        S3GuardTool.BucketInfo.NAME,
+        "-" + S3GuardTool.BucketInfo.MARKERS_FLAG, "keep",
+        getLandsatCSVFile());
+  }
+
+  @Test
+  public void testLandsatBucketMarkerAuthFails() throws Throwable {
+    describe("verify that -markers authoritative fails");
+    runToFailure(E_BAD_STATE,
+        S3GuardTool.BucketInfo.NAME,
+        "-" + S3GuardTool.BucketInfo.MARKERS_FLAG, "authoritative",
+        getLandsatCSVFile());
+  }
+
 }
