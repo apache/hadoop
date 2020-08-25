@@ -283,8 +283,7 @@ public final class TestAbfsClient {
   }
 
   public static AbfsClient getMockAbfsClient(AbfsClient baseAbfsClientInstance,
-      AbfsConfiguration abfsConfig)
-      throws IOException, NoSuchFieldException, IllegalAccessException {
+      AbfsConfiguration abfsConfig) throws Exception {
     AuthType currentAuthType = abfsConfig.getAuthType(
         abfsConfig.getAccountName());
 
@@ -310,47 +309,46 @@ public final class TestAbfsClient {
     when(client.createDefaultHeaders()).thenCallRealMethod();
 
     // override baseurl
-    Field baseUrlField = AbfsClient.class.getDeclaredField("baseUrl");
-    baseUrlField.setAccessible(true);
-    Field modifiersField = Field.class.getDeclaredField("modifiers");
-    modifiersField.setAccessible(true);
-    modifiersField.setInt(baseUrlField, baseUrlField.getModifiers() & ~java.lang.reflect.Modifier.FINAL);
-    baseUrlField.set(client, baseAbfsClientInstance.getBaseUrl());
+    client = TestAbfsClient.setAbfsClientField(client, "abfsConfiguration",
+        abfsConfig);
+
+    // override baseurl
+    client = TestAbfsClient.setAbfsClientField(client, "baseUrl",
+        baseAbfsClientInstance.getBaseUrl());
 
     // override auth provider
     if (currentAuthType == AuthType.SharedKey) {
-      Field sharedKeyCredsField = AbfsClient.class.getDeclaredField(
-          "sharedKeyCredentials");
-      sharedKeyCredsField.setAccessible(true);
-      modifiersField.setInt(sharedKeyCredsField,
-          sharedKeyCredsField.getModifiers()
-              & ~java.lang.reflect.Modifier.FINAL);
-      sharedKeyCredsField.set(client, new SharedKeyCredentials(
-          abfsConfig.getAccountName().substring(0,
-              abfsConfig.getAccountName().indexOf(DOT)),
-          abfsConfig.getStorageAccountKey()));
+      client = TestAbfsClient.setAbfsClientField(client, "sharedKeyCredentials",
+          new SharedKeyCredentials(
+              abfsConfig.getAccountName().substring(0,
+                  abfsConfig.getAccountName().indexOf(DOT)),
+              abfsConfig.getStorageAccountKey()));
     } else {
-      Field tokenProviderField = AbfsClient.class.getDeclaredField(
-          "tokenProvider");
-      tokenProviderField.setAccessible(true);
-      modifiersField.setInt(tokenProviderField,
-          tokenProviderField.getModifiers()
-              & ~java.lang.reflect.Modifier.FINAL);
-      tokenProviderField.set(client, abfsConfig.getTokenProvider());
+      client = TestAbfsClient.setAbfsClientField(client, "tokenProvider",
+          abfsConfig.getTokenProvider());
     }
 
     // override user agent
     String userAgent = "APN/1.0 Azure Blob FS/3.4.0-SNAPSHOT (PrivateBuild "
         + "JavaJRE 1.8.0_252; Linux 5.3.0-59-generic/amd64; openssl-1.0; "
         + "UNKNOWN/UNKNOWN) MSFT";
-    Field userAgentField = AbfsClient.class.getDeclaredField(
-        "userAgent");
-    userAgentField.setAccessible(true);
-    modifiersField.setInt(userAgentField,
-        userAgentField.getModifiers()
-            & ~java.lang.reflect.Modifier.FINAL);
-    userAgentField.set(client, userAgent);
+    client = TestAbfsClient.setAbfsClientField(client, "userAgent", userAgent);
 
+    return client;
+  }
+
+  private static AbfsClient setAbfsClientField(
+      final AbfsClient client,
+      final String fieldName,
+      Object fieldObject) throws Exception {
+
+    Field field = AbfsClient.class.getDeclaredField(fieldName);
+    field.setAccessible(true);
+    Field modifiersField = Field.class.getDeclaredField("modifiers");
+    modifiersField.setAccessible(true);
+    modifiersField.setInt(field,
+        field.getModifiers() & ~java.lang.reflect.Modifier.FINAL);
+    field.set(client, fieldObject);
     return client;
   }
 }
