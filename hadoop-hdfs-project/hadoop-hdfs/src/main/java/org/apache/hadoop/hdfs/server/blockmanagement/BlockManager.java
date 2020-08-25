@@ -2517,7 +2517,7 @@ public class BlockManager implements BlockStatsMXBean {
            * with the most up-to-date block information (e.g. genstamp).
            */
           BlockInfo bi = blocksMap.getStoredBlock(timedOutItems[i]);
-          if (bi == null) {
+          if (bi == null || bi.isDeleted()) {
             continue;
           }
           NumberReplicas num = countNodes(timedOutItems[i]);
