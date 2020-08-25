@@ -160,8 +160,8 @@ public final class DirectoryPolicyImpl
     case DIRECTORY_MARKER_POLICY_KEEP:
     case DIRECTORY_MARKER_POLICY_AUTHORITATIVE:
       // known but not available.
-      LOG.info("Directory marker policy {} is unsupported, using \"delete\"",
-          option);
+      LOG.info("Directory marker policy \"{}\" is unsupported,"
+              + " using \"delete\"", option);
       break;
     default:
       throw new IllegalArgumentException(UNKNOWN_MARKER_POLICY + option);

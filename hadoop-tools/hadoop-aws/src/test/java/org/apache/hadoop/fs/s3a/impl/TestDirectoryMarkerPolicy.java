@@ -63,6 +63,8 @@ public class TestDirectoryMarkerPolicy extends HadoopTestBase {
 
   private final DirectoryPolicy directoryPolicy;
 
+  private static final boolean EXPECT_MARKER_RETENTION = false;
+
   public TestDirectoryMarkerPolicy(
       final DirectoryPolicy.MarkerPolicy markerPolicy) {
     this.directoryPolicy = newPolicy(markerPolicy);
@@ -114,35 +116,35 @@ public class TestDirectoryMarkerPolicy extends HadoopTestBase {
 
   @Test
   public void testNonAuthPath() throws Throwable {
-    assertMarkerRetention(nonAuthPath, false);
+    assertMarkerRetention(nonAuthPath, EXPECT_MARKER_RETENTION);
     assertPathCapability(nonAuthPath,
         STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_DELETE,
-        true);
+        !EXPECT_MARKER_RETENTION);
     assertPathCapability(nonAuthPath,
         STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_KEEP,
-        false);
+        EXPECT_MARKER_RETENTION);
   }
 
   @Test
   public void testAuthPath() throws Throwable {
-    assertMarkerRetention(authPath, false);
+    assertMarkerRetention(authPath, EXPECT_MARKER_RETENTION);
     assertPathCapability(authPath,
         STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_DELETE,
-        true);
+        !EXPECT_MARKER_RETENTION);
     assertPathCapability(authPath,
         STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_KEEP,
-        false);
+        EXPECT_MARKER_RETENTION);
   }
 
   @Test
   public void testDeepAuthPath() throws Throwable {
-    assertMarkerRetention(deepAuth, false);
+    assertMarkerRetention(deepAuth, EXPECT_MARKER_RETENTION);
     assertPathCapability(deepAuth,
         STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_DELETE,
-        true);
+        !EXPECT_MARKER_RETENTION);
     assertPathCapability(deepAuth,
         STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_KEEP,
-        false);
+        EXPECT_MARKER_RETENTION);
   }
 
   @Test

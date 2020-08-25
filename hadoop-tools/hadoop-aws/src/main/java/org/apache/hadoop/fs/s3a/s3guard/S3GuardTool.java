@@ -1072,8 +1072,10 @@ public abstract class S3GuardTool extends Configured implements Tool {
 
     @VisibleForTesting
     public static final String IS_MARKER_AWARE =
-        "The S3A connector is compatible with buckets where"
-            + " directory markers are not deleted";
+        "The S3A connector can read data in S3 buckets where"
+            + " directory markers%n"
+            + "are not deleted (optional with later hadoop releases),%n"
+            + "and with buckets where they are.%n";
 
     public BucketInfo(Configuration conf) {
       super(conf, GUARDED_FLAG, UNGUARDED_FLAG, AUTH_FLAG, NONAUTH_FLAG, MAGIC_FLAG);

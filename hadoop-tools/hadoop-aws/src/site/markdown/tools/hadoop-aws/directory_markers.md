@@ -14,29 +14,30 @@
 
 # Controlling the S3A Directory Marker Behavior
 
-## <a name="compatibility"></a> Critical: this is not backwards compatible!
-
 From Hadoop 3.3.1 onwards, the S3A client can be configured to skip deleting
 directory markers when creating files under paths. This removes all scalability
 problems caused by deleting these markers -however, it is achieved at the expense
 of backwards compatibility.
 
-This Hadoop release is compatible with versions of Hadoop which
-can be configured to retain directory markers above files. 
+_This Hadoop release is compatible with versions of Hadoop which
+can be configured to retain directory markers above files._ 
 
-It does not support any options to change the marker retention
-policy to anything other than the historical `delete` policy.
+_It does not support any options to change the marker retention
+policy to anything other than the default `delete` policy._
 
 If the S3A filesystem is configured via 
 `fs.s3a.directory.marker.retention` to use a different policy
 (i.e `keep` or `authoritative`),
 a message will be logged at INFO and the connector will
-revert to the "delete" policy.
+use the "delete" policy.
 
 The `s3guard bucket-info` tool [can be used to verify support](#bucket-info).
 This allows for a command line check of compatibility, including
 in scripts.
 
+_For details on alternative marker retention policies and strategies
+for safe usage, consult the documentation of a Hadoop release which
+supports the ability to change the marker policy._
 
 ## <a name="bucket-info"></a> Verifying marker policy with `s3guard bucket-info`
 
@@ -48,8 +49,8 @@ line of bucket policies via the `-marker` option
 |--------|--------|
 | `-markers aware` | the hadoop release is "aware" of directory markers |
 | `-markers delete` | directory markers are deleted |
-| `-markers keep` | directory markers are kept (not backwards compatible) |
-| `-markers authoritative` | directory markers are kept in authoritative paths |
+| `-markers keep` | directory markers are kept (will always fail) |
+| `-markers authoritative` | directory markers are kept in authoritative paths (will always fail) |
 
 All releases of Hadoop which have been updated to be marker aware will support the `-markers aware` option.
 
@@ -61,23 +62,27 @@ All releases of Hadoop which have been updated to be marker aware will support t
 (`-markers keep` and  `-markers authoritative`)] will always fail.
 
 
-Example: `s3guard bucket-info -markers aware` on a compatible release.
+Probing for marker awareness: `s3guard bucket-info -markers aware`  
 
 ```
-> hadoop s3guard bucket-info -markers aware s3a://landsat-pds/
- Filesystem s3a://landsat-pds
- Location: us-west-2
- Filesystem s3a://landsat-pds is not using S3Guard
+> bin/hadoop s3guard bucket-info -markers aware s3a://landsat-pds/
+  Filesystem s3a://landsat-pds
+  Location: us-west-2
+  Filesystem s3a://landsat-pds is not using S3Guard
+  The "magic" committer is not supported
+  
+  S3A Client
+    Endpoint: fs.s3a.endpoint=s3.amazonaws.com
+    Encryption: fs.s3a.server-side-encryption-algorithm=none
+    Input seek policy: fs.s3a.experimental.input.fadvise=normal
+  
+  The directory marker policy is "delete"
+  
+  The S3A connector can read data in S3 buckets where directory markers
+  are not deleted (optional with later hadoop releases),
+  and with buckets where they are.
 
-...
-
- Security
-    Delegation token support is disabled
-
- The directory marker policy is "delete"
-
- The S3A connector is compatible with buckets where directory markers are not deleted
- Available Policies: delete, keep, authoritative
+  Available Policies: delete
 ```
 
 The same command will fail on older releases, because the `-markers` option
@@ -104,39 +109,87 @@ Generic options supported are:
   -conf <config file> - specify an application configuration file
   -D <property=value> - define a value for a given property
 
-2020-08-12 16:47:16,579 [main] INFO  util.ExitUtil (ExitUtil.java:terminate(210)) - Exiting with status 42: Illegal option -markers
+2020-08-12 16:47:16,579 [main] INFO  util.ExitUtil (ExitUtil.java:terminate(210)) - Exiting with status 42:
+ Illegal option -markers
 ````
 
-A specific policy check verifies that the connector is configured as desired
+The `-markers delete` option will verify that this release will delete directory markers.
 
 ```
 > hadoop s3guard bucket-info -markers delete s3a://landsat-pds/
-Filesystem s3a://landsat-pds
-Location: us-west-2
-Filesystem s3a://landsat-pds is not using S3Guard
+ Filesystem s3a://landsat-pds
+ Location: us-west-2
+ Filesystem s3a://landsat-pds is not using S3Guard
+ The "magic" committer is not supported
+ 
+ S3A Client
+    Endpoint: fs.s3a.endpoint=s3.amazonaws.com
+    Encryption: fs.s3a.server-side-encryption-algorithm=none
+    Input seek policy: fs.s3a.experimental.input.fadvise=normal
+ 
+ The directory marker policy is "delete"
 
-...
-
-The directory marker policy is "delete"
 ```
 
-When probing for a specific policy, the error code "46" is returned if the active policy
-does not match that requested:
+As noted: the sole option available on this Hadoop release is `delete`. Other policy
+probes will fail, returning error code 46. "unsupported"
+
 
 ```
 > hadoop s3guard bucket-info -markers keep s3a://landsat-pds/
 Filesystem s3a://landsat-pds
 Location: us-west-2
 Filesystem s3a://landsat-pds is not using S3Guard
+The "magic" committer is not supported
 
-...
-
-Security
-    Delegation token support is disabled
+S3A Client
+    Endpoint: fs.s3a.endpoint=s3.amazonaws.com
+    Encryption: fs.s3a.server-side-encryption-algorithm=none
+    Input seek policy: fs.s3a.experimental.input.fadvise=normal
 
 The directory marker policy is "delete"
 
-2020-08-12 17:14:30,563 [main] INFO  util.ExitUtil (ExitUtil.java:terminate(210)) - Exiting with status 46: 46: Bucket s3a://landsat-pds: required marker policy is "keep" but actual policy is "delete"
+2020-08-25 12:20:18,805 [main] INFO  util.ExitUtil (ExitUtil.java:terminate(210)) - Exiting with status 46:
+ 46: Bucket s3a://landsat-pds: required marker policy is "keep" but actual policy is "delete"
+```
+
+Even if the bucket configuration attempts to change the marker policy, probes for `keep` and `authoritative`
+will fail.
+
+Take, for example, a configuration for a specific bucket to delete markers under the authoritative path `/tables`:
+
+```xml
+<property>
+  <name>fs.s3a.bucket.s3-london.directory.marker.retention</name>
+  <value>authoritative</value>
+</property>
+<property>
+  <name>fs.s3a.bucket.s3-london.authoritative.path</name>
+  <value>/tables</value>
+</property>
+```
+
+The marker settings will be warned about on filesystem creation, and the marker policy to remain as `delete`.
+Thus a check for `-markers authoritative` will fail
+
+```
+> hadoop s3guard bucket-info -markers authoritative s3a://s3-london/
+2020-08-25 12:33:52,682 [main] INFO  impl.DirectoryPolicyImpl (DirectoryPolicyImpl.java:getDirectoryPolicy(163)) -
+ Directory marker policy "authoritative" is unsupported, using "delete"
+Filesystem s3a://s3-london
+Location: eu-west-2
+Filesystem s3a://s3-london is not using S3Guard
+The "magic" committer is supported
+
+S3A Client
+    Endpoint: fs.s3a.endpoint=s3.eu-west-2.amazonaws.com
+    Encryption: fs.s3a.server-side-encryption-algorithm=none
+    Input seek policy: fs.s3a.experimental.input.fadvise=normal
+
+The directory marker policy is "delete"
+
+2020-08-25 12:33:52,746 [main] INFO  util.ExitUtil (ExitUtil.java:terminate(210)) - Exiting with status 46:
+ 46: Bucket s3a://s3-london: required marker policy is "authoritative" but actual policy is "delete"
 ```
 
 
