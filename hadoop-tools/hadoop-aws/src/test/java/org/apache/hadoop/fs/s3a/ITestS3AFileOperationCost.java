@@ -177,6 +177,77 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
   }
 
   @Test
+  public void testCostOfListStatusOnFile() throws Throwable {
+    describe("Performing listStatus() on a file");
+    Path file = path(getMethodName() + ".txt");
+    S3AFileSystem fs = getFileSystem();
+    touch(fs, file);
+    verifyMetrics(() ->
+            fs.listStatus(file),
+            whenRaw(LIST_STATUS_LIST_OP
+                    .plus(GET_FILE_STATUS_ON_FILE)),
+            whenAuthoritative(LIST_STATUS_LIST_OP),
+            whenNonauth(LIST_STATUS_LIST_OP));
+//    resetMetricDiffs();
+//    fs.listStatus(file);
+//    if (!fs.hasMetadataStore()) {
+//      metadataRequests.assertDiffEquals(1);
+//    }
+//    listRequests.assertDiffEquals(1);
+  }
+
+  @Test
+  public void testCostOfListStatusOnEmptyDir() throws Throwable {
+    describe("Performing listStatus() on an empty dir");
+    Path dir = path(getMethodName());
+    S3AFileSystem fs = getFileSystem();
+    fs.mkdirs(dir);
+    verifyMetrics(() ->
+            fs.listStatus(dir),
+            whenRaw(LIST_STATUS_LIST_OP
+            .plus(GET_FILE_STATUS_ON_EMPTY_DIR)),
+            whenAuthoritative(NO_IO),
+            whenNonauth(LIST_STATUS_LIST_OP));
+//    resetMetricDiffs();
+//    fs.listStatus(dir);
+//    if (!fs.hasMetadataStore()) {
+//      verifyOperationCount(2, 1);
+//    } else {
+//      if (fs.allowAuthoritative(dir)) {
+//        verifyOperationCount(0, 0);
+//      } else {
+//        verifyOperationCount(0, 1);
+//      }
+//    }
+  }
+
+  @Test
+  public void testCostOfListStatusOnNonEmptyDir() throws Throwable {
+    describe("Performing listStatus() on a non empty dir");
+    Path dir = path(getMethodName());
+    S3AFileSystem fs = getFileSystem();
+    fs.mkdirs(dir);
+    Path file = new Path(dir, "file.txt");
+    touch(fs, file);
+    verifyMetrics(() ->
+            fs.listStatus(dir),
+            whenRaw(LIST_STATUS_LIST_OP),
+            whenAuthoritative(NO_IO),
+            whenNonauth(LIST_STATUS_LIST_OP));
+//    resetMetricDiffs();
+//    fs.listStatus(dir);
+//    if (!fs.hasMetadataStore()) {
+//      verifyOperationCount(0, 1);
+//    } else {
+//      if (fs.allowAuthoritative(dir)) {
+//        verifyOperationCount(0, 0);
+//      } else {
+//        verifyOperationCount(0, 1);
+//      }
+//    }
+  }
+
+  @Test
   public void testCostOfGetFileStatusOnFile() throws Throwable {
     describe("performing getFileStatus on a file");
     Path simpleFile = file(methodPath());
@@ -406,8 +477,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     fs.globStatus(basePath.suffix("/*"));
     // 2 head + 1 list from getFileStatus on path,
     // plus 1 list to match the glob pattern
-    verifyRaw(GET_FILE_STATUS_ON_DIR
-        .plus(LIST_OPERATION),
+    verifyRaw(LIST_STATUS_LIST_OP,
         () -> fs.globStatus(basePath.suffix("/*")));
   }
 
@@ -426,8 +496,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     // unguarded: 2 head + 1 list from getFileStatus on path,
     // plus 1 list to match the glob pattern
     // no additional operations from symlink resolution
-    verifyRaw(GET_FILE_STATUS_ON_DIR
-        .plus(LIST_OPERATION),
+    verifyRaw(LIST_STATUS_LIST_OP,
         () -> fs.globStatus(basePath.suffix("/*")));
   }
 

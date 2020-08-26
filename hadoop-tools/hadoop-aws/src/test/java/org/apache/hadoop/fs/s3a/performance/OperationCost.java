@@ -110,6 +110,9 @@ public final class OperationCost {
   public static final OperationCost LIST_FILES_LIST_OP =
       new OperationCost(0, 1);
 
+  /** listStatus always does a LIST. */
+  public static final OperationCost LIST_STATUS_LIST_OP =
+          new OperationCost(0, 1);
   /**
    * Metadata cost of a copy operation, as used during rename.
    * This happens even if the store is guarded.

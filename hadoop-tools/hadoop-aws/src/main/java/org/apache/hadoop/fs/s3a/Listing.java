@@ -24,6 +24,7 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.annotations.VisibleForTesting;
 
+import org.apache.commons.lang3.tuple.Triple;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
@@ -327,6 +328,55 @@ public class Listing extends AbstractStoreOperation {
                             acceptor,
                             cachedFileStatusIterator)),
             tombstones);
+  }
+
+  /**
+   * Calculate list of file statuses assuming path
+   * to be a non-empty directory.
+   * @param path input path.
+   * @return Triple of file statuses, metaData, auth flag.
+   * @throws IOException Any IO problems.
+   */
+  public Triple<S3AFileStatus[], DirListingMetadata, Boolean>
+        getFileStatusesAssumingNonEmptyDir(Path path)
+          throws IOException {
+    String key = pathToKey(path);
+    List<S3AFileStatus> result;
+    if (!key.isEmpty()) {
+      key = key + '/';
+    }
+
+    boolean allowAuthoritative = listingOperationCallbacks
+            .allowAuthoritative(path);
+    DirListingMetadata dirMeta =
+            S3Guard.listChildrenWithTtl(
+                    getStoreContext().getMetadataStore(),
+                    path,
+                    listingOperationCallbacks.getUpdatedTtlTimeProvider(),
+                    allowAuthoritative);
+    // In auth mode return directly with auth flag.
+    if (allowAuthoritative && dirMeta != null && dirMeta.isAuthoritative()) {
+      return Triple.of(S3Guard.dirMetaToStatuses(dirMeta),
+              dirMeta, Boolean.TRUE);
+    }
+
+    S3ListRequest request = createListObjectsRequest(key, "/");
+    LOG.debug("listStatus: doing listObjects for directory {}", key);
+
+    Listing.FileStatusListingIterator files = createFileStatusListingIterator(
+            path,
+            request,
+            ACCEPT_ALL,
+            new Listing.AcceptAllButSelfAndS3nDirs(path));
+    result = new ArrayList<>(files.getBatchSize());
+    while (files.hasNext()) {
+      result.add(files.next());
+    }
+    // return the results obtained from s3.
+    return Triple.of(
+            result.toArray(new S3AFileStatus[result.size()]),
+            dirMeta,
+            Boolean.FALSE);
   }
 
   public S3ListRequest createListObjectsRequest(String key, String delimiter) {

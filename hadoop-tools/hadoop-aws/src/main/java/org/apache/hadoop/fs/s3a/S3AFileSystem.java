@@ -31,6 +31,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -2666,50 +2667,44 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws AmazonClientException on failures inside the AWS SDK
    */
   private S3AFileStatus[] innerListStatus(Path f) throws FileNotFoundException,
-      IOException, AmazonClientException {
+          IOException, AmazonClientException {
     Path path = qualify(f);
-    String key = pathToKey(path);
     LOG.debug("List status for path: {}", path);
     entryPoint(INVOCATION_LIST_STATUS);
 
-    List<S3AFileStatus> result;
-    final S3AFileStatus fileStatus = innerGetFileStatus(path, false,
-        StatusProbeEnum.ALL);
+    Triple<S3AFileStatus[], DirListingMetadata, Boolean>
+            statusesAssumingNonEmptyDir = listing
+            .getFileStatusesAssumingNonEmptyDir(path);
 
-    if (fileStatus.isDirectory()) {
-      if (!key.isEmpty()) {
-        key = key + '/';
-      }
-
-      boolean allowAuthoritative = allowAuthoritative(f);
-      DirListingMetadata dirMeta =
-          S3Guard.listChildrenWithTtl(metadataStore, path, ttlTimeProvider,
-              allowAuthoritative);
-      if (allowAuthoritative && dirMeta != null && dirMeta.isAuthoritative()) {
-        return S3Guard.dirMetaToStatuses(dirMeta);
-      }
-
-      S3ListRequest request = createListObjectsRequest(key, "/");
-      LOG.debug("listStatus: doing listObjects for directory {}", key);
-
-      Listing.FileStatusListingIterator files =
-          listing.createFileStatusListingIterator(path,
-              request,
-              ACCEPT_ALL,
-              new Listing.AcceptAllButSelfAndS3nDirs(path));
-      result = new ArrayList<>(files.getBatchSize());
-      while (files.hasNext()) {
-        result.add(files.next());
-      }
-      // merge the results. This will update the store as needed
-      return S3Guard.dirListingUnion(metadataStore, path, result, dirMeta,
-          allowAuthoritative, ttlTimeProvider);
-    } else {
-      LOG.debug("Adding: rd (not a dir): {}", path);
-      S3AFileStatus[] stats = new S3AFileStatus[1];
-      stats[0]= fileStatus;
-      return stats;
+    if (statusesAssumingNonEmptyDir.getLeft().length == 0 &&
+            statusesAssumingNonEmptyDir.getRight()) {
+      // We are sure that this is an empty directory in auth mode.
+      return statusesAssumingNonEmptyDir.getLeft();
     }
+    else if (statusesAssumingNonEmptyDir.getLeft().length == 0) {
+      // We may have an empty dir, or may have file or may have nothing.
+      // So we call innerGetFileStatus to get the status, this may throw
+      // FileNotFoundException if we have nothing.
+      // So We are guaranteed to have either a dir marker or a file.
+      final S3AFileStatus fileStatus = innerGetFileStatus(path, false,
+              StatusProbeEnum.ALL);
+      // If it is a file return directly.
+      if (fileStatus.isFile()) {
+        LOG.debug("Adding: rd (not a dir): {}", path);
+        S3AFileStatus[] stats = new S3AFileStatus[1];
+        stats[0] = fileStatus;
+        return stats;
+      }
+    }
+    // Here we have a directory which may or may not be empty.
+    // So we update the metastore and return.
+    return S3Guard.dirListingUnion(
+            metadataStore,
+            path,
+            Arrays.asList(statusesAssumingNonEmptyDir.getLeft()),
+            statusesAssumingNonEmptyDir.getMiddle(),
+            allowAuthoritative(path),
+            ttlTimeProvider);
   }
 
   /**
