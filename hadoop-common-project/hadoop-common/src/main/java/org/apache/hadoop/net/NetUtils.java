@@ -39,11 +39,15 @@ import java.net.ConnectException;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.UnresolvedAddressException;
 import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.net.SocketFactory;
+
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 
 import org.apache.commons.net.util.SubnetUtils;
 import org.apache.commons.net.util.SubnetUtils.SubnetInfo;
@@ -182,7 +186,7 @@ public class NetUtils {
   public static InetSocketAddress createSocketAddr(String target,
                                                    int defaultPort,
                                                    String configName) {
-    return createSocketAddr(target, defaultPort, configName, false);
+    return createSocketAddr(target, defaultPort, configName, false, 0);
   }
 
   /**
@@ -199,11 +203,13 @@ public class NetUtils {
    *                   <code>target</code> was loaded. This is used in the
    *                   exception message in the case that parsing fails.
    * @param useCacheIfPresent Whether use cache when create URI
+   * @param uriCacheExpireMs The expire time of uri cache
    */
   public static InetSocketAddress createSocketAddr(String target,
                                                    int defaultPort,
                                                    String configName,
-                                                   boolean useCacheIfPresent) {
+                                                   boolean useCacheIfPresent,
+                                                   long uriCacheExpireMs) {
     String helpText = "";
     if (configName != null) {
       helpText = " (configuration property '" + configName + "')";
@@ -214,7 +220,8 @@ public class NetUtils {
     }
     target = target.trim();
     boolean hasScheme = target.contains("://");
-    URI uri = createURI(target, hasScheme, helpText, useCacheIfPresent);
+    URI uri = createURI(target, hasScheme, helpText,
+        useCacheIfPresent, uriCacheExpireMs);
 
     String host = uri.getHost();
     int port = uri.getPort();
@@ -232,15 +239,18 @@ public class NetUtils {
     return createSocketAddrForHost(host, port);
   }
 
-  private static final Map<String, URI> URI_CACHE = new ConcurrentHashMap<>();
+  private static volatile Cache<String, URI> uriCache;
+  private static final long URI_CACHE_SIZE_DEFAULT = 1000;
 
   private static URI createURI(String target,
                                boolean hasScheme,
                                String helpText,
-                               boolean useCacheIfPresent) {
+                               boolean useCacheIfPresent,
+                               long uriCacheExpireMs) {
     URI uri;
     if (useCacheIfPresent) {
-      uri = URI_CACHE.get(target);
+      initURICache(uriCacheExpireMs);
+      uri = uriCache.getIfPresent(target);
       if (uri != null) {
         return uri;
       }
@@ -256,9 +266,22 @@ public class NetUtils {
     }
 
     if (useCacheIfPresent) {
-      URI_CACHE.put(target, uri);
+      uriCache.put(target, uri);
     }
     return uri;
+  }
+
+  private static void initURICache(long cacheExpireMs) {
+    if (uriCache == null) {
+      synchronized (NetUtils.class) {
+        if (uriCache == null) {
+          uriCache = CacheBuilder.newBuilder()
+              .maximumSize(URI_CACHE_SIZE_DEFAULT)
+              .expireAfterWrite(cacheExpireMs, TimeUnit.MILLISECONDS)
+              .build();
+        }
+      }
+    }
   }
 
   /**

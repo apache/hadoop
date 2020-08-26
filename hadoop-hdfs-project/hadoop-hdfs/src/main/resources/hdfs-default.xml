@@ -4196,6 +4196,14 @@
 </property>
 
 <property>
+  <name>dfs.client.read.uri.cache.expire.ms</name>
+  <value>43200000</value>
+  <description>
+    The expire time of uri cache. Default is 43200000 ms, which is 12 hours.
+  </description>
+</property>
+
+<property>
   <name>dfs.client.read.short.circuit.replica.stale.threshold.ms</name>
   <value>1800000</value>
   <description>

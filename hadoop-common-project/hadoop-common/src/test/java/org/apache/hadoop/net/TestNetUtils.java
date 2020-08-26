@@ -360,6 +360,49 @@ public class TestNetUtils {
     }
   }
 
+  @Test
+  public void testCreateSocketAddressWithURICache() throws Throwable {
+    InetSocketAddress addr = NetUtils.createSocketAddr(
+        "127.0.0.1:12345", 1000, "myconfig", true, 10_000);
+    assertEquals("127.0.0.1", addr.getAddress().getHostAddress());
+    assertEquals(12345, addr.getPort());
+
+    addr = NetUtils.createSocketAddr(
+        "127.0.0.1:12345", 1000, "myconfig", true, 10_000);
+    assertEquals("127.0.0.1", addr.getAddress().getHostAddress());
+    assertEquals(12345, addr.getPort());
+
+    // ----------------------------------------------------
+
+    addr = NetUtils.createSocketAddr(
+        "127.0.0.1", 1000, "myconfig", true, 10_000);
+    assertEquals("127.0.0.1", addr.getAddress().getHostAddress());
+    assertEquals(1000, addr.getPort());
+
+    addr = NetUtils.createSocketAddr(
+        "127.0.0.1", 1000, "myconfig", true, 10_000);
+    assertEquals("127.0.0.1", addr.getAddress().getHostAddress());
+    assertEquals(1000, addr.getPort());
+
+    // ----------------------------------------------------
+
+    try {
+      addr = NetUtils.createSocketAddr(
+          "127.0.0.1:blahblah", 1000, "myconfig", true, 10_000);
+      fail("Should have failed to parse bad port");
+    } catch (IllegalArgumentException iae) {
+      assertInException(iae, "myconfig");
+    }
+
+    try {
+      addr = NetUtils.createSocketAddr(
+          "127.0.0.1:blahblah", 1000, "myconfig", true, 10_000);
+      fail("Should have failed to parse bad port");
+    } catch (IllegalArgumentException iae) {
+      assertInException(iae, "myconfig");
+    }
+  }
+
   private void assertRemoteDetailsIncluded(IOException wrapped)
       throws Throwable {
     assertInException(wrapped, "desthost");

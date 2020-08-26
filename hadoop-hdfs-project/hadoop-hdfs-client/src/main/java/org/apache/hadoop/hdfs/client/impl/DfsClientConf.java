@@ -130,6 +130,7 @@ public class DfsClientConf {
   private final long defaultBlockSize;
   private final long prefetchSize;
   private final boolean uriCacheEnable;
+  private final long uriCacheExpireMs;
   private final short defaultReplication;
   private final String taskId;
   private final FsPermission uMask;
@@ -241,8 +242,14 @@ public class DfsClientConf {
         Write.EXCLUDE_NODES_CACHE_EXPIRY_INTERVAL_DEFAULT);
     prefetchSize = conf.getLong(Read.PREFETCH_SIZE_KEY,
         10 * defaultBlockSize);
+
     uriCacheEnable = conf.getBoolean(Read.URI_CACHE_KEY,
         Read.URI_CACHE_DEFAULT);
+    uriCacheExpireMs = conf.getLong(Read.URI_CACHE_EXPIRE_MS_KEY,
+        Read.URI_CACHE_EXPIRE_MS_DEFAULT);
+    Preconditions.checkArgument(uriCacheExpireMs >= 0, "The value of " +
+        Read.URI_CACHE_EXPIRE_MS_KEY + " can't be less then 0.");
+
     numCachedConnRetry = conf.getInt(DFS_CLIENT_CACHED_CONN_RETRY_KEY,
         DFS_CLIENT_CACHED_CONN_RETRY_DEFAULT);
     numBlockWriteRetry = conf.getInt(
@@ -563,6 +570,13 @@ public class DfsClientConf {
    */
   public boolean isUriCacheEnable() {
     return uriCacheEnable;
+  }
+
+  /**
+   * @return the uriCacheExpireMs
+   */
+  public long getUriCacheExpireMs() {
+    return uriCacheExpireMs;
   }
 
   /**
