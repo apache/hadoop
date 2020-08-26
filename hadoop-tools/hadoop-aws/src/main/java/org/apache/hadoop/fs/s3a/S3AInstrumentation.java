@@ -1522,7 +1522,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
   public DelegationTokenStatistics newDelegationTokenStatistics() {
     return new DelegationTokenStatisticsImpl();
   }
-Is
+
   /**
    * Instrumentation exported to S3A Delegation Token support.
    */
