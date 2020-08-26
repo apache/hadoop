@@ -236,9 +236,9 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
 
       // Testing that bytes received is equal to bytes sent.
       long bytesSend = metricMap.get(AbfsStatistic.BYTES_SENT.getStatName());
-      //bytesReceived = assertAbfsStatistics(AbfsStatistic.BYTES_RECEIVED,
-        //  bytesSend,
-          //metricMap);
+      bytesReceived = assertAbfsStatistics(AbfsStatistic.BYTES_RECEIVED,
+          bytesSend,
+          metricMap);
 
     } finally {
       IOUtils.cleanupWithLogger(LOG, out, in);
@@ -289,9 +289,9 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
        * File).
        *
        */
-      //assertAbfsStatistics(AbfsStatistic.BYTES_RECEIVED,
-       //   bytesReceived + LARGE_OPERATIONS * (testResponseString.getBytes().length),
-          //metricMap);
+      assertAbfsStatistics(AbfsStatistic.BYTES_RECEIVED,
+          bytesReceived + LARGE_OPERATIONS * (testResponseString.getBytes().length),
+          metricMap);
       if (fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(getResponsePath).toString())) {
         // no network calls are made for hflush in case of appendblob
         assertAbfsStatistics(AbfsStatistic.GET_RESPONSES,
