@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.s3a.impl.statistics;
 
+import org.apache.hadoop.fs.statistics.DurationTracker;
+import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 
@@ -29,7 +31,7 @@ import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
  * refer to the inner class and not any superclass method.
  */
 public abstract class AbstractS3AStatisticsSource implements
-    IOStatisticsSource {
+    IOStatisticsSource, DurationTrackerFactory {
 
   private IOStatisticsStore ioStatistics;
 
@@ -86,5 +88,11 @@ public abstract class AbstractS3AStatisticsSource implements
     sb.append(ioStatistics);
     sb.append('}');
     return sb.toString();
+  }
+
+
+  @Override
+  public DurationTracker trackDuration(final String key, final int count) {
+    return getIOStatistics().trackDuration(key, count);
   }
 }

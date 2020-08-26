@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.emptyStatistics;
-import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.stubDurationTracker;
+import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.stubDurationTracker;
 
 /**
  * Special statistics context, all of whose context operations are no-ops.
@@ -40,34 +40,54 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.stubDurat
  */
 public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
 
+  public static final MetastoreInstrumentation
+      METASTORE_INSTRUMENTATION = new MetastoreInstrumentationImpl();
+
+  public static final S3AInputStreamStatistics
+      EMPTY_INPUT_STREAM_STATISTICS = new EmptyInputStreamStatistics();
+
+  public static final CommitterStatistics
+      EMPTY_COMMITTER_STATISTICS = new EmptyCommitterStatistics();
+
+  @SuppressWarnings("IOResourceOpenedButNotSafelyClosed")
+  public static final BlockOutputStreamStatistics
+      EMPTY_BLOCK_OUTPUT_STREAM_STATISTICS
+      = new EmptyBlockOutputStreamStatistics();
+
+  public static final DelegationTokenStatistics
+      EMPTY_DELEGATION_TOKEN_STATISTICS = new EmptyDelegationTokenStatistics();
+
+  public static final StatisticsFromAwsSdk
+      EMPTY_STATISTICS_FROM_AWS_SDK = new EmptyStatisticsFromAwsSdk();
+
   @Override
   public MetastoreInstrumentation getS3GuardInstrumentation() {
-    return new MetastoreInstrumentationImpl();
+    return METASTORE_INSTRUMENTATION;
   }
 
   @Override
   public S3AInputStreamStatistics newInputStreamStatistics() {
-    return new EmptyInputStreamStatistics();
+    return EMPTY_INPUT_STREAM_STATISTICS;
   }
 
   @Override
   public CommitterStatistics newCommitterStatistics() {
-    return new EmptyCommitterStatistics();
+    return EMPTY_COMMITTER_STATISTICS;
   }
 
   @Override
   public BlockOutputStreamStatistics newOutputStreamStatistics() {
-    return new EmptyBlockOutputStreamStatistics();
+    return EMPTY_BLOCK_OUTPUT_STREAM_STATISTICS;
   }
 
   @Override
   public DelegationTokenStatistics newDelegationTokenStatistics() {
-    return new EmptyDelegationTokenStatistics();
+    return EMPTY_DELEGATION_TOKEN_STATISTICS;
   }
 
   @Override
   public StatisticsFromAwsSdk newStatisticsFromAwsSdk() {
-    return new EmptyStatisticsFromAwsSdk();
+    return EMPTY_STATISTICS_FROM_AWS_SDK;
   }
 
   @Override
@@ -91,9 +111,28 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
   }
 
   /**
+   * Base class for all the empty implementations.
+   */
+  private static class EmptyS3AStatisticImpl implements
+      S3AStatisticInterface {
+
+    /**
+     * Always return the stub duration tracker.
+     * @param key statistic key prefix
+     * @param count  #of times to increment the matching counter in this
+     * operation.
+     * @return stub tracker.
+     */
+    public DurationTracker trackDuration(String key, int count) {
+      return stubDurationTracker();
+    }
+  }
+
+  /**
    * Input Stream statistics callbacks.
    */
   private static final class EmptyInputStreamStatistics
+      extends EmptyS3AStatisticImpl
       implements S3AInputStreamStatistics {
 
     @Override
@@ -289,76 +328,68 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
 
   }
 
+  /**
+   * Committer statistics.
+   */
   private static final class EmptyCommitterStatistics
+      extends EmptyS3AStatisticImpl
       implements CommitterStatistics {
 
     @Override
     public void commitCreated() {
-
     }
 
     @Override
     public void commitUploaded(final long size) {
-
     }
 
     @Override
     public void commitCompleted(final long size) {
-
     }
 
     @Override
     public void commitAborted() {
-
     }
 
     @Override
     public void commitReverted() {
-
     }
 
     @Override
     public void commitFailed() {
-
     }
 
     @Override
     public void taskCompleted(final boolean success) {
-
     }
 
     @Override
     public void jobCompleted(final boolean success) {
-
     }
   }
 
   private static final class EmptyBlockOutputStreamStatistics
+      extends EmptyS3AStatisticImpl
       implements BlockOutputStreamStatistics {
 
     @Override
     public void blockUploadQueued(final int blockSize) {
-
     }
 
     @Override
     public void blockUploadStarted(final long duration, final int blockSize) {
-
     }
 
     @Override
     public void blockUploadCompleted(final long duration, final int blockSize) {
-
     }
 
     @Override
     public void blockUploadFailed(final long duration, final int blockSize) {
-
     }
 
     @Override
     public void bytesTransferred(final long byteCount) {
-
     }
 
     @Override
@@ -368,7 +399,6 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
 
     @Override
     public void exceptionInMultipartAbort() {
-
     }
 
     @Override
@@ -403,12 +433,10 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
 
     @Override
     public void blockAllocated() {
-
     }
 
     @Override
     public void blockReleased() {
-
     }
 
     @Override
@@ -432,11 +460,15 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
 
     @Override
     public void close() throws IOException {
-
     }
+
   }
 
+  /**
+   * Delegation Token Statistics.
+   */
   private static final class EmptyDelegationTokenStatistics
+      extends EmptyS3AStatisticImpl
       implements DelegationTokenStatistics {
 
     @Override
@@ -445,8 +477,11 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     }
   }
 
-  private static final class EmptyStatisticsFromAwsSdk implements
-      StatisticsFromAwsSdk {
+  /**
+   * AWS SDK Callbacks.
+   */
+  private static final class EmptyStatisticsFromAwsSdk
+      implements StatisticsFromAwsSdk {
 
     @Override
     public void updateAwsRequestCount(final long longValue) {

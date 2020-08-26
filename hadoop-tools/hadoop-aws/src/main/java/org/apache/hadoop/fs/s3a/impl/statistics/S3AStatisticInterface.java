@@ -18,11 +18,15 @@
 
 package org.apache.hadoop.fs.s3a.impl.statistics;
 
-/**
- * Instrumentation exported to for S3A Delegation Token support.
- */
-public interface DelegationTokenStatistics extends S3AStatisticInterface {
+import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
-  /** A token has been issued. */
-  void tokenIssued();
+/**
+ * Base Interface for S3A Statistics, as a way of managing
+ * them.
+ */
+public interface S3AStatisticInterface extends IOStatisticsSource,
+    DurationTrackerFactory {
+
+
 }

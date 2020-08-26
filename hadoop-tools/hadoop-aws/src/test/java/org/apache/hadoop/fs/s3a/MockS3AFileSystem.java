@@ -359,55 +359,12 @@ public class MockS3AFileSystem extends S3AFileSystem {
 
   @Override
   public CommitterStatistics newCommitterStatistics() {
-    return new StubCommitterStatistics();
+    return EmptyS3AStatisticsContext.EMPTY_COMMITTER_STATISTICS;
   }
 
   @Override
   public void operationRetried(Exception ex) {
     /** no-op */
-  }
-
-  private final class StubCommitterStatistics implements CommitterStatistics {
-
-    @Override
-    public void commitCreated() {
-
-    }
-
-    @Override
-    public void commitUploaded(final long size) {
-
-    }
-
-    @Override
-    public void commitCompleted(final long size) {
-
-    }
-
-    @Override
-    public void commitAborted() {
-
-    }
-
-    @Override
-    public void commitReverted() {
-
-    }
-
-    @Override
-    public void commitFailed() {
-
-    }
-
-    @Override
-    public void taskCompleted(final boolean success) {
-
-    }
-
-    @Override
-    public void jobCompleted(final boolean success) {
-
-    }
   }
 
 }

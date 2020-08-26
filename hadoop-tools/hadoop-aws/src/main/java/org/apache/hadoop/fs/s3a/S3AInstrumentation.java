@@ -67,7 +67,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import static org.apache.hadoop.fs.s3a.Constants.STREAM_READ_GAUGE_INPUT_POLICY;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringifyIOStatistics;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
-import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_HTTP_GET_REQUEST;
+import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.stubDurationTracker;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_EXECUTOR_ACQUIRED;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_HTTP_GET_REQUEST;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 
@@ -706,7 +708,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               StreamStatisticNames.STREAM_READ_TOTAL_BYTES,
               StreamStatisticNames.STREAM_READ_VERSION_MISMATCHES)
           .withGauges(STREAM_READ_GAUGE_INPUT_POLICY)
-          .withDurationTracking(OP_HTTP_GET_REQUEST)
+          .withDurationTracking(ACTION_HTTP_GET_REQUEST)
           .build();
       setIOStatistics(st);
       // create initial snapshot of merged statistics
@@ -1062,7 +1064,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
     @Override
     public DurationTracker initiateGetRequest() {
-      return getIOStatistics().trackDuration(OP_HTTP_GET_REQUEST);
+      return trackDuration(ACTION_HTTP_GET_REQUEST);
     }
 
   }
@@ -1132,10 +1134,11 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               STREAM_WRITE_TOTAL_DATA.getSymbol(),
               STREAM_WRITE_FAILURES.getSymbol(),
               STREAM_WRITE_EXCEPTIONS_COMPLETING_UPLOADS.getSymbol()
-              )
+          )
           .withGauges(
               STREAM_WRITE_BLOCK_UPLOADS_PENDING.getSymbol(),
               STREAM_WRITE_BLOCK_UPLOADS_DATA_PENDING.getSymbol())
+          .withDurationTracking(ACTION_EXECUTOR_ACQUIRED)
           .build();
       setIOStatistics(st);
       // these are extracted to avoid lookups on heavily used counters.
@@ -1519,7 +1522,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
   public DelegationTokenStatistics newDelegationTokenStatistics() {
     return new DelegationTokenStatisticsImpl();
   }
-
+Is
   /**
    * Instrumentation exported to S3A Delegation Token support.
    */
@@ -1533,6 +1536,11 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     @Override
     public void tokenIssued() {
       incrementCounter(DELEGATION_TOKENS_ISSUED, 1);
+    }
+
+    @Override
+    public DurationTracker trackDuration(final String key, final int count) {
+      return stubDurationTracker();
     }
   }
 

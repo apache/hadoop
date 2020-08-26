@@ -24,7 +24,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSource;
  * Statistics for committed work.
  */
 public interface CommitterStatistics
-    extends IOStatisticsSource {
+    extends S3AStatisticInterface {
 
   /** A commit has been created. */
   void commitCreated();

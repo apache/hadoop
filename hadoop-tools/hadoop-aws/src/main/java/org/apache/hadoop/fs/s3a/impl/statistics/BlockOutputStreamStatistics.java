@@ -20,13 +20,11 @@ package org.apache.hadoop.fs.s3a.impl.statistics;
 
 import java.io.Closeable;
 
-import org.apache.hadoop.fs.statistics.IOStatisticsSource;
-
 /**
  * Block output stream statistics.
  */
 public interface BlockOutputStreamStatistics extends Closeable,
-    IOStatisticsSource {
+    S3AStatisticInterface {
 
   /**
    * Block is queued for upload.

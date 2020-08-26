@@ -115,6 +115,7 @@ import org.apache.hadoop.fs.s3a.impl.S3AMultipartUploaderBuilder;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
+import org.apache.hadoop.fs.s3a.impl.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.fs.s3a.impl.statistics.CommitterStatistics;
 import org.apache.hadoop.fs.s3a.impl.statistics.BondedS3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.impl.statistics.S3AMultipartUploaderStatisticsImpl;
@@ -1319,15 +1320,20 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     PutTracker putTracker =
         committerIntegration.createTracker(path, key);
     String destKey = putTracker.getDestKey();
+    final BlockOutputStreamStatistics outputStreamStatistics
+        = statisticsContext.newOutputStreamStatistics();
     return new FSDataOutputStream(
         new S3ABlockOutputStream(this,
             destKey,
-            new SemaphoredDelegatingExecutor(boundedThreadPool,
-                blockOutputActiveBlocks, true),
+            new SemaphoredDelegatingExecutor(
+                boundedThreadPool,
+                blockOutputActiveBlocks,
+                true,
+                outputStreamStatistics),
             progress,
             partSize,
             blockFactory,
-            statisticsContext.newOutputStreamStatistics(),
+            outputStreamStatistics,
             getWriteOperationHelper(),
             putTracker),
         null);

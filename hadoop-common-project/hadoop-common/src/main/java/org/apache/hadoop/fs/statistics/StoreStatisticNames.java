@@ -148,18 +148,6 @@ public final class StoreStatisticNames {
       = "store_io_retry";
 
   /**
-   * An HTTP HEAD request was made: {@value}.
-   */
-  public static final String OP_HTTP_HEAD_REQUEST
-      = "op_http_head_request";
-
-  /**
-   * An HTTP GET request was made: {@value}.
-   */
-  public static final String OP_HTTP_GET_REQUEST
-      = "op_http_get_request";
-
-  /**
    * A store's equivalent of a paged LIST request was initiated: {@value}.
    */
   public static final String OBJECT_LIST_REQUEST
@@ -262,6 +250,27 @@ public final class StoreStatisticNames {
    * Value {@value}.
    */
   public static final String SUFFIX_MEAN = ".mean";
+
+
+  /**
+   * The name of the statistic collected for executor aquisition if
+   * a duration tracker factory is passed in to the constructor.
+   * {@value}.
+   */
+  public static String ACTION_EXECUTOR_ACQUIRED = "action_executor_acquired";
+
+  /**
+   * An HTTP HEAD request was made: {@value}.
+   */
+  public static final String ACTION_HTTP_HEAD_REQUEST
+      = "action_http_head_request";
+
+  /**
+   * An HTTP GET request was made: {@value}.
+   */
+  public static final String ACTION_HTTP_GET_REQUEST
+      = "action_http_get_request";
+
 
   private StoreStatisticNames() {
   }

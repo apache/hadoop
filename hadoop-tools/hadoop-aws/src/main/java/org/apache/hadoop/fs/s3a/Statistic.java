@@ -115,7 +115,7 @@ public enum Statistic {
       StoreStatisticNames.OBJECT_CONTINUE_LIST_REQUEST,
       "Number of continued object listings made"),
   OBJECT_METADATA_REQUESTS(
-      StoreStatisticNames.OP_HTTP_HEAD_REQUEST,
+      StoreStatisticNames.ACTION_HTTP_HEAD_REQUEST,
       "Number of requests for object metadata"),
   OBJECT_MULTIPART_UPLOAD_INITIATED(
       StoreStatisticNames.OBJECT_MULTIPART_UPLOAD_INITIATED,

@@ -328,11 +328,4 @@ public final class IOStatisticsBinding {
     } while (!done);
   }
 
-  /**
-   * Get the stub duration tracker.
-   * @return the stub tracker.
-   */
-  public static DurationTracker stubDurationTracker() {
-    return StubDurationTracker.STUB_DURATION_TRACKER;
-  }
 }

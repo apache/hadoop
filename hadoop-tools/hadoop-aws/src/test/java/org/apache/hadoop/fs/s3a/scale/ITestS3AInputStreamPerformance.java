@@ -60,7 +60,7 @@ import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyCounte
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsSourceToString;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToString;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
-import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_HTTP_GET_REQUEST;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_HTTP_GET_REQUEST;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MAX;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MEAN;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MIN;
@@ -517,13 +517,13 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
     logStreamStatistics();
     IOStatistics iostats = in.getIOStatistics();
     long maxHttpGet = lookupMaximumStatistic(iostats,
-        OP_HTTP_GET_REQUEST + SUFFIX_MAX);
+        ACTION_HTTP_GET_REQUEST + SUFFIX_MAX);
     assertThatMinimumStatistic(iostats,
-        OP_HTTP_GET_REQUEST + SUFFIX_MIN)
+        ACTION_HTTP_GET_REQUEST + SUFFIX_MIN)
         .isGreaterThan(0)
         .isLessThan(maxHttpGet);
     MeanStatistic getMeanStat = lookupMeanStatistic(iostats,
-        OP_HTTP_GET_REQUEST + SUFFIX_MEAN);
+        ACTION_HTTP_GET_REQUEST + SUFFIX_MEAN);
     Assertions.assertThat(getMeanStat.getSamples())
         .describedAs("sample count of %s", getMeanStat)
         .isEqualTo(expectedOpenCount);

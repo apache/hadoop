@@ -24,9 +24,9 @@ import org.apache.hadoop.fs.statistics.DurationTracker;
  * A simple stub duration tracker which can be issued in interfaces
  * and other places where full duration tracking is not implemented.
  */
-final class StubDurationTracker implements DurationTracker {
+public final class StubDurationTracker implements DurationTracker {
 
-  static final DurationTracker STUB_DURATION_TRACKER =
+  public static final DurationTracker STUB_DURATION_TRACKER =
       new StubDurationTracker();
 
   private StubDurationTracker() {
