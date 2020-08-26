@@ -232,7 +232,7 @@ public class ITestAzureBlobFileSystemCreate extends
 
     // Case 2: Not Overwrite - File pre-exists
     intercept(FileAlreadyExistsException.class,
-        () -> fs.create(nonOverwriteFile,false));
+        () -> fs.create(nonOverwriteFile, false));
 
     // One request to server to create path should be issued
     createRequestCount++;

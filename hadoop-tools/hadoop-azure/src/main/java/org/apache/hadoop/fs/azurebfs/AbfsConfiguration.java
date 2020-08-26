@@ -577,7 +577,9 @@ public class AbfsConfiguration{
     return this.azureAtomicDirs;
   }
 
-  public boolean isDefaultCreateOverwriteDisabled() { return this.disableDefaultCreateOverwrite; }
+  public boolean isDefaultCreateOverwriteDisabled() {
+    return this.disableDefaultCreateOverwrite;
+  }
 
   public String getAppendBlobDirs() {
     return this.azureAppendBlobDirs;
