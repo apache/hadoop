@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.statistics.impl;
 
+import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.util.OperationDuration;
 
 /**

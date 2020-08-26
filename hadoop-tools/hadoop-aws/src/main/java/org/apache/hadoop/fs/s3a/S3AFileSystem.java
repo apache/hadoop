@@ -126,7 +126,7 @@ import org.apache.hadoop.fs.s3a.tools.MarkerToolOperations;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperationsImpl;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
-import org.apache.hadoop.fs.statistics.impl.DurationTracker;
+import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
@@ -1706,7 +1706,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       return submit(unboundedThreadPool,
         () -> {
           try (DurationTracker ignored =
-                   listingContext.getIostatistics()
+                   listingContext.getDurationTrackerFactory()
                        .trackDuration(OBJECT_LIST_REQUEST)) {
             return listObjects(request);
           }
@@ -1723,7 +1723,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       return submit(unboundedThreadPool,
         () -> {
           try (DurationTracker ignored =
-                   listingContext.getIostatistics()
+                   listingContext.getDurationTrackerFactory()
                        .trackDuration(OBJECT_CONTINUE_LIST_REQUEST)) {
             return continueListObjects(request, prevResult);
           }

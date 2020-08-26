@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.statistics;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.statistics.impl.StubDurationTrackerFactory;
 
 /**
  * Support for working with IOStatistics.
@@ -75,4 +76,14 @@ public final class IOStatisticsSupport {
         : null; // null source or interface not implemented
   }
 
+  /**
+   * Return a stub duration tracker factory whose returned trackers
+   * are always no-ops.
+   * <p></p>
+   * As singletons are returned, this is very low-cost to use.
+   * @return a duration tracker factory.
+   */
+  public DurationTrackerFactory stubDurationTrackerFactory() {
+    return StubDurationTrackerFactory.STUB_DURATION_TRACKER_FACTORY;
+  }
 }

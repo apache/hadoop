@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.s3guard.MetastoreInstrumentation;
 import org.apache.hadoop.fs.s3a.s3guard.MetastoreInstrumentationImpl;
 import org.apache.hadoop.fs.statistics.IOStatistics;
-import org.apache.hadoop.fs.statistics.impl.DurationTracker;
+import org.apache.hadoop.fs.statistics.DurationTracker;
 
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.emptyStatistics;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.stubDurationTracker;

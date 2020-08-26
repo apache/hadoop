@@ -132,10 +132,13 @@ public final class FutureIOSupport {
 
   /**
    * From the inner cause of an execution exception, extract the inner cause.
-   * If it is an RTE: throw immediately.
-   * If it is an IOE: Return.
-   * If it is a WrappedIOException: Unwrap and return
-   * Else: create a new IOException.
+   * <ol>
+   *   <li> If it is an IOE: Return.</li>
+   *   <li> If it is a {@link RuntimeIOException}: return the cause</li>
+   *   <li> Completion/Execution Exceptions: extract and repeat</li>
+   *   <li> If it is an RTE: throw.</li>
+   *   <li> Any other type: wrap in an IOE</li>
+   * </ol>
    *
    * Recursively handles wrapped Execution and Completion Exceptions in
    * case something very complicated has happened.
@@ -148,6 +151,7 @@ public final class FutureIOSupport {
     if (cause instanceof IOException) {
       return (IOException) cause;
     } else if (cause instanceof RuntimeIOException) {
+      // this is always an IOException
       return ((RuntimeIOException) cause).getCause();
     } else if (cause instanceof CompletionException) {
       return unwrapInnerException(cause);

@@ -29,7 +29,9 @@ import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
 import org.apache.hadoop.fs.s3a.S3ListRequest;
 import org.apache.hadoop.fs.s3a.S3ListResult;
 import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
-import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
+import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * These are all the callbacks which
@@ -135,14 +137,14 @@ public interface ListingOperationCallbacks {
    */
   final class ListingContext {
 
-    private final IOStatisticsStore iostatistics;
+    private final DurationTrackerFactory durationTrackerFactory;
 
-    public ListingContext(final IOStatisticsStore iostatistics) {
-      this.iostatistics = iostatistics;
+    public ListingContext(final DurationTrackerFactory durationTrackerFactory) {
+      this.durationTrackerFactory = requireNonNull(durationTrackerFactory);
     }
 
-    public IOStatisticsStore getIostatistics() {
-      return iostatistics;
+    public DurationTrackerFactory getDurationTrackerFactory() {
+      return durationTrackerFactory;
     }
   }
 }

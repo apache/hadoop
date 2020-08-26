@@ -19,7 +19,7 @@
 package org.apache.hadoop.fs.s3a.impl.statistics;
 
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
-import org.apache.hadoop.fs.statistics.impl.DurationTracker;
+import org.apache.hadoop.fs.statistics.DurationTracker;
 
 /**
  * Statistics updated by an input stream during its actual operation.

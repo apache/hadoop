@@ -17,7 +17,7 @@
  */
 
 /**
- * Support for functional programming within the Hadoop APIs.
+ * Support for functional programming within the Hadoop (filesystem) APIs.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable

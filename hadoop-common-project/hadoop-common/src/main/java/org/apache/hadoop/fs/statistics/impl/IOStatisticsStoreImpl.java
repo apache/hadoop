@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.MeanStatistic;
 
@@ -413,19 +414,8 @@ final class IOStatisticsStoreImpl extends WrappedIOStatistics
     addTimedOperation(prefix, duration.toMillis());
   }
 
-  /**
-   * Track the duration of a single statistic through a
-   * {@link StatisticDurationTracker}.
-   * @param prefix statistic prefix
-   * @return a tracker instance.
-   */
   @Override
-  public DurationTracker trackDuration(final String prefix) {
-    return new StatisticDurationTracker(this, prefix);
-  }
-
-  @Override
-  public DurationTracker trackDuration(final String prefix, final int count) {
-    return new StatisticDurationTracker(this, prefix, count);
+  public DurationTracker trackDuration(final String key, final int count) {
+    return new StatisticDurationTracker(this, key, count);
   }
 }

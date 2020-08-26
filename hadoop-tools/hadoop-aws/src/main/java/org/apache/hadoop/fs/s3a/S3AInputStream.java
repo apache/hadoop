@@ -40,7 +40,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.FSInputStream;
-import org.apache.hadoop.fs.statistics.impl.DurationTracker;
+import org.apache.hadoop.fs.statistics.DurationTracker;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

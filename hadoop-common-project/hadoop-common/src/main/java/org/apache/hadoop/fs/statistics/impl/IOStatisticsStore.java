@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsAggregator;
+import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.statistics.MeanStatistic;
 
 /**
@@ -30,13 +31,15 @@ import org.apache.hadoop.fs.statistics.MeanStatistic;
  * use in classes which track statistics for reporting.
  */
 public interface IOStatisticsStore extends IOStatistics,
-    IOStatisticsAggregator {
+    IOStatisticsAggregator,
+    DurationTrackerFactory {
 
   /**
    * Increment a counter by one.
+   * <p></p>
    * No-op if the counter is unknown.
    * @param key statistics key
-   * @return old value
+   * @return old value or, if the counter is unknown: 0
    */
   default long incrementCounter(String key) {
     return incrementCounter(key, 1);
@@ -44,15 +47,17 @@ public interface IOStatisticsStore extends IOStatistics,
 
   /**
    * Increment a counter.
+   * <p></p>
    * No-op if the counter is unknown.
    * @param key statistics key
    * @param value value to increment
-   * @return old value or 0
+   * @return old value or, if the counter is unknown: 0
    */
   long incrementCounter(String key, long value);
 
   /**
    * Set a counter.
+   * <p></p>
    * No-op if the counter is unknown.
    * @param key statistics key
    * @param value value to set
@@ -61,6 +66,7 @@ public interface IOStatisticsStore extends IOStatistics,
 
   /**
    * Set a gauge.
+   * <p></p>
    * No-op if the gauge is unknown.
    * @param key statistics key
    * @param value value to set
@@ -69,6 +75,7 @@ public interface IOStatisticsStore extends IOStatistics,
 
   /**
    * Increment a gauge.
+   * <p></p>
    * No-op if the gauge is unknown.
    * @param key statistics key
    * @param value value to increment
@@ -86,6 +93,7 @@ public interface IOStatisticsStore extends IOStatistics,
 
   /**
    * Increment a maximum.
+   * <p></p>
    * No-op if the maximum is unknown.
    * @param key statistics key
    * @param value value to increment
@@ -95,6 +103,7 @@ public interface IOStatisticsStore extends IOStatistics,
 
   /**
    * Set a minimum.
+   * <p></p>
    * No-op if the minimum is unknown.
    * @param key statistics key
    * @param value value to set
@@ -103,6 +112,7 @@ public interface IOStatisticsStore extends IOStatistics,
 
   /**
    * Increment a minimum.
+   * <p></p>
    * No-op if the minimum is unknown.
    * @param key statistics key
    * @param value value to increment
@@ -113,6 +123,7 @@ public interface IOStatisticsStore extends IOStatistics,
   /**
    * Add a minimum sample: if less than the current value,
    * updates the value.
+   * <p></p>
    * No-op if the minimum is unknown.
    * @param key statistics key
    * @param value sample value
@@ -122,6 +133,7 @@ public interface IOStatisticsStore extends IOStatistics,
   /**
    * Add a maximum sample: if greater than the current value,
    * updates the value.
+   * <p></p>
    * No-op if the maximum is unknown.
    * @param key statistics key
    * @param value sample value
@@ -129,10 +141,19 @@ public interface IOStatisticsStore extends IOStatistics,
   void addMaximumSample(String key, long value);
 
 
+  /**
+   * Set a mean statistic to a given value.
+   * <p></p>
+   * No-op if the maximum is unknown.
+   * @param key statistic key
+   * @param value new value.
+   */
   void setMeanStatistic(String key, MeanStatistic value);
 
   /**
    * Add a sample to the mean statistics.
+   * <p></p>
+   * No-op if the maximum is unknown.
    * @param key key
    * @param value sample value.
    */
@@ -235,28 +256,4 @@ public interface IOStatisticsStore extends IOStatistics,
    */
   void addTimedOperation(String prefix, Duration duration);
 
-  /**
-   * Initiate a duration tracking operation by creating/returning
-   * an object whose {@code close()} call will
-   * invoke {@link #addTimedOperation(String, Duration)} to
-   * update the statistics.
-   * <p></p>
-   * The expected use is within a try-with-resources clause.
-   * @param prefix statistic prefix
-   * @return an object to close after an operation completes.
-   */
-  DurationTracker trackDuration(String prefix);
-
-  /**
-   * Initiate a duration tracking operation by creating/returning
-   * an object whose {@code close()} call will
-   * invoke {@link #addTimedOperation(String, Duration)} to
-   * update the statistics.
-   * <p></p>
-   * The expected use is within a try-with-resources clause.
-   * @param prefix statistic prefix
-   * @param count  #of times to increment the matching counter.
-   * @return an object to close after an operation completes.
-   */
-  DurationTracker trackDuration(String prefix, int count);
 }

@@ -763,6 +763,8 @@ public class Listing extends AbstractStoreOperation {
           .withDurationTracking(OBJECT_LIST_REQUEST)
           .withDurationTracking(OBJECT_CONTINUE_LIST_REQUEST)
           .build();
+      // the context contains only the duration tracker factory, at
+      // least for now
       this.listingContext = new ListingOperationCallbacks.ListingContext(
           iostats);
       this.s3ListResultFuture = listingOperationCallbacks

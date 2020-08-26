@@ -29,6 +29,7 @@ import java.util.function.Function;
 import com.google.common.annotations.VisibleForTesting;
 
 import org.apache.hadoop.fs.StorageStatistics;
+import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.MeanStatistic;

@@ -16,24 +16,18 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.statistics.impl;
-
-import org.apache.hadoop.fs.statistics.DurationTracker;
+package org.apache.hadoop.fs.statistics;
 
 /**
- * A simple stub duration tracker which can be issued in interfaces
- * and other places where full duration tracking is not implemented.
+ * Interface to be implemented by objects which can track duration.
+ * It extends AutoCloseable to fit into a try-with-resources statement,
+ * but then strips out the {@code throws Exception} aspect of the signature
+ * so it doesn't force code to add extra handling for any failures.
  */
-final class StubDurationTracker implements DurationTracker {
+public interface DurationTracker extends AutoCloseable {
 
-  static final DurationTracker STUB_DURATION_TRACKER =
-      new StubDurationTracker();
-
-  private StubDurationTracker() {
-  }
-
-  @Override
-  public void close() {
-
-  }
+  /**
+   * Finish tracking: update the statistics with the timings.
+   */
+  void close();
 }

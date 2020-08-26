@@ -40,10 +40,12 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.snapshotM
  * <p></p>
  * It is serializable so that frameworks which can use java serialization
  * to propagate data (Spark, Flink...) can send the statistics
- * back.
+ * back. For this reason, TreeMaps are explicitly used as field types,
+ * even though IDEs can recommend use of Map instead.
  * <p></p>
  * It is annotated for correct serializations with jackson2.
  */
+@SuppressWarnings("CollectionDeclaredAsConcreteClass")
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public final class IOStatisticsSnapshot
@@ -51,18 +53,33 @@ public final class IOStatisticsSnapshot
 
   private static final long serialVersionUID = -1762522703841538084L;
 
+  /**
+   * Counters.
+   */
   @JsonProperty
   private TreeMap<String, Long> counters;
 
+  /**
+   * Gauges.
+   */
   @JsonProperty
   private TreeMap<String, Long> gauges;
 
+  /**
+   * Minimum values.
+   */
   @JsonProperty
   private TreeMap<String, Long> minimums;
 
+  /**
+   * Maximum values.
+   */
   @JsonProperty
   private TreeMap<String, Long> maximums;
 
+  /**
+   * mean statistics. The JSON key is all lower case..
+   */
   @JsonProperty("meanstatistics")
   private TreeMap<String, MeanStatistic> meanStatistics;
 
@@ -70,22 +87,32 @@ public final class IOStatisticsSnapshot
    * Construct.
    */
   public IOStatisticsSnapshot() {
-    counters = new TreeMap<>();
-    gauges = new TreeMap<>();
-    minimums = new TreeMap<>();
-    maximums = new TreeMap<>();
-    meanStatistics = new TreeMap<>();
+    createMaps();
   }
 
   /**
-   * Construct, reading the statistics data in
+   * Construct, taking a snapshot of the source statistics data
    * if the source is non-null.
+   * If the source is null, the empty maps are created
    * @param source statistics source. Nullable.
    */
   public IOStatisticsSnapshot(IOStatistics source) {
     if (source != null) {
       snapshot(source);
+    } else {
+      createMaps();
     }
+  }
+
+  /**
+   * Create the maps.
+   */
+  private void createMaps() {
+    counters = new TreeMap<>();
+    gauges = new TreeMap<>();
+    minimums = new TreeMap<>();
+    maximums = new TreeMap<>();
+    meanStatistics = new TreeMap<>();
   }
 
   /**

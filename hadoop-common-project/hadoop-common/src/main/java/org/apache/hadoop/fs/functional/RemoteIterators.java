@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.functional;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -40,6 +41,13 @@ import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStat
  * transform the results of an iterator, without losing the statistics
  * in the process, and to chain the operations together.
  * <p></p>
+ * The closeable operation will be passed through RemoteIterators which
+ * wrap other RemoteIterators. This is to support any iterator which
+ * can be closed to release held connections, file handles etc.
+ * Unless client code is written to assume that RemoteIterator instances
+ * may be closed, this is not likely to be broadly used. It is added
+ * to make it possible to adopt this feature in a managed way.
+ * <p></p>
  * Based on the S3A Listing code, and some some work on moving other code
  * to using iterative listings so as to pick up the statistics.
  */
@@ -54,7 +62,7 @@ public final class RemoteIterators {
    * Create an iterator from a singleton.
    * @param instance instance
    * @param <T> type
-   * @return an iterator
+   * @return a remote iterator
    */
   public static <T> RemoteIterator<T> toRemoteIterator(@Nullable T instance) {
     return new SingletonIterator<>(instance);
@@ -63,10 +71,20 @@ public final class RemoteIterators {
   /**
    * Create a remote iterator from a java.util.Iterator.
    * @param <T> type
-   * @return an iterator
+   * @return a remote iterator
    */
   public static <T> RemoteIterator<T> toRemoteIterator(Iterator<T> iterator) {
     return new FromIterator<>(iterator);
+  }
+
+  /**
+   * Create a remote iterator from a java.util.Iterable -e.g. a list
+   * or other collection.
+   * @param <T> type
+   * @return a remote iterator
+   */
+  public static <T> RemoteIterator<T> toRemoteIterator(Iterable<T> iterable) {
+    return new FromIterator<>(iterable.iterator());
   }
 
   /**
@@ -75,45 +93,29 @@ public final class RemoteIterators {
    * @param <T> result type
    * @param iterator source
    * @param mapper transformation
-   * @return an iterator
+   * @return a remote iterator
    */
   public static <S, T> RemoteIterator<T> mappingRemoteIterator(
       RemoteIterator<S> iterator,
-      FunctionsRaisingIOE.FunctionRaisingIOE<S, T> mapper) {
+      FunctionsRaisingIOE.FunctionRaisingIOE<? super S, T> mapper) {
     return new MappingRemoteIterator<>(iterator, mapper);
   }
 
   /**
    * Create an iterator from an iterator and a filter.
-   * Elements are filtered during the hasNext phase.
+   * <p></p>
+   * Elements are filtered in the hasNext() method; if not used
+   * the filtering will be done on demand in the {@code next()}
+   * call.
    * @param <S> type
    * @param iterator source
    * @param filter filter
-   * @return an iterator
+   * @return a remote iterator
    */
   public static <S> RemoteIterator<S> filteringRemoteIterator(
       RemoteIterator<S> iterator,
-      FunctionsRaisingIOE.FunctionRaisingIOE<S, Boolean> filter) {
-    return new FilteringMappingRemoteIterator<>(iterator, filter, self -> self);
-  }
-
-  /**
-   * Create an iterator from an iterator, a filter and a
-   * transformation function.
-   * Elements are filtered during the hasNext phase.
-   * The transform operation is applied during next(), and
-   * only to elements which the filter accepted.
-   * @param <S> source type
-   * @param <T> result type
-   * @param iterator source
-   * @param mapper transformation
-   * @return an iterator
-   */
-  public static <S, T> RemoteIterator<T> filteringMappingRemoteIterator(
-      RemoteIterator<S> iterator,
-      FunctionsRaisingIOE.FunctionRaisingIOE<S, Boolean> filter,
-      FunctionsRaisingIOE.FunctionRaisingIOE<S, T> mapper) {
-    return new FilteringMappingRemoteIterator<>(iterator, filter, mapper);
+      FunctionsRaisingIOE.FunctionRaisingIOE<? super S, Boolean> filter) {
+    return new FilteringRemoteIterator<>(iterator, filter);
   }
 
   /**
@@ -132,6 +134,10 @@ public final class RemoteIterators {
      */
     private T singleton;
 
+    /**
+     * Instantiate.
+     * @param singleton single value...may be null
+     */
     private SingletonIterator(@Nullable T singleton) {
       this.singleton = singleton;
     }
@@ -141,6 +147,7 @@ public final class RemoteIterators {
       return singleton != null;
     }
 
+    @SuppressWarnings("NewExceptionWithoutArguments")
     @Override
     public T next() throws IOException {
       if (hasNext()) {
@@ -202,32 +209,26 @@ public final class RemoteIterators {
   }
 
   /**
-   * Iterator taking a source and a transformational function.
+   * Wrapper of another remote iterator; IOStatistics
+   * and Closeable methods are passed down if implemented.
    * @param <S> source type
-   * @param <T> final output type.There
+   * @param <T> type of returned value
    */
-  private static final class MappingRemoteIterator<S, T>
-      implements RemoteIterator<T>, IOStatisticsSource {
+  private static abstract class WrappingRemoteIterator<S, T>
+      implements RemoteIterator<T>, IOStatisticsSource, Closeable {
 
+    /**
+     * Source iterator.
+     */
     private final RemoteIterator<S> source;
 
-    private final FunctionsRaisingIOE.FunctionRaisingIOE<S, T> mapper;
 
-    private MappingRemoteIterator(
-        RemoteIterator<S> source,
-        FunctionsRaisingIOE.FunctionRaisingIOE<S, T> mapper) {
+    protected WrappingRemoteIterator(final RemoteIterator<S> source) {
       this.source = requireNonNull(source);
-      this.mapper = requireNonNull(mapper);
     }
 
-    @Override
-    public boolean hasNext() throws IOException {
-      return source.hasNext();
-    }
-
-    @Override
-    public T next() throws IOException {
-      return mapper.apply(source.next());
+    protected RemoteIterator<S> getSource() {
+      return source;
     }
 
     @Override
@@ -236,23 +237,63 @@ public final class RemoteIterators {
     }
 
     @Override
-    public String toString() {
-      return "FunctionRemoteIterator{" + source + '}';
+    public void close() throws IOException {
+      if (source instanceof Closeable) {
+        ((Closeable) source).close();
+      }
     }
   }
 
+  /**
+   * Iterator taking a source and a transformational function.
+   * @param <S> source type
+   * @param <T> final output type.There
+   */
+  private static final class MappingRemoteIterator<S, T>
+      extends WrappingRemoteIterator<S,T> {
+
+
+    private final FunctionsRaisingIOE.FunctionRaisingIOE<? super S, T> mapper;
+
+    private MappingRemoteIterator(
+        RemoteIterator<S> source,
+        FunctionsRaisingIOE.FunctionRaisingIOE<? super S, T> mapper) {
+      super(source);
+      this.mapper = requireNonNull(mapper);
+    }
+
+    @Override
+    public boolean hasNext() throws IOException {
+      return getSource().hasNext();
+    }
+
+    @Override
+    public T next() throws IOException {
+      return mapper.apply(getSource().next());
+    }
+
+    @Override
+    public String toString() {
+      return "FunctionRemoteIterator{" + getSource() + '}';
+    }
+  }
+
+  /**
+   * Extend the wrapped iterator by filtering source values out.
+   * Only those values for which the filter predicate returns true
+   * will be returned.
+   * @param <S> type of iterator.
+   */
   @SuppressWarnings("NewExceptionWithoutArguments")
-  private static final class FilteringMappingRemoteIterator<S, T>
-      implements RemoteIterator<T>, IOStatisticsSource {
+  private static final class FilteringRemoteIterator<S>
+      extends WrappingRemoteIterator<S, S> {
 
     /**
-     * Source iterator.
+     * Filter Predicate.
+     * Takes the input type or any superclass.
      */
-    private final RemoteIterator<S> source;
-
-    private final FunctionsRaisingIOE.FunctionRaisingIOE<S, Boolean> filter;
-
-    private final FunctionsRaisingIOE.FunctionRaisingIOE<S, T> mapper;
+    private final FunctionsRaisingIOE.FunctionRaisingIOE<? super S, Boolean>
+        filter;
 
     /**
      * Next value; will be null if none has been evaluated, or the
@@ -266,15 +307,13 @@ public final class RemoteIterators {
      * transformed via the mapper.
      * @param source source iterator.
      * @param filter filter predicate.
-     * @param mapper mapper function.
      */
-    private FilteringMappingRemoteIterator(
+    private FilteringRemoteIterator(
         RemoteIterator<S> source,
-        FunctionsRaisingIOE.FunctionRaisingIOE<S, Boolean> filter,
-        FunctionsRaisingIOE.FunctionRaisingIOE<S, T> mapper) {
-      this.source = requireNonNull(source);
+        FunctionsRaisingIOE.FunctionRaisingIOE<? super S, Boolean> filter) {
+      super(source);
+
       this.filter = requireNonNull(filter);
-      this.mapper = requireNonNull(mapper);
     }
 
     /**
@@ -283,8 +322,8 @@ public final class RemoteIterators {
      * @throws IOException failure in retrieval from source or mapping
      */
     private boolean fetch() throws IOException {
-      while (next == null && source.hasNext()) {
-        S candidate = source.next();
+      while (next == null && getSource().hasNext()) {
+        S candidate = getSource().next();
         if (filter.apply(candidate)) {
           next = candidate;
           return true;
@@ -316,23 +355,19 @@ public final class RemoteIterators {
      * @throws NoSuchElementException no more data
      */
     @Override
-    public T next() throws IOException {
+    public S next() throws IOException {
       if (hasNext()) {
-        T result = mapper.apply(next);
+        S result = next;
         next = null;
         return result;
       }
       throw new NoSuchElementException();
     }
 
-    @Override
-    public IOStatistics getIOStatistics() {
-      return retrieveIOStatistics(source);
-    }
 
     @Override
     public String toString() {
-      return "FilteringFunctionIterator{" + source + '}';
+      return "FilteringRemoteIterator{" + getSource() + '}';
     }
   }
 }

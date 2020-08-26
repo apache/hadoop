@@ -18,16 +18,26 @@
 
 package org.apache.hadoop.fs.statistics.impl;
 
+import org.apache.hadoop.fs.statistics.DurationTracker;
+import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
+
 /**
- * Interface to be implemented by objects which can track duration.
- * It extends AutoCloseable to fit into a try-with-resources statement,
- * but then strips out the {@code throws Exception} aspect of the signature
- * so it doesn't force code to add extra handling for any failures.
+ * This is a stub factory which always returns no-op duration
+ * trackers. Allows for code to always be handed a factory.
  */
-public interface DurationTracker extends AutoCloseable {
+public final class StubDurationTrackerFactory implements DurationTrackerFactory {
 
   /**
-   * Finish tracking: update the statistics with the timings.
+   * Single instance.
    */
-  void close();
+  public static final StubDurationTrackerFactory STUB_DURATION_TRACKER_FACTORY
+      = new StubDurationTrackerFactory();
+
+  private StubDurationTrackerFactory() {
+  }
+
+  @Override
+  public DurationTracker trackDuration(final String key, final int count) {
+    return StubDurationTracker.STUB_DURATION_TRACKER;
+  }
 }
