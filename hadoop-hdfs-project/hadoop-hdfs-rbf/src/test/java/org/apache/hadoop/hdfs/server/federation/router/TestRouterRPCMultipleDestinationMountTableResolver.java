@@ -25,6 +25,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -34,6 +35,7 @@ import java.util.Map;
 import java.util.TreeSet;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Options.Rename;
@@ -57,7 +59,9 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDestinationReq
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDestinationResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
+import org.apache.hadoop.hdfs.tools.federation.RouterAdmin;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -542,6 +546,43 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
     verifyRenameOnMultiDestDirectories(DestinationOrder.SPACE, true);
   }
 
+  @Test
+  public void testClearQuota() throws Exception {
+    long nsQuota = 5;
+    long ssQuota = 100;
+    Path path = new Path("/router_test");
+    nnFs0.mkdirs(path);
+    nnFs1.mkdirs(path);
+    MountTable addEntry = MountTable.newInstance("/router_test",
+        Collections.singletonMap("ns0", "/router_test"));
+    addEntry.setQuota(new RouterQuotaUsage.Builder().build());
+    assertTrue(addMountTable(addEntry));
+    RouterQuotaUpdateService updateService =
+        routerContext.getRouter().getQuotaCacheUpdateService();
+    updateService.periodicInvoke();
+
+    //set quota and validate the quota
+    RouterAdmin admin = getRouterAdmin();
+    String[] argv = new String[] {"-setQuota", path.toString(), "-nsQuota",
+        String.valueOf(nsQuota), "-ssQuota", String.valueOf(ssQuota)};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    updateService.periodicInvoke();
+    resolver.loadCache(true);
+    ContentSummary cs = routerFs.getContentSummary(path);
+    assertEquals(nsQuota, cs.getQuota());
+    assertEquals(ssQuota, cs.getSpaceQuota());
+
+    //clear quota and validate the quota
+    argv = new String[] {"-clrQuota", path.toString()};
+    assertEquals(0, ToolRunner.run(admin, argv));
+    updateService.periodicInvoke();
+    resolver.loadCache(true);
+    //quota should be cleared
+    ContentSummary cs1 = routerFs.getContentSummary(path);
+    assertEquals(-1, cs1.getQuota());
+    assertEquals(-1, cs1.getSpaceQuota());
+  }
+
   /**
    * Test to verify rename operation on directories in case of multiple
    * destinations.
@@ -723,4 +764,12 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
     return null;
   }
 
+  private RouterAdmin getRouterAdmin() {
+    Router router = routerContext.getRouter();
+    Configuration configuration = routerContext.getConf();
+    InetSocketAddress routerSocket = router.getAdminServerAddress();
+    configuration.setSocketAddr(RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_KEY,
+        routerSocket);
+    return new RouterAdmin(configuration);
+  }
 }
