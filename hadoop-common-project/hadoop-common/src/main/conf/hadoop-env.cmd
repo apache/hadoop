@@ -24,6 +24,9 @@
 @rem The java implementation to use.  Required.
 set JAVA_HOME=%JAVA_HOME%
 
+@rem In case path contains spaces, convert JAVA_HOME to short paths
+for %%I in ("%JAVA_HOME%") do set JAVA_HOME=%%~sI
+
 @rem The jsvc implementation to use. Jsvc is required to run secure datanodes.
 @rem set JSVC_HOME=%JSVC_HOME%
 
