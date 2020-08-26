@@ -270,13 +270,17 @@ public class AbfsClient implements Closeable {
       final String permission,
       final String umask,
       final boolean isAppendBlob) throws AzureBlobFileSystemException {
-    boolean isFirstAttemptToCreateWithoutOverwrite = false;
-
     String operation = isFile
         ? SASTokenProvider.CREATE_FILE_OPERATION
         : SASTokenProvider.CREATE_DIRECTORY_OPERATION;
 
-    // attemptFileCreateWithoutOverwriteFirst
+    // HDFS FS defaults overwrite behaviour to true for create file which leads
+    // to majority create API traffic with overwrite=true. In some cases, this
+    // will end in race conditions at backend with parallel operations issued to
+    // same path either by means of the customer workload or ABFS driver retry.
+    // Disabling the create overwrite default setting to false should
+    // significantly reduce the chances for such race conditions.
+    boolean isFirstAttemptToCreateWithoutOverwrite = false;
     if (isFile && overwrite
         && abfsConfiguration.isDefaultCreateOverwriteDisabled()) {
       isFirstAttemptToCreateWithoutOverwrite = true;
@@ -296,15 +300,16 @@ public class AbfsClient implements Closeable {
     appendSASTokenToQuery(path, operation, abfsUriQueryBuilder);
 
     try {
-      op = createPath(path, abfsUriQueryBuilder,
+      op = createPathImpl(path, abfsUriQueryBuilder,
           (isFirstAttemptToCreateWithoutOverwrite ? false : overwrite),
           permission, umask);
     } catch (AbfsRestOperationException e) {
       if ((e.getStatusCode() == HttpURLConnection.HTTP_CONFLICT)
           && isFirstAttemptToCreateWithoutOverwrite) {
+        isFirstAttemptToCreateWithoutOverwrite = false;
         // was a first attempt made to create without overwrite. Now try again
         // with overwrite now.
-        op = createPath(path, abfsUriQueryBuilder, true, permission, umask);
+        op = createPathImpl(path, abfsUriQueryBuilder, true, permission, umask);
       } else {
         throw e;
       }
@@ -313,7 +318,7 @@ public class AbfsClient implements Closeable {
     return op;
   }
 
-  private AbfsRestOperation createPath(final String path,
+  private AbfsRestOperation createPathImpl(final String path,
       AbfsUriQueryBuilder abfsUriQueryBuilder,
       final boolean overwrite,
       final String permission,
