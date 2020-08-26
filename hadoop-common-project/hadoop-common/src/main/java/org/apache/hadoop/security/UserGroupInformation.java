@@ -1253,7 +1253,7 @@ public class UserGroupInformation {
     reloginFromKeytab(checkTGT, false);
   }
 
-  private void reloginFromKeytab(boolean checkTGT, boolean ignoreTimeElapsed)
+  private void reloginFromKeytab(boolean checkTGT, boolean ignoreLastLoginTime)
       throws IOException {
     if (!shouldRelogin() || !isFromKeytab()) {
       return;
@@ -1269,7 +1269,7 @@ public class UserGroupInformation {
         return;
       }
     }
-    relogin(login, ignoreTimeElapsed);
+    relogin(login, ignoreLastLoginTime);
   }
 
   /**
@@ -1293,7 +1293,7 @@ public class UserGroupInformation {
     relogin(login, false);
   }
 
-  private void relogin(HadoopLoginContext login, boolean ignoreTimeElapsed)
+  private void relogin(HadoopLoginContext login, boolean ignoreLastLoginTime)
       throws IOException {
     // ensure the relogin is atomic to avoid leaving credentials in an
     // inconsistent state.  prevents other ugi instances, SASL, and SPNEGO
@@ -1301,16 +1301,16 @@ public class UserGroupInformation {
     synchronized(login.getSubjectLock()) {
       // another racing thread may have beat us to the relogin.
       if (login == getLogin()) {
-        unprotectedRelogin(login, ignoreTimeElapsed);
+	unprotectedRelogin(login, ignoreLastLoginTime);
       }
     }
   }
 
   private void unprotectedRelogin(HadoopLoginContext login,
-      boolean ignoreTimeElapsed) throws IOException {
+      boolean ignoreLastLoginTime) throws IOException {
     assert Thread.holdsLock(login.getSubjectLock());
     long now = Time.now();
-    if (!hasSufficientTimeElapsed(now) && !ignoreTimeElapsed) {
+    if (!hasSufficientTimeElapsed(now) && !ignoreLastLoginTime) {
       return;
     }
     // register most recent relogin attempt
