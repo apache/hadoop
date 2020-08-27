@@ -103,8 +103,9 @@ public final class TestAbfsClient {
 
   private String getUserAgentString(AbfsConfiguration config,
       boolean includeSSLProvider) throws MalformedURLException {
+    AbfsClientContext abfsClientContext = new AbfsClientContextBuilder().build();
     AbfsClient client = new AbfsClient(new URL("https://azure.com"), null,
-        config, null, (AccessTokenProvider) null, null, null);
+        config, (AccessTokenProvider) null, abfsClientContext);
     String sslProviderName = null;
     if (includeSSLProvider) {
       sslProviderName = DelegatingSSLSocketFactory.getDefaultFactory()
@@ -257,6 +258,12 @@ public final class TestAbfsClient {
         abfsConfig.getAccountName(),
         abfsConfig);
 
+    AbfsClientContext abfsClientContext =
+        new AbfsClientContextBuilder().withAbfsPerfTracker(tracker)
+                                .withExponentialRetryPolicy(
+                                    new ExponentialRetryPolicy(abfsConfig.getMaxIoRetries()))
+                                .build();
+
     // Create test AbfsClient
     AbfsClient testClient = new AbfsClient(
         baseAbfsClientInstance.getBaseUrl(),
@@ -267,11 +274,10 @@ public final class TestAbfsClient {
             abfsConfig.getStorageAccountKey())
             : null),
         abfsConfig,
-        new ExponentialRetryPolicy(abfsConfig.getMaxIoRetries()),
         (currentAuthType == AuthType.OAuth
             ? abfsConfig.getTokenProvider()
             : null),
-        tracker, null);
+        abfsClientContext);
 
     return testClient;
   }
