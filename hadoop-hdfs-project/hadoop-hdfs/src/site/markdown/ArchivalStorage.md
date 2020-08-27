@@ -27,7 +27,7 @@ The frameworks provided by Heterogeneous Storage and Archival Storage generalize
 Storage Types and Storage Policies
 ----------------------------------
 
-### Storage Types: ARCHIVE, DISK, SSD, NVDIMM and RAM\_DISK
+### Storage Types: ARCHIVE, DISK, SSD, RAM\_DISK and NVDIMM
 
 The first phase of [Heterogeneous Storage (HDFS-2832)](https://issues.apache.org/jira/browse/HDFS-2832) changed datanode storage model from a single storage, which may correspond to multiple physical storage medias, to a collection of storages with each storage corresponding to a physical storage media. It also added the notion of storage types, DISK and SSD, where DISK is the default storage type.
 
@@ -37,7 +37,7 @@ Another new storage type *RAM\_DISK* is added for supporting writing single repl
 
 From Hadoop 3.4, a new storage type *NVDIMM* is added for supporting writing replica files in non-volatile memory that has the capability to hold saved data even if the power is turned off.
 
-### Storage Policies: Hot, Warm, Cold, All\_SSD, One\_SSD, All\_NVDIMM, Lazy\_Persist and Provided
+### Storage Policies: Hot, Warm, Cold, All\_SSD, One\_SSD, Lazy\_Persist, Provided and All\_NVDIMM
 
 A new concept of storage policies is introduced in order to allow files to be stored in different storage types according to the storage policy.
 
@@ -48,9 +48,9 @@ We have the following storage policies:
 * **Warm** - partially hot and partially cold. When a block is warm, some of its replicas are stored in DISK and the remaining replicas are stored in ARCHIVE.
 * **All\_SSD** - for storing all replicas in SSD.
 * **One\_SSD** - for storing one of the replicas in SSD. The remaining replicas are stored in DISK.
-* **All\_NVDIMM** - for storing all replicas in NVDIMM.
 * **Lazy\_Persist** - for writing blocks with single replica in memory. The replica is first written in RAM\_DISK and then it is lazily persisted in DISK.
 * **Provided** - for storing data outside HDFS. See also [HDFS Provided Storage](./HdfsProvidedStorage.html).
+* **All\_NVDIMM** - for storing all replicas in NVDIMM.
 
 More formally, a storage policy consists of the following fields:
 
