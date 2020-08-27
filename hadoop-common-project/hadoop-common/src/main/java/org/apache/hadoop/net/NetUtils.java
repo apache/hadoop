@@ -186,7 +186,7 @@ public class NetUtils {
   public static InetSocketAddress createSocketAddr(String target,
                                                    int defaultPort,
                                                    String configName) {
-    return createSocketAddr(target, defaultPort, configName, false, 0);
+    return createSocketAddr(target, defaultPort, configName, false);
   }
 
   /**
@@ -203,13 +203,11 @@ public class NetUtils {
    *                   <code>target</code> was loaded. This is used in the
    *                   exception message in the case that parsing fails.
    * @param useCacheIfPresent Whether use cache when create URI
-   * @param uriCacheExpireMs The expire time of uri cache
    */
   public static InetSocketAddress createSocketAddr(String target,
                                                    int defaultPort,
                                                    String configName,
-                                                   boolean useCacheIfPresent,
-                                                   long uriCacheExpireMs) {
+                                                   boolean useCacheIfPresent) {
     String helpText = "";
     if (configName != null) {
       helpText = " (configuration property '" + configName + "')";
@@ -220,8 +218,7 @@ public class NetUtils {
     }
     target = target.trim();
     boolean hasScheme = target.contains("://");
-    URI uri = createURI(target, hasScheme, helpText,
-        useCacheIfPresent, uriCacheExpireMs);
+    URI uri = createURI(target, hasScheme, helpText, useCacheIfPresent);
 
     String host = uri.getHost();
     int port = uri.getPort();
@@ -239,18 +236,20 @@ public class NetUtils {
     return createSocketAddrForHost(host, port);
   }
 
-  private static volatile Cache<String, URI> uriCache;
   private static final long URI_CACHE_SIZE_DEFAULT = 1000;
+  private static final long URI_CACHE_EXPIRE_TIME_DEFAULT = 12;
+  private static final Cache<String, URI> URI_CACHE = CacheBuilder.newBuilder()
+      .maximumSize(URI_CACHE_SIZE_DEFAULT)
+      .expireAfterWrite(URI_CACHE_EXPIRE_TIME_DEFAULT, TimeUnit.HOURS)
+      .build();
 
   private static URI createURI(String target,
                                boolean hasScheme,
                                String helpText,
-                               boolean useCacheIfPresent,
-                               long uriCacheExpireMs) {
+                               boolean useCacheIfPresent) {
     URI uri;
     if (useCacheIfPresent) {
-      initURICache(uriCacheExpireMs);
-      uri = uriCache.getIfPresent(target);
+      uri = URI_CACHE.getIfPresent(target);
       if (uri != null) {
         return uri;
       }
@@ -266,22 +265,9 @@ public class NetUtils {
     }
 
     if (useCacheIfPresent) {
-      uriCache.put(target, uri);
+      URI_CACHE.put(target, uri);
     }
     return uri;
-  }
-
-  private static void initURICache(long cacheExpireMs) {
-    if (uriCache == null) {
-      synchronized (NetUtils.class) {
-        if (uriCache == null) {
-          uriCache = CacheBuilder.newBuilder()
-              .maximumSize(URI_CACHE_SIZE_DEFAULT)
-              .expireAfterWrite(cacheExpireMs, TimeUnit.MILLISECONDS)
-              .build();
-        }
-      }
-    }
   }
 
   /**

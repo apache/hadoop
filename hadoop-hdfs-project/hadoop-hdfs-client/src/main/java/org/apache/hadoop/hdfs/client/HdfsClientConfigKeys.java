@@ -27,7 +27,6 @@ import java.util.concurrent.TimeUnit;
 public interface HdfsClientConfigKeys {
   long SECOND = 1000L;
   long MINUTE = 60 * SECOND;
-  long HOUR = 60 * MINUTE;
 
   String  DFS_BLOCK_SIZE_KEY = "dfs.blocksize";
   long    DFS_BLOCK_SIZE_DEFAULT = 128*1024*1024;
@@ -415,10 +414,8 @@ public interface HdfsClientConfigKeys {
 
     String  PREFETCH_SIZE_KEY = PREFIX + "prefetch.size";
 
-    String URI_CACHE_KEY = PREFIX + "uri.cache.enable";
+    String URI_CACHE_KEY = PREFIX + "uri.cache.enabled";
     boolean URI_CACHE_DEFAULT = false;
-    String URI_CACHE_EXPIRE_MS_KEY = PREFIX + "uri.cache.expire.ms";
-    long URI_CACHE_EXPIRE_MS_DEFAULT = 12 * HOUR;
 
     interface ShortCircuit {
       String PREFIX = Read.PREFIX + "shortcircuit.";

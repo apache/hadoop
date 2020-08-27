@@ -363,24 +363,24 @@ public class TestNetUtils {
   @Test
   public void testCreateSocketAddressWithURICache() throws Throwable {
     InetSocketAddress addr = NetUtils.createSocketAddr(
-        "127.0.0.1:12345", 1000, "myconfig", true, 10_000);
+        "127.0.0.1:12345", 1000, "myconfig", true);
     assertEquals("127.0.0.1", addr.getAddress().getHostAddress());
     assertEquals(12345, addr.getPort());
 
     addr = NetUtils.createSocketAddr(
-        "127.0.0.1:12345", 1000, "myconfig", true, 10_000);
+        "127.0.0.1:12345", 1000, "myconfig", true);
     assertEquals("127.0.0.1", addr.getAddress().getHostAddress());
     assertEquals(12345, addr.getPort());
 
     // ----------------------------------------------------
 
     addr = NetUtils.createSocketAddr(
-        "127.0.0.1", 1000, "myconfig", true, 10_000);
+        "127.0.0.1", 1000, "myconfig", true);
     assertEquals("127.0.0.1", addr.getAddress().getHostAddress());
     assertEquals(1000, addr.getPort());
 
     addr = NetUtils.createSocketAddr(
-        "127.0.0.1", 1000, "myconfig", true, 10_000);
+        "127.0.0.1", 1000, "myconfig", true);
     assertEquals("127.0.0.1", addr.getAddress().getHostAddress());
     assertEquals(1000, addr.getPort());
 
@@ -388,7 +388,7 @@ public class TestNetUtils {
 
     try {
       addr = NetUtils.createSocketAddr(
-          "127.0.0.1:blahblah", 1000, "myconfig", true, 10_000);
+          "127.0.0.1:blahblah", 1000, "myconfig", true);
       fail("Should have failed to parse bad port");
     } catch (IllegalArgumentException iae) {
       assertInException(iae, "myconfig");
@@ -396,7 +396,7 @@ public class TestNetUtils {
 
     try {
       addr = NetUtils.createSocketAddr(
-          "127.0.0.1:blahblah", 1000, "myconfig", true, 10_000);
+          "127.0.0.1:blahblah", 1000, "myconfig", true);
       fail("Should have failed to parse bad port");
     } catch (IllegalArgumentException iae) {
       assertInException(iae, "myconfig");

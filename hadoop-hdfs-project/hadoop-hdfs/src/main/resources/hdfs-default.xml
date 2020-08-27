@@ -4186,20 +4186,11 @@
 </property>
 
 <property>
-  <name>dfs.client.read.uri.cache.enable</name>
+  <name>dfs.client.read.uri.cache.enabled</name>
   <value>false</value>
   <description>
     If true, dfs client will use cache when creating URI based on host:port
     to reduce the frequency of URI object creation.
-    Default is false.
-  </description>
-</property>
-
-<property>
-  <name>dfs.client.read.uri.cache.expire.ms</name>
-  <value>43200000</value>
-  <description>
-    The expire time of uri cache. Default is 43200000 ms, which is 12 hours.
   </description>
 </property>
 
