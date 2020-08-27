@@ -1857,6 +1857,8 @@ public class RouterClientProtocol implements ClientProtocol {
 
   /**
    * Aggregate content summaries for each subcluster.
+   * If the mount point has multiple destinations
+   * add the quota set value only once.
    *
    * @param summaries Collection of individual summaries.
    * @return Aggregated content summary.
@@ -1879,9 +1881,9 @@ public class RouterClientProtocol implements ClientProtocol {
       length += summary.getLength();
       fileCount += summary.getFileCount();
       directoryCount += summary.getDirectoryCount();
-      quota += summary.getQuota();
+      quota = summary.getQuota();
       spaceConsumed += summary.getSpaceConsumed();
-      spaceQuota += summary.getSpaceQuota();
+      spaceQuota = summary.getSpaceQuota();
       // We return from the first response as we assume that the EC policy
       // of each sub-cluster is same.
       if (ecPolicy.isEmpty()) {
