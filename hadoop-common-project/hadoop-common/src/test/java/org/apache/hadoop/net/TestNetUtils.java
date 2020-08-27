@@ -352,7 +352,7 @@ public class TestNetUtils {
     assertEquals(1000, addr.getPort());
 
     try {
-      addr = NetUtils.createSocketAddr(
+      NetUtils.createSocketAddr(
           "127.0.0.1:blahblah", 1000, "myconfig");
       fail("Should have failed to parse bad port");
     } catch (IllegalArgumentException iae) {
@@ -387,7 +387,7 @@ public class TestNetUtils {
     // ----------------------------------------------------
 
     try {
-      addr = NetUtils.createSocketAddr(
+      NetUtils.createSocketAddr(
           "127.0.0.1:blahblah", 1000, "myconfig", true);
       fail("Should have failed to parse bad port");
     } catch (IllegalArgumentException iae) {
@@ -395,7 +395,7 @@ public class TestNetUtils {
     }
 
     try {
-      addr = NetUtils.createSocketAddr(
+      NetUtils.createSocketAddr(
           "127.0.0.1:blahblah", 1000, "myconfig", true);
       fail("Should have failed to parse bad port");
     } catch (IllegalArgumentException iae) {
