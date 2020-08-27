@@ -28,7 +28,7 @@ public class AbfsClientContext {
   private final AbfsPerfTracker abfsPerfTracker;
   private final AbfsCounters abfsCounters;
 
-  public AbfsClientContext(
+  AbfsClientContext(
       ExponentialRetryPolicy exponentialRetryPolicy,
       AbfsPerfTracker abfsPerfTracker,
       AbfsCounters abfsCounters) {
