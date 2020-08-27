@@ -91,9 +91,12 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
             .keepDirectoryMarkers(methodPath)
             && fs.isDirectory(methodPath)) {
           MarkerTool.ScanResult result = MarkerTool.execMarkerTool(fs,
-              methodPath, true, 0, UNLIMITED_LISTING, false);
-          assertEquals("Audit of " + methodPath + " failed: " + result,
+              methodPath, true, 0, 0, UNLIMITED_LISTING, false);
+          final String resultStr = result.toString();
+          assertEquals("Audit of " + methodPath + " failed: " + resultStr,
               0, result.getExitCode());
+          assertEquals("Marker Count under " + methodPath + " non-zero: " + resultStr,
+              0, result.getFilteredMarkerCount());
         }
       } catch (FileNotFoundException ignored) {
       } catch (Exception e) {

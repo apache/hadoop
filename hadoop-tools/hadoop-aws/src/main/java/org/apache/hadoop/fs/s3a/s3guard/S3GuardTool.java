@@ -1463,9 +1463,12 @@ public abstract class S3GuardTool extends Configured implements Tool,
     private void processMarkerOption(final PrintStream out,
         final S3AFileSystem fs,
         final String marker) {
+      println(out, "%nSecurity");
       DirectoryPolicy markerPolicy = fs.getDirectoryMarkerPolicy();
       String desc = markerPolicy.describe();
-      println(out, "%nThe directory marker policy is \"%s\"%n", desc);
+      println(out, "\tThe directory marker policy is \"%s\"%n", desc);
+      printOption(out, "\tAuthoritative paths",
+          AUTHORITATIVE_PATH, "");
 
       DirectoryPolicy.MarkerPolicy mp = markerPolicy.getMarkerPolicy();
 

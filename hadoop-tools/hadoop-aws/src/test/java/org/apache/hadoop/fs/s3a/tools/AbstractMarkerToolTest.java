@@ -313,7 +313,9 @@ public class AbstractMarkerToolTest extends AbstractS3ATestBase {
         path,
         doPurge,
         expectedMarkers,
-        limit, nonAuth);
+        expectedMarkers,
+        limit,
+        nonAuth);
     Assertions.assertThat(result.getExitCode())
         .describedAs("Exit code of marker(%s, %s, %d) -> %s",
             path, doPurge, expectedMarkers, result)
