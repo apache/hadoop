@@ -95,6 +95,18 @@ public class SnapshotManager implements SnapshotStatsMXBean {
   static final long DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED_GC_PERIOD_MS_DEFAULT
       = 5 * 60_000L; //5 minutes
 
+  private static final ThreadLocal<Boolean> DELETION_ORDERED
+      = new ThreadLocal<>();
+
+  static boolean isDeletionOrdered() {
+    final Boolean b = DELETION_ORDERED.get();
+    return b != null? b: false;
+  }
+
+  public void initThreadLocals() {
+    DELETION_ORDERED.set(isSnapshotDeletionOrdered());
+  }
+
   private final FSDirectory fsdir;
   private boolean captureOpenFiles;
   /**

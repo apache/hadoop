@@ -76,7 +76,11 @@ abstract class AbstractINodeDiffList<N extends INode,
     if (diffs == null) {
       return;
     }
-    int snapshotIndex = diffs.binarySearch(snapshot);
+    final int snapshotIndex = diffs.binarySearch(snapshot);
+    // DeletionOrdered: only can remove the element at index 0 and no prior
+    //                  check snapshotIndex <= 0 since the diff may not exist
+    assert !SnapshotManager.isDeletionOrdered()
+        || (snapshotIndex <= 0 && prior == Snapshot.NO_SNAPSHOT_ID);
 
     D removed;
     if (snapshotIndex == 0) {
