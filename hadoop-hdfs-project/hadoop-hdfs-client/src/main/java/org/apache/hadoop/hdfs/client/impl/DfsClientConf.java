@@ -213,24 +213,7 @@ public class DfsClientConf {
         Write.MAX_PACKETS_IN_FLIGHT_KEY,
         Write.MAX_PACKETS_IN_FLIGHT_DEFAULT);
 
-    final boolean byteArrayManagerEnabled = conf.getBoolean(
-        Write.ByteArrayManager.ENABLED_KEY,
-        Write.ByteArrayManager.ENABLED_DEFAULT);
-    if (!byteArrayManagerEnabled) {
-      writeByteArrayManagerConf = null;
-    } else {
-      final int countThreshold = conf.getInt(
-          Write.ByteArrayManager.COUNT_THRESHOLD_KEY,
-          Write.ByteArrayManager.COUNT_THRESHOLD_DEFAULT);
-      final int countLimit = conf.getInt(
-          Write.ByteArrayManager.COUNT_LIMIT_KEY,
-          Write.ByteArrayManager.COUNT_LIMIT_DEFAULT);
-      final long countResetTimePeriodMs = conf.getLong(
-          Write.ByteArrayManager.COUNT_RESET_TIME_PERIOD_MS_KEY,
-          Write.ByteArrayManager.COUNT_RESET_TIME_PERIOD_MS_DEFAULT);
-      writeByteArrayManagerConf = new ByteArrayManager.Conf(
-          countThreshold, countLimit, countResetTimePeriodMs);
-    }
+    writeByteArrayManagerConf = loadWriteByteArrayManagerConf(conf);
 
     defaultBlockSize = conf.getLongBytes(DFS_BLOCK_SIZE_KEY,
         DFS_BLOCK_SIZE_DEFAULT);
@@ -316,6 +299,27 @@ public class DfsClientConf {
     Preconditions.checkArgument(clientShortCircuitNum <= 5,
             HdfsClientConfigKeys.DFS_CLIENT_SHORT_CIRCUIT_NUM +
                     "can't be more then 5.");
+  }
+
+  private ByteArrayManager.Conf loadWriteByteArrayManagerConf(
+      Configuration conf) {
+    final boolean byteArrayManagerEnabled = conf.getBoolean(
+        Write.ByteArrayManager.ENABLED_KEY,
+        Write.ByteArrayManager.ENABLED_DEFAULT);
+    if (!byteArrayManagerEnabled) {
+      return null;
+    }
+    final int countThreshold = conf.getInt(
+        Write.ByteArrayManager.COUNT_THRESHOLD_KEY,
+        Write.ByteArrayManager.COUNT_THRESHOLD_DEFAULT);
+    final int countLimit = conf.getInt(
+        Write.ByteArrayManager.COUNT_LIMIT_KEY,
+        Write.ByteArrayManager.COUNT_LIMIT_DEFAULT);
+    final long countResetTimePeriodMs = conf.getLong(
+        Write.ByteArrayManager.COUNT_RESET_TIME_PERIOD_MS_KEY,
+        Write.ByteArrayManager.COUNT_RESET_TIME_PERIOD_MS_DEFAULT);
+    return new ByteArrayManager.Conf(
+        countThreshold, countLimit, countResetTimePeriodMs);
   }
 
   @SuppressWarnings("unchecked")
