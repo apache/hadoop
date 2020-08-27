@@ -143,7 +143,7 @@ public class TestUGILoginFromKeytab {
     Thread.sleep(2000);
 
     // Force relogin from keytab
-    ugi.reloginFromKeytab(true);
+    ugi.forceReloginFromKeytab();
     final long secondLogin = user.getLastLogin();
     final LoginContext login2 = user.getLogin();
     Assert.assertTrue("User should have been able to relogin from keytab",
