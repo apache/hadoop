@@ -583,6 +583,63 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
     assertEquals(-1, cs1.getSpaceQuota());
   }
 
+  @Test
+  public void testContentSummaryWithMultipleDest() throws Exception {
+    MountTable addEntry;
+    long nsQuota = 5;
+    long ssQuota = 100;
+    Path path = new Path("/testContentSummaryWithMultipleDest");
+    Map<String, String> destMap = new HashMap<>();
+    destMap.put("ns0", "/testContentSummaryWithMultipleDest");
+    destMap.put("ns1", "/testContentSummaryWithMultipleDest");
+    nnFs0.mkdirs(path);
+    nnFs1.mkdirs(path);
+    addEntry =
+        MountTable.newInstance("/testContentSummaryWithMultipleDest", destMap);
+    addEntry.setQuota(
+        new RouterQuotaUsage.Builder().quota(nsQuota).spaceQuota(ssQuota)
+            .build());
+    assertTrue(addMountTable(addEntry));
+    RouterQuotaUpdateService updateService =
+        routerContext.getRouter().getQuotaCacheUpdateService();
+    updateService.periodicInvoke();
+    ContentSummary cs = routerFs.getContentSummary(path);
+    assertEquals(nsQuota, cs.getQuota());
+    assertEquals(ssQuota, cs.getSpaceQuota());
+    ContentSummary ns0Cs = nnFs0.getContentSummary(path);
+    assertEquals(nsQuota, ns0Cs.getQuota());
+    assertEquals(ssQuota, ns0Cs.getSpaceQuota());
+    ContentSummary ns1Cs = nnFs1.getContentSummary(path);
+    assertEquals(nsQuota, ns1Cs.getQuota());
+    assertEquals(ssQuota, ns1Cs.getSpaceQuota());
+  }
+
+  @Test
+  public void testContentSummaryMultipleDestWithMaxValue()
+      throws Exception {
+    MountTable addEntry;
+    long nsQuota = Long.MAX_VALUE - 2;
+    long ssQuota = Long.MAX_VALUE - 2;
+    Path path = new Path("/testContentSummaryMultipleDestWithMaxValue");
+    Map<String, String> destMap = new HashMap<>();
+    destMap.put("ns0", "/testContentSummaryMultipleDestWithMaxValue");
+    destMap.put("ns1", "/testContentSummaryMultipleDestWithMaxValue");
+    nnFs0.mkdirs(path);
+    nnFs1.mkdirs(path);
+    addEntry = MountTable
+        .newInstance("/testContentSummaryMultipleDestWithMaxValue", destMap);
+    addEntry.setQuota(
+        new RouterQuotaUsage.Builder().quota(nsQuota).spaceQuota(ssQuota)
+            .build());
+    assertTrue(addMountTable(addEntry));
+    RouterQuotaUpdateService updateService =
+        routerContext.getRouter().getQuotaCacheUpdateService();
+    updateService.periodicInvoke();
+    ContentSummary cs = routerFs.getContentSummary(path);
+    assertEquals(nsQuota, cs.getQuota());
+    assertEquals(ssQuota, cs.getSpaceQuota());
+  }
+
   /**
    * Test to verify rename operation on directories in case of multiple
    * destinations.
