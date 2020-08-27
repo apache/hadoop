@@ -189,7 +189,7 @@ if not defined HADOOP_POLICYFILE (
 @rem Determine the JAVA_PLATFORM
 @rem
 
-for /f "delims=" %%A in ('%JAVA% -Xmx32m %HADOOP_JAVA_PLATFORM_OPTS% -classpath "%CLASSPATH%" org.apache.hadoop.util.PlatformName') do set JAVA_PLATFORM=%%A
+for /f "delims=" %%A in ('""%JAVA%" -Xmx32m %HADOOP_JAVA_PLATFORM_OPTS% -classpath %CLASSPATH%" org.apache.hadoop.util.PlatformName') do set JAVA_PLATFORM=%%A
 @rem replace space with underscore
 set JAVA_PLATFORM=%JAVA_PLATFORM: =_%
 
