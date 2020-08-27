@@ -263,6 +263,11 @@ class FSDirRenameOp {
           throws IOException {
     final INodesInPath srcIIP = fsd.resolvePath(pc, src, DirOp.WRITE_LINK);
     final INodesInPath dstIIP = fsd.resolvePath(pc, dst, DirOp.CREATE_LINK);
+
+    if(fsd.isNonEmptyDirectory(srcIIP)) {
+      DFSUtil.checkProtectedDescendants(fsd, srcIIP);
+    }
+
     if (fsd.isPermissionEnabled()) {
       boolean renameToTrash = false;
       if (null != options &&

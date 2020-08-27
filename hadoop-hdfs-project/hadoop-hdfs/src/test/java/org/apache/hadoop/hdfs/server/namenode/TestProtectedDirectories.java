@@ -26,6 +26,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.Trash;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.AccessControlException;
@@ -36,6 +38,7 @@ import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.*;
 
@@ -284,6 +287,31 @@ public class TestProtectedDirectories {
     }
   }
 
+  @Test
+  public void testMoveToTrash() throws Throwable {
+    for (TestMatrixEntry testMatrixEntry : createTestMatrix()) {
+      Configuration conf = new HdfsConfiguration();
+      conf.setInt(DFSConfigKeys.FS_TRASH_INTERVAL_KEY, 3600);
+      MiniDFSCluster cluster = setupTestCase(
+          conf, testMatrixEntry.getProtectedPaths(),
+          testMatrixEntry.getUnprotectedPaths());
+
+      try {
+        LOG.info("Running {}", testMatrixEntry);
+        FileSystem fs = cluster.getFileSystem();
+        for (Path path : testMatrixEntry.getAllPathsToBeDeleted()) {
+          assertThat(
+              testMatrixEntry + ": Testing whether " + path +
+                  " can be moved to trash",
+              moveToTrash(fs, path, conf),
+              is(testMatrixEntry.canPathBeDeleted(path)));
+        }
+      } finally {
+        cluster.shutdown();
+      }
+    }
+  }
+
   /*
    * Verify that protected directories could not be renamed.
    */
@@ -332,6 +360,33 @@ public class TestProtectedDirectories {
                   renamePath(fs, srcPath,
                           new Path(srcPath.toString() + "_renamed")),
                   is(testMatrixEntry.canPathBeRenamed(srcPath)));
+        }
+      } finally {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test
+  public void testMoveProtectedSubDirsToTrash() throws Throwable {
+    for (TestMatrixEntry testMatrixEntry :
+        createTestMatrixForProtectSubDirs()) {
+      Configuration conf = new HdfsConfiguration();
+      conf.setBoolean(DFS_PROTECTED_SUBDIRECTORIES_ENABLE, true);
+      conf.setInt(DFSConfigKeys.FS_TRASH_INTERVAL_KEY, 3600);
+      MiniDFSCluster cluster = setupTestCase(
+          conf, testMatrixEntry.getProtectedPaths(),
+          testMatrixEntry.getUnprotectedPaths());
+
+      try {
+        LOG.info("Running {}", testMatrixEntry);
+        FileSystem fs = cluster.getFileSystem();
+        for (Path srcPath : testMatrixEntry.getAllPathsToBeDeleted()) {
+          assertThat(
+              testMatrixEntry + ": Testing whether "
+                  + srcPath + " can be moved to trash",
+              moveToTrash(fs, srcPath, conf),
+              is(testMatrixEntry.canPathBeRenamed(srcPath)));
         }
       } finally {
         cluster.shutdown();
@@ -461,6 +516,21 @@ public class TestProtectedDirectories {
       fs.delete(path, true);
       return true;
     } catch (AccessControlException ace) {
+      return false;
+    }
+  }
+
+  private boolean moveToTrash(FileSystem fs, Path path, Configuration conf) {
+    try {
+      return Trash.moveToAppropriateTrash(fs, path, conf);
+    } catch (FileNotFoundException fnf) {
+      // fs.delete(...) does not throw an exception if the file does not exist.
+      // The deletePath method in this class, will therefore return true if
+      // there is an attempt to delete a file which does not exist. Therefore
+      // catching this exception and returning true to keep it consistent and
+      // allow tests to work with the same test matrix.
+      return true;
+    } catch (IOException ace) {
       return false;
     }
   }
