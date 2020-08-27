@@ -1215,15 +1215,37 @@ public class UserGroupInformation {
    * Re-Login a user in from a keytab file. Loads a user identity from a keytab
    * file and logs them in. They become the currently logged-in user. This
    * method assumes that {@link #loginUserFromKeytab(String, String)} had
-   * happened already.
-   * The Subject field of this UserGroupInformation object is updated to have
-   * the new credentials.
+   * happened already. The Subject field of this UserGroupInformation object is
+   * updated to have the new credentials.
+   *
    * @throws IOException
    * @throws KerberosAuthException on a failure
    */
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
-  public synchronized void reloginFromKeytab() throws IOException {
+  public void reloginFromKeytab() throws IOException {
+    reloginFromKeytab(false);
+  }
+
+  /**
+   * Force re-Login a user in from a keytab file irrespective of the last login
+   * time. Loads a user identity from a keytab file and logs them in. They
+   * become the currently logged-in user. This method assumes that
+   * {@link #loginUserFromKeytab(String, String)} had happened already. The
+   * Subject field of this UserGroupInformation object is updated to have the
+   * new credentials.
+   *
+   * @throws IOException
+   * @throws KerberosAuthException on a failure
+   */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
+  public void forceReloginFromKeytab() throws IOException {
+    reloginFromKeytab(true);
+  }
+
+  private synchronized void reloginFromKeytab(boolean ignoreTimeElapsed)
+      throws IOException {
     if (!isSecurityEnabled()
         || user.getAuthenticationMethod() != AuthenticationMethod.KERBEROS
         || !isKeytab) {
@@ -1231,7 +1253,8 @@ public class UserGroupInformation {
     }
 
     long now = Time.now();
-    if (!shouldRenewImmediatelyForTests && !hasSufficientTimeElapsed(now)) {
+    if (!shouldRenewImmediatelyForTests && !ignoreTimeElapsed
+        && !hasSufficientTimeElapsed(now)) {
       return;
     }
 
