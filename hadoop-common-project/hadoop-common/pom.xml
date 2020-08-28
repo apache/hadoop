@@ -363,6 +363,10 @@
       <artifactId>wildfly-openssl-java</artifactId>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>io.airlift</groupId>
+      <artifactId>aircompressor</artifactId>
+    </dependency>
   </dependencies>
 
   <build>

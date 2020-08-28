@@ -141,6 +141,7 @@
     <metrics.version>3.2.4</metrics.version>
     <netty3.version>3.10.6.Final</netty3.version>
     <netty4.version>4.1.50.Final</netty4.version>
+    <aircompressor.version>0.16</aircompressor.version>
 
     <!-- Maven protoc compiler -->
     <protobuf-maven-plugin.version>0.5.1</protobuf-maven-plugin.version>
@@ -1727,6 +1728,11 @@
         <groupId>net.java.dev.jna</groupId>
         <artifactId>jna</artifactId>
         <version>${jna.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.airlift</groupId>
+        <artifactId>aircompressor</artifactId>
+        <version>${aircompressor.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

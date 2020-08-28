@@ -176,6 +176,26 @@ public class TestCodec {
     codecTest(conf, seed, count, "org.apache.hadoop.io.compress.GzipCodec");
   }
 
+  @Test
+  public void testLzoCodec() throws IOException {
+    codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.LzoCodec");
+    codecTest(conf, seed, count, "org.apache.hadoop.io.compress.LzoCodec");
+
+    // Testing `com.hadoop.compression.lzo.LzoCodec` that is bridged to `org.apache.hadoop.io.compress.LzoCodec`
+    codecTest(conf, seed, 0, "com.hadoop.compression.lzo.LzoCodec");
+    codecTest(conf, seed, count, "com.hadoop.compression.lzo.LzoCodec");
+  }
+
+  @Test
+  public void testLzopCodec() throws IOException {
+    codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.LzopCodec");
+    codecTest(conf, seed, count, "org.apache.hadoop.io.compress.LzopCodec");
+
+    // Testing `com.hadoop.compression.lzo.LzopCodec` that is bridged to `org.apache.hadoop.io.compress.LzopCodec`
+    codecTest(conf, seed, 0, "com.hadoop.compression.lzo.LzopCodec");
+    codecTest(conf, seed, count, "com.hadoop.compression.lzo.LzopCodec");
+  }
+
   private static void codecTest(Configuration conf, int seed, int count, 
                                 String codecClass) 
     throws IOException {
