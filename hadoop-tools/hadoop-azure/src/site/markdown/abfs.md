@@ -785,16 +785,6 @@ greater than or equal to 0.
 in bytes. The value should be between 16384 to 104857600 both inclusive (16 KB
 to 100 MB). The default value will be 8388608 (8 MB).
 
-`fs.azure.write.max.concurrent.requests`: To set the maximum concurrent
- write requests from an AbfsOutputStream instance  to server at any point of
- time. Effectively this will be the threadpool size within the
- AbfsOutputStream instance. Set the value in between 1 to 8 both inclusive.
-
-`fs.azure.write.max.requests.to.queue`: To set the maximum write requests
- that can be queued. Memory consumption of AbfsOutputStream instance can be
- tuned with this config considering each queued request holds a buffer. Set
- the value 3 or 4 times the value set for s.azure.write.max.concurrent.requests.
-
 `fs.azure.read.request.size`: To set the read buffer size.Specify the value in
 bytes. The value should be between 16384 to 104857600 both inclusive (16 KB to
 100 MB). The default value will be 4194304 (4 MB).
@@ -805,6 +795,18 @@ will be set as Runtime.getRuntime().availableProcessors(). By default the value
 will be -1. To disable readaheads, set this value to 0. If your workload is
  doing only random reads (non-sequential) or you are seeing throttling, you
   may try setting this value to 0.
+
+To run under limited memory situations configure the following.
+
+`fs.azure.write.max.concurrent.requests`: To set the maximum concurrent
+ write requests from an AbfsOutputStream instance  to server at any point of
+ time. Effectively this will be the threadpool size within the
+ AbfsOutputStream instance. Set the value in between 1 to 8 both inclusive.
+
+`fs.azure.write.max.requests.to.queue`: To set the maximum write requests
+ that can be queued. Memory consumption of AbfsOutputStream instance can be
+ tuned with this config considering each queued request holds a buffer. Set
+ the value 3 or 4 times the value set for s.azure.write.max.concurrent.requests.
 
 ### <a name="securityconfigoptions"></a> Security Options
 `fs.azure.always.use.https`: Enforces to use HTTPS instead of HTTP when the flag
