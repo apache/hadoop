@@ -25,6 +25,7 @@ import java.io.PrintStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.AccessDeniedException;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
@@ -46,6 +47,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -758,7 +760,7 @@ public abstract class S3GuardTool extends Configured implements Tool,
    */
   static class Destroy extends S3GuardTool {
     public static final String NAME = "destroy";
-    public static final String PURPOSE = "destroy Metadata Store data "
+    public static final String PURPOSE = "destroy the Metadata Store including its contents"
         + DATA_IN_S3_IS_PRESERVED;
     private static final String USAGE = NAME + " [OPTIONS] [s3a://BUCKET]\n" +
         "\t" + PURPOSE + "\n\n" +
@@ -1252,7 +1254,7 @@ public abstract class S3GuardTool extends Configured implements Tool,
 
     @VisibleForTesting
     public static final String IS_MARKER_AWARE =
-        "The S3A connector is compatible with buckets where"
+        "\tThe S3A connector is compatible with buckets where"
             + " directory markers are not deleted";
 
     public BucketInfo(Configuration conf) {
@@ -1328,8 +1330,9 @@ public abstract class S3GuardTool extends Configured implements Tool,
         authMode = conf.getBoolean(METADATASTORE_AUTHORITATIVE, false);
         final long ttl = conf.getTimeDuration(METADATASTORE_METADATA_TTL,
             DEFAULT_METADATASTORE_METADATA_TTL, TimeUnit.MILLISECONDS);
-        println(out, "\tMetadata time to live: %s=%s milliseconds",
-            METADATASTORE_METADATA_TTL, ttl);
+        println(out, "\tMetadata time to live: (set in %s) = %s",
+            METADATASTORE_METADATA_TTL,
+            DurationFormatUtils.formatDurationHMS(ttl));
         printStoreDiagnostics(out, store);
       } else {
         println(out, "Filesystem %s is not using S3Guard", fsUri);
@@ -1466,10 +1469,15 @@ public abstract class S3GuardTool extends Configured implements Tool,
       println(out, "%nSecurity");
       DirectoryPolicy markerPolicy = fs.getDirectoryMarkerPolicy();
       String desc = markerPolicy.describe();
-      println(out, "\tThe directory marker policy is \"%s\"%n", desc);
+      println(out, "\tThe directory marker policy is \"%s\"", desc);
+
+      String pols = DirectoryPolicyImpl.availablePolicies()
+          .stream()
+          .map(DirectoryPolicy.MarkerPolicy::getOptionName)
+          .collect(Collectors.joining(", "));
+      println(out, "\tAvailable Policies: %s", pols);
       printOption(out, "\tAuthoritative paths",
           AUTHORITATIVE_PATH, "");
-
       DirectoryPolicy.MarkerPolicy mp = markerPolicy.getMarkerPolicy();
 
       String desiredMarker = marker == null
@@ -1481,12 +1489,6 @@ public abstract class S3GuardTool extends Configured implements Tool,
           // simple awareness test -provides a way to validate compatibility
           // on the command line
           println(out, IS_MARKER_AWARE);
-          String pols = DirectoryPolicyImpl.availablePolicies()
-              .stream()
-              .map(DirectoryPolicy.MarkerPolicy::getOptionName)
-              .collect(Collectors.joining(", "));
-          println(out, "Available Policies: %s", pols);
-
         } else {
           // compare with current policy
           if (!optionName.equalsIgnoreCase(desiredMarker)) {
