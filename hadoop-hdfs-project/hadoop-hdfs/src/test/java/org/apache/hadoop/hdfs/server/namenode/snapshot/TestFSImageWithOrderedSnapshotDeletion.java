@@ -47,13 +47,12 @@ public class TestFSImageWithOrderedSnapshotDeletion {
     GenericTestUtils.setLogLevel(INode.LOG, Level.TRACE);
   }
 
-  static final long seed = 0;
+  static final long SEED = 0;
   static final short NUM_DATANODES = 1;
   static final int BLOCKSIZE = 1024;
-  static final long txid = 1;
 
   private final Path dir = new Path("/TestSnapshot");
-  private static final String testDir =
+  private static final String TEST_DIR =
       GenericTestUtils.getTestDir().getAbsolutePath();
 
   Configuration conf;
@@ -88,7 +87,7 @@ public class TestFSImageWithOrderedSnapshotDeletion {
 
   void createFile(Path directory, String filename) throws Exception {
     final Path f = new Path(directory, filename);
-    DFSTestUtil.createFile(hdfs, f, 0, NUM_DATANODES, seed);
+    DFSTestUtil.createFile(hdfs, f, 0, NUM_DATANODES, SEED);
   }
 
   void appendFile(Path directory, String filename) throws Exception {
@@ -147,16 +146,16 @@ public class TestFSImageWithOrderedSnapshotDeletion {
     restartCluster();
   }
 
-  private File getDumpTreeFile(String dir, String suffix) {
-    return new File(dir, String.format("dumpTree_%s", suffix));
+  private File getDumpTreeFile(String directory, String suffix) {
+    return new File(directory, String.format("dumpTree_%s", suffix));
   }
   /**
-   * Dump the fsdir tree to a temp file
+   * Dump the fsdir tree to a temp file.
    * @param fileSuffix suffix of the temp file for dumping
    * @return the temp file
    */
   private File dumpTree2File(String fileSuffix) throws IOException {
-    File file = getDumpTreeFile(testDir, fileSuffix);
+    File file = getDumpTreeFile(TEST_DIR, fileSuffix);
     SnapshotTestHelper.dumpTree2File(fsn.getFSDirectory(), file);
     return file;
   }
@@ -209,7 +208,7 @@ public class TestFSImageWithOrderedSnapshotDeletion {
     hdfs.allowSnapshot(dir1);
     hdfs.createSnapshot(dir1, "s0");
     Path file1 = new Path(dirb, "file1");
-    DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, (short) 1, seed);
+    DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, (short) 1, SEED);
     Path rennamePath = new Path(dirx, "dirb");
     // mv /dir1/dira/dirb to /dir1/dirx/dirb
     hdfs.rename(dirb, rennamePath);
@@ -258,7 +257,7 @@ public class TestFSImageWithOrderedSnapshotDeletion {
     hdfs.mkdirs(diry);
     hdfs.createSnapshot(dir1, "s3");
     Path file1 = new Path("/dir1/dira/dirb/diry/file1");
-    DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, (short) 1, seed);
+    DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, (short) 1, SEED);
     hdfs.createSnapshot(dir1, "s4");
     hdfs.delete(new Path("/dir1/dira/dirb"), true);
     hdfs.deleteSnapshot(dir1, "s1");
@@ -302,7 +301,7 @@ public class TestFSImageWithOrderedSnapshotDeletion {
     Path file1 = new Path("/dir1/dira/dirb/file1");
     DFSTestUtil.createFile(hdfs,
         new Path(
-            "/dir1/dira/dirb/file1"), BLOCKSIZE, (short) 1, seed);
+            "/dir1/dira/dirb/file1"), BLOCKSIZE, (short) 1, SEED);
     hdfs.createSnapshot(dir1, "s3");
     hdfs.deleteSnapshot(dir1, "s1");
     hdfs.deleteSnapshot(dir1, "s3");
@@ -344,7 +343,7 @@ public class TestFSImageWithOrderedSnapshotDeletion {
     hdfs.mkdirs(diry);
     hdfs.createSnapshot(dir1, "s3");
     Path file1 = new Path("/dir1/dira/dirb/diry/file1");
-    DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, (short) 1, seed);
+    DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, (short) 1, SEED);
     hdfs.createSnapshot(dir1, "s4");
     hdfs.delete(new Path("/dir1/dira/dirb"), true);
     hdfs.deleteSnapshot(dir1, "s1");
@@ -389,7 +388,7 @@ public class TestFSImageWithOrderedSnapshotDeletion {
     hdfs.mkdirs(diry);
     hdfs.createSnapshot(dir1, "s3");
     Path file1 = new Path("/dir1/dira/dirb/diry/file1");
-    DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, (short) 1, seed);
+    DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, (short) 1, SEED);
     hdfs.createSnapshot(dir1, "s4");
     hdfs.delete(new Path("/dir1/dira/dirb/diry/file1"), false);
     hdfs.deleteSnapshot(dir1, "s1");
@@ -430,12 +429,13 @@ public class TestFSImageWithOrderedSnapshotDeletion {
     Path dird = new Path(dirc, "dird");
     Path dire = new Path(dird, "dire");
     Path file1 = new Path(dire, "file1");
-    DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, (short) 1, seed);
+    DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, (short) 1, SEED);
     Path rennamePath = new Path(dirx, "dirb");
     // mv /dir1/dira/dirb to /dir1/dirx/dirb
     hdfs.rename(dirb, rennamePath);
     hdfs.createSnapshot(dir1, "s1");
-    DFSTestUtil.appendFile(hdfs, new Path("/dir1/dirx/dirb/dirc/dird/dire/file1"), "more data");
+    DFSTestUtil.appendFile(hdfs,
+        new Path("/dir1/dirx/dirb/dirc/dird/dire/file1"), "more data");
     Path renamePath1 = new Path(dir2, "dira");
     hdfs.mkdirs(renamePath1);
     //mv dirx/dirb to /dir2/dira/dirb
@@ -472,14 +472,14 @@ public class TestFSImageWithOrderedSnapshotDeletion {
     hdfs.mkdirs(dir1, new FsPermission((short) 0777));
     rename(dir1, dir2);
     hdfs.createSnapshot(sub1, "snap2");
-    DFSTestUtil.createFile(hdfs, foo, BLOCKSIZE, (short) 1, seed);
-    DFSTestUtil.createFile(hdfs, bar, BLOCKSIZE, (short) 1, seed);
+    DFSTestUtil.createFile(hdfs, foo, BLOCKSIZE, (short) 1, SEED);
+    DFSTestUtil.createFile(hdfs, bar, BLOCKSIZE, (short) 1, SEED);
     hdfs.createSnapshot(sub1, snap3);
     hdfs.delete(foo, false);
-    DFSTestUtil.createFile(hdfs, foo, BLOCKSIZE, (short) 1, seed);
+    DFSTestUtil.createFile(hdfs, foo, BLOCKSIZE, (short) 1, SEED);
     hdfs.createSnapshot(sub1, snap4);
     hdfs.delete(foo, false);
-    DFSTestUtil.createFile(hdfs, foo, BLOCKSIZE, (short) 1, seed);
+    DFSTestUtil.createFile(hdfs, foo, BLOCKSIZE, (short) 1, SEED);
     hdfs.createSnapshot(sub1, snap5);
     rename(dir2, dir3);
     hdfs.createSnapshot(sub1, snap6);
