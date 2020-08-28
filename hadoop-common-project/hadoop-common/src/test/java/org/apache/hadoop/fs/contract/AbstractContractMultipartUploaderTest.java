@@ -807,12 +807,17 @@ public abstract class AbstractContractMultipartUploaderTest extends
 
     // now upload part 2.
     complete(file, upload2, partHandles2);
-    // and await the visible length to match
-    eventually(timeToBecomeConsistentMillis(),
-        () -> verifyFileLength(file, size2),
-        new LambdaTestUtils.ProportionalRetryInterval(
-            CONSISTENCY_INTERVAL,
-            timeToBecomeConsistentMillis()));
+
+    // and await the visible length to match, if this FS is not
+    // consistent.
+    final int consistencyDelay = timeToBecomeConsistentMillis();
+    if (consistencyDelay > 0) {
+      eventually(consistencyDelay,
+          () -> verifyFileLength(file, size2),
+          new LambdaTestUtils.ProportionalRetryInterval(
+              CONSISTENCY_INTERVAL,
+              consistencyDelay));
+    }
 
     verifyContents(file, digest2, size2);
   }
