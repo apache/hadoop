@@ -711,4 +711,9 @@
     <Class name="~org\.apache\.hadoop\.yarn\.server\.timelineservice\.reader\.TestTimelineReaderWebServicesHBaseStorage.*" />
     <Bug pattern="UMAC_UNCALLABLE_METHOD_OF_ANONYMOUS_CLASS" />
   </Match>
+
+  <!-- Generated files from JSON schema -->
+  <Match>
+    <Package name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.schema" />
+  </Match>
 </FindBugsFilter>
