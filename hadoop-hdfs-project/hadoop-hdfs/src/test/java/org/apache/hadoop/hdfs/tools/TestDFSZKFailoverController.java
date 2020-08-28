@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.tools;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_BIND_HOST_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICE_ID;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -60,6 +61,7 @@ import java.util.function.Supplier;
 public class TestDFSZKFailoverController extends ClientBaseWithFixes {
   private static final String LOCALHOST_SERVER_ADDRESS = "127.0.0.1";
   private static final String WILDCARD_ADDRESS = "0.0.0.0";
+  private static final String NAMESERVICE_ID = "ns1";
   private Configuration conf;
   private MiniDFSCluster cluster;
   private TestContext ctx;
@@ -226,9 +228,11 @@ public class TestDFSZKFailoverController extends ClientBaseWithFixes {
     DFSZKFailoverController zkfc = DFSZKFailoverController.create(
         conf);
     String addr = zkfc.getRpcAddressToBindTo().getHostString();
+    String nameserviceId = conf.get(DFS_NAMESERVICE_ID);
 
     assertEquals("Bind address " + addr + " is not wildcard.",
         addr, WILDCARD_ADDRESS);
+    assertEquals(nameserviceId, NAMESERVICE_ID);
   }
 
   /**

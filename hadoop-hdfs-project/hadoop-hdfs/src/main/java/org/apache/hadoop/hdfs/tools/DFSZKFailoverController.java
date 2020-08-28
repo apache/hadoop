@@ -158,7 +158,7 @@ public class DFSZKFailoverController extends ZKFailoverController {
           "You may run zkfc on the node other than namenode.";
       throw new HadoopIllegalArgumentException(msg);
     }
-    NameNode.initializeGenericKeys(localNNConf, nsId, nnId);
+
     DFSUtil.setGenericConf(localNNConf, nsId, nnId, ZKFC_CONF_KEYS);
     
     NNHAServiceTarget localTarget = new NNHAServiceTarget(
