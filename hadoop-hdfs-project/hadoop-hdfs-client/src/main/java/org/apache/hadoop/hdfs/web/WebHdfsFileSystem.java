@@ -366,7 +366,7 @@ public class WebHdfsFileSystem extends FileSystem
     if (delegationToken == null) {
       Token<?> token = tokenSelector.selectToken(
           new Text(getCanonicalServiceName()), ugi.getTokens());
-      // ugi tokens are usually indicative of a task which can't 
+      // ugi tokens are usually indicative of a task which can't
       // refetch tokens.  Don't attempt to fetch tokens from the
       // namenode in this situation.
       if (token != null) {
