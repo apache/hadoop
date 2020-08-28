@@ -32,7 +32,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSBuilder;
-import org.apache.hadoop.fs.functional.FunctionsRaisingIOE;
+import org.apache.hadoop.fs.functional.CallableRaisingIOE;
 import org.apache.hadoop.fs.functional.RuntimeIOException;
 
 /**
@@ -242,7 +242,7 @@ public final class FutureIOSupport {
    * @throws IllegalArgumentException invalid argument
    */
   public static <T> CompletableFuture<T> eval(
-      FunctionsRaisingIOE.CallableRaisingIOE<T> callable) {
+      CallableRaisingIOE<T> callable) {
     CompletableFuture<T> result = new CompletableFuture<>();
     try {
       result.complete(callable.apply());

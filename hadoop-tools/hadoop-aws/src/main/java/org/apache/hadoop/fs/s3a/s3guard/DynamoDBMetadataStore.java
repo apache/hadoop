@@ -79,7 +79,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.fs.functional.FunctionsRaisingIOE;
+import org.apache.hadoop.fs.functional.CallableRaisingIOE;
 import org.apache.hadoop.fs.functional.RuntimeIOException;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.AWSServiceThrottledException;
@@ -1635,7 +1635,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
       Set<Path> clearedParentPathSet = new HashSet<>();
       // declare the operation to delete a batch as a function so
       // as to keep the code consistent across multiple uses.
-      FunctionsRaisingIOE.CallableRaisingIOE<Void> deleteBatchOperation =
+      CallableRaisingIOE<Void> deleteBatchOperation =
           () -> {
             // lowest path entries get deleted first.
             deletionBatch.sort(PathOrderComparators.TOPMOST_PATH_LAST);

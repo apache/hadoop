@@ -63,18 +63,27 @@ public final class IOStatisticsSupport {
   }
 
   /**
-   * Get the IOStatistics of the source, falling back to
-   * null if the source does not implement
-   * {@link IOStatisticsSource}, or the return value
-   * of {@link IOStatisticsSource#getIOStatistics()} was null.
+   * Get the IOStatistics of the source, casting it
+   * if it is of the relevant type, otherwise,
+   * if it implements {@link IOStatisticsSource}
+   * extracting the value.
+   * <p></p>
+   * Returns null if the source isn't of the write type
+   * or the return value of
+   * {@link IOStatisticsSource#getIOStatistics()} was null.
    * @return an IOStatistics instance or null
    */
 
   public static IOStatistics retrieveIOStatistics(
       final Object source) {
-    return (source instanceof IOStatisticsSource)
-        ? ((IOStatisticsSource) source).getIOStatistics()
-        : null; // null source or interface not implemented
+    if (source instanceof IOStatistics) {
+      return (IOStatistics) source;
+    } else if (source instanceof IOStatisticsSource) {
+      return ((IOStatisticsSource) source).getIOStatistics();
+    } else {
+      // null source or interface not implemented
+      return null;
+    }
   }
 
   /**

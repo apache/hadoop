@@ -21,8 +21,14 @@ package org.apache.hadoop.fs.functional;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 import java.util.NoSuchElementException;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -31,11 +37,14 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
 import static java.util.Objects.requireNonNull;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatisticsAtDebug;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
 
 /**
  * A set of remote iterators supporting transformation and filtering,
- * with IOStatisticsSource passthrough.
+ * with IOStatisticsSource passthrough, and of conversions of
+ * the iterators to lists/arrays and of performing actions
+ * on the values.
  * <p></p>
  * This aims to make it straightforward to use lambda-expressions to
  * transform the results of an iterator, without losing the statistics
@@ -48,6 +57,14 @@ import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStat
  * may be closed, this is not likely to be broadly used. It is added
  * to make it possible to adopt this feature in a managed way.
  * <p></p>
+ * One notable feature is that the
+ * {@link #foreach(RemoteIterator, ConsumerRaisingIOE)} method will
+ * LOG at debug any IOStatistics provided by the iterator, if such
+ * statistics are provided. There's no attempt at retrieval and logging
+ * if the LOG is not set to debug, so it is a zero cost feature unless
+ * the logger {@code org.apache.hadoop.fs.functional.RemoteIterators}
+ * is at DEBUG.
+ * <p></p>
  * Based on the S3A Listing code, and some some work on moving other code
  * to using iterative listings so as to pick up the statistics.
  */
@@ -55,17 +72,25 @@ import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStat
 @InterfaceStability.Unstable
 public final class RemoteIterators {
 
+  /**
+   * Log used for logging any statistics in
+   * {@link #foreach(RemoteIterator, ConsumerRaisingIOE)}
+   * at DEBUG.
+   */
+  private static final Logger LOG = LoggerFactory.getLogger(
+      RemoteIterators.class);
+
   private RemoteIterators() {
   }
 
   /**
    * Create an iterator from a singleton.
-   * @param instance instance
+   * @param singleton instance
    * @param <T> type
    * @return a remote iterator
    */
-  public static <T> RemoteIterator<T> toRemoteIterator(@Nullable T instance) {
-    return new SingletonIterator<>(instance);
+  public static <T> RemoteIterator<T> toRemoteIterator(@Nullable T singleton) {
+    return new SingletonIterator<>(singleton);
   }
 
   /**
@@ -88,6 +113,70 @@ public final class RemoteIterators {
   }
 
   /**
+   * Create a remote iterator from an array.
+   * @param <T> type
+   * @return a remote iterator
+   */
+  public static <T> RemoteIterator<T> toRemoteIterator(T[] array) {
+    return new FromIterator<>(Arrays.stream(array).iterator());
+  }
+
+  /**
+   * Build a list from a RemoteIterator.
+   * @param <T> type
+   * @return a list of the values.
+   * @throws IOException if the source RemoteIterator raises it.
+   */
+  public static <T> List<T> toList(RemoteIterator<T> source)
+      throws IOException {
+    List<T> l = new ArrayList<>();
+    foreach(source, l::add);
+    return l;
+  }
+
+  /**
+   * Build an array from a RemoteIterator.
+   * @param <T> type
+   * @return an array of the values.
+   * @throws IOException if the source RemoteIterator raises it.
+   */
+  public static <T> T[] toArray(RemoteIterator<T> source) throws IOException {
+    return (T[]) toList(source).toArray();
+  }
+
+  /**
+   * Apply an operation to all values of a RemoteIterator.
+   * <p></p>
+   * If the iterator is an IOStatisticsSource returning a non-null
+   * set of statistics, <i>and</i> this classes log is set to DEBUG,
+   * then the statistics of the operation are evaluated and logged at
+   * debug.
+   * <p></p>
+   * The number of entries processed is returned, as it is useful to
+   * know this, especially during tests or when reporting values
+   * to users.
+   * @param source iterator source
+   * @param consumer consumer of the values.
+   * @return the number of elements processed
+   * @param <T> type of source
+   * @throws IOException if the source RemoteIterator or the consumer raise one.
+   */
+  public static <T> long foreach(
+      RemoteIterator<T> source,
+      ConsumerRaisingIOE<? super T> consumer) throws IOException {
+    long count = 0;
+
+    while (source.hasNext()) {
+      count++;
+      consumer.accept(source.next());
+    }
+
+    // maybe log the results
+    logIOStatisticsAtDebug(LOG, "RemoteIterator Statistics: {}", source);
+    return count;
+  }
+
+  /**
    * Create an iterator from an iterator and a transformation function.
    * @param <S> source type
    * @param <T> result type
@@ -97,7 +186,7 @@ public final class RemoteIterators {
    */
   public static <S, T> RemoteIterator<T> mappingRemoteIterator(
       RemoteIterator<S> iterator,
-      FunctionsRaisingIOE.FunctionRaisingIOE<? super S, T> mapper) {
+      FunctionRaisingIOE<? super S, T> mapper) {
     return new MappingRemoteIterator<>(iterator, mapper);
   }
 
@@ -114,7 +203,7 @@ public final class RemoteIterators {
    */
   public static <S> RemoteIterator<S> filteringRemoteIterator(
       RemoteIterator<S> iterator,
-      FunctionsRaisingIOE.FunctionRaisingIOE<? super S, Boolean> filter) {
+      FunctionRaisingIOE<? super S, Boolean> filter) {
     return new FilteringRemoteIterator<>(iterator, filter);
   }
 
@@ -250,14 +339,13 @@ public final class RemoteIterators {
    * @param <T> final output type.There
    */
   private static final class MappingRemoteIterator<S, T>
-      extends WrappingRemoteIterator<S,T> {
+      extends WrappingRemoteIterator<S, T> {
 
-
-    private final FunctionsRaisingIOE.FunctionRaisingIOE<? super S, T> mapper;
+    private final FunctionRaisingIOE<? super S, T> mapper;
 
     private MappingRemoteIterator(
         RemoteIterator<S> source,
-        FunctionsRaisingIOE.FunctionRaisingIOE<? super S, T> mapper) {
+        FunctionRaisingIOE<? super S, T> mapper) {
       super(source);
       this.mapper = requireNonNull(mapper);
     }
@@ -292,7 +380,7 @@ public final class RemoteIterators {
      * Filter Predicate.
      * Takes the input type or any superclass.
      */
-    private final FunctionsRaisingIOE.FunctionRaisingIOE<? super S, Boolean>
+    private final FunctionRaisingIOE<? super S, Boolean>
         filter;
 
     /**
@@ -310,7 +398,7 @@ public final class RemoteIterators {
      */
     private FilteringRemoteIterator(
         RemoteIterator<S> source,
-        FunctionsRaisingIOE.FunctionRaisingIOE<? super S, Boolean> filter) {
+        FunctionRaisingIOE<? super S, Boolean> filter) {
       super(source);
 
       this.filter = requireNonNull(filter);
@@ -363,7 +451,6 @@ public final class RemoteIterators {
       }
       throw new NoSuchElementException();
     }
-
 
     @Override
     public String toString() {

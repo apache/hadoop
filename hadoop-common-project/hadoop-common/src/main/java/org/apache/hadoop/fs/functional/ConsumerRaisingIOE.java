@@ -16,20 +16,36 @@
  * limitations under the License.
  */
 
-/**
- * Support for functional programming within the Hadoop (filesystem) APIs.
- * <p></p>
- * Much of this (RemoteIterable, the various consumers and
- * functions) are needed simply to cope with Java's checked exceptions and
- * the fact that the java.util.function can only throw runtime exceptions.
- * <p></p>
- * Pretty much all the Hadoop FS APIs raise IOExceptions, hence the need
- * for these classes. If Java had made a different decision about the
- * nature of exceptions, life would be better.
- */
-@InterfaceAudience.Public
-@InterfaceStability.Unstable
 package org.apache.hadoop.fs.functional;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import java.io.IOException;
+
+/**
+ * Version of java.util.function.Consumer which raises
+ * exceptions.
+ * @param <T> type of argument,.
+ */
+@FunctionalInterface
+public interface ConsumerRaisingIOE<T> {
+
+  /**
+   * Process the argument.
+   * @param t type
+   * @throws IOException if needed
+   */
+  void accept(T t) throws IOException;
+
+  /**
+   * after calling {@link #accept(Object)},
+   * invoke the next consumer in the chain.
+   * @param next next consumer
+   * @return the chain.
+   */
+  default ConsumerRaisingIOE<T> andThen(
+      ConsumerRaisingIOE<? super T> next) {
+    return (T t) -> {
+      accept(t);
+      next.accept(t);
+    };
+  }
+}

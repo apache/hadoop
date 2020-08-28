@@ -16,20 +16,16 @@
  * limitations under the License.
  */
 
-/**
- * Support for functional programming within the Hadoop (filesystem) APIs.
- * <p></p>
- * Much of this (RemoteIterable, the various consumers and
- * functions) are needed simply to cope with Java's checked exceptions and
- * the fact that the java.util.function can only throw runtime exceptions.
- * <p></p>
- * Pretty much all the Hadoop FS APIs raise IOExceptions, hence the need
- * for these classes. If Java had made a different decision about the
- * nature of exceptions, life would be better.
- */
-@InterfaceAudience.Public
-@InterfaceStability.Unstable
 package org.apache.hadoop.fs.functional;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import java.io.IOException;
+
+/**
+ * This is a callable which only raises an IOException.
+ * @param <R> return type
+ */
+@FunctionalInterface
+public interface CallableRaisingIOE<R> {
+
+  R apply() throws IOException;
+}

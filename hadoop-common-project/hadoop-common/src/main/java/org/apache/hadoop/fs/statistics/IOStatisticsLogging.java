@@ -46,7 +46,9 @@ public final class IOStatisticsLogging {
 
   /**
    * Extract the statistics from a source object -or ""
-   * if it is not a source of statistics
+   * if it is not an instance of {@link IOStatistics},
+   * {@link IOStatisticsSource} or the retrieved
+   * statistics are null.
    * <p>
    * Exceptions are caught and downgraded to debug logging.
    * @param source source of statistics.
@@ -128,6 +130,29 @@ public final class IOStatisticsLogging {
   public static Object demandStringifyIOStatistics(
       @Nullable IOStatistics statistics) {
     return new StatisticsToString(statistics);
+  }
+
+  /**
+   * Extract any statistics from the source and log at debug, if
+   * the log is set to log at debug.
+   * No-op if logging is not at debug or the source is null/of
+   * the wrong type/doesn't provide statistics.
+   * @param log log to log to
+   * @param message message for log -this must contain "{}" for the
+   * statistics report
+   * @param source source object
+   */
+  public static void logIOStatisticsAtDebug(
+      Logger log,
+      String message,
+      Object source) {
+    if (log.isDebugEnabled()) {
+      // robust extract and convert to string
+      String stats = ioStatisticsSourceToString(source);
+      if (!stats.isEmpty()) {
+        log.debug(message, stats);
+      }
+    }
   }
 
   /**
