@@ -2442,4 +2442,38 @@ public class TestDistributedFileSystem {
       }
     }
   }
+
+  @Test
+  public void testDisallowSnapshotShouldThrowWhenTrashRootExists()
+      throws IOException {
+    Configuration conf = getTestConfiguration();
+    MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    try {
+      DistributedFileSystem dfs = cluster.getFileSystem();
+      Path testDir = new Path("/disallowss/test1/");
+      Path file0path = new Path(testDir, "file-0");
+      dfs.create(file0path);
+      dfs.allowSnapshot(testDir);
+      // Create trash root manually
+      Path testDirTrashRoot = new Path(testDir, FileSystem.TRASH_PREFIX);
+      dfs.mkdirs(testDirTrashRoot);
+      // Try disallowing snapshot, should throw
+      try {
+        dfs.disallowSnapshot(testDir);
+        fail("Should have thrown IOException when trash root exists inside "
+            + "snapshot root when disallowing snapshot on it.");
+      } catch (IOException ignored) {
+      }
+      // Remove the trash root and try again, should pass this time
+      dfs.delete(testDirTrashRoot, true);
+      dfs.disallowSnapshot(testDir);
+      // Cleanup
+      dfs.delete(testDir, true);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
 }
