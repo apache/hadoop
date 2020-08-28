@@ -366,9 +366,9 @@ public class WebHdfsFileSystem extends FileSystem
     if (delegationToken == null) {
       Token<?> token = tokenSelector.selectToken(
           new Text(getCanonicalServiceName()), ugi.getTokens());
-      // ugi tokens are usually indicative of a task which can't
-      // refetch tokens.  even if ugi has credentials, don't attempt
-      // to get another token to match hdfs/rpc behavior
+      // ugi tokens are usually indicative of a task which can't 
+      // refetch tokens.  Don't attempt to fetch tokens from the
+      // namenode in this situation.
       if (token != null) {
         LOG.debug("Using UGI token: {}", token);
         canRefreshDelegationToken = false;
@@ -391,6 +391,9 @@ public class WebHdfsFileSystem extends FileSystem
   @VisibleForTesting
   synchronized boolean replaceExpiredDelegationToken() throws IOException {
     boolean replaced = false;
+    if (attemptReplaceDelegationTokenFromUGI()) {
+      return true;
+    }
     if (canRefreshDelegationToken) {
       Token<?> token = getDelegationToken(null);
       LOG.debug("Replaced expired token: {}", token);
@@ -398,6 +401,17 @@ public class WebHdfsFileSystem extends FileSystem
       replaced = (token != null);
     }
     return replaced;
+  }
+
+  private synchronized boolean attemptReplaceDelegationTokenFromUGI() {
+    Token<?> token = tokenSelector.selectToken(
+            new Text(getCanonicalServiceName()), ugi.getTokens());
+    if (token != null && !token.equals(delegationToken)) {
+      LOG.debug("Replaced expired token with new UGI token: {}", token);
+      setDelegationToken(token);
+      return true;
+    }
+    return false;
   }
 
   @Override
