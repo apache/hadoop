@@ -40,6 +40,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.StringUtils;
 
+import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.E_BAD_STATE;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.SUCCESS;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -286,6 +287,41 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
       out.flush();
     }
     assertEquals("Command " + cmd + " failed\n"+ buf, 0, r);
+  }
+
+  @Test
+  public void testLandsatBucketMarkerAware() throws Throwable {
+    describe("verify that -markers aware succeeds");
+    run(S3GuardTool.BucketInfo.NAME,
+        "-" + S3GuardTool.BucketInfo.MARKERS_FLAG,
+        S3GuardTool.BucketInfo.MARKERS_AWARE,
+        getLandsatCSVFile());
+  }
+
+  @Test
+  public void testLandsatBucketMarkerDelete() throws Throwable {
+    describe("verify that -markers delete succeeds");
+    run(S3GuardTool.BucketInfo.NAME,
+        "-" + S3GuardTool.BucketInfo.MARKERS_FLAG, "delete",
+        getLandsatCSVFile());
+  }
+
+  @Test
+  public void testLandsatBucketMarkerKeepFails() throws Throwable {
+    describe("verify that -markers keep fails");
+    runToFailure(E_BAD_STATE,
+        S3GuardTool.BucketInfo.NAME,
+        "-" + S3GuardTool.BucketInfo.MARKERS_FLAG, "keep",
+        getLandsatCSVFile());
+  }
+
+  @Test
+  public void testLandsatBucketMarkerAuthFails() throws Throwable {
+    describe("verify that -markers authoritative fails");
+    runToFailure(E_BAD_STATE,
+        S3GuardTool.BucketInfo.NAME,
+        "-" + S3GuardTool.BucketInfo.MARKERS_FLAG, "authoritative",
+        getLandsatCSVFile());
   }
 
 }

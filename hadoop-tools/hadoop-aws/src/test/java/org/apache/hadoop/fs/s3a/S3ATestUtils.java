@@ -43,6 +43,7 @@ import java.net.URISyntaxException;
 import java.util.List;
 import java.util.concurrent.Callable;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
@@ -472,6 +473,19 @@ public final class S3ATestUtils {
             return c.toString();
           }
         });
+  }
+
+
+  /**
+   * Get the name of the test bucket.
+   * @param conf configuration to scan.
+   * @return the bucket name from the config.
+   * @throws NullPointerException: no test bucket
+   */
+  public static String getTestBucketName(final Configuration conf) {
+    String bucket = checkNotNull(conf.get(TEST_FS_S3A_NAME),
+        "No test bucket");
+    return URI.create(bucket).getHost();
   }
 
   /**
