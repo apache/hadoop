@@ -20,10 +20,11 @@ package org.apache.hadoop.fs.impl;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Optional;
 
 import org.slf4j.Logger;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -36,7 +37,6 @@ import static org.apache.hadoop.fs.FSExceptionMessages.RENAME_DEST_EQUALS_SOURCE
 import static org.apache.hadoop.fs.FSExceptionMessages.RENAME_DEST_EXISTS;
 import static org.apache.hadoop.fs.FSExceptionMessages.RENAME_DEST_IS_ROOT;
 import static org.apache.hadoop.fs.FSExceptionMessages.RENAME_DEST_NOT_EMPTY;
-import static org.apache.hadoop.fs.FSExceptionMessages.RENAME_DEST_NO_PARENT;
 import static org.apache.hadoop.fs.FSExceptionMessages.RENAME_DEST_PARENT_NOT_DIRECTORY;
 import static org.apache.hadoop.fs.FSExceptionMessages.RENAME_DEST_UNDER_SOURCE;
 import static org.apache.hadoop.fs.FSExceptionMessages.RENAME_SOURCE_DEST_DIFFERENT_TYPE;
@@ -44,16 +44,21 @@ import static org.apache.hadoop.fs.FSExceptionMessages.RENAME_SOURCE_IS_ROOT;
 import static org.apache.hadoop.fs.FSExceptionMessages.RENAME_SOURCE_NOT_FOUND;
 
 /**
- * Pulls out rename logic into its own operation.
- * This is to enable different implementations of the rename() operation
- * to do all the upfront validation.
+ * Rename Support.
+ * <p></p>
+ * This is to support different implementations of the rename() operation
+ * with all the upfront validation.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class RenameHelper {
 
   final Logger log;
+
   final FileSystem fileSystem;
 
-  public RenameHelper(final FileSystem fileSystem,
+  public RenameHelper(
+      final FileSystem fileSystem,
       final Logger log) {
     this.log = log;
     this.fileSystem = fileSystem;
@@ -66,109 +71,253 @@ public class RenameHelper {
    * This was pull out of FileSystem so that subclasses can implement more
    * efficient versions of the rename operation, ones where the filestatus
    * facts are
-   * @param srcPath qualified source
-   * @param srcStatus qualified source status.
-   * @param destPath qualified dest.
-   * @param destStatus qualified dest status.
-   * @param hasChildrenFunction function to probe for a directory having
-   * children. Generally {@code FileSystem.hasChildren(Path)}.
-   * @param options options
-   * @throws FileNotFoundException source path does not exist, or the parent
+   *
+   * @param args@throws FileNotFoundException source path does not exist, or the parent
    * path of dest does not exist.
    * @throws FileAlreadyExistsException dest path exists and is a file
    * @throws ParentNotDirectoryException if the parent path of dest is not
    * a directory
    * @throws IOException other failure
    */
-  public void validateRenameOptions(
-      final Path srcPath,
-      final FileStatus srcStatus,
-      final Path destPath,
-      final Optional<FileStatus> destStatus,
-      final FunctionWithIOE<FileStatus, Boolean> hasChildrenFunction,
-      final FunctionWithIOE<FileStatus, Boolean> deleteEmptyDirectoryFunction,
-      final Options.Rename... options) throws IOException {
-    log.debug("Rename {} tp {}", srcPath, destPath);
-    if (srcStatus == null) {
+  public RenameValidationResult validateRenameOptions(final RenameValidationParams args)
+      throws IOException {
+    final Path sourcePath = args.getSourcePath();
+    final Path destPath = args.getDestPath();
+    log.debug("Rename {} tp {}",
+        sourcePath,
+        destPath);
+    final FileStatus sourceStatus = args.getSourceStatus();
+    if (sourceStatus == null) {
       throw new FileNotFoundException(
-          String.format(RENAME_SOURCE_NOT_FOUND, srcPath));
+          String.format(RENAME_SOURCE_NOT_FOUND, sourcePath));
     }
-    final String srcStr = srcPath.toUri().getPath();
+    final String srcStr = sourcePath.toUri().getPath();
     final String dstStr = destPath.toUri().getPath();
     if (dstStr.startsWith(srcStr)
         && dstStr.charAt(srcStr.length() - 1) == Path.SEPARATOR_CHAR) {
-      throw new PathIOException(srcPath.toString(),
-          String.format(RENAME_DEST_UNDER_SOURCE, srcPath, destPath));
+      throw new PathIOException(srcStr,
+          String.format(RENAME_DEST_UNDER_SOURCE, srcStr,
+              dstStr));
     }
     if ("/".equals(srcStr)) {
-      throw new PathIOException(srcPath.toString(), RENAME_SOURCE_IS_ROOT);
+      throw new PathIOException(srcStr, RENAME_SOURCE_IS_ROOT);
     }
     if ("/".equals(dstStr)) {
-      throw new PathIOException(srcPath.toString(), RENAME_DEST_IS_ROOT);
+      throw new PathIOException(srcStr, RENAME_DEST_IS_ROOT);
     }
     if (srcStr.equals(dstStr)) {
       throw new FileAlreadyExistsException(
-          String.format(RENAME_DEST_EQUALS_SOURCE, srcPath, destPath));
+          String.format(RENAME_DEST_EQUALS_SOURCE,
+              srcStr,
+              dstStr));
     }
 
     boolean overwrite = false;
-    if (null != options) {
-      for (Options.Rename option : options) {
+    final Options.Rename[] renameOptions = args.getRenameOptions();
+    if (null != renameOptions) {
+      for (Options.Rename option : renameOptions) {
         if (option == Options.Rename.OVERWRITE) {
           overwrite = true;
         }
       }
     }
-    if (destStatus.isPresent()) {
-      FileStatus dest = destStatus.get();
-      if (srcStatus.isDirectory() != dest.isDirectory()) {
-        throw new PathIOException(srcPath.toString(),
-            String.format(RENAME_SOURCE_DEST_DIFFERENT_TYPE, srcPath, destPath));
+    final FileStatus destStatus = args.getDestStatus();
+    if (destStatus != null) {
+      if (sourceStatus.isDirectory() != destStatus.isDirectory()) {
+        throw new PathIOException(sourcePath.toString(),
+            String.format(RENAME_SOURCE_DEST_DIFFERENT_TYPE,
+                sourcePath,
+                destPath));
       }
       if (!overwrite) {
         throw new FileAlreadyExistsException(
             String.format(RENAME_DEST_EXISTS, destPath));
       }
       // Delete the destination that is a file or an empty directory
-      if (dest.isDirectory()) {
+      if (destStatus.isDirectory()) {
         // list children. This may be expensive in time or memory.
-        if (hasChildrenFunction.apply(dest)) {
-          throw new PathIOException(srcPath.toString(),
-              String.format(RENAME_DEST_NOT_EMPTY, destPath));
+        if (args.getHasChildrenFunction().apply(destStatus)) {
+          throw new PathIOException(sourcePath.toString(),
+              String.format(RENAME_DEST_NOT_EMPTY,
+                  destPath));
         }
       }
       // its an empty directory, delete.
-      deleteEmptyDirectoryFunction.apply(dest);
+      args.getDeleteEmptyDirectoryFunction().apply(destStatus);
     } else {
       // verify the parent of the dest being a directory.
       // this is implicit if the source and dest share the same parent,
-      // otherwise a getFileStatus call is needed.
+      // otherwise a probe is is needed.
+      // uses isDirectory so those stores which have optimised that
+      // are slightly more efficient on the success path.
+      // This is at the expense of a second check during failure
+      // to distinguish parent dir not existing from parent
+      // not being a file.
       final Path destParent = destPath.getParent();
-      final Path srcParent = srcPath.getParent();
+      final Path srcParent = sourcePath.getParent();
       if (!destParent.equals(srcParent)) {
-        // check
-        final FileStatus parentStatus = fileSystem.getFileStatus(destParent);
-        if (parentStatus == null) {
-          throw new FileNotFoundException(
-              String.format(RENAME_DEST_NO_PARENT, destParent));
-        }
-        if (!parentStatus.isDirectory()) {
+        // check that any non-root parent is a directory
+        if (!destParent.isRoot()
+            && !fileSystem.isDirectory(destParent)) {
+          // not a dir, so we fail. Do the full getFileStatus to trigger
+          // an FNFE if it is not there
+          fileSystem.getFileStatus(destParent);
           throw new ParentNotDirectoryException(
               String.format(RENAME_DEST_PARENT_NOT_DIRECTORY, destParent));
         }
       }
     }
+    return new RenameValidationResult();
   }
 
-  @FunctionalInterface
-  public interface FunctionWithIOE<T, R> {
+
+  /**
+   * Arguments for the rename validation operation.
+   */
+  public static class RenameValidationParams {
+
+    private final Path sourcePath;
+
+    private final FileStatus sourceStatus;
+
+    private final Path destPath;
+
+    private final FileStatus destStatus;
+
+    private final FunctionsRaisingIOE.FunctionRaisingIOE<FileStatus, Boolean>
+        hasChildrenFunction;
+
+    private final FunctionsRaisingIOE.FunctionRaisingIOE<FileStatus, Boolean>
+        deleteEmptyDirectoryFunction;
+
+    private final Options.Rename[] renameOptions;
 
     /**
-     * Applies this function to the given argument.
-     *
-     * @param t the function argument
-     * @return the function result
+     * @param sourcePath qualified source
+     * @param sourceStatus qualified source status.
+     * @param destPath qualified dest.
+     * @param destStatus qualified dest status.
+     * @param hasChildrenFunction function to probe for a directory having
+     * children. Generally {@link FileSystem#hasChildren(FileStatus)}.
+     * @param renameOptions options
      */
-    R apply(T t) throws IOException;
+    private RenameValidationParams(final Path sourcePath,
+        final FileStatus sourceStatus,
+        final Path destPath,
+        final FileStatus destStatus,
+        final FunctionsRaisingIOE.FunctionRaisingIOE<FileStatus, Boolean> hasChildrenFunction,
+        final FunctionsRaisingIOE.FunctionRaisingIOE<FileStatus, Boolean> deleteEmptyDirectoryFunction,
+        final Options.Rename... renameOptions) {
+      this.sourcePath = sourcePath;
+      this.sourceStatus = sourceStatus;
+      this.destPath = destPath;
+      this.destStatus = destStatus;
+      this.hasChildrenFunction = hasChildrenFunction;
+      this.deleteEmptyDirectoryFunction = deleteEmptyDirectoryFunction;
+      this.renameOptions = renameOptions;
+    }
+
+    Path getSourcePath() {
+      return sourcePath;
+    }
+
+    FileStatus getSourceStatus() {
+      return sourceStatus;
+    }
+
+    Path getDestPath() {
+      return destPath;
+    }
+
+    FileStatus getDestStatus() {
+      return destStatus;
+    }
+
+    FunctionsRaisingIOE.FunctionRaisingIOE<FileStatus, Boolean> getHasChildrenFunction() {
+      return hasChildrenFunction;
+    }
+
+    FunctionsRaisingIOE.FunctionRaisingIOE<FileStatus, Boolean> getDeleteEmptyDirectoryFunction() {
+      return deleteEmptyDirectoryFunction;
+    }
+
+    Options.Rename[] getRenameOptions() {
+      return renameOptions;
+    }
+  }
+
+  /**
+   * Builder for the {@link RenameValidationParams} arguments.
+   */
+  public static class RenameValidationBuilder {
+
+    private Path sourcePath;
+
+    private FileStatus sourceStatus;
+
+    private Path destPath;
+
+    private FileStatus destStatus;
+
+    private FunctionsRaisingIOE.FunctionRaisingIOE<FileStatus, Boolean> hasChildrenFunction;
+
+    private FunctionsRaisingIOE.FunctionRaisingIOE<FileStatus, Boolean>
+        deleteEmptyDirectoryFunction;
+
+    private Options.Rename[] renameOptions;
+
+    public RenameValidationBuilder withSourcePath(final Path sourcePath) {
+      this.sourcePath = sourcePath;
+      return this;
+    }
+
+    public RenameValidationBuilder withSourceStatus(final FileStatus sourceStatus) {
+      this.sourceStatus = sourceStatus;
+      return this;
+    }
+
+    public RenameValidationBuilder withDestPath(final Path destPath) {
+      this.destPath = destPath;
+      return this;
+    }
+
+    public RenameValidationBuilder withDestStatus(
+        final FileStatus destStatus) {
+      this.destStatus = destStatus;
+      return this;
+    }
+
+    public RenameValidationBuilder withHasChildrenFunction(
+        final FunctionsRaisingIOE.FunctionRaisingIOE<FileStatus, Boolean> hasChildrenFunction) {
+      this.hasChildrenFunction = hasChildrenFunction;
+      return this;
+    }
+
+    public RenameValidationBuilder withDeleteEmptyDirectoryFunction(
+        final FunctionsRaisingIOE.FunctionRaisingIOE<FileStatus, Boolean> deleteEmptyDirectoryFunction) {
+      this.deleteEmptyDirectoryFunction = deleteEmptyDirectoryFunction;
+      return this;
+    }
+
+    public RenameValidationBuilder withRenameOptions(
+        final Options.Rename... renameOptions) {
+      this.renameOptions = renameOptions;
+      return this;
+    }
+
+    public RenameValidationParams createRenameValidation() {
+      return new RenameValidationParams(sourcePath, sourceStatus, destPath,
+          destStatus, hasChildrenFunction, deleteEmptyDirectoryFunction,
+          renameOptions);
+    }
+  }
+
+  /**
+   * Result of the rename.
+   * Extensible in case there's a desire to add data in future
+   * (statistics, results of FileStatus calls, etc)
+   */
+  public class RenameValidationResult {
+
   }
 }

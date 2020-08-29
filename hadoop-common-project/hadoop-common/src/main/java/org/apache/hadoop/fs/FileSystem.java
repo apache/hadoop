@@ -1555,19 +1555,23 @@ public abstract class FileSystem extends Configured
     final Path destPath = makeQualified(dest);
     // Default implementation
     final FileStatus srcStatus = getFileLinkStatus(sourcePath);
-    Optional<FileStatus> destStatus;
+    FileStatus destStatus;
     try {
-      destStatus = Optional.ofNullable(getFileLinkStatus(destPath));
+      destStatus = getFileLinkStatus(destPath);
     } catch (IOException e) {
-      destStatus = Optional.empty();
+      destStatus = null;
     }
-    new RenameHelper(this, LOGGER).validateRenameOptions(
-        sourcePath,
-        srcStatus,
-        destPath, destStatus,
-        this::hasChildren,
-        this::deleteEmptyDirectory,
-        options);
+    new RenameHelper(this, LOGGER)
+        .validateRenameOptions(
+            new RenameHelper.RenameValidationBuilder()
+                .withSourcePath(sourcePath)
+                .withSourceStatus(srcStatus)
+                .withDestPath(destPath)
+                .withDestStatus(destStatus)
+                .withHasChildrenFunction(this::hasChildren)
+                .withDeleteEmptyDirectoryFunction(this::deleteEmptyDirectory)
+                .withRenameOptions(options)
+                .createRenameValidation());
     if (!rename(sourcePath, destPath)) {
       // inner rename failed, no obvious cause
       throw new PathIOException(source.toString(),

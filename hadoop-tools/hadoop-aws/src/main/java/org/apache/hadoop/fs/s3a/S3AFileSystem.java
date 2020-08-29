@@ -1368,18 +1368,18 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     final Path sourcePath = makeQualified(source);
     final Path destPath = makeQualified(dest);
     // Default implementation
-    final Optional<FileStatus> destStatus = Optional.of(
-        innerGetFileStatus(destPath, true, StatusProbeEnum.ALL));
     final FileStatus srcStatus = innerGetFileStatus(sourcePath, false,
         StatusProbeEnum.ALL);
     new RenameHelper(this, LOG).validateRenameOptions(
-        sourcePath,
-        srcStatus,
-        destPath,
-        destStatus,
-        this::hasChildren,
-        this::deleteEmptyDirectory,
-        options);
+        new RenameHelper.RenameValidationBuilder().withSourcePath(sourcePath)
+            .withSourceStatus(srcStatus)
+            .withDestPath(destPath)
+            .withDestStatus(
+                innerGetFileStatus(destPath, true, StatusProbeEnum.ALL))
+            .withHasChildrenFunction(this::hasChildren)
+            .withDeleteEmptyDirectoryFunction(this::deleteEmptyDirectory)
+            .withRenameOptions(options)
+            .createRenameValidation());
     // now call rename throwing exceptions on failures
     try {
       innerRename(sourcePath, destPath);
