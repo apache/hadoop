@@ -84,7 +84,6 @@ public class TestUserGroupMappingPlacementRule {
         .build();
 
     when(queueManager.getQueue(isNull())).thenReturn(null);
-    when(queueManager.isAmbiguous("primarygrouponly")).thenReturn(true);
     rule.setQueueManager(queueManager);
     ApplicationSubmissionContext asc = Records.newRecord(
         ApplicationSubmissionContext.class);
@@ -349,7 +348,7 @@ public class TestUserGroupMappingPlacementRule {
             .build());
   }
 
-  @Test(expected = YarnException.class)
+  @Test
   public void testUserMappingToNestedUserPrimaryGroupWithAmbiguousQueues()
       throws YarnException {
     // u:%user:%user, submitter nosecondarygroupuser, queue is ambiguous
@@ -362,6 +361,7 @@ public class TestUserGroupMappingPlacementRule {
                 .parentQueue("%primary_group")
                 .build())
             .inputUser("nosecondarygroupuser")
+            .expectedQueue("default")
             .build());
   }
 

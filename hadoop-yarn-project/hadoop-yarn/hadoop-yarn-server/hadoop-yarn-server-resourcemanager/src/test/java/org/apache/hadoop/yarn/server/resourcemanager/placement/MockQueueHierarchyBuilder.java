@@ -19,11 +19,13 @@
 package org.apache.hadoop.yarn.server.resourcemanager.placement;
 
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import org.apache.commons.compress.utils.Lists;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -33,6 +35,8 @@ class MockQueueHierarchyBuilder {
   private static final String QUEUE_SEP = ".";
   private List<String> queuePaths = Lists.newArrayList();
   private List<String> managedParentQueues = Lists.newArrayList();
+  private Set<String> ambiguous = Sets.newHashSet();
+  private Map<String, String> shortNameMapping = Maps.newHashMap();
   private CapacitySchedulerQueueManager queueManager;
 
   public static MockQueueHierarchyBuilder create() {
@@ -75,6 +79,14 @@ class MockQueueHierarchyBuilder {
     for (String queuePath : queuePaths) {
       addQueues(queues, queuePath);
     }
+
+    ambiguous.forEach(queue -> {
+      if (queue.equals("root")) {
+        return;
+      }
+      when(queueManager.isAmbiguous(queue)).thenReturn(true);
+      when(queueManager.getQueue(queue)).thenReturn(null);
+    });
   }
 
   private void addQueues(Map<String, AbstractCSQueue> queues,
@@ -88,6 +100,12 @@ class MockQueueHierarchyBuilder {
       String parentPath = currentQueuePath;
       currentQueuePath += currentQueuePath.equals("") ?
           queueName : QUEUE_SEP + queueName;
+
+      if (shortNameMapping.containsKey(queueName) &&
+          !shortNameMapping.get(queueName).equals(currentQueuePath)) {
+        ambiguous.add(queueName);
+      }
+      shortNameMapping.put(queueName, currentQueuePath);
 
       if (managedParentQueues.contains(parentPath) && !isLeaf) {
         throw new IllegalStateException("Cannot add a queue under " +
