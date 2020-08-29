@@ -168,7 +168,7 @@ public class ViewFs extends AbstractFileSystem {
   Path homeDir = null;
   private ViewFileSystem.RenameStrategy renameStrategy =
       ViewFileSystem.RenameStrategy.SAME_MOUNTPOINT;
-  private static boolean showMountLinksAsSymlinks = true;
+  private boolean showMountLinksAsSymlinks = true;
 
   static AccessControlException readOnlyMountTable(final String operation,
       final String p) {
@@ -220,9 +220,9 @@ public class ViewFs extends AbstractFileSystem {
    * @throws IOException
    * @throws URISyntaxException 
    */
-  ViewFs(final URI theUri, final Configuration conf) throws IOException,
+  public ViewFs(final URI theUri, final Configuration conf) throws IOException,
       URISyntaxException {
-    super(theUri, FsConstants.VIEWFS_SCHEME, false, -1);
+    super(theUri, theUri.getScheme(), false, -1);
     creationTime = Time.now();
     ugi = UserGroupInformation.getCurrentUser();
     config = conf;
@@ -230,21 +230,31 @@ public class ViewFs extends AbstractFileSystem {
         .getBoolean(CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS,
             CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS_DEFAULT);
     // Now build  client side view (i.e. client side mount table) from config.
-    String authority = theUri.getAuthority();
     boolean initingUriAsFallbackOnNoMounts =
         !FsConstants.VIEWFS_TYPE.equals(getType());
+    loadMountTable(theUri, conf, initingUriAsFallbackOnNoMounts);
+    renameStrategy = ViewFileSystem.RenameStrategy.valueOf(
+        conf.get(Constants.CONFIG_VIEWFS_RENAME_STRATEGY,
+            ViewFileSystem.RenameStrategy.SAME_MOUNTPOINT.toString()));
+  }
+
+  void loadMountTable(URI theUri, Configuration conf,
+      boolean initingUriAsFallbackOnNoMounts)
+      throws URISyntaxException, IOException {
+    String authority = theUri.getAuthority();
+    AbstractFsGetter fsGetter = fsGetter();
     fsState = new InodeTree<AbstractFileSystem>(conf, authority, theUri,
         initingUriAsFallbackOnNoMounts) {
 
       @Override
       protected AbstractFileSystem getTargetFileSystem(final URI uri)
-        throws URISyntaxException, UnsupportedFileSystemException {
+          throws URISyntaxException, UnsupportedFileSystemException {
           String pathString = uri.getPath();
           if (pathString.isEmpty()) {
             pathString = "/";
           }
           return new ChRootedFs(
-              AbstractFileSystem.createFileSystem(uri, config),
+              fsGetter.getNewInstance(uri, config),
               new Path(pathString));
       }
 
@@ -263,9 +273,23 @@ public class ViewFs extends AbstractFileSystem {
         // return MergeFs.createMergeFs(mergeFsURIList, config);
       }
     };
-    renameStrategy = ViewFileSystem.RenameStrategy.valueOf(
-        conf.get(Constants.CONFIG_VIEWFS_RENAME_STRATEGY,
-            ViewFileSystem.RenameStrategy.SAME_MOUNTPOINT.toString()));
+  }
+
+  static class AbstractFsGetter {
+    /**
+     * Gets new file system instance of given uri.
+     */
+    public AbstractFileSystem getNewInstance(URI uri, Configuration conf)
+        throws UnsupportedFileSystemException {
+      return AbstractFileSystem.createFileSystem(uri, conf);
+    }
+  }
+
+  /**
+   * Gets file system creator instance.
+   */
+  protected AbstractFsGetter fsGetter() {
+    return new AbstractFsGetter();
   }
 
   @Override
