@@ -17,17 +17,36 @@
 
 <!-- MACRO{toc|fromDepth=0|toDepth=2} -->
 
-**NOTE:  Hadoop's `s3:` and `s3n:` connectors have been removed.
+
+
+## <a name="compatibility"></a> Compatibility
+
+
+###  <a name="directory-marker-compatibility"></a> Directory Marker Compatibility
+
+1. This release can safely list/index/read S3 buckets where "empty directory"
+markers are retained.
+
+1. This release does not support the switching to directory marker
+policies of "keep" and "authoritative" -the 
+
+Consult [Controlling the S3A Directory Marker Behavior](directory_markers.html) for
+full details.
+
+### Shipping connectors: S3A only.
+
+Hadoop's `s3:` and `s3n:` connectors have been removed.
 Please use `s3a:` as the connector to data hosted in S3 with Apache Hadoop.**
 
 **Consult the [s3n documentation](./s3n.html) for migration instructions.**
 
 
-See also:
+## <a name="documents"></a> Documents
 
 * [Encryption](./encryption.html)
 * [S3Guard](./s3guard.html)
 * [Troubleshooting](./troubleshooting_s3a.html)
+* [Controlling the S3A Directory Marker Behavior](directory_markers.html).
 * [Testing](./testing.html)
 
 ##<a name="overview"></a> Overview

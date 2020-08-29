@@ -61,6 +61,10 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
     Thread.currentThread().setName("JUnit-" + methodName.getMethodName());
   }
 
+  protected String getMethodName() {
+    return methodName.getMethodName();
+  }
+
   @Override
   protected int getTestTimeoutMillis() {
     return S3A_TEST_TIMEOUT;
