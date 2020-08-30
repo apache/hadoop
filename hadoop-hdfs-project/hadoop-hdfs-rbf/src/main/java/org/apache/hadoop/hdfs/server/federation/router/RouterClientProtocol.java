@@ -51,6 +51,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ECBlockGroupStats;
+import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
@@ -1505,6 +1506,13 @@ public class RouterClientProtocol implements ClientProtocol {
   @Override
   public void unsetErasureCodingPolicy(String src) throws IOException {
     erasureCoding.unsetErasureCodingPolicy(src);
+  }
+
+  @Override
+  public ECTopologyVerifierResult getECTopologyResultForPolicies(
+      String... policyNames) throws IOException {
+    rpcServer.checkOperation(NameNode.OperationCategory.UNCHECKED, true);
+    return erasureCoding.getECTopologyResultForPolicies(policyNames);
   }
 
   @Override

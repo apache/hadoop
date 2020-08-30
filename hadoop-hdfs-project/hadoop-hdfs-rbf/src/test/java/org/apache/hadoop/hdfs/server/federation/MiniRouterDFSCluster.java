@@ -570,6 +570,17 @@ public class MiniRouterDFSCluster {
     this.numDatanodesPerNameservice = num;
   }
 
+  /** Racks for datanodes. */
+  private String[] racks = null;
+
+  /**
+   * Set racks for each datanode. If racks is uninitialized or passed null then
+   * default is used.
+   */
+  public void setRacks(String[] racks) {
+    this.racks = racks;
+  }
+
   /**
    * Set the DNs to belong to only one subcluster.
    */
@@ -723,6 +734,7 @@ public class MiniRouterDFSCluster {
           .numDataNodes(numDNs)
           .nnTopology(topology)
           .dataNodeConfOverlays(dnConfs)
+          .racks(racks)
           .build();
       cluster.waitActive();
 
