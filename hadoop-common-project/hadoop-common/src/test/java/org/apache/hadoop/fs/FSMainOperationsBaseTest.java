@@ -29,6 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -72,16 +73,28 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
 
   protected FileSystem fSys;
   
-  private static final PathFilter DEFAULT_FILTER = (file) -> true;
+  final private static PathFilter DEFAULT_FILTER = new PathFilter() {
+    @Override
+    public boolean accept(final Path file) {
+      return true;
+    }
+  };
 
   //A test filter with returns any path containing an "x" or "X"
-  final private static PathFilter TEST_X_FILTER =
-      (file) -> (file.getName().contains("x") || file.getName().contains("X"));
+  final private static PathFilter TEST_X_FILTER = new PathFilter() {
+    @Override
+    public boolean accept(Path file) {
+      if(file.getName().contains("x") || file.getName().contains("X"))
+        return true;
+      else
+        return false;
+    }
+  };
 
   protected static final byte[] data = getFileData(numBlocks,
       getDefaultBlockSize());
   
-  protected abstract FileSystem createFileSystem() throws Exception;
+  abstract protected FileSystem createFileSystem() throws Exception;
 
   public FSMainOperationsBaseTest() {
   }
@@ -143,11 +156,11 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
   @Test
   public void testFsStatus() throws Exception {
     FsStatus fsStatus = fSys.getStatus(null);
-    assertNotNull(fsStatus);
+    Assert.assertNotNull(fsStatus);
     //used, free and capacity are non-negative longs
-    assertTrue(fsStatus.getUsed() >= 0);
-    assertTrue(fsStatus.getRemaining() >= 0);
-    assertTrue(fsStatus.getCapacity() >= 0);
+    Assert.assertTrue(fsStatus.getUsed() >= 0);
+    Assert.assertTrue(fsStatus.getRemaining() >= 0);
+    Assert.assertTrue(fsStatus.getCapacity() >= 0);
   }
   
   @Test
@@ -156,31 +169,31 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     // First we cd to our test root
     Path workDir = new Path(getAbsoluteTestRootPath(fSys), new Path("test"));
     fSys.setWorkingDirectory(workDir);
-    assertEquals(workDir, fSys.getWorkingDirectory());
+    Assert.assertEquals(workDir, fSys.getWorkingDirectory());
 
     fSys.setWorkingDirectory(new Path("."));
-    assertEquals(workDir, fSys.getWorkingDirectory());
+    Assert.assertEquals(workDir, fSys.getWorkingDirectory());
 
     fSys.setWorkingDirectory(new Path(".."));
-    assertEquals(workDir.getParent(), fSys.getWorkingDirectory());
+    Assert.assertEquals(workDir.getParent(), fSys.getWorkingDirectory());
     
     // cd using a relative path
 
     // Go back to our test root
     workDir = new Path(getAbsoluteTestRootPath(fSys), new Path("test"));
     fSys.setWorkingDirectory(workDir);
-    assertEquals(workDir, fSys.getWorkingDirectory());
+    Assert.assertEquals(workDir, fSys.getWorkingDirectory());
     
     Path relativeDir = new Path("existingDir1");
     Path absoluteDir = new Path(workDir,"existingDir1");
     fSys.mkdirs(absoluteDir);
     fSys.setWorkingDirectory(relativeDir);
-    assertEquals(absoluteDir, fSys.getWorkingDirectory());
+    Assert.assertEquals(absoluteDir, fSys.getWorkingDirectory());
     // cd using a absolute path
     absoluteDir = getTestRootPath(fSys, "test/existingDir2");
     fSys.mkdirs(absoluteDir);
     fSys.setWorkingDirectory(absoluteDir);
-    assertEquals(absoluteDir, fSys.getWorkingDirectory());
+    Assert.assertEquals(absoluteDir, fSys.getWorkingDirectory());
     
     // Now open a file relative to the wd we just set above.
     Path absolutePath = new Path(absoluteDir, "foo");
@@ -190,7 +203,7 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     
     // Now mkdir relative to the dir we cd'ed to
     fSys.mkdirs(new Path("newDir"));
-    assertTrue(isDir(fSys, new Path(absoluteDir, "newDir")));
+    Assert.assertTrue(isDir(fSys, new Path(absoluteDir, "newDir")));
 
     /**
      * We cannot test this because FileSystem has never checked for
@@ -214,68 +227,84 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     Path absoluteDir = new Path(fSys.getUri() + "/test/existingDir");
     fSys.mkdirs(absoluteDir);
     fSys.setWorkingDirectory(absoluteDir);
-    assertEquals(absoluteDir, fSys.getWorkingDirectory());
+    Assert.assertEquals(absoluteDir, fSys.getWorkingDirectory());
   }
   
   @Test
   public void testMkdirs() throws Exception {
     Path testDir = getTestRootPath(fSys, "test/hadoop");
-    assertFalse(exists(fSys, testDir));
-    assertFalse(isFile(fSys, testDir));
+    Assert.assertFalse(exists(fSys, testDir));
+    Assert.assertFalse(isFile(fSys, testDir));
 
     fSys.mkdirs(testDir);
 
-    assertTrue(exists(fSys, testDir));
-    assertFalse(isFile(fSys, testDir));
+    Assert.assertTrue(exists(fSys, testDir));
+    Assert.assertFalse(isFile(fSys, testDir));
     
     fSys.mkdirs(testDir);
 
-    assertTrue(exists(fSys, testDir));
-    assertFalse(isFile(fSys, testDir));
+    Assert.assertTrue(exists(fSys, testDir));
+    Assert.assertFalse(isFile(fSys, testDir));
 
     Path parentDir = testDir.getParent();
-    assertTrue(exists(fSys, parentDir));
-    assertFalse(isFile(fSys, parentDir));
+    Assert.assertTrue(exists(fSys, parentDir));
+    Assert.assertFalse(isFile(fSys, parentDir));
 
     Path grandparentDir = parentDir.getParent();
-    assertTrue(exists(fSys, grandparentDir));
-    assertFalse(isFile(fSys, grandparentDir));
+    Assert.assertTrue(exists(fSys, grandparentDir));
+    Assert.assertFalse(isFile(fSys, grandparentDir));
     
   }
   
   @Test
   public void testMkdirsFailsForSubdirectoryOfExistingFile() throws Exception {
     Path testDir = getTestRootPath(fSys, "test/hadoop");
-    assertFalse(exists(fSys, testDir));
+    Assert.assertFalse(exists(fSys, testDir));
     fSys.mkdirs(testDir);
-    assertTrue(exists(fSys, testDir));
+    Assert.assertTrue(exists(fSys, testDir));
     
     createFile(getTestRootPath(fSys, "test/hadoop/file"));
     
     Path testSubDir = getTestRootPath(fSys, "test/hadoop/file/subdir");
-    intercept(IOException.class, () ->
-      fSys.mkdirs(testSubDir));
-    assertFalse(exists(fSys, testSubDir));
+    try {
+      fSys.mkdirs(testSubDir);
+      Assert.fail("Should throw IOException.");
+    } catch (IOException e) {
+      // expected
+    }
+    Assert.assertFalse(exists(fSys, testSubDir));
     
     Path testDeepSubDir = getTestRootPath(fSys, "test/hadoop/file/deep/sub/dir");
-    intercept(IOException.class, () ->
-        fSys.mkdirs(testDeepSubDir));
-    assertFalse(exists(fSys, testDeepSubDir));
+    try {
+      fSys.mkdirs(testDeepSubDir);
+      Assert.fail("Should throw IOException.");
+    } catch (IOException e) {
+      // expected
+    }
+    Assert.assertFalse(exists(fSys, testDeepSubDir));
     
   }
   
   @Test
   public void testGetFileStatusThrowsExceptionForNonExistentFile()
       throws Exception {
-    intercept(FileNotFoundException.class, () ->
-      fSys.getFileStatus(getTestRootPath(fSys, "test/hadoop/file")));
+    try {
+      fSys.getFileStatus(getTestRootPath(fSys, "test/hadoop/file"));
+      Assert.fail("Should throw FileNotFoundException");
+    } catch (FileNotFoundException e) {
+      // expected
+    }
   }
   
   @Test
   public void testListStatusThrowsExceptionForNonExistentFile()
       throws Exception {
-    intercept(FileNotFoundException.class, () ->
-      fSys.listStatus(getTestRootPath(fSys, "test/hadoop/file")));
+    try {
+      fSys.listStatus(getTestRootPath(fSys, "test/hadoop/file"));
+      Assert.fail("Should throw FileNotFoundException");
+    } catch (FileNotFoundException fnfe) {
+      // expected
+    }
   }
 
   @Test
@@ -288,8 +317,10 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     fSys.mkdirs(subDir);
     fSys.setPermission(obscuredDir, new FsPermission((short)0)); //no access
     try {
-      intercept(IOException.class, () ->
-          fSys.listStatus(obscuredDir));
+      fSys.listStatus(obscuredDir);
+      Assert.fail("Should throw IOException");
+    } catch (IOException ioe) {
+      // expected
     } finally {
       // make sure the test directory can be deleted
       fSys.setPermission(obscuredDir, new FsPermission((short)0755)); //default
@@ -303,7 +334,7 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
         getTestRootPath(fSys, "test/hadoop/a"),
         getTestRootPath(fSys, "test/hadoop/b"),
         getTestRootPath(fSys, "test/hadoop/c/1"), };
-    assertFalse(exists(fSys, testDirs[0]));
+    Assert.assertFalse(exists(fSys, testDirs[0]));
 
     for (Path path : testDirs) {
       fSys.mkdirs(path);
@@ -311,21 +342,21 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
 
     // test listStatus that returns an array
     FileStatus[] paths = fSys.listStatus(getTestRootPath(fSys, "test"));
-    assertEquals(1, paths.length);
-    assertEquals(getTestRootPath(fSys, "test/hadoop"), paths[0].getPath());
+    Assert.assertEquals(1, paths.length);
+    Assert.assertEquals(getTestRootPath(fSys, "test/hadoop"), paths[0].getPath());
 
     paths = fSys.listStatus(getTestRootPath(fSys, "test/hadoop"));
-    assertEquals(3, paths.length);
+    Assert.assertEquals(3, paths.length);
 
-    assertTrue(containsTestRootPath(getTestRootPath(fSys, "test/hadoop/a"),
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys, "test/hadoop/a"),
         paths));
-    assertTrue(containsTestRootPath(getTestRootPath(fSys, "test/hadoop/b"),
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys, "test/hadoop/b"),
         paths));
-    assertTrue(containsTestRootPath(getTestRootPath(fSys, "test/hadoop/c"),
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys, "test/hadoop/c"),
         paths));
 
     paths = fSys.listStatus(getTestRootPath(fSys, "test/hadoop/a"));
-    assertEquals(0, paths.length);
+    Assert.assertEquals(0, paths.length);
     
   }
   
@@ -367,10 +398,10 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     // should return 2 paths ("/test/hadoop/axa" and "/test/hadoop/axx")
     FileStatus[] filteredPaths = fSys.listStatus(
         getTestRootPath(fSys, "test/hadoop"), TEST_X_FILTER);
-    assertEquals(2, filteredPaths.length);
-    assertTrue(containsTestRootPath(getTestRootPath(fSys,
+    Assert.assertEquals(2,filteredPaths.length);
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys,
         TEST_DIR_AXA), filteredPaths));
-    assertTrue(containsTestRootPath(getTestRootPath(fSys,
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys,
         TEST_DIR_AXX), filteredPaths));
   }
   
@@ -378,14 +409,14 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
   public void testGlobStatusNonExistentFile() throws Exception {
     FileStatus[] paths = fSys.globStatus(
         getTestRootPath(fSys, "test/hadoopfsdf"));
-    assertNull(paths);
+    Assert.assertNull(paths);
 
     paths = fSys.globStatus(
         getTestRootPath(fSys, "test/hadoopfsdf/?"));
-    assertEquals(0, paths.length);
+    Assert.assertEquals(0, paths.length);
     paths = fSys.globStatus(
         getTestRootPath(fSys, "test/hadoopfsdf/xyz*/?"));
-    assertEquals(0, paths.length);
+    Assert.assertEquals(0, paths.length);
   }
   
   @Test
@@ -405,7 +436,7 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     // should return nothing
     FileStatus[] paths = fSys.globStatus(
         getTestRootPath(fSys, "test/hadoop/?"));
-    assertEquals(0, paths.length);
+    Assert.assertEquals(0, paths.length);
   }
   
   @Test
@@ -425,10 +456,10 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     // Should return two items ("/test/hadoop" and "/test/hadoop2")
     FileStatus[] paths = fSys.globStatus(
         getTestRootPath(fSys, "test/hadoop*"));
-    assertEquals(2, paths.length);
-    assertTrue(containsTestRootPath(getTestRootPath(fSys,
+    Assert.assertEquals(2, paths.length);
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys,
         "test/hadoop"), paths));
-    assertTrue(containsTestRootPath(getTestRootPath(fSys,
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys,
         "test/hadoop2"), paths));
   }
   
@@ -450,11 +481,11 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     //"/test/hadoop/axx", and "/test/hadoop2/axx")
     FileStatus[] paths = fSys.globStatus(
         getTestRootPath(fSys, "test/hadoop*/*"));
-    assertEquals(4, paths.length);
-    assertTrue(containsTestRootPath(getTestRootPath(fSys, TEST_DIR_AAA), paths));
-    assertTrue(containsTestRootPath(getTestRootPath(fSys, TEST_DIR_AXA), paths));
-    assertTrue(containsTestRootPath(getTestRootPath(fSys, TEST_DIR_AXX), paths));
-    assertTrue(containsTestRootPath(getTestRootPath(fSys, TEST_DIR_AAA2), paths));
+    Assert.assertEquals(4, paths.length);
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys, TEST_DIR_AAA), paths));
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys, TEST_DIR_AXA), paths));
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys, TEST_DIR_AXX), paths));
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys, TEST_DIR_AAA2), paths));
   }
   
   @Test
@@ -474,10 +505,10 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     //Should return only 2 items ("/test/hadoop/axa", "/test/hadoop/axx")
     FileStatus[] paths = fSys.globStatus(
         getTestRootPath(fSys, "test/hadoop/ax?"));
-    assertEquals(2, paths.length);
-    assertTrue(containsTestRootPath(getTestRootPath(fSys,
+    Assert.assertEquals(2, paths.length);
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys,
         TEST_DIR_AXA), paths));
-    assertTrue(containsTestRootPath(getTestRootPath(fSys,
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys,
         TEST_DIR_AXX), paths));
   }
   
@@ -499,7 +530,7 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     FileStatus[] filteredPaths = fSys.globStatus(
         getTestRootPath(fSys, "test/hadoop/?"),
         DEFAULT_FILTER);
-    assertEquals(0, filteredPaths.length);
+    Assert.assertEquals(0,filteredPaths.length);
   }
   
   @Test
@@ -521,12 +552,12 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     FileStatus[] filteredPaths = fSys.globStatus(
         getTestRootPath(fSys, "test/hadoop/*"),
         DEFAULT_FILTER);
-    assertEquals(3, filteredPaths.length);
-    assertTrue(containsTestRootPath(getTestRootPath(fSys,
+    Assert.assertEquals(3, filteredPaths.length);
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys,
         TEST_DIR_AAA), filteredPaths));
-    assertTrue(containsTestRootPath(getTestRootPath(fSys,
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys,
         TEST_DIR_AXA), filteredPaths));
-    assertTrue(containsTestRootPath(getTestRootPath(fSys,
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys,
         TEST_DIR_AXX), filteredPaths));
   }
   
@@ -549,12 +580,12 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     FileStatus[] filteredPaths = fSys.globStatus(
         getTestRootPath(fSys, "test/hadoop/a??"),
         DEFAULT_FILTER);
-    assertEquals(3, filteredPaths.length);
-    assertTrue(containsTestRootPath(getTestRootPath(fSys, TEST_DIR_AAA),
+    Assert.assertEquals(3, filteredPaths.length);
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys, TEST_DIR_AAA),
         filteredPaths));
-    assertTrue(containsTestRootPath(getTestRootPath(fSys, TEST_DIR_AXA),
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys, TEST_DIR_AXA),
         filteredPaths));
-    assertTrue(containsTestRootPath(getTestRootPath(fSys, TEST_DIR_AXX),
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys, TEST_DIR_AXX),
         filteredPaths));
   }
   
@@ -577,10 +608,10 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     FileStatus[] filteredPaths = fSys.globStatus(
         getTestRootPath(fSys, "test/hadoop/*"),
         TEST_X_FILTER);
-    assertEquals(2, filteredPaths.length);
-    assertTrue(containsTestRootPath(getTestRootPath(fSys,
+    Assert.assertEquals(2, filteredPaths.length);
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys,
         TEST_DIR_AXA), filteredPaths));
-    assertTrue(containsTestRootPath(getTestRootPath(fSys,
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys,
         TEST_DIR_AXX), filteredPaths));
   }
   
@@ -603,7 +634,7 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     FileStatus[] filteredPaths = fSys.globStatus(
         getTestRootPath(fSys, "test/hadoop/?"),
         TEST_X_FILTER);
-    assertEquals(0, filteredPaths.length);
+    Assert.assertEquals(0,filteredPaths.length);
   }
   
   @Test
@@ -625,10 +656,10 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     FileStatus[] filteredPaths = fSys.globStatus(
         getTestRootPath(fSys, "test/hadoop/a??"),
         TEST_X_FILTER);
-    assertEquals(2, filteredPaths.length);
-    assertTrue(containsTestRootPath(getTestRootPath(fSys, TEST_DIR_AXA),
+    Assert.assertEquals(2, filteredPaths.length);
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys, TEST_DIR_AXA),
         filteredPaths));
-    assertTrue(containsTestRootPath(getTestRootPath(fSys, TEST_DIR_AXX),
+    Assert.assertTrue(containsTestRootPath(getTestRootPath(fSys, TEST_DIR_AXX),
         filteredPaths));
   }
 
@@ -642,8 +673,10 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     fSys.mkdirs(subDir);
     fSys.setPermission(obscuredDir, new FsPermission((short)0)); //no access
     try {
-      intercept(IOException.class, () ->
-          fSys.globStatus(getTestRootPath(fSys, "test/hadoop/dir/foo/*")));
+      fSys.globStatus(getTestRootPath(fSys, "test/hadoop/dir/foo/*"));
+      Assert.fail("Should throw IOException");
+    } catch (IOException ioe) {
+      // expected
     } finally {
       // make sure the test directory can be deleted
       fSys.setPermission(obscuredDir, new FsPermission((short)0755)); //default
@@ -682,72 +715,77 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     fSys.mkdirs(path.getParent());
 
    
-    try(FSDataOutputStream out =
-      fSys.create(path, false, 4096, (short) 1, getDefaultBlockSize())) {
+    FSDataOutputStream out =
+      fSys.create(path, false, 4096, (short) 1, getDefaultBlockSize() );
       out.write(data, 0, len);
-    }
+    out.close();
 
-    assertTrue("Exists", exists(fSys, path));
-    assertEquals("Length", len, fSys.getFileStatus(path).getLen());
+    Assert.assertTrue("Exists", exists(fSys, path));
+    Assert.assertEquals("Length", len, fSys.getFileStatus(path).getLen());
 
+    FSDataInputStream in = fSys.open(path);
     byte[] buf = new byte[len];
-    try(FSDataInputStream in = fSys.open(path)) {
       in.readFully(0, buf);
-    }
+    in.close();
 
-    assertEquals(len, buf.length);
+    Assert.assertEquals(len, buf.length);
     for (int i = 0; i < buf.length; i++) {
-      assertEquals("Position " + i, data[i], buf[i]);
+      Assert.assertEquals("Position " + i, data[i], buf[i]);
     }
     
-    assertTrue("Deleted", fSys.delete(path, false));
+    Assert.assertTrue("Deleted", fSys.delete(path, false));
     
-    assertFalse("No longer exists", exists(fSys, path));
+    Assert.assertFalse("No longer exists", exists(fSys, path));
 
   }
   
   @Test
-  public void testOverwrite() throws Exception {
+  public void testOverwrite() throws IOException {
     Path path = getTestRootPath(fSys, "test/hadoop/file");
     
     fSys.mkdirs(path.getParent());
 
     createFile(path);
     
-    assertTrue("Exists", exists(fSys, path));
-    assertEquals("Length", data.length, fSys.getFileStatus(path).getLen());
-    intercept(IOException.class, () ->
-      createFile(path));
+    Assert.assertTrue("Exists", exists(fSys, path));
+    Assert.assertEquals("Length", data.length, fSys.getFileStatus(path).getLen());
 
-    try (FSDataOutputStream out = fSys.create(path, true, 4096)) {
-      out.write(data, 0, data.length);
+    try {
+      createFile(path);
+      Assert.fail("Should throw IOException.");
+    } catch (IOException e) {
+      // Expected
     }
 
-    assertTrue("Exists", exists(fSys, path));
-    assertEquals("Length", data.length, fSys.getFileStatus(path).getLen());
+    FSDataOutputStream out = fSys.create(path, true, 4096);
+      out.write(data, 0, data.length);
+    out.close();
+
+    Assert.assertTrue("Exists", exists(fSys, path));
+    Assert.assertEquals("Length", data.length, fSys.getFileStatus(path).getLen());
     
   }
   
   @Test
   public void testWriteInNonExistentDirectory() throws IOException {
     Path path = getTestRootPath(fSys, "test/hadoop/file");
-    assertFalse("Parent doesn't exist", exists(fSys, path.getParent()));
+    Assert.assertFalse("Parent doesn't exist", exists(fSys, path.getParent()));
     createFile(path);
     
-    assertTrue("Exists", exists(fSys, path));
-    assertEquals("Length", data.length, fSys.getFileStatus(path).getLen());
-    assertTrue("Parent exists", exists(fSys, path.getParent()));
+    Assert.assertTrue("Exists", exists(fSys, path));
+    Assert.assertEquals("Length", data.length, fSys.getFileStatus(path).getLen());
+    Assert.assertTrue("Parent exists", exists(fSys, path.getParent()));
   }
 
   @Test
   public void testDeleteNonExistentFile() throws IOException {
     Path path = getTestRootPath(fSys, "test/hadoop/file");    
-    assertFalse("Doesn't exist", exists(fSys, path));
-    assertFalse("No deletion", fSys.delete(path, true));
+    Assert.assertFalse("Doesn't exist", exists(fSys, path));
+    Assert.assertFalse("No deletion", fSys.delete(path, true));
   }
   
   @Test
-  public void testDeleteRecursively() throws Exception {
+  public void testDeleteRecursively() throws IOException {
     Path dir = getTestRootPath(fSys, "test/hadoop");
     Path file = getTestRootPath(fSys, "test/hadoop/file");
     Path subdir = getTestRootPath(fSys, "test/hadoop/subdir");
@@ -755,28 +793,33 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     createFile(file);
     fSys.mkdirs(subdir);
     
-    assertTrue("File exists", exists(fSys, file));
-    assertTrue("Dir exists", exists(fSys, dir));
-    assertTrue("Subdir exists", exists(fSys, subdir));
-    intercept(IOException.class, () ->
-      fSys.delete(dir, false));
-    assertTrue("File still exists", exists(fSys, file));
-    assertTrue("Dir still exists", exists(fSys, dir));
-    assertTrue("Subdir still exists", exists(fSys, subdir));
+    Assert.assertTrue("File exists", exists(fSys, file));
+    Assert.assertTrue("Dir exists", exists(fSys, dir));
+    Assert.assertTrue("Subdir exists", exists(fSys, subdir));
     
-    assertTrue("Deleted", fSys.delete(dir, true));
-    assertFalse("File doesn't exist", exists(fSys, file));
-    assertFalse("Dir doesn't exist", exists(fSys, dir));
-    assertFalse("Subdir doesn't exist", exists(fSys, subdir));
+    try {
+      fSys.delete(dir, false);
+      Assert.fail("Should throw IOException.");
+    } catch (IOException e) {
+      // expected
+    }
+    Assert.assertTrue("File still exists", exists(fSys, file));
+    Assert.assertTrue("Dir still exists", exists(fSys, dir));
+    Assert.assertTrue("Subdir still exists", exists(fSys, subdir));
+
+    Assert.assertTrue("Deleted", fSys.delete(dir, true));
+    Assert.assertFalse("File doesn't exist", exists(fSys, file));
+    Assert.assertFalse("Dir doesn't exist", exists(fSys, dir));
+    Assert.assertFalse("Subdir doesn't exist", exists(fSys, subdir));
   }
   
   @Test
   public void testDeleteEmptyDirectory() throws IOException {
     Path dir = getTestRootPath(fSys, "test/hadoop");
     fSys.mkdirs(dir);
-    assertTrue("Dir exists", exists(fSys, dir));
-    assertTrue("Deleted", fSys.delete(dir, false));
-    assertFalse("Dir doesn't exist", exists(fSys, dir));
+    Assert.assertTrue("Dir exists", exists(fSys, dir));
+    Assert.assertTrue("Deleted", fSys.delete(dir, false));
+    Assert.assertFalse("Dir doesn't exist", exists(fSys, dir));
   }
   
   @Test
@@ -923,13 +966,13 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     fSys.mkdirs(dst.getParent());
     
     rename(src, dst, true, false, true, options);
-    assertFalse("Nested file1 exists",
+    Assert.assertFalse("Nested file1 exists",
         exists(fSys, getTestRootPath(fSys, "test/hadoop/dir/file1")));
-    assertFalse("Nested file2 exists",
+    Assert.assertFalse("Nested file2 exists",
         exists(fSys, getTestRootPath(fSys, "test/hadoop/dir/subdir/file2")));
-    assertTrue("Renamed nested file1 exists",
+    Assert.assertTrue("Renamed nested file1 exists",
         exists(fSys, getTestRootPath(fSys, "test/new/newdir/file1")));
-    assertTrue("Renamed nested exists",
+    Assert.assertTrue("Renamed nested exists",
         exists(fSys, getTestRootPath(fSys, "test/new/newdir/subdir/file2")));
   }
 
@@ -946,7 +989,7 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     fSys.mkdirs(dst);
 
     // Fails without overwrite option
-    intercept(IOException.class, () ->
+    intercept(FileAlreadyExistsException.class, () ->
       rename(src, dst, false, true, false, Rename.NONE));
     // Succeeds with the overwrite option
     rename(src, dst, true, false, true, Rename.OVERWRITE);
@@ -965,7 +1008,7 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     fSys.mkdirs(dst);
     createFile(getTestRootPath(fSys, "test/new/newdir/file1"));
     // Fails without overwrite option
-    intercept(IOException.class, () ->
+    intercept(FileAlreadyExistsException.class, () ->
       rename(src, dst, false, true, false, Rename.NONE));
     // Fails even with the overwrite option
     intercept(IOException.class, () ->
@@ -1019,7 +1062,7 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     FSDataInputStream in = fSys.open(src);
     InputStream is = in.getWrappedStream();
     in.close();
-    assertNotNull(is);
+    Assert.assertNotNull(is);
   }
   
   @Test
@@ -1032,15 +1075,18 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     fSys.initialize(new URI("file:///"), conf);
     writeFile(fSys, fileToFS);
     if (fSys.exists(crcFileAtLFS))
-      assertTrue("CRC files not deleted", fSys
+      Assert.assertTrue("CRC files not deleted", fSys
           .delete(crcFileAtLFS, true));
     fSys.copyToLocalFile(false, fileToFS, fileToLFS, true);
-    assertFalse("CRC files are created", fSys.exists(crcFileAtLFS));
+    Assert.assertFalse("CRC files are created", fSys.exists(crcFileAtLFS));
   }
 
   private void writeFile(FileSystem fs, Path name) throws IOException {
-    try (FSDataOutputStream stm = fs.create(name)) {
+    FSDataOutputStream stm = fs.create(name);
+    try {
       stm.writeBytes("42\n");
+    } finally {
+      stm.close();
     }
   }
   
@@ -1053,13 +1099,11 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
       boolean srcExists, boolean dstExists, Rename... options)
       throws IOException {
     fSys.rename(src, dst, options);
-    if (!renameShouldSucceed) {
-      fail("rename should have thrown exception");
+    if (!renameShouldSucceed)
+      Assert.fail("rename should have thrown exception");
+    Assert.assertEquals("Source exists", srcExists, exists(fSys, src));
+    Assert.assertEquals("Destination exists", dstExists, exists(fSys, dst));
     }
-    assertEquals("Source exists", srcExists, exists(fSys, src));
-    assertEquals("Destination exists", dstExists, exists(fSys, dst));
-  }
-
   private boolean containsTestRootPath(Path path, FileStatus[] filteredPaths)
     throws IOException {
       Path testRootPath = getTestRootPath(fSys, path.toString());
@@ -1070,5 +1114,4 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
       }
     return false;
  }
-
 }

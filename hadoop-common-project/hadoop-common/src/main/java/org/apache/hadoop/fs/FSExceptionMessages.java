@@ -54,27 +54,32 @@ public class FSExceptionMessages {
 
   /**
    * Renaming a destination under source is forbidden.
-   * This is a format string.
+   * <p></p>
+   * {@value}.
    */
   public static final String RENAME_DEST_UNDER_SOURCE =
       "Rename destination %s is a directory or file under source %s";
 
   /**
    * Renaming a destination to source is forbidden.
-   * This is a format string.
+   * <p></p>
+   * {@value}.
    */
   public static final String RENAME_DEST_EQUALS_SOURCE =
       "The source %s and destination %s are the same";
 
   /**
    * Renaming to root is forbidden.
+   * <p></p>
+   * {@value}.
    */
   public static final String RENAME_DEST_IS_ROOT =
-      "Rename destination cannot be the root";
+      "Rename destination cannot be the root path \"/\"";
 
   /**
    * The parent of a rename destination is not found.
-   * This is a format string.
+   * <p></p>
+   * {@value}.
    */
   public static final String RENAME_DEST_NO_PARENT_OF =
       "Rename destination parent of %s not found";
@@ -82,54 +87,64 @@ public class FSExceptionMessages {
   /**
    * The parent of a rename destination is not found.
    * This is a format string, taking the parent path of the destination
+   * <p></p>
+   * {@value}.
    */
   public static final String RENAME_DEST_NO_PARENT =
       "Rename destination parent %s not found";
 
   /**
    * The parent of a rename destination is not a directory.
-   * This is a format string.
+   * <p></p>
+   * {@value}.
    */
   public static final String RENAME_DEST_PARENT_NOT_DIRECTORY =
       "Rename destination parent %s is a file";
 
   /**
    * The rename destination is not an empty directory.
-   * This is a format string.
+   * <p></p>
+   * {@value}.
    */
   public static final String RENAME_DEST_NOT_EMPTY =
       "Rename destination directory is not empty: %s";
 
   /**
    * The rename destination is not an empty directory.
-   * This is a format string.
+   * <p></p>
+   * {@value}.
    */
   public static final String RENAME_DEST_EXISTS =
       "Rename destination %s already exists";
 
   /**
    * The rename source doesn't exist.
-   * This is a format string.
+   * <p></p>
+   * {@value}.
    */
   public static final String RENAME_SOURCE_NOT_FOUND =
       "Rename source %s is not found";
 
   /**
-   * The rename source and dest are off different types
-   * This is a format string.
+   * The rename source and dest are of different types.
+   * <p></p>
+   * {@value}.
    */
   public static final String RENAME_SOURCE_DEST_DIFFERENT_TYPE =
       "Rename source %s and destination %s are of different types";
 
   /**
    * The rename source doesn't exist.
+   * <p></p>
+   * {@value}.
    */
   public static final String RENAME_SOURCE_IS_ROOT =
       "Rename source cannot be the root";
 
   /**
    * The rename failed for an unknown reason.
-   * This is a format string.
+   * <p></p>
+   * {@value}.
    */
   public static final String RENAME_FAILED = "Rename from %s to %s failed";
 

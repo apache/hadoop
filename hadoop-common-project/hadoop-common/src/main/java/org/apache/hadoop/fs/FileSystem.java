@@ -59,7 +59,7 @@ import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.impl.AbstractFSBuilderImpl;
 import org.apache.hadoop.fs.impl.FutureDataInputStreamBuilderImpl;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
-import org.apache.hadoop.fs.impl.RenameHelper;
+import org.apache.hadoop.fs.impl.FileSystemRename3Action;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -92,7 +92,6 @@ import org.slf4j.LoggerFactory;
 import static com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.*;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
-import static org.apache.hadoop.fs.FSExceptionMessages.*;
 
 /****************************************************************
  * An abstract base class for a fairly generic filesystem.  It
@@ -1554,64 +1553,25 @@ public abstract class FileSystem extends Configured
     final Path sourcePath = makeQualified(source);
     final Path destPath = makeQualified(dest);
     // Default implementation
-    final FileStatus srcStatus = getFileLinkStatus(sourcePath);
-    FileStatus destStatus;
-    try {
-      destStatus = getFileLinkStatus(destPath);
-    } catch (IOException e) {
-      destStatus = null;
-    }
-    new RenameHelper(this, LOGGER)
-        .validateRenameOptions(
-            new RenameHelper.RenameValidationBuilder()
+    new FileSystemRename3Action()
+        .rename(
+            new FileSystemRename3Action.RenameValidationBuilder()
                 .withSourcePath(sourcePath)
-                .withSourceStatus(srcStatus)
                 .withDestPath(destPath)
-                .withDestStatus(destStatus)
-                .withHasChildrenFunction(this::hasChildren)
-                .withDeleteEmptyDirectoryFunction(this::deleteEmptyDirectory)
+                .withRenameCallbacks(
+                    createRenameCallbacks())
                 .withRenameOptions(options)
-                .createRenameValidation());
-    if (!rename(sourcePath, destPath)) {
-      // inner rename failed, no obvious cause
-      throw new PathIOException(source.toString(),
-          String.format(RENAME_FAILED, source, destPath));
-    }
+                .build());
   }
 
   /**
-   * Test for a directory having children. This is used by the
-   * base implementation of {@link #rename(Path, Path, Rename...)}.
-   * It is made an override point so that those stores for which listing
-   * children is expensive, but probing for the existence of one or more
-   * children inexpensive, may substitute their own implementation. This
-   * is particularly relevant for object stores.
-   * @param directory the file status of the destination.
-   * @return true if the path has one or more child entries.
-   * @throws IOException for IO problems.
+   * Override point, create any custom rename callbacks.
+   * This only needs to be overridden if the subclass has
+   * optimized operations.
+   * @return callbacks for renaming.
    */
-  protected boolean hasChildren(FileStatus directory) throws IOException {
-    Path path = directory.getPath();
-    FileStatus[] list = listStatus(path);
-    return list != null && list.length != 0
-        && (!path.equals(list[0].getPath()));
-  }
-
-  /**
-   * Delete an empty directory.
-   * Subclasses can assume that the directory exists at the time of
-   * invocation, and is a directory with no children.
-   * The base class calls (@code delete(path, false)}, so
-   * as to guarantee that if another process added a file during
-   * the rename validation, the delete operation will reject
-   * the delete operation.
-   * @param destStatus the status of this entry.
-   * @return true if the directory was deleted
-   * @throws IOException failure
-   */
-  protected boolean deleteEmptyDirectory(FileStatus destStatus)
-      throws IOException {
-    return delete(destStatus.getPath(), false);
+  protected FileSystemRename3Action.RenameCallbacks createRenameCallbacks() {
+    return FileSystemRename3Action.callbacksFromFileSystem(this);
   }
 
   /**

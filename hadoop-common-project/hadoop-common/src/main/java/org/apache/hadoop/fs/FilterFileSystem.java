@@ -30,6 +30,7 @@ import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.impl.FileSystemRename3Action;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
@@ -742,4 +743,8 @@ public class FilterFileSystem extends FileSystem {
     }
   }
 
+  @Override
+  protected FileSystemRename3Action.RenameCallbacks createRenameCallbacks() {
+    return fs.createRenameCallbacks();
+  }
 }
