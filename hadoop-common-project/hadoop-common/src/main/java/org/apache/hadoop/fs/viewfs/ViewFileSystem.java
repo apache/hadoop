@@ -940,7 +940,7 @@ public class ViewFileSystem extends FileSystem {
       children.addAll(Arrays.asList(targetFs.getChildFileSystems()));
     }
 
-    if(fsState.getRootFallbackLink()!=null) {
+    if (fsState.isRootInternalDir() && fsState.getRootFallbackLink() != null) {
       children.addAll(Arrays.asList(
           fsState.getRootFallbackLink().targetFileSystem
               .getChildFileSystems()));
