@@ -36,6 +36,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -2653,7 +2654,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   public FileStatus[] listStatus(Path f) throws FileNotFoundException,
       IOException {
-    return once("listStatus", f.toString(), () -> innerListStatus(f));
+    return once("listStatus",
+        f.toString(),
+        () -> iteratorToStatuses(innerListStatus(f), new HashSet<>()));
   }
 
   /**
@@ -2666,22 +2669,22 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IOException due to an IO problem.
    * @throws AmazonClientException on failures inside the AWS SDK
    */
-  private S3AFileStatus[] innerListStatus(Path f) throws FileNotFoundException,
+  private RemoteIterator<S3AFileStatus> innerListStatus(Path f) throws FileNotFoundException,
           IOException, AmazonClientException {
     Path path = qualify(f);
     LOG.debug("List status for path: {}", path);
     entryPoint(INVOCATION_LIST_STATUS);
 
-    Triple<S3AFileStatus[], DirListingMetadata, Boolean>
+    Triple<RemoteIterator<S3AFileStatus>, DirListingMetadata, Boolean>
             statusesAssumingNonEmptyDir = listing
             .getFileStatusesAssumingNonEmptyDir(path);
 
-    if (statusesAssumingNonEmptyDir.getLeft().length == 0 &&
+    if (!statusesAssumingNonEmptyDir.getLeft().hasNext() &&
             statusesAssumingNonEmptyDir.getRight()) {
       // We are sure that this is an empty directory in auth mode.
       return statusesAssumingNonEmptyDir.getLeft();
     }
-    else if (statusesAssumingNonEmptyDir.getLeft().length == 0) {
+    else if (!statusesAssumingNonEmptyDir.getLeft().hasNext()) {
       // We may have an empty dir, or may have file or may have nothing.
       // So we call innerGetFileStatus to get the status, this may throw
       // FileNotFoundException if we have nothing.
@@ -2693,18 +2696,23 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         LOG.debug("Adding: rd (not a dir): {}", path);
         S3AFileStatus[] stats = new S3AFileStatus[1];
         stats[0] = fileStatus;
-        return stats;
+        return listing.createProvidedFileStatusIterator(
+                stats,
+                ACCEPT_ALL,
+                Listing.ACCEPT_ALL_BUT_S3N);
       }
     }
     // Here we have a directory which may or may not be empty.
     // So we update the metastore and return.
-    return S3Guard.dirListingUnion(
+    RemoteIterator<S3AFileStatus> combinedRes = S3Guard.dirListingUnion(
             metadataStore,
             path,
-            Arrays.asList(statusesAssumingNonEmptyDir.getLeft()),
+            statusesAssumingNonEmptyDir.getLeft(),
             statusesAssumingNonEmptyDir.getMiddle(),
             allowAuthoritative(path),
-            ttlTimeProvider);
+            ttlTimeProvider,
+            listing);
+    return combinedRes;
   }
 
   /**

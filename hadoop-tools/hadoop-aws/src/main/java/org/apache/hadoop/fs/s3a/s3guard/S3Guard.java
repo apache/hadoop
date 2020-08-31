@@ -39,6 +39,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.s3a.Listing;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,6 +59,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_AUTHORITATIVE_PATH;
+import static org.apache.hadoop.fs.s3a.S3AUtils.ACCEPT_ALL;
 import static org.apache.hadoop.fs.s3a.S3AUtils.createUploadFileStatus;
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.authoritativeEmptyDirectoryMarker;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_BAD_CONFIGURATION;
@@ -296,30 +298,6 @@ public final class S3Guard {
   }
 
   /**
-   * Convert the data of an iterator of {@link S3AFileStatus} to
-   * an array. Given tombstones are filtered out. If the iterator
-   * does return any item, an empty array is returned.
-   * @param iterator a non-null iterator
-   * @param tombstones
-   * @return a possibly-empty array of file status entries
-   * @throws IOException
-   */
-  public static S3AFileStatus[] iteratorToStatuses(
-      RemoteIterator<S3AFileStatus> iterator, Set<Path> tombstones)
-      throws IOException {
-    List<FileStatus> statuses = new ArrayList<>();
-
-    while (iterator.hasNext()) {
-      S3AFileStatus status = iterator.next();
-      if (!tombstones.contains(status.getPath())) {
-        statuses.add(status);
-      }
-    }
-
-    return statuses.toArray(new S3AFileStatus[0]);
-  }
-
-  /**
    * Convert the data of a directory listing to an array of {@link FileStatus}
    * entries. Tombstones are filtered out at this point. If the listing is null
    * an empty array is returned.
@@ -362,14 +340,16 @@ public final class S3Guard {
    * @return Final result of directory listing.
    * @throws IOException if metadata store update failed
    */
-  public static S3AFileStatus[] dirListingUnion(MetadataStore ms, Path path,
-      List<S3AFileStatus> backingStatuses, DirListingMetadata dirMeta,
-      boolean isAuthoritative, ITtlTimeProvider timeProvider)
-      throws IOException {
+  public static RemoteIterator<S3AFileStatus> dirListingUnion(
+          MetadataStore ms, Path path,
+          RemoteIterator<S3AFileStatus> backingStatuses,
+          DirListingMetadata dirMeta, boolean isAuthoritative,
+          ITtlTimeProvider timeProvider, Listing listing)
+          throws IOException {
 
     // Fast-path for NullMetadataStore
     if (isNullMetadataStore(ms)) {
-      return backingStatuses.toArray(new S3AFileStatus[backingStatuses.size()]);
+      return backingStatuses;
     }
 
     assertQualified(path);
@@ -409,8 +389,10 @@ public final class S3Guard {
           timeProvider, operationState);
     }
     IOUtils.cleanupWithLogger(LOG, operationState);
-
-    return dirMetaToStatuses(dirMeta);
+    return listing.createProvidedFileStatusIterator(
+            dirMetaToStatuses(dirMeta),
+            ACCEPT_ALL,
+            Listing.ACCEPT_ALL_BUT_S3N);
   }
 
   /**
@@ -429,7 +411,7 @@ public final class S3Guard {
   private static void authoritativeUnion(
       final MetadataStore ms,
       final Path path,
-      final List<S3AFileStatus> backingStatuses,
+      final RemoteIterator<S3AFileStatus> backingStatuses,
       final DirListingMetadata dirMeta,
       final ITtlTimeProvider timeProvider,
       final BulkOperationState operationState) throws IOException {
@@ -440,7 +422,8 @@ public final class S3Guard {
     Set<Path> deleted = dirMeta.listTombstones();
     final Map<Path, PathMetadata> dirMetaMap = dirMeta.getListing().stream()
         .collect(Collectors.toMap(pm -> pm.getFileStatus().getPath(), pm -> pm));
-    for (S3AFileStatus s : backingStatuses) {
+    while (backingStatuses.hasNext()) {
+      S3AFileStatus s = backingStatuses.next();
       final Path statusPath = s.getPath();
       if (deleted.contains(statusPath)) {
         continue;
@@ -493,16 +476,17 @@ public final class S3Guard {
   private static void nonAuthoritativeUnion(
       final MetadataStore ms,
       final Path path,
-      final List<S3AFileStatus> backingStatuses,
+      final RemoteIterator<S3AFileStatus> backingStatuses,
       final DirListingMetadata dirMeta,
       final ITtlTimeProvider timeProvider,
       final BulkOperationState operationState) throws IOException {
-    List<PathMetadata> entriesToAdd = new ArrayList<>(backingStatuses.size());
+    List<PathMetadata> entriesToAdd = new ArrayList<>();
     Set<Path> deleted = dirMeta.listTombstones();
 
     final Map<Path, PathMetadata> dirMetaMap = dirMeta.getListing().stream()
         .collect(Collectors.toMap(pm -> pm.getFileStatus().getPath(), pm -> pm));
-    for (S3AFileStatus s : backingStatuses) {
+    while (backingStatuses.hasNext()) {
+      S3AFileStatus s = backingStatuses.next();
       final Path statusPath = s.getPath();
       if (deleted.contains(statusPath)) {
         continue;

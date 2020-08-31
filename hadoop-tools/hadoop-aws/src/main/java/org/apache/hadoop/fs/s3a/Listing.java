@@ -76,7 +76,7 @@ public class Listing extends AbstractStoreOperation {
 
   private static final Logger LOG = S3AFileSystem.LOG;
 
-  static final FileStatusAcceptor ACCEPT_ALL_BUT_S3N =
+  public static final FileStatusAcceptor ACCEPT_ALL_BUT_S3N =
       new AcceptAllButS3nDirs();
 
   private final ListingOperationCallbacks listingOperationCallbacks;
@@ -96,7 +96,7 @@ public class Listing extends AbstractStoreOperation {
    * @param acceptor the file status acceptor
    * @return the file status iterator
    */
-  ProvidedFileStatusIterator createProvidedFileStatusIterator(
+  public ProvidedFileStatusIterator createProvidedFileStatusIterator(
       S3AFileStatus[] fileStatuses,
       PathFilter filter,
       FileStatusAcceptor acceptor) {
@@ -251,7 +251,7 @@ public class Listing extends AbstractStoreOperation {
       if (!forceNonAuthoritativeMS &&
               allowAuthoritative &&
               metadataStoreListFilesIterator.isRecursivelyAuthoritative()) {
-        S3AFileStatus[] statuses = S3Guard.iteratorToStatuses(
+        S3AFileStatus[] statuses = S3AUtils.iteratorToStatuses(
                 metadataStoreListFilesIterator, tombstones);
         cachedFilesIterator = createProvidedFileStatusIterator(
                 statuses, ACCEPT_ALL, acceptor);
@@ -337,7 +337,7 @@ public class Listing extends AbstractStoreOperation {
    * @return Triple of file statuses, metaData, auth flag.
    * @throws IOException Any IO problems.
    */
-  public Triple<S3AFileStatus[], DirListingMetadata, Boolean>
+  public Triple<RemoteIterator<S3AFileStatus>, DirListingMetadata, Boolean>
         getFileStatusesAssumingNonEmptyDir(Path path)
           throws IOException {
     String key = pathToKey(path);
@@ -356,25 +356,26 @@ public class Listing extends AbstractStoreOperation {
                     allowAuthoritative);
     // In auth mode return directly with auth flag.
     if (allowAuthoritative && dirMeta != null && dirMeta.isAuthoritative()) {
-      return Triple.of(S3Guard.dirMetaToStatuses(dirMeta),
+      ProvidedFileStatusIterator mfsItr = createProvidedFileStatusIterator(
+              S3Guard.dirMetaToStatuses(dirMeta),
+              ACCEPT_ALL,
+              Listing.ACCEPT_ALL_BUT_S3N);
+      return Triple.of(mfsItr,
               dirMeta, Boolean.TRUE);
     }
 
     S3ListRequest request = createListObjectsRequest(key, "/");
     LOG.debug("listStatus: doing listObjects for directory {}", key);
 
-    Listing.FileStatusListingIterator files = createFileStatusListingIterator(
+    Listing.FileStatusListingIterator filesItr = createFileStatusListingIterator(
             path,
             request,
             ACCEPT_ALL,
             new Listing.AcceptAllButSelfAndS3nDirs(path));
-    result = new ArrayList<>(files.getBatchSize());
-    while (files.hasNext()) {
-      result.add(files.next());
-    }
+
     // return the results obtained from s3.
     return Triple.of(
-            result.toArray(new S3AFileStatus[result.size()]),
+            filesItr,
             dirMeta,
             Boolean.FALSE);
   }

@@ -188,12 +188,6 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
                     .plus(GET_FILE_STATUS_ON_FILE)),
             whenAuthoritative(LIST_STATUS_LIST_OP),
             whenNonauth(LIST_STATUS_LIST_OP));
-//    resetMetricDiffs();
-//    fs.listStatus(file);
-//    if (!fs.hasMetadataStore()) {
-//      metadataRequests.assertDiffEquals(1);
-//    }
-//    listRequests.assertDiffEquals(1);
   }
 
   @Test
@@ -208,17 +202,6 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
             .plus(GET_FILE_STATUS_ON_EMPTY_DIR)),
             whenAuthoritative(NO_IO),
             whenNonauth(LIST_STATUS_LIST_OP));
-//    resetMetricDiffs();
-//    fs.listStatus(dir);
-//    if (!fs.hasMetadataStore()) {
-//      verifyOperationCount(2, 1);
-//    } else {
-//      if (fs.allowAuthoritative(dir)) {
-//        verifyOperationCount(0, 0);
-//      } else {
-//        verifyOperationCount(0, 1);
-//      }
-//    }
   }
 
   @Test
@@ -234,17 +217,6 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
             whenRaw(LIST_STATUS_LIST_OP),
             whenAuthoritative(NO_IO),
             whenNonauth(LIST_STATUS_LIST_OP));
-//    resetMetricDiffs();
-//    fs.listStatus(dir);
-//    if (!fs.hasMetadataStore()) {
-//      verifyOperationCount(0, 1);
-//    } else {
-//      if (fs.allowAuthoritative(dir)) {
-//        verifyOperationCount(0, 0);
-//      } else {
-//        verifyOperationCount(0, 1);
-//      }
-//    }
   }
 
   @Test
