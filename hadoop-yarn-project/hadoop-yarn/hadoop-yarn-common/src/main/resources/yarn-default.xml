@@ -257,6 +257,12 @@
   </property>
 
   <property>
+    <description>Enable tools section in all ui1 webapp.</description>
+    <name>yarn.webapp.ui1.tools.enable</name>
+    <value>true</value>
+  </property>
+
+  <property>
     <description>
       Explicitly provide WAR file path for ui2 if needed.
     </description>
