@@ -30,7 +30,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderTokenIssuer;
 import org.apache.hadoop.fs.BatchListingOperations;
-import org.apache.hadoop.fs.BatchRename;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.CacheFlag;
@@ -51,6 +50,7 @@ import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.GlobalStorageStatistics;
 import org.apache.hadoop.fs.GlobalStorageStatistics.StorageStatisticsProvider;
+import org.apache.hadoop.fs.IORenameStatistic;
 import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.InvalidPathHandleException;
 import org.apache.hadoop.fs.PartialListing;
@@ -149,7 +149,7 @@ import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapa
 @InterfaceAudience.LimitedPrivate({ "MapReduce", "HBase" })
 @InterfaceStability.Unstable
 public class DistributedFileSystem extends FileSystem
-    implements KeyProviderTokenIssuer, BatchListingOperations, BatchRename {
+    implements KeyProviderTokenIssuer, BatchListingOperations {
   private Path workingDir;
   private URI uri;
 
@@ -976,14 +976,15 @@ public class DistributedFileSystem extends FileSystem
   }
 
   @Override
-  public void batchRename(List<String> srcs, List<String> dsts,
-      final Options.Rename... options) throws IOException {
+  public IORenameStatistic batchRename(List<String> srcs, List<String> dsts,
+                                       final Options.Rename... options) throws IOException {
     if (srcs.size() != dsts.size()) {
       throw new InvalidPathException("mismatch batch path src: " +
           String.join(",", srcs) + " dst: " + String.join(",", dsts));
     }
     statistics.incrementWriteOps(1);
     dfs.batchRename(getBatchPathName(srcs), getBatchPathName(dsts));
+    return new IORenameStatistic();
   }
 
   @Override

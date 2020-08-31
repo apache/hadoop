@@ -60,7 +60,6 @@ import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderTokenIssuer;
-import org.apache.hadoop.fs.BatchRename;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.ContentSummary;
@@ -75,6 +74,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.GlobalStorageStatistics;
 import org.apache.hadoop.fs.GlobalStorageStatistics.StorageStatisticsProvider;
+import org.apache.hadoop.fs.IORenameStatistic;
 import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.MultipartUploaderBuilder;
 import org.apache.hadoop.fs.QuotaUsage;
@@ -141,8 +141,7 @@ import com.google.common.collect.Lists;
 /** A FileSystem for HDFS over the web. */
 public class WebHdfsFileSystem extends FileSystem
     implements DelegationTokenRenewer.Renewable,
-    TokenAspect.TokenManagementDelegator, KeyProviderTokenIssuer,
-    BatchRename {
+    TokenAspect.TokenManagementDelegator, KeyProviderTokenIssuer {
   public static final Logger LOG = LoggerFactory
       .getLogger(WebHdfsFileSystem.class);
   /** WebHdfs version. */
@@ -1195,8 +1194,8 @@ public class WebHdfsFileSystem extends FileSystem
   }
 
   @Override
-  public void batchRename(List<String> srcs, List<String> dsts,
-      final Options.Rename... options) throws IOException {
+  public IORenameStatistic batchRename(List<String> srcs, List<String> dsts,
+        final Options.Rename... options) throws IOException {
     statistics.incrementWriteOps(1);
     storageStatistics.incrementOpCounter(OpType.BATCH_RENAME);
     final HttpOpParam.Op op = PutOpParam.Op.BATCH_RENAME;
@@ -1209,6 +1208,7 @@ public class WebHdfsFileSystem extends FileSystem
         new DestinationParam(StringUtils.join(":", getBatchPathName(dsts))),
         new RenameOptionSetParam(options)
     ).run();
+    return new IORenameStatistic();
   }
 
   @Override

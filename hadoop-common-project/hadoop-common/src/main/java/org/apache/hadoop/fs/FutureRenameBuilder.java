@@ -15,30 +15,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.fs;
 
+import com.sun.tools.javac.util.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 import java.io.IOException;
-import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 /**
- * Interface filesystems MAY implement to offer a batched operations.
+ * Builder for input streams and subclasses whose return value is
+ * actually a completable future: this allows for better asynchronous
+ * operation.
+ *
+ * To be more generic, {@link #opt(String, int)} and {@link #must(String, int)}
+ * variants provide implementation-agnostic way to customize the builder.
+ * Each FS-specific builder implementation can interpret the FS-specific
+ * options accordingly, for example:
+ *
+ * If the option is not related to the file system, the option will be ignored.
+ * If the option is must, but not supported by the file system, a
+ * {@link IllegalArgumentException} will be thrown.
+ *
  */
-
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-public interface BatchRename {
+public interface FutureRenameBuilder {
+  public FutureRenameBuilder rename(Pair<String, String> src2dst);
+  public FutureRenameBuilder option(Options.Rename... options);
 
-  /**
-   * Batched rename API that rename a batch of files.
-   *
-   * @param srcs source file list.
-   * @param dsts target file list.
-   * @throws IOException failure exception.
-   */
-  void batchRename(List<String> srcs, List<String> dsts,
-      Options.Rename... options) throws IOException;
+  CompletableFuture<IORenameStatistic> build()
+      throws IllegalArgumentException, UnsupportedOperationException,
+      IOException;
 }

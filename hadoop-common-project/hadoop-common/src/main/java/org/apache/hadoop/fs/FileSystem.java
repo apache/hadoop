@@ -58,6 +58,7 @@ import org.apache.hadoop.fs.Options.HandleOpt;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.impl.AbstractFSBuilderImpl;
 import org.apache.hadoop.fs.impl.FutureDataInputStreamBuilderImpl;
+import org.apache.hadoop.fs.impl.FutureRenameBuilderImpl;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
@@ -1607,6 +1608,18 @@ public abstract class FileSystem extends Configured
     if (!rename(src, dst)) {
       throw new IOException("rename from " + src + " to " + dst + " failed.");
     }
+  }
+
+  public IORenameStatistic batchRename(final List<String> srcs, final List<String> dsts,
+                                          final Rename... options) throws IOException {
+    if (srcs.size() != dsts.size()) {
+      throw new InvalidPathException("mismatch batch path src: " +
+          String.join(",", srcs) + " dst: " + String.join(",", dsts));
+    }
+    for(int i = 0; i < srcs.size(); i++) {
+      rename(new Path(srcs.get(i)), new Path(dsts.get(i)), options);
+    }
+    return new IORenameStatistic();
   }
 
   /**
@@ -4669,5 +4682,64 @@ public abstract class FileSystem extends Configured
       throws IOException {
     methodNotSupported();
     return null;
+  }
+
+  /**
+   * Builder returned for {@code #openFile(Path)}
+   * and {@code #openFile(PathHandle)}.
+   */
+  private static class FSRenameBuilder
+      extends FutureRenameBuilderImpl
+      implements FutureRenameBuilder {
+
+    /**
+     * Path Constructor.     *
+     * @param srcs path to open.
+     */
+    protected FSRenameBuilder(
+        @Nonnull final FileSystem fs,
+        @Nonnull final List<String> srcs,
+        @Nonnull final List<String> dsts,
+        Rename... options) {
+      super(fs, srcs, dsts, options);
+    }
+
+    /**
+     * Perform the open operation.
+     * Returns a future which, when get() or a chained completion
+     * operation is invoked, will supply the input stream of the file
+     * referenced by the path/path handle.
+     * @return a future to the input stream.
+     * @throws IOException early failure to open
+     * @throws UnsupportedOperationException if the specific operation
+     * is not supported.
+     * @throws IllegalArgumentException if the parameters are not valid.
+     */
+    @Override
+    public CompletableFuture<IORenameStatistic> build() throws IOException {
+      return LambdaUtils.eval(new CompletableFuture<>(),
+          () ->getFS().batchRename(getSrcs(), getDsts(), getOptions()));
+    }
+  }
+
+  /**
+   * rename one or batch file through a builder API.
+   * Ultimately calls {@link #rename(Path, Path)} unless a subclass
+   * executes the open command differently.
+   *
+   * The semantics of this call are therefore the same as that of
+   * {@link #rename(Path, int)} with one special point: it is in
+   * {@code FSDataInputStreamBuilder.build()} in which the open operation
+   * takes place -it is there where all preconditions to the operation
+   * are checked.
+   * @param path file path
+   * @return a FSDataInputStreamBuilder object to build the input stream
+   * @throws IOException if some early checks cause IO failures.
+   * @throws UnsupportedOperationException if support is checked early.
+   */
+  @InterfaceStability.Unstable
+  public FutureRenameBuilder renameFile(List<String> srcs, List<String> dsts, Rename... options)
+      throws IOException, UnsupportedOperationException {
+    return new FSRenameBuilder(this, srcs, dsts, options);
   }
 }
