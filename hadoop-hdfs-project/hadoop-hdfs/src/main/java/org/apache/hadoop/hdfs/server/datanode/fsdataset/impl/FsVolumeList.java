@@ -301,13 +301,15 @@ class FsVolumeList {
   void addVolume(FsVolumeReference ref) {
     FsVolumeImpl volume = (FsVolumeImpl) ref.getVolume();
     volumes.add(volume);
-    if (volume.getStorageType() == StorageType.DISK
-        || volume.getStorageType() == StorageType.ARCHIVE) {
+    if (enableSameDiskTiering &&
+        (volume.getStorageType() == StorageType.DISK
+        || volume.getStorageType() == StorageType.ARCHIVE)) {
       String device = volume.getDevice();
       if (device != null) {
         Map<StorageType, FsVolumeImpl> storageTypeMap = deviceVolumeMapping.getOrDefault(device, new ConcurrentHashMap<>());
         if (storageTypeMap.containsKey(volume.getStorageType())) {
-          FsDatasetImpl.LOG.error("Found storage type already exist. Skip.");
+          FsDatasetImpl.LOG.error("Found storage type already exist." +
+              " Skipping for now. Please check disk configuration");
         } else {
           storageTypeMap.put(volume.getStorageType(), volume);
           deviceVolumeMapping.put(device, storageTypeMap);

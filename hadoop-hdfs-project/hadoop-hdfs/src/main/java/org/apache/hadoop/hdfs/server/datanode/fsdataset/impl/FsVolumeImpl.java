@@ -1286,7 +1286,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
     // move block files to the rbw directory
     BlockPoolSlice bpslice = getBlockPoolSlice(b.getBlockPoolId());
     final File dest = FsDatasetImpl.moveBlockFiles(b.getLocalBlock(), temp,
-        bpslice.getRbwDir())[0];
+        bpslice.getRbwDir());
     // create RBW
     final LocalReplicaInPipeline rbw = new ReplicaBuilder(ReplicaState.RBW)
         .setBlockId(blockId)
@@ -1496,24 +1496,6 @@ public class FsVolumeImpl implements FsVolumeSpi {
         block.getGenerationStamp(), replicaInfo,
         getTmpDir(block.getBlockPoolId()),
         replicaInfo.isOnTransientStorage(), smallBufferSize, conf);
-
-    ReplicaInfo newReplicaInfo = new ReplicaBuilder(ReplicaState.TEMPORARY)
-        .setBlockId(replicaInfo.getBlockId())
-        .setGenerationStamp(replicaInfo.getGenerationStamp())
-        .setFsVolume(this)
-        .setDirectoryToUse(blockFiles[0].getParentFile())
-        .setBytesToReserve(0)
-        .build();
-    newReplicaInfo.setNumBytes(blockFiles[1].length());
-    return newReplicaInfo;
-  }
-
-  public ReplicaInfo renameBlockToTmpLocation(ExtendedBlock block,
-      ReplicaInfo replicaInfo,
-      Configuration conf) throws IOException {
-
-    File[] blockFiles = FsDatasetImpl.moveBlockFiles(block.getLocalBlock(), replicaInfo,
-        getTmpDir(block.getBlockPoolId()));
 
     ReplicaInfo newReplicaInfo = new ReplicaBuilder(ReplicaState.TEMPORARY)
         .setBlockId(replicaInfo.getBlockId())
