@@ -1839,9 +1839,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final long DFS_LEASE_HARDLIMIT_DEFAULT =
       HdfsClientConfigKeys.DFS_LEASE_HARDLIMIT_DEFAULT;
 
-  public static final String DFS_DATANODE_ALLOW_SAME_DISK_TIERING = "dfs.datanode.samedisk.tiering.enabled";
-  public static final boolean DFS_DATANODE_ALLOW_SAME_DISK_TIERING_DEFAULT = false;
+  public static final String DFS_DATANODE_ALLOW_SAME_DISK_TIERING = "dfs.datanode.same-disk-tiering.enabled";
+  public static final boolean DFS_DATANODE_ALLOW_SAME_DISK_TIERING_DEFAULT = true;
 
-  public static final String DFS_DATANODE_RESERVE_FOR_ARCHIVE = "dfs.datanode.samedisk.tiering.enabled";
-  public static final double DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT = 0.0;
+  public static final String DFS_DATANODE_RESERVE_FOR_ARCHIVE_PERCENTAGE = "dfs.datanode.reserve-for-archive.percentage";
+  public static final double DFS_DATANODE_RESERVE_FOR_ARCHIVE_PERCENTAGE_DEFAULT = 0.0;
 }

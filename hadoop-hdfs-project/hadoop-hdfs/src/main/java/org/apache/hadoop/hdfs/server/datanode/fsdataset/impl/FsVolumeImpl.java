@@ -134,7 +134,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   private final FileIoProvider fileIoProvider;
   private final DataNodeVolumeMetrics metrics;
   private URI baseURI;
-  private boolean enableSameDiskTiering;
+  private boolean enableSameDiskArchival;
   private String device;
 
   /**
@@ -192,10 +192,10 @@ public class FsVolumeImpl implements FsVolumeSpi {
     }
     this.conf = conf;
     this.fileIoProvider = fileIoProvider;
-    this.enableSameDiskTiering =
+    this.enableSameDiskArchival =
         conf.getBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING,
             DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING_DEFAULT);
-    if (enableSameDiskTiering) {
+    if (enableSameDiskArchival) {
       this.device = usage.getMount();
     }
   }
@@ -424,24 +424,25 @@ public class FsVolumeImpl implements FsVolumeSpi {
    */
   @VisibleForTesting
   public long getCapacity() {
-    if (configuredCapacity < 0L) {
-      long remaining;
-      if (cachedCapacity > 0L) {
-        remaining = cachedCapacity - getReserved();
-      } else {
-        remaining = usage.getCapacity() - getReserved();
-        if (enableSameDiskTiering) {
-          double reservedForArchive = conf.getDouble(DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE, DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_DEFAULT);
-          if (storageType == StorageType.ARCHIVE) {
-            remaining = (long) (remaining * reservedForArchive);
-          } else {
-            remaining = (long) (remaining * (1 - reservedForArchive));
-          }
-        }
-      }
-      return Math.max(remaining, 0L);
+    long capacity;
+    if (configuredCapacity < 0) {
+      long remaining = usage.getCapacity() - getReserved();
+      capacity = remaining > 0 ? remaining : 0;
+    } else {
+      capacity = configuredCapacity;
     }
-    return configuredCapacity;
+
+    if (enableSameDiskArchival) {
+      double reservedForArchive = conf.getDouble(DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_PERCENTAGE,
+          DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_PERCENTAGE_DEFAULT);
+      if (storageType == StorageType.ARCHIVE) {
+        capacity = (long) (capacity * reservedForArchive);
+      } else {
+        capacity = (long) (capacity * (1 - reservedForArchive));
+      }
+    }
+
+    return capacity;
   }
 
   /**
@@ -472,16 +473,25 @@ public class FsVolumeImpl implements FsVolumeSpi {
   }
 
   long getActualNonDfsUsed() throws IOException {
-    if (enableSameDiskTiering) {
-      FsVolumeSpi spi = dataset.volumes.getVolumeOnSameDevice(this).getVolume();
-      if (spi instanceof FsVolumeImpl) {
-        FsVolumeImpl volume = (FsVolumeImpl) dataset.volumes.getVolumeOnSameDevice(this);
-        if (volume != null) {
-          return usage.getUsed() - getDfsUsed() - volume.getDfsUsed();
-        }
+    // DISK and ARCHIVAL on same disk should share the same amount of reserved capacity.
+    // When calculating actual non dfs used,
+    // exclude DFS used capacity by another volume.
+    if (enableSameDiskArchival && (storageType == StorageType.DISK || storageType == StorageType.ARCHIVE)) {
+      StorageType counterpartStorageType = storageType == StorageType.DISK ? StorageType.ARCHIVE : StorageType.DISK;
+      FsVolumeImpl volume = (FsVolumeImpl) dataset.getVolume(device, counterpartStorageType).getVolume();
+      if (volume != null) {
+        return getDfUsed() - getDfsUsed() - volume.getDfsUsed();
       }
     }
-    return usage.getUsed() - getDfsUsed();
+    return getDfUsed() - getDfsUsed();
+  }
+
+  /**
+   * This function is only used for Mock.
+   */
+  @VisibleForTesting
+  public long getDfUsed() {
+    return usage.getUsed();
   }
 
   private long getRemainingReserved() throws IOException {

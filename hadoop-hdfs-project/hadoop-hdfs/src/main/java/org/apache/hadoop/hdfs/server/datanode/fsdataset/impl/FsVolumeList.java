@@ -19,9 +19,6 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
-import java.nio.file.FileStore;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -68,7 +65,7 @@ class FsVolumeList {
   private final BlockScanner blockScanner;
 
   public boolean enableSameDiskTiering;
-  private ConcurrentMap<String, Map<StorageType, FsVolumeImpl>> volumeDeviceMapping;
+  private ConcurrentMap<String, Map<StorageType, FsVolumeImpl>> deviceVolumeMapping;
 
   FsVolumeList(List<VolumeFailureInfo> initialVolumeFailureInfos,
       BlockScanner blockScanner,
@@ -84,7 +81,7 @@ class FsVolumeList {
     }
     enableSameDiskTiering = config.getBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING, DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING_DEFAULT);
     if (enableSameDiskTiering) {
-      volumeDeviceMapping = new ConcurrentHashMap<>();
+      deviceVolumeMapping = new ConcurrentHashMap<>();
     }
   }
 
@@ -308,12 +305,12 @@ class FsVolumeList {
         || volume.getStorageType() == StorageType.ARCHIVE) {
       String device = volume.getDevice();
       if (device != null) {
-        Map<StorageType, FsVolumeImpl> storageTypeMap = volumeDeviceMapping.getOrDefault(device, new ConcurrentHashMap<>());
+        Map<StorageType, FsVolumeImpl> storageTypeMap = deviceVolumeMapping.getOrDefault(device, new ConcurrentHashMap<>());
         if (storageTypeMap.containsKey(volume.getStorageType())) {
           FsDatasetImpl.LOG.error("Found storage type already exist. Skip.");
         } else {
           storageTypeMap.put(volume.getStorageType(), volume);
-          volumeDeviceMapping.put(device, storageTypeMap);
+          deviceVolumeMapping.put(device, storageTypeMap);
         }
       }
     }
@@ -340,10 +337,10 @@ class FsVolumeList {
       if (enableSameDiskTiering && (target.getStorageType() == StorageType.DISK || target.getStorageType() == StorageType.ARCHIVE)) {
         String device = target.getDevice();
         if (device != null) {
-          Map storageTypeMap = volumeDeviceMapping.get(target.getDevice());
+          Map storageTypeMap = deviceVolumeMapping.get(target.getDevice());
           storageTypeMap.remove(target.getStorageType());
           if (storageTypeMap.isEmpty()) {
-            volumeDeviceMapping.remove(target.getDevice());
+            deviceVolumeMapping.remove(target.getDevice());
           }
         }
       }
@@ -367,21 +364,19 @@ class FsVolumeList {
     }
   }
 
-  FsVolumeReference getVolumeOnSameDevice(FsVolumeImpl volume) {
-    FsVolumeImpl impl = null;
-    try {
-      if (!volume.getDevice().isEmpty() && volumeDeviceMapping.containsKey(volume.getDevice())) {
-        Map<StorageType, FsVolumeImpl> storageTypeMap = volumeDeviceMapping.get(volume.getDevice());
-        if (volume.getStorageType() == StorageType.ARCHIVE) {
-          impl = storageTypeMap.getOrDefault(StorageType.DISK, null);
-        } else {
-          impl = storageTypeMap.getOrDefault(StorageType.ARCHIVE, null);
+  FsVolumeReference getVolumeByDeviceAndStorageType(String device, StorageType storageType) {
+    if (deviceVolumeMapping != null && deviceVolumeMapping.containsKey(device)) {
+      try {
+        FsVolumeImpl volume = deviceVolumeMapping.get(device).getOrDefault(storageType, null);
+        if (volume != null) {
+          return volume.obtainReference();
         }
-        return impl == null ? null : impl.obtainReference();
+      } catch (ClosedChannelException e) {
+        FsDatasetImpl.LOG.warn("Volume closed when getting volume by device and storage type: "
+            + device + ", " + storageType);
       }
-    } catch (ClosedChannelException e) {
-      FsDatasetImpl.LOG.error("Failed to obtain a reference for volume: " + impl);
     }
+
     return null;
   }
 

@@ -29,7 +29,6 @@ import java.io.InputStream;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -189,6 +188,12 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           volumeMap.get(b.getBlockPoolId(), b.getLocalBlock());
       return r != null ? (FsVolumeImpl) r.getVolume() : null;
     }
+  }
+
+  // Get volume by device and storage type.
+  // Only used when turning on same disk tiering feature.
+  FsVolumeReference getVolume(String device, StorageType storageType) {
+    return volumes.getVolumeByDeviceAndStorageType(device, storageType);
   }
 
   @Override // FsDatasetSpi
@@ -1041,7 +1046,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     boolean useSameDevice = false;
     try (AutoCloseableLock lock = datasetReadLock.acquire()) {
       if (volumes.enableSameDiskTiering && replicaInfo.getVolume() instanceof FsVolumeImpl) {
-        volumeRef = volumes.getVolumeOnSameDevice((FsVolumeImpl) replicaInfo.getVolume());
+        volumeRef = volumes.getNextVolume(targetStorageType, targetStorageId,
+            block.getNumBytes());
         useSameDevice = true;
       }
       if (volumeRef == null) {
@@ -1684,7 +1690,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       // check volume
       final FsVolumeImpl v = (FsVolumeImpl) temp.getVolume();
       if (v == null) {
-        throw new IOException("r.getVolume() = null, temp=" + temp);
+        throw new IOException("r.getVolumeByDeviceAndStorageType() = null, temp=" + temp);
       }
 
       final ReplicaInPipeline rbw = v.convertTemporaryToRbw(b, temp);
