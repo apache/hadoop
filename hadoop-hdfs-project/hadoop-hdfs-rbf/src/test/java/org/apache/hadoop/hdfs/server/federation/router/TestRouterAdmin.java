@@ -27,11 +27,14 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
@@ -66,6 +69,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import com.google.common.collect.Lists;
+
 /**
  * The administrator interface of the {@link Router} implemented by
  * {@link RouterAdminServer}.
@@ -78,6 +83,11 @@ public class TestRouterAdmin {
       "Hadoop:service=Router,name=FederationRPC";
   private static List<MountTable> mockMountTable;
   private static StateStoreService stateStore;
+  private static RouterRpcClient mockRpcClient;
+  private static final Map<RemoteLocation, HdfsFileStatus> mockResponse0 =
+      new HashMap<>();
+  private static final Map<RemoteLocation, HdfsFileStatus> mockResponse1 =
+      new HashMap<>();
 
   @BeforeClass
   public static void globalSetUp() throws Exception {
@@ -103,11 +113,39 @@ public class TestRouterAdmin {
         createNamenodeReport("ns1", "nn1", HAServiceState.ACTIVE));
     stateStore.refreshCaches(true);
 
+    setUpMocks();
+  }
+
+  private static void setUpMocks() throws IOException {
     RouterRpcServer spyRpcServer =
         Mockito.spy(routerContext.getRouter().createRpcServer());
     Whitebox
         .setInternalState(routerContext.getRouter(), "rpcServer", spyRpcServer);
     Mockito.doReturn(null).when(spyRpcServer).getFileInfo(Mockito.anyString());
+
+    mockRpcClient = Mockito.spy(spyRpcServer.getRPCClient());
+    Whitebox
+        .setInternalState(spyRpcServer, "rpcClient", mockRpcClient);
+    RemoteLocation remoteLocation0 = new RemoteLocation("ns0", "/testdir", null);
+    RemoteLocation remoteLocation1 = new RemoteLocation("ns1", "/", null);
+    mockResponse0.put(remoteLocation0,
+        new HdfsFileStatus.Builder().build());
+    Mockito.doReturn(mockResponse0).when(mockRpcClient).invokeConcurrent(
+        Mockito.eq(Lists.newArrayList(remoteLocation0)),
+        Mockito.any(RemoteMethod.class),
+        Mockito.eq(false),
+        Mockito.eq(false),
+        Mockito.eq(HdfsFileStatus.class)
+    );
+    mockResponse1.put(remoteLocation1,
+        new HdfsFileStatus.Builder().build());
+    Mockito.doReturn(mockResponse1).when(mockRpcClient).invokeConcurrent(
+        Mockito.eq(Lists.newArrayList(remoteLocation1)),
+        Mockito.any(RemoteMethod.class),
+        Mockito.eq(false),
+        Mockito.eq(false),
+        Mockito.eq(HdfsFileStatus.class)
+    );
   }
 
   @AfterClass
@@ -128,7 +166,6 @@ public class TestRouterAdmin {
     MountTable newEntry = MountTable.newInstance(
         "/testpath", Collections.singletonMap("ns0", "/testdir"),
         Time.now(), Time.now());
-
     RouterClient client = routerContext.getAdminClient();
     MountTableManager mountTable = client.getMountTableManager();
 
