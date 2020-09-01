@@ -62,7 +62,7 @@ import org.slf4j.LoggerFactory;
 @InterfaceStability.Unstable
 public class ReduceTask extends Task {
 
-  static {                                        // register a ctor
+  static {                                        // register actor
     WritableFactories.setFactory
       (ReduceTask.class,
        new WritableFactory() {
