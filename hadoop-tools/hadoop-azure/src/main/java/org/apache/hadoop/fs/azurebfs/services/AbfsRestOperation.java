@@ -248,8 +248,10 @@ public class AbfsRestOperation {
 
       httpOperation.processResponse(buffer, bufferOffset, bufferLength);
       incrementCounter(AbfsStatistic.GET_RESPONSES, 1);
-      incrementCounter(AbfsStatistic.BYTES_RECEIVED,
-          httpOperation.getBytesReceived());
+      if (httpOperation.getStatusCode() < HttpURLConnection.HTTP_BAD_REQUEST) {
+        incrementCounter(AbfsStatistic.BYTES_RECEIVED,
+            httpOperation.getBytesReceived());
+      }
     } catch (IOException ex) {
       if (ex instanceof UnknownHostException) {
         LOG.warn(String.format("Unknown host name: %s. Retrying to resolve the host name...", httpOperation.getUrl().getHost()));
