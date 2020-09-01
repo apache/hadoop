@@ -239,7 +239,7 @@ public class TestFSMainOperationsSwift extends FSMainOperationsBaseTest {
 
   @Test(timeout = SWIFT_TEST_TIMEOUT)
   @Override
-  public void testOverwrite() throws Exception {
+  public void testOverwrite() throws IOException {
     super.testOverwrite();
   }
 
@@ -257,7 +257,7 @@ public class TestFSMainOperationsSwift extends FSMainOperationsBaseTest {
 
   @Test(timeout = SWIFT_TEST_TIMEOUT)
   @Override
-  public void testDeleteRecursively() throws Exception {
+  public void testDeleteRecursively() throws IOException {
     super.testDeleteRecursively();
   }
 

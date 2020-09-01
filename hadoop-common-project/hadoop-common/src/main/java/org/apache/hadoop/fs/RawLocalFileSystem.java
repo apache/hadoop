@@ -33,8 +33,11 @@ import java.io.OutputStream;
 import java.io.FileDescriptor;
 import java.net.URI;
 import java.nio.ByteBuffer;
+import java.nio.file.DirectoryIteratorException;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.FileTime;
@@ -46,6 +49,7 @@ import java.util.StringTokenizer;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.impl.FileSystemRename3Action;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
@@ -1084,6 +1088,74 @@ public class RawLocalFileSystem extends FileSystem {
       return FileSystem.areSymlinksEnabled();
     default:
       return super.hasPathCapability(path, capability);
+    }
+  }
+
+  /**
+   * Return the local-FS-specific rename callbacks, with
+   * better failure reporting.
+   * @return callbacks for renaming.
+   */
+  @Override
+  protected FileSystemRename3Action.RenameCallbacks createRenameCallbacks() {
+    return new RenameToRawLocalFS();
+  }
+
+  /**
+   * Subclass of the normal filesystem rename3 callbacks which
+   * uses the Java 7 nio APIs.
+   */
+  private final class RenameToRawLocalFS extends
+      FileSystemRename3Action.RenameCallbacksToFileSystem {
+
+    private RenameToRawLocalFS() {
+      super(RawLocalFileSystem.this);
+    }
+
+    @Override
+    public boolean directoryHasChildren(final FileStatus directory)
+        throws IOException {
+      try (DirectoryStream<java.nio.file.Path> paths
+               = Files.newDirectoryStream(
+                   pathToFile(directory.getPath()).toPath())) {
+        if (paths.iterator().hasNext()) {
+          // there's an entry, so fail
+          return true;
+        } else {
+          return false;
+        }
+      } catch (DirectoryIteratorException ex) {
+        throw ex.getCause();
+      }
+    }
+
+    /**
+     * This rename uses the java.nio.Files API
+     * to perform the copy and so fail meaningfully.
+     * {@inheritDoc}
+     * @param params
+     */
+    @Override
+    public void executeRename(
+        final FileSystemRename3Action.ExecuteRenameParams params)
+        throws PathIOException, IOException {
+      super.executeRename(params);
+      File sourceFile = pathToFile(params.getSourcePath());
+      File destFile = pathToFile(params.getDestPath());
+
+      if (params.isDeleteDest()) {
+        // when the test is to be cleaned up, we invoke the move
+        // operation with overwrite = true
+        Files.move(
+            sourceFile.toPath(),
+            destFile.toPath(),
+            StandardCopyOption.REPLACE_EXISTING);
+      } else {
+        // otherwise: no overwrite.
+        Files.move(
+            sourceFile.toPath(),
+            destFile.toPath());
+      }
     }
   }
 }

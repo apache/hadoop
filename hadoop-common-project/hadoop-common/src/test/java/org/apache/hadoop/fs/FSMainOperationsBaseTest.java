@@ -377,7 +377,7 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
     // listStatus with filters returns empty correctly
     FileStatus[] filteredPaths = fSys.listStatus(
         getTestRootPath(fSys, "test"), TEST_X_FILTER);
-    assertEquals(0,filteredPaths.length);
+    Assert.assertEquals(0,filteredPaths.length);
     
   }
   

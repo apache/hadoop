@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.AbstractFileSystem;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -35,7 +36,6 @@ import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
-import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DurationInfo;
 
@@ -55,12 +55,17 @@ public class FileSystemRename3Action {
   private static final Logger LOG =
       LoggerFactory.getLogger(FileSystemRename3Action.class);
 
+  public static final Path ROOT = new Path("/");
+
   public FileSystemRename3Action() {
   }
 
   /**
-   * Validate all the preconditions of
-   * {@link FileSystem#rename(Path, Path, Options.Rename...)}.
+   * Execcute
+   * {@link FileSystem#rename(Path, Path, Options.Rename...)}, by first
+   * validating the arguments, then using the supplied
+   * {@link RenameCallbacks} implementation to probe the store and
+   * then execute the rename.
    * <p></p>
    * @param params rename arguments
    * @throws FileNotFoundException source path does not exist, or the parent
@@ -75,106 +80,137 @@ public class FileSystemRename3Action {
     final Path sourcePath = params.getSourcePath();
     final Path destPath = params.getDestPath();
     final Options.Rename[] renameOptions = params.getRenameOptions();
-    final FileStatus sourceStatus = params.getSourceStatus();
-    final FileStatus destStatus = params.getDestStatus();
     final RenameCallbacks callbacks = params.getRenameCallbacks();
 
     LOG.debug("Rename {} tp {}",
         sourcePath,
         destPath);
 
-    if (sourceStatus == null) {
-      throw new FileNotFoundException(
-          String.format(RENAME_SOURCE_NOT_FOUND, sourcePath));
-    }
-    final String srcStr = sourcePath.toUri().getPath();
-    final String dstStr = destPath.toUri().getPath();
-    if (dstStr.startsWith(srcStr)
-        && dstStr.charAt(srcStr.length() - 1) == Path.SEPARATOR_CHAR) {
-      throw new PathIOException(srcStr,
-          String.format(RENAME_DEST_UNDER_SOURCE, srcStr,
-              dstStr));
-    }
-    if ("/".equals(srcStr)) {
-      throw new PathIOException(srcStr, RENAME_SOURCE_IS_ROOT);
-    }
-    if ("/".equals(dstStr)) {
-      throw new PathIOException(srcStr, RENAME_DEST_IS_ROOT);
-    }
-    if (srcStr.equals(dstStr)) {
-      throw new FileAlreadyExistsException(
-          String.format(RENAME_DEST_EQUALS_SOURCE,
-              srcStr,
-              dstStr));
-    }
+    try {
+      final String srcStr = sourcePath.toUri().getPath();
+      final String dstStr = destPath.toUri().getPath();
+      if (dstStr.startsWith(srcStr)
+          && dstStr.charAt(srcStr.length() - 1) == Path.SEPARATOR_CHAR) {
+        throw new PathIOException(srcStr,
+            String.format(RENAME_DEST_UNDER_SOURCE, srcStr,
+                dstStr));
+      }
+      if (sourcePath.isRoot()) {
+        throw new PathIOException(srcStr, RENAME_SOURCE_IS_ROOT);
+      }
+      if (destPath.isRoot()) {
+        throw new PathIOException(srcStr, RENAME_DEST_IS_ROOT);
+      }
+      if (sourcePath.equals(destPath)) {
+        throw new FileAlreadyExistsException(
+            String.format(RENAME_DEST_EQUALS_SOURCE,
+                srcStr,
+                dstStr));
+      }
 
-    boolean overwrite = false;
-    boolean deleteEmptyDestDirectory = false;
+      boolean overwrite = false;
+      boolean deleteDestination = false;
 
-    if (null != renameOptions) {
-      for (Options.Rename option : renameOptions) {
-        if (option == Options.Rename.OVERWRITE) {
-          overwrite = true;
+      if (null != renameOptions) {
+        for (Options.Rename option : renameOptions) {
+          if (option == Options.Rename.OVERWRITE) {
+            overwrite = true;
+          }
         }
       }
-    }
-    if (destStatus != null) {
-      if (sourceStatus.isDirectory() != destStatus.isDirectory()) {
-        // if the source is a directory, so must any existing
-        // destination
-        throw new PathIOException(sourcePath.toString(),
-            String.format(RENAME_SOURCE_DEST_DIFFERENT_TYPE,
-                sourcePath,
-                destPath));
+      final FileStatus sourceStatus = callbacks.getSourceStatus(sourcePath);
+      if (sourceStatus == null) {
+        throw new FileNotFoundException(
+            String.format(RENAME_SOURCE_NOT_FOUND, sourcePath));
       }
-      if (!overwrite) {
-        // the destination exists but overwrite = false
-        throw new FileAlreadyExistsException(
-            String.format(RENAME_DEST_EXISTS, destPath));
-      }
-      // Delete the destination that is a file or an empty directory
-      if (destStatus.isDirectory()) {
-        // list children. This may be expensive in time or memory.
-        if (callbacks.directoryHasChildren(destStatus)) {
+
+      final FileStatus destStatus = callbacks.getDestStatusOrNull(destPath);
+
+      if (destStatus != null) {
+        // the destination exists.
+
+        // The source and destination types must match.
+        if (sourceStatus.isDirectory() != destStatus.isDirectory()) {
           throw new PathIOException(sourcePath.toString(),
-              String.format(RENAME_DEST_NOT_EMPTY,
+              String.format(RENAME_SOURCE_DEST_DIFFERENT_TYPE,
+                  sourcePath,
                   destPath));
         }
-      }
-      // its an empty directory, delete.
-      deleteEmptyDestDirectory = true;
-    } else {
-      // verify the parent of the dest being a directory.
-      // this is implicit if the source and dest share the same parent,
-      // otherwise a probe is is needed.
-      // uses isDirectory so those stores which have optimised that
-      // are slightly more efficient on the success path.
-      // This is at the expense of a second check during failure
-      // to distinguish parent dir not existing from parent
-      // not being a file.
-      final Path destParent = destPath.getParent();
-      final Path srcParent = sourcePath.getParent();
-      if (!destParent.equals(srcParent)) {
-        // check that any non-root parent is a directory
-        if (!destParent.isRoot()) {
+        // and the rename must permit overwrite
+        if (!overwrite) {
+          // the destination exists but overwrite = false
+          throw new FileAlreadyExistsException(
+              String.format(RENAME_DEST_EXISTS, destPath));
+        }
+        // If the destination exists,is a directory, it must be empty
+        if (destStatus.isDirectory()) {
+          if (callbacks.directoryHasChildren(destStatus)) {
+            throw new PathIOException(sourcePath.toString(),
+                String.format(RENAME_DEST_NOT_EMPTY,
+                    destPath));
+          }
+        }
+        // declare that the destination must be deleted
+        deleteDestination = true;
+      } else {
+        // there was no destination status; the path does not
+        // exist.
+
+        // verify the parent of the dest being a directory.
+        // this is implicit if the source and dest share the same parent,
+        // otherwise a probe is is needed.
+        // uses isDirectory so those stores which have optimised that
+        // are slightly more efficient on the success path.
+        // This is at the expense of a second check during failure
+        // to distinguish parent dir not existing from parent
+        // not being a file.
+        final Path destParent = destPath.getParent();
+        final Path srcParent = sourcePath.getParent();
+        if (!destParent.equals(srcParent) && destParent.isRoot()) {
+          // check that any non-root parent is a directory
           callbacks.verifyIsDirectory(destParent);
         }
       }
-    }
 
+      // and now, finally, the rename.
+      // log duration @ debug for the benefit of anyone wondering why
+      // renames are slow against object stores.
+      try (DurationInfo ignored = new DurationInfo(LOG, false,
+          "executing rename(%s %s, %s)",
+          sourceStatus.isFile() ? "file" : "directory",
+          srcStr,
+          destPath)) {
+        callbacks.executeRename(
+            new ExecuteRenameParams(sourceStatus, destPath, destStatus,
+                renameOptions, deleteDestination));
+      }
+    } finally {
+      IOUtils.cleanupWithLogger(LOG, callbacks);
 
-    // and now, finally, the rename.
-    // log duration @ debug for the benefit of anyone wondering why
-    // renames are slow against object stores.
-    try (DurationInfo ignored = new DurationInfo(LOG, false,
-        "rename(%s %s, %s)",
-        sourceStatus.isFile() ? "file" : "directory",
-        srcStr,
-        destPath)) {
-      callbacks.rename(sourceStatus, destPath, destStatus, renameOptions,
-          deleteEmptyDestDirectory);
     }
   }
+
+  /**
+   * Create the rename callbacks from a filesystem.
+   * @param fileSystem filesystem to invoke.
+   * @return callbacks.
+   */
+  public static RenameCallbacks callbacksFromFileSystem(
+      FileSystem fileSystem) {
+    return new RenameCallbacksToFileSystem(fileSystem);
+  }
+
+  /**
+   * Create the rename callbacks into an AbstractFileSystem
+   * instance.
+   * @param abstractFileSystem filesystm to invoke.
+   * @return callbacks.
+   */
+  public static RenameCallbacks callbacksFromFileContext(
+      AbstractFileSystem abstractFileSystem) {
+    return new RenameCallbacksToFileContext(abstractFileSystem);
+  }
+
 
   /**
    * Arguments for the rename validation operation.
@@ -183,11 +219,7 @@ public class FileSystemRename3Action {
 
     private final Path sourcePath;
 
-    private final FileStatus sourceStatus;
-
     private final Path destPath;
-
-    private final FileStatus destStatus;
 
     private final RenameCallbacks renameCallbacks;
 
@@ -195,22 +227,16 @@ public class FileSystemRename3Action {
 
     /**
      * @param sourcePath qualified source
-     * @param sourceStatus qualified source status.
      * @param destPath qualified dest.
-     * @param destStatus qualified dest status.
      * @param renameCallbacks callbacks
      * @param renameOptions options
      */
     private RenameActionParams(final Path sourcePath,
-        final FileStatus sourceStatus,
         final Path destPath,
-        final FileStatus destStatus,
         final RenameCallbacks renameCallbacks,
-        final Options.Rename... renameOptions) {
+        final Options.Rename[] renameOptions) {
       this.sourcePath = sourcePath;
-      this.sourceStatus = sourceStatus;
       this.destPath = destPath;
-      this.destStatus = destStatus;
       this.renameCallbacks = renameCallbacks;
       this.renameOptions = renameOptions;
     }
@@ -219,16 +245,8 @@ public class FileSystemRename3Action {
       return sourcePath;
     }
 
-    FileStatus getSourceStatus() {
-      return sourceStatus;
-    }
-
     Path getDestPath() {
       return destPath;
-    }
-
-    FileStatus getDestStatus() {
-      return destStatus;
     }
 
     public RenameCallbacks getRenameCallbacks() {
@@ -247,11 +265,8 @@ public class FileSystemRename3Action {
 
     private Path sourcePath;
 
-    private FileStatus sourceStatus;
 
     private Path destPath;
-
-    private FileStatus destStatus;
 
     private RenameCallbacks renameCallbacks;
 
@@ -262,19 +277,9 @@ public class FileSystemRename3Action {
       return this;
     }
 
-    public RenameValidationBuilder withSourceStatus(final FileStatus sourceStatus) {
-      this.sourceStatus = sourceStatus;
-      return this;
-    }
 
     public RenameValidationBuilder withDestPath(final Path destPath) {
       this.destPath = destPath;
-      return this;
-    }
-
-    public RenameValidationBuilder withDestStatus(
-        final FileStatus destStatus) {
-      this.destStatus = destStatus;
       return this;
     }
 
@@ -292,8 +297,9 @@ public class FileSystemRename3Action {
     }
 
     public RenameActionParams build() {
-      return new RenameActionParams(sourcePath, sourceStatus, destPath,
-          destStatus, renameCallbacks,
+      return new RenameActionParams(sourcePath,
+          destPath,
+          renameCallbacks,
           renameOptions);
     }
   }
@@ -313,11 +319,13 @@ public class FileSystemRename3Action {
    * These are used to validate/prepare the operation and the
    * final action.
    */
-  public interface RenameCallbacks {
+  public interface RenameCallbacks extends Closeable {
 
     /**
-     * Test for a directory having children. This is used by the
-     * base implementation of
+     * Test for a directory having children.
+     * <p></p>
+     * This is invoked knowing that the destination exists
+     * and is a directory.
      * @param directory the file status of the destination.
      * @return true if the path has one or more child entries.
      * @throws IOException for IO problems.
@@ -350,7 +358,7 @@ public class FileSystemRename3Action {
      * @param destPath destination path.
      * @return the file status, or null for a failure.
      */
-    FileStatus getDestStatusOrNull(Path destPath);
+    FileStatus getDestStatusOrNull(Path destPath) throws IOException;
 
     /**
      * Execute the final rename, by invoking
@@ -360,38 +368,24 @@ public class FileSystemRename3Action {
      * <p></p>
      * If a FileSystem can throw more meaningful
      * exceptions here, users will appreciate it.
-     * @param sourceStatus source FS status
-     * @param destPath path of destination
-     * @param destStatus status of destination
-     * @param renameOptions any rename options
-     * @param deleteEmptyDestDirectory
-     * @throws IOException IO failure
+     *
+     * @param params @throws IOException IO failure
      * @throws PathIOException IO failure
      *
      */
-    void rename(
-        FileStatus sourceStatus,
-        Path destPath,
-        @Nullable FileStatus destStatus,
-        Options.Rename[] renameOptions, final boolean deleteEmptyDestDirectory)
+    void executeRename(final ExecuteRenameParams params)
         throws PathIOException, IOException;
   }
 
   /**
-   * Create the rename callbacks from a filesystem.
-   * @param fileSystem filesystm to invoke.
-   * @return callbacks.
-   */
-  public static RenameCallbacks callbacksFromFileSystem(FileSystem fileSystem) {
-    return new RenameCallbacksToFileSystem(fileSystem);
-  }
-
-  /**
    * Implementation of {@link RenameCallbacks} which uses the
-   * FileSystem APIs. This may be suboptimal, if FS implementations
-   * can implement empty directory probes/deletes better themselves.
+   * FileSystem APIs.
+   * <p></p>
+   * If FS implementations can do this more efficiently
+   * or fail rename better than {@link FileSystem#rename(Path, Path)}
+   * does, they should subclass/reimplement this.
    */
-  private static final class RenameCallbacksToFileSystem
+  public static class RenameCallbacksToFileSystem
       implements RenameCallbacks {
 
     /**
@@ -403,47 +397,38 @@ public class FileSystemRename3Action {
      * Construct with the given filesystem.
      * @param fileSystem target FS.
      */
-    private RenameCallbacksToFileSystem(final FileSystem fileSystem) {
+    protected RenameCallbacksToFileSystem(final FileSystem fileSystem) {
       this.fileSystem = requireNonNull(fileSystem);
     }
 
     /**
-     * {@inheritDoc}
-     * @param directory the file status of the destination.
-     * @return true if there are children.
-     * @throws IOException
+     * Get the filesystem.
+     * @return
      */
+    protected FileSystem getFileSystem() {
+      return fileSystem;
+    }
+
+    @Override
+    public void close() throws IOException {
+
+    }
+
     @Override
     public boolean directoryHasChildren(final FileStatus directory)
         throws IOException {
-      Path path = directory.getPath();
       // get an iterator and then see if it is of size
       // one or more.
       // we use this for more efficiency with larger directories
       // on those clients which do paged downloads.
-      final RemoteIterator<FileStatus> it
-          = fileSystem.listStatusIterator(path);
-      try {
-        if (!it.hasNext()) {
-          // no children.
-          return false;
-        }
-        final FileStatus first = it.next();
-        return !path.equals(first.getPath());
-      } finally {
-        // in case the iterator is closeable.
-        if (it instanceof Closeable) {
-          IOUtils.cleanupWithLogger(LOG, (Closeable) it);
-        }
-      }
+      return fileSystem.listStatusIterator(directory.getPath())
+          .hasNext();
     }
 
     @Override
     public void verifyIsDirectory(final Path destParent)
         throws ParentNotDirectoryException, IOException {
-      // check
-      final FileStatus parentStatus = fileSystem.getFileStatus(destParent);
-      if (!parentStatus.isDirectory()) {
+      if (!fileSystem.getFileStatus(destParent).isDirectory()) {
         throw new ParentNotDirectoryException(
             String.format(RENAME_DEST_PARENT_NOT_DIRECTORY, destParent));
       }
@@ -456,14 +441,12 @@ public class FileSystemRename3Action {
     }
 
     @Override
-    public FileStatus getDestStatusOrNull(Path destPath) {
-      FileStatus destStatus;
+    public FileStatus getDestStatusOrNull(Path destPath) throws IOException {
       try {
-        destStatus = fileSystem.getFileLinkStatus(destPath);
-      } catch (IOException e) {
-        destStatus = null;
+        return fileSystem.getFileLinkStatus(destPath);
+      } catch (FileNotFoundException e) {
+        return null;
       }
-      return destStatus;
     }
 
     /**
@@ -475,28 +458,175 @@ public class FileSystemRename3Action {
      * If a FileSystem can throw more meaningful
      * exceptions here, users will appreciate it.
      * {@inheritDoc}.
+     * @param params
      */
     @Override
-    public void rename(
-        final FileStatus sourceStatus,
-        final Path destPath,
-        @Nullable final FileStatus destStatus,
-        final Options.Rename[] renameOptions,
-        final boolean deleteEmptyDestDirectory)
+    public void executeRename(final ExecuteRenameParams params)
         throws PathIOException, IOException {
 
-      final Path sourcePath = sourceStatus.getPath();
-      if (deleteEmptyDestDirectory) {
-        fileSystem.delete(destStatus.getPath(), false);
+      Path sourcePath = params.getSourcePath();
+      Path destPath = params.getDestPath();
+      if (params.isDeleteDest()) {
+        fileSystem.delete(destPath, false);
       }
       if (!fileSystem.rename(sourcePath, destPath)) {
         // inner rename failed, no obvious cause
         throw new PathIOException(sourcePath.toString(),
-            String.format(RENAME_FAILED, sourcePath, destPath));
+            String.format(RENAME_FAILED, sourcePath,
+                destPath));
       }
     }
 
   }
 
+  /**
+   * Implementation of {@link RenameCallbacks} which uses the
+   * FileSystem APIs. This may be suboptimal, if FS implementations
+   * can implement empty directory probes/deletes better themselves.
+   */
+  private static final class RenameCallbacksToFileContext
+      implements RenameCallbacks {
 
+    /**
+     * FS to invoke.
+     */
+    private final AbstractFileSystem fileSystem;
+
+
+    /**
+     * Construct with the given filesystem.
+     * @param fileSystem target FS.
+     */
+    private RenameCallbacksToFileContext(
+        final AbstractFileSystem fileSystem) {
+      this.fileSystem = requireNonNull(fileSystem);
+    }
+
+    @Override
+    public void close() throws IOException {
+
+    }
+
+    @Override
+    public boolean directoryHasChildren(final FileStatus directory)
+        throws IOException {
+      Path path = directory.getPath();
+      // get an iterator and then see if it is of size
+      // one or more.
+      // we use this for more efficiency with larger directories
+      // on those clients which do paged downloads.
+      return fileSystem.listStatusIterator(path).hasNext();
+    }
+
+    @Override
+    public void verifyIsDirectory(final Path destParent)
+        throws ParentNotDirectoryException, IOException {
+      // check
+      if (!fileSystem.getFileStatus(destParent).isDirectory()) {
+        throw new ParentNotDirectoryException(
+            String.format(RENAME_DEST_PARENT_NOT_DIRECTORY, destParent));
+      }
+    }
+
+    @Override
+    public FileStatus getSourceStatus(Path sourcePath)
+        throws FileNotFoundException, IOException {
+      return fileSystem.getFileLinkStatus(sourcePath);
+    }
+
+    @Override
+    public FileStatus getDestStatusOrNull(Path destPath) throws IOException {
+      try {
+        return fileSystem.getFileLinkStatus(destPath);
+      } catch (FileNotFoundException e) {
+        return null;
+      }
+    }
+
+    /**
+     * Execute the final rename, by invoking
+     * {@link FileSystem#rename(Path, Path)}.
+     * If the method returns "false", a
+     * PathIOException is raised.
+     * <p></p>
+     * If a FileSystem can throw more meaningful
+     * exceptions here, users will appreciate it.
+     * {@inheritDoc}.
+     * @param params
+     */
+    @Override
+    public void executeRename(final ExecuteRenameParams params)
+        throws PathIOException, IOException {
+      Path sourcePath = params.getSourcePath();
+      Path destPath = params.getDestPath();
+      if (params.isDeleteDest()) {
+        fileSystem.delete(destPath, false);
+      }
+      fileSystem.renameInternal(sourcePath, destPath);
+    }
+
+  }
+
+  /**
+   * Parameters for {@link RenameCallbacks#executeRename(ExecuteRenameParams)}.
+   * <p></p>
+   * Made a parameter object so if we extend it, external implementations
+   * of the {@link RenameCallbacks} interface won't encounter link
+   * problems.
+   */
+  public static class ExecuteRenameParams {
+
+    private final FileStatus sourceStatus;
+
+    private final Path destPath;
+
+    @Nullable private final FileStatus destStatus;
+
+    private final Options.Rename[] renameOptions;
+
+    private final boolean deleteDest;
+
+    /**
+     * @param sourceStatus source FS status
+     * @param destPath path of destination
+     * @param destStatus status of destination
+     * @param renameOptions any rename options
+     * @param deleteDest delete destination path
+     */
+    public ExecuteRenameParams(final FileStatus sourceStatus,
+        final Path destPath,
+        @Nullable final FileStatus destStatus,
+        final Options.Rename[] renameOptions,
+        final boolean deleteDest) {
+      this.sourceStatus = sourceStatus;
+      this.destPath = destPath;
+      this.destStatus = destStatus;
+      this.renameOptions = renameOptions;
+      this.deleteDest = deleteDest;
+    }
+
+    public FileStatus getSourceStatus() {
+      return sourceStatus;
+    }
+
+    public Path getSourcePath() {
+      return sourceStatus.getPath();
+    }
+
+    public FileStatus getDestStatus() {
+      return destStatus;
+    }
+
+    public Path getDestPath() {
+      return destPath;
+    }
+
+    public Options.Rename[] getRenameOptions() {
+      return renameOptions;
+    }
+
+    public boolean isDeleteDest() {
+      return deleteDest;
+    }
+  }
 }

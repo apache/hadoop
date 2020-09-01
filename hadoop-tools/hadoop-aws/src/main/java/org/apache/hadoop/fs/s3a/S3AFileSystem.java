@@ -115,6 +115,7 @@ import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport;
 import org.apache.hadoop.fs.s3a.impl.OperationCallbacks;
 import org.apache.hadoop.fs.s3a.impl.RenameOperation;
 import org.apache.hadoop.fs.s3a.impl.S3AMultipartUploaderBuilder;
+import org.apache.hadoop.fs.s3a.impl.S3ARenameCallbacks;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
@@ -1553,131 +1554,29 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * may wish to override.
    */
   protected FileSystemRename3Action.RenameCallbacks createRenameCallbacks() {
-    return new S3ARenameCallbacks();
+    return new S3ARenameCallbacks(
+        createStoreContext(),
+        operationCallbacks,
+        pageSize,
+        new S3ARenameCallbacks.Probes() {
+          @Override
+          public S3AFileStatus stat(final Path f,
+              final boolean needEmptyDirectoryFlag,
+              final Set<StatusProbeEnum> probes) throws IOException {
+            return innerGetFileStatus(f, needEmptyDirectoryFlag, probes);
+          }
+
+          @Override
+          public boolean isDir(final Path path) throws IOException {
+            return isDirectory(path);
+          }
+
+          @Override
+          public boolean dirHasChildren(final Path path) throws IOException {
+            return listStatusIterator(path).hasNext();
+          }
+        });
   }
-
-  /**
-   * Internal implementation of callbacks
-   */
-  private final class S3ARenameCallbacks implements
-      FileSystemRename3Action.RenameCallbacks {
-
-    private final FileSystemRename3Action.RenameCallbacks fsRenameCallbacks =
-        FileSystemRename3Action.callbacksFromFileSystem(S3AFileSystem.this);
-
-    @Override
-    @Retries.RetryTranslated
-    public S3AFileStatus getSourceStatus(final Path sourcePath)
-        throws FileNotFoundException, IOException {
-      return innerGetFileStatus(sourcePath, false,
-          StatusProbeEnum.ALL);
-    }
-
-    @Override
-    @Retries.RetryTranslated
-    public S3AFileStatus getDestStatusOrNull(final Path destPath) {
-      try {
-        return innerGetFileStatus(destPath, true,
-            StatusProbeEnum.ALL);
-      } catch (IOException e) {
-        return null;
-      }
-    }
-
-    /**
-     * Optimized probe which looks at empty dir state of the
-     * directory passed in, if known.
-     * {@inheritDoc}.
-     */
-    @Override
-    @Retries.RetryTranslated
-    public boolean directoryHasChildren(final FileStatus directory)
-        throws IOException {
-      if (directory instanceof S3AFileStatus) {
-        S3AFileStatus st = (S3AFileStatus) directory;
-        if (st.isEmptyDirectory() == Tristate.TRUE) {
-          return false;
-        }
-        if (st.isEmptyDirectory() == Tristate.FALSE) {
-          return true;
-        }
-      }
-      return fsRenameCallbacks.directoryHasChildren(directory);
-    }
-
-    /**
-     * Optimized probe which assumes the path is a parent, so
-     * checks directory status first.
-     * {@inheritDoc}.
-     */
-    @Override
-    @Retries.RetryTranslated
-    public void verifyIsDirectory(final Path destParent)
-        throws ParentNotDirectoryException, IOException {
-      if (isDirectory(destParent)) {
-        return;
-      }
-      // either nothing there, or it is a faile.
-      // do a HEAD, raising FNFE if it is not there
-      innerGetFileStatus(destParent, false, StatusProbeEnum.FILE);
-      // if we get here, no exception was raised, therefore HEAD
-      // succeeded, therefore there is a file at the path.
-      throw new ParentNotDirectoryException(
-          String.format(RENAME_DEST_PARENT_NOT_DIRECTORY, destParent));
-    }
-
-    /**
-     * This is a highly optimized rename operation which
-     * avoids performing any duplicate metadata probes,
-     * as well as raising all failures as meaningful exceptions.
-     * {@inheritDoc}.
-     */
-    @Override
-    @Retries.RetryTranslated
-    public void rename(
-        final FileStatus sourceStatus,
-        final Path destPath,
-        @Nullable final FileStatus destStatus,
-        final Options.Rename[] renameOptions,
-        final boolean deleteEmptyDestDirectory)
-        throws PathIOException, IOException {
-
-      final Path sourcePath = sourceStatus.getPath();
-      final String source = sourcePath.toString();
-      String srcKey = pathToKey(sourcePath);
-      String dstKey = pathToKey(destPath);
-
-      final StoreContext context = createStoreContext();
-
-      once("rename(" + source + ", "
-              + destPath + ")", source,
-          () -> {
-            if (deleteEmptyDestDirectory) {
-              // TODO: Do we need this at all?
-              DeleteOperation deleteOperation = new DeleteOperation(
-                  context,
-                  (S3AFileStatus) destStatus,
-                  false,
-                  operationCallbacks,
-                  pageSize);
-              deleteOperation.execute();
-            }
-
-            // Initiate the rename.
-            // this will call back into this class via the rename callbacks
-            // and interact directly with any metastore.
-            RenameOperation renameOperation = new RenameOperation(
-                context,
-                sourcePath, srcKey, (S3AFileStatus) sourceStatus,
-                destPath, dstKey, (S3AFileStatus) destStatus,
-                operationCallbacks,
-                pageSize);
-            long bytesCopied = renameOperation.execute();
-            LOG.debug("Copied {} bytes", bytesCopied);
-          });
-    }
-  }
-
 
   @Override public Token<? extends TokenIdentifier> getFsDelegationToken()
       throws IOException {
