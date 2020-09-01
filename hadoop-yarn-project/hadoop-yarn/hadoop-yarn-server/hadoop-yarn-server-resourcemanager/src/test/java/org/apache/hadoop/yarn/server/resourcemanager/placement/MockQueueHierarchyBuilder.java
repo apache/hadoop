@@ -23,6 +23,7 @@ import com.google.common.collect.Sets;
 import org.apache.commons.compress.utils.Lists;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -38,6 +39,7 @@ class MockQueueHierarchyBuilder {
   private Set<String> ambiguous = Sets.newHashSet();
   private Map<String, String> shortNameMapping = Maps.newHashMap();
   private CapacitySchedulerQueueManager queueManager;
+  private Map<String, List<CSQueue>> childrenMap = Maps.newHashMap();
 
   public static MockQueueHierarchyBuilder create() {
     return new MockQueueHierarchyBuilder();
@@ -164,12 +166,20 @@ class MockQueueHierarchyBuilder {
 
   private void setQueueFields(ParentQueue parent, AbstractCSQueue newQueue,
       String queueName) {
-    String fullPathOfQueue = parent.getQueuePath() + QUEUE_SEP + queueName;
+    String fullPathOfParent = parent.getQueuePath();
+    String fullPathOfQueue = fullPathOfParent + QUEUE_SEP + queueName;
     addQueueToQueueManager(queueName, newQueue, fullPathOfQueue);
+
+    if (childrenMap.get(fullPathOfParent) == null) {
+      childrenMap.put(fullPathOfParent, new ArrayList<>());
+    }
+    childrenMap.get(fullPathOfParent).add(newQueue);
+    when(parent.getChildQueues()).thenReturn(childrenMap.get(fullPathOfParent));
 
     when(newQueue.getParent()).thenReturn(parent);
     when(newQueue.getQueuePath()).thenReturn(fullPathOfQueue);
     when(newQueue.getQueueName()).thenReturn(queueName);
+
   }
 
   private void addQueueToQueueManager(String queueName, AbstractCSQueue queue,
