@@ -483,8 +483,8 @@ public class TestViewFileSystemOverloadSchemeWithHdfsScheme {
 
   // HDFS-15529: if any extended tests added fallback, then getChildFileSystems
   // will include fallback as well.
-  private boolean isFallBackExist(Configuration conf) {
-    return conf.get(ConfigUtil.getConfigViewFsPrefix(defaultFSURI
+  private boolean isFallBackExist(Configuration config) {
+    return config.get(ConfigUtil.getConfigViewFsPrefix(defaultFSURI
         .getAuthority()) + "." + Constants.CONFIG_VIEWFS_LINK_FALLBACK) != null;
   }
 
