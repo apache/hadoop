@@ -25,7 +25,6 @@ import java.io.PrintStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.AccessDeniedException;
-import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
@@ -760,8 +759,8 @@ public abstract class S3GuardTool extends Configured implements Tool,
    */
   static class Destroy extends S3GuardTool {
     public static final String NAME = "destroy";
-    public static final String PURPOSE = "destroy the Metadata Store including its contents"
-        + DATA_IN_S3_IS_PRESERVED;
+    public static final String PURPOSE = "destroy the Metadata Store including its"
+        + " contents" + DATA_IN_S3_IS_PRESERVED;
     private static final String USAGE = NAME + " [OPTIONS] [s3a://BUCKET]\n" +
         "\t" + PURPOSE + "\n\n" +
         "Common options:\n" +

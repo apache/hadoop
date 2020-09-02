@@ -309,13 +309,15 @@ public class AbstractMarkerToolTest extends AbstractS3ATestBase {
       final boolean nonAuth) throws IOException {
 
     MarkerTool.ScanResult result = MarkerTool.execMarkerTool(
-        sourceFS,
-        path,
-        doPurge,
-        expectedMarkers,
-        expectedMarkers,
-        limit,
-        nonAuth);
+        new MarkerTool.ScanArgsBuilder()
+            .withSourceFS(sourceFS)
+            .withPath(path)
+            .withDoPurge(doPurge)
+            .withMinMarkerCount(expectedMarkers)
+            .withMaxMarkerCount(expectedMarkers)
+            .withLimit(limit)
+            .withNonAuth(nonAuth)
+            .build());
     Assertions.assertThat(result.getExitCode())
         .describedAs("Exit code of marker(%s, %s, %d) -> %s",
             path, doPurge, expectedMarkers, result)
@@ -331,6 +333,5 @@ public class AbstractMarkerToolTest extends AbstractS3ATestBase {
   protected static String m(String s) {
     return "-" + s;
   }
-
 
 }
