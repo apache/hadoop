@@ -461,7 +461,7 @@ Building on CentOS 8
   $ sudo ./b2 install
 
 * Install optional dependencies (snappy-devel).
-  $ sudo dnf --enablerepo=PowerTools snappy-devel
+  $ sudo dnf --enablerepo=PowerTools install snappy-devel
 
 * Install optional dependencies (libzstd-devel).
   $ sudo dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
