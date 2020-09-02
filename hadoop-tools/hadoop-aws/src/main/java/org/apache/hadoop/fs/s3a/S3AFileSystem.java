@@ -136,9 +136,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class S3AFileSystem extends FileSystem
-    implements StreamCapabilities {
-
+public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   /**
    * Default blocksize as used in blocksize and FS status queries.
    */
@@ -985,7 +983,7 @@ public class S3AFileSystem extends FileSystem
     if (!src.getParent().equals(destCreated.getParent())) {
       LOG.debug("source & dest parents are different; fix up dir markers");
       deleteUnnecessaryFakeDirectories(destCreated.getParent());
-      createFakeDirectoryIfNecessary(src);
+      maybeCreateFakeParentDirectory(src);
     }
     return true;
   }
@@ -1579,6 +1577,21 @@ public class S3AFileSystem extends FileSystem
     if (!key.isEmpty() && !s3Exists(f)) {
       LOG.debug("Creating new fake directory at {}", f);
       createFakeDirectory(key);
+    }
+  }
+
+  /**
+   * Create a fake parent directory if required.
+   * That is: it parent is not the root path and does not yet exist.
+   * @param path whose parent is created if needed.
+   * @throws IOException IO problem
+   * @throws AmazonClientException untranslated AWS client problem
+   */
+  void maybeCreateFakeParentDirectory(Path path)
+      throws IOException, AmazonClientException {
+    Path parent = path.getParent();
+    if (parent != null) {
+      createFakeDirectoryIfNecessary(parent);
     }
   }
 
