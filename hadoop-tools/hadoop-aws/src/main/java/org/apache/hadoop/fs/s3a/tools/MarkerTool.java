@@ -930,51 +930,59 @@ public final class MarkerTool extends S3GuardTool {
     private boolean nonAuth = false;
 
     /** Source FS; must be or wrap an S3A FS. */
-    public ScanArgsBuilder withSourceFS(final FileSystem sourceFS) {
-      this.sourceFS = sourceFS;
+    public ScanArgsBuilder withSourceFS(final FileSystem source) {
+      this.sourceFS = source;
       return this;
     }
 
     /** Path to scan. */
-    public ScanArgsBuilder withPath(final Path path) {
-      this.path = path;
+    public ScanArgsBuilder withPath(final Path p) {
+      this.path = p;
       return this;
     }
 
     /** Purge? */
-    public ScanArgsBuilder withDoPurge(final boolean doPurge) {
-      this.doPurge = doPurge;
+    public ScanArgsBuilder withDoPurge(final boolean d) {
+      this.doPurge = d;
       return this;
     }
 
     /** Min marker count (ignored on purge). */
-    public ScanArgsBuilder withMinMarkerCount(final int minMarkerCount) {
-      this.minMarkerCount = minMarkerCount;
+    public ScanArgsBuilder withMinMarkerCount(final int min) {
+      this.minMarkerCount = min;
       return this;
     }
 
     /** Max marker count (ignored on purge). */
-    public ScanArgsBuilder withMaxMarkerCount(final int maxMarkerCount) {
-      this.maxMarkerCount = maxMarkerCount;
+    public ScanArgsBuilder withMaxMarkerCount(final int max) {
+      this.maxMarkerCount = max;
       return this;
     }
 
     /** Limit of files to scan; 0 for 'unlimited'. */
-    public ScanArgsBuilder withLimit(final int limit) {
-      this.limit = limit;
+    public ScanArgsBuilder withLimit(final int l) {
+      this.limit = l;
       return this;
     }
 
     /** Consider only markers in nonauth paths as errors. */
-    public ScanArgsBuilder withNonAuth(final boolean nonAuth) {
-      this.nonAuth = nonAuth;
+    public ScanArgsBuilder withNonAuth(final boolean b) {
+      this.nonAuth = b;
       return this;
     }
 
+    /**
+     * Build the actual argument instance.
+     * @return the arguments to pass in
+     */
     public ScanArgs build() {
-      return new ScanArgs(sourceFS, path, doPurge, minMarkerCount,
+      return new ScanArgs(sourceFS,
+          path,
+          doPurge,
+          minMarkerCount,
           maxMarkerCount,
-          limit, nonAuth);
+          limit,
+          nonAuth);
     }
   }
 }
