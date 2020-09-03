@@ -394,6 +394,15 @@ abstract class InodeTree<T> {
     return rootFallbackLink != null;
   }
 
+  /**
+   * @return true if the root represented as internalDir. In LinkMergeSlash,
+   * there will be root to root mapping. So, root does not represent as
+   * internalDir.
+   */
+  protected boolean isRootInternalDir() {
+    return root.isInternalDir();
+  }
+
   protected INodeLink<T> getRootFallbackLink() {
     Preconditions.checkState(root.isInternalDir());
     return rootFallbackLink;
