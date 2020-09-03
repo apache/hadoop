@@ -22,6 +22,9 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FilterOutputStream;
 import java.io.IOException;
+import java.nio.file.DirectoryNotEmptyException;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,8 +78,17 @@ public class AtomicFileOutputStream extends FilterOutputStream {
         boolean renamed = tmpFile.renameTo(origFile);
         if (!renamed) {
           // On windows, renameTo does not replace.
-          if (origFile.exists() && !origFile.delete()) {
-            throw new IOException("Could not delete original file " + origFile);
+          if (origFile.exists()) {
+            try {
+              Files.delete(origFile.toPath());
+            } catch (NoSuchFileException e) {
+              LOG.warn("Could not delete " + origFile + " due to " + e);
+            } catch (DirectoryNotEmptyException e) {
+              LOG.warn("Could not delete " + origFile + " due to " + e);
+            } catch (IOException e) {
+              throw new IOException("Could not delete original file " + origFile
+                  + " due to failure: " + e);
+            }
           }
           try {
             NativeIO.renameTo(tmpFile, origFile);
