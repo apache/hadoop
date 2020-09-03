@@ -81,13 +81,9 @@ public class AtomicFileOutputStream extends FilterOutputStream {
           if (origFile.exists()) {
             try {
               Files.delete(origFile.toPath());
-            } catch (NoSuchFileException e) {
-              LOG.warn("Could not delete " + origFile + " due to " + e);
-            } catch (DirectoryNotEmptyException e) {
-              LOG.warn("Could not delete " + origFile + " due to " + e);
             } catch (IOException e) {
               throw new IOException("Could not delete original file " + origFile
-                  + " due to failure: " + e);
+                  + " due to: " + e);
             }
           }
           try {
