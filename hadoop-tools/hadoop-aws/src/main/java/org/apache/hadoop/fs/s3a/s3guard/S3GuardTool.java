@@ -37,6 +37,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
@@ -47,6 +49,7 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AUtils;
+import org.apache.hadoop.fs.s3a.impl.DirectoryPolicy;
 import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.GenericOptionsParser;
@@ -59,6 +62,8 @@ import static org.apache.hadoop.service.launcher.LauncherExitCodes.*;
 /**
  * CLI to manage S3Guard Metadata Store.
  */
+@InterfaceAudience.LimitedPrivate("management tools")
+@InterfaceStability.Evolving
 public abstract class S3GuardTool extends Configured implements Tool {
   private static final Logger LOG = LoggerFactory.getLogger(S3GuardTool.class);
 
@@ -960,6 +965,9 @@ public abstract class S3GuardTool extends Configured implements Tool {
     public static final String AUTH_FLAG = "auth";
     public static final String NONAUTH_FLAG = "nonauth";
     public static final String ENCRYPTION_FLAG = "encryption";
+    public static final String MAGIC_FLAG = "magic";
+    public static final String MARKERS_FLAG = "markers";
+    public static final String MARKERS_AWARE = "aware";
 
     public static final String PURPOSE = "provide/check S3Guard information"
         + " about a specific bucket";
@@ -968,12 +976,22 @@ public abstract class S3GuardTool extends Configured implements Tool {
         + "Common options:\n"
         + "  -" + GUARDED_FLAG + " - Require S3Guard\n"
         + "  -" + ENCRYPTION_FLAG
-        + " -require {none, sse-s3, sse-kms} - Require encryption policy";
+        + " (none, sse-s3, sse-kms) - Require encryption policy\n"
+        + "  -" + MARKERS_FLAG
+        + " (aware, keep, delete, authoritative) - directory markers policy\n";
 
-    BucketInfo(Configuration conf) {
+    @VisibleForTesting
+    public static final String IS_MARKER_AWARE =
+        "The S3A connector can read data in S3 buckets where"
+            + " directory markers%n"
+            + "are not deleted (optional with later hadoop releases),%n"
+            + "and with buckets where they are.%n";
+
+    public BucketInfo(Configuration conf) {
       super(conf, GUARDED_FLAG, UNGUARDED_FLAG, AUTH_FLAG, NONAUTH_FLAG);
       CommandFormat format = getCommandFormat();
       format.addOptionWithValue(ENCRYPTION_FLAG);
+      format.addOptionWithValue(MARKERS_FLAG);
     }
 
     @Override
@@ -1053,8 +1071,51 @@ public abstract class S3GuardTool extends Configured implements Tool {
                 fsUri, desiredEncryption, encryption);
       }
 
+      // directory markers
+      processMarkerOption(out, fs,
+          getCommandFormat().getOptValue(MARKERS_FLAG));
+
+      // and finally flush the output and report a success.
       out.flush();
       return SUCCESS;
+    }
+
+    /**
+     * Validate the marker options.
+     * @param out output stream
+     * @param fs filesystem
+     * @param path test path
+     * @param marker desired marker option -may be null.
+     */
+    private void processMarkerOption(final PrintStream out,
+        final S3AFileSystem fs,
+        final String marker) {
+      DirectoryPolicy markerPolicy = fs.getDirectoryMarkerPolicy();
+      String desc = markerPolicy.describe();
+      println(out, "%nThe directory marker policy is \"%s\"%n", desc);
+
+      DirectoryPolicy.MarkerPolicy mp = markerPolicy.getMarkerPolicy();
+
+      String desiredMarker = marker == null
+          ? ""
+          : marker.trim();
+      final String optionName = mp.getOptionName();
+      if (!desiredMarker.isEmpty()) {
+        if (MARKERS_AWARE.equalsIgnoreCase(desiredMarker)) {
+          // simple awareness test -provides a way to validate compatibility
+          // on the command line
+          println(out, IS_MARKER_AWARE);
+          println(out, "Available Policies: delete");
+
+        } else {
+          // compare with current policy
+          if (!optionName.equalsIgnoreCase(desiredMarker)) {
+            throw badState("Bucket %s: required marker policy is \"%s\""
+                    + " but actual policy is \"%s\"",
+                fs.getUri(), desiredMarker, optionName);
+          }
+        }
+      }
     }
 
     private String printOption(PrintStream out,

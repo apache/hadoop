@@ -15,7 +15,23 @@
 
 # Hadoop-AWS module: Integration with Amazon Web Services
 
-<!-- MACRO{toc|fromDepth=0|toDepth=5} -->
+<!-- MACRO{toc|fromDepth=0|toDepth=2} -->
+
+
+
+## <a name="compatibility"></a> Compatibility
+
+
+###  <a name="directory-marker-compatibility"></a> Directory Marker Compatibility
+
+1. This release can safely list/index/read S3 buckets where "empty directory"
+markers are retained.
+
+1. This release does not support the switching to directory marker
+policies of "keep" and "authoritative" -the
+
+Consult [Controlling the S3A Directory Marker Behavior](directory_markers.html) for
+full details.
 
 ## Overview
 
@@ -42,6 +58,7 @@ See also:
 * [Testing](testing.html)
 * [Troubleshooting S3a](troubleshooting_s3a.html)
 * [S3Guard](s3guard.html)
+* [Controlling the S3A Directory Marker Behavior](directory_markers.html).
 
 ### Warning #1: Object Stores are not filesystems
 

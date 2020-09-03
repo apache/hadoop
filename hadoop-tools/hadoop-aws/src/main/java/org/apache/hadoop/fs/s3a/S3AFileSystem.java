@@ -31,6 +31,7 @@ import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.Objects;
@@ -81,6 +82,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.StreamCapabilities;
+import org.apache.hadoop.fs.s3a.impl.DirectoryPolicy;
+import org.apache.hadoop.fs.s3a.impl.DirectoryPolicyImpl;
+import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -131,7 +136,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class S3AFileSystem extends FileSystem {
+public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   /**
    * Default blocksize as used in blocksize and FS status queries.
    */
@@ -169,6 +174,11 @@ public class S3AFileSystem extends FileSystem {
   private String blockOutputBuffer;
   private S3ADataBlocks.BlockFactory blockFactory;
   private int blockOutputActiveBlocks;
+
+  /**
+   * Directory policy.
+   */
+  private DirectoryPolicy directoryPolicy;
 
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
@@ -298,6 +308,9 @@ public class S3AFileSystem extends FileSystem {
         LOG.debug("Using metadata store {}, authoritative={}",
             getMetadataStore(), allowAuthoritative);
       }
+      // directory policy, which may look at authoritative paths
+      directoryPolicy = DirectoryPolicyImpl.getDirectoryPolicy(conf);
+      LOG.debug("Directory marker retention policy is {}", directoryPolicy);
     } catch (AmazonClientException e) {
       throw translateException("initializing ", new Path(name), e);
     }
@@ -410,6 +423,19 @@ public class S3AFileSystem extends FileSystem {
    * @return AmazonS3Client
    */
   AmazonS3 getAmazonS3Client() {
+    return s3;
+  }
+
+  /**
+   * Returns the S3 client used by this filesystem.
+   * <i>Warning: this must only be used for testing, as it bypasses core
+   * S3A operations. </i>
+   * @param reason a justification for requesting access.
+   * @return AmazonS3Client
+   */
+  @VisibleForTesting
+  public AmazonS3 getAmazonS3ClientForTesting(String reason) {
+    LOG.warn("Access to S3A client requested, reason {}", reason);
     return s3;
   }
 
@@ -846,6 +872,10 @@ public class S3AFileSystem extends FileSystem {
     }
     // TODO S3Guard HADOOP-13761: retries when source paths are not visible yet
     // TODO S3Guard: performance: mark destination dirs as authoritative
+    // The path to whichever file or directory is created by the
+    // rename. When deleting markers all parents of
+    // this path will need their markers pruned.
+    Path destCreated = dst;
 
     // Ok! Time to start
     if (srcStatus.isFile()) {
@@ -859,9 +889,11 @@ public class S3AFileSystem extends FileSystem {
         String filename =
             srcKey.substring(pathToKey(src.getParent()).length()+1);
         newDstKey = newDstKey + filename;
+        destCreated = keyToQualifiedPath(newDstKey);
+
         copyFile(srcKey, newDstKey, length);
         S3Guard.addMoveFile(metadataStore, srcPaths, dstMetas, src,
-            keyToQualifiedPath(newDstKey), length, getDefaultBlockSize(dst),
+            destCreated, length, getDefaultBlockSize(dst),
             username);
       } else {
         copyFile(srcKey, dstKey, srcStatus.getLen());
@@ -948,9 +980,10 @@ public class S3AFileSystem extends FileSystem {
 
     metadataStore.move(srcPaths, dstMetas);
 
-    if (src.getParent() != dst.getParent()) {
-      deleteUnnecessaryFakeDirectories(dst.getParent());
-      createFakeDirectoryIfNecessary(src.getParent());
+    if (!src.getParent().equals(destCreated.getParent())) {
+      LOG.debug("source & dest parents are different; fix up dir markers");
+      deleteUnnecessaryFakeDirectories(destCreated.getParent());
+      maybeCreateFakeParentDirectory(src);
     }
     return true;
   }
@@ -1548,6 +1581,21 @@ public class S3AFileSystem extends FileSystem {
   }
 
   /**
+   * Create a fake parent directory if required.
+   * That is: it parent is not the root path and does not yet exist.
+   * @param path whose parent is created if needed.
+   * @throws IOException IO problem
+   * @throws AmazonClientException untranslated AWS client problem
+   */
+  void maybeCreateFakeParentDirectory(Path path)
+      throws IOException, AmazonClientException {
+    Path parent = path.getParent();
+    if (parent != null) {
+      createFakeDirectoryIfNecessary(parent);
+    }
+  }
+
+  /**
    * List the statuses of the files/directories in the given path if the path is
    * a directory.
    *
@@ -1792,6 +1840,8 @@ public class S3AFileSystem extends FileSystem {
 
       FileStatus msStatus = pm.getFileStatus();
       if (needEmptyDirectoryFlag && msStatus.isDirectory()) {
+        // the caller needs to know if a directory is empty,
+        // and that this is a directory.
         if (pm.isEmptyDirectory() != Tristate.UNKNOWN) {
           // We have a definitive true / false from MetadataStore, we are done.
           return S3AFileStatus.fromFileStatus(msStatus, pm.isEmptyDirectory());
@@ -1800,28 +1850,33 @@ public class S3AFileSystem extends FileSystem {
           if (children != null) {
             tombstones = children.listTombstones();
           }
-          LOG.debug("MetadataStore doesn't know if dir is empty, using S3.");
+          LOG.debug("MetadataStore doesn't know if {} is empty, using S3.",
+              path);
         }
       } else {
         // Either this is not a directory, or we don't care if it is empty
         return S3AFileStatus.fromFileStatus(msStatus, pm.isEmptyDirectory());
       }
 
-      // If the metadata store has no children for it and it's not listed in
-      // S3 yet, we'll assume the empty directory is true;
-      S3AFileStatus s3FileStatus;
+      // now issue the S3 getFileStatus call.
       try {
-        s3FileStatus = s3GetFileStatus(path, key, tombstones);
+        S3AFileStatus s3FileStatus = s3GetFileStatus(path, key,
+            StatusProbeEnum.ALL,
+            tombstones,
+            true);
+        // entry was found, so save in S3Guard and return the final value.
+        return S3Guard.putAndReturn(metadataStore, s3FileStatus,
+            instrumentation);
       } catch (FileNotFoundException e) {
         return S3AFileStatus.fromFileStatus(msStatus, Tristate.TRUE);
       }
-      // entry was found, save in S3Guard
-      return S3Guard.putAndReturn(metadataStore, s3FileStatus, instrumentation);
     } else {
       // there was no entry in S3Guard
       // retrieve the data and update the metadata store in the process.
       return S3Guard.putAndReturn(metadataStore,
-          s3GetFileStatus(path, key, tombstones), instrumentation);
+          s3GetFileStatus(path, key, StatusProbeEnum.ALL,
+              tombstones, needEmptyDirectoryFlag),
+          instrumentation);
     }
   }
 
@@ -1831,101 +1886,120 @@ public class S3AFileSystem extends FileSystem {
    * and for direct management of empty directory blobs.
    * @param path Qualified path
    * @param key  Key string for the path
+   * @param probes probes to make
+   * @param tombstones tombstones to filter
+   * @param needEmptyDirectoryFlag if true, implementation will calculate
+   *        a TRUE or FALSE value for {@link S3AFileStatus#isEmptyDirectory()}
    * @return Status
-   * @throws FileNotFoundException when the path does not exist
+   * @throws FileNotFoundException the supplied probes failed.
    * @throws IOException on other problems.
    */
-  private S3AFileStatus s3GetFileStatus(final Path path, String key,
-      Set<Path> tombstones) throws IOException {
-    if (!key.isEmpty()) {
-      try {
-        ObjectMetadata meta = getObjectMetadata(key);
+  private S3AFileStatus s3GetFileStatus(final Path path,
+      final String key,
+      final Set<StatusProbeEnum> probes,
+      final Set<Path> tombstones,
+      final boolean needEmptyDirectoryFlag) throws IOException {
+    LOG.debug("S3GetFileStatus {}", path);
+    Preconditions.checkArgument(!needEmptyDirectoryFlag
+        || probes.contains(StatusProbeEnum.List),
+        "s3GetFileStatus(%s) wants to know if a directory is empty but"
+            + " does not request a list probe", path);
 
-        if (objectRepresentsDirectory(key, meta.getContentLength())) {
-          LOG.debug("Found exact file: fake directory");
-          return new S3AFileStatus(Tristate.TRUE, path, username);
-        } else {
-          LOG.debug("Found exact file: normal file");
-          return new S3AFileStatus(meta.getContentLength(),
-              dateToLong(meta.getLastModified()),
-              path,
-              getDefaultBlockSize(path),
-              username);
-        }
+    if (!key.isEmpty() && !key.endsWith("/")
+        && probes.contains(StatusProbeEnum.Head)) {
+      try {
+        // look for the simple file
+        ObjectMetadata meta = getObjectMetadata(key);
+        LOG.debug("Found exact file: normal file {}", key);
+        return new S3AFileStatus(meta.getContentLength(),
+            dateToLong(meta.getLastModified()),
+            path,
+            getDefaultBlockSize(path),
+            username);
       } catch (AmazonServiceException e) {
+      // if the response is a 404 error, it just means that there is
+      // no file at that path...the remaining checks will be needed.
         if (e.getStatusCode() != 404) {
           throw translateException("getFileStatus", path, e);
         }
       } catch (AmazonClientException e) {
         throw translateException("getFileStatus", path, e);
       }
-
-      // Necessary?
-      if (!key.endsWith("/")) {
-        String newKey = key + "/";
-        try {
-          ObjectMetadata meta = getObjectMetadata(newKey);
-
-          if (objectRepresentsDirectory(newKey, meta.getContentLength())) {
-            LOG.debug("Found file (with /): fake directory");
-            return new S3AFileStatus(Tristate.TRUE, path, username);
-          } else {
-            LOG.warn("Found file (with /): real file? should not happen: {}",
-                key);
-
-            return new S3AFileStatus(meta.getContentLength(),
-                    dateToLong(meta.getLastModified()),
-                    path,
-                    getDefaultBlockSize(path),
-                    username);
-          }
-        } catch (AmazonServiceException e) {
-          if (e.getStatusCode() != 404) {
-            throw translateException("getFileStatus", newKey, e);
-          }
-        } catch (AmazonClientException e) {
-          throw translateException("getFileStatus", newKey, e);
-        }
-      }
     }
 
-    try {
-      key = maybeAddTrailingSlash(key);
-      ListObjectsRequest request = new ListObjectsRequest();
-      request.setBucketName(bucket);
-      request.setPrefix(key);
-      request.setDelimiter("/");
-      request.setMaxKeys(1);
+    // execute the list
+    if (probes.contains(StatusProbeEnum.List)) {
+      // this will find a marker dir / as well as an entry.
+      // When making a simple "is this a dir check" all is good.
+      // but when looking for an empty dir, we need to verify there are no
+      // children, so ask for two entries, so as to find
+      // a child
+      String dirKey = maybeAddTrailingSlash(key);
+      // list size is dir marker + at least one non-tombstone entry
+      // there's a corner case: more tombstones than you have in a
+      // single page list. We assume that if you have been deleting
+      // that many files, then the AWS listing will have purged some
+      // by the time of listing so that the response includes some
+      // which have not.
 
-      ObjectListing objects = listObjects(request);
-
-      Collection<String> prefixes = objects.getCommonPrefixes();
-      Collection<S3ObjectSummary> summaries = objects.getObjectSummaries();
-      if (!isEmptyOfKeys(prefixes, tombstones) ||
-          !isEmptyOfObjects(summaries, tombstones)) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Found path as directory (with /): {}/{}",
-              prefixes.size(), summaries.size());
-
-          for (S3ObjectSummary summary : summaries) {
-            LOG.debug("Summary: {} {}", summary.getKey(), summary.getSize());
-          }
-          for (String prefix : prefixes) {
-            LOG.debug("Prefix: {}", prefix);
-          }
-        }
-
-        return new S3AFileStatus(Tristate.FALSE, path, username);
-      } else if (key.isEmpty()) {
-        LOG.debug("Found root directory");
-        return new S3AFileStatus(Tristate.TRUE, path, username);
+      int listSize;
+      if (tombstones == null) {
+        // no tombstones so look for a marker and at least one child.
+        listSize = 2;
+      } else {
+        // build a listing > tombstones. If the caller has many thousands
+        // of tombstones this won't work properly, which is why pruning
+        // of expired tombstones matters.
+        listSize = Math.min(2 + tombstones.size(), Math.max(2, maxKeys));
       }
-    } catch (AmazonServiceException e) {
-      if (e.getStatusCode() != 404) {
+
+      try {
+        ListObjectsRequest request = new ListObjectsRequest();
+        request.setBucketName(bucket);
+        request.setPrefix(dirKey);
+        request.setDelimiter("/");
+        request.setMaxKeys(listSize);
+
+        ObjectListing objects = listObjects(request);
+
+        Collection<String> prefixes = objects.getCommonPrefixes();
+        Collection<S3ObjectSummary> summaries = objects.getObjectSummaries();
+        if (!isEmptyOfKeys(prefixes, tombstones) ||
+            !isEmptyOfObjects(summaries, tombstones)) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Found path as directory (with /): {}/{}",
+                prefixes.size(), summaries.size());
+
+            for (S3ObjectSummary summary : summaries) {
+              LOG.debug("Summary: {} {}", summary.getKey(),
+                  summary.getSize());
+            }
+            for (String prefix : prefixes) {
+              LOG.debug("Prefix: {}", prefix);
+            }
+          }
+          // At least one entry has been found.
+          // If looking for an empty directory, the marker must exist but no children.
+          // So the listing must contain the marker entry only.
+          if (needEmptyDirectoryFlag
+              && representsEmptyDirectory(objects,
+              dirKey, tombstones)) {
+            return new S3AFileStatus(Tristate.TRUE, path, username);
+          }
+          // either an empty directory is not needed, or the
+          // listing does not meet the requirements.
+          return new S3AFileStatus(Tristate.FALSE, path, username);
+        } else if (key.isEmpty()) {
+          LOG.debug("Found root directory");
+          return new S3AFileStatus(Tristate.TRUE, path, username);
+        }
+      } catch (AmazonServiceException e) {
+        if (e.getStatusCode() != 404) {
+          throw translateException("getFileStatus", key, e);
+        }
+      } catch (AmazonClientException e) {
         throw translateException("getFileStatus", key, e);
       }
-    } catch (AmazonClientException e) {
-      throw translateException("getFileStatus", key, e);
     }
 
     LOG.debug("Not Found: {}", path);
@@ -1967,11 +2041,41 @@ public class S3AFileSystem extends FileSystem {
     if (tombstones == null) {
       return summaries.isEmpty();
     }
+    Collection<String> stringCollection = objectSummaryKeys(summaries);
+    return isEmptyOfKeys(stringCollection, tombstones);
+  }
+
+  /**
+   * Get the list of keys in the object summary.
+   * @return a possibly empty list
+   */
+  private Collection<String> objectSummaryKeys(
+      final Collection<S3ObjectSummary> summaries) {
     Collection<String> stringCollection = new ArrayList<>(summaries.size());
     for (S3ObjectSummary summary : summaries) {
       stringCollection.add(summary.getKey());
     }
-    return isEmptyOfKeys(stringCollection, tombstones);
+    return stringCollection;
+  }
+
+  /**
+   * Does this listing represent an empty directory?
+   * @param result listing
+   * @param dirKey directory key
+   * @param tombstones Set of tombstone markers, or null if not applicable.
+   * @return true if the list is considered empty.
+   */
+  public boolean representsEmptyDirectory(
+      ObjectListing result,
+      final String dirKey,
+      final Set<Path> tombstones) {
+    // If looking for an empty directory, the marker must exist but
+    // no children.
+    // So the listing must contain the marker entry only as an object,
+    // and prefixes is null
+    Collection<String> keys = objectSummaryKeys(result.getObjectSummaries());
+    return keys.size() == 1 && keys.contains(dirKey)
+        && result.getCommonPrefixes().isEmpty();
   }
 
   /**
@@ -1983,7 +2087,8 @@ public class S3AFileSystem extends FileSystem {
     Path path = qualify(f);
     String key = pathToKey(path);
     try {
-      s3GetFileStatus(path, key, null);
+      s3GetFileStatus(path, key, StatusProbeEnum.ALL,
+          null, false);
       return true;
     } catch (FileNotFoundException e) {
       return false;
@@ -2422,6 +2527,14 @@ public class S3AFileSystem extends FileSystem {
     return getConf().getLongBytes(FS_S3A_BLOCK_SIZE, DEFAULT_BLOCKSIZE);
   }
 
+  /**
+   * Get the directory marker policy of this filesystem.
+   * @return the marker policy.
+   */
+  public DirectoryPolicy getDirectoryMarkerPolicy() {
+    return directoryPolicy;
+  }
+
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder(
@@ -2450,6 +2563,7 @@ public class S3AFileSystem extends FileSystem {
     sb.append(", authoritative=").append(allowAuthoritative);
     sb.append(", boundedExecutor=").append(boundedThreadPool);
     sb.append(", unboundedExecutor=").append(unboundedThreadPool);
+    sb.append(", ").append(directoryPolicy);
     sb.append(", statistics {")
         .append(statistics)
         .append("}");
@@ -2911,4 +3025,47 @@ public class S3AFileSystem extends FileSystem {
     }
   }
 
+  /**
+   * This Hadoop version does not support PathCapabilities.
+   * By implementing the method on its own, code which
+   * introspects to find the method can still probe for
+   * the capabilities of the store.
+   * @param path path (unused)
+   * @param capability capability to probe for.
+   * @return true if the FS has the specific capability.
+   * @throws IOException failure
+   */
+  public boolean hasPathCapability(final Path path, final String capability)
+      throws IOException {
+    return hasCapability(capability);
+  }
+
+  /**
+   * Return the capabilities of this filesystem instance.
+   * @param capability string to query the stream support for.
+   * @return whether the FS instance has the capability.
+   */
+  @Override
+  public boolean hasCapability(String capability) {
+
+    final String cap = capability.toLowerCase(Locale.ENGLISH);
+    switch (cap) {
+
+    case STORE_CAPABILITY_DIRECTORY_MARKER_AWARE:
+      return true;
+
+    /*
+     * Marker policy capabilities are handed off.
+     */
+    case STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_KEEP:
+    case STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_DELETE:
+    case STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_AUTHORITATIVE:
+    case STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_KEEP:
+    case STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_DELETE:
+      return getDirectoryMarkerPolicy().hasPathCapability(new Path("/"), cap);
+
+    default:
+      return false;
+    }
+  }
 }
