@@ -508,10 +508,9 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   /**
-   * Since, the value of readAheadBytesRead counter could be arbitrary due to
-   * race condition we have a getter for value of this counter at some point
-   * in the operation.
-   * @return bytes read from readAhead at some point of the operation.
+   * Getter for bytes read from readAhead buffer that fills asynchronously.
+   *
+   * @return value of the counter in long.
    */
   @VisibleForTesting
   public long getBytesFromReadAhead() {
@@ -519,10 +518,9 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   /**
-   * Since, the value of remoteBytesRead counter value is dependent on a race
-   * condition we have a getter for the value of this counter at some point
-   * of operation to compare it against in a test.
-   * @return bytes read remotely at some point of the operation.
+   * Getter for bytes read remotely from the data store.
+   *
+   * @return value of the counter in long.
    */
   @VisibleForTesting
   public long getBytesFromRemoteRead() {
