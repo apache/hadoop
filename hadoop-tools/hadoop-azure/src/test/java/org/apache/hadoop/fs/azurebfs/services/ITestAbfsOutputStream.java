@@ -42,7 +42,7 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
   public void testMaxRequestsAndQueueCapacityDefaults() throws Exception {
     Configuration conf = getRawConfiguration();
     final AzureBlobFileSystem fs = getFileSystem(conf);
-    FSDataOutputStream out = fs.create(TEST_FILE_PATH);
+    try (FSDataOutputStream out = fs.create(TEST_FILE_PATH)) {
     AbfsOutputStream stream = (AbfsOutputStream) out.getWrappedStream();
     Assertions.assertThat(stream.getMaxConcurrentRequestCount()).describedAs(
         "maxConcurrentRequests should be " + getConfiguration()
@@ -52,6 +52,7 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
         "maxRequestsToQueue should be " + getConfiguration()
             .getMaxWriteRequestsToQueue())
         .isEqualTo(getConfiguration().getMaxWriteRequestsToQueue());
+    }
   }
 
   @Test

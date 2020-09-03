@@ -796,7 +796,8 @@ will be -1. To disable readaheads, set this value to 0. If your workload is
  doing only random reads (non-sequential) or you are seeing throttling, you
   may try setting this value to 0.
 
-To run under limited memory situations configure the following.
+To run under limited memory situations configure the following. Especially
+when there are too many writes from the same process. 
 
 `fs.azure.write.max.concurrent.requests`: To set the maximum concurrent
  write requests from an AbfsOutputStream instance  to server at any point of
