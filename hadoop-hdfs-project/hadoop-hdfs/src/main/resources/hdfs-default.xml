@@ -5982,6 +5982,6 @@
 
   <property>
     <name>dfs.datanode.reserve-for-archive.percentage</name>
-    <value>0.0</value>
+    <value>0.5</value>
   </property>
 </configuration>

@@ -64,7 +64,7 @@ class FsVolumeList {
   private final VolumeChoosingPolicy<FsVolumeImpl> blockChooser;
   private final BlockScanner blockScanner;
 
-  public boolean enableSameDiskTiering;
+  private boolean enableSameDiskTiering;
   private ConcurrentMap<String, Map<StorageType, FsVolumeImpl>> deviceVolumeMapping;
 
   FsVolumeList(List<VolumeFailureInfo> initialVolumeFailureInfos,
@@ -336,13 +336,15 @@ class FsVolumeList {
    */
   private void removeVolume(FsVolumeImpl target) {
     if (volumes.remove(target)) {
-      if (enableSameDiskTiering && (target.getStorageType() == StorageType.DISK || target.getStorageType() == StorageType.ARCHIVE)) {
+      if (enableSameDiskTiering &&
+          (target.getStorageType() == StorageType.DISK
+              || target.getStorageType() == StorageType.ARCHIVE)) {
         String device = target.getDevice();
-        if (device != null) {
-          Map storageTypeMap = deviceVolumeMapping.get(target.getDevice());
+        if (!device.isEmpty()) {
+          Map storageTypeMap = deviceVolumeMapping.get(device);
           storageTypeMap.remove(target.getStorageType());
           if (storageTypeMap.isEmpty()) {
-            deviceVolumeMapping.remove(target.getDevice());
+            deviceVolumeMapping.remove(device);
           }
         }
       }
@@ -378,7 +380,6 @@ class FsVolumeList {
             + device + ", " + storageType);
       }
     }
-
     return null;
   }
 

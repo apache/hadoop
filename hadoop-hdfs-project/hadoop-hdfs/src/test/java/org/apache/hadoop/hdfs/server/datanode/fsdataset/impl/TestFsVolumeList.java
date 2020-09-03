@@ -455,7 +455,7 @@ public class TestFsVolumeList {
         DFSConfigKeys.DFS_DATANODE_FIXED_VOLUME_SIZE_DEFAULT);
   }
 
-  // Test
+  // Test basics with same disk archival turned on.
   @Test
   public void testGetVolumeWithSameDiskArchival() throws Exception {
     File diskVolDir = new File(baseDir, "volume-disk");
@@ -487,11 +487,13 @@ public class TestFsVolumeList {
     assertEquals(diskVolume.getDevice(), archivalVolume.getDevice());
     String device = diskVolume.getDevice();
 
+    // 1) getVolume should return correct reference.
     assertEquals(diskVolume,
         volumeList.getVolumeByDeviceAndStorageType(device, StorageType.DISK).getVolume());
     assertEquals(archivalVolume,
         volumeList.getVolumeByDeviceAndStorageType(device, StorageType.ARCHIVE).getVolume());
 
+    // 1) removeVolume should work as expected
     volumeList.removeVolume(diskVolume.getStorageLocation(), true);
     assertEquals(null,
         volumeList.getVolumeByDeviceAndStorageType(device, StorageType.DISK));
@@ -551,8 +553,8 @@ public class TestFsVolumeList {
     // 2) getActualNonDfsUsed() should count in both DISK and ARCHIVE.
     // expectedActualNonDfsUsage =
     // diskUsage - archivalDfsUsage - diskDfsUsage
-    Mockito.doReturn(spyArchivalVolume).when(dataset).getVolume(anyString(), eq(StorageType.ARCHIVE));
-    Mockito.doReturn(spyDiskVolume).when(dataset).getVolume(anyString(), eq(StorageType.DISK));
+    Mockito.doReturn(spyArchivalVolume.obtainReference()).when(dataset).getVolume(anyString(), eq(StorageType.ARCHIVE));
+    Mockito.doReturn(spyDiskVolume.obtainReference()).when(dataset).getVolume(anyString(), eq(StorageType.DISK));
 
     long expectedActualNonDfsUsage = 400L;
     Mockito.doReturn(diskDfsUsage).when(spyDiskVolume).getDfsUsed();

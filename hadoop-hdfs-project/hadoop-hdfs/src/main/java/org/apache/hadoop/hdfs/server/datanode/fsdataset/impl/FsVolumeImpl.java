@@ -135,7 +135,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   private final DataNodeVolumeMetrics metrics;
   private URI baseURI;
   private boolean enableSameDiskArchival;
-  private String device;
+  private final String device;
 
   /**
    * Per-volume worker pool that processes new blocks to cache.
@@ -197,6 +197,8 @@ public class FsVolumeImpl implements FsVolumeSpi {
             DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING_DEFAULT);
     if (enableSameDiskArchival) {
       this.device = usage.getMount();
+    } else {
+      device = null;
     }
   }
 
@@ -425,9 +427,14 @@ public class FsVolumeImpl implements FsVolumeSpi {
   @VisibleForTesting
   public long getCapacity() {
     long capacity;
-    if (configuredCapacity < 0) {
-      long remaining = usage.getCapacity() - getReserved();
-      capacity = remaining > 0 ? remaining : 0;
+    if (configuredCapacity < 0L) {
+      long remaining;
+      if (cachedCapacity > 0L) {
+        remaining = cachedCapacity - getReserved();
+      } else {
+        remaining = usage.getCapacity() - getReserved();
+      }
+      capacity = Math.max(remaining, 0L);
     } else {
       capacity = configuredCapacity;
     }
@@ -478,8 +485,9 @@ public class FsVolumeImpl implements FsVolumeSpi {
     // exclude DFS used capacity by another volume.
     if (enableSameDiskArchival && (storageType == StorageType.DISK || storageType == StorageType.ARCHIVE)) {
       StorageType counterpartStorageType = storageType == StorageType.DISK ? StorageType.ARCHIVE : StorageType.DISK;
-      FsVolumeImpl volume = (FsVolumeImpl) dataset.getVolume(device, counterpartStorageType).getVolume();
-      if (volume != null) {
+      FsVolumeReference ref = dataset.getVolume(device, counterpartStorageType);
+      if (ref != null) {
+        FsVolumeImpl volume = (FsVolumeImpl) ref.getVolume();
         return getDfUsed() - getDfsUsed() - volume.getDfsUsed();
       }
     }
