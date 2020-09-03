@@ -70,6 +70,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   /** Stream statistics. */
   private final AbfsInputStreamStatistics streamStatistics;
+  private long bytesFromReadAhead; // bytes read from readAhead; for testing
+  private long bytesFromRemoteRead; // bytes read remotely; for testing
 
   public AbfsInputStream(
           final AbfsClient client,
@@ -235,6 +237,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
       // try reading from buffers first
       receivedBytes = ReadBufferManager.getBufferManager().getBlock(this, position, length, b);
+      bytesFromReadAhead += receivedBytes;
       if (receivedBytes > 0) {
         incrementReadOps();
         LOG.debug("Received data from read ahead, not doing remote read");
@@ -302,6 +305,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       throw new IOException("Unexpected Content-Length");
     }
     LOG.debug("HTTP request read bytes = {}", bytesRead);
+    bytesFromRemoteRead += bytesRead;
     return (int) bytesRead;
   }
 
@@ -501,6 +505,28 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   @VisibleForTesting
   public AbfsInputStreamStatistics getStreamStatistics() {
     return streamStatistics;
+  }
+
+  /**
+   * Since, the value of readAheadBytesRead counter could be arbitrary due to
+   * race condition we have a getter for value of this counter at some point
+   * in the operation.
+   * @return bytes read from readAhead at some point of the operation.
+   */
+  @VisibleForTesting
+  public long getBytesFromReadAhead() {
+    return bytesFromReadAhead;
+  }
+
+  /**
+   * Since, the value of remoteBytesRead counter value is dependent on a race
+   * condition we have a getter for the value of this counter at some point
+   * of operation to compare it against in a test.
+   * @return bytes read remotely at some point of the operation.
+   */
+  @VisibleForTesting
+  public long getBytesFromRemoteRead() {
+    return bytesFromRemoteRead;
   }
 
   /**
