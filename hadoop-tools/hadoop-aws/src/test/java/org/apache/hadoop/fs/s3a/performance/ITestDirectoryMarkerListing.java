@@ -775,7 +775,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
     while (status.hasNext()) {
       l.add(status.next());
     }
-    return (List <FileStatus>)dump(l);
+    return (List<FileStatus>)dump(l);
   }
 
   /**

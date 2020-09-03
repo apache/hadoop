@@ -1911,11 +1911,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
         // look for the simple file
         ObjectMetadata meta = getObjectMetadata(key);
         LOG.debug("Found exact file: normal file {}", key);
-          return new S3AFileStatus(meta.getContentLength(),
-              dateToLong(meta.getLastModified()),
-              path,
-              getDefaultBlockSize(path),
-              username);
+        return new S3AFileStatus(meta.getContentLength(),
+            dateToLong(meta.getLastModified()),
+            path,
+            getDefaultBlockSize(path),
+            username);
       } catch (AmazonServiceException e) {
       // if the response is a 404 error, it just means that there is
       // no file at that path...the remaining checks will be needed.
@@ -1929,77 +1929,77 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
 
     // execute the list
     if (probes.contains(StatusProbeEnum.List)) {
-        // this will find a marker dir / as well as an entry.
-        // When making a simple "is this a dir check" all is good.
-        // but when looking for an empty dir, we need to verify there are no
-        // children, so ask for two entries, so as to find
-        // a child
-        String dirKey = maybeAddTrailingSlash(key);
-        // list size is dir marker + at least one non-tombstone entry
-        // there's a corner case: more tombstones than you have in a
-        // single page list. We assume that if you have been deleting
-        // that many files, then the AWS listing will have purged some
-        // by the time of listing so that the response includes some
-        // which have not.
+      // this will find a marker dir / as well as an entry.
+      // When making a simple "is this a dir check" all is good.
+      // but when looking for an empty dir, we need to verify there are no
+      // children, so ask for two entries, so as to find
+      // a child
+      String dirKey = maybeAddTrailingSlash(key);
+      // list size is dir marker + at least one non-tombstone entry
+      // there's a corner case: more tombstones than you have in a
+      // single page list. We assume that if you have been deleting
+      // that many files, then the AWS listing will have purged some
+      // by the time of listing so that the response includes some
+      // which have not.
 
-        int listSize;
-        if (tombstones == null) {
-          // no tombstones so look for a marker and at least one child.
-          listSize = 2;
-        } else {
-          // build a listing > tombstones. If the caller has many thousands
-          // of tombstones this won't work properly, which is why pruning
-          // of expired tombstones matters.
-          listSize = Math.min(2 + tombstones.size(), Math.max(2, maxKeys));
-        }
+      int listSize;
+      if (tombstones == null) {
+        // no tombstones so look for a marker and at least one child.
+        listSize = 2;
+      } else {
+        // build a listing > tombstones. If the caller has many thousands
+        // of tombstones this won't work properly, which is why pruning
+        // of expired tombstones matters.
+        listSize = Math.min(2 + tombstones.size(), Math.max(2, maxKeys));
+      }
 
-        try {
-          ListObjectsRequest request = new ListObjectsRequest();
-          request.setBucketName(bucket);
-          request.setPrefix(dirKey);
-          request.setDelimiter("/");
-          request.setMaxKeys(listSize);
+      try {
+        ListObjectsRequest request = new ListObjectsRequest();
+        request.setBucketName(bucket);
+        request.setPrefix(dirKey);
+        request.setDelimiter("/");
+        request.setMaxKeys(listSize);
 
-          ObjectListing objects = listObjects(request);
+        ObjectListing objects = listObjects(request);
 
-          Collection<String> prefixes = objects.getCommonPrefixes();
-          Collection<S3ObjectSummary> summaries = objects.getObjectSummaries();
-          if (!isEmptyOfKeys(prefixes, tombstones) ||
-              !isEmptyOfObjects(summaries, tombstones)) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Found path as directory (with /): {}/{}",
-                  prefixes.size(), summaries.size());
+        Collection<String> prefixes = objects.getCommonPrefixes();
+        Collection<S3ObjectSummary> summaries = objects.getObjectSummaries();
+        if (!isEmptyOfKeys(prefixes, tombstones) ||
+            !isEmptyOfObjects(summaries, tombstones)) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Found path as directory (with /): {}/{}",
+                prefixes.size(), summaries.size());
 
-              for (S3ObjectSummary summary : summaries) {
-                LOG.debug("Summary: {} {}", summary.getKey(),
-                    summary.getSize());
-              }
-              for (String prefix : prefixes) {
-                LOG.debug("Prefix: {}", prefix);
-              }
+            for (S3ObjectSummary summary : summaries) {
+              LOG.debug("Summary: {} {}", summary.getKey(),
+                  summary.getSize());
             }
-            // At least one entry has been found.
-            // If looking for an empty directory, the marker must exist but no children.
-            // So the listing must contain the marker entry only.
-            if (needEmptyDirectoryFlag
-                && representsEmptyDirectory(objects,
-                dirKey, tombstones)) {
-              return new S3AFileStatus(Tristate.TRUE, path, username);
+            for (String prefix : prefixes) {
+              LOG.debug("Prefix: {}", prefix);
             }
-            // either an empty directory is not needed, or the
-            // listing does not meet the requirements.
-            return new S3AFileStatus(Tristate.FALSE, path, username);
-          } else if (key.isEmpty()) {
-            LOG.debug("Found root directory");
+          }
+          // At least one entry has been found.
+          // If looking for an empty directory, the marker must exist but no children.
+          // So the listing must contain the marker entry only.
+          if (needEmptyDirectoryFlag
+              && representsEmptyDirectory(objects,
+              dirKey, tombstones)) {
             return new S3AFileStatus(Tristate.TRUE, path, username);
           }
-        } catch (AmazonServiceException e) {
-          if (e.getStatusCode() != 404) {
-            throw translateException("getFileStatus", key, e);
-          }
-        } catch (AmazonClientException e) {
+          // either an empty directory is not needed, or the
+          // listing does not meet the requirements.
+          return new S3AFileStatus(Tristate.FALSE, path, username);
+        } else if (key.isEmpty()) {
+          LOG.debug("Found root directory");
+          return new S3AFileStatus(Tristate.TRUE, path, username);
+        }
+      } catch (AmazonServiceException e) {
+        if (e.getStatusCode() != 404) {
           throw translateException("getFileStatus", key, e);
         }
+      } catch (AmazonClientException e) {
+        throw translateException("getFileStatus", key, e);
+      }
     }
 
     LOG.debug("Not Found: {}", path);

@@ -39,8 +39,8 @@ import static org.junit.Assert.assertEquals;
  * As this FS only supports "delete", this is more minimal test
  * suite than on later versions.
  * <p></p>
- * It helps ensure that there aren't unexpected problems if the site configuration
- * asks for retention of some form.
+ * It helps ensure that there aren't unexpected problems if the site
+ * configuration asks for retention of some form.
  */
 @RunWith(Parameterized.class)
 public class TestDirectoryMarkerPolicy {
