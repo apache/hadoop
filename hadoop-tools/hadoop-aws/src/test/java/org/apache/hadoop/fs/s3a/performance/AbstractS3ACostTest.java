@@ -164,7 +164,10 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
             OBJECT_LIST_REQUESTS,
             OBJECT_METADATA_REQUESTS,
             OBJECT_PUT_BYTES,
-            OBJECT_PUT_REQUESTS)
+            OBJECT_PUT_REQUESTS,
+            STREAM_OPENED,
+            STREAM_CLOSE_BYTES_READ,
+            STREAM_SEEK_BYTES_SKIPPED)
         .build();
   }
 
