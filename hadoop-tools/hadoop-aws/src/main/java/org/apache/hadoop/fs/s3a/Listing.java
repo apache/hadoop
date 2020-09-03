@@ -747,11 +747,6 @@ public class Listing extends AbstractStoreOperation {
     private CompletableFuture<S3ListResult> s3ListResultFuture;
 
     /**
-     * Result of previous batch.
-     */
-    private S3ListResult objectsPrev;
-
-    /**
      * Constructor -calls `listObjects()` on the request to populate the
      * initial set of results/fail if there was a problem talking to the bucket.
      * @param listPath path of the listing
@@ -764,29 +759,76 @@ public class Listing extends AbstractStoreOperation {
         S3ListRequest request) throws IOException {
       this.listPath = listPath;
       this.maxKeys = listingOperationCallbacks.getMaxKeys();
+      this.request = request;
+      // initiate the asynchronous listing
       this.s3ListResultFuture = listingOperationCallbacks
               .listObjectsAsync(request);
-      this.request = request;
-      this.objectsPrev = null;
     }
 
     /**
-     * Declare that the iterator has data if it is either is the initial
-     * iteration or it is a later one and the last listing obtained was
-     * incomplete.
-     * @throws IOException never: there is no IO in this operation.
+     * Determine if there is more data.
+     * <p></p>
+     * If the previous fetch
+     * completed and has not had its data returned by a next()
+     * call, then return true.
+     *
+     * Otherwise, wait for any outsanding listing to return, blocking for
+     * the result, and kick off the next async fetch if that result
+     * indicates there is more data.
+     * <p></p>
+     * @throws IOException if the retrieval process failed.
      */
     @Override
     public boolean hasNext() throws IOException {
-      return firstListing ||
-              (objectsPrev != null && objectsPrev.isTruncated());
+      // there is a next element if either there is a result already
+      // or there is a result to block for
+      try {
+        if (objects != null) {
+          // already a result, which next() will return.
+          return true;
+        }
+        // no previous objects
+
+        // Is there is any active fetch underway?
+        if (s3ListResultFuture == null) {
+          // no outstanding list, so no more results.
+          return false;
+        }
+        // there is a future, so wait for it.
+        objects = awaitListOperationCompletion();
+        listingCount++;
+        // kick off the next listing
+        fetchNextBatchAsyncIfPresent();
+
+        // if we get here, there was a result, even if it is an empty listing.
+        return true;
+      } catch (AmazonClientException e) {
+        throw translateException("listObjects()", listPath, e);
+      }
+    }
+
+    /**
+     * Wait for the listing to complete; sets {@link #s3ListResultFuture}
+     * to null before returning.
+     * @return the result of the active operation.
+     * @throws IOException failure.
+     */
+    protected S3ListResult awaitListOperationCompletion()
+        throws IOException {
+      Preconditions.checkState(s3ListResultFuture != null,
+          "No active listing in progress");
+      S3ListResult result = awaitFuture(s3ListResultFuture);
+      s3ListResultFuture = null;
+      return result;
     }
 
     /**
      * Ask for the next listing.
-     * For the first invocation, this returns the initial set, with no
-     * remote IO. For later requests, S3 will be queried, hence the calls
-     * may block or fail.
+     * <p></p>
+     * This calls {@link #hasNext()} to force a block
+     * to await for any active list to return.
+     * Any subsequent list will be queued for execution
+     * afterwards.
      * @return the next object listing.
      * @throws IOException if a query made of S3 fails.
      * @throws NoSuchElementException if there is no more data to list.
@@ -794,44 +836,36 @@ public class Listing extends AbstractStoreOperation {
     @Override
     @Retries.RetryTranslated
     public S3ListResult next() throws IOException {
-      if (firstListing) {
-        // clear the firstListing flag for future calls.
-        firstListing = false;
-        // Calculating the result of last async list call.
-        objects = awaitFuture(s3ListResultFuture);
-        fetchNextBatchAsyncIfPresent();
-      } else {
-        try {
-          if (objectsPrev!= null && !objectsPrev.isTruncated()) {
-            // nothing more to request: fail.
-            throw new NoSuchElementException("No more results in listing of "
-                    + listPath);
-          }
-          // Calculating the result of last async list call.
-          objects = awaitFuture(s3ListResultFuture);
-          // Requesting next batch of results.
-          fetchNextBatchAsyncIfPresent();
-          listingCount++;
-          LOG.debug("New listing status: {}", this);
-        } catch (AmazonClientException e) {
-          throw translateException("listObjects()", listPath, e);
-        }
+      if (!hasNext()) {
+        throw new NoSuchElementException("No more results in listing of "
+            + listPath);
       }
-      // Storing the current result to be used by hasNext() call.
-      objectsPrev = objects;
+      // at this point, we know objects is non null. There may be another
+      // fetch under way, but that is not important.
+      S3ListResult objectsPrev = objects;
+      // reset the objects field
+      objects = null;
       return objectsPrev;
     }
 
     /**
      * If there are more listings present, call for next batch async.
-     * @throws IOException
+     * The future in {@link #s3ListResultFuture} will be updated
+     * with either a new value or set to null.
+     * @return true if another fetch was initiated.
+     * @throws IOException failure
      */
     private void fetchNextBatchAsyncIfPresent() throws IOException {
       if (objects.isTruncated()) {
+        // more data to fetch
         LOG.debug("[{}], Requesting next {} objects under {}",
                 listingCount, maxKeys, listPath);
+        firstListing = false;
         s3ListResultFuture = listingOperationCallbacks
                 .continueListObjectsAsync(request, objects);
+      } else {
+        // no more data to fetch.
+        s3ListResultFuture = null;
       }
     }
 
@@ -839,7 +873,8 @@ public class Listing extends AbstractStoreOperation {
     public String toString() {
       return "Object listing iterator against " + listPath
           + "; listing count "+ listingCount
-          + "; isTruncated=" + objects.isTruncated();
+          + "; isTruncated="
+          + (objects != null ? objects.isTruncated(): "false");
     }
 
     /**

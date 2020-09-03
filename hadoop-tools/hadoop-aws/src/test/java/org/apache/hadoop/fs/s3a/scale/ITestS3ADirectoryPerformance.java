@@ -27,7 +27,10 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
+import org.apache.hadoop.fs.s3a.S3ListRequest;
+import org.apache.hadoop.fs.s3a.S3ListResult;
 import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.util.DurationInfo;
 
 import org.junit.Test;
 import org.assertj.core.api.Assertions;
@@ -38,6 +41,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -156,6 +160,11 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
     }
   }
 
+  /**
+   * This test bulk creates directory entries through PUT requests so does
+   * not work with guarded stores.
+   */
+  @SuppressWarnings("InfiniteLoopStatement")
   @Test
   public void testMultiPagesListingPerformanceAndCorrectness()
           throws Throwable {
@@ -168,6 +177,9 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
     final int numOfPutThreads = 50;
     final Configuration conf =
             getConfigurationWithConfiguredBatchSize(batchSize);
+    removeBaseAndBucketOverrides(conf,
+        Constants.S3_METADATA_STORE_IMPL);
+
     final InputStream im = new InputStream() {
       @Override
       public int read() throws IOException {
@@ -212,7 +224,7 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
 
       Assertions.assertThat(listUsingListFiles)
               .describedAs("Listing results using listFiles() must" +
-                      "match with original list of files")
+                      "  match with original list of files")
               .hasSameElementsAs(originalListOfFiles)
               .hasSize(numOfPutRequests);
       List<String> listUsingListStatus = new ArrayList<>();
@@ -228,9 +240,58 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
               numOfPutRequests, batchSize, eachFileProcessingTime);
       Assertions.assertThat(listUsingListStatus)
               .describedAs("Listing results using listStatus() must" +
-                      "match with original list of files")
+                      " match with original list of files")
               .hasSameElementsAs(originalListOfFiles)
               .hasSize(numOfPutRequests);
+
+      // now iterate through listObjects in two
+      // different ways: hasNext/next and next() to failure
+      // both list sequences MUST return the same results
+      String pathKey = fs.pathToKey(dir);
+      S3ListRequest r = fs.createListObjectsRequest(pathKey, "/");
+      // first iteration does a hasNext/next sequence
+      int scan1pageCount  = 0;
+      int scan1objectCount  = 0;
+      try (DurationInfo ignored =
+               new DurationInfo(LOG, "Iterating through objects")) {
+        RemoteIterator<S3ListResult> it = fs.getListing()
+            .createObjectListingIterator(dir, r);
+        while (it.hasNext()) {
+          scan1pageCount++;
+          S3ListResult result = it.next();
+          scan1objectCount += result.getObjectSummaries().size();
+        }
+      }
+
+      // iteration calls next() until there is a failure.
+      int scan2pageCount = 0;
+      int scan2objectCount = 0;
+      RemoteIterator<S3ListResult> it = fs.getListing()
+          .createObjectListingIterator(dir, r);
+      try (DurationInfo ignored =
+               new DurationInfo(LOG, "Iterating through objects")) {
+        while (true) {
+          S3ListResult result = it.next();
+          scan2pageCount++;
+          scan2objectCount += result.getObjectSummaries().size();
+        }
+      } catch (NoSuchElementException expected) {
+        // end of scan
+      }
+      Assertions.assertThat(it.hasNext())
+          .describedAs("hasNext() after next() %s", it)
+          .isFalse();
+      Assertions.assertThat(scan1pageCount)
+          .describedAs("Scan page count")
+          .isEqualTo(scan2pageCount);
+      Assertions.assertThat(scan1objectCount)
+          .describedAs("Scan object count")
+          .isEqualTo(scan2objectCount);
+
+      // now do a bulk delete
+      try (DurationInfo ignored = new DurationInfo(LOG, "Deleting objects")) {
+        fs.delete(dir, true);
+      }
     } finally {
       executorService.shutdown();
     }
