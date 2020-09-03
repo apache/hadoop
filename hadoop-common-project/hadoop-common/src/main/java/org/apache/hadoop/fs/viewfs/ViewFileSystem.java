@@ -959,6 +959,12 @@ public class ViewFileSystem extends FileSystem {
       FileSystem targetFs = mountPoint.target.targetFileSystem;
       children.addAll(Arrays.asList(targetFs.getChildFileSystems()));
     }
+
+    if (fsState.isRootInternalDir() && fsState.getRootFallbackLink() != null) {
+      children.addAll(Arrays.asList(
+          fsState.getRootFallbackLink().targetFileSystem
+              .getChildFileSystems()));
+    }
     return children.toArray(new FileSystem[]{});
   }
   
