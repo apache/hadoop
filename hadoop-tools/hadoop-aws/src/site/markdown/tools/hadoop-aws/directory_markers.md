@@ -366,7 +366,7 @@ Syntax
 
 ```
 > hadoop s3guard markers -verbose -nonauth
-markers (-audit | -clean) [-expected <count>] [-out <filename>] [-limit <limit>] [-nonauth] [-verbose] <PATH>
+markers (-audit | -clean) [-min <count>] [-max <count>] [-out <filename>] [-limit <limit>] [-nonauth] [-verbose] <PATH>
         View and manipulate S3 directory markers
 
 ```
@@ -377,7 +377,8 @@ markers (-audit | -clean) [-expected <count>] [-out <filename>] [-limit <limit>]
 |-------------------------|-------------------------|
 |  `-audit`               | Audit the path for surplus markers |
 |  `-clean`               | Clean all surplus markers under a path |
-|  `-expected <count>]`   | Expected number of markers to find (primarily for testing)  |
+|  `-min <count>`         | Minimum number of markers an audit must find (default: 0) |
+|  `-max <count>]`        | Minimum number of markers an audit must find (default: 0)  |
 |  `-limit <count>]`      | Limit the number of objects to scan |
 |  `-nonauth`             | Only consider markers in non-authoritative paths as errors  |
 |  `-out <filename>`      | Save a list of all markers found to the nominated file  |
@@ -489,7 +490,7 @@ The `markers clean` command will clean the directory tree of all surplus markers
 The `-verbose` option prints more detail on the operation as well as some IO statistics
 
 ```
-> hadoop s3guard markers -verbose -clean s3a://london/
+> hadoop s3guard markers -clean -verbose s3a://london/
 
 2020-08-05 18:33:25,303 [main] INFO  impl.DirectoryPolicyImpl (DirectoryPolicyImpl.java:getDirectoryPolicy(143)) - Directory markers will be kept on authoritative paths
 The directory marker policy of s3a://london is "Authoritative"

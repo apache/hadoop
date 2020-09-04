@@ -259,7 +259,8 @@ public class ITestMarkerTool extends AbstractMarkerToolTest {
         AUDIT,
         m(OPT_LIMIT), 0,
         m(OPT_OUT), audit,
-        m(OPT_EXPECTED), expectedMarkersWithBaseDir,
+        m(OPT_MIN), expectedMarkersWithBaseDir,
+        m(OPT_MAX), expectedMarkersWithBaseDir,
         createdPaths.base);
     expectMarkersInOutput(audit, expectedMarkersWithBaseDir);
   }
@@ -286,9 +287,6 @@ public class ITestMarkerTool extends AbstractMarkerToolTest {
         m(OPT_LIMIT), 2,
         CLEAN,
         createdPaths.base);
-    run(MARKERS, V,
-        AUDIT,
-        createdPaths.base);
   }
 
   /**
@@ -302,7 +300,8 @@ public class ITestMarkerTool extends AbstractMarkerToolTest {
     describe("Audit a few thousand landsat objects");
     final File audit = tempAuditFile();
 
-    run(MARKERS,
+    runToFailure(EXIT_INTERRUPTED,
+        MARKERS,
         AUDIT,
         m(OPT_LIMIT), 3000,
         m(OPT_OUT), audit,
