@@ -604,9 +604,9 @@ public class RouterAdminServer extends AbstractService
    *
    * @param entry the new mount points added, could be from add or update.
    * @return destination nameservices where the file doesn't exist.
-   * @throws IOException
+   * @throws IOException unable to verify the file in destinations
    */
-  private List<String> verifyFileInDestinations(MountTable entry)
+  public List<String> verifyFileInDestinations(MountTable entry)
       throws IOException {
     GetDestinationRequest request =
         GetDestinationRequest.newInstance(entry.getSourcePath());

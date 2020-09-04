@@ -34,10 +34,13 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -58,14 +61,18 @@ import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.NamenodeContext;
+import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeContext;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.NamenodeStatusReport;
+import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
 import org.apache.hadoop.hdfs.server.federation.router.ConnectionManager;
+import org.apache.hadoop.hdfs.server.federation.router.RemoteMethod;
 import org.apache.hadoop.hdfs.server.federation.router.Router;
 import org.apache.hadoop.hdfs.server.federation.router.RouterClient;
 import org.apache.hadoop.hdfs.server.federation.router.RouterRpcClient;
@@ -87,12 +94,19 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.Whitebox;
+import org.mockito.ArgumentMatcher;
+import org.mockito.Mockito;
+import org.mockito.internal.util.reflection.FieldSetter;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Set;
 import java.util.function.Supplier;
+
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 /**
  * Helper utilities for testing HDFS Federation.
@@ -550,5 +564,48 @@ public final class FederationTestUtils {
       StateStoreService stateStore = router.getStateStore();
       stateStore.refreshCaches(true);
     }
+  }
+
+  private static class RemoteLocationsMatcher
+      implements ArgumentMatcher<List<RemoteLocation>> {
+    private Set<RemoteLocation> expectedLocations;
+    public RemoteLocationsMatcher(List<RemoteLocation> rl) {
+      expectedLocations = new HashSet<>(rl);
+    }
+    @Override
+    public boolean matches(List<RemoteLocation> obj) {
+      if (obj.size () != expectedLocations.size()) {
+        return false;
+      }
+
+      Set<RemoteLocation> set1 = new HashSet<>(obj);
+      return Sets.difference(set1, expectedLocations).size()
+          + Sets.difference(expectedLocations, set1).size() == 0;
+    }
+  }
+
+  public static void mockMountTableDestination(
+      RouterRpcClient routerRpcClient, String src, List<String> nsIds, List<String> dests)
+      throws IOException {
+    // Mock files from destinations
+    List<RemoteLocation> locations = new LinkedList<>();
+    Map<RemoteLocation, HdfsFileStatus> mockResponse =
+        new HashMap<>();
+    for (String ns : nsIds) {
+      for (String dest : dests) {
+        RemoteLocation remoteLocation = new RemoteLocation(
+            ns, dest, null);
+        mockResponse.put(remoteLocation,
+            new HdfsFileStatus.Builder().build());
+        locations.add(remoteLocation);
+      }
+    }
+    Mockito.doReturn(mockResponse).when(routerRpcClient).invokeConcurrent(
+        Mockito.argThat(new RemoteLocationsMatcher(locations)),
+        Mockito.any(RemoteMethod.class),
+        Mockito.eq(false),
+        Mockito.eq(false),
+        Mockito.eq(HdfsFileStatus.class)
+    );
   }
 }
