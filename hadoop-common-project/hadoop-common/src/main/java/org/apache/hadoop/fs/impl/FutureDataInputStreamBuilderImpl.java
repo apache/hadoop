@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.impl;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 
@@ -40,16 +41,15 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_
  * Builder for input streams and subclasses whose return value is
  * actually a completable future: this allows for better asynchronous
  * operation.
- *
+ * <p></p>
  * To be more generic, {@link #opt(String, int)} and {@link #must(String, int)}
  * variants provide implementation-agnostic way to customize the builder.
  * Each FS-specific builder implementation can interpret the FS-specific
  * options accordingly, for example:
- *
+ * <p></p>
  * If the option is not related to the file system, the option will be ignored.
- * If the option is must, but not supported by the file system, a
+ * If the option is must, but not supported/known by the file system, an
  * {@link IllegalArgumentException} will be thrown.
- *
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
@@ -147,7 +147,8 @@ public abstract class FutureDataInputStreamBuilderImpl
   }
 
   @Override
-  public FutureDataInputStreamBuilder withFileStatus(FileStatus st) {
+  public FutureDataInputStreamBuilder withFileStatus(
+      @Nullable FileStatus st) {
     this.status = st;
     return this;
   }

@@ -27,8 +27,8 @@ import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTest
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.s3a.Constants;
 
-import static org.apache.hadoop.fs.impl.OpenFileParameters.FS_OPT_OPENFILE_FADVISE;
-import static org.apache.hadoop.fs.impl.OpenFileParameters.FS_OPT_OPENFILE_LENGTH;
+import static org.apache.hadoop.fs.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE;
+import static org.apache.hadoop.fs.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
 
 /**
  * Internal constants private only to the S3A codebase.
@@ -83,8 +83,8 @@ public final class InternalConstants {
   @InterfaceStability.Unstable
   public static final Set<String> S3A_OPENFILE_KEYS =
       Stream.of(
-          FS_OPT_OPENFILE_FADVISE,
-          FS_OPT_OPENFILE_LENGTH,
+          FS_OPTION_OPENFILE_FADVISE,
+          FS_OPTION_OPENFILE_LENGTH,
           Constants.INPUT_FADVISE,
           Constants.READAHEAD_RANGE)
           .collect(Collectors.toSet());

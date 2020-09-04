@@ -106,47 +106,4 @@ public class OpenFileParameters {
     return status;
   }
 
-
-  /**
-   * OpenFile option for seek policies: {@value}.
-   */
-  public static final String FS_OPT_OPENFILE_FADVISE =
-      "fs.opt.openfile.fadvise";
-
-  /**
-   * fadvise policy: {@value}.
-   */
-  public static final String FS_OPT_OPENFILE_FADVISE_NORMAL = "normal";
-
-  /**
-   * fadvise policy: {@value}.
-   */
-  public static final String FS_OPT_OPENFILE_FADVISE_SEQUENTIAL = "sequential";
-
-  /**
-   * fadvise policy: {@value}.
-   */
-  public static final String FS_OPT_OPENFILE_FADVISE_RANDOM = "random";
-
-  /**
-   * fadvise policy: {@value}.
-   */
-  public static final String FS_OPT_OPENFILE_FADVISE_ADAPTIVE = "adaptive";
-
-  /**
-   * OpenFile option for seek policies: {@value}.
-   */
-  public static final String FS_OPT_OPENFILE_LENGTH =
-      "fs.opt.openfile.length";
-
-  /**
-   * Set of standard options.
-   */
-  public static final Set<String> STANDARD_OPTIONS =
-      Stream.of(
-          FS_OPT_OPENFILE_FADVISE,
-          FS_OPT_OPENFILE_LENGTH)
-          .collect(Collectors.toSet());
-
-
 }

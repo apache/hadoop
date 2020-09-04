@@ -497,7 +497,9 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
     S3AFileStatus s2 = new S3AFileStatus(true, testpath, "alice");
     assertTrue("not a directory " + s2, s2.isDirectory());
     LOG.info("Open with directory status");
-    interceptFuture(FileNotFoundException.class, "",
+    // rejection is currently during the synchronous phase
+    // because the
+    intercept(FileNotFoundException.class, "", () ->
         fs.openFile(testpath)
             .withFileStatus(s2)
             .build());

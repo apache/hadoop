@@ -38,10 +38,9 @@ import org.apache.hadoop.fs.s3a.S3ATestUtils;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.readStream;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
-import static org.apache.hadoop.fs.impl.OpenFileParameters.FS_OPT_OPENFILE_FADVISE;
-import static org.apache.hadoop.fs.impl.OpenFileParameters.FS_OPT_OPENFILE_FADVISE_SEQUENTIAL;
-import static org.apache.hadoop.fs.impl.OpenFileParameters.FS_OPT_OPENFILE_LENGTH;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
+import static org.apache.hadoop.fs.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE;
+import static org.apache.hadoop.fs.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE_SEQUENTIAL;
+import static org.apache.hadoop.fs.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
 import static org.apache.hadoop.fs.s3a.Statistic.STREAM_CLOSE_BYTES_READ;
 import static org.apache.hadoop.fs.s3a.Statistic.STREAM_OPENED;
 import static org.apache.hadoop.fs.s3a.Statistic.STREAM_SEEK_BYTES_SKIPPED;
@@ -131,14 +130,14 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
     int offset = 2;
     long shortLen = len - offset;
     CompletableFuture<FSDataInputStream> f2 = fs.openFile(testFile)
-        .must(FS_OPT_OPENFILE_FADVISE, FS_OPT_OPENFILE_FADVISE_SEQUENTIAL)
-        .opt(FS_OPT_OPENFILE_LENGTH, shortLen)
+        .must(FS_OPTION_OPENFILE_FADVISE, FS_OPTION_OPENFILE_FADVISE_SEQUENTIAL)
+        .opt(FS_OPTION_OPENFILE_LENGTH, shortLen)
         .build();
     FSDataInputStream in2 = verifyMetrics(() ->
             fs.openFile(testFile)
-                .must(FS_OPT_OPENFILE_FADVISE,
-                    FS_OPT_OPENFILE_FADVISE_SEQUENTIAL)
-                .opt(FS_OPT_OPENFILE_LENGTH, shortLen)
+                .must(FS_OPTION_OPENFILE_FADVISE,
+                    FS_OPTION_OPENFILE_FADVISE_SEQUENTIAL)
+                .opt(FS_OPTION_OPENFILE_LENGTH, shortLen)
                 .build()
                 .get(),
         always(NO_IO),
@@ -158,8 +157,9 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
     long longLen = len + 10;
     FSDataInputStream in3 = verifyMetrics(() ->
             fs.openFile(testFile)
-                .must(FS_OPT_OPENFILE_FADVISE, FS_OPT_OPENFILE_FADVISE_SEQUENTIAL)
-                .must(FS_OPT_OPENFILE_LENGTH, longLen)
+                .must(FS_OPTION_OPENFILE_FADVISE,
+                    FS_OPTION_OPENFILE_FADVISE_SEQUENTIAL)
+                .must(FS_OPTION_OPENFILE_LENGTH, longLen)
                 .build()
                 .get(),
         always(NO_IO));

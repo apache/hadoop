@@ -107,10 +107,9 @@ import org.apache.hadoop.fs.s3a.impl.CopyOutcome;
 import org.apache.hadoop.fs.s3a.impl.DeleteOperation;
 import org.apache.hadoop.fs.s3a.impl.DirectoryPolicy;
 import org.apache.hadoop.fs.s3a.impl.DirectoryPolicyImpl;
-import org.apache.hadoop.fs.s3a.impl.InternalConstants;
 import org.apache.hadoop.fs.s3a.impl.ListingOperationCallbacks;
 import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport;
-import org.apache.hadoop.fs.s3a.impl.S3AOpenFileHelper;
+import org.apache.hadoop.fs.s3a.impl.S3AOpenFileOperation;
 import org.apache.hadoop.fs.s3a.impl.OperationCallbacks;
 import org.apache.hadoop.fs.s3a.impl.RenameOperation;
 import org.apache.hadoop.fs.s3a.impl.S3AMultipartUploaderBuilder;
@@ -119,7 +118,6 @@ import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
 import org.apache.hadoop.fs.s3a.impl.statistics.S3AMultipartUploaderStatisticsImpl;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
-import org.apache.hadoop.fs.s3a.select.InternalSelectConstants;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperations;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperationsImpl;
 import org.apache.hadoop.io.IOUtils;
@@ -306,7 +304,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   /**
    * Helper for the openFile() method.
    */
-  private S3AOpenFileHelper openFileHelper;
+  private S3AOpenFileOperation openFileHelper;
 
   /**
    * Directory policy.
@@ -486,7 +484,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           BULK_DELETE_PAGE_SIZE_DEFAULT, 0);
       listing = new Listing(listingOperationCallbacks, createStoreContext());
       // now the open file logic
-      openFileHelper = new S3AOpenFileHelper(
+      openFileHelper = new S3AOpenFileOperation(
           inputPolicy,
           changeDetectionPolicy,
           readAhead,
@@ -1129,7 +1127,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.RetryTranslated
   private FSDataInputStream open(
       final Path path,
-      final S3AOpenFileHelper.OpenFileInformation fileInformation)
+      final S3AOpenFileOperation.OpenFileInformation fileInformation)
       throws IOException {
 
     final S3AFileStatus fileStatus =
@@ -4729,7 +4727,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.RetryTranslated
   private FSDataInputStream select(final Path path,
       final Configuration options,
-      final S3AOpenFileHelper.OpenFileInformation fileInformation)
+      final S3AOpenFileOperation.OpenFileInformation fileInformation)
       throws IOException {
     entryPoint(OBJECT_SELECT_REQUESTS);
     requireSelectSupport(path);
@@ -4802,7 +4800,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   private S3AFileStatus extractOrFetchSimpleFileStatus(
       final Path path,
-      final S3AOpenFileHelper.OpenFileInformation fileInformation)
+      final S3AOpenFileOperation.OpenFileInformation fileInformation)
       throws IOException {
     S3AFileStatus fileStatus = fileInformation.getStatus();
     if (fileStatus == null) {
@@ -4838,7 +4836,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       final Path rawPath,
       final OpenFileParameters parameters) throws IOException {
     final Path path = qualify(rawPath);
-    S3AOpenFileHelper.OpenFileInformation fileInformation =
+    S3AOpenFileOperation.OpenFileInformation fileInformation =
         openFileHelper.prepareToOpenFile(
             path,
             parameters,

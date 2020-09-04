@@ -37,8 +37,8 @@ import org.apache.hadoop.fs.s3a.select.SelectConstants;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hadoop.fs.impl.AbstractFSBuilderImpl.rejectUnknownMandatoryKeys;
-import static org.apache.hadoop.fs.impl.OpenFileParameters.FS_OPT_OPENFILE_FADVISE;
-import static org.apache.hadoop.fs.impl.OpenFileParameters.FS_OPT_OPENFILE_LENGTH;
+import static org.apache.hadoop.fs.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE;
+import static org.apache.hadoop.fs.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
 import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADVISE;
 import static org.apache.hadoop.fs.s3a.Constants.READAHEAD_RANGE;
 
@@ -49,10 +49,10 @@ import static org.apache.hadoop.fs.s3a.Constants.READAHEAD_RANGE;
  * This got complex enough it merited removal from S3AFS -which
  * also permits unit testing.
  */
-  public class S3AOpenFileHelper {
+  public class S3AOpenFileOperation extends AbstractStoreOperation {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(S3AOpenFileHelper.class);
+      LoggerFactory.getLogger(S3AOpenFileOperation.class);
 
   private final S3AInputPolicy inputPolicy;
 
@@ -76,11 +76,12 @@ import static org.apache.hadoop.fs.s3a.Constants.READAHEAD_RANGE;
    * @param readAheadRange read ahead range
    * @param username username
    */
-  public S3AOpenFileHelper(
+  public S3AOpenFileOperation(
       final S3AInputPolicy inputPolicy,
       final ChangeDetectionPolicy changePolicy,
       final long readAheadRange,
       final String username) {
+    super(null);
     this.inputPolicy = inputPolicy;
     this.changePolicy = changePolicy;
     this.readAheadRange = readAheadRange;
@@ -249,10 +250,10 @@ import static org.apache.hadoop.fs.s3a.Constants.READAHEAD_RANGE;
           username,
           eTag,
           versionId);
-    } else if (options.get(FS_OPT_OPENFILE_LENGTH) != null) {
+    } else if (options.get(FS_OPTION_OPENFILE_LENGTH) != null) {
       // build a minimal S3A FileStatus From the input length alone.
       // this is all we actually need.
-      long length = options.getLong(FS_OPT_OPENFILE_LENGTH, 0);
+      long length = options.getLong(FS_OPTION_OPENFILE_LENGTH, 0);
       LOG.debug("Fixing length of file to read {} as {}", path, length);
       fileStatus = new S3AFileStatus(
           length,
@@ -267,7 +268,7 @@ import static org.apache.hadoop.fs.s3a.Constants.READAHEAD_RANGE;
     }
     // seek policy from default, s3a opt or standard option
     String policy1 = options.get(INPUT_FADVISE, inputPolicy.toString());
-    String policy2 = options.get(FS_OPT_OPENFILE_FADVISE, policy1);
+    String policy2 = options.get(FS_OPTION_OPENFILE_FADVISE, policy1);
     S3AInputPolicy policy = S3AInputPolicy.getPolicy(policy2);
 
     // readahead range

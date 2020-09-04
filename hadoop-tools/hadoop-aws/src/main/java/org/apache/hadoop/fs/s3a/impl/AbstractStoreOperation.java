@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
+import javax.annotation.Nullable;
 
 /**
  * Base class of operations in the store.
@@ -34,8 +34,8 @@ public abstract class AbstractStoreOperation {
    * constructor.
    * @param storeContext store context.
    */
-  protected AbstractStoreOperation(final StoreContext storeContext) {
-    this.storeContext = checkNotNull(storeContext);
+  protected AbstractStoreOperation(final @Nullable StoreContext storeContext) {
+    this.storeContext = storeContext;
   }
 
   /**

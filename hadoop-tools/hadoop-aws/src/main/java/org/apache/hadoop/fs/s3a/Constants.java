@@ -24,8 +24,6 @@ import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
 import java.util.concurrent.TimeUnit;
 
-import static org.apache.hadoop.fs.impl.OpenFileParameters.FS_OPT_OPENFILE_LENGTH;
-
 /**
  * All the constants used with the {@link S3AFileSystem}.
  *

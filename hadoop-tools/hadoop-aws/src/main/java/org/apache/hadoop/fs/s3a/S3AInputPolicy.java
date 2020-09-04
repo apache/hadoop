@@ -25,7 +25,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Locale;
 
-import static org.apache.hadoop.fs.impl.OpenFileParameters.FS_OPT_OPENFILE_FADVISE_ADAPTIVE;
+import static org.apache.hadoop.fs.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE_ADAPTIVE;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 
 /**
@@ -63,7 +63,7 @@ public enum S3AInputPolicy {
     String trimmed = name.trim().toLowerCase(Locale.ENGLISH);
     switch (trimmed) {
     case INPUT_FADV_NORMAL:
-    case FS_OPT_OPENFILE_FADVISE_ADAPTIVE:
+    case FS_OPTION_OPENFILE_FADVISE_ADAPTIVE:
       return Normal;
     case INPUT_FADV_RANDOM:
       return Random;
