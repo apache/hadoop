@@ -395,7 +395,7 @@ public class DeadNodeDetector implements Runnable {
             probe.getDatanodeInfo());
         removeDeadNode(probe.getDatanodeInfo());
       } else if (probe.getType() == ProbeType.CHECK_SUSPECT) {
-        LOG.info("Remove the node out from suspect node list: {}.",
+        LOG.debug("Remove the node out from suspect node list: {}.",
             probe.getDatanodeInfo());
         removeNodeFromDeadNodeDetector(probe.getDatanodeInfo());
       }
@@ -475,7 +475,7 @@ public class DeadNodeDetector implements Runnable {
       datanodeInfos.add(datanodeInfo);
     }
 
-    LOG.warn("Add datanode {} to suspectAndDeadNodes", datanodeInfo);
+    LOG.debug("Add datanode {} to suspectAndDeadNodes.", datanodeInfo);
     addSuspectNodeToDetect(datanodeInfo);
   }
 
