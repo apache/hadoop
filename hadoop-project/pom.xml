@@ -2273,6 +2273,31 @@
           </exclusion>
         </exclusions>
       </dependency>
+      <!-- Raz S3 hook -->
+      <dependency>
+        <groupId>org.apache.ranger</groupId>
+        <artifactId>ranger-raz-hook-s3</artifactId>
+        <scope>compile</scope>
+        <version>${ranger.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>com.sun.jersey</groupId>
+            <artifactId>jersey-bundle</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>jul-to-slf4j</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
