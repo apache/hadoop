@@ -48,6 +48,7 @@ message RegisterApplicationMasterResponseProto {
   optional string queue = 5;
   repeated NMTokenProto nm_tokens_from_previous_attempts = 6;
   repeated SchedulerResourceTypes scheduler_resource_types = 7;
+  repeated ResourceTypeInfoProto resource_types = 9;
 }
 
 message FinishApplicationMasterRequestProto {
