@@ -842,7 +842,20 @@ abstract class InodeTree<T> {
   }
 
   /**
-   * Build resolve result return to caller.
+   * Build resolve result.
+   * Here's an example
+   * Config:
+   *   <property>
+   *     <name>fs.viewfs.mounttable.mt
+   *     .linkRegex.replaceresolveddstpath:_:-#.^/user/(?<username>\w+)</name>
+   *     <value>/targetTestRoot/$username</value>
+   *   </property>
+   * Dir path to test:
+   * viewfs://mt/user/hadoop_user1/hadoop_dir1
+   * Expect path: /targetTestRoot/hadoop-user1/hadoop_dir1
+   * resolvedPathStr: /user/hadoop_user1
+   * targetOfResolvedPathStr: /targetTestRoot/hadoop-user1
+   * remainingPath: /hadoop_dir1
    *
    * @return targetFileSystem or null on exceptions.
    */
