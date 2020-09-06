@@ -388,9 +388,6 @@ abstract class InodeTree<T> {
   protected abstract T getTargetFileSystem(URI uri)
       throws UnsupportedFileSystemException, URISyntaxException, IOException;
 
-  protected abstract T getTargetFileSystem(URI uri, boolean enableCache)
-      throws UnsupportedFileSystemException, URISyntaxException, IOException;
-
   protected abstract T getTargetFileSystem(INodeDir<T> dir)
       throws URISyntaxException, IOException;
 
@@ -847,18 +844,14 @@ abstract class InodeTree<T> {
   /**
    * Build resolve result return to caller.
    *
-   * @param resultKind
-   * @param resolvedPathStr
-   * @param targetOfResolvedPathStr
-   * @param remainingPath
-   * @return
+   * @return targetFileSystem or null on exceptions.
    */
   protected ResolveResult<T> buildResolveResultForRegexMountPoint(
       ResultKind resultKind, String resolvedPathStr,
       String targetOfResolvedPathStr, Path remainingPath) {
     try {
       T targetFs = getTargetFileSystem(
-          new URI(targetOfResolvedPathStr), false);
+          new URI(targetOfResolvedPathStr));
       return new ResolveResult<T>(resultKind, targetFs, resolvedPathStr,
           remainingPath);
     } catch (IOException ex) {

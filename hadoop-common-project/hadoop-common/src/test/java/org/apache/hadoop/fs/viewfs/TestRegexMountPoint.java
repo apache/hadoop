@@ -70,12 +70,6 @@ public class TestRegexMountPoint {
 
       @Override
       protected TestRegexMountPointFileSystem getTargetFileSystem(
-          final URI uri, boolean enableCache) {
-        return new TestRegexMountPointFileSystem(uri);
-      }
-
-      @Override
-      protected TestRegexMountPointFileSystem getTargetFileSystem(
           final INodeDir<TestRegexMountPointFileSystem> dir) {
         return new TestRegexMountPointFileSystem(null);
       }

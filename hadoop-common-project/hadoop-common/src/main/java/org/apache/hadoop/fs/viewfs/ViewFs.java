@@ -250,14 +250,6 @@ public class ViewFs extends AbstractFileSystem {
 
       @Override
       protected AbstractFileSystem getTargetFileSystem(
-          final URI uri, boolean enableCache)
-          throws URISyntaxException, UnsupportedFileSystemException {
-        throw new UnsupportedFileSystemException(
-            "Cache option is not supported in ViewFs! Uri:" + uri);
-      }
-
-      @Override
-      protected AbstractFileSystem getTargetFileSystem(
           final INodeDir<AbstractFileSystem> dir) throws URISyntaxException {
         return new InternalDirOfViewFs(dir, creationTime, ugi, getUri(), this,
             config);

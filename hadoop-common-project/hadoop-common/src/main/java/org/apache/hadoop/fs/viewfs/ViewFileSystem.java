@@ -22,6 +22,8 @@ import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_ENABLE_INNER_C
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE_DEFAULT;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME_DEFAULT;
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_INNER_CACHE_EVICT_ON_CLOSE;
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_INNER_CACHE_EVICT_ON_CLOSE_DEFAULT;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS_DEFAULT;
 import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
@@ -33,7 +35,6 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -42,6 +43,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -114,6 +116,7 @@ public class ViewFileSystem extends FileSystem {
   static class InnerCache {
     private Map<Key, FileSystem> map = new HashMap<>();
     private FsGetter fsCreator;
+    private ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
 
     InnerCache(FsGetter fsCreator) {
       this.fsCreator = fsCreator;
@@ -121,12 +124,27 @@ public class ViewFileSystem extends FileSystem {
 
     FileSystem get(URI uri, Configuration config) throws IOException {
       Key key = new Key(uri);
-      if (map.get(key) == null) {
-        FileSystem fs = fsCreator.getNewInstance(uri, config);
+      FileSystem fs = null;
+      try {
+        rwLock.readLock().lock();
+        fs = map.get(key);
+        if (fs != null) {
+          return fs;
+        }
+      } finally {
+        rwLock.readLock().unlock();
+      }
+      try {
+        rwLock.writeLock().lock();
+        fs = map.get(key);
+        if (fs != null) {
+          return fs;
+        }
+        fs = fsCreator.getNewInstance(uri, config);
         map.put(key, fs);
         return fs;
-      } else {
-        return map.get(key);
+      } finally {
+        rwLock.writeLock().unlock();
       }
     }
 
@@ -140,9 +158,13 @@ public class ViewFileSystem extends FileSystem {
       }
     }
 
-    InnerCache unmodifiableCache() {
-      map = Collections.unmodifiableMap(map);
-      return this;
+    void clear() {
+      try {
+        rwLock.writeLock().lock();
+        map.clear();
+      } finally {
+        rwLock.writeLock().unlock();
+      }
     }
 
     /**
@@ -217,6 +239,7 @@ public class ViewFileSystem extends FileSystem {
   Path homeDir = null;
   private boolean enableInnerCache = false;
   private InnerCache cache;
+  private boolean evictCacheOnClose = false;
   // Default to rename within same mountpoint
   private RenameStrategy renameStrategy = RenameStrategy.SAME_MOUNTPOINT;
   /**
@@ -281,6 +304,9 @@ public class ViewFileSystem extends FileSystem {
     config = conf;
     enableInnerCache = config.getBoolean(CONFIG_VIEWFS_ENABLE_INNER_CACHE,
         CONFIG_VIEWFS_ENABLE_INNER_CACHE_DEFAULT);
+    evictCacheOnClose = config.getBoolean(
+        CONFIG_VIEWFS_INNER_CACHE_EVICT_ON_CLOSE,
+        CONFIG_VIEWFS_INNER_CACHE_EVICT_ON_CLOSE_DEFAULT);
     FsGetter fsGetter = fsGetter();
     final InnerCache innerCache = new InnerCache(fsGetter);
     // Now build  client side view (i.e. client side mount table) from config.
@@ -300,15 +326,8 @@ public class ViewFileSystem extends FileSystem {
         @Override
         protected FileSystem getTargetFileSystem(final URI uri)
           throws URISyntaxException, IOException {
-          return getTargetFileSystem(uri, enableInnerCache);
-        }
-
-        @Override
-        protected FileSystem getTargetFileSystem(
-            final URI uri, boolean enableCache)
-            throws URISyntaxException, IOException {
           FileSystem fs;
-          if (enableCache) {
+          if (enableInnerCache) {
             fs = innerCache.get(uri, config);
           } else {
             fs = fsGetter.get(uri, config);
@@ -342,7 +361,7 @@ public class ViewFileSystem extends FileSystem {
       // All fs instances are created and cached on startup. The cache is
       // readonly after the initialize() so the concurrent access of the cache
       // is safe.
-      cache = innerCache.unmodifiableCache();
+      cache = innerCache;
     }
   }
 
@@ -414,7 +433,7 @@ public class ViewFileSystem extends FileSystem {
       fsState.resolve(getUriPath(f), true);
     return res.targetFileSystem.append(res.remainingPath, bufferSize, progress);
   }
-  
+
   @Override
   public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
       EnumSet<CreateFlag> flags, int bufferSize, short replication,
@@ -1697,6 +1716,9 @@ public class ViewFileSystem extends FileSystem {
     super.close();
     if (enableInnerCache && cache != null) {
       cache.closeAll();
+      if (evictCacheOnClose) {
+        cache.clear();
+      }
     }
   }
 }

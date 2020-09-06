@@ -45,6 +45,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.fs.viewfs.RegexMountPoint.INTERCEPTOR_INTERNAL_SEP;
+import static org.junit.Assert.assertSame;
 
 /**
  * Test linkRegex node type for view file system.
@@ -233,6 +234,19 @@ public class TestViewFileSystemLinkRegex extends ViewFileSystemBaseTest {
           vfs.getFileStatus(dirPathBeforeMountPoint).isDirectory());
       Assert.assertEquals(
           childrenFilesCnt, vfs.listStatus(dirPathBeforeMountPoint).length);
+
+      // Test Inner cache, the resolved result's filesystem should be the same.
+      ViewFileSystem viewFileSystem = (ViewFileSystem) vfs;
+      ChRootedFileSystem target1 = (ChRootedFileSystem) viewFileSystem
+          .fsState.resolve(
+              viewFileSystem.getUriPath(
+                  dirPathBeforeMountPoint), true).targetFileSystem;
+      ChRootedFileSystem target2 = (ChRootedFileSystem) viewFileSystem
+          .fsState.resolve(
+              viewFileSystem.getUriPath(
+                  dirPathBeforeMountPoint), true).targetFileSystem;
+      assertSame(target1.getMyFs(), target2.getMyFs());
+
     } finally {
       if (vfs != null) {
         vfs.close();
@@ -438,9 +452,6 @@ public class TestViewFileSystemLinkRegex extends ViewFileSystemBaseTest {
     //   </property>
     // Dir path to test: /user/hadoop_user1/hadoop_dir1
     // Expect path: /targetTestRoot/hdfs-user1/hadoop_dir1
-    URI viewFsUri =
-        new URI(
-            FsConstants.VIEWFS_SCHEME, CLUSTER_NAME, "/", null, null);
     String regexStr = "^/user/(?<username>\\w+)/";
     String dstPathStr = targetTestRoot + "$username";
     // Replace "_" with "-"
