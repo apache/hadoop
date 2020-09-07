@@ -306,9 +306,6 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       .addTransition(NodeState.DECOMMISSIONING, EnumSet.of(
           NodeState.DECOMMISSIONING, NodeState.DECOMMISSIONED),
           RMNodeEventType.RECONNECTED, new ReconnectNodeTransition())
-      .addTransition(NodeState.DECOMMISSIONING, NodeState.DECOMMISSIONING,
-          RMNodeEventType.RESOURCE_UPDATE,
-          new UpdateNodeResourceWhenRunningTransition())
 
       //Transitions from LOST state
       .addTransition(NodeState.LOST, NodeState.LOST,
