@@ -128,6 +128,7 @@ public class RouterAdminServer extends AbstractService
   private static boolean isPermissionEnabled;
   private boolean iStateStoreCache;
   private final long maxComponentLength;
+  private boolean mountTableCheckDestination;
 
   public RouterAdminServer(Configuration conf, Router router)
       throws IOException {
@@ -186,6 +187,9 @@ public class RouterAdminServer extends AbstractService
     this.maxComponentLength = (int) conf.getLongBytes(
         RBFConfigKeys.DFS_ROUTER_ADMIN_MAX_COMPONENT_LENGTH_KEY,
         RBFConfigKeys.DFS_ROUTER_ADMIN_MAX_COMPONENT_LENGTH_DEFAULT);
+    this.mountTableCheckDestination = conf.getBoolean(
+        RBFConfigKeys.DFS_ROUTER_ADMIN_MOUNT_CHECK_ENABLE,
+        RBFConfigKeys.DFS_ROUTER_ADMIN_MOUNT_CHECK_ENABLE_DEFAULT);
 
     GenericRefreshProtocolServerSideTranslatorPB genericRefreshXlator =
         new GenericRefreshProtocolServerSideTranslatorPB(this);
@@ -328,10 +332,12 @@ public class RouterAdminServer extends AbstractService
     // Checks max component length limit.
     MountTable mountTable = request.getEntry();
     verifyMaxComponentLength(mountTable);
-    List<String> nsIds = verifyFileInDestinations(mountTable);
-    if (!nsIds.isEmpty()) {
-      throw new IllegalArgumentException("File not found in downstream " +
-          "nameservices: " + StringUtils.join(",", nsIds));
+    if (this.mountTableCheckDestination) {
+      List<String> nsIds = verifyFileInDestinations(mountTable);
+      if (!nsIds.isEmpty()) {
+        throw new IllegalArgumentException("File not found in downstream " +
+            "nameservices: " + StringUtils.join(",", nsIds));
+      }
     }
     return getMountTableStore().addMountTableEntry(request);
   }
@@ -343,10 +349,12 @@ public class RouterAdminServer extends AbstractService
     MountTable oldEntry = null;
     // Checks max component length limit.
     verifyMaxComponentLength(updateEntry);
-    List<String> nsIds = verifyFileInDestinations(updateEntry);
-    if (!nsIds.isEmpty()) {
-      throw new IllegalArgumentException("File not found in downstream " +
-          "nameservices: " + StringUtils.join(",", nsIds));
+    if (this.mountTableCheckDestination) {
+      List<String> nsIds = verifyFileInDestinations(updateEntry);
+      if (!nsIds.isEmpty()) {
+        throw new IllegalArgumentException("File not found in downstream " +
+            "nameservices: " + StringUtils.join(",", nsIds));
+      }
     }
     if (this.router.getSubclusterResolver() instanceof MountTableResolver) {
       MountTableResolver mResolver =

@@ -26,7 +26,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -38,7 +37,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.server.federation.FederationTestUtils;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
@@ -65,11 +63,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.mockito.internal.util.reflection.FieldSetter;
 
 import java.util.function.Supplier;
-
-import com.google.common.collect.Lists;
 
 /**
  * Tests Router admin commands.
@@ -78,7 +73,6 @@ public class TestRouterAdminCLI {
   private static StateStoreDFSCluster cluster;
   private static RouterContext routerContext;
   private static StateStoreService stateStore;
-  private static RouterRpcClient mockRpcClient;
 
   private static RouterAdmin admin;
   private static RouterClient client;
@@ -144,11 +138,6 @@ public class TestRouterAdminCLI {
 
     Mockito.doReturn(null).when(spyRpcServer).getFileInfo(Mockito.anyString());
 
-    // Mocked two files corresponding to the two mount entries.
-    mockRpcClient = Mockito.spy(spyRpcServer.getRPCClient());
-    FieldSetter.setField(spyRpcServer,
-        RouterRpcServer.class.getDeclaredField("rpcClient"),
-        mockRpcClient);
   }
 
   @AfterClass
@@ -170,8 +159,6 @@ public class TestRouterAdminCLI {
     String nsId = "ns0,ns1";
     String src = "/test-addmounttable";
     String dest = "/addmounttable";
-    FederationTestUtils.mockMountTableDestination(
-        mockRpcClient, src, Arrays.asList(nsId.split(",")), Lists.newArrayList(dest));
     String[] argv = new String[] {"-add", src, nsId, dest};
     assertEquals(0, ToolRunner.run(admin, argv));
     assertEquals(-1, ToolRunner.run(admin, argv));
@@ -196,11 +183,7 @@ public class TestRouterAdminCLI {
     assertFalse(mountTable.isFaultTolerant());
 
     // test mount table update behavior
-    String oldDest = dest;
     dest = dest + "-new";
-    FederationTestUtils.mockMountTableDestination(
-        mockRpcClient, src, Arrays.asList(nsId.split(",")),
-        Lists.newArrayList(oldDest, dest));
     argv = new String[] {"-add", src, nsId, dest, "-readonly",
         "-faulttolerant", "-order", "HASH_ALL"};
     assertEquals(0, ToolRunner.run(admin, argv));
@@ -226,9 +209,6 @@ public class TestRouterAdminCLI {
     String src = "/test-addmounttable-notnormalized";
     String srcWithSlash = src + "/";
     String dest = "/addmounttable-notnormalized";
-    FederationTestUtils.mockMountTableDestination(
-        mockRpcClient, src, Arrays.asList(nsId.split(",")),
-        Lists.newArrayList(dest));
     String[] argv = new String[] {"-add", srcWithSlash, nsId, dest};
     assertEquals(0, ToolRunner.run(admin, argv));
 
@@ -249,12 +229,8 @@ public class TestRouterAdminCLI {
     assertFalse(mountTable.isFaultTolerant());
 
     // test mount table update behavior
-    String oldDest = dest;
     dest = dest + "-new";
     argv = new String[] {"-add", srcWithSlash, nsId, dest, "-readonly"};
-    FederationTestUtils.mockMountTableDestination(
-        mockRpcClient, src, Arrays.asList(nsId.split(",")),
-        Lists.newArrayList(oldDest, dest));
     assertEquals(0, ToolRunner.run(admin, argv));
     stateStore.loadCache(MountTableStoreImpl.class, true);
 
@@ -299,9 +275,6 @@ public class TestRouterAdminCLI {
     final String mnt = "/" + order;
     final String nsId = "ns0,ns1";
     final String dest = "/";
-    FederationTestUtils.mockMountTableDestination(
-        mockRpcClient, mnt, Arrays.asList(nsId.split(",")),
-        Lists.newArrayList(dest));
     String[] argv = new String[] {
         "-add", mnt, nsId, dest, "-order", order.toString()};
     assertEquals(0, ToolRunner.run(admin, argv));
@@ -325,9 +298,6 @@ public class TestRouterAdminCLI {
     String src = "/test-lsmounttable";
     String srcWithSlash = src + "/";
     String dest = "/lsmounttable";
-    FederationTestUtils.mockMountTableDestination(
-        mockRpcClient, src, Arrays.asList(nsId.split(",")),
-        Lists.newArrayList(dest));
     String[] argv = new String[] {"-add", src, nsId, dest};
     assertEquals(0, ToolRunner.run(admin, argv));
 
@@ -375,14 +345,8 @@ public class TestRouterAdminCLI {
   @Test
   public void testListWithDetails() throws Exception {
     // Create mount entry.
-    String src = "/testLsWithDetails";
-    String nsId = "ns0,ns1";
-    String dest = "/dest";
-    String[] argv = new String[] {"-add", src, nsId,
-        dest, "-order", "HASH_ALL", "-readonly", "-faulttolerant"};
-    FederationTestUtils.mockMountTableDestination(
-        mockRpcClient, src, Arrays.asList(nsId.split(",")),
-        Lists.newArrayList(dest));
+    String[] argv = new String[] {"-add", "/testLsWithDetails", "ns0,ns1",
+        "/dest", "-order", "HASH_ALL", "-readonly", "-faulttolerant"};
     assertEquals(0, ToolRunner.run(admin, argv));
     System.setOut(new PrintStream(out));
     stateStore.loadCache(MountTableStoreImpl.class, true);
