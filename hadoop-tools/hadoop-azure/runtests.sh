@@ -15,10 +15,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# shellcheck source=./testsupport.sh
-# shellcheck disable=SC2034 # unused variables are global in nature and used
-# in testsupport.sh
+# shellcheck disable=SC2034
+# unused variables are global in nature and used in testsupport.sh
 
+# shellcheck source=./testsupport.sh
 . ./testsupport.sh
 
 scenario=HNS-OAuth
