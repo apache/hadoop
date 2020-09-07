@@ -501,16 +501,10 @@ public class DecayRpcScheduler implements RpcScheduler,
 
     for (Map.Entry<Object, List<AtomicLong>> entry : callCosts.entrySet()) {
       Object id = entry.getKey();
-      // The priority for service users is always 0
-      if (isServiceUser((String)id)) {
-        nextCache.put(id, 0);
-        continue;
-      }
-
       AtomicLong value = entry.getValue().get(0);
 
       long snapshot = value.get();
-      int computedLevel = computePriorityLevel(snapshot);
+      int computedLevel = computePriorityLevel(snapshot, id);
 
       nextCache.put(id, computedLevel);
     }
@@ -558,9 +552,15 @@ public class DecayRpcScheduler implements RpcScheduler,
    * Given the cost for an identity, compute a scheduling decision.
    *
    * @param cost the cost for an identity
+   * @param identity the identity of the user
    * @return scheduling decision from 0 to numLevels - 1
    */
-  private int computePriorityLevel(long cost) {
+  private int computePriorityLevel(long cost, Object identity) {
+    // The priority for service users is always 0
+    if (isServiceUser((String)identity)) {
+      return 0;
+    }
+
     long totalCallSnapshot = totalDecayedCallCost.get();
 
     double proportion = 0;
@@ -597,15 +597,10 @@ public class DecayRpcScheduler implements RpcScheduler,
       }
     }
 
-    // The priority for service users is always 0
-    if (isServiceUser((String)identity)) {
-      return 0;
-    }
-
     // Cache was no good, compute it
     List<AtomicLong> costList = callCosts.get(identity);
     long currentCost = costList == null ? 0 : costList.get(0).get();
-    int priority = computePriorityLevel(currentCost);
+    int priority = computePriorityLevel(currentCost, identity);
     LOG.debug("compute priority for {} priority {}", identity, priority);
     return priority;
   }
