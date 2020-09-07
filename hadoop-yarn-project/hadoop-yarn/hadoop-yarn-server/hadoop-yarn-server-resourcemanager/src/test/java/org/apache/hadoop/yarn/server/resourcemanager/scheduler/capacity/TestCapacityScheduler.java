@@ -1157,6 +1157,44 @@ public class TestCapacityScheduler {
     rm1.stop();
   }
 
+  // Test the last container finish time is updated
+  @Test
+  public void testGetLastContainerFinishTimeOfApplicationAttemp() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+    // Run an application with 1 AM and 1 task container
+    MockRM rm1 = new MockRM(conf);
+    rm1.start();
+    MockNM nm1 = rm1.registerNode("127.0.0.1:1234", 8000);
+    MockRMAppSubmissionData data1 =
+        MockRMAppSubmissionData.Builder.createWithMemory(1024, rm1)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm1, data1);
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
+    CapacityScheduler cs = (CapacityScheduler) rm1.getResourceScheduler();
+    // request a task container.
+    List<Container> taskContainer = am1.allocateAndWaitForContainers(
+        2, 3 * GB, nm1);
+    nm1.nodeHeartbeat(true);
+    FiCaSchedulerApp app = cs.getApplicationAttempt(am1
+        .getApplicationAttemptId());
+    long lastContainerFinishTime = app.getLastContainerFinishTime();
+    Assert.assertEquals(0, lastContainerFinishTime);
+    // finish the first task container
+    ContainerId taskContainerId = taskContainer.get(0).getId();
+    am1.addContainerToBeReleased(taskContainerId);
+    am1.schedule();
+    lastContainerFinishTime = app.getLastContainerFinishTime();
+    Assert.assertNotEquals(0, lastContainerFinishTime);
+    // finish another task container
+    taskContainerId = taskContainer.get(1).getId();
+    am1.addContainerToBeReleased(taskContainerId);
+    am1.schedule();
+    long updatedTime = app.getLastContainerFinishTime();
+    Assert.assertTrue(updatedTime > lastContainerFinishTime);
+  }
+
   @Test(timeout = 300000)
   public void testRecoverRequestAfterPreemption() throws Exception {
     Configuration conf = new Configuration();

@@ -221,7 +221,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
           new RMContainerFinishedEvent(containerId, containerStatus, event));
 
       containersToPreempt.remove(containerId);
-
+      // update last container finish time
+      lastContainerFinishTime = System.currentTimeMillis();
       // In order to save space in the audit log, only include the partition
       // if it is not the default partition.
       String containerPartition = null;

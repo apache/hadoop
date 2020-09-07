@@ -114,8 +114,11 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   private Map<String, Long> lastResourceSecondsMap = new HashMap<>();
   protected final AppSchedulingInfo appSchedulingInfo;
   protected ApplicationAttemptId attemptId;
+  // the finish time of last container.
+  protected long lastContainerFinishTime = 0;
   protected Map<ContainerId, RMContainer> liveContainers =
       new ConcurrentHashMap<>();
+
   protected final Map<SchedulerRequestKey, Map<NodeId, RMContainer>>
       reservedContainers = new HashMap<>();
 
@@ -256,6 +259,11 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   public OpportunisticContainerContext
       getOpportunisticContainerContext() {
     return this.oppContainerContext;
+  }
+
+  // Get the last container finish time
+  public long getLastContainerFinishTime() {
+    return lastContainerFinishTime;
   }
 
   /**
@@ -412,6 +420,7 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     writeLock.lock();
     try {
       RMContainer rmContainer = liveContainers.remove(containerId);
+      lastContainerFinishTime = System.currentTimeMillis();
       if (rmContainer != null) {
         if (rmContainer.getExecutionType() == ExecutionType.OPPORTUNISTIC) {
           this.attemptOpportunisticResourceUsage
