@@ -17,9 +17,13 @@
  */
 package org.apache.hadoop.hdfs;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathHandle;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.test.Whitebox;
+import org.junit.Test;
 
 import java.io.IOException;
 
@@ -43,5 +47,24 @@ public class TestViewDistributedFileSystem extends TestDistributedFileSystem{
                     ViewDistributedFileSystem.class), "threadData");
     data.set(null);
     super.testStatistics();
+  }
+
+  @Test
+  public void testOpenWithPathHandle() throws Exception {
+    Configuration conf = getTestConfiguration();
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      FileSystem fileSys = cluster.getFileSystem();
+      Path openTestPath = new Path("/testOpen");
+      fileSys.create(openTestPath).close();
+      PathHandle pathHandle =
+          fileSys.getPathHandle(fileSys.getFileStatus(openTestPath));
+      fileSys.open(pathHandle, 1024).close();
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
   }
 }

@@ -266,6 +266,10 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
 
   @Override
   public boolean recoverLease(final Path f) throws IOException {
+    if (this.vfs == null) {
+      return super.recoverLease(f);
+    }
+
     ViewFileSystemOverloadScheme.MountPathInfo<FileSystem> mountPathInfo =
         this.vfs.getMountPathInfo(f, getConf());
     checkDFS(mountPathInfo.getTargetFs(), "recoverLease");
@@ -286,6 +290,9 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
   @Override
   public FSDataInputStream open(PathHandle fd, int bufferSize)
       throws IOException {
+    if (this.vfs == null) {
+      return super.open(fd, bufferSize);
+    }
     return this.vfs.open(fd, bufferSize);
   }
 
