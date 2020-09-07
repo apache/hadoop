@@ -29,5 +29,12 @@ import java.io.IOException;
 @FunctionalInterface
 public interface BiFunctionRaisingIOE<T, U, R> {
 
+  /**
+   * Apply the function.
+   * @param t argument 1
+   * @param u argument 2
+   * @return result
+   * @throws IOException Any IO failure
+   */
   R apply(T t, U u) throws IOException;
 }

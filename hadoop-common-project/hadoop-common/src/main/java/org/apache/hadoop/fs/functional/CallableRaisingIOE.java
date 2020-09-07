@@ -27,5 +27,10 @@ import java.io.IOException;
 @FunctionalInterface
 public interface CallableRaisingIOE<R> {
 
+  /**
+   * Apply the operation.
+   * @return result
+   * @throws IOException Any IO failure
+   */
   R apply() throws IOException;
 }

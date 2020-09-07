@@ -118,7 +118,7 @@ public final class IOStatisticsSnapshot
   /**
    * Clear all the maps.
    */
-  public void clear() {
+  public synchronized void clear() {
     counters.clear();
     gauges.clear();
     minimums.clear();
@@ -128,9 +128,12 @@ public final class IOStatisticsSnapshot
 
   /**
    * Take a snapshot.
+   * <p></p>
+   * This completely overwrites the map data with the statistics
+   * from the source.
    * @param source statistics source.
    */
-  public void snapshot(IOStatistics source) {
+  public synchronized void snapshot(IOStatistics source) {
     checkNotNull(source);
     counters = snapshotMap(source.counters());
     gauges = snapshotMap(source.gauges());
@@ -140,8 +143,17 @@ public final class IOStatisticsSnapshot
         MeanStatistic::copy);
   }
 
+  /**
+   * Aggregate the current statistics with the
+   * statistics reference passed in.
+   * <p></p>
+   * The operation is synchronized.
+   * @param statistics statistics; may be null
+   * @return true if a merge took place.
+   */
   @Override
-  public boolean aggregate(@Nullable IOStatistics statistics) {
+  public synchronized boolean aggregate(
+      @Nullable IOStatistics statistics) {
     if (statistics == null) {
       return false;
     }

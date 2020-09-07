@@ -28,6 +28,12 @@ import java.io.IOException;
 @FunctionalInterface
 public interface FunctionRaisingIOE<T, R> {
 
+  /**
+   * Apply the function.
+   * @param t argument 1
+   * @return result
+   * @throws IOException Any IO failure
+   */
   R apply(T t) throws IOException;
 }
 

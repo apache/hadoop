@@ -29,7 +29,6 @@ import java.util.function.Function;
 import com.google.common.annotations.VisibleForTesting;
 
 import org.apache.hadoop.fs.StorageStatistics;
-import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.MeanStatistic;
@@ -225,6 +224,12 @@ public final class IOStatisticsBinding {
     });
   }
 
+  /**
+   * Aggregate two counters.
+   * @param l left value
+   * @param r right value
+   * @return the aggregate value
+   */
   public static Long aggregateCounters(Long l, Long r) {
     return Math.max(l, 0) + Math.max(r, 0);
   }

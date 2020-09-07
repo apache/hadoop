@@ -72,8 +72,8 @@ For the different statistic category, the result of `aggregate(x, y)` is
 
 | Category         | Aggregation |
 |------------------|-------------|
-| `counter`        | `min(0, x) + min(0, y)`     |
-| `gauge`          | `min(0, x) + min(0, y)` |
+| `counter`        | `max(0, x) + max(0, y)`  |
+| `gauge`          | `max(0, x) + max(0, y)` |
 | `minimum`        | `min(x, y)` |
 | `maximum`        | `max(x, y)` |
 | `meanStatistic` | calculation of the mean of `x` and `y` ) |
@@ -323,9 +323,9 @@ and ideally consistent across `IOStatisticSource` implementations.
 For each map of statistics returned:
 
 * The operations to add/remove entries are unsupported: the map returned
-  It MAY be mutable by the source of statistics.
+  MAY be mutable by the source of statistics.
 
-* The map MAY be emoty.
+* The map MAY be empty.
 
 * The map keys each represent a measured statistic.
 
@@ -341,9 +341,9 @@ For each map of statistics returned:
   no guarantee as to when the evaluation takes place.
 
 * The returned `Map.Entry` instances MUST return the same value on
- repeated `getValue()` calls.
+ repeated `getValue()` calls. (i.e once you have the entry, it is immutable).
 
-* Queries of statistics SHOULD Be fast and non-blocking to the extent
+* Queries of statistics SHOULD be fast and non-blocking to the extent
  that if invoked during a long operation, they will prioritize
  returning fast over most timely values.
 
@@ -360,7 +360,7 @@ For each map of statistics returned:
 
 1. An instance of `IOStatistics` can be shared across threads;
 
-1. Read access to the supplied statistics maps must be thread safe.
+1. Read access to the supplied statistics maps MUST be thread safe.
 
 1. Iterators returned from the maps MUST NOT be shared across threads.
 

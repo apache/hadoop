@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -38,7 +39,7 @@ final class EvaluatingStatisticsMap<E extends Serializable> implements
    * Functions to invoke when evaluating keys.
    */
   private final Map<String, Function<String, E>> evaluators
-      = new TreeMap<>();
+      = new ConcurrentHashMap<>();
 
   /**
    * Function to use when copying map values.
@@ -50,10 +51,19 @@ final class EvaluatingStatisticsMap<E extends Serializable> implements
    */
   private final String name;
 
+  /**
+   * Construct with the copy function being simple passthrough.
+   * @param name map name
+   */
   EvaluatingStatisticsMap(final String name) {
     this(name, IOStatisticsBinding::passthroughFn);
   }
 
+  /**
+   * Construct with the copy function being that supplied in.
+   * @param name map name
+   * @param copyFn copy function.
+   */
   EvaluatingStatisticsMap(final String name,
       final Function<E, E> copyFn) {
     this.name = name;
@@ -110,12 +120,11 @@ final class EvaluatingStatisticsMap<E extends Serializable> implements
   @Override
   public void putAll(final Map<? extends String, ? extends E> m) {
     throw new UnsupportedOperationException();
-
   }
 
   @Override
   public void clear() {
-    evaluators.clear();
+    throw new UnsupportedOperationException();
   }
 
   @Override
@@ -132,17 +141,22 @@ final class EvaluatingStatisticsMap<E extends Serializable> implements
     return snapshot().values();
   }
 
+  /**
+   * Take a snapshot.
+   * @return a map snapshot.
+   */
   public TreeMap<String, E> snapshot() {
     return IOStatisticsBinding.snapshotMap(this, copyFn);
   }
 
   /**
    * Creating the entry set forces an evaluation of the functions.
+   * <p></p>
    * The evaluation may be parallelized.
    * @return an evaluated set of values
    */
   @Override
-  public Set<Entry<String, E>> entrySet() {
+  public synchronized Set<Entry<String, E>> entrySet() {
     Set<Entry<String, Function<String, E>>> evalEntries =
         evaluators.entrySet();
     Set<Entry<String, E>> r = evalEntries.parallelStream().map((e) ->

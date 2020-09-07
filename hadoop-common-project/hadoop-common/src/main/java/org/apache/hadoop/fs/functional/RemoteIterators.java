@@ -99,7 +99,7 @@ public final class RemoteIterators {
    * @return a remote iterator
    */
   public static <T> RemoteIterator<T> toRemoteIterator(Iterator<T> iterator) {
-    return new FromIterator<>(iterator);
+    return new FromIterable<>(iterator);
   }
 
   /**
@@ -109,7 +109,7 @@ public final class RemoteIterators {
    * @return a remote iterator
    */
   public static <T> RemoteIterator<T> toRemoteIterator(Iterable<T> iterable) {
-    return new FromIterator<>(iterable.iterator());
+    return new FromIterable<>(iterable);
   }
 
   /**
@@ -118,7 +118,7 @@ public final class RemoteIterators {
    * @return a remote iterator
    */
   public static <T> RemoteIterator<T> toRemoteIterator(T[] array) {
-    return new FromIterator<>(Arrays.stream(array).iterator());
+    return new FromIterable<>(Arrays.stream(array).iterator());
   }
 
   /**
@@ -262,18 +262,39 @@ public final class RemoteIterators {
   }
 
   /**
-   * Create a remote iterator from a simple java.util.Iterator.
+   * Create a remote iterator from a simple java.util.Iterator, or
+   * an iterable.
    * <p> </p>
-   * if the iterator is a source of statistics that is passed through.
+   * If the iterator is a source of statistics that is passed through.
+   * <p></p>
+   * The {@link #close()} will close the source iterator if it is
+   * Closeable; it will also do the same if the origin was an iterable
+   * and it is closeable. That is needed to support
+   * java.nio directory listings.
    * @param <T> iterator type.
    */
-  private static final class FromIterator<T>
-      implements RemoteIterator<T>, IOStatisticsSource {
+  private static final class FromIterable<T>
+      implements RemoteIterator<T>, IOStatisticsSource, Closeable {
 
     private final Iterator<? extends T> source;
+    private final Closeable origin;
 
-    private FromIterator(Iterator<? extends T> source) {
+    private FromIterable(Iterator<? extends T> source) {
       this.source = requireNonNull(source);
+      this.origin = null;
+    }
+
+    /**
+     * Construct from an iterable.
+     * If the origin is closeable it will be closed in
+     * the close() call.
+     * @param origin origin.
+     */
+    private FromIterable(final Iterable<T> origin) {
+      this.source = origin.iterator();
+      this.origin = origin instanceof Closeable
+          ? (Closeable) origin
+          : null;
     }
 
     @Override
@@ -295,6 +316,19 @@ public final class RemoteIterators {
     public String toString() {
       return "FromIterator{" + source + '}';
     }
+
+    @Override
+    public void close() throws IOException {
+      try {
+        if (source instanceof Closeable) {
+          ((Closeable) source).close();
+        }
+      } finally {
+        if (origin != null) {
+          origin.close();
+        }
+      }
+    }
   }
 
   /**
@@ -310,7 +344,6 @@ public final class RemoteIterators {
      * Source iterator.
      */
     private final RemoteIterator<S> source;
-
 
     protected WrappingRemoteIterator(final RemoteIterator<S> source) {
       this.source = requireNonNull(source);
