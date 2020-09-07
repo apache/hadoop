@@ -15,33 +15,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-conffile=src/test/resources/azure-auth-keys.xml
-bkpconffile=src/test/resources/azure-auth-keys_BKP.xml
+conffile=src/test/resources/abfs-testrun-configs.xml
+bkpconffile=src/test/resources/abfs-testrun-configs_BKP.xml
 testresultsregex="Results:(\n|.)*?Tests run:"
 testresultsfilename=
 starttime=
 
 validate() {
-  if [ -z $scenario ]; then
+  if [ -z "$scenario" ]; then
    echo "Exiting. scenario cannot be empty"
    exit
   fi
   propertiessize=${#properties[@]}
   valuessize=${#values[@]}
-  if [ $propertiessize -lt 1 ] || [ $valuessize -lt 1 ] || [ $propertiessize -ne $valuessize ]; then
+  if [ "$propertiessize" -lt 1 ] || [ "$valuessize" -lt 1 ] || [ "$propertiessize" -ne "$valuessize" ]; then
     echo "Exiting. Both properties and values arrays has to be populated and of same size. Please check for scenario $scenario"
     exit
   fi
 }
 
 checkdependancies() {
-  command -v pcregrep &>/dev/null
-  if [[ "${?}" -ne 0 ]]; then
+  if ! [ "$(command -v pcregrep)" ]; then
     echo "Exiting. pcregrep is required to run the script."
     exit
   fi
-  command -v xmlstarlet &>/dev/null
-  if [[ "${?}" -ne 0 ]]; then
+  if ! [ "$(command -v xmlstarlet)" ]; then
     echo "Exiting. xmlstarlet is required to run the script."
     exit
   fi
@@ -56,30 +54,32 @@ changeconf() {
 testwithconfs() {
   propertiessize=${#properties[@]}
   valuessize=${#values[@]}
-  if [ $propertiessize -ne $valuessize ]; then
+  if [ "$propertiessize" -ne "$valuessize" ]; then
     echo "Exiting. Number of properties and values differ for $scenario"
     exit
   fi
-  for ((i = 0; i < $propertiessize; i++)); do
+  for ((i = 0; i < propertiessize; i++)); do
     key=${properties[$i]}
     val=${values[$i]}
-    changeconf $key $val
+    changeconf "$key" "$val"
   done
-  mvn -T 1C -Dparallel-tests=abfs -Dscale -DtestsThreadCount=8 clean verify >>$testlogfilename
+  mvn -T 1C -Dparallel-tests=abfs -Dscale -DtestsThreadCount=8 clean verify >>"$testlogfilename"
 }
 
 summary() {
-  echo "" >>$testresultsfilename
-  echo $scenario >>$testresultsfilename
-  echo ======================== >>$testresultsfilename
-  pcregrep -M "$testresultsregex" "$testlogfilename" >>$testresultsfilename
+  {
+    echo ""
+    echo "$scenario"
+    echo "========================"
+    pcregrep -M "$testresultsregex" "$testlogfilename"
+  } >> "$testresultsfilename"
   printf "\n----- Test results -----\n"
   pcregrep -M "$testresultsregex" "$testlogfilename"
 
-  secondstaken=$(($ENDTIME - $STARTTIME))
+  secondstaken=$((ENDTIME - STARTTIME))
   mins=$((secondstaken / 60))
   secs=$((secondstaken % 60))
-  printf "\nTime taken: $mins mins $secs secs.\n"
+  printf "\nTime taken: %s mins %s secs.\n" "$mins" "$secs"
   echo "Find test logs for the scenario ($scenario) in: $testlogfilename"
   echo "Find consolidated test results in: $testresultsfilename"
   echo "----------"
@@ -96,7 +96,7 @@ runtestwithconfs() {
   fi
   STARTTIME=$(date +%s)
   testlogfilename="testlogs/Test-$starttime-Logs-$scenario.log"
-  printf "\nRunning the scenario: $scenario..."
+  printf "\nRunning the scenario: %s..." "$scenario"
   testwithconfs
   ENDTIME=$(date +%s)
   summary

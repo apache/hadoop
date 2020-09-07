@@ -49,7 +49,7 @@
 
   <!--====================== IMPORTANT!! ========================-->
   <!--WARNING!!
-      PLEASE CREATE A FILE NAMED "azure-auth-keys.xml"
+      PLEASE CREATE A FILE NAMED "abfs-testrun-configs.xml"
       AND SEE "site/markdown/testing_azure.md", THEN
       STORE THE CONFIGURATION PROPERTIES WITHIN IT.
       TO PREVENT ACCIDENTAL LEAKS OF YOUR STORAGE ACCOUNT CREDENTIALS,
@@ -57,7 +57,7 @@
       IT IN PATCHES OR COMMITS. -->
   <!--=============================================================-->
 
-  <include xmlns="http://www.w3.org/2001/XInclude" href="azure-auth-keys.xml">
+  <include xmlns="http://www.w3.org/2001/XInclude" href="abfs-testrun-configs.xml">
     <fallback />
   </include>
 
