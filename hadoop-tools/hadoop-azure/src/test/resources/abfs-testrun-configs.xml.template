@@ -3,9 +3,23 @@
 
   <!--====================== IMPORTANT!! ========================-->
   <!--
-      PLEASE PROVIDE VALUES FOR THE CONFIGS IN THIS FILE AND
-      RENAME THE SAME TO "abfs-testrun-configs.xml"
+      1. PLEASE PROVIDE VALUES FOR THE CONFIGS IN THIS FILE AND
+         RENAME THE SAME TO "abfs-testrun-configs.xml"
+      2. UPDATE runtests.sh
+         A.  "fs.azure.abfs.account.name" AND "fs.azure.test.namespace.enabled"
+             ARE MANDATORY WITH EVERY SCENARIO. AUTHTYPE BY DEFAULT WILL BE
+             SHAREDKEY AS CONFIGURED IN THIS TEMPLATE FILE.
+         B.  PLEASE ADD MORE SCENARIOS IF THE CODE CHANGE REQUIRES TESTING WITH
+             DIFFERENT VARIANTS OF CONFIGS.
+      3. THE SCRIPT REQUIRES THE FOLLOWING UTILITIES xmlstarlet AND pcregrep
+      4. NOW THE SCRIPT CAN BE EXECUTED WITH ./runtests.sh
   -->
+
+  <!--=============== Auth type ===============-->
+  <property>
+    <name>fs.azure.account.auth.type</name>
+    <value>SharedKey</value>
+  </property>
 
   <!--=============== Auth related accounts ===============-->
   <!-- This set of configs needs to be provided for all the accounts with which
