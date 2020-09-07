@@ -884,7 +884,8 @@ http[s]://[account][domain-suffix]/[filesystem], please use the following:
 This is the expected way in which the tests have to be ran before raising a PR.
 The script runtests.sh contain template for 3 combinations of tests. Ensure
 the auth configs for all the accounts used for testing are provided in
-abfs-testrun-configs.xmlIn case any new flags or properties are introduced with
+abfs-testrun-configs.xml. In case any new flags or properties are introduced
+ with
 the code change, add the combinations with the possible configurations into the
 runtests.sh.
 
