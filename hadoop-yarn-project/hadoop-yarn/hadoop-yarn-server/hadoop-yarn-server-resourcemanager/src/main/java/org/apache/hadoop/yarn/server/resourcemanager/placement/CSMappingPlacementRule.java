@@ -203,15 +203,16 @@ public class CSMappingPlacementRule extends PlacementRule {
     return vctx;
   }
 
-  private String validateAndNormalizeQueue(String queueName)
-      throws YarnException {
+  private String validateAndNormalizeQueue(
+      String queueName, boolean allowCreate) throws YarnException {
     MappingQueuePath path = new MappingQueuePath(queueName);
     String leaf = path.getLeafName();
     String parent = path.getParent();
 
     String normalizedName;
     if (parent != null) {
-      normalizedName = validateAndNormalizeQueueWithParent(parent, leaf);
+      normalizedName = validateAndNormalizeQueueWithParent(
+          parent, leaf, allowCreate);
     } else {
       normalizedName = validateAndNormalizeQueueWithNoParent(leaf);
     }
@@ -225,8 +226,8 @@ public class CSMappingPlacementRule extends PlacementRule {
     return normalizedName;
   }
 
-  private String validateAndNormalizeQueueWithParent(String parent, String leaf)
-      throws YarnException {
+  private String validateAndNormalizeQueueWithParent(
+      String parent, String leaf, boolean allowCreate) throws YarnException {
     CSQueue parentQueue = queueManager.getQueue(parent);
     //we don't find the specified parent, so the placement rule is invalid
     //for this case
@@ -244,17 +245,26 @@ public class CSMappingPlacementRule extends PlacementRule {
     String parentPath = parentQueue.getQueuePath();
     String fullPath = parentPath + DOT + leaf;
 
-    //if we have a parent which is not a managed parent, we check if the leaf
-    //queue exists under this parent
-    if (!(parentQueue instanceof ManagedParentQueue)) {
-      CSQueue queue = queueManager.getQueue(fullPath);
-      //if the queue doesn't exit we return null
-      if (queue == null) {
-        throw new YarnException("Mapping rule specified a parent queue '" +
-            parent + "', but it is not a managed parent queue, " +
-            "and no queue exists with name '" + leaf + "' under it.");
-      }
+    //checking if the queue actually exists
+    CSQueue queue = queueManager.getQueue(fullPath);
+    //if we have a parent which is not a managed parent and the queue doesn't
+    //then it is an invalid target, since the queue won't be auto-created
+    if (!(parentQueue instanceof ManagedParentQueue) && queue == null) {
+      throw new YarnException("Mapping rule specified a parent queue '" +
+          parent + "', but it is not a managed parent queue, " +
+          "and no queue exists with name '" + leaf + "' under it.");
     }
+
+    //if the queue does not exist but the parent is managed we need to check if
+    //auto-creation is allowed
+    if (parentQueue instanceof ManagedParentQueue
+        && queue == null
+        && allowCreate == false) {
+      throw new YarnException("Mapping rule doesn't allow auto-creation of " +
+          "the queue '" + fullPath + "'");
+    }
+
+
     //at this point we either have a managed parent or the queue actually
     //exists so we have a placement context, returning it
     return fullPath;
@@ -293,11 +303,11 @@ public class CSMappingPlacementRule extends PlacementRule {
 
     if (result.getResult() == MappingRuleResultType.PLACE) {
       try {
-        result.updateNormalizedQueue(
-            validateAndNormalizeQueue(result.getQueue()));
+        result.updateNormalizedQueue(validateAndNormalizeQueue(
+            result.getQueue(), result.isCreateAllowed()));
       } catch (Exception e) {
-        LOG.info("Cannot place to queue '" + result.getQueue() +
-            "' returned by mapping rule.", e);
+        LOG.info("Cannot place to queue '{}' returned by mapping rule. " +
+            "Reason: {}", result.getQueue(), e.getMessage());
         result = rule.getFallback();
       }
     }
@@ -395,7 +405,7 @@ public class CSMappingPlacementRule extends PlacementRule {
       MappingRule rule) throws YarnException {
     try {
       String queueName = validateAndNormalizeQueue(
-          variables.replacePathVariables("%default"));
+          variables.replacePathVariables("%default"), false);
       LOG.debug("Application '{}' have been placed to queue '{}' by " +
               "the fallback option of rule {}",
           asc.getApplicationName(), queueName, rule);

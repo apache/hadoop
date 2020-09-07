@@ -62,7 +62,7 @@ public class TestMappingRule {
 
     MappingRule rule = new MappingRule(
         MappingRuleMatchers.createUserMatcher("bob"),
-        (new MappingRuleActions.PlaceToQueueAction("%default.%default"))
+        (new MappingRuleActions.PlaceToQueueAction("%default.%default", true))
             .setFallbackSkip()
     );
 
@@ -133,7 +133,7 @@ public class TestMappingRule {
   @Test
   public void testToStrings() {
     MappingRuleAction action = new MappingRuleActions.PlaceToQueueAction(
-        "queue");
+        "queue", true);
     MappingRuleMatcher matcher = MappingRuleMatchers.createUserMatcher("bob");
     MappingRule rule = new MappingRule(matcher, action);
 

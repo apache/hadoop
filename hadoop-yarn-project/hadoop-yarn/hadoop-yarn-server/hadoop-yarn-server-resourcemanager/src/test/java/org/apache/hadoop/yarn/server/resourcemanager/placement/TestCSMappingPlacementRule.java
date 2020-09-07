@@ -260,12 +260,12 @@ public class TestCSMappingPlacementRule {
     rules.add(
         new MappingRule(
             MappingRuleMatchers.createUserMatcher("alice"),
-            (new MappingRuleActions.PlaceToQueueAction("non-existent"))
+            (new MappingRuleActions.PlaceToQueueAction("non-existent", true))
                 .setFallbackReject()));
     rules.add(
         new MappingRule(
             MappingRuleMatchers.createUserMatcher("bob"),
-            (new MappingRuleActions.PlaceToQueueAction("non-existent"))
+            (new MappingRuleActions.PlaceToQueueAction("non-existent", true))
                 .setFallbackSkip()));
     rules.add(
         new MappingRule(
@@ -274,11 +274,11 @@ public class TestCSMappingPlacementRule {
     rules.add(
         new MappingRule(
             MappingRuleMatchers.createUserMatcher("bob"),
-            new MappingRuleActions.PlaceToQueueAction("%default")));
+            new MappingRuleActions.PlaceToQueueAction("%default", true)));
     rules.add(
         new MappingRule(
             MappingRuleMatchers.createUserMatcher("charlie"),
-            (new MappingRuleActions.PlaceToQueueAction("non-existent"))
+            (new MappingRuleActions.PlaceToQueueAction("non-existent", true))
                 .setFallbackDefaultPlacement()));
     rules.add(
         new MappingRule(
@@ -287,14 +287,14 @@ public class TestCSMappingPlacementRule {
     rules.add(
         new MappingRule(
             MappingRuleMatchers.createUserMatcher("emily"),
-            (new MappingRuleActions.PlaceToQueueAction("non-existent"))
+            (new MappingRuleActions.PlaceToQueueAction("non-existent", true))
                 .setFallbackDefaultPlacement()));
     //This rule is to catch all shouldfail applications, and place them to a
     // queue, so we can detect they were not rejected nor null-ed
     rules.add(
         new MappingRule(
             MappingRuleMatchers.createApplicationNameMatcher("ShouldFail"),
-            new MappingRuleActions.PlaceToQueueAction("root.default")));
+            new MappingRuleActions.PlaceToQueueAction("root.default", true)));
 
     CSMappingPlacementRule engine = setupEngine(true, rules);
     ApplicationSubmissionContext fail = createApp("ShouldFail");
@@ -373,4 +373,42 @@ public class TestCSMappingPlacementRule {
     }
   }
 
+  @Test
+  public void testAllowCreateFlag() throws IOException {
+    ArrayList<MappingRule> rules = new ArrayList<>();
+    rules.add(
+        new MappingRule(
+            MappingRuleMatchers.createUserMatcher("alice"),
+            (new MappingRuleActions.PlaceToQueueAction("non-existent", true))
+                .setFallbackReject()));
+    rules.add(
+        new MappingRule(
+            MappingRuleMatchers.createUserMatcher("bob"),
+            (new MappingRuleActions.PlaceToQueueAction("non-existent", false))
+                .setFallbackReject()));
+    rules.add(
+        new MappingRule(
+            MappingRuleMatchers.createUserMatcher("charlie"),
+            (new MappingRuleActions.PlaceToQueueAction("root.man.create", true))
+                .setFallbackReject()));
+    rules.add(
+        new MappingRule(
+            MappingRuleMatchers.createUserMatcher("emily"),
+            (new MappingRuleActions.PlaceToQueueAction("root.man.create", false))
+                .setFallbackReject()));
+
+    CSMappingPlacementRule engine = setupEngine(true, rules);
+    ApplicationSubmissionContext app = createApp("app");
+
+    assertReject("Alice should be rejected because the target queue" +
+            " does not exist", engine, app, "alice");
+    assertReject("Bob should be rejected because the target queue" +
+        " does not exist", engine, app, "bob");
+    assertReject("Emily should be rejected because auto queue creation is not" +
+        " allowed for this action", engine, app, "emily");
+
+    assertPlace("Charlie should be able to place since it is allowed to create",
+        engine, app, "charlie", "root.man.create");
+
+  }
 }

@@ -98,7 +98,8 @@ public class MappingRule {
   public static MappingRule createLegacyRule(
       String type, String source, String path) {
     MappingRuleMatcher matcher;
-    MappingRuleAction action = new MappingRuleActions.PlaceToQueueAction(path);
+    MappingRuleAction action = MappingRuleActions.createPlaceToQueueAction(
+        path, true);
     //While legacy rule fallback handling is a bit inconsistent, the most cases
     //it fall back to default queue placement, so this is the best approximation
     action.setFallbackDefaultPlacement();
