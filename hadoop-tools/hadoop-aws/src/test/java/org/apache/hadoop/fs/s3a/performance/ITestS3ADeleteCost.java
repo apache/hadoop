@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.performance;
 
 
+import java.io.FileNotFoundException;
 import java.util.Arrays;
 import java.util.Collection;
 
@@ -28,6 +29,7 @@ import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
@@ -37,6 +39,7 @@ import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.*;
 import static org.apache.hadoop.fs.s3a.performance.OperationCostValidator.probe;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Use metrics to assert about the cost of file API calls.
@@ -145,7 +148,7 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
     boolean rawAndDeleting = isRaw() && isDeleting();
     verifyMetrics(() -> {
       fs.delete(file1, false);
-      return "after fs.delete(file1simpleFile) " + getMetricSummary();
+      return "after fs.delete(file1) " + getMetricSummary();
     },
         // delete file. For keeping: that's it
         probe(rawAndKeeping, OBJECT_METADATA_REQUESTS,
@@ -173,7 +176,11 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
   public void testDirMarkersSubdir() throws Throwable {
     describe("verify cost of deep subdir creation");
 
-    Path subDir = new Path(methodPath(), "1/2/3/4/5/6");
+    Path parent = methodPath();
+    Path subDir = new Path(parent, "1/2/3/4/5/6");
+    S3AFileSystem fs = getFileSystem();
+    int dirsCreated = 2;
+    fs.mkdirs(parent);
     // one dir created, possibly a parent removed
     verifyMetrics(() -> {
       mkdirs(subDir);
@@ -187,6 +194,37 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
         // delete all possible fake dirs above the subdirectory
         withWhenDeleting(FAKE_DIRECTORIES_DELETED,
             directoriesInPath(subDir) - 1));
+
+
+    // now delete the deep tree.
+    verifyMetrics(() ->
+          fs.delete(parent, true),
+
+        // keeping: the parent dir marker needs deletion alongside
+        // the subdir one.
+        with(OBJECT_DELETE_REQUESTS, DELETE_MARKER_REQUEST),
+        withWhenKeeping(OBJECT_DELETE_OBJECTS, dirsCreated),
+
+        // deleting: only the marker at the bottom needs deleting
+        withWhenDeleting(OBJECT_DELETE_OBJECTS, 1));
+
+    // followup with list calls to make sure all is clear.
+    verifyNoListing(parent);
+    verifyNoListing(subDir);
+    verifyNoListing(new Path(parent, "1"));
+    verifyNoListing(new Path(parent, "1/2/"));
+    verifyNoListing(new Path(parent, "1/2/3"));
+  }
+
+  /**
+   * List a path, verify that there are no direct child entries.
+   * @param path path to scan
+   */
+  protected void verifyNoListing(final Path path) throws Exception {
+    intercept(FileNotFoundException.class, () -> {
+      FileStatus[] statuses = getFileSystem().listStatus(path);
+      return Arrays.deepToString(statuses);
+    });
   }
 
   @Test
