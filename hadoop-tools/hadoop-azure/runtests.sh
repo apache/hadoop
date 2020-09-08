@@ -18,8 +18,8 @@
 # shellcheck disable=SC2034
 # unused variables are global in nature and used in testsupport.sh
 
-# shellcheck source=./testsupport.sh
-. ./testsupport.sh
+# shellcheck disable=SC1091
+source ./testsupport.sh
 
 scenario=HNS-OAuth
 properties=("fs.azure.abfs.account.name" "fs.azure.test.namespace.enabled"

@@ -63,7 +63,7 @@ testwithconfs() {
     val=${values[$i]}
     changeconf "$key" "$val"
   done
-  mvn -T 1C -Dparallel-tests=abfs -Dscale -DtestsThreadCount=8 clean verify >>"$testlogfilename"
+  mvn -T 1C -Dparallel-tests=abfs -Dscale -DtestsThreadCount=8 clean verify >> "$testlogfilename"
 }
 
 summary() {
@@ -90,6 +90,7 @@ runtestwithconfs() {
   cp $conffile $bkpconffile
   if [ -z "$starttime" ]; then
     starttime=$(date +"%Y-%m-%d_%H-%M-%S")
+    mkdir -p "testlogs"
     testresultsfilename="testlogs/Test-$starttime-Results.log"
     checkdependancies
     mvn clean install -DskipTests
