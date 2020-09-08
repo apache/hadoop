@@ -137,7 +137,8 @@ public abstract class AbstractContractUnbufferTest extends AbstractFSContractTes
           throws IOException {
     byte[] streamData = new byte[length];
     assertEquals("failed to read expected number of bytes from "
-            + "stream", length, stream.read(streamData));
+            + "stream. This may be transient",
+        length, stream.read(streamData));
     byte[] validateFileBytes;
     if (startIndex == 0 && length == fileBytes.length) {
       validateFileBytes = fileBytes;
