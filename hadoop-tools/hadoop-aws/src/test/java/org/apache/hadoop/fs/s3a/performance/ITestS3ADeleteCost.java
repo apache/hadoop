@@ -23,6 +23,7 @@ import java.io.FileNotFoundException;
 import java.util.Arrays;
 import java.util.Collection;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -195,6 +196,9 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
         withWhenDeleting(FAKE_DIRECTORIES_DELETED,
             directoriesInPath(subDir) - 1));
 
+    int dirDeleteRequests  = 1;
+    int fileDeleteRequests  = 0;
+    int totalDeleteRequests = dirDeleteRequests + fileDeleteRequests;
 
     // now delete the deep tree.
     verifyMetrics(() ->
@@ -202,7 +206,7 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
 
         // keeping: the parent dir marker needs deletion alongside
         // the subdir one.
-        with(OBJECT_DELETE_REQUESTS, DELETE_MARKER_REQUEST),
+        with(OBJECT_DELETE_REQUESTS, totalDeleteRequests),
         withWhenKeeping(OBJECT_DELETE_OBJECTS, dirsCreated),
 
         // deleting: only the marker at the bottom needs deleting
@@ -211,9 +215,12 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
     // followup with list calls to make sure all is clear.
     verifyNoListing(parent);
     verifyNoListing(subDir);
-    verifyNoListing(new Path(parent, "1"));
-    verifyNoListing(new Path(parent, "1/2/"));
-    verifyNoListing(new Path(parent, "1/2/3"));
+    // now reinstate the directory, which in HADOOP-17244 hitting problems
+    fs.mkdirs(parent);
+    FileStatus[] children = fs.listStatus(parent);
+    Assertions.assertThat(children)
+        .describedAs("Children of %s", parent)
+        .isEmpty();
   }
 
   /**

@@ -366,7 +366,7 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
           S3AFileStatus next = objects.next();
           LOG.debug("Found Unlisted entry {}", next);
           queueForDeletion(deletionKey(next), null,
-              objects.next().isDirectory());
+              next.isDirectory());
         }
         if (extraFilesDeleted > 0) {
           LOG.debug("Raw S3 Scan found {} extra file(s) to delete",
@@ -548,7 +548,9 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
                 undeletedObjects,
                 state,
                 !auditDeletedKeys));
-        deletedObjects.addAll(result.getDeletedObjects());
+        if (result != null) {
+          deletedObjects.addAll(result.getDeletedObjects());
+        }
         // now the dirs
         List<DeleteObjectsRequest.KeyVersion> dirs = keyList.stream()
             .filter(e -> e.isDirMarker)
@@ -564,7 +566,9 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
                 undeletedObjects,
                 state,
                 !auditDeletedKeys));
-        deletedObjects.addAll(result.getDeletedObjects());
+        if (result != null) {
+          deletedObjects.addAll(result.getDeletedObjects());
+        }
       }
       if (!pathList.isEmpty()) {
         // delete file paths only. This stops tombstones
@@ -572,7 +576,7 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
         // (HADOOP-17244)
         metadataStore.deletePaths(pathList, state);
       }
-      if (auditDeletedKeys && result != null) {
+      if (auditDeletedKeys) {
         // audit the deleted keys
         if (deletedObjects.size() != keyList.size()) {
           // size mismatch

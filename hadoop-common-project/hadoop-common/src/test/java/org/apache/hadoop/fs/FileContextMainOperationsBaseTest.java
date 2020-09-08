@@ -21,7 +21,6 @@ package org.apache.hadoop.fs;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.NoSuchElementException;
 import java.util.concurrent.CompletableFuture;
@@ -1323,39 +1322,17 @@ public abstract class FileContextMainOperationsBaseTest  {
       LOG.debug("Probing source and destination");
       Assert.assertEquals("Source exists", srcExists, exists(fc, src));
       Assert.assertEquals("Destination exists", dstExists, exists(fc, dst));
-      if (!dstExists) {
-        verifyNoListing(fc, dst);
-      }
     } catch (AssertionError e) {
       if (ioe != null && e.getCause() == null) {
         e.initCause(ioe);
       }
       throw e;
-
+    }
+    if (ioe != null) {
+      throw ioe;
     }
   }
 
-  /**
-   * List a path, verify that there are no direct child entries.
-   * @param path path to scan
-   */
-  protected void verifyNoListing(FileContext fc, final Path path)
-      throws IOException {
-    try {
-      intercept(FileNotFoundException.class, () -> {
-        RemoteIterator<FileStatus> st = fc.listStatus(path);
-        if (st.hasNext()) {
-          return st.next().toString();
-        }
-        return "No exception raised";
-      });
-    } catch (IOException e) {
-      throw e;
-    } catch (Exception e) {
-      throw new AssertionError(e);
-
-    }
-  }
   private boolean containsPath(Path path, FileStatus[] filteredPaths)
     throws IOException {
     for(int i = 0; i < filteredPaths.length; i ++) { 
