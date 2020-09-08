@@ -107,7 +107,7 @@ public interface Constants {
   boolean CONFIG_VIEWFS_ENABLE_INNER_CACHE_DEFAULT = true;
 
   /**
-   * Whether to evict cached children file times on ViewFileSystem::close()
+   * Whether to evict cached children file times on ViewFileSystem::close().
    */
   String CONFIG_VIEWFS_INNER_CACHE_EVICT_ON_CLOSE =
       "fs.viewfs.inner.cache.evict.on.close";
