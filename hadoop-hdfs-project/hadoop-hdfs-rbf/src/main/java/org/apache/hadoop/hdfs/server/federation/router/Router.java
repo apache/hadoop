@@ -553,11 +553,18 @@ public class Router extends CompositeService implements
   protected NamenodeHeartbeatService createLocalNamenodeHeartbeatService() {
     // Detect NN running in this machine
     String nsId = DFSUtil.getNamenodeNameServiceId(conf);
+
+    if (nsId == null) {
+      LOG.error("Cannot find nameservice id for local {}", nsId);
+      return null;
+    }
+
     String nnId = null;
     if (HAUtil.isHAEnabled(conf, nsId)) {
       nnId = HAUtil.getNameNodeId(conf, nsId);
       if (nnId == null) {
         LOG.error("Cannot find namenode id for local {}", nsId);
+        return null;
       }
     }
 
