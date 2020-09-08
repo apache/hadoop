@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.placement;
 
 import java.util.Arrays;
+import java.util.Set;
 
 /**
  * This class contains all the matcher and some helper methods to generate them.
@@ -96,6 +97,48 @@ public class MappingRuleMatchers {
     }
   }
 
+  /**
+   * The GroupMatcher will check if any of the user's groups match the provided
+   * group name. It does not care if it's primary or secondary group, it just
+   * checks if the user is member of the expected group.
+   */
+  public static class UserGroupMatcher implements MappingRuleMatcher {
+    /**
+     * The group which should match the users's groups.
+     */
+    private String group;
+
+    UserGroupMatcher(String value) {
+      this.group = value;
+    }
+
+    /**
+     * The method will match (return true) if the user is in the provided group.
+     * This matcher expect an extraVariableSet to be present in the variable
+     * context, if it's not present, we return false.
+     * If the expected group is null we always return false.
+     * @param variables The variable context, which contains all the variables
+     * @return true if user is member of the group
+     */
+    @Override
+    public boolean match(VariableContext variables) {
+      Set<String> groups = variables.getExtraDataset("groups");
+
+      if (group == null || groups == null) {
+        return false;
+      }
+
+      String substituted = variables.replaceVariables(group);
+      return groups.contains(substituted);
+    }
+
+    @Override
+    public String toString() {
+      return "GroupMatcher{" +
+          "group='" + group + '\'' +
+          '}';
+    }
+  }
   /**
    * AndMatcher is a basic boolean matcher which takes multiple other
    * matcher as it's arguments, and on match it checks if all of them are true.
@@ -193,13 +236,13 @@ public class MappingRuleMatchers {
   }
 
   /**
-   * Convenience method to create a variable matcher which matches against the
-   * user's primary group.
+   * Convenience method to create a group matcher which matches against the
+   * groups of the user.
    * @param groupName The groupName to be matched
-   * @return VariableMatcher with %primary_group as the variable
+   * @return UserGroupMatcher
    */
-  public static MappingRuleMatcher createGroupMatcher(String groupName) {
-    return new VariableMatcher("%primary_group", groupName);
+  public static MappingRuleMatcher createUserGroupMatcher(String groupName) {
+    return new UserGroupMatcher(groupName);
   }
 
   /**
@@ -215,7 +258,7 @@ public class MappingRuleMatchers {
       String userName, String groupName) {
     return new AndMatcher(
         createUserMatcher(userName),
-        createGroupMatcher(groupName));
+        createUserGroupMatcher(groupName));
   }
 
   /**

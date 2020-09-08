@@ -411,4 +411,37 @@ public class TestCSMappingPlacementRule {
         engine, app, "charlie", "root.man.create");
 
   }
+
+  private MappingRule createGroupMapping(String group, String queue) {
+    MappingRuleMatcher matcher = MappingRuleMatchers.createUserGroupMatcher(group);
+    MappingRuleAction action =
+        (new MappingRuleActions.PlaceToQueueAction(queue, true))
+        .setFallbackReject();
+    return new MappingRule(matcher, action);
+  }
+
+  @Test
+  public void testGroupMatching() throws IOException {
+    ArrayList<MappingRule> rules = new ArrayList<>();
+
+    rules.add(createGroupMapping("p_alice", "root.man.p_alice"));
+    rules.add(createGroupMapping("developer", "root.man.developer"));
+
+    //everybody is in the user group, this should catch all
+    rules.add(createGroupMapping("user", "root.man.user"));
+
+    CSMappingPlacementRule engine = setupEngine(true, rules);
+    ApplicationSubmissionContext app = createApp("app");
+
+    assertPlace(
+        "Alice should be placed to root.man.p_alice based on her primary group",
+        engine, app, "alice", "root.man.p_alice");
+    assertPlace(
+        "Bob should be placed to root.man.developer based on his developer " +
+        "group", engine, app, "bob", "root.man.developer");
+    assertPlace(
+        "Charlie should be placed to root.man.user because he is not a " +
+        "developer nor in the p_alice group", engine, app, "charlie",
+        "root.man.user");
+  }
 }

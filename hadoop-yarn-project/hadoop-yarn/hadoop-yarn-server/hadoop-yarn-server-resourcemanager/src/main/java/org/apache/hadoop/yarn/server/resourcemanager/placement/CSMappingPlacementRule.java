@@ -156,23 +156,24 @@ public class CSMappingPlacementRule extends PlacementRule {
     return mappingRules.size() > 0;
   }
 
-  private String getPrimaryGroup(String user) throws IOException {
-    return groups.getGroupsSet(user).iterator().next();
-  }
-
   /**
-   * Traverse all secondary groups (as there could be more than one
-   * and position is not guaranteed) and ensure there is queue with
-   * the same name.
+   * Sets group related data for the provided variable context.
+   * Primary group is the first group returned by getGroups.
+   * To determine secondary group we traverse all groups
+   * (as there could be more than one and position is not guaranteed) and
+   * ensure there is queue with the same name.
+   * This method also sets the groups set for the variable context for group
+   * matching.
+   * @param vctx Variable context to be updated
    * @param user Name of the user
-   * @return Name of the secondary group if found, null otherwise
    * @throws IOException
    */
-  private String getSecondaryGroup(String user) throws IOException {
+  private void setupGroupsForVariableContext(VariableContext vctx, String user)
+      throws IOException {
     Set<String> groupsSet = groups.getGroupsSet(user);
     String secondaryGroup = null;
     Iterator<String> it = groupsSet.iterator();
-    it.next();
+    String primaryGroup = it.next();
     while (it.hasNext()) {
       String group = it.next();
       if (this.queueManager.getQueue(group) != null) {
@@ -185,7 +186,10 @@ public class CSMappingPlacementRule extends PlacementRule {
       LOG.debug("User {} is not associated with any Secondary " +
           "Group. Hence it may use the 'default' queue", user);
     }
-    return secondaryGroup;
+
+    vctx.put("%primary_group", primaryGroup);
+    vctx.put("%secondary_group", secondaryGroup);
+    vctx.putExtraDataset("groups", groupsSet);
   }
 
   private VariableContext createVariableContext(
@@ -195,9 +199,8 @@ public class CSMappingPlacementRule extends PlacementRule {
     vctx.put("%user", user);
     vctx.put("%specified", asc.getQueue());
     vctx.put("%application", asc.getApplicationName());
-    vctx.put("%primary_group", getPrimaryGroup(user));
-    vctx.put("%secondary_group", getSecondaryGroup(user));
     vctx.put("%default", "root.default");
+    setupGroupsForVariableContext(vctx, user);
 
     vctx.setImmutables(immutableVariables);
     return vctx;

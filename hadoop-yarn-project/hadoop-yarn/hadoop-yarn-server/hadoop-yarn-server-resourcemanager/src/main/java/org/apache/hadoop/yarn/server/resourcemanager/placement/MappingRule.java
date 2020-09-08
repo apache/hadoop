@@ -109,7 +109,7 @@ public class MappingRule {
       matcher = MappingRuleMatchers.createUserMatcher(source);
       break;
     case GROUP_MAPPING:
-      matcher = MappingRuleMatchers.createGroupMatcher(source);
+      matcher = MappingRuleMatchers.createUserGroupMatcher(source);
       break;
     case APPLICATION_MAPPING:
       matcher = MappingRuleMatchers.createApplicationNameMatcher(source);
