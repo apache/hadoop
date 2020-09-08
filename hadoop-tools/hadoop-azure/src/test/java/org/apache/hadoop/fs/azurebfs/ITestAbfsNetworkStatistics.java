@@ -27,6 +27,7 @@ import org.junit.Test;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
@@ -250,4 +251,31 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
     }
   }
 
+  /**
+   * Testing bytes_received counter value when a response failure occurs.
+   */
+  @Test
+  public void testAbfsHttpResponseFailure() throws IOException {
+    describe("Test to check the values of bytes received counter when a "
+        + "response is failed");
+
+    AzureBlobFileSystem fs = getFileSystem();
+    Path responseFailurePath = path(getMethodName());
+    Map<String, Long> metricMap;
+    FSDataOutputStream out = null;
+
+    try {
+      //create an empty file
+      out = fs.create(responseFailurePath);
+      //Re-creating the file again on same path with false overwrite, this
+      // would cause a response failure with status code 409.
+      out = fs.create(responseFailurePath, false);
+    } catch (FileAlreadyExistsException faee) {
+      metricMap = fs.getInstrumentationMap();
+      // Assert after catching the 409 error to check the counter values.
+      assertAbfsStatistics(AbfsStatistic.BYTES_RECEIVED, 0, metricMap);
+    } finally {
+      IOUtils.cleanupWithLogger(LOG, out);
+    }
+  }
 }
