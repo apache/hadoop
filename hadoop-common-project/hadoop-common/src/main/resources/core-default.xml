@@ -2585,6 +2585,14 @@
 </property>
 
 <property>
+  <name>ipc.[port_number].decay-scheduler.service-users</name>
+  <value></value>
+  <description>Service users will always be scheduled into the highest-priority
+    queue. They are specified as a comma-separated list.
+  </description>
+</property>
+
+<property>
   <name>ipc.[port_number].weighted-cost.lockshared</name>
   <value>10</value>
   <description>The weight multiplier to apply to the time spent in the
