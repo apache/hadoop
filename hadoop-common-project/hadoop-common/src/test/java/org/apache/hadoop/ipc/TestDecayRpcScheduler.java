@@ -398,8 +398,8 @@ public class TestDecayRpcScheduler {
         "service1,service2");
     scheduler = new DecayRpcScheduler(4, "ipc.19", conf);
 
-    assertTrue(scheduler.getServiceUsernames().contains("service1"));
-    assertTrue(scheduler.getServiceUsernames().contains("service2"));
+    assertTrue(scheduler.getServiceUserNames().contains("service1"));
+    assertTrue(scheduler.getServiceUserNames().contains("service2"));
 
     for (int i = 0; i < 10; i++) {
       getPriorityIncrementCallCount("user1");

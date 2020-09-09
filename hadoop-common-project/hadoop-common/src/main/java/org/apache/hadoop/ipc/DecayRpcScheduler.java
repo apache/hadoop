@@ -188,7 +188,7 @@ public class DecayRpcScheduler implements RpcScheduler,
   private static final double PRECISION = 0.0001;
   private MetricsProxy metricsProxy;
   private final CostProvider costProvider;
-  private Set<String> serviceUsernames;
+  private Set<String> serviceUserNames;
 
   /**
    * This TimerTask will call decayCurrentCosts until
@@ -240,7 +240,7 @@ public class DecayRpcScheduler implements RpcScheduler,
         conf);
     this.backOffResponseTimeThresholds =
         parseBackOffResponseTimeThreshold(ns, conf, numLevels);
-    this.serviceUsernames = this.parseServiceUsernames(ns, conf);
+    this.serviceUserNames = this.parseServiceUserNames(ns, conf);
 
     // Setup response time metrics
     responseTimeTotalInCurrWindow = new AtomicLongArray(numLevels);
@@ -371,7 +371,7 @@ public class DecayRpcScheduler implements RpcScheduler,
     return decimals;
   }
 
-  private Set<String> parseServiceUsernames(String ns, Configuration conf) {
+  private Set<String> parseServiceUserNames(String ns, Configuration conf) {
     Collection<String> collection = conf.getStringCollection(
         ns + "." + IPC_DECAYSCHEDULER_SERVICE_USERS_KEY);
     return new HashSet<>(collection);
@@ -622,8 +622,8 @@ public class DecayRpcScheduler implements RpcScheduler,
     return cachedOrComputedPriorityLevel(identity);
   }
 
-  private boolean isServiceUser(String username) {
-    return this.serviceUsernames.contains(username);
+  private boolean isServiceUser(String userName) {
+    return this.serviceUserNames.contains(userName);
   }
 
   @Override
@@ -727,8 +727,8 @@ public class DecayRpcScheduler implements RpcScheduler,
   }
 
   @VisibleForTesting
-  Set<String> getServiceUsernames() {
-    return serviceUsernames;
+  Set<String> getServiceUserNames() {
+    return serviceUserNames;
   }
 
   @VisibleForTesting
