@@ -97,7 +97,6 @@ class RegexMountPointResolvedDstPathReplaceInterceptor
   /**
    * The interceptRemainingPath will just return the remainingPath passed in.
    *
-   * @return remaining path pass in
    */
   @Override
   public Path interceptRemainingPath(Path remainingPath) {

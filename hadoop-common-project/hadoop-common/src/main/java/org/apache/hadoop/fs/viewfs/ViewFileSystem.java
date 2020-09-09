@@ -22,8 +22,6 @@ import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_ENABLE_INNER_C
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE_DEFAULT;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME_DEFAULT;
-import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_INNER_CACHE_EVICT_ON_CLOSE;
-import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_INNER_CACHE_EVICT_ON_CLOSE_DEFAULT;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNT_LINKS_AS_SYMLINKS_DEFAULT;
 import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
@@ -304,9 +302,6 @@ public class ViewFileSystem extends FileSystem {
     config = conf;
     enableInnerCache = config.getBoolean(CONFIG_VIEWFS_ENABLE_INNER_CACHE,
         CONFIG_VIEWFS_ENABLE_INNER_CACHE_DEFAULT);
-    evictCacheOnClose = config.getBoolean(
-        CONFIG_VIEWFS_INNER_CACHE_EVICT_ON_CLOSE,
-        CONFIG_VIEWFS_INNER_CACHE_EVICT_ON_CLOSE_DEFAULT);
     FsGetter fsGetter = fsGetter();
     final InnerCache innerCache = new InnerCache(fsGetter);
     // Now build  client side view (i.e. client side mount table) from config.
@@ -1716,9 +1711,7 @@ public class ViewFileSystem extends FileSystem {
     super.close();
     if (enableInnerCache && cache != null) {
       cache.closeAll();
-      if (evictCacheOnClose) {
-        cache.clear();
-      }
+      cache.clear();
     }
   }
 }

@@ -119,14 +119,14 @@ public class TestRegexMountPoint {
     Assert.assertTrue(
         resolveResult.targetFileSystem
             instanceof TestRegexMountPointFileSystem);
-    Assert.assertTrue(resolveResult.resolvedPath.equals("/user/hadoop"));
+    Assert.assertEquals("/user/hadoop", resolveResult.resolvedPath);
     Assert.assertTrue(
         resolveResult.targetFileSystem
             instanceof TestRegexMountPointFileSystem);
-    Assert.assertTrue(
+    Assert.assertEquals("/namenode1/testResolve/hadoop",
         ((TestRegexMountPointFileSystem) resolveResult.targetFileSystem)
-            .getUri().toString().equals("/namenode1/testResolve/hadoop"));
-    Assert.assertTrue(resolveResult.remainingPath.toString().equals("/file1"));
+            .getUri().toString());
+    Assert.assertEquals("/file1", resolveResult.remainingPath.toString());
   }
 
   @Test
@@ -147,14 +147,14 @@ public class TestRegexMountPoint {
     Assert.assertTrue(
         resolveResult.targetFileSystem
             instanceof TestRegexMountPointFileSystem);
-    Assert.assertTrue(resolveResult.resolvedPath.equals("/user/hadoop_user1"));
+    Assert.assertEquals("/user/hadoop_user1", resolveResult.resolvedPath);
     Assert.assertTrue(
         resolveResult.targetFileSystem
             instanceof TestRegexMountPointFileSystem);
-    Assert.assertTrue(
+    Assert.assertEquals("/namenode1/testResolve/hadoop-user1",
         ((TestRegexMountPointFileSystem) resolveResult.targetFileSystem)
-            .getUri().toString().equals("/namenode1/testResolve/hadoop-user1"));
-    Assert.assertTrue(
-        resolveResult.remainingPath.toString().equals("/file_index"));
+            .getUri().toString());
+    Assert.assertEquals("/file_index",
+        resolveResult.remainingPath.toString());
   }
 }
