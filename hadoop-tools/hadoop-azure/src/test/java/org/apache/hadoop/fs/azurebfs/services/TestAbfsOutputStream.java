@@ -22,13 +22,16 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
+import com.google.common.util.concurrent.ListeningExecutorService;
 import org.junit.Test;
 
 import org.mockito.ArgumentCaptor;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -58,6 +61,15 @@ public final class TestAbfsOutputStream {
             boolean isAppendBlob) throws IOException, IllegalAccessException {
     AbfsConfiguration abfsConf = new AbfsConfiguration(new Configuration(),
         accountName1);
+    int maxThreads = Runtime.getRuntime().availableProcessors() * 2;
+    int totalTasks = maxThreads * 4;
+    long keepAliveTime = 60;
+    ListeningExecutorService executorService
+        = BlockingThreadPoolExecutorService.newInstance(
+        maxThreads,
+        maxThreads + totalTasks,
+        keepAliveTime, TimeUnit.SECONDS,
+        "abfs-worker");
     return new AbfsOutputStreamContext(2)
             .withWriteBufferSize(writeBufferSize)
             .enableFlush(isFlushEnabled)
@@ -66,7 +78,8 @@ public final class TestAbfsOutputStream {
             .withAppendBlob(isAppendBlob)
             .withWriteMaxConcurrentRequestCount(abfsConf.getWriteMaxConcurrentRequestCount())
             .withMaxWriteRequestsToQueue(abfsConf.getMaxWriteRequestsToQueue())
-            .build();
+            .withExecutorService(executorService)
+        .build();
   }
 
   /**

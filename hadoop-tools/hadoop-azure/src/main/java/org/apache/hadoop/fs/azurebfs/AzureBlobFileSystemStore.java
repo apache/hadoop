@@ -47,10 +47,14 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -111,8 +115,11 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
+import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
 import org.apache.http.client.utils.URIBuilder;
 
+import static com.google.common.util.concurrent.MoreExecutors.listeningDecorator;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_EQUALS;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_FORWARD_SLASH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_HYPHEN;
@@ -154,6 +161,17 @@ public class AzureBlobFileSystemStore implements Closeable {
    * The set of directories where we should store files as append blobs.
    */
   private Set<String> appendBlobDirSet;
+
+  /**
+   * Unbounded executor pool.
+   */
+  private ListeningExecutorService executorService;
+
+  /**
+   * Capacity for creating an executor for a specific stream
+   * or other component which takes an executor service.
+   */
+  private int executorCapacity;
 
   public AzureBlobFileSystemStore(URI uri, boolean isSecureScheme,
                                   Configuration configuration,
@@ -216,6 +234,29 @@ public class AzureBlobFileSystemStore implements Closeable {
       this.appendBlobDirSet = new HashSet<>(Arrays.asList(
           abfsConfiguration.getAppendBlobDirs().split(AbfsHttpConstants.COMMA)));
     }
+    initThreadPools();
+  }
+
+  /**
+   * Initialize executor services.
+   */
+  void initThreadPools() {
+    int maxThreads = abfsConfiguration.getMaxConcurrentWriteThreads();
+    if (maxThreads < 0) {
+      // make a multiple of the core count
+      maxThreads = Runtime.getRuntime().availableProcessors() * (-maxThreads);
+    }
+    // TODO: configurable
+    long keepAliveTime = 60;
+    executorService = listeningDecorator(
+        new ThreadPoolExecutor(
+            maxThreads, Integer.MAX_VALUE,
+            keepAliveTime, TimeUnit.SECONDS,
+            new LinkedBlockingQueue<>(),
+            BlockingThreadPoolExecutorService.newDaemonThreadFactory(
+                "abfs-worker")));
+    // TODO: configurable
+    executorCapacity = 8;
   }
 
   /**
@@ -243,6 +284,9 @@ public class AzureBlobFileSystemStore implements Closeable {
   @Override
   public void close() throws IOException {
     IOUtils.cleanupWithLogger(LOG, client);
+    if (executorService != null) {
+      executorService.shutdown();
+    }
   }
 
   byte[] encodeAttribute(String value) throws UnsupportedEncodingException {
@@ -492,6 +536,11 @@ public class AzureBlobFileSystemStore implements Closeable {
             .withAppendBlob(isAppendBlob)
             .withWriteMaxConcurrentRequestCount(abfsConfiguration.getWriteMaxConcurrentRequestCount())
             .withMaxWriteRequestsToQueue(abfsConfiguration.getMaxWriteRequestsToQueue())
+            .withExecutorService(
+                new SemaphoredDelegatingExecutor(
+                    executorService,
+                    executorCapacity,
+                    true))
             .build();
   }
 

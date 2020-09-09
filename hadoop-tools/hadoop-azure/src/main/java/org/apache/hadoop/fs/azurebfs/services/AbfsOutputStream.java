@@ -26,15 +26,13 @@ import java.net.HttpURLConnection;
 import java.nio.ByteBuffer;
 import java.util.Locale;
 import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ExecutorCompletionService;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,7 +71,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   private final int maxRequestsThatCanBeQueued;
 
   private ConcurrentLinkedDeque<WriteOperation> writeOperations;
-  private final ThreadPoolExecutor threadExecutor;
+  private final ListeningExecutorService threadExecutor;
   private final ExecutorCompletionService<Void> completionService;
 
   // SAS tokens can be re-used until they expire
@@ -125,12 +123,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     }
     this.maxRequestsThatCanBeQueued = abfsOutputStreamContext
         .getMaxWriteRequestsToQueue();
-    this.threadExecutor
-        = new ThreadPoolExecutor(maxConcurrentRequestCount,
-        maxConcurrentRequestCount,
-        10L,
-        TimeUnit.SECONDS,
-        new LinkedBlockingQueue<>());
+    this.threadExecutor = abfsOutputStreamContext.getExecutorService();
     this.completionService = new ExecutorCompletionService<>(this.threadExecutor);
     this.cachedSasToken = new CachedSASToken(
         abfsOutputStreamContext.getSasTokenRenewPeriodForStreamsInSeconds());
@@ -270,8 +263,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
 
   /**
    * Force all data in the output stream to be written to Azure storage.
-   * Wait to return until this is complete. Close the access to the stream and
-   * shutdown the upload thread pool.
+   * Wait to return until this is complete. Close the access to the stream.
    * If the blob was created, its lease will be released.
    * Any error encountered caught in threads and stored will be rethrown here
    * after cleanup.
@@ -284,7 +276,11 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
 
     try {
       flushInternal(true);
-      threadExecutor.shutdown();
+      // block until all uploads through the thread pool are complete.
+      // TODO: wait for all queued uploads to finish, rather
+      // than just one. This was implicitly
+      // done in shutdown/shutdownNow.
+      waitForTaskToComplete();
     } catch (IOException e) {
       // Problems surface in try-with-resources clauses if
       // the exception thrown in a close == the one already thrown
@@ -297,12 +293,9 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
       bufferIndex = 0;
       closed = true;
       writeOperations.clear();
-      if (!threadExecutor.isShutdown()) {
-        threadExecutor.shutdownNow();
-      }
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Closing AbfsOutputStream ", toString());
+      LOG.debug("Closing AbfsOutputStream {}", this);
     }
   }
 
@@ -375,12 +368,14 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     final long offset = position;
     position += bytesLength;
 
+/*
     if (threadExecutor.getQueue().size() >= maxRequestsThatCanBeQueued) {
+    if (executorService.getQueue().size() >= maxConcurrentRequestCount * 2) {
       long start = System.currentTimeMillis();
-      waitForTaskToComplete();
       outputStreamStatistics.timeSpentTaskWait(start, System.currentTimeMillis());
     }
-
+*/
+    long start = System.currentTimeMillis();
     final Future<Void> job = completionService.submit(new Callable<Void>() {
       @Override
       public Void call() throws Exception {
@@ -397,6 +392,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
         }
       }
     });
+    outputStreamStatistics.timeSpentTaskWait(start, System.currentTimeMillis());
 
     if (job.isCancelled()) {
       outputStreamStatistics.uploadFailed(bytesLength);

@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import com.google.common.util.concurrent.ListeningExecutorService;
+
 /**
  * Class to hold extra output stream configs.
  */
@@ -36,6 +38,8 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
   private int writeMaxConcurrentRequestCount;
 
   private int maxWriteRequestsToQueue;
+
+  private ListeningExecutorService executorService;
 
   public AbfsOutputStreamContext(final long sasTokenRenewPeriodForStreamsInSeconds) {
     super(sasTokenRenewPeriodForStreamsInSeconds);
@@ -87,6 +91,12 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
     return this;
   }
 
+  public AbfsOutputStreamContext withExecutorService(
+      final ListeningExecutorService _executorService) {
+    executorService = _executorService;
+    return this;
+  }
+
   public int getWriteBufferSize() {
     return writeBufferSize;
   }
@@ -113,5 +123,9 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   public int getMaxWriteRequestsToQueue() {
     return this.maxWriteRequestsToQueue;
+  }
+
+  public ListeningExecutorService getExecutorService() {
+    return executorService;
   }
 }

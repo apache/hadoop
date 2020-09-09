@@ -158,9 +158,9 @@ public class AbfsConfiguration{
       DefaultValue = AZURE_BLOCK_LOCATION_HOST_DEFAULT)
   private String azureBlockLocationHost;
 
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_CONCURRENT_CONNECTION_VALUE_OUT,
-      MinValue = 1,
-      DefaultValue = MAX_CONCURRENT_WRITE_THREADS)
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_MAX_THREADS,
+      MinValue = -256,
+      DefaultValue = -4)
   private int maxConcurrentWriteThreads;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_LIST_MAX_RESULTS,
