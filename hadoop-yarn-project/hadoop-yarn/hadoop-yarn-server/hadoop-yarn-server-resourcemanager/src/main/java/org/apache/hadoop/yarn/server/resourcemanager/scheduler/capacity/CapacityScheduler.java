@@ -3284,4 +3284,12 @@ public class CapacityScheduler extends
   public void setMaxRunningAppsEnforcer(CSMaxRunningAppsEnforcer enforcer) {
     this.maxRunningEnforcer = enforcer;
   }
+
+  /**
+   * Returning true as capacity scheduler supports placement constraints.
+   */
+  @Override
+  public boolean placementConstraintEnabled() {
+    return true;
+  }
 }

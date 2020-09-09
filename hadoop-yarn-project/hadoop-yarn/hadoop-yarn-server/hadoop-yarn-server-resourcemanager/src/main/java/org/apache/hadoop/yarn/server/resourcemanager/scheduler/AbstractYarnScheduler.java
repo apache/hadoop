@@ -884,6 +884,15 @@ public abstract class AbstractYarnScheduler
         + " does not support reservations");
   }
 
+  /**
+   * By default placement constraint is disabled. Schedulers which support
+   * placement constraint can override this value.
+   * @return enabled or not
+   */
+  public boolean placementConstraintEnabled() {
+    return false;
+  }
+
   protected void refreshMaximumAllocation(Resource newMaxAlloc) {
     nodeTracker.setConfiguredMaxAllocation(newMaxAlloc);
   }
