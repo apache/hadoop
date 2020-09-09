@@ -84,10 +84,6 @@ public class TestRouterAdmin {
   private static List<MountTable> mockMountTable;
   private static StateStoreService stateStore;
   private static RouterRpcClient mockRpcClient;
-  private static final Map<RemoteLocation, HdfsFileStatus> mockResponse0 =
-      new HashMap<>();
-  private static final Map<RemoteLocation, HdfsFileStatus> mockResponse1 =
-      new HashMap<>();
 
   @BeforeClass
   public static void globalSetUp() throws Exception {
@@ -135,20 +131,24 @@ public class TestRouterAdmin {
     FieldSetter.setField(spyRpcServer,
         RouterRpcServer.class.getDeclaredField("rpcClient"),
         mockRpcClient);
-    RemoteLocation remoteLocation0 = new RemoteLocation("ns0", "/testdir", null);
-    RemoteLocation remoteLocation1 = new RemoteLocation("ns1", "/", null);
-    mockResponse0.put(remoteLocation0,
+    RemoteLocation remoteLocation0 =
+        new RemoteLocation("ns0", "/testdir", null);
+    RemoteLocation remoteLocation1 =
+        new RemoteLocation("ns1", "/", null);
+    final Map<RemoteLocation, HdfsFileStatus> MockResponse0 = new HashMap<>();
+    final Map<RemoteLocation, HdfsFileStatus> MockResponse1 = new HashMap<>();
+    MockResponse0.put(remoteLocation0,
         new HdfsFileStatus.Builder().build());
-    Mockito.doReturn(mockResponse0).when(mockRpcClient).invokeConcurrent(
+    Mockito.doReturn(MockResponse0).when(mockRpcClient).invokeConcurrent(
         Mockito.eq(Lists.newArrayList(remoteLocation0)),
         Mockito.any(RemoteMethod.class),
         Mockito.eq(false),
         Mockito.eq(false),
         Mockito.eq(HdfsFileStatus.class)
     );
-    mockResponse1.put(remoteLocation1,
+    MockResponse1.put(remoteLocation1,
         new HdfsFileStatus.Builder().build());
-    Mockito.doReturn(mockResponse1).when(mockRpcClient).invokeConcurrent(
+    Mockito.doReturn(MockResponse1).when(mockRpcClient).invokeConcurrent(
         Mockito.eq(Lists.newArrayList(remoteLocation1)),
         Mockito.any(RemoteMethod.class),
         Mockito.eq(false),
@@ -175,6 +175,7 @@ public class TestRouterAdmin {
     MountTable newEntry = MountTable.newInstance(
         "/testpath", Collections.singletonMap("ns0", "/testdir"),
         Time.now(), Time.now());
+
     RouterClient client = routerContext.getAdminClient();
     MountTableManager mountTable = client.getMountTableManager();
 

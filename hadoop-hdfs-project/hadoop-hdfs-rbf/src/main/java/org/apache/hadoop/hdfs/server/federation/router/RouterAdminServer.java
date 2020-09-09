@@ -583,7 +583,7 @@ public class RouterAdminServer extends AbstractService
    */
   private List<String> getDestinationNameServices(
       GetDestinationRequest request, List<RemoteLocation> locations)
-    throws IOException {
+      throws IOException {
     final String src = request.getSrcPath();
     final List<String> nsIds = new ArrayList<>();
     RouterRpcServer rpcServer = this.router.getRpcServer();
