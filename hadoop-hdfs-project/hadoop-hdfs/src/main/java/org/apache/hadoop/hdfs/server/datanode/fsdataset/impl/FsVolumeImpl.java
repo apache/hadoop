@@ -491,9 +491,13 @@ public class FsVolumeImpl implements FsVolumeSpi {
     // DISK and ARCHIVAL on same disk should share the same amount of reserved capacity.
     // When calculating actual non dfs used,
     // exclude DFS used capacity by another volume.
-    if (enableSameDiskArchival && (storageType == StorageType.DISK || storageType == StorageType.ARCHIVE)) {
-      StorageType counterpartStorageType = storageType == StorageType.DISK ? StorageType.ARCHIVE : StorageType.DISK;
-      FsVolumeReference counterpartRef = dataset.getVolumeRef(device, counterpartStorageType);
+    if (enableSameDiskArchival &&
+        (storageType == StorageType.DISK
+            || storageType == StorageType.ARCHIVE)) {
+      StorageType counterpartStorageType = storageType == StorageType.DISK
+          ? StorageType.ARCHIVE : StorageType.DISK;
+      FsVolumeReference counterpartRef = dataset
+          .getVolumeRef(device, counterpartStorageType);
       if (counterpartRef != null) {
         FsVolumeImpl counterpartVol = (FsVolumeImpl) counterpartRef.getVolume();
         long used = getDfUsed() - getDfsUsed() - counterpartVol.getDfsUsed();

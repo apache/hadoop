@@ -463,21 +463,25 @@ public class TestFsVolumeList {
     diskVolDir.mkdirs();
     archivalVolDir.mkdirs();
     double reservedForArchival = 0.75;
-    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING, true);
-    conf.setDouble(DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_PERCENTAGE, reservedForArchival);
+    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING,
+        true);
+    conf.setDouble(DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_PERCENTAGE,
+        reservedForArchival);
     FsVolumeImpl diskVolume = new FsVolumeImplBuilder()
         .setConf(conf)
         .setDataset(dataset)
         .setStorageID("storage-id")
         .setStorageDirectory(
-            new StorageDirectory(StorageLocation.parse(diskVolDir.getPath())))
+            new StorageDirectory(
+                StorageLocation.parse(diskVolDir.getPath())))
         .build();
     FsVolumeImpl archivalVolume = new FsVolumeImplBuilder()
         .setConf(conf)
         .setDataset(dataset)
         .setStorageID("storage-id")
         .setStorageDirectory(
-            new StorageDirectory(StorageLocation.parse("[ARCHIVE]" + archivalVolDir.getPath())))
+            new StorageDirectory(StorageLocation
+                .parse("[ARCHIVE]" + archivalVolDir.getPath())))
         .build();
     FsVolumeList volumeList = new FsVolumeList(
         Collections.<VolumeFailureInfo>emptyList(), blockScanner, blockChooser, conf);
@@ -489,16 +493,19 @@ public class TestFsVolumeList {
 
     // 1) getVolumeRef should return correct reference.
     assertEquals(diskVolume,
-        volumeList.getVolumeRefByDeviceAndStorageType(device, StorageType.DISK).getVolume());
+        volumeList.getVolumeRefByDeviceAndStorageType(
+            device, StorageType.DISK).getVolume());
     assertEquals(archivalVolume,
-        volumeList.getVolumeRefByDeviceAndStorageType(device, StorageType.ARCHIVE).getVolume());
+        volumeList.getVolumeRefByDeviceAndStorageType(
+            device, StorageType.ARCHIVE).getVolume());
 
     // 1) removeVolume should work as expected
     volumeList.removeVolume(diskVolume.getStorageLocation(), true);
     assertEquals(null,
-        volumeList.getVolumeRefByDeviceAndStorageType(device, StorageType.DISK));
-    assertEquals(archivalVolume,
-        volumeList.getVolumeRefByDeviceAndStorageType(device, StorageType.ARCHIVE).getVolume());
+        volumeList.getVolumeRefByDeviceAndStorageType(
+            device, StorageType.DISK));
+    assertEquals(archivalVolume, volumeList.getVolumeRefByDeviceAndStorageType(
+        device, StorageType.ARCHIVE).getVolume());
   }
 
   // Test dfs stats with same disk archival
@@ -520,8 +527,10 @@ public class TestFsVolumeList {
 
     // Set up DISK and ARCHIVAL and capacity.
     conf.setLong(DFSConfigKeys.DFS_DATANODE_DU_RESERVED_KEY, duReserved);
-    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING, true);
-    conf.setDouble(DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_PERCENTAGE, reservedForArchival);
+    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING,
+        true);
+    conf.setDouble(DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_PERCENTAGE,
+        reservedForArchival);
     FsVolumeImpl diskVolume = new FsVolumeImplBuilder()
         .setConf(conf)
         .setDataset(dataset)
@@ -534,7 +543,8 @@ public class TestFsVolumeList {
         .setDataset(dataset)
         .setStorageID("storage-id")
         .setStorageDirectory(
-            new StorageDirectory(StorageLocation.parse("[ARCHIVE]" + archivalVolDir.getPath())))
+            new StorageDirectory(
+                StorageLocation.parse("[ARCHIVE]" + archivalVolDir.getPath())))
         .build();
     FsVolumeImpl spyDiskVolume = Mockito.spy(diskVolume);
     FsVolumeImpl spyArchivalVolume = Mockito.spy(archivalVolume);
@@ -545,23 +555,33 @@ public class TestFsVolumeList {
     Mockito.doReturn(dfAvailable).when(spyArchivalVolume).getDfAvailable();
 
     // 1) getCapacity() should reflect configured archive storage percentage.
-    long diskStorageTypeCapacity = (long) ((dfCapacity - duReserved) * (1 - reservedForArchival));
+    long diskStorageTypeCapacity =
+        (long) ((dfCapacity - duReserved) * (1 - reservedForArchival));
     assertEquals(diskStorageTypeCapacity, spyDiskVolume.getCapacity());
-    long archiveStorageTypeCapacity = (long) ((dfCapacity - duReserved) * (reservedForArchival));
+    long archiveStorageTypeCapacity =
+        (long) ((dfCapacity - duReserved) * (reservedForArchival));
     assertEquals(archiveStorageTypeCapacity, spyArchivalVolume.getCapacity());
 
     // 2) getActualNonDfsUsed() should count in both DISK and ARCHIVE.
     // expectedActualNonDfsUsage =
     // diskUsage - archivalDfsUsage - diskDfsUsage
-    Mockito.doReturn(spyArchivalVolume.obtainReference()).when(dataset).getVolumeRef(anyString(), eq(StorageType.ARCHIVE));
-    Mockito.doReturn(spyDiskVolume.obtainReference()).when(dataset).getVolumeRef(anyString(), eq(StorageType.DISK));
+    Mockito.doReturn(spyArchivalVolume.obtainReference())
+        .when(dataset).getVolumeRef(anyString(), eq(StorageType.ARCHIVE));
+    Mockito.doReturn(spyDiskVolume.obtainReference())
+        .when(dataset).getVolumeRef(anyString(), eq(StorageType.DISK));
 
     long expectedActualNonDfsUsage = 400L;
-    Mockito.doReturn(diskDfsUsage).when(spyDiskVolume).getDfsUsed();
-    Mockito.doReturn(archivalDfsUsage).when(spyArchivalVolume).getDfsUsed();
-    Mockito.doReturn(dfUsage).when(spyDiskVolume).getDfUsed();
-    Mockito.doReturn(dfUsage).when(spyArchivalVolume).getDfUsed();
-    assertEquals(expectedActualNonDfsUsage, spyDiskVolume.getActualNonDfsUsed());
-    assertEquals(expectedActualNonDfsUsage, spyArchivalVolume.getActualNonDfsUsed());
+    Mockito.doReturn(diskDfsUsage)
+        .when(spyDiskVolume).getDfsUsed();
+    Mockito.doReturn(archivalDfsUsage)
+        .when(spyArchivalVolume).getDfsUsed();
+    Mockito.doReturn(dfUsage)
+        .when(spyDiskVolume).getDfUsed();
+    Mockito.doReturn(dfUsage)
+        .when(spyArchivalVolume).getDfUsed();
+    assertEquals(expectedActualNonDfsUsage,
+        spyDiskVolume.getActualNonDfsUsed());
+    assertEquals(expectedActualNonDfsUsage,
+        spyArchivalVolume.getActualNonDfsUsed());
   }
 }

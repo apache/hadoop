@@ -65,7 +65,8 @@ class FsVolumeList {
   private final BlockScanner blockScanner;
 
   private boolean enableSameDiskTiering;
-  private ConcurrentMap<String, Map<StorageType, FsVolumeImpl>> deviceVolumeMapping;
+  private ConcurrentMap<String, Map<StorageType, FsVolumeImpl>>
+      deviceVolumeMapping;
 
   FsVolumeList(List<VolumeFailureInfo> initialVolumeFailureInfos,
       BlockScanner blockScanner,
@@ -98,15 +99,19 @@ class FsVolumeList {
    * Get vol by device and storage type.
    * This is used when same-disk-tiering is enabled.
    */
-  FsVolumeReference getVolumeRefByDeviceAndStorageType(String device, StorageType storageType) {
-    if (deviceVolumeMapping != null && deviceVolumeMapping.containsKey(device)) {
+  FsVolumeReference getVolumeRefByDeviceAndStorageType(String device,
+      StorageType storageType) {
+    if (deviceVolumeMapping != null
+        && deviceVolumeMapping.containsKey(device)) {
       try {
-        FsVolumeImpl volume = deviceVolumeMapping.get(device).getOrDefault(storageType, null);
+        FsVolumeImpl volume = deviceVolumeMapping
+            .get(device).getOrDefault(storageType, null);
         if (volume != null) {
           return volume.obtainReference();
         }
       } catch (ClosedChannelException e) {
-        FsDatasetImpl.LOG.warn("Volume closed when getting volume by device and storage type: "
+        FsDatasetImpl.LOG.warn("Volume closed when getting volume" +
+            " by device and storage type: "
             + device + ", " + storageType);
       }
     }
@@ -328,7 +333,8 @@ class FsVolumeList {
       String device = volume.getDevice();
       if (!device.isEmpty()) {
         Map<StorageType, FsVolumeImpl> storageTypeMap =
-            deviceVolumeMapping.getOrDefault(device, new ConcurrentHashMap<>());
+            deviceVolumeMapping
+                .getOrDefault(device, new ConcurrentHashMap<>());
         if (storageTypeMap.containsKey(volume.getStorageType())) {
           FsDatasetImpl.LOG.error("Found storage type already exist." +
               " Skipping for now. Please check disk configuration");
