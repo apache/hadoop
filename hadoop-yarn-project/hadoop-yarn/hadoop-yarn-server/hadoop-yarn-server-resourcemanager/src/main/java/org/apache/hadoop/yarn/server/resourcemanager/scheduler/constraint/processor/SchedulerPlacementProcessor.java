@@ -22,7 +22,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +38,7 @@ public class SchedulerPlacementProcessor extends AbstractPlacementProcessor {
       AllocateRequest request, AllocateResponse response) throws YarnException {
     if (request.getSchedulingRequests() != null
         && !request.getSchedulingRequests().isEmpty()) {
-      if (!(scheduler instanceof CapacityScheduler)) {
+      if (!scheduler.placementConstraintEnabled()) {
         String message = "Found non empty SchedulingRequest of "
             + "AllocateRequest for application=" + appAttemptId.toString()
             + ", however the configured scheduler="
