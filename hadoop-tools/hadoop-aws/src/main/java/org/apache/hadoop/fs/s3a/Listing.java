@@ -40,7 +40,7 @@ import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
-import org.apache.hadoop.fs.functional.RemoteIterators;
+import org.apache.hadoop.util.functional.RemoteIterators;
 
 import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
@@ -214,7 +214,7 @@ public class Listing extends AbstractStoreOperation {
    */
   public RemoteIterator<S3ALocatedFileStatus> createSingleStatusIterator(
       S3ALocatedFileStatus status) {
-    return RemoteIterators.toRemoteIterator(status);
+    return RemoteIterators.remoteIteratorFromSingleton(status);
   }
 
   /**

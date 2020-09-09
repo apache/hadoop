@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.functional;
+package org.apache.hadoop.util.functional;
 
 import java.io.IOException;
 

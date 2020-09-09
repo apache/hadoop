@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.s3a.s3guard;
 import java.io.IOException;
 import java.util.Iterator;
 
-import org.apache.hadoop.fs.functional.RuntimeIOException;
+import org.apache.hadoop.util.functional.RuntimeIOException;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.Retries;
 

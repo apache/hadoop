@@ -16,25 +16,36 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.functional;
+package org.apache.hadoop.util.functional;
 
 import java.io.IOException;
 
 /**
- * Function of arity 2 which may raise an IOException.
- * @param <T> type of arg1
- * @param <U> type of arg2
- * @param <R> type of return value.
+ * Version of java.util.function.Consumer which raises
+ * exceptions.
+ * @param <T> type of argument,.
  */
 @FunctionalInterface
-public interface BiFunctionRaisingIOE<T, U, R> {
+public interface ConsumerRaisingIOE<T> {
 
   /**
-   * Apply the function.
-   * @param t argument 1
-   * @param u argument 2
-   * @return result
-   * @throws IOException Any IO failure
+   * Process the argument.
+   * @param t type
+   * @throws IOException if needed
    */
-  R apply(T t, U u) throws IOException;
+  void accept(T t) throws IOException;
+
+  /**
+   * after calling {@link #accept(Object)},
+   * invoke the next consumer in the chain.
+   * @param next next consumer
+   * @return the chain.
+   */
+  default ConsumerRaisingIOE<T> andThen(
+      ConsumerRaisingIOE<? super T> next) {
+    return (T t) -> {
+      accept(t);
+      next.accept(t);
+    };
+  }
 }

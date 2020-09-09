@@ -31,7 +31,7 @@ import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.fs.functional.RuntimeIOException;
+import org.apache.hadoop.util.functional.RuntimeIOException;
 import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.impl.FutureIOSupport.raiseInnerCause;

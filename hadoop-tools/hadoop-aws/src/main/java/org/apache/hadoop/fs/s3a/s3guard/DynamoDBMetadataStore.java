@@ -79,8 +79,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.fs.functional.CallableRaisingIOE;
-import org.apache.hadoop.fs.functional.RuntimeIOException;
+import org.apache.hadoop.util.functional.CallableRaisingIOE;
+import org.apache.hadoop.util.functional.RemoteIterators;
+import org.apache.hadoop.util.functional.RuntimeIOException;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.AWSServiceThrottledException;
 import org.apache.hadoop.fs.s3a.Constants;
@@ -639,8 +640,9 @@ public class DynamoDBMetadataStore implements MetadataStore,
       LOG.debug("Subtree path {} is deleted; this will be a no-op", path);
       return;
     }
-    deleteEntries(new InternalIterators.PathFromRemoteStatusIterator(
-        new DescendantsIterator(this, meta)),
+    deleteEntries(RemoteIterators.mappingRemoteIterator(
+        new DescendantsIterator(this, meta),
+        FileStatus::getPath),
         operationState);
   }
 
@@ -649,8 +651,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
   public void deletePaths(Collection<Path> paths,
       final BulkOperationState operationState)
       throws IOException {
-    deleteEntries(
-        new InternalIterators.RemoteIteratorFromIterator<>(paths.iterator()),
+    deleteEntries(RemoteIterators.remoteIteratorFromIterable(paths),
         operationState);
   }
 

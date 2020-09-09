@@ -17,19 +17,25 @@
  */
 
 /**
- * Support for functional programming within the Hadoop (filesystem) APIs.
+ * Support for functional programming within the Hadoop APIs.
  * <p></p>
- * Much of this (RemoteIterable, the various consumers and
- * functions) are needed simply to cope with Java's checked exceptions and
+ * Much of this is needed simply to cope with Java's checked exceptions and
  * the fact that the java.util.function can only throw runtime exceptions.
  * <p></p>
  * Pretty much all the Hadoop FS APIs raise IOExceptions, hence the need
  * for these classes. If Java had made a different decision about the
  * nature of exceptions, life would be better.
+ * <p></p>
+ * Do note that the {@link org.apache.hadoop.util.functional.RemoteIterators}
+ * iterators go beyond that of the java ones, in terms of declaring themselves
+ * Closeable and implementors of
+ * {@link org.apache.hadoop.fs.statistics.IOStatisticsSource}; a chain
+ * of wrapped iterators can supply statistics of the inner iterators, and
+ * encourage close() to be called after use.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-package org.apache.hadoop.fs.functional;
+package org.apache.hadoop.util.functional;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;

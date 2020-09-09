@@ -32,8 +32,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSBuilder;
-import org.apache.hadoop.fs.functional.CallableRaisingIOE;
-import org.apache.hadoop.fs.functional.RuntimeIOException;
+import org.apache.hadoop.util.functional.CallableRaisingIOE;
+import org.apache.hadoop.util.functional.RuntimeIOException;
 
 /**
  * Support for future IO and the FS Builder subclasses.

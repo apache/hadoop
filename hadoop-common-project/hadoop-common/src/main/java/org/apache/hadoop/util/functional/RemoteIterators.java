@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.functional;
+package org.apache.hadoop.util.functional;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -89,7 +90,8 @@ public final class RemoteIterators {
    * @param <T> type
    * @return a remote iterator
    */
-  public static <T> RemoteIterator<T> toRemoteIterator(@Nullable T singleton) {
+  public static <T> RemoteIterator<T> remoteIteratorFromSingleton(
+      @Nullable T singleton) {
     return new SingletonIterator<>(singleton);
   }
 
@@ -98,8 +100,9 @@ public final class RemoteIterators {
    * @param <T> type
    * @return a remote iterator
    */
-  public static <T> RemoteIterator<T> toRemoteIterator(Iterator<T> iterator) {
-    return new FromIterable<>(iterator);
+  public static <T> RemoteIterator<T> remoteIteratorFromIterator(
+      Iterator<T> iterator) {
+    return new FromIterator<>(iterator);
   }
 
   /**
@@ -108,8 +111,9 @@ public final class RemoteIterators {
    * @param <T> type
    * @return a remote iterator
    */
-  public static <T> RemoteIterator<T> toRemoteIterator(Iterable<T> iterable) {
-    return new FromIterable<>(iterable);
+  public static <T> RemoteIterator<T> remoteIteratorFromIterable(
+      Iterable<T> iterable) {
+    return new FromIterator<>(iterable.iterator());
   }
 
   /**
@@ -117,8 +121,53 @@ public final class RemoteIterators {
    * @param <T> type
    * @return a remote iterator
    */
-  public static <T> RemoteIterator<T> toRemoteIterator(T[] array) {
-    return new FromIterable<>(Arrays.stream(array).iterator());
+  public static <T> RemoteIterator<T> remoteIteratorFromArray(T[] array) {
+    return new FromIterator<>(Arrays.stream(array).iterator());
+  }
+
+  /**
+   * Create an iterator from an iterator and a transformation function.
+   * @param <S> source type
+   * @param <T> result type
+   * @param iterator source
+   * @param mapper transformation
+   * @return a remote iterator
+   */
+  public static <S, T> RemoteIterator<T> mappingRemoteIterator(
+      RemoteIterator<S> iterator,
+      FunctionRaisingIOE<? super S, T> mapper) {
+    return new MappingRemoteIterator<>(iterator, mapper);
+  }
+
+  /**
+   * Create an iterator from an iterator and a filter.
+   * <p></p>
+   * Elements are filtered in the hasNext() method; if not used
+   * the filtering will be done on demand in the {@code next()}
+   * call.
+   * @param <S> type
+   * @param iterator source
+   * @param filter filter
+   * @return a remote iterator
+   */
+  public static <S> RemoteIterator<S> filteringRemoteIterator(
+      RemoteIterator<S> iterator,
+      FunctionRaisingIOE<? super S, Boolean> filter) {
+    return new FilteringRemoteIterator<>(iterator, filter);
+  }
+
+  /**
+   * This adds an extra close operation alongside the passthrough
+   * to any Closeable.close() method supported by the source iterator.
+   * @param iterator source
+   * @param toClose extra object to close.
+   * @param <S> source type.
+   * @return a new iterator
+   */
+  public static <S> RemoteIterator<S> closingRemoteIterator(
+      RemoteIterator<S> iterator,
+      Closeable toClose) {
+    return new CloseRemoteIterator<>(iterator, toClose);
   }
 
   /**
@@ -155,6 +204,8 @@ public final class RemoteIterators {
    * The number of entries processed is returned, as it is useful to
    * know this, especially during tests or when reporting values
    * to users.
+   * <p></p>
+   * This does not close the iterator afterwards.
    * @param source iterator source
    * @param consumer consumer of the values.
    * @return the number of elements processed
@@ -176,36 +227,6 @@ public final class RemoteIterators {
     return count;
   }
 
-  /**
-   * Create an iterator from an iterator and a transformation function.
-   * @param <S> source type
-   * @param <T> result type
-   * @param iterator source
-   * @param mapper transformation
-   * @return a remote iterator
-   */
-  public static <S, T> RemoteIterator<T> mappingRemoteIterator(
-      RemoteIterator<S> iterator,
-      FunctionRaisingIOE<? super S, T> mapper) {
-    return new MappingRemoteIterator<>(iterator, mapper);
-  }
-
-  /**
-   * Create an iterator from an iterator and a filter.
-   * <p></p>
-   * Elements are filtered in the hasNext() method; if not used
-   * the filtering will be done on demand in the {@code next()}
-   * call.
-   * @param <S> type
-   * @param iterator source
-   * @param filter filter
-   * @return a remote iterator
-   */
-  public static <S> RemoteIterator<S> filteringRemoteIterator(
-      RemoteIterator<S> iterator,
-      FunctionRaisingIOE<? super S, Boolean> filter) {
-    return new FilteringRemoteIterator<>(iterator, filter);
-  }
 
   /**
    * A remote iterator from a singleton. It has a single next()
@@ -223,26 +244,30 @@ public final class RemoteIterators {
      */
     private T singleton;
 
+    /** Has the entry been processed?  */
+    private boolean processed;
+
     /**
      * Instantiate.
      * @param singleton single value...may be null
      */
     private SingletonIterator(@Nullable T singleton) {
       this.singleton = singleton;
+      // if the entry is null, consider it processed.
+      this.processed = singleton == null;
     }
 
     @Override
     public boolean hasNext() throws IOException {
-      return singleton != null;
+      return !processed;
     }
 
     @SuppressWarnings("NewExceptionWithoutArguments")
     @Override
     public T next() throws IOException {
       if (hasNext()) {
-        T r = singleton;
-        singleton = null;
-        return r;
+        processed = true;
+        return singleton;
       } else {
         throw new NoSuchElementException();
       }
@@ -259,6 +284,7 @@ public final class RemoteIterators {
           + (singleton != null ? singleton : "")
           + '}';
     }
+
   }
 
   /**
@@ -268,33 +294,27 @@ public final class RemoteIterators {
    * If the iterator is a source of statistics that is passed through.
    * <p></p>
    * The {@link #close()} will close the source iterator if it is
-   * Closeable; it will also do the same if the origin was an iterable
-   * and it is closeable. That is needed to support
-   * java.nio directory listings.
+   * Closeable;
    * @param <T> iterator type.
    */
-  private static final class FromIterable<T>
+  private static final class FromIterator<T>
       implements RemoteIterator<T>, IOStatisticsSource, Closeable {
 
+    /**
+     * inner iterator..
+     */
     private final Iterator<? extends T> source;
-    private final Closeable origin;
 
-    private FromIterable(Iterator<? extends T> source) {
-      this.source = requireNonNull(source);
-      this.origin = null;
-    }
+    private final Closeable sourceToClose;
+
 
     /**
-     * Construct from an iterable.
-     * If the origin is closeable it will be closed in
-     * the close() call.
-     * @param origin origin.
+     * Construct from an interator.
+     * @param source source iterator.
      */
-    private FromIterable(final Iterable<T> origin) {
-      this.source = origin.iterator();
-      this.origin = origin instanceof Closeable
-          ? (Closeable) origin
-          : null;
+    private FromIterator(Iterator<? extends T> source) {
+      this.source = requireNonNull(source);
+      sourceToClose = new MaybeClose(source);
     }
 
     @Override
@@ -319,15 +339,8 @@ public final class RemoteIterators {
 
     @Override
     public void close() throws IOException {
-      try {
-        if (source instanceof Closeable) {
-          ((Closeable) source).close();
-        }
-      } finally {
-        if (origin != null) {
-          origin.close();
-        }
-      }
+      sourceToClose.close();
+
     }
   }
 
@@ -345,8 +358,11 @@ public final class RemoteIterators {
      */
     private final RemoteIterator<S> source;
 
+    private final Closeable sourceToClose;
+
     protected WrappingRemoteIterator(final RemoteIterator<S> source) {
       this.source = requireNonNull(source);
+      sourceToClose = new MaybeClose(source);
     }
 
     protected RemoteIterator<S> getSource() {
@@ -360,10 +376,14 @@ public final class RemoteIterators {
 
     @Override
     public void close() throws IOException {
-      if (source instanceof Closeable) {
-        ((Closeable) source).close();
-      }
+      sourceToClose.close();
     }
+
+    @Override
+    public String toString() {
+      return source.toString();
+    }
+
   }
 
   /**
@@ -374,6 +394,9 @@ public final class RemoteIterators {
   private static final class MappingRemoteIterator<S, T>
       extends WrappingRemoteIterator<S, T> {
 
+    /**
+     * Mapper to invoke.
+     */
     private final FunctionRaisingIOE<? super S, T> mapper;
 
     private MappingRemoteIterator(
@@ -488,6 +511,84 @@ public final class RemoteIterators {
     @Override
     public String toString() {
       return "FilteringRemoteIterator{" + getSource() + '}';
+    }
+  }
+
+  /**
+   * A wrapping remote iterator which adds another entry to
+   * close. This is to assist cleanup.
+   * @param <S> type
+   */
+  private static final class CloseRemoteIterator<S>
+      extends WrappingRemoteIterator<S, S> {
+
+    private final MaybeClose toClose;
+
+    private CloseRemoteIterator(
+        final RemoteIterator<S> source,
+        final Closeable toClose) {
+      super(source);
+      this.toClose = new MaybeClose(Objects.requireNonNull(toClose));
+    }
+
+    @Override
+    public boolean hasNext() throws IOException {
+      return getSource().hasNext();
+    }
+
+    @Override
+    public S next() throws IOException {
+      return getSource().next();
+    }
+
+    @Override
+    public void close() throws IOException {
+      try {
+        super.close();
+      } finally {
+        toClose.close();
+      }
+    }
+  }
+
+  /**
+   * Class to help with Closeable logic, where sources may/may not
+   * be closeable, only one invocation is allowed.
+   */
+  private static final class MaybeClose implements Closeable {
+
+    private Closeable toClose;
+
+    /**
+     * Construct.
+     * @param o object to close.
+     */
+    private MaybeClose(Object o) {
+      this(o, true);
+    }
+
+    /**
+     * Construct -close the object if it is closeable and close==true
+     * @param o object to close.
+     * @param close should close?
+     */
+    private MaybeClose(Object o, boolean close) {
+      if (close && o instanceof Closeable) {
+        this.toClose = (Closeable) o;
+      } else {
+        this.toClose = null;
+      }
+    }
+
+    @Override
+    public void close() throws IOException {
+      if (toClose != null) {
+        try {
+          toClose.close();
+        } finally {
+          toClose = null;
+        }
+      }
     }
   }
 }

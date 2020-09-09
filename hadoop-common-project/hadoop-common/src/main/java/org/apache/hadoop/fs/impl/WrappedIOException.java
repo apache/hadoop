@@ -25,7 +25,7 @@ import com.google.common.base.Preconditions;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.functional.RuntimeIOException;
+import org.apache.hadoop.util.functional.RuntimeIOException;
 
 /**
  * A wrapper for an IOException which
