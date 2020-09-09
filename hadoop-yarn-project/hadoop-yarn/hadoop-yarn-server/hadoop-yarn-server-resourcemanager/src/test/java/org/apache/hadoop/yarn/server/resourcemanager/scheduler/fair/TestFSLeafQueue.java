@@ -36,6 +36,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.metrics.CustomResourceMetricValue;
@@ -164,7 +165,7 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
     RMContext rmContext = resourceManager.getRMContext();
     final FSAppAttempt app =
         new FSAppAttempt(scheduler, applicationAttemptId, "user1",
-            schedulable, null, rmContext);
+            schedulable, null, rmContext, Priority.newInstance(1));
 
     // this needs to be in sync with the number of runnables declared below
     int testThreads = 2;

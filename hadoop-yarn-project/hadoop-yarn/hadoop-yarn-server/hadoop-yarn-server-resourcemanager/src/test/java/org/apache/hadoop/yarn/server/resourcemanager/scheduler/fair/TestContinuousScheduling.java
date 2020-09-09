@@ -133,7 +133,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     ApplicationPlacementContext placementCtx =
         new ApplicationPlacementContext("queue11");
     scheduler.addApplication(appAttemptId.getApplicationId(), "queue11",
-        "user11", false, placementCtx);
+        "user11", false, placementCtx, Priority.newInstance(1));
     scheduler.addApplicationAttempt(appAttemptId, false, false);
     List<ResourceRequest> ask = new ArrayList<>();
     ask.add(createResourceRequest(1024, 1, ResourceRequest.ANY, 1, 1, true));
@@ -174,7 +174,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     ApplicationPlacementContext placementCtx =
         new ApplicationPlacementContext("queue11");
     scheduler.addApplication(appAttemptId.getApplicationId(), "queue11",
-        "user11", false, placementCtx);
+        "user11", false, placementCtx, Priority.newInstance(1));
     scheduler.addApplicationAttempt(appAttemptId, false, false);
     List<ResourceRequest> ask = new ArrayList<>();
     ResourceRequest request =
@@ -373,7 +373,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     ApplicationPlacementContext placementCtx =
         new ApplicationPlacementContext("root.queue1");
     scheduler.addApplication(id11.getApplicationId(), "root.queue1", "user1",
-        false, placementCtx);
+        false, placementCtx, Priority.newInstance(1));
     scheduler.addApplicationAttempt(id11, false, false);
     fsAppAttempt = scheduler.getApplicationAttempt(id11);
 

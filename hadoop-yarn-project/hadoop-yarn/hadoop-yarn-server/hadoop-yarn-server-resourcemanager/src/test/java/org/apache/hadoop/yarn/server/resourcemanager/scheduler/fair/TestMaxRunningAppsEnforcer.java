@@ -27,6 +27,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -74,7 +75,7 @@ public class TestMaxRunningAppsEnforcer {
     ApplicationId appId = ApplicationId.newInstance(0l, appNum++);
     ApplicationAttemptId attId = ApplicationAttemptId.newInstance(appId, 0);
     FSAppAttempt app = new FSAppAttempt(scheduler, attId, user, queue, null,
-        rmContext);
+        rmContext, Priority.newInstance(1));
     boolean runnable = maxAppsEnforcer.canAppBeRunnable(queue, app);
     queue.addApp(app, runnable);
     if (runnable) {

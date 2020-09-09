@@ -36,6 +36,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
@@ -431,7 +432,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
         new ApplicationPlacementContext(queueName);
 
     scheduler.addApplication(id11.getApplicationId(), queueName, "user1",
-        false, placementCtx);
+        false, placementCtx, Priority.newInstance(1));
     scheduler.addApplicationAttempt(id11, false, false);
     List<ResourceRequest> ask1 = new ArrayList<ResourceRequest>();
     ResourceRequest request1 =
@@ -1384,7 +1385,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     ApplicationPlacementContext placementCtx =
         new ApplicationPlacementContext("queue1");
     scheduler.addApplication(attemptId.getApplicationId(), "queue1", "user1",
-            false, placementCtx);
+            false, placementCtx, Priority.newInstance(1));
     scheduler.addApplicationAttempt(attemptId, false, false);
     List<ResourceRequest> asks = new ArrayList<ResourceRequest>();
     asks.add(createResourceRequest(2048, node2.getRackName(), 1, 1, false));
@@ -2072,7 +2073,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     ApplicationPlacementContext placementCtx =
         new ApplicationPlacementContext("root.queue1");
     scheduler.addApplication(id11.getApplicationId(),
-        "root.queue1", "user1", false, placementCtx);
+        "root.queue1", "user1", false, placementCtx, Priority.newInstance(1));
     scheduler.addApplicationAttempt(id11, false, false);
     List<ResourceRequest> ask1 = new ArrayList<ResourceRequest>();
     ResourceRequest request1 = createResourceRequest(minReqSize * 2,
@@ -2086,7 +2087,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     createMockRMApp(id21);
     placementCtx = new ApplicationPlacementContext("root.queue2");
     scheduler.addApplication(id21.getApplicationId(),
-        "root.queue2", "user1", false, placementCtx);
+        "root.queue2", "user1", false, placementCtx, Priority.newInstance(1));
     scheduler.addApplicationAttempt(id21, false, false);
     List<ResourceRequest> ask2 = new ArrayList<ResourceRequest>();
     ResourceRequest request2 = createResourceRequest(2 * minReqSize,
@@ -2102,7 +2103,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     ApplicationAttemptId id22 = createAppAttemptId(2, 2);
     createMockRMApp(id22);
     scheduler.addApplication(id22.getApplicationId(),
-        "root.queue2", "user1", false, placementCtx);
+        "root.queue2", "user1", false, placementCtx, Priority.newInstance(1));
     scheduler.addApplicationAttempt(id22, false, false);
     List<ResourceRequest> ask3 = new ArrayList<ResourceRequest>();
     ResourceRequest request4 = createResourceRequest(minReqSize,
@@ -2671,7 +2672,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     ApplicationPlacementContext placementCtx =
         new ApplicationPlacementContext("queue1");
     scheduler.addApplication(attemptId.getApplicationId(), "queue1", "user1",
-        false, placementCtx);
+        false, placementCtx, Priority.newInstance(1));
     scheduler.addApplicationAttempt(attemptId, false, false);
     
     // 1 request with 2 nodes on the same rack. another request with 1 node on
@@ -3008,7 +3009,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     ApplicationPlacementContext placementCtx =
         new ApplicationPlacementContext(queue);
     scheduler.addApplication(attId.getApplicationId(), queue, user, false,
-        placementCtx);
+        placementCtx, Priority.newInstance(1));
 
     numTries = 0;
     while (application.getFinishTime() == 0 && numTries < MAX_TRIES) {
@@ -4324,7 +4325,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     ApplicationPlacementContext placementCtx =
         new ApplicationPlacementContext("root.queue1");
     scheduler.addApplication(id11.getApplicationId(), "root.queue1", "user1",
-        false, placementCtx);
+        false, placementCtx, Priority.newInstance(1));
     scheduler.addApplicationAttempt(id11, false, false);
 
     List<ResourceRequest> ask1 = new ArrayList<>();
@@ -5322,7 +5323,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     ApplicationPlacementContext placementCtx =
         new ApplicationPlacementContext("root.queue1");
     scheduler.addApplication(appAttemptId.getApplicationId(), "root.queue1",
-        "user1", false, placementCtx);
+        "user1", false, placementCtx, Priority.newInstance(1));
     scheduler.addApplicationAttempt(appAttemptId, false, false);
 
     // Create container request that goes to a specific node.

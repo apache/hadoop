@@ -26,6 +26,7 @@ import java.util.Set;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
@@ -577,7 +578,7 @@ public class TestQueueManager {
     // the appAttempt is created
     // removeEmptyDynamicQueues() should not remove the queue
     FSAppAttempt appAttempt = new FSAppAttempt(scheduler, applicationAttemptId,
-        "a_user", q, activeUsersManager, rmContext);
+        "a_user", q, activeUsersManager, rmContext, Priority.newInstance(1));
     q.addApp(appAttempt, true);
     queueManager.removeEmptyDynamicQueues();
     q = queueManager.getLeafQueue("root.leaf1", false);

@@ -84,7 +84,7 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
     RMContext rmContext = resourceManager.getRMContext();
     FSAppAttempt schedulerApp =
         new FSAppAttempt(scheduler, applicationAttemptId, "user1", queue ,
-            null, rmContext);
+            null, rmContext, Priority.newInstance(1));
 
     // Default level should be node-local
     assertEquals(NodeType.NODE_LOCAL, schedulerApp.getAllowedLocalityLevel(
@@ -148,7 +148,7 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
     ApplicationAttemptId applicationAttemptId = createAppAttemptId(1, 1);
     FSAppAttempt schedulerApp =
             new FSAppAttempt(scheduler, applicationAttemptId, "user1", queue,
-                    null, rmContext);
+                    null, rmContext, Priority.newInstance(1));
 
     // Default level should be node-local
     assertEquals(NodeType.NODE_LOCAL,
@@ -201,7 +201,7 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
     ApplicationAttemptId applicationAttemptId = createAppAttemptId(1, 1);
     FSAppAttempt schedulerApp =
         new FSAppAttempt(scheduler, applicationAttemptId, "user1", queue ,
-            null, rmContext);
+            null, rmContext, Priority.newInstance(1));
     assertEquals(NodeType.OFF_SWITCH, schedulerApp.getAllowedLocalityLevel(
         prio, 10, -1.0, -1.0));
   }
@@ -245,7 +245,7 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
     RMContext rmContext = resourceManager.getRMContext();
     FSAppAttempt schedulerApp =
         new FSAppAttempt(mockScheduler, applicationAttemptId, "user1", mockQueue ,
-            null, rmContext);
+            null, rmContext, Priority.newInstance(1));
 
     // Min of Memory and CPU across cluster and queue is used in
     // DominantResourceFairnessPolicy
@@ -311,7 +311,7 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
     ApplicationPlacementContext placementCtx =
         new ApplicationPlacementContext("default");
     scheduler.addApplication(id11.getApplicationId(),
-            "default", "user1", false, placementCtx);
+            "default", "user1", false, placementCtx, Priority.newInstance(1));
     scheduler.addApplicationAttempt(id11, false, false);
     assertNotNull(scheduler.getSchedulerApplications().get(id11.
             getApplicationId()));
@@ -378,7 +378,7 @@ public class TestFSAppAttempt extends FairSchedulerTestBase {
     Mockito.when(rmContext.getYarnConfiguration()).thenReturn(conf);
     FSAppAttempt schedulerApp =
         new FSAppAttempt(scheduler, applicationAttemptId, "user1", queue,
-            null, rmContext);
+            null, rmContext, Priority.newInstance(1));
     schedulerApp.setAmRunning(false);
     FSSchedulerNode schedulerNode = Mockito.mock(FSSchedulerNode.class);
 

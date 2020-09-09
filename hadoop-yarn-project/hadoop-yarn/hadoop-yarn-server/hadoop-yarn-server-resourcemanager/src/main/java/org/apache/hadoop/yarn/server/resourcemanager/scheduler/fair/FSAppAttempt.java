@@ -118,13 +118,14 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
   public FSAppAttempt(FairScheduler scheduler,
       ApplicationAttemptId applicationAttemptId, String user, FSLeafQueue queue,
-      ActiveUsersManager activeUsersManager, RMContext rmContext) {
+      ActiveUsersManager activeUsersManager, RMContext rmContext,
+      Priority priority) {
     super(applicationAttemptId, user, queue, activeUsersManager, rmContext);
 
     this.scheduler = scheduler;
     this.startTime = scheduler.getClock().getTime();
     this.lastTimeAtFairShare = this.startTime;
-    this.appPriority = Priority.newInstance(1);
+    this.appPriority = priority;
     this.enableAMPreemption = scheduler.getConf()
             .getAMPreemptionEnabled(getQueue().getQueueName());
   }
@@ -1335,8 +1336,6 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
 
   @Override
   public Priority getPriority() {
-    // Right now per-app priorities are not passed to scheduler,
-    // so everyone has the same priority.
     return appPriority;
   }
 
