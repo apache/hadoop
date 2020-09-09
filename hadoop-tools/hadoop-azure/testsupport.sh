@@ -20,35 +20,54 @@ bkpconffile=src/test/resources/abfs-testrun-configs_BKP.xml
 testresultsregex="Results:(\n|.)*?Tests run:"
 testresultsfilename=
 starttime=
+threadcount=
+defaultthreadcount=8
 
 validate() {
+  if [ -z "$threadcount" ] ; then
+    threadcount=$defaultthreadcount
+  fi
+  numberegex='^[0-9]+$'
+  if ! [[ $threadcount =~ $numberegex ]] ; then
+    echo "Exiting. The script param (threadcount) should be a number"
+    exit -1
+  fi
   if [ -z "$scenario" ]; then
    echo "Exiting. scenario cannot be empty"
-   exit
+   exit -1
   fi
   propertiessize=${#properties[@]}
   valuessize=${#values[@]}
   if [ "$propertiessize" -lt 1 ] || [ "$valuessize" -lt 1 ] || [ "$propertiessize" -ne "$valuessize" ]; then
     echo "Exiting. Both properties and values arrays has to be populated and of same size. Please check for scenario $scenario"
-    exit
+    exit -1
+  fi
+
+  if ! [ -f "$conffile" ]; then
+    echo "Exiting. $conffile missing"
+    exit -1
   fi
 }
 
 checkdependancies() {
   if ! [ "$(command -v pcregrep)" ]; then
     echo "Exiting. pcregrep is required to run the script."
-    exit
+    exit -1
   fi
   if ! [ "$(command -v xmlstarlet)" ]; then
     echo "Exiting. xmlstarlet is required to run the script."
-    exit
+    exit -1
   fi
 }
 
 changeconf() {
   xmlstarlet ed -P -L -d "/configuration/property[name='$1']" $conffile
   xmlstarlet ed -P -L -s /configuration -t elem -n propertyTMP -v "" -s /configuration/propertyTMP -t elem -n name -v "$1" -r /configuration/propertyTMP -v property $conffile
-  xmlstarlet ed -P -L -s "/configuration/property[name='$1']" -t elem -n value -v "$2" $conffile
+  if ! xmlstarlet ed -P -L -s "/configuration/property[name='$1']" -t elem -n value -v "$2" $conffile
+  then
+    echo "Exiting. Changing config property failed."
+    exit -1
+  fi
 }
 
 testwithconfs() {
@@ -56,14 +75,14 @@ testwithconfs() {
   valuessize=${#values[@]}
   if [ "$propertiessize" -ne "$valuessize" ]; then
     echo "Exiting. Number of properties and values differ for $scenario"
-    exit
+    exit -1
   fi
   for ((i = 0; i < propertiessize; i++)); do
     key=${properties[$i]}
     val=${values[$i]}
     changeconf "$key" "$val"
   done
-  mvn -T 1C -Dparallel-tests=abfs -Dscale -DtestsThreadCount=8 clean verify >> "$testlogfilename"
+  mvn -T 1C -Dparallel-tests=abfs -Dscale -DtestsThreadCount=$threadcount verify >> "$testlogfilename"
 }
 
 summary() {
@@ -89,14 +108,14 @@ runtestwithconfs() {
   validate
   cp $conffile $bkpconffile
   if [ -z "$starttime" ]; then
-    starttime=$(date +"%Y-%m-%d_%H-%M-%S")
-    mkdir -p "testlogs"
-    testresultsfilename="testlogs/Test-$starttime-Results.log"
     checkdependancies
     mvn clean install -DskipTests
+    starttime=$(date +"%Y-%m-%d_%H-%M-%S")
+    mkdir -p "target/testlogs"
+    testresultsfilename="target/testlogs/Test-$starttime-Results.log"
   fi
   STARTTIME=$(date +%s)
-  testlogfilename="testlogs/Test-$starttime-Logs-$scenario.log"
+  testlogfilename="target/testlogs/Test-$starttime-Logs-$scenario.log"
   printf "\nRunning the scenario: %s..." "$scenario"
   testwithconfs
   ENDTIME=$(date +%s)

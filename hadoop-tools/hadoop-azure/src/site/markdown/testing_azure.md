@@ -898,9 +898,10 @@ the property mentioned at index 1 of array properties should be specified at
 index 1 of the array values. Call the function runtestwithconfs once the 3
 values mentioned are set. Now the script runtests.sh is ready to be ran.
 
-Once the tests are completed, logs will be present in the directory testlogs.
-A consolidated test results will be present in the file Test-$starttime-Results
-.log, $startname will be the start time of the test. Similarly, the full test
-report can be found in individual log files, for each of the scenarios with the
-file name Test-$starttime-Logs-$scenario. Please attach the consolidates test
-results from the file Test-$starttime-Results.log into the respective PRs.
+Once the tests are completed, logs will be present in the directory
+target/testlogs. A consolidated test results will be present in the file
+Test-$starttime-Results.log, $startname will be the start time of the test.
+Similarly, the full test report can be found in individual log files, for each
+of the scenarios with the file name Test-$starttime-Logs-$scenario. Please
+attach the consolidates test results from the file Test-$starttime-Results.log
+into the respective PRs.

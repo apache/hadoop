@@ -20,6 +20,9 @@
 
 # shellcheck disable=SC1091
 source ./testsupport.sh
+threadcount=$1
+
+### ADD THE TEST COMBINATIONS BELOW. DO NOT EDIT THE ABOVE LINES.
 
 scenario=HNS-OAuth
 properties=("fs.azure.abfs.account.name" "fs.azure.test.namespace.enabled"
