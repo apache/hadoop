@@ -29,6 +29,12 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
 
   private boolean tolerateOobAppends;
 
+  private boolean alwaysReadBufferSize;
+
+  private int readAheadBlockSize;
+
+  private int readAheadBufferCount;
+
   private AbfsInputStreamStatistics streamStatistics;
 
   public AbfsInputStreamContext(final long sasTokenRenewPeriodForStreamsInSeconds) {
@@ -60,6 +66,24 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
     return this;
   }
 
+  public AbfsInputStreamContext withShouldReadBufferSizeAlways(
+      final boolean alwaysReadBufferSize) {
+    this.alwaysReadBufferSize = alwaysReadBufferSize;
+    return this;
+  }
+
+  public AbfsInputStreamContext withReadAheadBlockSize(
+      final int readAheadBlockSize) {
+    this.readAheadBlockSize = readAheadBlockSize;
+    return this;
+  }
+
+  public AbfsInputStreamContext withReadAheadBufferCount(
+      final int readAheadBufferCount) {
+    this.readAheadBufferCount = readAheadBufferCount;
+    return this;
+  }
+
   public AbfsInputStreamContext build() {
     // Validation of parameters to be done here.
     return this;
@@ -80,4 +104,17 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
   public AbfsInputStreamStatistics getStreamStatistics() {
     return streamStatistics;
   }
+
+  public boolean shouldReadBufferSizeAlways() {
+    return alwaysReadBufferSize;
+  }
+
+  public int getReadAheadBlockSize() {
+    return readAheadBlockSize;
+  }
+
+  public int getReadAheadBufferCount() {
+    return readAheadBufferCount;
+  }
+
 }

@@ -75,6 +75,9 @@ public final class ConfigurationKeys {
    *  Default is empty. **/
   public static final String FS_AZURE_APPEND_BLOB_KEY = "fs.azure.appendblob.directories";
   public static final String FS_AZURE_READ_AHEAD_QUEUE_DEPTH = "fs.azure.readaheadqueue.depth";
+  public static final String FS_AZURE_ALWAYS_READ_BUFFER_SIZE = "fs.azure.alwaysReadBufferSize";
+  public static final String FS_AZURE_READ_AHEAD_BLOCK_SIZE = "fs.azure.read.ahead.block.size";
+  public static final String FS_AZURE_READ_AHEAD_BUFFER_COUNT = "fs.azure.read.ahead.buffer.count";
   /** Provides a config control to enable or disable ABFS Flush operations -
    *  HFlush and HSync. Default is true. **/
   public static final String FS_AZURE_ENABLE_FLUSH = "fs.azure.enable.flush";
