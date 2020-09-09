@@ -79,7 +79,9 @@ class FsVolumeList {
       volumeFailureInfos.put(volumeFailureInfo.getFailedStorageLocation(),
           volumeFailureInfo);
     }
-    enableSameDiskTiering = config.getBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING, DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING_DEFAULT);
+    enableSameDiskTiering = config.getBoolean(
+        DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING,
+        DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING_DEFAULT);
     if (enableSameDiskTiering) {
       deviceVolumeMapping = new ConcurrentHashMap<>();
     }
@@ -90,6 +92,25 @@ class FsVolumeList {
    */
   List<FsVolumeImpl> getVolumes() {
     return Collections.unmodifiableList(volumes);
+  }
+
+  /**
+   * Get vol by device and storage type.
+   * This is used when same-disk-tiering is enabled.
+   */
+  FsVolumeReference getVolumeRefByDeviceAndStorageType(String device, StorageType storageType) {
+    if (deviceVolumeMapping != null && deviceVolumeMapping.containsKey(device)) {
+      try {
+        FsVolumeImpl volume = deviceVolumeMapping.get(device).getOrDefault(storageType, null);
+        if (volume != null) {
+          return volume.obtainReference();
+        }
+      } catch (ClosedChannelException e) {
+        FsDatasetImpl.LOG.warn("Volume closed when getting volume by device and storage type: "
+            + device + ", " + storageType);
+      }
+    }
+    return null;
   }
 
   private FsVolumeReference chooseVolume(List<FsVolumeImpl> list,
@@ -305,8 +326,9 @@ class FsVolumeList {
         (volume.getStorageType() == StorageType.DISK
         || volume.getStorageType() == StorageType.ARCHIVE)) {
       String device = volume.getDevice();
-      if (device != null) {
-        Map<StorageType, FsVolumeImpl> storageTypeMap = deviceVolumeMapping.getOrDefault(device, new ConcurrentHashMap<>());
+      if (!device.isEmpty()) {
+        Map<StorageType, FsVolumeImpl> storageTypeMap =
+            deviceVolumeMapping.getOrDefault(device, new ConcurrentHashMap<>());
         if (storageTypeMap.containsKey(volume.getStorageType())) {
           FsDatasetImpl.LOG.error("Found storage type already exist." +
               " Skipping for now. Please check disk configuration");
@@ -366,21 +388,6 @@ class FsVolumeList {
             " does not exist or is removed by others.");
       }
     }
-  }
-
-  FsVolumeReference getVolumeByDeviceAndStorageType(String device, StorageType storageType) {
-    if (deviceVolumeMapping != null && deviceVolumeMapping.containsKey(device)) {
-      try {
-        FsVolumeImpl volume = deviceVolumeMapping.get(device).getOrDefault(storageType, null);
-        if (volume != null) {
-          return volume.obtainReference();
-        }
-      } catch (ClosedChannelException e) {
-        FsDatasetImpl.LOG.warn("Volume closed when getting volume by device and storage type: "
-            + device + ", " + storageType);
-      }
-    }
-    return null;
   }
 
   /**

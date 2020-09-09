@@ -487,18 +487,18 @@ public class TestFsVolumeList {
     assertEquals(diskVolume.getDevice(), archivalVolume.getDevice());
     String device = diskVolume.getDevice();
 
-    // 1) getVolume should return correct reference.
+    // 1) getVolumeRef should return correct reference.
     assertEquals(diskVolume,
-        volumeList.getVolumeByDeviceAndStorageType(device, StorageType.DISK).getVolume());
+        volumeList.getVolumeRefByDeviceAndStorageType(device, StorageType.DISK).getVolume());
     assertEquals(archivalVolume,
-        volumeList.getVolumeByDeviceAndStorageType(device, StorageType.ARCHIVE).getVolume());
+        volumeList.getVolumeRefByDeviceAndStorageType(device, StorageType.ARCHIVE).getVolume());
 
     // 1) removeVolume should work as expected
     volumeList.removeVolume(diskVolume.getStorageLocation(), true);
     assertEquals(null,
-        volumeList.getVolumeByDeviceAndStorageType(device, StorageType.DISK));
+        volumeList.getVolumeRefByDeviceAndStorageType(device, StorageType.DISK));
     assertEquals(archivalVolume,
-        volumeList.getVolumeByDeviceAndStorageType(device, StorageType.ARCHIVE).getVolume());
+        volumeList.getVolumeRefByDeviceAndStorageType(device, StorageType.ARCHIVE).getVolume());
   }
 
   // Test dfs stats with same disk archival
@@ -553,8 +553,8 @@ public class TestFsVolumeList {
     // 2) getActualNonDfsUsed() should count in both DISK and ARCHIVE.
     // expectedActualNonDfsUsage =
     // diskUsage - archivalDfsUsage - diskDfsUsage
-    Mockito.doReturn(spyArchivalVolume.obtainReference()).when(dataset).getVolume(anyString(), eq(StorageType.ARCHIVE));
-    Mockito.doReturn(spyDiskVolume.obtainReference()).when(dataset).getVolume(anyString(), eq(StorageType.DISK));
+    Mockito.doReturn(spyArchivalVolume.obtainReference()).when(dataset).getVolumeRef(anyString(), eq(StorageType.ARCHIVE));
+    Mockito.doReturn(spyDiskVolume.obtainReference()).when(dataset).getVolumeRef(anyString(), eq(StorageType.DISK));
 
     long expectedActualNonDfsUsage = 400L;
     Mockito.doReturn(diskDfsUsage).when(spyDiskVolume).getDfsUsed();

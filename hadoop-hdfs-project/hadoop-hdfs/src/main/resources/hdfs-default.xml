@@ -5977,11 +5977,11 @@
 
   <property>
     <name>dfs.datanode.same-disk-tiering.enabled</name>
-    <value>true</value>
+    <value>false</value>
   </property>
 
   <property>
     <name>dfs.datanode.reserve-for-archive.percentage</name>
-    <value>0.5</value>
+    <value>0.0</value>
   </property>
 </configuration>

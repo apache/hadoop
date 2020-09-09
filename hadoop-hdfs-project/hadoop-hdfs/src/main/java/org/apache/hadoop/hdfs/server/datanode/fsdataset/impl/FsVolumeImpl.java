@@ -136,6 +136,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   private URI baseURI;
   private boolean enableSameDiskArchival;
   private final String device;
+  private double reservedForArchive;
 
   /**
    * Per-volume worker pool that processes new blocks to cache.
@@ -197,8 +198,15 @@ public class FsVolumeImpl implements FsVolumeSpi {
             DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING_DEFAULT);
     if (enableSameDiskArchival) {
       this.device = usage.getMount();
+      reservedForArchive = conf.getDouble(DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_PERCENTAGE,
+          DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_PERCENTAGE_DEFAULT);
+      if (reservedForArchive >= 1) {
+        FsDatasetImpl.LOG.warn("Value of reserve-for-archival is >= 100% for "
+            + currentDir + ". Setting it to 99%.");
+        reservedForArchive = 0.99;
+      }
     } else {
-      device = null;
+      device = "";
     }
   }
 
@@ -485,10 +493,12 @@ public class FsVolumeImpl implements FsVolumeSpi {
     // exclude DFS used capacity by another volume.
     if (enableSameDiskArchival && (storageType == StorageType.DISK || storageType == StorageType.ARCHIVE)) {
       StorageType counterpartStorageType = storageType == StorageType.DISK ? StorageType.ARCHIVE : StorageType.DISK;
-      FsVolumeReference ref = dataset.getVolume(device, counterpartStorageType);
-      if (ref != null) {
-        FsVolumeImpl volume = (FsVolumeImpl) ref.getVolume();
-        return getDfUsed() - getDfsUsed() - volume.getDfsUsed();
+      FsVolumeReference counterpartRef = dataset.getVolumeRef(device, counterpartStorageType);
+      if (counterpartRef != null) {
+        FsVolumeImpl counterpartVol = (FsVolumeImpl) counterpartRef.getVolume();
+        long used = getDfUsed() - getDfsUsed() - counterpartVol.getDfsUsed();
+        counterpartRef.close();
+        return used;
       }
     }
     return getDfUsed() - getDfsUsed();
