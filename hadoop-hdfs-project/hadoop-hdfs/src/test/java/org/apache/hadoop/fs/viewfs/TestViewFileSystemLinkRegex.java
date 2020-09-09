@@ -228,7 +228,8 @@ public class TestViewFileSystemLinkRegex extends ViewFileSystemBaseTest {
           vfs.resolvePath(dirPathBeforeMountPoint).toString());
       Assert.assertTrue(
           vfs.getFileStatus(dirPathBeforeMountPoint).isDirectory());
-      Assert.assertEquals(childrenFilesCnt, vfs.listStatus(dirPathBeforeMountPoint).length);
+      Assert.assertEquals(
+          childrenFilesCnt, vfs.listStatus(dirPathBeforeMountPoint).length);
 
       // Test Inner cache, the resolved result's filesystem should be the same.
       ViewFileSystem viewFileSystem = (ViewFileSystem) vfs;
