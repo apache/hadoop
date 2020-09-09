@@ -278,6 +278,7 @@ public class DFSStripedInputStream extends DFSInputStream {
           // re-fetch the block in case the block has been moved
           fetchBlockAt(block.getStartOffset());
           addToLocalDeadNodes(dnInfo.info);
+          dfsClient.addNodeToDeadNodeDetector(this, dnInfo.info);
         }
       }
       if (reader != null) {
