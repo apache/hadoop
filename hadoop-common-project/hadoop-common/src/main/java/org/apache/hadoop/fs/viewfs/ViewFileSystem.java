@@ -237,7 +237,6 @@ public class ViewFileSystem extends FileSystem {
   Path homeDir = null;
   private boolean enableInnerCache = false;
   private InnerCache cache;
-  private boolean evictCacheOnClose = false;
   // Default to rename within same mountpoint
   private RenameStrategy renameStrategy = RenameStrategy.SAME_MOUNTPOINT;
   /**

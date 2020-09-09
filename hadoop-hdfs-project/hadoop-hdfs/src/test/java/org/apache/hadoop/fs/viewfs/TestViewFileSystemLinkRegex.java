@@ -216,30 +216,30 @@ public class TestViewFileSystemLinkRegex extends ViewFileSystemBaseTest {
       int childrenFilesCnt)
       throws IOException, URISyntaxException {
       // Set up test env
-      createDirWithChildren(
-          fsTarget, expectedResolveResult, childrenFilesCnt);
-      ConfigUtil.addLinkRegex(
-          config, CLUSTER_NAME, regexStr, dstPathStr, interceptorSettings);
-      // Asserts
-      URI viewFsUri = new URI(
-          FsConstants.VIEWFS_SCHEME, CLUSTER_NAME, "/", null, null);
-      try (FileSystem vfs = FileSystem.get(viewFsUri, config)) {
-        Assert.assertEquals(expectedResolveResult.toString(),
-            vfs.resolvePath(dirPathBeforeMountPoint).toString());
-        Assert.assertTrue(
-            vfs.getFileStatus(dirPathBeforeMountPoint).isDirectory());
-        Assert.assertEquals(childrenFilesCnt, vfs.listStatus(dirPathBeforeMountPoint).length);
+    createDirWithChildren(
+        fsTarget, expectedResolveResult, childrenFilesCnt);
+    ConfigUtil.addLinkRegex(
+        config, CLUSTER_NAME, regexStr, dstPathStr, interceptorSettings);
+    // Asserts
+    URI viewFsUri = new URI(
+        FsConstants.VIEWFS_SCHEME, CLUSTER_NAME, "/", null, null);
+    try (FileSystem vfs = FileSystem.get(viewFsUri, config)) {
+      Assert.assertEquals(expectedResolveResult.toString(),
+          vfs.resolvePath(dirPathBeforeMountPoint).toString());
+      Assert.assertTrue(
+          vfs.getFileStatus(dirPathBeforeMountPoint).isDirectory());
+      Assert.assertEquals(childrenFilesCnt, vfs.listStatus(dirPathBeforeMountPoint).length);
 
-        // Test Inner cache, the resolved result's filesystem should be the same.
-        ViewFileSystem viewFileSystem = (ViewFileSystem) vfs;
-        ChRootedFileSystem target1 = (ChRootedFileSystem) viewFileSystem.fsState
-            .resolve(viewFileSystem.getUriPath(dirPathBeforeMountPoint), true)
-            .targetFileSystem;
-        ChRootedFileSystem target2 = (ChRootedFileSystem) viewFileSystem.fsState
-            .resolve(viewFileSystem.getUriPath(dirPathBeforeMountPoint), true)
-            .targetFileSystem;
-        assertSame(target1.getMyFs(), target2.getMyFs());
-      }
+      // Test Inner cache, the resolved result's filesystem should be the same.
+      ViewFileSystem viewFileSystem = (ViewFileSystem) vfs;
+      ChRootedFileSystem target1 = (ChRootedFileSystem) viewFileSystem.fsState
+          .resolve(viewFileSystem.getUriPath(dirPathBeforeMountPoint), true)
+          .targetFileSystem;
+      ChRootedFileSystem target2 = (ChRootedFileSystem) viewFileSystem.fsState
+          .resolve(viewFileSystem.getUriPath(dirPathBeforeMountPoint), true)
+          .targetFileSystem;
+      assertSame(target1.getMyFs(), target2.getMyFs());
+    }
   }
   /**
    * Test regex mount points which use capture group index for mapping.

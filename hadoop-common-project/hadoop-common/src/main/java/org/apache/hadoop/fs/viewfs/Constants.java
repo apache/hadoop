@@ -105,8 +105,6 @@ public interface Constants {
 
   boolean CONFIG_VIEWFS_ENABLE_INNER_CACHE_DEFAULT = true;
 
-  boolean CONFIG_VIEWFS_INNER_CACHE_EVICT_ON_CLOSE_DEFAULT = false;
-
   /**
    * Enable ViewFileSystem to show mountlinks as symlinks.
    */
