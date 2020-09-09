@@ -49,7 +49,7 @@ validate() {
   fi
 }
 
-checkdependancies() {
+checkdependencies() {
   if ! [ "$(command -v pcregrep)" ]; then
     echo "Exiting. pcregrep is required to run the script."
     exit -1
@@ -108,7 +108,7 @@ runtestwithconfs() {
   validate
   cp $conffile $bkpconffile
   if [ -z "$starttime" ]; then
-    checkdependancies
+    checkdependencies
     mvn clean install -DskipTests
     starttime=$(date +"%Y-%m-%d_%H-%M-%S")
     mkdir -p "target/testlogs"
