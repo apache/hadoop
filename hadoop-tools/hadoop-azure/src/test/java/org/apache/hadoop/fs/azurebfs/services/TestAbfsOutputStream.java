@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Random;
@@ -54,13 +55,17 @@ public final class TestAbfsOutputStream {
   private AbfsOutputStreamContext populateAbfsOutputStreamContext(int writeBufferSize,
             boolean isFlushEnabled,
             boolean disableOutputStreamFlush,
-            boolean isAppendBlob) {
+            boolean isAppendBlob) throws IOException, IllegalAccessException {
+    AbfsConfiguration abfsConf = new AbfsConfiguration(new Configuration(),
+        accountName1);
     return new AbfsOutputStreamContext(2)
             .withWriteBufferSize(writeBufferSize)
             .enableFlush(isFlushEnabled)
             .disableOutputStreamFlush(disableOutputStreamFlush)
             .withStreamStatistics(new AbfsOutputStreamStatisticsImpl())
             .withAppendBlob(isAppendBlob)
+            .withWriteMaxConcurrentRequestCount(abfsConf.getWriteMaxConcurrentRequestCount())
+            .withMaxWriteRequestsToQueue(abfsConf.getMaxWriteRequestsToQueue())
             .build();
   }
 
