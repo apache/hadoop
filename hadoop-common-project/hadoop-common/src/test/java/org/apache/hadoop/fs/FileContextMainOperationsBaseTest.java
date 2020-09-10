@@ -1306,14 +1306,33 @@ public abstract class FileContextMainOperationsBaseTest  {
 
   protected void rename(Path src, Path dst, boolean srcExists,
       boolean dstExists, Rename... options) throws IOException {
+    IOException ioe = null;
     try {
       fc.rename(src, dst, options);
-    } finally {
+    } catch (IOException ex) {
+      // lets not swallow this completely.
+      LOG.warn("Rename result: " + ex, ex);
+      ioe = ex;
+    }
+
+    // There's a bit of extra work in these assertions, as if they fail
+    // any IOE caught earlier is added as the cause. This
+    // gets the likely root cause to the test report
+    try {
+      LOG.debug("Probing source and destination");
       Assert.assertEquals("Source exists", srcExists, exists(fc, src));
       Assert.assertEquals("Destination exists", dstExists, exists(fc, dst));
+    } catch (AssertionError e) {
+      if (ioe != null && e.getCause() == null) {
+        e.initCause(ioe);
+      }
+      throw e;
+    }
+    if (ioe != null) {
+      throw ioe;
     }
   }
-  
+
   private boolean containsPath(Path path, FileStatus[] filteredPaths)
     throws IOException {
     for(int i = 0; i < filteredPaths.length; i ++) { 
