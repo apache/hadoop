@@ -2172,9 +2172,19 @@ public class TestDistributedFileSystem {
       String testDirStr = testDir.toUri().getPath();
       assertTrue(trAfterAllowSnapshotStr.startsWith(testDirStr));
 
+      // test2Dir has the same prefix as testDir, but not snapshottable
+      Path test2Dir = new Path("/ssgtr/test12/");
+      Path file1path = new Path(test2Dir, "file-1");
+      trAfterAllowSnapshot = dfs.getTrashRoot(file1path);
+      trAfterAllowSnapshotStr = trAfterAllowSnapshot.toUri().getPath();
+      // The trash root should not be in the snapshot root
+      assertFalse(trAfterAllowSnapshotStr.startsWith(testDirStr));
+      assertTrue(trBeforeAllowSnapshotStr.startsWith(homeDirStr));
+
       // Cleanup
       dfs.disallowSnapshot(testDir);
       dfs.delete(testDir, true);
+      dfs.delete(test2Dir, true);
     } finally {
       if (cluster != null) {
         cluster.shutdown();
