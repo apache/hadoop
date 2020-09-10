@@ -526,11 +526,7 @@ abstract class InodeTree<T> {
         }
         linkType = LinkType.SINGLE;
       } else if (src.startsWith(linkFallbackPrefix)) {
-        if (src.length() != linkFallbackPrefix.length()) {
-          throw new IOException("ViewFs: Mount points initialization error." +
-              " Invalid " + Constants.CONFIG_VIEWFS_LINK_FALLBACK +
-              " entry in config: " + src);
-        }
+        checkMntEntryKeyEqualsTarget(src, linkFallbackPrefix);
         linkType = LinkType.SINGLE_FALLBACK;
       } else if (src.startsWith(linkMergePrefix)) { // A merge link
         src = src.substring(linkMergePrefix.length());
@@ -538,11 +534,7 @@ abstract class InodeTree<T> {
       } else if (src.startsWith(linkMergeSlashPrefix)) {
         // This is a LinkMergeSlash entry. This entry should
         // not have any additional source path.
-        if (src.length() != linkMergeSlashPrefix.length()) {
-          throw new IOException("ViewFs: Mount points initialization error." +
-              " Invalid " + Constants.CONFIG_VIEWFS_LINK_MERGE_SLASH +
-              " entry in config: " + src);
-        }
+        checkMntEntryKeyEqualsTarget(src, linkMergeSlashPrefix);
         linkType = LinkType.MERGE_SLASH;
       } else if (src.startsWith(Constants.CONFIG_VIEWFS_LINK_NFLY)) {
         // prefix.settings.src
@@ -557,31 +549,8 @@ abstract class InodeTree<T> {
 
         linkType = LinkType.NFLY;
       } else if (src.startsWith(Constants.CONFIG_VIEWFS_LINK_REGEX)) {
-        final String target = si.getValue();
-        String linkKeyPath = null;
-        final String linkRegexPrefix = Constants.CONFIG_VIEWFS_LINK_REGEX + ".";
-        // settings#.linkKey
-        String settingsAndLinkKeyPath = src.substring(linkRegexPrefix.length());
-        int settingLinkKeySepIndex = settingsAndLinkKeyPath
-            .indexOf(RegexMountPoint.SETTING_SRCREGEX_SEP);
-        if (settingLinkKeySepIndex == -1) {
-          // There's no settings
-          linkKeyPath = settingsAndLinkKeyPath;
-          settings = null;
-        } else {
-          // settings#.linkKey style configuration
-          // settings from settings#.linkKey
-          settings =
-              settingsAndLinkKeyPath.substring(0, settingLinkKeySepIndex);
-          // linkKeyPath
-          linkKeyPath = settingsAndLinkKeyPath.substring(
-              settings.length() + RegexMountPoint.SETTING_SRCREGEX_SEP
-                  .length());
-        }
-        linkType = LinkType.REGEX;
         linkEntries.add(
-            new LinkEntry(linkKeyPath, target, linkType, settings, ugi,
-                config));
+            buildLinkRegexEntry(config, ugi, src, si.getValue()));
         continue;
       } else if (src.startsWith(Constants.CONFIG_VIEWFS_HOMEDIR)) {
         // ignore - we set home dir from config
@@ -643,14 +612,7 @@ abstract class InodeTree<T> {
               new URI(le.getTarget()));
           continue;
         case REGEX:
-          LOGGER.info("Add regex mount point:" + le.getSrc()
-              + ", target:" + le.getTarget()
-              + ", interceptor settings:" + le.getSettings());
-          RegexMountPoint regexMountPoint =
-              new RegexMountPoint<T>(
-                  this, le.getSrc(), le.getTarget(), le.getSettings());
-          regexMountPoint.initialize();
-          regexMountPointList.add(regexMountPoint);
+          addRegexMountEntry(le);
           continue;
         default:
           createLink(le.getSrc(), le.getTarget(), le.getLinkType(),
@@ -677,6 +639,55 @@ abstract class InodeTree<T> {
               theUri);
       getRootDir().addFallbackLink(rootFallbackLink);
     }
+  }
+
+  private void checkMntEntryKeyEqualsTarget(
+      String mntEntryKey, String targetMntEntryKey) throws IOException {
+    if (!mntEntryKey.equals(targetMntEntryKey)) {
+      throw new IOException("ViewFs: Mount points initialization error." +
+          " Invalid " + targetMntEntryKey +
+          " entry in config: " + mntEntryKey);
+    }
+  }
+
+  private void addRegexMountEntry(LinkEntry le) throws IOException {
+    LOGGER.info("Add regex mount point:" + le.getSrc()
+        + ", target:" + le.getTarget()
+        + ", interceptor settings:" + le.getSettings());
+    RegexMountPoint regexMountPoint =
+        new RegexMountPoint<T>(
+            this, le.getSrc(), le.getTarget(), le.getSettings());
+    regexMountPoint.initialize();
+    regexMountPointList.add(regexMountPoint);
+  }
+
+  private LinkEntry buildLinkRegexEntry(
+      Configuration config, UserGroupInformation ugi,
+      String mntEntryStrippedKey, String mntEntryValue) {
+    String linkKeyPath = null;
+    String settings = null;
+    final String linkRegexPrefix = Constants.CONFIG_VIEWFS_LINK_REGEX + ".";
+    // settings#.linkKey
+    String settingsAndLinkKeyPath =
+        mntEntryStrippedKey.substring(linkRegexPrefix.length());
+    int settingLinkKeySepIndex = settingsAndLinkKeyPath
+        .indexOf(RegexMountPoint.SETTING_SRCREGEX_SEP);
+    if (settingLinkKeySepIndex == -1) {
+      // There's no settings
+      linkKeyPath = settingsAndLinkKeyPath;
+      settings = null;
+    } else {
+      // settings#.linkKey style configuration
+      // settings from settings#.linkKey
+      settings =
+          settingsAndLinkKeyPath.substring(0, settingLinkKeySepIndex);
+      // linkKeyPath
+      linkKeyPath = settingsAndLinkKeyPath.substring(
+          settings.length() + RegexMountPoint.SETTING_SRCREGEX_SEP
+              .length());
+    }
+    return new LinkEntry(
+        linkKeyPath, mntEntryValue, LinkType.REGEX, settings, ugi, config);
   }
 
   /**
