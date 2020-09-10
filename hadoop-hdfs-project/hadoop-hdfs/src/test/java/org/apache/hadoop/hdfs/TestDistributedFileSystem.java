@@ -2445,7 +2445,7 @@ public class TestDistributedFileSystem {
 
   @Test
   public void testDisallowSnapshotShouldThrowWhenTrashRootExists()
-      throws IOException {
+      throws Exception {
     Configuration conf = getTestConfiguration();
     MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
@@ -2459,12 +2459,8 @@ public class TestDistributedFileSystem {
       Path testDirTrashRoot = new Path(testDir, FileSystem.TRASH_PREFIX);
       dfs.mkdirs(testDirTrashRoot);
       // Try disallowing snapshot, should throw
-      try {
-        dfs.disallowSnapshot(testDir);
-        fail("Should have thrown IOException when trash root exists inside "
-            + "snapshot root when disallowing snapshot on it.");
-      } catch (IOException ignored) {
-      }
+      LambdaTestUtils.intercept(IOException.class,
+          () -> dfs.disallowSnapshot(testDir));
       // Remove the trash root and try again, should pass this time
       dfs.delete(testDirTrashRoot, true);
       dfs.disallowSnapshot(testDir);
