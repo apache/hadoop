@@ -278,9 +278,12 @@ public class SnappyCompressor implements Compressor {
       return 0;
     } else {
       // Set the position and limit of `uncompressedDirectBuf` for reading
-      uncompressedDirectBuf.position(0).limit(uncompressedDirectBufLen);
-      return Snappy.compress((ByteBuffer) uncompressedDirectBuf,
+      uncompressedDirectBuf.limit(uncompressedDirectBufLen).position(0);
+      int size = Snappy.compress((ByteBuffer) uncompressedDirectBuf,
               (ByteBuffer) compressedDirectBuf);
+      uncompressedDirectBufLen = 0;
+      uncompressedDirectBuf.limit(directBufferSize).position(0);
+      return size;
     }
   }
 }

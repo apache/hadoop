@@ -263,15 +263,17 @@ public class SnappyDecompressor implements Decompressor {
       return 0;
     } else {
       // Set the position and limit of `compressedDirectBuf` for reading
-      compressedDirectBuf.position(0).limit(compressedDirectBufLen);
+      compressedDirectBuf.limit(compressedDirectBufLen).position(0);
       // There is compressed input, decompress it now.
       int size = Snappy.uncompressedLength((ByteBuffer) compressedDirectBuf);
-      if (size > uncompressedDirectBuf.capacity()) {
+      if (size > uncompressedDirectBuf.remaining()) {
         throw new IOException("Could not decompress data. " +
           "uncompressedDirectBuf length is too small.");
       }
       size = Snappy.uncompress((ByteBuffer) compressedDirectBuf,
               (ByteBuffer) uncompressedDirectBuf);
+      compressedDirectBufLen = 0;
+      compressedDirectBuf.limit(directBufferSize).position(0);
       return size;
     }
   }
