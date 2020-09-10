@@ -508,6 +508,10 @@ public class FSDirectory implements Closeable {
     return namesystem;
   }
 
+  public boolean isImageLoaded() {
+    return namesystem.isImageLoaded();
+  }
+
   /**
    * Parse configuration setting dfs.namenode.protected.directories to
    * retrieve the set of protected directories.

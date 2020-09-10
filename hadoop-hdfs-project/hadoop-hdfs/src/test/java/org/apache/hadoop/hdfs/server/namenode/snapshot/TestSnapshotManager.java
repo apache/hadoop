@@ -18,13 +18,17 @@
 
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
+import static org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager.DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INode;
@@ -131,6 +135,70 @@ public class TestSnapshotManager {
         fsdir);
     Assert.assertTrue(snapshotManager.
         getMaxSnapshotID() < Snapshot.CURRENT_STATE_ID);
+  }
+
+  @Test
+  public void SnapshotLimitOnRestart() throws Exception {
+    final Configuration conf = new Configuration();
+    final Path snapshottableDir
+        = new Path("/" + getClass().getSimpleName());
+    int numSnapshots = 5;
+    conf.setInt(DFSConfigKeys.
+            DFS_NAMENODE_SNAPSHOT_MAX_LIMIT, numSnapshots);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_FILESYSTEM_LIMIT,
+        numSnapshots * 2);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).
+        numDataNodes(0).build();
+    cluster.waitActive();
+    DistributedFileSystem hdfs = cluster.getFileSystem();
+    hdfs.mkdirs(snapshottableDir);
+    hdfs.allowSnapshot(snapshottableDir);
+    int i = 0;
+    for (; i < numSnapshots; i++) {
+      hdfs.createSnapshot(snapshottableDir, "s" + i);
+    }
+    try {
+      hdfs.createSnapshot(snapshottableDir, "s" + i);
+      Assert.fail("Expected SnapshotException not thrown");
+    } catch (SnapshotException se) {
+      Assert.assertTrue(
+          StringUtils.toLowerCase(se.getMessage()).contains(
+              "max snapshot limit"));
+    }
+
+    // now change max snapshot directory limit to 2 and restart namenode
+    cluster.getNameNode().getConf().setInt(DFSConfigKeys.
+        DFS_NAMENODE_SNAPSHOT_MAX_LIMIT, 2);
+    cluster.restartNameNodes();
+
+    // make sure edits of all previous 5 create snapshots are replayed
+    Assert.assertEquals(numSnapshots, cluster.getNamesystem().
+        getSnapshotManager().getNumSnapshots());
+
+    // make sure namenode has the new snapshot limit configured as 2
+    Assert.assertEquals(2,
+        cluster.getNamesystem().getSnapshotManager().getMaxSnapshotLimit());
+
+    // Any new snapshot creation should still fail
+    try {
+      hdfs.createSnapshot(snapshottableDir, "s" + i);
+      Assert.fail("Expected SnapshotException not thrown");
+    } catch (SnapshotException se) {
+      Assert.assertTrue(
+          StringUtils.toLowerCase(se.getMessage()).contains(
+              "max snapshot limit"));
+    }
+    // now change max snapshot FS limit to 2 and restart namenode
+    cluster.getNameNode().getConf().setInt(DFSConfigKeys.
+        DFS_NAMENODE_SNAPSHOT_FILESYSTEM_LIMIT, 2);
+    cluster.restartNameNodes();
+    // make sure edits of all previous 5 create snapshots are replayed
+    Assert.assertEquals(numSnapshots, cluster.getNamesystem().
+        getSnapshotManager().getNumSnapshots());
+
+    // make sure namenode has the new snapshot limit configured as 2
+    Assert.assertEquals(2,
+        cluster.getNamesystem().getSnapshotManager().getMaxSnapshotLimit());
   }
 
 }
