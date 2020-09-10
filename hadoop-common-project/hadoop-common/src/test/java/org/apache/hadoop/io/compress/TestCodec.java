@@ -244,14 +244,9 @@ public class TestCodec {
         RandomDatum v2 = new RandomDatum();
         k2.readFields(inflateIn);
         v2.readFields(inflateIn);
-
-        boolean debug = k1.equals(k2) && v1.equals(v2);
-        if(!debug) {
-          int a = 10;
-        }
         assertTrue("original and compressed-then-decompressed-output not equal",
-                   debug);
-      
+                   k1.equals(k2) && v1.equals(v2));
+
         // original and compressed-then-decompressed-output have the same
         // hashCode
         Map<RandomDatum, String> m = new HashMap<RandomDatum, String>();

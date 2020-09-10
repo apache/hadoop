@@ -59,8 +59,7 @@ public class TestCompressorDecompressor {
           .withCompressDecompressPair(new SnappyCompressor(), new SnappyDecompressor())
           .withCompressDecompressPair(new Lz4Compressor(), new Lz4Decompressor())
           .withCompressDecompressPair(new BuiltInZlibDeflater(), new BuiltInZlibInflater())
-          .withTestCases(ImmutableSet.of(
-                      // CompressionTestStrategy.COMPRESS_DECOMPRESS_SINGLE_BLOCK,
+          .withTestCases(ImmutableSet.of(CompressionTestStrategy.COMPRESS_DECOMPRESS_SINGLE_BLOCK,
                       CompressionTestStrategy.COMPRESS_DECOMPRESS_BLOCK,
                       CompressionTestStrategy.COMPRESS_DECOMPRESS_ERRORS,
                       CompressionTestStrategy.COMPRESS_DECOMPRESS_WITH_EMPTY_STREAM))
@@ -84,7 +83,7 @@ public class TestCompressorDecompressor {
           .withCompressDecompressPair(new Lz4Compressor(BYTE_SIZE),
               new Lz4Decompressor(BYTE_SIZE))
           .withTestCases(ImmutableSet.of(CompressionTestStrategy.COMPRESS_DECOMPRESS_SINGLE_BLOCK,
-//                      CompressionTestStrategy.COMPRESS_DECOMPRESS_BLOCK,
+                      CompressionTestStrategy.COMPRESS_DECOMPRESS_BLOCK,
                       CompressionTestStrategy.COMPRESS_DECOMPRESS_ERRORS,
                       CompressionTestStrategy.COMPRESS_DECOMPRESS_WITH_EMPTY_STREAM))
           .test();

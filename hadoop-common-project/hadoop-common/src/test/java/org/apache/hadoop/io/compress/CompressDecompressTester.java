@@ -401,19 +401,13 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
           for (Integer step : blockLabels) {
             decompressor.setInput(compressedBytes, off, step);
             while (!decompressor.finished()) {
-              try {
-                int dSize = decompressor.decompress(operationBlock, 0,
-                        operationBlock.length);
-                decompressOut.write(operationBlock, 0, dSize);
-              } catch (NullPointerException ex) {
-                int b = 10;
-
-              }
+              int dSize = decompressor.decompress(operationBlock, 0,
+                  operationBlock.length);
+              decompressOut.write(operationBlock, 0, dSize);
             }
             decompressor.reset();
             off = off + step;
           }
-          int a = 10;
           assertArrayEquals(
               joiner.join(name, "byte arrays not equals error !!!"),
               originalRawData, decompressOut.toByteArray());
