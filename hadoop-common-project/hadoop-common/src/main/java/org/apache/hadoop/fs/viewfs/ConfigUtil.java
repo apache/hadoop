@@ -166,20 +166,6 @@ public class ConfigUtil {
     addLinkNfly(conf, getDefaultMountTableName(conf), src, null, targets);
   }
 
-
-  /**
-   * Add a LinkRegex to the config for the specified mount table.
-   * @param conf - get mountable config from this conf
-   * @param mountTableName - the mountable name of the regex config item
-   * @param srcRegex - the src path regex expression that applies to this config
-   * @param targetStr - the string of target path
-   */
-  public static void addLinkRegex(
-      Configuration conf, final String mountTableName,
-      final String srcRegex, final String targetStr) {
-    addLinkRegex(conf, mountTableName, srcRegex, targetStr, null);
-  }
-
   /**
    * Add a LinkRegex to the config for the specified mount table.
    * @param conf - get mountable config from this conf
