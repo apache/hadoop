@@ -135,20 +135,20 @@ public class TestRouterAdmin {
         new RemoteLocation("ns0", "/testdir", null);
     RemoteLocation remoteLocation1 =
         new RemoteLocation("ns1", "/", null);
-    final Map<RemoteLocation, HdfsFileStatus> MockResponse0 = new HashMap<>();
-    final Map<RemoteLocation, HdfsFileStatus> MockResponse1 = new HashMap<>();
-    MockResponse0.put(remoteLocation0,
+    final Map<RemoteLocation, HdfsFileStatus> mockResponse0 = new HashMap<>();
+    final Map<RemoteLocation, HdfsFileStatus> mockResponse1 = new HashMap<>();
+    mockResponse0.put(remoteLocation0,
         new HdfsFileStatus.Builder().build());
-    Mockito.doReturn(MockResponse0).when(mockRpcClient).invokeConcurrent(
+    Mockito.doReturn(mockResponse0).when(mockRpcClient).invokeConcurrent(
         Mockito.eq(Lists.newArrayList(remoteLocation0)),
         Mockito.any(RemoteMethod.class),
         Mockito.eq(false),
         Mockito.eq(false),
         Mockito.eq(HdfsFileStatus.class)
     );
-    MockResponse1.put(remoteLocation1,
+    mockResponse1.put(remoteLocation1,
         new HdfsFileStatus.Builder().build());
-    Mockito.doReturn(MockResponse1).when(mockRpcClient).invokeConcurrent(
+    Mockito.doReturn(mockResponse1).when(mockRpcClient).invokeConcurrent(
         Mockito.eq(Lists.newArrayList(remoteLocation1)),
         Mockito.any(RemoteMethod.class),
         Mockito.eq(false),
