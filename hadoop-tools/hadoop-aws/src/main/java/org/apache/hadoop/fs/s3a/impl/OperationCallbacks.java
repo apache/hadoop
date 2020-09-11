@@ -105,7 +105,7 @@ public interface OperationCallbacks {
       throws IOException;
 
   /**
-   * Recursive list of files and directory markers.
+   * Recursive list of files and empty directories.
    *
    * @param path path to list from
    * @param status optional status of path to list.
@@ -115,7 +115,7 @@ public interface OperationCallbacks {
    * @throws IOException failure
    */
   @Retries.RetryTranslated
-  RemoteIterator<S3ALocatedFileStatus> listFilesAndDirectoryMarkers(
+  RemoteIterator<S3ALocatedFileStatus> listFilesAndEmptyDirectories(
       Path path,
       S3AFileStatus status,
       boolean collectTombstones,

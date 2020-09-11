@@ -333,7 +333,7 @@ public class TestPartialDeleteFailures {
     }
 
     @Override
-    public RemoteIterator<S3ALocatedFileStatus> listFilesAndDirectoryMarkers(
+    public RemoteIterator<S3ALocatedFileStatus> listFilesAndEmptyDirectories(
             Path path,
             S3AFileStatus status,
             boolean collectTombstones,

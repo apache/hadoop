@@ -773,13 +773,8 @@ public abstract class AbstractFileSystem implements PathCapabilities {
       if (dstStatus.isDirectory()) {
         RemoteIterator<FileStatus> list = listStatusIterator(dst);
         if (list != null && list.hasNext()) {
-          FileStatus child = list.next();
-          LOG.debug("Rename {}, {} failing as destination has"
-              + " at least one child: {}",
-              src, dst, child);
           throw new IOException(
-              "Rename cannot overwrite non empty destination directory " + dst
-           + " containing child: " + child.getPath());
+              "Rename cannot overwrite non empty destination directory " + dst);
         }
       }
       delete(dst, false);
