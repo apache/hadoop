@@ -86,9 +86,4 @@ public class TestViewDistributedFileSystemContract
           super.testRenameRootDirForbidden();
         });
   }
-
-  @Ignore("Ignore this test until HDFS-15532")
-  @Override
-  public void testLSRootDir() throws Throwable {
-  }
 }
