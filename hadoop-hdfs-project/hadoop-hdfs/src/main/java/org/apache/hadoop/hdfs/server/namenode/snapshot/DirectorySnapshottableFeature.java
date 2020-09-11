@@ -190,8 +190,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
           + n + " snapshot(s) and the snapshot quota is "
           + snapshotQuota);
     }
-    snapshotManager.checkSnapshotLimit(snapshotManager.
-        getMaxSnapshotLimit(), n);
+    snapshotManager.checkPerDirectorySnapshotLimit(n);
     final Snapshot s = new Snapshot(id, name, snapshotRoot);
     final byte[] nameBytes = s.getRoot().getLocalNameBytes();
     final int i = searchSnapshot(nameBytes);

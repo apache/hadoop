@@ -508,6 +508,10 @@ public class FSDirectory implements Closeable {
     return namesystem;
   }
 
+  /**
+   * Indicates whether the image loading is complete or not.
+   * @return true if image loading is complete, false otherwise
+   */
   public boolean isImageLoaded() {
     return namesystem.isImageLoaded();
   }

@@ -368,10 +368,14 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     }
   }
 
+  /**
+   * Return CaptureOpenFiles config value.
+   */
   boolean captureOpenFiles() {
     return captureOpenFiles;
   }
 
+  @VisibleForTesting
   int getMaxSnapshotLimit() {
     return maxSnapshotLimit;
   }
@@ -455,7 +459,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
           "snapshot IDs and ID rollover is not supported.");
     }
     int n = numSnapshots.get();
-    checkSnapshotLimit(maxSnapshotFSLimit, n);
+    checkFileSystemSnapshotLimit(n);
     srcRoot.addSnapshot(this, snapshotName, leaseManager, mtime);
       
     //create success, update id
@@ -464,11 +468,19 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     return Snapshot.getSnapshotPath(snapshotRoot, snapshotName);
   }
 
-  void checkSnapshotLimit(int limit, int numSnapshots)
+  void checkFileSystemSnapshotLimit(int n) throws SnapshotException {
+    checkSnapshotLimit(maxSnapshotFSLimit, n, "file system");
+  }
+
+  void checkPerDirectorySnapshotLimit(int n) throws SnapshotException {
+        checkSnapshotLimit(maxSnapshotLimit, n, "per directory");
+  }
+
+  void checkSnapshotLimit(int limit, int snapshotCount, String type)
       throws SnapshotException {
-    if (numSnapshots >= limit) {
-      String msg = "there are already " + (numSnapshots + 1)
-          + " snapshot(s) and the max snapshot limit is "
+    if (snapshotCount >= limit) {
+      String msg = "there are already " + (snapshotCount + 1)
+          + " snapshot(s) and the "  + type + " snapshot limit is "
           + limit;
       if (fsdir.isImageLoaded()) {
         // We have reached the maximum snapshot limit

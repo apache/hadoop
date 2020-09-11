@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
-import static org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager.DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -35,6 +34,7 @@ import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.Assert;
@@ -138,7 +138,7 @@ public class TestSnapshotManager {
   }
 
   @Test
-  public void SnapshotLimitOnRestart() throws Exception {
+  public void testSnapshotLimitOnRestart() throws Exception {
     final Configuration conf = new Configuration();
     final Path snapshottableDir
         = new Path("/" + getClass().getSimpleName());
@@ -157,48 +157,38 @@ public class TestSnapshotManager {
     for (; i < numSnapshots; i++) {
       hdfs.createSnapshot(snapshottableDir, "s" + i);
     }
-    try {
-      hdfs.createSnapshot(snapshottableDir, "s" + i);
-      Assert.fail("Expected SnapshotException not thrown");
-    } catch (SnapshotException se) {
-      Assert.assertTrue(
-          StringUtils.toLowerCase(se.getMessage()).contains(
-              "max snapshot limit"));
-    }
+    LambdaTestUtils.intercept(SnapshotException.class,
+        "snapshot limit",
+        () -> hdfs.createSnapshot(snapshottableDir, "s5"));
 
     // now change max snapshot directory limit to 2 and restart namenode
     cluster.getNameNode().getConf().setInt(DFSConfigKeys.
         DFS_NAMENODE_SNAPSHOT_MAX_LIMIT, 2);
     cluster.restartNameNodes();
+    SnapshotManager snapshotManager = cluster.getNamesystem().
+        getSnapshotManager();
 
     // make sure edits of all previous 5 create snapshots are replayed
-    Assert.assertEquals(numSnapshots, cluster.getNamesystem().
-        getSnapshotManager().getNumSnapshots());
+    Assert.assertEquals(numSnapshots, snapshotManager.getNumSnapshots());
 
     // make sure namenode has the new snapshot limit configured as 2
-    Assert.assertEquals(2,
-        cluster.getNamesystem().getSnapshotManager().getMaxSnapshotLimit());
+    Assert.assertEquals(2, snapshotManager.getMaxSnapshotLimit());
 
     // Any new snapshot creation should still fail
-    try {
-      hdfs.createSnapshot(snapshottableDir, "s" + i);
-      Assert.fail("Expected SnapshotException not thrown");
-    } catch (SnapshotException se) {
-      Assert.assertTrue(
-          StringUtils.toLowerCase(se.getMessage()).contains(
-              "max snapshot limit"));
-    }
+    LambdaTestUtils.intercept(SnapshotException.class,
+        "snapshot limit",
+        () -> hdfs.createSnapshot(snapshottableDir, "s5"));
     // now change max snapshot FS limit to 2 and restart namenode
     cluster.getNameNode().getConf().setInt(DFSConfigKeys.
         DFS_NAMENODE_SNAPSHOT_FILESYSTEM_LIMIT, 2);
     cluster.restartNameNodes();
+    snapshotManager = cluster.getNamesystem().
+        getSnapshotManager();
     // make sure edits of all previous 5 create snapshots are replayed
-    Assert.assertEquals(numSnapshots, cluster.getNamesystem().
-        getSnapshotManager().getNumSnapshots());
+    Assert.assertEquals(numSnapshots, snapshotManager.getNumSnapshots());
 
     // make sure namenode has the new snapshot limit configured as 2
-    Assert.assertEquals(2,
-        cluster.getNamesystem().getSnapshotManager().getMaxSnapshotLimit());
+    Assert.assertEquals(2, snapshotManager.getMaxSnapshotLimit());
   }
 
 }
