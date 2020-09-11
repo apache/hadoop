@@ -2259,6 +2259,7 @@ public class TestDistributedFileSystem {
       assertEquals(trashRootsAfter2.size() + 1, trashRootsAfter3.size());
 
       // Cleanup
+      dfs.delete(new Path(testDir, FileSystem.TRASH_PREFIX), true);
       dfs.disallowSnapshot(testDir);
       dfs.delete(testDir, true);
     } finally {
@@ -2313,6 +2314,7 @@ public class TestDistributedFileSystem {
       assertEquals(trashRoots, trashRootsAfter);
 
       // Cleanup
+      dfs.delete(new Path(testDir, FileSystem.TRASH_PREFIX), true);
       dfs.disallowSnapshot(testDir);
       dfs.delete(testDir, true);
     } finally {
