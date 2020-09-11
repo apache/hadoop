@@ -294,7 +294,7 @@ public class DeadNodeDetector extends Daemon {
   }
 
   /**
-   * Prode datanode by probe byte.
+   * Prode datanode by probe type.
    */
   private void scheduleProbe(ProbeType type) {
     LOG.debug("Schedule probe datanode for probe type: {}.", type);
@@ -376,9 +376,8 @@ public class DeadNodeDetector extends Daemon {
       } catch (Exception e) {
         LOG.error("Probe failed, datanode: {}, type: {}.", datanodeInfo, type,
             e);
+        deadNodeDetector.probeCallBack(this, false);
       }
-
-      deadNodeDetector.probeCallBack(this, false);
     }
   }
 
@@ -402,7 +401,7 @@ public class DeadNodeDetector extends Daemon {
       }
     } else {
       if (probe.getType() == ProbeType.CHECK_SUSPECT) {
-        LOG.info("Add the node to dead node list: {}.",
+        LOG.warn("Probe failed, add suspect node to dead node list: {}.",
             probe.getDatanodeInfo());
         addToDead(probe.getDatanodeInfo());
       }
@@ -415,11 +414,12 @@ public class DeadNodeDetector extends Daemon {
   private void checkDeadNodes() {
     Set<DatanodeInfo> datanodeInfos = clearAndGetDetectedDeadNodes();
     for (DatanodeInfo datanodeInfo : datanodeInfos) {
-      LOG.debug("Add dead node to check: {}.", datanodeInfo);
       if (!deadNodesProbeQueue.offer(datanodeInfo)) {
         LOG.debug("Skip to add dead node {} to check " +
                 "since the probe queue is full.", datanodeInfo);
         break;
+      } else {
+        LOG.debug("Add dead node to check: {}.", datanodeInfo);
       }
     }
     state = State.IDLE;
@@ -475,6 +475,7 @@ public class DeadNodeDetector extends Daemon {
       datanodeInfos.add(datanodeInfo);
     }
 
+    LOG.debug("Add datanode {} to suspectAndDeadNodes.", datanodeInfo);
     addSuspectNodeToDetect(datanodeInfo);
   }
 
