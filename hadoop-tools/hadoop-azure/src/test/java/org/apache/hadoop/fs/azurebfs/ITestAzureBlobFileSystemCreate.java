@@ -194,6 +194,17 @@ public class ITestAzureBlobFileSystemCreate extends
         });
   }
 
+  /**
+   * Tests if the number of connections made for:
+   * 1. create overwrite=false of a file that doesnt pre-exist
+   * 2. create overwrite=false of a file that pre-exists
+   * 3. create overwrite=true of a file that doesnt pre-exist
+   * 4. create overwrite=true of a file that pre-exists
+   * matches the expectation when run against both combinations of
+   * fs.azure.disable.default.create.overwrite=true and
+   * fs.azure.disable.default.create.overwrite=false
+   * @throws Throwable
+   */
   @Test
   public void testDefaultCreateOverwriteFileTest() throws Throwable {
     testCreateFileOverwrite(true);
@@ -261,9 +272,11 @@ public class ITestAzureBlobFileSystemCreate extends
     fs.create(overwriteFilePath, true);
 
     if (defaultDisableCreateOverwrite) {
-      // Two requests will be sent to server to create path, one without overwrite
-      // and another with overwrite should be issued.
-      createRequestCount += 2;
+      // Three requests will be sent to server to create path,
+      // 1. create without overwrite
+      // 2. GetFileStatus to get eTag
+      // 3. create with overwrite
+      createRequestCount += 3;
     } else {
       createRequestCount++;
     }

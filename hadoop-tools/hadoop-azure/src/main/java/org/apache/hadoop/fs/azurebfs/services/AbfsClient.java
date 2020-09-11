@@ -41,6 +41,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConcurrentWriteOperationDetectedException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException;
 import org.apache.hadoop.fs.azurebfs.extensions.ExtensionHelper;
@@ -293,6 +294,7 @@ public class AbfsClient implements Closeable {
         operation.equals(SASTokenProvider.CREATE_FILE_OPERATION)
             ? FILE
             : DIRECTORY);
+
     if (isAppendBlob) {
       abfsUriQueryBuilder.addQuery(QUERY_PARAM_BLOBTYPE, APPEND_BLOB_TYPE);
     }
@@ -302,14 +304,55 @@ public class AbfsClient implements Closeable {
     try {
       op = createPathImpl(path, abfsUriQueryBuilder,
           (isFirstAttemptToCreateWithoutOverwrite ? false : overwrite),
-          permission, umask);
+          permission, umask, null);
     } catch (AbfsRestOperationException e) {
       if ((e.getStatusCode() == HttpURLConnection.HTTP_CONFLICT)
           && isFirstAttemptToCreateWithoutOverwrite) {
+        // Was the first attempt made to create file without overwrite which
+        // failed because there is a pre-existing file.
+        //
+        // There is a rare possibility of race condition incase of create with
+        // overwrite=true. One such incident lead to data loss, where a retried
+        // create overwrite succeeded followed by an append, but the very first
+        // create overwrite made it to backend post the append. This lead to the
+        // file being overwritten and hence data loss. To prevent this scenario,
+        // first fetch the eTag of current file and set condition to overwrite
+        // only if eTag matches.
         isFirstAttemptToCreateWithoutOverwrite = false;
-        // was a first attempt made to create without overwrite. Now try again
-        // with overwrite now.
-        op = createPathImpl(path, abfsUriQueryBuilder, true, permission, umask);
+
+        // Fetch eTag
+        try {
+          op = getPathStatus(path, false);
+        } catch (AbfsRestOperationException ex) {
+          if (e.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
+            // Is a parallel access case, as file which was found to be
+            // present went missing by this request.
+            throw new ConcurrentWriteOperationDetectedException(
+                "Parallel access to the create path detected. Failing request "
+                    + "to honor single writer semantics");
+          } else {
+            throw ex;
+          }
+        }
+
+        String eTag = op.getResult().getResponseHeader(ETAG);
+
+        try {
+          // overwrite
+          op = createPathImpl(path, abfsUriQueryBuilder, true, permission,
+              umask, eTag);
+        } catch (AbfsRestOperationException ex) {
+          if (e.getStatusCode() == HttpURLConnection.HTTP_PRECON_FAILED) {
+            // Is a parallel access case, as file with eTag was just queried
+            // and precondition failure can happen only when another file with
+            // different etag got created.
+            throw new ConcurrentWriteOperationDetectedException(
+                "Parallel access to the create path detected. Failing request "
+                    + "to honor single writer semantics");
+          } else {
+            throw ex;
+          }
+        }
       } else {
         throw e;
       }
@@ -322,7 +365,8 @@ public class AbfsClient implements Closeable {
       AbfsUriQueryBuilder abfsUriQueryBuilder,
       final boolean overwrite,
       final String permission,
-      final String umask) throws AzureBlobFileSystemException {
+      final String umask,
+      final String eTag) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     if (!overwrite) {
@@ -335,6 +379,10 @@ public class AbfsClient implements Closeable {
 
     if (umask != null && !umask.isEmpty()) {
       requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_UMASK, umask));
+    }
+
+    if (eTag != null && !eTag.isEmpty()) {
+      requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.IF_MATCH, eTag));
     }
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
