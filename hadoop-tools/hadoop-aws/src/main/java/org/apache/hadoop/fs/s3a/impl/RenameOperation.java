@@ -400,7 +400,6 @@ Are   * @throws IOException failure
           destStatus.getPath());
       // Although the dir marker policy doesn't always need to do this,
       // it's simplest just to be consistent here.
-      // note: updates the metastore as well a S3.
       callbacks.deleteObjectAtPath(destStatus.getPath(), dstKey, false, null);
     }
 
@@ -412,7 +411,7 @@ Are   * @throws IOException failure
         false);
 
     final RemoteIterator<S3ALocatedFileStatus> iterator =
-        callbacks.listFilesAndDirectoryMarkers(parentPath,
+        callbacks.listFilesAndEmptyDirectories(parentPath,
             sourceStatus,
             true,
             true);

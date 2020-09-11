@@ -1574,7 +1574,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
     @Override
     @Retries.RetryTranslated
-    public RemoteIterator<S3ALocatedFileStatus> listFilesAndDirectoryMarkers(
+    public RemoteIterator<S3ALocatedFileStatus> listFilesAndEmptyDirectories(
         final Path path,
         final S3AFileStatus status,
         final boolean collectTombstones,
@@ -2079,7 +2079,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           DELETE_CONSIDERED_IDEMPOTENT,
           ()-> {
             incrementStatistic(OBJECT_DELETE_REQUESTS);
-            incrementStatistic(OBJECT_DELETE_OBJECTS);
             s3.deleteObject(bucket, key);
             return null;
           });
@@ -2126,14 +2125,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Perform a bulk object delete operation against S3; leaves S3Guard
-   * alone.
+   * Perform a bulk object delete operation.
    * Increments the {@code OBJECT_DELETE_REQUESTS} and write
-   * operation statistics
-   * <p></p>
-   * {@code OBJECT_DELETE_OBJECTS} is updated with the actual number
-   * of objects deleted in the request.
-   * <p></p>
+   * operation statistics.
    * Retry policy: retry untranslated; delete considered idempotent.
    * If the request is throttled, this is logged in the throttle statistics,
    * with the counter set to the number of keys, rather than the number
@@ -2154,10 +2148,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     incrementWriteOperations();
     BulkDeleteRetryHandler retryHandler =
         new BulkDeleteRetryHandler(createStoreContext());
-    int keyCount = deleteRequest.getKeys().size();
     try(DurationInfo ignored =
             new DurationInfo(LOG, false, "DELETE %d keys",
-                keyCount)) {
+                deleteRequest.getKeys().size())) {
       return invoker.retryUntranslated("delete",
           DELETE_CONSIDERED_IDEMPOTENT,
           (text, e, r, i) -> {
@@ -2166,7 +2159,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           },
           () -> {
             incrementStatistic(OBJECT_DELETE_REQUESTS, 1);
-            incrementStatistic(OBJECT_DELETE_OBJECTS, keyCount);
             return s3.deleteObjects(deleteRequest);
           });
     } catch (MultiObjectDeleteException e) {
