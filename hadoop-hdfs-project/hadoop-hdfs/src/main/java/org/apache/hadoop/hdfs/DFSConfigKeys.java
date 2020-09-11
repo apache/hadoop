@@ -1510,8 +1510,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
 
   public static final String DFS_DATANODE_RESERVE_FOR_ARCHIVE_PERCENTAGE =
       "dfs.datanode.reserve-for-archive.percentage";
-  public static final double DFS_DATANODE_RESERVE_FOR_ARCHIVE_PERCENTAGE_DEFAULT =
-      0.0;
+  public static final double
+      DFS_DATANODE_RESERVE_FOR_ARCHIVE_PERCENTAGE_DEFAULT = 0.0;
 
   // dfs.client.retry confs are moved to HdfsClientConfigKeys.Retry
   @Deprecated

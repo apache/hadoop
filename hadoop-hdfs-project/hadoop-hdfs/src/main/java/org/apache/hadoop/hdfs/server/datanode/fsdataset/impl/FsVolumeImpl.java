@@ -198,7 +198,8 @@ public class FsVolumeImpl implements FsVolumeSpi {
             DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING_DEFAULT);
     if (enableSameDiskArchival) {
       this.device = usage.getMount();
-      reservedForArchive = conf.getDouble(DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_PERCENTAGE,
+      reservedForArchive = conf.getDouble(
+          DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_PERCENTAGE,
           DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_PERCENTAGE_DEFAULT);
       if (reservedForArchive >= 1) {
         FsDatasetImpl.LOG.warn("Value of reserve-for-archival is >= 100% for "
@@ -448,12 +449,13 @@ public class FsVolumeImpl implements FsVolumeSpi {
     }
 
     if (enableSameDiskArchival) {
-      double reservedForArchive = conf.getDouble(DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_PERCENTAGE,
+      double reservedForArchival = conf.getDouble(
+          DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_PERCENTAGE,
           DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_PERCENTAGE_DEFAULT);
       if (storageType == StorageType.ARCHIVE) {
-        capacity = (long) (capacity * reservedForArchive);
+        capacity = (long) (capacity * reservedForArchival);
       } else {
-        capacity = (long) (capacity * (1 - reservedForArchive));
+        capacity = (long) (capacity * (1 - reservedForArchival));
       }
     }
 
@@ -488,7 +490,8 @@ public class FsVolumeImpl implements FsVolumeSpi {
   }
 
   long getActualNonDfsUsed() throws IOException {
-    // DISK and ARCHIVAL on same disk should share the same amount of reserved capacity.
+    // DISK and ARCHIVAL on same disk
+    // should share the same amount of reserved capacity.
     // When calculating actual non dfs used,
     // exclude DFS used capacity by another volume.
     if (enableSameDiskArchival &&

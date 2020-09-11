@@ -90,7 +90,8 @@ public class TestFsVolumeList {
   @Test(timeout=30000)
   public void testGetNextVolumeWithClosedVolume() throws IOException {
     FsVolumeList volumeList = new FsVolumeList(
-        Collections.<VolumeFailureInfo>emptyList(), blockScanner, blockChooser, conf);
+        Collections.<VolumeFailureInfo>emptyList(),
+        blockScanner, blockChooser, conf);
     final List<FsVolumeImpl> volumes = new ArrayList<>();
     for (int i = 0; i < 3; i++) {
       File curDir = new File(baseDir, "nextvolume-" + i);
@@ -484,7 +485,8 @@ public class TestFsVolumeList {
                 .parse("[ARCHIVE]" + archivalVolDir.getPath())))
         .build();
     FsVolumeList volumeList = new FsVolumeList(
-        Collections.<VolumeFailureInfo>emptyList(), blockScanner, blockChooser, conf);
+        Collections.<VolumeFailureInfo>emptyList(),
+        blockScanner, blockChooser, conf);
     volumeList.addVolume(archivalVolume.obtainReference());
     volumeList.addVolume(diskVolume.obtainReference());
 
