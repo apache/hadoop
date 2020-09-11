@@ -473,7 +473,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
   }
 
   void checkPerDirectorySnapshotLimit(int n) throws SnapshotException {
-        checkSnapshotLimit(maxSnapshotLimit, n, "per directory");
+    checkSnapshotLimit(maxSnapshotLimit, n, "per directory");
   }
 
   void checkSnapshotLimit(int limit, int snapshotCount, String type)
