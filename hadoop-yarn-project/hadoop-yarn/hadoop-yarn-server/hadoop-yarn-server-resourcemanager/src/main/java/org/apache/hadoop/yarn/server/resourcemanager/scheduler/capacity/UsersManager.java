@@ -24,7 +24,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
@@ -72,7 +71,7 @@ public class UsersManager implements AbstractUsersManager {
 
   // To detect whether there is a change in user count for every user-limit
   // calculation.
-  private AtomicLong latestVersionOfUsersState = new AtomicLong(0);
+  private long latestVersionOfUsersState = 0;
   private Map<String, Map<SchedulingMode, Long>> localVersionOfActiveUsersState =
       new HashMap<String, Map<SchedulingMode, Long>>();
   private Map<String, Map<SchedulingMode, Long>> localVersionOfAllUsersState =
@@ -91,8 +90,12 @@ public class UsersManager implements AbstractUsersManager {
       new HashMap<String, Set<ApplicationId>>();
 
   // Pre-computed list of user-limits.
-  Map<String, Map<SchedulingMode, Resource>> preComputedActiveUserLimit = new ConcurrentHashMap<>();
-  Map<String, Map<SchedulingMode, Resource>> preComputedAllUserLimit = new ConcurrentHashMap<>();
+  @VisibleForTesting
+  Map<String, Map<SchedulingMode, Resource>> preComputedActiveUserLimit =
+      new HashMap<>();
+  @VisibleForTesting
+  Map<String, Map<SchedulingMode, Resource>> preComputedAllUserLimit =
+      new HashMap<>();
 
   private float activeUsersTimesWeights = 0.0f;
   private float allUsersTimesWeights = 0.0f;
@@ -361,9 +364,9 @@ public class UsersManager implements AbstractUsersManager {
     writeLock.lock();
     try {
 
-      long value = latestVersionOfUsersState.incrementAndGet();
+      long value = ++latestVersionOfUsersState;
       if (value < 0) {
-        latestVersionOfUsersState.set(0);
+        latestVersionOfUsersState = 0;
       }
     } finally {
       writeLock.unlock();
@@ -581,6 +584,15 @@ public class UsersManager implements AbstractUsersManager {
     return userSpecificUserLimit;
   }
 
+  protected long getLatestVersionOfUsersState() {
+    readLock.lock();
+    try {
+      return latestVersionOfUsersState;
+    } finally {
+      readLock.unlock();
+    }
+  }
+
   /*
    * Recompute user-limit under following conditions: 1. cached user-limit does
    * not exist in local map. 2. Total User count doesn't match with local cached
@@ -588,8 +600,13 @@ public class UsersManager implements AbstractUsersManager {
    */
   private boolean isRecomputeNeeded(SchedulingMode schedulingMode,
       String nodePartition, boolean isActive) {
-    return (getLocalVersionOfUsersState(nodePartition, schedulingMode,
-        isActive) != latestVersionOfUsersState.get());
+    readLock.lock();
+    try {
+      return (getLocalVersionOfUsersState(nodePartition, schedulingMode,
+          isActive) != latestVersionOfUsersState);
+    } finally {
+      readLock.unlock();
+    }
   }
 
   /*
@@ -610,7 +627,7 @@ public class UsersManager implements AbstractUsersManager {
         localVersionOfUsersState.put(nodePartition, localVersion);
       }
 
-      localVersion.put(schedulingMode, latestVersionOfUsersState.get());
+      localVersion.put(schedulingMode, latestVersionOfUsersState);
     } finally {
       writeLock.unlock();
     }
