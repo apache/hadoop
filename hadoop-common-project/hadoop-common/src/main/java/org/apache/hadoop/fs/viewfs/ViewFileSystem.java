@@ -1269,16 +1269,13 @@ public class ViewFileSystem extends FileSystem {
       // is a chance of files exists under that internalDir in fallback.
       // Iterator#next will call getFileBlockLocations with that files. So, we
       // should return getFileBlockLocations on fallback. See HDFS-15532.
-      if (fs.getPath() != InodeTree.SlashPath && this.fsState
+      if (!InodeTree.SlashPath.equals(fs.getPath()) && this.fsState
           .getRootFallbackLink() != null) {
         FileSystem linkedFallbackFs =
             this.fsState.getRootFallbackLink().getTargetFileSystem();
         Path parent = Path.getPathWithoutSchemeAndAuthority(
             new Path(theInternalDir.fullPath));
-        String leafChild = (InodeTree.SlashPath.equals(fs.getPath())) ?
-            InodeTree.SlashPath.toString() :
-            fs.getPath().getName();
-        Path pathToFallbackFs = new Path(parent, leafChild);
+        Path pathToFallbackFs = new Path(parent, fs.getPath().getName());
         return linkedFallbackFs
             .getFileBlockLocations(pathToFallbackFs, start, len);
       }
