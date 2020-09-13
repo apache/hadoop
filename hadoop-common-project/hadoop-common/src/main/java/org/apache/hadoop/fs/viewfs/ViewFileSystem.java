@@ -1277,6 +1277,23 @@ public class ViewFileSystem extends FileSystem {
     public BlockLocation[] getFileBlockLocations(final FileStatus fs,
         final long start, final long len) throws
         FileNotFoundException, IOException {
+
+      // When application calls listFiles on internalDir, it would return
+      // RemoteIterator from InternalDirOfViewFs. If there is a fallBack, there
+      // is a chance of files exists under that internalDir in fallback.
+      // Iterator#next will call getFileBlockLocations with that files. So, we
+      // should return getFileBlockLocations on fallback. See HDFS-15532.
+      if (!InodeTree.SlashPath.equals(fs.getPath()) && this.fsState
+          .getRootFallbackLink() != null) {
+        FileSystem linkedFallbackFs =
+            this.fsState.getRootFallbackLink().getTargetFileSystem();
+        Path parent = Path.getPathWithoutSchemeAndAuthority(
+            new Path(theInternalDir.fullPath));
+        Path pathToFallbackFs = new Path(parent, fs.getPath().getName());
+        return linkedFallbackFs
+            .getFileBlockLocations(pathToFallbackFs, start, len);
+      }
+
       checkPathIsSlash(fs.getPath());
       throw new FileNotFoundException("Path points to dir not a file");
     }

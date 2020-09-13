@@ -29,7 +29,6 @@ import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -85,10 +84,5 @@ public class TestViewDistributedFileSystemContract
         "InternalDir of ViewFileSystem is readonly", () -> {
           super.testRenameRootDirForbidden();
         });
-  }
-
-  @Ignore("Ignore this test until HDFS-15532")
-  @Override
-  public void testLSRootDir() throws Throwable {
   }
 }

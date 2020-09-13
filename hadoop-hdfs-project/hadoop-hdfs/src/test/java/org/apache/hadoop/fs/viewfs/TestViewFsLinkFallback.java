@@ -18,6 +18,7 @@
 package org.apache.hadoop.fs.viewfs;
 
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -30,11 +31,14 @@ import java.util.EnumSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.AbstractFileSystem;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsConstants;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -447,5 +451,25 @@ public class TestViewFsLinkFallback {
     assertFalse(fsTarget.exists(Path.mergePaths(fallbackTarget, vfsTestDir)));
     vfs.create(vfsTestDir, EnumSet.of(CREATE),
         Options.CreateOpts.perms(FsPermission.getDefault())).close();
+  }
+
+  /**
+   * Tests that, when fallBack has files under matching internal dir, listFiles
+   * should work.
+   */
+  @Test
+  public void testListFiles() throws Exception {
+    Configuration conf = new Configuration();
+    Path fallbackTarget = new Path(targetTestRoot, "fallbackDir");
+    fsTarget.mkdirs(fallbackTarget);
+    Path fileInFallBackRoot = new Path(fallbackTarget, "GetFileBlockLocations");
+    fsTarget.create(fileInFallBackRoot).close();
+    ConfigUtil.addLinkFallback(conf, fallbackTarget.toUri());
+    FileContext fc = FileContext.getFileContext(viewFsDefaultClusterUri, conf);
+    RemoteIterator<LocatedFileStatus> iterator =
+        fc.util().listFiles(new Path("/"), false);
+    assertTrue(iterator.hasNext());
+    assertEquals(fileInFallBackRoot.getName(),
+        iterator.next().getPath().getName());
   }
 }
