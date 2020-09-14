@@ -69,7 +69,7 @@ public class TestSnapshotManager {
     conf.setInt(DFSConfigKeys.
             DFS_NAMENODE_SNAPSHOT_MAX_LIMIT,
         testMaxSnapshotIDLimit);
-    testMaxSnapshotLimit(testMaxSnapshotIDLimit,"max snapshot limit" ,
+    testMaxSnapshotLimit(testMaxSnapshotIDLimit,"file system snapshot limit" ,
         conf, testMaxSnapshotIDLimit * 2);
   }
 
@@ -84,6 +84,7 @@ public class TestSnapshotManager {
     SnapshotManager sm = spy(new SnapshotManager(conf, fsdir));
     doReturn(ids).when(sm).getSnapshottableRoot(any());
     doReturn(maxSnapID).when(sm).getMaxSnapshotID();
+    doReturn(true).when(fsdir).isImageLoaded();
 
     // Create testMaxSnapshotLimit snapshots. These should all succeed.
     //
