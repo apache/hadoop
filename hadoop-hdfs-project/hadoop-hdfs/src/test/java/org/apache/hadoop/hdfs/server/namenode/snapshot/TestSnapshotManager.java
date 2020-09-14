@@ -153,8 +153,7 @@ public class TestSnapshotManager {
     DistributedFileSystem hdfs = cluster.getFileSystem();
     hdfs.mkdirs(snapshottableDir);
     hdfs.allowSnapshot(snapshottableDir);
-    int i = 0;
-    for (; i < numSnapshots; i++) {
+    for (int i = 0; i < numSnapshots; i++) {
       hdfs.createSnapshot(snapshottableDir, "s" + i);
     }
     LambdaTestUtils.intercept(SnapshotException.class,
@@ -176,8 +175,7 @@ public class TestSnapshotManager {
 
     // Any new snapshot creation should still fail
     LambdaTestUtils.intercept(SnapshotException.class,
-        "snapshot limit",
-        () -> hdfs.createSnapshot(snapshottableDir, "s5"));
+        "snapshot limit", () -> hdfs.createSnapshot(snapshottableDir, "s5"));
     // now change max snapshot FS limit to 2 and restart namenode
     cluster.getNameNode().getConf().setInt(DFSConfigKeys.
         DFS_NAMENODE_SNAPSHOT_FILESYSTEM_LIMIT, 2);
@@ -189,6 +187,7 @@ public class TestSnapshotManager {
 
     // make sure namenode has the new snapshot limit configured as 2
     Assert.assertEquals(2, snapshotManager.getMaxSnapshotLimit());
+    cluster.shutdown();
   }
 
 }
