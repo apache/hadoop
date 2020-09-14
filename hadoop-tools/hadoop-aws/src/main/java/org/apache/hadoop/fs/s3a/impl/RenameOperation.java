@@ -218,9 +218,9 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
    * @param version object version.
    */
   private void queueToDelete(Path path, String key, String version) {
-    LOG.debug("Queueing to delete {}", path);
+    LOG.debug("Queueing to delete {}@{}", path, version);
     pathsToDelete.add(path);
-    keysToDelete.add(new DeleteObjectsRequest.KeyVersion(key, version));
+    keysToDelete.add(new DeleteObjectsRequest.KeyVersion(key));
   }
 
   /**
@@ -418,6 +418,7 @@ Are   * @throws IOException failure
     while (iterator.hasNext()) {
       // get the next entry in the listing.
       S3ALocatedFileStatus child = iterator.next();
+      LOG.debug("To rename {}", child);
       // convert it to an S3 key.
       String k = storeContext.pathToKey(child.getPath());
       // possibly adding a "/" if it represents directory and it does
