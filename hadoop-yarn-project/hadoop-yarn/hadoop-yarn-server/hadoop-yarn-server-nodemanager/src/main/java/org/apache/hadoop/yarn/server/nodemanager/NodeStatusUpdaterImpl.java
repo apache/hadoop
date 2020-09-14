@@ -405,10 +405,10 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         List<LogAggregationReport> logAggregationReports =
             context.getNMLogAggregationStatusTracker()
                 .pullCachedLogAggregationReports();
-        LOG.debug("The cache log aggregation status size:{}",
-            logAggregationReports.size());
         if (logAggregationReports != null
             && !logAggregationReports.isEmpty()) {
+          LOG.debug("The cache log aggregation status size:{}",
+              logAggregationReports.size());
           request.setLogAggregationReportsForApps(logAggregationReports);
         }
       }
@@ -623,8 +623,10 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     }
 
     containerStatuses.addAll(pendingCompletedContainers.values());
-    LOG.debug("Sending out {} container statuses: {}",
-        containerStatuses.size(), containerStatuses);
+    if (!containerStatuses.isEmpty()) {
+      LOG.debug("Sending out {} container statuses: {}",
+          containerStatuses.size(), containerStatuses);
+    }
 
     return containerStatuses;
   }
@@ -663,8 +665,10 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         addCompletedContainer(containerId);
       }
     }
-    LOG.info("Sending out " + containerStatuses.size()
-      + " NM container statuses: " + containerStatuses);
+    if (!containerStatuses.isEmpty()) {
+      LOG.info("Sending out " + containerStatuses.size()
+          + " NM container statuses: " + containerStatuses);
+    }
     return containerStatuses;
   }
 
