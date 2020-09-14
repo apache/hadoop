@@ -324,7 +324,7 @@ public class AbfsClient implements Closeable {
         try {
           op = getPathStatus(path, false);
         } catch (AbfsRestOperationException ex) {
-          if (e.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
+          if (ex.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
             // Is a parallel access case, as file which was found to be
             // present went missing by this request.
             throw new ConcurrentWriteOperationDetectedException(
@@ -342,7 +342,7 @@ public class AbfsClient implements Closeable {
           op = createPathImpl(path, abfsUriQueryBuilder, true, permission,
               umask, eTag);
         } catch (AbfsRestOperationException ex) {
-          if (e.getStatusCode() == HttpURLConnection.HTTP_PRECON_FAILED) {
+          if (ex.getStatusCode() == HttpURLConnection.HTTP_PRECON_FAILED) {
             // Is a parallel access case, as file with eTag was just queried
             // and precondition failure can happen only when another file with
             // different etag got created.
@@ -361,7 +361,8 @@ public class AbfsClient implements Closeable {
     return op;
   }
 
-  private AbfsRestOperation createPathImpl(final String path,
+  @VisibleForTesting
+  public AbfsRestOperation createPathImpl(final String path,
       AbfsUriQueryBuilder abfsUriQueryBuilder,
       final boolean overwrite,
       final String permission,

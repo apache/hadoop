@@ -310,9 +310,18 @@ public final class TestAbfsClient {
     when(client.createDefaultHeaders()).thenCallRealMethod();
 
     // override baseurl
+    Field abfsConfigurationField = AbfsClient.class.getDeclaredField("abfsConfiguration");
+    abfsConfigurationField.setAccessible(true);
+    Field modifiersField = Field.class.getDeclaredField("modifiers");
+    modifiersField.setAccessible(true);
+    modifiersField.setInt(abfsConfigurationField,
+        abfsConfigurationField.getModifiers()
+            & ~java.lang.reflect.Modifier.FINAL);
+    abfsConfigurationField.set(client, abfsConfig);
+
+    // override baseurl
     Field baseUrlField = AbfsClient.class.getDeclaredField("baseUrl");
     baseUrlField.setAccessible(true);
-    Field modifiersField = Field.class.getDeclaredField("modifiers");
     modifiersField.setAccessible(true);
     modifiersField.setInt(baseUrlField, baseUrlField.getModifiers() & ~java.lang.reflect.Modifier.FINAL);
     baseUrlField.set(client, baseAbfsClientInstance.getBaseUrl());
