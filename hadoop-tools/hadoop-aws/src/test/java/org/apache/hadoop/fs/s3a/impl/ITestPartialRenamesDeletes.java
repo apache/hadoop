@@ -72,6 +72,7 @@ import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.extractUndeletedPaths;
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.removeUndeletedPaths;
+import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.toPathList;
 import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.assertFileCount;
 import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.extractCause;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
@@ -331,12 +332,16 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     removeBucketOverrides(bucketName, conf,
         MAX_THREADS,
         MAXIMUM_CONNECTIONS,
-        S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_KEY);
+        S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_KEY,
+        DIRECTORY_MARKER_POLICY);
     conf.setInt(MAX_THREADS, EXECUTOR_THREAD_COUNT);
     conf.setInt(MAXIMUM_CONNECTIONS, EXECUTOR_THREAD_COUNT * 2);
     // turn off prune delays, so as to stop scale tests creating
     // so much cruft that future CLI prune commands take forever
     conf.setInt(S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_KEY, 0);
+    // use the keep policy to ensure that surplus markers exist
+    // to complicate failures
+    conf.set(DIRECTORY_MARKER_POLICY, DIRECTORY_MARKER_POLICY_KEEP);
     return conf;
   }
 
@@ -611,6 +616,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
 
     // the full FS
     S3AFileSystem fs = getFileSystem();
+    StoreContext storeContext = fs.createStoreContext();
 
     List<Path> readOnlyFiles = createFiles(fs, readOnlyDir,
         dirDepth, fileCount, dirCount);
@@ -624,6 +630,13 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     List<Path> allFiles = Stream.concat(
         readOnlyFiles.stream(),
         deletableFiles.stream())
+        .collect(Collectors.toList());
+    List<MultiObjectDeleteSupport.KeyPath> keyPaths = allFiles.stream()
+        .map(path ->
+            new MultiObjectDeleteSupport.KeyPath(
+                storeContext.pathToKey(path),
+                path,
+                false))
         .collect(Collectors.toList());
 
     // this set can be deleted by the role FS
@@ -649,16 +662,17 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     ex = expectDeleteForbidden(basePath);
     if (multiDelete) {
       // multi-delete status checks
-      extractCause(MultiObjectDeleteException.class, ex);
       deleteVerbCount.assertDiffEquals("Wrong delete count", 1);
       MultiObjectDeleteException mde = extractCause(
           MultiObjectDeleteException.class, ex);
-      final List<Path> undeleted
-          = removeUndeletedPaths(mde, allFiles, fs::keyToQualifiedPath);
+      List<MultiObjectDeleteSupport.KeyPath> undeletedKeyPaths = removeUndeletedPaths(
+          mde, keyPaths, storeContext::keyToPath);
+      final List<Path> undeleted = toPathList(
+          undeletedKeyPaths);
       Assertions.assertThat(undeleted)
           .as("files which could not be deleted")
           .containsExactlyInAnyOrderElementsOf(readOnlyFiles);
-      Assertions.assertThat(allFiles)
+      Assertions.assertThat(toPathList(keyPaths))
           .as("files which were deleted")
           .containsExactlyInAnyOrderElementsOf(deletableFiles);
       rejectionCount.assertDiffEquals("Wrong rejection count",
@@ -786,8 +800,22 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
       final int dirCount) throws IOException {
     List<CompletableFuture<Path>> futures = new ArrayList<>(fileCount);
     List<Path> paths = new ArrayList<>(fileCount);
-    List<Path> dirs = new ArrayList<>(fileCount);
+    List<Path> dirs = new ArrayList<>(dirCount);
     buildPaths(paths, dirs, destDir, depth, fileCount, dirCount);
+
+    // create directories. With dir marker retention, that adds more entries
+    // to cause deletion issues
+    try (DurationInfo ignore =
+             new DurationInfo(LOG, "Creating %d directories", dirs.size())) {
+      for (Path path : dirs) {
+        futures.add(submit(EXECUTOR, () ->{
+          fs.mkdirs(path);
+          return path;
+        }));
+      }
+      waitForCompletion(futures);
+    }
+
     try (DurationInfo ignore =
             new DurationInfo(LOG, "Creating %d files", fileCount)) {
       for (Path path : paths) {

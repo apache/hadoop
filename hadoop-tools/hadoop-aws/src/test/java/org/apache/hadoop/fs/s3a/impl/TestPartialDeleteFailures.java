@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -39,6 +40,7 @@ import org.apache.hadoop.fs.s3a.S3ATestUtils;
 
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.ACCESS_DENIED;
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.removeUndeletedPaths;
+import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.toPathList;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -56,6 +58,10 @@ public class TestPartialDeleteFailures {
     return new Path("s3a://bucket/" + k);
   }
 
+  private static String toKey(Path path) {
+    return path.toUri().getPath();
+  }
+
   @Before
   public void setUp() throws Exception {
     context = S3ATestUtils.createMockStoreContext(true,
@@ -64,28 +70,30 @@ public class TestPartialDeleteFailures {
 
   @Test
   public void testDeleteExtraction() {
-    List<Path> src = pathList("a", "a/b", "a/c");
-    List<Path> rejected = pathList("a/b");
+    List<MultiObjectDeleteSupport.KeyPath> src = pathList("a", "a/b", "a/c");
+    List<MultiObjectDeleteSupport.KeyPath> rejected = pathList("a/b");
     MultiObjectDeleteException ex = createDeleteException(ACCESS_DENIED,
         rejected);
-    List<Path> undeleted = removeUndeletedPaths(ex, src,
-        TestPartialDeleteFailures::qualifyKey);
+    List<MultiObjectDeleteSupport.KeyPath> undeleted =
+        removeUndeletedPaths(ex, src,
+            TestPartialDeleteFailures::qualifyKey);
     assertEquals("mismatch of rejected and undeleted entries",
         rejected, undeleted);
   }
 
   @Test
   public void testSplitKeysFromResults() throws Throwable {
-    List<Path> src = pathList("a", "a/b", "a/c");
-    List<Path> rejected = pathList("a/b");
-    List<DeleteObjectsRequest.KeyVersion> keys = keysToDelete(src);
+    List<MultiObjectDeleteSupport.KeyPath> src = pathList("a", "a/b", "a/c");
+    List<MultiObjectDeleteSupport.KeyPath> rejected = pathList("a/b");
+    List<DeleteObjectsRequest.KeyVersion> keys = keysToDelete(toPathList(src));
     MultiObjectDeleteException ex = createDeleteException(ACCESS_DENIED,
         rejected);
-    Pair<List<Path>, List<Path>> pair =
+    Pair<List<MultiObjectDeleteSupport.KeyPath>,
+        List<MultiObjectDeleteSupport.KeyPath>> pair =
         new MultiObjectDeleteSupport(context, null)
           .splitUndeletedKeys(ex, keys);
-    List<Path> undeleted = pair.getLeft();
-    List<Path> deleted = pair.getRight();
+    List<MultiObjectDeleteSupport.KeyPath> undeleted = pair.getLeft();
+    List<MultiObjectDeleteSupport.KeyPath> deleted = pair.getRight();
     assertEquals(rejected, undeleted);
     // now check the deleted list to verify that it is valid
     src.remove(rejected.get(0));
@@ -97,9 +105,12 @@ public class TestPartialDeleteFailures {
    * @param paths paths to qualify and then convert to a lst.
    * @return same paths as a list.
    */
-  private List<Path> pathList(String... paths) {
+  private List<MultiObjectDeleteSupport.KeyPath> pathList(String... paths) {
     return Arrays.stream(paths)
-        .map(TestPartialDeleteFailures::qualifyKey)
+        .map(k->
+            new MultiObjectDeleteSupport.KeyPath(k,
+                qualifyKey(k),
+                k.endsWith("/")))
         .collect(Collectors.toList());
   }
 
@@ -111,12 +122,13 @@ public class TestPartialDeleteFailures {
    */
   private MultiObjectDeleteException createDeleteException(
       final String code,
-      final List<Path> rejected) {
+      final List<MultiObjectDeleteSupport.KeyPath> rejected) {
     List<MultiObjectDeleteException.DeleteError> errors = rejected.stream()
-        .map((p) -> {
+        .map((kp) -> {
+          Path p = kp.getPath();
           MultiObjectDeleteException.DeleteError e
               = new MultiObjectDeleteException.DeleteError();
-          e.setKey(p.toUri().getPath());
+          e.setKey(kp.getKey());
           e.setCode(code);
           e.setMessage("forbidden");
           return e;
@@ -132,7 +144,10 @@ public class TestPartialDeleteFailures {
   public static List<DeleteObjectsRequest.KeyVersion> keysToDelete(
       List<Path> paths) {
     return paths.stream()
-        .map((p) -> p.toUri().getPath())
+        .map(p -> {
+          String uripath = p.toUri().getPath();
+          return uripath.substring(1);
+        })
         .map(DeleteObjectsRequest.KeyVersion::new)
         .collect(Collectors.toList());
   }
@@ -150,16 +165,21 @@ public class TestPartialDeleteFailures {
     List<DeleteObjectsRequest.KeyVersion> keyList = keysToDelete(src);
     List<Path> deleteForbidden = Lists.newArrayList(pathAB);
     final List<Path> deleteAllowed = Lists.newArrayList(pathA, pathAC);
+    List<MultiObjectDeleteSupport.KeyPath> forbiddenKP = deleteForbidden.stream()
+        .map(p ->
+            new MultiObjectDeleteSupport.KeyPath(toKey(p), p, false))
+        .collect(Collectors.toList());
     MultiObjectDeleteException ex = createDeleteException(ACCESS_DENIED,
-        deleteForbidden);
+        forbiddenKP);
     S3ATestUtils.OperationTrackingStore store
         = new S3ATestUtils.OperationTrackingStore();
     StoreContext storeContext = S3ATestUtils
             .createMockStoreContext(true, store, CONTEXT_ACCESSORS);
     MultiObjectDeleteSupport deleteSupport
         = new MultiObjectDeleteSupport(storeContext, null);
+    List<Path> retainedMarkers = new ArrayList<>();
     Triple<List<Path>, List<Path>, List<Pair<Path, IOException>>>
-        triple = deleteSupport.processDeleteFailure(ex, keyList);
+        triple = deleteSupport.processDeleteFailure(ex, keyList, retainedMarkers);
     Assertions.assertThat(triple.getRight())
         .as("failure list")
         .isEmpty();
@@ -173,6 +193,10 @@ public class TestPartialDeleteFailures {
         as("undeleted store entries")
         .containsAll(deleteForbidden)
         .doesNotContainAnyElementsOf(deleteAllowed);
+    // because dir marker retention is on, we expect at least one retained marker
+    Assertions.assertThat(retainedMarkers).
+        as("Retained Markers")
+        .isNotEmpty();
   }
 
 

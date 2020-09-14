@@ -111,7 +111,10 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
         keepMarkers
             ? DIRECTORY_MARKER_POLICY_KEEP
             : DIRECTORY_MARKER_POLICY_DELETE);
-    conf.setBoolean(METADATASTORE_AUTHORITATIVE, authoritative);
+    if (isGuarded()) {
+      conf.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_DYNAMO);
+      conf.setBoolean(METADATASTORE_AUTHORITATIVE, authoritative);
+    }
     disableFilesystemCaching(conf);
     return conf;
   }

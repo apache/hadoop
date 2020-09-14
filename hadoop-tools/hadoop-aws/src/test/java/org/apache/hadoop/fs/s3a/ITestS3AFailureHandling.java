@@ -141,13 +141,13 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
     Path markerPath = fs.keyToQualifiedPath(marker);
     keys.add(new DeleteObjectsRequest.KeyVersion(marker));
 
-    Pair<List<Path>, List<Path>> pair =
+    Pair<List<KeyPath>, List<KeyPath>> pair =
         new MultiObjectDeleteSupport(fs.createStoreContext(), null)
         .splitUndeletedKeys(ex, keys);
     assertEquals(undeleted, pair.getLeft());
-    List<Path> right = pair.getRight();
+    List<KeyPath> right = pair.getRight();
     assertEquals("Wrong size for " + join(right), 1, right.size());
-    assertEquals(markerPath, right.get(0));
+    assertEquals(markerPath, right.get(0).getPath());
   }
 
   /**

@@ -19,16 +19,20 @@
 package org.apache.hadoop.fs.s3a.performance;
 
 
+import java.io.FileNotFoundException;
 import java.util.Arrays;
 import java.util.Collection;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.Tristate;
@@ -37,6 +41,7 @@ import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.*;
 import static org.apache.hadoop.fs.s3a.performance.OperationCostValidator.probe;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Use metrics to assert about the cost of file API calls.
@@ -58,7 +63,9 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
         {"raw-keep-markers", false, true, false},
         {"raw-delete-markers", false, false, false},
         {"nonauth-keep-markers", true, true, false},
-        {"auth-delete-markers", true, false, true}
+        {"nonauth-delete-markers", true, false, false},
+        {"auth-delete-markers", true, false, true},
+        {"auth-keep-markers", true, true, true}
     });
   }
 
@@ -145,7 +152,7 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
     boolean rawAndDeleting = isRaw() && isDeleting();
     verifyMetrics(() -> {
       fs.delete(file1, false);
-      return "after fs.delete(file1simpleFile) " + getMetricSummary();
+      return "after fs.delete(file1) " + getMetricSummary();
     },
         // delete file. For keeping: that's it
         probe(rawAndKeeping, OBJECT_METADATA_REQUESTS,
@@ -173,7 +180,24 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
   public void testDirMarkersSubdir() throws Throwable {
     describe("verify cost of deep subdir creation");
 
-    Path subDir = new Path(methodPath(), "1/2/3/4/5/6");
+    Path methodPath = methodPath();
+    Path parent = new Path(methodPath, "parent");
+    Path subDir = new Path(parent, "1/2/3/4/5/6");
+    S3AFileSystem fs = getFileSystem();
+    // this creates a peer of the parent dir, so ensures
+    // that when parent dir is deleted, no markers need to
+    // be recreated...that complicates all the metrics which
+    // are measured
+    Path sibling = new Path(methodPath, "sibling");
+    ContractTestUtils.touch(fs, sibling);
+
+    int dirsCreated = 2;
+    fs.delete(parent, true);
+
+    LOG.info("creating parent dir {}", parent);
+    fs.mkdirs(parent);
+
+    LOG.info("creating sub directory {}", subDir);
     // one dir created, possibly a parent removed
     verifyMetrics(() -> {
       mkdirs(subDir);
@@ -187,6 +211,49 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
         // delete all possible fake dirs above the subdirectory
         withWhenDeleting(FAKE_DIRECTORIES_DELETED,
             directoriesInPath(subDir) - 1));
+
+    int dirDeleteRequests  = 1;
+    int fileDeleteRequests  = 0;
+    int totalDeleteRequests = dirDeleteRequests + fileDeleteRequests;
+
+    LOG.info("About to delete {}", parent);
+    // now delete the deep tree.
+    verifyMetrics(() ->
+        {
+          fs.delete(parent, true);
+          return "deleting parent dir " + parent
+              + " " + getMetricSummary();
+        },
+
+        // two directory markers will be deleted in a single request
+        with(OBJECT_DELETE_REQUESTS, totalDeleteRequests),
+        // keeping: the parent dir marker needs deletion alongside
+        // the subdir one.
+        withWhenKeeping(OBJECT_DELETE_OBJECTS, dirsCreated),
+
+        // deleting: only the marker at the bottom needs deleting
+        withWhenDeleting(OBJECT_DELETE_OBJECTS, 1));
+
+    // followup with list calls to make sure all is clear.
+    verifyNoListing(parent);
+    verifyNoListing(subDir);
+    // now reinstate the directory, which in HADOOP-17244 hitting problems
+    fs.mkdirs(parent);
+    FileStatus[] children = fs.listStatus(parent);
+    Assertions.assertThat(children)
+        .describedAs("Children of %s", parent)
+        .isEmpty();
+  }
+
+  /**
+   * List a path, verify that there are no direct child entries.
+   * @param path path to scan
+   */
+  protected void verifyNoListing(final Path path) throws Exception {
+    intercept(FileNotFoundException.class, () -> {
+      FileStatus[] statuses = getFileSystem().listStatus(path);
+      return Arrays.deepToString(statuses);
+    });
   }
 
   @Test

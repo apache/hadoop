@@ -1024,8 +1024,14 @@ public final class S3ATestUtils {
      * @param expected expected value.
      */
     public void assertDiffEquals(String message, long expected) {
-      Assert.assertEquals(message + ": " + statistic.getSymbol(),
-          expected, diff());
+      String text = message + ": " + statistic.getSymbol();
+      long diff = diff();
+      if (expected != diff) {
+        // Log in error ensures that the details appear in the test output
+        LOG.error(text + " expected {}, actual {}", expected, diff);
+      }
+      Assert.assertEquals(text,
+          expected, diff);
     }
 
     /**

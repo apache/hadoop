@@ -211,6 +211,13 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
    *     Only queuing objects here whose copy operation has
    *     been submitted and so is in that thread pool.
    *   </li>
+   *   <li>
+   *     If a path is supplied, then after the delete is executed
+   *     (and completes) the rename tracker from S3Guard will be
+   *     told of its deletion. Do not set this for directory
+   *     markers with children, as it may mistakenly add
+   *     tombstones into the table.
+   *   </li>
    * </ol>
    * This method must only be called from the primary thread.
    * @param path path to the object
@@ -218,7 +225,9 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
    */
   private void queueToDelete(Path path, String key) {
     LOG.debug("Queueing to delete {}", path);
-    pathsToDelete.add(path);
+    if (path != null) {
+      pathsToDelete.add(path);
+    }
     keysToDelete.add(new DeleteObjectsRequest.KeyVersion(key));
   }
 
@@ -235,6 +244,11 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
   private void queueToDelete(
       List<DirMarkerTracker.Marker> markersToDelete) {
     markersToDelete.forEach(this::queueToDelete);
+    // TODO
+    markersToDelete.forEach(m -> queueToDelete(
+        null,
+        m.getKey(),
+        m.getStatus().getVersionId()));
   }
 
   /**
