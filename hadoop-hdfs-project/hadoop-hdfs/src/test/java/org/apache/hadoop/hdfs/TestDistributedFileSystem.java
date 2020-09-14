@@ -2269,6 +2269,7 @@ public class TestDistributedFileSystem {
       assertEquals(trashRootsAfter2.size() + 1, trashRootsAfter3.size());
 
       // Cleanup
+      dfs.delete(new Path(testDir, FileSystem.TRASH_PREFIX), true);
       dfs.disallowSnapshot(testDir);
       dfs.delete(testDir, true);
     } finally {
@@ -2323,6 +2324,7 @@ public class TestDistributedFileSystem {
       assertEquals(trashRoots, trashRootsAfter);
 
       // Cleanup
+      dfs.delete(new Path(testDir, FileSystem.TRASH_PREFIX), true);
       dfs.disallowSnapshot(testDir);
       dfs.delete(testDir, true);
     } finally {
@@ -2445,6 +2447,36 @@ public class TestDistributedFileSystem {
 
       // Cleanup
       dfs.disallowSnapshot(testDir);
+      dfs.delete(testDir, true);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test
+  public void testDisallowSnapshotShouldThrowWhenTrashRootExists()
+      throws Exception {
+    Configuration conf = getTestConfiguration();
+    MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    try {
+      DistributedFileSystem dfs = cluster.getFileSystem();
+      Path testDir = new Path("/disallowss/test1/");
+      Path file0path = new Path(testDir, "file-0");
+      dfs.create(file0path);
+      dfs.allowSnapshot(testDir);
+      // Create trash root manually
+      Path testDirTrashRoot = new Path(testDir, FileSystem.TRASH_PREFIX);
+      dfs.mkdirs(testDirTrashRoot);
+      // Try disallowing snapshot, should throw
+      LambdaTestUtils.intercept(IOException.class,
+          () -> dfs.disallowSnapshot(testDir));
+      // Remove the trash root and try again, should pass this time
+      dfs.delete(testDirTrashRoot, true);
+      dfs.disallowSnapshot(testDir);
+      // Cleanup
       dfs.delete(testDir, true);
     } finally {
       if (cluster != null) {

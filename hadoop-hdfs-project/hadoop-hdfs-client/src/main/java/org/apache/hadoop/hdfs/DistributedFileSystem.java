@@ -2068,6 +2068,12 @@ public class DistributedFileSystem extends FileSystem
     new FileSystemLinkResolver<Void>() {
       @Override
       public Void doCall(final Path p) throws IOException {
+        String ssTrashRoot =
+            new Path(p, FileSystem.TRASH_PREFIX).toUri().getPath();
+        if (dfs.exists(ssTrashRoot)) {
+          throw new IOException("Found trash root under path " + p + ". "
+              + "Please remove or move the trash root and then try again.");
+        }
         dfs.disallowSnapshot(getPathName(p));
         return null;
       }
