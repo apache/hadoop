@@ -29,6 +29,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -582,9 +583,9 @@ public class RouterRpcClient {
    * @return If the exception comes from an unavailable subcluster.
    */
   public static boolean isUnavailableException(IOException ioe) {
-    if (ioe instanceof ConnectException ||
-        ioe instanceof ConnectTimeoutException ||
+    if (ioe instanceof ConnectTimeoutException ||
         ioe instanceof EOFException ||
+        ioe instanceof SocketException ||
         ioe instanceof StandbyException) {
       return true;
     }
