@@ -706,7 +706,7 @@ abstract class InodeTree<T> {
     final T targetFileSystem;
     final String resolvedPath;
     final Path remainingPath;   // to resolve in the target FileSystem
-    final boolean isLastInternalDirLink;
+    private final boolean isLastInternalDirLink;
 
     ResolveResult(final ResultKind k, final T targetFs, final String resolveP,
         final Path remainingP, boolean isLastIntenalDirLink) {

@@ -549,14 +549,15 @@ public class ViewFs extends AbstractFileSystem {
       final boolean overwrite) throws IOException, UnresolvedLinkException {
     // passing resolveLastComponet as false to catch renaming a mount point 
     // itself we need to catch this as an internal operation and fail.
-    InodeTree.ResolveResult<AbstractFileSystem> resSrc = 
-      fsState.resolve(getUriPath(src), false);
+    InodeTree.ResolveResult<AbstractFileSystem> resSrc =
+        fsState.resolve(getUriPath(src), false);
 
     if (resSrc.isInternalDir()) {
       if (fsState.getRootFallbackLink() == null) {
         // If fallback is null, we can't rename from src.
         throw new AccessControlException(
-            "Cannot Rename within internal dirs of mount table: src=" + src + " is readOnly");
+            "Cannot Rename within internal dirs of mount table: src=" + src
+                + " is readOnly");
       }
       InodeTree.ResolveResult<AbstractFileSystem> resSrcWithLastComp =
           fsState.resolve(getUriPath(src), true);
@@ -572,13 +573,14 @@ public class ViewFs extends AbstractFileSystem {
     }
 
     InodeTree.ResolveResult<AbstractFileSystem> resDst =
-                                fsState.resolve(getUriPath(dst), false);
+        fsState.resolve(getUriPath(dst), false);
 
     if (resDst.isInternalDir()) {
       if (fsState.getRootFallbackLink() == null) {
         // If fallback is null, we can't rename to dst.
         throw new AccessControlException(
-            "Cannot Rename within internal dirs of mount table: dest=" + dst + " is readOnly");
+            "Cannot Rename within internal dirs of mount table: dest=" + dst
+                + " is readOnly");
       }
       // if the fallback exist, we may have chance to rename to fallback path
       // where dst parent is matching to internalDir.
@@ -590,7 +592,8 @@ public class ViewFs extends AbstractFileSystem {
           .isLastInternalDirLink()) {
         // we cannot rename to internal tree.
         throw new AccessControlException(
-            "Cannot Rename within internal dirs of mount table: dest=" + dst + " is readOnly");
+            "Cannot Rename within internal dirs of mount table: dest=" + dst
+                + " is readOnly");
       } else {
         // This is fallback and let's set the dst fs with this fallback
         resDst = resDstWithLastComp;
