@@ -33,6 +33,7 @@ import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.util.Random;
 
+import org.apache.commons.codec.binary.Hex;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.compress.BlockCompressorStream;
@@ -440,5 +441,44 @@ public class TestSnappyCompressorDecompressor {
     ctx.startThreads();
 
     ctx.waitFor(60000);
+  }
+
+  @Test
+  public void testSnappyCompatibility() throws Exception {
+    // HADOOP-17125. Using snappy-java in SnappyCodec. These strings are raw data and compressed data
+    // using previous native Snappy codec. We use updated Snappy codec to decode it and check if it
+    // matches.
+    String rawData = "010a06030a040a0c0109020c0a010204020d02000b010701080605080b090902060a080502060a0d06070908080a0c0105030904090d05090800040c090c0d0d0804000d00040b0b0d010d060907020a030a0c0900040905080107040d0c01060a0b09070a04000b01040b09000e0e00020b06050b060e030e0a07050d06050d";
+    String compressed = "8001f07f010a06030a040a0c0109020c0a010204020d02000b010701080605080b090902060a080502060a0d06070908080a0c0105030904090d05090800040c090c0d0d0804000d00040b0b0d010d060907020a030a0c0900040905080107040d0c01060a0b09070a04000b01040b09000e0e00020b06050b060e030e0a07050d06050d";
+
+    byte[] rawDataBytes = Hex.decodeHex(rawData);
+    byte[] compressedBytes = Hex.decodeHex(compressed);
+
+    ByteBuffer inBuf = ByteBuffer.allocateDirect(compressedBytes.length);
+    inBuf.put(compressedBytes, 0, compressedBytes.length);
+    inBuf.flip();
+
+    ByteBuffer outBuf = ByteBuffer.allocateDirect(rawDataBytes.length);
+    ByteBuffer expected = ByteBuffer.wrap(rawDataBytes);
+
+    SnappyDecompressor.SnappyDirectDecompressor decompressor = new SnappyDecompressor.SnappyDirectDecompressor();
+
+    outBuf.clear();
+    while(!decompressor.finished()) {
+      decompressor.decompress(inBuf, outBuf);
+      if (outBuf.remaining() == 0) {
+        outBuf.flip();
+        while (outBuf.remaining() > 0) {
+          assertEquals(expected.get(), outBuf.get());
+        }
+        outBuf.clear();
+      }
+    }
+    outBuf.flip();
+    while (outBuf.remaining() > 0) {
+      assertEquals(expected.get(), outBuf.get());
+    }
+    outBuf.clear();
+    assertEquals(0, expected.remaining());
   }
 }
