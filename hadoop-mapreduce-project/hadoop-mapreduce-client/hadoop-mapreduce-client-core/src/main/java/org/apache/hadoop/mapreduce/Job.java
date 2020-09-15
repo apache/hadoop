@@ -1453,30 +1453,18 @@ public class Job extends JobContextImpl implements JobContext, AutoCloseable {
     String confParam = areFiles ?
         MRJobConfig.CACHE_FILES_SHARED_CACHE_UPLOAD_POLICIES :
         MRJobConfig.CACHE_ARCHIVES_SHARED_CACHE_UPLOAD_POLICIES;
-    conf.set(confParam, populateSharedCacheUploadPolicies(policies));
-  }
-
-  private static String populateSharedCacheUploadPolicies(
-      Map<String, Boolean> policies) {
-    // If policies are an empty map or null, we will set EMPTY_STRING.
-    // In other words, cleaning up existing policies. This is useful when we
-    // try to clean up shared cache upload policies for non-application
-    // master tasks. See YARN-10398 for details.
+    // If no policy is provided, we will reset the config by setting an empty
+    // string value. In other words, cleaning up existing policies. This is
+    // useful when we try to clean up shared cache upload policies for
+    // non-application master tasks. See MAPREDUCE-7294 for details.
     if (policies == null || policies.size() == 0) {
-      return "";
+      conf.set(confParam, "");
+      return;
     }
     StringBuilder sb = new StringBuilder();
-    Iterator<Map.Entry<String, Boolean>> it = policies.entrySet().iterator();
-    Map.Entry<String, Boolean> e;
-    if (it.hasNext()) {
-      e = it.next();
-      sb.append(e.getKey() + DELIM + e.getValue());
-    }
-    while (it.hasNext()) {
-      e = it.next();
-      sb.append("," + e.getKey() + DELIM + e.getValue());
-    }
-    return sb.toString();
+    policies.forEach((k,v) -> sb.append(k).append(DELIM).append(v).append(","));
+    sb.deleteCharAt(sb.length() - 1);
+    conf.set(confParam, sb.toString());
   }
 
   /**
