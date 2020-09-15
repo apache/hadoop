@@ -249,8 +249,8 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
     assertEquals(0, abfsInputStream.getBCursor());
   }
 
-  private void verifyAfterSeek(AbfsInputStream abfsInputStream, long seekPos){
-    assertEquals(seekPos, abfsInputStream.getFCursor());
+  private void verifyAfterSeek(AbfsInputStream abfsInputStream, long seekPos) throws IOException {
+    assertEquals(seekPos, abfsInputStream.getPos());
     assertEquals(-1, abfsInputStream.getFCursorAfterLastRead());
     assertEquals(0, abfsInputStream.getLimit());
     assertEquals(0, abfsInputStream.getBCursor());
