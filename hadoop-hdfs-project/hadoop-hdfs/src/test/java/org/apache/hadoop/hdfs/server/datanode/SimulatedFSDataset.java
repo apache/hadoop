@@ -1510,7 +1510,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   @Override
-  public List<ReplicaInfo> getFinalizedBlocks(String bpid) {
+  public List<ReplicaInfo> getSortedFinalizedBlocks(String bpid) {
     throw new UnsupportedOperationException();
   }
 

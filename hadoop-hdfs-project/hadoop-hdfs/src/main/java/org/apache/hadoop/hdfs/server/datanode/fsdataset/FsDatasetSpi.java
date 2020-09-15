@@ -237,16 +237,17 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
   VolumeFailureSummary getVolumeFailureSummary();
 
   /**
-   * Gets a list of references to the finalized blocks for the given block pool.
+   * Gets a sorted list of references to the finalized blocks for the given
+   * block pool. The list is sorted by blockID.
    * <p>
    * Callers of this function should call
    * {@link FsDatasetSpi#acquireDatasetLock} to avoid blocks' status being
    * changed during list iteration.
    * </p>
    * @return a list of references to the finalized blocks for the given block
-   *         pool.
+   *         pool. The list is sorted by blockID.
    */
-  List<ReplicaInfo> getFinalizedBlocks(String bpid);
+  List<ReplicaInfo> getSortedFinalizedBlocks(String bpid);
 
   /**
    * Check whether the in-memory block record matches the block on the disk,
