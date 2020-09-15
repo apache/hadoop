@@ -56,6 +56,14 @@ public final class ConfigurationKeys {
   public static final String AZURE_WRITE_MAX_REQUESTS_TO_QUEUE = "fs.azure.write.max.requests.to.queue";
   public static final String AZURE_WRITE_BUFFER_SIZE = "fs.azure.write.request.size";
   public static final String AZURE_READ_BUFFER_SIZE = "fs.azure.read.request.size";
+
+  /**
+   * Read ahead range parameter which can be set by user.
+   * Default value is {@code FileSystemConfigurations#DEFAULT_READ_AHEAD_RANGE}.
+   * This might reduce number of calls to remote as next requested
+   * data could already be present in buffer.
+   */
+  public static final String AZURE_READ_AHEAD_RANGE = "fs.azure.readahead.range";
   public static final String AZURE_BLOCK_SIZE_PROPERTY_NAME = "fs.azure.block.size";
   public static final String AZURE_BLOCK_LOCATION_HOST_PROPERTY_NAME = "fs.azure.block.location.impersonatedhost";
   public static final String AZURE_CONCURRENT_CONNECTION_VALUE_OUT = "fs.azure.concurrentRequestCount.out";

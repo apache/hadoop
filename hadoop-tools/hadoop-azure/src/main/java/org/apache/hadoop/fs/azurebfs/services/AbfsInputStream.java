@@ -56,6 +56,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private final String eTag;                  // eTag of the path when InputStream are created
   private final boolean tolerateOobAppends; // whether tolerate Oob Appends
   private final boolean readAheadEnabled; // whether enable readAhead;
+  // User configured size of read ahead.
+  private final int readAheadRange;
 
   // SAS tokens can be re-used until they expire
   private CachedSASToken cachedSasToken;
@@ -73,6 +75,12 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private long bytesFromReadAhead; // bytes read from readAhead; for testing
   private long bytesFromRemoteRead; // bytes read remotely; for testing
 
+  /**
+   * This is the actual position within the object, used by
+   * lazy seek to decide whether to seek on the next read or not.
+   */
+  private long nextReadPos;
+
   public AbfsInputStream(
           final AbfsClient client,
           final Statistics statistics,
@@ -88,6 +96,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.readAheadQueueDepth = abfsInputStreamContext.getReadAheadQueueDepth();
     this.tolerateOobAppends = abfsInputStreamContext.isTolerateOobAppends();
     this.eTag = eTag;
+    this.readAheadRange = abfsInputStreamContext.getReadAheadRange();
     this.readAheadEnabled = true;
     this.cachedSasToken = new CachedSASToken(
         abfsInputStreamContext.getSasTokenRenewPeriodForStreamsInSeconds());
@@ -128,6 +137,22 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     }
     incrementReadOps();
     do {
+      if (nextReadPos >= fCursor - limit && nextReadPos <= fCursor) {
+        // data can be read from buffer.
+        bCursor = (int) (nextReadPos - (fCursor - limit));
+
+        // When bCursor == limit, buffer will be filled again.
+        // So in this case we are not actually reading from buffer.
+        if(bCursor != limit) {
+          streamStatistics.seekInBuffer();
+        }
+      } else {
+        // Clearing the buffer and setting the file pointer
+        // based on previous seek() call.
+        fCursor = nextReadPos;
+        limit = 0;
+        bCursor = 0;
+      }
       lastReadBytes = readOneBlock(b, currentOff, currentLen);
       if (lastReadBytes > 0) {
         currentOff += lastReadBytes;
@@ -180,9 +205,13 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
       // Enable readAhead when reading sequentially
       if (-1 == fCursorAfterLastRead || fCursorAfterLastRead == fCursor || b.length >= bufferSize) {
+        LOG.debug("Sequential read with read ahead size of {}", bufferSize);
         bytesRead = readInternal(fCursor, buffer, 0, bufferSize, false);
       } else {
-        bytesRead = readInternal(fCursor, buffer, 0, b.length, true);
+        // Enabling read ahead for random reads as well to reduce number of remote calls.
+        int lengthWithReadAhead = Math.min(b.length + readAheadRange, bufferSize);
+        LOG.debug("Random read with read ahead size of {}", lengthWithReadAhead);
+        bytesRead = readInternal(fCursor, buffer, 0, lengthWithReadAhead, true);
       }
 
       if (bytesRead == -1) {
@@ -200,6 +229,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     int bytesToRead = Math.min(len, bytesRemaining);
     System.arraycopy(buffer, bCursor, b, off, bytesToRead);
     bCursor += bytesToRead;
+    nextReadPos += bytesToRead;
     if (statistics != null) {
       statistics.incrementBytesRead(bytesToRead);
     }
@@ -278,12 +308,12 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     final AbfsRestOperation op;
     AbfsPerfTracker tracker = client.getAbfsPerfTracker();
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker, "readRemote", "read")) {
-      LOG.trace("Trigger client.read for path={} position={} offset={} length={}", path, position, offset, length);
-      op = client.read(path, position, b, offset, length, tolerateOobAppends ? "*" : eTag, cachedSasToken.get());
-      cachedSasToken.update(op.getSasToken());
       if (streamStatistics != null) {
         streamStatistics.remoteReadOperation();
       }
+      LOG.trace("Trigger client.read for path={} position={} offset={} length={}", path, position, offset, length);
+      op = client.read(path, position, b, offset, length, tolerateOobAppends ? "*" : eTag, cachedSasToken.get());
+      cachedSasToken.update(op.getSasToken());
       LOG.debug("issuing HTTP GET request params position = {} b.length = {} "
           + "offset = {} length = {}", position, b.length, offset, length);
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
@@ -341,21 +371,9 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       streamStatistics.seek(n, fCursor);
     }
 
-    if (n>=fCursor-limit && n<=fCursor) { // within buffer
-      bCursor = (int) (n-(fCursor-limit));
-      if (streamStatistics != null) {
-        streamStatistics.seekInBuffer();
-      }
-      return;
-    }
-
     // next read will read from here
-    fCursor = n;
-    LOG.debug("set fCursor to {}", fCursor);
-
-    //invalidate buffer
-    limit = 0;
-    bCursor = 0;
+    nextReadPos = n;
+    LOG.debug("set nextReadPos to {}", nextReadPos);
   }
 
   @Override
@@ -426,7 +444,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     if (closed) {
       throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
     }
-    return fCursor - limit + bCursor;
+    return nextReadPos < 0 ? 0 : nextReadPos;
   }
 
   /**
@@ -490,6 +508,11 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   byte[] getBuffer() {
     return buffer;
+  }
+
+  @VisibleForTesting
+  public int getReadAheadRange() {
+    return readAheadRange;
   }
 
   @VisibleForTesting
