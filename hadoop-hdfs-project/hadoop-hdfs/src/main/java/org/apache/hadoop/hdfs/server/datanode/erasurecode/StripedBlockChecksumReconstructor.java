@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.DataOutputBuffer;
 
@@ -33,7 +34,8 @@ import org.apache.hadoop.io.DataOutputBuffer;
 @InterfaceAudience.Private
 public abstract class StripedBlockChecksumReconstructor
     extends StripedReconstructor {
-  private ByteBuffer targetBuffer;
+  @VisibleForTesting
+  protected ByteBuffer targetBuffer;
   private final byte[] targetIndices;
 
   private byte[] checksumBuf;
@@ -87,7 +89,7 @@ public abstract class StripedBlockChecksumReconstructor
 
         // step3: calculate checksum
         checksumDataLen += checksumWithTargetOutput(
-            targetBuffer.array(), toReconstructLen);
+            getBytesFromBuffer(targetBuffer), toReconstructLen);
 
         updatePositionInBlock(toReconstructLen);
         requestedLen -= toReconstructLen;
@@ -97,6 +99,17 @@ public abstract class StripedBlockChecksumReconstructor
       commitDigest();
     } finally {
       cleanup();
+    }
+  }
+
+  private byte[] getBytesFromBuffer(ByteBuffer buffer) {
+    if (buffer.isDirect()) {
+      int limit = buffer.limit();
+      byte[] bytes = new byte[limit];
+      buffer.get(bytes, 0, limit);
+      return bytes;
+    } else {
+      return buffer.array();
     }
   }
 
@@ -132,7 +145,7 @@ public abstract class StripedBlockChecksumReconstructor
     return checksumWriter;
   }
 
-  private long checksumWithTargetOutput(byte[] outputData, int toReconstructLen)
+  protected long checksumWithTargetOutput(byte[] outputData, int toReconstructLen)
       throws IOException {
     long checksumDataLength = 0;
     // Calculate partial block checksum. There are two cases.
@@ -140,7 +153,7 @@ public abstract class StripedBlockChecksumReconstructor
     // case-2) length of data bytes which is less than bytesPerCRC
     if (requestedLen <= toReconstructLen) {
       int remainingLen = Math.toIntExact(requestedLen);
-      outputData = Arrays.copyOf(targetBuffer.array(), remainingLen);
+      outputData = Arrays.copyOf(outputData, remainingLen);
 
       int partialLength = remainingLen % getChecksum().getBytesPerChecksum();
 
@@ -183,7 +196,7 @@ public abstract class StripedBlockChecksumReconstructor
     return checksumBuf.length;
   }
 
-  private void reconstructTargets(int toReconstructLen) throws IOException {
+  protected void reconstructTargets(int toReconstructLen) throws IOException {
     ByteBuffer[] inputs = getStripedReader().getInputBuffers(toReconstructLen);
 
     ByteBuffer[] outputs = new ByteBuffer[1];
