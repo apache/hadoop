@@ -675,6 +675,10 @@ public class ViewFileSystem extends FileSystem {
         fsState.resolve(getUriPath(src), false);
 
     if (resSrc.isInternalDir()) {
+      if (fsState.getRootFallbackLink() == null) {
+        // If fallback is null, we can't rename from src.
+        throw readOnlyMountTable("rename", src);
+      }
       InodeTree.ResolveResult<FileSystem> resSrcWithLastComp =
           fsState.resolve(getUriPath(src), true);
       if (resSrcWithLastComp.isInternalDir() || resSrcWithLastComp
@@ -689,16 +693,23 @@ public class ViewFileSystem extends FileSystem {
     InodeTree.ResolveResult<FileSystem> resDst =
         fsState.resolve(getUriPath(dst), false);
 
-    if (resDst.isInternalDir() && fsState.getRootFallbackLink() != null) {
+    if (resDst.isInternalDir()) {
+      if (fsState.getRootFallbackLink() == null) {
+        // If fallback is null, we can't rename to dst.
+        throw readOnlyMountTable("rename", dst);
+      }
+      // if the fallback exist, we may have chance to rename to fallback path
+      // where dst parent is matching to internalDir.
       InodeTree.ResolveResult<FileSystem> resDstWithLastComp =
           fsState.resolve(getUriPath(dst), true);
       // resolveLastComponent with true is to check if the target already
       // exist in internalDir/InternalDirLink itself.
       if (resDstWithLastComp.isInternalDir() || resDstWithLastComp
           .isLastInternalDirLink()) {
+        // we cannot rename to internal tree.
         throw readOnlyMountTable("rename", dst);
       } else {
-        // This is fallback and let's set the src fs with this fallBack
+        // This is fallback and let's set the src fs with this fallback
         resDst = resDstWithLastComp;
       }
     }
