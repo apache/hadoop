@@ -1236,6 +1236,14 @@
   restarts. Defaults to 10 minutes.</description>
 </property>
 
+  <property>
+    <name>dfs.client.write.recover.lease.on.close.exception</name>
+    <value>false</value>
+    <description>
+      Set to true to call recoverLease operation automatically when DFSOutputSteam closing encounters exception.
+    </description>
+  </property>
+
 <property>
   <name>dfs.namenode.checkpoint.dir</name>
   <value>file://${hadoop.tmp.dir}/dfs/namesecondary</value>
