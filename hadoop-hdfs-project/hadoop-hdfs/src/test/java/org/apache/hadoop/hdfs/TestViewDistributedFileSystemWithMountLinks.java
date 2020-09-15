@@ -20,9 +20,12 @@ package org.apache.hadoop.hdfs;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.viewfs.ConfigUtil;
 import org.apache.hadoop.fs.viewfs.TestViewFileSystemOverloadSchemeWithHdfsScheme;
+import org.apache.hadoop.fs.viewfs.ViewFsTestSetup;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -48,7 +51,7 @@ public class TestViewDistributedFileSystemWithMountLinks extends
     URI defaultFSURI =
         URI.create(conf.get(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY));
     ConfigUtil.addLinkFallback(conf, defaultFSURI.getAuthority(),
-        new Path(defaultFSURI.toString()).toUri());
+        new Path(defaultFSURI.toString() + "/").toUri());
     setConf(conf);
   }
 
@@ -60,5 +63,56 @@ public class TestViewDistributedFileSystemWithMountLinks extends
   @Test(timeout = 30000)
   public void testMountLinkWithNonExistentLink() throws Exception {
     testMountLinkWithNonExistentLink(false);
+  }
+
+  @Test
+  public void testRenameOnInternalDirWithFallback() throws Exception {
+    Configuration conf = getConf();
+    URI defaultFSURI =
+        URI.create(conf.get(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY));
+    final Path hdfsTargetPath1 = new Path(defaultFSURI + "/HDFSUser");
+    final Path hdfsTargetPath2 = new Path(defaultFSURI + "/NewHDFSUser/next");
+    ViewFsTestSetup.addMountLinksToConf(defaultFSURI.getAuthority(),
+        new String[] {"/HDFSUser", "/NewHDFSUser/next"},
+        new String[] {hdfsTargetPath1.toUri().toString(),
+            hdfsTargetPath2.toUri().toString()}, conf);
+    //Making sure parent dir structure as mount points available in fallback.
+    try (DistributedFileSystem dfs = new DistributedFileSystem()) {
+      dfs.initialize(defaultFSURI, conf);
+      dfs.mkdirs(hdfsTargetPath1);
+      dfs.mkdirs(hdfsTargetPath2);
+    }
+
+    try (FileSystem fs = FileSystem.get(conf)) {
+      Path src = new Path("/newFileOnRoot");
+      Path dst = new Path("/newFileOnRoot1");
+      fs.create(src).close();
+      verifyRename(fs, src, dst);
+
+      src = new Path("/newFileOnRoot1");
+      dst = new Path("/NewHDFSUser/newFileOnRoot");
+      fs.mkdirs(dst.getParent());
+      verifyRename(fs, src, dst);
+
+      src = new Path("/NewHDFSUser/newFileOnRoot");
+      dst = new Path("/NewHDFSUser/newFileOnRoot1");
+      verifyRename(fs, src, dst);
+
+      src = new Path("/NewHDFSUser/newFileOnRoot1");
+      dst = new Path("/newFileOnRoot");
+      verifyRename(fs, src, dst);
+
+      src = new Path("/HDFSUser/newFileOnRoot1");
+      dst = new Path("/HDFSUser/newFileOnRoot");
+      fs.create(src).close();
+      verifyRename(fs, src, dst);
+    }
+  }
+
+  private void verifyRename(FileSystem fs, Path src, Path dst)
+      throws IOException {
+    fs.rename(src, dst);
+    Assert.assertFalse(fs.exists(src));
+    Assert.assertTrue(fs.exists(dst));
   }
 }

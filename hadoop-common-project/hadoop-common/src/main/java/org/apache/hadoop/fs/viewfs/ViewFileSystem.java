@@ -671,17 +671,36 @@ public class ViewFileSystem extends FileSystem {
   public boolean rename(final Path src, final Path dst) throws IOException {
     // passing resolveLastComponet as false to catch renaming a mount point to 
     // itself. We need to catch this as an internal operation and fail.
-    InodeTree.ResolveResult<FileSystem> resSrc = 
-      fsState.resolve(getUriPath(src), false); 
-  
+    InodeTree.ResolveResult<FileSystem> resSrc =
+        fsState.resolve(getUriPath(src), false);
+
     if (resSrc.isInternalDir()) {
-      throw readOnlyMountTable("rename", src);
+      InodeTree.ResolveResult<FileSystem> resSrcWithLastComp =
+          fsState.resolve(getUriPath(src), true);
+      if (resSrcWithLastComp.isInternalDir() || resSrcWithLastComp
+          .isLastInternalDirLink()) {
+        throw readOnlyMountTable("rename", src);
+      } else {
+        // This is fallBack and let's set the src fs with this fallBack
+        resSrc = resSrcWithLastComp;
+      }
     }
-      
-    InodeTree.ResolveResult<FileSystem> resDst = 
-      fsState.resolve(getUriPath(dst), false);
-    if (resDst.isInternalDir()) {
-          throw readOnlyMountTable("rename", dst);
+
+    InodeTree.ResolveResult<FileSystem> resDst =
+        fsState.resolve(getUriPath(dst), false);
+
+    if (resDst.isInternalDir() && fsState.getRootFallbackLink() != null) {
+      InodeTree.ResolveResult<FileSystem> resDstWithLastComp =
+          fsState.resolve(getUriPath(dst), true);
+      // resolveLastComponent with true is to check if the target already
+      // exist in internalDir/InternalDirLink itself.
+      if (resDstWithLastComp.isInternalDir() || resDstWithLastComp
+          .isLastInternalDirLink()) {
+        throw readOnlyMountTable("rename", dst);
+      } else {
+        // This is fallback and let's set the src fs with this fallBack
+        resDst = resDstWithLastComp;
+      }
     }
 
     URI srcUri = resSrc.targetFileSystem.getUri();

@@ -550,21 +550,41 @@ public class ViewFs extends AbstractFileSystem {
     // passing resolveLastComponet as false to catch renaming a mount point 
     // itself we need to catch this as an internal operation and fail.
     InodeTree.ResolveResult<AbstractFileSystem> resSrc = 
-      fsState.resolve(getUriPath(src), false); 
-  
+      fsState.resolve(getUriPath(src), false);
+
     if (resSrc.isInternalDir()) {
-      throw new AccessControlException(
-          "Cannot Rename within internal dirs of mount table: src=" + src
-              + " is readOnly");
+      InodeTree.ResolveResult<AbstractFileSystem> resSrcWithLastComp =
+          fsState.resolve(getUriPath(src), true);
+      if (resSrcWithLastComp.isInternalDir() || resSrcWithLastComp
+          .isLastInternalDirLink()) { // This is fallBack
+        //Let's set the src fs with this fallBack
+        throw new AccessControlException(
+            "Cannot Rename within internal dirs of mount table: src=" + src
+                + " is readOnly");
+      } else {
+        resSrc = resSrcWithLastComp;
+      }
     }
 
     InodeTree.ResolveResult<AbstractFileSystem> resDst =
                                 fsState.resolve(getUriPath(dst), false);
-    if (resDst.isInternalDir()) {
-      throw new AccessControlException(
-          "Cannot Rename within internal dirs of mount table: dest=" + dst
-              + " is readOnly");
+
+    if (resDst.isInternalDir() && fsState.getRootFallbackLink() != null) {
+      InodeTree.ResolveResult<AbstractFileSystem> resDstWithLastComp =
+          fsState.resolve(getUriPath(dst), true);
+      // resolveLastComponent with true is to check if the target already
+      // exist in internalDir/InternalDirLink itself.
+      if (resDstWithLastComp.isInternalDir() || resDstWithLastComp
+          .isLastInternalDirLink()) {
+        throw new AccessControlException(
+            "Cannot Rename within internal dirs of mount table: dest=" + dst
+                + " is readOnly");
+      } else {
+        // This is fallback and let's set the src fs with this fallBack
+        resDst = resDstWithLastComp;
+      }
     }
+
     //Alternate 1: renames within same file system
     URI srcUri = resSrc.targetFileSystem.getUri();
     URI dstUri = resDst.targetFileSystem.getUri();
