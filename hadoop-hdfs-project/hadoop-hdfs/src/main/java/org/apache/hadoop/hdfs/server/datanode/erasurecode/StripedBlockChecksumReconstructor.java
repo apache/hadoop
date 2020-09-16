@@ -145,8 +145,8 @@ public abstract class StripedBlockChecksumReconstructor
     return checksumWriter;
   }
 
-  protected long checksumWithTargetOutput(byte[] outputData, int toReconstructLen)
-      throws IOException {
+  protected long checksumWithTargetOutput(
+      byte[] outputData, int toReconstructLen) throws IOException {
     long checksumDataLength = 0;
     // Calculate partial block checksum. There are two cases.
     // case-1) length of data bytes which is fraction of bytesPerCRC

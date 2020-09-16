@@ -1,3 +1,20 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.hadoop.hdfs.server.datanode.erasurecode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY;
@@ -68,14 +85,14 @@ public class TestStripedBlockChecksumReconstructor {
     conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
-      false);
+        false);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 0);
     conf.setBoolean(DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDNs).build();
     Path ecPath = new Path(ecDir);
     cluster.getFileSystem().mkdir(ecPath, FsPermission.getDirDefault());
     cluster.getFileSystem().getClient().setErasureCodingPolicy(ecDir,
-      StripedFileTestUtil.getDefaultECPolicy().getName());
+        StripedFileTestUtil.getDefaultECPolicy().getName());
     fs = cluster.getFileSystem();
     client = fs.getClient();
     fs.enableErasureCodingPolicy(StripedFileTestUtil
@@ -89,8 +106,8 @@ public class TestStripedBlockChecksumReconstructor {
   @After
   public void tearDown() {
     if (cluster != null) {
-       cluster.shutdown();
-       cluster = null;
+      cluster.shutdown();
+      cluster = null;
     }
   }
 
@@ -205,7 +222,8 @@ public class TestStripedBlockChecksumReconstructor {
     }
 
     @Override
-    void updateDigester(byte[] checksumBytes, int dataBytesPerChecksum) throws IOException {
+    void updateDigester(byte[] checksumBytes,
+        int dataBytesPerChecksum) throws IOException {
     }
 
     @Override
@@ -218,7 +236,7 @@ public class TestStripedBlockChecksumReconstructor {
 
     @Override
     protected long checksumWithTargetOutput(byte[] outputData,
-      int toReconstructLen) {
+        int toReconstructLen) {
       return toReconstructLen;
     }
   }
@@ -244,7 +262,8 @@ public class TestStripedBlockChecksumReconstructor {
     }
 
     @Override
-    void updateDigester(byte[] checksumBytes, int dataBytesPerChecksum) throws IOException {
+    void updateDigester(byte[] checksumBytes,
+        int dataBytesPerChecksum) throws IOException {
     }
 
     @Override
