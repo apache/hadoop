@@ -31,6 +31,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.regex.Pattern;
 
+import org.apache.hadoop.hdfs.server.datanode.DataNodeLayoutVersion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -303,7 +304,7 @@ public class TestDFSUpgrade {
       UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
       cluster = createCluster();
       baseDirs = UpgradeUtilities.createDataNodeStorageDirs(dataNodeDirs, "current");
-      storageInfo = new StorageInfo(HdfsServerConstants.DATANODE_LAYOUT_VERSION,
+      storageInfo = new StorageInfo(DataNodeLayoutVersion.getCurrentLayoutVersion(),
           UpgradeUtilities.getCurrentNamespaceID(cluster),
           UpgradeUtilities.getCurrentClusterID(cluster), Long.MAX_VALUE,
           NodeType.DATA_NODE);

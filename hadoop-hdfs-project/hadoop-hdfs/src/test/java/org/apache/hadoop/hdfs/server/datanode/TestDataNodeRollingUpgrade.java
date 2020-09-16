@@ -362,7 +362,7 @@ public class TestDataNodeRollingUpgrade {
       LOG.info("Shutting down the Datanode");
       MiniDFSCluster.DataNodeProperties dnprop = cluster.stopDataNode(0);
       DFSTestUtil.addDataNodeLayoutVersion(
-          DataNodeLayoutVersion.CURRENT_LAYOUT_VERSION - 1,
+          DataNodeLayoutVersion.getCurrentLayoutVersion() - 1,
           "Test Layout for TestDataNodeRollingUpgrade");
       LOG.info("Restarting the DataNode");
       cluster.restartDataNode(dnprop, true);
@@ -423,7 +423,7 @@ public class TestDataNodeRollingUpgrade {
       LOG.info("Shutting down the Datanode");
       MiniDFSCluster.DataNodeProperties dnprop = cluster.stopDataNode(0);
       DFSTestUtil.addDataNodeLayoutVersion(
-          DataNodeLayoutVersion.CURRENT_LAYOUT_VERSION - 1,
+          DataNodeLayoutVersion.getCurrentLayoutVersion() - 1,
           "Test Layout for TestDataNodeRollingUpgrade");
       LOG.info("Restarting the DataNode");
       cluster.restartDataNode(dnprop, true);

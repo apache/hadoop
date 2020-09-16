@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 
+import org.apache.hadoop.hdfs.server.datanode.DataNodeLayoutVersion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -89,7 +90,7 @@ public class TestDFSStartupVersions {
    */
   private StorageData[] initializeVersions() throws Exception {
     int layoutVersionOld = Storage.LAST_UPGRADABLE_LAYOUT_VERSION;
-    int layoutVersionCur = HdfsServerConstants.DATANODE_LAYOUT_VERSION;
+    int layoutVersionCur = DataNodeLayoutVersion.getCurrentLayoutVersion();
     int layoutVersionNew = Integer.MIN_VALUE;
     int namespaceIdCur = UpgradeUtilities.getCurrentNamespaceID(null);
     int namespaceIdOld = Integer.MIN_VALUE;
@@ -200,7 +201,7 @@ public class TestDFSStartupVersions {
       return false;
     }
     // check #3
-    int softwareLV = HdfsServerConstants.DATANODE_LAYOUT_VERSION;
+    int softwareLV = DataNodeLayoutVersion.getCurrentLayoutVersion();
     int storedLV = datanodeVer.getLayoutVersion();
     if (softwareLV == storedLV &&  
         datanodeVer.getCTime() == namenodeVer.getCTime()) 

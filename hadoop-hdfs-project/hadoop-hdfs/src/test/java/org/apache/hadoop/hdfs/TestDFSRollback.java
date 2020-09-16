@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.hadoop.hdfs.server.datanode.DataNodeLayoutVersion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -191,7 +192,7 @@ public class TestDFSRollback {
           UpgradeUtilities.getCurrentBlockPoolID(cluster));
       // Put newer layout version in current.
       storageInfo = new StorageInfo(
-          HdfsServerConstants.DATANODE_LAYOUT_VERSION - 1,
+          DataNodeLayoutVersion.getCurrentLayoutVersion() - 1,
           UpgradeUtilities.getCurrentNamespaceID(cluster),
           UpgradeUtilities.getCurrentClusterID(cluster),
           UpgradeUtilities.getCurrentFsscTime(cluster),
@@ -277,7 +278,7 @@ public class TestDFSRollback {
       
       UpgradeUtilities.createDataNodeStorageDirs(dataNodeDirs, "current");
       baseDirs = UpgradeUtilities.createDataNodeStorageDirs(dataNodeDirs, "previous");
-      storageInfo = new StorageInfo(HdfsServerConstants.DATANODE_LAYOUT_VERSION,
+      storageInfo = new StorageInfo(DataNodeLayoutVersion.getCurrentLayoutVersion(),
           UpgradeUtilities.getCurrentNamespaceID(cluster),
           UpgradeUtilities.getCurrentClusterID(cluster), Long.MAX_VALUE,
           NodeType.DATA_NODE);

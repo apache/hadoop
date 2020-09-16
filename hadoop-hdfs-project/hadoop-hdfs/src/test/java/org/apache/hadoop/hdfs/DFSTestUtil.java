@@ -69,6 +69,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
+import java.util.SortedSet;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
@@ -1955,20 +1956,8 @@ public class DFSTestUtil {
 
   public static void addDataNodeLayoutVersion(final int lv, final String description)
       throws NoSuchFieldException, IllegalAccessException {
-    Preconditions.checkState(lv < DataNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
-
-    // Override {@link DataNodeLayoutVersion#CURRENT_LAYOUT_VERSION} via reflection.
-    Field modifiersField = Field.class.getDeclaredField("modifiers");
-    modifiersField.setAccessible(true);
-    Field field = DataNodeLayoutVersion.class.getField("CURRENT_LAYOUT_VERSION");
-    field.setAccessible(true);
-    modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
-    field.setInt(null, lv);
-
-    field = HdfsServerConstants.class.getField("DATANODE_LAYOUT_VERSION");
-    field.setAccessible(true);
-    modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
-    field.setInt(null, lv);
+    Preconditions.checkState(lv < DataNodeLayoutVersion.getCurrentLayoutVersion());
+    DataNodeLayoutVersion.setCurrentLayoutVersionForTesting(lv);
 
     // Inject the feature into the FEATURES map.
     final LayoutVersion.FeatureInfo featureInfo =

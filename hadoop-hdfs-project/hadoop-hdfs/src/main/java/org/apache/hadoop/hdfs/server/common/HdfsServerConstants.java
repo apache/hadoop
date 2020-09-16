@@ -62,12 +62,6 @@ public interface HdfsServerConstants {
   int NAMENODE_LAYOUT_VERSION
       = NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION;
   /**
-   * Current layout version for DataNode.
-   * Please see {@link DataNodeLayoutVersion.Feature} on adding new layout version.
-   */
-  int DATANODE_LAYOUT_VERSION
-      = DataNodeLayoutVersion.CURRENT_LAYOUT_VERSION;
-  /**
    * Path components that are reserved in HDFS.
    * <p>
    * .reserved is only reserved under root ("/").
