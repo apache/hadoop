@@ -531,7 +531,8 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
       throws IOException {
     List<DeleteObjectsResult.DeletedObject> deletedObjects = new ArrayList<>();
     try (DurationInfo ignored =
-             new DurationInfo(LOG, false, "Delete page of keys")) {
+             new DurationInfo(LOG, false,
+                 "Delete page of %d keys", keyList.size())) {
       DeleteObjectsResult result = null;
       List<Path> undeletedObjects = new ArrayList<>();
       if (!keyList.isEmpty()) {
@@ -541,10 +542,10 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
             .map(e -> e.keyVersion)
             .collect(Collectors.toList());
         LOG.debug("Deleting of {} file objects", files.size());
-        result = Invoker.once("Remove S3 Keys",
+        result = Invoker.once("Remove S3 Files",
             status.getPath().toString(),
             () -> callbacks.removeKeys(
-                keyList,
+                files,
                 false,
                 undeletedObjects,
                 state,
@@ -578,7 +579,7 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
         // (HADOOP-17244)
         metadataStore.deletePaths(pathList, state);
       }
-      if (auditDeletedKeys && result != null) {
+      if (auditDeletedKeys) {
         // audit the deleted keys
         if (deletedObjects.size() != keyList.size()) {
           // size mismatch

@@ -136,9 +136,9 @@ public final class MultiObjectDeleteSupport extends AbstractStoreOperation {
         deleteException.getDeletedObjects().size());
     // convert the collection of keys being deleted into paths
     final List<KeyPath> pathsBeingDeleted = keysToKeyPaths(keysToDelete);
-    // Take this is list of paths
+    // Take this ist of paths
     // extract all undeleted entries contained in the exception and
-    // then removes them from the original list.
+    // then remove them from the original list.
     List<KeyPath> undeleted = removeUndeletedPaths(deleteException,
         pathsBeingDeleted,
         getStoreContext()::keyToPath);
@@ -209,15 +209,16 @@ public final class MultiObjectDeleteSupport extends AbstractStoreOperation {
     List<Path> deletedPaths = new ArrayList<>();
     List<KeyPath> undeleted = outcome.getLeft();
     retainedMarkers.clear();
-    List<Path> undeletedPaths = toPathList(
-        (List<KeyPath>) undeleted);
+    List<Path> undeletedPaths = toPathList((List<KeyPath>) undeleted);
     // sort shorter keys first,
     // so that if the left key is longer than the first it is considered
     // smaller, so appears in the list first.
     // thus when we look for a dir being empty, we know it holds
     deleted.sort((l, r) -> r.getKey().length() - l.getKey().length());
 
-    // now go through and delete
+    // now go through and delete from S3Guard all paths listed in
+    // the result which are either files or directories with
+    // no children.
     deleted.forEach(kp -> {
       Path path = kp.getPath();
       try{

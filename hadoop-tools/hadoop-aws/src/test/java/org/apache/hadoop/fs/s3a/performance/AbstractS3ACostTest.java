@@ -151,6 +151,7 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
             INVOCATION_COPY_FROM_LOCAL_FILE,
             OBJECT_COPY_REQUESTS,
             OBJECT_DELETE_REQUESTS,
+            OBJECT_DELETE_OBJECTS,
             OBJECT_LIST_REQUESTS,
             OBJECT_METADATA_REQUESTS,
             OBJECT_PUT_BYTES,

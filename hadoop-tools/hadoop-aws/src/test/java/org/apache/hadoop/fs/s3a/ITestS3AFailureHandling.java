@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 
 import org.apache.hadoop.conf.Configuration;
@@ -144,9 +145,10 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
     Pair<List<KeyPath>, List<KeyPath>> pair =
         new MultiObjectDeleteSupport(fs.createStoreContext(), null)
         .splitUndeletedKeys(ex, keys);
-    assertEquals(undeleted, pair.getLeft());
+    assertEquals(undeleted, toPathList(pair.getLeft()));
     List<KeyPath> right = pair.getRight();
-    assertEquals("Wrong size for " + join(right), 1, right.size());
+    Assertions.assertThat(right)
+        .hasSize(1);
     assertEquals(markerPath, right.get(0).getPath());
   }
 

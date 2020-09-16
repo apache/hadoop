@@ -2081,6 +2081,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           DELETE_CONSIDERED_IDEMPOTENT,
           ()-> {
             incrementStatistic(OBJECT_DELETE_REQUESTS);
+            incrementStatistic(OBJECT_DELETE_OBJECTS);
             s3.deleteObject(bucket, key);
             return null;
           });
@@ -2127,9 +2128,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Perform a bulk object delete operation.
+   * Perform a bulk object delete operation against S3; leaves S3Guard
+   * alone.
    * Increments the {@code OBJECT_DELETE_REQUESTS} and write
-   * operation statistics.
+   * operation statistics
+   * <p></p>
+   * {@code OBJECT_DELETE_OBJECTS} is updated with the actual number
+   * of objects deleted in the request.
+   * <p></p>
    * Retry policy: retry untranslated; delete considered idempotent.
    * If the request is throttled, this is logged in the throttle statistics,
    * with the counter set to the number of keys, rather than the number
