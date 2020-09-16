@@ -27,8 +27,6 @@ import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.google.common.base.Preconditions;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -473,8 +471,7 @@ public class TestDataNodeRollingUpgrade {
   }
 
   static void addDataNodeLayoutVersion(final int lv) {
-    Preconditions.checkState(
-        lv < DataNodeLayoutVersion.getCurrentLayoutVersion());
+    assertTrue(lv < DataNodeLayoutVersion.getCurrentLayoutVersion());
     DataNodeLayoutVersion.setCurrentLayoutVersionForTesting(lv);
 
     // Inject the feature into the FEATURES map.
