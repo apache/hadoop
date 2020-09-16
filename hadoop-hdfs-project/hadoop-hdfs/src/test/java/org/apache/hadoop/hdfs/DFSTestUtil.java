@@ -1950,8 +1950,8 @@ public class DFSTestUtil {
     FsShellRun(cmd, 0, null, conf);
   }
 
-  public static void addDataNodeLayoutVersion(final int lv, final String description)
-      throws NoSuchFieldException, IllegalAccessException {
+  public static void addDataNodeLayoutVersion(final int lv,
+                                              final String description) {
     Preconditions.checkState(lv < DataNodeLayoutVersion.getCurrentLayoutVersion());
     DataNodeLayoutVersion.setCurrentLayoutVersionForTesting(lv);
 
