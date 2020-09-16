@@ -523,9 +523,51 @@ public class TestViewFsLinkFallback {
     verifyRename(fs, src, dst);
   }
 
+  @Test
+  public void testRenameWhenDstOnInternalDirWithFallback() throws Exception {
+    Configuration conf = new Configuration();
+    Path fallbackTarget = new Path(targetTestRoot, "fallbackDir");
+    fsTarget.mkdirs(fallbackTarget);
+    ConfigUtil.addLink(conf, "/InternalDirDoesNotExistInFallback/test",
+        new Path(targetTestRoot.toString() + "/user1").toUri());
+    ConfigUtil.addLink(conf, "/NewHDFSUser/next/next1",
+        new Path(targetTestRoot.toString() + "/newUser1").toUri());
+    ConfigUtil.addLinkFallback(conf, fallbackTarget.toUri());
+
+    try (DistributedFileSystem dfs = new DistributedFileSystem()) {
+      dfs.initialize(fsDefault.getUri(), conf);
+      dfs.mkdirs(new Path(targetTestRoot.toString() + "/newUser1"));
+      dfs.mkdirs(
+          new Path(fallbackTarget.toString() + "/NewHDFSUser/next/next1"));
+    }
+
+    final AbstractFileSystem fs =
+        AbstractFileSystem.get(viewFsDefaultClusterUri, conf);
+    final Path src = new Path("/newFileOnRoot");
+    final Path dst = new Path("/NewHDFSUser/next");
+    fs.mkdir(src, FsPermission.getDefault(), true);
+    // src and dst types are must be either  same dir or files
+    LambdaTestUtils.intercept(IOException.class,
+        () -> fs.rename(src, dst, Options.Rename.OVERWRITE));
+
+    final Path src1 = new Path("/newFileOnRoot1");
+    final Path dst1 = new Path("/NewHDFSUser/next/file");
+    fs.create(src1, EnumSet.of(CREATE),
+        Options.CreateOpts.perms(FsPermission.getDefault())).close();
+    verifyRename(fs, src1, dst1);
+
+    final Path src2 = new Path("/newFileOnRoot2");
+    final Path dst2 = new Path("/InternalDirDoesNotExistInFallback/file");
+    fs.create(src2, EnumSet.of(CREATE),
+        Options.CreateOpts.perms(FsPermission.getDefault())).close();
+    // If fallback does not have same structure as internal, rename will fail.
+    LambdaTestUtils.intercept(FileNotFoundException.class,
+        () -> fs.rename(src2, dst2, Options.Rename.OVERWRITE));
+  }
+
   private void verifyRename(AbstractFileSystem fs, Path src, Path dst)
       throws Exception {
-    fs.rename(src, dst);
+    fs.rename(src, dst, Options.Rename.OVERWRITE);
     LambdaTestUtils
         .intercept(FileNotFoundException.class, () -> fs.getFileStatus(src));
     Assert.assertNotNull(fs.getFileStatus(dst));

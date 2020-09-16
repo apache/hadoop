@@ -109,6 +109,45 @@ public class TestViewDistributedFileSystemWithMountLinks extends
     }
   }
 
+  @Test
+  public void testRenameWhenDstOnInternalDirWithFallback() throws Exception {
+    Configuration conf = getConf();
+    URI defaultFSURI =
+        URI.create(conf.get(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY));
+    final Path hdfsTargetPath1 = new Path(defaultFSURI + "/HDFSUser");
+    final Path hdfsTargetPath2 =
+        new Path(defaultFSURI + "/dstNewHDFSUser" + "/next");
+    ViewFsTestSetup.addMountLinksToConf(defaultFSURI.getAuthority(),
+        new String[] {"/InternalDirDoesNotExistInFallback/test",
+            "/NewHDFSUser/next/next1"},
+        new String[] {hdfsTargetPath1.toUri().toString(),
+            hdfsTargetPath2.toUri().toString()}, conf);
+    try (DistributedFileSystem dfs = new DistributedFileSystem()) {
+      dfs.initialize(defaultFSURI, conf);
+      dfs.mkdirs(hdfsTargetPath1);
+      dfs.mkdirs(hdfsTargetPath2);
+      dfs.mkdirs(new Path("/NewHDFSUser/next/next1"));
+    }
+
+    try (FileSystem fs = FileSystem.get(conf)) {
+      Path src = new Path("/newFileOnRoot");
+      Path dst = new Path("/NewHDFSUser/next");
+      fs.create(src).close();
+      verifyRename(fs, src, dst);
+
+      src = new Path("/newFileOnRoot");
+      dst = new Path("/NewHDFSUser/next/file");
+      fs.create(src).close();
+      verifyRename(fs, src, dst);
+
+      src = new Path("/newFileOnRoot");
+      dst = new Path("/InternalDirDoesNotExistInFallback/file");
+      fs.create(src).close();
+      // If fallback does not have same structure as internal, rename will fail.
+      Assert.assertFalse(fs.rename(src, dst));
+    }
+  }
+
   private void verifyRename(FileSystem fs, Path src, Path dst)
       throws IOException {
     fs.rename(src, dst);
