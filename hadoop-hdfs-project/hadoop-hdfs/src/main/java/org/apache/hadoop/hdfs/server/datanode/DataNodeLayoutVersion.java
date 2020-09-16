@@ -44,7 +44,7 @@ public class DataNodeLayoutVersion {
    * @param lv new layout version to set
    */
   @VisibleForTesting
-  public static void setCurrentLayoutVersionForTesting(int lv) {
+  static void setCurrentLayoutVersionForTesting(int lv) {
     currentLayoutVersion = lv;
   }
 
