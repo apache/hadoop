@@ -235,11 +235,16 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    * @throws IOException if an error occurs.
    */
   public AbfsHttpOperation(final URL url, final String method, final List<AbfsHttpHeader> requestHeaders)
+          throws IOException {
+    this(url, method, "", requestHeaders);
+  }
+  public AbfsHttpOperation(final URL url, final String method, final String clientCorrelationID, final List<AbfsHttpHeader> requestHeaders)
       throws IOException {
     this.isTraceEnabled = LOG.isTraceEnabled();
     this.url = url;
     this.method = method;
     this.clientRequestId = UUID.randomUUID().toString();
+    clientRequestId = clientCorrelationID + ":" + UUID.randomUUID().toString();
 
     this.connection = openConnection();
     if (this.connection instanceof HttpsURLConnection) {
