@@ -125,4 +125,12 @@ public interface Constants {
       "fs.viewfs.ignore.port.in.mount.table.name";
 
   boolean CONFIG_VIEWFS_IGNORE_PORT_IN_MOUNT_TABLE_NAME_DEFAULT = false;
+
+  /**
+   * Config capacity of mount point resolution cache.
+   * Value <= 0 means disable cache.
+   */
+  String CONFIG_VIEWFS_PATH_RESOLUTION_CACHE_CAPACITY
+      = "fs.viewfs.path.resolution.cache.capacity";
+  int CONFIG_VIEWFS_PATH_RESOLUTION_CACHE_CAPACITY_DEFAULT = 0;
 }

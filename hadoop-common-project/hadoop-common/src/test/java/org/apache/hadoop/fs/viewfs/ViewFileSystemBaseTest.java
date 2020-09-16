@@ -1430,4 +1430,48 @@ abstract public class ViewFileSystemBaseTest {
           summaryAfter.getLength());
     }
   }
+
+  @Test
+  public void testMountPointCache() throws Exception {
+    conf.setInt(Constants.CONFIG_VIEWFS_PATH_RESOLUTION_CACHE_CAPACITY, 1);
+    FileSystem fileSystem = FileSystem.get(FsConstants.VIEWFS_URI, conf);
+    ViewFileSystem viewfs = (ViewFileSystem) fileSystem;
+    Path resolvedPath1 = new Path(targetTestRoot, "dir3/file1");
+    Path srcPath1 = new Path("/internalDir/internalDir2/linkToDir3/file1");
+    LRUMap cacheMap = viewfs.fsState.getPathResolutionCache();
+    FileSystemTestHelper.createFile(fsTarget, resolvedPath1);
+    Assert.assertTrue(
+        resolvedPath1.toString().equals(
+            fileSystem.resolvePath(srcPath1).toString()));
+    Assert.assertEquals(viewfs.fsState.getPathResolutionCacheCapacity(), 1);
+    Assert.assertEquals(viewfs.fsState.getPathResolutionCache().size(), 1);
+    Assert.assertTrue(viewfs.fsState.getPathResolutionCache().isFull());
+    InodeTree.ResolveResult resolveResult1 =
+        viewfs.fsState.resolve(viewfs.getUriPath(srcPath1), true);
+    LOG.info("Resolve result resolve path:" + resolveResult1.resolvedPath +
+        ", remaining path:" + resolveResult1.remainingPath
+        + ", file kind:" + resolveResult1.kind);
+    Assert.assertTrue(resolveResult1.resolvedPath.toString().equals(
+        new Path("/internalDir/internalDir2/linkToDir3").toString()));
+    Assert.assertTrue(resolveResult1.remainingPath.toString().equals(
+        "/file1"));
+    Assert.assertEquals(resolveResult1,
+        cacheMap.get(
+            InodeTree.getResolveCacheKeyStr(
+                viewfs.getUriPath(srcPath1), true)));
+
+    Path srcPath2 = new Path("/internalDir/internalDir2/linkToDir3/file2");
+    InodeTree.ResolveResult resolveResult2 =
+        viewfs.fsState.resolve(viewfs.getUriPath(srcPath2), true);
+    Assert.assertTrue(resolveResult2.resolvedPath.toString().equals(
+        new Path("/internalDir/internalDir2/linkToDir3").toString()));
+    Assert.assertTrue(resolveResult2.remainingPath.toString().equals(
+        "/file2"));
+    Assert.assertEquals(viewfs.fsState.getPathResolutionCache().size(), 1);
+    Assert.assertTrue(viewfs.fsState.getPathResolutionCache().isFull());
+    Assert.assertEquals(resolveResult2,
+        cacheMap.get(
+            InodeTree.getResolveCacheKeyStr(
+                viewfs.getUriPath(srcPath2), true)));
+  }
 }

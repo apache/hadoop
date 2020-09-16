@@ -428,6 +428,15 @@ fs.viewfs.mounttable.${VIEWNAME}.linkRegx.${REGEX_STR}
 fs.viewfs.mounttable.${VIEWNAME}.linkRegx.${interceptorSettings}#.${srcRegex}
 ```
 
+### Path Resolving Cache
+Regex parsing time could vary based on the defined rule. It’s possible that the parsing time could be long. So a resolving result cache should definitely help to reduce the parsing time. Besides, the cache could also help reduce the target file system initialization time. An LRU cache is used to implement it. The cache is disabled by default. Please config the following properties to use it.
+```xml
+<property>
+    <name>fs.viewfs.path.resolution.cache.capacity</name>
+    <value>${cache_cap}</value>
+</property>
+```
+
 
 
 Appendix: A Mount Table Configuration Example
