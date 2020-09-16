@@ -117,7 +117,7 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
       // Is a file overwrite case
       long createRequestCalls = 1;
       long createTriggeredGFSForETag = 0;
-      if (this.getConfiguration().isDefaultCreateOverwriteDisabled()) {
+      if (this.getConfiguration().isConditionalCreateOverwriteEnabled()) {
         createRequestCalls += 1;
         createTriggeredGFSForETag = 1;
       }
@@ -260,7 +260,7 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
       out = fs.create(getResponsePath);
 
       long createRequestCalls = 1;
-      if (this.getConfiguration().isDefaultCreateOverwriteDisabled()) {
+      if (this.getConfiguration().isConditionalCreateOverwriteEnabled()) {
         createRequestCalls += 2;
       }
 

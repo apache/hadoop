@@ -275,15 +275,13 @@ public class AbfsClient implements Closeable {
         ? SASTokenProvider.CREATE_FILE_OPERATION
         : SASTokenProvider.CREATE_DIRECTORY_OPERATION;
 
-    // HDFS FS defaults overwrite behaviour to true for create file which leads
-    // to majority create API traffic with overwrite=true. In some cases, this
-    // will end in race conditions at backend with parallel operations issued to
-    // same path either by means of the customer workload or ABFS driver retry.
-    // Disabling the create overwrite default setting to false should
-    // significantly reduce the chances for such race conditions.
+    // if "fs.azure.enable.conditional.create.overwrite" is enabled,
+    // trigger a create with overwrite=false first so that eTag fetch can be
+    // avoided for cases when no pre-existing file is present (which is the
+    // case with most part of create traffic)
     boolean isFirstAttemptToCreateWithoutOverwrite = false;
     if (isFile && overwrite
-        && abfsConfiguration.isDefaultCreateOverwriteDisabled()) {
+        && abfsConfiguration.isConditionalCreateOverwriteEnabled()) {
       isFirstAttemptToCreateWithoutOverwrite = true;
     }
 
@@ -310,14 +308,7 @@ public class AbfsClient implements Closeable {
           && isFirstAttemptToCreateWithoutOverwrite) {
         // Was the first attempt made to create file without overwrite which
         // failed because there is a pre-existing file.
-        //
-        // There is a rare possibility of race condition incase of create with
-        // overwrite=true. One such incident lead to data loss, where a retried
-        // create overwrite succeeded followed by an append, but the very first
-        // create overwrite made it to backend post the append. This lead to the
-        // file being overwritten and hence data loss. To prevent this scenario,
-        // first fetch the eTag of current file and set condition to overwrite
-        // only if eTag matches.
+        // resetting the first attempt flag for readabiltiy
         isFirstAttemptToCreateWithoutOverwrite = false;
 
         // Fetch eTag
@@ -338,7 +329,7 @@ public class AbfsClient implements Closeable {
         String eTag = op.getResult().getResponseHeader(ETAG);
 
         try {
-          // overwrite
+          // overwrite only if eTag matches with the file properties fetched befpre
           op = createPathImpl(path, abfsUriQueryBuilder, true, permission,
               umask, eTag);
         } catch (AbfsRestOperationException ex) {

@@ -64,12 +64,12 @@ public class ITestAzureBlobFileSystemMkDir extends AbstractAbfsIntegrationTest {
     testCreateDirOverwrite(false);
   }
 
-  public void testCreateDirOverwrite(boolean defaultDisableCreateOverwrite)
+  public void testCreateDirOverwrite(boolean enableConditionalCreateOverwrite)
       throws Throwable {
     final AzureBlobFileSystem currentFs = getFileSystem();
     Configuration config = new Configuration(this.getRawConfiguration());
-    config.set("fs.azure.disable.default.create.overwrite",
-        Boolean.toString(defaultDisableCreateOverwrite));
+    config.set("fs.azure.enable.conditional.create.overwrite",
+        Boolean.toString(enableConditionalCreateOverwrite));
 
     final AzureBlobFileSystem fs =
         (AzureBlobFileSystem) FileSystem.newInstance(currentFs.getUri(),

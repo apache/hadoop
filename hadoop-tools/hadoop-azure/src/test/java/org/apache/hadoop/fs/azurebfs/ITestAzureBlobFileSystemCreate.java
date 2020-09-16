@@ -218,8 +218,8 @@ public class ITestAzureBlobFileSystemCreate extends
    * 3. create overwrite=true of a file that doesnt pre-exist
    * 4. create overwrite=true of a file that pre-exists
    * matches the expectation when run against both combinations of
-   * fs.azure.disable.default.create.overwrite=true and
-   * fs.azure.disable.default.create.overwrite=false
+   * fs.azure.enable.conditional.create.overwrite=true and
+   * fs.azure.enable.conditional.create.overwrite=false
    * @throws Throwable
    */
   @Test
@@ -228,12 +228,12 @@ public class ITestAzureBlobFileSystemCreate extends
     testCreateFileOverwrite(false);
   }
 
-  public void testCreateFileOverwrite(boolean defaultDisableCreateOverwrite)
+  public void testCreateFileOverwrite(boolean enableConditionalCreateOverwrite)
       throws Throwable {
     final AzureBlobFileSystem currentFs = getFileSystem();
     Configuration config = new Configuration(this.getRawConfiguration());
-    config.set("fs.azure.disable.default.create.overwrite",
-        Boolean.toString(defaultDisableCreateOverwrite));
+    config.set("fs.azure.enable.conditional.create.overwrite",
+        Boolean.toString(enableConditionalCreateOverwrite));
 
     final AzureBlobFileSystem fs =
         (AzureBlobFileSystem) FileSystem.newInstance(currentFs.getUri(),
@@ -288,7 +288,7 @@ public class ITestAzureBlobFileSystemCreate extends
     // Case 4: Overwrite - File pre-exists
     fs.create(overwriteFilePath, true);
 
-    if (defaultDisableCreateOverwrite) {
+    if (enableConditionalCreateOverwrite) {
       // Three requests will be sent to server to create path,
       // 1. create without overwrite
       // 2. GetFileStatus to get eTag
@@ -327,7 +327,7 @@ public class ITestAzureBlobFileSystemCreate extends
 
     final AzureBlobFileSystem currentFs = getFileSystem();
     Configuration config = new Configuration(this.getRawConfiguration());
-    config.set("fs.azure.disable.default.create.overwrite",
+    config.set("fs.azure.enable.conditional.create.overwrite",
         Boolean.toString(true));
 
     final AzureBlobFileSystem fs =
