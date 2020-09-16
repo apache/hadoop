@@ -167,8 +167,6 @@ RUN apt-get -q update \
 # https://github.com/PyCQA/pylint/issues/2294
 ####
 RUN pip2 install \
-    astroid==1.6.6 \
-    isort==4.3.21 \
     configparser==4.0.2 \
     pylint==1.9.2 \
     isort==4.3.21
