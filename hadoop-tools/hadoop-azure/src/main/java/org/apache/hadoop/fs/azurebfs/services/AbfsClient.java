@@ -885,6 +885,10 @@ public class AbfsClient implements Closeable {
     }
   }
 
+  public String getClientCorrelationID() {
+      return abfsConfiguration.getCorrelationID();
+  }
+
   public AuthType getAuthType() {
     return authType;
   }
