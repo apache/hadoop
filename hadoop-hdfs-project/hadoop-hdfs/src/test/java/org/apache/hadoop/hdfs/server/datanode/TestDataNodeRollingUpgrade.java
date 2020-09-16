@@ -478,10 +478,9 @@ public class TestDataNodeRollingUpgrade {
     final LayoutVersion.FeatureInfo featureInfo =
         new LayoutVersion.FeatureInfo(lv, lv + 1,
             "Test Layout for TestDataNodeRollingUpgrade", false);
-    final LayoutVersion.LayoutFeature feature = () -> featureInfo;
 
     // Update the FEATURES map with the new layout version.
     LayoutVersion.updateMap(DataNodeLayoutVersion.FEATURES,
-        new LayoutVersion.LayoutFeature[] { feature });
+        new LayoutVersion.LayoutFeature[] { () -> featureInfo });
   }
 }
