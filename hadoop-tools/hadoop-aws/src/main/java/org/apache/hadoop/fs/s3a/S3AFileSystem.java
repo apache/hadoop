@@ -31,7 +31,6 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -187,6 +186,7 @@ import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.fixBucketRegion;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.logDnsLookup;
+import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.dirMetaToStatuses;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**
@@ -2669,7 +2669,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IOException due to an IO problem.
    * @throws AmazonClientException on failures inside the AWS SDK
    */
-  private RemoteIterator<S3AFileStatus> innerListStatus(Path f) throws FileNotFoundException,
+  private RemoteIterator<S3AFileStatus> innerListStatus(Path f)
+          throws FileNotFoundException,
           IOException, AmazonClientException {
     Path path = qualify(f);
     LOG.debug("List status for path: {}", path);
@@ -2683,8 +2684,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             statusesAssumingNonEmptyDir.getRight()) {
       // We are sure that this is an empty directory in auth mode.
       return statusesAssumingNonEmptyDir.getLeft();
-    }
-    else if (!statusesAssumingNonEmptyDir.getLeft().hasNext()) {
+    } else if (!statusesAssumingNonEmptyDir.getLeft().hasNext()) {
       // We may have an empty dir, or may have file or may have nothing.
       // So we call innerGetFileStatus to get the status, this may throw
       // FileNotFoundException if we have nothing.
@@ -2711,7 +2711,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             statusesAssumingNonEmptyDir.getMiddle(),
             allowAuthoritative(path),
             ttlTimeProvider,
-            listing);
+            p -> listing.createProvidedFileStatusIterator(
+                    dirMetaToStatuses(statusesAssumingNonEmptyDir.getMiddle()),
+                    ACCEPT_ALL,
+                    Listing.ACCEPT_ALL_BUT_S3N));
     return combinedRes;
   }
 
@@ -4500,7 +4503,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             : null;
     final RemoteIterator<S3AFileStatus> cachedFileStatusIterator =
         listing.createProvidedFileStatusIterator(
-            S3Guard.dirMetaToStatuses(meta), filter, acceptor);
+            dirMetaToStatuses(meta), filter, acceptor);
     return (allowAuthoritative && meta != null
         && meta.isAuthoritative())
         ? listing.createLocatedFileStatusIterator(

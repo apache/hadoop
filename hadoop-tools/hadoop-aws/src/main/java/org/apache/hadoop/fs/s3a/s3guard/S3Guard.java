@@ -39,7 +39,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.fs.s3a.Listing;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,7 +58,6 @@ import org.apache.hadoop.util.ReflectionUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_AUTHORITATIVE_PATH;
-import static org.apache.hadoop.fs.s3a.S3AUtils.ACCEPT_ALL;
 import static org.apache.hadoop.fs.s3a.S3AUtils.createUploadFileStatus;
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.authoritativeEmptyDirectoryMarker;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_BAD_CONFIGURATION;
@@ -337,6 +335,8 @@ public final class S3Guard {
    * @param dirMeta  Directory listing from MetadataStore.  May be null.
    * @param isAuthoritative State of authoritative mode
    * @param timeProvider Time provider to use when updating entries
+   * @param toStatusItr function to convert array of file status to
+   *                    RemoteIterator.
    * @return Final result of directory listing.
    * @throws IOException if metadata store update failed
    */
@@ -344,7 +344,8 @@ public final class S3Guard {
           MetadataStore ms, Path path,
           RemoteIterator<S3AFileStatus> backingStatuses,
           DirListingMetadata dirMeta, boolean isAuthoritative,
-          ITtlTimeProvider timeProvider, Listing listing)
+          ITtlTimeProvider timeProvider,
+          Function<S3AFileStatus[], RemoteIterator<S3AFileStatus>> toStatusItr)
           throws IOException {
 
     // Fast-path for NullMetadataStore
@@ -389,10 +390,8 @@ public final class S3Guard {
           timeProvider, operationState);
     }
     IOUtils.cleanupWithLogger(LOG, operationState);
-    return listing.createProvidedFileStatusIterator(
-            dirMetaToStatuses(dirMeta),
-            ACCEPT_ALL,
-            Listing.ACCEPT_ALL_BUT_S3N);
+
+    return toStatusItr.apply(dirMetaToStatuses(dirMeta));
   }
 
   /**

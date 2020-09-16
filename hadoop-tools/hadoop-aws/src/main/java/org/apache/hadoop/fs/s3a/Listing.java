@@ -76,7 +76,7 @@ public class Listing extends AbstractStoreOperation {
 
   private static final Logger LOG = S3AFileSystem.LOG;
 
-  public static final FileStatusAcceptor ACCEPT_ALL_BUT_S3N =
+  static final FileStatusAcceptor ACCEPT_ALL_BUT_S3N =
       new AcceptAllButS3nDirs();
 
   private final ListingOperationCallbacks listingOperationCallbacks;
@@ -96,11 +96,24 @@ public class Listing extends AbstractStoreOperation {
    * @param acceptor the file status acceptor
    * @return the file status iterator
    */
-  public ProvidedFileStatusIterator createProvidedFileStatusIterator(
+  ProvidedFileStatusIterator createProvidedFileStatusIterator(
       S3AFileStatus[] fileStatuses,
       PathFilter filter,
       FileStatusAcceptor acceptor) {
     return new ProvidedFileStatusIterator(fileStatuses, filter, acceptor);
+  }
+
+  /**
+   * Create a FileStatus iterator against a provided list of file status.
+   * @param fileStatuses array of file status.
+   * @return
+   */
+  @VisibleForTesting
+  public static ProvidedFileStatusIterator toProvidedFileStatusIterator(
+          S3AFileStatus[] fileStatuses) {
+    return new ProvidedFileStatusIterator(fileStatuses,
+            ACCEPT_ALL,
+            Listing.ACCEPT_ALL_BUT_S3N);
   }
 
   /**
@@ -367,7 +380,7 @@ public class Listing extends AbstractStoreOperation {
     S3ListRequest request = createListObjectsRequest(key, "/");
     LOG.debug("listStatus: doing listObjects for directory {}", key);
 
-    Listing.FileStatusListingIterator filesItr = createFileStatusListingIterator(
+    FileStatusListingIterator filesItr = createFileStatusListingIterator(
             path,
             request,
             ACCEPT_ALL,
