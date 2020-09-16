@@ -1763,5 +1763,6 @@ public class ViewFileSystem extends FileSystem {
       cache.closeAll();
       cache.clear();
     }
+    fsState.clearPathResolutionCache();
   }
 }

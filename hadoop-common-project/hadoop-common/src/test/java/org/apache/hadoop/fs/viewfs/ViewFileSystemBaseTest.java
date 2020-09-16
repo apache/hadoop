@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 
+import org.apache.commons.collections.map.LRUMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
@@ -1440,21 +1441,20 @@ abstract public class ViewFileSystemBaseTest {
     Path srcPath1 = new Path("/internalDir/internalDir2/linkToDir3/file1");
     LRUMap cacheMap = viewfs.fsState.getPathResolutionCache();
     FileSystemTestHelper.createFile(fsTarget, resolvedPath1);
-    Assert.assertTrue(
-        resolvedPath1.toString().equals(
-            fileSystem.resolvePath(srcPath1).toString()));
-    Assert.assertEquals(viewfs.fsState.getPathResolutionCacheCapacity(), 1);
-    Assert.assertEquals(viewfs.fsState.getPathResolutionCache().size(), 1);
+    Assert.assertEquals(
+        resolvedPath1.toString(),
+            fileSystem.resolvePath(srcPath1).toString());
+    Assert.assertEquals(1, viewfs.fsState.getPathResolutionCacheCapacity());
+    Assert.assertEquals(1, viewfs.fsState.getPathResolutionCache().size());
     Assert.assertTrue(viewfs.fsState.getPathResolutionCache().isFull());
     InodeTree.ResolveResult resolveResult1 =
         viewfs.fsState.resolve(viewfs.getUriPath(srcPath1), true);
     LOG.info("Resolve result resolve path:" + resolveResult1.resolvedPath +
         ", remaining path:" + resolveResult1.remainingPath
         + ", file kind:" + resolveResult1.kind);
-    Assert.assertTrue(resolveResult1.resolvedPath.toString().equals(
-        new Path("/internalDir/internalDir2/linkToDir3").toString()));
-    Assert.assertTrue(resolveResult1.remainingPath.toString().equals(
-        "/file1"));
+    Assert.assertEquals("/internalDir/internalDir2/linkToDir3",
+        resolveResult1.resolvedPath);
+    Assert.assertEquals("/file1", resolveResult1.remainingPath.toString());
     Assert.assertEquals(resolveResult1,
         cacheMap.get(
             InodeTree.getResolveCacheKeyStr(
@@ -1463,11 +1463,12 @@ abstract public class ViewFileSystemBaseTest {
     Path srcPath2 = new Path("/internalDir/internalDir2/linkToDir3/file2");
     InodeTree.ResolveResult resolveResult2 =
         viewfs.fsState.resolve(viewfs.getUriPath(srcPath2), true);
-    Assert.assertTrue(resolveResult2.resolvedPath.toString().equals(
-        new Path("/internalDir/internalDir2/linkToDir3").toString()));
-    Assert.assertTrue(resolveResult2.remainingPath.toString().equals(
-        "/file2"));
-    Assert.assertEquals(viewfs.fsState.getPathResolutionCache().size(), 1);
+    Assert.assertEquals(
+        "/internalDir/internalDir2/linkToDir3",
+        resolveResult2.resolvedPath);
+    Assert.assertEquals("/file2",
+        resolveResult2.remainingPath.toString());
+    Assert.assertEquals(1, viewfs.fsState.getPathResolutionCache().size());
     Assert.assertTrue(viewfs.fsState.getPathResolutionCache().isFull());
     Assert.assertEquals(resolveResult2,
         cacheMap.get(

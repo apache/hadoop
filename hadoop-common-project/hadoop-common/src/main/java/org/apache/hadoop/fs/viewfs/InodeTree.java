@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -29,7 +30,9 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.commons.collections.map.LRUMap;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -778,10 +781,13 @@ abstract class InodeTree<T> {
         }
         remainingPath = new Path(remainingPathStr.toString());
         resolveResult = new ResolveResult<T>(ResultKind.EXTERNAL_DIR,
-            getRootLink().getTargetFileSystem(), root.fullPath, remainingPath, true);
+            getRootLink().getTargetFileSystem(), root.fullPath, remainingPath,
+            true);
         return resolveResult;
       }
       Preconditions.checkState(root.isInternalDir());
+
+      // Try to resolve path in the regex mount point
       INodeDir<T> curInode = getRootDir();
       resolveResult = tryResolveInRegexMountpoint(p, resolveLastComponent);
       if (resolveResult != null) {
@@ -822,7 +828,8 @@ abstract class InodeTree<T> {
             remainingPath = new Path(remainingPathStr.toString());
           }
           resolveResult = new ResolveResult<T>(ResultKind.EXTERNAL_DIR,
-              link.getTargetFileSystem(), nextInode.fullPath, remainingPath, true);
+              link.getTargetFileSystem(), nextInode.fullPath, remainingPath,
+              true);
           return resolveResult;
         } else if (nextInode.isInternalDir()) {
           curInode = (INodeDir<T>) nextInode;
@@ -922,20 +929,15 @@ abstract class InodeTree<T> {
     }
   }
 
-  /**
-   * Return resolution cache capacity.
-   *
-   * @return
-   */
-  public int getPathResolutionCacheCapacity() {
+  int getPathResolutionCacheCapacity() {
     return pathResolutionCacheCapacity;
   }
 
   private void addResolveResultToCache(final String pathStr,
       final Boolean resolveLastComponent,
       final ResolveResult<T> resolveResult) {
+    String key = getResolveCacheKeyStr(pathStr, resolveLastComponent);
     try {
-      String key = getResolveCacheKeyStr(pathStr, resolveLastComponent);
       cacheRWLock.writeLock().lock();
       pathResolutionCache.put(key, resolveResult);
     } finally {
@@ -948,8 +950,8 @@ abstract class InodeTree<T> {
     if (pathResolutionCacheCapacity <= 0) {
       return null;
     }
+    String key = getResolveCacheKeyStr(pathStr, resolveLastComponent);
     try {
-      String key = getResolveCacheKeyStr(pathStr, resolveLastComponent);
       cacheRWLock.readLock().lock();
       return (ResolveResult<T>) pathResolutionCache.get(key);
     } finally {
@@ -957,14 +959,26 @@ abstract class InodeTree<T> {
     }
   }
 
-  public static String getResolveCacheKeyStr(final String path,
+  static String getResolveCacheKeyStr(final String path,
       Boolean resolveLastComp) {
-    return path + ",resolveLastComp" + resolveLastComp;
+    return path + "_resolveLastComp:" + resolveLastComp;
   }
 
   @VisibleForTesting
-  public LRUMap getPathResolutionCache() {
+  LRUMap getPathResolutionCache() {
     return pathResolutionCache;
+  }
+
+  void clearPathResolutionCache() {
+    if (pathResolutionCache == null) {
+      return;
+    }
+    try {
+      cacheRWLock.writeLock().lock();
+      pathResolutionCache.clear();
+    } finally {
+      cacheRWLock.writeLock().unlock();
+    }
   }
 
   List<MountPoint<T>> getMountPoints() {
