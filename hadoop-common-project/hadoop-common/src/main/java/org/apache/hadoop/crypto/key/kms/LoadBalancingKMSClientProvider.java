@@ -502,6 +502,7 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
         return null;
       }
     }, nextIdx(), false);
+    invalidateCache(name);
   }
 
   @Override

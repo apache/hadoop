@@ -299,19 +299,18 @@ public class ValueQueue <E> {
    * @param keyName the key to drain the Queue for
    */
   public void drain(String keyName) {
+    Runnable e;
+    while ((e = queue.deleteByName(keyName)) != null) {
+      executor.remove(e);
+    }
+    writeLock(keyName);
     try {
-      Runnable e;
-      while ((e = queue.deleteByName(keyName)) != null) {
-        executor.remove(e);
+      LinkedBlockingQueue kq = keyQueues.getIfPresent(keyName);
+      if (kq != null) {
+        kq.clear();
       }
-      writeLock(keyName);
-      try {
-        keyQueues.get(keyName).clear();
-      } finally {
-        writeUnlock(keyName);
-      }
-    } catch (ExecutionException ex) {
-      //NOP
+    } finally {
+      writeUnlock(keyName);
     }
   }
 
