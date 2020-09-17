@@ -56,7 +56,8 @@ public class SnappyDecompressor implements Decompressor {
     try {
       SnappyLoader.getVersion();
     } catch (Throwable t) {
-      LOG.warn("Error loading snappy libraries: " + t);
+      throw new RuntimeException("native snappy library not available: " +
+              "SnappyDecompressor has not been loaded.", t);
     }
 
     this.directBufferSize = directBufferSize;

@@ -27,6 +27,7 @@ import org.apache.hadoop.io.compress.Compressor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xerial.snappy.Snappy;
+import org.xerial.snappy.SnappyLoader;
 
 /**
  * A {@link Compressor} based on the snappy compression algorithm.
@@ -54,6 +55,14 @@ public class SnappyCompressor implements Compressor {
    * @param directBufferSize size of the direct buffer to be used.
    */
   public SnappyCompressor(int directBufferSize) {
+    // `snappy-java` is provided scope. We need to check if its availability.
+    try {
+      SnappyLoader.getVersion();
+    } catch (Throwable t) {
+      throw new RuntimeException("native snappy library not available: " +
+              "SnappyCompressor has not been loaded.", t);
+    }
+
     this.directBufferSize = directBufferSize;
 
     uncompressedDirectBuf = ByteBuffer.allocateDirect(directBufferSize);
