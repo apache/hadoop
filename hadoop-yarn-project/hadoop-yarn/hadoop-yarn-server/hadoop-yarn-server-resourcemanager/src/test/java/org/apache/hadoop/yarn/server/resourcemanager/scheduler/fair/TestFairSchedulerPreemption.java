@@ -94,6 +94,7 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     conf.setBoolean(FairSchedulerConfiguration.PREEMPTION, true);
     conf.setFloat(FairSchedulerConfiguration.PREEMPTION_THRESHOLD, 0f);
     conf.setInt(FairSchedulerConfiguration.WAIT_TIME_BEFORE_KILL, 0);
+    conf.setLong(FairSchedulerConfiguration.UPDATE_INTERVAL_MS, 60_000L);
     setupCluster();
   }
 
