@@ -27,6 +27,7 @@ import org.apache.hadoop.io.compress.DirectDecompressor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xerial.snappy.Snappy;
+import org.xerial.snappy.SnappyLoader;
 
 /**
  * A {@link Decompressor} based on the snappy compression algorithm.
@@ -51,6 +52,13 @@ public class SnappyDecompressor implements Decompressor {
    * @param directBufferSize size of the direct buffer to be used.
    */
   public SnappyDecompressor(int directBufferSize) {
+    // `snappy-java` is provided scope. We need to check if its availability.
+    try {
+      SnappyLoader.getVersion();
+    } catch (Throwable t) {
+      LOG.warn("Error loading snappy libraries: " + t);
+    }
+
     this.directBufferSize = directBufferSize;
 
     compressedDirectBuf = ByteBuffer.allocateDirect(directBufferSize);
@@ -264,13 +272,7 @@ public class SnappyDecompressor implements Decompressor {
     } else {
       // Set the position and limit of `compressedDirectBuf` for reading
       compressedDirectBuf.limit(compressedDirectBufLen).position(0);
-      // There is compressed input, decompress it now.
-      int size = Snappy.uncompressedLength((ByteBuffer) compressedDirectBuf);
-      if (size > uncompressedDirectBuf.remaining()) {
-        throw new IOException("Could not decompress data. " +
-          "uncompressedDirectBuf length is too small.");
-      }
-      size = Snappy.uncompress((ByteBuffer) compressedDirectBuf,
+      int size = Snappy.uncompress((ByteBuffer) compressedDirectBuf,
               (ByteBuffer) uncompressedDirectBuf);
       compressedDirectBufLen = 0;
       compressedDirectBuf.limit(compressedDirectBuf.capacity()).position(0);
