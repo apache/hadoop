@@ -23,6 +23,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -41,8 +42,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -472,4 +475,102 @@ public class TestViewFsLinkFallback {
     assertEquals(fileInFallBackRoot.getName(),
         iterator.next().getPath().getName());
   }
+
+  @Test
+  public void testRenameOnInternalDirWithFallback() throws Exception {
+    Configuration conf = new Configuration();
+    Path fallbackTarget = new Path(targetTestRoot, "fallbackDir");
+    fsTarget.mkdirs(fallbackTarget);
+    ConfigUtil.addLink(conf, "/user1",
+        new Path(targetTestRoot.toString() + "/user1").toUri());
+    ConfigUtil.addLink(conf, "/NewHDFSUser/next",
+        new Path(targetTestRoot.toString() + "/newUser1").toUri());
+    ConfigUtil.addLinkFallback(conf, fallbackTarget.toUri());
+
+    //Make sure target fs has parent dir structures
+    try (DistributedFileSystem dfs = new DistributedFileSystem()) {
+      dfs.initialize(fsDefault.getUri(), conf);
+      dfs.mkdirs(new Path(targetTestRoot.toString() + "/user1"));
+      dfs.mkdirs(new Path(fallbackTarget.toString() + "/newUser1"));
+    }
+
+    final AbstractFileSystem fs =
+        AbstractFileSystem.get(viewFsDefaultClusterUri, conf);
+
+    Path src = new Path("/newFileOnRoot");
+    Path dst = new Path("/newFileOnRoot1");
+    fs.create(src, EnumSet.of(CREATE),
+        Options.CreateOpts.perms(FsPermission.getDefault())).close();
+    verifyRename(fs, src, dst);
+
+    src = new Path("/newFileOnRoot1");
+    dst = new Path("/newUser1/newFileOnRoot");
+    fs.mkdir(dst.getParent(), FsPermission.getDefault(), true);
+    verifyRename(fs, src, dst);
+
+    src = new Path("/newUser1/newFileOnRoot");
+    dst = new Path("/newUser1/newFileOnRoot1");
+    verifyRename(fs, src, dst);
+
+    src = new Path("/newUser1/newFileOnRoot1");
+    dst = new Path("/newFileOnRoot");
+    verifyRename(fs, src, dst);
+
+    src = new Path("/user1/newFileOnRoot1");
+    dst = new Path("/user1/newFileOnRoot");
+    fs.create(src, EnumSet.of(CREATE),
+        Options.CreateOpts.perms(FsPermission.getDefault())).close();
+    verifyRename(fs, src, dst);
+  }
+
+  @Test
+  public void testRenameWhenDstOnInternalDirWithFallback() throws Exception {
+    Configuration conf = new Configuration();
+    Path fallbackTarget = new Path(targetTestRoot, "fallbackDir");
+    fsTarget.mkdirs(fallbackTarget);
+    ConfigUtil.addLink(conf, "/InternalDirDoesNotExistInFallback/test",
+        new Path(targetTestRoot.toString() + "/user1").toUri());
+    ConfigUtil.addLink(conf, "/NewHDFSUser/next/next1",
+        new Path(targetTestRoot.toString() + "/newUser1").toUri());
+    ConfigUtil.addLinkFallback(conf, fallbackTarget.toUri());
+
+    try (DistributedFileSystem dfs = new DistributedFileSystem()) {
+      dfs.initialize(fsDefault.getUri(), conf);
+      dfs.mkdirs(new Path(targetTestRoot.toString() + "/newUser1"));
+      dfs.mkdirs(
+          new Path(fallbackTarget.toString() + "/NewHDFSUser/next/next1"));
+    }
+
+    final AbstractFileSystem fs =
+        AbstractFileSystem.get(viewFsDefaultClusterUri, conf);
+    final Path src = new Path("/newFileOnRoot");
+    final Path dst = new Path("/NewHDFSUser/next");
+    fs.mkdir(src, FsPermission.getDefault(), true);
+    // src and dst types are must be either  same dir or files
+    LambdaTestUtils.intercept(IOException.class,
+        () -> fs.rename(src, dst, Options.Rename.OVERWRITE));
+
+    final Path src1 = new Path("/newFileOnRoot1");
+    final Path dst1 = new Path("/NewHDFSUser/next/file");
+    fs.create(src1, EnumSet.of(CREATE),
+        Options.CreateOpts.perms(FsPermission.getDefault())).close();
+    verifyRename(fs, src1, dst1);
+
+    final Path src2 = new Path("/newFileOnRoot2");
+    final Path dst2 = new Path("/InternalDirDoesNotExistInFallback/file");
+    fs.create(src2, EnumSet.of(CREATE),
+        Options.CreateOpts.perms(FsPermission.getDefault())).close();
+    // If fallback does not have same structure as internal, rename will fail.
+    LambdaTestUtils.intercept(FileNotFoundException.class,
+        () -> fs.rename(src2, dst2, Options.Rename.OVERWRITE));
+  }
+
+  private void verifyRename(AbstractFileSystem fs, Path src, Path dst)
+      throws Exception {
+    fs.rename(src, dst, Options.Rename.OVERWRITE);
+    LambdaTestUtils
+        .intercept(FileNotFoundException.class, () -> fs.getFileStatus(src));
+    Assert.assertNotNull(fs.getFileStatus(dst));
+  }
+
 }

@@ -706,18 +706,26 @@ abstract class InodeTree<T> {
     final T targetFileSystem;
     final String resolvedPath;
     final Path remainingPath;   // to resolve in the target FileSystem
+    private final boolean isLastInternalDirLink;
 
     ResolveResult(final ResultKind k, final T targetFs, final String resolveP,
-        final Path remainingP) {
+        final Path remainingP, boolean isLastIntenalDirLink) {
       kind = k;
       targetFileSystem = targetFs;
       resolvedPath = resolveP;
       remainingPath = remainingP;
+      this.isLastInternalDirLink = isLastIntenalDirLink;
     }
 
     // Internal dir path resolution completed within the mount table
     boolean isInternalDir() {
       return (kind == ResultKind.INTERNAL_DIR);
+    }
+
+    // Indicates whether the internal dir path resolution completed at the link
+    // or resolved due to fallback.
+    boolean isLastInternalDirLink() {
+      return this.isLastInternalDirLink;
     }
   }
 
@@ -737,7 +745,7 @@ abstract class InodeTree<T> {
           getRootDir().getInternalDirFs()
           : getRootLink().getTargetFileSystem();
       resolveResult = new ResolveResult<T>(ResultKind.INTERNAL_DIR,
-          targetFs, root.fullPath, SlashPath);
+          targetFs, root.fullPath, SlashPath, false);
       return resolveResult;
     }
 
@@ -755,7 +763,8 @@ abstract class InodeTree<T> {
       }
       remainingPath = new Path(remainingPathStr.toString());
       resolveResult = new ResolveResult<T>(ResultKind.EXTERNAL_DIR,
-          getRootLink().getTargetFileSystem(), root.fullPath, remainingPath);
+          getRootLink().getTargetFileSystem(), root.fullPath, remainingPath,
+          true);
       return resolveResult;
     }
     Preconditions.checkState(root.isInternalDir());
@@ -775,7 +784,7 @@ abstract class InodeTree<T> {
         if (hasFallbackLink()) {
           resolveResult = new ResolveResult<T>(ResultKind.EXTERNAL_DIR,
               getRootFallbackLink().getTargetFileSystem(), root.fullPath,
-              new Path(p));
+              new Path(p), false);
           return resolveResult;
         } else {
           StringBuilder failedAt = new StringBuilder(path[0]);
@@ -801,7 +810,8 @@ abstract class InodeTree<T> {
           remainingPath = new Path(remainingPathStr.toString());
         }
         resolveResult = new ResolveResult<T>(ResultKind.EXTERNAL_DIR,
-            link.getTargetFileSystem(), nextInode.fullPath, remainingPath);
+            link.getTargetFileSystem(), nextInode.fullPath, remainingPath,
+            true);
         return resolveResult;
       } else if (nextInode.isInternalDir()) {
         curInode = (INodeDir<T>) nextInode;
@@ -824,7 +834,7 @@ abstract class InodeTree<T> {
       remainingPath = new Path(remainingPathStr.toString());
     }
     resolveResult = new ResolveResult<T>(ResultKind.INTERNAL_DIR,
-        curInode.getInternalDirFs(), curInode.fullPath, remainingPath);
+        curInode.getInternalDirFs(), curInode.fullPath, remainingPath, false);
     return resolveResult;
   }
 
@@ -874,7 +884,7 @@ abstract class InodeTree<T> {
       T targetFs = getTargetFileSystem(
           new URI(targetOfResolvedPathStr));
       return new ResolveResult<T>(resultKind, targetFs, resolvedPathStr,
-          remainingPath);
+          remainingPath, true);
     } catch (IOException ex) {
       LOGGER.error(String.format(
           "Got Exception while build resolve result."
