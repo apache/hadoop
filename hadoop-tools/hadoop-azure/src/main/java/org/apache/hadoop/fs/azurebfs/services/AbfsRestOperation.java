@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemExc
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.oauth2.AzureADAuthenticator.HttpException;
+import org.apache.hadoop.fs.azurebfs.utils.TrackingContext;
 
 /**
  * The AbfsRestOperation for Rest AbfsClient.
@@ -210,8 +211,9 @@ public class AbfsRestOperation {
   private boolean executeHttpOperation(final int retryCount) throws AzureBlobFileSystemException {
     AbfsHttpOperation httpOperation = null;
     try {
+      TrackingContext trackingContext = new TrackingContext(client.getClientCorrelationID());
       // initialize the HTTP request and open the connection
-      httpOperation = new AbfsHttpOperation(url, method, client.getClientCorrelationID(), requestHeaders);
+      httpOperation = new AbfsHttpOperation(url, method, trackingContext, requestHeaders);
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
 
       switch(client.getAuthType()) {

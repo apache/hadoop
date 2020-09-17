@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsPerfLoggable;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
+import org.apache.hadoop.fs.azurebfs.utils.TrackingContext;
 
 /**
  * Represents an HTTP operation.
@@ -234,17 +235,13 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    *
    * @throws IOException if an error occurs.
    */
-  public AbfsHttpOperation(final URL url, final String method, final List<AbfsHttpHeader> requestHeaders)
-          throws IOException {
-    this(url, method, "", requestHeaders);
-  }
-  public AbfsHttpOperation(final URL url, final String method, final String clientCorrelationID, final List<AbfsHttpHeader> requestHeaders)
+
+  public AbfsHttpOperation(final URL url, final String method, final TrackingContext trackingContext, final List<AbfsHttpHeader> requestHeaders)
       throws IOException {
     this.isTraceEnabled = LOG.isTraceEnabled();
     this.url = url;
     this.method = method;
-    this.clientRequestId = UUID.randomUUID().toString();
-    clientRequestId = clientCorrelationID + ":" + UUID.randomUUID().toString();
+    this.clientRequestId = trackingContext.toString();
 
     this.connection = openConnection();
     if (this.connection instanceof HttpsURLConnection) {
