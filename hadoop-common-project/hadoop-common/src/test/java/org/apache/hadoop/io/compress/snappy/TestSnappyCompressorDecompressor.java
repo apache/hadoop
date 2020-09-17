@@ -315,39 +315,39 @@ public class TestSnappyCompressorDecompressor {
   }
 
   private void compressDecompressLoop(int rawDataSize) throws IOException {
-    byte[] rawData = BytesGenerator.get(rawDataSize);
+    byte[] rawData = BytesGenerator.get(rawDataSize);    
     byte[] compressedResult = new byte[rawDataSize+20];
-    int directBufferSize = Math.max(rawDataSize*2, 64*1024);
+    int directBufferSize = Math.max(rawDataSize*2, 64*1024);    
     SnappyCompressor compressor = new SnappyCompressor(directBufferSize);
     compressor.setInput(rawData, 0, rawDataSize);
     int compressedSize = compressor.compress(compressedResult, 0, compressedResult.length);
     SnappyDirectDecompressor decompressor = new SnappyDirectDecompressor();
-
+   
     ByteBuffer inBuf = ByteBuffer.allocateDirect(compressedSize);
     ByteBuffer outBuf = ByteBuffer.allocateDirect(rawDataSize);
 
     inBuf.put(compressedResult, 0, compressedSize);
-    inBuf.flip();
+    inBuf.flip();    
 
     ByteBuffer expected = ByteBuffer.wrap(rawData);
-
+    
     outBuf.clear();
     while(!decompressor.finished()) {
       decompressor.decompress(inBuf, outBuf);
       if (outBuf.remaining() == 0) {
         outBuf.flip();
-        while (outBuf.remaining() > 0) {
+        while (outBuf.remaining() > 0) {        
           assertEquals(expected.get(), outBuf.get());
         }
         outBuf.clear();
       }
     }
     outBuf.flip();
-    while (outBuf.remaining() > 0) {
+    while (outBuf.remaining() > 0) {        
       assertEquals(expected.get(), outBuf.get());
     }
     outBuf.clear();
-
+    
     assertEquals(0, expected.remaining());
   }
   

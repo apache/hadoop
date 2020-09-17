@@ -246,7 +246,7 @@ public class TestCodec {
         v2.readFields(inflateIn);
         assertTrue("original and compressed-then-decompressed-output not equal",
                    k1.equals(k2) && v1.equals(v2));
-
+      
         // original and compressed-then-decompressed-output have the same
         // hashCode
         Map<RandomDatum, String> m = new HashMap<RandomDatum, String>();

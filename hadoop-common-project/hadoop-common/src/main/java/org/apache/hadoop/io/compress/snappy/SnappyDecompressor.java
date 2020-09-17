@@ -282,7 +282,7 @@ public class SnappyDecompressor implements Decompressor {
 
   int decompressDirect(ByteBuffer src, ByteBuffer dst) throws IOException {
     assert (this instanceof SnappyDirectDecompressor);
-
+    
     ByteBuffer presliced = dst;
     if (dst.position() > 0) {
       presliced = dst;
@@ -311,10 +311,10 @@ public class SnappyDecompressor implements Decompressor {
     }
     return n;
   }
-
+  
   public static class SnappyDirectDecompressor extends SnappyDecompressor implements
       DirectDecompressor {
-
+    
     @Override
     public boolean finished() {
       return (endOfInput && super.finished());
