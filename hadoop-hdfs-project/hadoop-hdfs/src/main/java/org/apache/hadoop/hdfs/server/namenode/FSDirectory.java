@@ -509,6 +509,14 @@ public class FSDirectory implements Closeable {
   }
 
   /**
+   * Indicates whether the image loading is complete or not.
+   * @return true if image loading is complete, false otherwise
+   */
+  public boolean isImageLoaded() {
+    return namesystem.isImageLoaded();
+  }
+
+  /**
    * Parse configuration setting dfs.namenode.protected.directories to
    * retrieve the set of protected directories.
    *
