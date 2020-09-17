@@ -64,7 +64,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
       LoggerFactory.getLogger(ITestAzureBlobFileSystemDelegationSAS.class);
 
   public ITestAzureBlobFileSystemDelegationSAS() throws Exception {
-    // These tests rely on specific settings in azure-auth-keys.xml:
+    // These tests rely on specific settings in abfs-testrun-configs.xml:
     String sasProvider = getRawConfiguration().get(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE);
     Assume.assumeTrue(MockDelegationSASTokenProvider.class.getCanonicalName().equals(sasProvider));
     Assume.assumeNotNull(getRawConfiguration().get(TestConfigurationKeys.FS_AZURE_TEST_APP_ID));

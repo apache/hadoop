@@ -90,6 +90,9 @@ public final class FileSystemConfigurations {
 
   public static final String DEFAULT_FS_AZURE_USER_AGENT_PREFIX = EMPTY_STRING;
   public static final String DEFAULT_VALUE_UNKNOWN = "UNKNOWN";
+  public static final String DEFAULT_FS_AZURE_CLIENT_CORRELATION_ID = EMPTY_STRING;
+  public static final int MAX_CLIENT_CORRELATION_ID_LENGTH = 65;  //2 * guid_length + 1
+  public static final String CLIENT_CORRELATION_ID_PATTERN = "[a-zA-Z0-9-]*";
 
   public static final boolean DEFAULT_DELETE_CONSIDERED_IDEMPOTENT = true;
   public static final int DEFAULT_CLOCK_SKEW_WITH_SERVER_IN_MS = 5 * 60 * 1000; // 5 mins

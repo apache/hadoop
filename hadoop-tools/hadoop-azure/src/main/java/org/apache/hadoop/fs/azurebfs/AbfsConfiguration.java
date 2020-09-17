@@ -205,9 +205,9 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_FS_AZURE_USER_AGENT_PREFIX)
   private String userAgentId;
 
-  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_CORRELATIONID,
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_CLIENT_CORRELATIONID,
           DefaultValue = "")
-  private String correlationID;
+  private String clientCorrelationID;
 
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_CLUSTER_NAME,
       DefaultValue = DEFAULT_VALUE_UNKNOWN)
@@ -296,13 +296,13 @@ public class AbfsConfiguration{
    * are not satisfied.
    * @return Client Correlation ID
    */
-  public String getCorrelationID(){
-    int GUID_LENGTH = 32;
-    if (correlationID.length() > 2 * GUID_LENGTH + 1)
-      correlationID = correlationID.substring(0,2 * GUID_LENGTH + 1);
-    if (correlationID.matches("[a-z0-9-]*"))
-      return correlationID;
-    return "";
+  public String getClientCorrelationID(){
+    /* Putting length check first to avoid processing regex check for long strings */
+    if (clientCorrelationID.length() > MAX_CLIENT_CORRELATION_ID_LENGTH)
+      return DEFAULT_FS_AZURE_CLIENT_CORRELATION_ID;
+    if (clientCorrelationID.matches(CLIENT_CORRELATION_ID_PATTERN))
+      return clientCorrelationID;
+    return DEFAULT_FS_AZURE_CLIENT_CORRELATION_ID;
   }
 
   /**
