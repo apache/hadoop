@@ -547,8 +547,8 @@ abstract public class ViewFsBaseTest {
       UnresolvedLinkException, IOException, URISyntaxException {
     AbstractFileSystem mockAFS = mock(AbstractFileSystem.class);
     InodeTree.ResolveResult<AbstractFileSystem> res =
-      new InodeTree.ResolveResult<AbstractFileSystem>(null, mockAFS , null,
-        new Path("someFile"));
+        new InodeTree.ResolveResult<AbstractFileSystem>(null, mockAFS, null,
+            new Path("someFile"), true);
     @SuppressWarnings("unchecked")
     InodeTree<AbstractFileSystem> fsState = mock(InodeTree.class);
     when(fsState.resolve(anyString(), anyBoolean())).thenReturn(res);
