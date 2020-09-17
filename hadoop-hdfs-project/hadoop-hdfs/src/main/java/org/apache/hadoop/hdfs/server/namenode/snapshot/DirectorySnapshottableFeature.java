@@ -172,28 +172,25 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
   /**
    * Add a snapshot.
    * @param snapshotRoot Root of the snapshot.
+   * @param snapshotManager SnapshotManager Instance.
    * @param name Name of the snapshot.
    * @param leaseManager
-   * @param captureOpenFiles
    * @throws SnapshotException Throw SnapshotException when there is a snapshot
    *           with the same name already exists or snapshot quota exceeds
    */
-  public Snapshot addSnapshot(INodeDirectory snapshotRoot, int id, String name,
-      final LeaseManager leaseManager, final boolean captureOpenFiles,
-      int maxSnapshotLimit, long now)
+  public Snapshot addSnapshot(INodeDirectory snapshotRoot,
+                              SnapshotManager snapshotManager, String name,
+                              final LeaseManager leaseManager, long now)
       throws SnapshotException {
+    int id = snapshotManager.getSnapshotCounter();
     //check snapshot quota
     final int n = getNumSnapshots();
     if (n + 1 > snapshotQuota) {
       throw new SnapshotException("Failed to add snapshot: there are already "
           + n + " snapshot(s) and the snapshot quota is "
           + snapshotQuota);
-    } else if (n + 1 > maxSnapshotLimit) {
-      throw new SnapshotException(
-          "Failed to add snapshot: there are already " + n
-              + " snapshot(s) and the max snapshot limit is "
-              + maxSnapshotLimit);
     }
+    snapshotManager.checkPerDirectorySnapshotLimit(n);
     final Snapshot s = new Snapshot(id, name, snapshotRoot);
     final byte[] nameBytes = s.getRoot().getLocalNameBytes();
     final int i = searchSnapshot(nameBytes);
@@ -210,7 +207,7 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
     snapshotRoot.updateModificationTime(now, Snapshot.CURRENT_STATE_ID);
     s.getRoot().setModificationTime(now, Snapshot.CURRENT_STATE_ID);
 
-    if (captureOpenFiles) {
+    if (snapshotManager.captureOpenFiles()) {
       try {
         Set<INodesInPath> openFilesIIP =
             leaseManager.getINodeWithLeases(snapshotRoot);
