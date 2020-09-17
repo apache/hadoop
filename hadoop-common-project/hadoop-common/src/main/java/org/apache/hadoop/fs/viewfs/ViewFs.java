@@ -548,23 +548,60 @@ public class ViewFs extends AbstractFileSystem {
   public void renameInternal(final Path src, final Path dst,
       final boolean overwrite) throws IOException, UnresolvedLinkException {
     // passing resolveLastComponet as false to catch renaming a mount point 
-    // itself we need to catch this as an internal operation and fail.
-    InodeTree.ResolveResult<AbstractFileSystem> resSrc = 
-      fsState.resolve(getUriPath(src), false); 
-  
+    // itself we need to catch this as an internal operation and fail if no
+    // fallback.
+    InodeTree.ResolveResult<AbstractFileSystem> resSrc =
+        fsState.resolve(getUriPath(src), false);
+
     if (resSrc.isInternalDir()) {
-      throw new AccessControlException(
-          "Cannot Rename within internal dirs of mount table: src=" + src
-              + " is readOnly");
+      if (fsState.getRootFallbackLink() == null) {
+        // If fallback is null, we can't rename from src.
+        throw new AccessControlException(
+            "Cannot Rename within internal dirs of mount table: src=" + src
+                + " is readOnly");
+      }
+      InodeTree.ResolveResult<AbstractFileSystem> resSrcWithLastComp =
+          fsState.resolve(getUriPath(src), true);
+      if (resSrcWithLastComp.isInternalDir() || resSrcWithLastComp
+          .isLastInternalDirLink()) {
+        throw new AccessControlException(
+            "Cannot Rename within internal dirs of mount table: src=" + src
+                + " is readOnly");
+      } else {
+        // This is fallback and let's set the src fs with this fallback
+        resSrc = resSrcWithLastComp;
+      }
     }
 
     InodeTree.ResolveResult<AbstractFileSystem> resDst =
-                                fsState.resolve(getUriPath(dst), false);
+        fsState.resolve(getUriPath(dst), false);
+
     if (resDst.isInternalDir()) {
-      throw new AccessControlException(
-          "Cannot Rename within internal dirs of mount table: dest=" + dst
-              + " is readOnly");
+      if (fsState.getRootFallbackLink() == null) {
+        // If fallback is null, we can't rename to dst.
+        throw new AccessControlException(
+            "Cannot Rename within internal dirs of mount table: dest=" + dst
+                + " is readOnly");
+      }
+      // if the fallback exist, we may have chance to rename to fallback path
+      // where dst parent is matching to internalDir.
+      InodeTree.ResolveResult<AbstractFileSystem> resDstWithLastComp =
+          fsState.resolve(getUriPath(dst), true);
+      if (resDstWithLastComp.isInternalDir()) {
+        // We need to get fallback here. If matching fallback path not exist, it
+        // will fail later. This is a very special case: Even though we are on
+        // internal directory, we should allow to rename, so that src files will
+        // moved under matching fallback dir.
+        resDst = new InodeTree.ResolveResult<AbstractFileSystem>(
+            InodeTree.ResultKind.INTERNAL_DIR,
+            fsState.getRootFallbackLink().getTargetFileSystem(), "/",
+            new Path(resDstWithLastComp.resolvedPath), false);
+      } else {
+        // The link resolved to some target fs or fallback fs.
+        resDst = resDstWithLastComp;
+      }
     }
+
     //Alternate 1: renames within same file system
     URI srcUri = resSrc.targetFileSystem.getUri();
     URI dstUri = resDst.targetFileSystem.getUri();
