@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.FileNotFoundException;
 import java.io.FilterOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.EnumSet;
 import java.util.UUID;
 
@@ -35,11 +36,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.test.GenericTestUtils;
 
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConcurrentWriteOperationDetectedException;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.TestAbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
-import org.apache.hadoop.fs.azurebfs.services.AbfsUriQueryBuilder;
 
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
@@ -335,11 +338,14 @@ public class ITestAzureBlobFileSystemCreate extends
             config);
 
     // Get mock AbfsClient with current config
-    org.apache.hadoop.fs.azurebfs.services.AbfsClient
+    AbfsClient
         mockClient
-        = org.apache.hadoop.fs.azurebfs.services.TestAbfsClient.getMockAbfsClient(
+        = TestAbfsClient.getMockAbfsClient(
         fs.getAbfsStore().getClient(),
         fs.getAbfsStore().getAbfsConfiguration());
+
+    AzureBlobFileSystemStore abfsStore = fs.getAbfsStore();
+    abfsStore = setAzureBlobSystemStoreField(abfsStore, "client", mockClient);
 
     AbfsRestOperation successOp = mock(
         AbfsRestOperation.class);
@@ -366,9 +372,8 @@ public class ITestAzureBlobFileSystemCreate extends
         .doThrow(
             serverErrorResponseEx) // Scn5: create overwrite=false fails with Http500
         .when(mockClient)
-        .createPathImpl(any(String.class), any(
-            AbfsUriQueryBuilder.class),
-            eq(false), any(String.class), any(String.class), eq(null));
+        .createPath(any(String.class), eq(true), eq(false), any(String.class),
+            any(String.class), any(boolean.class), eq(null));
 
     doThrow(fileNotFoundResponseEx) // Scn1: GFS fails with Http404
         .doThrow(serverErrorResponseEx) // Scn2: GFS fails with Http500
@@ -382,35 +387,23 @@ public class ITestAzureBlobFileSystemCreate extends
         .doThrow(
             serverErrorResponseEx) // Scn4: create overwrite=true fails with Http500
         .when(mockClient)
-        .createPathImpl(any(String.class), any(
-            AbfsUriQueryBuilder.class),
-            eq(true), any(String.class), any(String.class), eq(null));
-
-    when(mockClient.createPath(any(String.class), eq(true), eq(true),
-        any(String.class),
-        any(String.class), eq(false))).thenCallRealMethod();
+        .createPath(any(String.class), eq(true), eq(true), any(String.class),
+            any(String.class), any(boolean.class), eq(null));
 
     // Scn1: GFS fails with Http404
     // Sequence of events expected:
     // 1. create overwrite=false - fail with conflict
     // 2. GFS - fail with File Not found
     // Create will fail with ConcurrentWriteOperationDetectedException
-    intercept(
-        ConcurrentWriteOperationDetectedException.class,
-        () ->
-            mockClient.createPath("someTestPath", true, true, "0644", "0022",
-                false));
+    validateCreateFileException(ConcurrentWriteOperationDetectedException.class,
+        abfsStore);
 
     // Scn2: GFS fails with Http500
     // Sequence of events expected:
     // 1. create overwrite=false - fail with conflict
     // 2. GFS - fail with Server error
     // Create will fail with 500
-    intercept(
-        AbfsRestOperationException.class,
-        () ->
-            mockClient.createPath("someTestPath", true, true, "0644", "0022",
-                false));
+    validateCreateFileException(AbfsRestOperationException.class, abfsStore);
 
     // Scn3: create overwrite=true fails with Http412
     // Sequence of events expected:
@@ -418,11 +411,8 @@ public class ITestAzureBlobFileSystemCreate extends
     // 2. GFS - pass
     // 3. create overwrite=true - fail with Pre-Condition
     // Create will fail with ConcurrentWriteOperationDetectedException
-    intercept(
-        ConcurrentWriteOperationDetectedException.class,
-        () ->
-            mockClient.createPath("someTestPath", true, true, "0644", "0022",
-                false));
+    validateCreateFileException(ConcurrentWriteOperationDetectedException.class,
+        abfsStore);
 
     // Scn4: create overwrite=true fails with Http500
     // Sequence of events expected:
@@ -430,21 +420,38 @@ public class ITestAzureBlobFileSystemCreate extends
     // 2. GFS - pass
     // 3. create overwrite=true - fail with Server error
     // Create will fail with 500
-    intercept(
-        AbfsRestOperationException.class,
-        () ->
-            mockClient.createPath("someTestPath", true, true, "0644", "0022",
-                false));
+    validateCreateFileException(AbfsRestOperationException.class, abfsStore);
 
     // Scn5: create overwrite=false fails with Http500
     // Sequence of events expected:
     // 1. create overwrite=false - fail with server error
     // Create will fail with 500
+    validateCreateFileException(AbfsRestOperationException.class, abfsStore);
+  }
+
+  private AzureBlobFileSystemStore setAzureBlobSystemStoreField(
+      final AzureBlobFileSystemStore abfsStore,
+      final String fieldName,
+      Object fieldObject) throws Exception {
+
+    Field abfsClientField = AzureBlobFileSystemStore.class.getDeclaredField(fieldName);
+    abfsClientField.setAccessible(true);
+    Field modifiersField = Field.class.getDeclaredField("modifiers");
+    modifiersField.setAccessible(true);
+    modifiersField.setInt(abfsClientField,
+        abfsClientField.getModifiers() & ~java.lang.reflect.Modifier.FINAL);
+    abfsClientField.set(abfsStore, fieldObject);
+    return abfsStore;
+  }
+
+  private <E extends Throwable> void validateCreateFileException(final Class<E> exceptionClass, final AzureBlobFileSystemStore abfsStore)
+      throws Exception {
+    FsPermission permission = new FsPermission(0644);
+    FsPermission umask = new FsPermission(0022);
+    Path testPath = new Path("testFile");
     intercept(
-        AbfsRestOperationException.class,
-        () ->
-            mockClient.createPath("someTestPath", true, true, "0644", "0022",
-                false));
+        exceptionClass,
+        () -> abfsStore.createFile(testPath, null, true, permission, umask));
   }
 
   private AbfsRestOperationException getMockAbfsRestOperationException(int status) {

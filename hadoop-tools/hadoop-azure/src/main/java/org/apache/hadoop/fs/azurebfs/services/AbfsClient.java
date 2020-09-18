@@ -40,8 +40,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConcurrentWriteOperationDetectedException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException;
 import org.apache.hadoop.fs.azurebfs.extensions.ExtensionHelper;
@@ -265,102 +263,10 @@ public class AbfsClient implements Closeable {
     return op;
   }
 
-  public AbfsRestOperation createPath(final String path,
-      final boolean isFile,
-      final boolean overwrite,
-      final String permission,
-      final String umask,
-      final boolean isAppendBlob) throws AzureBlobFileSystemException {
-    String operation = isFile
-        ? SASTokenProvider.CREATE_FILE_OPERATION
-        : SASTokenProvider.CREATE_DIRECTORY_OPERATION;
-
-    // if "fs.azure.enable.conditional.create.overwrite" is enabled,
-    // trigger a create with overwrite=false first so that eTag fetch can be
-    // avoided for cases when no pre-existing file is present (which is the
-    // case with most part of create traffic)
-    boolean isFirstAttemptToCreateWithoutOverwrite = false;
-    if (isFile && overwrite
-        && abfsConfiguration.isConditionalCreateOverwriteEnabled()) {
-      isFirstAttemptToCreateWithoutOverwrite = true;
-    }
-
-    AbfsRestOperation op = null;
-    // Query builder
-    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
-    abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE,
-        operation.equals(SASTokenProvider.CREATE_FILE_OPERATION)
-            ? FILE
-            : DIRECTORY);
-
-    if (isAppendBlob) {
-      abfsUriQueryBuilder.addQuery(QUERY_PARAM_BLOBTYPE, APPEND_BLOB_TYPE);
-    }
-
-    appendSASTokenToQuery(path, operation, abfsUriQueryBuilder);
-
-    try {
-      op = createPathImpl(path, abfsUriQueryBuilder,
-          (isFirstAttemptToCreateWithoutOverwrite ? false : overwrite),
-          permission, umask, null);
-    } catch (AbfsRestOperationException e) {
-      if ((e.getStatusCode() == HttpURLConnection.HTTP_CONFLICT)
-          && isFirstAttemptToCreateWithoutOverwrite) {
-        // Was the first attempt made to create file without overwrite which
-        // failed because there is a pre-existing file.
-        // resetting the first attempt flag for readabiltiy
-        isFirstAttemptToCreateWithoutOverwrite = false;
-
-        // Fetch eTag
-        try {
-          op = getPathStatus(path, false);
-        } catch (AbfsRestOperationException ex) {
-          if (ex.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
-            // Is a parallel access case, as file which was found to be
-            // present went missing by this request.
-            throw new ConcurrentWriteOperationDetectedException(
-                "Parallel access to the create path detected. Failing request "
-                    + "to honor single writer semantics");
-          } else {
-            throw ex;
-          }
-        }
-
-        String eTag = op.getResult().getResponseHeader(ETAG);
-
-        try {
-          // overwrite only if eTag matches with the file properties fetched befpre
-          op = createPathImpl(path, abfsUriQueryBuilder, true, permission,
-              umask, eTag);
-        } catch (AbfsRestOperationException ex) {
-          if (ex.getStatusCode() == HttpURLConnection.HTTP_PRECON_FAILED) {
-            // Is a parallel access case, as file with eTag was just queried
-            // and precondition failure can happen only when another file with
-            // different etag got created.
-            throw new ConcurrentWriteOperationDetectedException(
-                "Parallel access to the create path detected. Failing request "
-                    + "to honor single writer semantics");
-          } else {
-            throw ex;
-          }
-        }
-      } else {
-        throw e;
-      }
-    }
-
-    return op;
-  }
-
-  @VisibleForTesting
-  public AbfsRestOperation createPathImpl(final String path,
-      AbfsUriQueryBuilder abfsUriQueryBuilder,
-      final boolean overwrite,
-      final String permission,
-      final String umask,
-      final String eTag) throws AzureBlobFileSystemException {
+  public AbfsRestOperation createPath(final String path, final boolean isFile, final boolean overwrite,
+                                      final String permission, final String umask,
+                                      final boolean isAppendBlob, final String eTag) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-
     if (!overwrite) {
       requestHeaders.add(new AbfsHttpHeader(IF_NONE_MATCH, AbfsHttpConstants.STAR));
     }
@@ -376,6 +282,17 @@ public class AbfsClient implements Closeable {
     if (eTag != null && !eTag.isEmpty()) {
       requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.IF_MATCH, eTag));
     }
+
+    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
+    abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, isFile ? FILE : DIRECTORY);
+    if (isAppendBlob) {
+      abfsUriQueryBuilder.addQuery(QUERY_PARAM_BLOBTYPE, APPEND_BLOB_TYPE);
+    }
+
+    String operation = isFile
+        ? SASTokenProvider.CREATE_FILE_OPERATION
+        : SASTokenProvider.CREATE_DIRECTORY_OPERATION;
+    appendSASTokenToQuery(path, operation, abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(

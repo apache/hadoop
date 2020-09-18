@@ -47,15 +47,15 @@ public class ITestAzureBlobFileSystemMkDir extends AbstractAbfsIntegrationTest {
     assertMkdirs(fs, path);
   }
 
-  /**
-   * Test mkdir for possible values of fs.azure.disable.default.create.overwrite
-   * @throws Exception
-   */
   @Test
   public void testCreateRoot() throws Exception {
     assertMkdirs(getFileSystem(), new Path("/"));
   }
 
+  /**
+   * Test mkdir for possible values of fs.azure.disable.default.create.overwrite
+   * @throws Exception
+   */
   @Test
   public void testDefaultCreateOverwriteDirTest() throws Throwable {
     // the config fs.azure.disable.default.create.overwrite should have no
