@@ -757,7 +757,7 @@ public class TestDiskBalancer {
         }
       }, 1000, 100000);
 
-      assertTrue("Disk balancer operation hit max errors!", errorCount.get() <
+      assertTrue("Disk balancer operation hit max errors!", errorCount.get() <=
           DFSConfigKeys.DFS_DISK_BALANCER_MAX_DISK_ERRORS_DEFAULT);
       createWorkPlanLatch.await();
       removeDiskLatch.await();
