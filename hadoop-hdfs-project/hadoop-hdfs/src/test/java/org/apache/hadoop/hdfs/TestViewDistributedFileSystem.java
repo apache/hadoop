@@ -76,7 +76,7 @@ public class TestViewDistributedFileSystem extends TestDistributedFileSystem{
     Configuration conf = getTestConfiguration();
     MiniDFSCluster cluster = null;
     try {
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
       URI defaultUri =
           URI.create(conf.get(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY));
       ConfigUtil.addLinkFallback(conf, defaultUri.getHost(), defaultUri);
