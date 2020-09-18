@@ -18,14 +18,17 @@
 package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathHandle;
+import org.apache.hadoop.fs.viewfs.ConfigUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.test.Whitebox;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.net.URI;
 
 public class TestViewDistributedFileSystem extends TestDistributedFileSystem{
   @Override
@@ -61,6 +64,25 @@ public class TestViewDistributedFileSystem extends TestDistributedFileSystem{
       PathHandle pathHandle =
           fileSys.getPathHandle(fileSys.getFileStatus(openTestPath));
       fileSys.open(pathHandle, 1024).close();
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Override
+  public void testEmptyDelegationToken() throws IOException {
+    Configuration conf = getTestConfiguration();
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      URI defaultUri =
+          URI.create(conf.get(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY));
+      ConfigUtil.addLinkFallback(conf, defaultUri.getHost(), defaultUri);
+      try (FileSystem fileSys = FileSystem.get(conf)) {
+        fileSys.getDelegationToken("");
+      }
     } finally {
       if (cluster != null) {
         cluster.shutdown();
