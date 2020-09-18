@@ -104,7 +104,7 @@ public class MockDelegationSASTokenProvider implements SASTokenProvider {
     requestBody.append("</Expiry></KeyInfo>");
 
     TrackingContext trackingContext = new TrackingContext(CORRELATION_ID);
-    AbfsHttpOperation op = new AbfsHttpOperation(url, method, trackingContext, requestHeaders);
+    AbfsHttpOperation op = new AbfsHttpOperation(url, method, requestHeaders);
 
     byte[] requestBuffer = requestBody.toString().getBytes(StandardCharsets.UTF_8.toString());
     op.sendRequest(requestBuffer, 0, requestBuffer.length);

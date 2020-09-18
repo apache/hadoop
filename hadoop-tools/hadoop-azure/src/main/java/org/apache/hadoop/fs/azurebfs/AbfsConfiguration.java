@@ -206,7 +206,7 @@ public class AbfsConfiguration{
   private String userAgentId;
 
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_CLIENT_CORRELATIONID,
-          DefaultValue = "")
+          DefaultValue = DEFAULT_FS_AZURE_CLIENT_CORRELATION_ID)
   private String clientCorrelationID;
 
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_CLUSTER_NAME,
@@ -297,7 +297,7 @@ public class AbfsConfiguration{
    * @return Client Correlation ID
    */
   public String getClientCorrelationID(){
-    /* Putting length check first to avoid processing regex check for long strings */
+    // Putting length check first to avoid processing regex check for long strings
     if (clientCorrelationID.length() > MAX_CLIENT_CORRELATION_ID_LENGTH)
       return DEFAULT_FS_AZURE_CLIENT_CORRELATION_ID;
     if (clientCorrelationID.matches(CLIENT_CORRELATION_ID_PATTERN))

@@ -32,6 +32,7 @@ import java.util.Locale;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
+import org.apache.hadoop.fs.azurebfs.utils.TrackingContext;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
@@ -67,6 +68,7 @@ public class AbfsClient implements Closeable {
   private final String filesystem;
   private final AbfsConfiguration abfsConfiguration;
   private final String userAgent;
+  private final TrackingContext trackingContext;
   private final AbfsPerfTracker abfsPerfTracker;
 
   private final String accountName;
@@ -86,6 +88,7 @@ public class AbfsClient implements Closeable {
     this.retryPolicy = abfsClientContext.getExponentialRetryPolicy();
     this.accountName = abfsConfiguration.getAccountName().substring(0, abfsConfiguration.getAccountName().indexOf(AbfsHttpConstants.DOT));
     this.authType = abfsConfiguration.getAuthType(accountName);
+    this.trackingContext = new TrackingContext(abfsConfiguration.getClientCorrelationID());
 
     String sslProviderName = null;
 
@@ -155,6 +158,7 @@ public class AbfsClient implements Closeable {
             UTF_8));
     requestHeaders.add(new AbfsHttpHeader(CONTENT_TYPE, EMPTY_STRING));
     requestHeaders.add(new AbfsHttpHeader(USER_AGENT, userAgent));
+    requestHeaders.add(new AbfsHttpHeader(X_MS_CLIENT_REQUEST_ID, trackingContext.toString()));
     return requestHeaders;
   }
 
@@ -883,10 +887,6 @@ public class AbfsClient implements Closeable {
     } else {
       return null;
     }
-  }
-
-  public String getClientCorrelationID() {
-      return abfsConfiguration.getClientCorrelationID();
   }
 
   public AuthType getAuthType() {
