@@ -135,7 +135,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   private final DataNodeVolumeMetrics metrics;
   private URI baseURI;
   private boolean enableSameDiskArchival;
-  private final String device;
+  private final String mount;
   private double reservedForArchive;
 
   /**
@@ -197,22 +197,22 @@ public class FsVolumeImpl implements FsVolumeSpi {
         conf.getBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING,
             DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING_DEFAULT);
     if (enableSameDiskArchival) {
-      this.device = usage.getMount();
+      this.mount = usage.getMount();
       reservedForArchive = conf.getDouble(
           DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_PERCENTAGE,
           DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_PERCENTAGE_DEFAULT);
-      if (reservedForArchive >= 1) {
-        FsDatasetImpl.LOG.warn("Value of reserve-for-archival is >= 100% for "
-            + currentDir + ". Setting it to 99%.");
-        reservedForArchive = 0.99;
+      if (reservedForArchive > 1) {
+        FsDatasetImpl.LOG.warn("Value of reserve-for-archival is > 100% for "
+            + currentDir + ". Setting it to 100%.");
+        reservedForArchive = 1;
       }
     } else {
-      device = "";
+      mount = "";
     }
   }
 
-  String getDevice() {
-    return device;
+  String getMount() {
+    return mount;
   }
 
   protected ThreadPoolExecutor initializeCacheExecutor(File parent) {
@@ -500,7 +500,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
       StorageType counterpartStorageType = storageType == StorageType.DISK
           ? StorageType.ARCHIVE : StorageType.DISK;
       FsVolumeReference counterpartRef = dataset
-          .getVolumeRef(device, counterpartStorageType);
+          .getVolumeRef(mount, counterpartStorageType);
       if (counterpartRef != null) {
         FsVolumeImpl counterpartVol = (FsVolumeImpl) counterpartRef.getVolume();
         long used = getDfUsed() - getDfsUsed() - counterpartVol.getDfsUsed();

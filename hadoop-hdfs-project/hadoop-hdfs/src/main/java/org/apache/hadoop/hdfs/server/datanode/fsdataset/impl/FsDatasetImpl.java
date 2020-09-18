@@ -193,7 +193,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   // Get volume by device and storage type.
   // Only used when turning on same disk tiering feature.
   FsVolumeReference getVolumeRef(String device, StorageType storageType) {
-    return volumes.getVolumeRefByDeviceAndStorageType(device, storageType);
+    return volumes.getVolumeRefByMountAndStorageType(device, storageType);
   }
 
   @Override // FsDatasetSpi

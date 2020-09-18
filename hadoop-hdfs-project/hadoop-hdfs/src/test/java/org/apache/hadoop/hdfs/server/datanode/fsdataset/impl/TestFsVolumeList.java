@@ -490,23 +490,23 @@ public class TestFsVolumeList {
     volumeList.addVolume(archivalVolume.obtainReference());
     volumeList.addVolume(diskVolume.obtainReference());
 
-    assertEquals(diskVolume.getDevice(), archivalVolume.getDevice());
-    String device = diskVolume.getDevice();
+    assertEquals(diskVolume.getMount(), archivalVolume.getMount());
+    String device = diskVolume.getMount();
 
     // 1) getVolumeRef should return correct reference.
     assertEquals(diskVolume,
-        volumeList.getVolumeRefByDeviceAndStorageType(
+        volumeList.getVolumeRefByMountAndStorageType(
             device, StorageType.DISK).getVolume());
     assertEquals(archivalVolume,
-        volumeList.getVolumeRefByDeviceAndStorageType(
+        volumeList.getVolumeRefByMountAndStorageType(
             device, StorageType.ARCHIVE).getVolume());
 
     // 1) removeVolume should work as expected
     volumeList.removeVolume(diskVolume.getStorageLocation(), true);
     assertEquals(null,
-        volumeList.getVolumeRefByDeviceAndStorageType(
+        volumeList.getVolumeRefByMountAndStorageType(
             device, StorageType.DISK));
-    assertEquals(archivalVolume, volumeList.getVolumeRefByDeviceAndStorageType(
+    assertEquals(archivalVolume, volumeList.getVolumeRefByMountAndStorageType(
         device, StorageType.ARCHIVE).getVolume());
   }
 
