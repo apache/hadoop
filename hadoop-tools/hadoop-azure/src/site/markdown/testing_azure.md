@@ -80,7 +80,7 @@ tests against mocked storage, which is an in-memory emulation of Azure Storage.
 The integration tests are designed to test directly against an Azure storage
 service, and require an account and credentials in order to run.
 
-This is done by creating the file to `src/test/resources/abfs-testrun-configs.xml`
+This is done by creating the file to `src/test/resources/azure-auth-keys.xml`
 and setting the name of the storage account and its access key.
 
 For example:
@@ -100,7 +100,7 @@ For example:
 </configuration>
 ```
 
-To run contract tests, set the WASB file system URI in `src/test/resources/abfs-testrun-configs.xml`
+To run contract tests, set the WASB file system URI in `src/test/resources/azure-auth-keys.xml`
 and the account access key. For example:
 
 ```xml
@@ -119,7 +119,7 @@ and the account access key. For example:
 </configuration>
 ```
 
-Overall, to run all the tests using `mvn test`,  a sample `abfs-testrun-configs.xml` is like following:
+Overall, to run all the tests using `mvn test`,  a sample `azure-auth-keys.xml` is like following:
 
 ```xml
 <?xml version="1.0"?>
@@ -140,7 +140,7 @@ Overall, to run all the tests using `mvn test`,  a sample `abfs-testrun-configs.
 </configuration>
 ```
 
-DO NOT ADD `abfs-testrun-configs.xml` TO REVISION CONTROL.  The keys to your Azure
+DO NOT ADD `azure-auth-keys.xml` TO REVISION CONTROL.  The keys to your Azure
 Storage account are a secret and must not be shared.
 
 
@@ -593,7 +593,7 @@ namespace is enabled for the storage account.  Furthermore, the metadata and dat
 produced by ADLS Gen 2 REST API can be consumed by Blob REST API, and vice versa.
 
 In order to test ABFS, please add the following configuration to your
-`src/test/resources/abfs-testrun-configs.xml` file. Note that the ABFS tests include
+`src/test/resources/azure-auth-keys.xml` file. Note that the ABFS tests include
 compatibility tests which require WASB credentials, in addition to the ABFS
 credentials.
 
@@ -878,30 +878,3 @@ http[s]://[account][domain-suffix]/[filesystem], please use the following:
   <value>{IP}:{PORT}</value>
 </property>
 ```
-
-##Run different combinations of tests using the runtests.sh script
-
-This is the expected way in which the tests have to be ran before raising a PR.
-The script runtests.sh contain template for 3 combinations of tests. Ensure
-the auth configs for all the accounts used for testing are provided in
-abfs-testrun-configs.xml. In case any new flags or properties are introduced
-with the code change, add the combinations with the possible configurations
-into the runtests.sh. The thread count can be specified as the command line
-argument for the script. By default the same will be 8.
-
-Adding a combination of tests involves setting the variable scenario (ex: HNS
--OAuth) and specifying the specific configurations for the particular
-combination with 2 arrays namely properties and values. Specify the property
-names within the array properties and corresponding values in the values
-array. The property and value is determined by the array index. The value for
-the property mentioned at index 1 of array properties should be specified at
-index 1 of the array values. Call the function runtestwithconfs once the 3
-values mentioned are set. Now the script runtests.sh is ready to be ran.
-
-Once the tests are completed, logs will be present in the directory
-target/testlogs. A consolidated test results will be present in the file
-Test-$starttime-Results.log, $startname will be the start time of the test.
-Similarly, the full test report can be found in individual log files, for each
-of the scenarios with the file name Test-$starttime-Logs-$scenario. Please
-attach the consolidates test results from the file Test-$starttime-Results.log
-into the respective PRs.
