@@ -33,10 +33,10 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.test.GenericTestUtils;
 
-import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConcurrentWriteOperationDetectedException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
@@ -434,7 +434,8 @@ public class ITestAzureBlobFileSystemCreate extends
       final String fieldName,
       Object fieldObject) throws Exception {
 
-    Field abfsClientField = AzureBlobFileSystemStore.class.getDeclaredField(fieldName);
+    Field abfsClientField = AzureBlobFileSystemStore.class.getDeclaredField(
+        fieldName);
     abfsClientField.setAccessible(true);
     Field modifiersField = Field.class.getDeclaredField("modifiers");
     modifiersField.setAccessible(true);
@@ -446,8 +447,10 @@ public class ITestAzureBlobFileSystemCreate extends
 
   private <E extends Throwable> void validateCreateFileException(final Class<E> exceptionClass, final AzureBlobFileSystemStore abfsStore)
       throws Exception {
-    FsPermission permission = new FsPermission(0644);
-    FsPermission umask = new FsPermission(0022);
+    FsPermission permission = new FsPermission(FsAction.ALL, FsAction.ALL,
+        FsAction.ALL);
+    FsPermission umask = new FsPermission(FsAction.NONE, FsAction.NONE,
+        FsAction.NONE);
     Path testPath = new Path("testFile");
     intercept(
         exceptionClass,
