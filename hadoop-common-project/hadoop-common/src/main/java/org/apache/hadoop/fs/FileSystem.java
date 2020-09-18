@@ -4655,7 +4655,7 @@ public abstract class FileSystem extends Configured
       final OpenFileParameters parameters) throws IOException {
     AbstractFSBuilderImpl.rejectUnknownMandatoryKeys(
         parameters.getMandatoryKeys(),
-        OpenFileOptions.FS_OPTION_OPENFILE_STANDARD_OPTIONS, "");
+        Options.OpenFileOptions.FS_OPTION_OPENFILE_STANDARD_OPTIONS, "");
     CompletableFuture<FSDataInputStream> result = new CompletableFuture<>();
     try {
       result.complete(open(pathHandle, parameters.getBufferSize()));

@@ -46,6 +46,10 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE_SEQUENTIAL;
+import static org.apache.hadoop.fs.impl.FutureIOSupport.awaitFuture;
+
 /**
  * Support for marshalling objects to and from JSON.
  *
@@ -243,7 +247,12 @@ public class JsonSerialization<T> {
    * @throws IOException IO or JSON parse problems
    */
   public T load(FileSystem fs, Path path) throws IOException {
-    try (FSDataInputStream dataInputStream = fs.open(path)) {
+
+    try (FSDataInputStream dataInputStream =
+             awaitFuture(fs.openFile(path)
+                 .opt(FS_OPTION_OPENFILE_FADVISE,
+                     FS_OPTION_OPENFILE_FADVISE_SEQUENTIAL)
+                 .build())) {
       // throw an EOF exception if there is no data available.
       if (dataInputStream.available() == 0) {
         throw new EOFException("No data in " + path);

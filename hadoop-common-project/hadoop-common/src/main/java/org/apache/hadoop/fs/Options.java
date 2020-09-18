@@ -18,8 +18,11 @@
 package org.apache.hadoop.fs;
 
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.BiFunction;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -517,5 +520,74 @@ public final class Options {
   public enum ChecksumCombineMode {
     MD5MD5CRC,  // MD5 of block checksums, which are MD5 over chunk CRCs
     COMPOSITE_CRC  // Block/chunk-independent composite CRC
+  }
+
+  /**
+   * The standard {@code openFile()} options.
+   */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
+  public static final class OpenFileOptions {
+
+    private OpenFileOptions() {
+    }
+
+    /**
+     * Prefix for all standard filesystem options: {@value}.
+     */
+    public static final String FILESYSTEM_OPTION = "fs.option.";
+
+    /**
+     * Prefix for all openFile options: {@value}.
+     */
+    public static final String FS_OPTION_OPENFILE =
+        FILESYSTEM_OPTION + "openfile.";
+
+    /**
+     * OpenFile option for seek policies: {@value}.
+     */
+    public static final String FS_OPTION_OPENFILE_LENGTH =
+        FS_OPTION_OPENFILE + "length";
+
+    /**
+     * OpenFile option for seek policies: {@value}.
+     */
+    public static final String FS_OPTION_OPENFILE_FADVISE =
+        FS_OPTION_OPENFILE + "fadvise";
+
+    /**
+     * fadvise policy 'normal' -up to implementation: {@value}.
+     */
+    public static final String FS_OPTION_OPENFILE_FADVISE_NORMAL =
+        "normal";
+
+    /**
+     * fadvise policy for sequential IO: {@value}.
+     */
+    public static final String FS_OPTION_OPENFILE_FADVISE_SEQUENTIAL =
+        "sequential";
+
+    /**
+     * fadvise policy for random: {@value}.
+     */
+    public static final String FS_OPTION_OPENFILE_FADVISE_RANDOM =
+        "random";
+
+    /**
+     * fadvise policy for adaptive IO: {@value}.
+     */
+    public static final String FS_OPTION_OPENFILE_FADVISE_ADAPTIVE =
+        "adaptive";
+
+    /**
+     * Set of standard options which openfile implementations
+     * MUST recognize, even if they ignore the actual values.
+     */
+    public static final Set<String> FS_OPTION_OPENFILE_STANDARD_OPTIONS =
+        Stream.of(
+            FS_OPTION_OPENFILE_FADVISE,
+            FS_OPTION_OPENFILE_LENGTH)
+            .collect(Collectors.toSet());
+
   }
 }

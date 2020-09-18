@@ -36,9 +36,9 @@ import org.apache.hadoop.fs.s3a.select.InternalSelectConstants;
 import org.apache.hadoop.fs.s3a.select.SelectConstants;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
 import static org.apache.hadoop.fs.impl.AbstractFSBuilderImpl.rejectUnknownMandatoryKeys;
-import static org.apache.hadoop.fs.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE;
-import static org.apache.hadoop.fs.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
 import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADVISE;
 import static org.apache.hadoop.fs.s3a.Constants.READAHEAD_RANGE;
 
@@ -49,7 +49,7 @@ import static org.apache.hadoop.fs.s3a.Constants.READAHEAD_RANGE;
  * This got complex enough it merited removal from S3AFS -which
  * also permits unit testing.
  */
-  public class S3AOpenFileOperation extends AbstractStoreOperation {
+public class S3AOpenFileOperation extends AbstractStoreOperation {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(S3AOpenFileOperation.class);
@@ -67,7 +67,6 @@ import static org.apache.hadoop.fs.s3a.Constants.READAHEAD_RANGE;
    * the same.
    */
   private final OpenFileInformation simpleFileInformation;
-
 
   /**
    * Instantiate with the default options from the filesystem.
@@ -103,7 +102,7 @@ import static org.apache.hadoop.fs.s3a.Constants.READAHEAD_RANGE;
     /** File status; may be null. */
     private final S3AFileStatus status;
 
-    /** SQL string if this is a SQL select file*/
+    /** SQL string if this is a SQL select file. */
     private final String sql;
 
     /** Active input policy. */
@@ -115,6 +114,9 @@ import static org.apache.hadoop.fs.s3a.Constants.READAHEAD_RANGE;
     /** read ahead range. */
     private final long readAheadRange;
 
+    /**
+     * Constructor.
+     */
     private OpenFileInformation(final boolean isSql,
         final S3AFileStatus status,
         final String sql,
@@ -221,7 +223,7 @@ import static org.apache.hadoop.fs.s3a.Constants.READAHEAD_RANGE;
       String eTag;
       // can use this status to skip our own probes,
       LOG.debug("File was opened with a supplied FileStatus;"
-          + " skipping getFileStatus call in open() operation: {}",
+              + " skipping getFileStatus call in open() operation: {}",
 
           providedStatus);
       if (providedStatus instanceof S3AFileStatus) {
@@ -261,7 +263,8 @@ import static org.apache.hadoop.fs.s3a.Constants.READAHEAD_RANGE;
           path,
           blockSize,
           username,
-          null, null);
+          null,
+          null);
     } else {
       // neither a file status nor a file length
       fileStatus = null;
@@ -278,7 +281,7 @@ import static org.apache.hadoop.fs.s3a.Constants.READAHEAD_RANGE;
   }
 
   /**
-   * Open a simple file by builing the base
+   * Open a simple file.
    * @return the parameters needed to open a file through open().
    */
   public OpenFileInformation openSimpleFile() {

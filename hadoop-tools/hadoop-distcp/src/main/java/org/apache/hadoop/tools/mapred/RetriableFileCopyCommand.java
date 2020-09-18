@@ -52,6 +52,9 @@ import org.apache.hadoop.tools.util.ThrottledInputStream;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE_SEQUENTIAL;
+import static org.apache.hadoop.fs.impl.FutureIOSupport.awaitFuture;
 import static org.apache.hadoop.tools.mapred.CopyMapper.getFileAttributeSettings;
 
 /**
@@ -362,7 +365,10 @@ public class RetriableFileCopyCommand extends RetriableCommand {
       FileSystem fs = path.getFileSystem(conf);
       float bandwidthMB = conf.getFloat(DistCpConstants.CONF_LABEL_BANDWIDTH_MB,
               DistCpConstants.DEFAULT_BANDWIDTH_MB);
-      FSDataInputStream in = fs.open(path);
+      FSDataInputStream in = awaitFuture(fs.openFile(path)
+          .opt(FS_OPTION_OPENFILE_FADVISE,
+              FS_OPTION_OPENFILE_FADVISE_SEQUENTIAL)
+          .build());
       return new ThrottledInputStream(in, bandwidthMB * 1024 * 1024);
     }
     catch (IOException e) {

@@ -102,7 +102,8 @@ class CopyCommands {
       try {
         for (PathData src : srcs) {
           if (src.stat.getLen() != 0) {
-            try (FSDataInputStream in = src.fs.open(src.path)) {
+            // Always do sequential reads.
+            try (FSDataInputStream in = src.openForSequentialIO()) {
               IOUtils.copyBytes(in, out, getConf(), false);
               writeDelimiter(out);
             }

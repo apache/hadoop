@@ -27,8 +27,8 @@ import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTest
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.s3a.Constants;
 
-import static org.apache.hadoop.fs.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE;
-import static org.apache.hadoop.fs.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
 
 /**
  * Internal constants private only to the S3A codebase.

@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 
 import org.assertj.core.api.Assertions;
 import org.assertj.core.api.ObjectAssert;
@@ -34,9 +35,9 @@ import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
 import org.apache.hadoop.test.HadoopTestBase;
 
 import static java.util.Collections.singleton;
-import static org.apache.hadoop.fs.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE_ADAPTIVE;
-import static org.apache.hadoop.fs.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE_RANDOM;
-import static org.apache.hadoop.fs.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE_ADAPTIVE;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE_RANDOM;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
 import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADVISE;
 import static org.apache.hadoop.fs.s3a.Constants.READAHEAD_RANGE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -81,75 +82,79 @@ public class TestOpenFileHelper extends HadoopTestBase {
         .isEqualTo(READ_AHEAD_RANGE);
   }
 
+  /**
+   * Initiate an assert from an open file information instance.
+   * @param fi file info
+   * @return an assert stream.
+   */
   private ObjectAssert<S3AOpenFileOperation.OpenFileInformation> assertFI(
       final S3AOpenFileOperation.OpenFileInformation fi) {
     return Assertions.assertThat(fi)
         .describedAs("File Information %s", fi);
   }
 
+  public ObjectAssert<S3AOpenFileOperation.OpenFileInformation> assertOpenFile(
+      final String key, final String option) throws IOException {
+    return assertFI(prepareToOpenFile(params(key, option)));
+  }
+
   @Test
-  public void testUnknownMandatory() throws Throwable {
+  public void testUnknownMandatoryOption() throws Throwable {
 
     String key = "unknown";
     intercept(IllegalArgumentException.class, key, () ->
-        helper.prepareToOpenFile(TESTPATH,
-            params(key, "undefined"),
-            0));
+        prepareToOpenFile(params(key, "undefined")));
   }
 
   @Test
-  public void testSeekPolicy() throws Throwable {
+  public void testSeekRandomIOPolicy() throws Throwable {
 
     // ask for random IO
-    ObjectAssert<S3AOpenFileOperation.OpenFileInformation> asst =
-        assertFI(helper.prepareToOpenFile(TESTPATH,
-            params(INPUT_FADVISE, FS_OPTION_OPENFILE_FADVISE_RANDOM),
-            0));
+    String option = FS_OPTION_OPENFILE_FADVISE_RANDOM;
 
     // is picked up
-    asst.extracting(f -> f.getInputPolicy())
+    assertOpenFile(INPUT_FADVISE, option).extracting(f -> f.getInputPolicy())
         .isEqualTo(S3AInputPolicy.Random);
     // and as neither status nor length was set: no file status
-    asst.extracting(f -> f.getStatus())
+    assertOpenFile(INPUT_FADVISE, option).extracting(f -> f.getStatus())
         .isNull();
   }
+
 
   @Test
   public void testSeekPolicyAdaptive() throws Throwable {
 
     // when caller asks for adaptive, they get "normal"
     ObjectAssert<S3AOpenFileOperation.OpenFileInformation> asst =
-        assertFI(helper.prepareToOpenFile(TESTPATH,
-            params(INPUT_FADVISE, FS_OPTION_OPENFILE_FADVISE_ADAPTIVE),
-            0));
+        assertOpenFile(INPUT_FADVISE, FS_OPTION_OPENFILE_FADVISE_ADAPTIVE);
 
     asst.extracting(f -> f.getInputPolicy())
         .isEqualTo(S3AInputPolicy.Normal);
   }
 
+  /**
+   * Verify that an unknown seek policy falls back to "normal".
+   */
   @Test
   public void testUnknownSeekPolicy() throws Throwable {
 
     // fall back to the normal seek policy.
-    ObjectAssert<S3AOpenFileOperation.OpenFileInformation> asst =
-        assertFI(helper.prepareToOpenFile(TESTPATH,
-            params(INPUT_FADVISE, "undefined"),
-            0));
 
-    asst.extracting(f -> f.getInputPolicy())
+    assertOpenFile(INPUT_FADVISE, "undefined")
+        .extracting(f -> f.getInputPolicy())
         .isEqualTo(S3AInputPolicy.Normal);
   }
 
+  /**
+   * Verify readahead range is picked up.
+   */
   @Test
   public void testReadahead() throws Throwable {
 
     // readahead range option
-    ObjectAssert<S3AOpenFileOperation.OpenFileInformation> asst =
-        assertFI(helper.prepareToOpenFile(TESTPATH,
-            params(READAHEAD_RANGE, "4096"),
-            0));
 
-    asst.extracting(f -> f.getReadAheadRange())
+    assertOpenFile(READAHEAD_RANGE, "4096")
+        .extracting(f -> f.getReadAheadRange())
         .isEqualTo(4096L);
   }
 
@@ -157,10 +162,9 @@ public class TestOpenFileHelper extends HadoopTestBase {
   public void testStatusWithValidFilename() throws Throwable {
     Path p = new Path("file:///tmp/" + TESTPATH.getName());
     ObjectAssert<S3AOpenFileOperation.OpenFileInformation> asst =
-        assertFI(helper.prepareToOpenFile(TESTPATH,
+        assertFI(prepareToOpenFile(
             params(FS_OPTION_OPENFILE_LENGTH, "32")
-                .withStatus(status(p, 4096)),
-            0));
+                .withStatus(status(p, 4096))));
     asst.extracting(f -> f.getStatus().getVersionId())
         .isEqualTo("version");
     asst.extracting(f -> f.getStatus().getETag())
@@ -169,16 +173,19 @@ public class TestOpenFileHelper extends HadoopTestBase {
         .isEqualTo(4096L);
   }
 
+  /**
+   * Verify S3ALocatedFileStatus is handled.
+   */
   @Test
   public void testLocatedStatus() throws Throwable {
     Path p = new Path("file:///tmp/" + TESTPATH.getName());
     ObjectAssert<S3AOpenFileOperation.OpenFileInformation> asst =
-        assertFI(helper.prepareToOpenFile(TESTPATH,
-            params(FS_OPTION_OPENFILE_LENGTH, "32")
-                .withStatus(
-                    new S3ALocatedFileStatus(
-                    status(p, 4096), null)),
-            0));
+        assertFI(
+            prepareToOpenFile(
+                params(FS_OPTION_OPENFILE_LENGTH, "32")
+                    .withStatus(
+                        new S3ALocatedFileStatus(
+                            status(p, 4096), null))));
     asst.extracting(f -> f.getStatus().getVersionId())
         .isEqualTo("version");
     asst.extracting(f -> f.getStatus().getETag())
@@ -193,10 +200,9 @@ public class TestOpenFileHelper extends HadoopTestBase {
   @Test
   public void testDirectoryStatus() throws Throwable {
     intercept(FileNotFoundException.class, TESTFILE, () ->
-        helper.prepareToOpenFile(TESTPATH,
+        prepareToOpenFile(
             params(INPUT_FADVISE, "normal")
-                .withStatus(new S3AFileStatus(true, TESTPATH, USERNAME)),
-            0));
+                .withStatus(new S3AFileStatus(true, TESTPATH, USERNAME))));
   }
 
   /**
@@ -205,23 +211,28 @@ public class TestOpenFileHelper extends HadoopTestBase {
   @Test
   public void testStatusWithInconsistentFilename() throws Throwable {
     intercept(IllegalArgumentException.class, TESTFILE, () ->
-        helper.prepareToOpenFile(TESTPATH,
-            params(INPUT_FADVISE, "normal")
-                .withStatus(new S3AFileStatus(true,
-                    new Path(TESTFILE + "-"), USERNAME)),
-            0));
+        prepareToOpenFile(params(INPUT_FADVISE, "normal")
+            .withStatus(new S3AFileStatus(true,
+                new Path(TESTFILE + "-"), USERNAME))));
+  }
+
+  public S3AOpenFileOperation.OpenFileInformation prepareToOpenFile(
+      final OpenFileParameters parameters)
+      throws IOException {
+    return helper.prepareToOpenFile(TESTPATH,
+        parameters, 0);
   }
 
   /**
-   * If a file length option is set, create a file status
+   * If a file length option is set, a file status
+   * is created.
    */
   @Test
   public void testFileLength() throws Throwable {
     ObjectAssert<S3AOpenFileOperation.OpenFileInformation> asst =
-        assertFI(helper.prepareToOpenFile(TESTPATH,
+        assertFI(prepareToOpenFile(
             params(FS_OPTION_OPENFILE_LENGTH, "8192")
-                .withStatus(null),
-            0));
+                .withStatus(null)));
     asst.extracting(f -> f.getStatus())
         .isNotNull();
     asst.extracting(f -> f.getStatus().getPath())
@@ -231,17 +242,36 @@ public class TestOpenFileHelper extends HadoopTestBase {
   }
 
 
-  private S3AFileStatus status(final Path p, final int length) {
+  /**
+   * Create an S3A status entry with stub etag and versions, timestamp of 0.
+   * @param path status path
+   * @param length file length
+   * @return a status instance.
+   */
+  private S3AFileStatus status(final Path path, final int length) {
     return new S3AFileStatus(length, 0,
-        p, 0, "", "etag", "version");
+        path, 0, "", "etag", "version");
   }
 
+  /**
+   * Create an instance of {@link OpenFileParameters} with
+   * the key as a mandatory parameter.
+   * @param key mandatory key
+   * @param val value
+   * @return the instance.
+   */
   private OpenFileParameters params(final String key, final String val) {
     return new OpenFileParameters()
         .withMandatoryKeys(singleton(key))
         .withOptions(conf(key, val));
   }
 
+  /**
+   * Create a configuration with a single entry.
+   * @param key entry key
+   * @param val entry value
+   * @return a configuration
+   */
   private Configuration conf(String key, Object val) {
     Configuration c = new Configuration(false);
     c.set(key, val.toString());

@@ -25,7 +25,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Locale;
 
-import static org.apache.hadoop.fs.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE_ADAPTIVE;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_FADVISE_ADAPTIVE;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 
 /**
