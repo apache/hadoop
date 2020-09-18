@@ -449,13 +449,10 @@ public class FsVolumeImpl implements FsVolumeSpi {
     }
 
     if (enableSameDiskArchival) {
-      double reservedForArchival = conf.getDouble(
-          DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_PERCENTAGE,
-          DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_PERCENTAGE_DEFAULT);
       if (storageType == StorageType.ARCHIVE) {
-        capacity = (long) (capacity * reservedForArchival);
+        capacity = (long) (capacity * reservedForArchive);
       } else {
-        capacity = (long) (capacity * (1 - reservedForArchival));
+        capacity = (long) (capacity * (1 - reservedForArchive));
       }
     }
 
