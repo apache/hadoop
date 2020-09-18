@@ -29,6 +29,11 @@
   </property>
 
   <property>
+    <name>fs.azure.test.namespace.enabled</name>
+    <value>true</value>
+  </property>
+
+  <property>
     <name>fs.azure.abfs.latency.track</name>
     <value>false</value>
   </property>
@@ -36,34 +41,23 @@
   <!--====================  ABFS CONFIGURATION ====================-->
   <!-- SEE relevant section in "site/markdown/testing_azure.md"-->
 
-  <property>
-    <name>fs.azure.enable.flush</name>
-    <value>true</value>
-    <description>Provides a config control to enable or disable ABFS Flush
-      operations HFlush and HSync.</description>
-  </property>
-
   <!--========== CONFIGURATION SHARED BY WASB AND ABFS ==========-->
   <property>
     <name>fs.azure.user.agent.prefix</name>
     <value>MSFT</value>
   </property>
-<!--  <property>
-    <name>fs.azure.clientcorrelationid</name>
-    <value>test-corr-id</value>
-  </property>-->
+
   <!--====================== IMPORTANT!! ========================-->
   <!--WARNING!!
-      PLEASE PROVIDE VALUES FOR THE CONFIGS IN "abfs-testrun-configs.xml
-      .template" AND RENAME THE SAME TO "abfs-testrun-configs.xml"
-      SEE "site/markdown/testing_azure.md" FOR MORE INFORMATION, THEN STORE THE
-      CONFIGURATION PROPERTIES WITHIN IT.
+      PLEASE CREATE A FILE NAMED "azure-auth-keys.xml"
+      AND SEE "site/markdown/testing_azure.md", THEN
+      STORE THE CONFIGURATION PROPERTIES WITHIN IT.
       TO PREVENT ACCIDENTAL LEAKS OF YOUR STORAGE ACCOUNT CREDENTIALS,
       THIS FILE IS LISTED IN .gitignore TO PREVENT YOU FROM INCLUDING
       IT IN PATCHES OR COMMITS. -->
   <!--=============================================================-->
 
-  <include xmlns="http://www.w3.org/2001/XInclude" href="abfs-testrun-configs.xml">
+  <include xmlns="http://www.w3.org/2001/XInclude" href="azure-auth-keys.xml">
     <fallback />
   </include>
 
