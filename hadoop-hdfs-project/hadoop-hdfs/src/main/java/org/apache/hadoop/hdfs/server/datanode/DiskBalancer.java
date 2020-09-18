@@ -902,7 +902,7 @@ public class DiskBalancer {
      */
     private ExtendedBlock getBlockToCopy(FsVolumeSpi.BlockIterator iter,
                                          DiskBalancerWorkItem item) {
-      while (!iter.atEnd() && item.getErrorCount() < getMaxError(item)) {
+      while (!iter.atEnd() && item.getErrorCount() <= getMaxError(item)) {
         try {
           ExtendedBlock block = iter.nextBlock();
           if(null == block){
@@ -923,7 +923,7 @@ public class DiskBalancer {
           item.incErrorCount();
         }
       }
-      if (item.getErrorCount() >= getMaxError(item)) {
+      if (item.getErrorCount() > getMaxError(item)) {
         item.setErrMsg("Error count exceeded.");
         LOG.info("Maximum error count exceeded. Error count: {} Max error:{} ",
             item.getErrorCount(), item.getMaxDiskErrors());
