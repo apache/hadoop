@@ -221,7 +221,8 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
         CommitConstants.PENDINGSET_SUFFIX);
     LOG.info("Saving work of {} to {}", taskAttemptID, taskOutcomePath);
     try {
-      pendingSet.save(getDestFS(), taskOutcomePath, false);
+      // We will overwrite if there exists a pendingSet file already
+      pendingSet.save(getDestFS(), taskOutcomePath, true);
     } catch (IOException e) {
       LOG.warn("Failed to save task commit data to {} ",
           taskOutcomePath, e);
