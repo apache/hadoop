@@ -331,7 +331,7 @@ public final class MultiObjectDeleteSupport extends AbstractStoreOperation {
     List<KeyPath> undeleted = extractUndeletedKeyPaths(deleteException, qualifier);
     // and remove them from the undeleted list, matching on key
     for (KeyPath undel : undeleted) {
-      pathsBeingDeleted.removeIf(kp -> kp.equals(undel));
+      pathsBeingDeleted.removeIf(kp -> kp.getPath().equals(undel.getPath()));
     }
     return undeleted;
   }

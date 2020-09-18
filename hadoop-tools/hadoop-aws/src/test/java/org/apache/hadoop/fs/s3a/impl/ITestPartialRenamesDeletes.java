@@ -352,16 +352,17 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
 
   /**
    * Create a unique path, which includes method name,
-   * multidelete flag and a random UUID.
+   * multidelete flag and a timestamp.
    * @return a string to use for paths.
    * @throws IOException path creation failure.
    */
   private Path uniquePath() throws IOException {
+    long now = System.currentTimeMillis();
     return path(
-        String.format("%s-%s-%04d",
+        String.format("%s-%s-%06d.%03d",
             getMethodName(),
             multiDelete ? "multi" : "single",
-            System.currentTimeMillis() % 10000));
+            now / 1000, now % 1000));
   }
 
   /**
@@ -642,8 +643,6 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
         fileCount, dirCount,
         new ArrayList<>(fileCount),
         dirs);
-        createFiles(fs, readOnlyDir,
-        dirDepth, fileCount, dirCount);
     List<Path> deletableFiles = createFiles(fs,
         writableDir, dirDepth, fileCount, dirCount);
 
@@ -722,6 +721,25 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     Assertions.assertThat(readOnlyListing)
         .as("ReadOnly directory " + directoryList)
         .containsExactlyInAnyOrderElementsOf(readOnlyFiles);
+  }
+
+  /**
+   * Verifies the logic of handling directory markers in
+   * delete operations, specifically:
+   * <ol>
+   *   <li>all markers above empty directories MUST be deleted</li>
+   *   <li>all markers above non-empty directories MUST NOT be deleted</li>
+   * </ol>
+   * As the delete list may include subdirectories, we need to work up from
+   * the bottom of the list of deleted files before probing the parents,
+   * that being done by a s3guard get(path, need-empty-directory) call.
+   * <p></p>
+   * This is pretty sensitive code.
+   */
+  @Test
+  public void testSubdirDeleteFailures() throws Throwable {
+    describe("Multiobject delete handling of directorYesFory markers");
+    assume("Multiobject delete only", multiDelete);
   }
 
   /**

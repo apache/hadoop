@@ -137,7 +137,9 @@ public class TestPartialDeleteFailures {
   }
 
   /**
-   * From a list of paths, build up the list of keys for a delete request.
+   * From a list of paths, build up the list of KeyVersion records
+   * for a delete request.
+   * All the entries will be files (i.e. no trailing /)
    * @param paths path list
    * @return a key list suitable for a delete request.
    */
@@ -153,22 +155,39 @@ public class TestPartialDeleteFailures {
   }
 
   /**
+   * From a list of keys, build up the list of keys for a delete request.
+   * If a key has a trailing /, that will be retained, so it will be
+   * considered a directory during multi-object delete failure handling
+   * @param keys key list
+   * @return a key list suitable for a delete request.
+   */
+  public static List<DeleteObjectsRequest.KeyVersion> toDeleteRequests(
+      List<String> keys) {
+    return keys.stream()
+        .map(DeleteObjectsRequest.KeyVersion::new)
+        .collect(Collectors.toList());
+  }
+
+  /**
    * Verify that on a partial delete, the S3Guard tables are updated
    * with deleted items. And only them.
    */
   @Test
   public void testProcessDeleteFailure() throws Throwable {
-    Path pathA = qualifyKey("/a");
-    Path pathAB = qualifyKey("/a/b");
-    Path pathAC = qualifyKey("/a/c");
+    String keyA = "/a/";
+    String keyAB = "/a/b";
+    String keyAC = "/a/c";
+    Path pathA = qualifyKey(keyA);
+    Path pathAB = qualifyKey(keyAB);
+    Path pathAC = qualifyKey(keyAC);
+    List<String> srcKeys = Lists.newArrayList(keyA, keyAB, keyAC);
     List<Path> src = Lists.newArrayList(pathA, pathAB, pathAC);
-    List<DeleteObjectsRequest.KeyVersion> keyList = keysToDelete(src);
+    List<DeleteObjectsRequest.KeyVersion> keyList = toDeleteRequests(srcKeys);
     List<Path> deleteForbidden = Lists.newArrayList(pathAB);
     final List<Path> deleteAllowed = Lists.newArrayList(pathA, pathAC);
-    List<MultiObjectDeleteSupport.KeyPath> forbiddenKP = deleteForbidden.stream()
-        .map(p ->
-            new MultiObjectDeleteSupport.KeyPath(toKey(p), p, false))
-        .collect(Collectors.toList());
+    List<MultiObjectDeleteSupport.KeyPath> forbiddenKP =
+        Lists.newArrayList(
+            new MultiObjectDeleteSupport.KeyPath(keyAB, pathAB, true));
     MultiObjectDeleteException ex = createDeleteException(ACCESS_DENIED,
         forbiddenKP);
     S3ATestUtils.OperationTrackingStore store
@@ -196,7 +215,10 @@ public class TestPartialDeleteFailures {
     // because dir marker retention is on, we expect at least one retained marker
     Assertions.assertThat(retainedMarkers).
         as("Retained Markers")
-        .isNotEmpty();
+        .containsExactly(pathA);
+    Assertions.assertThat(store.getDeleted()).
+        as("List of tombstoned records")
+        .doesNotContain(pathA);
   }
 
 
