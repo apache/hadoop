@@ -211,9 +211,8 @@ public class AbfsRestOperation {
   private boolean executeHttpOperation(final int retryCount) throws AzureBlobFileSystemException {
     AbfsHttpOperation httpOperation = null;
     try {
-      TrackingContext trackingContext = new TrackingContext(client.getClientCorrelationID());
       // initialize the HTTP request and open the connection
-      httpOperation = new AbfsHttpOperation(url, method, trackingContext, requestHeaders);
+      httpOperation = new AbfsHttpOperation(url, method, requestHeaders);
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
 
       switch(client.getAuthType()) {
