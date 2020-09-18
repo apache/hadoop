@@ -141,9 +141,9 @@ public class TestS3Guard extends Assert {
             S3Guard.dirListingUnion(
                     ms, DIR_PATH, itr, dirMeta,
                     false, timeProvider,
-                    s3AFileStatuses ->
-                            toProvidedFileStatusIterator(
-                                    dirMetaToStatuses(dirMeta))),
+              s3AFileStatuses ->
+                      toProvidedFileStatusIterator(
+                              dirMetaToStatuses(dirMeta))),
             new HashSet<>());
     // the listing returns the new status
     Assertions.assertThat(find(result2, MS_FILE_1))
@@ -183,9 +183,9 @@ public class TestS3Guard extends Assert {
     RemoteIterator<S3AFileStatus> resultItr = S3Guard
             .dirListingUnion(ms, DIR_PATH, storeItr, dirMeta,
                     true, timeProvider,
-                    s3AFileStatuses ->
-                            toProvidedFileStatusIterator(
-                                    dirMetaToStatuses(dirMeta)));
+              s3AFileStatuses ->
+                      toProvidedFileStatusIterator(
+                              dirMetaToStatuses(dirMeta)));
 
     S3AFileStatus[] result = S3AUtils.iteratorToStatuses(
             resultItr, new HashSet<>());
@@ -215,9 +215,9 @@ public class TestS3Guard extends Assert {
     FileStatus[] result2 = S3AUtils.iteratorToStatuses(
             S3Guard.dirListingUnion(ms, DIR_PATH, itr, dirMeta,
                     true, timeProvider,
-                    s3AFileStatuses ->
-                            toProvidedFileStatusIterator(
-                                    dirMetaToStatuses(dirMeta))),
+              s3AFileStatuses ->
+                      toProvidedFileStatusIterator(
+                              dirMetaToStatuses(dirMeta))),
             new HashSet<>());
 
     // but the result of the listing contains the old entry

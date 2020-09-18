@@ -2704,18 +2704,17 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
     // Here we have a directory which may or may not be empty.
     // So we update the metastore and return.
-    RemoteIterator<S3AFileStatus> combinedRes = S3Guard.dirListingUnion(
+    return S3Guard.dirListingUnion(
             metadataStore,
             path,
             statusesAssumingNonEmptyDir.getLeft(),
             statusesAssumingNonEmptyDir.getMiddle(),
             allowAuthoritative(path),
-            ttlTimeProvider,
-            p -> listing.createProvidedFileStatusIterator(
+            ttlTimeProvider, p ->
+                    listing.createProvidedFileStatusIterator(
                     dirMetaToStatuses(statusesAssumingNonEmptyDir.getMiddle()),
                     ACCEPT_ALL,
                     Listing.ACCEPT_ALL_BUT_S3N));
-    return combinedRes;
   }
 
   /**

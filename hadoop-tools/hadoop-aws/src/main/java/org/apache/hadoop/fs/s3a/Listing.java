@@ -106,7 +106,7 @@ public class Listing extends AbstractStoreOperation {
   /**
    * Create a FileStatus iterator against a provided list of file status.
    * @param fileStatuses array of file status.
-   * @return
+   * @return the file status iterator.
    */
   @VisibleForTesting
   public static ProvidedFileStatusIterator toProvidedFileStatusIterator(
