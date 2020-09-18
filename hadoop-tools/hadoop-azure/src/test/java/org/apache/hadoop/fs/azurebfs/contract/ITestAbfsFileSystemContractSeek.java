@@ -77,8 +77,8 @@ public class ITestAbfsFileSystemContractSeek extends AbstractContractSeekTest{
    */
   @Test
   public void testSeekAndReadWithReadAhead() throws IOException {
-    describe(" Testing seek and read with read ahead " +
-            "enabled for random reads");
+    describe(" Testing seek and read with read ahead "
+            + "enabled for random reads");
 
     Path testSeekFile = path(getMethodName() + "bigseekfile.txt");
     createDataSet(testSeekFile);
@@ -90,8 +90,8 @@ public class ITestAbfsFileSystemContractSeek extends AbstractContractSeekTest{
               MIN_BUFFER_SIZE, inStream.getReadAheadRange());
 
       long remoteReadOperationsOldVal = streamStatistics.getRemoteReadOperations();
-      assertEquals("Number of remote read ops should be 0 " +
-              "before any read call is made", 0, remoteReadOperationsOldVal);
+      assertEquals("Number of remote read ops should be 0 "
+              + "before any read call is made", 0, remoteReadOperationsOldVal);
 
       // Test read at first position. Remote read.
       assertEquals("First call to getPos() should return 0",
@@ -148,7 +148,7 @@ public class ITestAbfsFileSystemContractSeek extends AbstractContractSeekTest{
       remoteReadOperationsOldVal = remoteReadOperationsNewVal;
 
       // Seek backward such that data is read from remote.
-      newSeek -= 100;
+      newSeek -= 101;
       in.seek(newSeek);
       assertGetPosition(newSeek, in.getPos());
       assertDataAtPos(newSeek, (byte) in.read());
@@ -194,8 +194,8 @@ public class ITestAbfsFileSystemContractSeek extends AbstractContractSeekTest{
    */
   @Test
   public void testSeekAfterUnbuffer() throws IOException {
-    describe("Test to make sure that seeking in AbfsInputStream after " +
-            "unbuffer() call is not doing anyIO.");
+    describe("Test to make sure that seeking in AbfsInputStream after "
+            + "unbuffer() call is not doing anyIO.");
     Path testFile = path(getMethodName() + ".txt");
     createDataSet(testFile);
     final CompletableFuture<FSDataInputStream> future =

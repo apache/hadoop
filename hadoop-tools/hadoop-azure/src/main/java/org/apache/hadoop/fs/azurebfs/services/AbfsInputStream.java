@@ -143,7 +143,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
         // When bCursor == limit, buffer will be filled again.
         // So in this case we are not actually reading from buffer.
-        if(bCursor != limit) {
+        if (bCursor != limit) {
           streamStatistics.seekInBuffer();
         }
       } else {
