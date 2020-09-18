@@ -1032,15 +1032,24 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     return super.getDefaultPort();
   }
 
+  /**
+   * If no mount points configured, it works same as
+   * {@link DistributedFileSystem#getDelegationToken(String)}. If
+   * there are mount points configured and if default fs(linkFallback)
+   * configured, then it will return default fs delegation token. Otherwise
+   * it will return null.
+   */
   @Override
   public Token<DelegationTokenIdentifier> getDelegationToken(String renewer)
       throws IOException {
     if (this.vfs == null) {
       return super.getDelegationToken(renewer);
     }
-    //Let applications call getDelegationTokenIssuers and get respective
-    // delegation tokens from child fs.
-    throw new UnsupportedOperationException();
+
+    if (defaultDFS != null) {
+      return defaultDFS.getDelegationToken(renewer);
+    }
+    return null;
   }
 
   @Override
