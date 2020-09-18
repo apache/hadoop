@@ -22,7 +22,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIOException;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.LinkedList;
 
@@ -47,22 +49,24 @@ public class Concat extends FsCommand {
   protected void processArguments(LinkedList<PathData> args)
       throws IOException {
     if (args.size() < 1) {
-      throw new IOException("Target path not specified.");
+      throw new IOException("Target path not specified. " + USAGE);
     }
     if (args.size() < 3) {
-      throw new IOException("The number of source paths is less than 2.");
+      throw new IOException(
+          "The number of source paths is less than 2. " + USAGE);
     }
     PathData target = args.removeFirst();
     LinkedList<PathData> srcList = args;
     if (!target.exists || !target.stat.isFile()) {
-      throw new IOException(String.format("Target path %s does not exist or is"
-              + " not file.", target.path));
+      throw new FileNotFoundException(String
+          .format("Target path %s does not exist or is" + " not file.",
+              target.path));
     }
     Path[] srcArray = new Path[srcList.size()];
     for (int i = 0; i < args.size(); i++) {
       PathData src = srcList.get(i);
       if (!src.exists || !src.stat.isFile()) {
-        throw new IOException(
+        throw new FileNotFoundException(
             String.format("%s does not exist or is not file.", src.path));
       }
       srcArray[i] = src.path;
@@ -74,8 +78,8 @@ public class Concat extends FsCommand {
     try {
       fs.concat(target.path, srcArray);
     } catch (UnsupportedOperationException exception) {
-      throw new IOException("Dest filesystem '" + fs.getUri().getScheme()
-          + "' doesn't support concat.");
+      throw new PathIOException("Dest filesystem '" + fs.getUri().getScheme()
+          + "' doesn't support concat.", exception);
     }
   }
 

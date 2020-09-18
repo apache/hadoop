@@ -17,17 +17,10 @@
  */
 package org.apache.hadoop.fs.shell;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FsShell;
-import org.apache.hadoop.fs.LocalFileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
-
+import org.assertj.core.api.Assertions;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -36,14 +29,23 @@ import java.io.PrintStream;
 import java.net.URI;
 import java.util.Random;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FsShell;
+import org.apache.hadoop.fs.LocalFileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.test.AbstractHadoopTestBase;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Test Concat.
  */
-public class TestFsShellConcat {
+public class TestFsShellConcat extends AbstractHadoopTestBase {
 
   private static Configuration conf;
   private static FsShell shell;
@@ -59,9 +61,7 @@ public class TestFsShellConcat {
     testRootDir = lfs.makeQualified(new Path(GenericTestUtils.getTempPath(
         "testFsShellCopy")));
 
-    if (lfs.exists(testRootDir)) {
-      lfs.delete(testRootDir, true);
-    }
+    lfs.delete(testRootDir, true);
     lfs.mkdirs(testRootDir);
     lfs.setWorkingDirectory(testRootDir);
     dstPath = new Path(testRootDir, "dstFile");
@@ -69,7 +69,8 @@ public class TestFsShellConcat {
 
     Random random = new Random();
     for (int i = 0; i < 10; i++) {
-      OutputStream out = lfs.create(new Path(testRootDir, "file-" + i));
+      OutputStream out =
+          lfs.create(new Path(testRootDir, String.format("file-%02d", i)));
       out.write(random.nextInt());
       out.close();
     }
@@ -77,6 +78,17 @@ public class TestFsShellConcat {
 
   @Test
   public void testConcat() throws Exception {
+    // Read concatenated files to build the expected file content.
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    for (int i = 0; i < 10; i++) {
+      try (InputStream in = lfs
+          .open(new Path(testRootDir, String.format("file-%02d", i)))) {
+        IOUtils.copyBytes(in, out, 1024);
+      }
+    }
+    byte[] expectContent = out.toByteArray();
+
+    // Do concat.
     FileSystem mockFs = Mockito.mock(FileSystem.class);
     Mockito.doAnswer(invocation -> {
       Object[] args = invocation.getArguments();
@@ -88,8 +100,20 @@ public class TestFsShellConcat {
     Concat.setTstFs(mockFs);
     shellRun(0, "-concat", dstPath.toString(), testRootDir+"/file-*");
 
-    assertTrue(lfs.exists(dstPath));
+    // Verify concat result.
+    ContractTestUtils
+        .assertPathExists(lfs, "The target file doesn't exist.", dstPath);
     assertEquals(1, lfs.listStatus(testRootDir).length);
+    assertEquals(expectContent.length, lfs.getFileStatus(dstPath).getLen());
+    out = new ByteArrayOutputStream();
+    try (InputStream in = lfs.open(dstPath)) {
+      IOUtils.copyBytes(in, out, 1024);
+    }
+    // Verify content.
+    byte[] concatedContent = out.toByteArray();
+    assertEquals(expectContent.length, concatedContent.length);
+    ContractTestUtils.compareByteArrays(expectContent, concatedContent,
+        expectContent.length);
   }
 
   @Test
@@ -101,14 +125,19 @@ public class TestFsShellConcat {
     Mockito.doAnswer(invocationOnMock -> new URI("mockfs:///")).when(mockFs)
         .getUri();
     Concat.setTstFs(mockFs);
-    PrintStream oldErr = System.err;
     final ByteArrayOutputStream err = new ByteArrayOutputStream();
+    PrintStream oldErr = System.err;
     System.setErr(new PrintStream(err));
-    shellRun(1, "-concat", dstPath.toString(), testRootDir + "/file-*");
-    System.setErr(oldErr);
+    try {
+      shellRun(1, "-concat", dstPath.toString(), testRootDir + "/file-*");
+    } finally {
+      System.setErr(oldErr);
+    }
     System.err.print(err.toString());
-    assertTrue(err.toString()
-        .contains("Dest filesystem 'mockfs' doesn't support concat"));
+    String expectedErrMsg = "Dest filesystem 'mockfs' doesn't support concat";
+    Assertions.assertThat(err.toString().contains(expectedErrMsg))
+        .withFailMessage("The err message should contain \"" + expectedErrMsg
+            + "\" message.").isTrue();
   }
 
   private void shellRun(int n, String... args) {
@@ -121,31 +150,16 @@ public class TestFsShellConcat {
   private void mockConcat(Path target, Path[] srcArray) throws IOException {
     Path tmp = new Path(target.getParent(), target.getName() + ".bak");
     lfs.rename(target, tmp);
-    OutputStream out = lfs.create(target);
-    try {
-      InputStream in = lfs.open(tmp);
-      try {
+    try (OutputStream out = lfs.create(target)) {
+      try (InputStream in = lfs.open(tmp)) {
         IOUtils.copyBytes(in, out, 1024);
-      } finally {
-        if (in != null) {
-          in.close();
-        }
-        lfs.delete(tmp, true);
       }
+      lfs.delete(tmp, true);
       for (int i = 0; i < srcArray.length; i++) {
-        in = lfs.open(srcArray[i]);
-        try {
-          IOUtils.copyBytes(in, out, 1024);
-        } finally {
-          if (in != null) {
-            in.close();
-          }
-          lfs.delete(srcArray[i], true);
+        try (InputStream iin = lfs.open(srcArray[i])) {
+          IOUtils.copyBytes(iin, out, 1024);
         }
-      }
-    } finally {
-      if (out != null) {
-        out.close();
+        lfs.delete(srcArray[i], true);
       }
     }
   }

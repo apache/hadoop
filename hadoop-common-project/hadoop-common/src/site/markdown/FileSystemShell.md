@@ -823,7 +823,7 @@ files should be in the same directory.
 
 Example:
 
-* `hadoop fs -concat /user/hadoop/target-file /user/hadoop/file-0 /user/hadoop/file-1`
+* `hadoop fs -concat hdfs://cluster/user/hadoop/target-file hdfs://cluster/user/hadoop/file-0 hdfs://cluster/user/hadoop/file-1`
 * `hadoop fs -concat /user/hadoop/target-file /user/hadoop/file-*`
 
 usage
