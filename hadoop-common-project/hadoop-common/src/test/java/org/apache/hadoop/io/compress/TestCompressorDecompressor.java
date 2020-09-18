@@ -78,11 +78,10 @@ public class TestCompressorDecompressor {
     try {
       CompressDecompressTester.of(rawData)
           .withCompressDecompressPair(
-              new SnappyCompressor(BYTE_SIZE + BYTE_SIZE / 2),
-              new SnappyDecompressor(BYTE_SIZE + BYTE_SIZE / 2))
-          .withCompressDecompressPair(new Lz4Compressor(BYTE_SIZE),
-              new Lz4Decompressor(BYTE_SIZE))
-          .withTestCases(ImmutableSet.of(CompressionTestStrategy.COMPRESS_DECOMPRESS_SINGLE_BLOCK,
+              new SnappyCompressor(), new SnappyDecompressor())
+          .withCompressDecompressPair(
+              new Lz4Compressor(), new Lz4Decompressor())
+          .withTestCases(ImmutableSet.of(CompressionTestStrategy.COMPRESS_DECOMPRESS_BLOCK,
                       CompressionTestStrategy.COMPRESS_DECOMPRESS_BLOCK,
                       CompressionTestStrategy.COMPRESS_DECOMPRESS_ERRORS,
                       CompressionTestStrategy.COMPRESS_DECOMPRESS_WITH_EMPTY_STREAM))
