@@ -72,20 +72,23 @@ public class TestCompressorDecompressor {
   }
   
   @Test
-  public void testCompressorDecompressorWithExeedBufferLimit() {
-    int BYTE_SIZE = 100 * 1024;
-    byte[] rawData = generate(BYTE_SIZE);
+  public void testCompressorDecompressorWithExceedBufferLimit() {
+    // input data size greater than internal buffer size.
+    final int byteSize = 100 * 1024;
+    final int bufferSize = 64 * 1024;
+    byte[] rawData = generate(byteSize);
     try {
       CompressDecompressTester.of(rawData)
           .withCompressDecompressPair(
-              new SnappyCompressor(BYTE_SIZE + BYTE_SIZE / 2),
-              new SnappyDecompressor(BYTE_SIZE + BYTE_SIZE / 2))
-          .withCompressDecompressPair(new Lz4Compressor(BYTE_SIZE),
-              new Lz4Decompressor(BYTE_SIZE))
-          .withTestCases(ImmutableSet.of(CompressionTestStrategy.COMPRESS_DECOMPRESS_SINGLE_BLOCK,
-                      CompressionTestStrategy.COMPRESS_DECOMPRESS_BLOCK,
-                      CompressionTestStrategy.COMPRESS_DECOMPRESS_ERRORS,
-                      CompressionTestStrategy.COMPRESS_DECOMPRESS_WITH_EMPTY_STREAM))
+              new SnappyCompressor(bufferSize),
+              new SnappyDecompressor(bufferSize))
+          .withCompressDecompressPair(
+              new Lz4Compressor(bufferSize),
+              new Lz4Decompressor(bufferSize))
+          .withTestCases(ImmutableSet.of(
+              CompressionTestStrategy.COMPRESS_DECOMPRESS_BLOCK,
+              CompressionTestStrategy.COMPRESS_DECOMPRESS_ERRORS,
+              CompressionTestStrategy.COMPRESS_DECOMPRESS_WITH_EMPTY_STREAM))
           .test();
 
     } catch (Exception ex) {
