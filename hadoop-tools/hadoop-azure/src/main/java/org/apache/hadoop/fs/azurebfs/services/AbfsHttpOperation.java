@@ -256,9 +256,11 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     this.connection.setRequestMethod(method);
 
     for (AbfsHttpHeader header : requestHeaders) {
-      System.out.println(header.getName() + header.getValue());
       this.connection.setRequestProperty(header.getName(), header.getValue());
+      System.out.println("propset"+this.connection.getRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID));
+      System.out.println("userag" + this.connection.getRequestProperty("User-Agent"));
     }
+    clientRequestId = this.connection.getRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
   }
 
    /**
