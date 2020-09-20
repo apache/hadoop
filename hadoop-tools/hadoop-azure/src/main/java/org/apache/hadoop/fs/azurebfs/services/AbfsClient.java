@@ -137,6 +137,10 @@ public class AbfsClient implements Closeable {
     return filesystem;
   }
 
+  public void setClientCorrelationId(String clientCorrelationId) {
+      this.trackingContext.setClientCorrelationId(clientCorrelationId);
+  }
+
   protected AbfsPerfTracker getAbfsPerfTracker() {
     return abfsPerfTracker;
   }
@@ -171,9 +175,11 @@ public class AbfsClient implements Closeable {
 
   public AbfsRestOperation createFilesystem() throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
+    System.out.println("created headers");
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = new AbfsUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
+    System.out.println("query builder");
 
     final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
@@ -182,6 +188,7 @@ public class AbfsClient implements Closeable {
             HTTP_METHOD_PUT,
             url,
             requestHeaders);
+    System.out.println("Will execute now");
     op.execute();
     return op;
   }
