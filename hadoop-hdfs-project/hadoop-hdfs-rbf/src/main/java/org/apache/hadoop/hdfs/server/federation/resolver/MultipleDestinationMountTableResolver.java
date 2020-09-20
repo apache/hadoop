@@ -99,8 +99,9 @@ public class MultipleDestinationMountTableResolver extends MountTableResolver {
 
         // Change the order of the name spaces according to the policy
         if (firstNamespace != null) {
-          // This is the entity in the tree, we need to create our own copy
-          mountTableResult = new PathLocation(mountTableResult, firstNamespace);
+          // Create our own prioritized copy based on the entity in the tree.
+          mountTableResult = PathLocation.prioritizeDestination(
+              mountTableResult, firstNamespace);
           LOG.debug("Ordered locations following {} are {}",
               order, mountTableResult);
         } else {
