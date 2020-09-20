@@ -39,6 +39,7 @@ import java.util.concurrent.CyclicBarrier;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobID;
@@ -999,6 +1000,28 @@ public class TestJobImpl {
 
     // Verify whether changed priority is same as what is set in Job.
     Assert.assertEquals(updatedPriority, jobPriority);
+  }
+
+  @Test
+  public void testCleanupSharedCacheUploadPolicies() {
+    Configuration config = new Configuration();
+    Map<String, Boolean> archivePolicies = new HashMap<>();
+    archivePolicies.put("archive1", true);
+    archivePolicies.put("archive2", true);
+    Job.setArchiveSharedCacheUploadPolicies(config, archivePolicies);
+    Map<String, Boolean> filePolicies = new HashMap<>();
+    filePolicies.put("file1", true);
+    filePolicies.put("jar1", true);
+    Job.setFileSharedCacheUploadPolicies(config, filePolicies);
+    Assert.assertEquals(
+        2, Job.getArchiveSharedCacheUploadPolicies(config).size());
+    Assert.assertEquals(
+        2, Job.getFileSharedCacheUploadPolicies(config).size());
+    JobImpl.cleanupSharedCacheUploadPolicies(config);
+    Assert.assertEquals(
+        0, Job.getArchiveSharedCacheUploadPolicies(config).size());
+    Assert.assertEquals(
+        0, Job.getFileSharedCacheUploadPolicies(config).size());
   }
 
   private static CommitterEventHandler createCommitterEventHandler(
