@@ -13,6 +13,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 //import static org.assertj.core.api.Assertions.assertTrue;
 import static org.hamcrest.Matchers.*;
 
+import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -53,27 +54,33 @@ public class TestClientCorrelation {
         final List<AbfsHttpHeader> requestHeaders = new ArrayList<AbfsHttpHeader>();
         //requestHeaders.add(new AbfsHttpHeader(X_MS_VERSION, xMsVersion));
         requestHeaders.add(new AbfsHttpHeader(X_MS_CLIENT_REQUEST_ID, clientCorrelationId));
+        requestHeaders.add(new AbfsHttpHeader("return-client-request-id", "True"));
+        for (AbfsHttpHeader header : requestHeaders)
+        System.out.println(header.getName());
         op = new AbfsHttpOperation(url, "GET", requestHeaders);
-
-        //client.setClientCorrelationId(clientCorrelationId);
-        /*byte[] buffer = new byte[5];
-        int offset = 0;
-        int length = 5;
+        System.out.println("hi"+op.getConnection().getResponseCode());
+        Assert.assertTrue("Requests should not fail",
+                op.getConnection().getResponseCode() < 400
+                || op.getConnection().getResponseCode() >=500);
+        //System.out.println(op.getConnection().getResponseCode());
+        //client.setClientCorrelationId(clientCorrelationId)
         byte[] requestBuffer = new byte[128];
-        op.sendRequest(requestBuffer, 0, requestBuffer.length);
+        //httpurlconn
+        //op.sendRequest(requestBuffer, 0, requestBuffer.length);
+        //System.out.println(op.getStatusCode());
 
         byte[] responseBuffer = new byte[4 * 1024];
-        op.processResponse(responseBuffer, 0, responseBuffer.length);
-        System.out.println(responseBuffer);
-        //op.sendRequest(buffer, offset, length);
+        //op.processResponse(responseBuffer, 0, responseBuffer.length);
+        System.out.println(op.getConnection().getHeaderFields().toString());
+        System.out.println(op.getResponseHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID));
         //final List<AbfsHttpHeader> requestHeaders = AbfsClient.createDefaultHeaders();
-        op.getConnection().setRequestProperty(X_MS_CLIENT_REQUEST_ID,
-          clientCorrelationId + ":" + UUID.randomUUID().toString());*/
-        Assert.assertTrue("Requests should not fail",
-                op.getStatusCode() >= 400 && op.getStatusCode() < 500
-        && op.getStatusCode() != 404);
+       // op.getConnection().setRequestProperty(X_MS_CLIENT_REQUEST_ID,
+         // clientCorrelationId + ":" + UUID.randomUUID().toString());*/
+        //Assert.assertTrue("Requests should not fail" + op.getStorageErrorMessage(),
+          //      op.getStatusCode() >= 400 && op.getStatusCode() < 500
+        //&& op.getStatusCode() != 404);
         //assertThat("",op.getStatusCode(), greaterThan(400)).describedAs("Requests should not fail");
-        assertThat(op.getResponseHeader(HttpHeaderConfigurations.X_MS_REQUEST_ID))
+        assertThat(op.getResponseHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID))
                 .describedAs("Response header should contain client request header")
                 .contains(clientCorrelationId);
     }
