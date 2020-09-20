@@ -87,10 +87,26 @@ public class PathLocation {
    * @param other Other path location to copy from.
    * @param firstNsId Identifier of the namespace to place first.
    */
+  @Deprecated
   public PathLocation(PathLocation other, String firstNsId) {
     this.sourcePath = other.sourcePath;
     this.destOrder = other.destOrder;
     this.destinations = orderedNamespaces(other.destinations, firstNsId);
+  }
+
+  /**
+   * Return a path location with the prioritized destinations based on
+   * the current path location.
+   *
+   * @param base The base path location we'd like to prioritize on.
+   * @param firstNsId Identifier of the namespace to place first.
+   */
+  public static PathLocation prioritizeDestination(
+      PathLocation base, String firstNsId) {
+    List<RemoteLocation> prioritizedDestinations = orderedNamespaces(
+        base.destinations, firstNsId);
+    return new PathLocation(base.sourcePath, prioritizedDestinations,
+        base.destOrder);
   }
 
   /**
