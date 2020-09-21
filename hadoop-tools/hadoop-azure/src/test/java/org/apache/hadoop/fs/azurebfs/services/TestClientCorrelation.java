@@ -1,42 +1,65 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.Assert.*;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FILESYSTEM;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.*;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_RESOURCE;
-import static org.mockito.Mockito.mock;
 import static org.assertj.core.api.Assertions.assertThat;
 //import static org.assertj.core.api.Assertions.assertTrue;
-import static org.hamcrest.Matchers.*;
 
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azurebfs.*;
+import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
 
 import java.io.IOException;
 import java.net.URL;
 import java.util.UUID;
 
 public class TestClientCorrelation {
-    private AbfsHttpOperation op;
-    private final AbfsClient client;
 
-    public TestClientCorrelation() {
-        client = mock(AbfsClient.class);
+    //private final AbfsClient client;
+    private static final String ACCOUNT_NAME = "bogusAccountName.dfs.core.windows.net";
+    private String validClientCorrelationId = "valid-corr-id-123";
+
+    public TestClientCorrelation() throws IOException, IllegalAccessException {
+
+
+        //client = mock(AbfsClient.class);
         //System.out.println(op.getUrl().getContent().toString());
 
         //System.out.println(op.getResult().getConnection().getRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID));
     }
 
     @Test
-    public void verifyValidClientCorrelationId() throws IOException {
+    public void verifyValidClientCorrelationId() throws IOException, IllegalAccessException {
 
         String clientCorrelationId = "valid-corr-id-123";
+
+        final Configuration configuration = new Configuration();
+        configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
+        configuration.set(ConfigurationKeys.FS_AZURE_CLIENT_CORRELATIONID, validClientCorrelationId);
+        AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration,
+                ACCOUNT_NAME);
+        AzureBlobFileSystem abfs = new AzureBlobFileSystem();
+//        URI uri = new U
+//        abfs.initialize(uri, abfsConfiguration);
+
+
+        AbfsClientContext abfsClientContext = new AbfsClientContextBuilder().build();
+//        AbfsClient client = new AbfsClient(new URL("https://azure.com"), null,
+//                abfsConfiguration, (AccessTokenProvider) null, abfsClientContext);
+
         final List<AbfsHttpHeader> requestHeaders = new ArrayList<AbfsHttpHeader>();
         //requestHeaders.add(new AbfsHttpHeader(X_MS_VERSION, xMsVersion));
         requestHeaders.add(new AbfsHttpHeader(X_MS_CLIENT_REQUEST_ID, clientCorrelationId));
@@ -48,7 +71,9 @@ public class TestClientCorrelation {
         for (AbfsHttpHeader header : requestHeaders)
         System.out.println(header.getName());
         URL url = new URL("https://azure.com");
-        op = new AbfsHttpOperation(url, "GET", requestHeaders);
+        AbfsHttpOperation op = new AbfsHttpOperation(url, "GET", requestHeaders);
+        //op.getConnection().setRequestProperty("Request-Context", clientCorrelationId);
+        //op.getConnection().setRequestProperty();
         System.out.println("hi"+op.getConnection().getResponseCode());
         Assert.assertTrue("Requests should not fail",
                 op.getConnection().getResponseCode() < 400
@@ -59,7 +84,7 @@ public class TestClientCorrelation {
             System.out.println(header+op.getConnection().getHeaderField(header));
         //op.processResponse(responseBuffer, 0, responseBuffer.length);
         System.out.println(op.getResponseHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID));
-
+        System.out.println(op.getResponseHeader("Request-Context"));
         assertThat(op.getResponseHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID))
                 .describedAs("Response header should contain client request header")
                 .contains(clientCorrelationId);
@@ -106,7 +131,7 @@ public class TestClientCorrelation {
                 op.getConnection().getResponseCode() < 400
                         || op.getConnection().getResponseCode() >=500
                         || op.getConnection().getResponseCode() == 404);
-
+        //System.out.println(op.getResponseHeader("C"))
         assertThat(op.getResponseHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID))
                 .describedAs("Should be empty").startsWith(":");
     }

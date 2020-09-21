@@ -27,6 +27,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -40,6 +42,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLIENT_CORRELATIONID;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ACCOUNT_KEY;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -85,6 +88,33 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     intercept(AbfsRestOperationException.class,
             "UnknownHostException: " + fakeAccountName,
             () -> FileSystem.get(conf.getRawConfiguration()));
+  }
+
+  @Test
+  public void testClientCorrelation()
+          throws IOException {
+    AbfsConfiguration conf = this.getConfiguration();
+    String clientCorrelationId = "alid-corr-id-123";
+
+    conf.set(FS_AZURE_CLIENT_CORRELATIONID, clientCorrelationId);
+    AbfsClient client = this.getFileSystem().getAbfsClient();
+
+    AbfsRestOperation op = client.deleteFilesystem();
+
+    System.out.println(op.getResult().getStatusCode());
+    int responseCode = op.getResult().getStatusCode();
+    Assert.assertTrue("Request should not fail",
+            responseCode < 400 || responseCode >= 500
+            || responseCode == 404);
+
+    String responseHeader = op.getResult()
+            .getResponseHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
+    System.out.println("response header -- " + responseHeader);
+
+    Assertions.assertThat(responseHeader).describedAs("Should contain request IDs")
+            .startsWith(clientCorrelationId);
+
+
   }
 
   @Test
