@@ -1465,9 +1465,6 @@ public class Job extends JobContextImpl implements JobContext, AutoCloseable {
     if (it.hasNext()) {
       e = it.next();
       sb.append(e.getKey() + DELIM + e.getValue());
-    } else {
-      // policies is an empty map, just skip setting the parameter
-      return;
     }
     while (it.hasNext()) {
       e = it.next();
