@@ -240,6 +240,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     this.isTraceEnabled = LOG.isTraceEnabled();
     this.url = url;
     this.method = method;
+    System.out.println("url looks like " + url);
 
     this.connection = openConnection();
     if (this.connection instanceof HttpsURLConnection) {

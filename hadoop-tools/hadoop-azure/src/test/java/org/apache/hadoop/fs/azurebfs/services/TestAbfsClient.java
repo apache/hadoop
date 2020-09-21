@@ -279,6 +279,7 @@ public final class TestAbfsClient {
             : null),
         abfsClientContext);
 
+    System.out.println(baseAbfsClientInstance.getBaseUrl().toString());
     return testClient;
   }
 
