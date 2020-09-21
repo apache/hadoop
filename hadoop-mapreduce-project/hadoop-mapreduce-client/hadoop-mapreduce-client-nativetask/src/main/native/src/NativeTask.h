@@ -59,8 +59,8 @@ enum Endium {
 #define NATIVE_HADOOP_VERSION "native.hadoop.version"
 
 #define NATIVE_INPUT_SPLIT "native.input.split"
-#define INPUT_LINE_KV_SEPERATOR "mapreduce.input.keyvaluelinerecordreader.key.value.separator"
-#define MAPRED_TEXTOUTPUT_FORMAT_SEPERATOR "mapreduce.output.textoutputformat.separator"
+#define INPUT_LINE_KV_SEPARATOR "mapreduce.input.keyvaluelinerecordreader.key.value.separator"
+#define MAPRED_TEXTOUTPUT_FORMAT_SEPARATOR "mapreduce.output.textoutputformat.separator"
 #define MAPRED_WORK_OUT_DIR "mapreduce.task.output.dir"
 #define MAPRED_COMPRESS_OUTPUT "mapreduce.output.fileoutputformat.compress"
 #define MAPRED_OUTPUT_COMPRESSION_CODEC "mapreduce.output.fileoutputformat.compress.codec"
