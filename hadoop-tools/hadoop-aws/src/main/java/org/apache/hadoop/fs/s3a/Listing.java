@@ -24,6 +24,7 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.annotations.VisibleForTesting;
 
+import org.apache.commons.lang3.tuple.Triple;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
@@ -100,6 +101,19 @@ public class Listing extends AbstractStoreOperation {
       PathFilter filter,
       FileStatusAcceptor acceptor) {
     return new ProvidedFileStatusIterator(fileStatuses, filter, acceptor);
+  }
+
+  /**
+   * Create a FileStatus iterator against a provided list of file status.
+   * @param fileStatuses array of file status.
+   * @return the file status iterator.
+   */
+  @VisibleForTesting
+  public static ProvidedFileStatusIterator toProvidedFileStatusIterator(
+          S3AFileStatus[] fileStatuses) {
+    return new ProvidedFileStatusIterator(fileStatuses,
+            ACCEPT_ALL,
+            Listing.ACCEPT_ALL_BUT_S3N);
   }
 
   /**
@@ -250,7 +264,7 @@ public class Listing extends AbstractStoreOperation {
       if (!forceNonAuthoritativeMS &&
               allowAuthoritative &&
               metadataStoreListFilesIterator.isRecursivelyAuthoritative()) {
-        S3AFileStatus[] statuses = S3Guard.iteratorToStatuses(
+        S3AFileStatus[] statuses = S3AUtils.iteratorToStatuses(
                 metadataStoreListFilesIterator, tombstones);
         cachedFilesIterator = createProvidedFileStatusIterator(
                 statuses, ACCEPT_ALL, acceptor);
@@ -327,6 +341,56 @@ public class Listing extends AbstractStoreOperation {
                             acceptor,
                             cachedFileStatusIterator)),
             tombstones);
+  }
+
+  /**
+   * Calculate list of file statuses assuming path
+   * to be a non-empty directory.
+   * @param path input path.
+   * @return Triple of file statuses, metaData, auth flag.
+   * @throws IOException Any IO problems.
+   */
+  public Triple<RemoteIterator<S3AFileStatus>, DirListingMetadata, Boolean>
+        getFileStatusesAssumingNonEmptyDir(Path path)
+          throws IOException {
+    String key = pathToKey(path);
+    List<S3AFileStatus> result;
+    if (!key.isEmpty()) {
+      key = key + '/';
+    }
+
+    boolean allowAuthoritative = listingOperationCallbacks
+            .allowAuthoritative(path);
+    DirListingMetadata dirMeta =
+            S3Guard.listChildrenWithTtl(
+                    getStoreContext().getMetadataStore(),
+                    path,
+                    listingOperationCallbacks.getUpdatedTtlTimeProvider(),
+                    allowAuthoritative);
+    // In auth mode return directly with auth flag.
+    if (allowAuthoritative && dirMeta != null && dirMeta.isAuthoritative()) {
+      ProvidedFileStatusIterator mfsItr = createProvidedFileStatusIterator(
+              S3Guard.dirMetaToStatuses(dirMeta),
+              ACCEPT_ALL,
+              Listing.ACCEPT_ALL_BUT_S3N);
+      return Triple.of(mfsItr,
+              dirMeta, Boolean.TRUE);
+    }
+
+    S3ListRequest request = createListObjectsRequest(key, "/");
+    LOG.debug("listStatus: doing listObjects for directory {}", key);
+
+    FileStatusListingIterator filesItr = createFileStatusListingIterator(
+            path,
+            request,
+            ACCEPT_ALL,
+            new Listing.AcceptAllButSelfAndS3nDirs(path));
+
+    // return the results obtained from s3.
+    return Triple.of(
+            filesItr,
+            dirMeta,
+            Boolean.FALSE);
   }
 
   public S3ListRequest createListObjectsRequest(String key, String delimiter) {
