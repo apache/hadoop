@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -89,6 +90,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -126,6 +128,7 @@ public class RouterAdminServer extends AbstractService
   private static boolean isPermissionEnabled;
   private boolean iStateStoreCache;
   private final long maxComponentLength;
+  private boolean mountTableCheckDestination;
 
   public RouterAdminServer(Configuration conf, Router router)
       throws IOException {
@@ -184,6 +187,9 @@ public class RouterAdminServer extends AbstractService
     this.maxComponentLength = (int) conf.getLongBytes(
         RBFConfigKeys.DFS_ROUTER_ADMIN_MAX_COMPONENT_LENGTH_KEY,
         RBFConfigKeys.DFS_ROUTER_ADMIN_MAX_COMPONENT_LENGTH_DEFAULT);
+    this.mountTableCheckDestination = conf.getBoolean(
+        RBFConfigKeys.DFS_ROUTER_ADMIN_MOUNT_CHECK_ENABLE,
+        RBFConfigKeys.DFS_ROUTER_ADMIN_MOUNT_CHECK_ENABLE_DEFAULT);
 
     GenericRefreshProtocolServerSideTranslatorPB genericRefreshXlator =
         new GenericRefreshProtocolServerSideTranslatorPB(this);
@@ -326,6 +332,13 @@ public class RouterAdminServer extends AbstractService
     // Checks max component length limit.
     MountTable mountTable = request.getEntry();
     verifyMaxComponentLength(mountTable);
+    if (this.mountTableCheckDestination) {
+      List<String> nsIds = verifyFileInDestinations(mountTable);
+      if (!nsIds.isEmpty()) {
+        throw new IllegalArgumentException("File not found in downstream " +
+            "nameservices: " + StringUtils.join(",", nsIds));
+      }
+    }
     return getMountTableStore().addMountTableEntry(request);
   }
 
@@ -336,6 +349,13 @@ public class RouterAdminServer extends AbstractService
     MountTable oldEntry = null;
     // Checks max component length limit.
     verifyMaxComponentLength(updateEntry);
+    if (this.mountTableCheckDestination) {
+      List<String> nsIds = verifyFileInDestinations(updateEntry);
+      if (!nsIds.isEmpty()) {
+        throw new IllegalArgumentException("File not found in downstream " +
+            "nameservices: " + StringUtils.join(",", nsIds));
+      }
+    }
     if (this.router.getSubclusterResolver() instanceof MountTableResolver) {
       MountTableResolver mResolver =
           (MountTableResolver) this.router.getSubclusterResolver();
@@ -542,10 +562,31 @@ public class RouterAdminServer extends AbstractService
   @Override
   public GetDestinationResponse getDestination(
       GetDestinationRequest request) throws IOException {
+    RouterRpcServer rpcServer = this.router.getRpcServer();
+    List<RemoteLocation> locations =
+        rpcServer.getLocationsForPath(request.getSrcPath(), false);
+    List<String> nsIds = getDestinationNameServices(request, locations);
+    if (nsIds.isEmpty() && !locations.isEmpty()) {
+      String nsId = locations.get(0).getNameserviceId();
+      nsIds.add(nsId);
+    }
+    return GetDestinationResponse.newInstance(nsIds);
+  }
+
+  /**
+   * Get destination nameservices where the file in request exists.
+   *
+   * @param request request with src info.
+   * @param locations remote locations to check against.
+   * @return list of nameservices where the dest file was found
+   * @throws IOException
+   */
+  private List<String> getDestinationNameServices(
+      GetDestinationRequest request, List<RemoteLocation> locations)
+      throws IOException {
     final String src = request.getSrcPath();
     final List<String> nsIds = new ArrayList<>();
     RouterRpcServer rpcServer = this.router.getRpcServer();
-    List<RemoteLocation> locations = rpcServer.getLocationsForPath(src, false);
     RouterRpcClient rpcClient = rpcServer.getRPCClient();
     RemoteMethod method = new RemoteMethod("getFileInfo",
         new Class<?>[] {String.class}, new RemoteParam());
@@ -562,11 +603,35 @@ public class RouterAdminServer extends AbstractService
       LOG.error("Cannot get location for {}: {}",
           src, ioe.getMessage());
     }
-    if (nsIds.isEmpty() && !locations.isEmpty()) {
-      String nsId = locations.get(0).getNameserviceId();
-      nsIds.add(nsId);
+    return nsIds;
+  }
+
+  /**
+   * Verify the file exists in destination nameservices to avoid dangling
+   * mount points.
+   *
+   * @param entry the new mount points added, could be from add or update.
+   * @return destination nameservices where the file doesn't exist.
+   * @throws IOException unable to verify the file in destinations
+   */
+  public List<String> verifyFileInDestinations(MountTable entry)
+      throws IOException {
+    GetDestinationRequest request =
+        GetDestinationRequest.newInstance(entry.getSourcePath());
+    List<RemoteLocation> locations = entry.getDestinations();
+    List<String> nsId =
+        getDestinationNameServices(request, locations);
+
+    // get nameservices where no target file exists
+    Set<String> destNs = new HashSet<>(nsId);
+    List<String> nsWithoutFile = new ArrayList<>();
+    for (RemoteLocation location : locations) {
+      String ns = location.getNameserviceId();
+      if (!destNs.contains(ns)) {
+        nsWithoutFile.add(ns);
+      }
     }
-    return GetDestinationResponse.newInstance(nsIds);
+    return nsWithoutFile;
   }
 
   /**
