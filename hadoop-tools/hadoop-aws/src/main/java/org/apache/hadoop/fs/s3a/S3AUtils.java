@@ -42,6 +42,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
@@ -1414,6 +1415,30 @@ public final class S3AUtils {
     }
     LOG.debug("Using User-Agent: {}", userAgent);
     awsConf.setUserAgentPrefix(userAgent);
+  }
+
+  /**
+   * Convert the data of an iterator of {@link S3AFileStatus} to
+   * an array. Given tombstones are filtered out. If the iterator
+   * does return any item, an empty array is returned.
+   * @param iterator a non-null iterator
+   * @param tombstones
+   * @return a possibly-empty array of file status entries
+   * @throws IOException
+   */
+  public static S3AFileStatus[] iteratorToStatuses(
+      RemoteIterator<S3AFileStatus> iterator, Set<Path> tombstones)
+      throws IOException {
+    List<FileStatus> statuses = new ArrayList<>();
+
+    while (iterator.hasNext()) {
+      S3AFileStatus status = iterator.next();
+      if (!tombstones.contains(status.getPath())) {
+        statuses.add(status);
+      }
+    }
+
+    return statuses.toArray(new S3AFileStatus[0]);
   }
 
   /**
