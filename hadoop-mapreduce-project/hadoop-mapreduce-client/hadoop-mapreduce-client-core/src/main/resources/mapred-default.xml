@@ -1562,10 +1562,18 @@
 
 <property>
   <name>mapreduce.fileoutputcommitter.algorithm.version</name>
-  <value>2</value>
-  <description>The file output committer algorithm version
-  valid algorithm version number: 1 or 2
-  default to 2, which is the original algorithm
+  <value>21/value>
+  <description>The file output committer algorithm version.
+
+  There have been two algorithm versions in Hadoop, "1" and "2".
+
+  The version 2 algorithm has been disabled as task commits
+  were not atomic. If the first task attempt failed partway
+  through the task commit, the output directory may end up
+  with data from that failed commit, as well as the data
+  from any subsequent attempts.
+
+  See https://issues.apache.org/jira/browse/MAPREDUCE-7282
 
   In algorithm version 1,
 
@@ -1585,32 +1593,58 @@
   $joboutput/, then it will delete $joboutput/_temporary/
   and write $joboutput/_SUCCESS
 
-  It has a performance regression, which is discussed in MAPREDUCE-4815.
+  It has a performance limitation, which is discussed in MAPREDUCE-4815.
+
   If a job generates many files to commit then the commitJob
   method call at the end of the job can take minutes.
   the commit is single-threaded and waits until all
   tasks have completed before commencing.
 
-  algorithm version 2 will change the behavior of commitTask,
+  The algorithm version 2 changed the behavior of commitTask,
   recoverTask, and commitJob.
 
-  1. commitTask will rename all files in
+  1. commitTask renamed all files in
   $joboutput/_temporary/$appAttemptID/_temporary/$taskAttemptID/
   to $joboutput/
 
-  2. recoverTask actually doesn't require to do anything, but for
+  2. recoverTask didn't do anything, but for
   upgrade from version 1 to version 2 case, it will check if there
   are any files in
   $joboutput/_temporary/($appAttemptID - 1)/$taskID/
   and rename them to $joboutput/
 
-  3. commitJob can simply delete $joboutput/_temporary and write
+  3. commitJob deleted $joboutput/_temporary and wrotew
   $joboutput/_SUCCESS
 
-  This algorithm will reduce the output commit time for
-  large jobs by having the tasks commit directly to the final
-  output directory as they were completing and commitJob had
-  very little to do.
+  This algorithm reduced the output commit time for large jobs
+  as the work of renaming files to their destination took place
+  incrementally as tasks committed. However, it has a key flaw
+
+  Task Attempt Commit is not atomic. If a task attempt ID 1 failed
+  partway through the rename, a second task attempt would be
+  scheduled.
+
+  - If task attempts 1 and 2 generated files with different names,
+    then those files from task 1 with different names which were
+    already renamed into the destination, would still be present.
+    They would not be overwritten by the second attempt.
+
+  - If task attempt 1 was still executing -even though the job
+    driver considered it to have failed- then a race condition
+    could arise where the output contained a mix of both task
+    attempts.
+
+  The applications which use these committers, including MapReduce,
+  and Apache Spark expect task attempts to be atomic -this
+  commit algorithm is not compatible.
+
+  Note:
+  * the Apache Hadoop S3A commit algorithms do have atomic task
+    commit and are safe.
+  * The Amazon "EMRFS S3-optimized Committer" completes its
+    multipart uploads in task commit, so has the same
+    limitation as for algorithm v2.
+  https://docs.aws.amazon.com/emr/latest/ReleaseGuide/emr-spark-committer-multipart.html
   </description>
 </property>
 

@@ -68,7 +68,7 @@ public class FileOutputCommitter extends PathOutputCommitter {
       "mapreduce.fileoutputcommitter.marksuccessfuljobs";
   public static final String FILEOUTPUTCOMMITTER_ALGORITHM_VERSION =
       "mapreduce.fileoutputcommitter.algorithm.version";
-  public static final int FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_DEFAULT = 2;
+  public static final int FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_DEFAULT = 1;
   // Skip cleanup _temporary folders under job's output directory
   public static final String FILEOUTPUTCOMMITTER_CLEANUP_SKIPPED =
       "mapreduce.fileoutputcommitter.cleanup.skipped";
@@ -93,15 +93,19 @@ public class FileOutputCommitter extends PathOutputCommitter {
   // commitJob will recursively delete the entire job temporary directory.
   // HDFS has O(1) recursive delete, so this parameter is left false by default.
   // Users of object stores, for example, may want to set this to true. Note:
-  // this is only used if mapreduce.fileoutputcommitter.algorithm.version=2
+  // this was only used if mapreduce.fileoutputcommitter.algorithm.version=2,
+  // and so is now unused
+  @Deprecated
   public static final String FILEOUTPUTCOMMITTER_TASK_CLEANUP_ENABLED =
       "mapreduce.fileoutputcommitter.task.cleanup.enabled";
+
+  @Deprecated
   public static final boolean
       FILEOUTPUTCOMMITTER_TASK_CLEANUP_ENABLED_DEFAULT = false;
 
   private Path outputPath = null;
   private Path workPath = null;
-  private final int algorithmVersion;
+  //private final int algorithmVersion;
   private final boolean skipCleanup;
   private final boolean ignoreCleanupFailures;
 
@@ -135,12 +139,17 @@ public class FileOutputCommitter extends PathOutputCommitter {
                              JobContext context) throws IOException {
     super(outputPath, context);
     Configuration conf = context.getConfiguration();
-    algorithmVersion =
+    int algorithmVersion =
         conf.getInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
                     FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_DEFAULT);
     LOG.info("File Output Committer Algorithm version is " + algorithmVersion);
     if (algorithmVersion != 1 && algorithmVersion != 2) {
       throw new IOException("Only 1 or 2 algorithm version is supported");
+    }
+    // Downgrade v2 to v1 with a warning.
+    if (algorithmVersion == 2) {
+      LOG.warn("The v2 algorithm has been removed to ensure the output of jobs"
+          + " are always correct");
     }
 
     // if skip cleanup
@@ -399,10 +408,8 @@ public class FileOutputCommitter extends PathOutputCommitter {
       Path finalOutput = getOutputPath();
       FileSystem fs = finalOutput.getFileSystem(context.getConfiguration());
 
-      if (algorithmVersion == 1) {
-        for (FileStatus stat: getAllCommittedTaskPaths(context)) {
-          mergePaths(fs, stat, finalOutput, context);
-        }
+      for (FileStatus stat: getAllCommittedTaskPaths(context)) {
+        mergePaths(fs, stat, finalOutput, context);
       }
 
       if (skipCleanup) {
@@ -503,16 +510,9 @@ public class FileOutputCommitter extends PathOutputCommitter {
 
   private void renameOrMerge(FileSystem fs, FileStatus from, Path to,
       JobContext context) throws IOException {
-    if (algorithmVersion == 1) {
-      if (!fs.rename(from.getPath(), to)) {
-        throw new IOException("Failed to rename " + from + " to " + to);
-      }
-    } else {
-      fs.mkdirs(to);
-      for (FileStatus subFrom : fs.listStatus(from.getPath())) {
-        Path subTo = new Path(to, subFrom.getPath().getName());
-        mergePaths(fs, subFrom, subTo, context);
-      }
+    // this always does rename now that the V2 algorithm has been removed.
+    if (!fs.rename(from.getPath(), to)) {
+      throw new IOException("Failed to rename " + from + " to " + to);
     }
   }
 
@@ -588,36 +588,18 @@ public class FileOutputCommitter extends PathOutputCommitter {
       }
 
       if (taskAttemptDirStatus != null) {
-        if (algorithmVersion == 1) {
-          Path committedTaskPath = getCommittedTaskPath(context);
-          if (fs.exists(committedTaskPath)) {
-             if (!fs.delete(committedTaskPath, true)) {
-               throw new IOException("Could not delete " + committedTaskPath);
-             }
-          }
-          if (!fs.rename(taskAttemptPath, committedTaskPath)) {
-            throw new IOException("Could not rename " + taskAttemptPath + " to "
-                + committedTaskPath);
-          }
-          LOG.info("Saved output of task '" + attemptId + "' to " +
-              committedTaskPath);
-        } else {
-          // directly merge everything from taskAttemptPath to output directory
-          mergePaths(fs, taskAttemptDirStatus, outputPath, context);
-          LOG.info("Saved output of task '" + attemptId + "' to " +
-              outputPath);
-
-          if (context.getConfiguration().getBoolean(
-              FILEOUTPUTCOMMITTER_TASK_CLEANUP_ENABLED,
-              FILEOUTPUTCOMMITTER_TASK_CLEANUP_ENABLED_DEFAULT)) {
-            LOG.debug(String.format(
-                "Deleting the temporary directory of '%s': '%s'",
-                attemptId, taskAttemptPath));
-            if(!fs.delete(taskAttemptPath, true)) {
-              LOG.warn("Could not delete " + taskAttemptPath);
-            }
-          }
+        Path committedTaskPath = getCommittedTaskPath(context);
+        if (fs.exists(committedTaskPath)) {
+           if (!fs.delete(committedTaskPath, true)) {
+             throw new IOException("Could not delete " + committedTaskPath);
+           }
         }
+        if (!fs.rename(taskAttemptPath, committedTaskPath)) {
+          throw new IOException("Could not rename " + taskAttemptPath + " to "
+              + committedTaskPath);
+        }
+        LOG.info("Saved output of task '" + attemptId + "' to " +
+            committedTaskPath);
       } else {
         LOG.warn("No Output found for " + attemptId);
       }
@@ -682,7 +664,7 @@ public class FileOutputCommitter extends PathOutputCommitter {
 
   @Override
   public boolean isCommitJobRepeatable(JobContext context) throws IOException {
-    return algorithmVersion == 2;
+    return false;
   }
 
   @Override
@@ -702,35 +684,21 @@ public class FileOutputCommitter extends PathOutputCommitter {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Trying to recover task from " + previousCommittedTaskPath);
       }
-      if (algorithmVersion == 1) {
-        if (fs.exists(previousCommittedTaskPath)) {
-          Path committedTaskPath = getCommittedTaskPath(context);
-          if (!fs.delete(committedTaskPath, true) &&
-              fs.exists(committedTaskPath)) {
-            throw new IOException("Could not delete " + committedTaskPath);
-          }
-          //Rename can fail if the parent directory does not yet exist.
-          Path committedParent = committedTaskPath.getParent();
-          fs.mkdirs(committedParent);
-          if (!fs.rename(previousCommittedTaskPath, committedTaskPath)) {
-            throw new IOException("Could not rename " + previousCommittedTaskPath +
-                " to " + committedTaskPath);
-          }
-        } else {
-            LOG.warn(attemptId+" had no output to recover.");
+      if (fs.exists(previousCommittedTaskPath)) {
+        Path committedTaskPath = getCommittedTaskPath(context);
+        if (!fs.delete(committedTaskPath, true) &&
+            fs.exists(committedTaskPath)) {
+          throw new IOException("Could not delete " + committedTaskPath);
+        }
+        //Rename can fail if the parent directory does not yet exist.
+        Path committedParent = committedTaskPath.getParent();
+        fs.mkdirs(committedParent);
+        if (!fs.rename(previousCommittedTaskPath, committedTaskPath)) {
+          throw new IOException("Could not rename " + previousCommittedTaskPath +
+              " to " + committedTaskPath);
         }
       } else {
-        // essentially a no-op, but for backwards compatibility
-        // after upgrade to the new fileOutputCommitter,
-        // check if there are any output left in committedTaskPath
-        try {
-          FileStatus from = fs.getFileStatus(previousCommittedTaskPath);
-          LOG.info("Recovering task for upgrading scenario, moving files from "
-              + previousCommittedTaskPath + " to " + outputPath);
-          mergePaths(fs, from, outputPath, context);
-        } catch (FileNotFoundException ignored) {
-        }
-        LOG.info("Done recovering task " + attemptId);
+          LOG.warn(attemptId+" had no output to recover.");
       }
     } else {
       LOG.warn("Output Path is null in recoverTask()");
@@ -744,7 +712,6 @@ public class FileOutputCommitter extends PathOutputCommitter {
     sb.append(super.toString()).append("; ");
     sb.append("outputPath=").append(outputPath);
     sb.append(", workPath=").append(workPath);
-    sb.append(", algorithmVersion=").append(algorithmVersion);
     sb.append(", skipCleanup=").append(skipCleanup);
     sb.append(", ignoreCleanupFailures=").append(ignoreCleanupFailures);
     sb.append('}');
