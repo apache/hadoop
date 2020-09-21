@@ -1562,7 +1562,7 @@
 
 <property>
   <name>mapreduce.fileoutputcommitter.algorithm.version</name>
-  <value>21/value>
+  <value>1</value>
   <description>The file output committer algorithm version.
 
   There have been two algorithm versions in Hadoop, "1" and "2".

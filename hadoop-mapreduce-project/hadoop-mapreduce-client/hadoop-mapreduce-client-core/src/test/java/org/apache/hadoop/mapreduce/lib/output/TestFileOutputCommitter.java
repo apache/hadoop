@@ -209,16 +209,6 @@ public class TestFileOutputCommitter {
     testRecoveryInternal(1, 1);
   }
 
-  @Test
-  public void testRecoveryV2() throws Exception {
-    testRecoveryInternal(2, 2);
-  }
-
-  @Test
-  public void testRecoveryUpgradeV1V2() throws Exception {
-    testRecoveryInternal(1, 2);
-  }
-
   private void validateContent(Path dir) throws IOException {
     validateContent(new File(dir.toUri().getPath()));
   }
@@ -270,9 +260,6 @@ public class TestFileOutputCommitter {
     conf.setInt(
         FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
         version);
-    conf.setBoolean(
-        FileOutputCommitter.FILEOUTPUTCOMMITTER_TASK_CLEANUP_ENABLED,
-        taskCleanup);
     JobContext jContext = new JobContextImpl(conf, taskID.getJobID());
     TaskAttemptContext tContext = new TaskAttemptContextImpl(conf, taskID);
     FileOutputCommitter committer = new FileOutputCommitter(outDir, tContext);
@@ -322,23 +309,8 @@ public class TestFileOutputCommitter {
   }
 
   @Test
-  public void testCommitterV2() throws Exception {
-    testCommitterInternal(2, false);
-  }
-
-  @Test
-  public void testCommitterV2TaskCleanupEnabled() throws Exception {
-    testCommitterInternal(2, true);
-  }
-
-  @Test
   public void testCommitterWithDuplicatedCommitV1() throws Exception {
     testCommitterWithDuplicatedCommitInternal(1);
-  }
-
-  @Test
-  public void testCommitterWithDuplicatedCommitV2() throws Exception {
-    testCommitterWithDuplicatedCommitInternal(2);
   }
 
   private void testCommitterWithDuplicatedCommitInternal(int version) throws
@@ -387,12 +359,6 @@ public class TestFileOutputCommitter {
   public void testCommitterWithFailureV1() throws Exception {
     testCommitterWithFailureInternal(1, 1);
     testCommitterWithFailureInternal(1, 2);
-  }
-
-  @Test
-  public void testCommitterWithFailureV2() throws Exception {
-    testCommitterWithFailureInternal(2, 1);
-    testCommitterWithFailureInternal(2, 2);
   }
 
   private void testCommitterWithFailureInternal(int version, int maxAttempts)
@@ -471,11 +437,6 @@ public class TestFileOutputCommitter {
   @Test
   public void testCommitterRepeatableV1() throws Exception {
     testCommitterRetryInternal(1);
-  }
-
-  @Test
-  public void testCommitterRepeatableV2() throws Exception {
-    testCommitterRetryInternal(2);
   }
 
   // retry committer for 2 times.
@@ -578,11 +539,6 @@ public class TestFileOutputCommitter {
   }
 
   @Test
-  public void testMapFileOutputCommitterV2() throws Exception {
-    testMapFileOutputCommitterInternal(2);
-  }
-
-  @Test
   public void testInvalidVersionNumber() throws IOException {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
@@ -637,11 +593,6 @@ public class TestFileOutputCommitter {
   @Test
   public void testAbortV1() throws IOException, InterruptedException {
     testAbortInternal(1);
-  }
-
-  @Test
-  public void testAbortV2() throws IOException, InterruptedException {
-    testAbortInternal(2);
   }
 
   public static class FakeFileSystem extends RawLocalFileSystem {
@@ -718,11 +669,6 @@ public class TestFileOutputCommitter {
   @Test
   public void testFailAbortV1() throws Exception {
     testFailAbortInternal(1);
-  }
-
-  @Test
-  public void testFailAbortV2() throws Exception {
-    testFailAbortInternal(2);
   }
 
   static class RLFS extends RawLocalFileSystem {
@@ -821,11 +767,6 @@ public class TestFileOutputCommitter {
   @Test
   public void testConcurrentCommitTaskWithSubDirV1() throws Exception {
     testConcurrentCommitTaskWithSubDir(1);
-  }
-
-  @Test
-  public void testConcurrentCommitTaskWithSubDirV2() throws Exception {
-    testConcurrentCommitTaskWithSubDir(2);
   }
 
   public static String slurp(File f) throws IOException {

@@ -161,16 +161,6 @@ public class TestFileOutputCommitter {
     testRecoveryInternal(1, 1);
   }
 
-  @Test
-  public void testRecoveryV2() throws Exception {
-    testRecoveryInternal(2, 2);
-  }
-
-  @Test
-  public void testRecoveryUpgradeV1V2() throws Exception {
-    testRecoveryInternal(1, 2);
-  }
-
   private void validateContent(Path dir) throws IOException {
     File fdir = new File(dir.toUri().getPath());
     File expectedFile = new File(fdir, partFile);
@@ -213,12 +203,6 @@ public class TestFileOutputCommitter {
   public void testCommitterWithFailureV1() throws Exception {
     testCommitterWithFailureInternal(1, 1);
     testCommitterWithFailureInternal(1, 2);
-  }
-
-  @Test
-  public void testCommitterWithFailureV2() throws Exception {
-    testCommitterWithFailureInternal(2, 1);
-    testCommitterWithFailureInternal(2, 2);
   }
 
   private void testCommitterWithFailureInternal(int version, int maxAttempts) throws Exception {
@@ -267,11 +251,6 @@ public class TestFileOutputCommitter {
   @Test
   public void testCommitterWithDuplicatedCommitV1() throws Exception {
     testCommitterWithDuplicatedCommitInternal(1);
-  }
-
-  @Test
-  public void testCommitterWithDuplicatedCommitV2() throws Exception {
-    testCommitterWithDuplicatedCommitInternal(2);
   }
 
   private void testCommitterWithDuplicatedCommitInternal(int version) throws
@@ -355,11 +334,6 @@ public class TestFileOutputCommitter {
     testCommitterInternal(1);
   }
 
-  @Test
-  public void testCommitterV2() throws Exception {
-    testCommitterInternal(2);
-  }
-
   private void testMapFileOutputCommitterInternal(int version)
       throws Exception {
     JobConf conf = new JobConf();
@@ -398,18 +372,8 @@ public class TestFileOutputCommitter {
   }
 
   @Test
-  public void testMapFileOutputCommitterV2() throws Exception {
-    testMapFileOutputCommitterInternal(2);
-  }
-
-  @Test
   public void testMapOnlyNoOutputV1() throws Exception {
     testMapOnlyNoOutputInternal(1);
-  }
-
-  @Test
-  public void testMapOnlyNoOutputV2() throws Exception {
-    testMapOnlyNoOutputInternal(2);
   }
 
   private void testMapOnlyNoOutputInternal(int version) throws Exception {
@@ -475,11 +439,6 @@ public class TestFileOutputCommitter {
   @Test
   public void testAbortV1() throws Exception {
     testAbortInternal(1);
-  }
-
-  @Test
-  public void testAbortV2() throws Exception {
-    testAbortInternal(2);
   }
 
   public static class FakeFileSystem extends RawLocalFileSystem {
@@ -560,10 +519,6 @@ public class TestFileOutputCommitter {
     testFailAbortInternal(1);
   }
 
-  @Test
-  public void testFailAbortV2() throws Exception {
-    testFailAbortInternal(2);
-  }
   public static String slurp(File f) throws IOException {
     int len = (int) f.length();
     byte[] buf = new byte[len];
