@@ -25,18 +25,21 @@ import com.google.common.base.Preconditions;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.util.functional.RuntimeIOException;
 
 /**
  * A wrapper for an IOException which
  * {@link FutureIOSupport#raiseInnerCause(ExecutionException)} knows to
  * always extract the exception.
- *
+ * <p></p>
  * The constructor signature guarantees the cause will be an IOException,
  * and as it checks for a null-argument, non-null.
+ * @deprecated: use the public {@link RuntimeIOException}.
  */
+@Deprecated
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class WrappedIOException extends RuntimeException {
+public class WrappedIOException extends RuntimeIOException {
 
   private static final long serialVersionUID = 2510210974235779294L;
 

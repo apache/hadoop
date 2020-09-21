@@ -32,6 +32,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSBuilder;
+import org.apache.hadoop.util.functional.CallableRaisingIOE;
+import org.apache.hadoop.util.functional.RuntimeIOException;
 
 /**
  * Support for future IO and the FS Builder subclasses.
@@ -130,10 +132,13 @@ public final class FutureIOSupport {
 
   /**
    * From the inner cause of an execution exception, extract the inner cause.
-   * If it is an RTE: throw immediately.
-   * If it is an IOE: Return.
-   * If it is a WrappedIOException: Unwrap and return
-   * Else: create a new IOException.
+   * <ol>
+   *   <li> If it is an IOE: Return.</li>
+   *   <li> If it is a {@link RuntimeIOException}: return the cause</li>
+   *   <li> Completion/Execution Exceptions: extract and repeat</li>
+   *   <li> If it is an RTE: throw.</li>
+   *   <li> Any other type: wrap in an IOE</li>
+   * </ol>
    *
    * Recursively handles wrapped Execution and Completion Exceptions in
    * case something very complicated has happened.
@@ -145,8 +150,9 @@ public final class FutureIOSupport {
     Throwable cause = e.getCause();
     if (cause instanceof IOException) {
       return (IOException) cause;
-    } else if (cause instanceof WrappedIOException) {
-      return ((WrappedIOException) cause).getCause();
+    } else if (cause instanceof RuntimeIOException) {
+      // this is always an IOException
+      return ((RuntimeIOException) cause).getCause();
     } else if (cause instanceof CompletionException) {
       return unwrapInnerException(cause);
     } else if (cause instanceof ExecutionException) {
@@ -236,7 +242,7 @@ public final class FutureIOSupport {
    * @throws IllegalArgumentException invalid argument
    */
   public static <T> CompletableFuture<T> eval(
-      FunctionsRaisingIOE.CallableRaisingIOE<T> callable) {
+      CallableRaisingIOE<T> callable) {
     CompletableFuture<T> result = new CompletableFuture<>();
     try {
       result.complete(callable.apply());
