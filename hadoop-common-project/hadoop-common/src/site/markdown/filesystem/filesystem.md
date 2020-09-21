@@ -654,7 +654,7 @@ The behavior of the returned stream is covered in [Output](outputstream.html).
 * S3A, Swift and potentially other Object Stores do not currently change the `FS` state
 until the output stream `close()` operation is completed.
 This is a significant difference between the behavior of object stores
-and that of filesystems, as it allows >1 client to create a file with `overwrite==false`,
+and that of filesystems, as it allows &gt;1 client to create a file with `overwrite=false`,
 and potentially confuse file/directory logic. In particular, using `create()` to acquire
 an exclusive lock on a file (whoever creates the file without an error is considered
 the holder of the lock) may not not a safe algorithm to use when working with object stores.

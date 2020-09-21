@@ -884,7 +884,7 @@ This has been difficult to deal with within the Hadoop S3A code itself
 (HADOOP-16490, HADOOP-16635) -and if applications make their own probes for files
 before creating them, the problem will intermittently surface.
 
-1. If you look for an object on S3 and it is not there - The 404 MAY Be returned even
+1. If you look for an object on S3 and it is not there - The 404 MAY be returned even
 after the object has been created.
 1. FS operations triggering such a probe include: `getFileStatus()`, `exists()`, `open()`
 and others.
@@ -894,7 +894,7 @@ create files with this option except when some form of exclusivity is needed on 
 creation -in which case, be aware, that with the non-atomic probe+create sequence which
 some object store connectors implement, the semantics of the creation are not sufficient
 to allow the filesystem to be used as an implicit coordination mechanism between processes.
-``
+
 ## <a name="implementors"></a> Implementors notes.
 
 ### `StreamCapabilities`
@@ -914,9 +914,12 @@ on to the distributed FS, it SHOULD declare that it supports them.
 ### Metadata updates
 
 Implementors MAY NOT update a file's metadata (length, date, ...) after
-every `hsync()` call. HDFS doesn't -so there is no need to feel too guilty.
+every `hsync()` call. HDFS doesn't, except when the written data crosses
+a block boundary.
 
 ### Does `close()` sync data?
 
-By default, HDFS does not sync data to disk when a stream is closed.
+By default, HDFS does not sync data to disk when a stream is closed; it will
+be asynchronously saved to disk.
+
 This does not mean that users do not expect it.
