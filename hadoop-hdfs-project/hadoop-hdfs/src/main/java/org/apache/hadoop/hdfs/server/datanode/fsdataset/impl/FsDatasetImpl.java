@@ -470,12 +470,25 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         LOG.error(errorMsg);
         throw new IOException(errorMsg);
       }
+      // Check if there is same storage type on the mount.
+      // Only useful when same disk tiering is turned on.
+      FsVolumeImpl volumeImpl = (FsVolumeImpl) ref.getVolume();
+      FsVolumeReference checkRef = volumes.getVolumeRefByMountAndStorageType(
+          volumeImpl.getMount(), volumeImpl.getStorageType());
+      if (checkRef != null) {
+        final String errorMsg = String.format(
+            "Storage type %s already exists on same mount: %s.",
+            volumeImpl.getStorageType(), volumeImpl.getMount());
+        checkRef.close();
+        LOG.error(errorMsg);
+        throw new IOException(errorMsg);
+      }
       volumeMap.mergeAll(replicaMap);
       storageMap.put(sd.getStorageUuid(),
           new DatanodeStorage(sd.getStorageUuid(),
               DatanodeStorage.State.NORMAL,
               storageType));
-      asyncDiskService.addVolume((FsVolumeImpl) ref.getVolume());
+      asyncDiskService.addVolume(volumeImpl);
       volumes.addVolume(ref);
     }
   }
