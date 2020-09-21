@@ -116,11 +116,20 @@ import org.apache.hadoop.fs.s3a.impl.S3AMultipartUploaderBuilder;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
+import org.apache.hadoop.fs.s3a.impl.statistics.BlockOutputStreamStatistics;
+import org.apache.hadoop.fs.s3a.impl.statistics.CommitterStatistics;
+import org.apache.hadoop.fs.s3a.impl.statistics.BondedS3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.impl.statistics.S3AMultipartUploaderStatisticsImpl;
+import org.apache.hadoop.fs.s3a.impl.statistics.S3AStatisticsContext;
+import org.apache.hadoop.fs.s3a.impl.statistics.StatisticsFromAwsSdk;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.select.InternalSelectConstants;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperations;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperationsImpl;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+import org.apache.hadoop.fs.statistics.DurationTracker;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.DelegationTokenIssuer;
@@ -173,6 +182,7 @@ import static org.apache.hadoop.fs.impl.AbstractFSBuilderImpl.rejectUnknownManda
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.Invoker.*;
+import static org.apache.hadoop.fs.s3a.Listing.toLocatedFileStatusIterator;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
@@ -183,10 +193,13 @@ import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.hasDe
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletionIgnoringExceptions;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AWS_SDK_METRICS_ENABLED;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.fixBucketRegion;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.logDnsLookup;
 import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.dirMetaToStatuses;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_CONTINUE_LIST_REQUEST;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**
@@ -205,7 +218,7 @@ import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class S3AFileSystem extends FileSystem implements StreamCapabilities,
-    AWSPolicyProvider, DelegationTokenProvider {
+    AWSPolicyProvider, DelegationTokenProvider, IOStatisticsSource {
   /**
    * Default blocksize as used in blocksize and FS status queries.
    */
@@ -260,6 +273,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private S3AInstrumentation instrumentation;
   private final S3AStorageStatistics storageStatistics =
       createStorageStatistics();
+
+  private S3AStatisticsContext statisticsContext;
+
   private long readAhead;
   private S3AInputPolicy inputPolicy;
   private ChangeDetectionPolicy changeDetectionPolicy;
@@ -365,6 +381,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       invoker = new Invoker(new S3ARetryPolicy(getConf()), onRetry);
       instrumentation = new S3AInstrumentation(uri);
+      initializeStatisticsBinding();
 
       // Username is the current user at the time the FS was instantiated.
       owner = UserGroupInformation.getCurrentUser();
@@ -374,7 +391,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       s3guardInvoker = new Invoker(new S3GuardExistsRetryPolicy(getConf()),
           onRetry);
-      writeHelper = new WriteOperationHelper(this, getConf());
+      writeHelper = new WriteOperationHelper(this, getConf(),
+          statisticsContext);
 
       failOnMetadataWriteError = conf.getBoolean(FAIL_ON_METADATA_WRITE_ERROR,
           FAIL_ON_METADATA_WRITE_ERROR_DEFAULT);
@@ -529,6 +547,31 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
+   * Initialize the statistics binding.
+   * This is done by creating an {@code IntegratedS3AStatisticsContext}
+   * with callbacks to get the FS's instrumentation and FileSystem.statistics
+   * field; the latter may change after {@link #initialize(URI, Configuration)},
+   * so needs to be dynamically adapted.
+   * Protected so that (mock) subclasses can replace it with a
+   * different statistics binding, if desired.
+   */
+  protected void initializeStatisticsBinding() {
+    statisticsContext = new BondedS3AStatisticsContext(
+        new BondedS3AStatisticsContext.S3AFSStatisticsSource() {
+
+          @Override
+          public S3AInstrumentation getInstrumentation() {
+            return S3AFileSystem.this.getInstrumentation();
+          }
+
+          @Override
+          public Statistics getInstanceStatistics() {
+            return S3AFileSystem.this.statistics;
+          }
+        });
+  }
+
+  /**
    * Initialize the thread pool.
    * This must be re-invoked after replacing the S3Client during test
    * runs.
@@ -607,6 +650,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Get S3A Instrumentation. For test purposes.
    * @return this instance's instrumentation.
    */
+  @VisibleForTesting
   public S3AInstrumentation getInstrumentation() {
     return instrumentation;
   }
@@ -674,8 +718,17 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         S3_CLIENT_FACTORY_IMPL, DEFAULT_S3_CLIENT_FACTORY_IMPL,
         S3ClientFactory.class);
 
+    StatisticsFromAwsSdk awsStats = null;
+    //  TODO: HADOOP-16830 when the S3 client building code works
+    //   with different regions,
+    //   then non-null stats can be passed in here.
+    if (AWS_SDK_METRICS_ENABLED) {
+      awsStats = statisticsContext.newStatisticsFromAwsSdk();
+    }
+
     s3 = ReflectionUtils.newInstance(s3ClientFactoryClass, conf)
-        .createS3Client(getUri(), bucket, credentials, uaSuffix);
+    .createS3Client(getUri(), bucket, credentials, uaSuffix,
+        awsStats);
   }
 
   /**
@@ -1173,7 +1226,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         invoker,
         s3guardInvoker,
         statistics,
-        instrumentation,
+        statisticsContext,
         fileStatus,
         seekPolicy,
         changePolicy,
@@ -1270,15 +1323,20 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     PutTracker putTracker =
         committerIntegration.createTracker(path, key);
     String destKey = putTracker.getDestKey();
+    final BlockOutputStreamStatistics outputStreamStatistics
+        = statisticsContext.newOutputStreamStatistics();
     return new FSDataOutputStream(
         new S3ABlockOutputStream(this,
             destKey,
-            new SemaphoredDelegatingExecutor(boundedThreadPool,
-                blockOutputActiveBlocks, true),
+            new SemaphoredDelegatingExecutor(
+                boundedThreadPool,
+                blockOutputActiveBlocks,
+                true,
+                outputStreamStatistics),
             progress,
             partSize,
             blockFactory,
-            instrumentation.newOutputStreamStatistics(statistics),
+            outputStreamStatistics,
             getWriteOperationHelper(),
             putTracker),
         null);
@@ -1652,20 +1710,34 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     @Override
     @Retries.RetryRaw
     public CompletableFuture<S3ListResult> listObjectsAsync(
-            S3ListRequest request)
+        S3ListRequest request,
+        ListingContext listingContext)
             throws IOException {
       return submit(unboundedThreadPool,
-        () -> listObjects(request));
+        () -> {
+          try (DurationTracker ignored =
+                   listingContext.getDurationTrackerFactory()
+                       .trackDuration(OBJECT_LIST_REQUEST)) {
+            return listObjects(request);
+          }
+      });
     }
 
     @Override
     @Retries.RetryRaw
     public CompletableFuture<S3ListResult> continueListObjectsAsync(
-            S3ListRequest request,
-            S3ListResult prevResult)
+        S3ListRequest request,
+        S3ListResult prevResult,
+        ListingContext listingContext)
             throws IOException {
       return submit(unboundedThreadPool,
-        () -> continueListObjects(request, prevResult));
+        () -> {
+          try (DurationTracker ignored =
+                   listingContext.getDurationTrackerFactory()
+                       .trackDuration(OBJECT_CONTINUE_LIST_REQUEST)) {
+            return continueListObjects(request, prevResult);
+          }
+      });
     }
 
     @Override
@@ -1814,7 +1886,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param count the count to increment
    */
   protected void incrementStatistic(Statistic statistic, long count) {
-    instrumentation.incrementCounter(statistic, count);
+    statisticsContext.incrementCounter(statistic, count);
     storageStatistics.incrementCounter(statistic, count);
   }
 
@@ -1824,7 +1896,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param count the count to decrement
    */
   protected void decrementGauge(Statistic statistic, long count) {
-    instrumentation.decrementGauge(statistic, count);
+    statisticsContext.decrementGauge(statistic, count);
   }
 
   /**
@@ -1833,7 +1905,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param count the count to increment
    */
   protected void incrementGauge(Statistic statistic, long count) {
-    instrumentation.incrementGauge(statistic, count);
+    statisticsContext.incrementGauge(statistic, count);
   }
 
   /**
@@ -1846,6 +1918,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     if (isThrottleException(ex)) {
       operationThrottled(false);
     } else {
+      incrementStatistic(STORE_IO_RETRY);
       incrementStatistic(IGNORED_ERRORS);
     }
   }
@@ -1897,11 +1970,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     LOG.debug("Request throttled on {}", metastore ? "S3": "DynamoDB");
     if (metastore) {
       incrementStatistic(S3GUARD_METADATASTORE_THROTTLED);
-      instrumentation.addValueToQuantiles(S3GUARD_METADATASTORE_THROTTLE_RATE,
+      statisticsContext.addValueToQuantiles(S3GUARD_METADATASTORE_THROTTLE_RATE,
           1);
     } else {
       incrementStatistic(STORE_IO_THROTTLED);
-      instrumentation.addValueToQuantiles(STORE_IO_THROTTLE_RATE, 1);
+      statisticsContext.addValueToQuantiles(STORE_IO_THROTTLE_RATE, 1);
     }
   }
 
@@ -1912,6 +1985,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Override
   public S3AStorageStatistics getStorageStatistics() {
     return storageStatistics;
+  }
+
+  /**
+   * Get this filesystem's storage statistics as IO Statistics.
+   * @return statistics
+   */
+  @Override
+  public IOStatistics getIOStatistics() {
+    return IOStatisticsBinding.fromStorageStatistics(
+        storageStatistics);
   }
 
   /**
@@ -3592,8 +3675,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     ChangeTracker changeTracker = new ChangeTracker(
         keyToQualifiedPath(srcKey).toString(),
         changeDetectionPolicy,
-        readContext.instrumentation.newInputStreamStatistics()
-            .getVersionMismatchCounter(),
+        readContext.getS3AStatisticsContext()
+            .newInputStreamStatistics()
+            .getChangeTrackerStatistics(),
         srcAttributes);
 
     String action = "copyFile(" + srcKey + ", " + dstKey + ")";
@@ -4292,21 +4376,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         new Listing.AcceptFilesOnly(qualify(f)), null, true, false));
   }
 
-  private static RemoteIterator<LocatedFileStatus> toLocatedFileStatusIterator(
-      RemoteIterator<? extends LocatedFileStatus> iterator) {
-    return new RemoteIterator<LocatedFileStatus>() {
-      @Override
-      public boolean hasNext() throws IOException {
-        return iterator.hasNext();
-      }
-
-      @Override
-      public LocatedFileStatus next() throws IOException {
-        return iterator.next();
-      }
-    };
-  }
-
   /**
    * Recursive List of files and empty directories.
    * @param f path to list from
@@ -4389,7 +4458,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       if (status != null && status.isFile()) {
         // simple case: File
         LOG.debug("Path is a file: {}", path);
-        return new Listing.SingleStatusRemoteIterator(
+        return listing.createSingleStatusIterator(
             toLocatedFileStatus(status));
       }
       // Assuming the path to be a directory
@@ -4409,7 +4478,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                 ? status
                 : (S3AFileStatus) getFileStatus(path);
         if (fileStatus.isFile()) {
-          return new Listing.SingleStatusRemoteIterator(
+          return listing.createSingleStatusIterator(
                   toLocatedFileStatus(fileStatus));
         }
       }
@@ -4468,7 +4537,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               if (fileStatus.isFile()) {
                 // simple case: File
                 LOG.debug("Path is a file");
-                return new Listing.SingleStatusRemoteIterator(
+                return listing.createSingleStatusIterator(
                         filter.accept(path)
                                 ? toLocatedFileStatus(fileStatus)
                                 : null);
@@ -4615,8 +4684,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Create a new instance of the committer statistics.
    * @return a new committer statistics instance
    */
-  public S3AInstrumentation.CommitterStatistics newCommitterStatistics() {
-    return instrumentation.newCommitterStatistics();
+  public CommitterStatistics newCommitterStatistics() {
+    return statisticsContext.newCommitterStatistics();
   }
 
   @SuppressWarnings("deprecation")
@@ -4750,8 +4819,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       ChangeTracker changeTracker =
           new ChangeTracker(uri.toString(),
               changeDetectionPolicy,
-              readContext.instrumentation.newInputStreamStatistics()
-                  .getVersionMismatchCounter(),
+              readContext.getS3AStatisticsContext()
+                  .newInputStreamStatistics()
+                  .getChangeTrackerStatistics(),
               objectAttributes);
 
       // will retry internally if wrong version detected
@@ -4918,7 +4988,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .setExecutor(boundedThreadPool)
         .setExecutorCapacity(executorCapacity)
         .setInvoker(invoker)
-        .setInstrumentation(getInstrumentation())
+        .setStatisticsContext(statisticsContext)
         .setStorageStatistics(getStorageStatistics())
         .setInputPolicy(getInputPolicy())
         .setChangeDetectionPolicy(changeDetectionPolicy)

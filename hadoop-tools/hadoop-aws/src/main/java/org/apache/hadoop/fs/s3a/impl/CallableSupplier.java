@@ -31,7 +31,7 @@ import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.fs.impl.WrappedIOException;
+import org.apache.hadoop.util.functional.RuntimeIOException;
 import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.impl.FutureIOSupport.raiseInnerCause;
@@ -63,9 +63,9 @@ public final class CallableSupplier<T> implements Supplier {
     } catch (RuntimeException e) {
       throw e;
     } catch (IOException e) {
-      throw new WrappedIOException(e);
+      throw new RuntimeIOException(e);
     } catch (Exception e) {
-      throw new WrappedIOException(new IOException(e));
+      throw new RuntimeIOException(new IOException(e));
     }
   }
 
@@ -73,7 +73,7 @@ public final class CallableSupplier<T> implements Supplier {
    * Submit a callable into a completable future.
    * RTEs are rethrown.
    * Non RTEs are caught and wrapped; IOExceptions to
-   * {@link WrappedIOException} instances.
+   * {@link RuntimeIOException} instances.
    * @param executor executor.
    * @param call call to invoke
    * @param <T> type

@@ -33,9 +33,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
-import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3AStorageStatistics;
 import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.fs.s3a.impl.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -88,7 +88,7 @@ public class StoreContext {
   private final Invoker invoker;
 
   /** Instrumentation and statistics. */
-  private final S3AInstrumentation instrumentation;
+  private final S3AStatisticsContext statisticsContext;
   private final S3AStorageStatistics storageStatistics;
 
   /** Seek policy. */
@@ -129,7 +129,7 @@ public class StoreContext {
       final ListeningExecutorService executor,
       final int executorCapacity,
       final Invoker invoker,
-      final S3AInstrumentation instrumentation,
+      final S3AStatisticsContext statisticsContext,
       final S3AStorageStatistics storageStatistics,
       final S3AInputPolicy inputPolicy,
       final ChangeDetectionPolicy changeDetectionPolicy,
@@ -146,7 +146,7 @@ public class StoreContext {
     this.executor = executor;
     this.executorCapacity = executorCapacity;
     this.invoker = invoker;
-    this.instrumentation = instrumentation;
+    this.statisticsContext = statisticsContext;
     this.storageStatistics = storageStatistics;
     this.inputPolicy = inputPolicy;
     this.changeDetectionPolicy = changeDetectionPolicy;
@@ -186,8 +186,13 @@ public class StoreContext {
     return invoker;
   }
 
-  public S3AInstrumentation getInstrumentation() {
-    return instrumentation;
+  /**
+   * Get the statistics context for this StoreContext.
+   * @return the statistics context this store context was created
+   * with.
+   */
+  public S3AStatisticsContext getStatisticsContext() {
+    return statisticsContext;
   }
 
   public S3AInputPolicy getInputPolicy() {
@@ -267,7 +272,7 @@ public class StoreContext {
    * @param count the count to increment
    */
   public void incrementStatistic(Statistic statistic, long count) {
-    instrumentation.incrementCounter(statistic, count);
+    statisticsContext.incrementCounter(statistic, count);
     storageStatistics.incrementCounter(statistic, count);
   }
 
@@ -277,7 +282,7 @@ public class StoreContext {
    * @param count the count to decrement
    */
   public void decrementGauge(Statistic statistic, long count) {
-    instrumentation.decrementGauge(statistic, count);
+    statisticsContext.decrementGauge(statistic, count);
   }
 
   /**
@@ -286,7 +291,7 @@ public class StoreContext {
    * @param count the count to increment
    */
   public void incrementGauge(Statistic statistic, long count) {
-    instrumentation.incrementGauge(statistic, count);
+    statisticsContext.incrementGauge(statistic, count);
   }
 
   /**

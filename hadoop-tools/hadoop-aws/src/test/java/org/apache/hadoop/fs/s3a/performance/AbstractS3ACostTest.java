@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a.performance;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.EnumSet;
 import java.util.Set;
 import java.util.concurrent.Callable;
 
@@ -39,7 +40,6 @@ import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
-import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.*;
 import static org.apache.hadoop.fs.s3a.performance.OperationCostValidator.expect;
 import static org.apache.hadoop.fs.s3a.performance.OperationCostValidator.probe;
@@ -138,21 +138,11 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
 
     isDeleting = !isKeeping;
 
-    // insert new metrics so as to keep the list sorted
-    costValidator = OperationCostValidator.builder(getFileSystem())
-        .withMetrics(
-            DIRECTORIES_CREATED,
-            DIRECTORIES_DELETED,
-            FAKE_DIRECTORIES_DELETED,
-            FILES_DELETED,
-            INVOCATION_COPY_FROM_LOCAL_FILE,
-            OBJECT_COPY_REQUESTS,
-            OBJECT_DELETE_REQUESTS,
-            OBJECT_LIST_REQUESTS,
-            OBJECT_METADATA_REQUESTS,
-            OBJECT_PUT_BYTES,
-            OBJECT_PUT_REQUESTS)
-        .build();
+    // Add statistics of the filesystem are added as metrics,
+    OperationCostValidator.Builder builder = OperationCostValidator.builder(
+        getFileSystem());
+    EnumSet.allOf(Statistic.class).forEach(s -> builder.withMetric(s));
+    costValidator = builder.build();
   }
 
   public void assumeUnguarded() {

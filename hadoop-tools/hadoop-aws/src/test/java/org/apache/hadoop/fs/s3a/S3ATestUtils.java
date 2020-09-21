@@ -42,6 +42,8 @@ import org.apache.hadoop.fs.s3a.impl.OperationCallbacks;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
+import org.apache.hadoop.fs.s3a.impl.statistics.BlockOutputStreamStatistics;
+import org.apache.hadoop.fs.s3a.impl.statistics.EmptyS3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata;
 import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
@@ -947,7 +949,7 @@ public final class S3ATestUtils {
         .setExecutorCapacity(DEFAULT_EXECUTOR_CAPACITY)
         .setInvoker(
             new Invoker(RetryPolicies.TRY_ONCE_THEN_FAIL, Invoker.LOG_EVENT))
-        .setInstrumentation(new S3AInstrumentation(name))
+        .setStatisticsContext(new EmptyS3AStatisticsContext())
         .setStorageStatistics(new S3AStorageStatistics())
         .setInputPolicy(S3AInputPolicy.Normal)
         .setChangeDetectionPolicy(
@@ -1238,7 +1240,7 @@ public final class S3ATestUtils {
    * @param out output stream
    * @return the (active) stats of the write
    */
-  public static S3AInstrumentation.OutputStreamStatistics
+  public static BlockOutputStreamStatistics
       getOutputStreamStatistics(FSDataOutputStream out) {
     S3ABlockOutputStream blockOutputStream
         = (S3ABlockOutputStream) out.getWrappedStream();
@@ -1780,18 +1782,19 @@ public final class S3ATestUtils {
 
   public static class MinimalListingOperationCallbacks
           implements ListingOperationCallbacks {
+
     @Override
     public CompletableFuture<S3ListResult> listObjectsAsync(
-            S3ListRequest request)
-            throws IOException {
+        final S3ListRequest request,
+        final ListingContext listingContext) throws IOException {
       return null;
     }
 
     @Override
     public CompletableFuture<S3ListResult> continueListObjectsAsync(
-            S3ListRequest request,
-            S3ListResult prevResult)
-            throws IOException {
+        final S3ListRequest request,
+        final S3ListResult prevResult,
+        final ListingContext listingContext) throws IOException {
       return null;
     }
 

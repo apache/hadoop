@@ -21,13 +21,18 @@ package org.apache.hadoop.fs.s3a;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.s3a.impl.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.io.IOUtils;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import java.io.IOException;
 
-import static org.apache.hadoop.fs.s3a.Statistic.STREAM_SEEK_BYTES_READ;
+import static org.apache.hadoop.fs.s3a.Statistic.STREAM_READ_BYTES;
+import static org.apache.hadoop.fs.s3a.Statistic.STREAM_READ_CLOSE_BYTES_READ;
+import static org.apache.hadoop.fs.s3a.Statistic.STREAM_READ_TOTAL_BYTES;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringifyIOStatisticsSource;
 
 /**
  * Integration test for calling
@@ -40,6 +45,8 @@ import static org.apache.hadoop.fs.s3a.Statistic.STREAM_SEEK_BYTES_READ;
  */
 public class ITestS3AUnbuffer extends AbstractS3ATestBase {
 
+  public static final int FILE_LENGTH = 16;
+
   private Path dest;
 
   @Override
@@ -48,7 +55,7 @@ public class ITestS3AUnbuffer extends AbstractS3ATestBase {
     dest = path("ITestS3AUnbuffer");
     describe("ITestS3AUnbuffer");
 
-    byte[] data = ContractTestUtils.dataset(16, 'a', 26);
+    byte[] data = ContractTestUtils.dataset(FILE_LENGTH, 'a', 26);
     ContractTestUtils.writeDataset(getFileSystem(), dest, data, data.length,
             16, true);
   }
@@ -71,7 +78,7 @@ public class ITestS3AUnbuffer extends AbstractS3ATestBase {
 
   /**
    * Test that calling {@link S3AInputStream#unbuffer()} merges a stream's
-   * {@link org.apache.hadoop.fs.s3a.S3AInstrumentation.InputStreamStatistics}
+   * {@code InputStreamStatistics}
    * into the {@link S3AFileSystem}'s {@link S3AInstrumentation} instance.
    */
   @Test
@@ -79,36 +86,73 @@ public class ITestS3AUnbuffer extends AbstractS3ATestBase {
     describe("testUnbufferStreamStatistics");
 
     // Validate bytesRead is updated correctly
+    S3AFileSystem fs = getFileSystem();
     S3ATestUtils.MetricDiff bytesRead = new S3ATestUtils.MetricDiff(
-            getFileSystem(), STREAM_SEEK_BYTES_READ);
+        fs, STREAM_READ_BYTES);
+    S3ATestUtils.MetricDiff totalBytesRead = new S3ATestUtils.MetricDiff(
+        fs, STREAM_READ_TOTAL_BYTES);
+    S3ATestUtils.MetricDiff bytesReadInClose = new S3ATestUtils.MetricDiff(
+        fs, STREAM_READ_CLOSE_BYTES_READ);
 
     // Open file, read half the data, and then call unbuffer
     FSDataInputStream inputStream = null;
-    try {
-      inputStream = getFileSystem().open(dest);
+    int firstBytesToRead = 8;
 
-      readAndAssertBytesRead(inputStream, 8);
+    int secondBytesToRead = 1;
+    long expectedFinalBytesRead;
+    long expectedTotalBytesRead;
+
+    Object streamStatsStr;
+    try {
+      inputStream = fs.open(dest);
+      streamStatsStr = demandStringifyIOStatisticsSource(inputStream);
+
+      LOG.info("initial stream statistics {}", streamStatsStr);
+      readAndAssertBytesRead(inputStream, firstBytesToRead);
+      LOG.info("stream statistics after read {}", streamStatsStr);
       inputStream.unbuffer();
 
       // Validate that calling unbuffer updates the input stream statistics
-      bytesRead.assertDiffEquals(8);
+      bytesRead.assertDiffEquals(firstBytesToRead);
+      final long bytesInUnbuffer = bytesReadInClose.diff();
+      totalBytesRead.assertDiffEquals(firstBytesToRead + bytesInUnbuffer);
 
       // Validate that calling unbuffer twice in a row updates the statistics
       // correctly
-      readAndAssertBytesRead(inputStream, 4);
+      bytesReadInClose.reset();
+      bytesRead.reset();
+      readAndAssertBytesRead(inputStream, secondBytesToRead);
       inputStream.unbuffer();
-      bytesRead.assertDiffEquals(12);
+      LOG.info("stream statistics after second read {}", streamStatsStr);
+      bytesRead.assertDiffEquals(secondBytesToRead);
+      final long bytesInClose = bytesReadInClose.diff();
+      expectedFinalBytesRead = firstBytesToRead + secondBytesToRead;
+      expectedTotalBytesRead = expectedFinalBytesRead
+          + bytesInUnbuffer + bytesInClose;
+
+      totalBytesRead.assertDiffEquals(expectedTotalBytesRead);
     } finally {
+      LOG.info("Closing stream");
       IOUtils.closeStream(inputStream);
     }
+    LOG.info("stream statistics after close {}", streamStatsStr);
 
     // Validate that closing the file does not further change the statistics
-    bytesRead.assertDiffEquals(12);
+    totalBytesRead.assertDiffEquals(expectedTotalBytesRead);
 
     // Validate that the input stream stats are correct when the file is closed
-    assertEquals("S3AInputStream statistics were not updated properly", 12,
-            ((S3AInputStream) inputStream.getWrappedStream())
-                    .getS3AStreamStatistics().bytesRead);
+    S3AInputStreamStatistics streamStatistics = ((S3AInputStream) inputStream
+        .getWrappedStream())
+        .getS3AStreamStatistics();
+    Assertions.assertThat(streamStatistics)
+        .describedAs("Stream statistics %s", streamStatistics)
+        .hasFieldOrPropertyWithValue("bytesRead",
+            expectedFinalBytesRead)
+        .hasFieldOrPropertyWithValue("totalBytesRead", expectedTotalBytesRead);
+    assertEquals("S3AInputStream statistics were not updated properly in "
+        + streamStatsStr,
+        expectedFinalBytesRead,
+            streamStatistics.getBytesRead());
   }
 
   private boolean isObjectStreamOpen(FSDataInputStream inputStream) {

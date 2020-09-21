@@ -27,13 +27,20 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
-import org.apache.hadoop.fs.s3a.S3AInstrumentation;
+import org.apache.hadoop.fs.s3a.impl.statistics.S3AInputStreamStatistics;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
+import org.apache.hadoop.fs.statistics.MeanStatistic;
+import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.apache.hadoop.util.LineReader;
+
+import org.assertj.core.api.Assertions;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -46,6 +53,17 @@ import java.io.IOException;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatMinimumStatistic;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupMaximumStatistic;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupMeanStatistic;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyCounterStatisticValue;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsSourceToString;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToString;
+import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_HTTP_GET_REQUEST;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MAX;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MEAN;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MIN;
 
 /**
  * Look at the performance of S3a operations.
@@ -58,9 +76,12 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
   private Path testData;
   private FileStatus testDataStatus;
   private FSDataInputStream in;
-  private S3AInstrumentation.InputStreamStatistics streamStatistics;
+  private S3AInputStreamStatistics streamStatistics;
   public static final int BLOCK_SIZE = 32 * 1024;
   public static final int BIG_BLOCK_SIZE = 256 * 1024;
+
+  private static final IOStatisticsSnapshot IOSTATS = snapshotIOStatistics();
+
 
   /** Tests only run if the there is a named test file that can be read. */
   private boolean testDataAvailable = true;
@@ -106,7 +127,17 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
   public void cleanup() {
     describe("cleanup");
     IOUtils.closeStream(in);
+    if (in != null) {
+      LOG.info("Stream statistics {}",
+          ioStatisticsSourceToString(in));
+      IOSTATS.aggregate(in.getIOStatistics());
+    }
     IOUtils.closeStream(s3aFS);
+  }
+
+  @AfterClass
+  public static void dumpIOStatistics() {
+    LOG.info("Aggregate Stream Statistics {}", IOSTATS);
   }
 
   /**
@@ -187,7 +218,7 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
    */
   private void assertOpenOperationCount(long expected) {
     assertEquals("open operations in\n" + in,
-        expected, streamStatistics.openOperations);
+        expected, streamStatistics.getOpenOperations());
   }
 
   /**
@@ -295,7 +326,7 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
     logTimePerIOP("seek()", timer, blockCount);
     logStreamStatistics();
     assertOpenOperationCount(0);
-    assertEquals("bytes read", 0, streamStatistics.bytesRead);
+    assertEquals("bytes read", 0, streamStatistics.getBytesRead());
   }
 
   @Test
@@ -320,7 +351,7 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
   @Test
   public void testDecompressionSequential128K() throws Throwable {
     describe("Decompress with a 128K readahead");
-    executeDecompression(128 * 1024, S3AInputPolicy.Sequential);
+    executeDecompression(128 * _1KB, S3AInputPolicy.Sequential);
     assertStreamOpenedExactlyOnce();
   }
 
@@ -339,9 +370,11 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
     int lines = 0;
 
     FSDataInputStream objectIn = openTestFile(inputPolicy, readahead);
+    IOStatistics readerStatistics = null;
     ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
     try (LineReader lineReader = new LineReader(
         codec.createInputStream(objectIn), getConf())) {
+      readerStatistics = lineReader.getIOStatistics();
       Text line = new Text();
       int read;
       while ((read = lineReader.readLine(line)) > 0) {
@@ -359,6 +392,9 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
         readahead);
     logTimePerIOP("line read", timer, lines);
     logStreamStatistics();
+    assertNotNull("No IOStatistics through line reader", readerStatistics);
+    LOG.info("statistics from reader {}",
+        ioStatisticsToString(readerStatistics));
   }
 
   private void logStreamStatistics() {
@@ -391,8 +427,8 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
         readahead);
     logTimePerIOP("seek(pos + " + blockCount+"); read()", timer, blockCount);
     LOG.info("Effective bandwidth {} MB/S",
-        timer.bandwidthDescription(streamStatistics.bytesRead -
-            streamStatistics.bytesSkippedOnSeek));
+        timer.bandwidthDescription(streamStatistics.getBytesRead() -
+            streamStatistics.getBytesSkippedOnSeek()));
     logStreamStatistics();
   }
 
@@ -419,7 +455,7 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
   public void testRandomIORandomPolicy() throws Throwable {
     executeRandomIO(S3AInputPolicy.Random, (long) RANDOM_IO_SEQUENCE.length);
     assertEquals("streams aborted in " + streamStatistics,
-        0, streamStatistics.aborted);
+        0, streamStatistics.getAborted());
   }
 
   @Test
@@ -427,11 +463,21 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
     long expectedOpenCount = RANDOM_IO_SEQUENCE.length;
     executeRandomIO(S3AInputPolicy.Normal, expectedOpenCount);
     assertEquals("streams aborted in " + streamStatistics,
-        1, streamStatistics.aborted);
+        1, streamStatistics.getAborted());
     assertEquals("policy changes in " + streamStatistics,
-        2, streamStatistics.policySetCount);
+        2, streamStatistics.getPolicySetCount());
     assertEquals("input policy in " + streamStatistics,
-        S3AInputPolicy.Random.ordinal(), streamStatistics.inputPolicy);
+        S3AInputPolicy.Random.ordinal(),
+        streamStatistics.getInputPolicy());
+    IOStatistics ioStatistics = streamStatistics.getIOStatistics();
+    verifyCounterStatisticValue(
+        ioStatistics,
+        StreamStatisticNames.STREAM_READ_ABORTED,
+        1);
+    verifyCounterStatisticValue(
+        ioStatistics,
+        StreamStatisticNames.STREAM_READ_SEEK_POLICY_CHANGED,
+        2);
   }
 
   /**
@@ -466,9 +512,22 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
     assertOpenOperationCount(expectedOpenCount);
     logTimePerIOP("byte read", timer, totalBytesRead);
     LOG.info("Effective bandwidth {} MB/S",
-        timer.bandwidthDescription(streamStatistics.bytesRead -
-            streamStatistics.bytesSkippedOnSeek));
+        timer.bandwidthDescription(streamStatistics.getBytesRead() -
+            streamStatistics.getBytesSkippedOnSeek()));
     logStreamStatistics();
+    IOStatistics iostats = in.getIOStatistics();
+    long maxHttpGet = lookupMaximumStatistic(iostats,
+        ACTION_HTTP_GET_REQUEST + SUFFIX_MAX);
+    assertThatMinimumStatistic(iostats,
+        ACTION_HTTP_GET_REQUEST + SUFFIX_MIN)
+        .isGreaterThan(0)
+        .isLessThan(maxHttpGet);
+    MeanStatistic getMeanStat = lookupMeanStatistic(iostats,
+        ACTION_HTTP_GET_REQUEST + SUFFIX_MEAN);
+    Assertions.assertThat(getMeanStat.getSamples())
+        .describedAs("sample count of %s", getMeanStat)
+        .isEqualTo(expectedOpenCount);
+
     return timer;
   }
 
@@ -525,7 +584,7 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
               + " current position in stream " + currentPos
               + " in\n" + fs
               + "\n " + in,
-          1, streamStatistics.openOperations);
+          1, streamStatistics.getOpenOperations());
       for (int i = currentPos; i < currentPos + read; i++) {
         assertEquals("Wrong value from byte " + i,
             sourceData[i], buffer[i]);

@@ -25,8 +25,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import com.amazonaws.event.ProgressEvent;
 import com.amazonaws.event.ProgressEventType;
 import com.amazonaws.event.ProgressListener;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.s3a.S3ATestUtils;
+import org.assertj.core.api.Assertions;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
@@ -36,17 +35,23 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.s3a.S3AInstrumentation;
+import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.fs.s3a.impl.statistics.BlockOutputStreamStatistics;
+import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.util.Progressable;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringifyIOStatistics;
+import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
+import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
 
 /**
  * Scale test which creates a huge file.
@@ -103,7 +108,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
         KEY_HUGE_PARTITION_SIZE,
         DEFAULT_HUGE_PARTITION_SIZE);
     assertTrue("Partition size too small: " + partitionSize,
-        partitionSize > MULTIPART_MIN_SIZE);
+        partitionSize >= MULTIPART_MIN_SIZE);
     conf.setLong(SOCKET_SEND_BUFFER, _1MB);
     conf.setLong(SOCKET_RECV_BUFFER, _1MB);
     conf.setLong(MIN_MULTIPART_THRESHOLD, partitionSize);
@@ -170,7 +175,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     Statistic putBytesPending = Statistic.OBJECT_PUT_BYTES_PENDING;
 
     ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
-    S3AInstrumentation.OutputStreamStatistics streamStatistics;
+    BlockOutputStreamStatistics streamStatistics;
     long blocksPer10MB = blocksPerMB * 10;
     ProgressCallback progress = new ProgressCallback(timer);
     try (FSDataOutputStream out = fs.create(fileToCreate,
@@ -221,8 +226,20 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     logFSState();
     bandwidth(timer, filesize);
     LOG.info("Statistics after stream closed: {}", streamStatistics);
+    IOStatistics iostats = snapshotIOStatistics(
+        retrieveIOStatistics(getFileSystem()));
+    LOG.info("IOStatistics after upload: {}",
+        demandStringifyIOStatistics(iostats));
     long putRequestCount = storageStatistics.getLong(putRequests);
     Long putByteCount = storageStatistics.getLong(putBytes);
+    Assertions.assertThat(putRequestCount)
+        .describedAs("Put request count from filesystem stats %s",
+            iostats)
+        .isGreaterThan(0);
+    Assertions.assertThat(putByteCount)
+        .describedAs("putByteCount count from filesystem stats %s",
+            iostats)
+        .isGreaterThan(0);
     LOG.info("PUT {} bytes in {} operations; {} MB/operation",
         putByteCount, putRequestCount,
         putByteCount / (putRequestCount * _1MB));
@@ -234,7 +251,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
         "Put file " + fileToCreate + " of size " + filesize);
     if (streamStatistics != null) {
       assertEquals("actively allocated blocks in " + streamStatistics,
-          0, streamStatistics.blocksActivelyAllocated());
+          0, streamStatistics.getBlocksActivelyAllocated());
     }
   }
 
