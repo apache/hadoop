@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultEntrySchema;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLIENT_CORRELATIONID;
@@ -91,17 +92,30 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   }
 
   @Test
-  public void testClientCorrelation()
-          throws IOException {
-    AbfsConfiguration conf = this.getConfiguration();
-    String clientCorrelationId = "alid-corr-id-123";
+  public void testClientCorrelation() throws IOException {
+//    AbfsConfiguration conf = this.getConfiguration();
+    String[] clientCorrelationIds = {"valid-corr-id-123", "inval!d", ""};
+//    checkRequest(conf, clientCorrelationIds[0], 1);
+//    checkRequest(conf, clientCorrelationIds[1], 0);
+//    checkRequest(conf, clientCorrelationIds[2], 0);
 
-    conf.set(FS_AZURE_CLIENT_CORRELATIONID, clientCorrelationId);
+      checkRequest(clientCorrelationIds[0], 1);
+      checkRequest(clientCorrelationIds[1], 0);
+      checkRequest(clientCorrelationIds[2], 0);
+  }
+
+//  public void checkRequest(AbfsConfiguration conf,
+  public void checkRequest(
+               String clientCorrelationId, int valid) throws IOException {
+//    AbfsConfiguration conf = this.getConfiguration();
+//    conf.set(FS_AZURE_CLIENT_CORRELATIONID, clientCorrelationId);
+    this.getConfiguration().set(FS_AZURE_CLIENT_CORRELATIONID, clientCorrelationId);
     AbfsClient client = this.getFileSystem().getAbfsClient();
 
     AbfsRestOperation op = client.deleteFilesystem();
 
-    System.out.println(op.getResult().getStatusCode());
+    System.out.println("req prop" + op.getResult().getUrl().openConnection()
+            .getRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID));
     int responseCode = op.getResult().getStatusCode();
     Assert.assertTrue("Request should not fail",
             responseCode < 400 || responseCode >= 500
@@ -110,11 +124,13 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     String responseHeader = op.getResult()
             .getResponseHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
     System.out.println("response header -- " + responseHeader);
-
-    Assertions.assertThat(responseHeader).describedAs("Should contain request IDs")
+    if (valid == 1)
+      Assertions.assertThat(responseHeader).describedAs("Should contain request IDs")
             .startsWith(clientCorrelationId);
-
-
+    else
+      Assertions.assertThat(responseHeader)
+              .describedAs("Invalid or empty correlationId value" +
+              " should be converted to empty string").startsWith(":");
   }
 
   @Test
