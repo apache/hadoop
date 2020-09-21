@@ -80,8 +80,7 @@ public class AtomicFileOutputStream extends FilterOutputStream {
             try {
               Files.delete(origFile.toPath());
             } catch (IOException e) {
-              throw new IOException("Could not delete original file " + origFile
-                  + " due to: " + e);
+              throw new IOException("Could not delete original file " + origFile, e);
             }
           }
           try {
