@@ -549,6 +549,13 @@ public final class Constants {
   @InterfaceStability.Unstable
   public static final String INPUT_FADV_RANDOM = "random";
 
+  /**
+   * Gauge name for the input policy : {@value}.
+   * This references an enum currently exclusive to the S3A stream.
+   */
+  public static final String STREAM_READ_GAUGE_INPUT_POLICY =
+      "stream_read_gauge_input_policy";
+
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
   public static final String S3_CLIENT_FACTORY_IMPL =

@@ -39,11 +39,13 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase;
+import org.apache.hadoop.fs.s3a.impl.statistics.CommitterStatistics;
+import org.apache.hadoop.fs.s3a.impl.statistics.EmptyS3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.util.Progressable;
 
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Relays FS calls to the mocked FS, allows for some extra logging with
@@ -83,8 +85,6 @@ public class MockS3AFileSystem extends S3AFileSystem {
    * mock FS.
    */
   private int logEvents = LOG_NAME;
-  private final S3AInstrumentation instrumentation =
-      new S3AInstrumentation(FS_URI);
   private Configuration conf;
   private WriteOperationHelper writeHelper;
 
@@ -146,12 +146,12 @@ public class MockS3AFileSystem extends S3AFileSystem {
   public void initialize(URI name, Configuration originalConf)
       throws IOException {
     conf = originalConf;
-    writeHelper = new WriteOperationHelper(this, conf);
+    writeHelper = new WriteOperationHelper(this, conf,
+        new EmptyS3AStatisticsContext());
   }
 
   @Override
   public void close() {
-    cleanupWithLogger(LOG, instrumentation);
   }
 
   @Override
@@ -359,12 +359,13 @@ public class MockS3AFileSystem extends S3AFileSystem {
   }
 
   @Override
-  public S3AInstrumentation.CommitterStatistics newCommitterStatistics() {
-    return instrumentation.newCommitterStatistics();
+  public CommitterStatistics newCommitterStatistics() {
+    return EmptyS3AStatisticsContext.EMPTY_COMMITTER_STATISTICS;
   }
 
   @Override
   public void operationRetried(Exception ex) {
     /** no-op */
   }
+
 }

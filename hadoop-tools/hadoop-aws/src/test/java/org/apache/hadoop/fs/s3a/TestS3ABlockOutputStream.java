@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.commit.PutTracker;
+import org.apache.hadoop.fs.s3a.impl.statistics.EmptyS3AStatisticsContext;
 import org.apache.hadoop.util.Progressable;
 import org.junit.Before;
 import org.junit.Test;
@@ -50,11 +51,10 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
     S3ADataBlocks.BlockFactory blockFactory =
         mock(S3ADataBlocks.BlockFactory.class);
     long blockSize = Constants.DEFAULT_MULTIPART_SIZE;
-    S3AInstrumentation.OutputStreamStatistics statistics = null;
     WriteOperationHelper oHelper = mock(WriteOperationHelper.class);
     PutTracker putTracker = mock(PutTracker.class);
     stream = spy(new S3ABlockOutputStream(fs, "", executorService,
-      progressable, blockSize, blockFactory, statistics, oHelper,
+      progressable, blockSize, blockFactory, null, oHelper,
       putTracker));
   }
 
@@ -70,7 +70,8 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
     S3AFileSystem s3a = mock(S3AFileSystem.class);
     when(s3a.getBucket()).thenReturn("bucket");
     WriteOperationHelper woh = new WriteOperationHelper(s3a,
-        new Configuration());
+        new Configuration(),
+        new EmptyS3AStatisticsContext());
     ByteArrayInputStream inputStream = new ByteArrayInputStream(
         "a".getBytes());
     // first one works

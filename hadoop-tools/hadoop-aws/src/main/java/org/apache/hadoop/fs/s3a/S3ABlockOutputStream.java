@@ -49,10 +49,15 @@ import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.PutTracker;
+import org.apache.hadoop.fs.s3a.impl.statistics.BlockOutputStreamStatistics;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.util.Progressable;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.emptyStatistics;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**
@@ -67,7 +72,7 @@ import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 class S3ABlockOutputStream extends OutputStream implements
-    StreamCapabilities {
+    StreamCapabilities, IOStatisticsSource {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(S3ABlockOutputStream.class);
@@ -80,6 +85,9 @@ class S3ABlockOutputStream extends OutputStream implements
 
   /** Size of all blocks. */
   private final int blockSize;
+
+  /** IO Statistics. */
+  private final IOStatistics iostatistics;
 
   /** Total bytes for uploads submitted so far. */
   private long bytesSubmitted;
@@ -109,7 +117,7 @@ class S3ABlockOutputStream extends OutputStream implements
   private long blockCount = 0;
 
   /** Statistics to build up. */
-  private final S3AInstrumentation.OutputStreamStatistics statistics;
+  private final BlockOutputStreamStatistics statistics;
 
   /**
    * Write operation helper; encapsulation of the filesystem operations.
@@ -146,7 +154,7 @@ class S3ABlockOutputStream extends OutputStream implements
       Progressable progress,
       long blockSize,
       S3ADataBlocks.BlockFactory blockFactory,
-      S3AInstrumentation.OutputStreamStatistics statistics,
+      BlockOutputStreamStatistics statistics,
       WriteOperationHelper writeOperationHelper,
       PutTracker putTracker)
       throws IOException {
@@ -155,6 +163,10 @@ class S3ABlockOutputStream extends OutputStream implements
     this.blockFactory = blockFactory;
     this.blockSize = (int) blockSize;
     this.statistics = statistics;
+    // test instantiations may not provide statistics;
+    this.iostatistics = statistics != null
+        ? statistics.getIOStatistics()
+        : emptyStatistics();
     this.writeOperationHelper = writeOperationHelper;
     this.putTracker = putTracker;
     Preconditions.checkArgument(blockSize >= Constants.MULTIPART_MIN_SIZE,
@@ -282,6 +294,7 @@ class S3ABlockOutputStream extends OutputStream implements
     if (len == 0) {
       return;
     }
+    statistics.writeBytes(len);
     S3ADataBlocks.DataBlock block = createBlockIfNeeded();
     int written = block.write(source, offset, len);
     int remainingCapacity = block.remainingCapacity();
@@ -382,7 +395,8 @@ class S3ABlockOutputStream extends OutputStream implements
         // then complete the operation
         if (putTracker.aboutToComplete(multiPartUpload.getUploadId(),
             partETags,
-            bytes)) {
+            bytes,
+            iostatistics)) {
           multiPartUpload.complete(partETags);
         } else {
           LOG.info("File {} will be visible when the job is committed", key);
@@ -473,6 +487,8 @@ class S3ABlockOutputStream extends OutputStream implements
     if (block != null) {
       sb.append(", activeBlock=").append(block);
     }
+    sb.append(" Statistics=")
+        .append(IOStatisticsLogging.ioStatisticsSourceToString(this));
     sb.append('}');
     return sb.toString();
   }
@@ -493,7 +509,7 @@ class S3ABlockOutputStream extends OutputStream implements
    * Get the statistics for this stream.
    * @return stream statistics
    */
-  S3AInstrumentation.OutputStreamStatistics getStatistics() {
+  BlockOutputStreamStatistics getStatistics() {
     return statistics;
   }
 
@@ -520,9 +536,18 @@ class S3ABlockOutputStream extends OutputStream implements
     case StreamCapabilities.HSYNC:
       return false;
 
+      // yes, we do statistics.
+    case StreamCapabilities.IOSTATISTICS:
+      return true;
+
     default:
       return false;
     }
+  }
+
+  @Override
+  public IOStatistics getIOStatistics() {
+    return iostatistics;
   }
 
   /**

@@ -22,8 +22,11 @@ import java.io.Closeable;
 
 /**
  * Statistics for the S3A multipart uploader.
+ * It is expected to act as the statistics source for
+ * the uploader.
  */
-public interface S3AMultipartUploaderStatistics extends Closeable {
+public interface S3AMultipartUploaderStatistics extends Closeable,
+    S3AStatisticInterface {
 
   void instantiated();
 
