@@ -179,27 +179,27 @@ public final class IOStatisticsSnapshot
   }
 
   @Override
-  public Map<String, Long> counters() {
+  public synchronized Map<String, Long> counters() {
     return counters;
   }
 
   @Override
-  public Map<String, Long> gauges() {
+  public synchronized Map<String, Long> gauges() {
     return gauges;
   }
 
   @Override
-  public Map<String, Long> minimums() {
+  public synchronized Map<String, Long> minimums() {
     return minimums;
   }
 
   @Override
-  public Map<String, Long> maximums() {
+  public synchronized Map<String, Long> maximums() {
     return maximums;
   }
 
   @Override
-  public Map<String, MeanStatistic> meanStatistics() {
+  public synchronized Map<String, MeanStatistic> meanStatistics() {
     return meanStatistics;
   }
 
