@@ -346,6 +346,7 @@ public class ITestAzureBlobFileSystemCreate extends
 
     AzureBlobFileSystemStore abfsStore = fs.getAbfsStore();
     abfsStore = setAzureBlobSystemStoreField(abfsStore, "client", mockClient);
+    boolean isNamespaceEnabled = abfsStore.getIsNamespaceEnabled();
 
     AbfsRestOperation successOp = mock(
         AbfsRestOperation.class);
@@ -363,6 +364,7 @@ public class ITestAzureBlobFileSystemCreate extends
     AbfsRestOperationException preConditionResponseEx
         = getMockAbfsRestOperationException(HTTP_PRECON_FAILED);
 
+    // mock for overwrite=false
     doThrow(conflictResponseEx) // Scn1: GFS fails with Http404
         .doThrow(conflictResponseEx) // Scn2: GFS fails with Http500
         .doThrow(
@@ -372,8 +374,10 @@ public class ITestAzureBlobFileSystemCreate extends
         .doThrow(
             serverErrorResponseEx) // Scn5: create overwrite=false fails with Http500
         .when(mockClient)
-        .createPath(any(String.class), eq(true), eq(false), any(String.class),
-            any(String.class), any(boolean.class), eq(null));
+        .createPath(any(String.class), eq(true), eq(false),
+            isNamespaceEnabled ? any(String.class) : eq(null),
+            isNamespaceEnabled ? any(String.class) : eq(null),
+            any(boolean.class), eq(null));
 
     doThrow(fileNotFoundResponseEx) // Scn1: GFS fails with Http404
         .doThrow(serverErrorResponseEx) // Scn2: GFS fails with Http500
@@ -382,13 +386,16 @@ public class ITestAzureBlobFileSystemCreate extends
         .when(mockClient)
         .getPathStatus(any(String.class), eq(false));
 
+    // mock for overwrite=true
     doThrow(
         preConditionResponseEx) // Scn3: create overwrite=true fails with Http412
         .doThrow(
             serverErrorResponseEx) // Scn4: create overwrite=true fails with Http500
         .when(mockClient)
-        .createPath(any(String.class), eq(true), eq(true), any(String.class),
-            any(String.class), any(boolean.class), eq(null));
+        .createPath(any(String.class), eq(true), eq(true),
+            isNamespaceEnabled ? any(String.class) : eq(null),
+            isNamespaceEnabled ? any(String.class) : eq(null),
+            any(boolean.class), eq(null));
 
     // Scn1: GFS fails with Http404
     // Sequence of events expected:
