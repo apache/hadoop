@@ -1084,10 +1084,12 @@ public class TestWebHDFS {
     webHdfs.setQuotaByStorageType(path, StorageType.DISK, spaceQuota);
     webHdfs.setQuotaByStorageType(path, StorageType.ARCHIVE, spaceQuota);
     webHdfs.setQuotaByStorageType(path, StorageType.SSD, spaceQuota);
+    webHdfs.setQuotaByStorageType(path, StorageType.NVDIMM, spaceQuota);
     quotaUsage = dfs.getQuotaUsage(path);
     assertEquals(spaceQuota, quotaUsage.getTypeQuota(StorageType.DISK));
     assertEquals(spaceQuota, quotaUsage.getTypeQuota(StorageType.ARCHIVE));
     assertEquals(spaceQuota, quotaUsage.getTypeQuota(StorageType.SSD));
+    assertEquals(spaceQuota, quotaUsage.getTypeQuota(StorageType.NVDIMM));
 
     // Test invalid parameters
 
