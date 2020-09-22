@@ -108,10 +108,8 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     AbfsRestOperation op = client.getFilesystemProperties();
 
     int responseCode = op.getResult().getStatusCode();
-    Assert.assertTrue("Request should succeed with 200 status code", responseCode == 200);
-
+    assertEquals("Status code", 200, responseCode);
     String responseHeader = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
-    System.out.println(includeInHeader + clientCorrelationId + responseHeader);
     if (includeInHeader) {
       Assertions.assertThat(responseHeader).describedAs("Should contain request IDs")
               .startsWith(clientCorrelationId);
