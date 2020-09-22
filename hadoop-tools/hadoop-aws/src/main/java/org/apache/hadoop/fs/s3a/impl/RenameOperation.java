@@ -243,12 +243,9 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
    */
   private void queueToDelete(
       List<DirMarkerTracker.Marker> markersToDelete) {
-    markersToDelete.forEach(this::queueToDelete);
-    // TODO
     markersToDelete.forEach(m -> queueToDelete(
         null,
-        m.getKey(),
-        m.getStatus().getVersionId()));
+        m.getKey()));
   }
 
   /**
