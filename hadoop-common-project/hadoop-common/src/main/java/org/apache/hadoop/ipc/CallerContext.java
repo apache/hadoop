@@ -36,6 +36,7 @@ import java.util.Arrays;
 @InterfaceStability.Evolving
 public final class CallerContext {
   public static final Charset SIGNATURE_ENCODING = StandardCharsets.UTF_8;
+  public static final String ITEM_SEPARATOR = "\\$";
   /** The caller context.
    *
    * It will be truncated if it exceeds the maximum allowed length in
@@ -69,6 +70,10 @@ public final class CallerContext {
 
   @InterfaceAudience.Private
   public boolean isContextValid() {
+    return isContextValid(context);
+  }
+
+  public static boolean isContextValid(String context) {
     return context != null && !context.isEmpty();
   }
 
@@ -109,16 +114,62 @@ public final class CallerContext {
 
   /** The caller context builder. */
   public static final class Builder {
-    private final String context;
+    private String context;
     private byte[] signature;
 
     public Builder(String context) {
       this.context = context;
     }
 
+    public Builder(String key, String value, String separator) {
+      this.context = key + separator + value;
+    }
+
     public Builder setSignature(byte[] signature) {
       if (signature != null && signature.length > 0) {
         this.signature = Arrays.copyOf(signature, signature.length);
+      }
+      return this;
+    }
+
+    /**
+     * Append new item to the context.
+     * @param item
+     * @return builder
+     */
+    public Builder append(String item) {
+      if (CallerContext.isContextValid(context)) {
+        this.context = new StringBuilder(context)
+            .append(CallerContext.ITEM_SEPARATOR)
+            .append(item)
+            .toString();
+      } else {
+        this.context = item;
+      }
+      return this;
+    }
+
+    /**
+     * Append new item which contains key and value to the context.
+     * @param key
+     * @param value
+     * @param separator
+     * @return builder
+     */
+    public Builder append(String key, String value, String separator) {
+      if (CallerContext.isContextValid(context)) {
+        this.context = new StringBuilder(context)
+            .append(CallerContext.ITEM_SEPARATOR)
+            .append(key)
+            .append(separator)
+            .append(value)
+            .toString();
+      } else {
+        this.context = new StringBuilder(context)
+            .append(key)
+            .append(separator)
+            .append(value)
+            .toString();
       }
       return this;
     }
