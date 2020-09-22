@@ -93,11 +93,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testClientCorrelation() throws IOException {
-//    AbfsConfiguration conf = this.getConfiguration();
     String[] clientCorrelationIds = {"valid-corr-id-123", "inval!d", ""};
-//    checkRequest(conf, clientCorrelationIds[0], 1);
-//    checkRequest(conf, clientCorrelationIds[1], 0);
-//    checkRequest(conf, clientCorrelationIds[2], 0);
 
       checkRequest(clientCorrelationIds[0], 1);
       checkRequest(clientCorrelationIds[1], 0);
@@ -107,15 +103,15 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 //  public void checkRequest(AbfsConfiguration conf,
   public void checkRequest(
                String clientCorrelationId, int valid) throws IOException {
-//    AbfsConfiguration conf = this.getConfiguration();
-//    conf.set(FS_AZURE_CLIENT_CORRELATIONID, clientCorrelationId);
+
     this.getConfiguration().set(FS_AZURE_CLIENT_CORRELATIONID, clientCorrelationId);
     AbfsClient client = this.getFileSystem().getAbfsClient();
-
+    this.getConfiguration().setClientCorrelationID(clientCorrelationId);
+    String corrected = this.getConfiguration().getClientCorrelationID();
+    client.setClientCorrelationId(corrected);
+//  System.out.println("config" + this.getConfiguration().getClientCorrelationID());
     AbfsRestOperation op = client.deleteFilesystem();
 
-    System.out.println("req prop" + op.getResult().getUrl().openConnection()
-            .getRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID));
     int responseCode = op.getResult().getStatusCode();
     Assert.assertTrue("Request should not fail",
             responseCode < 400 || responseCode >= 500
