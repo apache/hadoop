@@ -258,8 +258,8 @@ public final class MeanStatistic implements Serializable, Cloneable {
       // if we are empty, then so must the other.
       return that.isEmpty();
     }
-    return sum == that.sum &&
-        samples == that.samples;
+    return getSum() == that.getSum() &&
+        getSamples() == that.getSamples();
   }
 
   @Override
