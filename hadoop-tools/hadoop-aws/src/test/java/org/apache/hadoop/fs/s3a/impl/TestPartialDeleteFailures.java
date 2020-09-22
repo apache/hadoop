@@ -37,6 +37,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
+import org.apache.hadoop.fs.s3a.test.OperationTrackingStore;
 
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.ACCESS_DENIED;
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.removeUndeletedPaths;
@@ -65,7 +66,7 @@ public class TestPartialDeleteFailures {
   @Before
   public void setUp() throws Exception {
     context = S3ATestUtils.createMockStoreContext(true,
-        new S3ATestUtils.OperationTrackingStore(), CONTEXT_ACCESSORS);
+        new OperationTrackingStore(), CONTEXT_ACCESSORS);
   }
 
   @Test
@@ -190,8 +191,8 @@ public class TestPartialDeleteFailures {
             new MultiObjectDeleteSupport.KeyPath(keyAB, pathAB, true));
     MultiObjectDeleteException ex = createDeleteException(ACCESS_DENIED,
         forbiddenKP);
-    S3ATestUtils.OperationTrackingStore store
-        = new S3ATestUtils.OperationTrackingStore();
+    OperationTrackingStore store
+        = new OperationTrackingStore();
     StoreContext storeContext = S3ATestUtils
             .createMockStoreContext(true, store, CONTEXT_ACCESSORS);
     MultiObjectDeleteSupport deleteSupport

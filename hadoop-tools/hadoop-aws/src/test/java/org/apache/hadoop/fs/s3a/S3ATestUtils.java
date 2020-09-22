@@ -37,19 +37,13 @@ import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
-import org.apache.hadoop.fs.s3a.impl.ListingOperationCallbacks;
-import org.apache.hadoop.fs.s3a.impl.OperationCallbacks;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
-import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
-import org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata;
-import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStoreCapabilities;
-import org.apache.hadoop.fs.s3a.s3guard.PathMetadata;
-import org.apache.hadoop.fs.s3a.s3guard.RenameTracker;
 import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
+import org.apache.hadoop.fs.s3a.test.OperationTrackingStore;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -61,13 +55,7 @@ import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 import org.apache.hadoop.util.ReflectionUtils;
 
-import com.amazonaws.AmazonClientException;
 import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.DeleteObjectsResult;
-import com.amazonaws.services.s3.model.MultiObjectDeleteException;
-import com.amazonaws.services.s3.transfer.model.CopyResult;
-import javax.annotation.Nullable;
 import org.hamcrest.core.Is;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -82,8 +70,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -1546,292 +1532,4 @@ public final class S3ATestUtils {
         probes);
   }
 
-  public static class MinimalOperationCallbacks
-          implements OperationCallbacks {
-    @Override
-    public S3ObjectAttributes createObjectAttributes(
-            Path path,
-            String eTag,
-            String versionId,
-            long len) {
-      return null;
-    }
-
-    @Override
-    public S3ObjectAttributes createObjectAttributes(
-            S3AFileStatus fileStatus) {
-      return null;
-    }
-
-    @Override
-    public S3AReadOpContext createReadContext(
-            FileStatus fileStatus) {
-      return null;
-    }
-
-    @Override
-    public void finishRename(
-            Path sourceRenamed,
-            Path destCreated)
-            throws IOException {
-
-    }
-
-    @Override
-    public void deleteObjectAtPath(
-            Path path,
-            String key,
-            boolean isFile,
-            BulkOperationState operationState)
-            throws IOException {
-
-    }
-
-    @Override
-    public RemoteIterator<S3ALocatedFileStatus> listFilesAndEmptyDirectories(
-            Path path,
-            S3AFileStatus status,
-            boolean collectTombstones,
-            boolean includeSelf)
-            throws IOException {
-      return null;
-    }
-
-    @Override
-    public CopyResult copyFile(
-            String srcKey,
-            String destKey,
-            S3ObjectAttributes srcAttributes,
-            S3AReadOpContext readContext)
-            throws IOException {
-      return null;
-    }
-
-    @Override
-    public DeleteObjectsResult removeKeys(
-            List<DeleteObjectsRequest.KeyVersion> keysToDelete,
-            boolean deleteFakeDir,
-            List<Path> undeletedObjectsOnFailure,
-            BulkOperationState operationState,
-            boolean quiet)
-            throws MultiObjectDeleteException, AmazonClientException,
-            IOException {
-      return null;
-    }
-
-    @Override
-    public boolean allowAuthoritative(Path p) {
-      return false;
-    }
-
-    @Override
-    public RemoteIterator<S3AFileStatus> listObjects(
-            Path path,
-            String key)
-            throws IOException {
-      return null;
-    }
-  }
-
-  /**
-   * MetadataStore which tracks what is deleted and added.
-   */
-  public static class OperationTrackingStore implements MetadataStore {
-
-    private final List<Path> deleted = new ArrayList<>();
-
-    private final List<Path> created = new ArrayList<>();
-
-    @Override
-    public void initialize(final FileSystem fs,
-        ITtlTimeProvider ttlTimeProvider) {
-    }
-
-    @Override
-    public void initialize(final Configuration conf,
-        ITtlTimeProvider ttlTimeProvider) {
-    }
-
-    @Override
-    public void forgetMetadata(final Path path) {
-    }
-
-    @Override
-    public PathMetadata get(final Path path) {
-      return null;
-    }
-
-    @Override
-    public PathMetadata get(final Path path,
-        final boolean wantEmptyDirectoryFlag) {
-      return null;
-    }
-
-    @Override
-    public DirListingMetadata listChildren(final Path path) {
-      return null;
-    }
-
-    @Override
-    public void put(final PathMetadata meta) {
-      put(meta, null);
-    }
-
-    @Override
-    public void put(final PathMetadata meta,
-        final BulkOperationState operationState) {
-      created.add(meta.getFileStatus().getPath());
-    }
-
-    @Override
-    public void put(final Collection<? extends PathMetadata> metas,
-        final BulkOperationState operationState) {
-      metas.stream().forEach(meta -> put(meta, null));
-    }
-
-    @Override
-    public void put(final DirListingMetadata meta,
-        final List<Path> unchangedEntries,
-        final BulkOperationState operationState) {
-      created.add(meta.getPath());
-    }
-
-    @Override
-    public void destroy() {
-    }
-
-    @Override
-    public void delete(final Path path,
-        final BulkOperationState operationState) {
-      deleted.add(path);
-    }
-
-    @Override
-    public void deletePaths(final Collection<Path> paths,
-        @Nullable final BulkOperationState operationState)
-            throws IOException {
-      deleted.addAll(paths);
-    }
-
-    @Override
-    public void deleteSubtree(final Path path,
-        final BulkOperationState operationState) {
-
-    }
-
-    @Override
-    public void move(@Nullable final Collection<Path> pathsToDelete,
-        @Nullable final Collection<PathMetadata> pathsToCreate,
-        @Nullable final BulkOperationState operationState) {
-    }
-
-    @Override
-    public void prune(final PruneMode pruneMode, final long cutoff) {
-    }
-
-    @Override
-    public long prune(final PruneMode pruneMode,
-        final long cutoff,
-        final String keyPrefix) {
-      return 0;
-    }
-
-    @Override
-    public BulkOperationState initiateBulkWrite(
-        final BulkOperationState.OperationType operation,
-        final Path dest) {
-      return null;
-    }
-
-    @Override
-    public void setTtlTimeProvider(ITtlTimeProvider ttlTimeProvider) {
-    }
-
-    @Override
-    public Map<String, String> getDiagnostics() {
-      return null;
-    }
-
-    @Override
-    public void updateParameters(final Map<String, String> parameters) {
-    }
-
-    @Override
-    public void close() {
-    }
-
-    public List<Path> getDeleted() {
-      return deleted;
-    }
-
-    public List<Path> getCreated() {
-      return created;
-    }
-
-    @Override
-    public RenameTracker initiateRenameOperation(
-        final StoreContext storeContext,
-        final Path source,
-        final S3AFileStatus sourceStatus,
-        final Path dest) {
-      throw new UnsupportedOperationException("unsupported");
-    }
-
-    @Override
-    public void addAncestors(final Path qualifiedPath,
-        @Nullable final BulkOperationState operationState) {
-
-    }
-  }
-
-  public static class MinimalListingOperationCallbacks
-          implements ListingOperationCallbacks {
-    @Override
-    public CompletableFuture<S3ListResult> listObjectsAsync(
-            S3ListRequest request)
-            throws IOException {
-      return null;
-    }
-
-    @Override
-    public CompletableFuture<S3ListResult> continueListObjectsAsync(
-            S3ListRequest request,
-            S3ListResult prevResult)
-            throws IOException {
-      return null;
-    }
-
-    @Override
-    public S3ALocatedFileStatus toLocatedFileStatus(
-            S3AFileStatus status) throws IOException {
-      return null;
-    }
-
-    @Override
-    public S3ListRequest createListObjectsRequest(
-            String key,
-            String delimiter) {
-      return null;
-    }
-
-    @Override
-    public long getDefaultBlockSize(Path path) {
-      return 0;
-    }
-
-    @Override
-    public int getMaxKeys() {
-      return 0;
-    }
-
-    @Override
-    public ITtlTimeProvider getUpdatedTtlTimeProvider() {
-      return null;
-    }
-
-    @Override
-    public boolean allowAuthoritative(Path p) {
-      return false;
-    }
-  }
 }
