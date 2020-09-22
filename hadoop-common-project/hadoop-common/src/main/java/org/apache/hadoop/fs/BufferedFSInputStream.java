@@ -23,7 +23,6 @@ import java.io.FileDescriptor;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.IntFunction;
 
 import org.apache.hadoop.classification.InterfaceAudience;

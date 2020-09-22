@@ -73,9 +73,10 @@ public class AsyncReaderUtils {
    * @param allocate the function to allocate ByteBuffers
    * @return the CompletableFuture that contains the read data
    */
-  public static CompletableFuture<ByteBuffer> readRangeFrom(PositionedReadable stream,
-                                                            FileRange range,
-                                                            IntFunction<ByteBuffer> allocate) {
+  public static
+  CompletableFuture<ByteBuffer> readRangeFrom(PositionedReadable stream,
+                                              FileRange range,
+                                              IntFunction<ByteBuffer> allocate){
     CompletableFuture<ByteBuffer> result = new CompletableFuture<>();
     try {
       ByteBuffer buffer = allocate.apply(range.getLength());
@@ -104,7 +105,8 @@ public class AsyncReaderUtils {
   }
 
   /**
-   * Is the given input list:
+   * Is the given input list already in the desired order?
+   * In particular, does it meet these requirements:
    * <ul>
    *   <li>already sorted by offset</li>
    *   <li>each range is more than minimumSeek apart</li>
@@ -158,7 +160,8 @@ public class AsyncReaderUtils {
    *   <li>Upper layers want to pass down logical file ranges.</li>
    *   <li>Fewer reads have better performance.</li>
    *   <li>Applications want callbacks as ranges are read.</li>
-   *   <li>Some file systems want to round ranges to be at checksum boundaries.</li>
+   *   <li>Some file systems want to round ranges to be at checksum boundaries.
+   *   </li>
    * </ul>
    *
    * @param input the list of input ranges
@@ -167,10 +170,11 @@ public class AsyncReaderUtils {
    * @param maxSize the largest combined file range in bytes
    * @return the list of sorted CombinedFileRanges that cover the input
    */
-  public static List<CombinedFileRange> sortAndMergeRanges(List<? extends FileRange> input,
-                                                           int chunkSize,
-                                                           int minimumSeek,
-                                                           int maxSize) {
+  public static
+  List<CombinedFileRange> sortAndMergeRanges(List<? extends FileRange> input,
+                                             int chunkSize,
+                                             int minimumSeek,
+                                             int maxSize) {
     // sort the ranges by offset
     FileRange[] ranges = input.toArray(new FileRange[0]);
     Arrays.sort(ranges, Comparator.comparingLong(FileRange::getOffset));
@@ -180,8 +184,10 @@ public class AsyncReaderUtils {
     // now merge together the ones that merge
     for(FileRange range: ranges) {
       long start = roundDown(range.getOffset(), chunkSize);
-      long end = roundUp(range.getOffset() + range.getLength(), chunkSize);
-      if (current == null || !current.merge(start, end, range, minimumSeek, maxSize)) {
+      long end = roundUp(range.getOffset() + range.getLength(),
+          chunkSize);
+      if (current == null ||
+          !current.merge(start, end, range, minimumSeek, maxSize)) {
         current = new CombinedFileRange(start, end, range);
         result.add(current);
       }
