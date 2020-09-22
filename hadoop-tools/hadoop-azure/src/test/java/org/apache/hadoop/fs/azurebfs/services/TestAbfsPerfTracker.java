@@ -46,7 +46,6 @@ public final class TestAbfsPerfTracker {
   private static final int TEST_AGGREGATE_COUNT = 42;
   private final String filesystemName = "bogusFilesystemName";
   private final String accountName = "bogusAccountName";
-  private final String clientCorrelationId = "bogusClientCorrelationId";
   private final URL url;
 
   public TestAbfsPerfTracker() throws Exception {

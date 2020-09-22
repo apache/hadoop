@@ -240,7 +240,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     this.isTraceEnabled = LOG.isTraceEnabled();
     this.url = url;
     this.method = method;
-    System.out.println("url looks like " + url);
 
     this.connection = openConnection();
     if (this.connection instanceof HttpsURLConnection) {
@@ -258,8 +257,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
     for (AbfsHttpHeader header : requestHeaders) {
       this.connection.setRequestProperty(header.getName(), header.getValue());
-      System.out.println("propset"+this.connection.getRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID));
-      System.out.println("userag" + this.connection.getRequestProperty("User-Agent"));
     }
     clientRequestId = this.connection.getRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
   }

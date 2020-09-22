@@ -131,7 +131,6 @@ public class AbfsRestOperation {
     this.client = client;
     this.method = method;
     this.url = url;
-    System.out.println("url looks like" + url);
     this.requestHeaders = requestHeaders;
     this.hasRequestBody = (AbfsHttpConstants.HTTP_METHOD_PUT.equals(method)
             || AbfsHttpConstants.HTTP_METHOD_PATCH.equals(method));
