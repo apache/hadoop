@@ -28,7 +28,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -40,7 +39,6 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultEntrySchema;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
-import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLIENT_CORRELATIONID;
@@ -100,26 +98,20 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
       checkRequest(clientCorrelationIds[2], 0);
   }
 
-//  public void checkRequest(AbfsConfiguration conf,
-  public void checkRequest(
-               String clientCorrelationId, int valid) throws IOException {
+  public void checkRequest(String clientCorrelationId, int valid) throws IOException {
 
     this.getConfiguration().set(FS_AZURE_CLIENT_CORRELATIONID, clientCorrelationId);
     AbfsClient client = this.getFileSystem().getAbfsClient();
     this.getConfiguration().setClientCorrelationID(clientCorrelationId);
     String corrected = this.getConfiguration().getClientCorrelationID();
     client.setClientCorrelationId(corrected);
-//  System.out.println("config" + this.getConfiguration().getClientCorrelationID());
     AbfsRestOperation op = client.deleteFilesystem();
 
     int responseCode = op.getResult().getStatusCode();
     Assert.assertTrue("Request should not fail",
-            responseCode < 400 || responseCode >= 500
-            || responseCode == 404);
+            responseCode < 400 || responseCode >= 500 || responseCode == 404);
 
-    String responseHeader = op.getResult()
-            .getResponseHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
-    System.out.println("response header -- " + responseHeader);
+    String responseHeader = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
     if (valid == 1)
       Assertions.assertThat(responseHeader).describedAs("Should contain request IDs")
             .startsWith(clientCorrelationId);

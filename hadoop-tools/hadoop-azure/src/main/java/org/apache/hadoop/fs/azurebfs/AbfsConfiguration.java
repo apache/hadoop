@@ -319,6 +319,10 @@ public class AbfsConfiguration{
     return DEFAULT_FS_AZURE_CLIENT_CORRELATION_ID;
   }
 
+  public void setClientCorrelationID(String clientCorrelationId) {
+    this.clientCorrelationID = clientCorrelationId;
+  }
+
   /**
    * Returns the account-specific value if it exists, then looks for an
    * account-agnostic value.
