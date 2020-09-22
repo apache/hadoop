@@ -12,7 +12,11 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 
-# Controlling the S3A Directory Marker Behavior
+# Experimental: Controlling the S3A Directory Marker Behavior
+
+This document discusses an experimental feature of the S3A
+connector since Hadoop 3.3.1: the ability to retain directory
+marker objects above paths containing files or subdirectories.
 
 ## <a name="compatibility"></a> Critical: this is not backwards compatible!
 
@@ -26,14 +30,39 @@ Versions of Hadoop which are incompatible with other marker retention policies,
 as of August 2020.
 
 -------------------------------------------------------
-|  Branch    | Compatible Since | Future Fix Planned? |
+|  Branch    | Compatible Since | Supported           |
 |------------|------------------|---------------------|
-| Hadoop 2.x |                  | NO                  |
-| Hadoop 3.0 |                  | NO                  |
-| Hadoop 3.1 |      check       | Yes                 |
-| Hadoop 3.2 |      check       | Yes                 |
+| Hadoop 2.x |       n/a        | WONTFIX             |
+| Hadoop 3.0 |      check       | Read-only           |
+| Hadoop 3.1 |      check       | Read-only           |
+| Hadoop 3.2 |      check       | Read-only           |
 | Hadoop 3.3 |      3.3.1       | Done                |
 -------------------------------------------------------
+
+*WONTFIX*
+
+The Hadoop branch-2 line will *not* be patched.
+
+*Read-only*
+
+These branches have read-only compatibility.
+
+* They may list directories with directory markers, and correctly identify when
+  such directories have child entries.
+* They will open files under directories with such markers.
+
+However, they have limitations when writing/deleting directories.
+
+Specifically: S3Guard tables may not be correctly updated in
+all conditions, especially on the partial failure of delete
+operations. Specifically: they may mistakenly add a tombstone in
+the dynamoDB table and so future directory/directory tree listings
+will consider the directory to be nonexistent.
+
+_It is not safe for Hadoop releases before Hadoop 3.3.1 to write
+to S3 buckets which have directory markers when S3Guard is enabled_
+
+## Verifying read compatibility.
 
 The `s3guard bucket-info` tool [can be used to verify support](#bucket-info).
 This allows for a command line check of compatibility, including
@@ -48,6 +77,7 @@ It is only safe change the directory marker policy if the following
 1. You know exactly which applications are writing to and reading from
    (including backing up) an S3 bucket.
 2. You know all applications which read data from the bucket are compatible.
+
 
 ### <a name="backups"></a> Applications backing up data.
 
@@ -240,7 +270,7 @@ can switch to the higher-performance mode for those specific directories.
 Only the default setting, `fs.s3a.directory.marker.retention = delete` is compatible with
 every shipping Hadoop releases.
 
-##  <a name="authoritative"></a> Directory Markers and S3Guard
+##  <a name="s3guard"></a> Directory Markers and S3Guard
 
 Applications which interact with S3A in S3A clients with S3Guard enabled still
 create and delete markers. There's no attempt to skip operations, such as by having
@@ -255,6 +285,28 @@ then an S3A connector with a retention policy of `fs.s3a.directory.marker.retent
 *Note* there may be further changes in directory semantics in "authoritative mode";
 only use in managed applications where all clients are using the same version of
 hadoop, and configured consistently.
+
+After the directory marker feature [HADOOP-13230](https://issues.apache.org/jira/browse/HADOOP-13230)
+was added, issues related to S3Guard integration surfaced:
+
+1. The incremental update of the S3Guard table was inserting tombstones
+   over directories as the markers were deleted, hiding files underneath.
+   This happened during directory `rename()` and `delete()`.
+1. The update of the S3Guard table after a partial failure of a bulk delete
+   operation would insert tombstones in S3Guard records of successfully
+   deleted markers, irrespective of the directory status.
+
+Issue #1 is unique to Hadoop branch 3.3; however issue #2 is s critical
+part of the S3Guard consistency handling. 
+
+Both issues have been fixed in Hadoop 3.3.x,
+in [HADOOP-17244](https://issues.apache.org/jira/browse/HADOOP-17244)
+
+Issue #2, delete failure handling, is not easily backported and is
+not likely to be backported.
+
+Accordingly: Hadoop releases with read-only compatibility must not be used
+to rename or delete directories where markers are retained *when S3Guard is enabled.*
 
 ## <a name="bucket-info"></a> Verifying marker policy with `s3guard bucket-info`
 
