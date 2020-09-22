@@ -149,15 +149,19 @@ public class TestBlockStatsMXBean {
       String storageType = (String)entry.get("key");
       Map<String,Object> storageTypeStats = (Map<String,Object>)entry.get("value");
       typesPresent.add(storageType);
-      if (storageType.equals("ARCHIVE") || storageType.equals("DISK") ) {
-        assertEquals(3L, storageTypeStats.get("nodesInService"));
-      } else if (storageType.equals("RAM_DISK")) {
-        assertEquals(7L, storageTypeStats.get("nodesInService"));
-      } else if (storageType.equals("NVDIMM")) {
-        assertEquals(1L, storageTypeStats.get("nodesInService"));
-      }
-      else {
-        fail();
+      switch (storageType) {
+          case "ARCHIVE":
+          case "DISK":
+              assertEquals(3L, storageTypeStats.get("nodesInService"));
+              break;
+          case "RAM_DISK":
+              assertEquals(7L, storageTypeStats.get("nodesInService"));
+              break;
+          case "NVDIMM":
+              assertEquals(1L, storageTypeStats.get("nodesInService"));
+              break;
+          default:
+              fail();
       }
     }
 
