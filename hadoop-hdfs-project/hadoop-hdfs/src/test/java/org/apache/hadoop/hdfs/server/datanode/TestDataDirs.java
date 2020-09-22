@@ -48,7 +48,7 @@ public class TestDataDirs {
     // type is not case-sensitive and we are able to handle white-space between
     // storage type and URI.
     String locations1 = "[disk]/dir0,[DISK]/dir1,[sSd]/dir2,[disK]/dir3," +
-            "[ram_disk]/dir4,[disk]/dir5, [disk] /dir6, [disk], [nvdimm]/dir7";
+            "[ram_disk]/dir4,[disk]/dir5, [disk] /dir6, [disk] , [nvdimm]/dir7";
     conf.set(DFS_DATANODE_DATA_DIR_KEY, locations1);
     locations = DataNode.getStorageLocations(conf);
     assertThat(locations.size(), is(9));
