@@ -127,6 +127,8 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     return clientRequestId;
   }
 
+  public String getClientCorrelationId() {return this.connection.getRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);}
+
   public String getExpectedAppendPos() {
     return expectedAppendPos;
   }
@@ -234,7 +236,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    *
    * @throws IOException if an error occurs.
    */
-
   public AbfsHttpOperation(final URL url, final String method, final List<AbfsHttpHeader> requestHeaders)
       throws IOException {
     this.isTraceEnabled = LOG.isTraceEnabled();
@@ -258,7 +259,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     for (AbfsHttpHeader header : requestHeaders) {
       this.connection.setRequestProperty(header.getName(), header.getValue());
     }
-    clientRequestId = this.connection.getRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
+    clientRequestId = getClientCorrelationId();
   }
 
    /**
