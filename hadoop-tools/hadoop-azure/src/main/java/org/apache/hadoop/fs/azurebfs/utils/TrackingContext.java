@@ -14,8 +14,4 @@ public class TrackingContext {
     public String toString(){
         return clientCorrelationID + ":" + clientRequestID;
     }
-
-    public void setClientCorrelationId(String clientCorrelationID) {
-        this.clientCorrelationID = clientCorrelationID;
-    }
 }

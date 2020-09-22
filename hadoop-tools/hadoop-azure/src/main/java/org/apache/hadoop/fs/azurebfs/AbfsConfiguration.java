@@ -205,6 +205,11 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_FS_AZURE_USER_AGENT_PREFIX)
   private String userAgentId;
 
+  /**
+   * The client correlation ID provided by the customer to correlate all requests over
+   * this instance of configuration. An empty string is returned if the length and character
+   * constraints are not satisfied.
+   */
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_CLIENT_CORRELATIONID,
           DefaultValue = DEFAULT_FS_AZURE_CLIENT_CORRELATION_ID)
   private String clientCorrelationID;
@@ -290,10 +295,6 @@ public class AbfsConfiguration{
   }
 
   /**
-   * Returns the correlation ID provided by the customer
-   * to correlate all requests over this instance of configuration.
-   * An empty string is returned if the length and character constraints
-   * are not satisfied.
    * @return Client Correlation ID
    */
   public String getClientCorrelationID(){
@@ -305,10 +306,6 @@ public class AbfsConfiguration{
       return clientCorrelationID;
     
     return DEFAULT_FS_AZURE_CLIENT_CORRELATION_ID;
-  }
-
-  public void setClientCorrelationID(String clientCorrelationId) {
-    this.clientCorrelationID = clientCorrelationId;
   }
 
   /**

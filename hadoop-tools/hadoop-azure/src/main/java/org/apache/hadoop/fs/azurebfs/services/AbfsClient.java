@@ -32,7 +32,6 @@ import java.util.Locale;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
-import org.apache.hadoop.fs.azurebfs.utils.TrackingContext;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
@@ -48,6 +47,7 @@ import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.utils.DateTimeUtils;
+import org.apache.hadoop.fs.azurebfs.utils.TrackingContext;
 import org.apache.hadoop.io.IOUtils;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.*;
@@ -135,10 +135,6 @@ public class AbfsClient implements Closeable {
 
   public String getFileSystem() {
     return filesystem;
-  }
-
-  public void setClientCorrelationId(String clientCorrelationId) {
-      this.trackingContext.setClientCorrelationId(clientCorrelationId);
   }
 
   protected AbfsPerfTracker getAbfsPerfTracker() {
