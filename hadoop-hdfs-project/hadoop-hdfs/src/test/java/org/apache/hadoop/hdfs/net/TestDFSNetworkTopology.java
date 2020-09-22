@@ -248,7 +248,7 @@ public class TestDFSNetworkTopology {
     HashMap<String, EnumMap<StorageType, Integer>> d3info =
         d3.getChildrenStorageInfo();
     assertEquals(2, d3info.keySet().size());
-    assertTrue(d3info.get("r3").size() == 1 && d3info.get("r4").size() ==1);
+    assertTrue(d3info.get("r3").size() == 1 && d3info.get("r4").size() == 1);
     assertEquals(2, (int)d3info.get("r3").get(StorageType.SSD));
     assertEquals(1, (int)d3info.get("r4").get(StorageType.NVDIMM));
 
