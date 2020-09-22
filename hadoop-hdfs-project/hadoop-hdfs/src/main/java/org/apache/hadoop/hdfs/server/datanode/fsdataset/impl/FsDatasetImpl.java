@@ -2300,8 +2300,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           return;
         }
         if (volume.isRAMStorage()) {
-          LOG.warn("Caching not supported on block with id " + blockId +
-              " since the volume is backed by RAM_DISK or NVDIMM.");
+          LOG.warn("Caching not supported on block with id {} since the volume " +
+              "is backed by {} which is RAM.", blockId, volume);
           return;
         }
         success = true;
