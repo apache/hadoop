@@ -123,11 +123,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     return storageErrorMessage;
   }
 
-  public String getClientRequestId() {
-    return clientRequestId;
-  }
-
-  public String getClientCorrelationId() {return this.connection.getRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);}
+  public String getClientRequestId() {return this.connection.getRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);}
 
   public String getExpectedAppendPos() {
     return expectedAppendPos;
@@ -259,7 +255,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     for (AbfsHttpHeader header : requestHeaders) {
       this.connection.setRequestProperty(header.getName(), header.getValue());
     }
-    clientRequestId = getClientCorrelationId();
+    clientRequestId = getClientRequestId();
   }
 
    /**
