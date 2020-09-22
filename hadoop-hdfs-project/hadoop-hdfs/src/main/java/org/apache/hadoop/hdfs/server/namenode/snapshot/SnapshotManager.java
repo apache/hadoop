@@ -482,7 +482,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
       String msg = "there are already " + (snapshotCount + 1)
           + " snapshot(s) and the "  + type + " snapshot limit is "
           + limit;
-      if (fsdir.isImageLoaded()) {
+      if (isImageLoaded()) {
         // We have reached the maximum snapshot limit
         throw new SnapshotException(
             "Failed to create snapshot: " + msg);
@@ -492,7 +492,10 @@ public class SnapshotManager implements SnapshotStatsMXBean {
       }
     }
   }
-  
+
+  boolean isImageLoaded() {
+    return fsdir.isImageLoaded();
+  }
   /**
    * Delete a snapshot for a snapshottable directory
    * @param snapshotName Name of the snapshot to be deleted

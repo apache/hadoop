@@ -241,6 +241,24 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
       throws SnapshotException {
     final int i = searchSnapshot(DFSUtil.string2Bytes(snapshotName));
     if (i < 0) {
+      // considering a sequence like this with snapshots S1 and s2
+      // 1. Ordered snapshot deletion feature is turned on
+      // 2. Delete S2 creating edit log entry for S2 deletion
+      // 3. Delete S1
+      // 4. S2 gets deleted by snapshot gc thread creating edit log record for
+      //    S2 deletion again
+      // 5. Disable Ordered snapshot deletion feature
+      // 6. Restarting Namenode
+      // In this case, when edit log replay happens actual deletion of S2
+      // will happen when first edit log for S2 deletion gets replayed and
+      // the second edit log record replay for S2 deletion will fail as snapshot
+      // won't exist thereby failing the Namenode start
+      // The idea here is to check during edit log replay, if a certain snapshot
+      // is not found and the ordered snapshot deletion is off, ignore the error
+      if (!snapshotManager.isSnapshotDeletionOrdered() &&
+          !snapshotManager.isImageLoaded()) {
+        return null;
+      }
       throw new SnapshotException("Cannot delete snapshot " + snapshotName
           + " from path " + snapshotRoot.getFullPathName()
           + ": the snapshot does not exist.");
