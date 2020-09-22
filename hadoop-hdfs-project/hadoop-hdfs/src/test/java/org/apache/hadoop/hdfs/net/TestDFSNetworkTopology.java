@@ -70,6 +70,7 @@ public class TestDFSNetworkTopology {
 
         "/l2/d4/r1", "/l2/d4/r1", "/l2/d4/r1", "/l2/d4/r1", "/l2/d4/r1",
         "/l2/d4/r1", "/l2/d4/r1", "/l2/d4/r2",
+
         "/l3/d5/r1", "/l3/d5/r1", "/l3/d5/r2"};
     final String[] hosts = {
         "host1", "host2", "host3", "host4", "host5",
