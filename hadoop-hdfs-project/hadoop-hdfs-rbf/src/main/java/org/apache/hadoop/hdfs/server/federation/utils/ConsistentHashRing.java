@@ -33,8 +33,8 @@ import org.apache.hadoop.io.MD5Hash;
  * or remove nodes, it minimizes the item migration.
  */
 public class ConsistentHashRing {
-  private static final String SEPERATOR = "/";
-  private static final String VIRTUAL_NODE_FORMAT = "%s" + SEPERATOR + "%d";
+  private static final String SEPARATOR = "/";
+  private static final String VIRTUAL_NODE_FORMAT = "%s" + SEPARATOR + "%d";
 
   /** Hash ring. */
   private SortedMap<String, String> ring = new TreeMap<String, String>();
@@ -119,7 +119,7 @@ public class ConsistentHashRing {
         hash = tailMap.isEmpty() ? ring.firstKey() : tailMap.firstKey();
       }
       String virtualNode = ring.get(hash);
-      int index = virtualNode.lastIndexOf(SEPERATOR);
+      int index = virtualNode.lastIndexOf(SEPARATOR);
       if (index >= 0) {
         return virtualNode.substring(0, index);
       } else {
