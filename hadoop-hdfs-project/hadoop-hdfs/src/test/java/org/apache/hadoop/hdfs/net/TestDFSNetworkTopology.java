@@ -126,7 +126,7 @@ public class TestDFSNetworkTopology {
     HashMap<String, EnumMap<StorageType, Integer>> d2info =
         d2.getChildrenStorageInfo();
     assertEquals(1, d2info.keySet().size());
-    assertTrue(d2info.get("r3").size() == 4);
+    assertEquals(4, d2info.get("r3").size());
     assertEquals(1, (int)d2info.get("r3").get(StorageType.DISK));
     assertEquals(1, (int)d2info.get("r3").get(StorageType.RAM_DISK));
     assertEquals(1, (int)d2info.get("r3").get(StorageType.SSD));
@@ -217,12 +217,12 @@ public class TestDFSNetworkTopology {
         "/l1/d3/r4"};
     String[] newHost = {"nhost1", "nhost2", "nhost3", "nhost4", "nhost5"};
     String[] newips = {"30.30.30.30", "31.31.31.31", "32.32.32.32",
-        "33.33.33.33", "33.33.33.34"};
+        "33.33.33.33", "34.34.34.34"};
     StorageType[] newTypes = {StorageType.DISK, StorageType.SSD,
         StorageType.SSD, StorageType.SSD, StorageType.NVDIMM};
     DatanodeDescriptor[] newDD = new DatanodeDescriptor[5];
 
-    for (int i = 0; i<5; i++) {
+    for (int i = 0; i < 5; i++) {
       DatanodeStorageInfo dsi = DFSTestUtil.createDatanodeStorageInfo(
           "s" + newHost[i], newips[i], newRack[i], newHost[i],
           newTypes[i], null);
@@ -268,7 +268,7 @@ public class TestDFSNetworkTopology {
     assertEquals(2, (int)l1info.get("d3").get(StorageType.SSD));
     assertEquals(1, (int)l1info.get("d3").get(StorageType.NVDIMM));
 
-    for (int i = 0; i<5; i++) {
+    for (int i = 0; i < 5; i++) {
       CLUSTER.remove(newDD[i]);
     }
 
@@ -355,7 +355,7 @@ public class TestDFSNetworkTopology {
     // exclude the host on r4 (since there is only one host, no randomness here)
     excluded.add(n);
 
-    for (int i = 0; i<10; i++) {
+    for (int i = 0; i < 10; i++) {
       n = CLUSTER.chooseRandomWithStorageType("/l2/d3", null, null,
           StorageType.ARCHIVE);
       assertTrue(n instanceof DatanodeDescriptor);
@@ -365,7 +365,7 @@ public class TestDFSNetworkTopology {
     }
 
     // test exclude nodes
-    for (int i = 0; i<10; i++) {
+    for (int i = 0; i < 10; i++) {
       n = CLUSTER.chooseRandomWithStorageType("/l2/d3", null, excluded,
           StorageType.ARCHIVE);
       assertTrue(n instanceof DatanodeDescriptor);
@@ -374,7 +374,7 @@ public class TestDFSNetworkTopology {
     }
 
     // test exclude scope
-    for (int i = 0; i<10; i++) {
+    for (int i = 0; i < 10; i++) {
       n = CLUSTER.chooseRandomWithStorageType("/l2/d3", "/l2/d3/r4", null,
           StorageType.ARCHIVE);
       assertTrue(n instanceof DatanodeDescriptor);
@@ -383,7 +383,7 @@ public class TestDFSNetworkTopology {
     }
 
     // test exclude scope + excluded node with expected null return node
-    for (int i = 0; i<10; i++) {
+    for (int i = 0; i < 10; i++) {
       n = CLUSTER.chooseRandomWithStorageType("/l2/d3", "/l2/d3/r5", excluded,
           StorageType.ARCHIVE);
       assertNull(n);
@@ -397,7 +397,7 @@ public class TestDFSNetworkTopology {
     // exclude the host on r4 (since there is only one host, no randomness here)
     excluded.add(n);
     Set<String> expectedSet = Sets.newHashSet("host4", "host5");
-    for (int i = 0; i<10; i++) {
+    for (int i = 0; i < 10; i++) {
       // under l1, there are four hosts with DISK:
       // /l1/d1/r1/host2, /l1/d1/r2/host4, /l1/d1/r2/host5 and /l1/d2/r3/host6
       // host6 is excludedNode, host2 is under excluded range scope /l1/d1/r1
@@ -439,7 +439,7 @@ public class TestDFSNetworkTopology {
     excluded.add(n);
 
     // search with given scope being desired scope
-    for (int i = 0; i<10; i++) {
+    for (int i = 0; i < 10; i++) {
       n = CLUSTER.chooseRandomWithStorageType(
           "/l2/d3", null, StorageType.ARCHIVE);
       assertTrue(n instanceof DatanodeDescriptor);
@@ -448,7 +448,7 @@ public class TestDFSNetworkTopology {
           dd.getHostName().equals("host14"));
     }
 
-    for (int i = 0; i<10; i++) {
+    for (int i = 0; i < 10; i++) {
       n = CLUSTER.chooseRandomWithStorageType(
           "/l2/d3", excluded, StorageType.ARCHIVE);
       assertTrue(n instanceof DatanodeDescriptor);
@@ -461,7 +461,7 @@ public class TestDFSNetworkTopology {
     // a total of 4 ramdisk nodes:
     // /l1/d2/r3/host7, /l2/d3/r2/host10, /l2/d4/r1/host7 and /l2/d4/r1/host10
     // so if we exclude /l2/d4/r1, if should be always either host7 or host10
-    for (int i = 0; i<10; i++) {
+    for (int i = 0; i < 10; i++) {
       n = CLUSTER.chooseRandomWithStorageType(
           "~/l2/d4", null, StorageType.RAM_DISK);
       assertTrue(n instanceof DatanodeDescriptor);
@@ -476,7 +476,7 @@ public class TestDFSNetworkTopology {
         StorageType.RAM_DISK);
     // add host10 to exclude
     excluded.add(n);
-    for (int i = 0; i<10; i++) {
+    for (int i = 0; i < 10; i++) {
       n = CLUSTER.chooseRandomWithStorageType(
           "~/l2/d4", excluded, StorageType.RAM_DISK);
       assertTrue(n instanceof DatanodeDescriptor);
@@ -573,7 +573,7 @@ public class TestDFSNetworkTopology {
     excluded.add(n);
 
     // search with given scope being desired scope
-    for (int i = 0; i<10; i++) {
+    for (int i = 0; i < 10; i++) {
       n = CLUSTER.chooseRandomWithStorageTypeTwoTrial(
           "/l2/d3", null, StorageType.ARCHIVE);
       assertTrue(n instanceof DatanodeDescriptor);
@@ -582,7 +582,7 @@ public class TestDFSNetworkTopology {
           dd.getHostName().equals("host14"));
     }
 
-    for (int i = 0; i<10; i++) {
+    for (int i = 0; i < 10; i++) {
       n = CLUSTER.chooseRandomWithStorageTypeTwoTrial(
           "/l2/d3", excluded, StorageType.ARCHIVE);
       assertTrue(n instanceof DatanodeDescriptor);
@@ -595,7 +595,7 @@ public class TestDFSNetworkTopology {
     // a total of 4 ramdisk nodes:
     // /l1/d2/r3/host7, /l2/d3/r2/host10, /l2/d4/r1/host7 and /l2/d4/r1/host10
     // so if we exclude /l2/d4/r1, if should be always either host7 or host10
-    for (int i = 0; i<10; i++) {
+    for (int i = 0; i < 10; i++) {
       n = CLUSTER.chooseRandomWithStorageTypeTwoTrial(
           "~/l2/d4", null, StorageType.RAM_DISK);
       assertTrue(n instanceof DatanodeDescriptor);
@@ -610,7 +610,7 @@ public class TestDFSNetworkTopology {
         StorageType.RAM_DISK);
     // add host10 to exclude
     excluded.add(n);
-    for (int i = 0; i<10; i++) {
+    for (int i = 0; i < 10; i++) {
       n = CLUSTER.chooseRandomWithStorageTypeTwoTrial(
           "~/l2/d4", excluded, StorageType.RAM_DISK);
       assertTrue(n instanceof DatanodeDescriptor);
