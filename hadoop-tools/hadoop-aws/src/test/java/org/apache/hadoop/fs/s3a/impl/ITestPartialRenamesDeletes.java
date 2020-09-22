@@ -48,6 +48,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 import org.apache.hadoop.util.DurationInfo;
 
@@ -838,5 +839,49 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
    */
   public static String filenameOfIndex(final int i) {
     return String.format("%s%03d", PREFIX, i);
+  }
+
+  /**
+   * Verifies that s3:DeleteObjectVersion is not required for rename.
+   * <p></p>
+   * See HADOOP-17621.
+   * <p></p>
+   * This test will only show a regression if the bucket has versioning
+   * enabled *and* S3Guard is enabled.
+   */
+  @Test
+  public void testRenamePermissionRequirements() throws Throwable {
+    describe("Verify rename() only needs s3:DeleteObject permission");
+    // close the existing roleFS
+    IOUtils.cleanupWithLogger(LOG, roleFS);
+
+    // create an assumed role config which doesn't have
+    // s3:DeleteObjectVersion permission, and attempt rename
+    // and then delete.
+    Configuration roleConfig = createAssumedRoleConfig();
+    bindRolePolicyStatements(roleConfig,
+        STATEMENT_S3GUARD_CLIENT,
+        STATEMENT_ALLOW_SSE_KMS_RW,
+        STATEMENT_ALL_BUCKET_READ_ACCESS,  // root:     r-x
+        new Statement(Effects.Allow)       // dest:     rwx
+            .addActions(S3_PATH_RW_OPERATIONS)
+            .addResources(directory(basePath)),
+        new Statement(Effects.Deny)
+            .addActions(S3_DELETE_OBJECT_VERSION)
+            .addResources(directory(basePath)));
+    roleFS = (S3AFileSystem) basePath.getFileSystem(roleConfig);
+
+    Path srcDir = new Path(basePath, "src");
+    Path destDir = new Path(basePath, "dest");
+    roleFS.mkdirs(srcDir);
+
+    // the role FS has everything but that deleteObjectVersion permission, so
+    // MUST be able to create files
+    List<Path> createdFiles = createFiles(roleFS, srcDir, dirDepth, fileCount,
+        dirCount);
+    roleFS.rename(srcDir, destDir);
+    roleFS.rename(destDir, srcDir);
+    roleFS.delete(srcDir, true);
+
   }
 }
