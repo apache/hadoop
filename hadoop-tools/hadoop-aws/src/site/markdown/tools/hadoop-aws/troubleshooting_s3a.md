@@ -423,6 +423,45 @@ If the client using [assumed roles](assumed_roles.html), and a policy
 is set in `fs.s3a.assumed.role.policy`, then that policy declares
 _all_ the rights which the caller has.
 
+### <a name="access_denied_renaming"></a> `AccessDeniedException` in rename, "MultiObjectDeleteException: One or more objects could not be deleted"
+
+
+```
+mv: rename s3a://london/dest to s3a://london/src on
+s3a://london/dest:
+    com.amazonaws.services.s3.model.MultiObjectDeleteException: One or more objects
+    could not be deleted (Service: null; Status Code: 200; Error Code: null; Request
+    ID: 5C9018EF245F02C5; S3 Extended Request ID:
+    5fQ2RVCPF0rdvADRv2XY3U4yb2J0gHRID/4jm1eqCXp7RxpU0dH9DliChYsCUD1aVCFtbwfWJWY=),
+    S3 Extended Request ID:
+    5fQ2RVCPF0rdvADRv2XY3U4yb2J0gHRID/4jm1eqCXp7RxpU0dH9DliChYsCUD1aVCFtbwfWJWY=:null:
+    AccessDenied: dest/file10: Access Denied
+```
+
+The S3A connector's emulation of file and directory rename is implemented by copying each file,
+then deleting the originals. This delete process is done in batches, by default in a single
+"multiple object delete request". If one or more of the objects listed in the request cannot
+be deleted, an error is returned in S3 listing which objects were not deleted.
+If the cause was "access denied", it is translated into an `AccessDeniedException`.
+
+The rename is halted at this point: files may be present in both the source and destination directories.
+Those files which could not be deleted from the source directory will also have been copied
+into the destination directory. Files which were successfully deleted from the source
+directory will _only_ be in the destination. And files for which the rename operation
+had yet to commence -they will only be in the source tree.
+
+The user has to recover from this themselves. Be assured: no data will have been deleted, it
+is just that the data may now be scattered across two directories. 
+Note: this is one reason why any application which tries to atomically commit work
+via rename (classic Hadoop output committers, distcp with the `-atomic` option) are
+not safe to use with S3. It is not a file system.
+
+For an 'AccessDenied' failure, the root cause is IAM permissions.
+The user/role/bucket must have the permission
+`s3:DeleteObject` on the source path. It is safest to grant `s3:Delete*` so
+that if a future version of the S3A connector supported extra operations
+(explicit deletion of versioned files, get/set/delete object tagging, ...),
+the client will have the permission to use them.
 
 ### <a name="kms_access_denied"></a>  `AccessDeniedException` when using SSE-KMS
 

@@ -40,6 +40,8 @@ import java.io.Writer;
 import java.lang.ref.WeakReference;
 import java.net.InetSocketAddress;
 import java.net.JarURLConnection;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.file.Files;
@@ -3247,7 +3249,15 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
           File href = new File(confInclude);
           if (!href.isAbsolute()) {
             // Included resources are relative to the current resource
-            File baseFile = new File(name).getParentFile();
+            File baseFile;
+
+            try {
+              baseFile = new File(new URI(name));
+            } catch (IllegalArgumentException | URISyntaxException e) {
+              baseFile = new File(name);
+            }
+
+            baseFile = baseFile.getParentFile();
             href = new File(baseFile, href.getPath());
           }
           if (!href.exists()) {

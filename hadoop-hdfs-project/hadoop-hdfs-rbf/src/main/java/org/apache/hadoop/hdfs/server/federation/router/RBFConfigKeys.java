@@ -277,6 +277,10 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
   public static final String DFS_ROUTER_ADMIN_MAX_COMPONENT_LENGTH_KEY =
       FEDERATION_ROUTER_PREFIX + "fs-limits.max-component-length";
   public static final int DFS_ROUTER_ADMIN_MAX_COMPONENT_LENGTH_DEFAULT = 0;
+  public static final String DFS_ROUTER_ADMIN_MOUNT_CHECK_ENABLE =
+      FEDERATION_ROUTER_PREFIX + "admin.mount.check.enable";
+  public static final boolean DFS_ROUTER_ADMIN_MOUNT_CHECK_ENABLE_DEFAULT =
+      false;
 
   // HDFS Router-based federation web
   public static final String DFS_ROUTER_HTTP_ENABLE =
