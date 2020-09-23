@@ -45,12 +45,7 @@ public class TestLz4CompressorDecompressor {
   
   private static final Random rnd = new Random(12345l);
 
-  @Before
-  public void before() {
-    assumeTrue(Lz4Codec.isNativeCodeLoaded());
-  }
-
-  //test on NullPointerException in {@code compressor.setInput()} 
+  //test on NullPointerException in {@code compressor.setInput()}
   @Test
   public void testCompressorSetInputNullPointerException() {
     try {
