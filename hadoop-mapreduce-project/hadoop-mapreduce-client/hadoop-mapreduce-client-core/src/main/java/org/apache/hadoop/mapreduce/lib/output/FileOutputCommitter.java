@@ -589,10 +589,9 @@ public class FileOutputCommitter extends PathOutputCommitter {
 
       if (taskAttemptDirStatus != null) {
         Path committedTaskPath = getCommittedTaskPath(context);
-        if (fs.exists(committedTaskPath)) {
-           if (!fs.delete(committedTaskPath, true)) {
-             throw new IOException("Could not delete " + committedTaskPath);
-           }
+        if (fs.exists(committedTaskPath)
+            && !fs.delete(committedTaskPath, true)) {
+          throw new IOException("Could not delete " + committedTaskPath);
         }
         if (!fs.rename(taskAttemptPath, committedTaskPath)) {
           throw new IOException("Could not rename " + taskAttemptPath + " to "
@@ -698,7 +697,7 @@ public class FileOutputCommitter extends PathOutputCommitter {
               " to " + committedTaskPath);
         }
       } else {
-          LOG.warn(attemptId+" had no output to recover.");
+        LOG.warn(attemptId + " had no output to recover.");
       }
     } else {
       LOG.warn("Output Path is null in recoverTask()");
