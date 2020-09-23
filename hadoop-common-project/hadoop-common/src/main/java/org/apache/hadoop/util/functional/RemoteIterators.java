@@ -568,7 +568,7 @@ public final class RemoteIterators {
     }
 
     /**
-     * Construct -close the object if it is closeable and close==true
+     * Construct -close the object if it is closeable and close==true.
      * @param o object to close.
      * @param close should close?
      */
