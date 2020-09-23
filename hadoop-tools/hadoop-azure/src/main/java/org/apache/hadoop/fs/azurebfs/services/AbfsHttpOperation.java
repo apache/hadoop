@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -49,8 +49,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
  * Represents an HTTP operation.
  */
 public class AbfsHttpOperation implements AbfsPerfLoggable {
-  private static final Logger LOG = LoggerFactory
-      .getLogger(AbfsHttpOperation.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AbfsHttpOperation.class);
 
   private static final int CONNECT_TIMEOUT = 30 * 1000;
   private static final int READ_TIMEOUT = 30 * 1000;
@@ -67,9 +66,9 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   private int statusCode;
   private String statusDescription;
   private String storageErrorCode = "";
-  private String storageErrorMessage = "";
+  private String storageErrorMessage  = "";
   private String clientRequestId = "";
-  private String requestId = "";
+  private String requestId  = "";
   private String expectedAppendPos = "";
   private ListResultSchema listResultSchema = null;
 
@@ -83,9 +82,9 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   private long sendRequestTimeMs;
   private long recvResponseTimeMs;
 
-  public static AbfsHttpOperation getAbfsHttpOperationWithFixedResult(
-      final URL url, final String method, final int httpStatus) {
-    return new AbfsHttpOperation(url, method, httpStatus);
+  public static AbfsHttpOperation getAbfsHttpOperationWithFixedResult(final URL url,
+      final String method, final int httpStatus) {
+       return new AbfsHttpOperation(url, method, httpStatus);
   }
 
   private AbfsHttpOperation(final URL url, final String method,
@@ -96,7 +95,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     this.statusCode = httpStatus;
   }
 
-  protected HttpURLConnection getConnection() {
+  protected  HttpURLConnection getConnection() {
     return connection;
   }
 
@@ -124,10 +123,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     return storageErrorMessage;
   }
 
-  public String getClientRequestId() {
-    return this.connection
-        .getRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
-  }
+  public String getClientRequestId() {return this.connection.getRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);}
 
   public String getExpectedAppendPos() {
     return expectedAppendPos;
@@ -192,22 +188,37 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
     try {
       urlStr = URLEncoder.encode(url.toString(), "UTF-8");
-    } catch (UnsupportedEncodingException e) {
+    } catch(UnsupportedEncodingException e) {
       urlStr = "https%3A%2F%2Ffailed%2Fto%2Fencode%2Furl";
     }
 
     final StringBuilder sb = new StringBuilder();
-    sb.append("s=").append(statusCode).append(" e=").append(storageErrorCode)
-        .append(" ci=").append(clientRequestId).append(" ri=")
-        .append(requestId);
+    sb.append("s=")
+      .append(statusCode)
+      .append(" e=")
+      .append(storageErrorCode)
+      .append(" ci=")
+      .append(clientRequestId)
+      .append(" ri=")
+      .append(requestId);
 
     if (isTraceEnabled) {
-      sb.append(" ct=").append(connectionTimeMs).append(" st=")
-          .append(sendRequestTimeMs).append(" rt=").append(recvResponseTimeMs);
+      sb.append(" ct=")
+        .append(connectionTimeMs)
+        .append(" st=")
+        .append(sendRequestTimeMs)
+        .append(" rt=")
+        .append(recvResponseTimeMs);
     }
 
-    sb.append(" bs=").append(bytesSent).append(" br=").append(bytesReceived)
-        .append(" m=").append(method).append(" u=").append(urlStr);
+    sb.append(" bs=")
+      .append(bytesSent)
+      .append(" br=")
+      .append(bytesReceived)
+      .append(" m=")
+      .append(method)
+      .append(" u=")
+      .append(urlStr);
 
     return sb.toString();
   }
@@ -215,14 +226,14 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   /**
    * Initializes a new HTTP request and opens the connection.
    *
-   * @param url            The full URL including query string parameters.
-   * @param method         The HTTP method (PUT, PATCH, POST, GET, HEAD, or
-   *                       DELETE).
+   * @param url The full URL including query string parameters.
+   * @param method The HTTP method (PUT, PATCH, POST, GET, HEAD, or DELETE).
    * @param requestHeaders The HTTP request headers.READ_TIMEOUT
+   *
    * @throws IOException if an error occurs.
    */
-  public AbfsHttpOperation(final URL url, final String method,
-      final List<AbfsHttpHeader> requestHeaders) throws IOException {
+  public AbfsHttpOperation(final URL url, final String method, final List<AbfsHttpHeader> requestHeaders)
+      throws IOException {
     this.isTraceEnabled = LOG.isTraceEnabled();
     this.url = url;
     this.method = method;
@@ -230,8 +241,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     this.connection = openConnection();
     if (this.connection instanceof HttpsURLConnection) {
       HttpsURLConnection secureConn = (HttpsURLConnection) this.connection;
-      SSLSocketFactory sslSocketFactory = DelegatingSSLSocketFactory
-          .getDefaultFactory();
+      SSLSocketFactory sslSocketFactory = DelegatingSSLSocketFactory.getDefaultFactory();
       if (sslSocketFactory != null) {
         secureConn.setSSLSocketFactory(sslSocketFactory);
       }
@@ -248,7 +258,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     clientRequestId = getClientRequestId();
   }
 
-  /**
+   /**
    * Sends the HTTP request.  Note that HttpUrlConnection requires that an
    * empty buffer be sent in order to set the "Content-Length: 0" header, which
    * is required by our endpoint.
@@ -256,16 +266,16 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    * @param buffer the request entity body.
    * @param offset an offset into the buffer where the data beings.
    * @param length the length of the data in the buffer.
+   *
    * @throws IOException if an error occurs.
    */
-  public void sendRequest(byte[] buffer, int offset, int length)
-      throws IOException {
+  public void sendRequest(byte[] buffer, int offset, int length) throws IOException {
     this.connection.setDoOutput(true);
     this.connection.setFixedLengthStreamingMode(length);
     if (buffer == null) {
       // An empty buffer is sent to set the "Content-Length: 0" header, which
       // is required by our endpoint.
-      buffer = new byte[] {};
+      buffer = new byte[]{};
       offset = 0;
       length = 0;
     }
@@ -295,10 +305,10 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    * @param buffer a buffer to hold the response entity body
    * @param offset an offset in the buffer where the data will being.
    * @param length the number of bytes to be written to the buffer.
+   *
    * @throws IOException if an error occurs.
    */
-  public void processResponse(final byte[] buffer, final int offset,
-      final int length) throws IOException {
+  public void processResponse(final byte[] buffer, final int offset, final int length) throws IOException {
 
     // get the response
     long startTime = 0;
@@ -314,8 +324,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
     this.statusDescription = this.connection.getResponseMessage();
 
-    this.requestId = this.connection
-        .getHeaderField(HttpHeaderConfigurations.X_MS_REQUEST_ID);
+    this.requestId = this.connection.getHeaderField(HttpHeaderConfigurations.X_MS_REQUEST_ID);
     if (this.requestId == null) {
       this.requestId = AbfsHttpConstants.EMPTY_STRING;
     }
@@ -337,8 +346,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
       if (this.isTraceEnabled) {
         this.recvResponseTimeMs += elapsedTimeMs(startTime);
       }
-      this.bytesReceived = this.connection
-          .getHeaderFieldLong(HttpHeaderConfigurations.CONTENT_LENGTH, 0);
+      this.bytesReceived = this.connection.getHeaderFieldLong(HttpHeaderConfigurations.CONTENT_LENGTH, 0);
     } else {
       // consume the input stream to release resources
       int totalBytesRead = 0;
@@ -351,14 +359,12 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
         // this is a list operation and need to retrieve the data
         // need a better solution
-        if (AbfsHttpConstants.HTTP_METHOD_GET.equals(this.method)
-            && buffer == null) {
+        if (AbfsHttpConstants.HTTP_METHOD_GET.equals(this.method) && buffer == null) {
           parseListFilesResponse(stream);
         } else {
           if (buffer != null) {
             while (totalBytesRead < length) {
-              int bytesRead = stream.read(buffer, offset + totalBytesRead,
-                  length - totalBytesRead);
+              int bytesRead = stream.read(buffer, offset + totalBytesRead, length - totalBytesRead);
               if (bytesRead == -1) {
                 endOfStream = true;
                 break;
@@ -387,6 +393,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     }
   }
 
+
   /**
    * Open the HTTP connection.
    *
@@ -405,21 +412,21 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   }
 
   /**
-   * When the request fails, this function is used to parse the
-   * responseAbfsHttpClient.LOG.debug("ExpectedError: ", ex);
+   * When the request fails, this function is used to parse the responseAbfsHttpClient.LOG.debug("ExpectedError: ", ex);
    * and extract the storageErrorCode and storageErrorMessage.  Any errors
    * encountered while attempting to process the error response are logged,
    * but otherwise ignored.
-   * <p>
+   *
    * For storage errors, the response body *usually* has the following format:
-   * <p>
+   *
    * {
-   * "error":
-   * {
-   * "code": "string",
-   * "message": "string"
+   *   "error":
+   *   {
+   *     "code": "string",
+   *     "message": "string"
+   *   }
    * }
-   * }
+   *
    */
   private void processStorageErrorResponse() {
     try (InputStream stream = connection.getErrorStream()) {
@@ -439,17 +446,17 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
             jp.nextToken();
             fieldValue = jp.getText();
             switch (fieldName) {
-            case "code":
-              storageErrorCode = fieldValue;
-              break;
-            case "message":
-              storageErrorMessage = fieldValue;
-              break;
-            case "ExpectedAppendPos":
-              expectedAppendPos = fieldValue;
-              break;
-            default:
-              break;
+              case "code":
+                storageErrorCode = fieldValue;
+                break;
+              case "message":
+                storageErrorMessage = fieldValue;
+                break;
+              case "ExpectedAppendPos":
+                expectedAppendPos = fieldValue;
+                break;
+              default:
+                break;
             }
           }
           jp.nextToken();
@@ -476,8 +483,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    * @param stream InputStream contains the list results.
    * @throws IOException
    */
-  private void parseListFilesResponse(final InputStream stream)
-      throws IOException {
+  private void parseListFilesResponse(final InputStream stream) throws IOException {
     if (stream == null) {
       return;
     }
@@ -489,8 +495,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
     try {
       final ObjectMapper objectMapper = new ObjectMapper();
-      this.listResultSchema = objectMapper
-          .readValue(stream, ListResultSchema.class);
+      this.listResultSchema = objectMapper.readValue(stream, ListResultSchema.class);
     } catch (IOException ex) {
       LOG.error("Unable to deserialize list results", ex);
       throw ex;
@@ -499,7 +504,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
   /**
    * Check null stream, this is to pass findbugs's redundant check for NULL
-   *
    * @param stream InputStream
    */
   private boolean isNullInputStream(InputStream stream) {

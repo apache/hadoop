@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -52,84 +52,72 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   private static final int LIST_MAX_RESULTS = 500;
   private static final int LIST_MAX_RESULTS_SERVER = 5000;
-  private static final String[] clientCorrelationIds = {"valid-corr-id-123",
-      "inval!d", ""};
+  private static final String[] clientCorrelationIds = {"valid-corr-id-123", "inval!d", ""};
 
   public ITestAbfsClient() throws Exception {
     super();
   }
 
   @Ignore("HADOOP-16845: Invalid continuation tokens are ignored by the ADLS "
-      + "Gen2 service, so we are disabling this test until the service is "
-      + "fixed.")
+      + "Gen2 service, so we are disabling this test until the service is fixed.")
   @Test
   public void testContinuationTokenHavingEqualSign() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
-    AbfsClient abfsClient = fs.getAbfsClient();
+    AbfsClient abfsClient =  fs.getAbfsClient();
 
     try {
-      AbfsRestOperation op = abfsClient
-          .listPath("/", true, LIST_MAX_RESULTS, "===========");
+      AbfsRestOperation op = abfsClient.listPath("/", true, LIST_MAX_RESULTS, "===========");
       Assert.assertTrue(false);
     } catch (AbfsRestOperationException ex) {
-      Assert.assertEquals("InvalidQueryParameterValue",
-          ex.getErrorCode().getErrorCode());
+      Assert.assertEquals("InvalidQueryParameterValue", ex.getErrorCode().getErrorCode());
     }
   }
 
-  @Ignore("Enable this to verify the log warning message format for "
-      + "HostNotFoundException")
+  @Ignore("Enable this to verify the log warning message format for HostNotFoundException")
   @Test
   public void testUnknownHost() throws Exception {
-    // When hitting hostName not found exception, the retry will take about
-    // 14 mins until failed.
-    // This test is to verify that the "Unknown host name: %s. Retrying to
-    // resolve the host name..." is logged as warning during the retry.
+    // When hitting hostName not found exception, the retry will take about 14 mins until failed.
+    // This test is to verify that the "Unknown host name: %s. Retrying to resolve the host name..." is logged as warning during the retry.
     AbfsConfiguration conf = this.getConfiguration();
     String accountName = this.getAccountName();
-    String fakeAccountName = "fake" + UUID.randomUUID() + accountName
-        .substring(accountName.indexOf("."));
+    String fakeAccountName = "fake" + UUID.randomUUID() + accountName.substring(accountName.indexOf("."));
 
     String fsDefaultFS = conf.get(FS_DEFAULT_NAME_KEY);
-    conf.set(FS_DEFAULT_NAME_KEY,
-        fsDefaultFS.replace(accountName, fakeAccountName));
-    conf.set(FS_AZURE_ACCOUNT_KEY + "." + fakeAccountName,
-        this.getAccountKey());
+    conf.set(FS_DEFAULT_NAME_KEY, fsDefaultFS.replace(accountName, fakeAccountName));
+    conf.set(FS_AZURE_ACCOUNT_KEY + "." + fakeAccountName, this.getAccountKey());
 
     intercept(AbfsRestOperationException.class,
-        "UnknownHostException: " + fakeAccountName,
-        () -> FileSystem.get(conf.getRawConfiguration()));
+            "UnknownHostException: " + fakeAccountName,
+            () -> FileSystem.get(conf.getRawConfiguration()));
   }
 
   @Test
   public void testClientCorrelation() throws IOException {
-    checkRequest(clientCorrelationIds[0], true);
-    checkRequest(clientCorrelationIds[1], false);
-    checkRequest(clientCorrelationIds[2], false);
+      checkRequest(clientCorrelationIds[0], true);
+      checkRequest(clientCorrelationIds[1], false);
+      checkRequest(clientCorrelationIds[2], false);
   }
 
   public void checkRequest(String clientCorrelationId, boolean includeInHeader)
-      throws IOException {
+          throws IOException {
     Configuration config = new Configuration(this.getRawConfiguration());
     config.set(FS_AZURE_CLIENT_CORRELATIONID, clientCorrelationId);
 
-    final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem
-        .newInstance(this.getFileSystem().getUri(), config);
+    final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(this.getFileSystem().getUri(), config);
     AbfsClient client = fs.getAbfsClient();
     AbfsRestOperation op = client.getFilesystemProperties();
 
     int responseCode = op.getResult().getStatusCode();
     assertEquals("Status code", 200, responseCode);
-    String responseHeader = op.getResult()
-        .getResponseHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
+    String responseHeader = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
     if (includeInHeader) {
+      Assertions.assertThat(responseHeader).describedAs("Should contain request IDs")
+              .startsWith(clientCorrelationId);
+    }
+    else {
       Assertions.assertThat(responseHeader)
-          .describedAs("Should contain request IDs")
-          .startsWith(clientCorrelationId);
-    } else {
-      Assertions.assertThat(responseHeader).describedAs(
-          "Invalid or empty correlationId value"
-              + " should be converted to empty string").startsWith(":");
+              .describedAs("Invalid or empty correlationId value" +
+                      " should be converted to empty string").startsWith(":");
     }
   }
 
