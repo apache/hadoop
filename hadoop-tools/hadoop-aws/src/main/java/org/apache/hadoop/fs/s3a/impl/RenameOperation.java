@@ -215,12 +215,11 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
    * This method must only be called from the primary thread.
    * @param path path to the object
    * @param key key of the object.
-   * @param version object version.
    */
-  private void queueToDelete(Path path, String key, String version) {
+  private void queueToDelete(Path path, String key) {
     LOG.debug("Queueing to delete {}", path);
     pathsToDelete.add(path);
-    keysToDelete.add(new DeleteObjectsRequest.KeyVersion(key, version));
+    keysToDelete.add(new DeleteObjectsRequest.KeyVersion(key));
   }
 
   /**
@@ -228,28 +227,26 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
    * <p></p>
    * no-op if the list is empty.
    * <p></p>
-   * See {@link #queueToDelete(Path, String, String)} for
+   * See {@link #queueToDelete(Path, String)} for
    * details on safe use of this method.
    *
    * @param markersToDelete markers
    */
   private void queueToDelete(
       List<DirMarkerTracker.Marker> markersToDelete) {
-    markersToDelete.forEach(m ->
-        queueToDelete(m));
+    markersToDelete.forEach(this::queueToDelete);
   }
 
   /**
    * Queue a single marker for deletion.
    * <p></p>
-   * See {@link #queueToDelete(Path, String, String)} for
+   * See {@link #queueToDelete(Path, String)} for
    * details on safe use of this method.
    *
    * @param marker markers
    */
   private void queueToDelete(final DirMarkerTracker.Marker marker) {
-    queueToDelete(marker.getPath(), marker.getKey(),
-        marker.getStatus().getVersionId());
+    queueToDelete(marker.getPath(), marker.getKey());
   }
 
   /**
@@ -418,6 +415,7 @@ Are   * @throws IOException failure
     while (iterator.hasNext()) {
       // get the next entry in the listing.
       S3ALocatedFileStatus child = iterator.next();
+      LOG.debug("To rename {}", child);
       // convert it to an S3 key.
       String k = storeContext.pathToKey(child.getPath());
       // possibly adding a "/" if it represents directory and it does
@@ -450,7 +448,7 @@ Are   * @throws IOException failure
         Path childDestPath = storeContext.keyToPath(newDestKey);
 
         // mark the source file for deletion on a successful copy.
-        queueToDelete(childSourcePath, key, child.getVersionId());
+        queueToDelete(childSourcePath, key);
           // now begin the single copy
         CompletableFuture<Path> copy = initiateCopy(child, key,
             childSourcePath, newDestKey, childDestPath);

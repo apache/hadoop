@@ -279,7 +279,7 @@ static int testHdfsMiniStressImpl(struct tlhThreadInfo *ti)
   EXPECT_NONNULL(ti->hdfs);
   // Error injection on, some failures are expected in the read path.
   // The expectation is that any memory stomps will cascade and cause
-  // the following test to fail.  Ideally RPC errors would be seperated
+  // the following test to fail.  Ideally RPC errors would be separated
   // from BlockReader errors (RPC is expected to recover from disconnects).
   doTestHdfsMiniStress(ti, 1);
   // No error injection

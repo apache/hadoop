@@ -104,7 +104,7 @@ The allocation file must be in XML format. The format contains five types of ele
 
     * **maxAMShare**: limit the fraction of the queue's fair share that can be used to run application masters. This property can only be used for leaf queues. For example, if set to 1.0f, then AMs in the leaf queue can take up to 100% of both the memory and CPU fair share. The value of -1.0f will disable this feature and the amShare will not be checked. The default value is 0.5f.
 
-    * **weight**: to share the cluster non-proportionally with other queues. Weights default to 1, and a queue with weight 2 should receive approximately twice as many resources as a queue with the default weight.
+    * **weight**: to share the cluster non-proportionally with other queues. Weights default to 1, and a queue with weight 2 should receive approximately twice as many resources as a queue with the default weight. A queue with weight 0 should receive resources after all non-zero weight queues have received resources.
 
     * **schedulingPolicy**: to set the scheduling policy of any queue. The allowed values are "fifo"/"fair"/"drf" or any class that extends `org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SchedulingPolicy`. Defaults to "fair". If "fifo", apps with earlier submit times are given preference for containers, but apps submitted later may run concurrently if there is leftover space on the cluster after satisfying the earlier app's requests.
 
