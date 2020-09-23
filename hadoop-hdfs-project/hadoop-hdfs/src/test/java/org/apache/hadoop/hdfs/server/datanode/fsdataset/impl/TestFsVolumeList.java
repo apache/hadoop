@@ -212,7 +212,7 @@ public class TestFsVolumeList {
         .setStorageID("storage-id")
         .setConf(conf)
         .build();
-    assertEquals("", 3L, volume5.getReserved());
+    assertEquals(3L, volume5.getReserved());
   }
 
   @Test
