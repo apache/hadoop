@@ -111,7 +111,7 @@ public final class IOStatisticsSnapshot
   /**
    * Create the maps.
    */
-  private void createMaps() {
+  private synchronized void createMaps() {
     counters = new ConcurrentHashMap<>();
     gauges = new ConcurrentHashMap<>();
     minimums = new ConcurrentHashMap<>();

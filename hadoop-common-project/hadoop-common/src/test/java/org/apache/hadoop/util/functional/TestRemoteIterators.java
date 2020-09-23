@@ -54,14 +54,14 @@ public class TestRemoteIterators extends AbstractHadoopTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(
       TestRemoteIterators.class);
 
-  private static final String[] data = {"a", "b", "c"};
+  private static final String[] DATA = {"a", "b", "c"};
 
   /** Counter for lambda-expressions. */
   private int counter;
 
   @Test
   public void testIterateArray() throws Throwable {
-    verifySize(remoteIteratorFromArray(data), data.length,
+    verifySize(remoteIteratorFromArray(DATA), DATA.length,
         (s) -> LOG.info(s));
   }
 
@@ -69,12 +69,12 @@ public class TestRemoteIterators extends AbstractHadoopTestBase {
   public void testIterateArrayMapped() throws Throwable {
     verifySize(
         mappingRemoteIterator(
-            remoteIteratorFromArray(data),
+            remoteIteratorFromArray(DATA),
             (d) -> {
               counter += d.length();
               return d;
             }),
-        data.length,
+        DATA.length,
         this::log);
     assertCounterValue(3);
   }
@@ -335,7 +335,7 @@ public class TestRemoteIterators extends AbstractHadoopTestBase {
   /**
    * Iterator which counts down.
    */
-  private static class CountdownRemoteIterator extends CloseCounter
+  private static final class CountdownRemoteIterator extends CloseCounter
       implements RemoteIterator<Integer> {
 
     private int limit;
@@ -365,7 +365,7 @@ public class TestRemoteIterators extends AbstractHadoopTestBase {
   /**
    * Iterator which counts down.
    */
-  private static class CountdownIterator extends CloseCounter
+  private static final class CountdownIterator extends CloseCounter
       implements Iterator<Integer> {
 
     private int limit;
@@ -396,7 +396,7 @@ public class TestRemoteIterators extends AbstractHadoopTestBase {
    * Iterable for countdown iterators.
    * Once closed, calls to iterator() raise an exception.
    */
-  private static class CountdownIterable extends CloseCounter
+  private static final class CountdownIterable extends CloseCounter
       implements Iterable<Integer> {
 
     private int limit;

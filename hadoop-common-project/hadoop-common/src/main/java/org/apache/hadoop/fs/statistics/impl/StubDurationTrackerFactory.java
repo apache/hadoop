@@ -25,7 +25,8 @@ import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
  * This is a stub factory which always returns no-op duration
  * trackers. Allows for code to always be handed a factory.
  */
-public final class StubDurationTrackerFactory implements DurationTrackerFactory {
+public final class StubDurationTrackerFactory
+    implements DurationTrackerFactory {
 
   /**
    * Single instance.

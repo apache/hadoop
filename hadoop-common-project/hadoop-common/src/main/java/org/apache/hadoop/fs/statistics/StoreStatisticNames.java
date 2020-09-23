@@ -253,11 +253,12 @@ public final class StoreStatisticNames {
 
 
   /**
-   * The name of the statistic collected for executor aquisition if
+   * The name of the statistic collected for executor acquisition if
    * a duration tracker factory is passed in to the constructor.
    * {@value}.
    */
-  public static String ACTION_EXECUTOR_ACQUIRED = "action_executor_acquired";
+  public static final String ACTION_EXECUTOR_ACQUIRED =
+      "action_executor_acquired";
 
   /**
    * An HTTP HEAD request was made: {@value}.
