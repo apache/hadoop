@@ -730,7 +730,7 @@ Consult the javadocs for `org.apache.hadoop.fs.azurebfs.constants.ConfigurationK
 of configuration options and their default values. Users can provide an identifier
  for correlating requests. This should be placed as the value for the configuration option
  `fs.azure.client.correlationid`. The client correlation id should be a string of length less than
- 65 characters and contain alphanumeric characters and/or hyphens only. 
+ 65 characters and contain alphanumeric characters and/or hyphens only.
 
 ### <a name="flushconfigoptions"></a> Flush Options
 
