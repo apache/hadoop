@@ -70,6 +70,14 @@ changeconf() {
   fi
 }
 
+removeproperties() {
+  propertiessize=${#properties[@]}
+  for ((i = 0; i < propertiessize; i++)); do
+    key=${properties[$i]}
+    xmlstarlet ed -P -L -d "/configuration/property[name='$key']" $conffile
+  done
+}
+
 testwithconfs() {
   propertiessize=${#properties[@]}
   valuessize=${#values[@]}
@@ -83,6 +91,7 @@ testwithconfs() {
     changeconf "$key" "$val"
   done
   mvn -T 1C -Dparallel-tests=abfs -Dscale -DtestsThreadCount=$threadcount verify >> "$testlogfilename"
+  removeproperties
 }
 
 summary() {
