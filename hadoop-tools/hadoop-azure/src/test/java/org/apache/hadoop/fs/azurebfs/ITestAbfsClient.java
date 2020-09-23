@@ -42,9 +42,9 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLIENT_CORRELATIONID;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ACCOUNT_KEY;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLIENT_CORRELATIONID;
 
 /**
  * Test continuation token which has equal sign.
@@ -52,7 +52,8 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   private static final int LIST_MAX_RESULTS = 500;
   private static final int LIST_MAX_RESULTS_SERVER = 5000;
-  private static final String[] clientCorrelationIds = {"valid-corr-id-123", "inval!d", ""};
+  private static final String[] clientCorrelationIds = {"valid-corr-id-123",
+      "inval!d", ""};
 
   public ITestAbfsClient() throws Exception {
     super();
@@ -93,31 +94,33 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testClientCorrelation() throws IOException {
-      checkRequest(clientCorrelationIds[0], true);
-      checkRequest(clientCorrelationIds[1], false);
-      checkRequest(clientCorrelationIds[2], false);
+    checkRequest(clientCorrelationIds[0], true);
+    checkRequest(clientCorrelationIds[1], false);
+    checkRequest(clientCorrelationIds[2], false);
   }
 
   public void checkRequest(String clientCorrelationId, boolean includeInHeader)
-          throws IOException {
+      throws IOException {
     Configuration config = new Configuration(this.getRawConfiguration());
     config.set(FS_AZURE_CLIENT_CORRELATIONID, clientCorrelationId);
 
-    final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(this.getFileSystem().getUri(), config);
+    final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem
+        .newInstance(this.getFileSystem().getUri(), config);
     AbfsClient client = fs.getAbfsClient();
     AbfsRestOperation op = client.getFilesystemProperties();
 
     int responseCode = op.getResult().getStatusCode();
     assertEquals("Status code", 200, responseCode);
-    String responseHeader = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
+    String responseHeader = op.getResult()
+        .getResponseHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
     if (includeInHeader) {
-      Assertions.assertThat(responseHeader).describedAs("Should contain request IDs")
-              .startsWith(clientCorrelationId);
-    }
-    else {
       Assertions.assertThat(responseHeader)
-              .describedAs("Invalid or empty correlationId value" +
-                      " should be converted to empty string").startsWith(":");
+          .describedAs("Should contain request IDs")
+          .startsWith(clientCorrelationId);
+    } else {
+      Assertions.assertThat(responseHeader).describedAs(
+          "Invalid or empty correlationId value"
+              + " should be converted to empty string").startsWith(":");
     }
   }
 

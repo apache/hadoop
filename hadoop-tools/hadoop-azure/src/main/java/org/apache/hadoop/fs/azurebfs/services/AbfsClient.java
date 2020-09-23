@@ -88,7 +88,8 @@ public class AbfsClient implements Closeable {
     this.retryPolicy = abfsClientContext.getExponentialRetryPolicy();
     this.accountName = abfsConfiguration.getAccountName().substring(0, abfsConfiguration.getAccountName().indexOf(AbfsHttpConstants.DOT));
     this.authType = abfsConfiguration.getAuthType(accountName);
-    this.trackingContext = new TrackingContext(abfsConfiguration.getClientCorrelationID());
+    this.trackingContext = new TrackingContext(
+        abfsConfiguration.getClientCorrelationID());
 
     String sslProviderName = null;
 
@@ -158,7 +159,9 @@ public class AbfsClient implements Closeable {
             UTF_8));
     requestHeaders.add(new AbfsHttpHeader(CONTENT_TYPE, EMPTY_STRING));
     requestHeaders.add(new AbfsHttpHeader(USER_AGENT, userAgent));
-    requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, trackingContext.toString()));
+    requestHeaders.add(
+        new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID,
+            trackingContext.toString()));
     return requestHeaders;
   }
 
