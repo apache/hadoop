@@ -28,6 +28,8 @@ import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_APPENDBLOB_ENABLED;
+
 /**
  * Test create operation.
  */
@@ -44,10 +46,15 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
     final AzureBlobFileSystem fs = getFileSystem(conf);
     try (FSDataOutputStream out = fs.create(TEST_FILE_PATH)) {
     AbfsOutputStream stream = (AbfsOutputStream) out.getWrappedStream();
+    int expectedMaxConcurrentRequestCount = 1;
+    if(!getConfiguration().getBoolean(FS_AZURE_TEST_APPENDBLOB_ENABLED, false)){
+      expectedMaxConcurrentRequestCount =
+          getConfiguration().getWriteMaxConcurrentRequestCount();
+    }
     Assertions.assertThat(stream.getMaxConcurrentRequestCount()).describedAs(
         "maxConcurrentRequests should be " + getConfiguration()
             .getWriteMaxConcurrentRequestCount())
-        .isEqualTo(getConfiguration().getWriteMaxConcurrentRequestCount());
+        .isEqualTo(expectedMaxConcurrentRequestCount);
     Assertions.assertThat(stream.getMaxRequestsThatCanBeQueued()).describedAs(
         "maxRequestsToQueue should be " + getConfiguration()
             .getMaxWriteRequestsToQueue())
@@ -67,6 +74,9 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
     final AzureBlobFileSystem fs = getFileSystem(conf);
     FSDataOutputStream out = fs.create(TEST_FILE_PATH);
     AbfsOutputStream stream = (AbfsOutputStream) out.getWrappedStream();
+    if(getConfiguration().getBoolean(FS_AZURE_TEST_APPENDBLOB_ENABLED, false)){
+      maxConcurrentRequests = 1;
+    }
     Assertions.assertThat(stream.getMaxConcurrentRequestCount())
         .describedAs("maxConcurrentRequests should be " + maxConcurrentRequests)
         .isEqualTo(maxConcurrentRequests);

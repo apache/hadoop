@@ -211,13 +211,7 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
        *
        * bytes_received - This should be equal to bytes sent earlier.
        */
-      long extraCalls = 0;
-      if (!fs.getAbfsStore()
-          .isAppendBlobKey(fs.makeQualified(getResponsePath).toString())) {
-        // no network calls are made for hflush in case of appendblob
-        extraCalls++;
-      }
-      long expectedGetResponses = getResponsesBeforeTest + extraCalls + 1;
+      long expectedGetResponses = getResponsesBeforeTest + 2;
       getResponses = assertAbfsStatistics(AbfsStatistic.GET_RESPONSES,
           expectedGetResponses, metricMap);
 
