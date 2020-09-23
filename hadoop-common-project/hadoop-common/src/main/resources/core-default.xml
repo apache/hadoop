@@ -3826,6 +3826,13 @@
       in audit logs.
     </description>
   </property>
+  <property>
+    <name>hadoop.caller.context.item.separator</name>
+    <value>,</value>
+    <description>
+      The separator is for context which maybe contain many items.
+    </description>
+  </property>
 <!-- SequenceFile's Sorter properties -->
   <property>
     <name>seq.io.sort.mb</name>

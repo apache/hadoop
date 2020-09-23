@@ -21,10 +21,15 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configuration;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ITEM_SEPARATOR_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ITEM_SEPARATOR_KEY;
 
 /**
  * A class defining the caller context for auditing coarse granularity
@@ -36,7 +41,6 @@ import java.util.Arrays;
 @InterfaceStability.Evolving
 public final class CallerContext {
   public static final Charset SIGNATURE_ENCODING = StandardCharsets.UTF_8;
-  public static final String ITEM_SEPARATOR = "\\$";
   /** The caller context.
    *
    * It will be truncated if it exceeds the maximum allowed length in
@@ -113,16 +117,20 @@ public final class CallerContext {
   }
 
   /** The caller context builder. */
-  public static final class Builder {
+  public static final class Builder implements Configurable {
     private String context;
     private byte[] signature;
+    private Configuration conf = new Configuration();
 
     public Builder(String context) {
       this.context = context;
     }
 
-    public Builder(String key, String value, String separator) {
-      this.context = key + separator + value;
+    public Builder(String key, String value, String kvSeparator) {
+      this.context = new StringBuilder(key)
+          .append(kvSeparator)
+          .append(value)
+          .toString();
     }
 
     public Builder setSignature(byte[] signature) {
@@ -140,7 +148,8 @@ public final class CallerContext {
     public Builder append(String item) {
       if (CallerContext.isContextValid(context)) {
         this.context = new StringBuilder(context)
-            .append(CallerContext.ITEM_SEPARATOR)
+            .append(conf.get(HADOOP_CALLER_CONTEXT_ITEM_SEPARATOR_KEY,
+                HADOOP_CALLER_CONTEXT_ITEM_SEPARATOR_DEFAULT))
             .append(item)
             .toString();
       } else {
@@ -153,21 +162,22 @@ public final class CallerContext {
      * Append new item which contains key and value to the context.
      * @param key
      * @param value
-     * @param separator
+     * @param kvSeparator
      * @return builder
      */
-    public Builder append(String key, String value, String separator) {
+    public Builder append(String key, String value, String kvSeparator) {
       if (CallerContext.isContextValid(context)) {
         this.context = new StringBuilder(context)
-            .append(CallerContext.ITEM_SEPARATOR)
+            .append(conf.get(HADOOP_CALLER_CONTEXT_ITEM_SEPARATOR_KEY,
+                HADOOP_CALLER_CONTEXT_ITEM_SEPARATOR_DEFAULT))
             .append(key)
-            .append(separator)
+            .append(kvSeparator)
             .append(value)
             .toString();
       } else {
-        this.context = new StringBuilder(context)
+        this.context = new StringBuilder()
             .append(key)
-            .append(separator)
+            .append(kvSeparator)
             .append(value)
             .toString();
       }
@@ -176,6 +186,16 @@ public final class CallerContext {
 
     public CallerContext build() {
       return new CallerContext(this);
+    }
+
+    @Override
+    public void setConf(Configuration conf) {
+      this.conf = conf;
+    }
+
+    @Override
+    public Configuration getConf() {
+      return this.conf;
     }
   }
 
