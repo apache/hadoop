@@ -257,11 +257,11 @@ final class IOStatisticsStoreImpl extends WrappedIOStatistics
     Map<String, Long> sourceCounters = source.counters();
     counterMap.entrySet().
         forEach(e -> {
-      Long sourceValue = lookupQuietly(sourceCounters, e.getKey());
-      if (sourceValue != null) {
-        e.getValue().addAndGet(sourceValue);
-      }
-    });
+          Long sourceValue = lookupQuietly(sourceCounters, e.getKey());
+          if (sourceValue != null) {
+            e.getValue().addAndGet(sourceValue);
+          }
+        });
     // gauge: add positive values only
     Map<String, Long> sourceGauges = source.gauges();
     gaugeMap.entrySet().forEach(e -> {

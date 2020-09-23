@@ -115,6 +115,16 @@ public class TestIOStatisticsSnapshot extends AbstractHadoopTestBase {
     String json = serializer.toJson(snapshot);
     LOG.info("serialized form\n{}", json);
     IOStatisticsSnapshot deser = serializer.fromJson(json);
+    verifyDeserializedInstance(deser);
+  }
+
+  /**
+   * Verify the deserialized instance's data
+   * matches the expected values.
+   * @param deser deserialized vlaue.
+   */
+  public void verifyDeserializedInstance(
+      final IOStatistics deser) {
     LOG.info("deserialized {}", deser);
     verifyCounterStatisticValue(deser, "c1", 0L);
     verifyGaugeStatisticValue(deser, "g1", 1L);
@@ -127,7 +137,9 @@ public class TestIOStatisticsSnapshot extends AbstractHadoopTestBase {
 
   @Test
   public void testJavaRoundTrip() throws Throwable {
-    IOStatisticsSnapshot deser = (IOStatisticsSnapshot) IOStatisticAssertions.javaRoundTrip(snapshot);
+    verifyDeserializedInstance(
+        IOStatisticAssertions.javaRoundTrip(
+            snapshot));
 
 
   }
