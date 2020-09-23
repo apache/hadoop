@@ -324,7 +324,7 @@ class BlockManagerSafeMode {
               numLive, datanodeThreshold);
         }
       } else {
-        msg += "The minimum number of live datanodes is not calculated " +
+        msg += "The number of live datanodes is not calculated " +
             "since reported blocks hasn't reached the threshold. ";
       }
     } else {
