@@ -215,10 +215,10 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   /**
    * Initializes a new HTTP request and opens the connection.
    *
-   * @param url The full URL including query string parameters.
-   * @param method The HTTP method (PUT, PATCH, POST, GET, HEAD, or DELETE).
+   * @param url            The full URL including query string parameters.
+   * @param method         The HTTP method (PUT, PATCH, POST, GET, HEAD, or
+   *                       DELETE).
    * @param requestHeaders The HTTP request headers.READ_TIMEOUT
-   *
    * @throws IOException if an error occurs.
    */
   public AbfsHttpOperation(final URL url, final String method,
@@ -256,7 +256,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    * @param buffer the request entity body.
    * @param offset an offset into the buffer where the data beings.
    * @param length the length of the data in the buffer.
-   *
    * @throws IOException if an error occurs.
    */
   public void sendRequest(byte[] buffer, int offset, int length)
@@ -296,7 +295,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    * @param buffer a buffer to hold the response entity body
    * @param offset an offset in the buffer where the data will being.
    * @param length the number of bytes to be written to the buffer.
-   *
    * @throws IOException if an error occurs.
    */
   public void processResponse(final byte[] buffer, final int offset,
@@ -412,17 +410,16 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    * and extract the storageErrorCode and storageErrorMessage.  Any errors
    * encountered while attempting to process the error response are logged,
    * but otherwise ignored.
-   *
+   * <p>
    * For storage errors, the response body *usually* has the following format:
-   *
+   * <p>
    * {
-   *   "error":
-   *   {
-   *     "code": "string",
-   *     "message": "string"
-   *   }
+   * "error":
+   * {
+   * "code": "string",
+   * "message": "string"
    * }
-   *
+   * }
    */
   private void processStorageErrorResponse() {
     try (InputStream stream = connection.getErrorStream()) {
@@ -502,6 +499,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
   /**
    * Check null stream, this is to pass findbugs's redundant check for NULL
+   *
    * @param stream InputStream
    */
   private boolean isNullInputStream(InputStream stream) {
