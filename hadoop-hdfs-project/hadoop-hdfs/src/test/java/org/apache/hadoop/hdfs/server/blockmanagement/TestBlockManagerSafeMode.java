@@ -527,7 +527,7 @@ public class TestBlockManagerSafeMode {
                 "threshold %.4f of total blocks %d.%n",
             0, BLOCK_THRESHOLD, THRESHOLD, BLOCK_TOTAL)));
     assertTrue(tip.contains(
-        "The minimum number of live datanodes is not calculated " +
+        "The number of live datanodes is not calculated " +
             "since reported blocks hasn't reached the threshold."));
     assertTrue(tip.contains("Safe mode will be turned off automatically once " +
         "the thresholds have been reached."));
