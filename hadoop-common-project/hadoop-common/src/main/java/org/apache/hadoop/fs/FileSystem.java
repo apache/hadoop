@@ -622,7 +622,7 @@ public abstract class FileSystem extends Configured
    */
   public static void closeAll() throws IOException {
     if (LOGGER.isDebugEnabled()) {
-      debugLogFileSystemClose("closeAll", null);
+      debugLogFileSystemClose("closeAll", "");
     }
     CACHE.closeAll();
   }
@@ -636,18 +636,19 @@ public abstract class FileSystem extends Configured
   public static void closeAllForUGI(UserGroupInformation ugi)
   throws IOException {
     if (LOGGER.isDebugEnabled()) {
-      debugLogFileSystemClose("closeAllForUGI", "UGI: " + ugi.toString());
+      debugLogFileSystemClose("closeAllForUGI", "UGI: " + ugi);
     }
     CACHE.closeAll(ugi);
   }
 
   private static void debugLogFileSystemClose(String methodName, String additionalInfo) {
     StackTraceElement callingMethod = new Throwable().fillInStackTrace().getStackTrace()[2];
-    LOGGER.debug(
-        "FileSystem." + methodName + "() called by method: "
-            + callingMethod.getClassName() + "." + callingMethod.getMethodName()
-            + "(" + callingMethod.getFileName() + ":" + callingMethod.getLineNumber() + "); "
-            + (additionalInfo != null ? additionalInfo : ""));
+    LOGGER.debug("FileSystem.{}() called by method: {}.{}({}:{}); {}", methodName, callingMethod.getClassName(),
+            callingMethod.getMethodName(), callingMethod.getFileName(), callingMethod.getLineNumber(), additionalInfo);
+    if (LOGGER.isTraceEnabled()) {
+      LOGGER.trace("FileSystem.{}() full stack trace:", methodName, new Throwable().fillInStackTrace());
+    }
+    
   }
 
   /**
