@@ -479,7 +479,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
   void checkSnapshotLimit(int limit, int snapshotCount, String type)
       throws SnapshotException {
     if (snapshotCount >= limit) {
-      String msg = "there are already " + (snapshotCount + 1)
+      String msg = "there are already " + snapshotCount
           + " snapshot(s) and the "  + type + " snapshot limit is "
           + limit;
       if (isImageLoaded()) {

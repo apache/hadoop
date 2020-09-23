@@ -210,7 +210,8 @@ public class TestOrderedSnapshotDeletion {
     hdfs.createSnapshot(snapshottableDir, "s1");
     assertXAttrSet("s1", hdfs, null);
     assertXAttrSet("s1", hdfs, null);
-    cluster.getNameNode().getConf().setBoolean(DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED, false);
+    cluster.getNameNode().getConf().
+        setBoolean(DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED, false);
     cluster.restartNameNodes();
   }
 
