@@ -295,9 +295,11 @@ class BlockManagerSafeMode {
 
   String getSafeModeTip() {
     String msg = "";
+    boolean isBlockThresholdMet = false;
 
     synchronized (this) {
-      if (blockSafe < blockThreshold) {
+      isBlockThresholdMet = (blockSafe >= blockThreshold);
+      if (!isBlockThresholdMet) {
         msg += String.format(
             "The reported blocks %d needs additional %d"
                 + " blocks to reach the threshold %.4f of total blocks %d.%n",
@@ -309,16 +311,21 @@ class BlockManagerSafeMode {
     }
 
     if (datanodeThreshold > 0) {
-      int numLive = blockManager.getDatanodeManager().getNumLiveDataNodes();
-      if (numLive < datanodeThreshold) {
-        msg += String.format(
-            "The number of live datanodes %d needs an additional %d live "
-                + "datanodes to reach the minimum number %d.%n",
-            numLive, (datanodeThreshold - numLive), datanodeThreshold);
+      if (isBlockThresholdMet) {
+        int numLive = blockManager.getDatanodeManager().getNumLiveDataNodes();
+        if (numLive < datanodeThreshold) {
+          msg += String.format(
+              "The number of live datanodes %d needs an additional %d live "
+                  + "datanodes to reach the minimum number %d.%n",
+              numLive, (datanodeThreshold - numLive), datanodeThreshold);
+        } else {
+          msg += String.format("The number of live datanodes %d has reached "
+                  + "the minimum number %d. ",
+              numLive, datanodeThreshold);
+        }
       } else {
-        msg += String.format("The number of live datanodes %d has reached "
-                + "the minimum number %d. ",
-            numLive, datanodeThreshold);
+        msg += "The minimum number of live datanodes is not calculated " +
+            "since reported blocks hasn't reached the threshold. ";
       }
     } else {
       msg += "The minimum number of live datanodes is not required. ";
