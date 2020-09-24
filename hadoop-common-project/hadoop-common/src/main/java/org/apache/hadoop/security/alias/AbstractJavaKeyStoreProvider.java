@@ -147,6 +147,8 @@ public abstract class AbstractJavaKeyStoreProvider extends CredentialProvider {
 
   protected abstract String getSchemeName();
 
+  protected abstract String getKeyStoreType();
+
   protected abstract OutputStream getOutputStreamForKeystore()
       throws IOException;
 
@@ -315,7 +317,7 @@ public abstract class AbstractJavaKeyStoreProvider extends CredentialProvider {
         password = CREDENTIAL_PASSWORD_DEFAULT.toCharArray();
       }
       KeyStore ks;
-      ks = KeyStore.getInstance("jceks");
+      ks = KeyStore.getInstance(getKeyStoreType());
       if (keystoreExists()) {
         stashOriginalFilePermissions();
         try (InputStream in = getInputStreamForFile()) {

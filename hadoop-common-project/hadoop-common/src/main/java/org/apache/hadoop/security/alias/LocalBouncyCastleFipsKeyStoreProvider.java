@@ -25,18 +25,19 @@ import java.io.IOException;
 import java.net.URI;
 
 /**
- * CredentialProvider based on Java's KeyStore file format. The file may be
- * stored only on the local filesystem using the following name mangling:
- * localjceks://file/home/larry/creds.jceks {@literal ->}
- * file:///home/larry/creds.jceks
+ * CredentialProvider based on bouncy castle FIPS KeyStore file format.
+ * The file may be stored only on the local filesystem using the
+ * following name mangling:
+ * localbcfks://file/home/larry/creds.bcfks {@literal ->}
+ * file:///home/larry/creds.bcfks
  */
 @InterfaceAudience.Private
-public final class LocalJavaKeyStoreProvider extends
+public final class LocalBouncyCastleFipsKeyStoreProvider extends
     LocalKeyStoreProvider {
-  public static final String SCHEME_NAME = "localjceks";
-  public static final String KEYSTORE_TYPE = "jceks";
+  public static final String SCHEME_NAME = "localbcfks";
+  public static final String KEYSTORE_TYPE = "bcfks";
 
-  private LocalJavaKeyStoreProvider(URI uri, Configuration conf)
+  private LocalBouncyCastleFipsKeyStoreProvider(URI uri, Configuration conf)
       throws IOException {
     super(uri, conf);
   }
@@ -52,14 +53,15 @@ public final class LocalJavaKeyStoreProvider extends
   }
 
   /**
-   * The factory to create JksProviders, which is used by the ServiceLoader.
+   * The factory to create KeyStore Providers, which is used by the
+   * ServiceLoader.
    */
   public static class Factory extends CredentialProviderFactory {
     @Override
     public CredentialProvider createProvider(URI providerName,
         Configuration conf) throws IOException {
       if (SCHEME_NAME.equals(providerName.getScheme())) {
-        return new LocalJavaKeyStoreProvider(providerName, conf);
+        return new LocalBouncyCastleFipsKeyStoreProvider(providerName, conf);
       }
       return null;
     }
