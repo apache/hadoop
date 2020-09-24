@@ -166,93 +166,86 @@ public class TestBlockStoragePolicy {
     }
     Assert.assertEquals(POLICY_SUITE.getPolicy(HOT), POLICY_SUITE.getDefaultPolicy());
     
-    { // check Cold policy
-      final BlockStoragePolicy cold = POLICY_SUITE.getPolicy(COLD);
-      for(short replication = 1; replication < 6; replication++) {
-        final List<StorageType> computed = cold.chooseStorageTypes(replication);
-        assertStorageType(computed, replication, StorageType.ARCHIVE);
-      }
-      assertCreationFallback(cold, null, null, null, null, null, null);
-      assertReplicationFallback(cold, null, null, null, null, null);
+    // check Cold policy
+    final BlockStoragePolicy cold = POLICY_SUITE.getPolicy(COLD);
+    for(short replication = 1; replication < 6; replication++) {
+      final List<StorageType> computed = cold.chooseStorageTypes(replication);
+      assertStorageType(computed, replication, StorageType.ARCHIVE);
     }
+    assertCreationFallback(cold, null, null, null, null, null, null);
+    assertReplicationFallback(cold, null, null, null, null, null);
     
-    { // check Warm policy
-      final BlockStoragePolicy warm = POLICY_SUITE.getPolicy(WARM);
-      for(short replication = 1; replication < 6; replication++) {
-        final List<StorageType> computed = warm.chooseStorageTypes(replication);
-        assertStorageType(computed, replication, StorageType.DISK, StorageType.ARCHIVE);
-      }
-      assertCreationFallback(warm, StorageType.DISK, StorageType.DISK,
-          StorageType.ARCHIVE, StorageType.DISK, null, StorageType.DISK);
-      assertReplicationFallback(warm, StorageType.DISK, StorageType.DISK,
-          StorageType.ARCHIVE, StorageType.DISK, StorageType.DISK);
+    // check Warm policy
+    final BlockStoragePolicy warm = POLICY_SUITE.getPolicy(WARM);
+    for(short replication = 1; replication < 6; replication++) {
+      final List<StorageType> computed = warm.chooseStorageTypes(replication);
+      assertStorageType(computed, replication, StorageType.DISK,
+        StorageType.ARCHIVE);
     }
+    assertCreationFallback(warm, StorageType.DISK, StorageType.DISK,
+      StorageType.ARCHIVE, StorageType.DISK, null, StorageType.DISK);
+    assertReplicationFallback(warm, StorageType.DISK, StorageType.DISK,
+      StorageType.ARCHIVE, StorageType.DISK, StorageType.DISK);
 
-    { // check Hot policy
-      final BlockStoragePolicy hot = POLICY_SUITE.getPolicy(HOT);
-      for(short replication = 1; replication < 6; replication++) {
-        final List<StorageType> computed = hot.chooseStorageTypes(replication);
-        assertStorageType(computed, replication, StorageType.DISK);
-      }
-      assertCreationFallback(hot, null, null, null, null, null,
-          null);
-      assertReplicationFallback(hot, StorageType.ARCHIVE, null,
-          StorageType.ARCHIVE, StorageType.ARCHIVE, StorageType.ARCHIVE);
+    // check Hot policy
+    final BlockStoragePolicy hot = POLICY_SUITE.getPolicy(HOT);
+    for(short replication = 1; replication < 6; replication++) {
+      final List<StorageType> computed = hot.chooseStorageTypes(replication);
+      assertStorageType(computed, replication, StorageType.DISK);
     }
+    assertCreationFallback(hot, null, null, null, null, null, null);
+    assertReplicationFallback(hot, StorageType.ARCHIVE, null,
+      StorageType.ARCHIVE, StorageType.ARCHIVE, StorageType.ARCHIVE);
 
-    { // check ONE_SSD policy
-      final BlockStoragePolicy onessd = POLICY_SUITE.getPolicy(ONESSD);
-      for (short replication = 1; replication < 6; replication++) {
-        final List<StorageType> computed = onessd
-            .chooseStorageTypes(replication);
-        assertStorageType(computed, replication, StorageType.SSD,
-            StorageType.DISK);
-      }
-      assertCreationFallback(onessd, StorageType.SSD, StorageType.SSD,
-          StorageType.SSD, StorageType.DISK, StorageType.SSD, StorageType.SSD);
-      assertReplicationFallback(onessd, StorageType.SSD, StorageType.SSD,
-          StorageType.SSD, StorageType.DISK, StorageType.SSD);
+    // check ONE_SSD policy
+    final BlockStoragePolicy onessd = POLICY_SUITE.getPolicy(ONESSD);
+    for (short replication = 1; replication < 6; replication++) {
+      final List<StorageType> computed = onessd
+        .chooseStorageTypes(replication);
+      assertStorageType(computed, replication, StorageType.SSD,
+        StorageType.DISK);
     }
+    assertCreationFallback(onessd, StorageType.SSD, StorageType.SSD,
+      StorageType.SSD, StorageType.DISK, StorageType.SSD, StorageType.SSD);
+    assertReplicationFallback(onessd, StorageType.SSD, StorageType.SSD,
+      StorageType.SSD, StorageType.DISK, StorageType.SSD);
 
-    { // check ALL_SSD policy
-      final BlockStoragePolicy allssd = POLICY_SUITE.getPolicy(ALLSSD);
-      for (short replication = 1; replication < 6; replication++) {
-        final List<StorageType> computed = allssd
-            .chooseStorageTypes(replication);
-        assertStorageType(computed, replication, StorageType.SSD);
-      }
-      assertCreationFallback(allssd, StorageType.DISK, StorageType.DISK, null,
-          StorageType.DISK, null, StorageType.DISK);
-      assertReplicationFallback(allssd, StorageType.DISK, StorageType.DISK,
-          null, StorageType.DISK, StorageType.DISK);
+    // check ALL_SSD policy
+    final BlockStoragePolicy allssd = POLICY_SUITE.getPolicy(ALLSSD);
+    for (short replication = 1; replication < 6; replication++) {
+      final List<StorageType> computed = allssd
+        .chooseStorageTypes(replication);
+      assertStorageType(computed, replication, StorageType.SSD);
     }
+    assertCreationFallback(allssd, StorageType.DISK, StorageType.DISK, null,
+      StorageType.DISK, null, StorageType.DISK);
+    assertReplicationFallback(allssd, StorageType.DISK, StorageType.DISK,
+      null, StorageType.DISK, StorageType.DISK);
 
-    { // check LAZY_PERSIST policy
-      final BlockStoragePolicy lazyPersist = POLICY_SUITE
-          .getPolicy(LAZY_PERSIST);
-      for (short replication = 1; replication < 6; replication++) {
-        final List<StorageType> computed = lazyPersist
-            .chooseStorageTypes(replication);
-        assertStorageType(computed, replication, StorageType.DISK);
-      }
-      assertCreationFallback(lazyPersist, StorageType.DISK, StorageType.DISK,
-          null, StorageType.DISK, null, StorageType.DISK);
-      assertReplicationFallback(lazyPersist, StorageType.DISK,
-          StorageType.DISK, null, StorageType.DISK, StorageType.DISK);
+    // check LAZY_PERSIST policy
+    final BlockStoragePolicy lazyPersist = POLICY_SUITE
+      .getPolicy(LAZY_PERSIST);
+    for (short replication = 1; replication < 6; replication++) {
+      final List<StorageType> computed = lazyPersist
+        .chooseStorageTypes(replication);
+      assertStorageType(computed, replication, StorageType.DISK);
     }
+    assertCreationFallback(lazyPersist, StorageType.DISK, StorageType.DISK,
+      null, StorageType.DISK, null, StorageType.DISK);
+    assertReplicationFallback(lazyPersist, StorageType.DISK,
+      StorageType.DISK, null, StorageType.DISK, StorageType.DISK);
 
-    { // check ALL_NVDIMM policy
-      final BlockStoragePolicy allnvdimm = POLICY_SUITE.getPolicy(ALLNVDIMM);
-      for (short replication = 1; replication < 6; replication++) {
-        final List<StorageType> computed = allnvdimm
-            .chooseStorageTypes(replication);
-        assertStorageType(computed, replication, StorageType.NVDIMM);
-      }
-      assertCreationFallback(allnvdimm, StorageType.DISK, StorageType.DISK,
-          null, StorageType.DISK, null, StorageType.DISK);
-      assertReplicationFallback(allnvdimm, StorageType.DISK,
-          StorageType.DISK, null, StorageType.DISK, StorageType.DISK);
+    // check ALL_NVDIMM policy
+    final BlockStoragePolicy allnvdimm = POLICY_SUITE.getPolicy(ALLNVDIMM);
+    for (short replication = 1; replication < 6; replication++) {
+      final List<StorageType> computed = allnvdimm
+        .chooseStorageTypes(replication);
+      assertStorageType(computed, replication, StorageType.NVDIMM);
     }
+    assertCreationFallback(allnvdimm, StorageType.DISK, StorageType.DISK,
+      null, StorageType.DISK, null, StorageType.DISK);
+    assertReplicationFallback(allnvdimm, StorageType.DISK,
+      StorageType.DISK, null, StorageType.DISK, StorageType.DISK);
   }
 
   static StorageType[] newStorageTypes(int nDisk, int nArchive) {
