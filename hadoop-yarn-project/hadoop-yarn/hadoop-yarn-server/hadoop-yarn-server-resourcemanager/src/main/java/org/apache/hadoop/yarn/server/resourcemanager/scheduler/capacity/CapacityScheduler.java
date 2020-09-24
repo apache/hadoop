@@ -224,7 +224,8 @@ public class CapacityScheduler extends
   private boolean usePortForNodeName;
 
   private boolean scheduleAsynchronously;
-  private List<AsyncScheduleThread> asyncSchedulerThreads;
+  @VisibleForTesting
+  protected List<AsyncScheduleThread> asyncSchedulerThreads;
   private ResourceCommitterService resourceCommitterService;
   private RMNodeLabelsManager labelManager;
   private AppPriorityACLsManager appPriorityACLManager;
@@ -3283,5 +3284,13 @@ public class CapacityScheduler extends
   @VisibleForTesting
   public void setMaxRunningAppsEnforcer(CSMaxRunningAppsEnforcer enforcer) {
     this.maxRunningEnforcer = enforcer;
+  }
+
+  /**
+   * Returning true as capacity scheduler supports placement constraints.
+   */
+  @Override
+  public boolean placementConstraintEnabled() {
+    return true;
   }
 }

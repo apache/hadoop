@@ -20,9 +20,14 @@ package org.apache.hadoop.ipc;
 
 import static java.lang.Thread.sleep;
 
+import java.util.Map;
+import org.eclipse.jetty.util.ajax.JSON;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -382,5 +387,38 @@ public class TestDecayRpcScheduler {
         new ProcessingDetails(TimeUnit.MILLISECONDS);
     scheduler.addResponseTime("ignored", mockCall, emptyProcessingDetails);
     return priority;
+  }
+
+  @Test
+  public void testServiceUsers() {
+    Configuration conf = new Configuration();
+    conf.setLong("ipc.19."
+        + DecayRpcScheduler.IPC_SCHEDULER_DECAYSCHEDULER_PERIOD_KEY, 999999);
+    conf.set("ipc.19." + DecayRpcScheduler.IPC_DECAYSCHEDULER_SERVICE_USERS_KEY,
+        "service1,service2");
+    scheduler = new DecayRpcScheduler(4, "ipc.19", conf);
+
+    assertTrue(scheduler.getServiceUserNames().contains("service1"));
+    assertTrue(scheduler.getServiceUserNames().contains("service2"));
+
+    for (int i = 0; i < 10; i++) {
+      getPriorityIncrementCallCount("user1");
+      getPriorityIncrementCallCount("service1");
+      getPriorityIncrementCallCount("service2");
+    }
+
+    assertNotEquals(0, scheduler.getPriorityLevel(mockCall("user1")));
+    // The priorities of service users should be always 0.
+    assertEquals(0, scheduler.getPriorityLevel(mockCall("service1")));
+    assertEquals(0, scheduler.getPriorityLevel(mockCall("service2")));
+
+    // DecayRpcScheduler caches priorities after decay
+    scheduler.forceDecay();
+    // Check priorities on cache
+    String summary = scheduler.getSchedulingDecisionSummary();
+    Map<String, Object> summaryMap = (Map<String, Object>) JSON.parse(summary);
+    assertNotEquals(0L, summaryMap.get("user1"));
+    assertEquals(0L, summaryMap.get("service1"));
+    assertEquals(0L, summaryMap.get("service2"));
   }
 }

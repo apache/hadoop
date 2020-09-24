@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.webapp.WebPageUtils;
 import org.apache.hadoop.yarn.util.Log4jWarningErrorMetricsAppender;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
@@ -51,7 +53,7 @@ public class NavBlock extends HtmlBlock implements YarnWebParams {
 	
     String RMWebAppURL =
         WebAppUtils.getResolvedRMWebAppURLWithScheme(this.conf);
-	  Hamlet.UL<Hamlet.DIV<Hamlet>> ul = html
+	  Hamlet.DIV<Hamlet> ul = html
       .div("#nav")
       .h3().__("ResourceManager").__()
         .ul()
@@ -65,17 +67,17 @@ public class NavBlock extends HtmlBlock implements YarnWebParams {
             .__()
           .li()
             .a(url("allContainers"), "List of Containers").__()
-        .__()
-      .h3("Tools")
-        .ul()
-          .li().a("/conf", "Configuration").__()
-          .li().a("/logs", "Local logs").__()
-          .li().a("/stacks", "Server stacks").__()
-          .li().a("/jmx?qry=Hadoop:*", "Server metrics").__();
-    if (addErrorsAndWarningsLink) {
-      ul.li().a(url("errors-and-warnings"), "Errors/Warnings").__();
+        .__();
+
+    Hamlet.UL<Hamlet.DIV<Hamlet>> tools = WebPageUtils.appendToolSection(ul, conf);
+
+    if (tools == null) {
+      return;
     }
-    ul.__().__();
+    if (addErrorsAndWarningsLink) {
+      tools.li().a(url("errors-and-warnings"), "Errors/Warnings").__();
+    }
+    tools.__().__();
   }
 
 }

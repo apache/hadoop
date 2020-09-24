@@ -486,6 +486,14 @@
         </comparator>
         <comparator>
           <type>SubstringComparator</type>
+          <expected-output>Add ErasureCodingPolicy RS-12-4-128k succeed</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Add ErasureCodingPolicy RS-LEGACY-12-4-128k succeed</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
           <expected-output>Add ErasureCodingPolicy RS-6-3-1024k failed</expected-output>
         </comparator>
       </comparators>

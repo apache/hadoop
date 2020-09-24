@@ -509,6 +509,14 @@ public class FSDirectory implements Closeable {
   }
 
   /**
+   * Indicates whether the image loading is complete or not.
+   * @return true if image loading is complete, false otherwise
+   */
+  public boolean isImageLoaded() {
+    return namesystem.isImageLoaded();
+  }
+
+  /**
    * Parse configuration setting dfs.namenode.protected.directories to
    * retrieve the set of protected directories.
    *
@@ -1210,7 +1218,8 @@ public class FSDirectory implements Closeable {
 
     // check existing components in the path
     for(int i = (pos > iip.length() ? iip.length(): pos) - 1; i >= 0; i--) {
-      if (commonAncestor == iip.getINode(i)) {
+      if (commonAncestor == iip.getINode(i)
+          && !commonAncestor.isInLatestSnapshot(iip.getLatestSnapshotId())) {
         // Stop checking for quota when common ancestor is reached
         return;
       }

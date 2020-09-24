@@ -89,7 +89,7 @@ public class Count extends FsCommand {
           "Otherwise, it displays the quota and usage for all the storage \n" +
           "types that support quota. The list of possible storage " +
           "types(case insensitive):\n" +
-          "ram_disk, ssd, disk and archive.\n" +
+          "ram_disk, ssd, disk, archive and nvdimm.\n" +
           "It can also pass the value '', 'all' or 'ALL' to specify all " +
           "the storage types.\n" +
           "The -" + OPTION_QUOTA_AND_USAGE + " option shows the quota and \n" +

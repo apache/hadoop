@@ -165,8 +165,8 @@ public class TestViewfsFileStatus {
     final Path path = new Path("/tmp/someFile");
     FileSystem mockFS = Mockito.mock(FileSystem.class);
     InodeTree.ResolveResult<FileSystem> res =
-      new InodeTree.ResolveResult<FileSystem>(null, mockFS , null,
-        new Path("someFile"));
+        new InodeTree.ResolveResult<FileSystem>(null, mockFS, null,
+            new Path("someFile"), true);
     @SuppressWarnings("unchecked")
     InodeTree<FileSystem> fsState = Mockito.mock(InodeTree.class);
     Mockito.when(fsState.resolve(path.toString(), true)).thenReturn(res);

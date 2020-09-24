@@ -102,7 +102,7 @@ public class SSLFactory implements ConnectionConfigurator {
   public static final String SSLCERTIFICATE = IBM_JAVA?"ibmX509":"SunX509";
 
   public static final String KEYSTORES_FACTORY_CLASS_KEY =
-    "hadoop.ssl.keystores.factory.class";
+      "hadoop.ssl.keystores.factory.class";
 
   private Configuration conf;
   private Mode mode;
@@ -165,6 +165,13 @@ public class SSLFactory implements ConnectionConfigurator {
           SSL_SERVER_CONF_DEFAULT);
     }
     sslConf.addResource(sslConfResource);
+    // Only fallback to input config if classpath SSL config does not load for
+    // backward compatibility.
+    if (sslConf.getResource(sslConfResource) == null) {
+      LOG.debug("{} can't be loaded form classpath, fallback using SSL" +
+          " config from input configuration.", sslConfResource);
+      sslConf = conf;
+    }
     return sslConf;
   }
 

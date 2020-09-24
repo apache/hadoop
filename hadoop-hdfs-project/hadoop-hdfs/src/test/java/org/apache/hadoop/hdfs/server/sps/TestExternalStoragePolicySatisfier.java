@@ -447,6 +447,33 @@ public class TestExternalStoragePolicySatisfier {
   }
 
   @Test(timeout = 300000)
+  public void testWhenStoragePolicySetToALLNVDIMM()
+          throws Exception {
+    try {
+      createCluster();
+      // Change policy to ALL_NVDIMM
+      dfs.setStoragePolicy(new Path(FILE), "ALL_NVDIMM");
+
+      StorageType[][] newtypes =
+          new StorageType[][]{{StorageType.NVDIMM, StorageType.DISK},
+              {StorageType.NVDIMM, StorageType.DISK},
+              {StorageType.NVDIMM, StorageType.DISK}};
+
+      startAdditionalDNs(config, 3, NUM_OF_DATANODES, newtypes,
+              STORAGES_PER_DATANODE, CAPACITY, hdfsCluster);
+
+      dfs.satisfyStoragePolicy(new Path(FILE));
+      hdfsCluster.triggerHeartbeats();
+      // Wait till StorgePolicySatisfier Identified that block
+      // to move to MVDIMM areas
+      DFSTestUtil.waitExpectedStorageType(FILE, StorageType.NVDIMM, 3,
+          30000, dfs);
+    } finally {
+      shutdownCluster();
+    }
+  }
+
+  @Test(timeout = 300000)
   public void testWhenStoragePolicySetToALLSSD()
       throws Exception {
     try {

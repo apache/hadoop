@@ -38,6 +38,8 @@ public final class HdfsConstants {
 
   public static final byte MEMORY_STORAGE_POLICY_ID = 15;
   public static final String MEMORY_STORAGE_POLICY_NAME = "LAZY_PERSIST";
+  public static final byte ALLNVDIMM_STORAGE_POLICY_ID = 14;
+  public static final String ALLNVDIMM_STORAGE_POLICY_NAME = "ALL_NVDIMM";
   public static final byte ALLSSD_STORAGE_POLICY_ID = 12;
   public static final String ALLSSD_STORAGE_POLICY_NAME = "ALL_SSD";
   public static final byte ONESSD_STORAGE_POLICY_ID = 10;
@@ -65,6 +67,7 @@ public final class HdfsConstants {
     HOT(HOT_STORAGE_POLICY_ID),
     ONE_SSD(ONESSD_STORAGE_POLICY_ID),
     ALL_SSD(ALLSSD_STORAGE_POLICY_ID),
+    ALL_NVDIMM(ALLNVDIMM_STORAGE_POLICY_ID),
     LAZY_PERSIST(MEMORY_STORAGE_POLICY_ID);
 
     private byte value;
@@ -86,6 +89,8 @@ public final class HdfsConstants {
         return ONE_SSD;
       case 12:
         return ALL_SSD;
+      case 14:
+        return ALL_NVDIMM;
       case 15:
         return LAZY_PERSIST;
       default:

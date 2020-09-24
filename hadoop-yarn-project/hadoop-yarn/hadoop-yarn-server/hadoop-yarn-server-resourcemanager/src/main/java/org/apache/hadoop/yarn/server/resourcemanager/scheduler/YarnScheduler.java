@@ -127,17 +127,22 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
   public int getNumClusterNodes();
   
   /**
-   * The main api between the ApplicationMaster and the Scheduler.
-   * The ApplicationMaster is updating his future resource requirements
-   * and may release containers he doens't need.
-   * 
-   * @param appAttemptId
-   * @param ask
-   * @param schedulingRequests
-   * @param release
-   * @param blacklistAdditions
-   * @param blacklistRemovals
-   * @param updateRequests     @return the {@link Allocation} for the application
+   * The main API between the ApplicationMaster and the Scheduler.
+   * The ApplicationMaster may request/update container resources,
+   * number of containers, node/rack preference for allocations etc.
+   * to the Scheduler.
+   * @param appAttemptId the id of the application attempt.
+   * @param ask the request made by an application to obtain various allocations
+   * like host/rack, resource, number of containers, relaxLocality etc.,
+   * see {@link ResourceRequest}.
+   * @param schedulingRequests similar to ask, but with added ability to specify
+   * allocation tags etc., see {@link SchedulingRequest}.
+   * @param release the list of containers to be released.
+   * @param blacklistAdditions places (node/rack) to be added to the blacklist.
+   * @param blacklistRemovals places (node/rack) to be removed from the
+   * blacklist.
+   * @param updateRequests container promotion/demotion updates.
+   * @return the {@link Allocation} for the application.
    */
   @Public
   @Stable

@@ -362,6 +362,8 @@ public class YarnConfiguration extends Configuration {
       + "webapp.ui2.war-file-path";
   public static final String YARN_API_SERVICES_ENABLE = "yarn."
       + "webapp.api-service.enable";
+  public static final String YARN_WEBAPP_UI1_ENABLE_TOOLS = "yarn."
+      + "webapp.ui1.tools.enable";
 
   @Private
   public static final String DEFAULT_YARN_API_SYSTEM_SERVICES_CLASS =
@@ -1085,6 +1087,7 @@ public class YarnConfiguration extends Configuration {
   
   /** Default queue name */
   public static final String DEFAULT_QUEUE_NAME = "default";
+  public static final String DEFAULT_QUEUE_FULL_NAME = "root.default";
 
   /**
    * Buckets (in minutes) for the number of apps running in each queue.

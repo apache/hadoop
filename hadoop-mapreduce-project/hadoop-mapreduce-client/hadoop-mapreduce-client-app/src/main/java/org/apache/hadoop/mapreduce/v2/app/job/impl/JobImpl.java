@@ -1425,7 +1425,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
    * be set up to false. In that way, the NMs that host the task containers
    * won't try to upload the resources to shared cache.
    */
-  private static void cleanupSharedCacheUploadPolicies(Configuration conf) {
+  @VisibleForTesting
+  static void cleanupSharedCacheUploadPolicies(Configuration conf) {
     Job.setArchiveSharedCacheUploadPolicies(conf, Collections.emptyMap());
     Job.setFileSharedCacheUploadPolicies(conf, Collections.emptyMap());
   }

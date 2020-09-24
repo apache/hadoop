@@ -423,6 +423,24 @@ public class HsWebServices extends WebServices {
     return new JobTaskAttemptCounterInfo(ta);
   }
 
+  /**
+   * Returns the user qualified path name of the remote log directory for
+   * each pre-configured log aggregation file controller.
+   *
+   * @param req                HttpServletRequest
+   * @return Path names grouped by file controller name
+   */
+  @GET
+  @Path("/remote-log-dir")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public Response getRemoteLogDirPath(@Context HttpServletRequest req,
+      @QueryParam(YarnWebServiceParams.REMOTE_USER) String user,
+      @QueryParam(YarnWebServiceParams.APP_ID) String appIdStr)
+      throws IOException {
+    init();
+    return logServlet.getRemoteLogDirPath(user, appIdStr);
+  }
+
   @GET
   @Path("/aggregatedlogs")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })

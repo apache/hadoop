@@ -170,6 +170,9 @@ public class TestFsVolumeList {
     conf.setLong(
         DFSConfigKeys.DFS_DATANODE_DU_RESERVED_KEY + "."
             + StringUtils.toLowerCase(StorageType.SSD.toString()), 2L);
+    conf.setLong(
+        DFSConfigKeys.DFS_DATANODE_DU_RESERVED_KEY + "."
+            + StringUtils.toLowerCase(StorageType.NVDIMM.toString()), 3L);
     FsVolumeImpl volume1 = new FsVolumeImplBuilder().setDataset(dataset)
         .setStorageDirectory(
             new StorageDirectory(
@@ -202,6 +205,14 @@ public class TestFsVolumeList {
         .setConf(conf)
         .build();
     assertEquals("", 100L, volume4.getReserved());
+    FsVolumeImpl volume5 = new FsVolumeImplBuilder().setDataset(dataset)
+        .setStorageDirectory(
+            new StorageDirectory(
+                StorageLocation.parse("[NVDIMM]"+volDir.getPath())))
+        .setStorageID("storage-id")
+        .setConf(conf)
+        .build();
+    assertEquals(3L, volume5.getReserved());
   }
 
   @Test
@@ -286,6 +297,9 @@ public class TestFsVolumeList {
     conf.setLong(
         DFS_DATANODE_DU_RESERVED_PERCENTAGE_KEY + "."
             + StringUtils.toLowerCase(StorageType.SSD.toString()), 50);
+    conf.setLong(
+        DFS_DATANODE_DU_RESERVED_PERCENTAGE_KEY + "."
+            + StringUtils.toLowerCase(StorageType.NVDIMM.toString()), 20);
     FsVolumeImpl volume1 = new FsVolumeImplBuilder()
         .setConf(conf)
         .setDataset(dataset)
@@ -329,6 +343,18 @@ public class TestFsVolumeList {
         .setUsage(usage)
         .build();
     assertEquals(600, volume4.getReserved());
+    FsVolumeImpl volume5 = new FsVolumeImplBuilder()
+        .setConf(conf)
+        .setDataset(dataset)
+        .setStorageID("storage-id")
+        .setStorageDirectory(
+            new StorageDirectory(StorageLocation.parse(
+                "[NVDIMM]" + volDir.getPath())))
+        .setUsage(usage)
+        .build();
+    assertEquals(800, volume5.getReserved());
+    assertEquals(3200, volume5.getCapacity());
+    assertEquals(200, volume5.getAvailable());
   }
 
   @Test(timeout = 60000)

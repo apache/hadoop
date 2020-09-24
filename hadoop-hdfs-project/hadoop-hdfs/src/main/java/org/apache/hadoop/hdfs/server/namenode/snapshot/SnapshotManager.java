@@ -95,6 +95,18 @@ public class SnapshotManager implements SnapshotStatsMXBean {
   static final long DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED_GC_PERIOD_MS_DEFAULT
       = 5 * 60_000L; //5 minutes
 
+  private static final ThreadLocal<Boolean> DELETION_ORDERED
+      = new ThreadLocal<>();
+
+  static boolean isDeletionOrdered() {
+    final Boolean b = DELETION_ORDERED.get();
+    return b != null? b: false;
+  }
+
+  public void initThreadLocals() {
+    DELETION_ORDERED.set(isSnapshotDeletionOrdered());
+  }
+
   private final FSDirectory fsdir;
   private boolean captureOpenFiles;
   /**
@@ -357,6 +369,17 @@ public class SnapshotManager implements SnapshotStatsMXBean {
   }
 
   /**
+   * Return CaptureOpenFiles config value.
+   */
+  boolean captureOpenFiles() {
+    return captureOpenFiles;
+  }
+
+  @VisibleForTesting
+  int getMaxSnapshotLimit() {
+    return maxSnapshotLimit;
+  }
+  /**
    * Get the snapshot root directory for the given directory. The given
    * directory must either be a snapshot root or a descendant of any
    * snapshot root directories.
@@ -436,23 +459,43 @@ public class SnapshotManager implements SnapshotStatsMXBean {
           "snapshot IDs and ID rollover is not supported.");
     }
     int n = numSnapshots.get();
-    if (n >= maxSnapshotFSLimit) {
-      // We have reached the maximum snapshot limit
-      throw new SnapshotException(
-          "Failed to create snapshot: there are already " + (n + 1)
-              + " snapshot(s) and the max snapshot limit is "
-              + maxSnapshotFSLimit);
-    }
-
-    srcRoot.addSnapshot(snapshotCounter, snapshotName, leaseManager,
-        this.captureOpenFiles, maxSnapshotLimit, mtime);
+    checkFileSystemSnapshotLimit(n);
+    srcRoot.addSnapshot(this, snapshotName, leaseManager, mtime);
       
     //create success, update id
     snapshotCounter++;
     numSnapshots.getAndIncrement();
     return Snapshot.getSnapshotPath(snapshotRoot, snapshotName);
   }
-  
+
+  void checkFileSystemSnapshotLimit(int n) throws SnapshotException {
+    checkSnapshotLimit(maxSnapshotFSLimit, n, "file system");
+  }
+
+  void checkPerDirectorySnapshotLimit(int n) throws SnapshotException {
+    checkSnapshotLimit(maxSnapshotLimit, n, "per directory");
+  }
+
+  void checkSnapshotLimit(int limit, int snapshotCount, String type)
+      throws SnapshotException {
+    if (snapshotCount >= limit) {
+      String msg = "there are already " + snapshotCount
+          + " snapshot(s) and the "  + type + " snapshot limit is "
+          + limit;
+      if (isImageLoaded()) {
+        // We have reached the maximum snapshot limit
+        throw new SnapshotException(
+            "Failed to create snapshot: " + msg);
+      } else {
+        // image is getting loaded. LOG an error msg and continue
+        LOG.error(msg);
+      }
+    }
+  }
+
+  boolean isImageLoaded() {
+    return fsdir.isImageLoaded();
+  }
   /**
    * Delete a snapshot for a snapshottable directory
    * @param snapshotName Name of the snapshot to be deleted

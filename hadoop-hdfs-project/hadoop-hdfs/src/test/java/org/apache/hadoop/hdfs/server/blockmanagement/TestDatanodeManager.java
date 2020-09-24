@@ -375,15 +375,16 @@ public class TestDatanodeManager {
     }
     DatanodeManager dm = mockDatanodeManager(fsn, conf);
 
-    int totalDNs = 5 + providedStorages;
+    int totalDNs = 6 + providedStorages;
 
-    // register 5 datanodes, each with different storage ID and type
+    // register 6 datanodes, each with different storage ID and type
     DatanodeInfo[] locs = new DatanodeInfo[totalDNs];
     String[] storageIDs = new String[totalDNs];
     List<StorageType> storageTypesList = new ArrayList<>(
         Arrays.asList(StorageType.ARCHIVE,
             StorageType.DEFAULT,
             StorageType.DISK,
+            StorageType.NVDIMM,
             StorageType.RAM_DISK,
             StorageType.SSD));
 
@@ -420,7 +421,7 @@ public class TestDatanodeManager {
     List<LocatedBlock> blocks = new ArrayList<>();
     blocks.add(block);
 
-    final String targetIp = locs[4].getIpAddr();
+    final String targetIp = locs[5].getIpAddr();
 
     // sort block locations
     dm.sortLocatedBlocks(targetIp, blocks);
@@ -511,7 +512,7 @@ public class TestDatanodeManager {
     assertEquals(DatanodeInfo.AdminStates.DECOMMISSIONED,
         sortedLocs[sortedLocs.length - 2].getAdminState());
 
-    // test client not in cluster but same rack with locs[4]
+    // test client not in cluster but same rack with locs[5]
     final String targetIpNotInCluster = locs[4].getIpAddr() + "-client";
     dm.sortLocatedBlocks(targetIpNotInCluster, blocks);
     DatanodeInfo[] sortedLocs2 = block.getLocations();

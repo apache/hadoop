@@ -35,7 +35,7 @@ pipeline {
         DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile"
         YETUS='yetus'
         // Branch or tag name.  Yetus release tags are 'rel/X.Y.Z'
-        YETUS_VERSION='master'
+        YETUS_VERSION='main'
     }
 
     parameters {
