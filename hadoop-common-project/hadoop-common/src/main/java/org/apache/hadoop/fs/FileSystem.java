@@ -642,13 +642,12 @@ public abstract class FileSystem extends Configured
   }
 
   private static void debugLogFileSystemClose(String methodName, String additionalInfo) {
-    StackTraceElement callingMethod = new Throwable().fillInStackTrace().getStackTrace()[2];
-    LOGGER.debug("FileSystem.{}() called by method: {}.{}({}:{}); {}", methodName, callingMethod.getClassName(),
-            callingMethod.getMethodName(), callingMethod.getFileName(), callingMethod.getLineNumber(), additionalInfo);
+    Throwable throwable = new Throwable().fillInStackTrace();
+    LOGGER.debug("FileSystem.{}() by method: {}); {}", methodName, throwable.getStackTrace()[2],
+        additionalInfo);
     if (LOGGER.isTraceEnabled()) {
-      LOGGER.trace("FileSystem.{}() full stack trace:", methodName, new Throwable().fillInStackTrace());
+      LOGGER.trace("FileSystem.{}() full stack trace:", methodName, throwable);
     }
-    
   }
 
   /**
@@ -2587,8 +2586,8 @@ public abstract class FileSystem extends Configured
   @Override
   public void close() throws IOException {
     if (LOGGER.isDebugEnabled()) {
-      debugLogFileSystemClose("close", "Key: " + this.key + "; Object Identity Hash: "
-              + Integer.toHexString(System.identityHashCode(this)));
+      debugLogFileSystemClose("close", "Key: " + key + "; URI: " + getUri()
+          + "; Object Identity Hash: " + Integer.toHexString(System.identityHashCode(this)));
     }
     // delete all files that were marked as delete-on-exit.
     processDeleteOnExit();
