@@ -235,7 +235,7 @@ public final class IOStatisticsSnapshot
    * Deserialize by loading each TreeMap, and building concurrent
    * hash maps from them.
    */
-  private synchronized void readObject(final ObjectInputStream s)
+  private void readObject(final ObjectInputStream s)
       throws IOException, ClassNotFoundException {
     // read in core
     s.defaultReadObject();
