@@ -430,6 +430,9 @@ public class FsVolumeImpl implements FsVolumeSpi {
    * Return either the configured capacity of the file system if configured; or
    * the capacity of the file system excluding space reserved for non-HDFS.
    *
+   * When same-disk-tiering is turned on, the reported capacity
+   * will take reservedForArchive value into consideration of.
+   *
    * @return the unreserved number of bytes left in this filesystem. May be
    *         zero.
    */
