@@ -85,7 +85,10 @@ public final class ConfigurationKeys {
    *  Default value of this config is true. **/
   public static final String FS_AZURE_DISABLE_OUTPUTSTREAM_FLUSH = "fs.azure.disable.outputstream.flush";
   public static final String FS_AZURE_USER_AGENT_PREFIX_KEY = "fs.azure.user.agent.prefix";
-
+  /**
+   * The client correlation ID provided by the customer to correlate all requests over
+   * this instance of configuration. Defaults to empty string if the length and character
+   * constraints are not satisfied. **/
   public static final String FS_AZURE_CLIENT_CORRELATIONID
       = "fs.azure.client.correlationid";
   public static final String FS_AZURE_CLUSTER_NAME = "fs.azure.cluster.name";

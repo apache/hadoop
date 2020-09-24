@@ -727,10 +727,13 @@ _Warning_ These extension points are unstable.
 Consult the javadocs for `org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys`,
 `org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations` and
 `org.apache.hadoop.fs.azurebfs.AbfsConfiguration` for the full list
-of configuration options and their default values. Users can provide an identifier
- for correlating requests. This should be placed as the value for the configuration option
- `fs.azure.client.correlationid`. The client correlation id should be a string of length less than
- 65 characters and contain alphanumeric characters and/or hyphens only.
+of configuration options and their default values.
+
+### <a name="clientcorrelationoptions"></a> Client Correlation Options
+Config `fs.azure.client.correlationid` provides an option to correlate client requests
+using this client-provided identifier. This config accepts a string of length 
+less than 65 characters and should contain alphanumeric characters and/or hyphens only.
+Defaults to empty string if input is invalid.
 
 ### <a name="flushconfigoptions"></a> Flush Options
 
