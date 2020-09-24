@@ -39,7 +39,7 @@ Quotas are persistent with the fsimage. When starting, if the fsimage is immedia
 Storage Type Quotas
 ------------------
 
-The storage type quota is a hard limit on the usage of specific storage type (SSD, DISK, ARCHIVE) by files in the tree rooted at the directory. It works similar to storage space quota in many aspects but offers fine-grain control over the cluster storage space usage. To set storage type quota on a directory, storage policies must be configured on the directory in order to allow files to be stored in different storage types according to the storage policy. See the [HDFS Storage Policy Documentation](./ArchivalStorage.html) for more information.
+The storage type quota is a hard limit on the usage of specific storage type (SSD, DISK, ARCHIVE, NVDIMM) by files in the tree rooted at the directory. It works similar to storage space quota in many aspects but offers fine-grain control over the cluster storage space usage. To set storage type quota on a directory, storage policies must be configured on the directory in order to allow files to be stored in different storage types according to the storage policy. See the [HDFS Storage Policy Documentation](./ArchivalStorage.html) for more information.
 
 The storage type quota can be combined with the space quotas and name quotas to efficiently manage the cluster storage usage. For example,
 
@@ -96,7 +96,7 @@ Quotas are managed by a set of commands available only to the administrator.
     integer, the directory does not exist or it is a file, or the
     directory would immediately exceed the new quota. The storage type
     specific quota is set when -storageType option is specified. Available
-    storageTypes are DISK,SSD,ARCHIVE,PROVIDED.
+    storageTypes are DISK,SSD,ARCHIVE,PROVIDED,NVDIMM.
 
 *   `hdfs dfsadmin -clrSpaceQuota -storageType <storagetype> <directory>...<directory>`
 
@@ -104,7 +104,7 @@ Quotas are managed by a set of commands available only to the administrator.
     for each directory, with faults reported if the directory does not exist or
     it is a file. It is not a fault if the directory has no storage type quota on
     for storage type specified. The storage type specific quota is cleared when -storageType
-    option is specified. Available storageTypes are DISK,SSD,ARCHIVE,PROVIDED.
+    option is specified. Available storageTypes are DISK,SSD,ARCHIVE,PROVIDED,NVDIMM.
 
 Reporting Command
 -----------------

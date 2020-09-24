@@ -792,7 +792,7 @@ public class TestBlockToken {
         EnumSet.allOf(BlockTokenIdentifier.AccessMode.class);
     StorageType[] storageTypes =
         new StorageType[]{StorageType.RAM_DISK, StorageType.SSD,
-            StorageType.DISK, StorageType.ARCHIVE};
+            StorageType.DISK, StorageType.ARCHIVE, StorageType.NVDIMM};
     BlockTokenIdentifier ident = new BlockTokenIdentifier("user", "bpool",
         123, accessModes, storageTypes, new String[] {"fake-storage-id"},
         useProto);

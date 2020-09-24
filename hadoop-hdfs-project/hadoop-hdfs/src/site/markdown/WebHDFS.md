@@ -1164,6 +1164,14 @@ Storage Policy Operations
                        "storageTypes": ["SSD"]
                    },
                    {
+                       "copyOnCreateFile": false,
+                       "creationFallbacks": ["DISK"],
+                       "id": 14,
+                       "name": "ALL_NVDIMM",
+                       "replicationFallbacks": ["DISK"],
+                       "storageTypes": ["NVDIMM"]
+                   },
+                   {
                        "copyOnCreateFile": true,
                        "creationFallbacks": ["DISK"],
                        "id": 15,

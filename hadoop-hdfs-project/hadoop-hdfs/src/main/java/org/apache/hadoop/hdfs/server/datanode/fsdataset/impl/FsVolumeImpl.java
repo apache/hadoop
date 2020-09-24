@@ -193,7 +193,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   }
 
   protected ThreadPoolExecutor initializeCacheExecutor(File parent) {
-    if (storageType.isTransient()) {
+    if (storageType.isRAM()) {
       return null;
     }
     if (dataset.datanode == null) {
@@ -531,6 +531,11 @@ public class FsVolumeImpl implements FsVolumeSpi {
   @Override
   public boolean isTransientStorage() {
     return storageType.isTransient();
+  }
+
+  @Override
+  public boolean isRAMStorage() {
+    return storageType.isRAM();
   }
 
   @VisibleForTesting
