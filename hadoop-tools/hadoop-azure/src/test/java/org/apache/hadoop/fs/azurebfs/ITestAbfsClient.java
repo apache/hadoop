@@ -35,14 +35,12 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultEntrySchema;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
-import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
-import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -56,10 +54,12 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
  * Test continuation token which has equal sign.
  */
 public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
+
   private static final int LIST_MAX_RESULTS = 500;
   private static final int LIST_MAX_RESULTS_SERVER = 5000;
-  private static final String[] CLIENT_CORRELATIONID_LIST = {"valid-corr-id-123",
-      "inval!d", ""};
+  private static final int HTTP_CREATED = 201;
+  private static final String[] CLIENT_CORRELATIONID_LIST = {
+      "valid-corr-id-123", "inval!d", ""};
 
   public ITestAbfsClient() throws Exception {
     super();
@@ -123,15 +123,15 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem
         .newInstance(this.getFileSystem().getUri(), config);
     AbfsClient client = fs.getAbfsClient();
-    String path = getRelativePath(new Path("testDir"));
-    boolean isNamespaceEnabled = this.getConfiguration().getIsNamespaceEnabledAccount().toBoolean();
+    String path = getRelativePath(new Path("/testDir"));
+    boolean isNamespaceEnabled = fs.getIsNamespaceEnabled();
     String permission = isNamespaceEnabled ? getOctalNotation(FsPermission.getDirDefault()) : null;
-    String umask = null;//isNamespaceEnabled ? getOctalNotation(FsPermission.getUMask(Configured.getConf())) : null;
+    String umask = isNamespaceEnabled ? getOctalNotation(FsPermission.getUMask(fs.getConf())) : null;
     AbfsRestOperation op = client.createPath(path,false,true,
         permission, umask, false, null);
 
     int responseCode = op.getResult().getStatusCode();
-    assertEquals("Status code", 200, responseCode);
+    assertEquals("Status code", HTTP_CREATED, responseCode);
     String responseHeader = op.getResult()
         .getResponseHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
     if (includeInHeader) {
