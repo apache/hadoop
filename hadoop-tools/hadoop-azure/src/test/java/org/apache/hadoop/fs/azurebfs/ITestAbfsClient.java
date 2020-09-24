@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
+import com.google.common.base.Preconditions;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,13 +35,17 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultEntrySchema;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
+import org.apache.hadoop.fs.permission.FsPermission;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ACCOUNT_KEY;
@@ -52,7 +58,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   private static final int LIST_MAX_RESULTS = 500;
   private static final int LIST_MAX_RESULTS_SERVER = 5000;
-  private static final String[] clientCorrelationIds = {"valid-corr-id-123",
+  private static final String[] CLIENT_CORRELATIONID_LIST = {"valid-corr-id-123",
       "inval!d", ""};
 
   public ITestAbfsClient() throws Exception {
@@ -94,9 +100,19 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testClientCorrelation() throws IOException {
-    checkRequest(clientCorrelationIds[0], true);
-    checkRequest(clientCorrelationIds[1], false);
-    checkRequest(clientCorrelationIds[2], false);
+    checkRequest(CLIENT_CORRELATIONID_LIST[0], true);
+    checkRequest(CLIENT_CORRELATIONID_LIST[1], false);
+    checkRequest(CLIENT_CORRELATIONID_LIST[2], false);
+  }
+
+  private String getOctalNotation(FsPermission fsPermission) {
+    Preconditions.checkNotNull(fsPermission, "fsPermission");
+    return String.format(AbfsHttpConstants.PERMISSION_FORMAT, fsPermission.toOctal());
+  }
+
+  private String getRelativePath(final Path path) {
+    Preconditions.checkNotNull(path, "path");
+    return path.toUri().getPath();
   }
 
   public void checkRequest(String clientCorrelationId, boolean includeInHeader)
@@ -107,7 +123,12 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem
         .newInstance(this.getFileSystem().getUri(), config);
     AbfsClient client = fs.getAbfsClient();
-    AbfsRestOperation op = client.getFilesystemProperties();
+    String path = getRelativePath(new Path("testDir"));
+    boolean isNamespaceEnabled = this.getConfiguration().getIsNamespaceEnabledAccount().toBoolean();
+    String permission = isNamespaceEnabled ? getOctalNotation(FsPermission.getDirDefault()) : null;
+    String umask = null;//isNamespaceEnabled ? getOctalNotation(FsPermission.getUMask(Configured.getConf())) : null;
+    AbfsRestOperation op = client.createPath(path,false,true,
+        permission, umask, false, null);
 
     int responseCode = op.getResult().getStatusCode();
     assertEquals("Status code", 200, responseCode);
