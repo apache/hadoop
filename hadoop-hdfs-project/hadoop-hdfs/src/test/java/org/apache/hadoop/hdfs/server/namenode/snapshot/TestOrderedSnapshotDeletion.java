@@ -195,6 +195,26 @@ public class TestOrderedSnapshotDeletion {
     assertXAttrSet("s1", hdfs, null);
   }
 
+  @Test(timeout = 6000000)
+  public void testOrderedDeletionWithRestart() throws Exception {
+    DistributedFileSystem hdfs = cluster.getFileSystem();
+    hdfs.mkdirs(snapshottableDir);
+    hdfs.allowSnapshot(snapshottableDir);
+
+    final Path sub0 = new Path(snapshottableDir, "sub0");
+    hdfs.mkdirs(sub0);
+    hdfs.createSnapshot(snapshottableDir, "s0");
+
+    final Path sub1 = new Path(snapshottableDir, "sub1");
+    hdfs.mkdirs(sub1);
+    hdfs.createSnapshot(snapshottableDir, "s1");
+    assertXAttrSet("s1", hdfs, null);
+    assertXAttrSet("s1", hdfs, null);
+    cluster.getNameNode().getConf().
+        setBoolean(DFS_NAMENODE_SNAPSHOT_DELETION_ORDERED, false);
+    cluster.restartNameNodes();
+  }
+
   @Test(timeout = 60000)
   public void testSnapshotXattrWithDisablingXattr() throws Exception {
     DistributedFileSystem hdfs = cluster.getFileSystem();
