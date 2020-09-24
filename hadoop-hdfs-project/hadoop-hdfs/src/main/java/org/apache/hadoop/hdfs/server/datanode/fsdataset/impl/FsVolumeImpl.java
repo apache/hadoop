@@ -134,7 +134,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   private final FileIoProvider fileIoProvider;
   private final DataNodeVolumeMetrics metrics;
   private URI baseURI;
-  private boolean enableSameDiskArchival;
+  private boolean enableSameDiskTiering;
   private final String mount;
   private double reservedForArchive;
 
@@ -193,10 +193,10 @@ public class FsVolumeImpl implements FsVolumeSpi {
     }
     this.conf = conf;
     this.fileIoProvider = fileIoProvider;
-    this.enableSameDiskArchival =
+    this.enableSameDiskTiering =
         conf.getBoolean(DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING,
             DFSConfigKeys.DFS_DATANODE_ALLOW_SAME_DISK_TIERING_DEFAULT);
-    if (enableSameDiskArchival) {
+    if (enableSameDiskTiering) {
       this.mount = usage.getMount();
       reservedForArchive = conf.getDouble(
           DFSConfigKeys.DFS_DATANODE_RESERVE_FOR_ARCHIVE_PERCENTAGE,
@@ -448,7 +448,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
       capacity = configuredCapacity;
     }
 
-    if (enableSameDiskArchival) {
+    if (enableSameDiskTiering) {
       if (storageType == StorageType.ARCHIVE) {
         capacity = (long) (capacity * reservedForArchive);
       } else {
@@ -491,7 +491,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
     // should share the same amount of reserved capacity.
     // When calculating actual non dfs used,
     // exclude DFS used capacity by another volume.
-    if (enableSameDiskArchival &&
+    if (enableSameDiskTiering &&
         (storageType == StorageType.DISK
             || storageType == StorageType.ARCHIVE)) {
       StorageType counterpartStorageType = storageType == StorageType.DISK
