@@ -55,12 +55,13 @@ public class SnappyCompressor implements Compressor {
    * @param directBufferSize size of the direct buffer to be used.
    */
   public SnappyCompressor(int directBufferSize) {
-    // `snappy-java` is provided scope. We need to check if its availability.
+    // `snappy-java` is provided scope. We need to check if it is available.
     try {
       SnappyLoader.getVersion();
     } catch (Throwable t) {
-      throw new RuntimeException("native snappy library not available: " +
-              "SnappyCompressor has not been loaded.", t);
+      throw new RuntimeException("snappy-java library is not available: " +
+              "SnappyCompressor has not been loaded. You need to add " +
+              "snappy-java.jar to your CLASSPATH", t);
     }
 
     this.directBufferSize = directBufferSize;
@@ -216,7 +217,7 @@ public class SnappyCompressor implements Compressor {
     }
 
     // Compress data
-    n = compressBytesDirect();
+    n = compressDirectBuf();
     compressedDirectBuf.limit(n);
     uncompressedDirectBuf.clear(); // snappy consumes all buffer input
 
@@ -282,7 +283,7 @@ public class SnappyCompressor implements Compressor {
   public void end() {
   }
 
-  private int compressBytesDirect() throws IOException {
+  private int compressDirectBuf() throws IOException {
     if (uncompressedDirectBufLen == 0) {
       return 0;
     } else {

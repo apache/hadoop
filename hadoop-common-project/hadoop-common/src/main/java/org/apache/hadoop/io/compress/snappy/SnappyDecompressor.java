@@ -52,12 +52,13 @@ public class SnappyDecompressor implements Decompressor {
    * @param directBufferSize size of the direct buffer to be used.
    */
   public SnappyDecompressor(int directBufferSize) {
-    // `snappy-java` is provided scope. We need to check if its availability.
+    // `snappy-java` is provided scope. We need to check if it is available.
     try {
       SnappyLoader.getVersion();
     } catch (Throwable t) {
-      throw new RuntimeException("native snappy library not available: " +
-              "SnappyDecompressor has not been loaded.", t);
+      throw new RuntimeException("snappy-java library is not available: " +
+              "SnappyDecompressor has not been loaded. You need to add " +
+              "snappy-java.jar to your CLASSPATH", t);
     }
 
     this.directBufferSize = directBufferSize;
@@ -223,7 +224,7 @@ public class SnappyDecompressor implements Decompressor {
       uncompressedDirectBuf.limit(directBufferSize);
 
       // Decompress data
-      n = decompressBytesDirect();
+      n = decompressDirectBuf();
       uncompressedDirectBuf.limit(n);
 
       if (userBufLen <= 0) {
@@ -267,7 +268,7 @@ public class SnappyDecompressor implements Decompressor {
     // do nothing
   }
 
-  private int decompressBytesDirect() throws IOException {
+  private int decompressDirectBuf() throws IOException {
     if (compressedDirectBufLen == 0) {
       return 0;
     } else {
@@ -299,7 +300,7 @@ public class SnappyDecompressor implements Decompressor {
     directBufferSize = dst.remaining();
     int n = 0;
     try {
-      n = decompressBytesDirect();
+      n = decompressDirectBuf();
       presliced.position(presliced.position() + n);
       // SNAPPY always consumes the whole buffer or throws an exception
       src.position(src.limit());
