@@ -510,7 +510,7 @@ public class ClientRMService extends AbstractService implements
       GetContainerReportRequest request) throws YarnException, IOException {
     ContainerId containerId = request.getContainerId();
     if (containerId == null) {
-      throw new ContainerNotFoundException("ContainerId doesn't exist");
+      throw new ContainerNotFoundException("Invalid container id: null");
     }
     ApplicationAttemptId appAttemptId = containerId.getApplicationAttemptId();
     ApplicationId appId = appAttemptId.getApplicationId();
