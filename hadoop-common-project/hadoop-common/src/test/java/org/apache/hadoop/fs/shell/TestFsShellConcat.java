@@ -17,10 +17,6 @@
  */
 package org.apache.hadoop.fs.shell;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.Mockito;
-import org.assertj.core.api.Assertions;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -29,14 +25,19 @@ import java.io.PrintStream;
 import java.net.URI;
 import java.util.Random;
 
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.Mockito;
+import org.assertj.core.api.Assertions;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -97,13 +98,13 @@ public class TestFsShellConcat extends AbstractHadoopTestBase {
       mockConcat(target, src);
       return null;
     }).when(mockFs).concat(any(Path.class), any(Path[].class));
-    Concat.setTstFs(mockFs);
+    Concat.setTestFs(mockFs);
     shellRun(0, "-concat", dstPath.toString(), testRootDir+"/file-*");
 
     // Verify concat result.
     ContractTestUtils
         .assertPathExists(lfs, "The target file doesn't exist.", dstPath);
-    assertEquals(1, lfs.listStatus(testRootDir).length);
+    Assertions.assertThat(lfs.listStatus(testRootDir).length).isEqualTo(1);
     assertEquals(expectContent.length, lfs.getFileStatus(dstPath).getLen());
     out = new ByteArrayOutputStream();
     try (InputStream in = lfs.open(dstPath)) {
@@ -124,7 +125,7 @@ public class TestFsShellConcat extends AbstractHadoopTestBase {
         .when(mockFs).concat(any(Path.class), any(Path[].class));
     Mockito.doAnswer(invocationOnMock -> new URI("mockfs:///")).when(mockFs)
         .getUri();
-    Concat.setTstFs(mockFs);
+    Concat.setTestFs(mockFs);
     final ByteArrayOutputStream err = new ByteArrayOutputStream();
     PrintStream oldErr = System.err;
     System.setErr(new PrintStream(err));

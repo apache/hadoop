@@ -17,16 +17,17 @@
  */
 package org.apache.hadoop.fs.shell;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.LinkedList;
+
 import com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
-
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.util.LinkedList;
 
 /**
  * Concat the given files.
@@ -43,7 +44,7 @@ public class Concat extends FsCommand {
   public static final String DESCRIPTION = "Concatenate existing source files"
       + " into the target file. Target file and source files should be in the"
       + " same directory.";
-  private static FileSystem tstFs; // test only.
+  private static FileSystem testFs; // test only.
 
   @Override
   protected void processArguments(LinkedList<PathData> args)
@@ -72,8 +73,8 @@ public class Concat extends FsCommand {
       srcArray[i] = src.path;
     }
     FileSystem fs = target.fs;
-    if (tstFs != null) {
-      fs = tstFs;
+    if (testFs != null) {
+      fs = testFs;
     }
     try {
       fs.concat(target.path, srcArray);
@@ -84,7 +85,7 @@ public class Concat extends FsCommand {
   }
 
   @VisibleForTesting
-  static void setTstFs(FileSystem fs) {
-    tstFs = fs;
+  static void setTestFs(FileSystem fs) {
+    testFs = fs;
   }
 }
