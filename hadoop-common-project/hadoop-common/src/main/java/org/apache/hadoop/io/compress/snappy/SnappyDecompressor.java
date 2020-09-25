@@ -277,7 +277,7 @@ public class SnappyDecompressor implements Decompressor {
       int size = Snappy.uncompress((ByteBuffer) compressedDirectBuf,
               (ByteBuffer) uncompressedDirectBuf);
       compressedDirectBufLen = 0;
-      compressedDirectBuf.limit(compressedDirectBuf.capacity()).position(0);
+      compressedDirectBuf.clear();
       return size;
     }
   }

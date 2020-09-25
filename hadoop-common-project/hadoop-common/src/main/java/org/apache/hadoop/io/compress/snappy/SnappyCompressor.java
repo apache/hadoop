@@ -292,7 +292,6 @@ public class SnappyCompressor implements Compressor {
       int size = Snappy.compress((ByteBuffer) uncompressedDirectBuf,
               (ByteBuffer) compressedDirectBuf);
       uncompressedDirectBufLen = 0;
-      uncompressedDirectBuf.limit(uncompressedDirectBuf.capacity()).position(0);
       return size;
     }
   }

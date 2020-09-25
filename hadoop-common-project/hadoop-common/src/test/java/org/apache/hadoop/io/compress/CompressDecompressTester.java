@@ -479,17 +479,19 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
     Compressor compressor = pair.compressor;
 
     if (compressor.getClass().isAssignableFrom(Lz4Compressor.class)
-            && (NativeCodeLoader.isNativeCodeLoaded())) {
+            && (NativeCodeLoader.isNativeCodeLoaded()))
       return true;
-    } else if (compressor.getClass().isAssignableFrom(BuiltInZlibDeflater.class)
-            && NativeCodeLoader.isNativeCodeLoaded()) {
+
+    else if (compressor.getClass().isAssignableFrom(BuiltInZlibDeflater.class)
+            && NativeCodeLoader.isNativeCodeLoaded())
       return true;
-    } else if (compressor.getClass().isAssignableFrom(ZlibCompressor.class)) {
+
+    else if (compressor.getClass().isAssignableFrom(ZlibCompressor.class)) {
       return ZlibFactory.isNativeZlibLoaded(new Configuration());
-    } else if (compressor.getClass().isAssignableFrom(SnappyCompressor.class)) {
-      return true;
     }
-    
+    else if (compressor.getClass().isAssignableFrom(SnappyCompressor.class))
+      return true;
+
     return false;      
   }
   
