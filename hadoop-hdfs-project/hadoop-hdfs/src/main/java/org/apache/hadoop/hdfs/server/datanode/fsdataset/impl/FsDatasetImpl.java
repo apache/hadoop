@@ -2299,9 +2299,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
               ": volume was not an instance of FsVolumeImpl.");
           return;
         }
-        if (volume.isTransientStorage()) {
-          LOG.warn("Caching not supported on block with id " + blockId +
-              " since the volume is backed by RAM.");
+        if (volume.isRAMStorage()) {
+          LOG.warn("Caching not supported on block with id {} since the " +
+              "volume is backed by {} which is RAM.", blockId, volume);
           return;
         }
         success = true;
