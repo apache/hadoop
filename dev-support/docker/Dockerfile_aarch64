@@ -64,7 +64,7 @@ RUN apt-get -q update \
         libsnappy-dev \
         libssl-dev \
         libtool \
-        libzstd1-dev \
+        libzstd-dev \
         locales \
         make \
         maven \
