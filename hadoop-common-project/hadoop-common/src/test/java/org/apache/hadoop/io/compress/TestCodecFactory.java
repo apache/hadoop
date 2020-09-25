@@ -207,11 +207,6 @@ public class TestCodecFactory {
     codec = factory.getCodecByClassName(BZip2Codec.class.getCanonicalName());
     checkCodec("empty factory for bzip2 codec", BZip2Codec.class, codec);
     
-    codec = factory.getCodec(new Path("/tmp/foo.snappy"));
-    checkCodec("empty factory snappy codec", SnappyCodec.class, codec);
-    codec = factory.getCodecByClassName(SnappyCodec.class.getCanonicalName());
-    checkCodec("empty factory snappy codec", SnappyCodec.class, codec);
-    
     codec = factory.getCodec(new Path("/tmp/foo.lz4"));
     checkCodec("empty factory lz4 codec", Lz4Codec.class, codec);
     codec = factory.getCodecByClassName(Lz4Codec.class.getCanonicalName());

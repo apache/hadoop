@@ -21,8 +21,6 @@ import java.util.Random;
 import org.apache.hadoop.io.compress.CompressDecompressTester.CompressionTestStrategy;
 import org.apache.hadoop.io.compress.lz4.Lz4Compressor;
 import org.apache.hadoop.io.compress.lz4.Lz4Decompressor;
-import org.apache.hadoop.io.compress.snappy.SnappyCompressor;
-import org.apache.hadoop.io.compress.snappy.SnappyDecompressor;
 import org.apache.hadoop.io.compress.zlib.BuiltInZlibDeflater;
 import org.apache.hadoop.io.compress.zlib.BuiltInZlibInflater;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -56,7 +54,6 @@ public class TestCompressorDecompressor {
     byte[] rawData = generate(SIZE);
     try {
       CompressDecompressTester.of(rawData)
-          .withCompressDecompressPair(new SnappyCompressor(), new SnappyDecompressor())
           .withCompressDecompressPair(new Lz4Compressor(), new Lz4Decompressor())
           .withCompressDecompressPair(new BuiltInZlibDeflater(), new BuiltInZlibInflater())
           .withTestCases(ImmutableSet.of(CompressionTestStrategy.COMPRESS_DECOMPRESS_SINGLE_BLOCK,
@@ -79,9 +76,6 @@ public class TestCompressorDecompressor {
     byte[] rawData = generate(byteSize);
     try {
       CompressDecompressTester.of(rawData)
-          .withCompressDecompressPair(
-              new SnappyCompressor(bufferSize),
-              new SnappyDecompressor(bufferSize))
           .withCompressDecompressPair(
               new Lz4Compressor(bufferSize),
               new Lz4Decompressor(bufferSize))
