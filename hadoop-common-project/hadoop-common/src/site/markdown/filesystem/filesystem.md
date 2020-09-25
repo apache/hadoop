@@ -1107,7 +1107,7 @@ Rename includes the calculation of the destination path.
 If the destination exists and is a directory, the final destination
 of the rename becomes the destination + the filename of the source path.
 
-    let dest = if (isDir(FS, src) and d != src) :
+    let dest = if (isDir(FS, d) and d != src) :
             d + [filename(src)]
         else :
             d
@@ -1186,10 +1186,10 @@ If `src` is a directory then all its children will then exist under `dest`, whil
 `src` and its descendants will no longer exist. The names of the paths under
 `dest` will match those under `src`, as will the contents:
 
-    if isDir(FS, src) isDir(FS, dest) and src != dest :
+    if isDir(FS, src) and isDir(FS, dest) and src != dest :
         FS' where:
             not exists(FS', src)
-            and dest in FS'.Directories]
+            and dest in FS'.Directories
             and forall c in descendants(FS, src) :
                 not exists(FS', c))
             and forall c in descendants(FS, src) where isDir(FS, c):

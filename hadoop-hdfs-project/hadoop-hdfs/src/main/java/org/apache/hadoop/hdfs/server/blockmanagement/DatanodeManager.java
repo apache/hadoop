@@ -326,12 +326,14 @@ public class DatanodeManager {
     this.readConsiderStorageType = conf.getBoolean(
         DFSConfigKeys.DFS_NAMENODE_READ_CONSIDERSTORAGETYPE_KEY,
         DFSConfigKeys.DFS_NAMENODE_READ_CONSIDERSTORAGETYPE_DEFAULT);
-    LOG.warn(
-        "{} and {} are incompatible and only one can be enabled. "
-            + "Both are currently enabled.",
-        DFSConfigKeys.DFS_NAMENODE_READ_CONSIDERLOAD_KEY,
-        DFSConfigKeys.DFS_NAMENODE_READ_CONSIDERSTORAGETYPE_KEY);
-
+    if (readConsiderLoad && readConsiderStorageType) {
+      LOG.warn(
+          "{} and {} are incompatible and only one can be enabled. "
+              + "Both are currently enabled. {} will be ignored.",
+          DFSConfigKeys.DFS_NAMENODE_READ_CONSIDERLOAD_KEY,
+          DFSConfigKeys.DFS_NAMENODE_READ_CONSIDERSTORAGETYPE_KEY,
+          DFSConfigKeys.DFS_NAMENODE_READ_CONSIDERSTORAGETYPE_KEY);
+    }
     this.avoidStaleDataNodesForWrite = conf.getBoolean(
         DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_KEY,
         DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_DEFAULT);

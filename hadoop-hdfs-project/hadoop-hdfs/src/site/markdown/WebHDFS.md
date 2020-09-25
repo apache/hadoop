@@ -1164,6 +1164,14 @@ Storage Policy Operations
                        "storageTypes": ["SSD"]
                    },
                    {
+                       "copyOnCreateFile": false,
+                       "creationFallbacks": ["DISK"],
+                       "id": 14,
+                       "name": "ALL_NVDIMM",
+                       "replicationFallbacks": ["DISK"],
+                       "storageTypes": ["NVDIMM"]
+                   },
+                   {
                        "copyOnCreateFile": true,
                        "creationFallbacks": ["DISK"],
                        "id": 15,
@@ -3142,7 +3150,7 @@ See also: [`CREATESNAPSHOT`](#Create_Snapshot), [`DELETESNAPSHOT`](#Delete_Snaps
 | Description | A list of source paths. |
 | Type | String |
 | Default Value | \<empty\> |
-| Valid Values | A list of comma seperated absolute FileSystem paths without scheme and authority. |
+| Valid Values | A list of comma separated absolute FileSystem paths without scheme and authority. |
 | Syntax | Any string. |
 
 See also: [`CONCAT`](#Concat_Files)

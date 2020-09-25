@@ -53,7 +53,7 @@ public class TestMappingRuleActions {
   @Test
   public void testActionFallbacks() {
     MappingRuleActionBase action =
-        new MappingRuleActions.PlaceToQueueAction("a");
+        new MappingRuleActions.PlaceToQueueAction("a", true);
 
     action.setFallbackDefaultPlacement();
     assertPlaceDefaultResult(action.getFallback());
@@ -122,28 +122,29 @@ public class TestMappingRuleActions {
     variables.setImmutables("%immutable");
 
     MappingRuleAction placeToStatic =
-        new MappingRuleActions.PlaceToQueueAction("root.static.queue");
+        new MappingRuleActions.PlaceToQueueAction("root.static.queue", true);
 
     MappingRuleAction placeToDynamic =
-        new MappingRuleActions.PlaceToQueueAction("root.%sub.%immutable");
+        new MappingRuleActions.PlaceToQueueAction("root.%sub.%immutable", true);
 
     MappingRuleAction placeToDynamicDoubleSub =
-        MappingRuleActions.createPlaceToQueueAction("root.%sub%sub.%immutable");
+        MappingRuleActions.createPlaceToQueueAction(
+            "root.%sub%sub.%immutable", true);
 
     MappingRuleAction placeToNull =
-        MappingRuleActions.createPlaceToQueueAction(null);
+        MappingRuleActions.createPlaceToQueueAction(null, true);
 
     MappingRuleAction placeToEmpty =
-        MappingRuleActions.createPlaceToQueueAction("");
+        MappingRuleActions.createPlaceToQueueAction("", true);
 
     MappingRuleAction placeToNulRef =
-        new MappingRuleActions.PlaceToQueueAction("%null");
+        new MappingRuleActions.PlaceToQueueAction("%null", true);
 
     MappingRuleAction placeToEmptyRef =
-        new MappingRuleActions.PlaceToQueueAction("%empty");
+        new MappingRuleActions.PlaceToQueueAction("%empty", true);
 
     MappingRuleAction placeToDefaultRef =
-        new MappingRuleActions.PlaceToQueueAction("%default");
+        new MappingRuleActions.PlaceToQueueAction("%default", true);
 
     assertPlaceResult(placeToStatic.execute(variables), "root.static.queue");
     assertPlaceResult(placeToDynamic.execute(variables), "root.xxx.immutable");
@@ -160,7 +161,7 @@ public class TestMappingRuleActions {
   @Test
   public void testToStrings() {
     MappingRuleAction place = new MappingRuleActions.PlaceToQueueAction(
-        "queue");
+        "queue", true);
     MappingRuleAction varUpdate = new MappingRuleActions.VariableUpdateAction(
         "%var", "value");
     MappingRuleAction reject = new MappingRuleActions.RejectAction();

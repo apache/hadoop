@@ -44,12 +44,21 @@ public final class MappingRuleActions {
     private String queuePattern;
 
     /**
+     * This flag indicates whether the target queue can be created if it does
+     * not exist yet.
+     */
+    private boolean allowCreate;
+
+    /**
      * Constructor.
      * @param queuePattern The queue pattern in which the application will be
      *                     placed if this action is fired. The pattern may
      *                     contain variables. eg. root.%primary_group.%user
+     * @param allowCreate Determines if the target queue should be created if it
+     *                    does not exist
      */
-    PlaceToQueueAction(String queuePattern) {
+    PlaceToQueueAction(String queuePattern, boolean allowCreate) {
+      this.allowCreate = allowCreate;
       this.queuePattern = queuePattern == null ? "" : queuePattern;
     }
 
@@ -63,7 +72,7 @@ public final class MappingRuleActions {
     @Override
     public MappingRuleResult execute(VariableContext variables) {
       String substituted = variables.replacePathVariables(queuePattern);
-      return MappingRuleResult.createPlacementResult(substituted);
+      return MappingRuleResult.createPlacementResult(substituted, allowCreate);
     }
 
     /**
@@ -209,11 +218,14 @@ public final class MappingRuleActions {
    * Convenience method to create an action which places the application to a
    * queue.
    * @param queue The name of the queue the application should be placed to
+   * @param allowCreate Determines if the target queue should be created if it
+   *                    does not exist
    * @return PlaceToQueueAction which will place the application to the
    * specified queue on execute
    */
-  public static MappingRuleAction createPlaceToQueueAction(String queue) {
-    return new PlaceToQueueAction(queue);
+  public static MappingRuleAction createPlaceToQueueAction(
+      String queue, boolean allowCreate) {
+    return new PlaceToQueueAction(queue, allowCreate);
   }
 
   /**
@@ -223,7 +235,7 @@ public final class MappingRuleActions {
    * DEFAULT queue on execute
    */
   public static MappingRuleAction createPlaceToDefaultAction() {
-    return createPlaceToQueueAction(DEFAULT_QUEUE_VARIABLE);
+    return createPlaceToQueueAction(DEFAULT_QUEUE_VARIABLE, false);
   }
 
   /**

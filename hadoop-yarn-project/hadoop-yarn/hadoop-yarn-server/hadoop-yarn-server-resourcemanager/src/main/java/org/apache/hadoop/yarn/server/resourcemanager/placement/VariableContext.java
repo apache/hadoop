@@ -45,6 +45,12 @@ public class VariableContext {
   private Set<String> immutableNames;
 
   /**
+   * Some matchers may need to find a data in a set, which is not usable
+   * as a variable in substitutions, this store is for those sets.
+   */
+  private Map<String, Set<String>> extraDataset = new HashMap<>();
+
+  /**
    * Checks if the provided variable is immutable.
    * @param name Name of the variable to check
    * @return true if the variable is immutable
@@ -112,6 +118,31 @@ public class VariableContext {
   public String get(String name) {
     String ret = variables.get(name);
     return ret == null ? "" : ret;
+  }
+
+  /**
+   * Adds a set to the context, each name can only be added once. The extra
+   * dataset is different from the regular variables because it cannot be
+   * referenced via tokens in the paths or any other input. However matchers
+   * and actions can explicitly access these datasets and can make decisions
+   * based on them.
+   * @param name Name which can be used to reference the collection
+   * @param set The dataset to be stored
+   */
+  public void putExtraDataset(String name, Set<String> set) {
+    if (extraDataset.containsKey(name)) {
+      throw new IllegalStateException(
+          "Dataset '" + name + "' is already set!");
+    }
+    extraDataset.put(name, set);
+  }
+
+  /**
+   * Returns the dataset referenced by the name.
+   * @param name Name of the set to be returned.
+   */
+  public Set<String> getExtraDataset(String name) {
+    return extraDataset.get(name);
   }
 
   /**
@@ -195,5 +226,4 @@ public class VariableContext {
 
     return String.join(".", parts);
   }
-
 }

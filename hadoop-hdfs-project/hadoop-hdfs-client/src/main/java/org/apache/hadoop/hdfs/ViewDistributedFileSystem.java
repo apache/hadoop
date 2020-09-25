@@ -266,6 +266,10 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
 
   @Override
   public boolean recoverLease(final Path f) throws IOException {
+    if (this.vfs == null) {
+      return super.recoverLease(f);
+    }
+
     ViewFileSystemOverloadScheme.MountPathInfo<FileSystem> mountPathInfo =
         this.vfs.getMountPathInfo(f, getConf());
     checkDFS(mountPathInfo.getTargetFs(), "recoverLease");
@@ -286,6 +290,9 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
   @Override
   public FSDataInputStream open(PathHandle fd, int bufferSize)
       throws IOException {
+    if (this.vfs == null) {
+      return super.open(fd, bufferSize);
+    }
     return this.vfs.open(fd, bufferSize);
   }
 
@@ -369,7 +376,6 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
   }
 
   @Override
-  //DFS specific API
   public FSDataOutputStream create(final Path f, final FsPermission permission,
       final EnumSet<CreateFlag> cflags, final int bufferSize,
       final short replication, final long blockSize,
@@ -380,12 +386,8 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
           .create(f, permission, cflags, bufferSize, replication, blockSize,
               progress, checksumOpt);
     }
-    ViewFileSystemOverloadScheme.MountPathInfo<FileSystem> mountPathInfo =
-        this.vfs.getMountPathInfo(f, getConf());
-    checkDFS(mountPathInfo.getTargetFs(), "create");
-    return mountPathInfo.getTargetFs()
-        .create(mountPathInfo.getPathOnTarget(), permission, cflags, bufferSize,
-            replication, blockSize, progress, checksumOpt);
+    return vfs.create(f, permission, cflags, bufferSize, replication, blockSize,
+        progress, checksumOpt);
   }
 
   void checkDFS(FileSystem fs, String methodName) {
@@ -1025,15 +1027,24 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
     return super.getDefaultPort();
   }
 
+  /**
+   * If no mount points configured, it works same as
+   * {@link DistributedFileSystem#getDelegationToken(String)}. If
+   * there are mount points configured and if default fs(linkFallback)
+   * configured, then it will return default fs delegation token. Otherwise
+   * it will return null.
+   */
   @Override
   public Token<DelegationTokenIdentifier> getDelegationToken(String renewer)
       throws IOException {
     if (this.vfs == null) {
       return super.getDelegationToken(renewer);
     }
-    //Let applications call getDelegationTokenIssuers and get respective
-    // delegation tokens from child fs.
-    throw new UnsupportedOperationException();
+
+    if (defaultDFS != null) {
+      return defaultDFS.getDelegationToken(renewer);
+    }
+    return null;
   }
 
   @Override

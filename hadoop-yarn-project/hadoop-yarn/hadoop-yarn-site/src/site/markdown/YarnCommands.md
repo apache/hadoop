@@ -119,11 +119,23 @@ Usage: `yarn logs -applicationId <application ID> [options] `
 
 | COMMAND\_OPTIONS | Description |
 |:---- |:---- |
+| -am \<AM Containers\> | Prints the AM Container logs, specify comma-separated value to get logs for related AM Container |
 | -applicationId \<application ID\> | Specifies an application id |
 | -appOwner \<AppOwner\> | AppOwner (assumed to be current user if not specified) |
 | -containerId \<ContainerId\> | ContainerId (must be specified if node address is specified) |
+| -client_max_retries \<Max Retries\> | Max number of retry for a client to get the container logs for the running applications |
+| -client_retry_interval_ms \<Retry Interval\> | Retry Interval (work with client_max_retries) |
+| -clusterId \<Cluster ID\> | ClusterId |
 | -help | Help |
+| -list_nodes | Show the list of nodes that successfully aggregated logs (can only be used with finished applications) |
+| -log_files \<Log File Name\> | View a specific log type |
+| -log_files_pattern \<Log File Pattern\> | Get matched log files by using java regex |
 | -nodeAddress \<NodeAddress\> | NodeAddress in the format nodename:port (must be specified if container id is specified) |
+| -out \<Local Directory\> | Download logs to specified local folder |
+| -show_application_log_info | List all container IDs (combine this with --nodeAddress to get containerIds for all the containers on the specific NodeManager) |
+| -show_container_log_info | Show the container log metadata |
+| -size \<size\> | Prints the log file's first 'n' bytes or the last 'n' bytes (use negative values as bytes to read from the end) |
+| -size_limit_mb \<Size Limit\> | Limit the size(in megabytes) of the total logs which could be fetched (specify -1 to ignore the size limit) |
 
 Dump the container logs
 

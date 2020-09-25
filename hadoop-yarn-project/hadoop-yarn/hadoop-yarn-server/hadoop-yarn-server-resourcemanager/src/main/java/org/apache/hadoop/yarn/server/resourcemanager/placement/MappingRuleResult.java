@@ -29,6 +29,13 @@ public final class MappingRuleResult {
   private final String queue;
 
   /**
+   * This flag indicates whether the target queue can be created if it does not
+   * exist yet.
+   * Only valid if result == PLACE
+   */
+  private boolean allowCreate = true;
+
+  /**
    * The normalized name of the queue, since CS allows users to reference queues
    * by only their leaf name, we need to normalize those queues to have full
    * reference.
@@ -79,12 +86,39 @@ public final class MappingRuleResult {
   }
 
   /**
+   * Constructor is private to force the user to use the predefined generator
+   * methods to create new instances in order to avoid inconsistent states.
+   * @param queue Name of the queue in which the application is supposed to be
+   *              placed, only valid if result == PLACE
+   *              otherwise it should be null
+   * @param result The type of the result
+   * @param allowCreate Determines if the target queue should be created if it
+   *                    does not exist
+   */
+  private MappingRuleResult(
+      String queue, MappingRuleResultType result, boolean allowCreate) {
+    this.queue = queue;
+    this.normalizedQueue = queue;
+    this.result = result;
+    this.allowCreate = allowCreate;
+  }
+
+  /**
    * This method returns the result queue. Currently only makes sense when
    * result == PLACE.
    * @return the queue this result is about
    */
   public String getQueue() {
     return queue;
+  }
+
+  /**
+   * The method returns true if the result queue should be created when it does
+   * not exist yet.
+   * @return true if non-existent queues should be created
+   */
+  public boolean isCreateAllowed() {
+    return allowCreate;
   }
 
   /**
@@ -121,8 +155,10 @@ public final class MappingRuleResult {
    * @param queue The name of the queue in which we shall place the application
    * @return The generated MappingRuleResult
    */
-  public static MappingRuleResult createPlacementResult(String queue) {
-    return new MappingRuleResult(queue, MappingRuleResultType.PLACE);
+  public static MappingRuleResult createPlacementResult(
+      String queue, boolean allowCreate) {
+    return new MappingRuleResult(
+        queue, MappingRuleResultType.PLACE, allowCreate);
   }
 
   /**

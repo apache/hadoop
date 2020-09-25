@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.placement;
 
+import com.google.common.collect.Sets;
 import junit.framework.TestCase;
 import org.junit.Test;
 
@@ -41,19 +42,21 @@ public class TestMappingRuleMatchers extends TestCase {
     matchingContext.put("%primary_group", "developers");
     matchingContext.put("%application", "TurboMR");
     matchingContext.put("%custom", "Matching string");
+    matchingContext.putExtraDataset("groups", Sets.newHashSet("developers"));
 
     VariableContext mismatchingContext = new VariableContext();
     mismatchingContext.put("%user", "dave");
     mismatchingContext.put("%primary_group", "testers");
     mismatchingContext.put("%application", "Tester APP");
     mismatchingContext.put("%custom", "Not matching string");
+    mismatchingContext.putExtraDataset("groups", Sets.newHashSet("testers"));
 
     VariableContext emptyContext = new VariableContext();
 
     Map<String, MappingRuleMatcher> matchers = new HashMap<>();
     matchers.put("User matcher", MappingRuleMatchers.createUserMatcher("bob"));
     matchers.put("Group matcher",
-        MappingRuleMatchers.createGroupMatcher("developers"));
+        MappingRuleMatchers.createUserGroupMatcher("developers"));
     matchers.put("Application name matcher",
         MappingRuleMatchers.createApplicationNameMatcher("TurboMR"));
     matchers.put("Custom matcher",
@@ -184,16 +187,17 @@ public class TestMappingRuleMatchers extends TestCase {
     VariableContext developerBob = new VariableContext();
     developerBob.put("%user", "bob");
     developerBob.put("%primary_group", "developers");
-
+    developerBob.putExtraDataset("groups", Sets.newHashSet("developers"));
 
     VariableContext testerBob = new VariableContext();
     testerBob.put("%user", "bob");
     testerBob.put("%primary_group", "testers");
+    testerBob.putExtraDataset("groups", Sets.newHashSet("testers"));
 
     VariableContext testerDave = new VariableContext();
     testerDave.put("%user", "dave");
     testerDave.put("%primary_group", "testers");
-
+    testerDave.putExtraDataset("groups", Sets.newHashSet("testers"));
 
     VariableContext accountantDave = new VariableContext();
     accountantDave.put("%user", "dave");
@@ -252,4 +256,56 @@ public class TestMappingRuleMatchers extends TestCase {
         ", " + var.toString() + "]}", or.toString());
   }
 
+  @Test
+  public void testGroupMatching() {
+    VariableContext letterGroups = new VariableContext();
+    letterGroups.putExtraDataset("groups", Sets.newHashSet("a", "b", "c"));
+
+    VariableContext numberGroups = new VariableContext();
+    numberGroups.putExtraDataset("groups", Sets.newHashSet("1", "2", "3"));
+
+    VariableContext noGroups = new VariableContext();
+
+    MappingRuleMatcher matchA =
+        MappingRuleMatchers.createUserGroupMatcher("a");
+    MappingRuleMatcher matchB =
+        MappingRuleMatchers.createUserGroupMatcher("b");
+    MappingRuleMatcher matchC =
+        MappingRuleMatchers.createUserGroupMatcher("c");
+    MappingRuleMatcher match1 =
+        MappingRuleMatchers.createUserGroupMatcher("1");
+    MappingRuleMatcher match2 =
+        MappingRuleMatchers.createUserGroupMatcher("2");
+    MappingRuleMatcher match3 =
+        MappingRuleMatchers.createUserGroupMatcher("3");
+    MappingRuleMatcher matchNull =
+        MappingRuleMatchers.createUserGroupMatcher(null);
+
+    //letter groups submission should match only the letters
+    assertTrue(matchA.match(letterGroups));
+    assertTrue(matchB.match(letterGroups));
+    assertTrue(matchC.match(letterGroups));
+    assertFalse(match1.match(letterGroups));
+    assertFalse(match2.match(letterGroups));
+    assertFalse(match3.match(letterGroups));
+    assertFalse(matchNull.match(letterGroups));
+
+    //numeric groups submission should match only the numbers
+    assertFalse(matchA.match(numberGroups));
+    assertFalse(matchB.match(numberGroups));
+    assertFalse(matchC.match(numberGroups));
+    assertTrue(match1.match(numberGroups));
+    assertTrue(match2.match(numberGroups));
+    assertTrue(match3.match(numberGroups));
+    assertFalse(matchNull.match(numberGroups));
+
+    //noGroups submission should not match anything
+    assertFalse(matchA.match(noGroups));
+    assertFalse(matchB.match(noGroups));
+    assertFalse(matchC.match(noGroups));
+    assertFalse(match1.match(noGroups));
+    assertFalse(match2.match(noGroups));
+    assertFalse(match3.match(noGroups));
+    assertFalse(matchNull.match(noGroups));
+  }
 }

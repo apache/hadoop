@@ -283,12 +283,11 @@ public class INodeDirectory extends INodeWithAdditionalFields
    * @param name Name of the snapshot.
    * @param mtime The snapshot creation time set by Time.now().
    */
-  public Snapshot addSnapshot(int id, String name,
-      final LeaseManager leaseManager, final boolean captureOpenFiles,
-      int maxSnapshotLimit, long mtime)
+  public Snapshot addSnapshot(SnapshotManager snapshotManager, String name,
+      final LeaseManager leaseManager, long mtime)
       throws SnapshotException {
-    return getDirectorySnapshottableFeature().addSnapshot(this, id, name,
-        leaseManager, captureOpenFiles, maxSnapshotLimit, mtime);
+    return getDirectorySnapshottableFeature().addSnapshot(this,
+        snapshotManager, name, leaseManager, mtime);
   }
 
   /**

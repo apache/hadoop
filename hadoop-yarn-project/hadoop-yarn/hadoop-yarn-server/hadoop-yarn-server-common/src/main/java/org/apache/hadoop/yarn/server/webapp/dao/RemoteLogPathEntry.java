@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.server.webapp.dao;
 /**
  * A remote log path for a log aggregation file controller.
  * <pre>
- *   <ROOT_PATH>/%USER/<SUFFIX>
+ *   {@code <ROOT_PATH>/%USER/<SUFFIX>}
  * </pre>
  */
 public class RemoteLogPathEntry {

@@ -22,6 +22,8 @@ import com.google.common.collect.ImmutableSet;
 import org.junit.Test;
 
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 
 import static org.junit.Assert.*;
 
@@ -197,6 +199,33 @@ public class TestVariableContext {
 
     testCases.forEach((pattern, expected) ->
         assertEquals(expected, variables.replaceVariables(pattern)));
+  }
+
+  @Test
+  public void testCollectionStore() {
+    VariableContext variables = new VariableContext();
+    Set<String> coll1 = new HashSet<>();
+    Set<String> coll2 = new HashSet<>();
+
+    coll1.add("Bob");
+    coll1.add("Roger");
+    coll2.add("Bob");
+
+    variables.putExtraDataset("set", coll1);
+    variables.putExtraDataset("sameset", coll1);
+    variables.putExtraDataset("list", coll2);
+
+    try {
+      variables.putExtraDataset("set", coll1);
+      fail("Same name cannot be used multiple times to add collections");
+    } catch (IllegalStateException e) {
+      //Exception expected
+    }
+
+    assertSame(coll1, variables.getExtraDataset("set"));
+    assertSame(coll1, variables.getExtraDataset("sameset"));
+    assertSame(coll2, variables.getExtraDataset("list"));
+    assertNull(variables.getExtraDataset("Nothing"));
   }
 
 }

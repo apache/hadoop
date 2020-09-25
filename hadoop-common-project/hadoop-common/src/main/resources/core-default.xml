@@ -2585,6 +2585,14 @@
 </property>
 
 <property>
+  <name>ipc.[port_number].decay-scheduler.service-users</name>
+  <value></value>
+  <description>Service users will always be scheduled into the highest-priority
+    queue. They are specified as a comma-separated list.
+  </description>
+</property>
+
+<property>
   <name>ipc.[port_number].weighted-cost.lockshared</name>
   <value>10</value>
   <description>The weight multiplier to apply to the time spent in the
@@ -3979,4 +3987,18 @@
       ThreadGroup approach is preferred for better performance.
     </description>
   </property>
+
+  <property>
+    <name>fs.AbstractFileSystem.ofs.impl</name>
+    <value>org.apache.hadoop.fs.ozone.RootedOzFs</value>
+    <description>The AbstractFileSystem for Rooted Ozone
+      FileSystem ofs uri</description>
+  </property>
+
+  <property>
+    <name>fs.AbstractFileSystem.o3fs.impl</name>
+    <value>org.apache.hadoop.fs.ozone.OzFs</value>
+    <description>The AbstractFileSystem for Ozone FileSystem o3fs uri</description>
+  </property>
+
 </configuration>

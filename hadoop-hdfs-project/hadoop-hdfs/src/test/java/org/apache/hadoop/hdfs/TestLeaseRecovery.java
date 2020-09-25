@@ -280,8 +280,22 @@ public class TestLeaseRecovery {
    */
   @Test
   public void testLeaseRecoveryAndAppend() throws Exception {
+    testLeaseRecoveryAndAppend(new Configuration());
+  }
+
+  /**
+   * Recover the lease on a file and append file from another client with
+   * ViewDFS enabled.
+   */
+  @Test
+  public void testLeaseRecoveryAndAppendWithViewDFS() throws Exception {
     Configuration conf = new Configuration();
-    try{
+    conf.set("fs.hdfs.impl", ViewDistributedFileSystem.class.getName());
+    testLeaseRecoveryAndAppend(conf);
+  }
+
+  private void testLeaseRecoveryAndAppend(Configuration conf) throws Exception {
+    try {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     Path file = new Path("/testLeaseRecovery");
     DistributedFileSystem dfs = cluster.getFileSystem();
