@@ -730,10 +730,15 @@ Consult the javadocs for `org.apache.hadoop.fs.azurebfs.constants.ConfigurationK
 of configuration options and their default values.
 
 ### <a name="clientcorrelationoptions"></a> Client Correlation Options
-Config `fs.azure.client.correlationid` provides an option to correlate client requests
-using this client-provided identifier. This config accepts a string of length 
-less than 65 characters and should contain alphanumeric characters and/or hyphens only.
-Defaults to empty string if input is invalid.
+Config `fs.azure.client.correlationid` provides an option to correlate client
+requests using this client-provided identifier. This Id will be visible in Azure
+Storage Analytics logs in the `request-id-header` field as a prefix to the unique
+Id that ABFS driver associates with each request.
+Reference: [Storage Analytics log format](https://docs.microsoft.com/en-us/rest/api/storageservices/storage-analytics-log-format)
+
+This config accepts a string which can be maximum of 65 characters and should
+contain alphanumeric characters and/or hyphens only. Defaults to empty string if
+input is invalid.
 
 ### <a name="flushconfigoptions"></a> Flush Options
 

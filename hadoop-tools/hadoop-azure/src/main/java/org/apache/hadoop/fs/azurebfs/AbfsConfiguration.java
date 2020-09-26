@@ -302,22 +302,17 @@ public class AbfsConfiguration{
   }
 
   /**
-   * The client correlation ID provided by the customer to correlate all requests over
-   * this instance of configuration. An empty string is returned if the length and character
-   * constraints are not satisfied.
-   * @return Client Correlation ID
+   * Gets client correlation ID provided in config.
+   * @return Client Correlation ID config value or empty string (default value)
+   * if length and character constraints are not met
    */
   public String getClientCorrelationID() {
-    // Putting length check first to avoid processing regex check for long strings
-    if (clientCorrelationID.length() > MAX_CLIENT_CORRELATION_ID_LENGTH) {
-      return DEFAULT_FS_AZURE_CLIENT_CORRELATION_ID;
+    if ((clientCorrelationID.length() > MAX_CLIENT_CORRELATION_ID_LENGTH) ||
+        (!clientCorrelationID.matches(CLIENT_CORRELATION_ID_PATTERN))) {
+          return DEFAULT_FS_AZURE_CLIENT_CORRELATION_ID;
     }
 
-    if (clientCorrelationID.matches(CLIENT_CORRELATION_ID_PATTERN)) {
-      return clientCorrelationID;
-    }
-
-    return DEFAULT_FS_AZURE_CLIENT_CORRELATION_ID;
+    return clientCorrelationID;
   }
 
   /**
