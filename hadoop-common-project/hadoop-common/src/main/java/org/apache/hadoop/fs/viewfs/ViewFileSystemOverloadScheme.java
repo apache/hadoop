@@ -97,7 +97,7 @@ import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_IGNORE_PORT_IN
  * the mount table name.
  * (3) If there are no mount links configured with the initializing uri's
  * hostname as the mount table name, then it will automatically consider the
- * current uri as fallback( ex: fs.viewfs.mounttable.<mycluster>.linkFallBack)
+ * current uri as fallback( ex: fs.viewfs.mounttable.<mycluster>.linkFallback)
  * target fs uri.
  *****************************************************************************/
 @InterfaceAudience.LimitedPrivate({ "MapReduce", "HBase", "Hive" })
@@ -354,4 +354,9 @@ public class ViewFileSystemOverloadScheme extends ViewFileSystem {
         .getMyFs();
   }
 
+  @Override
+  @InterfaceAudience.LimitedPrivate("HDFS")
+  public URI canonicalizeUri(URI uri) {
+    return super.canonicalizeUri(uri);
+  }
 }
