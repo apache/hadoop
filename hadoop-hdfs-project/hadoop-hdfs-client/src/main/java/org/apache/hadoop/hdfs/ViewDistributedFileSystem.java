@@ -1072,16 +1072,7 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
       return super.canonicalizeUri(uri);
     }
 
-    ViewFileSystemOverloadScheme.MountPathInfo<FileSystem> mountPathInfo = null;
-    try {
-      mountPathInfo = this.vfs.getMountPathInfo(new Path(uri), getConf());
-    } catch (IOException e) {
-      LOGGER.warn("Failed to resolve the uri as mount path", e);
-      return null;
-    }
-    checkDFS(mountPathInfo.getTargetFs(), "canonicalizeUri");
-    return ((DistributedFileSystem) mountPathInfo.getTargetFs())
-        .canonicalizeUri(uri);
+    return vfs.canonicalizeUri(uri);
   }
 
   @Override
