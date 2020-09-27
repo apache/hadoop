@@ -131,7 +131,7 @@ public class ReflectionUtils {
    *
    * @param theClass class of which an object is created
    * @param conf Configuration
-   * @param argsType the types of the arguments
+   * @param argTypes the types of the arguments
    * @param values the values of the arguments
    * @return a new object
    */
