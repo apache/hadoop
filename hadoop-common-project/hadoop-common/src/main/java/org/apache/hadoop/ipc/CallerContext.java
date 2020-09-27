@@ -116,7 +116,6 @@ public final class CallerContext {
     private final String separator;
     private StringBuilder sb = new StringBuilder();
     private byte[] signature;
-    private Configuration conf = new Configuration();
 
     public Builder(String context) {
       separator = HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT;
