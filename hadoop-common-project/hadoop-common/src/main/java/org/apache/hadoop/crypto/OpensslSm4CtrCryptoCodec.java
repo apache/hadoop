@@ -17,22 +17,30 @@
  */
 package org.apache.hadoop.crypto;
 
-import java.security.GeneralSecurityException;
-import javax.crypto.Cipher;
+import org.apache.hadoop.conf.Configuration;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.security.GeneralSecurityException;
+
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_OPENSSL_ENGINE_ID_KEY;
+
 /**
- * Implement the AES-CTR crypto codec using JCE provider.
+ * Implement the SM4-CTR crypto codec using JNI into OpenSSL.
  */
 @InterfaceAudience.Private
-public class JceAesCtrCryptoCodec extends JceCtrCryptoCodec {
+public class OpensslSm4CtrCryptoCodec extends OpensslCtrCryptoCodec {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(JceAesCtrCryptoCodec.class.getName());
+          LoggerFactory.getLogger(OpensslSm4CtrCryptoCodec.class.getName());
 
-  public JceAesCtrCryptoCodec() {
+  public OpensslSm4CtrCryptoCodec() {
+    String loadingFailureReason = OpensslCipher.getLoadingFailureReason();
+    if (loadingFailureReason != null) {
+      throw new RuntimeException(loadingFailureReason);
+    }
   }
 
   @Override
@@ -41,8 +49,14 @@ public class JceAesCtrCryptoCodec extends JceCtrCryptoCodec {
   }
 
   @Override
+  public void setConf(Configuration conf) {
+    super.setConf(conf);
+    setEngineId(conf.get(HADOOP_SECURITY_OPENSSL_ENGINE_ID_KEY));
+  }
+
+  @Override
   public CipherSuite getCipherSuite() {
-    return CipherSuite.AES_CTR_NOPADDING;
+    return CipherSuite.SM4_CTR_NOPADDING;
   }
 
   @Override
@@ -53,13 +67,13 @@ public class JceAesCtrCryptoCodec extends JceCtrCryptoCodec {
 
   @Override
   public Encryptor createEncryptor() throws GeneralSecurityException {
-    return new JceCtrCipher(Cipher.ENCRYPT_MODE, getProvider(),
-            getCipherSuite(), "AES");
+    return new OpensslCtrCipher(OpensslCipher.ENCRYPT_MODE,
+            getCipherSuite(), getEngineId());
   }
 
   @Override
   public Decryptor createDecryptor() throws GeneralSecurityException {
-    return new JceCtrCipher(Cipher.DECRYPT_MODE, getProvider(),
-            getCipherSuite(), "AES");
+    return new OpensslCtrCipher(OpensslCipher.DECRYPT_MODE,
+            getCipherSuite(), getEngineId());
   }
 }

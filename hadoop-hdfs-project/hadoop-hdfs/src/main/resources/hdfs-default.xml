@@ -377,7 +377,7 @@
   <value>0</value>
   <description>Reserved space in bytes per volume. Always leave this much space free for non dfs use.
       Specific storage type based reservation is also supported. The property can be followed with
-      corresponding storage types ([ssd]/[disk]/[archive]/[ram_disk]) for cluster with heterogeneous storage.
+      corresponding storage types ([ssd]/[disk]/[archive]/[ram_disk]/[nvdimm]) for cluster with heterogeneous storage.
       For example, reserved space for RAM_DISK storage can be configured using property
       'dfs.datanode.du.reserved.ram_disk'. If specific storage type reservation is not configured
       then dfs.datanode.du.reserved will be used. Support multiple size unit suffix(case insensitive),
@@ -395,7 +395,7 @@
     when this takes effect. The actual number of bytes reserved will be calculated by using the
     total capacity of the data directory in question. Specific storage type based reservation
     is also supported. The property can be followed with corresponding storage types
-    ([ssd]/[disk]/[archive]/[ram_disk]) for cluster with heterogeneous storage.
+    ([ssd]/[disk]/[archive]/[ram_disk]/[nvdimm]) for cluster with heterogeneous storage.
     For example, reserved percentage space for RAM_DISK storage can be configured using property
     'dfs.datanode.du.reserved.pct.ram_disk'. If specific storage type reservation is not configured
     then dfs.datanode.du.reserved.pct will be used.
@@ -604,7 +604,7 @@
   should store its blocks.  If this is a comma-delimited
   list of directories, then data will be stored in all named
   directories, typically on different devices. The directories should be tagged
-  with corresponding storage types ([SSD]/[DISK]/[ARCHIVE]/[RAM_DISK]) for HDFS
+  with corresponding storage types ([SSD]/[DISK]/[ARCHIVE]/[RAM_DISK]/[NVDIMM]) for HDFS
   storage policies. The default storage type will be DISK if the directory does
   not have a storage type tagged explicitly. Directories that do not exist will
   be created if local filesystem permission allows.

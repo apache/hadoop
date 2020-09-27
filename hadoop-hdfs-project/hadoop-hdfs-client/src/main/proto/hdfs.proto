@@ -221,6 +221,7 @@ enum StorageTypeProto {
   ARCHIVE = 3;
   RAM_DISK = 4;
   PROVIDED = 5;
+  NVDIMM = 6;
 }
 
 /**
@@ -295,6 +296,7 @@ message DataEncryptionKeyProto {
 enum CipherSuiteProto {
     UNKNOWN = 1;
     AES_CTR_NOPADDING = 2;
+    SM4_CTR_NOPADDING = 3;
 }
 
 /**

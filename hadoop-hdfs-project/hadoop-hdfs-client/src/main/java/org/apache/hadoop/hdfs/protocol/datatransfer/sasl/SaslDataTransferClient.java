@@ -548,14 +548,19 @@ public class SaslDataTransferClient {
           DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY);
       if (requestedQopContainsPrivacy(saslProps)) {
         // Negotiate cipher suites if configured.  Currently, the only supported
-        // cipher suite is AES/CTR/NoPadding, but the protocol allows multiple
-        // values for future expansion.
+        // cipher suite is AES/CTR/NoPadding or SM4/CTR/Nopadding,
+        // but the protocol allows multiple values for future expansion.
         if (cipherSuites != null && !cipherSuites.isEmpty()) {
-          if (!cipherSuites.equals(CipherSuite.AES_CTR_NOPADDING.getName())) {
+          CipherOption option = null;
+          if (cipherSuites.equals(CipherSuite.AES_CTR_NOPADDING.getName())) {
+            option = new CipherOption(CipherSuite.AES_CTR_NOPADDING);
+          } else if (cipherSuites.equals(
+              CipherSuite.SM4_CTR_NOPADDING.getName())) {
+            option = new CipherOption(CipherSuite.SM4_CTR_NOPADDING);
+          } else {
             throw new IOException(String.format("Invalid cipher suite, %s=%s",
                 DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY, cipherSuites));
           }
-          CipherOption option = new CipherOption(CipherSuite.AES_CTR_NOPADDING);
           cipherOptions = Lists.newArrayListWithCapacity(1);
           cipherOptions.add(option);
         }

@@ -3309,6 +3309,26 @@
 </property>
 
 <property>
+  <name>hadoop.security.crypto.codec.classes.sm4.ctr.nopadding</name>
+  <value>org.apache.hadoop.crypto.OpensslSm4CtrCryptoCodec, org.apache.hadoop.crypto.JceSm4CtrCryptoCodec</value>
+  <description>
+    Comma-separated list of crypto codec implementations for SM4/CTR/NoPadding.
+    The first implementation will be used if available, others are fallbacks.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.openssl.engine.id</name>
+  <value></value>
+  <description>
+    The Openssl provided an engine mechanism that allow to specify third-party software
+    encryption library or hardware encryption device for encryption. The engine ID could
+    be vendor defined and will be passed to openssl, more info please see:
+    https://github.com/openssl/openssl/blob/master/README.ENGINE
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.crypto.cipher.suite</name>
   <value>AES/CTR/NoPadding</value>
   <description>

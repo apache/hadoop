@@ -17,22 +17,22 @@
  */
 package org.apache.hadoop.crypto;
 
-import java.security.GeneralSecurityException;
-import javax.crypto.Cipher;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import javax.crypto.Cipher;
+import java.security.GeneralSecurityException;
 
 /**
- * Implement the AES-CTR crypto codec using JCE provider.
+ * Implement the SM4-CTR crypto codec using JCE provider.
  */
 @InterfaceAudience.Private
-public class JceAesCtrCryptoCodec extends JceCtrCryptoCodec {
+public class JceSm4CtrCryptoCodec extends JceCtrCryptoCodec {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(JceAesCtrCryptoCodec.class.getName());
+      LoggerFactory.getLogger(JceSm4CtrCryptoCodec.class.getName());
 
-  public JceAesCtrCryptoCodec() {
+  public JceSm4CtrCryptoCodec() {
   }
 
   @Override
@@ -42,7 +42,7 @@ public class JceAesCtrCryptoCodec extends JceCtrCryptoCodec {
 
   @Override
   public CipherSuite getCipherSuite() {
-    return CipherSuite.AES_CTR_NOPADDING;
+    return CipherSuite.SM4_CTR_NOPADDING;
   }
 
   @Override
@@ -54,12 +54,12 @@ public class JceAesCtrCryptoCodec extends JceCtrCryptoCodec {
   @Override
   public Encryptor createEncryptor() throws GeneralSecurityException {
     return new JceCtrCipher(Cipher.ENCRYPT_MODE, getProvider(),
-            getCipherSuite(), "AES");
+            getCipherSuite(), "SM4");
   }
 
   @Override
   public Decryptor createDecryptor() throws GeneralSecurityException {
     return new JceCtrCipher(Cipher.DECRYPT_MODE, getProvider(),
-            getCipherSuite(), "AES");
+            getCipherSuite(), "SM4");
   }
 }
