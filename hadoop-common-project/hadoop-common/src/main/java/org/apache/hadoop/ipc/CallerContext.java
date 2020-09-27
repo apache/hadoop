@@ -73,10 +73,6 @@ public final class CallerContext {
 
   @InterfaceAudience.Private
   public boolean isContextValid() {
-    return isContextValid(context);
-  }
-
-  public static boolean isContextValid(String context) {
     return context != null && !context.isEmpty();
   }
 
