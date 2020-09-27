@@ -168,6 +168,13 @@ public class TestReflectionUtils {
         containsString("Process Thread Dump: " + title));
   }
 
+  @Test
+  public void testNewInstanceForNonDefaultConstructor() {
+    Object x = ReflectionUtils.newInstance(
+        NoDefaultCtor.class, null, new Class[] {int.class}, 1);
+    Assert.assertTrue(x instanceof NoDefaultCtor);
+  }
+
   // Used for testGetDeclaredFieldsIncludingInherited
   private class Parent {
     private int parentField;
