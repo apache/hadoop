@@ -47,7 +47,8 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
     try (FSDataOutputStream out = fs.create(TEST_FILE_PATH)) {
     AbfsOutputStream stream = (AbfsOutputStream) out.getWrappedStream();
     int expectedMaxConcurrentRequestCount = 1;
-    if(!getConfiguration().getBoolean(FS_AZURE_TEST_APPENDBLOB_ENABLED, false)){
+      if (!getConfiguration()
+          .getBoolean(FS_AZURE_TEST_APPENDBLOB_ENABLED, false)) {
       expectedMaxConcurrentRequestCount =
           getConfiguration().getWriteMaxConcurrentRequestCount();
     }
@@ -74,7 +75,8 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
     final AzureBlobFileSystem fs = getFileSystem(conf);
     FSDataOutputStream out = fs.create(TEST_FILE_PATH);
     AbfsOutputStream stream = (AbfsOutputStream) out.getWrappedStream();
-    if(getConfiguration().getBoolean(FS_AZURE_TEST_APPENDBLOB_ENABLED, false)){
+    if (getConfiguration()
+        .getBoolean(FS_AZURE_TEST_APPENDBLOB_ENABLED, false)) {
       maxConcurrentRequests = 1;
     }
     Assertions.assertThat(stream.getMaxConcurrentRequestCount())
