@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.List;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.junit.Assume;
 import org.junit.Test;
@@ -116,6 +117,8 @@ public class ITestAzureBlobFileSystemCheckAccess
   public void testCheckAccessForFileWithNullFsAction() throws Exception {
     Assume.assumeTrue(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT + " is false",
         isHNSEnabled);
+    Assume.assumeTrue(FS_AZURE_ENABLE_CHECK_ACCESS + " is false",
+        isCheckAccessEnabled);
     //  NPE when trying to convert null FsAction enum
     superUserFs.access(new Path("test.txt"), null);
   }
@@ -312,7 +315,9 @@ public class ITestAzureBlobFileSystemCheckAccess
 
   private void checkIfConfigIsSet(String configKey){
     AbfsConfiguration conf = getConfiguration();
-    Assume.assumeNotNull(configKey + " config missing", conf.get(configKey));
+    String value = conf.get(configKey);
+    Preconditions.checkArgument((value != null && value.trim().length() > 1),
+        configKey + " config is mandatory for the test to run");
   }
 
   private void assertAccessible(Path testFilePath, FsAction fsAction)
