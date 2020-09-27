@@ -177,7 +177,7 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
    * Testing get_response and bytes_received in {@link AbfsRestOperation}.
    */
   @Test
-  public void testAbfsHttpResponseStatistics() throws IOException {
+  public void testbfsRestOperatAbfsHttpResponseStatistics() throws IOException {
     describe("Test to check correct values of statistics after Http "
         + "Response is processed.");
 
@@ -256,6 +256,7 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
       long createRequestCalls = 1;
       if (this.getConfiguration().isConditionalCreateOverwriteEnabled()) {
         createRequestCalls += 2;
+        // createOverwriteTriggeredGetForeTag.
       }
 
       for (int i = 0; i < LARGE_OPERATIONS; i++) {
@@ -280,10 +281,9 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
       /*
        * Testing the statistics values after writing and reading a large buffer.
        *
-       * get_response : get_responses(Last assertion) + 1
-       * (OutputStream) + 2 * LARGE_OPERATIONS(Writing and flushing
-       * LARGE_OPERATIONS times) + 1(open()) + 1(read()) +
-       * 1 (createOverwriteTriggeredGetForeTag).
+       * get_response : get_responses(Last assertion) +
+       * 2 * LARGE_OPERATIONS(Writing and flushing * LARGE_OPERATIONS times)
+       * + 1(open()) + 1(read()) + createRequestCalls.
        *
        * bytes_received : bytes_received(Last assertion) + LARGE_OPERATIONS *
        * bytes wrote each time (bytes_received is equal to bytes wrote in the
@@ -296,7 +296,7 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
       if (fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(getResponsePath).toString())) {
         // no network calls are made for hflush in case of appendblob
         assertAbfsStatistics(AbfsStatistic.GET_RESPONSES,
-            getResponses + 3 + LARGE_OPERATIONS, metricMap);
+            getResponses + 2 + createRequestCalls + LARGE_OPERATIONS, metricMap);
       } else {
         assertAbfsStatistics(AbfsStatistic.GET_RESPONSES,
             getResponses + 2 + createRequestCalls + 2 * LARGE_OPERATIONS,
