@@ -26,12 +26,14 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
+import java.security.Security;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 import org.apache.commons.lang3.builder.EqualsBuilder;
@@ -43,6 +45,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 
 import javax.crypto.KeyGenerator;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_JCEKS_KEY_SERIALFILTER;
 
 /**
@@ -409,9 +412,13 @@ public abstract class KeyProvider implements Closeable {
     // java.security.UnrecoverableKeyException in JDK 8u171.
     if(System.getProperty(JCEKS_KEY_SERIAL_FILTER) == null) {
       String serialFilter =
-          conf.get(HADOOP_SECURITY_CRYPTO_JCEKS_KEY_SERIALFILTER,
-              JCEKS_KEY_SERIALFILTER_DEFAULT);
+              conf.get(HADOOP_SECURITY_CRYPTO_JCEKS_KEY_SERIALFILTER,
+                      JCEKS_KEY_SERIALFILTER_DEFAULT);
       System.setProperty(JCEKS_KEY_SERIAL_FILTER, serialFilter);
+    }
+    String jceProvider = conf.get(HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_KEY);
+    if (BouncyCastleProvider.PROVIDER_NAME.equals(jceProvider)) {
+      Security.addProvider(new BouncyCastleProvider());
     }
   }
 
