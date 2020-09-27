@@ -58,7 +58,7 @@ public final class CallerContext {
   private final byte[] signature;
 
   private CallerContext(Builder builder) {
-    this.context = builder.sb.toString();
+    this.context = builder.sb.length() > 0 ? builder.sb.toString() : null;
     this.signature = builder.signature;
   }
 
@@ -119,12 +119,18 @@ public final class CallerContext {
 
     public Builder(String context) {
       separator = HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT;
-      sb.append(context);
+      if (isValid(context)) {
+        sb.append(context);
+      }
     }
 
     public Builder(Configuration conf) {
       separator = conf.get(HADOOP_CALLER_CONTEXT_SEPARATOR_KEY,
           HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT);
+    }
+
+    private boolean isValid(String context) {
+      return context != null && context.length() > 0;
     }
 
     public Builder setSignature(byte[] signature) {
@@ -140,10 +146,12 @@ public final class CallerContext {
      * @return builder
      */
     public Builder append(String item) {
-      if (sb.length() > 0) {
-        sb.append(separator);
+      if (isValid(item)) {
+        if (sb.length() > 0) {
+          sb.append(separator);
+        }
+        sb.append(item);
       }
-      sb.append(item);
       return this;
     }
 
@@ -154,10 +162,12 @@ public final class CallerContext {
      * @return builder
      */
     public Builder append(String key, String value) {
-      if (sb.length() > 0) {
-        sb.append(separator);
+      if (isValid(key) && isValid(value)) {
+        if (sb.length() > 0) {
+          sb.append(separator);
+        }
+        sb.append(key + ":" + value);
       }
-      sb.append(key + ":" + value);
       return this;
     }
 
