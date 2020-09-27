@@ -177,7 +177,7 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
    * Testing get_response and bytes_received in {@link AbfsRestOperation}.
    */
   @Test
-  public void testbfsRestOperatAbfsHttpResponseStatistics() throws IOException {
+  public void testAbfsHttpResponseStatistics() throws IOException {
     describe("Test to check correct values of statistics after Http "
         + "Response is processed.");
 
@@ -185,7 +185,7 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
     Path getResponsePath = path(getMethodName());
     Map<String, Long> metricMap;
     String testResponseString = "some response";
-    long getResponses, bytesReceived;
+    long getResponses, bytesReceived;g lo
 
     FSDataOutputStream out = null;
     FSDataInputStream in = null;
