@@ -185,7 +185,7 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
     Path getResponsePath = path(getMethodName());
     Map<String, Long> metricMap;
     String testResponseString = "some response";
-    long getResponses, bytesReceived;g lo
+    long getResponses, bytesReceived;
 
     FSDataOutputStream out = null;
     FSDataInputStream in = null;
