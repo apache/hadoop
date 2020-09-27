@@ -391,7 +391,7 @@ public class TestAuditLogger {
       auditlog.clearOutput();
 
       // invalid context is not passed to the rpc
-      context = new CallerContext.Builder(null).build();
+      context = new CallerContext.Builder((String)null).build();
       CallerContext.setCurrent(context);
       LOG.info("Set current caller context as {}", CallerContext.getCurrent());
       fs.mkdirs(new Path("/empty-signature"));

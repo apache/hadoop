@@ -21,27 +21,24 @@ import org.apache.hadoop.conf.Configuration;
 import org.junit.Assert;
 import org.junit.Test;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ITEM_SEPARATOR_DEFAULT;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ITEM_SEPARATOR_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_SEPARATOR_KEY;
 
 public class TestCallerContext {
   @Test
   public void testBuilderAppend() {
     Configuration conf = new Configuration();
-    conf.set(HADOOP_CALLER_CONTEXT_ITEM_SEPARATOR_KEY, "$");
-    CallerContext.Builder builder = new CallerContext.Builder(null);
-    builder.setConf(conf);
+    conf.set(HADOOP_CALLER_CONTEXT_SEPARATOR_KEY, "$");
+    CallerContext.Builder builder = new CallerContext.Builder(conf);
     CallerContext context =
-        builder.append("context1").append("context2").append("key3", "value3", ":").build();
+        builder.append("context1").append("context2").append("key3", "value3").build();
     Assert.assertEquals(true,
         context.getContext().contains("$"));
     String[] items = context.getContext().split("\\$");
     Assert.assertEquals(3, items.length);
-    Assert.assertEquals(true, items[2].equals("key3:value3"));
+    Assert.assertEquals("key3:value3", items[2]);
 
     builder.append("$$");
-    Assert.assertEquals(true,
-        builder.build().getContext()
-            .equals("context1$context2$key3:value3$$$"));
+    Assert.assertEquals("context1$context2$key3:value3$$$",
+        builder.build().getContext());
   }
 }

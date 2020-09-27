@@ -3827,10 +3827,12 @@
     </description>
   </property>
   <property>
-    <name>hadoop.caller.context.item.separator</name>
+    <name>hadoop.caller.context.separator</name>
     <value>,</value>
     <description>
-      The separator is for context which maybe contain many items.
+      The separator is for context which maybe contain many items. For example,
+      if the separator is ',',  and there are two key/value items in context,
+      in which case the context string is "key1:value1,key2:value2".
     </description>
   </property>
 <!-- SequenceFile's Sorter properties -->

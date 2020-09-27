@@ -350,10 +350,9 @@ public class CommonConfigurationKeysPublic {
       "hadoop.caller.context.signature.max.size";
   public static final int     HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_DEFAULT =
       40;
-  public static final String HADOOP_CALLER_CONTEXT_ITEM_SEPARATOR_KEY =
-      "hadoop.caller.context.item.separator";
-  public static final String HADOOP_CALLER_CONTEXT_ITEM_SEPARATOR_DEFAULT =
-      ",";
+  public static final String HADOOP_CALLER_CONTEXT_SEPARATOR_KEY =
+      "hadoop.caller.context.separator";
+  public static final String HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT = ",";
 
   /**
    * @see
