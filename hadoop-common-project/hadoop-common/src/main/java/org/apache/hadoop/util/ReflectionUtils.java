@@ -137,12 +137,12 @@ public class ReflectionUtils {
    */
   @SuppressWarnings("unchecked")
   public static <T> T newInstance(Class<T> theClass, Configuration conf,
-      Class<?>[] argsType, Object ... values) {
+      Class<?>[] argTypes, Object ... values) {
     T result;
     try {
       Constructor<T> meth = (Constructor<T>) CONSTRUCTOR_CACHE.get(theClass);
       if (meth == null) {
-        meth = theClass.getDeclaredConstructor(argsType);
+        meth = theClass.getDeclaredConstructor(argTypes);
         meth.setAccessible(true);
         CONSTRUCTOR_CACHE.put(theClass, meth);
       }
