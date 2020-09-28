@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
@@ -26,6 +27,7 @@ import java.util.Collection;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -82,12 +84,13 @@ public class TestResourceManager {
 
   private org.apache.hadoop.yarn.server.resourcemanager.NodeManager
       registerNode(String hostName, int containerManagerPort, int httpPort,
-          String rackName, Resource capability) throws IOException,
+      String rackName, Resource capability, NodeStatus nodeStatus)
+      throws IOException,
           YarnException {
     org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm = 
         new org.apache.hadoop.yarn.server.resourcemanager.NodeManager(
             hostName, containerManagerPort, httpPort, rackName, capability,
-            resourceManager);
+            resourceManager, nodeStatus);
     NodeAddedSchedulerEvent nodeAddEvent1 = 
         new NodeAddedSchedulerEvent(resourceManager.getRMContext()
             .getRMNodes().get(nm.getNodeId()));
@@ -103,26 +106,30 @@ public class TestResourceManager {
         
     final int memory = 4 * 1024;
     final int vcores = 4;
+
+    NodeStatus mockNodeStatus = createMockNodeStatus();
     
     // Register node1
     String host1 = "host1";
     org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm1 = 
       registerNode(host1, 1234, 2345, NetworkTopology.DEFAULT_RACK, 
-          Resources.createResource(memory, vcores));
+          Resources.createResource(memory, vcores), mockNodeStatus);
     
     // Register node2
     String host2 = "host2";
     org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm2 = 
       registerNode(host2, 1234, 2345, NetworkTopology.DEFAULT_RACK, 
-          Resources.createResource(memory/2, vcores/2));
+          Resources.createResource(memory/2, vcores/2), mockNodeStatus);
 
     // nodes should be in RUNNING state
     RMNodeImpl node1 = (RMNodeImpl) resourceManager.getRMContext().getRMNodes().get(
         nm1.getNodeId());
     RMNodeImpl node2 = (RMNodeImpl) resourceManager.getRMContext().getRMNodes().get(
         nm2.getNodeId());
-    node1.handle(new RMNodeStartedEvent(nm1.getNodeId(), null, null));
-    node2.handle(new RMNodeStartedEvent(nm2.getNodeId(), null, null));
+    node1.handle(new RMNodeStartedEvent(nm1.getNodeId(), null, null,
+        mockNodeStatus));
+    node2.handle(new RMNodeStartedEvent(nm2.getNodeId(), null, null,
+        mockNodeStatus));
 
     // Submit an application
     Application application = new Application("user1", resourceManager);
@@ -210,9 +217,10 @@ public class TestResourceManager {
   public void testNodeHealthReportIsNotNull() throws Exception{
     String host1 = "host1";
     final int memory = 4 * 1024;
+    NodeStatus mockNodeStatus = createMockNodeStatus();
     org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm1 = 
       registerNode(host1, 1234, 2345, NetworkTopology.DEFAULT_RACK, 
-          Resources.createResource(memory, 1));
+          Resources.createResource(memory, 1), mockNodeStatus);
     nm1.heartbeat();
     nm1.heartbeat();
     Collection<RMNode> values = resourceManager.getRMContext().getRMNodes().values();

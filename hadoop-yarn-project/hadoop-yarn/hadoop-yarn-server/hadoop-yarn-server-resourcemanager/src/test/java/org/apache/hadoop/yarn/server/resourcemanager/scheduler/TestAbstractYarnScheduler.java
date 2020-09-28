@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -46,6 +47,7 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
+import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
@@ -913,9 +915,13 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
       RegisterNodeManagerRequest request1 =
           recordFactory.newRecordInstance(RegisterNodeManagerRequest.class);
       NodeId nodeId1 = NodeId.newInstance(hostname1, 0);
+
+      NodeStatus mockNodeStatus = createMockNodeStatus();
+
       request1.setNodeId(nodeId1);
       request1.setHttpPort(0);
       request1.setResource(capability);
+      request1.setNodeStatus(mockNodeStatus);
       privateResourceTrackerService.registerNodeManager(request1);
       privateDispatcher.await();
       Resource clusterResource =

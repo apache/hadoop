@@ -71,6 +71,8 @@ public class NodeHealthScriptRunner extends AbstractService {
   private long lastReportedTime;
 
   private TimerTask timer;
+
+  private boolean runBeforeStartup;
   
   private enum HealthCheckerExitStatus {
     SUCCESS,
@@ -191,7 +193,7 @@ public class NodeHealthScriptRunner extends AbstractService {
   }
 
   public NodeHealthScriptRunner(String scriptName, long chkInterval, long timeout,
-      String[] scriptArgs) {
+      String[] scriptArgs, boolean runBeforeStartup) {
     super(NodeHealthScriptRunner.class.getName());
     this.lastReportedTime = System.currentTimeMillis();
     this.isHealthy = true;
@@ -200,6 +202,7 @@ public class NodeHealthScriptRunner extends AbstractService {
     this.intervalTime = chkInterval;
     this.scriptTimeout = timeout;
     this.timer = new NodeHealthMonitorExecutor(scriptArgs);
+    this.runBeforeStartup = runBeforeStartup;
   }
 
   /*
@@ -217,9 +220,16 @@ public class NodeHealthScriptRunner extends AbstractService {
   @Override
   protected void serviceStart() throws Exception {
     nodeHealthScriptScheduler = new Timer("NodeHealthMonitor-Timer", true);
-    // Start the timer task immediately and
-    // then periodically at interval time.
-    nodeHealthScriptScheduler.scheduleAtFixedRate(timer, 0, intervalTime);
+    long delay = 0;
+    if (runBeforeStartup) {
+      // Start the timer task immediately and wait for it to return.
+      timer.run();
+      delay = intervalTime;
+    }
+
+    // Set the script to run periodically at interval time.
+    nodeHealthScriptScheduler.scheduleAtFixedRate(timer, delay,
+        intervalTime);
     super.serviceStart();
   }
 

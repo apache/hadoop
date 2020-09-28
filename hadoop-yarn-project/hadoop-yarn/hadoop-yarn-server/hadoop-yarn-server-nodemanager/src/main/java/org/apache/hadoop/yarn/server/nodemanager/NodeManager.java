@@ -367,8 +367,11 @@ public class NodeManager extends CompositeService
         YarnConfiguration.DEFAULT_NM_HEALTH_CHECK_SCRIPT_TIMEOUT_MS);
     String[] scriptArgs = conf.getStrings(
         YarnConfiguration.NM_HEALTH_CHECK_SCRIPT_OPTS, new String[] {});
+    boolean runBeforeStartup = conf.getBoolean(
+        YarnConfiguration.NM_HEALTH_CHECK_RUN_BEFORE_STARTUP,
+        YarnConfiguration.DEFAULT_NM_HEALTH_CHECK_RUN_BEFORE_STARTUP);
     return new NodeHealthScriptRunner(nodeHealthScript,
-        nmCheckintervalTime, scriptTimeout, scriptArgs);
+        nmCheckintervalTime, scriptTimeout, scriptArgs, runBeforeStartup);
   }
 
   @VisibleForTesting

@@ -24,6 +24,8 @@ import org.apache.hadoop.yarn.nodelabels.NodeAttributeStore;
 import org.apache.hadoop.yarn.nodelabels.NodeLabelUtil;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeToAttributes;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.FileSystemNodeAttributeStore;
+
+import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -2682,10 +2684,14 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         RegisterNodeManagerRequest.class);
     NodeId nodeId = NodeId.newInstance("host2", 1234);
     Resource capability = BuilderUtils.newResource(1024, 1);
+
+    NodeStatus mockNodeStatus = createMockNodeStatus();
+
     req.setResource(capability);
     req.setNodeId(nodeId);
     req.setHttpPort(1234);
     req.setNMVersion(YarnVersionInfo.getVersion());
+    req.setNodeStatus(mockNodeStatus);
     ContainerId c1 = ContainerId.newContainerId(appAttemptId, 1);
     ContainerId c2 = ContainerId.newContainerId(appAttemptId, 2);
     ContainerId c3 = ContainerId.newContainerId(appAttemptId, 3);

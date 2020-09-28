@@ -1928,6 +1928,13 @@ public class YarnConfiguration extends Configuration {
     NM_PREFIX + "health-checker.script.timeout-ms";
   public static final long DEFAULT_NM_HEALTH_CHECK_SCRIPT_TIMEOUT_MS = 
     2 * DEFAULT_NM_HEALTH_CHECK_INTERVAL_MS;
+
+  /** Whether or not to run the node health script before the NM
+   *  starts up.*/
+  public static final String NM_HEALTH_CHECK_RUN_BEFORE_STARTUP =
+      NM_PREFIX + "health-checker.run-before-startup";
+  public static final boolean DEFAULT_NM_HEALTH_CHECK_RUN_BEFORE_STARTUP =
+      false;
   
   /** The health check script to run.*/
   public static final String NM_HEALTH_CHECK_SCRIPT_PATH = 

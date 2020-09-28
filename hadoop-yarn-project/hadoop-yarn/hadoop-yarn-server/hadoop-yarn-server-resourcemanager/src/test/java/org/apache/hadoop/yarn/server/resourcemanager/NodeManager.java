@@ -96,7 +96,7 @@ public class NodeManager implements ContainerManagementProtocol {
   
   public NodeManager(String hostName, int containerManagerPort, int httpPort,
       String rackName, Resource capability,
-      ResourceManager resourceManager)
+      ResourceManager resourceManager, NodeStatus nodeStatus)
       throws IOException, YarnException {
     this.containerManagerAddress = hostName + ":" + containerManagerPort;
     this.nodeHttpAddress = hostName + ":" + httpPort;
@@ -111,6 +111,7 @@ public class NodeManager implements ContainerManagementProtocol {
     request.setResource(capability);
     request.setNodeId(this.nodeId);
     request.setNMVersion(YarnVersionInfo.getVersion());
+    request.setNodeStatus(nodeStatus);
     resourceTrackerService.registerNodeManager(request);
     this.resourceManager = resourceManager;
     resourceManager.getResourceScheduler().getNodeReport(this.nodeId);

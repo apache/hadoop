@@ -1596,6 +1596,13 @@
   </property>
 
   <property>
+    <description>Whether or not to run the node health script
+    before the NM starts up.</description>
+    <name>yarn.nodemanager.health-checker.run-before-startup</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>The health check script to run.</description>
     <name>yarn.nodemanager.health-checker.script.path</name>
     <value></value>

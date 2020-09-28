@@ -26,6 +26,7 @@ import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.anyString;
 
+import org.apache.hadoop.yarn.server.nodemanager.NodeResourceMonitorImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -156,9 +157,12 @@ public abstract class BaseContainerManagerTest {
   protected NodeHealthCheckerService nodeHealthChecker;
   protected LocalDirsHandlerService dirsHandler;
   protected final long DUMMY_RM_IDENTIFIER = 1234;
+  private NodeHealthCheckerService nodeHealthCheckerService = mock(NodeHealthCheckerService.class);
+  private NodeResourceMonitorImpl nodeResourceMonitor = mock(
+      NodeResourceMonitorImpl.class);
 
   protected NodeStatusUpdater nodeStatusUpdater = new NodeStatusUpdaterImpl(
-      context, new AsyncDispatcher(), null, metrics) {
+      context, new AsyncDispatcher(), nodeHealthCheckerService, metrics) {
     @Override
     protected ResourceTracker getRMClient() {
       return new LocalRMInterface();
@@ -223,6 +227,7 @@ public abstract class BaseContainerManagerTest {
     nodeHealthChecker.init(conf);
     containerManager = createContainerManager(delSrvc);
     ((NMContext)context).setContainerManager(containerManager);
+    ((NMContext) context).setNodeResourceMonitor(nodeResourceMonitor);
     nodeStatusUpdater.init(conf);
     containerManager.init(conf);
     nodeStatusUpdater.start();

@@ -100,7 +100,7 @@ public class TestNodeHealthScriptRunner {
     writeNodeHealthScriptFile(normalScript, true);
     NodeHealthScriptRunner nodeHealthScriptRunner = new NodeHealthScriptRunner(
             nodeHealthscriptFile.getAbsolutePath(),
-            500, 1000, new String[] {});
+            500, 1000, new String[] {}, true);
     nodeHealthScriptRunner.init(conf);
     TimerTask timerTask = nodeHealthScriptRunner.getTimerTask();
 

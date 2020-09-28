@@ -333,6 +333,7 @@ public class ResourceTrackerService extends AbstractService implements
     Resource capability = request.getResource();
     String nodeManagerVersion = request.getNMVersion();
     Resource physicalResource = request.getPhysicalResource();
+    NodeStatus nodeStatus = request.getNodeStatus();
 
     RegisterNodeManagerResponse response = recordFactory
         .newRecordInstance(RegisterNodeManagerResponse.class);
@@ -409,7 +410,7 @@ public class ResourceTrackerService extends AbstractService implements
     if (oldNode == null) {
       RMNodeStartedEvent startEvent = new RMNodeStartedEvent(nodeId,
           request.getNMContainerStatuses(),
-          request.getRunningApplications());
+          request.getRunningApplications(), nodeStatus);
       if (request.getLogAggregationReportsForApps() != null
           && !request.getLogAggregationReportsForApps().isEmpty()) {
         if (LOG.isDebugEnabled()) {
@@ -445,7 +446,7 @@ public class ResourceTrackerService extends AbstractService implements
 
         this.rmContext.getRMNodes().put(nodeId, rmNode);
         this.rmContext.getDispatcher().getEventHandler()
-            .handle(new RMNodeStartedEvent(nodeId, null, null));
+            .handle(new RMNodeStartedEvent(nodeId, null, null, nodeStatus));
       } else {
         // Reset heartbeat ID since node just restarted.
         oldNode.resetLastNodeHeartBeatResponse();
