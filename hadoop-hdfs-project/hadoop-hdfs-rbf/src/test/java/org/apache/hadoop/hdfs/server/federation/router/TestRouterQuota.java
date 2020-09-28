@@ -99,7 +99,7 @@ public class TestRouterQuota {
         .quota()
         .rpc()
         .build();
-    routerConf.set(RBFConfigKeys.DFS_ROUTER_QUOTA_CACHE_UPATE_INTERVAL, "2s");
+    routerConf.set(RBFConfigKeys.DFS_ROUTER_QUOTA_CACHE_UPDATE_INTERVAL, "2s");
 
     // override some hdfs settings that used in testing space quota
     Configuration hdfsConf = new Configuration(false);
