@@ -288,7 +288,7 @@ public class RouterClientProtocol implements ClientProtocol {
         rpcServer.getLocationsForPath(src, true);
     RemoteLocation createLocation = null;
     try {
-      createLocation = rpcServer.getCreateLocation(src);
+      createLocation = rpcServer.getCreateLocation(src, locations);
       return rpcClient.invokeSingle(createLocation, method,
           HdfsFileStatus.class);
     } catch (IOException ioe) {
