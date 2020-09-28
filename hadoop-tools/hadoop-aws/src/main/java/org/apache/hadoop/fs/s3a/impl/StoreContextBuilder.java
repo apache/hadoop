@@ -52,7 +52,7 @@ public class StoreContextBuilder {
 
   private Invoker invoker;
 
-  private S3AStatisticsContext statisticsContext;
+  private S3AStatisticsContext instrumentation;
 
   private S3AStorageStatistics storageStatistics;
 
@@ -112,9 +112,9 @@ public class StoreContextBuilder {
     return this;
   }
 
-  public StoreContextBuilder setStatisticsContext(
-      final S3AStatisticsContext statisticsContext) {
-    this.statisticsContext = statisticsContext;
+  public StoreContextBuilder setInstrumentation(
+      final S3AStatisticsContext instr) {
+    this.instrumentation = instr;
     return this;
   }
 
@@ -176,7 +176,7 @@ public class StoreContextBuilder {
         executor,
         executorCapacity,
         invoker,
-        statisticsContext,
+        instrumentation,
         storageStatistics,
         inputPolicy,
         changeDetectionPolicy,

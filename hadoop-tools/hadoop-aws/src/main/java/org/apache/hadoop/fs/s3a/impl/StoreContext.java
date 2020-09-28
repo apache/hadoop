@@ -88,7 +88,8 @@ public class StoreContext {
   private final Invoker invoker;
 
   /** Instrumentation and statistics. */
-  private final S3AStatisticsContext statisticsContext;
+  private final S3AStatisticsContext instrumentation;
+
   private final S3AStorageStatistics storageStatistics;
 
   /** Seek policy. */
@@ -129,7 +130,7 @@ public class StoreContext {
       final ListeningExecutorService executor,
       final int executorCapacity,
       final Invoker invoker,
-      final S3AStatisticsContext statisticsContext,
+      final S3AStatisticsContext instrumentation,
       final S3AStorageStatistics storageStatistics,
       final S3AInputPolicy inputPolicy,
       final ChangeDetectionPolicy changeDetectionPolicy,
@@ -146,7 +147,7 @@ public class StoreContext {
     this.executor = executor;
     this.executorCapacity = executorCapacity;
     this.invoker = invoker;
-    this.statisticsContext = statisticsContext;
+    this.instrumentation = instrumentation;
     this.storageStatistics = storageStatistics;
     this.inputPolicy = inputPolicy;
     this.changeDetectionPolicy = changeDetectionPolicy;
@@ -191,8 +192,8 @@ public class StoreContext {
    * @return the statistics context this store context was created
    * with.
    */
-  public S3AStatisticsContext getStatisticsContext() {
-    return statisticsContext;
+  public S3AStatisticsContext getInstrumentation() {
+    return instrumentation;
   }
 
   public S3AInputPolicy getInputPolicy() {
@@ -272,7 +273,7 @@ public class StoreContext {
    * @param count the count to increment
    */
   public void incrementStatistic(Statistic statistic, long count) {
-    statisticsContext.incrementCounter(statistic, count);
+    instrumentation.incrementCounter(statistic, count);
     storageStatistics.incrementCounter(statistic, count);
   }
 
@@ -282,7 +283,7 @@ public class StoreContext {
    * @param count the count to decrement
    */
   public void decrementGauge(Statistic statistic, long count) {
-    statisticsContext.decrementGauge(statistic, count);
+    instrumentation.decrementGauge(statistic, count);
   }
 
   /**
@@ -291,7 +292,7 @@ public class StoreContext {
    * @param count the count to increment
    */
   public void incrementGauge(Statistic statistic, long count) {
-    statisticsContext.incrementGauge(statistic, count);
+    instrumentation.incrementGauge(statistic, count);
   }
 
   /**

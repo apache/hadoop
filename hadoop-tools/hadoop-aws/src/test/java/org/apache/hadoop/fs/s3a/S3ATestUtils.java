@@ -949,7 +949,7 @@ public final class S3ATestUtils {
         .setExecutorCapacity(DEFAULT_EXECUTOR_CAPACITY)
         .setInvoker(
             new Invoker(RetryPolicies.TRY_ONCE_THEN_FAIL, Invoker.LOG_EVENT))
-        .setStatisticsContext(new EmptyS3AStatisticsContext())
+        .setInstrumentation(new EmptyS3AStatisticsContext())
         .setStorageStatistics(new S3AStorageStatistics())
         .setInputPolicy(S3AInputPolicy.Normal)
         .setChangeDetectionPolicy(

@@ -161,7 +161,7 @@ public class S3ADelegationTokens extends AbstractDTService {
       throws IOException {
     super.bindToFileSystem(uri, context, delegationOperations);
     service = getTokenService(getCanonicalUri());
-    stats = context.getStatisticsContext().newDelegationTokenStatistics();
+    stats = context.getInstrumentation().newDelegationTokenStatistics();
   }
 
   /**

@@ -451,7 +451,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
     owner = fs;
     conf = owner.getConf();
     StoreContext context = owner.createStoreContext();
-    instrumentation = context.getStatisticsContext()
+    instrumentation = context.getInstrumentation()
         .getS3GuardInstrumentation();
     username = context.getUsername();
     executor = context.createThrottledExecutor();

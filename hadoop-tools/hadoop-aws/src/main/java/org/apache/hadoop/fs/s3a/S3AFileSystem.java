@@ -4988,7 +4988,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .setExecutor(boundedThreadPool)
         .setExecutorCapacity(executorCapacity)
         .setInvoker(invoker)
-        .setStatisticsContext(statisticsContext)
+        .setInstrumentation(statisticsContext)
         .setStorageStatistics(getStorageStatistics())
         .setInputPolicy(getInputPolicy())
         .setChangeDetectionPolicy(changeDetectionPolicy)

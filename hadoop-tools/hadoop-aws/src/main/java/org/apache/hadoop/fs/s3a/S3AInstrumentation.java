@@ -527,7 +527,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
    */
   public S3AInputStreamStatistics newInputStreamStatistics(
       final FileSystem.Statistics filesystemStatistics) {
-    return new InputStreamStatisticsImpl(filesystemStatistics);
+    return new InputStreamStatistics(filesystemStatistics);
   }
 
   /**
@@ -585,7 +585,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
    * threads.
    *
    */
-  private final class InputStreamStatisticsImpl
+  private final class InputStreamStatistics
       extends AbstractS3AStatisticsSource
       implements S3AInputStreamStatistics {
 
@@ -601,7 +601,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
      */
     private IOStatisticsSnapshot mergedStats;
 
-    private InputStreamStatisticsImpl(
+    private InputStreamStatistics(
         FileSystem.Statistics filesystemStatistics) {
       this.filesystemStatistics = filesystemStatistics;
       IOStatisticsStore st = iostatisticsStore()
@@ -655,13 +655,6 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
           -negativeOffset);
     }
 
-    /**
-     * Record a forward seek, adding a seek operation, a forward
-     * seek operation, and any bytes skipped.
-     * @param skipped
-     * @param bytesRead number of bytes skipped by reading from the stream.
- * If the seek was implemented by a close + reopen, set this to zero.
-     */
     @Override
     public void seekForwards(final long skipped,
         long bytesRead) {
@@ -679,22 +672,11 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       }
     }
 
-    /**
-     * The inner stream was opened.
-     * @return the previous count
-     */
     @Override
     public long streamOpened() {
       return increment(StreamStatisticNames.STREAM_READ_OPENED);
     }
 
-    /**
-     * The inner stream was closed.
-     * @param abortedConnection flag to indicate the stream was aborted,
-     * rather than closed cleanly
-     * @param remainingInCurrentRequest the number of bytes remaining in
-     * the current request.
-     */
     @Override
     public void streamClose(boolean abortedConnection,
         long remainingInCurrentRequest) {
@@ -711,19 +693,11 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       }
     }
 
-    /**
-     * An ignored stream read exception was received.
-     */
     @Override
     public void readException() {
       increment(StreamStatisticNames.STREAM_READ_EXCEPTIONS);
     }
 
-    /**
-     * Increment the bytes read counter by the number of bytes;
-     * no-op if the argument is negative.
-     * @param bytes number of bytes read
-     */
     @Override
     public void bytesRead(long bytes) {
       if (bytes > 0) {
@@ -732,32 +706,16 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       }
     }
 
-    /**
-     * A {@code read(byte[] buf, int off, int len)} operation has started.
-     * @param pos starting position of the read
-     * @param len length of bytes to read
-     */
     @Override
     public void readOperationStarted(long pos, long len) {
       increment(StreamStatisticNames.STREAM_READ_OPERATIONS);
     }
 
-    /**
-     * A {@code PositionedRead.read(position, buffer, offset, length)}
-     * operation has just started.
-     * @param pos starting position of the read
-     * @param len length of bytes to read
-     */
     @Override
     public void readFullyOperationStarted(long pos, long len) {
       increment(StreamStatisticNames.STREAM_READ_FULLY_OPERATIONS);
     }
 
-    /**
-     * A read operation has completed.
-     * @param requested number of requested bytes
-     * @param actual the actual number of bytes
-     */
     @Override
     public void readOperationCompleted(int requested, int actual) {
       if (requested > actual) {
@@ -994,7 +952,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
    */
   public BlockOutputStreamStatistics newOutputStreamStatistics(
       FileSystem.Statistics filesystemStatistics) {
-    return new BlockOutputStreamStatisticsImpl(filesystemStatistics);
+    return new OutputStreamStatistics(filesystemStatistics);
   }
 
   /**
@@ -1003,7 +961,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
    * @param source stream statistics
    */
   private void mergeOutputStreamStatistics(
-      BlockOutputStreamStatisticsImpl source) {
+      OutputStreamStatistics source) {
     incrementCounter(STREAM_WRITE_TOTAL_TIME, source.totalUploadDuration());
     incrementCounter(STREAM_WRITE_QUEUE_DURATION, source.queueDuration);
     incrementCounter(STREAM_WRITE_TOTAL_DATA, source.bytesUploaded);
@@ -1021,7 +979,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
    * {@link FileSystem.Statistics} instance; this is only done
    * in close() for better cross-thread accounting.
    */
-  private final class BlockOutputStreamStatisticsImpl
+  private final class OutputStreamStatistics
       extends AbstractS3AStatisticsSource
       implements BlockOutputStreamStatistics {
 
@@ -1039,7 +997,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
     private final FileSystem.Statistics filesystemStatistics;
 
-    private BlockOutputStreamStatisticsImpl(
+    private OutputStreamStatistics(
         @Nullable FileSystem.Statistics filesystemStatistics) {
       this.filesystemStatistics = filesystemStatistics;
       IOStatisticsStore st = iostatisticsStore()
@@ -1079,25 +1037,16 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       return incGauge(statistic.getSymbol(), v);
     }
 
-    /**
-     * A block has been allocated.
-     */
     @Override
     public void blockAllocated() {
       blocksAllocated.incrementAndGet();
     }
 
-    /**
-     * A block has been released.
-     */
     @Override
     public void blockReleased() {
       blocksReleased.incrementAndGet();
     }
 
-    /**
-     * Block is queued for upload.
-     */
     @Override
     public void blockUploadQueued(int blockSize) {
       incCounter(StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS);
@@ -1108,7 +1057,6 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       incAllGauges(STREAM_WRITE_BLOCK_UPLOADS_DATA_PENDING, blockSize);
     }
 
-    /** Queued block has been scheduled for upload. */
     @Override
     public void blockUploadStarted(long duration, int blockSize) {
       queueDuration.addAndGet(duration);
@@ -1117,7 +1065,6 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       incAllGauges(STREAM_WRITE_BLOCK_UPLOADS_ACTIVE, 1);
     }
 
-    /** A block upload has completed. */
     @Override
     public void blockUploadCompleted(long duration, int blockSize) {
       transferDuration.addAndGet(duration);
@@ -1143,10 +1090,6 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       incrementGauge(STREAM_WRITE_BLOCK_UPLOADS_DATA_PENDING, -byteCount);
     }
 
-    /**
-     * Note exception in a multipart complete.
-     * @param count count of exceptions
-     */
     @Override
     public void exceptionInMultipartComplete(int count) {
       if (count > 0) {
@@ -1156,38 +1099,22 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       }
     }
 
-    /**
-     * Note an exception in a multipart abort.
-     */
     @Override
     public void exceptionInMultipartAbort() {
       incCounter(
           STREAM_WRITE_EXCEPTIONS_COMPLETING_UPLOADS.getSymbol());
     }
 
-    /**
-     * Get the number of bytes pending upload.
-     * @return the number of bytes in the pending upload state.
-     */
     @Override
     public long getBytesPendingUpload() {
       return bytesPendingUpload.get();
     }
 
-    /**
-     * Data has been uploaded to be committed in a subsequent operation;
-     * to be called at the end of the write.
-     * @param size size in bytes
-     */
     @Override
     public void commitUploaded(long size) {
       incrementCounter(COMMITTER_BYTES_UPLOADED, size);
     }
 
-    /**
-     * Output stream has closed.
-     * Trigger merge in of all statistics not updated during operation.
-     */
     @Override
     public void close() {
       if (bytesPendingUpload.get() > 0) {
@@ -1266,8 +1193,6 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       sb.append(", blocksActive=").append(blocksActive);
       sb.append(", blockUploadsCompleted=").append(blockUploadsCompleted);
       sb.append(", bytesPendingUpload=").append(bytesPendingUpload);
-      sb.append(", bytesUploaded=").append(bytesUploaded);
-      sb.append(", bytesWritten=").append(bytesWritten);
       sb.append(", blocksAllocated=").append(blocksAllocated);
       sb.append(", blocksReleased=").append(blocksReleased);
       sb.append(", blocksActivelyAllocated=")
@@ -1320,10 +1245,6 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       incrementCounter(S3GUARD_METADATASTORE_RECORD_READS, count);
     }
 
-    /**
-     * records have been written (including deleted).
-     * @param count number of records written.
-     */
     @Override
     public void recordsWritten(int count) {
       incrementCounter(S3GUARD_METADATASTORE_RECORD_WRITES, count);
@@ -1331,7 +1252,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
     @Override
     public void directoryMarkedAuthoritative() {
-      incrementCounter(S3GUARD_METADATASTORE_AUTHORITATIVE_DIRECTORIES_UPDATED,
+      incrementCounter(
+          S3GUARD_METADATASTORE_AUTHORITATIVE_DIRECTORIES_UPDATED,
           1);
     }
 
@@ -1381,26 +1303,17 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       increment(COMMITTER_COMMITS_CREATED, 1);
     }
 
-    /**
-     * Data has been uploaded to be committed in a subsequent operation.
-     * @param size size in bytes
-     */
     @Override
     public void commitUploaded(long size) {
       increment(COMMITTER_BYTES_UPLOADED, size);
     }
 
-    /**
-     * A commit has been completed.
-     * @param size size in bytes
-     */
     @Override
     public void commitCompleted(long size) {
       increment(COMMITTER_COMMITS_COMPLETED, 1);
       increment(COMMITTER_BYTES_COMMITTED, size);
     }
 
-    /** A commit has been aborted. */
     @Override
     public void commitAborted() {
       increment(COMMITTER_COMMITS_ABORTED, 1);
@@ -1451,7 +1364,6 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     private DelegationTokenStatisticsImpl() {
     }
 
-    /** A token has been issued. */
     @Override
     public void tokenIssued() {
       incrementCounter(DELEGATION_TOKENS_ISSUED, 1);

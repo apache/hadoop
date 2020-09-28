@@ -63,7 +63,7 @@ public class BulkDeleteRetryHandler extends AbstractStoreOperation {
    */
   public BulkDeleteRetryHandler(final StoreContext storeContext) {
     super(storeContext);
-    instrumentation = storeContext.getStatisticsContext();
+    instrumentation = storeContext.getInstrumentation();
     storageStatistics = storeContext.getStorageStatistics();
   }
 
