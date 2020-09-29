@@ -86,7 +86,6 @@ public abstract class AbstractS3AStatisticsSource implements
     return sb.toString();
   }
 
-
   @Override
   public DurationTracker trackDuration(final String key, final int count) {
     return getIOStatistics().trackDuration(key, count);
