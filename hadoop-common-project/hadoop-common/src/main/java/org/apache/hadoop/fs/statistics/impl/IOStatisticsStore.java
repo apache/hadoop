@@ -49,9 +49,10 @@ public interface IOStatisticsStore extends IOStatistics,
    * Increment a counter.
    * <p></p>
    * No-op if the counter is unknown.
+   * If the value is negative, it is ignored.
    * @param key statistics key
    * @param value value to increment
-   * @return old value or, if the counter is unknown: 0
+   * @return the updated value or, if the counter is unknown: 0
    */
   long incrementCounter(String key, long value);
 

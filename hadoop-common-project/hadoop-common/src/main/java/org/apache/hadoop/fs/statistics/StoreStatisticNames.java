@@ -251,6 +251,13 @@ public final class StoreStatisticNames {
    */
   public static final String SUFFIX_MEAN = ".mean";
 
+  /**
+   * String to add to counters and other stats to track failures.
+   * This comes before the .min/.mean//max suffixes.
+   * <p></p>
+   * Value {@value}.
+   */
+  public static final String SUFFIX_FAILURES = ".failures";
 
   /**
    * The name of the statistic collected for executor acquisition if

@@ -22,12 +22,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_FAILURES;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MAX;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MEAN;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MIN;
 
 /**
- * Builder implementation.
+ * Builder for an IOStatistics store..
  */
 final class IOStatisticsStoreBuilderImpl implements
     IOStatisticsStoreBuilder {
@@ -77,10 +78,16 @@ final class IOStatisticsStoreBuilderImpl implements
   public IOStatisticsStoreBuilderImpl withDurationTracking(
       final String... prefixes) {
     for (String p : prefixes) {
-      withCounters(p);
-      withMinimums(p + SUFFIX_MIN);
-      withMaximums(p + SUFFIX_MAX);
-      withMeanStatistics(p + SUFFIX_MEAN);
+      withCounters(p, p + SUFFIX_FAILURES);
+      withMinimums(
+          p + SUFFIX_MIN,
+          p + SUFFIX_FAILURES + SUFFIX_MIN);
+      withMaximums(
+          p + SUFFIX_MAX,
+          p + SUFFIX_FAILURES + SUFFIX_MAX);
+      withMeanStatistics(
+          p + SUFFIX_MEAN,
+          p + SUFFIX_FAILURES + SUFFIX_MEAN);
     }
     return this;
   }
