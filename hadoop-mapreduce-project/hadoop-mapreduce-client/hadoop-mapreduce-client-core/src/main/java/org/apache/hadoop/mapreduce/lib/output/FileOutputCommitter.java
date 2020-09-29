@@ -68,7 +68,7 @@ public class FileOutputCommitter extends PathOutputCommitter {
       "mapreduce.fileoutputcommitter.marksuccessfuljobs";
   public static final String FILEOUTPUTCOMMITTER_ALGORITHM_VERSION =
       "mapreduce.fileoutputcommitter.algorithm.version";
-  public static final int FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_DEFAULT = 2;
+  public static final int FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_DEFAULT = 1;
   // Skip cleanup _temporary folders under job's output directory
   public static final String FILEOUTPUTCOMMITTER_CLEANUP_SKIPPED =
       "mapreduce.fileoutputcommitter.cleanup.skipped";
@@ -348,6 +348,16 @@ public class FileOutputCommitter extends PathOutputCommitter {
    * @param context the job's context
    */
   public void setupJob(JobContext context) throws IOException {
+    // Downgrade v2 to v1 with a warning.
+    if (algorithmVersion == 2) {
+      Logger log = LoggerFactory.getLogger(
+          "org.apache.hadoop.mapreduce.lib.output."
+              + "FileOutputCommitter.Algorithm");
+
+      log.warn("The v2 commit algorithm is deprecated;"
+          + " please switch to the v1 algorithm");
+    }
+
     if (hasOutputPath()) {
       Path jobAttemptPath = getJobAttemptPath(context);
       FileSystem fs = jobAttemptPath.getFileSystem(

@@ -1562,10 +1562,35 @@
 
 <property>
   <name>mapreduce.fileoutputcommitter.algorithm.version</name>
-  <value>2</value>
-  <description>The file output committer algorithm version
-  valid algorithm version number: 1 or 2
-  default to 2, which is the original algorithm
+  <value>1</value>
+  <description>The file output committer algorithm version.
+
+  There are two algorithm versions in Hadoop, "1" and "2".
+
+  The version 2 algorithm is deprecated and no longer the default
+  as task commits were not atomic.
+  If a first task attempt fails part-way
+  through its task commit, the output directory could end up
+  with data from that failed commit, alongside the data
+  from any subsequent attempts.
+
+  See https://issues.apache.org/jira/browse/MAPREDUCE-7282
+
+  Although no-longer the default, this algorithm is safe to use if
+  all task attempts for a single task meet the following requirements
+  -they generate exactly the same set of files
+  -the contents of each file are exactly the same in each task attempt
+
+  That is:
+  1. If a second attempt commits work, there will be no leftover files from
+  a first attempt which failed during its task commit.
+  2. If a network partition causes the first task attempt to overwrite
+  some/all of the output of a second attempt, the result will be
+  exactly the same as if it had not done so.
+
+  To avoid the warning message on job setup, set the log level of the log
+  org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.Algorithm
+  to ERROR.
 
   In algorithm version 1,
 
