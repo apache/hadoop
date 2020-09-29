@@ -82,6 +82,8 @@ Installing required packages for clean install of Ubuntu 14.04 LTS Desktop:
 
 Optional packages:
 
+* Snappy compression (only used for hadoop-mapreduce-client-nativetask)
+  $ sudo apt-get install snappy libsnappy-dev
 * Intel ISA-L library for erasure coding
   Please refer to https://01.org/intel%C2%AE-storage-acceleration-library-open-source-version
   (OR https://github.com/01org/isa-l)
@@ -160,6 +162,31 @@ Maven build goals:
 
   * Use -Dhbase.profile=2.0 to build Hadoop with HBase 2.0.0-beta1. Provide this option if you plan
     on running Timeline Service v2 with HBase 2.0.
+
+
+ Snappy build options:
+
+   Snappy is a compression library that can be utilized by the native code.
+   It is currently an optional component, meaning that Hadoop can be built with
+   or without this dependency. Snappy library as optional dependency is only
+   used for hadoop-mapreduce-client-nativetask.
+
+  * Use -Drequire.snappy to fail the build if libsnappy.so is not found.
+    If this option is not specified and the snappy library is missing,
+    we silently build a version of libhadoop.so that cannot make use of snappy.
+    This option is recommended if you plan on making use of snappy and want
+    to get more repeatable builds.
+
+  * Use -Dsnappy.prefix to specify a nonstandard location for the libsnappy
+    header files and library files. You do not need this option if you have
+    installed snappy using a package manager.
+  * Use -Dsnappy.lib to specify a nonstandard location for the libsnappy library
+    files.  Similarly to snappy.prefix, you do not need this option if you have
+    installed snappy using a package manager.
+  * Use -Dbundle.snappy to copy the contents of the snappy.lib directory into
+    the final tar file. This option requires that -Dsnappy.lib is also given,
+    and it ignores the -Dsnappy.prefix option. If -Dsnappy.lib isn't given, the
+    bundling and building will fail.
 
 
  ZStandard build options:
@@ -433,6 +460,9 @@ Building on CentOS 8
   $ ./bootstrap.sh --prefix=/usr/local
   $ ./b2
   $ sudo ./b2 install
+
+* Install optional dependencies (snappy-devel).
+  $ sudo dnf --enablerepo=PowerTools install snappy-devel
 
 * Install optional dependencies (libzstd-devel).
   $ sudo dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
