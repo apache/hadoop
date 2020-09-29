@@ -58,8 +58,8 @@ public final class CallerContext {
   private final byte[] signature;
 
   private CallerContext(Builder builder) {
-    this.context = builder.sb.length() > 0 ? builder.sb.toString() : null;
-    this.signature = builder.signature;
+    this.context = builder.getContext();
+    this.signature = builder.getSignature();
   }
 
   public String getContext() {
@@ -113,8 +113,9 @@ public final class CallerContext {
 
   /** The caller context builder. */
   public static final class Builder {
+    private static final String colon = ":";
     private final String separator;
-    private StringBuilder sb = new StringBuilder();
+    private final StringBuilder sb = new StringBuilder();
     private byte[] signature;
 
     public Builder(String context) {
@@ -138,6 +139,14 @@ public final class CallerContext {
         this.signature = Arrays.copyOf(signature, signature.length);
       }
       return this;
+    }
+
+    public String getContext() {
+      return sb.length() > 0 ? sb.toString() : null;
+    }
+
+    public byte[] getSignature() {
+      return signature;
     }
 
     /**
@@ -166,7 +175,7 @@ public final class CallerContext {
         if (sb.length() > 0) {
           sb.append(separator);
         }
-        sb.append(key + ":" + value);
+        sb.append(key).append(colon).append(value);
       }
       return this;
     }
