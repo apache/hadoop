@@ -69,6 +69,9 @@
     <TargetName>hadoop</TargetName>
   </PropertyGroup>
   <PropertyGroup>
+    <IncludePath Condition="Exists('$(ZLIB_HOME)')">$(ZLIB_HOME);$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup>
     <IsalLib Condition="Exists('$(CustomIsalPrefix)\isa-l.dll')">$(CustomIsalPrefix)</IsalLib>
     <IsalLib Condition="Exists('$(CustomIsalPrefix)\lib\isa-l.dll') And '$(IsalLib)' == ''">$(CustomIsalPrefix)\lib</IsalLib>
     <IsalLib Condition="Exists('$(CustomIsalPrefix)\bin\isa-l.dll') And '$(IsalLib)' == ''">$(CustomIsalPrefix)\bin</IsalLib>
