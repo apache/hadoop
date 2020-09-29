@@ -35,6 +35,7 @@ import java.net.URI;
 public final class JavaKeyStoreProvider extends KeyStoreProvider {
   public static final String SCHEME_NAME = "jceks";
   public static final String KEYSTORE_TYPE = "jceks";
+  public static final String ALGORITHM = "AES";
 
   private JavaKeyStoreProvider(URI uri, Configuration conf)
       throws IOException {
@@ -49,6 +50,11 @@ public final class JavaKeyStoreProvider extends KeyStoreProvider {
   @Override
   protected String getKeyStoreType() {
     return KEYSTORE_TYPE;
+  }
+
+  @Override
+  protected String getAlgorithm() {
+    return ALGORITHM;
   }
 
   /**

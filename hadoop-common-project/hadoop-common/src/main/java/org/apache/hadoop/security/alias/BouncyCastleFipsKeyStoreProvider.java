@@ -36,6 +36,7 @@ import java.net.URI;
 public final class BouncyCastleFipsKeyStoreProvider extends KeyStoreProvider {
   public static final String SCHEME_NAME = "bcfks";
   public static final String KEYSTORE_TYPE = "bcfks";
+  public static final String ALGORITHM = "HMACSHA512";
 
   private BouncyCastleFipsKeyStoreProvider(URI uri, Configuration conf)
       throws IOException {
@@ -50,6 +51,11 @@ public final class BouncyCastleFipsKeyStoreProvider extends KeyStoreProvider {
   @Override
   protected String getKeyStoreType() {
     return KEYSTORE_TYPE;
+  }
+
+  @Override
+  protected String getAlgorithm() {
+    return ALGORITHM;
   }
 
   /**

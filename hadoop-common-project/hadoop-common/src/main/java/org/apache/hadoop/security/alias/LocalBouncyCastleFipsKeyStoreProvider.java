@@ -36,6 +36,7 @@ public final class LocalBouncyCastleFipsKeyStoreProvider extends
     LocalKeyStoreProvider {
   public static final String SCHEME_NAME = "localbcfks";
   public static final String KEYSTORE_TYPE = "bcfks";
+  public static final String ALGORITHM = "HMACSHA512";
 
   private LocalBouncyCastleFipsKeyStoreProvider(URI uri, Configuration conf)
       throws IOException {
@@ -50,6 +51,11 @@ public final class LocalBouncyCastleFipsKeyStoreProvider extends
   @Override
   protected String getKeyStoreType() {
     return KEYSTORE_TYPE;
+  }
+
+  @Override
+  protected String getAlgorithm() {
+    return ALGORITHM;
   }
 
   /**

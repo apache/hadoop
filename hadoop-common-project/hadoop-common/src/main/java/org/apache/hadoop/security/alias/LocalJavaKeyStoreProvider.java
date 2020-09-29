@@ -35,6 +35,7 @@ public final class LocalJavaKeyStoreProvider extends
     LocalKeyStoreProvider {
   public static final String SCHEME_NAME = "localjceks";
   public static final String KEYSTORE_TYPE = "jceks";
+  public static final String ALGORITHM = "AES";
 
   private LocalJavaKeyStoreProvider(URI uri, Configuration conf)
       throws IOException {
@@ -49,6 +50,11 @@ public final class LocalJavaKeyStoreProvider extends
   @Override
   protected String getKeyStoreType() {
     return KEYSTORE_TYPE;
+  }
+
+  @Override
+  protected String getAlgorithm() {
+    return ALGORITHM;
   }
 
   /**

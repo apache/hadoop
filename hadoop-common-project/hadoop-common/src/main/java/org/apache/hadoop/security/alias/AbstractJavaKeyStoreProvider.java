@@ -149,6 +149,8 @@ public abstract class AbstractJavaKeyStoreProvider extends CredentialProvider {
 
   protected abstract String getKeyStoreType();
 
+  protected abstract String getAlgorithm();
+
   protected abstract OutputStream getOutputStreamForKeystore()
       throws IOException;
 
@@ -266,8 +268,8 @@ public abstract class AbstractJavaKeyStoreProvider extends CredentialProvider {
     writeLock.lock();
     try {
       keyStore.setKeyEntry(alias,
-          new SecretKeySpec(new String(material).getBytes("UTF-8"), "AES"),
-          password, null);
+          new SecretKeySpec(new String(material).getBytes("UTF-8"),
+              getAlgorithm()), password, null);
     } catch (KeyStoreException e) {
       throw new IOException("Can't store credential " + alias + " in " + this,
           e);
