@@ -57,10 +57,10 @@ The `IOStatistics` Interface exports five kinds of statistic:
 | Category | Type | Description |
 |------|------|-------------|
 | `counter`        | `long`          | a counter which may increase in value; SHOULD BE >= 0 |
-| `gauge`          | `long`          | an arbitrary value which can down as well as up; SHOULD BE >= 0|
+| `gauge`          | `long`          | an arbitrary value which can down as well as up; SHOULD BE >= 0 |
 | `minimum`        | `long`          | an minimum value; MAY BE negative |
 | `maximum`        | `long`          | a maximum value;  MAY BE negative |
-| `meanStatistic` | `MeanStatistic` | an arithmetic mean and sample size; mean MAY BE negative|
+| `meanStatistic`  | `MeanStatistic` | an arithmetic mean and sample size; mean MAY BE negative |
 
 Four are simple `long` values, with the variations how they are likely to
 change and how they are aggregated.
@@ -427,6 +427,6 @@ the provisioning of a public implementation MAY BE raised via the Hadoop develop
 channels.
 
 These MAY be used by those implementations of the Hadoop `FileSystem`, `AbstractFileSystem`
-and related classes which are not in the hadoop source tree. Implementors need to
-be aware that the implementation this code is unstable and may change across
+and related classes which are not in the hadoop source tree. Implementors MUST BE
+aware that the implementation this code is unstable and may change across
 minor point releases of Hadoop.
