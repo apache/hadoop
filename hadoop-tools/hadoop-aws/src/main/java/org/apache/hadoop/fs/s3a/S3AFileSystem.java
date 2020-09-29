@@ -128,7 +128,6 @@ import org.apache.hadoop.fs.s3a.tools.MarkerToolOperations;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperationsImpl;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
-import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
@@ -200,6 +199,7 @@ import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.logDnsLookup;
 import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.dirMetaToStatuses;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_CONTINUE_LIST_REQUEST;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfCallable;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**
@@ -1714,13 +1714,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         ListingContext listingContext)
             throws IOException {
       return submit(unboundedThreadPool,
-        () -> {
-          try (DurationTracker ignored =
-                   listingContext.getDurationTrackerFactory()
-                       .trackDuration(OBJECT_LIST_REQUEST)) {
-            return listObjects(request);
-          }
-      });
+          trackDurationOfCallable(
+              listingContext.getDurationTrackerFactory(),
+              OBJECT_LIST_REQUEST,
+              () -> listObjects(request)));
     }
 
     @Override
@@ -1731,13 +1728,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         ListingContext listingContext)
             throws IOException {
       return submit(unboundedThreadPool,
-        () -> {
-          try (DurationTracker ignored =
-                   listingContext.getDurationTrackerFactory()
-                       .trackDuration(OBJECT_CONTINUE_LIST_REQUEST)) {
-            return continueListObjects(request, prevResult);
-          }
-      });
+          trackDurationOfCallable(
+              listingContext.getDurationTrackerFactory(),
+              OBJECT_CONTINUE_LIST_REQUEST,
+              () -> continueListObjects(request, prevResult)));
     }
 
     @Override
