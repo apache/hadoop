@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.fs.statistics.impl;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
@@ -29,9 +31,13 @@ import java.util.function.Function;
 import com.google.common.annotations.VisibleForTesting;
 
 import org.apache.hadoop.fs.StorageStatistics;
+import org.apache.hadoop.fs.statistics.DurationTracker;
+import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.MeanStatistic;
+import org.apache.hadoop.util.functional.CallableRaisingIOE;
+import org.apache.hadoop.util.functional.FunctionRaisingIOE;
 
 import static org.apache.hadoop.fs.statistics.IOStatistics.MIN_UNSET_VALUE;
 
@@ -333,5 +339,115 @@ public final class IOStatisticsBinding {
       }
     } while (!done);
   }
+
+  /**
+   * Given an IOException raising function/lambda expression,
+   * return a new one which wraps the inner and tracks
+   * the duration of the operation, including whether
+   * it passes/fails.
+   * @param factory factory of duration trackers
+   * @param statistic statistic key
+   * @param inputFn input function
+   * @param <A> type of argument to the input function.
+   * @param <B> return type.
+   * @return a new function which tracks duration and failure.
+   */
+  public static <A, B> FunctionRaisingIOE<A, B> trackFunctionDuration(
+      DurationTrackerFactory factory,
+      String statistic,
+      FunctionRaisingIOE<A, B> inputFn) {
+    return (A x) -> {
+      // create the tracker outside try-with-resources so
+      // that failures can be set in the catcher.
+      DurationTracker tracker = factory.trackDuration(statistic);
+      try {
+        // exec the input function and return its value
+        return inputFn.apply(x);
+      } catch (IOException | RuntimeException e) {
+        // input function failed: note it
+        tracker.failed();
+        // and rethrow
+        throw e;
+      } finally {
+        // update the tracker.
+        // this is called after the catch() call would have
+        // set the failed flag.
+        tracker.close();
+      }
+    };
+  }
+
+  /**
+   * Given an IOException raising callable/lambda expression,
+   * return a new one which wraps the inner and tracks
+   * the duration of the operation, including whether
+   * it passes/fails.
+   * @param factory factory of duration trackers
+   * @param statistic statistic key
+   * @param input input callable.
+   * @param <B> return type.
+   * @return a new callable which tracks duration and failure.
+   */
+  public static <B> CallableRaisingIOE<B> trackDuration(
+      DurationTrackerFactory factory,
+      String statistic,
+      CallableRaisingIOE<B> input) {
+    return () -> {
+      // create the tracker outside try-with-resources so
+      // that failures can be set in the catcher.
+      DurationTracker tracker = factory.trackDuration(statistic);
+      try {
+        // exec the input function and return its value
+        return input.apply();
+      } catch (IOException | RuntimeException e) {
+        // input function failed: note it
+        tracker.failed();
+        // and rethrow
+        throw e;
+      } finally {
+        // update the tracker.
+        // this is called after the catch() call would have
+        // set the failed flag.
+        tracker.close();
+      }
+    };
+  }
+
+  /**
+   * Given a callable/lambda expression,
+   * return a new one which wraps the inner and tracks
+   * the duration of the operation, including whether
+   * it passes/fails.
+   * @param factory factory of duration trackers
+   * @param statistic statistic key
+   * @param input input callable.
+   * @param <B> return type.
+   * @return a new callable which tracks duration and failure.
+   */
+  public static <B> Callable<B> trackDurationOfCallable(
+      DurationTrackerFactory factory,
+      String statistic,
+      Callable<B> input) {
+    return () -> {
+      // create the tracker outside try-with-resources so
+      // that failures can be set in the catcher.
+      DurationTracker tracker = factory.trackDuration(statistic);
+      try {
+        // exec the input function and return its value
+        return input.call();
+      } catch (RuntimeException e) {
+        // input function failed: note it
+        tracker.failed();
+        // and rethrow
+        throw e;
+      } finally {
+        // update the tracker.
+        // this is called after the catch() call would have
+        // set the failed flag.
+        tracker.close();
+      }
+    };
+  }
+
 
 }

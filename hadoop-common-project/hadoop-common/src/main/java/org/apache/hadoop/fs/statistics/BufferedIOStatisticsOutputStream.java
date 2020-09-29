@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.statistics.impl;
+package org.apache.hadoop.fs.statistics;
 
 import java.io.BufferedOutputStream;
 import java.io.IOException;
@@ -24,8 +24,6 @@ import java.io.OutputStream;
 
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
-import org.apache.hadoop.fs.statistics.IOStatistics;
-import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
 
@@ -59,7 +57,8 @@ public class BufferedIOStatisticsOutputStream
    * @param out output stream to buffer
    * @param downgradeSyncable should Syncable calls downgrade?
    */
-  public BufferedIOStatisticsOutputStream(final OutputStream out,
+  public BufferedIOStatisticsOutputStream(
+      final OutputStream out,
       final boolean downgradeSyncable) {
     super(out);
     this.downgradeSyncable = downgradeSyncable;
@@ -72,8 +71,10 @@ public class BufferedIOStatisticsOutputStream
    * @param size buffer.
    * @param downgradeSyncable should Syncable calls downgrade?
    */
-  public BufferedIOStatisticsOutputStream(final OutputStream out,
-      final int size, final boolean downgradeSyncable) {
+  public BufferedIOStatisticsOutputStream(
+      final OutputStream out,
+      final int size,
+      final boolean downgradeSyncable) {
     super(out, size);
     this.downgradeSyncable = downgradeSyncable;
   }

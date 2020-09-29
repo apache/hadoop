@@ -16,14 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.statistics.impl;
+package org.apache.hadoop.fs.statistics;
 
 import java.io.BufferedInputStream;
 import java.io.InputStream;
 
 import org.apache.hadoop.fs.StreamCapabilities;
-import org.apache.hadoop.fs.statistics.IOStatistics;
-import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
 
@@ -42,10 +40,19 @@ public class BufferedIOStatisticsInputStream
     extends BufferedInputStream
     implements IOStatisticsSource, StreamCapabilities {
 
+  /**
+   * Buffer an input stream with the default buffer size of 8k.
+   * @param in input stream
+   */
   public BufferedIOStatisticsInputStream(final InputStream in) {
     super(in);
   }
 
+  /**
+   * Buffer an input stream with the chosen buffer size
+   * @param in input stream
+   * @param size buffer size
+   */
   public BufferedIOStatisticsInputStream(final InputStream in, final int size) {
     super(in, size);
   }

@@ -33,6 +33,11 @@ public final class StubDurationTracker implements DurationTracker {
   }
 
   @Override
+  public void failed() {
+
+  }
+
+  @Override
   public void close() {
 
   }

@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.statistics.impl;
 
 import org.apache.hadoop.fs.statistics.DurationTracker;
+import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 import org.apache.hadoop.util.OperationDuration;
 
 /**
@@ -35,7 +36,7 @@ public class StatisticDurationTracker extends OperationDuration
     implements DurationTracker {
 
   /**
-   * statistics to update.
+   * Statistics to update.
    */
   private final IOStatisticsStore iostats;
 
@@ -45,11 +46,17 @@ public class StatisticDurationTracker extends OperationDuration
   private final String key;
 
   /**
+   * Flag to indicate the operation failed.
+   */
+  private boolean failed;
+
+  /**
    * Constructor -increments the counter by 1.
    * @param iostats statistics to update
    * @param key prefix of values.
    */
-  public StatisticDurationTracker(final IOStatisticsStore iostats,
+  public StatisticDurationTracker(
+      final IOStatisticsStore iostats,
       final String key) {
     this(iostats, key, 1);
   }
@@ -62,7 +69,8 @@ public class StatisticDurationTracker extends OperationDuration
    * @param key Key to use as prefix of values.
    * @param count  #of times to increment the matching counter.
    */
-  public StatisticDurationTracker(final IOStatisticsStore iostats,
+  public StatisticDurationTracker(
+      final IOStatisticsStore iostats,
       final String key,
       final int count) {
     this.iostats = iostats;
@@ -72,12 +80,23 @@ public class StatisticDurationTracker extends OperationDuration
     }
   }
 
+  @Override
+  public void failed() {
+    failed = true;
+  }
+
   /**
    * Set the finished time and then update the statistics.
    */
   @Override
   public void close() {
     finished();
-    iostats.addTimedOperation(key, asDuration());
+    String name = key;
+    if (failed) {
+      // failure:
+      name = key + StoreStatisticNames.SUFFIX_FAILURES;
+      iostats.incrementCounter(name);
+    }
+    iostats.addTimedOperation(name, asDuration());
   }
 }

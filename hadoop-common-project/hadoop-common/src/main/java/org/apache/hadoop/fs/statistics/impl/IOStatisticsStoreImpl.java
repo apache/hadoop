@@ -159,10 +159,23 @@ final class IOStatisticsStoreImpl extends WrappedIOStatistics
 
   @Override
   public long incrementCounter(final String key, final long value) {
-    long l = incAtomicLong(counterMap.get(key), value);
-    LOG.debug("Incrementing counter {} by {} with final value {}",
-        key, value, l);
-    return l;
+    AtomicLong counter = counterMap.get(key);
+    if (counter == null) {
+      LOG.debug("Ignoring counter increment for unknown counter {}",
+          key);
+      return 0;
+    }
+    if (value < 0) {
+      LOG.debug("Ignoring negative incrment value {} for counter {}",
+          value, key);
+      // returns old value
+      return counter.get();
+    } else {
+      long l = incAtomicLong(counter, value);
+      LOG.debug("Incrementing counter {} by {} with final value {}",
+          key, value, l);
+      return l;
+    }
   }
 
   @Override
