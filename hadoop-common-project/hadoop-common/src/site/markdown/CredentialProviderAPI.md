@@ -134,7 +134,7 @@ In order to indicate a particular provider type and location, the user must prov
 2. The `JavaKeyStoreProvider`, which is represented by the provider URI `jceks://SCHEME/path-to-keystore`, is used to retrieve credentials from a Java keystore file in a filesystem `<SCHEME>`
  The underlying use of the Hadoop filesystem API allows credentials to be stored on the local filesystem or within cluster stores.
 3. The `LocalJavaKeyStoreProvider`, which is represented by the provider URI `localjceks://file/path-to-keystore`, is used to access credentials from a Java keystore that must be stored on the local filesystem. This is needed for credentials that would result in a recursive dependency on accessing HDFS. Anytime that your credential is required to gain access to HDFS we can't depend on getting a credential out of HDFS to do so.
-4. The `BouncyCastleFIPSKeyStoreProvider`, which is represented by the provider URI `bcfks://SCHEME/path-to-keystore`, is used to retrieve credentials from a Bouncy Castle FIPS keystore file in a file system `<SCHEME>` 
+4. The `BouncyCastleFIPSKeyStoreProvider`, which is represented by the provider URI `bcfks://SCHEME/path-to-keystore`, is used to retrieve credentials from a Bouncy Castle FIPS keystore file in a file system `<SCHEME>`
  The underlying use of the Hadoop filesystem API allows credentials to be stored on the local filesystem or within cluster stores.
 5. The `LocalBcouncyCastleFIPSKeyStoreProvider`, which is represented by the provider URI `localbcfks://file/path-to-keystore`, is used to access credentials from a Bouncy Castle FIPS keystore that must be stored on the local filesystem. This is needed for credentials that would result in a recursive dependency on accessing HDFS. Anytime that your credential is required to gain access to HDFS we can't depend on getting a credential out of HDFS to do so.
 
@@ -147,7 +147,7 @@ When credentials are stored in a filesystem, the following rules apply:
 and so visible across the cluster —but not in the filesystem which requires the specific
 credentials for their access.
 
-To wrap filesystem URIs with a `jceks` URI follow these steps. Bouncy Castle FIPS provider follows a similar step by replacing `jceks` with `bcfks` along with OS/JDK level FIPS provider configured. 
+To wrap filesystem URIs with a `jceks` URI follow these steps. Bouncy Castle FIPS provider follows a similar step by replacing `jceks` with `bcfks` along with OS/JDK level FIPS provider configured.
 
 1. Take a filesystem URI such as `hdfs://namenode:9001/users/alice/secrets.jceks`
 1. Place `jceks://` in front of the URL: `jceks://hdfs://namenode:9001/users/alice/secrets.jceks`
