@@ -133,7 +133,7 @@ public final class CallerContext {
     /**
      * Whether the field is valid.
      * The field should not contain '\t', '\n', '=', etc.
-     * Because the context could written to audit log.
+     * Because the context could be written to audit log.
      * @param field one of the fields in context.
      * @return true if the field is not null or empty.
      */
