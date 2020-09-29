@@ -36,6 +36,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
@@ -47,6 +48,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.schema.MappingRulesDescription;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.junit.After;
@@ -58,6 +60,8 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 
 /**
@@ -125,6 +129,7 @@ public class TestFSConfigToCSConfigConverter {
     config = new Configuration(false);
     config.set(FairSchedulerConfiguration.ALLOCATION_FILE, FAIR_SCHEDULER_XML);
     config.setBoolean(FairSchedulerConfiguration.MIGRATION_MODE, true);
+    config.setBoolean(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE, true);
     createConverter();
     converterTestCommons = new FSConfigConverterTestCommons();
     converterTestCommons.setUp();
@@ -139,6 +144,7 @@ public class TestFSConfigToCSConfigConverter {
     converter = new FSConfigToCSConfigConverter(ruleHandler,
         createDefaultConversionOptions());
     converter.setClusterResource(CLUSTER_RESOURCE);
+    converter.setConvertPlacementRules(false);
   }
 
   private FSConfigToCSConfigConverterParams.Builder
@@ -456,6 +462,7 @@ public class TestFSConfigToCSConfigConverter {
   public void testConvertCheckOutputDir() throws Exception {
     FSConfigToCSConfigConverterParams params = createDefaultParamsBuilder()
         .withClusterResource(CLUSTER_RESOURCE_STRING)
+        .withConvertPlacementRules(true)
         .build();
 
     converter.convert(params);
@@ -473,6 +480,11 @@ public class TestFSConfigToCSConfigConverter {
         "yarn-site.xml");
     assertTrue("Yarn site exists", yarnSiteFile.exists());
     assertTrue("Yarn site length > 0", yarnSiteFile.length() > 0);
+
+    File mappingRulesFile = new File(FSConfigConverterTestCommons.OUTPUT_DIR,
+        "mapping-rules.json");
+    assertTrue("Mapping rules file exists", mappingRulesFile.exists());
+    assertTrue("Mapping rules file length > 0", mappingRulesFile.length() > 0);
   }
 
   @Test
@@ -572,123 +584,52 @@ public class TestFSConfigToCSConfigConverter {
             CapacitySchedulerConfiguration.RESOURCE_CALCULATOR_CLASS, null));
   }
 
-  @SuppressWarnings("checkstyle:linelength")
-  public void testUserAsDefaultQueueWithPlacementRules() throws Exception {
-    config = new Configuration(false);
-    config.setBoolean(FairSchedulerConfiguration.MIGRATION_MODE, true);
-    config.set(FairSchedulerConfiguration.ALLOCATION_FILE,
-        FAIR_SCHEDULER_XML);
-
-    converter.convert(config);
-
-    Configuration convertedConf = converter.getCapacitySchedulerConfig();
-
-    String expectedMappingRules =
-        "u:%user:root.admins.devs.%user,u:%user:root.users.%user,u:%user:root.default";
-    String mappingRules =
-        convertedConf.get(CapacitySchedulerConfiguration.QUEUE_MAPPING);
-    assertEquals("Mapping rules", expectedMappingRules, mappingRules);
+  @Test
+  public void testUserAsDefaultQueueWithPlacementRules()
+      throws Exception {
+    testUserAsDefaultQueueAndPlacementRules(true);
   }
 
   @Test
-  public void testUserAsDefaultQueueTrueWithoutPlacementRules()
+  public void testUserAsDefaultQueueWithoutPlacementRules()
       throws Exception {
-    testUserAsDefaultQueueWithoutPlacementRules(true);
+    testUserAsDefaultQueueAndPlacementRules(false);
   }
 
-  @Test
-  public void testUserAsDefaultQueueFalseWithoutPlacementRules()
-      throws Exception {
-    testUserAsDefaultQueueWithoutPlacementRules(false);
-  }
-
-  private void testUserAsDefaultQueueWithoutPlacementRules(boolean
-      userAsDefaultQueue) throws Exception {
+  private void testUserAsDefaultQueueAndPlacementRules(
+      boolean hasPlacementRules) throws Exception {
     config = new Configuration(false);
     config.setBoolean(FairSchedulerConfiguration.MIGRATION_MODE, true);
-    config.set(FairSchedulerConfiguration.ALLOCATION_FILE,
-        FS_NO_PLACEMENT_RULES_XML);
-    config.setBoolean(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE,
-        userAsDefaultQueue);
 
-    converter.setConvertPlacementRules(true);
-    converter.convert(config);
-
-    Configuration convertedConf = converter.getCapacitySchedulerConfig();
-    String mappingRules =
-        convertedConf.get(CapacitySchedulerConfiguration.QUEUE_MAPPING);
-
-    if (userAsDefaultQueue) {
-      assertEquals("Mapping rules", "u:%user:%user", mappingRules);
+    if (hasPlacementRules) {
+      config.set(FairSchedulerConfiguration.ALLOCATION_FILE,
+          FAIR_SCHEDULER_XML);
     } else {
-      assertEquals("Mapping rules", "u:%user:root.default", mappingRules);
+      config.set(FairSchedulerConfiguration.ALLOCATION_FILE,
+          FS_NO_PLACEMENT_RULES_XML);
     }
-  }
 
-  @Test
-  public void testAutoCreateChildQueuesWithPlacementRules() throws Exception {
-    config = new Configuration(false);
-    config.setBoolean(FairSchedulerConfiguration.MIGRATION_MODE, true);
-    config.set(FairSchedulerConfiguration.ALLOCATION_FILE,
-        FAIR_SCHEDULER_XML);
-    config.setBoolean(FairSchedulerConfiguration.ALLOW_UNDECLARED_POOLS,
+    config.setBoolean(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE,
         true);
 
+    ByteArrayOutputStream jsonOutStream = new ByteArrayOutputStream();
+    converter.setConvertPlacementRules(true);
+    converter.setMappingRulesOutputStream(jsonOutStream);
+    converter.setConsoleMode(true);
     converter.convert(config);
 
-    Configuration convertedConf = converter.getCapacitySchedulerConfig();
-    String property =
-        "yarn.scheduler.capacity.root.auto-create-child-queue.enabled";
-    assertNull("Auto-create queue shouldn't be set",
-        convertedConf.get(property));
-  }
+    MappingRulesDescription description =
+        new ObjectMapper()
+          .reader()
+          .forType(MappingRulesDescription.class)
+          .readValue(jsonOutStream.toByteArray());
 
-  @Test
-  public void testAutoCreateChildQueuesTrueWithoutPlacementRules()
-      throws Exception {
-    testAutoCreateChildQueuesWithoutPlacementRules(true);
-  }
-
-  @Test
-  public void testAutoCreateChildQueuesFalseWithoutPlacementRules()
-      throws Exception {
-    testAutoCreateChildQueuesWithoutPlacementRules(false);
-  }
-
-  @SuppressWarnings("checkstyle:linelength")
-  private void testAutoCreateChildQueuesWithoutPlacementRules(
-      boolean allowUndeclaredPools) throws Exception {
-    config = new Configuration(false);
-    config.setBoolean(FairSchedulerConfiguration.MIGRATION_MODE, true);
-    config.set(FairSchedulerConfiguration.ALLOCATION_FILE,
-        FS_NO_PLACEMENT_RULES_XML);
-    config.setBoolean(FairSchedulerConfiguration.ALLOW_UNDECLARED_POOLS,
-        allowUndeclaredPools);
-
-    converter.convert(config);
-
-    Configuration convertedConf = converter.getCapacitySchedulerConfig();
-    String rootUserAutoCreate =
-        "yarn.scheduler.capacity.root.users.auto-create-child-queue.enabled";
-    String rootAutoCreate =
-        "yarn.scheduler.capacity.root.auto-create-child-queue.enabled";
-    String leafQueueAutoCreate =
-        "yarn.scheduler.capacity.root.users.joe.auto-create-child-queue.enabled";
-
-    if (allowUndeclaredPools) {
-      assertEquals("Auto-create queue wasn't enabled for root.users", true,
-          convertedConf.getBoolean(rootUserAutoCreate, false));
-      assertNull("Auto-create queue shouldn't be set for root",
-          convertedConf.get(rootAutoCreate));
-      assertNull("Auto-create queue shouldn't be set for leaf",
-          convertedConf.get(leafQueueAutoCreate));
+    if (hasPlacementRules) {
+      // fs.xml defines 5 rules
+      assertEquals("Number of rules", 5, description.getRules().size());
     } else {
-      assertNull("Auto-create queue shouldn't be set for root.users",
-          convertedConf.get(rootUserAutoCreate));
-      assertNull("Auto-create queue shouldn't be set for root",
-          convertedConf.get(rootAutoCreate));
-      assertNull("Auto-create queue shouldn't be set for leaf",
-          convertedConf.get(leafQueueAutoCreate));
+      // by default, FS internally creates 2 rules
+      assertEquals("Number of rules", 2, description.getRules().size());
     }
   }
 
@@ -720,7 +661,7 @@ public class TestFSConfigToCSConfigConverter {
     verify(placementConverter).convertPlacementPolicy(
         any(PlacementManager.class),
         any(FSConfigToCSConfigRuleHandler.class),
-        any(Boolean.class));
+        any(CapacitySchedulerConfiguration.class));
   }
 
   @Test

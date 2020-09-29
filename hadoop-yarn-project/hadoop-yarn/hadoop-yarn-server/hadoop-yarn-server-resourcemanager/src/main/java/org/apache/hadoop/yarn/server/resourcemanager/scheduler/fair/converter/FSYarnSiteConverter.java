@@ -32,9 +32,7 @@ import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
  */
 public class FSYarnSiteConverter {
   private boolean preemptionEnabled;
-  private boolean autoCreateChildQueues;
   private boolean sizeBasedWeight;
-  private boolean userAsDefaultQueue;
 
   @SuppressWarnings({"deprecation", "checkstyle:linelength"})
   public void convertSiteProperties(Configuration conf,
@@ -111,19 +109,9 @@ public class FSYarnSiteConverter {
           localityThresholdRack);
     }
 
-    if (conf.getBoolean(FairSchedulerConfiguration.ALLOW_UNDECLARED_POOLS,
-        FairSchedulerConfiguration.DEFAULT_ALLOW_UNDECLARED_POOLS)) {
-      autoCreateChildQueues = true;
-    }
-
     if (conf.getBoolean(FairSchedulerConfiguration.SIZE_BASED_WEIGHT,
         FairSchedulerConfiguration.DEFAULT_SIZE_BASED_WEIGHT)) {
       sizeBasedWeight = true;
-    }
-
-    if (conf.getBoolean(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE,
-        FairSchedulerConfiguration.DEFAULT_USER_AS_DEFAULT_QUEUE)) {
-      userAsDefaultQueue = true;
     }
 
     if (drfUsed) {
@@ -141,15 +129,7 @@ public class FSYarnSiteConverter {
     return preemptionEnabled;
   }
 
-  public boolean isAutoCreateChildQueues() {
-    return autoCreateChildQueues;
-  }
-
   public boolean isSizeBasedWeight() {
     return sizeBasedWeight;
-  }
-
-  public boolean isUserAsDefaultQueue() {
-    return userAsDefaultQueue;
   }
 }

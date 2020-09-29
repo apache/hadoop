@@ -15,19 +15,17 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ENABLE_QUEUE_MAPPING_OVERRIDE;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.QUEUE_MAPPING;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
-import java.util.Map;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
@@ -40,6 +38,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.placement.RejectPlacementRu
 import org.apache.hadoop.yarn.server.resourcemanager.placement.SecondaryGroupExistingPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.SpecifiedPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.UserPlacementRule;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.schema.MappingRulesDescription;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.schema.Rule;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.schema.Rule.FallbackResult;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.schema.Rule.Policy;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.schema.Rule.Type;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -54,6 +58,8 @@ import com.google.common.collect.Lists;
  */
 @RunWith(MockitoJUnitRunner.class)
 public class TestQueuePlacementConverter {
+  private static final String DEFAULT_QUEUE = "root.default";
+
   @Mock
   private PlacementManager placementManager;
 
@@ -62,113 +68,107 @@ public class TestQueuePlacementConverter {
 
   private QueuePlacementConverter converter;
 
+  private CapacitySchedulerConfiguration csConf;
+
   @Before
   public void setup() {
     this.converter = new QueuePlacementConverter();
+    this.csConf = new CapacitySchedulerConfiguration(
+        new Configuration(false));
   }
 
   @Test
-  public void testConvertUserAsDefaultQueue() {
-    Map<String, String> properties = convert(true);
+  public void testConvertUserRule() {
+    PlacementRule fsRule = mock(UserPlacementRule.class);
+    initPlacementManagerMock(fsRule);
 
-    verifyMapping(properties, "u:%user:%user");
+    MappingRulesDescription description = convert();
+    assertEquals("Number of rules", 1, description.getRules().size());
+    verifyRule(description.getRules().get(0), Policy.USER);
     verifyZeroInteractions(ruleHandler);
   }
 
   @Test
-  public void testConvertUserPlacementRuleWithoutUserAsDefaultQueue() {
-    testConvertUserPlacementRule(false);
-  }
+  public void testConvertSpecifiedRule() {
+    PlacementRule fsRule = mock(SpecifiedPlacementRule.class);
+    initPlacementManagerMock(fsRule);
 
-  @Test
-  public void testConvertUserPlacementRuleWithUserAsDefaultQueue() {
-    testConvertUserPlacementRule(true);
-  }
-
-  private void testConvertUserPlacementRule(boolean userAsDefaultQueue) {
-    PlacementRule rule = mock(UserPlacementRule.class);
-    initPlacementManagerMock(rule);
-
-    Map<String, String> properties = convert(userAsDefaultQueue);
-
-    verifyMapping(properties, "u:%user:%user");
+    MappingRulesDescription description = convert();
+    assertEquals("Number of rules", 1, description.getRules().size());
+    verifyRule(description.getRules().get(0), Policy.SPECIFIED);
     verifyZeroInteractions(ruleHandler);
   }
 
   @Test
-  public void testConvertSpecifiedPlacementRule() {
-    PlacementRule rule = mock(SpecifiedPlacementRule.class);
-    initPlacementManagerMock(rule);
+  public void testConvertPrimaryGroupRule() {
+    PlacementRule fsRule = mock(PrimaryGroupPlacementRule.class);
+    initPlacementManagerMock(fsRule);
 
-    Map<String, String> properties = convert(false);
+    MappingRulesDescription description = convert();
 
-    verifyMappingNoOverride(properties, 1);
+    assertEquals("Number of rules", 1, description.getRules().size());
+    verifyRule(description.getRules().get(0), Policy.PRIMARY_GROUP);
     verifyZeroInteractions(ruleHandler);
   }
 
   @Test
-  public void testConvertSpecifiedPlacementRuleAtSecondPlace() {
-    PlacementRule rule = mock(UserPlacementRule.class);
-    PlacementRule rule2 = mock(SpecifiedPlacementRule.class);
-    initPlacementManagerMock(rule, rule2);
+  public void testConvertSecondaryGroupRule() {
+    PlacementRule fsRule = mock(SecondaryGroupExistingPlacementRule.class);
+    initPlacementManagerMock(fsRule);
 
-    Map<String, String> properties = convert(false);
+    MappingRulesDescription description = convert();
 
-    verifyMappingNoOverride(properties, 2);
-    verify(ruleHandler).handleSpecifiedNotFirstRule();
-  }
-
-  @Test
-  public void testConvertPrimaryGroupPlacementRule() {
-    PlacementRule rule = mock(PrimaryGroupPlacementRule.class);
-    initPlacementManagerMock(rule);
-
-    Map<String, String> properties = convert(false);
-
-    verifyMapping(properties, "u:%user:%primary_group");
+    assertEquals("Number of rules", 1, description.getRules().size());
+    verifyRule(description.getRules().get(0), Policy.SECONDARY_GROUP);
     verifyZeroInteractions(ruleHandler);
   }
 
   @Test
-  public void testConvertSecondaryGroupPlacementRule() {
-    PlacementRule rule = mock(SecondaryGroupExistingPlacementRule.class);
-    initPlacementManagerMock(rule);
+  public void testConvertDefaultRuleWithQueueName() {
+    DefaultPlacementRule fsRule = mock(DefaultPlacementRule.class);
+    fsRule.defaultQueueName = "abc";
+    initPlacementManagerMock(fsRule);
 
-    Map<String, String> properties = convert(false);
+    MappingRulesDescription description = convert();
 
-    verifyMapping(properties, "u:%user:%secondary_group");
+    assertEquals("Number of rules", 1, description.getRules().size());
+
+    verifyRule(description.getRules().get(0), Policy.CUSTOM);
     verifyZeroInteractions(ruleHandler);
   }
 
   @Test
-  public void testConvertDefaultPlacementRule() {
-    DefaultPlacementRule rule = mock(DefaultPlacementRule.class);
-    rule.defaultQueueName = "abc";
-    initPlacementManagerMock(rule);
+  public void testConvertDefaultRule() {
+    DefaultPlacementRule fsRule = mock(DefaultPlacementRule.class);
+    fsRule.defaultQueueName = DEFAULT_QUEUE;
+    initPlacementManagerMock(fsRule);
 
-    Map<String, String> properties = convert(false);
+    MappingRulesDescription description = convert();
 
-    verifyMapping(properties, "u:%user:abc");
+    assertEquals("Number of rules", 1, description.getRules().size());
+    verifyRule(description.getRules().get(0), Policy.DEFAULT_QUEUE);
     verifyZeroInteractions(ruleHandler);
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testConvertUnsupportedPlacementRule() {
+  public void testConvertUnsupportedRule() {
     PlacementRule rule = mock(TestPlacementRule.class);
     initPlacementManagerMock(rule);
 
     // throws exception
-    convert(false);
+    convert();
   }
 
   @Test
-  public void testConvertRejectPlacementRule() {
+  public void testConvertRejectRule() {
     PlacementRule rule = mock(RejectPlacementRule.class);
     initPlacementManagerMock(rule);
 
-    Map<String, String> properties = convert(false);
+    MappingRulesDescription description = convert();
 
-    assertEquals("Map is not empty", 0, properties.size());
+    assertEquals("Number of rules", 1, description.getRules().size());
+    verifyRule(description.getRules().get(0), Policy.REJECT);
+    verifyZeroInteractions(ruleHandler);
   }
 
   @Test
@@ -178,11 +178,11 @@ public class TestQueuePlacementConverter {
     when(rule.getParentRule()).thenReturn(parent);
     initPlacementManagerMock(rule);
 
-    Map<String, String> properties = convert(false);
+    MappingRulesDescription description = convert();
 
-    verifyMapping(properties, "u:%user:%primary_group.%user");
-    verify(ruleHandler).handleDynamicMappedQueue(
-        eq("u:%user:%primary_group.%user"), eq(false));
+    assertEquals("Number of rules", 1, description.getRules().size());
+    verifyRule(description.getRules().get(0), Policy.PRIMARY_GROUP_USER);
+    verifyZeroInteractions(ruleHandler);
   }
 
   @Test
@@ -193,27 +193,41 @@ public class TestQueuePlacementConverter {
     when(rule.getParentRule()).thenReturn(parent);
     initPlacementManagerMock(rule);
 
-    Map<String, String> properties = convert(false);
+    MappingRulesDescription description = convert();
 
-    verifyMapping(properties, "u:%user:%secondary_group.%user");
-    verify(ruleHandler).handleDynamicMappedQueue(
-        eq("u:%user:%secondary_group.%user"), eq(false));
+    assertEquals("Number of rules", 1, description.getRules().size());
+    verifyRule(description.getRules().get(0), Policy.SECONDARY_GROUP_USER);
+    verifyZeroInteractions(ruleHandler);
   }
 
   @Test
   public void testConvertNestedDefaultRule() {
-    UserPlacementRule rule = mock(UserPlacementRule.class);
+    UserPlacementRule fsRule = mock(UserPlacementRule.class);
     DefaultPlacementRule parent =
         mock(DefaultPlacementRule.class);
-    parent.defaultQueueName = "abc";
-    when(rule.getParentRule()).thenReturn(parent);
-    initPlacementManagerMock(rule);
+    parent.defaultQueueName = "root.abc";
+    when(fsRule.getParentRule()).thenReturn(parent);
+    initPlacementManagerMock(fsRule);
 
-    Map<String, String> properties = convert(false);
+    MappingRulesDescription description = convert();
 
-    verifyMapping(properties, "u:%user:abc.%user");
-    verify(ruleHandler).handleDynamicMappedQueue(
-        eq("u:%user:abc.%user"), eq(false));
+    assertEquals("Number of rules", 1, description.getRules().size());
+    Rule rule = description.getRules().get(0);
+    verifyRule(description.getRules().get(0), Policy.USER);
+    assertEquals("Parent path", "root.abc", rule.getParentQueue());
+    verifyZeroInteractions(ruleHandler);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testUnsupportedNestedParentRule() {
+    UserPlacementRule fsRule = mock(UserPlacementRule.class);
+    TestPlacementRule parent =
+        mock(TestPlacementRule.class);
+    when(fsRule.getParentRule()).thenReturn(parent);
+    initPlacementManagerMock(fsRule);
+
+    // throws exception
+    convert();
   }
 
   @Test
@@ -225,11 +239,145 @@ public class TestQueuePlacementConverter {
         mock(SecondaryGroupExistingPlacementRule.class);
     initPlacementManagerMock(rule1, rule2, rule3);
 
-    Map<String, String> properties = convert(false);
+    MappingRulesDescription description = convert();
 
-    verifyMapping(properties,
-        "u:%user:%user,u:%user:%primary_group,u:%user:%secondary_group");
+    assertEquals("Number of rules", 3, description.getRules().size());
+    verifyRule(description.getRules().get(0), Policy.USER);
+    verifyRule(description.getRules().get(1), Policy.PRIMARY_GROUP);
+    verifyRule(description.getRules().get(2), Policy.SECONDARY_GROUP);
     verifyZeroInteractions(ruleHandler);
+  }
+
+  @Test
+  public void testConvertPrimaryGroupRuleWithCreate() {
+    FSPlacementRule fsRule = mock(PrimaryGroupPlacementRule.class);
+    when(fsRule.getCreateFlag()).thenReturn(true);
+    initPlacementManagerMock(fsRule);
+
+    convert();
+
+    verify(ruleHandler).handleRuleAutoCreateFlag(eq("root.<primaryGroup>"));
+    verifyNoMoreInteractions(ruleHandler);
+  }
+
+  @Test
+  public void testConvertSecondaryGroupRuleWithCreate() {
+    FSPlacementRule fsRule = mock(SecondaryGroupExistingPlacementRule.class);
+    when(fsRule.getCreateFlag()).thenReturn(true);
+    initPlacementManagerMock(fsRule);
+
+    convert();
+
+    verify(ruleHandler).handleRuleAutoCreateFlag(eq("root.<secondaryGroup>"));
+    verifyNoMoreInteractions(ruleHandler);
+  }
+
+  @Test
+  public void testConvertNestedPrimaryGroupRuleWithCreate() {
+    UserPlacementRule fsRule = mock(UserPlacementRule.class);
+    PrimaryGroupPlacementRule parent = mock(PrimaryGroupPlacementRule.class);
+    when(fsRule.getParentRule()).thenReturn(parent);
+    when(fsRule.getCreateFlag()).thenReturn(true);
+    initPlacementManagerMock(fsRule);
+
+    convert();
+
+    verify(ruleHandler).handleRuleAutoCreateFlag(eq("root.<primaryGroup>"));
+    verifyNoMoreInteractions(ruleHandler);
+  }
+
+  @Test
+  public void testConvertNestedSecondaryGroupRuleWithCreate() {
+    UserPlacementRule fsRule = mock(UserPlacementRule.class);
+    SecondaryGroupExistingPlacementRule parent =
+        mock(SecondaryGroupExistingPlacementRule.class);
+    when(fsRule.getParentRule()).thenReturn(parent);
+    when(fsRule.getCreateFlag()).thenReturn(true);
+    initPlacementManagerMock(fsRule);
+
+    convert();
+
+    verify(ruleHandler).handleRuleAutoCreateFlag(eq("root.<secondaryGroup>"));
+    verifyNoMoreInteractions(ruleHandler);
+  }
+
+  @Test
+  public void testConvertNestedDefaultGroupWithCreate() {
+    UserPlacementRule fsRule = mock(UserPlacementRule.class);
+    DefaultPlacementRule parent =
+        mock(DefaultPlacementRule.class);
+    parent.defaultQueueName = "root.abc";
+    when(fsRule.getParentRule()).thenReturn(parent);
+    when(fsRule.getCreateFlag()).thenReturn(true);
+    initPlacementManagerMock(fsRule);
+
+    convert();
+
+    verify(ruleHandler).handleRuleAutoCreateFlag(eq("root.abc"));
+    verifyNoMoreInteractions(ruleHandler);
+  }
+
+  @Test
+  public void testConvertNestedPrimaryGroupRuleWithParentCreate() {
+    UserPlacementRule fsRule = mock(UserPlacementRule.class);
+    PrimaryGroupPlacementRule parent = mock(PrimaryGroupPlacementRule.class);
+    when(fsRule.getParentRule()).thenReturn(parent);
+    when(parent.getCreateFlag()).thenReturn(true);
+    initPlacementManagerMock(fsRule);
+
+    convert();
+
+    verify(ruleHandler).handleFSParentCreateFlag(eq("root.<primaryGroup>"));
+    verifyNoMoreInteractions(ruleHandler);
+  }
+
+  @Test
+  public void testConvertNestedSecondaryGroupRuleWithParentCreate() {
+    UserPlacementRule fsRule = mock(UserPlacementRule.class);
+    SecondaryGroupExistingPlacementRule parent =
+        mock(SecondaryGroupExistingPlacementRule.class);
+    when(fsRule.getParentRule()).thenReturn(parent);
+    when(parent.getCreateFlag()).thenReturn(true);
+    initPlacementManagerMock(fsRule);
+
+    convert();
+
+    verify(ruleHandler).handleFSParentCreateFlag(eq("root.<secondaryGroup>"));
+    verifyNoMoreInteractions(ruleHandler);
+  }
+
+  @Test
+  public void testConvertNestedDefaultGroupWithParentCreate() {
+    UserPlacementRule fsRule = mock(UserPlacementRule.class);
+    DefaultPlacementRule parent =
+        mock(DefaultPlacementRule.class);
+    parent.defaultQueueName = "root.abc";
+    when(fsRule.getParentRule()).thenReturn(parent);
+    when(parent.getCreateFlag()).thenReturn(true);
+    initPlacementManagerMock(fsRule);
+
+    convert();
+
+    verify(ruleHandler).handleFSParentCreateFlag(eq("root.abc"));
+    verifyNoMoreInteractions(ruleHandler);
+  }
+
+  @Test
+  public void testConvertNestedDefaultWithConflictingQueues() {
+    UserPlacementRule fsRule = mock(UserPlacementRule.class);
+    DefaultPlacementRule parent =
+        mock(DefaultPlacementRule.class);
+    parent.defaultQueueName = "root.users";
+    when(fsRule.getParentRule()).thenReturn(parent);
+    when(fsRule.getCreateFlag()).thenReturn(true);
+    initPlacementManagerMock(fsRule);
+    csConf.setQueues("root.users", new String[] {"hadoop"});
+
+    convert();
+
+    verify(ruleHandler).handleRuleAutoCreateFlag(eq("root.users"));
+    verify(ruleHandler).handleChildStaticDynamicConflict(eq("root.users"));
+    verifyNoMoreInteractions(ruleHandler);
   }
 
   private void initPlacementManagerMock(
@@ -238,25 +386,24 @@ public class TestQueuePlacementConverter {
     when(placementManager.getPlacementRules()).thenReturn(listOfRules);
   }
 
-  private Map<String, String> convert(boolean userAsDefaultQueue) {
-    return converter.convertPlacementPolicy(placementManager, ruleHandler,
-        userAsDefaultQueue);
+  private MappingRulesDescription convert() {
+    return converter.convertPlacementPolicy(placementManager,
+        ruleHandler, csConf);
   }
 
-  private void verifyMapping(Map<String, String> properties,
-      String expectedValue) {
-    assertEquals("Map size", 1, properties.size());
-    String value = properties.get(QUEUE_MAPPING);
-    assertNotNull("No mapping property found", value);
-    assertEquals("Mapping", expectedValue, value);
+  private void verifyRule(Rule rule, Policy expectedPolicy) {
+    assertEquals("Policy type", expectedPolicy, rule.getPolicy());
+    assertEquals("Match string", "*", rule.getMatches());
+    assertEquals("Fallback result",
+        FallbackResult.SKIP, rule.getFallbackResult());
+    assertEquals("Type", Type.USER, rule.getType());
   }
 
-  private void verifyMappingNoOverride(Map<String, String> properties,
-      int expectedSize) {
-    assertEquals("Map size", expectedSize, properties.size());
-    String value = properties.get(ENABLE_QUEUE_MAPPING_OVERRIDE);
-    assertNotNull("No mapping property found", value);
-    assertEquals("Override mapping", "false", value);
+  private void verifySetDefaultRule(Rule rule, String expectedQueue) {
+    assertEquals("Policy type", Policy.SET_DEFAULT_QUEUE, rule.getPolicy());
+    assertEquals("Queue", expectedQueue, rule.getValue());
+    assertEquals("Fallback result",
+        FallbackResult.SKIP, rule.getFallbackResult());
   }
 
   private class TestPlacementRule extends FSPlacementRule {

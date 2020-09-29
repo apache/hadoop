@@ -88,6 +88,9 @@
         <rule name="nestedUserQueue" create="false">
             <rule name="default" create="false" queue="admins.devs"/>
         </rule>
+        <rule name="nestedUserQueue" create="false">
+            <rule name="primaryGroup" create="false" queue="users.devs"/>
+        </rule>
         <rule name="specified" create="true"/>
         <rule name="nestedUserQueue" create="true">
             <rule name="default" create="false" queue="users"/>
