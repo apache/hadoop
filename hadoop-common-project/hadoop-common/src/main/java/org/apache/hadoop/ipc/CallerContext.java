@@ -113,25 +113,32 @@ public final class CallerContext {
 
   /** The caller context builder. */
   public static final class Builder {
-    private static final String colon = ":";
-    private final String separator;
+    private static final String KEY_VALUE_SEPARATOR = ":";
+    private final String fieldSeparator;
     private final StringBuilder sb = new StringBuilder();
     private byte[] signature;
 
     public Builder(String context) {
-      separator = HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT;
+      fieldSeparator = HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT;
       if (isValid(context)) {
         sb.append(context);
       }
     }
 
     public Builder(Configuration conf) {
-      separator = conf.get(HADOOP_CALLER_CONTEXT_SEPARATOR_KEY,
+      fieldSeparator = conf.get(HADOOP_CALLER_CONTEXT_SEPARATOR_KEY,
           HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT);
     }
 
-    private boolean isValid(String context) {
-      return context != null && context.length() > 0;
+    /**
+     * Whether the field is valid.
+     * The field should not contain '\t', '\n', '=', etc.
+     * Because the context could written to audit log.
+     * @param field one of the fields in context.
+     * @return true if the field is not null or empty.
+     */
+    private boolean isValid(String field) {
+      return field != null && field.length() > 0;
     }
 
     public Builder setSignature(byte[] signature) {
@@ -141,41 +148,50 @@ public final class CallerContext {
       return this;
     }
 
+    /**
+     * Get the context.
+     * For example, the context is "key1:value1,key2:value2".
+     * @return the valid context or null.
+     */
     public String getContext() {
       return sb.length() > 0 ? sb.toString() : null;
     }
 
+    /**
+     * Get the signature.
+     * @return the signature.
+     */
     public byte[] getSignature() {
       return signature;
     }
 
     /**
-     * Append new item to the context.
-     * @param item
-     * @return builder
+     * Append new field to the context.
+     * @param field one of fields to append.
+     * @return the builder.
      */
-    public Builder append(String item) {
-      if (isValid(item)) {
+    public Builder append(String field) {
+      if (isValid(field)) {
         if (sb.length() > 0) {
-          sb.append(separator);
+          sb.append(fieldSeparator);
         }
-        sb.append(item);
+        sb.append(field);
       }
       return this;
     }
 
     /**
-     * Append new item which contains key and value to the context.
-     * @param key
-     * @param value
-     * @return builder
+     * Append new field which contains key and value to the context.
+     * @param key the key of field.
+     * @param value the value of field.
+     * @return the builder.
      */
     public Builder append(String key, String value) {
       if (isValid(key) && isValid(value)) {
         if (sb.length() > 0) {
-          sb.append(separator);
+          sb.append(fieldSeparator);
         }
-        sb.append(key).append(colon).append(value);
+        sb.append(key).append(KEY_VALUE_SEPARATOR).append(value);
       }
       return this;
     }
