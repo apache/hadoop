@@ -217,6 +217,10 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_FS_AZURE_USER_AGENT_PREFIX)
   private String userAgentId;
 
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_CLIENT_CORRELATIONID,
+      DefaultValue = DEFAULT_FS_AZURE_CLIENT_CORRELATION_ID)
+  private String clientCorrelationID;
+
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_CLUSTER_NAME,
       DefaultValue = DEFAULT_VALUE_UNKNOWN)
   private String clusterName;
@@ -285,6 +289,20 @@ public class AbfsConfiguration{
    */
   public String getAccountName() {
     return accountName;
+  }
+
+  /**
+   * Gets client correlation ID provided in config.
+   * @return Client Correlation ID config value or empty string (default value)
+   * if length and character constraints are not met
+   */
+  public String getClientCorrelationID() {
+    if ((clientCorrelationID.length() > MAX_CLIENT_CORRELATION_ID_LENGTH) ||
+        (!clientCorrelationID.matches(CLIENT_CORRELATION_ID_PATTERN))) {
+      return DEFAULT_FS_AZURE_CLIENT_CORRELATION_ID;
+    }
+
+    return clientCorrelationID;
   }
 
   /**

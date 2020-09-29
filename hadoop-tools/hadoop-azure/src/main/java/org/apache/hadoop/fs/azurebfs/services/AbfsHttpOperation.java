@@ -162,7 +162,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     sb.append(",");
     sb.append(expectedAppendPos);
     sb.append(",cid=");
-    sb.append(clientRequestId);
+    sb.append(getClientRequestHeader());
     sb.append(",rid=");
     sb.append(requestId);
     if (isTraceEnabled) {
@@ -182,6 +182,11 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     sb.append(",");
     sb.append(urlStr);
     return sb.toString();
+  }
+
+  public String getClientRequestHeader() {
+    return this.connection
+        .getRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
   }
 
   // Returns a trace message for the ABFS API logging service to consume
@@ -239,7 +244,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     this.isTraceEnabled = LOG.isTraceEnabled();
     this.url = url;
     this.method = method;
-    this.clientRequestId = UUID.randomUUID().toString();
+//    this.clientRequestId = UUID.randomUUID().toString();
 
     this.connection = openConnection();
     if (this.connection instanceof HttpsURLConnection) {
@@ -259,7 +264,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
       this.connection.setRequestProperty(header.getName(), header.getValue());
     }
 
-    this.connection.setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, clientRequestId);
+//    this.connection.setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, clientRequestId);
   }
 
    /**

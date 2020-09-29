@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.utils.DateTimeUtils;
+import org.apache.hadoop.fs.azurebfs.utils.TrackingContext;
 import org.apache.hadoop.io.IOUtils;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.*;
@@ -67,6 +68,7 @@ public class AbfsClient implements Closeable {
   private final String filesystem;
   private final AbfsConfiguration abfsConfiguration;
   private final String userAgent;
+  private TrackingContext trackingContext;
   private final AbfsPerfTracker abfsPerfTracker;
 
   private final String accountName;
@@ -86,6 +88,8 @@ public class AbfsClient implements Closeable {
     this.retryPolicy = abfsClientContext.getExponentialRetryPolicy();
     this.accountName = abfsConfiguration.getAccountName().substring(0, abfsConfiguration.getAccountName().indexOf(AbfsHttpConstants.DOT));
     this.authType = abfsConfiguration.getAuthType(accountName);
+    this.trackingContext = new TrackingContext(
+        abfsConfiguration.getClientCorrelationID());
 
     String sslProviderName = null;
 
@@ -132,6 +136,10 @@ public class AbfsClient implements Closeable {
 
   public String getFileSystem() {
     return filesystem;
+  }
+
+  public TrackingContext getTrackingContext() {
+    return trackingContext;
   }
 
   protected AbfsPerfTracker getAbfsPerfTracker() {
