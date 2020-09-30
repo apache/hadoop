@@ -73,7 +73,24 @@ public enum AbfsStatistic {
   READ_THROTTLES("read_throttles",
       "Total number of times a read operation is throttled."),
   WRITE_THROTTLES("write_throttles",
-      "Total number of times a write operation is throttled.");
+      "Total number of times a write operation is throttled."),
+
+  //OutputStream statistics.
+  BYTES_TO_UPLOAD("bytes_upload",
+      "Total bytes to upload."),
+  BYTES_UPLOAD_SUCCESSFUL("bytes_upload_successfully",
+      "Total bytes uploaded successfully."),
+  BYTES_UPLOAD_FAILED("bytes_upload_failed",
+      "Total bytes failed to upload."),
+  TIME_SPENT_ON_TASK_WAIT("time_spent_task_wait",
+      "Total time spent on waiting for a task."),
+  QUEUE_SHRUNK_OPS("queue_shrunk_ops",
+      "Total number of times blocking queue was shrunk."),
+  WRITE_CURRENT_BUFFER_OPERATIONS("write_current_buffer_ops",
+      "Total number of times the current buffer is written to the service."),
+  TIME_TAKEN_TO_PUT_REQUEST("time_taken_to_put_request",
+      "Total time taken to complete a put request.");
+
 
   private String statName;
   private String statDescription;
