@@ -28,6 +28,7 @@ import java.util.List;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.junit.Assert.*;
 
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.junit.Before;
 import org.junit.Test;
@@ -172,7 +173,28 @@ public class TestReflectionUtils {
   public void testNewInstanceForNonDefaultConstructor() {
     Object x = ReflectionUtils.newInstance(
         NoDefaultCtor.class, null, new Class[] {int.class}, 1);
-    Assert.assertTrue(x instanceof NoDefaultCtor);
+    assertTrue(x instanceof NoDefaultCtor);
+  }
+
+  @Test
+  public void testNewInstanceForNonDefaultConstructorWithException() {
+    try {
+      ReflectionUtils.newInstance(
+          NoDefaultCtor.class, null, new Class[]{int.class}, 1, 2);
+      fail("Should have failed before this point");
+    } catch (IllegalArgumentException e) {
+      GenericTestUtils.assertExceptionContains(
+          "1 parameters are required but 2 arguments are provided", e);
+    }
+
+    try {
+      ReflectionUtils.newInstance(
+          NoDefaultCtor.class, null, new Class[]{int.class});
+      fail("Should have failed before this point");
+    } catch (IllegalArgumentException e) {
+      GenericTestUtils.assertExceptionContains(
+          "1 parameters are required but 0 arguments are provided", e);
+    }
   }
 
   // Used for testGetDeclaredFieldsIncludingInherited

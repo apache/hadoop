@@ -139,6 +139,12 @@ public class ReflectionUtils {
   public static <T> T newInstance(Class<T> theClass, Configuration conf,
       Class<?>[] argTypes, Object ... values) {
     T result;
+    if (argTypes.length != values.length) {
+      throw new IllegalArgumentException(argTypes.length
+          + " parameters are required but "
+          + values.length
+          + " arguments are provided");
+    }
     try {
       Constructor<T> meth = (Constructor<T>) CONSTRUCTOR_CACHE.get(theClass);
       if (meth == null) {
