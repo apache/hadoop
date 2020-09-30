@@ -2155,8 +2155,9 @@ public class TestDistributedFileSystem {
     try {
       DistributedFileSystem dfs = cluster.getFileSystem();
       Path testDir = new Path("/ssgtr/test1/");
+      Path testDirTrashRoot = new Path(testDir, FileSystem.TRASH_PREFIX);
       Path file0path = new Path(testDir, "file-0");
-      dfs.create(file0path);
+      dfs.create(file0path).close();
 
       Path trBeforeAllowSnapshot = dfs.getTrashRoot(file0path);
       String trBeforeAllowSnapshotStr = trBeforeAllowSnapshot.toUri().getPath();
@@ -2165,6 +2166,17 @@ public class TestDistributedFileSystem {
       assertTrue(trBeforeAllowSnapshotStr.startsWith(homeDirStr));
 
       dfs.allowSnapshot(testDir);
+
+      // Provision trash root
+      final FsPermission TRASH_PERMISSION = new FsPermission(
+          FsAction.ALL, FsAction.ALL, FsAction.ALL, true);
+      // Note: DFS#allowSnapshot doesn't auto create trash root.
+      //  Only HdfsAdmin#allowSnapshot creates trash root when
+      //  dfs.namenode.snapshot.trashroot.enabled is set to true on NameNode.
+      dfs.provisionSnapshottableDirTrash(testDir, TRASH_PERMISSION);
+      // Expect trash root to be created with permission 777 and sticky bit
+      FileStatus trashRootFileStatus = dfs.getFileStatus(testDirTrashRoot);
+      assertEquals(TRASH_PERMISSION, trashRootFileStatus.getPermission());
 
       Path trAfterAllowSnapshot = dfs.getTrashRoot(file0path);
       String trAfterAllowSnapshotStr = trAfterAllowSnapshot.toUri().getPath();
@@ -2182,6 +2194,7 @@ public class TestDistributedFileSystem {
       assertTrue(trBeforeAllowSnapshotStr.startsWith(homeDirStr));
 
       // Cleanup
+      // DFS#disallowSnapshot would remove empty trash root without throwing.
       dfs.disallowSnapshot(testDir);
       dfs.delete(testDir, true);
       dfs.delete(test2Dir, true);

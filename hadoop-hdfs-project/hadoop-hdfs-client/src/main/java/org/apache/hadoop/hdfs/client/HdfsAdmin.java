@@ -67,7 +67,7 @@ import java.util.EnumSet;
 @InterfaceStability.Evolving
 public class HdfsAdmin {
 
-  private DistributedFileSystem dfs;
+  final private DistributedFileSystem dfs;
   private static final FsPermission TRASH_PERMISSION = new FsPermission(
       FsAction.ALL, FsAction.ALL, FsAction.ALL, true);
 
@@ -165,6 +165,19 @@ public class HdfsAdmin {
    */
   public void allowSnapshot(Path path) throws IOException {
     dfs.allowSnapshot(path);
+    if (dfs.isSnapshotTrashRootEnabled()) {
+      dfs.provisionSnapshottableDirTrash(path, TRASH_PERMISSION);
+    }
+  }
+
+  /**
+   * Provision a trash directory for a given snapshottable directory.
+   * @param path the root of the snapshottable directory
+   * @throws IOException if the trash directory can not be created.
+   */
+  public void provisionSnapshottableDirTrash(Path path)
+      throws IOException {
+    dfs.provisionSnapshottableDirTrash(path, TRASH_PERMISSION);
   }
 
   /**
