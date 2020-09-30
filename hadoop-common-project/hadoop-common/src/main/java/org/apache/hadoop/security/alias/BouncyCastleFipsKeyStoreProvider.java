@@ -25,19 +25,20 @@ import java.io.IOException;
 import java.net.URI;
 
 /**
- * CredentialProvider based on Java's KeyStore file format. The file may be
- * stored only on the local filesystem using the following name mangling:
- * localjceks://file/home/larry/creds.jceks {@literal ->}
- * file:///home/larry/creds.jceks
+ * CredentialProvider based on Bouncy Castle FIPS KeyStore file format.
+ * The file may be stored in any Hadoop FileSystem using the following
+ * name mangling:
+ * bcfks://hdfs@nn1.example.com/my/creds.bcfks {@literal ->}
+ * hdfs://nn1.example.com/my/creds.bcfks bcfks://file/home/larry/creds.bcfks
+ * {@literal ->} file:///home/user1/creds.bcfks
  */
 @InterfaceAudience.Private
-public final class LocalJavaKeyStoreProvider extends
-    LocalKeyStoreProvider {
-  public static final String SCHEME_NAME = "localjceks";
-  public static final String KEYSTORE_TYPE = "jceks";
-  public static final String ALGORITHM = "AES";
+public final class BouncyCastleFipsKeyStoreProvider extends KeyStoreProvider {
+  public static final String SCHEME_NAME = "bcfks";
+  public static final String KEYSTORE_TYPE = "bcfks";
+  public static final String ALGORITHM = "HMACSHA512";
 
-  private LocalJavaKeyStoreProvider(URI uri, Configuration conf)
+  private BouncyCastleFipsKeyStoreProvider(URI uri, Configuration conf)
       throws IOException {
     super(uri, conf);
   }
@@ -65,7 +66,7 @@ public final class LocalJavaKeyStoreProvider extends
     public CredentialProvider createProvider(URI providerName,
         Configuration conf) throws IOException {
       if (SCHEME_NAME.equals(providerName.getScheme())) {
-        return new LocalJavaKeyStoreProvider(providerName, conf);
+        return new BouncyCastleFipsKeyStoreProvider(providerName, conf);
       }
       return null;
     }
