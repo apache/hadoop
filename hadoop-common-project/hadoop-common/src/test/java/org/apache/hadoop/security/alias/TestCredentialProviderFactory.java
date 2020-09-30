@@ -36,6 +36,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,6 +51,9 @@ public class TestCredentialProviderFactory {
 
   @Rule
   public final TestName test = new TestName();
+
+  @Rule
+  public ExpectedException exception = ExpectedException.none();
 
   @Before
   public void announce() {
@@ -243,6 +247,21 @@ public class TestCredentialProviderFactory {
     // check permission retention after explicit change
     fs.setPermission(path, new FsPermission("777"));
     checkPermissionRetention(conf, ourUrl, path);
+  }
+
+  @Test
+  public void testLocalBCFKSProvider() throws Exception {
+    Configuration conf = new Configuration();
+    final Path ksPath = new Path(tmpDir.toString(), "test.bcfks");
+    final String ourUrl = LocalBouncyCastleFipsKeyStoreProvider.SCHEME_NAME +
+        "://file" + ksPath.toUri();
+    conf.set(CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH, ourUrl);
+
+    exception.expect(IOException.class);
+    exception.expectMessage("Can't create keystore");
+    List<CredentialProvider> providers =
+        CredentialProviderFactory.getProviders(conf);
+    assertTrue("BCFKS needs additional JDK setup", providers.isEmpty());
   }
 
   public void checkPermissionRetention(Configuration conf, String ourUrl,
