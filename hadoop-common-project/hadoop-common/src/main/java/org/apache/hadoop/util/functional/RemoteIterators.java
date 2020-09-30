@@ -36,6 +36,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+import org.apache.hadoop.io.IOUtils;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatisticsAtDebug;
@@ -102,7 +103,7 @@ public final class RemoteIterators {
    */
   public static <T> RemoteIterator<T> remoteIteratorFromIterator(
       Iterator<T> iterator) {
-    return new FromIterator<>(iterator);
+    return new WrappedJavaIterator<>(iterator);
   }
 
   /**
@@ -113,7 +114,7 @@ public final class RemoteIterators {
    */
   public static <T> RemoteIterator<T> remoteIteratorFromIterable(
       Iterable<T> iterable) {
-    return new FromIterator<>(iterable.iterator());
+    return new WrappedJavaIterator<>(iterable.iterator());
   }
 
   /**
@@ -122,7 +123,7 @@ public final class RemoteIterators {
    * @return a remote iterator
    */
   public static <T> RemoteIterator<T> remoteIteratorFromArray(T[] array) {
-    return new FromIterator<>(Arrays.stream(array).iterator());
+    return new WrappedJavaIterator<>(Arrays.stream(array).iterator());
   }
 
   /**
@@ -217,16 +218,23 @@ public final class RemoteIterators {
       ConsumerRaisingIOE<? super T> consumer) throws IOException {
     long count = 0;
 
-    while (source.hasNext()) {
-      count++;
-      consumer.accept(source.next());
+    try {
+      while (source.hasNext()) {
+        count++;
+        consumer.accept(source.next());
+      }
+
+      // maybe log the results
+      logIOStatisticsAtDebug(LOG, "RemoteIterator Statistics: {}", source);
+    } finally {
+      if (source instanceof Closeable) {
+        // source is closeable, so close.
+        IOUtils.cleanupWithLogger(LOG, (Closeable) source);
+      }
     }
 
-    // maybe log the results
-    logIOStatisticsAtDebug(LOG, "RemoteIterator Statistics: {}", source);
     return count;
   }
-
 
   /**
    * A remote iterator from a singleton. It has a single next()
@@ -242,7 +250,7 @@ public final class RemoteIterators {
     /**
      * Single entry.
      */
-    private T singleton;
+    private final T singleton;
 
     /** Has the entry been processed?  */
     private boolean processed;
@@ -297,7 +305,7 @@ public final class RemoteIterators {
    * Closeable;
    * @param <T> iterator type.
    */
-  private static final class FromIterator<T>
+  private static final class WrappedJavaIterator<T>
       implements RemoteIterator<T>, IOStatisticsSource, Closeable {
 
     /**
@@ -312,7 +320,7 @@ public final class RemoteIterators {
      * Construct from an interator.
      * @param source source iterator.
      */
-    private FromIterator(Iterator<? extends T> source) {
+    private WrappedJavaIterator(Iterator<? extends T> source) {
       this.source = requireNonNull(source);
       sourceToClose = new MaybeClose(source);
     }
@@ -379,6 +387,43 @@ public final class RemoteIterators {
       sourceToClose.close();
     }
 
+    /**
+     * Check for the source having a next element.
+     * If it does not, this object's close() method
+     * is called and false returned
+     * @return true if there is a new value
+     * @throws IOException failure to retrieve next value
+     */
+    protected boolean sourceHasNext() throws IOException {
+      boolean hasNext;
+      try {
+        hasNext = getSource().hasNext();
+      } catch (IOException e) {
+        IOUtils.cleanupWithLogger(LOG, this);
+        throw e;
+      }
+      if (!hasNext) {
+        // there is nothing less so automatically close.
+        close();
+      }
+      return hasNext;
+    }
+
+    /**
+     * Get the next source value
+     * @return the next value
+     * @throws IOException failure
+     * @throws NoSuchElementException no more data
+     */
+    protected S sourceNext() throws IOException {
+      try {
+        return getSource().next();
+      } catch (NoSuchElementException | IOException e) {
+        IOUtils.cleanupWithLogger(LOG, this);
+        throw e;
+      }
+    }
+
     @Override
     public String toString() {
       return source.toString();
@@ -408,12 +453,12 @@ public final class RemoteIterators {
 
     @Override
     public boolean hasNext() throws IOException {
-      return getSource().hasNext();
+      return sourceHasNext();
     }
 
     @Override
     public T next() throws IOException {
-      return mapper.apply(getSource().next());
+      return mapper.apply(sourceNext());
     }
 
     @Override
@@ -466,7 +511,7 @@ public final class RemoteIterators {
      * @throws IOException failure in retrieval from source or mapping
      */
     private boolean fetch() throws IOException {
-      while (next == null && getSource().hasNext()) {
+      while (next == null && sourceHasNext()) {
         S candidate = getSource().next();
         if (filter.apply(candidate)) {
           next = candidate;
@@ -523,6 +568,7 @@ public final class RemoteIterators {
       extends WrappingRemoteIterator<S, S> {
 
     private final MaybeClose toClose;
+    private boolean closed = false;
 
     private CloseRemoteIterator(
         final RemoteIterator<S> source,
@@ -533,16 +579,21 @@ public final class RemoteIterators {
 
     @Override
     public boolean hasNext() throws IOException {
-      return getSource().hasNext();
+      return sourceHasNext();
     }
 
     @Override
     public S next() throws IOException {
-      return getSource().next();
+      return sourceNext();
     }
 
     @Override
     public void close() throws IOException {
+      if (closed) {
+        return;
+      }
+      closed = true;
+      LOG.debug("Closing {}", this);
       try {
         super.close();
       } finally {
@@ -554,6 +605,7 @@ public final class RemoteIterators {
   /**
    * Class to help with Closeable logic, where sources may/may not
    * be closeable, only one invocation is allowed.
+   * On the second and later call of close(), it is a no-op.
    */
   private static final class MaybeClose implements Closeable {
 

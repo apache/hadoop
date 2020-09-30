@@ -166,7 +166,7 @@ final class IOStatisticsStoreImpl extends WrappedIOStatistics
       return 0;
     }
     if (value < 0) {
-      LOG.debug("Ignoring negative incrment value {} for counter {}",
+      LOG.debug("Ignoring negative increment value {} for counter {}",
           value, key);
       // returns old value
       return counter.get();

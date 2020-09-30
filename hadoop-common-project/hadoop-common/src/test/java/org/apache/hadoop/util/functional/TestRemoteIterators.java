@@ -21,6 +21,7 @@ package org.apache.hadoop.util.functional;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 import com.google.common.base.Preconditions;
 import org.junit.Test;
@@ -35,14 +36,7 @@ import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.extractStatistics;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.apache.hadoop.util.functional.RemoteIterators.closingRemoteIterator;
-import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteIterator;
-import static org.apache.hadoop.util.functional.RemoteIterators.foreach;
-import static org.apache.hadoop.util.functional.RemoteIterators.mappingRemoteIterator;
-import static org.apache.hadoop.util.functional.RemoteIterators.remoteIteratorFromArray;
-import static org.apache.hadoop.util.functional.RemoteIterators.remoteIteratorFromIterable;
-import static org.apache.hadoop.util.functional.RemoteIterators.remoteIteratorFromIterator;
-import static org.apache.hadoop.util.functional.RemoteIterators.remoteIteratorFromSingleton;
+import static org.apache.hadoop.util.functional.RemoteIterators.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -61,13 +55,13 @@ public class TestRemoteIterators extends AbstractHadoopTestBase {
 
   @Test
   public void testIterateArray() throws Throwable {
-    verifySize(remoteIteratorFromArray(DATA), DATA.length,
+    verifyInvoked(remoteIteratorFromArray(DATA), DATA.length,
         (s) -> LOG.info(s));
   }
 
   @Test
   public void testIterateArrayMapped() throws Throwable {
-    verifySize(
+    verifyInvoked(
         mappingRemoteIterator(
             remoteIteratorFromArray(DATA),
             (d) -> {
@@ -94,7 +88,7 @@ public class TestRemoteIterators extends AbstractHadoopTestBase {
     RemoteIterator<String> it = remoteIteratorFromSingleton(name);
     assertStringValueContains(it, "SingletonIterator");
     assertStringValueContains(it, name);
-    verifySize(
+    verifyInvoked(
         it,
         1,
         (s) -> result.append(s));
@@ -106,11 +100,25 @@ public class TestRemoteIterators extends AbstractHadoopTestBase {
   public void testSingletonNotClosed() throws Throwable {
     CloseCounter closeCounter = new CloseCounter();
     RemoteIterator<CloseCounter> it = remoteIteratorFromSingleton(closeCounter);
-    verifySize(it, 1, this::log);
+    verifyInvoked(it, 1, this::log);
     close(it);
     closeCounter.assertCloseCount(0);
   }
 
+  /**
+   * A null singleton is not an error.
+   */
+  @Test
+  public void testNullSingleton() throws Throwable {
+    verifyInvoked(remoteIteratorFromSingleton(null), 0, this::log);
+  }
+
+
+  /**
+   * If you create a singleton iterator and it is an IOStatisticsSource,
+   * then that is the statistics which can be extracted from the
+   * iterator.
+   */
   @Test
   public void testSingletonStats() throws Throwable {
     IOStatsInstance singleton = new IOStatsInstance();
@@ -119,23 +127,35 @@ public class TestRemoteIterators extends AbstractHadoopTestBase {
     extractStatistics(it);
   }
 
+  /**
+   * The mapping remote iterator passes IOStatistics
+   * calls down.
+   */
   @Test
   public void testMappedSingletonStats() throws Throwable {
     IOStatsInstance singleton = new IOStatsInstance();
     RemoteIterator<String> it
         = mappingRemoteIterator(remoteIteratorFromSingleton(singleton),
         Object::toString);
-    verifySize(it, 1, this::log);
+    verifyInvoked(it, 1, this::log);
     extractStatistics(it);
   }
 
+  /**
+   * Close() calls are passed through.
+   */
   @Test
-  public void testIteratorPassthrough() throws Throwable {
-    CountdownRemoteIterator it = new CountdownRemoteIterator(0);
-    verifySize(it, 0, this::log);
-    extractStatistics(it);
-    it.close();
-    it.assertCloseCount(1);
+  public void testClosePassthrough() throws Throwable {
+    CountdownRemoteIterator countdown = new CountdownRemoteIterator(0);
+    RemoteIterator<Integer> it = mappingRemoteIterator(
+        countdown,
+        i -> i);
+    verifyInvoked(it, 0, this::log);
+    // the foreach() operation called close()
+    countdown.assertCloseCount(1);
+    extractStatistics(countdown);
+    ((Closeable)it).close();
+    countdown.assertCloseCount(1);
   }
 
   @Test
@@ -144,7 +164,7 @@ public class TestRemoteIterators extends AbstractHadoopTestBase {
     RemoteIterator<Integer> it = mappingRemoteIterator(
         countdown,
         i -> i);
-    verifySize(it, 100, c -> counter++);
+    verifyInvoked(it, 100, c -> counter++);
     assertCounterValue(100);
     extractStatistics(it);
     assertStringValueContains(it, "CountdownRemoteIterator");
@@ -159,20 +179,24 @@ public class TestRemoteIterators extends AbstractHadoopTestBase {
     RemoteIterator<Integer> it = filteringRemoteIterator(
         countdown,
         i -> (i % 2) == 0);
-    verifySize(it, 50, c -> counter++);
+    verifyInvoked(it, 50, c -> counter++);
     assertCounterValue(50);
     extractStatistics(it);
     close(it);
     countdown.assertCloseCount(1);
   }
 
+  /**
+   * A filter which accepts nothing results in
+   * an empty iteration.
+   */
   @Test
   public void testFilterNoneAccepted() throws Throwable {
     // nothing gets through
     RemoteIterator<Integer> it = filteringRemoteIterator(
         new CountdownRemoteIterator(100),
         i -> false);
-    verifySize(it, 0, c -> counter++);
+    verifyInvoked(it, 0, c -> counter++);
     assertCounterValue(0);
     extractStatistics(it);
   }
@@ -183,16 +207,16 @@ public class TestRemoteIterators extends AbstractHadoopTestBase {
     RemoteIterator<Integer> it = filteringRemoteIterator(
         new CountdownRemoteIterator(100),
         i -> true);
-    verifySize(it, 100, c -> counter++);
+    verifyInvoked(it, 100, c -> counter++);
     assertStringValueContains(it, "CountdownRemoteIterator");
   }
 
   @Test
-  public void testIteratorSupport() throws Throwable {
+  public void testJavaIteratorSupport() throws Throwable {
     CountdownIterator countdownIterator = new CountdownIterator(100);
     RemoteIterator<Integer> it = remoteIteratorFromIterator(
         countdownIterator);
-    verifySize(it, 100, c -> counter++);
+    verifyInvoked(it, 100, c -> counter++);
     assertStringValueContains(it, "CountdownIterator");
     extractStatistics(it);
     close(it);
@@ -200,42 +224,67 @@ public class TestRemoteIterators extends AbstractHadoopTestBase {
   }
 
   @Test
-  public void testIterableSupport() throws Throwable {
+  public void testJavaIterableSupport() throws Throwable {
     CountdownIterable countdown = new CountdownIterable(100);
     RemoteIterator<Integer> it = remoteIteratorFromIterable(
         countdown);
-    verifySize(it, 100, c -> counter++);
+    verifyInvoked(it, 100, c -> counter++);
     assertStringValueContains(it, "CountdownIterator");
     extractStatistics(it);
     // close the iterator
     close(it);
     countdown.assertCloseCount(0);
     // and a new iterator can be crated
-    verifySize(remoteIteratorFromIterable(countdown),
+    verifyInvoked(remoteIteratorFromIterable(countdown),
         100, c -> counter++);
-
   }
 
   /**
    * If a RemoteIterator is constructed from an iterable
-   * and that is to be closed, we add it.
-   * @throws Throwable
+   * and that is to be closed, we close it.
    */
   @Test
-  public void testIterableClose() throws Throwable {
+  public void testJavaIterableClose() throws Throwable {
     CountdownIterable countdown = new CountdownIterable(100);
     RemoteIterator<Integer> it = closingRemoteIterator(
         remoteIteratorFromIterable(countdown),
         countdown);
-    verifySize(it, 100, c -> counter++);
+    verifyInvoked(it, 100, c -> counter++);
     assertStringValueContains(it, "CountdownIterator");
     extractStatistics(it);
-    // close the iterator
+
+    // verify the iterator was self closed in hasNext()
+    countdown.assertCloseCount(1);
+
+    // explicitly close the iterator
     close(it);
     countdown.assertCloseCount(1);
     // and a new iterator cannot be created
     intercept(IllegalStateException.class, () ->
         remoteIteratorFromIterable(countdown));
+  }
+
+  /**
+   * If a RemoteIterator is constructed from an iterable
+   * and that is to be closed, we close it.
+   */
+  @SuppressWarnings("InfiniteLoopStatement")
+  @Test
+  public void testJavaIterableCloseInNextLoop() throws Throwable {
+    CountdownIterable countdown = new CountdownIterable(100);
+    RemoteIterator<Integer> it = closingRemoteIterator(
+        remoteIteratorFromIterable(countdown),
+        countdown);
+    try {
+      while(true) {
+        it.next();
+      }
+    } catch (NoSuchElementException expected) {
+
+    }
+    // verify the iterator was self closed in next()
+    countdown.assertCloseCount(1);
+
   }
 
   /**
@@ -248,7 +297,7 @@ public class TestRemoteIterators extends AbstractHadoopTestBase {
       final Object o,
       final String expected) {
     assertThat(o.toString())
-        .describedAs("Iterator string value")
+        .describedAs("Object string value")
         .contains(expected);
   }
 
@@ -269,8 +318,9 @@ public class TestRemoteIterators extends AbstractHadoopTestBase {
    * @param length expected size
    * @param consumer consumer
    */
-  protected <T> void verifySize(final RemoteIterator<T> it,
-      int length, ConsumerRaisingIOE<T> consumer)
+  protected <T> void verifyInvoked(final RemoteIterator<T> it,
+      int length,
+      ConsumerRaisingIOE<T> consumer)
       throws IOException {
     assertThat(foreach(it, consumer))
         .describedAs("Scan through iterator %s", it)
@@ -288,18 +338,18 @@ public class TestRemoteIterators extends AbstractHadoopTestBase {
     }
   }
 
-
   /**
    * Class whose close() call increments a counter.
    */
   private static class CloseCounter extends
       IOStatsInstance implements Closeable {
 
-    private int closeCount = 0;
+    private int closeCount;
 
     @Override
     public void close() throws IOException {
       closeCount++;
+      LOG.info("close ${}", closeCount);
     }
 
     public int getCloseCount() {
@@ -381,6 +431,9 @@ public class TestRemoteIterators extends AbstractHadoopTestBase {
 
     @Override
     public Integer next() {
+      if (!hasNext()) {
+        throw new NoSuchElementException("limit reached");
+      }
       return limit--;
     }
 
