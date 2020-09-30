@@ -128,6 +128,21 @@ public final class CallerContext {
       }
       fieldSeparator = conf.get(HADOOP_CALLER_CONTEXT_SEPARATOR_KEY,
           HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT);
+      checkFieldSeparator(fieldSeparator);
+    }
+
+    /**
+     * Check whether the separator is legal.
+     * The illegal separators include '\t', '\t', '=', etc.
+     * Throw IllegalArgumentException if the separator is Illegal.
+     * @param separator the separator of fields.
+     */
+    private void checkFieldSeparator(String separator) {
+      if (separator.contains("\t") || separator.contains("\n")
+          || separator.contains("=")) {
+        throw new IllegalArgumentException("Illegal field separator: "
+            + separator);
+      }
     }
 
     /**
