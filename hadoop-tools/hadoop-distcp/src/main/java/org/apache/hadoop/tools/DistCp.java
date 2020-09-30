@@ -434,9 +434,9 @@ public class DistCp extends Configured implements Tool {
     int exitCode;
     try {
       DistCp distCp = new DistCp();
-      Cleanup CLEANUP = new Cleanup(distCp);
+      Cleanup cleanup = new Cleanup(distCp);
 
-      ShutdownHookManager.get().addShutdownHook(CLEANUP,
+      ShutdownHookManager.get().addShutdownHook(cleanup,
         SHUTDOWN_HOOK_PRIORITY);
       exitCode = ToolRunner.run(getDefaultConf(), distCp, argv);
     }
