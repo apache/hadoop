@@ -68,7 +68,7 @@ import java.util.EnumSet;
 public class HdfsAdmin {
 
   final private DistributedFileSystem dfs;
-  private static final FsPermission TRASH_PERMISSION = new FsPermission(
+  public static final FsPermission TRASH_PERMISSION = new FsPermission(
       FsAction.ALL, FsAction.ALL, FsAction.ALL, true);
 
   /**
@@ -173,11 +173,12 @@ public class HdfsAdmin {
   /**
    * Provision a trash directory for a given snapshottable directory.
    * @param path the root of the snapshottable directory
+   * @return Path of the provisioned trash root
    * @throws IOException if the trash directory can not be created.
    */
-  public void provisionSnapshottableDirTrash(Path path)
+  public Path provisionSnapshottableDirTrash(Path path)
       throws IOException {
-    dfs.provisionSnapshottableDirTrash(path, TRASH_PERMISSION);
+    return dfs.provisionSnapshottableDirTrash(path, TRASH_PERMISSION);
   }
 
   /**

@@ -87,6 +87,7 @@ import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.TimeoutException;
 
+import static org.apache.hadoop.hdfs.client.HdfsAdmin.TRASH_PERMISSION;
 import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.CoreMatchers.is;
@@ -937,8 +938,6 @@ public class TestDFSAdmin {
 
     // Verify .Trash creation after -allowSnapshot command
     assertTrue(dfs.exists(trashRoot));
-    final FsPermission TRASH_PERMISSION = new FsPermission(
-        FsAction.ALL, FsAction.ALL, FsAction.ALL, true);
     assertEquals(TRASH_PERMISSION,
         dfs.getFileStatus(trashRoot).getPermission());
 

@@ -2951,24 +2951,22 @@ public class DistributedFileSystem extends FileSystem
    * Provision snapshottable directory trash.
    * @param path Path to a snapshottable directory.
    * @param trashPermission Expected FsPermission of the trash root.
-   * @throws IOException
+   * @return Path of the provisioned trash root
    */
-  public void provisionSnapshottableDirTrash(final Path path,
+  public Path provisionSnapshottableDirTrash(final Path path,
       final FsPermission trashPermission) throws IOException {
     Path absF = fixRelativePart(path);
-    new FileSystemLinkResolver<Void>() {
+    return new FileSystemLinkResolver<Path>() {
       @Override
-      public Void doCall(Path p) throws IOException {
-        provisionSnapshottableDirTrash(getPathName(p), trashPermission);
-        return null;
+      public Path doCall(Path p) throws IOException {
+        return provisionSnapshottableDirTrash(getPathName(p), trashPermission);
       }
 
       @Override
-      public Void next(FileSystem fs, Path p) throws IOException {
+      public Path next(FileSystem fs, Path p) throws IOException {
         if (fs instanceof DistributedFileSystem) {
           DistributedFileSystem myDfs = (DistributedFileSystem)fs;
-          myDfs.provisionSnapshottableDirTrash(p, trashPermission);
-          return null;
+          return myDfs.provisionSnapshottableDirTrash(p, trashPermission);
         }
         throw new UnsupportedOperationException(
             "Cannot provisionSnapshottableDirTrash through a symlink to" +
@@ -2977,7 +2975,7 @@ public class DistributedFileSystem extends FileSystem
     }.resolve(this, absF);
   }
 
-  private void provisionSnapshottableDirTrash(
+  private Path provisionSnapshottableDirTrash(
       String pathStr, FsPermission trashPermission) throws IOException {
     Path path = new Path(pathStr);
     // Given path must be a snapshottable directory
@@ -3011,6 +3009,7 @@ public class DistributedFileSystem extends FileSystem
     // Create trash root and set the permission
     mkdir(trashPath, trashPermission);
     setPermission(trashPath, trashPermission);
+    return trashPath;
   }
 
   @Override

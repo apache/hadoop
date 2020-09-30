@@ -802,13 +802,14 @@ public class DFSAdmin extends FsShell {
   public void provisionSnapshotTrash(String[] argv) throws IOException {
     Path p = new Path(argv[1]);
     final HdfsAdmin admin = new HdfsAdmin(p.toUri(), getConf());
+    Path trashRoot;
     try {
-      admin.provisionSnapshottableDirTrash(p);
+      trashRoot = admin.provisionSnapshottableDirTrash(p);
     } catch (SnapshotException e) {
       throw new RemoteException(e.getClass().getName(), e.getMessage());
     }
-    System.out.println("Provision of snapshot trash in " + argv[1] +
-        " succeeded");
+    System.out.println("Successfully provisioned snapshot trash at " +
+        trashRoot);
   }
   
   /**
@@ -1267,7 +1268,7 @@ public class DFSAdmin extends FsShell {
 
     String provisionSnapshotTrash = "-provisionSnapshotTrash <snapshotDir>:\n" +
         "\tProvision trash root in a snapshottable directory with permission"
-        + "\t777 and sticky bit.\n";
+        + "\t" + HdfsAdmin.TRASH_PERMISSION + ".\n";
 
     String shutdownDatanode = "-shutdownDatanode <datanode_host:ipc_port> [upgrade]\n"
         + "\tSubmit a shutdown request for the given datanode. If an optional\n"

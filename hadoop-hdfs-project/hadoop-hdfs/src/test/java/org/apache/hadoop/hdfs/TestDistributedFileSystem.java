@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.FS_CLIENT_TOPOLOGY_RESOLUTION_ENABLED;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_FILE_CLOSE_NUM_COMMITTED_ALLOWED_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsAdmin.TRASH_PERMISSION;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_CONTEXT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -2168,8 +2169,6 @@ public class TestDistributedFileSystem {
       dfs.allowSnapshot(testDir);
 
       // Provision trash root
-      final FsPermission TRASH_PERMISSION = new FsPermission(
-          FsAction.ALL, FsAction.ALL, FsAction.ALL, true);
       // Note: DFS#allowSnapshot doesn't auto create trash root.
       //  Only HdfsAdmin#allowSnapshot creates trash root when
       //  dfs.namenode.snapshot.trashroot.enabled is set to true on NameNode.
