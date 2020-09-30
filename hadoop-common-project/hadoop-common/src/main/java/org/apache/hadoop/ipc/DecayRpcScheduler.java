@@ -152,10 +152,15 @@ public class DecayRpcScheduler implements RpcScheduler,
   private final ConcurrentHashMap<Object, List<AtomicLong>> callCosts =
       new ConcurrentHashMap<Object, List<AtomicLong>>();
 
-  // Should be the sum of all AtomicLongs in decayed callCosts
+  // Should be the sum of all AtomicLongs in decayed callCosts except
+  // service-user.
   private final AtomicLong totalDecayedCallCost = new AtomicLong();
-  // The sum of all AtomicLongs in raw callCosts
+  // The sum of all AtomicLongs in raw callCosts except service-user.
   private final AtomicLong totalRawCallCost = new AtomicLong();
+  // Should be the sum of all AtomicLongs in decayed callCosts of service-user.
+  private final AtomicLong totalServiceUserDecayedCallCost = new AtomicLong();
+  // The sum of all AtomicLongs in raw callCosts of service-user.
+  private final AtomicLong totalServiceUserRawCallCost = new AtomicLong();
 
 
   // Track total call count and response time in current decay window
@@ -446,6 +451,8 @@ public class DecayRpcScheduler implements RpcScheduler,
     try {
       long totalDecayedCost = 0;
       long totalRawCost = 0;
+      long totalServiceUserDecayedCost = 0;
+      long totalServiceUserRawCost = 0;
       Iterator<Map.Entry<Object, List<AtomicLong>>> it =
           callCosts.entrySet().iterator();
 
@@ -456,10 +463,15 @@ public class DecayRpcScheduler implements RpcScheduler,
 
 
         // Compute the next value by reducing it by the decayFactor
-        totalRawCost += rawCost.get();
         long currentValue = decayedCost.get();
         long nextValue = (long) (currentValue * decayFactor);
-        totalDecayedCost += nextValue;
+        if (isServiceUser((String) entry.getKey())) {
+          totalServiceUserRawCost += rawCost.get();
+          totalServiceUserDecayedCost += nextValue;
+        } else {
+          totalRawCost += rawCost.get();
+          totalDecayedCost += nextValue;
+        }
         decayedCost.set(nextValue);
 
         LOG.debug(
@@ -478,9 +490,13 @@ public class DecayRpcScheduler implements RpcScheduler,
       // Update the total so that we remain in sync
       totalDecayedCallCost.set(totalDecayedCost);
       totalRawCallCost.set(totalRawCost);
+      totalServiceUserDecayedCallCost.set(totalServiceUserDecayedCost);
+      totalServiceUserRawCallCost.set(totalServiceUserRawCost);
 
-      LOG.debug("After decaying the stored costs, totalDecayedCost: {}, " +
-          "totalRawCallCost: {}.", totalDecayedCost, totalRawCost);
+      LOG.debug("After decaying the stored costs, totalDecayedCost: {}, "
+              + "totalRawCallCost: {}, totalServiceUserDecayedCost: {},"
+              + " totalServiceUserRawCost: {}.", totalDecayedCost, totalRawCost,
+          totalServiceUserDecayedCost, totalServiceUserRawCost);
       // Now refresh the cache of scheduling decisions
       recomputeScheduleCache();
 
@@ -538,8 +554,13 @@ public class DecayRpcScheduler implements RpcScheduler,
     }
 
     // Update the total
-    totalDecayedCallCost.getAndAdd(costDelta);
-    totalRawCallCost.getAndAdd(costDelta);
+    if (!isServiceUser((String) identity)) {
+      totalDecayedCallCost.getAndAdd(costDelta);
+      totalRawCallCost.getAndAdd(costDelta);
+    } else {
+      totalServiceUserDecayedCallCost.getAndAdd(costDelta);
+      totalServiceUserRawCallCost.getAndAdd(costDelta);
+    }
 
     // At this point value is guaranteed to be not null. It may however have
     // been clobbered from callCosts. Nonetheless, we return what
@@ -893,6 +914,14 @@ public class DecayRpcScheduler implements RpcScheduler,
     return totalRawCallCost.get();
   }
 
+  public long getTotalServiceUserCallVolume() {
+    return totalServiceUserDecayedCallCost.get();
+  }
+
+  public long getTotalServiceUserRawCallVolume() {
+    return totalServiceUserRawCallCost.get();
+  }
+
   public long[] getResponseTimeCountInLastWindow() {
     long[] ret = new long[responseTimeCountInLastWindow.length()];
     for (int i = 0; i < responseTimeCountInLastWindow.length(); i++) {
@@ -922,6 +951,8 @@ public class DecayRpcScheduler implements RpcScheduler,
       addAvgResponseTimePerPriority(rb);
       addCallVolumePerPriority(rb);
       addRawCallVolume(rb);
+      addServiceUserDecayedCallVolume(rb);
+      addServiceUserRawCallVolume(rb);
     } catch (Exception e) {
       LOG.warn("Exception thrown while metric collection. Exception : "
           + e.getMessage());
@@ -943,6 +974,20 @@ public class DecayRpcScheduler implements RpcScheduler,
   private void addRawCallVolume(MetricsRecordBuilder rb) {
     rb.addCounter(Interns.info("CallVolume", "Raw Total " +
         "incoming Call Volume"), getTotalRawCallVolume());
+  }
+
+  // Key: ServiceUserDecayedCallVolume.
+  private void addServiceUserDecayedCallVolume(MetricsRecordBuilder rb) {
+    rb.addCounter(Interns.info("ServiceUserDecayedCallVolume",
+        "Service-user Decayed Total incoming Call Volume"),
+        getTotalServiceUserCallVolume());
+  }
+
+  // Key: ServiceUserCallVolume.
+  private void addServiceUserRawCallVolume(MetricsRecordBuilder rb) {
+    rb.addCounter(Interns.info("ServiceUserCallVolume",
+        "Service-user Raw Total incoming Call Volume"),
+        getTotalServiceUserRawCallVolume());
   }
 
   // Key: Priority.0.CompletedCallVolume
