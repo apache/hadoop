@@ -133,7 +133,7 @@ public final class CallerContext {
 
     /**
      * Check whether the separator is legal.
-     * The illegal separators include '\t', '\t', '=', etc.
+     * The illegal separators include '\t', '\n', '=', etc.
      * Throw IllegalArgumentException if the separator is Illegal.
      * @param separator the separator of fields.
      */
