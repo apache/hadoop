@@ -28,7 +28,7 @@ public class TestCallerContext {
   public void testBuilderAppend() {
     Configuration conf = new Configuration();
     conf.set(HADOOP_CALLER_CONTEXT_SEPARATOR_KEY, "$");
-    CallerContext.Builder builder = new CallerContext.Builder(conf);
+    CallerContext.Builder builder = new CallerContext.Builder(null, conf);
     CallerContext context = builder.append("context1")
         .append("context2").append("key3", "value3").build();
     Assert.assertEquals(true,

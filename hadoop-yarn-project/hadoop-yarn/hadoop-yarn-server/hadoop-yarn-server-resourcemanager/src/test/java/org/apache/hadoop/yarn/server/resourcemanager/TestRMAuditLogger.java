@@ -263,13 +263,11 @@ public class TestRMAuditLogger {
     testSuccessLogFormatHelper(checkIP, APPID, ATTEMPTID, CONTAINERID);
     testSuccessLogFormatHelper(checkIP, APPID, ATTEMPTID, CONTAINERID, null, null);
     testSuccessLogFormatHelper(checkIP, APPID, ATTEMPTID, CONTAINERID,
-        new CallerContext.Builder((String)null).setSignature(null).build(),
-        RESOURCE);
+        new CallerContext.Builder(null).setSignature(null).build(), RESOURCE);
     testSuccessLogFormatHelper(checkIP, APPID, ATTEMPTID, CONTAINERID,
         new CallerContext.Builder(CALLER_CONTEXT).setSignature(null).build(), RESOURCE);
     testSuccessLogFormatHelper(checkIP, APPID, ATTEMPTID, CONTAINERID,
-        new CallerContext.Builder((String)null).setSignature(CALLER_SIGNATURE)
-            .build(), RESOURCE);
+        new CallerContext.Builder(null).setSignature(CALLER_SIGNATURE).build(), RESOURCE);
     testSuccessLogFormatHelper(checkIP, APPID, ATTEMPTID, CONTAINERID,
         new CallerContext.Builder(CALLER_CONTEXT).setSignature(CALLER_SIGNATURE)
             .build(), RESOURCE);
@@ -365,13 +363,11 @@ public class TestRMAuditLogger {
     testFailureLogFormatHelper(checkIP, APPID, ATTEMPTID, CONTAINERID);
     
     testFailureLogFormatHelper(checkIP, APPID, ATTEMPTID, CONTAINERID,
-        new CallerContext.Builder((String)null).setSignature(null).build(),
-        RESOURCE);
+        new CallerContext.Builder(null).setSignature(null).build(), RESOURCE);
     testFailureLogFormatHelper(checkIP, APPID, ATTEMPTID, CONTAINERID,
         new CallerContext.Builder(CALLER_CONTEXT).setSignature(null).build(), RESOURCE);
     testFailureLogFormatHelper(checkIP, APPID, ATTEMPTID, CONTAINERID,
-        new CallerContext.Builder((String)null)
-            .setSignature(CALLER_SIGNATURE).build(), RESOURCE);
+        new CallerContext.Builder(null).setSignature(CALLER_SIGNATURE).build(), RESOURCE);
     testFailureLogFormatHelper(checkIP, APPID, ATTEMPTID, CONTAINERID,
         new CallerContext.Builder(CALLER_CONTEXT).setSignature(CALLER_SIGNATURE)
             .build(), RESOURCE);
