@@ -42,7 +42,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -405,88 +404,86 @@ public class DirectoryScanner implements Runnable {
     clear();
     Map<String, ScanInfo[]> diskReport = getDiskReport();
 
-    // Hold FSDataset lock to prevent further changes to the block map
-    try(AutoCloseableLock lock = dataset.acquireDatasetLock()) {
-      for (Entry<String, ScanInfo[]> entry : diskReport.entrySet()) {
-        String bpid = entry.getKey();
-        ScanInfo[] blockpoolReport = entry.getValue();
+    for (Entry<String, ScanInfo[]> entry : diskReport.entrySet()) {
+      String bpid = entry.getKey();
+      ScanInfo[] blockpoolReport = entry.getValue();
         
-        Stats statsRecord = new Stats(bpid);
-        stats.put(bpid, statsRecord);
-        LinkedList<ScanInfo> diffRecord = new LinkedList<ScanInfo>();
-        synchronized(diffs) {
-          diffs.put(bpid, diffRecord);
-        }
+      Stats statsRecord = new Stats(bpid);
+      stats.put(bpid, statsRecord);
+      LinkedList<ScanInfo> diffRecord = new LinkedList<ScanInfo>();
+      synchronized(diffs) {
+        diffs.put(bpid, diffRecord);
+      }
         
-        statsRecord.totalBlocks = blockpoolReport.length;
-        final List<ReplicaInfo> bl = dataset.getSortedFinalizedBlocks(bpid);
+      statsRecord.totalBlocks = blockpoolReport.length;
+      final List<ReplicaInfo> bl = dataset.getSortedFinalizedBlocks(bpid);
 
-        int d = 0; // index for blockpoolReport
-        int m = 0; // index for memReprot
-        while (m < bl.size() && d < blockpoolReport.length) {
-          ReplicaInfo memBlock = bl.get(m);
-          ScanInfo info = blockpoolReport[d];
-          if (info.getBlockId() < memBlock.getBlockId()) {
-            if (!dataset.isDeletingBlock(bpid, info.getBlockId())) {
-              // Block is missing in memory
-              statsRecord.missingMemoryBlocks++;
-              addDifference(diffRecord, statsRecord, info);
-            }
-            d++;
-            continue;
-          }
-          if (info.getBlockId() > memBlock.getBlockId()) {
-            // Block is missing on the disk
-            addDifference(diffRecord, statsRecord,
-                          memBlock.getBlockId(), info.getVolume());
-            m++;
-            continue;
-          }
-          // Block file and/or metadata file exists on the disk
-          // Block exists in memory
-          if (info.getVolume().getStorageType() != StorageType.PROVIDED &&
-              info.getBlockFile() == null) {
-            // Block metadata file exits and block file is missing
-            addDifference(diffRecord, statsRecord, info);
-          } else if (info.getGenStamp() != memBlock.getGenerationStamp()
-              || info.getBlockLength() != memBlock.getNumBytes()) {
-            // Block metadata file is missing or has wrong generation stamp,
-            // or block file length is different than expected
-            statsRecord.mismatchBlocks++;
-            addDifference(diffRecord, statsRecord, info);
-          } else if (memBlock.compareWith(info) != 0) {
-            // volumeMap record and on-disk files don't match.
-            statsRecord.duplicateBlocks++;
+      int d = 0; // index for blockpoolReport
+      int m = 0; // index for memReprot
+      while (m < bl.size() && d < blockpoolReport.length) {
+        ReplicaInfo memBlock = bl.get(m);
+        ScanInfo info = blockpoolReport[d];
+        if (info.getBlockId() < memBlock.getBlockId()) {
+          if (!dataset.isDeletingBlock(bpid, info.getBlockId())) {
+            // Block is missing in memory
+            statsRecord.missingMemoryBlocks++;
             addDifference(diffRecord, statsRecord, info);
           }
           d++;
+          continue;
+        }
+        if (info.getBlockId() > memBlock.getBlockId()) {
+          // Block is missing on the disk
+          addDifference(diffRecord, statsRecord,
+                        memBlock.getBlockId(), info.getVolume());
+          m++;
+          continue;
+        }
+        // Block file and/or metadata file exists on the disk
+        // Block exists in memory
+        if (info.getVolume().getStorageType() != StorageType.PROVIDED &&
+            info.getBlockFile() == null) {
+          // Block metadata file exits and block file is missing
+          addDifference(diffRecord, statsRecord, info);
+        } else if (info.getGenStamp() != memBlock.getGenerationStamp()
+            || info.getBlockLength() != memBlock.getNumBytes()) {
+          // Block metadata file is missing or has wrong generation stamp,
+          // or block file length is different than expected
+          statsRecord.mismatchBlocks++;
+          addDifference(diffRecord, statsRecord, info);
+        } else if (memBlock.compareWith(info) != 0) {
+          // volumeMap record and on-disk files don't match.
+          statsRecord.duplicateBlocks++;
+          addDifference(diffRecord, statsRecord, info);
+        }
+        d++;
 
-          if (d < blockpoolReport.length) {
-            // There may be multiple on-disk records for the same block, don't increment
-            // the memory record pointer if so.
-            ScanInfo nextInfo = blockpoolReport[Math.min(d, blockpoolReport.length - 1)];
-            if (nextInfo.getBlockId() != info.getBlockId()) {
-              ++m;
-            }
-          } else {
+        if (d < blockpoolReport.length) {
+          // There may be multiple on-disk records for the same block,
+          // don't increment the memory record pointer if so.
+          ScanInfo nextInfo
+              = blockpoolReport[Math.min(d, blockpoolReport.length - 1)];
+          if (nextInfo.getBlockId() != info.getBlockId()) {
             ++m;
           }
+        } else {
+          ++m;
         }
-        while (m < bl.size()) {
-          ReplicaInfo current = bl.get(m++);
-          addDifference(diffRecord, statsRecord,
-                        current.getBlockId(), current.getVolume());
+      }
+      while (m < bl.size()) {
+        ReplicaInfo current = bl.get(m++);
+        addDifference(diffRecord, statsRecord,
+                      current.getBlockId(), current.getVolume());
+      }
+      while (d < blockpoolReport.length) {
+        if (!dataset.isDeletingBlock(bpid, blockpoolReport[d].getBlockId())) {
+          statsRecord.missingMemoryBlocks++;
+          addDifference(diffRecord, statsRecord, blockpoolReport[d]);
         }
-        while (d < blockpoolReport.length) {
-          if (!dataset.isDeletingBlock(bpid, blockpoolReport[d].getBlockId())) {
-            statsRecord.missingMemoryBlocks++;
-            addDifference(diffRecord, statsRecord, blockpoolReport[d]);
-          }
-          d++;
-        }
-        LOG.info(statsRecord.toString());
-      } //end for
-    } //end synchronized
+        d++;
+      }
+      LOG.info(statsRecord.toString());
+    } //end for
   }
 
   /**
