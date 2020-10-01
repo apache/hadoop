@@ -2172,7 +2172,7 @@ public class TestDistributedFileSystem {
       // Note: DFS#allowSnapshot doesn't auto create trash root.
       //  Only HdfsAdmin#allowSnapshot creates trash root when
       //  dfs.namenode.snapshot.trashroot.enabled is set to true on NameNode.
-      dfs.provisionSnapshottableDirTrash(testDir, TRASH_PERMISSION);
+      dfs.provisionSnapshotTrash(testDir, TRASH_PERMISSION);
       // Expect trash root to be created with permission 777 and sticky bit
       FileStatus trashRootFileStatus = dfs.getFileStatus(testDirTrashRoot);
       assertEquals(TRASH_PERMISSION, trashRootFileStatus.getPermission());

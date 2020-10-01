@@ -166,7 +166,7 @@ public class HdfsAdmin {
   public void allowSnapshot(Path path) throws IOException {
     dfs.allowSnapshot(path);
     if (dfs.isSnapshotTrashRootEnabled()) {
-      dfs.provisionSnapshottableDirTrash(path, TRASH_PERMISSION);
+      dfs.provisionSnapshotTrash(path, TRASH_PERMISSION);
     }
   }
 
@@ -176,9 +176,9 @@ public class HdfsAdmin {
    * @return Path of the provisioned trash root
    * @throws IOException if the trash directory can not be created.
    */
-  public Path provisionSnapshottableDirTrash(Path path)
+  public Path provisionSnapshotTrash(Path path)
       throws IOException {
-    return dfs.provisionSnapshottableDirTrash(path, TRASH_PERMISSION);
+    return dfs.provisionSnapshotTrash(path, TRASH_PERMISSION);
   }
 
   /**

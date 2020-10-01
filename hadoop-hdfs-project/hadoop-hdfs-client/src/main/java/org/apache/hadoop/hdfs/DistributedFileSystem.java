@@ -2953,29 +2953,29 @@ public class DistributedFileSystem extends FileSystem
    * @param trashPermission Expected FsPermission of the trash root.
    * @return Path of the provisioned trash root
    */
-  public Path provisionSnapshottableDirTrash(final Path path,
+  public Path provisionSnapshotTrash(final Path path,
       final FsPermission trashPermission) throws IOException {
     Path absF = fixRelativePart(path);
     return new FileSystemLinkResolver<Path>() {
       @Override
       public Path doCall(Path p) throws IOException {
-        return provisionSnapshottableDirTrash(getPathName(p), trashPermission);
+        return provisionSnapshotTrash(getPathName(p), trashPermission);
       }
 
       @Override
       public Path next(FileSystem fs, Path p) throws IOException {
         if (fs instanceof DistributedFileSystem) {
           DistributedFileSystem myDfs = (DistributedFileSystem)fs;
-          return myDfs.provisionSnapshottableDirTrash(p, trashPermission);
+          return myDfs.provisionSnapshotTrash(p, trashPermission);
         }
         throw new UnsupportedOperationException(
-            "Cannot provisionSnapshottableDirTrash through a symlink to" +
+            "Cannot provisionSnapshotTrash through a symlink to" +
             " a non-DistributedFileSystem: " + fs + " -> " + p);
       }
     }.resolve(this, absF);
   }
 
-  private Path provisionSnapshottableDirTrash(
+  private Path provisionSnapshotTrash(
       String pathStr, FsPermission trashPermission) throws IOException {
     Path path = new Path(pathStr);
     // Given path must be a snapshottable directory
@@ -3004,6 +3004,12 @@ public class DistributedFileSystem extends FileSystem
       throw new FileAlreadyExistsException(errMessage);
     } catch (FileNotFoundException ignored) {
       // Trash path doesn't exist. Continue
+    }
+
+    // Print a warning if snapshot trash root feature is not enabled
+    if (!isSnapshotTrashRootEnabled()) {
+      DFSClient.LOG.warn("Snapshot trash root feature is disabled. This trash "
+          + "won't be used unless the feature is enabled on the NameNode.");
     }
 
     // Create trash root and set the permission

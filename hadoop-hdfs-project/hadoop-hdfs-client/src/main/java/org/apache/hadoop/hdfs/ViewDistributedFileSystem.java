@@ -1678,16 +1678,16 @@ public class ViewDistributedFileSystem extends DistributedFileSystem {
   }
 
   @Override
-  public Path provisionSnapshottableDirTrash(final Path path,
+  public Path provisionSnapshotTrash(final Path path,
       final FsPermission trashPermission) throws IOException {
     if (this.vfs == null) {
-      return super.provisionSnapshottableDirTrash(path, trashPermission);
+      return super.provisionSnapshotTrash(path, trashPermission);
     }
     ViewFileSystemOverloadScheme.MountPathInfo<FileSystem> mountPathInfo =
         this.vfs.getMountPathInfo(path, getConf());
-    checkDFS(mountPathInfo.getTargetFs(), "provisionSnapshottableDirTrash");
+    checkDFS(mountPathInfo.getTargetFs(), "provisionSnapshotTrash");
     return ((DistributedFileSystem) mountPathInfo.getTargetFs())
-        .provisionSnapshottableDirTrash(mountPathInfo.getPathOnTarget(),
+        .provisionSnapshotTrash(mountPathInfo.getPathOnTarget(),
           trashPermission);
   }
 

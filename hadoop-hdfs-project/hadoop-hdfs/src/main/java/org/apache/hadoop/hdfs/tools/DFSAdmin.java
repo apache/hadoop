@@ -804,7 +804,7 @@ public class DFSAdmin extends FsShell {
     final HdfsAdmin admin = new HdfsAdmin(p.toUri(), getConf());
     Path trashRoot;
     try {
-      trashRoot = admin.provisionSnapshottableDirTrash(p);
+      trashRoot = admin.provisionSnapshotTrash(p);
     } catch (SnapshotException e) {
       throw new RemoteException(e.getClass().getName(), e.getMessage());
     }
