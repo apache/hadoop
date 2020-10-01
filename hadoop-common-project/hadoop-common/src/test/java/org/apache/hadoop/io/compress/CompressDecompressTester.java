@@ -488,9 +488,9 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
 
     else if (compressor.getClass().isAssignableFrom(ZlibCompressor.class)) {
       return ZlibFactory.isNativeZlibLoaded(new Configuration());
-    }
-    else if (compressor.getClass().isAssignableFrom(SnappyCompressor.class))
+    } else if (compressor.getClass().isAssignableFrom(SnappyCompressor.class)) {
       return true;
+    }
 
     return false;      
   }
