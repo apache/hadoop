@@ -74,6 +74,9 @@ import static org.apache.hadoop.fs.s3a.auth.RoleModel.pathToKey;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_CONTINUE_LIST_REQUEST;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
+import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteIterator;
+import static org.apache.hadoop.util.functional.RemoteIterators.remoteIteratorFromArray;
+import static org.apache.hadoop.util.functional.RemoteIterators.remoteIteratorFromSingleton;
 
 /**
  * Place for the S3A listing classes; keeps all the small classes under control.
@@ -103,11 +106,14 @@ public class Listing extends AbstractStoreOperation {
    * @param acceptor the file status acceptor
    * @return the file status iterator
    */
-  ProvidedFileStatusIterator createProvidedFileStatusIterator(
+  RemoteIterator<S3AFileStatus> createProvidedFileStatusIterator(
       S3AFileStatus[] fileStatuses,
       PathFilter filter,
       FileStatusAcceptor acceptor) {
-    return new ProvidedFileStatusIterator(fileStatuses, filter, acceptor);
+    return filteringRemoteIterator(
+        remoteIteratorFromArray(fileStatuses),
+        status ->
+            filter.accept(status.getPath()) && acceptor.accept(status)) ;
   }
 
   /**
@@ -116,11 +122,11 @@ public class Listing extends AbstractStoreOperation {
    * @return the file status iterator.
    */
   @VisibleForTesting
-  public static ProvidedFileStatusIterator toProvidedFileStatusIterator(
+  public static RemoteIterator<S3AFileStatus> toProvidedFileStatusIterator(
           S3AFileStatus[] fileStatuses) {
-    return new ProvidedFileStatusIterator(fileStatuses,
-            ACCEPT_ALL,
-            Listing.ACCEPT_ALL_BUT_S3N);
+    return filteringRemoteIterator(
+        remoteIteratorFromArray(fileStatuses),
+        Listing.ACCEPT_ALL_BUT_S3N::accept);
   }
 
   /**
@@ -215,7 +221,7 @@ public class Listing extends AbstractStoreOperation {
       // no need to filter.
       return iterator;
     } else {
-      return RemoteIterators.filteringRemoteIterator(
+      return filteringRemoteIterator(
           iterator,
           candidate -> !tombstones.contains(candidate.getPath()));
     }
@@ -228,7 +234,7 @@ public class Listing extends AbstractStoreOperation {
    */
   public RemoteIterator<S3ALocatedFileStatus> createSingleStatusIterator(
       S3ALocatedFileStatus status) {
-    return RemoteIterators.remoteIteratorFromSingleton(status);
+    return remoteIteratorFromSingleton(status);
   }
 
   /**
@@ -395,7 +401,7 @@ public class Listing extends AbstractStoreOperation {
                     allowAuthoritative);
     // In auth mode return directly with auth flag.
     if (allowAuthoritative && dirMeta != null && dirMeta.isAuthoritative()) {
-      ProvidedFileStatusIterator mfsItr = createProvidedFileStatusIterator(
+      RemoteIterator<S3AFileStatus> mfsItr = createProvidedFileStatusIterator(
               S3Guard.dirMetaToStatuses(dirMeta),
               ACCEPT_ALL,
               Listing.ACCEPT_ALL_BUT_S3N);
@@ -453,47 +459,6 @@ public class Listing extends AbstractStoreOperation {
      * @return true if the status is accepted else false
      */
     boolean accept(FileStatus status);
-  }
-
-  /**
-   * This wraps up a provided non-null list of file status as a remote iterator.
-   *
-   * It firstly filters the provided list and later {@link #next} call will get
-   * from the filtered list. This suffers from scalability issues if the
-   * provided list is too large.
-   *
-   * There is no remote data to fetch.
-   */
-  static class ProvidedFileStatusIterator
-      implements RemoteIterator<S3AFileStatus> {
-    private final ArrayList<S3AFileStatus> filteredStatusList;
-    private int index = 0;
-
-    ProvidedFileStatusIterator(S3AFileStatus[] fileStatuses, PathFilter filter,
-        FileStatusAcceptor acceptor) {
-      Preconditions.checkArgument(fileStatuses != null, "Null status list!");
-
-      filteredStatusList = new ArrayList<>(fileStatuses.length);
-      for (S3AFileStatus status : fileStatuses) {
-        if (filter.accept(status.getPath()) && acceptor.accept(status)) {
-          filteredStatusList.add(status);
-        }
-      }
-      filteredStatusList.trimToSize();
-    }
-
-    @Override
-    public boolean hasNext() throws IOException {
-      return index < filteredStatusList.size();
-    }
-
-    @Override
-    public S3AFileStatus next() throws IOException {
-      if (!hasNext()) {
-        throw new NoSuchElementException();
-      }
-      return filteredStatusList.get(index++);
-    }
   }
 
   /**
