@@ -22,14 +22,18 @@ import java.util.UUID;
 
 public class TrackingContext {
   private String clientCorrelationID;
-  private final String clientRequestID;
+  private String clientRequestID;
 
   public TrackingContext(String clientCorrelationID) {
-    clientRequestID = UUID.randomUUID().toString();
     this.clientCorrelationID = clientCorrelationID;
   }
 
+  public void setClientRequestID() {
+    clientRequestID = UUID.randomUUID().toString();
+  }
+
   public String toString() {
+    setClientRequestID();
     return clientCorrelationID + ":" + clientRequestID;
   }
 }

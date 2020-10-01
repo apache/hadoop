@@ -211,6 +211,9 @@ public class AbfsRestOperation {
     AbfsHttpOperation httpOperation = null;
     try {
       // initialize the HTTP request and open the connection
+      client.getTrackingContext().setClientRequestID();
+      requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID,
+          client.getTrackingContext().toString()));
       httpOperation = new AbfsHttpOperation(url, method, requestHeaders);
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
 

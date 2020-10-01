@@ -138,6 +138,10 @@ public class AbfsClient implements Closeable {
     return filesystem;
   }
 
+  public TrackingContext getTrackingContext() {
+    return trackingContext;
+  }
+
   protected AbfsPerfTracker getAbfsPerfTracker() {
     return abfsPerfTracker;
   }
@@ -159,9 +163,6 @@ public class AbfsClient implements Closeable {
             UTF_8));
     requestHeaders.add(new AbfsHttpHeader(CONTENT_TYPE, EMPTY_STRING));
     requestHeaders.add(new AbfsHttpHeader(USER_AGENT, userAgent));
-    requestHeaders.add(
-        new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID,
-            trackingContext.toString()));
     return requestHeaders;
   }
 
