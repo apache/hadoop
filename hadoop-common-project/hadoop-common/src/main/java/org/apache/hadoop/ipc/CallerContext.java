@@ -26,7 +26,9 @@ import org.apache.hadoop.conf.Configuration;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.List;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_SEPARATOR_KEY;
@@ -119,8 +121,9 @@ public final class CallerContext {
      * The illegal separators include '\t', '\n', '='.
      * User should not set illegal separator.
      */
-    private static final List<String> ILLEGAL_SEPARATORS =
-        Arrays.asList("\t","\n","=");
+    private static final Set<String> ILLEGAL_SEPARATORS =
+        Collections.unmodifiableSet(
+            new HashSet<>(Arrays.asList("\t","\n","=")));
     private final String fieldSeparator;
     private final StringBuilder sb = new StringBuilder();
     private byte[] signature;
@@ -145,8 +148,7 @@ public final class CallerContext {
      * @param separator the separator of fields.
      */
     private void checkFieldSeparator(String separator) {
-      if (ILLEGAL_SEPARATORS.stream()
-          .anyMatch(sep -> separator.contains(sep))) {
+      if (ILLEGAL_SEPARATORS.contains(separator)) {
         throw new IllegalArgumentException("Illegal field separator: "
             + separator);
       }
