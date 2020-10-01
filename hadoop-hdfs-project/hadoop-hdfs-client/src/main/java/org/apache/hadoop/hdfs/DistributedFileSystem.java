@@ -2034,7 +2034,7 @@ public class DistributedFileSystem extends FileSystem
 
   /**
    * HDFS only.
-   * 
+   *
    * Returns if the NameNode enabled the snapshot trash root configuration
    * dfs.namenode.snapshot.trashroot.enabled
    * @return true if NameNode enabled snapshot trash root
@@ -2947,7 +2947,7 @@ public class DistributedFileSystem extends FileSystem
 
   /**
    * HDFS only.
-   * 
+   *
    * Provision snapshottable directory trash.
    * @param path Path to a snapshottable directory.
    * @param trashPermission Expected FsPermission of the trash root.

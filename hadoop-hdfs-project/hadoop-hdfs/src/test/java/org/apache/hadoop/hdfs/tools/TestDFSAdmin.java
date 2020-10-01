@@ -955,9 +955,9 @@ public class TestDFSAdmin {
         UserGroupInformation.getLoginUser().getShortUserName();
     final Path trashRootUserSubdir = new Path(trashRoot, username);
     assertTrue(dfs.exists(trashRootUserSubdir));
-    final FsPermission TRASH_USERDIR_PERMISSION = new FsPermission(
+    final FsPermission trashUserdirPermission = new FsPermission(
         FsAction.ALL, FsAction.NONE, FsAction.NONE, false);
-    assertEquals(TRASH_USERDIR_PERMISSION,
+    assertEquals(trashUserdirPermission,
         dfs.getFileStatus(trashRootUserSubdir).getPermission());
 
     // disallowSnapshot should fail when .Trash is not empty
