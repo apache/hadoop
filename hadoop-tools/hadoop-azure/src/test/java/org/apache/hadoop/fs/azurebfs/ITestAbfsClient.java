@@ -138,10 +138,10 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
       Assertions.assertThat(responseHeader)
           .describedAs("Should contain request IDs")
           .startsWith(clientCorrelationId);
-    } else {
-      Assertions.assertThat(responseHeader).describedAs(
-          "Invalid or empty correlationId value"
-              + " should be converted to empty string").startsWith(":");
+    } else if (clientCorrelationId.length() > 0){
+      assertFalse(
+          "Invalid or empty correlationId value should not be included in header",
+          responseHeader.contains(clientCorrelationId));
     }
   }
 

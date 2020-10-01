@@ -303,15 +303,9 @@ public class AbfsConfiguration{
 
   /**
    * Gets client correlation ID provided in config.
-   * @return Client Correlation ID config value or empty string (default value)
-   * if length and character constraints are not met
+   * @return Client Correlation ID config value
    */
   public String getClientCorrelationID() {
-    if ((clientCorrelationID.length() > MAX_CLIENT_CORRELATION_ID_LENGTH) ||
-        (!clientCorrelationID.matches(CLIENT_CORRELATION_ID_PATTERN))) {
-          return DEFAULT_FS_AZURE_CLIENT_CORRELATION_ID;
-    }
-
     return clientCorrelationID;
   }
 
