@@ -2644,6 +2644,30 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
+   * Override subclass such that we benefit for async listing done
+   * in {@code S3AFileSystem}. See {@code Listing#ObjectListingIterator}.
+   * {@inheritDoc}
+   *
+   */
+  @Override
+  public RemoteIterator<FileStatus> listStatusIterator(Path p)
+          throws FileNotFoundException, IOException {
+    RemoteIterator<S3AFileStatus> listStatusItr = once("listStatus",
+            p.toString(), () -> innerListStatus(p));
+    return new RemoteIterator<FileStatus>() {
+      @Override
+      public boolean hasNext() throws IOException {
+        return listStatusItr.hasNext();
+      }
+
+      @Override
+      public FileStatus next() throws IOException {
+        return listStatusItr.next();
+      }
+    };
+  }
+
+  /**
    * List the statuses of the files/directories in the given path if the path is
    * a directory.
    *
