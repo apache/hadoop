@@ -1159,7 +1159,8 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     CREATE_SNAPSHOT, RENAME_SNAPSHOT, DELETE_SNAPSHOT,
     ALLOW_SNAPSHOT, DISALLOW_SNAPSHOT, DISALLOW_SNAPSHOT_EXCEPTION,
     FILE_STATUS_ATTR, GET_SNAPSHOT_DIFF, GET_SNAPSHOTTABLE_DIRECTORY_LIST,
-    GET_SNAPSHOT_LIST
+    GET_SNAPSHOT_LIST, GET_SERVERDEFAULTS, CHECKACCESS, SETECPOLICY,
+    SATISFYSTORAGEPOLICY
   }
 
   private void operation(Operation op) throws Exception {
@@ -1282,6 +1283,18 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       break;
     case GET_SNAPSHOT_LIST:
       testGetSnapshotListing();
+      break;
+    case GET_SERVERDEFAULTS:
+      testGetServerDefaults();
+      break;
+    case CHECKACCESS:
+      testAccess();
+      break;
+    case SETECPOLICY:
+      testErasureCodingPolicy();
+      break;
+    case SATISFYSTORAGEPOLICY:
+      testStoragePolicySatisfier();
       break;
     }
 
