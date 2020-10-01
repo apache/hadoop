@@ -25,6 +25,7 @@ import java.util.EnumSet;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * Metadata about a snapshottable directory.
@@ -83,8 +84,8 @@ public class SnapshotStatus {
   }
 
   /**
-   * sets the prent path name.
-   * @param path parent path
+   * sets the path name.
+   * @param path path
    */
   public void setParentFullPath(byte[] path) {
     parentFullPath = path;
@@ -183,7 +184,7 @@ public class SnapshotStatus {
     return Math.max(n, String.valueOf(value).length());
   }
 
-  static String getSnapshotPath(String snapshottableDir,
+  public static String getSnapshotPath(String snapshottableDir,
                                 String snapshotRelativePath) {
     String parentFullPathStr =
         snapshottableDir == null || snapshottableDir.isEmpty() ?
@@ -196,5 +197,10 @@ public class SnapshotStatus {
         .append(Path.SEPARATOR)
         .append(snapshotRelativePath)
         .toString();
+  }
+
+  public static String getParentPath(String snapshotPath) {
+    int index = snapshotPath.indexOf(HdfsConstants.DOT_SNAPSHOT_DIR);
+    return index == -1 ? snapshotPath : snapshotPath.substring(0, index - 1);
   }
 }

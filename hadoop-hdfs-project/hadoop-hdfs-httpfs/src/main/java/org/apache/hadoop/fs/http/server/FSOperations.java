@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.lib.service.FileSystemAccess;
@@ -1827,6 +1828,43 @@ public class FSOperations {
         sds = dfs.getSnapshottableDirListing();
       } else {
         throw new UnsupportedOperationException("getSnapshottableDirListing is "
+            + "not supported for HttpFs on " + fs.getClass()
+            + ". Please check your fs.defaultFS configuration");
+      }
+      return JsonUtil.toJsonString(sds);
+    }
+  }
+
+  /**
+   *  Executor that performs a getSnapshotListing operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSGetSnapshotListing implements
+      FileSystemAccess.FileSystemExecutor<String> {
+    private Path path;
+
+    /**
+     * Creates a getSnapshotDiff executor.
+     * @param path directory path of the snapshots to be examined.
+     */
+    public FSGetSnapshotListing(String path) {
+      this.path = new Path(path);
+    }
+
+    /**
+     * Executes the filesystem operation.
+     * @param fs filesystem instance to use.
+     * @return A JSON string of all snapshots for a snapshottable directory.
+     * @throws IOException thrown if an IO error occurred.
+     */
+    @Override
+    public String execute(FileSystem fs) throws IOException {
+      SnapshotStatus[] sds = null;
+      if (fs instanceof DistributedFileSystem) {
+        DistributedFileSystem dfs = (DistributedFileSystem) fs;
+        sds = dfs.getSnapshotListing(path);
+      } else {
+        throw new UnsupportedOperationException("getSnapshotListing is "
             + "not supported for HttpFs on " + fs.getClass()
             + ". Please check your fs.defaultFS configuration");
       }
