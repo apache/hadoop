@@ -3833,7 +3833,7 @@
       The separator is for context which maybe contain many fields. For example,
       if the separator is ',',  and there are two key/value fields in context,
       in which case the context string is "key1:value1,key2:value2". The
-      separator should not contain '\t', '\n', '=', etc.
+      separator should not contain '\t', '\n', '='.
     </description>
   </property>
 <!-- SequenceFile's Sorter properties -->

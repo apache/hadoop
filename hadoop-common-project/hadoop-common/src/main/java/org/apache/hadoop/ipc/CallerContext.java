@@ -116,7 +116,7 @@ public final class CallerContext {
   public static final class Builder {
     private static final String KEY_VALUE_SEPARATOR = ":";
     /**
-     * The illegal separators include '\t', '\n', '=', etc.
+     * The illegal separators include '\t', '\n', '='.
      * User should not set illegal separator.
      */
     private static final List<String> ILLEGAL_SEPARATORS =
@@ -140,7 +140,7 @@ public final class CallerContext {
 
     /**
      * Check whether the separator is legal.
-     * The illegal separators include '\t', '\n', '=', etc.
+     * The illegal separators include '\t', '\n', '='.
      * Throw IllegalArgumentException if the separator is Illegal.
      * @param separator the separator of fields.
      */
@@ -154,7 +154,7 @@ public final class CallerContext {
 
     /**
      * Whether the field is valid.
-     * The field should not contain '\t', '\n', '=', etc.
+     * The field should not contain '\t', '\n', '='.
      * Because the context could be written to audit log.
      * @param field one of the fields in context.
      * @return true if the field is not null or empty.
