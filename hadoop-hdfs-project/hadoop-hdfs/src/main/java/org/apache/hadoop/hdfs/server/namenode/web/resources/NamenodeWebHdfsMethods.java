@@ -57,7 +57,7 @@ import javax.ws.rs.core.Response.Status;
 
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageType;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -86,6 +86,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
@@ -1338,6 +1339,12 @@ public class NamenodeWebHdfsMethods {
       SnapshottableDirectoryStatus[] snapshottableDirectoryList =
           cp.getSnapshottableDirListing();
       final String js = JsonUtil.toJsonString(snapshottableDirectoryList);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
+    case GETSNAPSHOTLIST: {
+      SnapshotStatus[] snapshotList =
+          cp.getSnapshotListing(fullpath);
+      final String js = JsonUtil.toJsonString(snapshotList);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     default:

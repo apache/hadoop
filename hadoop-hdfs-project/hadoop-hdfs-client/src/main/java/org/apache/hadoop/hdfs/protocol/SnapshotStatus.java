@@ -73,6 +73,15 @@ public class SnapshotStatus {
     this.parentFullPath = parentFullPath;
   }
 
+  public SnapshotStatus(HdfsFileStatus dirStatus,
+                                      int snapshotID, boolean isDeleted,
+                                      byte[] parentFullPath) {
+    this.dirStatus = dirStatus;
+    this.snapshotID = snapshotID;
+    this.isDeleted = isDeleted;
+    this.parentFullPath = parentFullPath;
+  }
+
   /**
    * sets the prent path name.
    * @param path parent path

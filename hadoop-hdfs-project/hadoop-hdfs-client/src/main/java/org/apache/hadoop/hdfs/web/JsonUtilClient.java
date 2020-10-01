@@ -36,18 +36,8 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtilClient;
-import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
-import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
-import org.apache.hadoop.hdfs.protocol.DirectoryListing;
-import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.io.erasurecode.ECSchema;
@@ -871,5 +861,38 @@ public class JsonUtilClient {
         new SnapshottableDirectoryStatus(dirStatus, snapshotNumber,
             snapshotQuota, parentFullPath);
     return snapshottableDirectoryStatus;
+  }
+
+  public static SnapshotStatus[] toSnapshotList(
+      final Map<?, ?> json) {
+    if (json == null) {
+      return null;
+    }
+    List<?> list = (List<?>) json.get("SnapshotList");
+    if (list == null) {
+      return null;
+    }
+    SnapshotStatus[] statuses =
+        new SnapshotStatus[list.size()];
+    for (int i = 0; i < list.size(); i++) {
+      statuses[i] = toSnapshotStatus((Map<?, ?>) list.get(i));
+    }
+    return statuses;
+  }
+
+  private static SnapshotStatus toSnapshotStatus(
+      Map<?, ?> json) {
+    if (json == null) {
+      return null;
+    }
+    int snapshotID = getInt(json, "snapshotID", 0);
+    boolean isDeleted = (Boolean)(json.get("isDeleted"));
+    byte[] parentFullPath = toByteArray((String) json.get("parentFullPath"));
+    HdfsFileStatus dirStatus =
+        toFileStatus((Map<?, ?>) json.get("dirStatus"), false);
+    SnapshotStatus snapshotStatus =
+        new SnapshotStatus(dirStatus, snapshotID,
+            isDeleted, parentFullPath);
+    return snapshotStatus;
   }
 }
