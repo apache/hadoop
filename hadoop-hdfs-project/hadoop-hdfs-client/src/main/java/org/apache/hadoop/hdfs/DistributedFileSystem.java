@@ -3006,15 +3006,16 @@ public class DistributedFileSystem extends FileSystem
       // Trash path doesn't exist. Continue
     }
 
-    // Print a warning if snapshot trash root feature is not enabled
-    if (!isSnapshotTrashRootEnabled()) {
-      DFSClient.LOG.warn("Snapshot trash root feature is disabled. This trash "
-          + "won't be used unless the feature is enabled on the NameNode.");
-    }
-
     // Create trash root and set the permission
     mkdir(trashPath, trashPermission);
     setPermission(trashPath, trashPermission);
+
+    // Print a warning if snapshot trash root feature is not enabled
+    if (!isSnapshotTrashRootEnabled()) {
+      DFSClient.LOG.warn("New trash is provisioned, but the snapshot trash root"
+          + " feature is disabled. This new trash but won't be automatically"
+          + " utilized unless the feature is enabled on the NameNode.");
+    }
     return trashPath;
   }
 
