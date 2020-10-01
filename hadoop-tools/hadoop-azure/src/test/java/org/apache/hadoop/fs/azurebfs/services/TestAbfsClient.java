@@ -339,6 +339,7 @@ public final class TestAbfsClient {
     TrackingContext trackingContext = new TrackingContext("clientCorrID");
     client = TestAbfsClient.setAbfsClientField(client, "trackingContext",
         trackingContext);
+    when(client.getTrackingContext()).thenReturn(trackingContext);
 
     return client;
   }

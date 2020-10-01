@@ -42,12 +42,9 @@ public class TrackingContext {
     }
     else if (clientCorrelationID.length() > 0) {
       this.clientCorrelationID = clientCorrelationID + ":";
-      LOG.debug("Client correlation id has been validated and set successfully.");
     }
     else {
       this.clientCorrelationID = DEFAULT_FS_AZURE_CLIENT_CORRELATION_ID;
-      LOG.debug(
-          "Correlation id not provided in config, hence excluded from header.");
     }
   }
 
