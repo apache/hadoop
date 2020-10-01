@@ -28,28 +28,16 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 import org.apache.hadoop.util.JsonSerialization;
-import org.apache.hadoop.util.functional.FunctionRaisingIOE;
 
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatMaximumStatistic;
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatMeanStatistic;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatMeanStatisticMatches;
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatMinimumStatistic;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyCounterStatisticValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyGaugeStatisticValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyMaximumStatisticValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyMinimumStatisticValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
-import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
-import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_FAILURES;
-import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MAX;
-import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MEAN;
-import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MIN;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
-import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackFunctionDuration;
-import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
- *
  * Test the IOStatisticStore implementation.
  */
 public class TestIOStatisticsStore extends AbstractHadoopTestBase {
@@ -80,7 +68,6 @@ public class TestIOStatisticsStore extends AbstractHadoopTestBase {
         .withMinimums(MIN)
         .withMaximums(MAX)
         .withMeanStatistics(MEAN)
-        .withDurationTracking(OBJECT_LIST_REQUEST)
         .build();
   }
 
@@ -178,95 +165,13 @@ public class TestIOStatisticsStore extends AbstractHadoopTestBase {
     Assertions.assertThat(stats.incrementCounter("unknown", -10))
         .isEqualTo(0);
   }
+
   @Test
   public void testNegativeCounterIncrementIgnored() throws Throwable {
     Assertions.assertThat(stats.incrementCounter(COUNT, 2))
         .isEqualTo(2);
     Assertions.assertThat(stats.incrementCounter(COUNT, -10))
         .isEqualTo(2);
-  }
-
-  /**
-   * Duration tracking.
-   */
-  @Test
-  public void testDuration() throws Throwable {
-    DurationTracker tracker =
-        stats.trackDuration(OBJECT_LIST_REQUEST);
-    verifyCounterStatisticValue(stats, OBJECT_LIST_REQUEST, 1L);
-    sleep();
-    tracker.close();
-    try (DurationTracker ignored =
-             stats.trackDuration(OBJECT_LIST_REQUEST)) {
-      sleep();
-    }
-    LOG.info("Statistics: {}", stats);
-    verifyCounterStatisticValue(stats, OBJECT_LIST_REQUEST, 2L);
-    assertThatMinimumStatistic(stats,
-        OBJECT_LIST_REQUEST + SUFFIX_MIN)
-        .isGreaterThan(0);
-    assertThatMaximumStatistic(stats,
-        OBJECT_LIST_REQUEST + SUFFIX_MAX)
-        .isGreaterThan(0);
-    assertThatMeanStatistic(stats,
-        OBJECT_LIST_REQUEST + SUFFIX_MEAN)
-        .hasFieldOrPropertyWithValue("samples", 2L)
-        .matches(s -> s.getSum() > 0)
-        .matches(s -> s.mean() > 0.0);
-  }
-
-  public void sleep() {
-    try {
-      Thread.sleep(1000);
-    } catch (InterruptedException ignored) {
-    }
-  }
-
-  @Test
-  public void testDurationSuccess() throws Throwable {
-    FunctionRaisingIOE<Integer, Integer> fn
-        = trackFunctionDuration(stats, OBJECT_LIST_REQUEST,
-        (Integer x) -> x);
-    Assertions.assertThat(fn.apply(1)).isEqualTo(1);
-    verifyCounterStatisticValue(stats, OBJECT_LIST_REQUEST, 1L);
-    assertThatMinimumStatistic(stats,
-        OBJECT_LIST_REQUEST + SUFFIX_MIN)
-        .isGreaterThanOrEqualTo(0);
-    assertThatMaximumStatistic(stats,
-        OBJECT_LIST_REQUEST + SUFFIX_MAX)
-        .isGreaterThanOrEqualTo(0);
-
-  }
-
-  /**
-   * Trigger a failure and verify its the failure statistics
-   * which go up.
-   */
-  @Test
-  public void testDurationFailure() throws Throwable {
-    FunctionRaisingIOE<Integer, Integer> fn =
-        trackFunctionDuration(stats, OBJECT_LIST_REQUEST,
-             (Integer x) -> {
-               sleep();
-               return 100 / x;
-        });
-    intercept(ArithmeticException.class,
-        () -> fn.apply(0));
-    verifyCounterStatisticValue(stats, OBJECT_LIST_REQUEST, 1L);
-    verifyCounterStatisticValue(stats,
-        OBJECT_LIST_REQUEST + SUFFIX_FAILURES, 1L);
-    assertThatMinimumStatistic(stats,
-        OBJECT_LIST_REQUEST + SUFFIX_MIN)
-        .isLessThan(0);
-    assertThatMaximumStatistic(stats,
-        OBJECT_LIST_REQUEST + SUFFIX_MAX)
-        .isLessThan(0);
-    assertThatMinimumStatistic(stats,
-        OBJECT_LIST_REQUEST + SUFFIX_FAILURES + SUFFIX_MIN)
-        .isGreaterThan(0);
-    assertThatMaximumStatistic(stats,
-        OBJECT_LIST_REQUEST + SUFFIX_FAILURES + SUFFIX_MAX)
-        .isGreaterThan(0);
   }
 
 }
