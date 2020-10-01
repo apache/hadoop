@@ -88,8 +88,8 @@ public enum AbfsStatistic {
       "Total number of times blocking queue was shrunk."),
   WRITE_CURRENT_BUFFER_OPERATIONS("write_current_buffer_ops",
       "Total number of times the current buffer is written to the service."),
-  TIME_TAKEN_TO_PUT_REQUEST("time_taken_to_put_request",
-      "Total time taken to complete a put request.");
+  TIME_SPENT_ON_PUT_REQUEST("time_spent_on_put_request",
+      "Total time spent on a put request.");
 
 
   private String statName;

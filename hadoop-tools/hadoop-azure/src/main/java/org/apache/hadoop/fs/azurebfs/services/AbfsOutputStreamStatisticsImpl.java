@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
@@ -45,7 +46,7 @@ public class AbfsOutputStreamStatisticsImpl
           getStatName(WRITE_CURRENT_BUFFER_OPERATIONS)
       )
       .withDurationTracking(
-          getStatName(TIME_TAKEN_TO_PUT_REQUEST),
+          getStatName(TIME_SPENT_ON_PUT_REQUEST),
           getStatName(TIME_SPENT_ON_TASK_WAIT)
       )
       .build();
@@ -137,37 +138,37 @@ public class AbfsOutputStreamStatisticsImpl
 
   @VisibleForTesting
   public long getBytesToUpload() {
-    return ioStatisticsStore.getCounterReference(getStatName(BYTES_TO_UPLOAD)).get();
+    return ioStatisticsStore.counters().get(getStatName(BYTES_TO_UPLOAD));
   }
 
   @VisibleForTesting
   public long getBytesUploadSuccessful() {
-    return ioStatisticsStore.getCounterReference(getStatName(BYTES_UPLOAD_SUCCESSFUL)).get();
+    return ioStatisticsStore.counters().get(getStatName(BYTES_UPLOAD_SUCCESSFUL));
   }
 
   @VisibleForTesting
   public long getBytesUploadFailed() {
-    return ioStatisticsStore.getCounterReference(getStatName(BYTES_UPLOAD_FAILED)).get();
+    return ioStatisticsStore.counters().get(getStatName(BYTES_UPLOAD_FAILED));
   }
 
   @VisibleForTesting
   public long getTimeSpentOnTaskWait() {
-    return ioStatisticsStore.getCounterReference(getStatName(TIME_SPENT_ON_TASK_WAIT)).get();
+    return ioStatisticsStore.counters().get(getStatName(TIME_SPENT_ON_TASK_WAIT));
   }
 
   @VisibleForTesting
   public long getQueueShrunkOps() {
-    return ioStatisticsStore.getCounterReference(getStatName(QUEUE_SHRUNK_OPS)).get();
+    return ioStatisticsStore.counters().get(getStatName(QUEUE_SHRUNK_OPS));
   }
 
   @VisibleForTesting
   public long getWriteCurrentBufferOperations() {
-    return ioStatisticsStore.getCounterReference(getStatName(WRITE_CURRENT_BUFFER_OPERATIONS)).get();
+    return ioStatisticsStore.counters().get(getStatName(WRITE_CURRENT_BUFFER_OPERATIONS));
   }
 
   @VisibleForTesting
   public double getTimeSpentOnPutRequest() {
-    return ioStatisticsStore.getMeanStatistic(getStatName(TIME_TAKEN_TO_PUT_REQUEST) + ".mean").mean();
+    return ioStatisticsStore.meanStatistics().get(getStatName(TIME_SPENT_ON_PUT_REQUEST) + StoreStatisticNames.SUFFIX_MEAN).mean();
   }
 
   /**

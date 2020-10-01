@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemExc
 import org.apache.hadoop.fs.azurebfs.utils.CachedSASToken;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.io.ElasticByteBufferPool;
@@ -56,7 +57,8 @@ import static org.apache.hadoop.io.IOUtils.wrapException;
 /**
  * The BlobFsOutputStream for Rest AbfsClient.
  */
-public class AbfsOutputStream extends OutputStream implements Syncable, StreamCapabilities {
+public class AbfsOutputStream extends OutputStream implements Syncable,
+    StreamCapabilities, IOStatisticsSource {
 
   private final AbfsClient client;
   private final String path;
@@ -391,7 +393,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     final Future<Void> job =
         completionService.submit(IOStatisticsBinding
             .trackDurationOfCallable((IOStatisticsStore) ioStatistics,
-                AbfsStatistic.TIME_TAKEN_TO_PUT_REQUEST.getStatName(),
+                AbfsStatistic.TIME_SPENT_ON_PUT_REQUEST.getStatName(),
                 () -> {
                   AbfsPerfTracker tracker = client.getAbfsPerfTracker();
                   try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
@@ -567,8 +569,8 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     return maxRequestsThatCanBeQueued;
   }
 
-  @VisibleForTesting
-  public IOStatistics getIoStatistics() {
+  @Override
+  public IOStatistics getIOStatistics() {
     return ioStatistics;
   }
 

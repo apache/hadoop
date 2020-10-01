@@ -22,21 +22,16 @@ import java.io.IOException;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStreamStatisticsImpl;
-import org.apache.hadoop.fs.statistics.IOStatistics;
 
 /**
  * Test AbfsOutputStream statistics.
  */
 public class ITestAbfsOutputStreamStatistics
     extends AbstractAbfsIntegrationTest {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(ITestAbfsOutputStreamStatistics.class);
 
   private static final int OPERATIONS = 10;
 
@@ -246,7 +241,7 @@ public class ITestAbfsOutputStreamStatistics
           getAbfsOutputStreamStatistics(outputStream);
 
      Assertions.assertThat(abfsOutputStreamStatistics.getTimeSpentOnPutRequest())
-          .describedAs("Mismatch in timeTakenForPutRequest DurationTracker")
+          .describedAs("Mismatch in timeSpentOnPutRequest DurationTracker")
           .isGreaterThan(0.0);
     }
   }

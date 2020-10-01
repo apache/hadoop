@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.util.Random;
 
-import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
