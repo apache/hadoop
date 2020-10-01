@@ -348,14 +348,17 @@ public class FileOutputCommitter extends PathOutputCommitter {
    * @param context the job's context
    */
   public void setupJob(JobContext context) throws IOException {
-    // Downgrade v2 to v1 with a warning.
+    // warning about v2 which is made to a custom logger so people can
+    // turn it off if they are happy with the v2 commit protocol.
     if (algorithmVersion == 2) {
       Logger log = LoggerFactory.getLogger(
           "org.apache.hadoop.mapreduce.lib.output."
               + "FileOutputCommitter.Algorithm");
 
-      log.warn("The v2 commit algorithm is deprecated;"
-          + " please switch to the v1 algorithm");
+      log.warn("The v2 commit algorithm assumes that the content of generated output files is"
+          + " consistent across all task attempts"
+          + " -if this is not true for this job, switch to the v1 commit algorithm."
+          + " See MAPREDUCE-7282");
     }
 
     if (hasOutputPath()) {
