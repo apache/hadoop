@@ -356,7 +356,7 @@ public final class IOStatisticsBinding {
       DurationTrackerFactory factory,
       String statistic,
       FunctionRaisingIOE<A, B> inputFn) {
-    return (A x) -> {
+    return (x) -> {
       // create the tracker outside try-with-resources so
       // that failures can be set in the catcher.
       DurationTracker tracker = factory.trackDuration(statistic);
@@ -364,6 +364,43 @@ public final class IOStatisticsBinding {
         // exec the input function and return its value
         return inputFn.apply(x);
       } catch (IOException | RuntimeException e) {
+        // input function failed: note it
+        tracker.failed();
+        // and rethrow
+        throw e;
+      } finally {
+        // update the tracker.
+        // this is called after the catch() call would have
+        // set the failed flag.
+        tracker.close();
+      }
+    };
+  }
+
+  /**
+   * Given a java function/lambda expression,
+   * return a new one which wraps the inner and tracks
+   * the duration of the operation, including whether
+   * it passes/fails.
+   * @param factory factory of duration trackers
+   * @param statistic statistic key
+   * @param inputFn input function
+   * @param <A> type of argument to the input function.
+   * @param <B> return type.
+   * @return a new function which tracks duration and failure.
+   */
+  public static <A, B> Function<A, B> trackJavaFunctionDuration(
+      DurationTrackerFactory factory,
+      String statistic,
+      Function<A, B> inputFn) {
+    return (x) -> {
+      // create the tracker outside try-with-resources so
+      // that failures can be set in the catcher.
+      DurationTracker tracker = factory.trackDuration(statistic);
+      try {
+        // exec the input function and return its value
+        return inputFn.apply(x);
+      } catch (RuntimeException e) {
         // input function failed: note it
         tracker.failed();
         // and rethrow
@@ -448,6 +485,7 @@ public final class IOStatisticsBinding {
       }
     };
   }
+
 
 
 }
