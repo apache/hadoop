@@ -736,7 +736,7 @@ Storage Analytics logs in the `request-id-header` field as a prefix to the uniqu
 Id that ABFS driver associates with each request.
 Reference: [Storage Analytics log format](https://docs.microsoft.com/en-us/rest/api/storageservices/storage-analytics-log-format)
 
-This config accepts a string which can be maximum of 65 characters and should
+This config accepts a string which can be maximum of 73 characters and should
 contain alphanumeric characters and/or hyphens only. Defaults to empty string if
 input is invalid.
 
