@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.viewfs.ViewFileSystemOverloadScheme;
 import org.apache.hadoop.hdfs.DFSInotifyEventInputStream;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
@@ -80,6 +81,10 @@ public class HdfsAdmin {
    */
   public HdfsAdmin(URI uri, Configuration conf) throws IOException {
     FileSystem fs = FileSystem.get(uri, conf);
+    if ((fs instanceof ViewFileSystemOverloadScheme)) {
+      fs = ((ViewFileSystemOverloadScheme) fs)
+          .getRawFileSystem(new Path(FileSystem.getDefaultUri(conf)), conf);
+    }
     if (!(fs instanceof DistributedFileSystem)) {
       throw new IllegalArgumentException("'" + uri + "' is not an HDFS URI.");
     } else {
