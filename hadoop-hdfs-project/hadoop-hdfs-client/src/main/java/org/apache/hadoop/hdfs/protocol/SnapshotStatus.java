@@ -25,7 +25,6 @@ import java.util.EnumSet;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtilClient;
-import org.apache.hadoop.util.StringUtils;
 
 /**
  * Metadata about a snapshottable directory.

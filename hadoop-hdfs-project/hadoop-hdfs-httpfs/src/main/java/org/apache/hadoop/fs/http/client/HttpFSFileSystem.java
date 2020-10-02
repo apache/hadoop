@@ -1584,7 +1584,7 @@ public class HttpFSFileSystem extends FileSystem
     return JsonUtilClient.toSnapshottableDirectoryList(json);
   }
 
-  public SnapshotStatus[] getSnapshotList(Path snapshotRoot)
+  public SnapshotStatus[] getSnapshotListing(Path snapshotRoot)
       throws IOException {
     Map<String, String> params = new HashMap<String, String>();
     params.put(OP_PARAM, Operation.GETSNAPSHOTLIST.toString());

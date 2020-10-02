@@ -1460,7 +1460,7 @@ public class WebHdfsFileSystem extends FileSystem
     }.run();
   }
 
-  public SnapshotStatus[] getSnapshotList(final Path snapshotDir)
+  public SnapshotStatus[] getSnapshotListing(final Path snapshotDir)
       throws IOException {
     storageStatistics
         .incrementOpCounter(OpType.GET_SNAPSHOT_LIST);

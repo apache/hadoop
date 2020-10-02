@@ -860,7 +860,7 @@ public class TestWebHDFS {
       webHdfs.createSnapshot(foo, "s1");
       webHdfs.createSnapshot(foo, "s2");
       webHdfs.deleteSnapshot(foo, "s2");
-      SnapshotStatus[] statuses = webHdfs.getSnapshotList(foo);
+      SnapshotStatus[] statuses = webHdfs.getSnapshotListing(foo);
       SnapshotStatus[] dfsStatuses = dfs.getSnapshotListing(foo);
 
       for (int i = 0; i < dfsStatuses.length; i++) {

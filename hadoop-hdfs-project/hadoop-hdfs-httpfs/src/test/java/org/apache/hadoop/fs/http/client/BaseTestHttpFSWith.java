@@ -1683,10 +1683,10 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       SnapshotStatus[] snapshotStatus = null;
       if (fs instanceof HttpFSFileSystem) {
         HttpFSFileSystem httpFS = (HttpFSFileSystem) fs;
-         snapshotStatus = httpFS.getSnapshotList(path);
+         snapshotStatus = httpFS.getSnapshotListing(path);
       } else if (fs instanceof WebHdfsFileSystem) {
         WebHdfsFileSystem webHdfsFileSystem = (WebHdfsFileSystem) fs;
-        snapshotStatus = webHdfsFileSystem.getSnapshotList(path);
+        snapshotStatus = webHdfsFileSystem.getSnapshotListing(path);
       } else {
         Assert.fail(fs.getClass().getSimpleName() +
             " doesn't support getSnapshotDiff");

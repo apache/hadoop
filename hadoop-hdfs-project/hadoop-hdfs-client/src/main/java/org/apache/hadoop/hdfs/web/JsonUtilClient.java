@@ -896,8 +896,8 @@ public class JsonUtilClient {
       return null;
     }
     int snapshotID = getInt(json, "snapshotID", 0);
-    boolean isDeleted = ((String)json.get("deletionStatus")).
-        contentEquals("DELETED");
+    boolean isDeleted = "DELETED".equalsIgnoreCase(
+        (String)json.get("deletionStatus"));
     String fullPath = ((String) json.get("fullPath"));
 
     HdfsFileStatus dirStatus =
