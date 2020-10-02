@@ -25,11 +25,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class TrackingContext {
-  private String clientCorrelationID;
+  private final String clientCorrelationID;
   private String clientRequestID;
   private static final Logger LOG = LoggerFactory.getLogger(
       org.apache.hadoop.fs.azurebfs.services.AbfsClient.class);
-  public static final String DEFAULT_FS_AZURE_CLIENT_CORRELATION_ID = EMPTY_STRING;
   public static final int MAX_CLIENT_CORRELATION_ID_LENGTH = 72;
   public static final String CLIENT_CORRELATION_ID_PATTERN = "[a-zA-Z0-9-]*";
 
@@ -37,14 +36,14 @@ public class TrackingContext {
     //validation
     if ((clientCorrelationID.length() > MAX_CLIENT_CORRELATION_ID_LENGTH) ||
         (!clientCorrelationID.matches(CLIENT_CORRELATION_ID_PATTERN))) {
-      this.clientCorrelationID = DEFAULT_FS_AZURE_CLIENT_CORRELATION_ID;
+      this.clientCorrelationID = EMPTY_STRING;
       LOG.debug("Invalid config provided; correlation id not included in header.");
     }
     else if (clientCorrelationID.length() > 0) {
       this.clientCorrelationID = clientCorrelationID + ":";
     }
     else {
-      this.clientCorrelationID = DEFAULT_FS_AZURE_CLIENT_CORRELATION_ID;
+      this.clientCorrelationID = EMPTY_STRING;
     }
   }
 
