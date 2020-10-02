@@ -218,7 +218,7 @@ public class AbfsConfiguration{
   private String userAgentId;
 
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_CLIENT_CORRELATIONID,
-      DefaultValue = DEFAULT_FS_AZURE_CLIENT_CORRELATION_ID)
+      DefaultValue = AbfsHttpConstants.EMPTY_STRING)
   private String clientCorrelationID;
 
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_CLUSTER_NAME,

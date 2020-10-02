@@ -20,18 +20,18 @@ package org.apache.hadoop.fs.azurebfs.utils;
 
 import java.util.UUID;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.CLIENT_CORRELATION_ID_PATTERN;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_FS_AZURE_CLIENT_CORRELATION_ID;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MAX_CLIENT_CORRELATION_ID_LENGTH;
 
 public class TrackingContext {
   private String clientCorrelationID;
   private String clientRequestID;
   private static final Logger LOG = LoggerFactory.getLogger(
       org.apache.hadoop.fs.azurebfs.services.AbfsClient.class);
+  public static final String DEFAULT_FS_AZURE_CLIENT_CORRELATION_ID = EMPTY_STRING;
+  public static final int MAX_CLIENT_CORRELATION_ID_LENGTH = 72;
+  public static final String CLIENT_CORRELATION_ID_PATTERN = "[a-zA-Z0-9-]*";
 
   public TrackingContext(String clientCorrelationID) {
     //validation
