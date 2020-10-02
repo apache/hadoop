@@ -244,7 +244,7 @@ public class Lz4Compressor implements Compressor {
     }
 
     // Compress data
-    n = compressBytesDirect();
+    n = compressDirectBuf();
     compressedDirectBuf.limit(n);
     uncompressedDirectBuf.clear(); // lz4 consumes all buffer input
 
@@ -310,7 +310,7 @@ public class Lz4Compressor implements Compressor {
   public synchronized void end() {
   }
 
-  private int compressBytesDirect() {
+  private int compressDirectBuf() {
     if (uncompressedDirectBufLen == 0) {
       return 0;
     } else {

@@ -225,7 +225,7 @@ public class Lz4Decompressor implements Decompressor {
       uncompressedDirectBuf.limit(directBufferSize);
 
       // Decompress data
-      n = decompressBytesDirect();
+      n = decompressDirectBuf();
       uncompressedDirectBuf.limit(n);
 
       if (userBufLen <= 0) {
@@ -269,7 +269,7 @@ public class Lz4Decompressor implements Decompressor {
     // do nothing
   }
 
-  private int decompressBytesDirect() {
+  private int decompressDirectBuf() {
     if (compressedDirectBufLen == 0) {
       return 0;
     } else {
