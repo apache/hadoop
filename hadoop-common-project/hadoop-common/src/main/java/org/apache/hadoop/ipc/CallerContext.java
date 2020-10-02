@@ -123,7 +123,7 @@ public final class CallerContext {
      */
     private static final Set<String> ILLEGAL_SEPARATORS =
         Collections.unmodifiableSet(
-            new HashSet<>(Arrays.asList("\t","\n","=")));
+            new HashSet<>(Arrays.asList("\t", "\n", "=")));
     private final String fieldSeparator;
     private final StringBuilder sb = new StringBuilder();
     private byte[] signature;
