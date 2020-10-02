@@ -2481,7 +2481,8 @@ public class TestDistributedFileSystem {
       dfs.allowSnapshot(testDir);
       // Create trash root manually
       Path testDirTrashRoot = new Path(testDir, FileSystem.TRASH_PREFIX);
-      dfs.mkdirs(testDirTrashRoot);
+      Path dirInsideTrash = new Path(testDirTrashRoot, "user1");
+      dfs.mkdirs(dirInsideTrash);
       // Try disallowing snapshot, should throw
       LambdaTestUtils.intercept(IOException.class,
           () -> dfs.disallowSnapshot(testDir));

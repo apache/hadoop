@@ -3242,7 +3242,7 @@ public class DistributedFileSystem extends FileSystem
   }
 
   /**
-   * Get erasure coding policy information for the specified path
+   * Get erasure coding policy information for the specified path.
    *
    * @param path The path of the file or directory
    * @return Returns the policy information if file or directory on the path
