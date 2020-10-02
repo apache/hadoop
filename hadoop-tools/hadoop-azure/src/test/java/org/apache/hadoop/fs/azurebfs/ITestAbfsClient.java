@@ -127,7 +127,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     boolean isNamespaceEnabled = fs.getIsNamespaceEnabled();
     String permission = isNamespaceEnabled ? getOctalNotation(FsPermission.getDirDefault()) : null;
     String umask = isNamespaceEnabled ? getOctalNotation(FsPermission.getUMask(fs.getConf())) : null;
-    AbfsRestOperation op = client.createPath(path,false,true,
+    AbfsRestOperation op = client.createPath(path, false, true,
         permission, umask, false, null);
 
     int responseCode = op.getResult().getStatusCode();

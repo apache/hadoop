@@ -34,8 +34,8 @@ public class TrackingContext {
 
   public TrackingContext(String clientCorrelationID) {
     //validation
-    if ((clientCorrelationID.length() > MAX_CLIENT_CORRELATION_ID_LENGTH) ||
-        (!clientCorrelationID.matches(CLIENT_CORRELATION_ID_PATTERN))) {
+    if ((clientCorrelationID.length() > MAX_CLIENT_CORRELATION_ID_LENGTH)
+        || (!clientCorrelationID.matches(CLIENT_CORRELATION_ID_PATTERN))) {
       this.clientCorrelationID = EMPTY_STRING;
       LOG.debug("Invalid config provided; correlation id not included in header.");
     }
