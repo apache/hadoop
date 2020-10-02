@@ -156,9 +156,9 @@
                 </goals>
                 <configuration>
                   <target>
-                    <copy file="${basedir}/../../../hadoop-common-project/hadoop-common/src/main/native/src/org/apache/hadoop/io/compress/lz4/lz4.h"
+                    <copy file="${basedir}/src/main/native/lz4/lz4.h"
                       todir="${project.build.directory}/native/" />
-                    <copy file="${basedir}/../../../hadoop-common-project/hadoop-common/src/main/native/src/org/apache/hadoop/io/compress/lz4/lz4.c"
+                    <copy file="${basedir}/src/main/native/lz4/lz4.c"
                       todir="${project.build.directory}/native/" />
                     <copy todir="${project.build.directory}/native/test/testData"
                       overwrite="true">
