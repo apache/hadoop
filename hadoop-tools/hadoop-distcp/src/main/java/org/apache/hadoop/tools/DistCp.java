@@ -127,6 +127,7 @@ public class DistCp extends Configured implements Tool {
    * to target location, by:
    *  1. Creating a list of files to be copied to target.
    *  2. Launching a Map-only job to copy the files. (Delegates to execute().)
+   *  The MR job is not closed as part of run if its a blocking call to run
    * @param argv List of arguments passed to DistCp, from the ToolRunner.
    * @return On success, it returns 0. Else, -1.
    */
@@ -148,9 +149,10 @@ public class DistCp extends Configured implements Tool {
       OptionsParser.usage();      
       return DistCpConstants.INVALID_ARGUMENT;
     }
-    
+
+    Job job = null;
     try {
-      execute();
+      job = execute();
     } catch (InvalidInputException e) {
       LOG.error("Invalid input: ", e);
       return DistCpConstants.INVALID_ARGUMENT;
@@ -166,6 +168,15 @@ public class DistCp extends Configured implements Tool {
     } catch (Exception e) {
       LOG.error("Exception encountered ", e);
       return DistCpConstants.UNKNOWN_ERROR;
+    } finally {
+      //Blocking distcp so close the job after its done
+      if (job != null && context.shouldBlock()) {
+        try {
+          job.close();
+        } catch (IOException e) {
+          LOG.error("Exception encountered while closing distcp job", e);
+        }
+      }
     }
     return DistCpConstants.SUCCESS;
   }
