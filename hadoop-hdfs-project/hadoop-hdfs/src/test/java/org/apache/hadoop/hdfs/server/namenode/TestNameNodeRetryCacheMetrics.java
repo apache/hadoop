@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.junit.Before;
 import org.junit.After;
 import org.junit.Test;
@@ -56,8 +57,14 @@ public class TestNameNodeRetryCacheMetrics {
   public void setup() throws Exception {
     conf = new HdfsConfiguration();
     conf.setBoolean(DFS_NAMENODE_ENABLE_RETRY_CACHE_KEY, true);
+    conf.setBoolean(HdfsClientConfigKeys.Failover.RANDOM_ORDER, false);
     conf.setInt(HdfsClientConfigKeys.DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_KEY, 2);
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+    cluster = new MiniDFSCluster.Builder(conf)
+        .nnTopology(MiniDFSNNTopology.simpleHATopology()).numDataNodes(3)
+        .build();
+    cluster.waitActive();
+    cluster.transitionToActive(namenodeId);
+    HATestUtil.setFailoverConfigurations(cluster, conf);
     filesystem = (DistributedFileSystem) HATestUtil.configureFailoverFs(cluster, conf);
     namesystem = cluster.getNamesystem(namenodeId);
     metrics = namesystem.getRetryCache().getMetricsForTests();
