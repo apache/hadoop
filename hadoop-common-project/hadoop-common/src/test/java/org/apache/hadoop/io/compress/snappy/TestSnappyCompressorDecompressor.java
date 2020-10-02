@@ -354,7 +354,7 @@ public class TestSnappyCompressorDecompressor {
   @Test
   public void testSnappyDirectBlockCompression() {
     int[] size = new int[] {
-      4 * 1024, 64 * 1024, 128 * 1024, 1024 * 1024
+        4 * 1024, 64 * 1024, 128 * 1024, 1024 * 1024
     };
     try {
       for (int i = 0; i < size.length; i++) {
