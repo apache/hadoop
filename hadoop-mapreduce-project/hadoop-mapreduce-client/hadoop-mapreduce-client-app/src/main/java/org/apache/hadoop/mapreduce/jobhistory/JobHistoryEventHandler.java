@@ -227,7 +227,7 @@ public class JobHistoryEventHandler extends AbstractService
       }
       }
     } catch (IOException e) {
-      LOG.error("Failed checking for the existance of history intermediate " +
+      LOG.error("Failed checking for the existence of history intermediate " +
       		"done directory: [" + doneDirPath + "]");
       throw new YarnRuntimeException(e);
     }
