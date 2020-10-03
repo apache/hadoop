@@ -514,12 +514,11 @@ class BPServiceActor implements Runnable {
 
       cmd = bpNamenode.cacheReport(bpRegistration, bpid, blockIds);
       long sendTime = monotonicNow();
-      long createCost = createTime - startTime;
       long sendCost = sendTime - createTime;
       dn.getMetrics().addCacheReport(sendCost);
       if (LOG.isDebugEnabled()) {
         LOG.debug("CacheReport of " + blockIds.size()
-            + " block(s) took " + createCost + " msecs to generate and "
+            + " block(s) took " + (createTime - startTime) + " msecs to generate and "
             + sendCost + " msecs for RPC and NN processing");
       }
     }
