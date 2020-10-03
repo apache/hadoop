@@ -127,7 +127,7 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
         ApplicationMetricsConstants.APP_NODE_LABEL_EXPRESSION,
         app.getAppNodeLabelExpression());
     if (app.getCallerContext() != null) {
-      if (app.getCallerContext().getContext() != null) {
+      if (app.getCallerContext().isContextValid()) {
         entityInfo.put(ApplicationMetricsConstants.YARN_APP_CALLER_CONTEXT,
             app.getCallerContext().getContext());
       }

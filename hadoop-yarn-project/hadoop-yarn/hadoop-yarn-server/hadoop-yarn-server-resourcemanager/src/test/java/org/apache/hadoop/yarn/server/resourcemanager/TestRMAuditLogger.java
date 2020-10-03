@@ -177,7 +177,7 @@ public class TestRMAuditLogger {
       expLog.append("\tRESOURCE=<memory:1536, vcores:1>");
     }
     if (callerContext != null) {
-      if (callerContext.getContext() != null) {
+      if (callerContext.isContextValid()) {
         expLog.append("\tCALLERCONTEXT=context");
       }
       if (callerContext.getSignature() != null) {
@@ -328,7 +328,7 @@ public class TestRMAuditLogger {
       expLog.append("\tRESOURCE=<memory:1536, vcores:1>");
     }
     if (callerContext != null) {
-      if (callerContext.getContext() != null) {
+      if (callerContext.isContextValid()) {
         expLog.append("\tCALLERCONTEXT=context");
       }
       if (callerContext.getSignature() != null) {
