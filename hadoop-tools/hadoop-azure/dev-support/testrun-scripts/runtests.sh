@@ -19,7 +19,8 @@
 # unused variables are global in nature and used in testsupport.sh
 
 # shellcheck disable=SC1091
-source ./testsupport.sh
+scriptdir="$(dirname "$0")"
+. $scriptdir/testsupport.sh
 threadcount=$1
 
 ### ADD THE TEST COMBINATIONS BELOW. DO NOT EDIT THE ABOVE LINES.

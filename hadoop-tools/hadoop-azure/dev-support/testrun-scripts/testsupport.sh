@@ -24,6 +24,14 @@ threadcount=
 defaultthreadcount=8
 
 validate() {
+  if ! [ -s "$conffile" ] ; then
+    echo "Exiting. conf file is empty"
+    exit -1
+  fi
+  if ! xmlstarlet val --well-formed "$conffile" ; then
+    echo "Exiting. conf file is not well formed xml"
+    exit -1
+  fi
   if [ -z "$threadcount" ] ; then
     threadcount=$defaultthreadcount
   fi

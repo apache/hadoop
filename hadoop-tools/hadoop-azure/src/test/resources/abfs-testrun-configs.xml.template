@@ -116,33 +116,6 @@
     <value>{Client secret of SP with RBAC Storage Blob Data Reader}</value>
   </property>
 
-  <!--========== Check access related configs ===========-->
-  <property>
-    <name>fs.azure.account.test.oauth2.client.id</name>
-    <value>{client id}</value>
-    <description>AAD client id.</description>
-  </property>
-  <property>
-    <name>fs.azure.account.test.oauth2.client.secret</name>
-    <value>{Client secret}</value>
-  </property>
-  <property>
-    <name>fs.azure.check.access.testuser.guid</name>
-    <value>{The guid of the service principal}</value>
-    <description>We are setting the ACLs for this guid to test checkaccess.
-      How to find service principal's guid: Try to get the token with the SP.
-      decode the token using jwt decoder use the oid field from the decoded
-      json string as guid.
-    </description>
-  </property>
-  <property>
-    <name>fs.azure.enable.check.access</name>
-    <value>true</value>
-    <description>Change this to false to disable check access
-      feature
-    </description>
-  </property>
-
   <!--========== Append blob related configs ===========-->
   <property>
     <name>fs.azure.test.appendblob.enabled</name>
