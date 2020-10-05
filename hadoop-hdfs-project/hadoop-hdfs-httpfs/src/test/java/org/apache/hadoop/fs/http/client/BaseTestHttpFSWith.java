@@ -1683,7 +1683,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       SnapshotStatus[] snapshotStatus = null;
       if (fs instanceof HttpFSFileSystem) {
         HttpFSFileSystem httpFS = (HttpFSFileSystem) fs;
-         snapshotStatus = httpFS.getSnapshotListing(path);
+        snapshotStatus = httpFS.getSnapshotListing(path);
       } else if (fs instanceof WebHdfsFileSystem) {
         WebHdfsFileSystem webHdfsFileSystem = (WebHdfsFileSystem) fs;
         snapshotStatus = webHdfsFileSystem.getSnapshotListing(path);
@@ -1697,7 +1697,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       SnapshotStatus[] dfsStatus =
           dfs.getSnapshotListing(path);
       Assert.assertEquals(JsonUtil.toJsonString(snapshotStatus),
-          JsonUtil.toJsonString(dfsStatus));;
+          JsonUtil.toJsonString(dfsStatus));
       // Cleanup
       fs.deleteSnapshot(path, "snap2");
       fs.deleteSnapshot(path, "snap1");

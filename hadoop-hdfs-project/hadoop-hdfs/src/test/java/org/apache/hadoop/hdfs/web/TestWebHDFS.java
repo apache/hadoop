@@ -846,7 +846,6 @@ public class TestWebHDFS {
 
   @Test
   public void testWebHdfsSnapshotList() throws Exception {
-    MiniDFSCluster cluster = null;
     final Configuration conf = WebHdfsTestUtil.createConf();
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();

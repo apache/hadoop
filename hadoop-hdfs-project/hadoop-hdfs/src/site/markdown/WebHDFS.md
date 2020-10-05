@@ -1642,7 +1642,7 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).renameSna
                 }
             ]
         }
-        
+
 ### Get Snapshot List
 
 * Submit a HTTP GET request.
