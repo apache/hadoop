@@ -47,7 +47,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         StreamCapabilities {
   private static final Logger LOG = LoggerFactory.getLogger(AbfsInputStream.class);
 
-  private static int NUM_OF_READ_AHEAD_BUFFERS;
   private static int READ_AHEAD_BLOCK_SIZE;
   private final AbfsClient client;
   private final Statistics statistics;
@@ -97,7 +96,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.cachedSasToken = new CachedSASToken(
         abfsInputStreamContext.getSasTokenRenewPeriodForStreamsInSeconds());
     this.streamStatistics = abfsInputStreamContext.getStreamStatistics();
-    NUM_OF_READ_AHEAD_BUFFERS = abfsInputStreamContext.getReadAheadBufferCount();
     READ_AHEAD_BLOCK_SIZE = abfsInputStreamContext.getReadAheadBlockSize();
     if (this.bufferSize > READ_AHEAD_BLOCK_SIZE) {
       LOG.debug(
@@ -108,7 +106,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       READ_AHEAD_BLOCK_SIZE = this.bufferSize;
     }
 
-    ReadBufferManager.setReadBufferManagerConfigs(NUM_OF_READ_AHEAD_BUFFERS, READ_AHEAD_BLOCK_SIZE);
+    ReadBufferManager.setReadBufferManagerConfigs(READ_AHEAD_BLOCK_SIZE);
   }
 
   public String getPath() {
@@ -248,9 +246,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       // First read to queue needs to be of readBufferSize and later
       // of readAhead Block size
       long nextSize = Math.min((long) bufferSize, contentLength - nextOffset);
-      // If the determined size turns out larger than READ_AHEAD_BLOCK_SIZE
-      // then read needs to be scheduled for READ_AHEAD_BLOCK_SIZE
-      nextSize = Math.min(nextSize, READ_AHEAD_BLOCK_SIZE);
       LOG.debug("read ahead enabled issuing readheads num = {}", numReadAheads);
       while (numReadAheads > 0 && nextOffset < contentLength) {
         LOG.debug("issuing read ahead requestedOffset = {} requested size {}",

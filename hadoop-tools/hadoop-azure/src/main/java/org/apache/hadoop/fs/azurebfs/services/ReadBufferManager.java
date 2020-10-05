@@ -37,7 +37,7 @@ import com.google.common.annotations.VisibleForTesting;
  */
 final class ReadBufferManager {
   private static final Logger LOGGER = LoggerFactory.getLogger(ReadBufferManager.class);
-  private static int NUM_BUFFERS = 16;
+  private static final int NUM_BUFFERS = 16;
   private static int BLOCK_SIZE = 4 * 1024 * 1024;
   private static final int NUM_THREADS = 8;
   private static final int DEFAULT_THRESHOLD_AGE_MILLISECONDS = 3000; // have to see if 3 seconds is a good threshold
@@ -68,9 +68,8 @@ final class ReadBufferManager {
     return BUFFER_MANAGER;
   }
 
-  static void setReadBufferManagerConfigs(int numOfReadAheadBuffers, int readAheadBlockSize) {
+  static void setReadBufferManagerConfigs(int readAheadBlockSize) {
     if (BUFFER_MANAGER == null) {
-      NUM_BUFFERS = numOfReadAheadBuffers;
       BLOCK_SIZE = readAheadBlockSize;
     }
   }
@@ -258,22 +257,12 @@ final class ReadBufferManager {
 
     // next, try any old nodes that have not been consumed
     long earliestBirthday = Long.MAX_VALUE;
-    ArrayList<ReadBuffer> oldFailedBuffers = new ArrayList<>();
     for (ReadBuffer buf : completedReadList) {
       if ((buf.getBufferindex() != -1) &&
           (buf.getTimeStamp() < earliestBirthday)) {
         nodeToEvict = buf;
         earliestBirthday = buf.getTimeStamp();
-      } else if ((buf != null) && (buf.getBufferindex() == -1)
-          && (currentTimeMillis() - buf.getTimeStamp())
-          > thresholdAgeMilliseconds) {
-        oldFailedBuffers.add(buf);
       }
-    }
-
-    // Try to clean up old failed readahead threads
-    for (ReadBuffer buf : oldFailedBuffers) {
-      evict(buf);
     }
 
     if ((currentTimeMillis() - earliestBirthday > thresholdAgeMilliseconds) && (nodeToEvict != null)) {
@@ -446,6 +435,7 @@ final class ReadBufferManager {
       if (result == ReadBufferStatus.AVAILABLE && bytesActuallyRead > 0) {
         buffer.setStatus(ReadBufferStatus.AVAILABLE);
         buffer.setLength(bytesActuallyRead);
+        completedReadList.add(buffer);
       } else {
         freeList.push(buffer.getBufferindex());
         // buffer will be deleted as per the eviction policy.
@@ -522,10 +512,9 @@ final class ReadBufferManager {
   }
 
   @VisibleForTesting
-  void testResetReadBufferManager(int readAheadBlockSize, int readAheadBufferCount, int threasholdTimeSpan) {
-    NUM_BUFFERS = readAheadBufferCount;
+  void testResetReadBufferManager(int readAheadBlockSize, int thresholdAgeMilliseconds) {
     BLOCK_SIZE = readAheadBlockSize;
-    thresholdAgeMilliseconds = threasholdTimeSpan;
+    thresholdAgeMilliseconds = thresholdAgeMilliseconds;
     testResetReadBufferManager();
   }
 
@@ -569,10 +558,5 @@ final class ReadBufferManager {
   @VisibleForTesting
   int getReadAheadBlockSize() {
     return BLOCK_SIZE;
-  }
-
-  @VisibleForTesting
-  int getReadAheadBufferCount() {
-    return NUM_BUFFERS;
   }
 }
