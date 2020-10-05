@@ -39,6 +39,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.deleteChildren;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dumpStats;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.iteratorToList;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.listChildren;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.toList;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.treeWalk;
@@ -242,6 +243,13 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
             + "listStatus = " + listStatusResult
             + "listFiles = " + listFilesResult,
         fileList.size() <= statuses.length);
+    List<FileStatus> statusList = (List<FileStatus>) iteratorToList(
+            fs.listStatusIterator(root));
+    String listStatusItrRes = join(statusList, "\n");
+    assertEquals("listStatus(/) vs listStatusIterator(/) with \n"
+                    + "listStatus =" + listStatusResult
+                    +" listLocatedStatus = " + listStatusItrRes,
+            statuses.length, statusList.size());
   }
 
   @Test

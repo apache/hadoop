@@ -20,9 +20,12 @@ package org.apache.hadoop.fs.contract;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+
+import org.assertj.core.api.Assertions;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -148,6 +151,7 @@ public abstract class AbstractContractGetFileStatusTest extends
   public void testComplexDirActions() throws Throwable {
     TreeScanResults tree = createTestTree();
     checkListStatusStatusComplexDir(tree);
+    checkListStatusIteratorComplexDir(tree);
     checkListLocatedStatusStatusComplexDir(tree);
     checkListFilesComplexDirNonRecursive(tree);
     checkListFilesComplexDirRecursive(tree);
@@ -167,6 +171,35 @@ public abstract class AbstractContractGetFileStatusTest extends
     TreeScanResults listing = new TreeScanResults(
         fs.listStatus(tree.getBasePath()));
     listing.assertSizeEquals("listStatus()", TREE_FILES, TREE_WIDTH, 0);
+  }
+
+  /**
+   * Test {@link FileSystem#listStatusIterator(Path)} on a complex
+   * directory tree.
+   * @param tree directory tree to list.
+   * @throws Throwable
+   */
+  protected void checkListStatusIteratorComplexDir(TreeScanResults tree)
+          throws Throwable {
+    describe("Expect listStatusIterator to list all entries in top dir only");
+
+    FileSystem fs = getFileSystem();
+    TreeScanResults listing = new TreeScanResults(
+            fs.listStatusIterator(tree.getBasePath()));
+    listing.assertSizeEquals("listStatus()", TREE_FILES, TREE_WIDTH, 0);
+    RemoteIterator<FileStatus> itr = fs.listStatusIterator(tree.getBasePath());
+    List<FileStatus> resWithoutCheckingHasnext =
+            (List<FileStatus>) iteratorToListThroughNextCallsAlone(fs
+                    .listStatusIterator(tree.getBasePath()));
+
+    List<FileStatus> resWithCheckingHasnext =
+            (List<FileStatus>) iteratorToList(fs
+                    .listStatusIterator(tree.getBasePath()));
+    Assertions.assertThat(resWithCheckingHasnext)
+            .describedAs("listStatusIterator() should return correct " +
+                    "results even if hasNext() calls are not made.")
+            .hasSameElementsAs(resWithoutCheckingHasnext);
+
   }
 
   /**
@@ -320,6 +353,22 @@ public abstract class AbstractContractGetFileStatusTest extends
     describe("test the listStatus(path) on a file");
     Path f = touchf("liststatusfile");
     verifyStatusArrayMatchesFile(f, getFileSystem().listStatus(f));
+  }
+
+  @Test
+  public void testListStatusIteratorFile() throws Throwable {
+    describe("test the listStatusIterator(path) on a file");
+    Path f = touchf("listStItrFile");
+    List<FileStatus> statusList = (List<FileStatus>) iteratorToList(
+            getFileSystem().listStatusIterator(f));
+    assertEquals("size of file list returned", 1, statusList.size());
+    assertIsNamedFile(f, statusList.get(0));
+    List<FileStatus> statusList2 =
+            (List<FileStatus>) iteratorToListThroughNextCallsAlone(
+                    getFileSystem().listStatusIterator(f));
+    assertEquals("size of file list returned through next() calls",
+            1, statusList2.size());
+    assertIsNamedFile(f, statusList2.get(0));
   }
 
   @Test
