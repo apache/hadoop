@@ -552,7 +552,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
         fs.getAbfsClient(),
         testFile.getName(), ALWAYS_READ_BUFFER_SIZE_TEST_FILE_SIZE, eTag,
         DISABLED_READAHEAD_DEPTH, FOUR_MB,
-        alwaysReadBufferSizeConfigValue, FOUR_MB, READAHEAD_BUFFER_COUNT);
+        alwaysReadBufferSizeConfigValue, FOUR_MB);
 
     long connectionsAtStart = fs.getInstrumentationMap()
         .get(GET_RESPONSES.getStatName());
