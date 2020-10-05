@@ -37,7 +37,6 @@ import com.google.common.annotations.VisibleForTesting;
  */
 final class ReadBufferManager {
   private static final Logger LOGGER = LoggerFactory.getLogger(ReadBufferManager.class);
-
   private static int NUM_BUFFERS = 16;
   private static int BLOCK_SIZE = 4 * 1024 * 1024;
   private static final int NUM_THREADS = 8;
@@ -234,18 +233,6 @@ final class ReadBufferManager {
       return false;  // there are no evict-able buffers
     }
 
-    // Try to clean up old failed readahead threads
-    ArrayList<ReadBuffer> oldFailedBuffers = new ArrayList<>();
-    for (ReadBuffer buf : completedReadList) {
-      if ((buf != null) && (currentTimeMillis() - buf.getTimeStamp()) > thresholdAgeMilliseconds) {
-        oldFailedBuffers.add(buf);
-      }
-    }
-
-    for (ReadBuffer buf : oldFailedBuffers) {
-      evict(buf);
-    }
-
     // first, try buffers where all bytes have been consumed (approximated as first and last bytes consumed)
     for (ReadBuffer buf : completedReadList) {
       if (buf.isFirstByteConsumed() && buf.isLastByteConsumed()) {
@@ -271,12 +258,24 @@ final class ReadBufferManager {
 
     // next, try any old nodes that have not been consumed
     long earliestBirthday = Long.MAX_VALUE;
+    ArrayList<ReadBuffer> oldFailedBuffers = new ArrayList<>();
     for (ReadBuffer buf : completedReadList) {
-      if ((buf.getBufferindex() != -1) && (buf.getTimeStamp() < earliestBirthday)) {
+      if ((buf.getBufferindex() != -1) &&
+          (buf.getTimeStamp() < earliestBirthday)) {
         nodeToEvict = buf;
         earliestBirthday = buf.getTimeStamp();
+      } else if ((buf != null) && (buf.getBufferindex() == -1)
+          && (currentTimeMillis() - buf.getTimeStamp())
+          > thresholdAgeMilliseconds) {
+        oldFailedBuffers.add(buf);
       }
     }
+
+    // Try to clean up old failed readahead threads
+    for (ReadBuffer buf : oldFailedBuffers) {
+      evict(buf);
+    }
+
     if ((currentTimeMillis() - earliestBirthday > thresholdAgeMilliseconds) && (nodeToEvict != null)) {
       return evict(nodeToEvict);
     }
@@ -350,6 +349,7 @@ final class ReadBufferManager {
   }
 
   private void clearFromReadAheadQueue(final AbfsInputStream stream, final long requestedOffset) {
+
     ReadBuffer buffer = getFromList(readAheadQueue, stream, requestedOffset);
     if (buffer != null) {
       readAheadQueue.remove(buffer);
@@ -456,7 +456,6 @@ final class ReadBufferManager {
       LOGGER.trace("doneReading-{}: to completedReadList idx {}", result, buffer.getBufferindex());
       completedReadList.add(buffer);
     }
-
     //outside the synchronized, since anyone receiving a wake-up from the latch must see safe-published results
     buffer.getLatch().countDown(); // wake up waiting threads (if any)
   }
@@ -496,7 +495,30 @@ final class ReadBufferManager {
 
   @VisibleForTesting
   void testResetReadBufferManager() {
-    BUFFER_MANAGER = null;
+    synchronized (this) {
+      ArrayList<ReadBuffer> completedBuffers = new ArrayList<>();
+      for (ReadBuffer buf : completedReadList) {
+        if (buf != null) {
+          completedBuffers.add(buf);
+        }
+      }
+
+      for (ReadBuffer buf : completedBuffers) {
+        evict(buf);
+      }
+
+      readAheadQueue.clear();
+      inProgressList.clear();
+      completedReadList.clear();
+      freeList.clear();
+      buffers = new byte[NUM_BUFFERS][];
+      for (int i = 0; i < NUM_BUFFERS; i++) {
+        buffers[i] = null;
+      }
+      buffers = null;
+      BUFFER_MANAGER = null;
+      //getBufferManager();
+    }
   }
 
   @VisibleForTesting
@@ -504,18 +526,7 @@ final class ReadBufferManager {
     NUM_BUFFERS = readAheadBufferCount;
     BLOCK_SIZE = readAheadBlockSize;
     thresholdAgeMilliseconds = threasholdTimeSpan;
-    java.util.ArrayList<ReadBuffer> completedBuffers = new java.util.ArrayList<>();
-    for (ReadBuffer buf : completedReadList) {
-      if (buf != null) {
-        completedBuffers.add(buf);
-      }
-    }
-
-    for (ReadBuffer buf : completedBuffers) {
-      evict(buf);
-    }
-
-    BUFFER_MANAGER = null;
+    testResetReadBufferManager();
   }
 
   @VisibleForTesting
@@ -525,16 +536,34 @@ final class ReadBufferManager {
   }
 
   @VisibleForTesting
-  ReadBuffer getBuffer(AbfsInputStream stream, long requestedOffset) {
-    ReadBuffer buffer = getFromList(readAheadQueue, stream, requestedOffset);
-    if (buffer != null) { return buffer; }
+  ReadBuffer testGetBuffer(AbfsInputStream stream, long position) {
+    ReadBuffer retBuffer = null;
 
-    buffer = getFromList(inProgressList, stream, requestedOffset);
-    if (buffer != null) { return buffer; }
+    retBuffer = testGetFromRawList(readAheadQueue, stream, position, "readAheadQueue");
+    if (retBuffer != null) { return retBuffer; }
 
-    buffer = getFromList(completedReadList, stream, requestedOffset);
+    retBuffer = testGetFromRawList(inProgressList, stream, position, "inProgressList");
+    if (retBuffer != null) { return retBuffer; }
 
-    return buffer;
+    retBuffer = testGetFromRawList(completedReadList, stream, position, "completedReadList");
+    if (retBuffer != null) { return retBuffer; }
+
+    return retBuffer;
+  }
+
+  @VisibleForTesting
+  ReadBuffer testGetFromRawList(Collection<ReadBuffer> list, AbfsInputStream stream, long position, String listname ) {
+    for (ReadBuffer buffer : list) {
+      if (buffer.getStream() == stream) {
+        if ((position >= buffer.getOffset()) &&
+            (position < (buffer.getOffset() + buffer.getLength())
+                || position < (buffer.getOffset() + buffer.getRequestedLength()))) {
+          return buffer;
+        }
+      }
+    }
+
+    return null;
   }
 
   @VisibleForTesting

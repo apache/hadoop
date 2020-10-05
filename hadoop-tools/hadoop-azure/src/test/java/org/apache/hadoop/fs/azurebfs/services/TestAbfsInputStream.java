@@ -525,7 +525,7 @@ public class TestAbfsInputStream extends
 
     // Test for requestRequestSize =48KB and readAheadBufferSize=16KB
     ReadBufferManager.getBufferManager()
-        .testResetReadBufferManager(SIXTEEN_KB, TEST_READAHEAD_BUFFER_COUNT_4, INCREASED_READ_BUFFER_AGE_THRESHOLD);
+        .testResetReadBufferManager(FORTY_EIGHT_KB, TEST_READAHEAD_BUFFER_COUNT_4, INCREASED_READ_BUFFER_AGE_THRESHOLD);
     inputStream = testReadAheadConfigs(FORTY_EIGHT_KB, TEST_READAHEAD_DEPTH_2,
         true,
         SIXTEEN_KB, TEST_READAHEAD_BUFFER_COUNT_4);
@@ -541,7 +541,7 @@ public class TestAbfsInputStream extends
     assertTrue("Read should be of exact requested size",
         inputStream.read(twoKBBuffer, 0, ONE_KB) == ONE_KB);
     if (readRequestSize > readAheadRequestSize) {
-      readRequestSize = readAheadRequestSize;
+      readAheadRequestSize = readRequestSize;
     }
 
     // get the expected bytes to compare
@@ -556,12 +556,13 @@ public class TestAbfsInputStream extends
 
     // Fetch RAH buffer for first read.
     ReadBuffer firstReadBuffer = ReadBufferManager.getBufferManager()
-        .getBuffer(inputStream, 0);
+        .testGetBuffer(inputStream, 0);
     assertTrue("ReadBuffer for first issued read not found",
         (firstReadBuffer != null));
     assertTrue("First readAhead should be of read request size",
         firstReadBuffer.getRequestedLength() == readRequestSize);
     byte[] dataFromReadAheadCompletedQueue_RAH1 = new byte[readRequestSize];
+    firstReadBuffer.getLatch().await();
     ReadBufferManager.getBufferManager()
         .testGetBlockFromCompletedQueue(inputStream, 0, readRequestSize,
             dataFromReadAheadCompletedQueue_RAH1);
@@ -571,14 +572,15 @@ public class TestAbfsInputStream extends
 
     // Fetch RAH buffer for second read
     ReadBuffer secondReadBuffer = ReadBufferManager.getBufferManager()
-        .getBuffer(inputStream, readRequestSize);
-    secondReadBuffer.getLatch().await();
+        .testGetBuffer(inputStream, readRequestSize);
+    //secondReadBuffer.getLatch().await();
     assertTrue("ReadBuffer for second issued read not found",
         (secondReadBuffer != null));
     assertTrue("Second readAhead should be of readAhead block size",
         secondReadBuffer.getRequestedLength() == readAheadRequestSize);
     byte[] dataFromReadAheadCompletedQueue_RAH2
         = new byte[readAheadRequestSize];
+    secondReadBuffer.getLatch().await();
     ReadBufferManager.getBufferManager()
         .testGetBlockFromCompletedQueue(inputStream, readRequestSize,
             readAheadRequestSize, dataFromReadAheadCompletedQueue_RAH2);

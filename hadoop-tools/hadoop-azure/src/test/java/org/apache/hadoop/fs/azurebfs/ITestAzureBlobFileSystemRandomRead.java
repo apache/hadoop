@@ -59,7 +59,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
   private static final long TEST_FILE_SIZE = 8 * MEGABYTE;
   private static final int MAX_ELAPSEDTIMEMS = 20;
   private static final int SEQUENTIAL_READ_BUFFER_SIZE = 16 * KILOBYTE;
-  private static final int CREATE_BUFFER_SIZE = 26 * KILOBYTE;
+  //private static final int CREATE_BUFFER_SIZE = 1 * MEGABYTE;
 
   private static final int SEEK_POSITION_ONE = 2* KILOBYTE;
   private static final int SEEK_POSITION_TWO = 5 * KILOBYTE;
@@ -73,7 +73,6 @@ public class ITestAzureBlobFileSystemRandomRead extends
   private static final String TEST_FILE_PREFIX = "/TestRandomRead";
   private static final String WASB = "WASB";
   private static final String ABFS = "ABFS";
-  private static long testFileLength = 0;
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestAzureBlobFileSystemRandomRead.class);
@@ -188,7 +187,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
   @Test
   public void testSkipBounds() throws Exception {
     Path testPath = new Path(TEST_FILE_PREFIX + "_testSkipBounds");
-    assumeHugeFileExists(testPath);
+    long testFileLength = assumeHugeFileExists(testPath);
 
     try (FSDataInputStream inputStream = this.getFileSystem().open(testPath)) {
       ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
@@ -229,7 +228,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
   @Test
   public void testValidateSeekBounds() throws Exception {
     Path testPath = new Path(TEST_FILE_PREFIX + "_testValidateSeekBounds");
-    assumeHugeFileExists(testPath);
+    long testFileLength = assumeHugeFileExists(testPath);
 
     try (FSDataInputStream inputStream = this.getFileSystem().open(testPath)) {
       ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
@@ -280,7 +279,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
   @Test
   public void testSeekAndAvailableAndPosition() throws Exception {
     Path testPath = new Path(TEST_FILE_PREFIX + "_testSeekAndAvailableAndPosition");
-    assumeHugeFileExists(testPath);
+    long testFileLength = assumeHugeFileExists(testPath);
 
     try (FSDataInputStream inputStream = this.getFileSystem().open(testPath)) {
       byte[] expected1 = {(byte) 'a', (byte) 'b', (byte) 'c'};
@@ -346,7 +345,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
   @Test
   public void testSkipAndAvailableAndPosition() throws Exception {
     Path testPath = new Path(TEST_FILE_PREFIX + "_testSkipAndAvailableAndPosition");
-    assumeHugeFileExists(testPath);
+    long testFileLength = assumeHugeFileExists(testPath);
 
     try (FSDataInputStream inputStream = this.getFileSystem().open(testPath)) {
       byte[] expected1 = {(byte) 'a', (byte) 'b', (byte) 'c'};
@@ -440,6 +439,37 @@ public class ITestAzureBlobFileSystemRandomRead extends
   }
 
   @Test
+  public void testSequentialReadAfterReverseSeekPerformance2()
+      throws Exception {
+    Path testPath = new Path(TEST_FILE_PREFIX + "_testSequentialReadAfterReverseSeekPerformance2");
+    assumeHugeFileExists(testPath);
+    final int maxAttempts = 10;
+    final double maxAcceptableRatio = 1.01;
+    double beforeSeekElapsedMs = 0, afterSeekElapsedMs = 0;
+    double ratio = Double.MAX_VALUE;
+    for (int i = 0; i < maxAttempts && ratio >= maxAcceptableRatio; i++) {
+      beforeSeekElapsedMs = sequentialRead(ABFS, testPath,
+          this.getFileSystem(), false);
+      afterSeekElapsedMs = sequentialRead(ABFS, testPath,
+          this.getFileSystem(), true);
+      ratio = afterSeekElapsedMs / beforeSeekElapsedMs;
+      LOG.info((String.format(
+          "beforeSeekElapsedMs=%1$d, afterSeekElapsedMs=%2$d, ratio=%3$.2f",
+          (long) beforeSeekElapsedMs,
+          (long) afterSeekElapsedMs,
+          ratio)));
+    }
+    assertTrue(String.format(
+        "Performance of ABFS stream after reverse seek is not acceptable:"
+            + " beforeSeekElapsedMs=%1$d, afterSeekElapsedMs=%2$d,"
+            + " ratio=%3$.2f",
+        (long) beforeSeekElapsedMs,
+        (long) afterSeekElapsedMs,
+        ratio),
+        ratio < maxAcceptableRatio);
+  }
+
+  @Test
   @Ignore("HADOOP-16915")
   public void testRandomReadPerformance() throws Exception {
     Assume.assumeFalse("This test does not support namespace enabled account",
@@ -510,7 +540,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
         + UUID.randomUUID().toString());
 
     final AzureBlobFileSystem fs = createTestFile(testFile, 16 * MEGABYTE,
-        8 * MEGABYTE, config);
+        1 * MEGABYTE, config);
     String eTag = fs.getAbfsClient()
         .getPathStatus(testFile.toUri().getPath(), false)
         .getResult()
@@ -657,11 +687,13 @@ public class ITestAzureBlobFileSystemRandomRead extends
     return bytes / 1000.0 * 8 / milliseconds;
   }
 
-  private void createTestFile(Path testPath) throws Exception {
+  private long createTestFile(Path testPath) throws Exception {
     createTestFile(testPath,
         TEST_FILE_SIZE,
-        CREATE_BUFFER_SIZE,
+        MEGABYTE,
         null);
+
+    return TEST_FILE_SIZE;
   }
 
   private AzureBlobFileSystem createTestFile(Path testFilePath, long testFileSize,
@@ -678,7 +710,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
 
     if (fs.exists(testFilePath)) {
       FileStatus status = fs.getFileStatus(testFilePath);
-      if (status.getLen() >= testFileSize) {
+      if (status.getLen() == testFileSize) {
         return fs;
       }
     }
@@ -708,17 +740,17 @@ public class ITestAzureBlobFileSystemRandomRead extends
       closeTimer.end("time to close() output stream");
     }
     timer.end("time to write %d KB", testFileSize / 1024);
-    testFileLength = fs.getFileStatus(testFilePath).getLen();
     return fs;
   }
 
-  private void assumeHugeFileExists(Path testPath) throws Exception{
-    createTestFile(testPath);
+  private long assumeHugeFileExists(Path testPath) throws Exception{
+    long fileSize = createTestFile(testPath);
     FileSystem fs = this.getFileSystem();
     ContractTestUtils.assertPathExists(this.getFileSystem(), "huge file not created", testPath);
     FileStatus status = fs.getFileStatus(testPath);
     ContractTestUtils.assertIsFile(testPath, status);
-    assertTrue("File " + testPath + " is empty", status.getLen() > 0);
+    assertTrue("File " + testPath + " is not of expected size " + fileSize + ":actual=" + status.getLen(), status.getLen() == fileSize);
+    return fileSize;
   }
 
   private void verifyConsistentReads(FSDataInputStream inputStreamV1,
