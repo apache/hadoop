@@ -69,7 +69,7 @@ public class FileOutputCommitter extends PathOutputCommitter {
       "mapreduce.fileoutputcommitter.marksuccessfuljobs";
   public static final String FILEOUTPUTCOMMITTER_ALGORITHM_VERSION =
       "mapreduce.fileoutputcommitter.algorithm.version";
-  public static final int FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_DEFAULT = 2;
+  public static final int FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_DEFAULT = 1;
   // Skip cleanup _temporary folders under job's output directory
   public static final String FILEOUTPUTCOMMITTER_CLEANUP_SKIPPED =
       "mapreduce.fileoutputcommitter.cleanup.skipped";
