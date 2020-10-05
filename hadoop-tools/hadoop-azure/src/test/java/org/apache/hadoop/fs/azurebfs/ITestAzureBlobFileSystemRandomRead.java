@@ -533,7 +533,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
     final AzureBlobFileSystem currentFs = getFileSystem();
     Configuration config = new Configuration(this.getRawConfiguration());
     config.set("fs.azure.readaheadqueue.depth", "0");
-    config.set("fs.azure.alwaysReadBufferSize",
+    config.set("fs.azure.read.alwaysReadBufferSize",
         Boolean.toString(alwaysReadBufferSizeConfigValue));
 
     final Path testFile = new Path("/FileName_"

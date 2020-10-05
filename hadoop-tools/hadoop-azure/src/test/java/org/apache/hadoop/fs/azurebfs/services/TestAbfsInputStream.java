@@ -594,9 +594,9 @@ public class TestAbfsInputStream extends
     config.set("fs.azure.read.request.size", Integer.toString(readRequestSize));
     config.set("fs.azure.readaheadqueue.depth",
         Integer.toString(readAheadQueueDepth));
-    config.set("fs.azure.alwaysReadBufferSize",
+    config.set("fs.azure.read.alwaysReadBufferSize",
         Boolean.toString(alwaysReadBufferSizeEnabled));
-    config.set("fs.azure.read.ahead.block.size",
+    config.set("fs.azure.read.readahead.blocksize",
         Integer.toString(readAheadBlockSize));
     if (readRequestSize > readAheadBlockSize) {
       readAheadBlockSize = readRequestSize;
