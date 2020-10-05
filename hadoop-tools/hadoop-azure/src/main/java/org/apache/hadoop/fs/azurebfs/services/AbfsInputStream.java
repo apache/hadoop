@@ -100,7 +100,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     if (this.bufferSize > READ_AHEAD_BLOCK_SIZE) {
       LOG.debug(
           "fs.azure.read.request.size[={}] is configured for higher size than "
-              + "fs.azure.read.ahead.block.size[={}]. Auto-align "
+              + "fs.azure.read.readahead.blocksize[={}]. Auto-align "
               + "readAhead block size to be same as readRequestSize.",
           bufferSize, READ_AHEAD_BLOCK_SIZE);
       READ_AHEAD_BLOCK_SIZE = this.bufferSize;
