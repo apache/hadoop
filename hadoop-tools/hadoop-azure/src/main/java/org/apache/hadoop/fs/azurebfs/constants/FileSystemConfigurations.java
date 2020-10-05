@@ -73,8 +73,8 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_FS_AZURE_ENABLE_CONDITIONAL_CREATE_OVERWRITE = true;
   public static final String DEFAULT_FS_AZURE_APPEND_BLOB_DIRECTORIES = "";
 
-  public static final boolean DEFAULT_ALWAYS_READ_BUFFER_SIZE = true;
   public static final int DEFAULT_READ_AHEAD_QUEUE_DEPTH = 2;
+  public static final boolean DEFAULT_ALWAYS_READ_BUFFER_SIZE = true;
   public static final int DEFAULT_READ_AHEAD_BLOCK_SIZE = 4 * 1024 * 1024;
   public static final int DEFAULT_READ_AHEAD_BUFFER_COUNT = 16;
 
