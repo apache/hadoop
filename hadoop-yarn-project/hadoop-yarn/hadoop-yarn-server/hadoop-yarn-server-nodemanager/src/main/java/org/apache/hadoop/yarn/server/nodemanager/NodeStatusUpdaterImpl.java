@@ -703,7 +703,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   @VisibleForTesting
   @Private
   public void removeOrTrackCompletedContainersFromContext(
-      List<ContainerId> containerIds) throws IOException {
+      List<ContainerId> containerIds) {
     Set<ContainerId> removedContainers = new HashSet<ContainerId>();
 
     pendingContainersToRemove.addAll(containerIds);
@@ -720,13 +720,13 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         removedContainers.add(containerId);
         iter.remove();
       }
+      pendingCompletedContainers.remove(containerId);
     }
 
     if (!removedContainers.isEmpty()) {
       LOG.info("Removed completed containers from NM context: "
           + removedContainers);
     }
-    pendingCompletedContainers.clear();
   }
 
   private void trackAppsForKeepAlive(List<ApplicationId> appIds) {
@@ -1301,6 +1301,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     @SuppressWarnings("unchecked")
     public void run() {
       int lastHeartbeatID = 0;
+      boolean missedHearbeat = false;
       while (!isStopped) {
         // Send heartbeat
         try {
@@ -1353,6 +1354,20 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             // Only remove the cleanedup containers that are acked
             removeOrTrackCompletedContainersFromContext(response
                 .getContainersToBeRemovedFromNM());
+
+            // If the last heartbeat was missed, it is possible that the
+            // RM saw this one as a duplicate and did not process it.
+            // If so, we can fail to notify the RM of these completed containers
+            // on the next heartbeat if we clear pendingCompletedContainers.
+            // If it wasn't a duplicate, the only impact is we might notify
+            // the RM twice, which it can handle.
+            if (!missedHearbeat) {
+              pendingCompletedContainers.clear();
+            } else {
+              LOG.info("skipped clearing pending completed containers due to " +
+                  "missed heartbeat");
+              missedHearbeat = false;
+            }
 
             logAggregationReportForAppsTempList.clear();
             lastHeartbeatID = response.getResponseId();
@@ -1433,6 +1448,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
           // TODO Better error handling. Thread can die with the rest of the
           // NM still running.
           LOG.error("Caught exception in status-updater", e);
+          missedHearbeat = true;
         } finally {
           synchronized (heartbeatMonitor) {
             nextHeartBeatInterval = nextHeartBeatInterval <= 0 ?
