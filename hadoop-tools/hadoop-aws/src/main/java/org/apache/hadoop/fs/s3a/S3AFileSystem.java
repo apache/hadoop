@@ -2980,55 +2980,30 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         // a file has been found in a non-auth path and the caller has not said
         // they only care about directories
         LOG.debug("Metadata for {} found in the non-auth metastore.", path);
-        // If the timestamp of the pm is close to "now", we don't need to
-        // bother with a check of S3. that means:
-        // one of : status modtime is close to now,
-        //  or pm.getLastUpdated() == now
+        final long msModTime = pm.getFileStatus().getModificationTime();
 
-        // get the time in which a status modtime is considered valid
-        // in a non-auth metastore
-        long validTime =
-            ttlTimeProvider.getNow() - ttlTimeProvider.getMetadataTtl();
-        final long msModTime = msStatus.getModificationTime();
+        S3AFileStatus s3AFileStatus;
+        try {
+          s3AFileStatus = s3GetFileStatus(path,
+              key,
+              probes,
+              tombstones,
+              needEmptyDirectoryFlag);
+        } catch (FileNotFoundException fne) {
+          s3AFileStatus = null;
+        }
+        if (s3AFileStatus == null) {
+          LOG.warn("Failed to find file {}. Either it is not yet visible, or "
+              + "it has been deleted.", path);
+        } else {
+          final long s3ModTime = s3AFileStatus.getModificationTime();
 
-        if (msModTime < validTime) {
-          LOG.debug("Metastore entry of {} is out of date, probing S3", path);
-          try {
-            S3AFileStatus s3AFileStatus = s3GetFileStatus(path,
-                key,
-                probes,
-                tombstones,
-                needEmptyDirectoryFlag);
-            // if the new status is more current than that in the metastore,
-            // it means S3 has changed and the store needs updating
-            final long s3ModTime = s3AFileStatus.getModificationTime();
-
-            if (s3ModTime > msModTime) {
-              // there's new data in S3
-              LOG.debug("S3Guard metadata for {} is outdated;"
-                      + " s3modtime={}; msModTime={} updating metastore",
-                  path, s3ModTime, msModTime);
-              // add to S3Guard
-              S3Guard.putAndReturn(metadataStore, s3AFileStatus,
-                  ttlTimeProvider);
-            } else {
-              // the modtime of the data is the same as/older than the s3guard
-              // value either an old object has been found, or the existing one
-              // was retrieved in both cases -refresh the S3Guard entry so the
-              // record's TTL is updated.
-              S3Guard.refreshEntry(metadataStore, pm, s3AFileStatus,
-                  ttlTimeProvider);
-            }
-            // return the value
-            // note that the checks for empty dir status below can be skipped
-            // because the call to s3GetFileStatus include the checks there
-            return s3AFileStatus;
-          } catch (FileNotFoundException fne) {
-            // the attempt to refresh the record failed because there was
-            // no entry. Either it is a new file not visible, or it
-            // has been deleted (and therefore S3Guard is out of sync with S3)
-            LOG.warn("Failed to find file {}. Either it is not yet visible, or "
-                + "it has been deleted.", path);
+          if(s3ModTime > msModTime) {
+            LOG.debug("S3Guard metadata for {} is outdated;"
+                + " s3modtime={}; msModTime={} updating metastore",
+                path, s3ModTime, msModTime);
+            return S3Guard.putAndReturn(metadataStore, s3AFileStatus,
+                ttlTimeProvider);
           }
         }
       }
