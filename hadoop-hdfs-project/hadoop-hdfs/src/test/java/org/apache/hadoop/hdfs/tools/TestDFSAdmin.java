@@ -30,6 +30,9 @@ import com.google.common.collect.Lists;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.text.TextStringBuilder;
+import org.apache.hadoop.fs.FsShell;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -84,11 +87,13 @@ import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.TimeoutException;
 
+import static org.apache.hadoop.hdfs.client.HdfsAdmin.TRASH_PERMISSION;
 import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -121,6 +126,8 @@ public class TestDFSAdmin {
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 512);
     conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR,
         GenericTestUtils.getRandomizedTempPath());
+    conf.setInt(DFSConfigKeys.FS_TRASH_INTERVAL_KEY, 60);
+    conf.setBoolean("dfs.namenode.snapshot.trashroot.enabled", true);
     restartCluster();
 
     admin = new DFSAdmin(conf);
@@ -916,6 +923,54 @@ public class TestDFSAdmin {
         .getECBlockGroupStats().getCorruptBlockGroups());
     assertEquals(highestPriorityLowRedundancyECBlocks, client.getNamenode()
         .getECBlockGroupStats().getHighestPriorityLowRedundancyBlocks());
+  }
+
+  @Test
+  public void testAllowDisallowSnapshot() throws Exception {
+    final Path dirPath = new Path("/ssdir1");
+    final Path trashRoot = new Path(dirPath, ".Trash");
+    final DistributedFileSystem dfs = cluster.getFileSystem();
+    final DFSAdmin dfsAdmin = new DFSAdmin(conf);
+
+    dfs.mkdirs(dirPath);
+    assertEquals(0, ToolRunner.run(dfsAdmin,
+        new String[]{"-allowSnapshot", dirPath.toString()}));
+
+    // Verify .Trash creation after -allowSnapshot command
+    assertTrue(dfs.exists(trashRoot));
+    assertEquals(TRASH_PERMISSION,
+        dfs.getFileStatus(trashRoot).getPermission());
+
+    // Move a file to trash
+    final Path file1 = new Path(dirPath, "file1");
+    try (FSDataOutputStream s = dfs.create(file1)) {
+      s.write(0);
+    }
+    FsShell fsShell = new FsShell(dfs.getConf());
+    assertEquals(0, ToolRunner.run(fsShell,
+        new String[]{"-rm", file1.toString()}));
+
+    // User directory inside snapshottable directory trash should have 700
+    final String username =
+        UserGroupInformation.getLoginUser().getShortUserName();
+    final Path trashRootUserSubdir = new Path(trashRoot, username);
+    assertTrue(dfs.exists(trashRootUserSubdir));
+    final FsPermission trashUserdirPermission = new FsPermission(
+        FsAction.ALL, FsAction.NONE, FsAction.NONE, false);
+    assertEquals(trashUserdirPermission,
+        dfs.getFileStatus(trashRootUserSubdir).getPermission());
+
+    // disallowSnapshot should fail when .Trash is not empty
+    assertNotEquals(0, ToolRunner.run(dfsAdmin,
+        new String[]{"-disallowSnapshot", dirPath.toString()}));
+
+    dfs.delete(trashRootUserSubdir, true);
+    // disallowSnapshot should succeed now that we have an empty .Trash
+    assertEquals(0, ToolRunner.run(dfsAdmin,
+        new String[]{"-disallowSnapshot", dirPath.toString()}));
+
+    // Cleanup
+    dfs.delete(dirPath, true);
   }
 
   @Test
