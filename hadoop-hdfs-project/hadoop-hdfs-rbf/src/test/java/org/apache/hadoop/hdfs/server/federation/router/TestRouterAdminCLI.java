@@ -1113,6 +1113,10 @@ public class TestRouterAdminCLI {
     // ensure the Router become RUNNING state
     waitState(RouterServiceState.RUNNING);
     assertFalse(routerContext.getRouter().getSafemodeService().isInSafeMode());
+    final RouterClientProtocol clientProtocol =
+        routerContext.getRouter().getRpcServer().getClientProtocolModule();
+    assertEquals(HAServiceState.ACTIVE, clientProtocol.getHAServiceState());
+
     assertEquals(0,
         ToolRunner.run(admin, new String[] {"-safemode", "enter" }));
 
@@ -1125,6 +1129,7 @@ public class TestRouterAdminCLI {
     // verify state using RBFMetrics
     assertEquals(RouterServiceState.SAFEMODE.toString(), jsonString);
     assertTrue(routerContext.getRouter().getSafemodeService().isInSafeMode());
+    assertEquals(HAServiceState.STANDBY, clientProtocol.getHAServiceState());
 
     System.setOut(new PrintStream(out));
     assertEquals(0,
@@ -1136,6 +1141,7 @@ public class TestRouterAdminCLI {
     // verify state
     assertEquals(RouterServiceState.RUNNING.toString(), jsonString);
     assertFalse(routerContext.getRouter().getSafemodeService().isInSafeMode());
+    assertEquals(HAServiceState.ACTIVE, clientProtocol.getHAServiceState());
 
     out.reset();
     assertEquals(0, ToolRunner.run(admin, new String[] {"-safemode", "get" }));
