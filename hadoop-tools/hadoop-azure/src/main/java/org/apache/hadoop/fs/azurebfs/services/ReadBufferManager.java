@@ -258,13 +258,11 @@ final class ReadBufferManager {
     // next, try any old nodes that have not been consumed
     long earliestBirthday = Long.MAX_VALUE;
     for (ReadBuffer buf : completedReadList) {
-      if ((buf.getBufferindex() != -1) &&
-          (buf.getTimeStamp() < earliestBirthday)) {
+      if (buf.getTimeStamp() < earliestBirthday) {
         nodeToEvict = buf;
         earliestBirthday = buf.getTimeStamp();
       }
     }
-
     if ((currentTimeMillis() - earliestBirthday > thresholdAgeMilliseconds) && (nodeToEvict != null)) {
       return evict(nodeToEvict);
     }
@@ -338,7 +336,6 @@ final class ReadBufferManager {
   }
 
   private void clearFromReadAheadQueue(final AbfsInputStream stream, final long requestedOffset) {
-
     ReadBuffer buffer = getFromList(readAheadQueue, stream, requestedOffset);
     if (buffer != null) {
       readAheadQueue.remove(buffer);
@@ -446,6 +443,7 @@ final class ReadBufferManager {
       LOGGER.trace("doneReading-{}: to completedReadList idx {}", result, buffer.getBufferindex());
       completedReadList.add(buffer);
     }
+
     //outside the synchronized, since anyone receiving a wake-up from the latch must see safe-published results
     buffer.getLatch().countDown(); // wake up waiting threads (if any)
   }
