@@ -29,7 +29,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.compress.lz4.Lz4Compressor;
 import org.apache.hadoop.io.compress.snappy.SnappyCompressor;
@@ -412,11 +411,7 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
               joiner.join(name, "byte arrays not equals error !!!"),
               originalRawData, decompressOut.toByteArray());
         } catch (Exception ex) {
-          if (ex.getMessage() != null) {
-            fail(joiner.join(name, ex.getMessage()));
-          } else {
-            fail(joiner.join(name, ExceptionUtils.getStackTrace(ex)));
-          }
+          throw new AssertionError(name + ex, ex);
         } finally {
           try {
             compressedOut.close();
