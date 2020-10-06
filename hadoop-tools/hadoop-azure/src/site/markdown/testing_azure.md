@@ -872,7 +872,7 @@ To run CheckAccess test cases you must register an app with no RBAC and set
 the following configurations.
 ```xml
 <!--===========================   FOR CheckAccess =========================-->
-<!-- To run ABFS CheckAccess SAS tests, you must register an app, with no role
+<!-- To run ABFS CheckAccess tests, you must register an app, with no role
  assignments, and set the configuration discussed below:
 
     1) Register a new app with no RBAC
@@ -939,11 +939,11 @@ http[s]://[account][domain-suffix]/[filesystem], please use the following:
 ##Run different combinations of tests using the runtests.sh script
 
 This is the expected way in which the tests have to be ran before raising a PR.
-The script runtests.sh contain template for 3 combinations of tests. Ensure
+The script `runtests.sh` contain template for 3 combinations of tests. Ensure
 the auth configs for all the accounts used for testing are provided in
 azure-auth-keys.xml. In case any new flags or properties are introduced
 with the code change, add the combinations with the possible configurations
-into the runtests.sh. The thread count can be specified as the command line
+into the `runtests.sh`. The thread count can be specified as the command line
 argument for the script. By default the same will be 8.
 
 Adding a combination of tests involves setting the variable scenario (ex: HNS
@@ -953,12 +953,12 @@ names within the array properties and corresponding values in the values
 array. The property and value is determined by the array index. The value for
 the property mentioned at index 1 of array properties should be specified at
 index 1 of the array values. Call the function runtestwithconfs once the 3
-values mentioned are set. Now the script runtests.sh is ready to be ran.
+values mentioned are set. Now the script `runtests.sh` is ready to be ran.
 
 Once the tests are completed, logs will be present in the directory
 target/testlogs. A consolidated test results will be present in the file
 Test-$starttime-Results.log, $startname will be the start time of the test.
 Similarly, the full test report can be found in individual log files, for each
 of the scenarios with the file name Test-$starttime-Logs-$scenario. Please
-attach the consolidates test results from the file Test-$starttime-Results.log
+attach the consolidated test results from the file Test-$starttime-Results.log
 into the respective PRs.
