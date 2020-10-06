@@ -121,6 +121,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
+import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -1908,6 +1909,10 @@ public class TestRouterRpc {
   public void testCreateWithCallerContext() throws IOException {
     GenericTestUtils.LogCapturer auditlog =
         GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.auditLog);
+
+
+    // Current callerContext is null
+    assertNull(CallerContext.getCurrent());
 
     // Create a directory via the router
     String dirPath = "/test_dir_with_callercontext";

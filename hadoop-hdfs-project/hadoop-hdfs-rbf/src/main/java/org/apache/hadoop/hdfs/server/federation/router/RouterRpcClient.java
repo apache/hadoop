@@ -409,7 +409,7 @@ public class RouterRpcClient {
           " with params " + Arrays.deepToString(params) + " from "
           + router.getRouterId());
     }
-    appendClientIp2CallerContext();
+    appendClientIpToCallerContext();
 
     Object ret = null;
     if (rpcMonitor != null) {
@@ -529,15 +529,13 @@ public class RouterRpcClient {
    * For Tracking which is the actual client address.
    * It adds key/value (clientIp/"ip") pair to the caller context.
    */
-  private void appendClientIp2CallerContext() {
+  private void appendClientIpToCallerContext() {
     final CallerContext ctx = CallerContext.getCurrent();
-    CallerContext.Builder builder;
     String origContext = ctx == null ? null : ctx.getContext();
     byte[] origSignature = ctx == null ? null : ctx.getSignature();
-    builder = new CallerContext.Builder(origContext, clientConf);
-    builder.append(CLIENT_IP_STR, Server.getRemoteAddress());
-    builder.setSignature(origSignature);
-    CallerContext.setCurrent(builder.build());
+    CallerContext.setCurrent(new CallerContext.Builder(origContext, clientConf)
+        .append(CLIENT_IP_STR, Server.getRemoteAddress())
+            .setSignature(origSignature).build());
   }
 
   /**
