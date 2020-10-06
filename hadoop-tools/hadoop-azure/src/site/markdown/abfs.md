@@ -796,6 +796,19 @@ will be -1. To disable readaheads, set this value to 0. If your workload is
  doing only random reads (non-sequential) or you are seeing throttling, you
   may try setting this value to 0.
 
+To run under limited memory situations configure the following. Especially
+when there are too many writes from the same process. 
+
+`fs.azure.write.max.concurrent.requests`: To set the maximum concurrent
+ write requests from an AbfsOutputStream instance  to server at any point of
+ time. Effectively this will be the threadpool size within the
+ AbfsOutputStream instance. Set the value in between 1 to 8 both inclusive.
+
+`fs.azure.write.max.requests.to.queue`: To set the maximum write requests
+ that can be queued. Memory consumption of AbfsOutputStream instance can be
+ tuned with this config considering each queued request holds a buffer. Set
+ the value 3 or 4 times the value set for s.azure.write.max.concurrent.requests.
+
 ### <a name="securityconfigoptions"></a> Security Options
 `fs.azure.always.use.https`: Enforces to use HTTPS instead of HTTP when the flag
 is made true. Irrespective of the flag, AbfsClient will use HTTPS if the secure

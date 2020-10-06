@@ -1992,17 +1992,18 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   }
 
   /**
-   * Gets a list of references to the finalized blocks for the given block pool.
+   * Gets a list of references to the finalized blocks for the given block pool,
+   * sorted by blockID.
    * <p>
    * Callers of this function should call
    * {@link FsDatasetSpi#acquireDatasetLock()} to avoid blocks' status being
    * changed during list iteration.
    * </p>
    * @return a list of references to the finalized blocks for the given block
-   *         pool.
+   *         pool. The list is sorted by blockID.
    */
   @Override
-  public List<ReplicaInfo> getFinalizedBlocks(String bpid) {
+  public List<ReplicaInfo> getSortedFinalizedBlocks(String bpid) {
     try (AutoCloseableLock lock = datasetReadLock.acquire()) {
       final List<ReplicaInfo> finalized = new ArrayList<ReplicaInfo>(
           volumeMap.size(bpid));
@@ -2298,9 +2299,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
               ": volume was not an instance of FsVolumeImpl.");
           return;
         }
-        if (volume.isTransientStorage()) {
-          LOG.warn("Caching not supported on block with id " + blockId +
-              " since the volume is backed by RAM.");
+        if (volume.isRAMStorage()) {
+          LOG.warn("Caching not supported on block with id {} since the " +
+              "volume is backed by {} which is RAM.", blockId, volume);
           return;
         }
         success = true;

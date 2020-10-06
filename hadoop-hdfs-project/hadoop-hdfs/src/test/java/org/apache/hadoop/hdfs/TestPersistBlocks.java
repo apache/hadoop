@@ -76,14 +76,15 @@ public class TestPersistBlocks {
   /** check if DFS remains in proper condition after a restart 
    **/
   @Test  
-  public void TestRestartDfsWithFlush() throws Exception {
+  public void testRestartDfsWithFlush() throws Exception {
     testRestartDfs(true);
   }
   
   
   /** check if DFS remains in proper condition after a restart 
    **/
-  public void TestRestartDfsWithSync() throws Exception {
+  @Test
+  public void testRestartDfsWithSync() throws Exception {
     testRestartDfs(false);
   }
   

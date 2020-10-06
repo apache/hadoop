@@ -91,6 +91,10 @@ This is configurable via the **identity provider**, which defaults to the **User
 provider simply uses the username of the client submitting the request. However, a custom identity provider can be used
 to performing throttling based on other groupings, or using an external identity provider.
 
+If particular users submit important requests and you don't want to limit them, you can set them up as the
+**service-users**. They are always scheduled into the high-priority queue and won't be included in the priority
+computation of normal user calls.
+
 ### Cost-based Fair Call Queue
 
 Though the fair call queue itself does a good job of mitigating the impact from users who submit a very high _number_
@@ -138,6 +142,7 @@ omitted.
 | decay-scheduler.backoff.responsetime.enable | DecayRpcScheduler | Whether or not to enable the backoff by response time feature. | false |
 | decay-scheduler.backoff.responsetime.thresholds | DecayRpcScheduler | The response time thresholds, as time durations, for each priority queue. If the average response time for a queue is above this threshold, backoff will occur in lower priority queues. This should be a comma-separated list of length equal to the number of priority levels. | Threshold increases by 10s per level (e.g., for 4 levels: `10s,20s,30s,40s`) |
 | decay-scheduler.metrics.top.user.count | DecayRpcScheduler | The number of top (i.e., heaviest) users to emit metric information about. | 10 |
+| decay-scheduler.service-users | DecayRpcScheduler | Service users will always be scheduled into the highest-priority queue and won't be included in the priority computation of normal user calls. They are specified as a comma-separated list. |  |
 | weighted-cost.lockshared | WeightedTimeCostProvider | The weight multiplier to apply to the time spent in the processing phase which holds a shared (read) lock. | 10 |
 | weighted-cost.lockexclusive | WeightedTimeCostProvider | The weight multiplier to apply to the time spent in the processing phase which holds an exclusive (write) lock. | 100 |
 | weighted-cost.{handler,lockfree,response} | WeightedTimeCostProvider | The weight multiplier to apply to the time spent in the processing phases which do not involve holding a lock. See `org.apache.hadoop.ipc.ProcessingDetails.Timing` for more details on each phase. | 1 |

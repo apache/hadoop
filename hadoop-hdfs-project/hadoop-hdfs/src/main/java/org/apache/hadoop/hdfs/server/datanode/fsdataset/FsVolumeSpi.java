@@ -77,6 +77,9 @@ public interface FsVolumeSpi
   /** Returns true if the volume is NOT backed by persistent storage. */
   boolean isTransientStorage();
 
+  /** Returns true if the volume is backed by RAM storage. */
+  boolean isRAMStorage();
+
   /**
    * Reserve disk space for a block (RBW or Re-replicating)
    * so a writer does not run out of space before the block is full.

@@ -224,7 +224,8 @@ public class CapacityScheduler extends
   private boolean usePortForNodeName;
 
   private boolean scheduleAsynchronously;
-  private List<AsyncScheduleThread> asyncSchedulerThreads;
+  @VisibleForTesting
+  protected List<AsyncScheduleThread> asyncSchedulerThreads;
   private ResourceCommitterService resourceCommitterService;
   private RMNodeLabelsManager labelManager;
   private AppPriorityACLsManager appPriorityACLManager;
@@ -243,6 +244,8 @@ public class CapacityScheduler extends
   private long asyncMaxPendingBacklogs;
 
   private CSMaxRunningAppsEnforcer maxRunningEnforcer;
+
+  private boolean activitiesManagerEnabled = true;
 
   public CapacityScheduler() {
     super(CapacityScheduler.class.getName());
@@ -341,7 +344,9 @@ public class CapacityScheduler extends
       this.workflowPriorityMappingsMgr = new WorkflowPriorityMappingsManager();
 
       this.activitiesManager = new ActivitiesManager(rmContext);
-      activitiesManager.init(conf);
+      if (activitiesManagerEnabled) {
+        activitiesManager.init(conf);
+      }
       initializeQueues(this.conf);
       this.isLazyPreemptionEnabled = conf.getLazyPreemptionEnabled();
 
@@ -399,7 +404,9 @@ public class CapacityScheduler extends
   private void startSchedulerThreads() {
     writeLock.lock();
     try {
-      activitiesManager.start();
+      if (activitiesManagerEnabled) {
+        activitiesManager.start();
+      }
       if (scheduleAsynchronously) {
         Preconditions.checkNotNull(asyncSchedulerThreads,
             "asyncSchedulerThreads is null");
@@ -433,7 +440,9 @@ public class CapacityScheduler extends
   public void serviceStop() throws Exception {
     writeLock.lock();
     try {
-      this.activitiesManager.stop();
+      if (activitiesManagerEnabled) {
+        this.activitiesManager.stop();
+      }
       if (scheduleAsynchronously && asyncSchedulerThreads != null) {
         for (Thread t : asyncSchedulerThreads) {
           t.interrupt();
@@ -3283,5 +3292,19 @@ public class CapacityScheduler extends
   @VisibleForTesting
   public void setMaxRunningAppsEnforcer(CSMaxRunningAppsEnforcer enforcer) {
     this.maxRunningEnforcer = enforcer;
+  }
+
+
+  /**
+   * Returning true as capacity scheduler supports placement constraints.
+   */
+  @Override
+  public boolean placementConstraintEnabled() {
+    return true;
+  }
+
+  @VisibleForTesting
+  public void setActivitiesManagerEnabled(boolean enabled) {
+    this.activitiesManagerEnabled = enabled;
   }
 }

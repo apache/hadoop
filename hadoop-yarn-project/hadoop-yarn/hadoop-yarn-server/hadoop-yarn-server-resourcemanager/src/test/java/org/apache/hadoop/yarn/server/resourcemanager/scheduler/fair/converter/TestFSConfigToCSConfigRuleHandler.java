@@ -73,9 +73,7 @@ public class TestFSConfigToCSConfigRuleHandler {
     ruleHandler.handleMaxChildCapacity();
     ruleHandler.handleMinResources();
     ruleHandler.handleMaxResources();
-    ruleHandler.handleQueueAutoCreate("test");
     ruleHandler.handleReservationSystem();
-    ruleHandler.handleSpecifiedNotFirstRule();
   }
 
   @Test
@@ -101,9 +99,7 @@ public class TestFSConfigToCSConfigRuleHandler {
     ruleHandler.handleMaxChildCapacity();
     ruleHandler.handleMinResources();
     ruleHandler.handleMaxResources();
-    ruleHandler.handleQueueAutoCreate("test");
     ruleHandler.handleReservationSystem();
-    ruleHandler.handleSpecifiedNotFirstRule();
   }
 
   @Test
@@ -133,9 +129,7 @@ public class TestFSConfigToCSConfigRuleHandler {
     expectAbort(() -> ruleHandler.handleMaxChildCapacity());
     expectAbort(() -> ruleHandler.handleMaxResources());
     expectAbort(() -> ruleHandler.handleMinResources());
-    expectAbort(() -> ruleHandler.handleQueueAutoCreate("test"));
     expectAbort(() -> ruleHandler.handleReservationSystem());
-    expectAbort(() -> ruleHandler.handleSpecifiedNotFirstRule());
     expectAbort(() -> ruleHandler.handleFairAsDrf("test"));
   }
 

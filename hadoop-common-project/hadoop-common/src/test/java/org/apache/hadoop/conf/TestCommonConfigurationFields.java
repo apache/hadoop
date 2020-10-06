@@ -172,6 +172,8 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
         "ipc.[port_number].decay-scheduler.backoff.responsetime.thresholds");
     xmlPropsToSkipCompare.add(
         "ipc.[port_number].decay-scheduler.metrics.top.user.count");
+    xmlPropsToSkipCompare.add(
+        "ipc.[port_number].decay-scheduler.service-users");
     xmlPropsToSkipCompare.add("ipc.[port_number].weighted-cost.lockshared");
     xmlPropsToSkipCompare.add("ipc.[port_number].weighted-cost.lockexclusive");
     xmlPropsToSkipCompare.add("ipc.[port_number].weighted-cost.handler");

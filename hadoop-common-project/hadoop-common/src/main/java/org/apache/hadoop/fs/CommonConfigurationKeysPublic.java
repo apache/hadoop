@@ -21,7 +21,9 @@ package org.apache.hadoop.fs;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.crypto.JceAesCtrCryptoCodec;
+import org.apache.hadoop.crypto.JceSm4CtrCryptoCodec;
 import org.apache.hadoop.crypto.OpensslAesCtrCryptoCodec;
+import org.apache.hadoop.crypto.OpensslSm4CtrCryptoCodec;
 
 /** 
  * This class contains constants for configuration keys used
@@ -350,6 +352,9 @@ public class CommonConfigurationKeysPublic {
       "hadoop.caller.context.signature.max.size";
   public static final int     HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_DEFAULT =
       40;
+  public static final String HADOOP_CALLER_CONTEXT_SEPARATOR_KEY =
+      "hadoop.caller.context.separator";
+  public static final String HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT = ",";
 
   /**
    * @see
@@ -702,9 +707,17 @@ public class CommonConfigurationKeysPublic {
       HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_KEY_PREFIX
           + CipherSuite.AES_CTR_NOPADDING.getConfigSuffix();
   public static final String
+      HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_SM4_CTR_NOPADDING_KEY =
+      HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_KEY_PREFIX
+          + CipherSuite.SM4_CTR_NOPADDING.getConfigSuffix();
+  public static final String
       HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_AES_CTR_NOPADDING_DEFAULT =
       OpensslAesCtrCryptoCodec.class.getName() + "," +
           JceAesCtrCryptoCodec.class.getName();
+  public static final String
+      HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_SM4_CTR_NOPADDING_DEFAULT =
+      OpensslSm4CtrCryptoCodec.class.getName() + "," +
+          JceSm4CtrCryptoCodec.class.getName();
   /**
    * @see
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
@@ -868,6 +881,13 @@ public class CommonConfigurationKeysPublic {
    */
   public static final String HADOOP_SECURITY_SECURE_RANDOM_IMPL_KEY = 
     "hadoop.security.secure.random.impl";
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String HADOOP_SECURITY_OPENSSL_ENGINE_ID_KEY =
+          "hadoop.security.openssl.engine.id";
   /**
    * @see
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">

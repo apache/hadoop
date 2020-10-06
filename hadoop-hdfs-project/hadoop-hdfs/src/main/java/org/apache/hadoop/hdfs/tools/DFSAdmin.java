@@ -40,6 +40,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.Joiner;
 
+import org.apache.hadoop.hdfs.client.HdfsAdmin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -239,7 +240,8 @@ public class DFSAdmin extends FsShell {
         "\t\t- DISK\n" +
         "\t\t- SSD\n" +
         "\t\t- ARCHIVE\n" +
-        "\t\t- PROVIDED";
+        "\t\t- PROVIDED\n" +
+        "\t\t- NVDIMM";
 
 
     private StorageType type;
@@ -303,7 +305,8 @@ public class DFSAdmin extends FsShell {
         "\t\t- DISK\n" +
         "\t\t- SSD\n" +
         "\t\t- ARCHIVE\n" +
-        "\t\t- PROVIDED";
+        "\t\t- PROVIDED\n" +
+        "\t\t- NVDIMM";
 
     private long quota; // the quota to be set
     private StorageType type;
@@ -458,6 +461,7 @@ public class DFSAdmin extends FsShell {
     "\t[-fetchImage <local directory>]\n" +
     "\t[-allowSnapshot <snapshotDir>]\n" +
     "\t[-disallowSnapshot <snapshotDir>]\n" +
+      "\t[-provisionSnapshotTrash <snapshotDir>]\n" +
     "\t[-shutdownDatanode <datanode_host:ipc_port> [upgrade]]\n" +
     "\t[-evictWriters <datanode_host:ipc_port>]\n" +
     "\t[-getDatanodeInfo <datanode_host:ipc_port>]\n" +
@@ -763,9 +767,9 @@ public class DFSAdmin extends FsShell {
    */
   public void allowSnapshot(String[] argv) throws IOException {
     Path p = new Path(argv[1]);
-    final DistributedFileSystem dfs = AdminHelper.getDFS(p.toUri(), getConf());
+    final HdfsAdmin admin = new HdfsAdmin(p.toUri(), getConf());
     try {
-      dfs.allowSnapshot(p);
+      admin.allowSnapshot(p);
     } catch (SnapshotException e) {
       throw new RemoteException(e.getClass().getName(), e.getMessage());
     }
@@ -780,13 +784,32 @@ public class DFSAdmin extends FsShell {
    */
   public void disallowSnapshot(String[] argv) throws IOException {
     Path p = new Path(argv[1]);
-    final DistributedFileSystem dfs = AdminHelper.getDFS(p.toUri(), getConf());
+    final HdfsAdmin admin = new HdfsAdmin(p.toUri(), getConf());
     try {
-      dfs.disallowSnapshot(p);
+      admin.disallowSnapshot(p);
     } catch (SnapshotException e) {
       throw new RemoteException(e.getClass().getName(), e.getMessage());
     }
     System.out.println("Disallowing snapshot on " + argv[1] + " succeeded");
+  }
+
+  /**
+   * Provision trash root in a snapshottable directory.
+   * Usage: hdfs dfsadmin -provisionSnapshotTrash snapshotDir
+   * @param argv List of of command line parameters.
+   * @exception IOException
+   */
+  public void provisionSnapshotTrash(String[] argv) throws IOException {
+    Path p = new Path(argv[1]);
+    final HdfsAdmin admin = new HdfsAdmin(p.toUri(), getConf());
+    Path trashRoot;
+    try {
+      trashRoot = admin.provisionSnapshotTrash(p);
+    } catch (SnapshotException e) {
+      throw new RemoteException(e.getClass().getName(), e.getMessage());
+    }
+    System.out.println("Successfully provisioned snapshot trash at " +
+        trashRoot);
   }
   
   /**
@@ -1243,6 +1266,10 @@ public class DFSAdmin extends FsShell {
     String disallowSnapshot = "-disallowSnapshot <snapshotDir>:\n" +
         "\tDo not allow snapshots to be taken on a directory any more.\n";
 
+    String provisionSnapshotTrash = "-provisionSnapshotTrash <snapshotDir>:\n" +
+        "\tProvision trash root in a snapshottable directory with permission"
+        + "\t" + HdfsAdmin.TRASH_PERMISSION + ".\n";
+
     String shutdownDatanode = "-shutdownDatanode <datanode_host:ipc_port> [upgrade]\n"
         + "\tSubmit a shutdown request for the given datanode. If an optional\n"
         + "\t\"upgrade\" argument is specified, clients accessing the datanode\n"
@@ -1332,6 +1359,8 @@ public class DFSAdmin extends FsShell {
       System.out.println(allowSnapshot);
     } else if ("disallowSnapshot".equalsIgnoreCase(cmd)) {
       System.out.println(disallowSnapshot);
+    } else if ("provisionSnapshotTrash".equalsIgnoreCase(cmd)) {
+      System.out.println(provisionSnapshotTrash);
     } else if ("shutdownDatanode".equalsIgnoreCase(cmd)) {
       System.out.println(shutdownDatanode);
     } else if ("evictWriters".equalsIgnoreCase(cmd)) {
@@ -1374,6 +1403,7 @@ public class DFSAdmin extends FsShell {
       System.out.println(fetchImage);
       System.out.println(allowSnapshot);
       System.out.println(disallowSnapshot);
+      System.out.println(provisionSnapshotTrash);
       System.out.println(shutdownDatanode);
       System.out.println(evictWriters);
       System.out.println(getDatanodeInfo);
@@ -2083,6 +2113,9 @@ public class DFSAdmin extends FsShell {
     } else if ("-disallowSnapshot".equalsIgnoreCase(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
           + " [-disallowSnapshot <snapshotDir>]");
+    } else if ("-provisionSnapshotTrash".equalsIgnoreCase(cmd)) {
+      System.err.println("Usage: hdfs dfsadmin"
+          + " [-provisionSnapshotTrash <snapshotDir>]");
     } else if ("-saveNamespace".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
           + " [-saveNamespace [-beforeShutdown]]");
@@ -2212,6 +2245,11 @@ public class DFSAdmin extends FsShell {
         return exitCode;
       }
     } else if ("-disallowSnapshot".equalsIgnoreCase(cmd)) {
+      if (argv.length != 2) {
+        printUsage(cmd);
+        return exitCode;
+      }
+    } else if ("-provisionSnapshotTrash".equalsIgnoreCase(cmd)) {
       if (argv.length != 2) {
         printUsage(cmd);
         return exitCode;
@@ -2352,6 +2390,8 @@ public class DFSAdmin extends FsShell {
         allowSnapshot(argv);
       } else if ("-disallowSnapshot".equalsIgnoreCase(cmd)) {
         disallowSnapshot(argv);
+      } else if ("-provisionSnapshotTrash".equalsIgnoreCase(cmd)) {
+        provisionSnapshotTrash(argv);
       } else if ("-saveNamespace".equals(cmd)) {
         exitCode = saveNamespace(argv);
       } else if ("-rollEdits".equals(cmd)) {
