@@ -198,7 +198,8 @@ public class TestRouterRpc {
   @BeforeClass
   public static void globalSetUp() throws Exception {
     Configuration namenodeConf = new Configuration();
-    namenodeConf.setBoolean(DFSConfigKeys.HADOOP_CALLER_CONTEXT_ENABLED_KEY, true);
+    namenodeConf.setBoolean(DFSConfigKeys.HADOOP_CALLER_CONTEXT_ENABLED_KEY,
+        true);
     // It's very easy to become overloaded for some specific dn in this small
     // cluster, which will cause the EC file block allocation failure. To avoid
     // this issue, we disable considerLoad option.

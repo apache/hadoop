@@ -118,7 +118,7 @@ public class RouterRpcClient {
   /** Optional perf monitor. */
   private final RouterRpcMonitor rpcMonitor;
 
-  private final Configuration conf;
+  private final Configuration clientConf;
 
   /** Pattern to parse a stack trace line. */
   private static final Pattern STACK_TRACE_PATTERN =
@@ -140,8 +140,7 @@ public class RouterRpcClient {
 
     this.namenodeResolver = resolver;
 
-    this.conf = conf;
-    Configuration clientConf = getClientConfiguration(conf);
+    this.clientConf = getClientConfiguration(conf);
     this.connectionManager = new ConnectionManager(clientConf);
     this.connectionManager.start();
 
@@ -535,7 +534,7 @@ public class RouterRpcClient {
     CallerContext.Builder builder;
     String origContext = ctx == null ? null : ctx.getContext();
     byte[] origSignature = ctx == null ? null : ctx.getSignature();
-    builder = new CallerContext.Builder(origContext, conf);
+    builder = new CallerContext.Builder(origContext, clientConf);
     builder.append(CLIENT_IP_STR, Server.getRemoteAddress());
     builder.setSignature(origSignature);
     CallerContext.setCurrent(builder.build());
