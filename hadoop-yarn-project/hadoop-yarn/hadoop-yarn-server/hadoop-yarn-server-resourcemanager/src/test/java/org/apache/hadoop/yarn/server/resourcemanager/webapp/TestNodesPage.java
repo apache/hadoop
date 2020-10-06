@@ -19,12 +19,16 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Map;
 
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodesPage.NodesBlock;
+import org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProvider;
+import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
 import org.junit.Before;
 import org.junit.Test;
@@ -56,6 +60,10 @@ public class TestNodesPage {
   
   @Before
   public void setUp() throws Exception {
+    setUpInternal(false);
+  }
+
+  private void setUpInternal(final boolean useDRC) throws Exception {
     final RMContext mockRMContext =
         TestRMWebApp.mockRMContext(3, numberOfRacks, numberOfNodesPerRack,
           8 * TestRMWebApp.GiB);
@@ -66,7 +74,7 @@ public class TestNodesPage {
             public void configure(Binder binder) {
               try {
                 binder.bind(ResourceManager.class).toInstance(
-                  TestRMWebApp.mockRm(mockRMContext));
+                    TestRMWebApp.mockRm(mockRMContext, useDRC));
               } catch (IOException e) {
                 throw new IllegalStateException(e);
               }
@@ -101,7 +109,22 @@ public class TestNodesPage {
     Mockito.verify(writer, Mockito.times(numberOfThInMetricsTable))
         .print("<td");
   }
-  
+
+  @Test
+  public void testNodesBlockRenderForLostNodesWithGPUResources()
+      throws Exception {
+    Map<String, ResourceInformation> oldRtMap =
+        ResourceUtils.getResourceTypes();
+    CustomResourceTypesConfigurationProvider.
+        initResourceTypes(ResourceInformation.GPU_URI);
+    this.setUpInternal(true);
+    try {
+      this.testNodesBlockRenderForLostNodes();
+    } finally {
+      ResourceUtils.initializeResourcesFromResourceInformationMap(oldRtMap);
+    }
+  }
+
   @Test
   public void testNodesBlockRenderForNodeLabelFilterWithNonEmptyLabel() {
     NodesBlock nodesBlock = injector.getInstance(NodesBlock.class);
