@@ -20,13 +20,45 @@ package org.apache.hadoop.fs.azurebfs.utils;
 
 import java.util.UUID;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.commons.lang3.StringUtils;
+
 public class TrackingContext {
-  private String clientCorrelationID;
+
+  private final String clientCorrelationID;
+
+  private final String fileSystemID;
+
   private String clientRequestID;
+
+  private String streamID;
+
   private int retryCount;
 
+  private static final Logger LOG = LoggerFactory.getLogger(
+      org.apache.hadoop.fs.azurebfs.services.AbfsClient.class);
+
+  public static final int MAX_CLIENT_CORRELATION_ID_LENGTH = 72;
+
+  public static final String CLIENT_CORRELATION_ID_PATTERN = "[a-zA-Z0-9-]*";
+
   public TrackingContext(String clientCorrelationID) {
-    this.clientCorrelationID = clientCorrelationID;
+    //validation
+    if ((clientCorrelationID.length() > MAX_CLIENT_CORRELATION_ID_LENGTH)
+        || (!clientCorrelationID.matches(CLIENT_CORRELATION_ID_PATTERN))) {
+      this.clientCorrelationID = EMPTY_STRING;
+      LOG.debug(
+          "Invalid config provided; correlation id not included in header.");
+    } else if (clientCorrelationID.length() > 0) {
+      this.clientCorrelationID = clientCorrelationID + ":";
+    } else {
+      this.clientCorrelationID = EMPTY_STRING;
+    }
+    fileSystemID = UUID.randomUUID().toString();
+    streamID = EMPTY_STRING;
   }
 
   public void setRetryCount(int count) {
@@ -37,8 +69,13 @@ public class TrackingContext {
     clientRequestID = UUID.randomUUID().toString();
   }
 
+  public void setStreamID(String stream) {
+    streamID = stream + StringUtils.right(UUID.randomUUID().toString(), 12);
+  }
+
   public String toString() {
-    return clientCorrelationID + ":" + clientRequestID + ":" + retryCount;
+    return clientCorrelationID + clientRequestID + ":" + fileSystemID + ":"
+        + streamID + ":" + retryCount;
   }
 
 }

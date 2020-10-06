@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.utils.Base64;
 import org.apache.hadoop.fs.azurebfs.utils.DelegationSASGenerator;
 import org.apache.hadoop.fs.azurebfs.utils.SASGenerator;
+import org.apache.hadoop.fs.azurebfs.utils.TrackingContext;
 import org.apache.hadoop.security.AccessControlException;
 
 /**
@@ -105,10 +106,10 @@ public class MockDelegationSASTokenProvider implements SASTokenProvider {
     AbfsHttpOperation op = new AbfsHttpOperation(url, method, requestHeaders);
 
     byte[] requestBuffer = requestBody.toString().getBytes(StandardCharsets.UTF_8.toString());
-    op.sendRequest(requestBuffer, 0, requestBuffer.length);
+    op.sendRequest(requestBuffer, 0, requestBuffer.length, new TrackingContext(CORRELATION_ID));
 
     byte[] responseBuffer = new byte[4 * 1024];
-    op.processResponse(responseBuffer, 0, responseBuffer.length);
+    op.processResponse(responseBuffer, 0, responseBuffer.length, new TrackingContext(CORRELATION_ID));
 
     String responseBody = new String(responseBuffer, 0, (int) op.getBytesReceived(), StandardCharsets.UTF_8);
     int beginIndex = responseBody.indexOf("<Value>") + "<Value>".length();

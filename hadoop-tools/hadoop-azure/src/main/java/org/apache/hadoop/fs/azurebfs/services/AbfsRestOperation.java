@@ -212,12 +212,7 @@ public class AbfsRestOperation {
     AbfsHttpOperation httpOperation = null;
     try {
       // initialize the HTTP request and open the connection
-      this.client.getTrackingContext().setClientRequestID();
-      requestHeaders.add(
-          new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID,
-              this.client.getTrackingContext().toString()));
-      System.out.println("here's the string " + this.client.getTrackingContext().toString());
-      httpOperation = new AbfsHttpOperation(url, method, requestHeaders);
+      httpOperation = new AbfsHttpOperation(url, method, requestHeaders, client.getTrackingContext());
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
 
       switch(client.getAuthType()) {
@@ -240,6 +235,10 @@ public class AbfsRestOperation {
           break;
       }
 
+      httpOperation.getConnection()
+          .setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID,
+              client.getTrackingContext().toString());
+
       // dump the headers
       AbfsIoUtils.dumpHeadersToDebugLog("Request Headers",
           httpOperation.getConnection().getRequestProperties());
@@ -247,12 +246,13 @@ public class AbfsRestOperation {
 
       if (hasRequestBody) {
         // HttpUrlConnection requires
-        httpOperation.sendRequest(buffer, bufferOffset, bufferLength);
+        httpOperation.sendRequest(buffer, bufferOffset, bufferLength, client.getTrackingContext());
         incrementCounter(AbfsStatistic.SEND_REQUESTS, 1);
         incrementCounter(AbfsStatistic.BYTES_SENT, bufferLength);
       }
 
-      httpOperation.processResponse(buffer, bufferOffset, bufferLength);
+
+      httpOperation.processResponse(buffer, bufferOffset, bufferLength, client.getTrackingContext());
       incrementCounter(AbfsStatistic.GET_RESPONSES, 1);
       //Only increment bytesReceived counter when the status code is 2XX.
       if (httpOperation.getStatusCode() >= HttpURLConnection.HTTP_OK
@@ -260,6 +260,7 @@ public class AbfsRestOperation {
         incrementCounter(AbfsStatistic.BYTES_RECEIVED,
             httpOperation.getBytesReceived());
       }
+
     } catch (IOException ex) {
       if (ex instanceof UnknownHostException) {
         LOG.warn(String.format("Unknown host name: %s. Retrying to resolve the host name...", httpOperation.getUrl().getHost()));
