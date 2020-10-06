@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.contract;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -187,18 +186,17 @@ public abstract class AbstractContractGetFileStatusTest extends
     TreeScanResults listing = new TreeScanResults(
             fs.listStatusIterator(tree.getBasePath()));
     listing.assertSizeEquals("listStatus()", TREE_FILES, TREE_WIDTH, 0);
-    RemoteIterator<FileStatus> itr = fs.listStatusIterator(tree.getBasePath());
-    List<FileStatus> resWithoutCheckingHasnext =
-            (List<FileStatus>) iteratorToListThroughNextCallsAlone(fs
+
+    List<FileStatus> resWithoutCheckingHasNext =
+            iteratorToListThroughNextCallsAlone(fs
                     .listStatusIterator(tree.getBasePath()));
 
-    List<FileStatus> resWithCheckingHasnext =
-            (List<FileStatus>) iteratorToList(fs
+    List<FileStatus> resWithCheckingHasNext = iteratorToList(fs
                     .listStatusIterator(tree.getBasePath()));
-    Assertions.assertThat(resWithCheckingHasnext)
+    Assertions.assertThat(resWithCheckingHasNext)
             .describedAs("listStatusIterator() should return correct " +
                     "results even if hasNext() calls are not made.")
-            .hasSameElementsAs(resWithoutCheckingHasnext);
+            .hasSameElementsAs(resWithoutCheckingHasNext);
 
   }
 
@@ -359,16 +357,39 @@ public abstract class AbstractContractGetFileStatusTest extends
   public void testListStatusIteratorFile() throws Throwable {
     describe("test the listStatusIterator(path) on a file");
     Path f = touchf("listStItrFile");
+
     List<FileStatus> statusList = (List<FileStatus>) iteratorToList(
             getFileSystem().listStatusIterator(f));
-    assertEquals("size of file list returned", 1, statusList.size());
-    assertIsNamedFile(f, statusList.get(0));
+    validateListingForFile(f, statusList, false);
+
     List<FileStatus> statusList2 =
             (List<FileStatus>) iteratorToListThroughNextCallsAlone(
                     getFileSystem().listStatusIterator(f));
-    assertEquals("size of file list returned through next() calls",
-            1, statusList2.size());
-    assertIsNamedFile(f, statusList2.get(0));
+    validateListingForFile(f, statusList2, true);
+  }
+
+  /**
+   * Validate listing result for an input path which is file.
+   * @param f file.
+   * @param statusList list status of a file.
+   * @param nextCallAlone whether the listing generated just using
+   *                      next() calls.
+   */
+  private void validateListingForFile(Path f,
+                                      List<FileStatus> statusList,
+                                      boolean nextCallAlone) {
+    String msg = String.format("size of file list returned using %s should " +
+            "be 1", nextCallAlone ?
+            "next() calls alone" : "hasNext() and next() calls");
+    Assertions.assertThat(statusList)
+            .describedAs(msg)
+            .hasSize(1);
+    Assertions.assertThat(statusList.get(0).getPath().toString())
+            .describedAs("path returned should match with the input path")
+            .isEqualTo(f.toString());
+    Assertions.assertThat(statusList.get(0).isFile())
+            .describedAs("path returned should be a file")
+            .isEqualTo(true);
   }
 
   @Test

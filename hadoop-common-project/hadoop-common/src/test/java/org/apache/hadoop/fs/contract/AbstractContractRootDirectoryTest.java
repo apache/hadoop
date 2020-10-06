@@ -22,13 +22,16 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.junit.Test;
+import org.assertj.core.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.RemoteIterator;
@@ -245,11 +248,10 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
         fileList.size() <= statuses.length);
     List<FileStatus> statusList = (List<FileStatus>) iteratorToList(
             fs.listStatusIterator(root));
-    String listStatusItrRes = join(statusList, "\n");
-    assertEquals("listStatus(/) vs listStatusIterator(/) with \n"
-                    + "listStatus =" + listStatusResult
-                    +" listLocatedStatus = " + listStatusItrRes,
-            statuses.length, statusList.size());
+    Assertions.assertThat(statusList)
+            .describedAs("Result of listStatus(/) and listStatusIterator(/)" +
+                    "must match")
+            .hasSameElementsAs(Arrays.stream(statuses).collect(Collectors.toList()));
   }
 
   @Test

@@ -1462,9 +1462,9 @@ public class ContractTestUtils extends Assert {
    * @return the file status entries as a list.
    * @throws IOException
    */
-  public static List<? extends FileStatus> iteratorToList(
-          RemoteIterator<? extends FileStatus> iterator) throws IOException {
-    ArrayList<FileStatus> list = new ArrayList<>();
+  public static <T extends FileStatus> List<T> iteratorToList(
+          RemoteIterator<T> iterator) throws IOException {
+    List<T> list = new ArrayList<>();
     while (iterator.hasNext()) {
       list.add(iterator.next());
     }
@@ -1486,14 +1486,15 @@ public class ContractTestUtils extends Assert {
    * @throws IOException IO problems
    */
   @SuppressWarnings("InfiniteLoopStatement")
-  public static List<? extends FileStatus> iteratorToListThroughNextCallsAlone(
-          RemoteIterator<? extends FileStatus> iterator) throws IOException {
-    ArrayList<FileStatus> list = new ArrayList<>();
+  public static <T extends FileStatus> List<T> iteratorToListThroughNextCallsAlone(
+          RemoteIterator<T> iterator) throws IOException {
+    List<T> list = new ArrayList<>();
     try {
       while (true) {
         list.add(iterator.next());
       }
-    } catch (NoSuchElementException expected) {
+    } catch (NoSuchElementException | IllegalStateException expected) {
+      // DirListingIterator.next() throws IllegalStateException
       // ignored
     }
     return list;
@@ -1520,7 +1521,8 @@ public class ContractTestUtils extends Assert {
       while (true) {
         list.add(iterator.next());
       }
-    } catch (NoSuchElementException expected) {
+    } catch (NoSuchElementException | IllegalStateException expected) {
+      // DirListingIterator.next() throws IllegalStateException
       // ignored
     }
     return list;
