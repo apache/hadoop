@@ -416,6 +416,22 @@ public final class IOStatisticsBinding {
 
   /**
    * Given an IOException raising callable/lambda expression,
+   * execute it and update the relevant statistic.
+   * @param factory factory of duration trackers
+   * @param statistic statistic key
+   * @param input input callable.
+   * @param <B> return type.
+   * @return the result of the operation.
+   */
+  public static <B> B trackDuration(
+      DurationTrackerFactory factory,
+      String statistic,
+      CallableRaisingIOE<B> input) throws IOException {
+    return trackDurationOfOperation(factory, statistic, input).apply();
+  }
+
+  /**
+   * Given an IOException raising callable/lambda expression,
    * return a new one which wraps the inner and tracks
    * the duration of the operation, including whether
    * it passes/fails.
@@ -425,7 +441,7 @@ public final class IOStatisticsBinding {
    * @param <B> return type.
    * @return a new callable which tracks duration and failure.
    */
-  public static <B> CallableRaisingIOE<B> trackDuration(
+  public static <B> CallableRaisingIOE<B> trackDurationOfOperation(
       DurationTrackerFactory factory,
       String statistic,
       CallableRaisingIOE<B> input) {
@@ -479,13 +495,11 @@ public final class IOStatisticsBinding {
         throw e;
       } finally {
         // update the tracker.
-        // this is called after the catch() call would have
+        // this is called after any catch() call will have
         // set the failed flag.
         tracker.close();
       }
     };
   }
-
-
 
 }

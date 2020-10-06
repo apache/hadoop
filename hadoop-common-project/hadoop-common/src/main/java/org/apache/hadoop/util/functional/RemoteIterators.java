@@ -410,7 +410,7 @@ public final class RemoteIterators {
     }
 
     /**
-     * Get the next source value
+     * Get the next source value.
      * @return the next value
      * @throws IOException failure
      * @throws NoSuchElementException no more data
@@ -568,7 +568,7 @@ public final class RemoteIterators {
       extends WrappingRemoteIterator<S, S> {
 
     private final MaybeClose toClose;
-    private boolean closed = false;
+    private boolean closed;
 
     private CloseRemoteIterator(
         final RemoteIterator<S> source,

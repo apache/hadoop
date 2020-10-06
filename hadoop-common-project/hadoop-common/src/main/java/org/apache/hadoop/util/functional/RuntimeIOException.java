@@ -25,10 +25,15 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * A RuntimeException which always contains an IOException.
+ * A {@code RuntimeException} which always contains an
+ * @code IOException}.
  * <p></p>
- * The constructor signature guarantees the cause will be an IOException,
- * and as it checks for a null-argument, non-null.
+ * The constructor signature guarantees the cause will be an
+ * IOException, and, as it checks for a null-argument, non-null.
+ * <p></p>
+ * The methods in {@link FutureIO} to await a Future's completion
+ * will automatically extract the wrapped IOE as part of their
+ * processing of caught exceptions.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
