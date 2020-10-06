@@ -362,6 +362,11 @@
       <artifactId>wildfly-openssl-java</artifactId>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>org.xerial.snappy</groupId>
+      <artifactId>snappy-java</artifactId>
+      <scope>compile</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -641,10 +646,6 @@
       </activation>
       <properties>
         <require.bzip2>false</require.bzip2>
-        <snappy.prefix></snappy.prefix>
-        <snappy.lib></snappy.lib>
-        <snappy.include></snappy.include>
-        <require.snappy>false</require.snappy>
         <zstd.prefix></zstd.prefix>
         <zstd.lib></zstd.lib>
         <zstd.include></zstd.include>
@@ -698,11 +699,7 @@
                     <GENERATED_JAVAH>${project.build.directory}/native/javah</GENERATED_JAVAH>
                     <JVM_ARCH_DATA_MODEL>${sun.arch.data.model}</JVM_ARCH_DATA_MODEL>
                     <REQUIRE_BZIP2>${require.bzip2}</REQUIRE_BZIP2>
-                    <REQUIRE_SNAPPY>${require.snappy}</REQUIRE_SNAPPY>
                     <REQUIRE_ZSTD>${require.zstd}</REQUIRE_ZSTD>
-                    <CUSTOM_SNAPPY_PREFIX>${snappy.prefix}</CUSTOM_SNAPPY_PREFIX>
-                    <CUSTOM_SNAPPY_LIB>${snappy.lib} </CUSTOM_SNAPPY_LIB>
-                    <CUSTOM_SNAPPY_INCLUDE>${snappy.include} </CUSTOM_SNAPPY_INCLUDE>
                     <CUSTOM_ZSTD_PREFIX>${zstd.prefix}</CUSTOM_ZSTD_PREFIX>
                     <CUSTOM_ZSTD_LIB>${zstd.lib} </CUSTOM_ZSTD_LIB>
                     <CUSTOM_ZSTD_INCLUDE>${zstd.include} </CUSTOM_ZSTD_INCLUDE>
@@ -757,14 +754,9 @@
         </os>
       </activation>
       <properties>
-        <snappy.prefix></snappy.prefix>
-        <snappy.lib></snappy.lib>
-        <snappy.include></snappy.include>
         <require.isal>false</require.isal>
         <isal.prefix></isal.prefix>
         <isal.lib></isal.lib>
-        <require.snappy>false</require.snappy>
-        <bundle.snappy.in.bin>true</bundle.snappy.in.bin>
         <zstd.prefix></zstd.prefix>
         <zstd.lib></zstd.lib>
         <zstd.include></zstd.include>
@@ -864,10 +856,6 @@
                     <argument>/nologo</argument>
                     <argument>/p:Configuration=Release</argument>
                     <argument>/p:OutDir=${project.build.directory}/bin/</argument>
-                    <argument>/p:CustomSnappyPrefix=${snappy.prefix}</argument>
-                    <argument>/p:CustomSnappyLib=${snappy.lib}</argument>
-                    <argument>/p:CustomSnappyInclude=${snappy.include}</argument>
-                    <argument>/p:RequireSnappy=${require.snappy}</argument>
                     <argument>/p:CustomZstdPrefix=${zstd.prefix}</argument>
                     <argument>/p:CustomZstdLib=${zstd.lib}</argument>
                     <argument>/p:CustomZstdInclude=${zstd.include}</argument>

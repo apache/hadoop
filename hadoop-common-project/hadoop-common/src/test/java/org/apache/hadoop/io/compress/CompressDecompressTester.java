@@ -79,27 +79,6 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
     };
   }
 
-  private static boolean isNativeSnappyLoadable() {
-    boolean snappyAvailable = false;
-    boolean loaded = false;
-    try {
-      System.loadLibrary("snappy");
-      logger.warn("Snappy native library is available");
-      snappyAvailable = true;
-      boolean hadoopNativeAvailable = NativeCodeLoader.isNativeCodeLoaded();
-      loaded = snappyAvailable && hadoopNativeAvailable;
-      if (loaded) {
-        logger.info("Snappy native library loaded");
-      } else {
-        logger.warn("Snappy native library not loaded");
-      }
-    } catch (Throwable t) {
-      logger.warn("Failed to load snappy: ", t);
-      return false;
-    }
-    return loaded;
-  }
-
   public static <T extends Compressor, E extends Decompressor> CompressDecompressTester<T, E> of(
       byte[] rawData) {
     return new CompressDecompressTester<T, E>(rawData);
@@ -432,7 +411,7 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
               joiner.join(name, "byte arrays not equals error !!!"),
               originalRawData, decompressOut.toByteArray());
         } catch (Exception ex) {
-          fail(joiner.join(name, ex.getMessage()));
+          throw new AssertionError(name + ex, ex);
         } finally {
           try {
             compressedOut.close();
@@ -504,11 +483,10 @@ public class CompressDecompressTester<T extends Compressor, E extends Decompress
 
     else if (compressor.getClass().isAssignableFrom(ZlibCompressor.class)) {
       return ZlibFactory.isNativeZlibLoaded(new Configuration());
-    }              
-    else if (compressor.getClass().isAssignableFrom(SnappyCompressor.class)
-            && isNativeSnappyLoadable())
+    } else if (compressor.getClass().isAssignableFrom(SnappyCompressor.class)) {
       return true;
-    
+    }
+
     return false;      
   }
   
