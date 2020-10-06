@@ -89,7 +89,21 @@ public enum AbfsStatistic {
   WRITE_CURRENT_BUFFER_OPERATIONS("write_current_buffer_ops",
       "Total number of times the current buffer is written to the service."),
   TIME_SPENT_ON_PUT_REQUEST("time_spent_on_put_request",
-      "Total time spent on a put request.");
+      "Total time spent on a put request."),
+
+  //InputStream statistics.
+  SEEK_IN_BUFFER("seek_in_buffer",
+      "Total number of seek operations performed in the buffer."),
+  BYTES_READ_BUFFER("bytes_read_buffer",
+      "Total number of bytes read from the buffer."),
+  REMOTE_READ_OP("remote_read_op",
+      "Total number of remote read operations performed."),
+  READ_AHEAD_BYTES_READ("read_ahead_bytes_read",
+      "Total number of bytes from readAhead."),
+  REMOTE_BYTES_READ("remote_bytes_read",
+      "Total number of bytes read from remote operations."),
+  NEGATIVE_SEEK_BYTES_BACKWARDS("negative_seek_bytes_backwards",
+      "Negative of the total bytes seeked backwards.");
 
 
   private String statName;
