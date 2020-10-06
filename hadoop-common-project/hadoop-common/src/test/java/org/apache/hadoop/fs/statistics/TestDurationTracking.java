@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.fs.statistics;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import org.junit.After;
@@ -27,14 +29,17 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.impl.FutureIOSupport;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 import org.apache.hadoop.util.functional.FunctionRaisingIOE;
+import org.apache.hadoop.util.functional.FutureIO;
 
 import static org.apache.hadoop.fs.statistics.DurationStatisticSummary.fetchDurationSummary;
 import static org.apache.hadoop.fs.statistics.DurationStatisticSummary.fetchSuccessSummary;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.*;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.*;
+import static org.apache.hadoop.fs.statistics.impl.StubDurationTrackerFactory.STUB_DURATION_TRACKER_FACTORY;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -107,9 +112,9 @@ public class TestDurationTracking extends AbstractHadoopTestBase {
    */
   @Test
   public void testDurationFunctionIOE() throws Throwable {
-    FunctionRaisingIOE<Integer, Integer> fn
-        = trackFunctionDuration(stats, REQUESTS,
-        (Integer x) -> x);
+    FunctionRaisingIOE<Integer, Integer> fn =
+        trackFunctionDuration(stats, REQUESTS,
+            (Integer x) -> x);
     assertThat(fn.apply(1)).isEqualTo(1);
     assertSummaryValues(
         fetchSuccessSummary(stats, REQUESTS),
@@ -198,13 +203,13 @@ public class TestDurationTracking extends AbstractHadoopTestBase {
   }
 
   /**
-   * Duration of the successful execution of a CallableRaisingIOE
+   * Duration of the successful execution of a CallableRaisingIOE.
    */
   @Test
   public void testCallableIOEDuration() throws Throwable {
     // call the operation
     assertThat(
-        trackDuration(stats, REQUESTS, () -> sleepf(100)).apply())
+        trackDuration(stats, REQUESTS, () -> sleepf(100)))
         .isEqualTo(100);
     DurationStatisticSummary summary = fetchSuccessSummary(stats, REQUESTS);
     assertSummaryValues(summary, 1, 0, 0);
@@ -221,11 +226,28 @@ public class TestDurationTracking extends AbstractHadoopTestBase {
         trackDuration(stats, REQUESTS, () -> {
           sleepf(100);
           throw new IOException("oops");
-        }).apply());
+        }));
     assertSummaryValues(
         fetchSuccessSummary(stats, REQUESTS),
         1, -1, -1);
 
+    assertSummaryValues(fetchDurationSummary(stats, REQUESTS, false),
+        1, 0, 0);
+  }
+
+
+  /**
+   * Track the duration of an IOE raising callable which fails.
+   */
+  @Test
+  public void testDurationThroughEval() throws Throwable {
+    CompletableFuture<Object> eval = FutureIOSupport.eval(
+        trackDurationOfOperation(stats, REQUESTS, () -> {
+          sleepf(100);
+          throw new FileNotFoundException("oops");
+        }));
+    intercept(FileNotFoundException.class, "oops", () ->
+        FutureIO.awaitFuture(eval));
     assertSummaryValues(fetchDurationSummary(stats, REQUESTS, false),
         1, 0, 0);
   }
@@ -239,6 +261,27 @@ public class TestDurationTracking extends AbstractHadoopTestBase {
     DurationStatisticSummary summary = fetchSuccessSummary(stats, UNKNOWN);
     assertSummaryValues(summary, 0, -1, -1);
     assertThat(summary.getMean()).isNull();
+  }
+
+  /**
+   * The stub duration tracker factory can be supplied as an input.
+   */
+  @Test
+  public void testTrackDurationWithStubFactory() throws Throwable {
+    trackDuration(STUB_DURATION_TRACKER_FACTORY, UNKNOWN, () -> sleepf(1));
+  }
+
+  /**
+   * Make sure the tracker returned from the stub factory
+   * follows the basic lifecycle.
+   */
+  @Test
+  public void testStubDurationLifecycle() throws Throwable {
+    DurationTracker tracker = STUB_DURATION_TRACKER_FACTORY
+        .trackDuration("k", 1);
+    tracker.failed();
+    tracker.close();
+    tracker.close();
   }
 
   /**

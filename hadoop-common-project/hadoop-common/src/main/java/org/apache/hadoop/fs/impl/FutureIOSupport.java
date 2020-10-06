@@ -33,10 +33,15 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSBuilder;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
-import org.apache.hadoop.util.functional.RuntimeIOException;
+import org.apache.hadoop.util.functional.FutureIO;
 
 /**
  * Support for future IO and the FS Builder subclasses.
+ * If methods in here are needed for applications, promote
+ * to {@link FutureIO} for public use -with the original
+ * method relaying to it. This is to ensure that external
+ * filesystem implementations can safely use these methods
+ * without linkage problems surfacing.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -57,14 +62,7 @@ public final class FutureIOSupport {
    */
   public static <T> T  awaitFuture(final Future<T> future)
       throws InterruptedIOException, IOException, RuntimeException {
-    try {
-      return future.get();
-    } catch (InterruptedException e) {
-      throw (InterruptedIOException)new InterruptedIOException(e.toString())
-          .initCause(e);
-    } catch (ExecutionException e) {
-      return raiseInnerCause(e);
-    }
+    return FutureIO.awaitFuture(future);
   }
 
 
@@ -84,17 +82,8 @@ public final class FutureIOSupport {
       final TimeUnit unit)
       throws InterruptedIOException, IOException, RuntimeException,
       TimeoutException {
-
-    try {
-      return future.get(timeout, unit);
-    } catch (InterruptedException e) {
-      throw (InterruptedIOException)new InterruptedIOException(e.toString())
-          .initCause(e);
-    } catch (ExecutionException e) {
-      return raiseInnerCause(e);
-    }
+    return FutureIO.awaitFuture(future, timeout, unit);
   }
-
 
   /**
    * From the inner cause of an execution exception, extract the inner cause
@@ -112,7 +101,7 @@ public final class FutureIOSupport {
    */
   public static <T> T raiseInnerCause(final ExecutionException e)
       throws IOException {
-    throw unwrapInnerException(e);
+    return FutureIO.raiseInnerCause(e);
   }
 
   /**
@@ -127,45 +116,7 @@ public final class FutureIOSupport {
    */
   public static <T> T raiseInnerCause(final CompletionException e)
       throws IOException {
-    throw unwrapInnerException(e);
-  }
-
-  /**
-   * From the inner cause of an execution exception, extract the inner cause.
-   * <ol>
-   *   <li> If it is an IOE: Return.</li>
-   *   <li> If it is a {@link RuntimeIOException}: return the cause</li>
-   *   <li> Completion/Execution Exceptions: extract and repeat</li>
-   *   <li> If it is an RTE: throw.</li>
-   *   <li> Any other type: wrap in an IOE</li>
-   * </ol>
-   *
-   * Recursively handles wrapped Execution and Completion Exceptions in
-   * case something very complicated has happened.
-   * @param e exception.
-   * @return an IOException extracted or built from the cause.
-   * @throws RuntimeException if that is the inner cause.
-   */
-  private static IOException unwrapInnerException(final Throwable e) {
-    Throwable cause = e.getCause();
-    if (cause instanceof IOException) {
-      return (IOException) cause;
-    } else if (cause instanceof RuntimeIOException) {
-      // this is always an IOException
-      return ((RuntimeIOException) cause).getCause();
-    } else if (cause instanceof CompletionException) {
-      return unwrapInnerException(cause);
-    } else if (cause instanceof ExecutionException) {
-      return unwrapInnerException(cause);
-    } else if (cause instanceof RuntimeException) {
-      throw (RuntimeException) cause;
-    } else if (cause != null) {
-      // other type: wrap with a new IOE
-      return new IOException(cause);
-    } else {
-      // this only happens if there was no cause.
-      return new IOException(e);
-    }
+    return FutureIO.raiseInnerCause(e);
   }
 
   /**

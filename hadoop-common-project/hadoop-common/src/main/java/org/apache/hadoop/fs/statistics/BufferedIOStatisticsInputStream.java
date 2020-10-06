@@ -49,7 +49,7 @@ public class BufferedIOStatisticsInputStream
   }
 
   /**
-   * Buffer an input stream with the chosen buffer size
+   * Buffer an input stream with the chosen buffer size.
    * @param in input stream
    * @param size buffer size
    */
@@ -57,6 +57,10 @@ public class BufferedIOStatisticsInputStream
     super(in, size);
   }
 
+  /**
+   * Return any IOStatistics offered by the inner stream.
+   * @return inner IOStatistics or null
+   */
   @Override
   public IOStatistics getIOStatistics() {
     return retrieveIOStatistics(in);
