@@ -17,6 +17,7 @@
 
 conffile=src/test/resources/abfs-testrun-configs.xml
 bkpconffile=src/test/resources/abfs-testrun-configs_BKP.xml
+logdir=target/testlogs
 testresultsregex="Results:(\n|.)*?Tests run:"
 testresultsfilename=
 starttime=
@@ -128,11 +129,11 @@ runtestwithconfs() {
     checkdependencies
     mvn clean install -DskipTests
     starttime=$(date +"%Y-%m-%d_%H-%M-%S")
-    mkdir -p "target/testlogs"
-    testresultsfilename="target/testlogs/Test-$starttime-Results.log"
+    mkdir -p "$logdir"
+    testresultsfilename="$logdir/Test-$starttime-Results.log"
   fi
   STARTTIME=$(date +%s)
-  testlogfilename="target/testlogs/Test-$starttime-Logs-$scenario.log"
+  testlogfilename="$logdir/Test-$starttime-Logs-$scenario.log"
   printf "\nRunning the scenario: %s..." "$scenario"
   testwithconfs
   ENDTIME=$(date +%s)

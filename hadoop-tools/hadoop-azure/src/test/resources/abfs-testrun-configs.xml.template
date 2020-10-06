@@ -117,7 +117,7 @@
   </property>
 
 <!--===========================   FOR CheckAccess =========================-->
-<!-- To run ABFS CheckAccess SAS tests, you must register an app, with no role
+<!-- To run ABFS CheckAccess tests, you must register an app, with no role
  assignments, and set the configuration discussed below:
 
     1) Register a new app with no RBAC
