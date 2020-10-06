@@ -175,7 +175,8 @@ class NodesPage extends RmView {
             .get(ResourceInformation.GPU_URI);
         long usedGPUs = 0;
         long availableGPUs = 0;
-        if (gpuIndex != null) {
+        if (gpuIndex != null && info.getUsedResource() != null
+            && info.getAvailableResource() != null) {
           usedGPUs = info.getUsedResource().getResource()
               .getResourceValue(ResourceInformation.GPU_URI);
           availableGPUs = info.getAvailableResource().getResource()
