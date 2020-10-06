@@ -384,9 +384,9 @@ public abstract class AbstractContractGetFileStatusTest extends
     Assertions.assertThat(statusList)
             .describedAs(msg)
             .hasSize(1);
-    Assertions.assertThat(statusList.get(0).getPath().toString())
+    Assertions.assertThat(statusList.get(0).getPath())
             .describedAs("path returned should match with the input path")
-            .isEqualTo(f.toString());
+            .isEqualTo(f);
     Assertions.assertThat(statusList.get(0).isFile())
             .describedAs("path returned should be a file")
             .isEqualTo(true);

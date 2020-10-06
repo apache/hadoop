@@ -1493,8 +1493,7 @@ public class ContractTestUtils extends Assert {
       while (true) {
         list.add(iterator.next());
       }
-    } catch (NoSuchElementException | IllegalStateException expected) {
-      // DirListingIterator.next() throws IllegalStateException
+    } catch (NoSuchElementException expected) {
       // ignored
     }
     return list;
@@ -1521,8 +1520,7 @@ public class ContractTestUtils extends Assert {
       while (true) {
         list.add(iterator.next());
       }
-    } catch (NoSuchElementException | IllegalStateException expected) {
-      // DirListingIterator.next() throws IllegalStateException
+    } catch (NoSuchElementException expected) {
       // ignored
     }
     return list;

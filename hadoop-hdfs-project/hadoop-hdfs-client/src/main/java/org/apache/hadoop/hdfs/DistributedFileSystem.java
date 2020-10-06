@@ -1107,6 +1107,7 @@ public class DistributedFileSystem extends FileSystem
     }
 
     HdfsFileStatus[] partialListing = thisListing.getPartialListing();
+
     if (!thisListing.hasMore()) { // got all entries of the directory
       FileStatus[] stats = new FileStatus[partialListing.length];
       for (int i = 0; i < partialListing.length; i++) {
