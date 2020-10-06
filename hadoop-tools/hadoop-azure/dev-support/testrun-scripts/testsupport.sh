@@ -15,8 +15,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-conffile=src/test/resources/abfs-testrun-configs.xml
-bkpconffile=src/test/resources/abfs-testrun-configs_BKP.xml
+conffile=src/test/resources/azure-auth-keys.xml
+bkpconffile=src/test/resources/azure-auth-keys_BKP.xml
 logdir=target/testlogs
 testresultsregex="Results:(\n|.)*?Tests run:"
 testresultsfilename=

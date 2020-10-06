@@ -51,8 +51,8 @@
 
   <!--====================== IMPORTANT!! ========================-->
   <!--WARNING!!
-      PLEASE PROVIDE VALUES FOR THE CONFIGS IN "abfs-testrun-configs.xml
-      .template" AND RENAME THE SAME TO "abfs-testrun-configs.xml"
+      PLEASE PROVIDE VALUES FOR THE CONFIGS IN "azure-auth-keys.xml
+      .template" AND RENAME THE SAME TO "azure-auth-keys.xml"
       SEE "site/markdown/testing_azure.md" FOR MORE INFORMATION, THEN STORE THE
       CONFIGURATION PROPERTIES WITHIN IT.
       TO PREVENT ACCIDENTAL LEAKS OF YOUR STORAGE ACCOUNT CREDENTIALS,
@@ -60,7 +60,7 @@
       IT IN PATCHES OR COMMITS. -->
   <!--=============================================================-->
 
-  <include xmlns="http://www.w3.org/2001/XInclude" href="abfs-testrun-configs.xml">
+  <include xmlns="http://www.w3.org/2001/XInclude" href="azure-auth-keys.xml">
     <fallback />
   </include>
 

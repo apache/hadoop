@@ -18,7 +18,7 @@
   <!--====================== IMPORTANT!! ========================-->
   <!--
       1. PLEASE PROVIDE VALUES FOR THE CONFIGS IN THIS FILE AND
-         RENAME THE SAME TO "abfs-testrun-configs.xml"
+         RENAME THE SAME TO "azure-auth-keys.xml"
       2. UPDATE runtests.sh
          A.  "fs.azure.abfs.account.name" AND "fs.azure.test.namespace.enabled"
              ARE MANDATORY WITH EVERY SCENARIO. AUTHTYPE BY DEFAULT WILL BE

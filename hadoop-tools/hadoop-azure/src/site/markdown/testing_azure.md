@@ -80,7 +80,7 @@ tests against mocked storage, which is an in-memory emulation of Azure Storage.
 The integration tests are designed to test directly against an Azure storage
 service, and require an account and credentials in order to run.
 
-This is done by creating the file to `src/test/resources/abfs-testrun-configs.xml`
+This is done by creating the file to `src/test/resources/azure-auth-keys.xml`
 and setting the name of the storage account and its access key.
 
 For example:
@@ -100,7 +100,7 @@ For example:
 </configuration>
 ```
 
-To run contract tests, set the WASB file system URI in `src/test/resources/abfs-testrun-configs.xml`
+To run contract tests, set the WASB file system URI in `src/test/resources/azure-auth-keys.xml`
 and the account access key. For example:
 
 ```xml
@@ -119,7 +119,7 @@ and the account access key. For example:
 </configuration>
 ```
 
-Overall, to run all the tests using `mvn test`,  a sample `abfs-testrun-configs.xml` is like following:
+Overall, to run all the tests using `mvn test`,  a sample `azure-auth-keys.xml` is like following:
 
 ```xml
 <?xml version="1.0"?>
@@ -140,7 +140,7 @@ Overall, to run all the tests using `mvn test`,  a sample `abfs-testrun-configs.
 </configuration>
 ```
 
-DO NOT ADD `abfs-testrun-configs.xml` TO REVISION CONTROL.  The keys to your Azure
+DO NOT ADD `azure-auth-keys.xml` TO REVISION CONTROL.  The keys to your Azure
 Storage account are a secret and must not be shared.
 
 
@@ -593,7 +593,7 @@ namespace is enabled for the storage account.  Furthermore, the metadata and dat
 produced by ADLS Gen 2 REST API can be consumed by Blob REST API, and vice versa.
 
 In order to test ABFS, please add the following configuration to your
-`src/test/resources/abfs-testrun-configs.xml` file. Note that the ABFS tests include
+`src/test/resources/azure-auth-keys.xml` file. Note that the ABFS tests include
 compatibility tests which require WASB credentials, in addition to the ABFS
 credentials.
 
@@ -941,7 +941,7 @@ http[s]://[account][domain-suffix]/[filesystem], please use the following:
 This is the expected way in which the tests have to be ran before raising a PR.
 The script runtests.sh contain template for 3 combinations of tests. Ensure
 the auth configs for all the accounts used for testing are provided in
-abfs-testrun-configs.xml. In case any new flags or properties are introduced
+azure-auth-keys.xml. In case any new flags or properties are introduced
 with the code change, add the combinations with the possible configurations
 into the runtests.sh. The thread count can be specified as the command line
 argument for the script. By default the same will be 8.
