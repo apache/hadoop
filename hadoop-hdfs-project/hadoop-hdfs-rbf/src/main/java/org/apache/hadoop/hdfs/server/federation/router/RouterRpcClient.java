@@ -66,8 +66,10 @@ import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction.RetryDecision;
+import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RetriableException;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -116,10 +118,13 @@ public class RouterRpcClient {
   /** Optional perf monitor. */
   private final RouterRpcMonitor rpcMonitor;
 
+  private final Configuration conf;
+
   /** Pattern to parse a stack trace line. */
   private static final Pattern STACK_TRACE_PATTERN =
       Pattern.compile("\\tat (.*)\\.(.*)\\((.*):(\\d*)\\)");
 
+  private static final String CLIENT_IP_STR = "clientIp";
 
   /**
    * Create a router RPC client to manage remote procedure calls to NNs.
@@ -135,6 +140,7 @@ public class RouterRpcClient {
 
     this.namenodeResolver = resolver;
 
+    this.conf = conf;
     Configuration clientConf = getClientConfiguration(conf);
     this.connectionManager = new ConnectionManager(clientConf);
     this.connectionManager.start();
@@ -404,6 +410,7 @@ public class RouterRpcClient {
           " with params " + Arrays.deepToString(params) + " from "
           + router.getRouterId());
     }
+    appendClientIp2CallerContext();
 
     Object ret = null;
     if (rpcMonitor != null) {
@@ -517,6 +524,21 @@ public class RouterRpcClient {
     } else {
       throw new StandbyException(msg);
     }
+  }
+
+  /**
+   * For Tracking which is the actual client address.
+   * It adds key/value (clientIp/"ip") pair to the caller context.
+   */
+  private void appendClientIp2CallerContext() {
+    final CallerContext ctx = CallerContext.getCurrent();
+    CallerContext.Builder builder;
+    String origContext = ctx == null ? null : ctx.getContext();
+    byte[] origSignature = ctx == null ? null : ctx.getSignature();
+    builder = new CallerContext.Builder(origContext, conf);
+    builder.append(CLIENT_IP_STR, Server.getRemoteAddress());
+    builder.setSignature(origSignature);
+    CallerContext.setCurrent(builder.build());
   }
 
   /**

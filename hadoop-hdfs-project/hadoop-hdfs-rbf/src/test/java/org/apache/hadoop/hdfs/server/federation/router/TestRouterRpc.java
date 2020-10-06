@@ -198,6 +198,7 @@ public class TestRouterRpc {
   @BeforeClass
   public static void globalSetUp() throws Exception {
     Configuration namenodeConf = new Configuration();
+    namenodeConf.setBoolean(DFSConfigKeys.HADOOP_CALLER_CONTEXT_ENABLED_KEY, true);
     // It's very easy to become overloaded for some specific dn in this small
     // cluster, which will cause the EC file block allocation failure. To avoid
     // this issue, we disable considerLoad option.
@@ -1900,5 +1901,20 @@ public class TestRouterRpc {
       }
     }
     return null;
+  }
+
+  @Test
+  public void testCreateWithCallerContext() throws IOException {
+    GenericTestUtils.LogCapturer auditlog =
+        GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.auditLog);
+
+    // Create a directory via the router
+    String dirPath = "/test_dir_with_callercontext";
+    FsPermission permission = new FsPermission("705");
+    routerProtocol.mkdirs(dirPath, permission, false);
+
+    // The audit log should contains "callerContext=clientIp:"
+    assertTrue(auditlog.getOutput().contains("callerContext=clientIp:"));
+    assertTrue(verifyFileExists(routerFS, dirPath));
   }
 }
