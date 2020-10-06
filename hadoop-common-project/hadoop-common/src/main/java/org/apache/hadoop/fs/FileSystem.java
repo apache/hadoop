@@ -621,6 +621,7 @@ public abstract class FileSystem extends Configured
    * @throws IOException a problem arose closing one or more filesystem.
    */
   public static void closeAll() throws IOException {
+    debugLogFileSystemClose("closeAll", "");
     CACHE.closeAll();
   }
 
@@ -631,8 +632,22 @@ public abstract class FileSystem extends Configured
    * @throws IOException a problem arose closing one or more filesystem.
    */
   public static void closeAllForUGI(UserGroupInformation ugi)
-  throws IOException {
+      throws IOException {
+    debugLogFileSystemClose("closeAllForUGI", "UGI: " + ugi);
     CACHE.closeAll(ugi);
+  }
+
+  private static void debugLogFileSystemClose(String methodName,
+      String additionalInfo) {
+    if (LOGGER.isDebugEnabled()) {
+      Throwable throwable = new Throwable().fillInStackTrace();
+      LOGGER.debug("FileSystem.{}() by method: {}); {}", methodName,
+          throwable.getStackTrace()[2], additionalInfo);
+      if (LOGGER.isTraceEnabled()) {
+        LOGGER.trace("FileSystem.{}() full stack trace:", methodName,
+            throwable);
+      }
+    }
   }
 
   /**
@@ -2570,6 +2585,9 @@ public abstract class FileSystem extends Configured
    */
   @Override
   public void close() throws IOException {
+    debugLogFileSystemClose("close", "Key: " + key + "; URI: " + getUri()
+        + "; Object Identity Hash: "
+        + Integer.toHexString(System.identityHashCode(this)));
     // delete all files that were marked as delete-on-exit.
     processDeleteOnExit();
     CACHE.remove(this.key, this);

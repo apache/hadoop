@@ -135,7 +135,6 @@ public class TestFSQueueConverter {
         .withCapacitySchedulerConfig(csConfig)
         .withPreemptionEnabled(false)
         .withSizeBasedWeight(false)
-        .withAutoCreateChildQueues(false)
         .withClusterResource(CLUSTER_RESOURCE)
         .withQueueMaxAMShareDefault(MAX_AM_SHARE_DEFAULT)
         .withQueueMaxAppsDefault(MAX_APPS_DEFAULT)
@@ -308,36 +307,9 @@ public class TestFSQueueConverter {
   }
 
   @Test
-  public void testQueueAutoCreateChildQueue() {
-    converter = builder
-        .withCapacitySchedulerConfig(csConfig)
-        .withAutoCreateChildQueues(true)
-        .build();
-
-    converter.convertQueueHierarchy(rootQueue);
-
-    Set<String> parentQueues = Sets.newHashSet(
-        "root.admins",
-        "root.users");
-
-    Set<String> leafQueues = Sets.newHashSet(
-        "root.default",
-        "root.admins.alice",
-        "root.admins.bob",
-        "root.users.joe",
-        "root.users.john");
-
-    assertTrueForQueues(parentQueues, ".auto-create-child-queue.enabled",
-        csConfig);
-    assertNoValueForQueues(leafQueues, ".auto-create-child-queue.enabled",
-        csConfig);
-  }
-
-  @Test
   public void testQueueWithNoAutoCreateChildQueue() {
     converter = builder
         .withCapacitySchedulerConfig(csConfig)
-        .withAutoCreateChildQueues(false)
         .build();
 
     converter.convertQueueHierarchy(rootQueue);

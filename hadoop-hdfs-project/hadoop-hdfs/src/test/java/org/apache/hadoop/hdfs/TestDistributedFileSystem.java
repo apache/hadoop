@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.FS_CLIENT_TOPOLOGY_RESOLUTION_ENABLED;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_FILE_CLOSE_NUM_COMMITTED_ALLOWED_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsAdmin.TRASH_PERMISSION;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_CONTEXT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -2155,8 +2156,9 @@ public class TestDistributedFileSystem {
     try {
       DistributedFileSystem dfs = cluster.getFileSystem();
       Path testDir = new Path("/ssgtr/test1/");
+      Path testDirTrashRoot = new Path(testDir, FileSystem.TRASH_PREFIX);
       Path file0path = new Path(testDir, "file-0");
-      dfs.create(file0path);
+      dfs.create(file0path).close();
 
       Path trBeforeAllowSnapshot = dfs.getTrashRoot(file0path);
       String trBeforeAllowSnapshotStr = trBeforeAllowSnapshot.toUri().getPath();
@@ -2165,6 +2167,15 @@ public class TestDistributedFileSystem {
       assertTrue(trBeforeAllowSnapshotStr.startsWith(homeDirStr));
 
       dfs.allowSnapshot(testDir);
+
+      // Provision trash root
+      // Note: DFS#allowSnapshot doesn't auto create trash root.
+      //  Only HdfsAdmin#allowSnapshot creates trash root when
+      //  dfs.namenode.snapshot.trashroot.enabled is set to true on NameNode.
+      dfs.provisionSnapshotTrash(testDir, TRASH_PERMISSION);
+      // Expect trash root to be created with permission 777 and sticky bit
+      FileStatus trashRootFileStatus = dfs.getFileStatus(testDirTrashRoot);
+      assertEquals(TRASH_PERMISSION, trashRootFileStatus.getPermission());
 
       Path trAfterAllowSnapshot = dfs.getTrashRoot(file0path);
       String trAfterAllowSnapshotStr = trAfterAllowSnapshot.toUri().getPath();
@@ -2182,6 +2193,7 @@ public class TestDistributedFileSystem {
       assertTrue(trBeforeAllowSnapshotStr.startsWith(homeDirStr));
 
       // Cleanup
+      // DFS#disallowSnapshot would remove empty trash root without throwing.
       dfs.disallowSnapshot(testDir);
       dfs.delete(testDir, true);
       dfs.delete(test2Dir, true);
@@ -2469,7 +2481,8 @@ public class TestDistributedFileSystem {
       dfs.allowSnapshot(testDir);
       // Create trash root manually
       Path testDirTrashRoot = new Path(testDir, FileSystem.TRASH_PREFIX);
-      dfs.mkdirs(testDirTrashRoot);
+      Path dirInsideTrash = new Path(testDirTrashRoot, "user1");
+      dfs.mkdirs(dirInsideTrash);
       // Try disallowing snapshot, should throw
       LambdaTestUtils.intercept(IOException.class,
           () -> dfs.disallowSnapshot(testDir));

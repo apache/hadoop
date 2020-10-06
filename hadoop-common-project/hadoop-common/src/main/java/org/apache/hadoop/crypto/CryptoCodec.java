@@ -101,7 +101,7 @@ public abstract class CryptoCodec implements Configurable, Closeable {
         HADOOP_SECURITY_CRYPTO_CIPHER_SUITE_DEFAULT);
     return getInstance(conf, CipherSuite.convert(name));
   }
-  
+
   private static List<Class<? extends CryptoCodec>> getCodecClasses(
       Configuration conf, CipherSuite cipherSuite) {
     List<Class<? extends CryptoCodec>> result = Lists.newArrayList();
@@ -112,6 +112,10 @@ public abstract class CryptoCodec implements Configurable, Closeable {
         .HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_AES_CTR_NOPADDING_KEY)) {
       codecString = conf.get(configName, CommonConfigurationKeysPublic
           .HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_AES_CTR_NOPADDING_DEFAULT);
+    } else if (configName.equals(CommonConfigurationKeysPublic
+            .HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_SM4_CTR_NOPADDING_KEY)){
+      codecString = conf.get(configName, CommonConfigurationKeysPublic
+              .HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_SM4_CTR_NOPADDING_DEFAULT);
     } else {
       codecString = conf.get(configName);
     }

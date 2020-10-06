@@ -162,6 +162,7 @@ public class TestLeafQueue {
   private void setUpInternal(ResourceCalculator rC, boolean withNodeLabels)
       throws Exception {
     CapacityScheduler spyCs = new CapacityScheduler();
+    spyCs.setActivitiesManagerEnabled(false);
     queues = new CSQueueStore();
     cs = spy(spyCs);
     rmContext = TestUtils.getMockRMContext();

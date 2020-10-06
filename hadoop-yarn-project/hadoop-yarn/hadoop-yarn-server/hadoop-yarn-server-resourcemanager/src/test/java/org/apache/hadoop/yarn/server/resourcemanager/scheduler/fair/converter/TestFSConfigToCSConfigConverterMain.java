@@ -93,6 +93,7 @@ public class TestFSConfigToCSConfigConverterMain {
 
     FSConfigToCSConfigConverterMain.main(new String[] {
         "-p",
+        "-m",
         "-y", YARN_SITE_XML,
         "-f", FS_ALLOC_FILE,
         "-r", CONVERSION_RULES_FILE});
@@ -102,6 +103,8 @@ public class TestFSConfigToCSConfigConverterMain {
         stdout.contains("======= yarn-site.xml ======="));
     assertTrue("Stdout doesn't contain capacity-scheduler.xml",
         stdout.contains("======= capacity-scheduler.xml ======="));
+    assertTrue("Stdout doesn't contain mapping-rules.json",
+        stdout.contains("======= mapping-rules.json ======="));
   }
 
   @Test
@@ -130,6 +133,7 @@ public class TestFSConfigToCSConfigConverterMain {
 
     FSConfigToCSConfigConverterMain.main(new String[] {
         "--print",
+        "--convert-placement-rules",
         "--yarnsiteconfig", YARN_SITE_XML,
         "--fsconfig", FS_ALLOC_FILE,
         "--rulesconfig", CONVERSION_RULES_FILE});
@@ -139,6 +143,8 @@ public class TestFSConfigToCSConfigConverterMain {
         stdout.contains("======= yarn-site.xml ======="));
     assertTrue("Stdout doesn't contain capacity-scheduler.xml",
         stdout.contains("======= capacity-scheduler.xml ======="));
+    assertTrue("Stdout doesn't contain mapping-rules.json",
+        stdout.contains("======= mapping-rules.json ======="));
   }
 
   private void verifyHelpText() {

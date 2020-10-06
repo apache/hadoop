@@ -868,6 +868,63 @@ hierarchical namespace enabled and set the following configuration settings:
 
 ```
 
+To run CheckAccess test cases you must register an app with no RBAC and set
+the following configurations.
+```xml
+<!--===========================   FOR CheckAccess =========================-->
+<!-- To run ABFS CheckAccess SAS tests, you must register an app, with no role
+ assignments, and set the configuration discussed below:
+
+    1) Register a new app with no RBAC
+    2) As part of the test configs you need to provide the guid for the above
+created app. Please follow the below steps to fetch the guid.
+      a) Get an access token with the above created app. Please refer the
+ following documentation for the same. https://docs.microsoft
+.com/en-us/azure/active-directory/develop/v2-oauth2-client-creds-grant-flow#get-a-token
+      b) Decode the token fetched with the above step. You may use https
+://jwt.ms/ to decode the token
+      d) The oid field in the decoded string is the guid.
+    3) Set the following configurations:
+-->
+
+  <property>
+    <name>fs.azure.enable.check.access</name>
+    <value>true</value>
+    <description>By default the check access will be on. Checkaccess can
+    be turned off by changing this flag to false.</description>
+  </property>
+  <property>
+    <name>fs.azure.account.test.oauth2.client.id</name>
+    <value>{client id}</value>
+    <description>The client id(app id) for the app created on step 1
+    </description>
+  </property>
+  <property>
+    <name>fs.azure.account.test.oauth2.client.secret</name>
+    <value>{client secret}</value>
+    <description>
+The client secret(application's secret) for the app created on step 1
+    </description>
+  </property>
+  <property>
+    <name>fs.azure.check.access.testuser.guid</name>
+    <value>{guid}</value>
+    <description>The guid fetched on step 2</description>
+  </property>
+  <property>
+    <name>fs.azure.account.oauth2.client.endpoint.{account name}.dfs.core
+.windows.net</name>
+    <value>https://login.microsoftonline.com/{TENANTID}/oauth2/token</value>
+    <description>
+Token end point. This can be found through Azure portal. As part of CheckAccess
+test cases. The access will be tested for an FS instance created with the
+above mentioned client credentials. So this configuration is necessary to
+create the test FS instance.
+    </description>
+  </property>
+
+```
+
 If running tests against an endpoint that uses the URL format
 http[s]://[ip]:[port]/[account]/[filesystem] instead of
 http[s]://[account][domain-suffix]/[filesystem], please use the following:

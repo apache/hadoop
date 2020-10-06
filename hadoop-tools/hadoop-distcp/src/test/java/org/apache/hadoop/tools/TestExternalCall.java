@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.tools;
 
+import org.apache.hadoop.mapreduce.Job;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -34,6 +36,8 @@ import org.junit.Test;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.security.Permission;
+
+import static org.mockito.Mockito.*;
 
 public class TestExternalCall {
 
@@ -133,6 +137,33 @@ public class TestExternalCall {
     }
 
   }
+
+  /**
+   * test methods run end execute of DistCp class. distcp job should be cleaned up after completion
+   * @throws Exception
+   */
+  @Test
+  public void testCleanupOfJob() throws Exception {
+
+    Configuration conf = getConf();
+
+    Path stagingDir = JobSubmissionFiles.getStagingDir(new Cluster(conf),
+      conf);
+    stagingDir.getFileSystem(conf).mkdirs(stagingDir);
+    Path soure = createFile("tmp.txt");
+    Path target = createFile("target.txt");
+
+    DistCp distcp = mock(DistCp.class);
+    Job job = spy(Job.class);
+    Mockito.when(distcp.getConf()).thenReturn(conf);
+    Mockito.when(distcp.execute()).thenReturn(job);
+    Mockito.when(distcp.run(Mockito.any())).thenCallRealMethod();
+    String[] arg = { soure.toString(), target.toString() };
+
+    distcp.run(arg);
+    Mockito.verify(job, times(1)).close();
+  }
+
 
   private SecurityManager securityManager;
 

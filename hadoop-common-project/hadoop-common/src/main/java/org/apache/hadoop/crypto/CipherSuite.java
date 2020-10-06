@@ -28,7 +28,8 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceAudience.Private
 public enum CipherSuite {
   UNKNOWN("Unknown", 0),
-  AES_CTR_NOPADDING("AES/CTR/NoPadding", 16);
+  AES_CTR_NOPADDING("AES/CTR/NoPadding", 16),
+  SM4_CTR_NOPADDING("SM4/CTR/NoPadding", 16);
 
   private final String name;
   private final int algoBlockSize;
