@@ -196,31 +196,31 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
     final StringBuilder sb = new StringBuilder();
     sb.append("s=")
-        .append(statusCode)
-        .append(" e=")
-        .append(storageErrorCode)
-        .append(" ci=")
-        .append(getClientRequestId())
-        .append(" ri=")
-        .append(requestId);
+      .append(statusCode)
+      .append(" e=")
+      .append(storageErrorCode)
+      .append(" ci=")
+      .append(getClientRequestId())
+      .append(" ri=")
+      .append(requestId);
 
     if (isTraceEnabled) {
       sb.append(" ct=")
-          .append(connectionTimeMs)
-          .append(" st=")
-          .append(sendRequestTimeMs)
-          .append(" rt=")
-          .append(recvResponseTimeMs);
+        .append(connectionTimeMs)
+        .append(" st=")
+        .append(sendRequestTimeMs)
+        .append(" rt=")
+        .append(recvResponseTimeMs);
     }
 
     sb.append(" bs=")
-        .append(bytesSent)
-        .append(" br=")
-        .append(bytesReceived)
-        .append(" m=")
-        .append(method)
-        .append(" u=")
-        .append(urlStr);
+      .append(bytesSent)
+      .append(" br=")
+      .append(bytesReceived)
+      .append(" m=")
+      .append(method)
+      .append(" u=")
+      .append(urlStr);
 
     return sb.toString();
   }
@@ -453,17 +453,17 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
             jp.nextToken();
             fieldValue = jp.getText();
             switch (fieldName) {
-            case "code":
-              storageErrorCode = fieldValue;
-              break;
-            case "message":
-              storageErrorMessage = fieldValue;
-              break;
-            case "ExpectedAppendPos":
-              expectedAppendPos = fieldValue;
-              break;
-            default:
-              break;
+              case "code":
+                storageErrorCode = fieldValue;
+                break;
+              case "message":
+                storageErrorMessage = fieldValue;
+                break;
+              case "ExpectedAppendPos":
+                expectedAppendPos = fieldValue;
+                break;
+              default:
+                break;
             }
           }
           jp.nextToken();

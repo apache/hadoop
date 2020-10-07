@@ -727,11 +727,12 @@ public class AzureBlobFileSystemStore implements Closeable {
     } while (shouldContinue);
   }
 
-  public void delete(final Path path, final boolean recursive)
+  public void delete(final Path path, final boolean recursive, TrackingContext trackingContext)
       throws AzureBlobFileSystemException {
     final Instant startAggregate = abfsPerfTracker.getLatencyInstant();
     long countAggregate = 0;
     boolean shouldContinue = true;
+    trackingContext.setClientCorrelationID(abfsConfiguration.getClientCorrelationID());
 
     LOG.debug("delete filesystem: {} path: {} recursive: {}",
             client.getFileSystem(),

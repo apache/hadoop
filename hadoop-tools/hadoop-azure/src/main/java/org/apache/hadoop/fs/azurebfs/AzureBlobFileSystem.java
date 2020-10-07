@@ -71,6 +71,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderExcept
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
+import org.apache.hadoop.fs.azurebfs.utils.TrackingContext;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -146,7 +147,6 @@ public class AzureBlobFileSystem extends FileSystem {
     LOG.debug("Initializing AzureBlobFileSystem for {} complete", uri);
 
     fileSystemID = UUID.randomUUID().toString();
-    abfsStore.getClient().getTrackingContext().setFileSystemID(fileSystemID);
   }
 
   @Override
@@ -353,7 +353,8 @@ public class AzureBlobFileSystem extends FileSystem {
         "AzureBlobFileSystem.delete path: {} recursive: {}", f.toString(), recursive);
     statIncrement(CALL_DELETE);
     Path qualifiedPath = makeQualified(f);
-    abfsStore.getClient().getTrackingContext().setOpName("delete");
+    TrackingContext trackingContext = new TrackingContext(fileSystemID, "DL");
+//    abfsStore.getClient().getTrackingContext().setOpName("delete");
 
     if (f.isRoot()) {
       if (!recursive) {
@@ -364,7 +365,7 @@ public class AzureBlobFileSystem extends FileSystem {
     }
 
     try {
-      abfsStore.delete(qualifiedPath, recursive);
+      abfsStore.delete(qualifiedPath, recursive, trackingContext);
       return true;
     } catch (AzureBlobFileSystemException ex) {
       checkException(f, ex, AzureServiceErrorCode.PATH_NOT_FOUND);

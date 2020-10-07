@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemExc
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.oauth2.AzureADAuthenticator.HttpException;
+import org.apache.hadoop.fs.azurebfs.utils.TrackingContext;
 
 /**
  * The AbfsRestOperation for Rest AbfsClient.
@@ -50,6 +51,8 @@ public class AbfsRestOperation {
   private final URL url;
   // all the custom HTTP request headers provided by the caller
   private final List<AbfsHttpHeader> requestHeaders;
+
+  private final TrackingContext trackingContext;
 
   // This is a simple operation class, where all the upload methods have a
   // request body and all the download methods have a response body.
@@ -107,8 +110,9 @@ public class AbfsRestOperation {
                     final AbfsClient client,
                     final String method,
                     final URL url,
-                    final List<AbfsHttpHeader> requestHeaders) {
-    this(operationType, client, method, url, requestHeaders, null);
+                    final List<AbfsHttpHeader> requestHeaders,
+                    final TrackingContext trackingContext) {
+    this(operationType, client, method, url, requestHeaders, trackingContext, null);
   }
 
   /**
@@ -125,12 +129,14 @@ public class AbfsRestOperation {
                     final String method,
                     final URL url,
                     final List<AbfsHttpHeader> requestHeaders,
+                    final TrackingContext trackingContext,
                     final String sasToken) {
     this.operationType = operationType;
     this.client = client;
     this.method = method;
     this.url = url;
     this.requestHeaders = requestHeaders;
+    this.trackingContext = trackingContext;
     this.hasRequestBody = (AbfsHttpConstants.HTTP_METHOD_PUT.equals(method)
             || AbfsHttpConstants.HTTP_METHOD_PATCH.equals(method));
     this.sasToken = sasToken;
@@ -156,11 +162,12 @@ public class AbfsRestOperation {
                     String method,
                     URL url,
                     List<AbfsHttpHeader> requestHeaders,
+                    final TrackingContext trackingContext,
                     byte[] buffer,
                     int bufferOffset,
                     int bufferLength,
                     String sasToken) {
-    this(operationType, client, method, url, requestHeaders, sasToken);
+    this(operationType, client, method, url, requestHeaders, trackingContext, sasToken);
     this.buffer = buffer;
     this.bufferOffset = bufferOffset;
     this.bufferLength = bufferLength;
