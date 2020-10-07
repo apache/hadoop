@@ -24,6 +24,8 @@ import static org.apache.hadoop.fs.FileContextTestHelper.exists;
 import static org.apache.hadoop.fs.FileContextTestHelper.isDir;
 import static org.apache.hadoop.fs.FileContextTestHelper.isFile;
 import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNT_LINKS_USER_NAME;
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNT_LINKS_GROUP_NAME;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
@@ -1022,4 +1024,38 @@ abstract public class ViewFsBaseTest {
     });
   }
 
+  public void testInternalDirectoryOwnership() throws IOException {
+    Configuration localConf = new Configuration(conf);
+    FileContext fc = FileContext.getFileContext(
+        FsConstants.VIEWFS_URI, localConf);
+
+    // check default owner/group
+    final UserGroupInformation currentUser =
+        UserGroupInformation.getCurrentUser();
+    FileStatus status = fc.getFileStatus(new Path("/internalDir"));
+    assertEquals(currentUser.getUserName(), status.getOwner());
+    assertEquals(currentUser.getGroupNames()[0], status.getGroup());
+    assertEquals(PERMISSION_555, status.getPermission());
+
+    // set owner and group configs for internal directories.
+    String fakeUser = "abc";
+    String fakeGroup = "def";
+    localConf.set(CONFIG_VIEWFS_MOUNT_LINKS_USER_NAME, fakeUser);
+    localConf.set(CONFIG_VIEWFS_MOUNT_LINKS_GROUP_NAME, fakeGroup);
+
+    // check that internal directory owner/group relects what's set.
+    fc = FileContext.getFileContext(
+        FsConstants.VIEWFS_URI, localConf);
+    status = fc.getFileStatus(new Path("/internalDir"));
+    assertEquals(fakeUser, status.getOwner());
+    assertEquals(fakeGroup, status.getGroup());
+    assertEquals(PERMISSION_555, status.getPermission());
+
+    // check that ACL status reflects what's set as well.
+    AclStatus aclStatus = fc.getAclStatus(new Path("/internalDir"));
+    assertEquals(fakeUser, aclStatus.getOwner());
+    assertEquals(fakeGroup, aclStatus.getGroup());
+    assertEquals(aclStatus.getEntries(),
+        AclUtil.getMinimalAcl(PERMISSION_555));
+  }
 }

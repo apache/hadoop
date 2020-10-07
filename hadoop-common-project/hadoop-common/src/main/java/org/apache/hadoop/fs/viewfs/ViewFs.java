@@ -77,6 +77,9 @@ import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNT_LINKS_USER_NAME;
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNT_LINKS_GROUP_NAME;
+
 /**
  * ViewFs (extends the AbstractFileSystem interface) implements a client-side
  * mount table. The viewFs file system is implemented completely in memory on
@@ -271,7 +274,7 @@ public class ViewFs extends AbstractFileSystem {
 
       @Override
       protected AbstractFileSystem getTargetFileSystem(
-          final INodeDir<AbstractFileSystem> dir) throws URISyntaxException {
+          final INodeDir<AbstractFileSystem> dir) throws URISyntaxException, IOException {
         return new InternalDirOfViewFs(dir, creationTime, ugi, getUri(), this,
             config);
       }
@@ -973,11 +976,12 @@ public class ViewFs extends AbstractFileSystem {
     final URI myUri; // the URI of the outer ViewFs
     private InodeTree<AbstractFileSystem> fsState;
     private Configuration conf;
+    private String mountLinkUserName;
+    private String mountLinkGroupName;
 
     public InternalDirOfViewFs(final InodeTree.INodeDir<AbstractFileSystem> dir,
         final long cTime, final UserGroupInformation ugi, final URI uri,
-        InodeTree fsState, Configuration conf)
-      throws URISyntaxException {
+        InodeTree fsState, Configuration conf) throws URISyntaxException, IOException {
       super(FsConstants.VIEWFS_URI, FsConstants.VIEWFS_SCHEME, false, -1);
       theInternalDir = dir;
       creationTime = cTime;
@@ -985,6 +989,14 @@ public class ViewFs extends AbstractFileSystem {
       myUri = uri;
       this.fsState = fsState;
       this.conf = conf;
+      mountLinkUserName = conf.get(CONFIG_VIEWFS_MOUNT_LINKS_USER_NAME);
+      mountLinkGroupName = conf.get(CONFIG_VIEWFS_MOUNT_LINKS_GROUP_NAME);
+      if (mountLinkUserName == null) {
+        mountLinkUserName = ugi.getShortUserName();
+      }
+      if (mountLinkGroupName == null) {
+        mountLinkGroupName = ugi.getPrimaryGroupName();
+      }
     }
 
     static private void checkPathIsSlash(final Path f) throws IOException {
@@ -1081,7 +1093,8 @@ public class ViewFs extends AbstractFileSystem {
     public FileStatus getFileStatus(final Path f) throws IOException {
       checkPathIsSlash(f);
       return new FileStatus(0, true, 0, 0, creationTime, creationTime,
-          PERMISSION_555, ugi.getShortUserName(), ugi.getPrimaryGroupName(),
+          getMountLinkDefaultPermissions(), mountLinkUserName,
+          mountLinkGroupName,
           new Path(theInternalDir.fullPath).makeQualified(
               myUri, null));
     }
@@ -1114,16 +1127,18 @@ public class ViewFs extends AbstractFileSystem {
                 myUri, null));
         } catch (FileNotFoundException ex) {
           result = new FileStatus(0, false, 0, 0, creationTime, creationTime,
-            PERMISSION_555, ugi.getShortUserName(), ugi.getPrimaryGroupName(),
-            inodelink.getTargetLink(),
-            new Path(inode.fullPath).makeQualified(
-                myUri, null));
+              getMountLinkDefaultPermissions(), mountLinkUserName,
+              mountLinkGroupName,
+              inodelink.getTargetLink(),
+              new Path(inode.fullPath).makeQualified(
+                  myUri, null));
         }
       } else {
         result = new FileStatus(0, true, 0, 0, creationTime, creationTime,
-          PERMISSION_555, ugi.getShortUserName(), ugi.getPrimaryGroupName(),
-          new Path(inode.fullPath).makeQualified(
-              myUri, null));
+            getMountLinkDefaultPermissions(), mountLinkUserName,
+            mountLinkGroupName,
+            new Path(inode.fullPath).makeQualified(
+                myUri, null));
       }
       return result;
     }
@@ -1178,8 +1193,8 @@ public class ViewFs extends AbstractFileSystem {
             // symlink and rest other properties are belongs to mount link only.
             linkStatuses.add(
                 new FileStatus(0, false, 0, 0, creationTime, creationTime,
-                    PERMISSION_555, ugi.getShortUserName(),
-                    ugi.getPrimaryGroupName(), link.getTargetLink(), path));
+                    getMountLinkDefaultPermissions(), mountLinkUserName,
+                    mountLinkGroupName, link.getTargetLink(), path));
             continue;
           }
 
@@ -1210,8 +1225,8 @@ public class ViewFs extends AbstractFileSystem {
         } else {
           internalDirStatuses.add(
               new FileStatus(0, true, 0, 0, creationTime, creationTime,
-                  PERMISSION_555, ugi.getShortUserName(),
-                  ugi.getPrimaryGroupName(), path));
+                  getMountLinkDefaultPermissions(), mountLinkUserName,
+                  mountLinkGroupName, path));
         }
       }
 
@@ -1408,9 +1423,9 @@ public class ViewFs extends AbstractFileSystem {
     @Override
     public AclStatus getAclStatus(Path path) throws IOException {
       checkPathIsSlash(path);
-      return new AclStatus.Builder().owner(ugi.getShortUserName())
-          .group(ugi.getPrimaryGroupName())
-          .addEntries(AclUtil.getMinimalAcl(PERMISSION_555))
+      return new AclStatus.Builder().owner(mountLinkUserName)
+          .group(mountLinkGroupName)
+          .addEntries(AclUtil.getMinimalAcl(getMountLinkDefaultPermissions()))
           .stickyBit(false).build();
     }
 
@@ -1478,6 +1493,10 @@ public class ViewFs extends AbstractFileSystem {
     public void setStoragePolicy(Path path, String policyName)
         throws IOException {
       throw readOnlyMountTable("setStoragePolicy", path);
+    }
+
+    private FsPermission getMountLinkDefaultPermissions() {
+      return PERMISSION_555;
     }
   }
 }

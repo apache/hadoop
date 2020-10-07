@@ -70,7 +70,12 @@ import static org.apache.hadoop.fs.FileSystemTestHelper.*;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE;
 import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT;
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNT_LINKS_USER_NAME;
+import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_MOUNT_LINKS_GROUP_NAME;
 import static org.apache.hadoop.fs.FileSystem.TRASH_PREFIX;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.spy;
 
 import org.junit.After;
 import org.junit.Assert;
@@ -1703,6 +1708,61 @@ abstract public class ViewFileSystemBaseTest {
     } catch (IOException ex) {
       assertTrue("Should get URISyntax Exception",
           ex.getMessage().startsWith("URISyntax exception"));
+    }
+  }
+
+  @Test
+  public void testInternalDirectoryOwnership() throws Exception {
+    Configuration localConf = new Configuration(conf);
+    FileSystem fs = FileSystem.get(FsConstants.VIEWFS_URI, localConf);
+
+    // Check default owner/group.
+    final UserGroupInformation currentUser =
+        UserGroupInformation.getCurrentUser();
+    FileStatus status = fs.getFileStatus(new Path("/internalDir"));
+    assertEquals(currentUser.getUserName(), status.getOwner());
+    assertEquals(currentUser.getGroupNames()[0], status.getGroup());
+    assertEquals(PERMISSION_555, status.getPermission());
+
+    UserGroupInformation currUgi = UserGroupInformation.getCurrentUser();
+    try {
+      // Force exception when currUgi.getPrimaryGroupName() is called. This will
+      // not be triggered when viewfs mount link configs are defined.
+      UserGroupInformation spyUgi = spy(currUgi);
+      String failureMessage = "Fail on group check";
+      when(spyUgi.getPrimaryGroupName()).thenThrow(
+          new IOException(failureMessage));
+      UserGroupInformation.setLoginUser(spyUgi);
+
+      fs = FileSystem.get(FsConstants.VIEWFS_URI, localConf);
+      final FileSystem finalFs = fs;
+      intercept(IOException.class, () -> {
+        finalFs.getFileStatus(new Path("/internalDir"));
+      });
+
+      // Set owner and group configs for internal directories.
+      String fakeUser = "abc";
+      String fakeGroup = "def";
+      localConf.set(CONFIG_VIEWFS_MOUNT_LINKS_USER_NAME, fakeUser);
+      localConf.set(CONFIG_VIEWFS_MOUNT_LINKS_GROUP_NAME, fakeGroup);
+
+      // Check that internal directory owner/group relects what's set.
+      fs = FileSystem.get(FsConstants.VIEWFS_URI, localConf);
+      status = fs.getFileStatus(new Path("/internalDir"));
+      assertEquals(fakeUser, status.getOwner());
+      assertEquals(fakeGroup, status.getGroup());
+      assertEquals(PERMISSION_555, status.getPermission());
+
+      // Check that ACL status reflects what's set as well.
+      AclStatus aclStatus = fs.getAclStatus(new Path("/internalDir"));
+      assertEquals(fakeUser, aclStatus.getOwner());
+      assertEquals(fakeGroup, aclStatus.getGroup());
+      assertEquals(AclUtil.getMinimalAcl(PERMISSION_555),
+          aclStatus.getEntries());
+      assertEquals(PERMISSION_555, aclStatus.getPermission());
+    } finally {
+      // Set user back to the original currUgi object.
+      UserGroupInformation.setLoginUser(currUgi);
     }
   }
 }

@@ -139,4 +139,16 @@ public interface Constants {
   String CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT =
       "fs.viewfs.trash.force-inside-mount-point";
   boolean CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT_DEFAULT = false;
+
+  /**
+   * Configuration for specifying user name for mount links.
+   */
+  String CONFIG_VIEWFS_MOUNT_LINKS_USER_NAME =
+      "fs.viewfs.mount.links.user.name";
+
+  /**
+   * Configuration for specifying group name for mount links.
+   */
+  String CONFIG_VIEWFS_MOUNT_LINKS_GROUP_NAME =
+      "fs.viewfs.mount.links.group.name";
 }
