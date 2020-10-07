@@ -31,8 +31,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.metrics2.lib.MutableCounter;
+import org.apache.hadoop.metrics2.lib.MutableMetric;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_LIST_REQUESTS;
@@ -96,9 +99,18 @@ public final class OperationCostValidator {
    * @param builder builder containing all options.
    */
   private OperationCostValidator(Builder builder) {
-    builder.metrics.forEach(stat ->
-        metricDiffs.put(stat.getSymbol(),
-            new S3ATestUtils.MetricDiff(builder.filesystem, stat)));
+    S3AFileSystem fs = builder.filesystem;
+    S3AInstrumentation instrumentation = fs.getInstrumentation();
+    for (Statistic stat : builder.metrics) {
+      String symbol = stat.getSymbol();
+      MutableMetric metric = instrumentation.lookupMetric(symbol);
+      if (metric instanceof MutableCounter) {
+        // only counters are used in the cost tracking;
+        // other statistics are ignored.
+        metricDiffs.put(symbol,
+            new S3ATestUtils.MetricDiff(fs, stat));
+      }
+    }
     builder.metrics.clear();
   }
 
@@ -246,7 +258,8 @@ public final class OperationCostValidator {
      * @return this
      */
     public Builder withMetric(Statistic statistic) {
-      return withMetric(statistic);
+      metrics.add(statistic);
+      return this;
     }
 
     /**

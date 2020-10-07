@@ -113,7 +113,7 @@ public class Listing extends AbstractStoreOperation {
     return filteringRemoteIterator(
         remoteIteratorFromArray(fileStatuses),
         status ->
-            filter.accept(status.getPath()) && acceptor.accept(status)) ;
+            filter.accept(status.getPath()) && acceptor.accept(status));
   }
 
   /**

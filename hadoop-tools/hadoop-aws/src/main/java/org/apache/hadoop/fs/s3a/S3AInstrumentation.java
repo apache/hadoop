@@ -348,7 +348,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     }
     if (!(metric instanceof MutableCounterLong)) {
       throw new IllegalStateException("Metric " + name
-          + " is not a MutableCounterLong: " + metric);
+          + " is not a MutableCounterLong: " + metric
+          + " (type: " + metric.getClass() +")");
     }
     return (MutableCounterLong) metric;
   }
