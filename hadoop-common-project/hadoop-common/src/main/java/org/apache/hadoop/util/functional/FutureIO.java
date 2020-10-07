@@ -138,12 +138,13 @@ public final class FutureIO {
   }
 
   /**
-   * From the inner cause of an execution exception, extract the inner cause.
+   * From the inner cause of an execution exception, extract the inner cause
+   * to an IOException, raising RuntimeExceptions and Errors immediately.
    * <ol>
    *   <li> If it is an IOE: Return.</li>
    *   <li> If it is a {@link RuntimeIOException}: return the cause</li>
    *   <li> Completion/Execution Exceptions: extract and repeat</li>
-   *   <li> If it is an RTE: throw.</li>
+   *   <li> If it is an RTE or Error: throw.</li>
    *   <li> Any other type: wrap in an IOE</li>
    * </ol>
    *
@@ -152,7 +153,9 @@ public final class FutureIO {
    * @param e exception.
    * @return an IOException extracted or built from the cause.
    * @throws RuntimeException if that is the inner cause.
+   * @throws Error if that is the inner cause.
    */
+  @SuppressWarnings("ChainOfInstanceofChecks")
   public static IOException unwrapInnerException(final Throwable e) {
     Throwable cause = e.getCause();
     if (cause instanceof IOException) {
@@ -166,6 +169,8 @@ public final class FutureIO {
       return unwrapInnerException(cause);
     } else if (cause instanceof RuntimeException) {
       throw (RuntimeException) cause;
+    } else if (cause instanceof Error) {
+      throw (Error) cause;
     } else if (cause != null) {
       // other type: wrap with a new IOE
       return new IOException(cause);

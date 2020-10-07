@@ -26,7 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * A {@code RuntimeException} which always contains an
- * @code IOException}.
+ * {@code IOException}.
  * <p></p>
  * The constructor signature guarantees the cause will be an
  * IOException, and, as it checks for a null-argument, non-null.
