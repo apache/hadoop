@@ -231,6 +231,24 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
                       "match with original list of files")
               .hasSameElementsAs(originalListOfFiles)
               .hasSize(numOfPutRequests);
+      // Validate listing using listStatusIterator().
+      NanoTimer timeUsingListStatusItr = new NanoTimer();
+      RemoteIterator<FileStatus> lsItr = fs.listStatusIterator(dir);
+      List<String> listUsingListStatusItr = new ArrayList<>();
+      while (lsItr.hasNext()) {
+        listUsingListStatusItr.add(lsItr.next().getPath().toString());
+        Thread.sleep(eachFileProcessingTime);
+      }
+      timeUsingListStatusItr.end("listing %d files using " +
+                      "listStatusIterator() api with batch size of %d " +
+                      "including %dms of processing time for each file",
+              numOfPutRequests, batchSize, eachFileProcessingTime);
+      Assertions.assertThat(listUsingListStatusItr)
+              .describedAs("Listing results using listStatusIterator() must" +
+                      "match with original list of files")
+              .hasSameElementsAs(originalListOfFiles)
+              .hasSize(numOfPutRequests);
+
     } finally {
       executorService.shutdown();
     }
