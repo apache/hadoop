@@ -1906,21 +1906,25 @@ public class TestRouterRpc {
   }
 
   @Test
-  public void testCreateWithCallerContext() throws IOException {
+  public void testMkdirsWithCallerContext() throws IOException {
     GenericTestUtils.LogCapturer auditlog =
         GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.auditLog);
-
 
     // Current callerContext is null
     assertNull(CallerContext.getCurrent());
 
+    // Set client context
+    CallerContext.setCurrent(
+        new CallerContext.Builder("clientContext").build());
+
     // Create a directory via the router
     String dirPath = "/test_dir_with_callercontext";
-    FsPermission permission = new FsPermission("705");
+    FsPermission permission = new FsPermission("755");
     routerProtocol.mkdirs(dirPath, permission, false);
 
-    // The audit log should contains "callerContext=clientIp:"
-    assertTrue(auditlog.getOutput().contains("callerContext=clientIp:"));
+    // The audit log should contains "callerContext=clientContext,clientIp:"
+    assertTrue(auditlog.getOutput()
+        .contains("callerContext=clientContext,clientIp:"));
     assertTrue(verifyFileExists(routerFS, dirPath));
   }
 }
