@@ -53,6 +53,7 @@ The HTTP REST API supports the complete [FileSystem](../../api/org/apache/hadoop
     * [`GETSTORAGEPOLICY`](#Get_Storage_Policy) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getStoragePolicy)
     * [`GETSNAPSHOTDIFF`](#Get_Snapshot_Diff)
     * [`GETSNAPSHOTTABLEDIRECTORYLIST`](#Get_Snapshottable_Directory_List)
+    * [`GETSNAPSHOTLIST`](#Get_Snapshot_List)
     * [`GETFILEBLOCKLOCATIONS`](#Get_File_Block_Locations) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileBlockLocations)
     * [`GETECPOLICY`](#Get_EC_Policy) (see [HDFSErasureCoding](./HDFSErasureCoding.html#Administrative_commands).getErasureCodingPolicy)
 *   HTTP PUT
@@ -1642,6 +1643,46 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).renameSna
             ]
         }
 
+### Get Snapshot List
+
+* Submit a HTTP GET request.
+
+        curl -i GET "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?"
+
+    The call lists the snapshots for a snapshottable directory. The client receives a response with a [`SnapshotList` JSON object](#SnapshotList_JSON_Schema):
+
+        HTTP/1.1 200 OK
+        Content-Type: application/json
+        Transfer-Encoding: chunked
+
+        {
+            "SnapshotList":
+            [
+                {
+                  "dirStatus":
+                    {
+                        "accessTime":0,
+                        "blockSize":0,
+                        "childrenNum":0,
+                        "fileId":16386,
+                        "group":"hadoop",
+                        "length":0,
+                        "modificationTime":1520761889225,
+                        "owner":"random",
+                        "pathSuffix":"bar",
+                        "permission":"755",
+                        "replication":0,
+                        "storagePolicy":0,
+                        "type":"DIRECTORY"
+                    },
+                  "fullPath":"/",
+                  "snapshotID":0,
+                  "deletionStatus":ACTIVE
+                }
+            ]
+        }
+
+
 Delegation Token Operations
 ---------------------------
 
@@ -2670,6 +2711,57 @@ var snapshottableDirectoryStatus =
     {
       "description" : "Total number of snapshots allowed on the snapshottable directory",
       "type"        : "integer",
+      "required"    : true
+    }
+  }
+}
+```
+### SnapshotList JSON Schema
+
+```json
+{
+  "name": "SnapshotList",
+  "type": "object",
+  "properties":
+  {
+    "SnapshotList":
+    {
+      "description": "An array of SnapshotStatus",
+      "type"        : "array",
+      "items"       : snapshotStatus,
+      "required"    : true
+    }
+  }
+}
+```
+
+#### SnapshotStatus
+
+JavaScript syntax is used to define `snapshotStatus` so that it can be referred in `SnapshotList` JSON schema.
+
+```javascript
+var snapshotStatus =
+{
+  "type": "object",
+  "properties":
+  {
+    "dirStatus": fileStatusProperties,
+    "fullPath":
+    {
+      "description" : "Full path of the parent of the snapshot",
+      "type"        : "string",
+      "required"    : true
+    },
+    "snapshotID":
+    {
+      "description" : "snapshot ID for the snapshot",
+      "type"        : "integer",
+      "required"    : true
+    },
+    "deletionStatus":
+    {
+      "description" : "Status showing whether the snapshot is active or in deleted state",
+      "type"        : "string",
       "required"    : true
     }
   }
