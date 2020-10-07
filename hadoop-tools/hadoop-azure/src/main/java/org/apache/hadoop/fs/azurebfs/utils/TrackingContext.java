@@ -33,6 +33,7 @@ public class TrackingContext {
   private String streamID = "";
   private int retryCount;
   private String opName = "";
+  private int iteration;
 
   private static final Logger LOG = LoggerFactory.getLogger(
       org.apache.hadoop.fs.azurebfs.services.AbfsClient.class);
@@ -72,14 +73,20 @@ public class TrackingContext {
 
   public void setOpName(String op) {
     opName = op;
+    iteration = 0;
   }
 //  public void setOperation(org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType op) {
 //    opName = op.name();//convert
 //  }
+  public void updateIteration() {
+    iteration++;
+  }
 
   public String toString() {
+//    if (iteration)
+    String operation = opName + (opName == "listITR" || opName == "ReadAhead"? iteration.toString() : "");
     return clientCorrelationID + clientRequestID + ":" + fileSystemID + ":"
-        + streamID + ":" + opName + ":" + retryCount;
+        + streamID + ":" + operation + ":" + retryCount;
   }
 
 }

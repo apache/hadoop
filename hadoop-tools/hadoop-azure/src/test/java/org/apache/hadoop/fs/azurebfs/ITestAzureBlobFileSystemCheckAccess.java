@@ -73,6 +73,7 @@ public class ITestAzureBlobFileSystemCheckAccess
       return;
     }
     String orgClientId = getConfiguration().get(FS_AZURE_BLOB_FS_CLIENT_ID);
+    System.out.println(orgClientId);
     String orgClientSecret = getConfiguration()
         .get(FS_AZURE_BLOB_FS_CLIENT_SECRET);
     Boolean orgCreateFileSystemDurungInit = getConfiguration()
