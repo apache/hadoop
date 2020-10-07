@@ -32,12 +32,14 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.UUID;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.utils.CachedSASToken;
@@ -78,6 +80,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
 
   // SAS tokens can be re-used until they expire
   private CachedSASToken cachedSasToken;
+  private String outputStreamID;
 
   /**
    * Queue storing buffers with the size of the Azure block ready for
@@ -134,6 +137,8 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     this.completionService = new ExecutorCompletionService<>(this.threadExecutor);
     this.cachedSasToken = new CachedSASToken(
         abfsOutputStreamContext.getSasTokenRenewPeriodForStreamsInSeconds());
+    this.outputStreamID = StringUtils.right(UUID.randomUUID().toString(), 12);
+    client.getTrackingContext().setStreamID("OUT" + outputStreamID);
   }
 
   /**

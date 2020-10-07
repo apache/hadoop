@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -94,6 +95,7 @@ public class AzureBlobFileSystem extends FileSystem {
   private Path workingDir;
   private AzureBlobFileSystemStore abfsStore;
   private boolean isClosed;
+  private String fileSystemID;
 
   private boolean delegationTokenEnabled = false;
   private AbfsDelegationTokenManager delegationTokenManager;
@@ -142,6 +144,9 @@ public class AzureBlobFileSystem extends FileSystem {
     AbfsClientThrottlingIntercept.initializeSingleton(abfsConfiguration.isAutoThrottlingEnabled());
 
     LOG.debug("Initializing AzureBlobFileSystem for {} complete", uri);
+
+    fileSystemID = UUID.randomUUID().toString();
+    abfsStore.getClient().getTrackingContext().setFileSystemID(fileSystemID);
   }
 
   @Override
@@ -174,6 +179,7 @@ public class AzureBlobFileSystem extends FileSystem {
     LOG.debug("AzureBlobFileSystem.open path: {} bufferSize: {}", path, bufferSize);
     statIncrement(CALL_OPEN);
     Path qualifiedPath = makeQualified(path);
+    abfsStore.getClient().getTrackingContext().setOpName("read");
 
     try {
       InputStream inputStream = abfsStore.openFileForRead(qualifiedPath, statistics);
@@ -197,6 +203,7 @@ public class AzureBlobFileSystem extends FileSystem {
     trailingPeriodCheck(f);
 
     Path qualifiedPath = makeQualified(f);
+    abfsStore.getClient().getTrackingContext().setOpName("mkdir");
 
     try {
       OutputStream outputStream = abfsStore.createFile(qualifiedPath, statistics, overwrite,
@@ -261,6 +268,7 @@ public class AzureBlobFileSystem extends FileSystem {
         bufferSize);
     statIncrement(CALL_APPEND);
     Path qualifiedPath = makeQualified(f);
+    abfsStore.getClient().getTrackingContext().setOpName("append");
 
     try {
       OutputStream outputStream = abfsStore.openFileForWrite(qualifiedPath, statistics, false);
@@ -274,6 +282,7 @@ public class AzureBlobFileSystem extends FileSystem {
   public boolean rename(final Path src, final Path dst) throws IOException {
     LOG.debug("AzureBlobFileSystem.rename src: {} dst: {}", src, dst);
     statIncrement(CALL_RENAME);
+    abfsStore.getClient().getTrackingContext().setOpName("rename");
 
     trailingPeriodCheck(dst);
 
@@ -344,6 +353,7 @@ public class AzureBlobFileSystem extends FileSystem {
         "AzureBlobFileSystem.delete path: {} recursive: {}", f.toString(), recursive);
     statIncrement(CALL_DELETE);
     Path qualifiedPath = makeQualified(f);
+    abfsStore.getClient().getTrackingContext().setOpName("delete");
 
     if (f.isRoot()) {
       if (!recursive) {
@@ -369,6 +379,7 @@ public class AzureBlobFileSystem extends FileSystem {
         "AzureBlobFileSystem.listStatus path: {}", f.toString());
     statIncrement(CALL_LIST_STATUS);
     Path qualifiedPath = makeQualified(f);
+    abfsStore.getClient().getTrackingContext().setOpName("ListITR"); //get iter no. 3 digit
 
     try {
       FileStatus[] result = abfsStore.listStatus(qualifiedPath);
@@ -428,6 +439,7 @@ public class AzureBlobFileSystem extends FileSystem {
         "AzureBlobFileSystem.mkdirs path: {} permissions: {}", f, permission);
     statIncrement(CALL_MKDIRS);
     trailingPeriodCheck(f);
+    abfsStore.getClient().getTrackingContext().setOpName("mkdir");
 
     final Path parentFolder = f.getParent();
     if (parentFolder == null) {
@@ -466,6 +478,7 @@ public class AzureBlobFileSystem extends FileSystem {
     LOG.debug("AzureBlobFileSystem.getFileStatus path: {}", f);
     statIncrement(CALL_GET_FILE_STATUS);
     Path qualifiedPath = makeQualified(f);
+    abfsStore.getClient().getTrackingContext().setOpName("GFS");
 
     try {
       return abfsStore.getFileStatus(qualifiedPath);
@@ -535,6 +548,7 @@ public class AzureBlobFileSystem extends FileSystem {
     if (file == null) {
       return null;
     }
+    abfsStore.getClient().getTrackingContext().setOpName("GFS");
 
     if ((start < 0) || (len < 0)) {
       throw new IllegalArgumentException("Invalid start or len parameter");
@@ -590,6 +604,7 @@ public class AzureBlobFileSystem extends FileSystem {
 
   private boolean deleteRoot() throws IOException {
     LOG.debug("Deleting root content");
+    abfsStore.getClient().getTrackingContext().setOpName("delete");
 
     final ExecutorService executorService = Executors.newFixedThreadPool(10);
 

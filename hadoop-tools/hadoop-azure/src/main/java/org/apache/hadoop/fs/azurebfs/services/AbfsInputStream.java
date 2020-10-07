@@ -22,6 +22,7 @@ import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.util.UUID;
 
 import com.google.common.base.Preconditions;
 import com.google.common.annotations.VisibleForTesting;
@@ -29,6 +30,7 @@ import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.CanUnbuffer;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
@@ -67,6 +69,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private int limit = 0;     // offset of next byte to be read into buffer from service (i.e., upper marker+1
   //                                                      of valid bytes in buffer)
   private boolean closed = false;
+  private String inputStreamID;
 
   /** Stream statistics. */
   private final AbfsInputStreamStatistics streamStatistics;
@@ -92,6 +95,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.cachedSasToken = new CachedSASToken(
         abfsInputStreamContext.getSasTokenRenewPeriodForStreamsInSeconds());
     this.streamStatistics = abfsInputStreamContext.getStreamStatistics();
+    this.inputStreamID = StringUtils.right(UUID.randomUUID().toString(), 12);
+    client.getTrackingContext().setStreamID("IN" + inputStreamID);
   }
 
   public String getPath() {
@@ -180,6 +185,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
       // Enable readAhead when reading sequentially
       if (-1 == fCursorAfterLastRead || fCursorAfterLastRead == fCursor || b.length >= bufferSize) {
+        client.getTrackingContext().setOpName("readAhead");
         bytesRead = readInternal(fCursor, buffer, 0, bufferSize, false);
       } else {
         bytesRead = readInternal(fCursor, buffer, 0, b.length, true);

@@ -180,6 +180,7 @@ public class AbfsRestOperation {
               new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_ABFS_CLIENT_LATENCY, latencyHeader);
       requestHeaders.add(httpHeader);
     }
+//     client.getTrackingContext().setOperation(operationType);
 
     retryCount = 0;
     LOG.debug("First execution of REST operation - {}", operationType);

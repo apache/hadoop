@@ -27,22 +27,16 @@ import org.slf4j.LoggerFactory;
 import org.apache.commons.lang3.StringUtils;
 
 public class TrackingContext {
-
   private final String clientCorrelationID;
-
-  private final String fileSystemID;
-
+  private String fileSystemID = "";
   private String clientRequestID;
-
-  private String streamID;
-
+  private String streamID = "";
   private int retryCount;
+  private String opName = "";
 
   private static final Logger LOG = LoggerFactory.getLogger(
       org.apache.hadoop.fs.azurebfs.services.AbfsClient.class);
-
   public static final int MAX_CLIENT_CORRELATION_ID_LENGTH = 72;
-
   public static final String CLIENT_CORRELATION_ID_PATTERN = "[a-zA-Z0-9-]*";
 
   public TrackingContext(String clientCorrelationID) {
@@ -57,8 +51,11 @@ public class TrackingContext {
     } else {
       this.clientCorrelationID = EMPTY_STRING;
     }
-    fileSystemID = UUID.randomUUID().toString();
     streamID = EMPTY_STRING;
+  }
+
+  public void setFileSystemID(String fileSystemID) {
+    this.fileSystemID = fileSystemID;
   }
 
   public void setRetryCount(int count) {
@@ -70,12 +67,19 @@ public class TrackingContext {
   }
 
   public void setStreamID(String stream) {
-    streamID = stream + StringUtils.right(UUID.randomUUID().toString(), 12);
+    streamID = stream;
   }
+
+  public void setOpName(String op) {
+    opName = op;
+  }
+//  public void setOperation(org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType op) {
+//    opName = op.name();//convert
+//  }
 
   public String toString() {
     return clientCorrelationID + clientRequestID + ":" + fileSystemID + ":"
-        + streamID + ":" + retryCount;
+        + streamID + ":" + opName + ":" + retryCount;
   }
 
 }
