@@ -249,9 +249,10 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
     List<FileStatus> statusList = (List<FileStatus>) iteratorToList(
             fs.listStatusIterator(root));
     Assertions.assertThat(statusList)
-            .describedAs("Result of listStatus(/) and listStatusIterator(/)" +
-                    "must match")
-            .hasSameElementsAs(Arrays.stream(statuses).collect(Collectors.toList()));
+            .describedAs("Result of listStatus(/) and listStatusIterator(/)"
+                    + " must match")
+            .hasSameElementsAs(Arrays.stream(statuses)
+                    .collect(Collectors.toList()));
   }
 
   @Test
