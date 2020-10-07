@@ -566,10 +566,11 @@ public class DefaultContainerExecutor extends ContainerExecutor {
   @Override
   public boolean signalContainer(ContainerSignalContext ctx)
       throws IOException {
+    String user = ctx.getUser();
     String pid = ctx.getPid();
     Signal signal = ctx.getSignal();
     LOG.debug("Sending signal {} to pid {} as user {}",
-        signal.getValue(), pid, ctx.getUser());
+        signal.getValue(), pid, user);
     if (!containerIsAlive(pid)) {
       return false;
     }
