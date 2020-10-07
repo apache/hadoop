@@ -1799,10 +1799,11 @@ public class RouterClientProtocol implements ClientProtocol {
   }
 
   @Override
-  public HAServiceProtocol.HAServiceState getHAServiceState()
-      throws IOException {
-    rpcServer.checkOperation(NameNode.OperationCategory.READ, false);
-    return null;
+  public HAServiceProtocol.HAServiceState getHAServiceState() {
+    if (rpcServer.isSafeMode()) {
+      return HAServiceProtocol.HAServiceState.STANDBY;
+    }
+    return HAServiceProtocol.HAServiceState.ACTIVE;
   }
 
   /**
