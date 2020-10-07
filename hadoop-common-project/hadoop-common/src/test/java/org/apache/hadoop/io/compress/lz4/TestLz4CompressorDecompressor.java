@@ -38,7 +38,6 @@ import org.apache.hadoop.io.compress.BlockCompressorStream;
 import org.apache.hadoop.io.compress.BlockDecompressorStream;
 import org.apache.hadoop.io.compress.CompressionInputStream;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
-import org.apache.hadoop.io.compress.Lz4Codec;
 import org.apache.hadoop.io.compress.lz4.Lz4Compressor;
 import org.apache.hadoop.io.compress.lz4.Lz4Decompressor;
 import org.apache.hadoop.test.MultithreadedTestUtil;
@@ -348,13 +347,13 @@ public class TestLz4CompressorDecompressor {
 
     int lc = 0;
     try {
-        while (reader.next(key, value)) {
-            assertEquals("key" + lc, key.toString());
-            assertEquals("value" + lc, value.toString());
-            lc ++;
-        }
+      while (reader.next(key, value)) {
+        assertEquals("key" + lc, key.toString());
+        assertEquals("value" + lc, value.toString());
+        lc++;
+      }
     } finally {
-        reader.close();
+      reader.close();
     }
     assertEquals(lines, lc);
   }
