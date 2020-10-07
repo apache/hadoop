@@ -92,8 +92,8 @@ public class PendingSet extends PersistentCommitData
   /**
    * IOStatistics.
    */
-  @JsonProperty("iosstatistics")
-  private IOStatisticsSnapshot ioStatistics = new IOStatisticsSnapshot();
+  @JsonProperty("iostatistics")
+  private IOStatisticsSnapshot iostats = new IOStatisticsSnapshot();
 
   public PendingSet() {
     this(0);
@@ -137,7 +137,7 @@ public class PendingSet extends PersistentCommitData
     // add any statistics.
     IOStatisticsSnapshot st = commit.getIOStatistics();
     if (st != null) {
-      ioStatistics.aggregate(st);
+      iostats.aggregate(st);
       st.clear();
     }
   }
@@ -225,10 +225,10 @@ public class PendingSet extends PersistentCommitData
 
   @Override
   public IOStatisticsSnapshot getIOStatistics() {
-    return ioStatistics;
+    return iostats;
   }
 
   public void setIOStatistics(final IOStatisticsSnapshot ioStatistics) {
-    this.ioStatistics = ioStatistics;
+    this.iostats = ioStatistics;
   }
 }

@@ -58,12 +58,11 @@ public class NetworkBinding {
    * of {@link org.apache.hadoop.fs.s3a.Constants#SSL_CHANNEL_MODE} is ignored.
    *
    * @param conf the {@link Configuration} used to get the client specified
-   *             value of {@link org.apache.hadoop.fs.s3a.Constants
-   *             #SSL_CHANNEL_MODE}
-   * @param awsConf the {@link ClientConfiguration} to set the
+   *             value of {@code SSL_CHANNEL_MODE}
+   * @param awsConf the {@code ClientConfiguration} to set the
    *                SSLConnectionSocketFactory for.
    * @throws IOException if there is an error while initializing the
-   * {@link SSLSocketFactory} other than classloader problems.
+   * {@code SSLSocketFactory} other than classloader problems.
    */
   public static void bindSSLChannelMode(Configuration conf,
       ClientConfiguration awsConf) throws IOException {

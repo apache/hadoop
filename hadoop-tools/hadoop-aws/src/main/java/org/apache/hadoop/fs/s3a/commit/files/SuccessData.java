@@ -133,8 +133,8 @@ public class SuccessData extends PersistentCommitData
   /**
    * IOStatistics.
    */
-  @JsonProperty("iosstatistics")
-  private IOStatisticsSnapshot ioStatistics = new IOStatisticsSnapshot();
+  @JsonProperty("iostatistics")
+  private IOStatisticsSnapshot iostats = new IOStatisticsSnapshot();
 
   @Override
   public void validate() throws ValidationFailure {
@@ -346,10 +346,10 @@ public class SuccessData extends PersistentCommitData
 
   @Override
   public IOStatisticsSnapshot getIOStatistics() {
-    return ioStatistics;
+    return iostats;
   }
 
   public void setIOStatistics(final IOStatisticsSnapshot ioStatistics) {
-    this.ioStatistics = ioStatistics;
+    this.iostats = ioStatistics;
   }
 }

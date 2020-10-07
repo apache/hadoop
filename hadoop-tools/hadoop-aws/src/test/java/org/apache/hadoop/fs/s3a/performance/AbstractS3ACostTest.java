@@ -141,6 +141,7 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
     // Add statistics of the filesystem are added as metrics,
     OperationCostValidator.Builder builder = OperationCostValidator.builder(
         getFileSystem());
+    // TODO: need to fix this to exclude gauges and things
     EnumSet.allOf(Statistic.class).forEach(s -> builder.withMetric(s));
     costValidator = builder.build();
   }

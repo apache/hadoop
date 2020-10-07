@@ -18,10 +18,8 @@
 
 package org.apache.hadoop.fs.s3a.impl.statistics;
 
-import org.apache.hadoop.fs.statistics.IOStatisticsSource;
-
 /**
- * Statistics for committed work.
+ * Statistics for S3A committers.
  */
 public interface CommitterStatistics
     extends S3AStatisticInterface {
