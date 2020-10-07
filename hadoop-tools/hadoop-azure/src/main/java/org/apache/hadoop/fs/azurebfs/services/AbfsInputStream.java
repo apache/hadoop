@@ -47,7 +47,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         StreamCapabilities {
   private static final Logger LOG = LoggerFactory.getLogger(AbfsInputStream.class);
 
-  private static int READ_AHEAD_BLOCK_SIZE;
+  private static int readAheadBlockSize;
   private final AbfsClient client;
   private final Statistics statistics;
   private final String path;
@@ -96,17 +96,17 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.cachedSasToken = new CachedSASToken(
         abfsInputStreamContext.getSasTokenRenewPeriodForStreamsInSeconds());
     this.streamStatistics = abfsInputStreamContext.getStreamStatistics();
-    READ_AHEAD_BLOCK_SIZE = abfsInputStreamContext.getReadAheadBlockSize();
-    if (this.bufferSize > READ_AHEAD_BLOCK_SIZE) {
+    readAheadBlockSize = abfsInputStreamContext.getReadAheadBlockSize();
+    if (this.bufferSize > readAheadBlockSize) {
       LOG.debug(
           "fs.azure.read.request.size[={}] is configured for higher size than "
               + "fs.azure.read.readahead.blocksize[={}]. Auto-align "
               + "readAhead block size to be same as readRequestSize.",
-          bufferSize, READ_AHEAD_BLOCK_SIZE);
-      READ_AHEAD_BLOCK_SIZE = this.bufferSize;
+          bufferSize, readAheadBlockSize);
+      readAheadBlockSize = this.bufferSize;
     }
 
-    ReadBufferManager.setReadBufferManagerConfigs(READ_AHEAD_BLOCK_SIZE);
+    ReadBufferManager.setReadBufferManagerConfigs(readAheadBlockSize);
   }
 
   public String getPath() {
@@ -254,7 +254,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         nextOffset = nextOffset + nextSize;
         numReadAheads--;
         // From next round onwards should be of readahead block size.
-        nextSize = Math.min((long) READ_AHEAD_BLOCK_SIZE, contentLength - nextOffset);
+        nextSize = Math.min((long) readAheadBlockSize, contentLength - nextOffset);
       }
 
       // try reading from buffers first

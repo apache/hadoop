@@ -530,69 +530,32 @@ public class TestAbfsInputStream extends
       int readRequestSize,
       int readAheadRequestSize)
       throws Exception {
-    Thread t = new Thread() {
-      public void run() {
-        // trigger a read for 1 KB on 2 KB buffer
-        byte[] twoKBBuffer = new byte[TWO_KB];
-
-        try {
-          assertTrue("Read should be of exact requested size",
-              inputStream.read(twoKBBuffer, 0, ONE_KB) == ONE_KB);
-        } catch (java.io.IOException e) {
-          fail("AbfsInput stream read threw exception: " + e.getMessage());
-        }
-      }
-    };
-
-    t.start();
-    t.join();
     if (readRequestSize > readAheadRequestSize) {
       readAheadRequestSize = readRequestSize;
     }
 
+    byte[] firstReadBuffer = new byte[readRequestSize];
+    byte[] secondReadBuffer = new byte[readAheadRequestSize];
+
     // get the expected bytes to compare
-    byte[] expected_RAH1_contents = new byte[readRequestSize];
-    byte[] expected_RAH2_contents = new byte[readAheadRequestSize];
-    getExpectedBufferData(0, readRequestSize, expected_RAH1_contents);
+    byte[] expectedFirstReadAheadBufferContents = new byte[readRequestSize];
+    byte[] expectedSecondReadAheadBufferContents = new byte[readAheadRequestSize];
+    getExpectedBufferData(0, readRequestSize, expectedFirstReadAheadBufferContents);
     getExpectedBufferData(readRequestSize, readAheadRequestSize,
-        expected_RAH2_contents);
+        expectedSecondReadAheadBufferContents);
 
-    // Fetch RAH buffer for first read.
-    ReadBuffer firstReadBuffer = ReadBufferManager.getBufferManager()
-        .testGetBufferOnceReadComplete(inputStream, 0);
-    assertTrue("ReadBuffer for first issued read not found",
-        (firstReadBuffer != null));
-    assertTrue("First readAhead should be of read request size",
-        firstReadBuffer.getRequestedLength() == readRequestSize);
-    byte[] dataFromReadAheadCompletedQueue_RAH1 = new byte[readRequestSize];
-    firstReadBuffer.getLatch().await();
-    ReadBufferManager.getBufferManager()
-        .testGetBlockFromCompletedQueue(inputStream, 0, readRequestSize,
-            dataFromReadAheadCompletedQueue_RAH1);
+    assertTrue("Read should be of exact requested size",
+              inputStream.read(firstReadBuffer, 0, readRequestSize) == readRequestSize);
     assertTrue("Data mismatch found in RAH1",
-        Arrays.equals(dataFromReadAheadCompletedQueue_RAH1,
-            expected_RAH1_contents));
+        Arrays.equals(firstReadBuffer,
+            expectedFirstReadAheadBufferContents));
 
-    ReadBuffer secondReadBuffer = null;
-    while (secondReadBuffer == null) {
-      // Fetch RAH buffer for second read
-      secondReadBuffer = ReadBufferManager.getBufferManager()
-          .testGetBufferOnceReadComplete(inputStream, readRequestSize);
-    }
-    //secondReadBuffer.getLatch().await();
-    assertTrue("ReadBuffer for second issued read not found",
-        (secondReadBuffer != null));
-    assertTrue("Second readAhead should be of readAhead block size",
-        secondReadBuffer.getRequestedLength() == readAheadRequestSize);
-    byte[] dataFromReadAheadCompletedQueue_RAH2
-        = new byte[readAheadRequestSize];
-    secondReadBuffer.getLatch().await();
-    ReadBufferManager.getBufferManager()
-        .testGetBlockFromCompletedQueue(inputStream, readRequestSize,
-            readAheadRequestSize, dataFromReadAheadCompletedQueue_RAH2);
+
+    assertTrue("Read should be of exact requested size",
+        inputStream.read(secondReadBuffer, 0, readAheadRequestSize) == readAheadRequestSize);
     assertTrue("Data mismatch found in RAH2",
-        Arrays.equals(dataFromReadAheadCompletedQueue_RAH2,
-            expected_RAH2_contents));
+        Arrays.equals(secondReadBuffer,
+            expectedSecondReadAheadBufferContents));
   }
 
   public AbfsInputStream testReadAheadConfigs(int readRequestSize,

@@ -52,9 +52,15 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.E
  */
 public class ITestAzureBlobFileSystemRandomRead extends
     AbstractAbfsScaleTest {
+  private static final int BYTE = 1;
+  private static final int THREE_BYTES = 3;
+  private static final int FIVE_BYTES = 5;
+  private static final int TWENTY_BYTES = 20;
+  private static final int THIRTY_BYTES = 30;
   private static final int KILOBYTE = 1024;
   private static final int MEGABYTE = KILOBYTE * KILOBYTE;
   private static final int FOUR_MB = 4 * MEGABYTE;
+  private static final int NINE_MB = 9 * MEGABYTE;
   private static final long TEST_FILE_SIZE = 8 * MEGABYTE;
   private static final int MAX_ELAPSEDTIMEMS = 20;
   private static final int SEQUENTIAL_READ_BUFFER_SIZE = 16 * KILOBYTE;
@@ -529,15 +535,15 @@ public class ITestAzureBlobFileSystemRandomRead extends
     long newReqCount = 0;
     long newDataSizeRead = 0;
 
-    byte[] buffer20b = new byte[20];
-    byte[] buffer30b = new byte[30];
-    byte[] byteBuffer5 = new byte[5];
+    byte[] buffer20b = new byte[TWENTY_BYTES];
+    byte[] buffer30b = new byte[THIRTY_BYTES];
+    byte[] byteBuffer5 = new byte[FIVE_BYTES];
 
     // first read
     // if alwaysReadBufferSize is off, this is a sequential read
-    inputStream.read(byteBuffer5, 0, 5);
+    inputStream.read(byteBuffer5, 0, FIVE_BYTES);
     newReqCount++;
-    newDataSizeRead += 4 * 1024 * 1024;
+    newDataSizeRead += FOUR_MB;
 
     assertStatistics(fs, GET_RESPONSES, connectionsAtStart + newReqCount);
     assertStatistics(fs, BYTES_RECEIVED,
@@ -547,13 +553,13 @@ public class ITestAzureBlobFileSystemRandomRead extends
     // if alwaysReadBufferSize is off, this is a random read. Reads only
     // incoming buffer size
     // else, reads a buffer size
-    inputStream.seek(9 * MEGABYTE);
-    inputStream.read(buffer20b, 0, 1);
+    inputStream.seek(NINE_MB);
+    inputStream.read(buffer20b, 0, BYTE);
     newReqCount++;
     if (alwaysReadBufferSizeConfigValue) {
-      newDataSizeRead += 4 * 1024 * 1024;
+      newDataSizeRead += FOUR_MB;
     } else {
-      newDataSizeRead += 20;
+      newDataSizeRead += TWENTY_BYTES;
     }
 
     assertStatistics(fs, GET_RESPONSES, connectionsAtStart + newReqCount);
@@ -563,11 +569,11 @@ public class ITestAzureBlobFileSystemRandomRead extends
     // third read adjacent to second but not exactly sequential.
     // if alwaysReadBufferSize is off, this is another random read
     // else second read would have read this too.
-    inputStream.seek(9 * MEGABYTE + 20 + 3);
-      inputStream.read(buffer30b, 0, 3);
+    inputStream.seek(NINE_MB + TWENTY_BYTES + THREE_BYTES);
+      inputStream.read(buffer30b, 0, THREE_BYTES);
       if (!alwaysReadBufferSizeConfigValue) {
         newReqCount++;
-        newDataSizeRead += 30;
+        newDataSizeRead += THIRTY_BYTES;
       }
 
       assertStatistics(fs, GET_RESPONSES, connectionsAtStart + newReqCount);
@@ -696,7 +702,6 @@ public class ITestAzureBlobFileSystemRandomRead extends
       int bytesWritten = 0;
       while (bytesWritten < testFileSize) {
         outputStream.write(buffer);
-        LOG.debug("String written (bytesWritten={}):{}",bytesWritten, bufferContents.substring(0, 10));
         bytesWritten += buffer.length;
       }
       LOG.info("Closing stream {}", outputStream);
