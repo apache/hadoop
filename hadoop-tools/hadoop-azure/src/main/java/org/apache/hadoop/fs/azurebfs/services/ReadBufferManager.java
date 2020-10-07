@@ -22,7 +22,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -37,6 +36,7 @@ import com.google.common.annotations.VisibleForTesting;
  */
 final class ReadBufferManager {
   private static final Logger LOGGER = LoggerFactory.getLogger(ReadBufferManager.class);
+
   private static final int NUM_BUFFERS = 16;
   private static int BLOCK_SIZE = 4 * 1024 * 1024;
   private static final int NUM_THREADS = 8;
@@ -132,7 +132,6 @@ final class ReadBufferManager {
       buffer.setLatch(new CountDownLatch(1));
 
       Integer bufferIndex = freeList.pop();  // will return a value, since we have checked size > 0 already
-
       buffer.setBuffer(buffers[bufferIndex]);
       buffer.setBufferindex(bufferIndex);
       readAheadQueue.add(buffer);
@@ -440,7 +439,6 @@ final class ReadBufferManager {
 
       buffer.setStatus(result);
       buffer.setTimeStamp(currentTimeMillis());
-      LOGGER.trace("doneReading-{}: to completedReadList idx {}", result, buffer.getBufferindex());
       completedReadList.add(buffer);
     }
 
@@ -505,7 +503,6 @@ final class ReadBufferManager {
       }
       buffers = null;
       BUFFER_MANAGER = null;
-      //getBufferManager();
     }
   }
 
@@ -523,15 +520,8 @@ final class ReadBufferManager {
   }
 
   @VisibleForTesting
-  ReadBuffer testGetBuffer(AbfsInputStream stream, long position) {
+  ReadBuffer testGetBufferOnceReadComplete(AbfsInputStream stream, long position) {
     ReadBuffer retBuffer = null;
-
-    retBuffer = testGetFromRawList(readAheadQueue, stream, position, "readAheadQueue");
-    if (retBuffer != null) { return retBuffer; }
-
-    retBuffer = testGetFromRawList(inProgressList, stream, position, "inProgressList");
-    if (retBuffer != null) { return retBuffer; }
-
     retBuffer = testGetFromRawList(completedReadList, stream, position, "completedReadList");
     if (retBuffer != null) { return retBuffer; }
 
