@@ -133,6 +133,7 @@ final class ReadBufferManager {
       buffer.setLatch(new CountDownLatch(1));
 
       Integer bufferIndex = freeList.pop();  // will return a value, since we have checked size > 0 already
+
       buffer.setBuffer(buffers[bufferIndex]);
       buffer.setBufferindex(bufferIndex);
       readAheadQueue.add(buffer);

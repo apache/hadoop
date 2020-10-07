@@ -33,7 +33,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSExceptionMessages;
-
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -59,7 +58,6 @@ public class ITestAzureBlobFileSystemRandomRead extends
   private static final long TEST_FILE_SIZE = 8 * MEGABYTE;
   private static final int MAX_ELAPSEDTIMEMS = 20;
   private static final int SEQUENTIAL_READ_BUFFER_SIZE = 16 * KILOBYTE;
-  //private static final int CREATE_BUFFER_SIZE = 1 * MEGABYTE;
 
   private static final int SEEK_POSITION_ONE = 2* KILOBYTE;
   private static final int SEEK_POSITION_TWO = 5 * KILOBYTE;
@@ -67,8 +65,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
   private static final int SEEK_POSITION_FOUR = 4100 * KILOBYTE;
 
   private static final int ALWAYS_READ_BUFFER_SIZE_TEST_FILE_SIZE = 16 * MEGABYTE;
-  private static final int READAHEAD_BUFFER_COUNT = 16;
-  private static final int DISABLED_READAHEAD_DEPTH = 0;
+    private static final int DISABLED_READAHEAD_DEPTH = 0;
 
   private static final String TEST_FILE_PREFIX = "/TestRandomRead";
   private static final String WASB = "WASB";
@@ -436,37 +433,6 @@ public class ITestAzureBlobFileSystemRandomRead extends
             (long) afterSeekElapsedMs,
             ratio),
             ratio < maxAcceptableRatio);
-  }
-
-  @Test
-  public void testSequentialReadAfterReverseSeekPerformance2()
-      throws Exception {
-    Path testPath = new Path(TEST_FILE_PREFIX + "_testSequentialReadAfterReverseSeekPerformance2");
-    assumeHugeFileExists(testPath);
-    final int maxAttempts = 10;
-    final double maxAcceptableRatio = 1.01;
-    double beforeSeekElapsedMs = 0, afterSeekElapsedMs = 0;
-    double ratio = Double.MAX_VALUE;
-    for (int i = 0; i < maxAttempts && ratio >= maxAcceptableRatio; i++) {
-      beforeSeekElapsedMs = sequentialRead(ABFS, testPath,
-          this.getFileSystem(), false);
-      afterSeekElapsedMs = sequentialRead(ABFS, testPath,
-          this.getFileSystem(), true);
-      ratio = afterSeekElapsedMs / beforeSeekElapsedMs;
-      LOG.info((String.format(
-          "beforeSeekElapsedMs=%1$d, afterSeekElapsedMs=%2$d, ratio=%3$.2f",
-          (long) beforeSeekElapsedMs,
-          (long) afterSeekElapsedMs,
-          ratio)));
-    }
-    assertTrue(String.format(
-        "Performance of ABFS stream after reverse seek is not acceptable:"
-            + " beforeSeekElapsedMs=%1$d, afterSeekElapsedMs=%2$d,"
-            + " ratio=%3$.2f",
-        (long) beforeSeekElapsedMs,
-        (long) afterSeekElapsedMs,
-        ratio),
-        ratio < maxAcceptableRatio);
   }
 
   @Test
