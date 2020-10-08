@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.UUID;
 
 import org.apache.hadoop.fs.azurebfs.enums.Trilean;
+import org.apache.hadoop.fs.azurebfs.utils.TrackingContext;
 import org.junit.Assume;
 import org.junit.Test;
 import org.assertj.core.api.Assertions;
@@ -54,6 +55,7 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
 
   private static final String TRUE_STR = "true";
   private static final String FALSE_STR = "false";
+  private final String fileSystemID = "test-filesystem-id";
 
   private boolean isUsingXNSAccount;
   public ITestGetNameSpaceEnabled() throws Exception {
@@ -82,7 +84,7 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
     Assertions.assertThat(fs.getIsNamespaceEnabled()).describedAs(
         "getIsNamespaceEnabled should return true when the "
             + "config is set as true").isTrue();
-    fs.getAbfsStore().deleteFilesystem();
+    fs.getAbfsStore().deleteFilesystem(new TrackingContext(fileSystemID, "DL");
     unsetAndAssert();
   }
 
@@ -92,7 +94,7 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
     Assertions.assertThat(fs.getIsNamespaceEnabled()).describedAs(
         "getIsNamespaceEnabled should return false when the "
             + "config is set as false").isFalse();
-    fs.getAbfsStore().deleteFilesystem();
+    fs.getAbfsStore().deleteFilesystem(new TrackingContext(fileSystemID, "DL");
     unsetAndAssert();
   }
 
@@ -105,7 +107,7 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
         "getIsNamespaceEnabled should return the value "
             + "configured for fs.azure.test.namespace.enabled")
         .isEqualTo(expectedValue);
-    fs.getAbfsStore().deleteFilesystem();
+    fs.getAbfsStore().deleteFilesystem(new TrackingContext(fileSystemID, "DL"));
   }
 
   private AzureBlobFileSystem getNewFSWithHnsConf(

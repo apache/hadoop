@@ -30,6 +30,7 @@ public class TrackingContext {
   private String clientCorrelationID;
   private String fileSystemID = "";
   private String clientRequestID;
+  private String primaryRequestID;
   private String streamID = "";
   private int retryCount;
   private String hadoopOpName = "";
@@ -44,6 +45,9 @@ public class TrackingContext {
     this.fileSystemID = fileSystemID;
     this.hadoopOpName = hadoopOpName;
     streamID = EMPTY_STRING;
+    retryCount = 0;
+    iteration = 0;
+    primaryRequestID = "";
   }
   public void setClientCorrelationID(String clientCorrelationID) {
     //validation
@@ -80,12 +84,13 @@ public class TrackingContext {
 //  }
   public void updateIteration() {
     iteration++;
+    primaryRequestID = clientRequestID + ":";
   }
 
   public String toString() {
 //    if (iteration)
-    String operation = opName + (opName == "listITR" || opName == "ReadAhead"? iteration.toString() : "");
-    return clientCorrelationID + clientRequestID + ":" + fileSystemID + ":"
+    String operation = hadoopOpName + (hadoopOpName == "LS" || hadoopOpName == "ReadAhead"? iteration.toString() : "");
+    return clientCorrelationID + clientRequestID + ":" + fileSystemID + ":" + primaryRequestID
         + streamID + ":" + operation + ":" + retryCount;
   }
 

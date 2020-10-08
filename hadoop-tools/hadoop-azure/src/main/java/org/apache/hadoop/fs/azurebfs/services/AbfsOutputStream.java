@@ -138,7 +138,6 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     this.cachedSasToken = new CachedSASToken(
         abfsOutputStreamContext.getSasTokenRenewPeriodForStreamsInSeconds());
     this.outputStreamID = StringUtils.right(UUID.randomUUID().toString(), 12);
-    client.getTrackingContext().setStreamID("OUT" + outputStreamID);
   }
 
   /**
@@ -171,6 +170,10 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   @Override
   public void write(final int byteVal) throws IOException {
     write(new byte[]{(byte) (byteVal & 0xFF)});
+  }
+
+  public String getOutputStreamID() {
+    return outputStreamID;
   }
 
   /**

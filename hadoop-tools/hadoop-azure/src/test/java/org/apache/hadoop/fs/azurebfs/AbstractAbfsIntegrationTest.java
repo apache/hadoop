@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
+import org.apache.hadoop.fs.azurebfs.utils.TrackingContext;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -184,12 +185,12 @@ public abstract class AbstractAbfsIntegrationTest extends
       if (usingFilesystemForSASTests) {
         abfsConfig.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey.name());
         AzureBlobFileSystem tempFs = (AzureBlobFileSystem) FileSystem.newInstance(rawConfig);
-        tempFs.getAbfsStore().deleteFilesystem();
+        tempFs.getAbfsStore().deleteFilesystem(new TrackingContext(abfs.getFileSystemID(), "DL"));
       }
       else if (!useConfiguredFileSystem) {
         // Delete all uniquely created filesystem from the account
         final AzureBlobFileSystemStore abfsStore = abfs.getAbfsStore();
-        abfsStore.deleteFilesystem();
+        abfsStore.deleteFilesystem(new TrackingContext(abfs.getFileSystemID(), "DL");
 
         AbfsRestOperationException ex = intercept(AbfsRestOperationException.class,
             new Callable<Hashtable<String, String>>() {

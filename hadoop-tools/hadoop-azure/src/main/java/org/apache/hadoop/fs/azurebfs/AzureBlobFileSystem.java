@@ -174,15 +174,19 @@ public class AzureBlobFileSystem extends FileSystem {
     return this.uri;
   }
 
+  public String getFileSystemID() {
+    return fileSystemID;
+  }
+
   @Override
   public FSDataInputStream open(final Path path, final int bufferSize) throws IOException {
     LOG.debug("AzureBlobFileSystem.open path: {} bufferSize: {}", path, bufferSize);
     statIncrement(CALL_OPEN);
+    TrackingContext trackingContext = new TrackingContext(fileSystemID, "FS");
     Path qualifiedPath = makeQualified(path);
-    abfsStore.getClient().getTrackingContext().setOpName("read");
 
     try {
-      InputStream inputStream = abfsStore.openFileForRead(qualifiedPath, statistics);
+      InputStream inputStream = abfsStore.openFileForRead(qualifiedPath, statistics, trackingContext);
       return new FSDataInputStream(inputStream);
     } catch(AzureBlobFileSystemException ex) {
       checkException(path, ex);
@@ -198,16 +202,17 @@ public class AzureBlobFileSystem extends FileSystem {
         permission,
         overwrite,
         blockSize);
+    TrackingContext trackingContext = new TrackingContext(fileSystemID, "LS");
 
     statIncrement(CALL_CREATE);
     trailingPeriodCheck(f);
 
     Path qualifiedPath = makeQualified(f);
-    abfsStore.getClient().getTrackingContext().setOpName("mkdir");
 
     try {
       OutputStream outputStream = abfsStore.createFile(qualifiedPath, statistics, overwrite,
-          permission == null ? FsPermission.getFileDefault() : permission, FsPermission.getUMask(getConf()));
+          permission == null ? FsPermission.getFileDefault() : permission, FsPermission.getUMask(getConf()),
+              trackingContext);
       statIncrement(FILES_CREATED);
       return new FSDataOutputStream(outputStream, statistics);
     } catch(AzureBlobFileSystemException ex) {
@@ -267,11 +272,12 @@ public class AzureBlobFileSystem extends FileSystem {
         f.toString(),
         bufferSize);
     statIncrement(CALL_APPEND);
+    TrackingContext trackingContext = new TrackingContext(fileSystemID, "AP");
     Path qualifiedPath = makeQualified(f);
-    abfsStore.getClient().getTrackingContext().setOpName("append");
 
     try {
-      OutputStream outputStream = abfsStore.openFileForWrite(qualifiedPath, statistics, false);
+      OutputStream outputStream = abfsStore.openFileForWrite(qualifiedPath, statistics, false,
+              trackingContext);
       return new FSDataOutputStream(outputStream, statistics);
     } catch(AzureBlobFileSystemException ex) {
       checkException(f, ex);
@@ -282,7 +288,7 @@ public class AzureBlobFileSystem extends FileSystem {
   public boolean rename(final Path src, final Path dst) throws IOException {
     LOG.debug("AzureBlobFileSystem.rename src: {} dst: {}", src, dst);
     statIncrement(CALL_RENAME);
-    abfsStore.getClient().getTrackingContext().setOpName("rename");
+    TrackingContext trackingContext = new TrackingContext(fileSystemID, "RN");
 
     trailingPeriodCheck(dst);
 
@@ -312,7 +318,7 @@ public class AzureBlobFileSystem extends FileSystem {
     }
 
     // Non-HNS account need to check dst status on driver side.
-    if (!abfsStore.getIsNamespaceEnabled() && dstFileStatus == null) {
+    if (!abfsStore.getIsNamespaceEnabled(trackingContext) && dstFileStatus == null) {
       dstFileStatus = tryGetFileStatus(qualifiedDstPath);
     }
 
@@ -329,7 +335,7 @@ public class AzureBlobFileSystem extends FileSystem {
 
       qualifiedDstPath = makeQualified(adjustedDst);
 
-      abfsStore.rename(qualifiedSrcPath, qualifiedDstPath);
+      abfsStore.rename(qualifiedSrcPath, qualifiedDstPath, trackingContext);
       return true;
     } catch(AzureBlobFileSystemException ex) {
       LOG.debug("Rename operation failed. ", ex);
@@ -354,7 +360,6 @@ public class AzureBlobFileSystem extends FileSystem {
     statIncrement(CALL_DELETE);
     Path qualifiedPath = makeQualified(f);
     TrackingContext trackingContext = new TrackingContext(fileSystemID, "DL");
-//    abfsStore.getClient().getTrackingContext().setOpName("delete");
 
     if (f.isRoot()) {
       if (!recursive) {
@@ -380,10 +385,10 @@ public class AzureBlobFileSystem extends FileSystem {
         "AzureBlobFileSystem.listStatus path: {}", f.toString());
     statIncrement(CALL_LIST_STATUS);
     Path qualifiedPath = makeQualified(f);
-    abfsStore.getClient().getTrackingContext().setOpName("ListITR"); //get iter no. 3 digit
+    TrackingContext trackingContext = new TrackingContext(fileSystemID, "LS");
 
     try {
-      FileStatus[] result = abfsStore.listStatus(qualifiedPath);
+      FileStatus[] result = abfsStore.listStatus(qualifiedPath, trackingContext);
       return result;
     } catch (AzureBlobFileSystemException ex) {
       checkException(f, ex);
@@ -440,7 +445,7 @@ public class AzureBlobFileSystem extends FileSystem {
         "AzureBlobFileSystem.mkdirs path: {} permissions: {}", f, permission);
     statIncrement(CALL_MKDIRS);
     trailingPeriodCheck(f);
-    abfsStore.getClient().getTrackingContext().setOpName("mkdir");
+    TrackingContext trackingContext = new TrackingContext(fileSystemID, "MK");
 
     final Path parentFolder = f.getParent();
     if (parentFolder == null) {
@@ -452,7 +457,7 @@ public class AzureBlobFileSystem extends FileSystem {
 
     try {
       abfsStore.createDirectory(qualifiedPath, permission == null ? FsPermission.getDirDefault() : permission,
-          FsPermission.getUMask(getConf()));
+          FsPermission.getUMask(getConf()), trackingContext);
       statIncrement(DIRECTORIES_CREATED);
       return true;
     } catch (AzureBlobFileSystemException ex) {
@@ -479,10 +484,10 @@ public class AzureBlobFileSystem extends FileSystem {
     LOG.debug("AzureBlobFileSystem.getFileStatus path: {}", f);
     statIncrement(CALL_GET_FILE_STATUS);
     Path qualifiedPath = makeQualified(f);
-    abfsStore.getClient().getTrackingContext().setOpName("GFS");
+    TrackingContext trackingContext = new TrackingContext(fileSystemID, "FS");
 
     try {
-      return abfsStore.getFileStatus(qualifiedPath);
+      return abfsStore.getFileStatus(qualifiedPath, trackingContext);
     } catch(AzureBlobFileSystemException ex) {
       checkException(f, ex);
       return null;
@@ -549,7 +554,6 @@ public class AzureBlobFileSystem extends FileSystem {
     if (file == null) {
       return null;
     }
-    abfsStore.getClient().getTrackingContext().setOpName("GFS");
 
     if ((start < 0) || (len < 0)) {
       throw new IllegalArgumentException("Invalid start or len parameter");
@@ -605,7 +609,6 @@ public class AzureBlobFileSystem extends FileSystem {
 
   private boolean deleteRoot() throws IOException {
     LOG.debug("Deleting root content");
-    abfsStore.getClient().getTrackingContext().setOpName("delete");
 
     final ExecutorService executorService = Executors.newFixedThreadPool(10);
 
@@ -692,6 +695,7 @@ public class AzureBlobFileSystem extends FileSystem {
   public void setXAttr(final Path path, final String name, final byte[] value, final EnumSet<XAttrSetFlag> flag)
       throws IOException {
     LOG.debug("AzureBlobFileSystem.setXAttr path: {}", path);
+    TrackingContext trackingContext = new TrackingContext(fileSystemID, "AT");
 
     if (name == null || name.isEmpty() || value == null) {
       throw new IllegalArgumentException("A valid name and value must be specified.");
@@ -700,14 +704,14 @@ public class AzureBlobFileSystem extends FileSystem {
     Path qualifiedPath = makeQualified(path);
 
     try {
-      Hashtable<String, String> properties = abfsStore.getPathStatus(qualifiedPath);
+      Hashtable<String, String> properties = abfsStore.getPathStatus(qualifiedPath, trackingContext);
       String xAttrName = ensureValidAttributeName(name);
       boolean xAttrExists = properties.containsKey(xAttrName);
       XAttrSetFlag.validate(name, xAttrExists, flag);
 
       String xAttrValue = abfsStore.decodeAttribute(value);
       properties.put(xAttrName, xAttrValue);
-      abfsStore.setPathProperties(qualifiedPath, properties);
+      abfsStore.setPathProperties(qualifiedPath, properties, trackingContext);
     } catch (AzureBlobFileSystemException ex) {
       checkException(path, ex);
     }
@@ -731,12 +735,13 @@ public class AzureBlobFileSystem extends FileSystem {
     if (name == null || name.isEmpty()) {
       throw new IllegalArgumentException("A valid name must be specified.");
     }
+    TrackingContext trackingContext = new TrackingContext(fileSystemID, "AT");
 
     Path qualifiedPath = makeQualified(path);
 
     byte[] value = null;
     try {
-      Hashtable<String, String> properties = abfsStore.getPathStatus(qualifiedPath);
+      Hashtable<String, String> properties = abfsStore.getPathStatus(qualifiedPath, trackingContext);
       String xAttrName = ensureValidAttributeName(name);
       if (properties.containsKey(xAttrName)) {
         String xAttrValue = properties.get(xAttrName);
@@ -767,6 +772,7 @@ public class AzureBlobFileSystem extends FileSystem {
       super.setPermission(path, permission);
       return;
     }
+    TrackingContext trackingContext = new TrackingContext(fileSystemID, "PR");
 
     if (permission == null) {
       throw new IllegalArgumentException("The permission can't be null");
@@ -776,7 +782,7 @@ public class AzureBlobFileSystem extends FileSystem {
 
     try {
       abfsStore.setPermission(qualifiedPath,
-              permission);
+              permission, trackingContext);
     } catch (AzureBlobFileSystemException ex) {
       checkException(path, ex);
     }
@@ -796,6 +802,7 @@ public class AzureBlobFileSystem extends FileSystem {
   public void modifyAclEntries(final Path path, final List<AclEntry> aclSpec)
       throws IOException {
     LOG.debug("AzureBlobFileSystem.modifyAclEntries path: {}", path);
+    TrackingContext trackingContext = new TrackingContext(fileSystemID, "AC");
 
     if (!getIsNamespaceEnabled()) {
       throw new UnsupportedOperationException(
@@ -811,7 +818,7 @@ public class AzureBlobFileSystem extends FileSystem {
 
     try {
       abfsStore.modifyAclEntries(qualifiedPath,
-              aclSpec);
+              aclSpec, trackingContext);
     } catch (AzureBlobFileSystemException ex) {
       checkException(path, ex);
     }
@@ -829,6 +836,7 @@ public class AzureBlobFileSystem extends FileSystem {
   public void removeAclEntries(final Path path, final List<AclEntry> aclSpec)
       throws IOException {
     LOG.debug("AzureBlobFileSystem.removeAclEntries path: {}", path);
+    TrackingContext trackingContext = new TrackingContext(fileSystemID, "AC");
 
     if (!getIsNamespaceEnabled()) {
       throw new UnsupportedOperationException(
@@ -843,7 +851,7 @@ public class AzureBlobFileSystem extends FileSystem {
     Path qualifiedPath = makeQualified(path);
 
     try {
-      abfsStore.removeAclEntries(qualifiedPath, aclSpec);
+      abfsStore.removeAclEntries(qualifiedPath, aclSpec, trackingContext);
     } catch (AzureBlobFileSystemException ex) {
       checkException(path, ex);
     }
@@ -864,11 +872,12 @@ public class AzureBlobFileSystem extends FileSystem {
           "removeDefaultAcl is only supported by storage accounts with the "
           + "hierarchical namespace enabled.");
     }
+    TrackingContext trackingContext = new TrackingContext(fileSystemID, "AC");
 
     Path qualifiedPath = makeQualified(path);
 
     try {
-      abfsStore.removeDefaultAcl(qualifiedPath);
+      abfsStore.removeDefaultAcl(qualifiedPath, trackingContext);
     } catch (AzureBlobFileSystemException ex) {
       checkException(path, ex);
     }
@@ -885,6 +894,7 @@ public class AzureBlobFileSystem extends FileSystem {
   @Override
   public void removeAcl(final Path path) throws IOException {
     LOG.debug("AzureBlobFileSystem.removeAcl path: {}", path);
+    TrackingContext trackingContext = new TrackingContext(fileSystemID, "AC");
 
     if (!getIsNamespaceEnabled()) {
       throw new UnsupportedOperationException(
@@ -895,7 +905,7 @@ public class AzureBlobFileSystem extends FileSystem {
     Path qualifiedPath = makeQualified(path);
 
     try {
-      abfsStore.removeAcl(qualifiedPath);
+      abfsStore.removeAcl(qualifiedPath, trackingContext);
     } catch (AzureBlobFileSystemException ex) {
       checkException(path, ex);
     }
@@ -921,6 +931,7 @@ public class AzureBlobFileSystem extends FileSystem {
           "setAcl is only supported by storage accounts with the hierarchical "
           + "namespace enabled.");
     }
+    TrackingContext trackingContext = new TrackingContext(fileSystemID, "AC");
 
     if (aclSpec == null || aclSpec.size() == 0) {
       throw new IllegalArgumentException("The aclSpec argument is invalid.");
@@ -929,7 +940,7 @@ public class AzureBlobFileSystem extends FileSystem {
     Path qualifiedPath = makeQualified(path);
 
     try {
-      abfsStore.setAcl(qualifiedPath, aclSpec);
+      abfsStore.setAcl(qualifiedPath, aclSpec, trackingContext);
     } catch (AzureBlobFileSystemException ex) {
       checkException(path, ex);
     }
@@ -951,11 +962,12 @@ public class AzureBlobFileSystem extends FileSystem {
           "getAclStatus is only supported by storage account with the "
           + "hierarchical namespace enabled.");
     }
+    TrackingContext trackingContext = new TrackingContext(fileSystemID, "AC");
 
     Path qualifiedPath = makeQualified(path);
 
     try {
-      return abfsStore.getAclStatus(qualifiedPath);
+      return abfsStore.getAclStatus(qualifiedPath, trackingContext);
     } catch (AzureBlobFileSystemException ex) {
       checkException(path, ex);
       return null;
@@ -977,9 +989,10 @@ public class AzureBlobFileSystem extends FileSystem {
   @Override
   public void access(final Path path, final FsAction mode) throws IOException {
     LOG.debug("AzureBlobFileSystem.access path : {}, mode : {}", path, mode);
+    TrackingContext trackingContext = new TrackingContext(fileSystemID, "LS");
     Path qualifiedPath = makeQualified(path);
     try {
-      this.abfsStore.access(qualifiedPath, mode);
+      this.abfsStore.access(qualifiedPath, mode, trackingContext);
     } catch (AzureBlobFileSystemException ex) {
       checkCheckAccessException(path, ex);
     }
@@ -1011,8 +1024,9 @@ public class AzureBlobFileSystem extends FileSystem {
   private boolean fileSystemExists() throws IOException {
     LOG.debug(
             "AzureBlobFileSystem.fileSystemExists uri: {}", uri);
+    TrackingContext trackingContext = new TrackingContext(fileSystemID, "FS");
     try {
-      abfsStore.getFilesystemProperties();
+      abfsStore.getFilesystemProperties(trackingContext);
     } catch (AzureBlobFileSystemException ex) {
       try {
         checkException(null, ex);
@@ -1030,8 +1044,9 @@ public class AzureBlobFileSystem extends FileSystem {
   private void createFileSystem() throws IOException {
     LOG.debug(
         "AzureBlobFileSystem.createFileSystem uri: {}", uri);
+    TrackingContext trackingContext = new TrackingContext(fileSystemID, "FS");
     try {
-      abfsStore.createFilesystem();
+      abfsStore.createFilesystem(trackingContext);
     } catch (AzureBlobFileSystemException ex) {
       checkException(null, ex);
     }
@@ -1254,7 +1269,8 @@ public class AzureBlobFileSystem extends FileSystem {
 
   @VisibleForTesting
   boolean getIsNamespaceEnabled() throws AzureBlobFileSystemException {
-    return abfsStore.getIsNamespaceEnabled();
+    TrackingContext trackingContext = new TrackingContext(fileSystemID, "NS");
+    return abfsStore.getIsNamespaceEnabled(trackingContext);
   }
 
   @VisibleForTesting

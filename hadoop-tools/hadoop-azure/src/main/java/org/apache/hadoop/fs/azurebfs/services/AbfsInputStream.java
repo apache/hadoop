@@ -96,11 +96,14 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         abfsInputStreamContext.getSasTokenRenewPeriodForStreamsInSeconds());
     this.streamStatistics = abfsInputStreamContext.getStreamStatistics();
     this.inputStreamID = StringUtils.right(UUID.randomUUID().toString(), 12);
-    client.getTrackingContext().setStreamID("IN" + inputStreamID);
   }
 
   public String getPath() {
     return path;
+  }
+
+  public String getInputStreamID() {
+    return inputStreamID;
   }
 
   @Override

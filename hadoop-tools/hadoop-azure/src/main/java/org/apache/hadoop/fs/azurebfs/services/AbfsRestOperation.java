@@ -52,8 +52,6 @@ public class AbfsRestOperation {
   // all the custom HTTP request headers provided by the caller
   private final List<AbfsHttpHeader> requestHeaders;
 
-  private final TrackingContext trackingContext;
-
   // This is a simple operation class, where all the upload methods have a
   // request body and all the download methods have a response body.
   private final boolean hasRequestBody;
@@ -110,9 +108,8 @@ public class AbfsRestOperation {
                     final AbfsClient client,
                     final String method,
                     final URL url,
-                    final List<AbfsHttpHeader> requestHeaders,
-                    final TrackingContext trackingContext) {
-    this(operationType, client, method, url, requestHeaders, trackingContext, null);
+                    final List<AbfsHttpHeader> requestHeaders) {
+    this(operationType, client, method, url, requestHeaders, null);
   }
 
   /**
@@ -129,14 +126,12 @@ public class AbfsRestOperation {
                     final String method,
                     final URL url,
                     final List<AbfsHttpHeader> requestHeaders,
-                    final TrackingContext trackingContext,
                     final String sasToken) {
     this.operationType = operationType;
     this.client = client;
     this.method = method;
     this.url = url;
     this.requestHeaders = requestHeaders;
-    this.trackingContext = trackingContext;
     this.hasRequestBody = (AbfsHttpConstants.HTTP_METHOD_PUT.equals(method)
             || AbfsHttpConstants.HTTP_METHOD_PATCH.equals(method));
     this.sasToken = sasToken;
@@ -162,12 +157,11 @@ public class AbfsRestOperation {
                     String method,
                     URL url,
                     List<AbfsHttpHeader> requestHeaders,
-                    final TrackingContext trackingContext,
                     byte[] buffer,
                     int bufferOffset,
                     int bufferLength,
                     String sasToken) {
-    this(operationType, client, method, url, requestHeaders, trackingContext, sasToken);
+    this(operationType, client, method, url, requestHeaders, sasToken);
     this.buffer = buffer;
     this.bufferOffset = bufferOffset;
     this.bufferLength = bufferLength;
@@ -179,7 +173,7 @@ public class AbfsRestOperation {
    * HTTP operations.
    */
    @VisibleForTesting
-   public void execute() throws AzureBlobFileSystemException {
+   public void execute(TrackingContext trackingContext) throws AzureBlobFileSystemException {
     // see if we have latency reports from the previous requests
     String latencyHeader = this.client.getAbfsPerfTracker().getClientLatency();
     if (latencyHeader != null && !latencyHeader.isEmpty()) {
@@ -187,14 +181,13 @@ public class AbfsRestOperation {
               new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_ABFS_CLIENT_LATENCY, latencyHeader);
       requestHeaders.add(httpHeader);
     }
-//     client.getTrackingContext().setOperation(operationType);
 
     retryCount = 0;
     LOG.debug("First execution of REST operation - {}", operationType);
-    while (!executeHttpOperation(retryCount)) {
+    while (!executeHttpOperation(retryCount, trackingContext)) {
       try {
         ++retryCount;
-        this.client.getTrackingContext().setRetryCount(retryCount);
+        trackingContext.setRetryCount(retryCount);
         LOG.debug("Retrying REST operation {}. RetryCount = {}",
             operationType, retryCount);
         Thread.sleep(client.getRetryPolicy().getRetryInterval(retryCount));
@@ -216,12 +209,16 @@ public class AbfsRestOperation {
    * fails, there may be a retry.  The retryCount is incremented with each
    * attempt.
    */
-  private boolean executeHttpOperation(final int retryCount) throws AzureBlobFileSystemException {
+  private boolean executeHttpOperation(final int retryCount, TrackingContext trackingContext)
+          throws AzureBlobFileSystemException {
     AbfsHttpOperation httpOperation = null;
     try {
       // initialize the HTTP request and open the connection
-      httpOperation = new AbfsHttpOperation(url, method, requestHeaders, client.getTrackingContext());
+      httpOperation = new AbfsHttpOperation(url, method, requestHeaders, trackingContext);
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
+      httpOperation.getConnection()
+              .setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID,
+                      trackingContext.toString());
 
       switch(client.getAuthType()) {
         case Custom:
@@ -243,10 +240,6 @@ public class AbfsRestOperation {
           break;
       }
 
-      httpOperation.getConnection()
-          .setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID,
-              client.getTrackingContext().toString());
-
       // dump the headers
       AbfsIoUtils.dumpHeadersToDebugLog("Request Headers",
           httpOperation.getConnection().getRequestProperties());
@@ -254,13 +247,13 @@ public class AbfsRestOperation {
 
       if (hasRequestBody) {
         // HttpUrlConnection requires
-        httpOperation.sendRequest(buffer, bufferOffset, bufferLength, client.getTrackingContext());
+        httpOperation.sendRequest(buffer, bufferOffset, bufferLength);
         incrementCounter(AbfsStatistic.SEND_REQUESTS, 1);
         incrementCounter(AbfsStatistic.BYTES_SENT, bufferLength);
       }
 
 
-      httpOperation.processResponse(buffer, bufferOffset, bufferLength, client.getTrackingContext());
+      httpOperation.processResponse(buffer, bufferOffset, bufferLength);
       incrementCounter(AbfsStatistic.GET_RESPONSES, 1);
       //Only increment bytesReceived counter when the status code is 2XX.
       if (httpOperation.getStatusCode() >= HttpURLConnection.HTTP_OK
