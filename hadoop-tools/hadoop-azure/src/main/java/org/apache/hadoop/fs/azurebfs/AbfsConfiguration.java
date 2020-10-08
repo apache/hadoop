@@ -67,6 +67,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.*;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.*;
 
@@ -218,7 +219,7 @@ public class AbfsConfiguration{
   private String userAgentId;
 
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_CLIENT_CORRELATIONID,
-      DefaultValue = DEFAULT_FS_AZURE_CLIENT_CORRELATION_ID)
+      DefaultValue = EMPTY_STRING)
   private String clientCorrelationID;
 
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_CLUSTER_NAME,
@@ -293,15 +294,9 @@ public class AbfsConfiguration{
 
   /**
    * Gets client correlation ID provided in config.
-   * @return Client Correlation ID config value or empty string (default value)
-   * if length and character constraints are not met
+   * @return Client Correlation ID config
    */
   public String getClientCorrelationID() {
-    if ((clientCorrelationID.length() > MAX_CLIENT_CORRELATION_ID_LENGTH) ||
-        (!clientCorrelationID.matches(CLIENT_CORRELATION_ID_PATTERN))) {
-      return DEFAULT_FS_AZURE_CLIENT_CORRELATION_ID;
-    }
-
     return clientCorrelationID;
   }
 

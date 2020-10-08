@@ -665,6 +665,7 @@ public class AzureBlobFileSystem extends FileSystem {
       super.setOwner(path, owner, group);
       return;
     }
+    TrackingContext trackingContext = new TrackingContext(fileSystemID, "PO")
 
     if ((owner == null || owner.isEmpty()) && (group == null || group.isEmpty())) {
       throw new IllegalArgumentException("A valid owner or group must be specified.");
@@ -675,7 +676,8 @@ public class AzureBlobFileSystem extends FileSystem {
     try {
       abfsStore.setOwner(qualifiedPath,
               owner,
-              group);
+              group,
+              trackingContext);
     } catch (AzureBlobFileSystemException ex) {
       checkException(path, ex);
     }

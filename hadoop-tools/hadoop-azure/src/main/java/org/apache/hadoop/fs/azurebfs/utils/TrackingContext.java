@@ -67,8 +67,9 @@ public class TrackingContext {
     this.fileSystemID = fileSystemID;
   }
 
-  public void setRetryCount(int count) {
-    retryCount = count;
+  public void updateRetryCount() {
+//    retryCount = count;
+    retryCount++;
   }
 
   public void setClientRequestID() {
@@ -85,6 +86,10 @@ public class TrackingContext {
   public void updateIteration() {
     iteration++;
     primaryRequestID = clientRequestID + ":";
+  }
+
+  public void setPrimaryRequestID() {
+    this.primaryRequestID = clientRequestID;
   }
 
   public String toString() {

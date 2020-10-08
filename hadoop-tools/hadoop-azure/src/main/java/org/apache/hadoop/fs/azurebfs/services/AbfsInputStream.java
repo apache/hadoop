@@ -27,6 +27,7 @@ import java.util.UUID;
 import com.google.common.base.Preconditions;
 import com.google.common.annotations.VisibleForTesting;
 
+import org.apache.hadoop.fs.azurebfs.utils.TrackingContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,6 +71,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   //                                                      of valid bytes in buffer)
   private boolean closed = false;
   private String inputStreamID;
+  private TrackingContext trackingContext;
 
   /** Stream statistics. */
   private final AbfsInputStreamStatistics streamStatistics;
@@ -83,6 +85,19 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
           final long contentLength,
           final AbfsInputStreamContext abfsInputStreamContext,
           final String eTag) {
+    this(client, statistics, path, contentLength, abfsInputStreamContext, eTag,
+            new TrackingContext("test-filesystem-id", "IP"));
+
+  }
+
+  public AbfsInputStream(
+          final AbfsClient client,
+          final Statistics statistics,
+          final String path,
+          final long contentLength,
+          final AbfsInputStreamContext abfsInputStreamContext,
+          final String eTag,
+          TrackingContext trackingContext) {
     this.client = client;
     this.statistics = statistics;
     this.path = path;
@@ -96,14 +111,12 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         abfsInputStreamContext.getSasTokenRenewPeriodForStreamsInSeconds());
     this.streamStatistics = abfsInputStreamContext.getStreamStatistics();
     this.inputStreamID = StringUtils.right(UUID.randomUUID().toString(), 12);
+    trackingContext.setStreamID(inputStreamID);
+    this.trackingContext = trackingContext;
   }
 
   public String getPath() {
     return path;
-  }
-
-  public String getInputStreamID() {
-    return inputStreamID;
   }
 
   @Override
@@ -188,7 +201,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
       // Enable readAhead when reading sequentially
       if (-1 == fCursorAfterLastRead || fCursorAfterLastRead == fCursor || b.length >= bufferSize) {
-        client.getTrackingContext().setOpName("readAhead");
         bytesRead = readInternal(fCursor, buffer, 0, bufferSize, false);
       } else {
         bytesRead = readInternal(fCursor, buffer, 0, b.length, true);
@@ -242,6 +254,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         ReadBufferManager.getBufferManager().queueReadAhead(this, nextOffset, (int) nextSize);
         nextOffset = nextOffset + nextSize;
         numReadAheads--;
+        System.out.println("in the readahead loop " + numReadAheads.toString());
+        trackingContext.setPrimaryRequestID();
       }
 
       // try reading from buffers first

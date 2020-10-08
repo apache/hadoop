@@ -234,16 +234,16 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    *
    * @throws IOException if an error occurs.
    */
-  public AbfsHttpOperation(final URL url, final String method, final List<AbfsHttpHeader> requestHeaders) throws IOException {
-    this(url, method, requestHeaders, new TrackingContext(""));
-  }
+//  public AbfsHttpOperation(final URL url, final String method, final List<AbfsHttpHeader> requestHeaders) throws IOException {
+//    this(url, method, requestHeaders, new TrackingContext("", "OP"));
+//  }
 
-  public AbfsHttpOperation(final URL url, final String method, final List<AbfsHttpHeader> requestHeaders, TrackingContext trackingContext)
+  public AbfsHttpOperation(final URL url, final String method, final List<AbfsHttpHeader> requestHeaders)
       throws IOException {
     this.isTraceEnabled = LOG.isTraceEnabled();
     this.url = url;
     this.method = method;
-    trackingContext.setClientRequestID();
+//    trackingContext.setClientRequestID();
 
     this.connection = openConnection();
     if (this.connection instanceof HttpsURLConnection) {
@@ -262,7 +262,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     for (AbfsHttpHeader header : requestHeaders) {
       this.connection.setRequestProperty(header.getName(), header.getValue());
     }
-    this.connection.setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, trackingContext.toString());
+//    this.connection.setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, trackingContext.toString());
   }
 
   /**

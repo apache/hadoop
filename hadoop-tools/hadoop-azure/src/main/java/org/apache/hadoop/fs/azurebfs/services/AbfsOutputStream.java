@@ -36,6 +36,7 @@ import java.util.UUID;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.fs.azurebfs.utils.TrackingContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -97,12 +98,22 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   private static final Logger LOG =
       LoggerFactory.getLogger(AbfsOutputStream.class);
 
+  public AbfsOutputStream(final AbfsClient client,
+                          final Statistics statistics,
+                          final String path,
+                          final long position,
+                          AbfsOutputStreamContext abfsOutputStreamContext) {
+    this(client, statistics, path, position, abfsOutputStreamContext,
+            new TrackingContext("test-filesystem-id", "OP"));
+  }
+
   public AbfsOutputStream(
           final AbfsClient client,
           final Statistics statistics,
           final String path,
           final long position,
-          AbfsOutputStreamContext abfsOutputStreamContext) {
+          AbfsOutputStreamContext abfsOutputStreamContext,
+          TrackingContext trackingContext) {
     this.client = client;
     this.statistics = statistics;
     this.path = path;
@@ -138,6 +149,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     this.cachedSasToken = new CachedSASToken(
         abfsOutputStreamContext.getSasTokenRenewPeriodForStreamsInSeconds());
     this.outputStreamID = StringUtils.right(UUID.randomUUID().toString(), 12);
+    trackingContext.setStreamID(outputStreamID);
   }
 
   /**
@@ -170,10 +182,6 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   @Override
   public void write(final int byteVal) throws IOException {
     write(new byte[]{(byte) (byteVal & 0xFF)});
-  }
-
-  public String getOutputStreamID() {
-    return outputStreamID;
   }
 
   /**

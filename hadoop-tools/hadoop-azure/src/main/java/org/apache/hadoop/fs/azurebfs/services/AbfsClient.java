@@ -698,8 +698,9 @@ public class AbfsClient implements Closeable {
     return op;
   }
 
-  public AbfsRestOperation setAcl(final String path, final String aclSpecString) throws AzureBlobFileSystemException {
-    return setAcl(path, aclSpecString, AbfsHttpConstants.EMPTY_STRING);
+  public AbfsRestOperation setAcl(final String path, final String aclSpecString,
+                                  TrackingContext trackingContext) throws AzureBlobFileSystemException {
+    return setAcl(path, aclSpecString, AbfsHttpConstants.EMPTY_STRING, trackingContext);
   }
 
   public AbfsRestOperation setAcl(final String path, final String aclSpecString, final String eTag,

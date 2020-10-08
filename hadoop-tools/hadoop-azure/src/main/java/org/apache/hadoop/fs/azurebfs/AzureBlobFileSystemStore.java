@@ -387,7 +387,8 @@ public class AzureBlobFileSystemStore implements Closeable {
         throw new InvalidAbfsRestOperationException(ex);
       }
 
-      final AbfsRestOperation op = client.setFilesystemProperties(commaSeparatedProperties);
+      final AbfsRestOperation op = client.setFilesystemProperties(commaSeparatedProperties,
+              new TrackingContext("test-filesystem-id", "FS"));
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
     }
   }
@@ -463,7 +464,7 @@ public class AzureBlobFileSystemStore implements Closeable {
       final boolean overwrite, final FsPermission permission,
       final FsPermission umask, TrackingContext trackingContext) throws AzureBlobFileSystemException {
     try (AbfsPerfInfo perfInfo = startTracking("createFile", "createPath")) {
-      boolean isNamespaceEnabled = getIsNamespaceEnabled();
+      boolean isNamespaceEnabled = getIsNamespaceEnabled(trackingContext);
       LOG.debug("createFile filesystem: {} path: {} overwrite: {} permission: {} umask: {} isNamespaceEnabled: {}",
               client.getFileSystem(),
               path,
@@ -512,8 +513,9 @@ public class AzureBlobFileSystemStore implements Closeable {
               statistics,
               relativePath,
               0,
-              populateAbfsOutputStreamContext(isAppendBlob));
-      trackingContext.setStreamID(out.getOutputStreamID());
+              populateAbfsOutputStreamContext(isAppendBlob),
+              trackingContext);
+//      trackingContext.setStreamID(out.getOutputStreamID());
 
       return out;
     }
@@ -548,6 +550,7 @@ public class AzureBlobFileSystemStore implements Closeable {
         // File pre-exists, fetch eTag
         try {
           op = client.getPathStatus(relativePath, false, trackingContext);
+          trackingContext.setPrimaryRequestID();
         } catch (AbfsRestOperationException ex) {
           if (ex.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
             // Is a parallel access case, as file which was found to be
@@ -607,7 +610,7 @@ public class AzureBlobFileSystemStore implements Closeable {
                               TrackingContext trackingContext)
       throws AzureBlobFileSystemException {
     try (AbfsPerfInfo perfInfo = startTracking("createDirectory", "createPath")) {
-      boolean isNamespaceEnabled = getIsNamespaceEnabled();
+      boolean isNamespaceEnabled = getIsNamespaceEnabled(trackingContext);
       LOG.debug("createDirectory filesystem: {} path: {} permission: {} umask: {} isNamespaceEnabled: {}",
               client.getFileSystem(),
               path,
@@ -656,8 +659,8 @@ public class AzureBlobFileSystemStore implements Closeable {
               relativePath, contentLength,
               populateAbfsInputStreamContext(),
               eTag);
-      trackingContext.setStreamID(in.getInputStreamID());
-      return
+//      trackingContext.setStreamID(in.getInputStreamID());
+      return in;
     }
   }
 
@@ -709,8 +712,9 @@ public class AzureBlobFileSystemStore implements Closeable {
               statistics,
               relativePath,
               offset,
-              populateAbfsOutputStreamContext(isAppendBlob));
-      trackingContext.setStreamID(out.getOutputStreamID());
+              populateAbfsOutputStreamContext(isAppendBlob),
+              trackingContext);
+//      trackingContext.setStreamID(out.getOutputStreamID());
 
       return out;
     }
@@ -791,7 +795,7 @@ public class AzureBlobFileSystemStore implements Closeable {
 
   public FileStatus getFileStatus(final Path path, TrackingContext trackingContext) throws IOException {
     try (AbfsPerfInfo perfInfo = startTracking("getFileStatus", "undetermined")) {
-      boolean isNamespaceEnabled = getIsNamespaceEnabled();
+      boolean isNamespaceEnabled = getIsNamespaceEnabled(trackingContext);
       LOG.debug("getFileStatus filesystem: {} path: {} isNamespaceEnabled: {}",
               client.getFileSystem(),
               path,
@@ -897,7 +901,7 @@ public class AzureBlobFileSystemStore implements Closeable {
 
     // generate continuation token if a valid startFrom is provided.
     if (startFrom != null && !startFrom.isEmpty()) {
-      continuation = getIsNamespaceEnabled()
+      continuation = getIsNamespaceEnabled(trackingContext)
               ? generateContinuationTokenForXns(startFrom)
               : generateContinuationTokenForNonXns(relativePath, startFrom);
     }
@@ -1026,7 +1030,7 @@ public class AzureBlobFileSystemStore implements Closeable {
   public void setOwner(final Path path, final String owner, final String group,
                        TrackingContext trackingContext) throws
           AzureBlobFileSystemException {
-    if (!getIsNamespaceEnabled()) {
+    if (!getIsNamespaceEnabled(trackingContext)) {
       throw new UnsupportedOperationException(
           "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
     }
@@ -1055,7 +1059,7 @@ public class AzureBlobFileSystemStore implements Closeable {
   public void setPermission(final Path path, final FsPermission permission,
                             TrackingContext trackingContext) throws
           AzureBlobFileSystemException {
-    if (!getIsNamespaceEnabled()) {
+    if (!getIsNamespaceEnabled(trackingContext)) {
       throw new UnsupportedOperationException(
           "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
     }
@@ -1079,7 +1083,7 @@ public class AzureBlobFileSystemStore implements Closeable {
   public void modifyAclEntries(final Path path, final List<AclEntry> aclSpec,
                                TrackingContext trackingContext) throws
           AzureBlobFileSystemException {
-    if (!getIsNamespaceEnabled()) {
+    if (!getIsNamespaceEnabled(trackingContext)) {
       throw new UnsupportedOperationException(
           "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
     }
@@ -1122,7 +1126,7 @@ public class AzureBlobFileSystemStore implements Closeable {
 
   public void removeAclEntries(final Path path, final List<AclEntry> aclSpec,
                                TrackingContext trackingContext) throws AzureBlobFileSystemException {
-    if (!getIsNamespaceEnabled()) {
+    if (!getIsNamespaceEnabled(trackingContext)) {
       throw new UnsupportedOperationException(
           "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
     }
@@ -1164,7 +1168,7 @@ public class AzureBlobFileSystemStore implements Closeable {
   }
 
   public void removeDefaultAcl(final Path path, TrackingContext trackingContext) throws AzureBlobFileSystemException {
-    if (!getIsNamespaceEnabled()) {
+    if (!getIsNamespaceEnabled(trackingContext)) {
       throw new UnsupportedOperationException(
           "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
     }
@@ -1207,7 +1211,7 @@ public class AzureBlobFileSystemStore implements Closeable {
   }
 
   public void removeAcl(final Path path, TrackingContext trackingContext) throws AzureBlobFileSystemException {
-    if (!getIsNamespaceEnabled()) {
+    if (!getIsNamespaceEnabled(trackingContext)) {
       throw new UnsupportedOperationException(
           "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
     }
@@ -1248,7 +1252,7 @@ public class AzureBlobFileSystemStore implements Closeable {
 
   public void setAcl(final Path path, final List<AclEntry> aclSpec,
                      TrackingContext trackingContext) throws AzureBlobFileSystemException {
-    if (!getIsNamespaceEnabled()) {
+    if (!getIsNamespaceEnabled(trackingContext)) {
       throw new UnsupportedOperationException(
           "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
     }
@@ -1290,7 +1294,7 @@ public class AzureBlobFileSystemStore implements Closeable {
   }
 
   public AclStatus getAclStatus(final Path path, TrackingContext trackingContext) throws IOException {
-    if (!getIsNamespaceEnabled()) {
+    if (!getIsNamespaceEnabled(trackingContext)) {
       throw new UnsupportedOperationException(
           "This operation is only valid for storage accounts with the hierarchical namespace enabled.");
     }
@@ -1341,7 +1345,7 @@ public class AzureBlobFileSystemStore implements Closeable {
     LOG.debug("access for filesystem: {}, path: {}, mode: {}",
         this.client.getFileSystem(), path, mode);
     if (!this.abfsConfiguration.isCheckAccessEnabled()
-        || !getIsNamespaceEnabled()) {
+        || !getIsNamespaceEnabled(trackingContext)) {
       LOG.debug("Returning; either check access is not enabled or the account"
           + " used is not namespace enabled");
       return;

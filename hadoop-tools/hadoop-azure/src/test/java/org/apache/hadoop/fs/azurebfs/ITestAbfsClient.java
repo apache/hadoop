@@ -27,6 +27,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.hadoop.fs.azurebfs.utils.TrackingContext;
 import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -127,7 +128,8 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     String permission = isNamespaceEnabled ? getOctalNotation(FsPermission.getDirDefault()) : null;
     String umask = isNamespaceEnabled ? getOctalNotation(FsPermission.getUMask(fs.getConf())) : null;
     AbfsRestOperation op = client.createPath(path, false, true,
-        permission, umask, false, null);
+        permission, umask, false, null,
+            new TrackingContext(fs.getFileSystemID(), "CR"));
 
     int responseCode = op.getResult().getStatusCode();
     assertEquals("Status code", HTTP_CREATED, responseCode);

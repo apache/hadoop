@@ -187,7 +187,7 @@ public class AbfsRestOperation {
     while (!executeHttpOperation(retryCount, trackingContext)) {
       try {
         ++retryCount;
-        trackingContext.setRetryCount(retryCount);
+        trackingContext.updateRetryCount();
         LOG.debug("Retrying REST operation {}. RetryCount = {}",
             operationType, retryCount);
         Thread.sleep(client.getRetryPolicy().getRetryInterval(retryCount));
@@ -214,7 +214,8 @@ public class AbfsRestOperation {
     AbfsHttpOperation httpOperation = null;
     try {
       // initialize the HTTP request and open the connection
-      httpOperation = new AbfsHttpOperation(url, method, requestHeaders, trackingContext);
+      trackingContext.setClientRequestID();
+      httpOperation = new AbfsHttpOperation(url, method, requestHeaders);
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
       httpOperation.getConnection()
               .setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID,
