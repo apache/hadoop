@@ -2990,6 +2990,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               tombstones,
               needEmptyDirectoryFlag);
         } catch (FileNotFoundException fne) {
+          LOG.trace("File Not Found from probes for {}", key, fne);
           s3AFileStatus = null;
         }
         if (s3AFileStatus == null) {
