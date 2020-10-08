@@ -138,8 +138,7 @@ int execute_regex_match(const char *regex_str, const char *input) {
   regex_t regex;
   int regex_match;
   if (0 != regcomp(&regex, regex_str, REG_EXTENDED|REG_NOSUB)) {
-    fprintf(LOGFILE, "Unable to compile regex.");
-    fflush(LOGFILE);
+    fprintf(LOGFILE, "Unable to compile regex.\n");
     exit(ERROR_COMPILING_REGEX);
   }
   regex_match = regexec(&regex, input, (size_t) 0, NULL, 0);
