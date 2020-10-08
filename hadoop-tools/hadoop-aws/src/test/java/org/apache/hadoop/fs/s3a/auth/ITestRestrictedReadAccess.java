@@ -422,7 +422,7 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
 
     readonlyFS.getFileStatus(emptyDir);
     // now look at a file; the outcome depends on the mode.
-    accessDeniedIf(!s3guard, () ->
+    accessDeniedIf(!guardedInAuthMode, () ->
         readonlyFS.getFileStatus(subdirFile));
 
     // irrespective of mode, the attempt to read the data will fail.
@@ -437,7 +437,7 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
     // This means that permissions on the file do not get checked.
     // See: HADOOP-16464.
     Optional<FSDataInputStream> optIn = accessDeniedIf(
-        !s3guard, () -> readonlyFS.open(emptyFile));
+        !guardedInAuthMode, () -> readonlyFS.open(emptyFile));
     if (optIn.isPresent()) {
       try (FSDataInputStream is = optIn.get()) {
         Assertions.assertThat(is.read())
@@ -455,8 +455,8 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
     describe("Glob Status operations");
     // baseline: the real filesystem on a subdir
     globFS(getFileSystem(), subdirFile, null, false, 1);
-    // a file fails if not guarded
-    globFS(readonlyFS, subdirFile, null, !s3guard, 1);
+    // a file fails if not in auth mode
+    globFS(readonlyFS, subdirFile, null, !guardedInAuthMode, 1);
     // empty directories don't fail.
     FileStatus[] st = globFS(readonlyFS, emptyDir, null, false, 1);
     if (s3guard) {
@@ -554,7 +554,7 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
         true,
         TEXT_FILE,
         true);
-    accessDeniedIf(!s3guard,
+    accessDeniedIf(!guardedInAuthMode,
         () -> fetcher.getFileStatuses())
         .ifPresent(stats -> {
           Assertions.assertThat(stats)
@@ -619,7 +619,7 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
   public void checkDeleteOperations() throws Throwable {
     describe("Testing delete operations");
     readonlyFS.delete(emptyDir, true);
-    if (!s3guard) {
+    if (!authMode) {
       // to fail on HEAD
       accessDenied(() -> readonlyFS.delete(emptyFile, true));
     } else {

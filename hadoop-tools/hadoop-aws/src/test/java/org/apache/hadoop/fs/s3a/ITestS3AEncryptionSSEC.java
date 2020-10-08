@@ -314,13 +314,23 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
     fsKeyB = createNewFileSystemWithSSECKey(KEY_4);
 
     //Until this point, no exception is thrown about access
-    if (!fsKeyB.hasMetadataStore()) {
+    if (statusProbesCheckS3(fsKeyB, fileToStat)) {
       intercept(AccessDeniedException.class,
           SERVICE_AMAZON_S3_STATUS_CODE_403,
           () -> fsKeyB.listStatus(fileToStat));
     } else {
       fsKeyB.listStatus(fileToStat);
     }
+  }
+
+  /**
+   * Do file status probes check S3?
+   * @param fs filesystem
+   * @param path file path
+   * @return true if check for a path being a file will issue a HEAD request.
+   */
+  private boolean statusProbesCheckS3(S3AFileSystem fs, Path path) {
+    return !fs.hasMetadataStore() || !fs.allowAuthoritative(path);
   }
 
   /**
@@ -340,7 +350,7 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
     Path fileToDelete = new Path(pathABC, "filetobedeleted.txt");
     writeThenReadFile(fileToDelete, TEST_FILE_LEN);
     fsKeyB = createNewFileSystemWithSSECKey(KEY_4);
-    if (!fsKeyB.hasMetadataStore()) {
+    if (statusProbesCheckS3(fsKeyB, fileToDelete)) {
       intercept(AccessDeniedException.class,
           SERVICE_AMAZON_S3_STATUS_CODE_403,
           () -> fsKeyB.delete(fileToDelete, false));
