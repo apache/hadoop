@@ -72,7 +72,7 @@ public class ITestAbfsInputStreamStatistics
       checkInitValue(stats.getBackwardSeekOperations(), "backwardSeekOps");
       checkInitValue(stats.getBytesRead(), "bytesRead");
       checkInitValue(stats.getBytesSkippedOnSeek(), "bytesSkippedOnSeek");
-      checkInitValue(stats.getNegativeBytesBackwardsOnSeek(), "bytesBackwardsOnSeek");
+      checkInitValue(stats.getBytesBackwardsOnSeek(), "bytesBackwardsOnSeek");
       checkInitValue(stats.getSeekInBuffer(), "seekInBuffer");
       checkInitValue(stats.getReadOperations(), "readOps");
       checkInitValue(stats.getBytesReadFromBuffer(), "bytesReadFromBuffer");
@@ -159,7 +159,7 @@ public class ITestAbfsInputStreamStatistics
       assertEquals("Mismatch in forwardSeekOps value", OPERATIONS,
           stats.getForwardSeekOperations());
       assertEquals("Mismatch in bytesBackwardsOnSeek value",
-          OPERATIONS * ONE_MB, stats.getNegativeBytesBackwardsOnSeek());
+          OPERATIONS * ONE_MB, stats.getBytesBackwardsOnSeek());
       assertEquals("Mismatch in bytesSkippedOnSeek value",
           0, stats.getBytesSkippedOnSeek());
       assertEquals("Mismatch in seekInBuffer value", 2 * OPERATIONS,

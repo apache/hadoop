@@ -293,7 +293,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         op = IOStatisticsBinding.trackDuration((IOStatisticsStore) ioStatistics,
             StoreStatisticNames.ACTION_HTTP_GET_REQUEST,
             () -> client.read(path, position, b, offset, length,
-                tolerateOobAppends ? "*" : eTag, cachedSasToken.get())).apply();
+                tolerateOobAppends ? "*" : eTag, cachedSasToken.get()));
       } else {
         op = client.read(path, position, b, offset, length,
             tolerateOobAppends ? "*" : eTag, cachedSasToken.get());

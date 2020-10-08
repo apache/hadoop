@@ -101,9 +101,7 @@ public enum AbfsStatistic {
   READ_AHEAD_BYTES_READ("read_ahead_bytes_read",
       "Total number of bytes from readAhead."),
   REMOTE_BYTES_READ("remote_bytes_read",
-      "Total number of bytes read from remote operations."),
-  NEGATIVE_SEEK_BYTES_BACKWARDS("negative_seek_bytes_backwards",
-      "Negative of the total bytes seeked backwards.");
+      "Total number of bytes read from remote operations.");
 
 
   private String statName;
