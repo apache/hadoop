@@ -296,7 +296,6 @@ static int validate_container_name(const char *container_name) {
     }
   }
   fprintf(ERRORFILE, "Specified container_id=%s is invalid\n", container_name);
-  fflush(ERRORFILE);
   return INVALID_DOCKER_CONTAINER_NAME;
 }
 
