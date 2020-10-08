@@ -71,6 +71,9 @@ final class ReadBufferManager {
 
   static void setReadBufferManagerConfigs(int readAheadBlockSize) {
     if (bufferManager == null) {
+      LOGGER.debug(
+          "ReadBufferManager not initialized yet. Overriding readAheadBlockSize as {}",
+          readAheadBlockSize);
       blockSize = readAheadBlockSize;
     }
   }
@@ -504,15 +507,25 @@ final class ReadBufferManager {
         buffers[i] = null;
       }
       buffers = null;
-      bufferManager = null;
+      resetBufferManager();
     }
   }
 
   @VisibleForTesting
+  static void resetBufferManager() {
+    bufferManager = null;
+  }
+
+  @VisibleForTesting
   void testResetReadBufferManager(int readAheadBlockSize, int thresholdAgeMilliseconds) {
-    blockSize = readAheadBlockSize;
-    this.thresholdAgeMilliseconds = thresholdAgeMilliseconds;
+    setBlockSize(readAheadBlockSize);
+    setThresholdAgeMilliseconds(thresholdAgeMilliseconds);
     testResetReadBufferManager();
+  }
+
+  @VisibleForTesting
+  static void setBlockSize(int readAheadBlockSize) {
+    blockSize = readAheadBlockSize;
   }
 
   @VisibleForTesting

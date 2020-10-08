@@ -47,7 +47,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         StreamCapabilities {
   private static final Logger LOG = LoggerFactory.getLogger(AbfsInputStream.class);
 
-  private static int readAheadBlockSize;
+  private int readAheadBlockSize;
   private final AbfsClient client;
   private final Statistics statistics;
   private final String path;
@@ -106,6 +106,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       readAheadBlockSize = this.bufferSize;
     }
 
+    // Propagate the config values to ReadBufferManager so that the first instance
+    // to initialize it get can set the readAheadBlockSize
     ReadBufferManager.setReadBufferManagerConfigs(readAheadBlockSize);
   }
 
