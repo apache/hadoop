@@ -141,7 +141,23 @@ public final class RemoteIterators {
   }
 
   /**
-   * Create an iterator from an iterator and a filter.
+   * Create a RemoteIterator from a RemoteIterator, casting the
+   * type in the process. This is to help with filesystem API
+   * calls where overloading causes confusion (e.g. listStatusIterator())
+   * @param <S> source type
+   * @param <T> result type
+   * @param iterator source
+   * @return a remote iterator
+   */
+  public static <S, T> RemoteIterator<T> typeCastingRemoteIterator(
+      RemoteIterator<S> iterator) {
+    return new TypeCastingRemoteIterator<>(iterator);
+  }
+
+  /**
+   * Create a RemoteIterator from a RemoteIterator and a filter
+   * function which returns true for every element to be passed
+   * through.
    * <p></p>
    * Elements are filtered in the hasNext() method; if not used
    * the filtering will be done on demand in the {@code next()}
@@ -464,6 +480,36 @@ public final class RemoteIterators {
     @Override
     public String toString() {
       return "FunctionRemoteIterator{" + getSource() + '}';
+    }
+  }
+
+  /**
+   * RemoteIterator which can change the type of the input.
+   * This is useful in some situations.
+   * @param <S> source type
+   * @param <T> final output type.
+   */
+  private static final class TypeCastingRemoteIterator<S, T>
+      extends WrappingRemoteIterator<S, T> {
+
+    private TypeCastingRemoteIterator(
+        RemoteIterator<S> source) {
+      super(source);
+    }
+
+    @Override
+    public boolean hasNext() throws IOException {
+      return sourceHasNext();
+    }
+
+    @Override
+    public T next() throws IOException {
+      return (T)sourceNext();
+    }
+
+    @Override
+    public String toString() {
+      return getSource().toString();
     }
   }
 
