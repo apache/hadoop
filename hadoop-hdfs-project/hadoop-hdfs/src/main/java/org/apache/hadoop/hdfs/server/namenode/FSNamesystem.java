@@ -388,6 +388,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       "dfs.namenode.snapshot.trashroot.enabled";
   public static final boolean DFS_NAMENODE_SNAPSHOT_TRASHROOT_ENABLED_DEFAULT
       = false;
+  private static final FsPermission SHARED_TRASH_PERMISSION =
+      new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL, true);
 
   private final MetricsRegistry registry = new MetricsRegistry("FSNamesystem");
   @Metric final MutableRatesWithAggregation detailedLockHoldTimeMetrics =
@@ -2029,6 +2031,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     metaSave(pw);
     pw.flush();
     return sw.toString();
+  }
+
+  public boolean getIsSnapshotTrashRootEnabled() {
+    return isSnapshotTrashRootEnabled;
   }
 
   @VisibleForTesting
@@ -8522,6 +8528,39 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       throw e;
     }
     logAuditEvent(true, operationName, src);
+  }
+
+  /**
+   * Check if snapshot roots are created for all existing snapshottable
+   * directories. Create them if not.
+   */
+  void checkAndProvisionSnapshotTrashRoots() throws IOException {
+    if (haEnabled) {
+      if (!inActiveState()) {
+        LOG.warn("HA is enabled. But the current NameNode is not active. "
+            + "Skipping the check.");
+        return;
+      }
+    }
+    SnapshottableDirectoryStatus[] dirStatusList = getSnapshottableDirListing();
+    if (dirStatusList == null) {
+      return;
+    }
+    for (SnapshottableDirectoryStatus dirStatus : dirStatusList) {
+      String currDir = dirStatus.getFullPath().toString();
+      if (!currDir.endsWith(Path.SEPARATOR)) {
+        currDir += Path.SEPARATOR;
+      }
+      String trashPath = currDir + FileSystem.TRASH_PREFIX;
+      HdfsFileStatus fileStatus = getFileInfo(trashPath, false, false, false);
+      if (fileStatus == null) {
+        LOG.info("Trash doesn't exist for snapshottable directory {}. "
+            + "Creating trash at {}", currDir, trashPath);
+        PermissionStatus permissionStatus = new PermissionStatus(getRemoteUser()
+            .getShortUserName(), null, SHARED_TRASH_PERMISSION);
+        mkdirs(trashPath, permissionStatus, false);
+      }
+    }
   }
 
   private Supplier<String> getLockReportInfoSupplier(String src) {

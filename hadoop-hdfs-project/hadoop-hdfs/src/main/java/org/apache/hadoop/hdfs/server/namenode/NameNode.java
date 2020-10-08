@@ -781,6 +781,10 @@ public class NameNode extends ReconfigurableBase implements
       }
     }
 
+    if (namesystem.getIsSnapshotTrashRootEnabled()) {
+      namesystem.checkAndProvisionSnapshotTrashRoots();
+    }
+
     startCommonServices(conf);
     startMetricsLogger(conf);
   }
