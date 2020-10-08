@@ -182,6 +182,37 @@ public class TestAbfsInputStream extends
     checkEvictedStatus(inputStream, 0, false);
   }
 
+  @Test
+  public void testFailedReadAheadEviction() throws Exception {
+    AbfsClient client = getMockAbfsClient();
+    AbfsRestOperation successOp = getMockRestOp();
+    ReadBufferManager.setThresholdAgeMilliseconds(30000);
+    // Stub :
+    // Read request leads to 3 readahead calls: Fail all 3 readahead-client.read()
+    // Actual read request fails with the failure in readahead thread
+    doThrow(new TimeoutException("Internal Server error"))
+        .when(client)
+        .read(any(String.class), any(Long.class), any(byte[].class),
+            any(Integer.class), any(Integer.class), any(String.class),
+            any(String.class));
+
+    AbfsInputStream inputStream = getAbfsInputStream(client, "testFailedReadAheadEviction.txt");
+
+    // Add a failed buffer to completed queue and set to no free buffers to read ahead.
+    ReadBuffer buff = new ReadBuffer();
+    buff.setStatus(
+        org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus.READ_FAILED);
+    ReadBufferManager.getBufferManager().testMimicFullUseAndAddFailedBuffer(buff);
+
+    // if read failed buffer eviction is tagged as a valid eviction, it will lead to
+    // wrong assumption of queue logic that a buffer is freed up and can lead to :
+    // java.util.EmptyStackException
+    //	at java.util.Stack.peek(Stack.java:102)
+    //	at java.util.Stack.pop(Stack.java:84)
+    //	at org.apache.hadoop.fs.azurebfs.services.ReadBufferManager.queueReadAhead
+    ReadBufferManager.getBufferManager().queueReadAhead(inputStream, 0, ONE_KB);
+  }
+
   /**
    * The test expects AbfsInputStream to initiate a remote read request for
    * the request offset and length when previous read ahead on the offset had failed.
@@ -264,12 +295,15 @@ public class TestAbfsInputStream extends
             any(String.class));
 
     AbfsInputStream inputStream = getAbfsInputStream(client, "testSuccessfulReadAhead.txt");
+    int beforeReadCompletedListSize = ReadBufferManager.getBufferManager().getCompletedReadListSize();
 
     // First read request that triggers readAheads.
     inputStream.read(new byte[ONE_KB]);
 
     // Only the 3 readAhead threads should have triggered client.read
     verifyReadCallCount(client, 3);
+    int newAdditionsToCompletedRead = ReadBufferManager.getBufferManager().getCompletedReadListSize() - beforeReadCompletedListSize;
+    assertEquals("New additions to completed reads should be same as number of readaheads", 3, newAdditionsToCompletedRead);
 
     // Another read request whose requested data is already read ahead.
     inputStream.read(ONE_KB, new byte[ONE_KB], 0, ONE_KB);
