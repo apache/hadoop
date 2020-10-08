@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.fs.statistics.IOStatistics;
 
 import org.junit.Test;
 import org.assertj.core.api.Assertions;
@@ -46,9 +47,16 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 
+import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupCounterStatistic;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyCounterStatisticValue;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToString;
+import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_CONTINUE_LIST_REQUEST;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
 
 /**
  * Test the performance of listing files/directories.
@@ -166,8 +174,13 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
     final int numOfPutRequests = 1000;
     final int eachFileProcessingTime = 10;
     final int numOfPutThreads = 50;
+    Assertions.assertThat(numOfPutRequests % batchSize)
+        .describedAs("Files put %d must be a multiple of list batch size %d",
+            numOfPutRequests, batchSize)
+        .isEqualTo(0);
     final Configuration conf =
             getConfigurationWithConfiguredBatchSize(batchSize);
+    removeBaseAndBucketOverrides(conf, S3_METADATA_STORE_IMPL);
     final InputStream im = new InputStream() {
       @Override
       public int read() throws IOException {
@@ -180,9 +193,10 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
             .newFixedThreadPool(numOfPutThreads);
 
     NanoTimer uploadTimer = new NanoTimer();
-    try(S3AFileSystem fs = (S3AFileSystem) FileSystem.get(dir.toUri(), conf)) {
-      fs.create(dir);
+    S3AFileSystem fs = (S3AFileSystem) FileSystem.get(dir.toUri(), conf);
+    try {
       assume("Test is only for raw fs", !fs.hasMetadataStore());
+      fs.create(dir);
       for (int i=0; i<numOfPutRequests; i++) {
         Path file = new Path(dir, String.format("file-%03d", i));
         originalListOfFiles.add(file.toString());
@@ -248,9 +262,24 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
                       "match with original list of files")
               .hasSameElementsAs(originalListOfFiles)
               .hasSize(numOfPutRequests);
-
+      // now validate the statistics returned by the listing
+      // to be non-null and containing list and continue counters.
+      IOStatistics lsStats = retrieveIOStatistics(lsItr);
+      String statsReport = ioStatisticsToString(lsStats);
+      LOG.info("Listing Statistics: {}", statsReport);
+      verifyCounterStatisticValue(lsStats, OBJECT_LIST_REQUEST, 1);
+      long continuations = lookupCounterStatistic(lsStats,
+          OBJECT_CONTINUE_LIST_REQUEST);
+      // calculate expected #of continuations
+      int expectedContinuations = numOfPutRequests / batchSize -1;
+      Assertions.assertThat(continuations)
+          .describedAs("%s in %s", OBJECT_CONTINUE_LIST_REQUEST, statsReport)
+          .isEqualTo(expectedContinuations);
     } finally {
       executorService.shutdown();
+      // delete in this FS so S3Guard is left out of it.
+      fs.delete(dir, true);
+      fs.close();
     }
   }
 

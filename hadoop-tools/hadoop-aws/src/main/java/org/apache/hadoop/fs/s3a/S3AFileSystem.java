@@ -203,6 +203,7 @@ import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_CONTINU
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfCallable;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
+import static org.apache.hadoop.util.functional.RemoteIterators.typeCastingRemoteIterator;
 
 /**
  * The core S3A Filesystem implementation.
@@ -2742,17 +2743,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           throws FileNotFoundException, IOException {
     RemoteIterator<S3AFileStatus> listStatusItr = once("listStatus",
             p.toString(), () -> innerListStatus(p));
-    return new RemoteIterator<FileStatus>() {
-      @Override
-      public boolean hasNext() throws IOException {
-        return listStatusItr.hasNext();
-      }
-
-      @Override
-      public FileStatus next() throws IOException {
-        return listStatusItr.next();
-      }
-    };
+    return typeCastingRemoteIterator(listStatusItr);
   }
 
   /**
