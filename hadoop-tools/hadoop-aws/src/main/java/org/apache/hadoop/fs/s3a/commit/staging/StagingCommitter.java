@@ -695,6 +695,8 @@ public class StagingCommitter extends AbstractS3ACommitter {
       context.progress();
 
       PendingSet pendingCommits = new PendingSet(commitCount);
+      pendingCommits.putExtraData(TASK_ATTEMPT_ID,
+          context.getTaskAttemptID().toString());
       try {
         Tasks.foreach(taskOutput)
             .stopOnFailure()
