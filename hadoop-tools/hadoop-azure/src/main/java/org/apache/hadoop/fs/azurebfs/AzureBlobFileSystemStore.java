@@ -1116,7 +1116,7 @@ public class AzureBlobFileSystemStore implements Closeable {
       try (AbfsPerfInfo perfInfoSet = startTracking("modifyAclEntries", "setAcl")) {
         final AbfsRestOperation setAclOp
                 = client.setAcl(relativePath,
-                AbfsAclHelper.serializeAclSpec(aclEntries), eTag);
+                AbfsAclHelper.serializeAclSpec(aclEntries), eTag, trackingContext);
         perfInfoSet.registerResult(setAclOp.getResult())
                 .registerSuccess(true)
                 .registerAggregates(perfInfoGet.getTrackingStart(), GET_SET_AGGREGATE_COUNT);

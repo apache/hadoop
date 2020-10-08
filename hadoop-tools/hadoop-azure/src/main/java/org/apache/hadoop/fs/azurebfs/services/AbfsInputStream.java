@@ -254,7 +254,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         ReadBufferManager.getBufferManager().queueReadAhead(this, nextOffset, (int) nextSize);
         nextOffset = nextOffset + nextSize;
         numReadAheads--;
-        System.out.println("in the readahead loop " + numReadAheads.toString());
+        System.out.println("in the readahead loop " + Integer.toString(numReadAheads));
         trackingContext.setPrimaryRequestID();
       }
 
@@ -302,7 +302,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     AbfsPerfTracker tracker = client.getAbfsPerfTracker();
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker, "readRemote", "read")) {
       LOG.trace("Trigger client.read for path={} position={} offset={} length={}", path, position, offset, length);
-      op = client.read(path, position, b, offset, length, tolerateOobAppends ? "*" : eTag, cachedSasToken.get());
+      op = client.read(path, position, b, offset, length, tolerateOobAppends ? "*" : eTag, cachedSasToken.get(),
+          new TrackingContext("test-filesystem-id", inputStreamID, "RD"));
       cachedSasToken.update(op.getSasToken());
       if (streamStatistics != null) {
         streamStatistics.remoteReadOperation();

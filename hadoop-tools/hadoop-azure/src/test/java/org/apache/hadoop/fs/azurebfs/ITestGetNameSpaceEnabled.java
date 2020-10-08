@@ -84,7 +84,7 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
     Assertions.assertThat(fs.getIsNamespaceEnabled()).describedAs(
         "getIsNamespaceEnabled should return true when the "
             + "config is set as true").isTrue();
-    fs.getAbfsStore().deleteFilesystem(new TrackingContext(fileSystemID, "DL");
+    fs.getAbfsStore().deleteFilesystem(new TrackingContext(fileSystemID, "DL"));
     unsetAndAssert();
   }
 
@@ -94,7 +94,7 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
     Assertions.assertThat(fs.getIsNamespaceEnabled()).describedAs(
         "getIsNamespaceEnabled should return false when the "
             + "config is set as false").isFalse();
-    fs.getAbfsStore().deleteFilesystem(new TrackingContext(fileSystemID, "DL");
+    fs.getAbfsStore().deleteFilesystem(new TrackingContext(fileSystemID, "DL"));
     unsetAndAssert();
   }
 

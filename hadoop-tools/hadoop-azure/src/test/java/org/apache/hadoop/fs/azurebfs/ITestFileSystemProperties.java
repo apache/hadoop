@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.utils.TrackingContext;
 
 /**
  * Test FileSystemProperties.
@@ -65,7 +66,8 @@ public class ITestFileSystemProperties extends AbstractAbfsIntegrationTest {
     final Hashtable<String, String> properties = new Hashtable<>();
     properties.put("key", "{ value: value }");
     fs.getAbfsStore().setFilesystemProperties(properties);
-    Hashtable<String, String> fetchedProperties = fs.getAbfsStore().getFilesystemProperties();
+    Hashtable<String, String> fetchedProperties = fs.getAbfsStore().getFilesystemProperties(
+        new TrackingContext(fs.getFileSystemID(), "FS"));
 
     assertEquals(properties, fetchedProperties);
   }

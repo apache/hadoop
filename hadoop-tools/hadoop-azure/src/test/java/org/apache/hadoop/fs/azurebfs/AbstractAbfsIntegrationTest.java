@@ -181,22 +181,23 @@ public abstract class AbstractAbfsIntegrationTest extends
       if (abfs == null) {
         return;
       }
+      TrackingContext trackingContext = new TrackingContext(abfs.getFileSystemID(), "DL");
 
       if (usingFilesystemForSASTests) {
         abfsConfig.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey.name());
         AzureBlobFileSystem tempFs = (AzureBlobFileSystem) FileSystem.newInstance(rawConfig);
-        tempFs.getAbfsStore().deleteFilesystem(new TrackingContext(abfs.getFileSystemID(), "DL"));
+        tempFs.getAbfsStore().deleteFilesystem(trackingContext);
       }
       else if (!useConfiguredFileSystem) {
         // Delete all uniquely created filesystem from the account
         final AzureBlobFileSystemStore abfsStore = abfs.getAbfsStore();
-        abfsStore.deleteFilesystem(new TrackingContext(abfs.getFileSystemID(), "DL");
+        abfsStore.deleteFilesystem(trackingContext);
 
         AbfsRestOperationException ex = intercept(AbfsRestOperationException.class,
             new Callable<Hashtable<String, String>>() {
               @Override
               public Hashtable<String, String> call() throws Exception {
-                return abfsStore.getFilesystemProperties();
+                return abfsStore.getFilesystemProperties(trackingContext);
               }
             });
         if (FILE_SYSTEM_NOT_FOUND.getStatusCode() != ex.getStatusCode()) {
@@ -430,7 +431,8 @@ public abstract class AbstractAbfsIntegrationTest extends
     abfss.getAbfsConfiguration().setDisableOutputStreamFlush(false);
 
     return (AbfsOutputStream) abfss.createFile(path, fs.getFsStatistics(),
-        true, FsPermission.getDefault(), FsPermission.getUMask(fs.getConf()));
+        true, FsPermission.getDefault(), FsPermission.getUMask(fs.getConf()),
+        new TrackingContext(fs.getFileSystemID(), "OP"));
   }
 
   /**

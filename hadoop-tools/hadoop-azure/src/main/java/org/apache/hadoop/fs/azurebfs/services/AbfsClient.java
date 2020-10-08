@@ -340,7 +340,7 @@ public class AbfsClient implements Closeable {
       op.execute(trackingContext);
     } catch (AzureBlobFileSystemException e) {
         final AbfsRestOperation idempotencyOp = renameIdempotencyCheckOp(
-            renameRequestStartTime, op, destination);
+            renameRequestStartTime, op, destination, trackingContext);
         if (idempotencyOp.getResult().getStatusCode()
             == op.getResult().getStatusCode()) {
           // idempotency did not return different result
@@ -371,7 +371,8 @@ public class AbfsClient implements Closeable {
   public AbfsRestOperation renameIdempotencyCheckOp(
       final Instant renameRequestStartTime,
       final AbfsRestOperation op,
-      final String destination) throws AzureBlobFileSystemException {
+      final String destination,
+      TrackingContext trackingContext) throws AzureBlobFileSystemException {
     if ((op.isARetriedRequest())
         && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND)) {
       // Server has returned HTTP 404, which means rename source no longer
@@ -380,7 +381,7 @@ public class AbfsClient implements Closeable {
 
       try {
         final AbfsRestOperation destStatusOp = getPathStatus(destination,
-            false);
+            false , trackingContext);
         if (destStatusOp.getResult().getStatusCode()
             == HttpURLConnection.HTTP_OK) {
           String lmt = destStatusOp.getResult().getResponseHeader(
@@ -400,7 +401,14 @@ public class AbfsClient implements Closeable {
   }
 
   public AbfsRestOperation append(final String path, final long position, final byte[] buffer, final int offset,
-                                  final int length, final String cachedSasToken, final boolean isAppendBlob) throws AzureBlobFileSystemException {
+      final int length, final String cachedSasToken, final boolean isAppendBlob) throws AzureBlobFileSystemException {
+    return append(path, position, buffer, offset, length, cachedSasToken,
+        isAppendBlob, new TrackingContext("test-filesystem-id", "AP"));
+  }
+
+  public AbfsRestOperation append(final String path, final long position, final byte[] buffer, final int offset,
+                                  final int length, final String cachedSasToken, final boolean isAppendBlob,
+      TrackingContext trackingContext) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     // JDK7 does not support PATCH, so to workaround the issue we will use
     // PUT and specify the real method in the X-Http-Method-Override header.
@@ -424,7 +432,7 @@ public class AbfsClient implements Closeable {
     try {
       op.execute(trackingContext);
     } catch (AzureBlobFileSystemException e) {
-      if (isAppendBlob && appendSuccessCheckOp(op, path, (position + length))) {
+      if (isAppendBlob && appendSuccessCheckOp(op, path, (position + length), trackingContext)) {
         final AbfsRestOperation successOp = new AbfsRestOperation(
             AbfsRestOperationType.Append,
                 this,
@@ -446,10 +454,10 @@ public class AbfsClient implements Closeable {
   // Hence, we pass/succeed the appendblob append call
   // in case we are doing a retry after checking the length of the file
   public boolean appendSuccessCheckOp(AbfsRestOperation op, final String path,
-                                       final long length) throws AzureBlobFileSystemException {
+                                       final long length, TrackingContext trackingContext) throws AzureBlobFileSystemException {
     if ((op.isARetriedRequest())
         && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_BAD_REQUEST)) {
-      final AbfsRestOperation destStatusOp = getPathStatus(path, false);
+      final AbfsRestOperation destStatusOp = getPathStatus(path, false, trackingContext);
       if (destStatusOp.getResult().getStatusCode() == HttpURLConnection.HTTP_OK) {
         String fileLength = destStatusOp.getResult().getResponseHeader(
             HttpHeaderConfigurations.CONTENT_LENGTH);
@@ -462,7 +470,8 @@ public class AbfsClient implements Closeable {
   }
 
   public AbfsRestOperation flush(final String path, final long position, boolean retainUncommittedData,
-                                 boolean isClose, final String cachedSasToken)
+                                 boolean isClose, final String cachedSasToken,
+      TrackingContext trackingContext)
       throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     // JDK7 does not support PATCH, so to workaround the issue we will use
@@ -544,7 +553,8 @@ public class AbfsClient implements Closeable {
   }
 
   public AbfsRestOperation read(final String path, final long position, final byte[] buffer, final int bufferOffset,
-                                final int bufferLength, final String eTag, String cachedSasToken) throws AzureBlobFileSystemException {
+                                final int bufferLength, final String eTag, String cachedSasToken,
+      TrackingContext trackingContext) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     requestHeaders.add(new AbfsHttpHeader(RANGE,
             String.format("bytes=%d-%d", position, position + bufferLength - 1)));
@@ -588,8 +598,7 @@ public class AbfsClient implements Closeable {
             this,
             HTTP_METHOD_DELETE,
             url,
-            requestHeaders,
-            trackingContext);
+            requestHeaders);
     try {
     op.execute(trackingContext);
     } catch (AzureBlobFileSystemException e) {
