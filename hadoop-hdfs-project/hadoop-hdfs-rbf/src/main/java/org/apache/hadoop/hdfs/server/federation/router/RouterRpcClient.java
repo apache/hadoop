@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_SEPARATOR_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_TIMEOUT_KEY;
 
@@ -117,8 +119,8 @@ public class RouterRpcClient {
   private final RetryPolicy retryPolicy;
   /** Optional perf monitor. */
   private final RouterRpcMonitor rpcMonitor;
-
-  private final Configuration clientConfiguration;
+  /** Field separator of CallerContext. */
+  private final String contextFieldSeparator;
 
   /** Pattern to parse a stack trace line. */
   private static final Pattern STACK_TRACE_PATTERN =
@@ -140,8 +142,11 @@ public class RouterRpcClient {
 
     this.namenodeResolver = resolver;
 
-    this.clientConfiguration = getClientConfiguration(conf);
-    this.connectionManager = new ConnectionManager(clientConfiguration);
+    Configuration clientConf = getClientConfiguration(conf);
+    this.contextFieldSeparator =
+        clientConf.get(HADOOP_CALLER_CONTEXT_SEPARATOR_KEY,
+            HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT);
+    this.connectionManager = new ConnectionManager(clientConf);
     this.connectionManager.start();
 
     int numThreads = conf.getInt(
@@ -534,7 +539,7 @@ public class RouterRpcClient {
     String origContext = ctx == null ? null : ctx.getContext();
     byte[] origSignature = ctx == null ? null : ctx.getSignature();
     CallerContext.setCurrent(
-        new CallerContext.Builder(origContext, clientConfiguration)
+        new CallerContext.Builder(origContext, contextFieldSeparator)
             .append(CLIENT_IP_STR, Server.getRemoteAddress())
             .setSignature(origSignature).build());
   }
