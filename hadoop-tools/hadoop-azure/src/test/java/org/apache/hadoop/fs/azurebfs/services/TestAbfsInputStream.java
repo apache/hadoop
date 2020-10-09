@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 
+import org.apache.hadoop.fs.azurebfs.utils.TrackingContext;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -105,7 +106,8 @@ public class TestAbfsInputStream extends
     Thread.sleep(1000);
     verify(client, times(count)).read(any(String.class), any(Long.class),
         any(byte[].class), any(Integer.class), any(Integer.class),
-        any(String.class), any(String.class));
+        any(String.class), any(String.class),
+            new TrackingContext(getFileSystem().getFileSystemID(), "RD"));
   }
 
   private void checkEvictedStatus(AbfsInputStream inputStream, int position, boolean expectedToThrowException)
@@ -160,7 +162,8 @@ public class TestAbfsInputStream extends
         .when(client)
         .read(any(String.class), any(Long.class), any(byte[].class),
             any(Integer.class), any(Integer.class), any(String.class),
-            any(String.class));
+            any(String.class),
+                new TrackingContext(getFileSystem().getFileSystemID(), "RD"));
 
     AbfsInputStream inputStream = getAbfsInputStream(client, "testFailedReadAhead.txt");
 
@@ -207,7 +210,8 @@ public class TestAbfsInputStream extends
         .when(client)
         .read(any(String.class), any(Long.class), any(byte[].class),
             any(Integer.class), any(Integer.class), any(String.class),
-            any(String.class));
+            any(String.class),
+                new TrackingContext(getFileSystem().getFileSystemID(), "RD"));
 
     AbfsInputStream inputStream = getAbfsInputStream(client, "testOlderReadAheadFailure.txt");
 
@@ -261,7 +265,8 @@ public class TestAbfsInputStream extends
         .when(client)
         .read(any(String.class), any(Long.class), any(byte[].class),
             any(Integer.class), any(Integer.class), any(String.class),
-            any(String.class));
+            any(String.class),
+                new TrackingContext(getFileSystem().getFileSystemID(), "RD"));
 
     AbfsInputStream inputStream = getAbfsInputStream(client, "testSuccessfulReadAhead.txt");
 
@@ -306,7 +311,8 @@ public class TestAbfsInputStream extends
         .when(client)
         .read(any(String.class), any(Long.class), any(byte[].class),
             any(Integer.class), any(Integer.class), any(String.class),
-            any(String.class));
+            any(String.class),
+                new TrackingContext(getFileSystem().getFileSystemID(), "RD"));
 
     AbfsInputStream inputStream = getAbfsInputStream(client, "testReadAheadManagerForFailedReadAhead.txt");
 
@@ -359,7 +365,8 @@ public class TestAbfsInputStream extends
         .when(client)
         .read(any(String.class), any(Long.class), any(byte[].class),
             any(Integer.class), any(Integer.class), any(String.class),
-            any(String.class));
+            any(String.class),
+                new TrackingContext(getFileSystem().getFileSystemID(), "RD"));
 
     AbfsInputStream inputStream = getAbfsInputStream(client, "testReadAheadManagerForOlderReadAheadFailure.txt");
 
@@ -413,7 +420,8 @@ public class TestAbfsInputStream extends
         .when(client)
         .read(any(String.class), any(Long.class), any(byte[].class),
             any(Integer.class), any(Integer.class), any(String.class),
-            any(String.class));
+            any(String.class),
+                new TrackingContext(getFileSystem().getFileSystemID(), "RD"));
 
     AbfsInputStream inputStream = getAbfsInputStream(client, "testSuccessfulReadAhead.txt");
 

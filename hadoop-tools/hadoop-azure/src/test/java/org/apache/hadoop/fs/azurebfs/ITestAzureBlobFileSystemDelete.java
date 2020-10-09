@@ -26,6 +26,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.hadoop.fs.azurebfs.utils.TrackingContext;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
@@ -212,12 +213,15 @@ public class ITestAzureBlobFileSystemDelete extends
         fs.getAbfsStore().getClient(),
         this.getConfiguration());
 
+    TrackingContext trackingContext = new TrackingContext(fs.getFileSystemID(), "DL");
+
     // Case 1: Not a retried case should throw error back
     intercept(AbfsRestOperationException.class,
         () -> client.deletePath(
         "/NonExistingPath",
         false,
-        null));
+        null),
+            trackingContext);
 
     // mock idempotency check to mimic retried case
     AbfsClient mockClient = TestAbfsClient.getMockAbfsClient(
@@ -233,12 +237,13 @@ public class ITestAzureBlobFileSystemDelete extends
 
     doReturn(idempotencyRetOp).when(mockClient).deleteIdempotencyCheckOp(any());
     when(mockClient.deletePath("/NonExistingPath", false,
-        null)).thenCallRealMethod();
+        null, trackingContext)).thenCallRealMethod();
 
     Assertions.assertThat(mockClient.deletePath(
         "/NonExistingPath",
         false,
-        null)
+        null,
+            trackingContext)
         .getResult()
         .getStatusCode())
         .describedAs("Idempotency check reports successful "

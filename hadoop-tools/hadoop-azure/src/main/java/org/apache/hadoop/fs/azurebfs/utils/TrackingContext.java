@@ -28,7 +28,7 @@ import org.apache.commons.lang3.StringUtils;
 
 public class TrackingContext {
   private String clientCorrelationID;
-  private String fileSystemID = "";
+  private String fileSystemID;
   private String clientRequestID;
   private String primaryRequestID;
   private String streamID = "";

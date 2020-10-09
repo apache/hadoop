@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 
+import org.apache.hadoop.fs.azurebfs.utils.TrackingContext;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -269,7 +270,8 @@ public class ITestAbfsInputStreamStatistics
 
       // AbfsRestOperation Instance required for eTag.
       AbfsRestOperation abfsRestOperation =
-          fs.getAbfsClient().getPathStatus(nullStatFilePath.toUri().getPath(), false);
+          fs.getAbfsClient().getPathStatus(nullStatFilePath.toUri().getPath(), false,
+                  new TrackingContext(fs.getFileSystemID(), "PA"));
 
       // AbfsInputStream with no StreamStatistics.
       in = new AbfsInputStream(fs.getAbfsClient(), null,

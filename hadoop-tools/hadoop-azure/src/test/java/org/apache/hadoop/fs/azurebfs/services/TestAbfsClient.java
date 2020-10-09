@@ -336,10 +336,10 @@ public final class TestAbfsClient {
     client = TestAbfsClient.setAbfsClientField(client, "userAgent", userAgent);
 
     // set tracking context
-    TrackingContext trackingContext = new TrackingContext("clientCorrID");
-    client = TestAbfsClient.setAbfsClientField(client, "trackingContext",
-        trackingContext);
-    when(client.getTrackingContext()).thenReturn(trackingContext);
+//    TrackingContext trackingContext = new TrackingContext("clientCorrID", "TS");
+//    client = TestAbfsClient.setAbfsClientField(client, "trackingContext",
+//        trackingContext);
+//    when(client.getTrackingContext()).thenReturn(trackingContext);
 
     return client;
   }

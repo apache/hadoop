@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.azurebfs;
 
+import org.apache.hadoop.fs.azurebfs.utils.TrackingContext;
 import org.junit.Assume;
 import org.junit.Test;
 
@@ -54,7 +55,8 @@ public class ITestSharedKeyAuth extends AbstractAbfsIntegrationTest {
             + "Authorization header is formed correctly including the "
             + "signature.\", 403",
         () -> {
-          abfsClient.getAclStatus("/");
+          abfsClient.getAclStatus("/", new TrackingContext(this.getFileSystem().getFileSystemID(),
+                  "AC"));
         });
   }
 

@@ -280,7 +280,11 @@ public class AzureBlobFileSystemStore implements Closeable {
     return authorityParts;
   }
 
-  public boolean getIsNamespaceEnabled(TrackingContext trackingContext) throws AzureBlobFileSystemException {
+  public boolean getIsNamespaceEnabled() throws AzureBlobFileSystemException {
+    return getIsNamespaceEnabled(new TrackingContext("test-filesystem-id", "NS"));
+  }
+
+    public boolean getIsNamespaceEnabled(TrackingContext trackingContext) throws AzureBlobFileSystemException {
     try {
       return this.isNamespaceEnabled.toBoolean();
     } catch (TrileanConversionException e) {

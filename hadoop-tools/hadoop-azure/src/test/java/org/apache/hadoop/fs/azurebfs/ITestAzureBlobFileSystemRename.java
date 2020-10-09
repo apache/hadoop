@@ -26,6 +26,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.hadoop.fs.azurebfs.utils.TrackingContext;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.junit.Assert;
@@ -237,11 +238,13 @@ public class ITestAzureBlobFileSystemRename extends
         fs.getAbfsStore().getClient(),
         this.getConfiguration());
 
+    TrackingContext trackingContext = new TrackingContext(fs.getFileSystemID(), "RN");
+
     AbfsRestOperation idempotencyRetOp = mock(AbfsRestOperation.class);
     when(idempotencyRetOp.getResult()).thenReturn(idempotencyRetHttpOp);
     doReturn(idempotencyRetOp).when(client).renameIdempotencyCheckOp(any(),
-        any(), any());
-    when(client.renamePath(any(), any(), any())).thenCallRealMethod();
+        any(), any(), trackingContext);
+    when(client.renamePath(any(), any(), any(), trackingContext)).thenCallRealMethod();
 
     // rename on non-existing source file will trigger idempotency check
     if (idempotencyRetHttpOp.getStatusCode() == HTTP_OK) {
@@ -249,7 +252,8 @@ public class ITestAzureBlobFileSystemRename extends
       Assertions.assertThat(client.renamePath(
           "/NonExistingsourcepath",
           "/destpath",
-          null)
+          null,
+              trackingContext)
           .getResult()
           .getStatusCode())
           .describedAs("Idempotency check reports recent successful "
@@ -261,7 +265,8 @@ public class ITestAzureBlobFileSystemRename extends
           () -> client.renamePath(
               "/NonExistingsourcepath",
               "/destpath",
-              ""));
+              "",
+                  trackingContext));
     }
   }
 

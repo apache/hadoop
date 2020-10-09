@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
 
+import org.apache.hadoop.fs.azurebfs.utils.TrackingContext;
 import org.junit.Assume;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -123,6 +124,7 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
     Assume.assumeTrue("Reader client id not provided", clientId != null);
     String secret = this.getConfiguration().get(TestConfigurationKeys.FS_AZURE_BLOB_DATA_READER_CLIENT_SECRET);
     Assume.assumeTrue("Reader client secret not provided", secret != null);
+    TrackingContext trackingContext = new TrackingContext(getFileSystem().getFileSystemID(), "AU")
 
     prepareFiles();
     final AzureBlobFileSystem fs = getBlobReader();
@@ -130,25 +132,27 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
     // Use abfsStore in this test to verify the  ERROR code in AbfsRestOperationException
     AzureBlobFileSystemStore abfsStore = fs.getAbfsStore();
     // TEST READ FS
-    Map<String, String> properties = abfsStore.getFilesystemProperties();
+    Map<String, String> properties = abfsStore.getFilesystemProperties(trackingContext);
     // TEST READ FOLDER
     assertTrue(fs.exists(EXISTED_FOLDER_PATH));
 
     // TEST DELETE FOLDER
     try {
-      abfsStore.delete(EXISTED_FOLDER_PATH, true);
+      abfsStore.delete(EXISTED_FOLDER_PATH, true, trackingContext);
     } catch (AbfsRestOperationException e) {
       assertEquals(AzureServiceErrorCode.AUTHORIZATION_PERMISSION_MISS_MATCH, e.getErrorCode());
     }
 
     // TEST READ  FILE
-    try (InputStream inputStream = abfsStore.openFileForRead(EXISTED_FILE_PATH, null)) {
+    try (InputStream inputStream = abfsStore.openFileForRead(EXISTED_FILE_PATH, null,
+            trackingContext)) {
       assertTrue(inputStream.read() != 0);
     }
 
     // TEST WRITE FILE
     try {
-      abfsStore.openFileForWrite(EXISTED_FILE_PATH, fs.getFsStatistics(), true);
+      abfsStore.openFileForWrite(EXISTED_FILE_PATH, fs.getFsStatistics(), true,
+              trackingContext);
     } catch (AbfsRestOperationException e) {
       assertEquals(AzureServiceErrorCode.AUTHORIZATION_PERMISSION_MISS_MATCH, e.getErrorCode());
     } finally {
