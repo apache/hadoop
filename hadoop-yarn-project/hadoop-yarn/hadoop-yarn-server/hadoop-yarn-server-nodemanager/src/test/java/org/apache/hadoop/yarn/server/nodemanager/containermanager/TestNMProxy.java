@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.SocketException;
+import java.util.concurrent.Callable;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -28,6 +30,7 @@ import org.apache.hadoop.io.retry.UnreliableInterface;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
@@ -151,7 +154,7 @@ public class TestNMProxy extends BaseContainerManagerTest {
   public void testNMProxyRPCRetry() throws Exception {
     conf.setLong(YarnConfiguration.CLIENT_NM_CONNECT_MAX_WAIT_MS, 1000);
     conf.setLong(YarnConfiguration.CLIENT_NM_CONNECT_RETRY_INTERVAL_MS, 100);
-    StartContainersRequest allRequests =
+    final StartContainersRequest allRequests =
         Records.newRecord(StartContainersRequest.class);
     Configuration newConf = new YarnConfiguration(conf);
     newConf.setInt(
@@ -161,15 +164,15 @@ public class TestNMProxy extends BaseContainerManagerTest {
         IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY, 100);
     // connect to some dummy address so that it can trigger
     // connection failure and RPC level retires.
-    newConf.set(YarnConfiguration.NM_ADDRESS, "1234");
-    ContainerManagementProtocol proxy = getNMProxy(newConf);
-    try {
-      proxy.startContainers(allRequests);
-      Assert.fail("should get socket exception");
-    } catch (IOException e) {
-      // socket exception should be thrown immediately, without RPC retries.
-      Assert.assertTrue(e instanceof java.net.SocketException);
-    }
+    newConf.set(YarnConfiguration.NM_ADDRESS, "127.0.0.1:1");
+    final ContainerManagementProtocol proxy = getNMProxy(newConf);
+    LambdaTestUtils.intercept(SocketException.class,
+        new Callable<StartContainersResponse>() {
+          @Override
+          public StartContainersResponse call() throws Exception {
+            return proxy.startContainers(allRequests);
+          }
+        });
   }
 
   private ContainerManagementProtocol getNMProxy(Configuration conf) {
