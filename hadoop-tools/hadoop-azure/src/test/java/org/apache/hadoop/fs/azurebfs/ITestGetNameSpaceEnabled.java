@@ -180,7 +180,8 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
         .setNamespaceEnabled(Trilean.getTrilean(invalidConf));
     AbfsClient mockClient =
         callAbfsGetIsNamespaceEnabledAndReturnMockAbfsClient();
-    verify(mockClient, times(1)).getAclStatus(anyString());
+    verify(mockClient, times(1)).getAclStatus(anyString(),
+        new TrackingContext("test-filesystem-id", "NS"));
   }
 
   private void ensureGetAclCallIsNeverMadeForValidConf(String validConf)
@@ -189,14 +190,16 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
         .setNamespaceEnabled(Trilean.getTrilean(validConf));
     AbfsClient mockClient =
         callAbfsGetIsNamespaceEnabledAndReturnMockAbfsClient();
-    verify(mockClient, never()).getAclStatus(anyString());
+    verify(mockClient, never()).getAclStatus(anyString(),
+        new TrackingContext("test-filesystem-id", "NS"));
   }
 
   private void unsetConfAndEnsureGetAclCallIsMadeOnce() throws IOException {
     this.getFileSystem().getAbfsStore().setNamespaceEnabled(Trilean.UNKNOWN);
     AbfsClient mockClient =
         callAbfsGetIsNamespaceEnabledAndReturnMockAbfsClient();
-    verify(mockClient, times(1)).getAclStatus(anyString());
+    verify(mockClient, times(1)).getAclStatus(anyString(),
+        new TrackingContext("test-filesystem-id", "NS"));
   }
 
   private AbfsClient callAbfsGetIsNamespaceEnabledAndReturnMockAbfsClient()
@@ -205,7 +208,7 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
     final AzureBlobFileSystemStore abfsStore = abfs.getAbfsStore();
     final AbfsClient mockClient = mock(AbfsClient.class);
     doReturn(mock(AbfsRestOperation.class)).when(mockClient)
-        .getAclStatus(anyString());
+        .getAclStatus(anyString(), new TrackingContext("test-filesystem-id", "NS"));
     abfsStore.setClient(mockClient);
     abfs.getIsNamespaceEnabled();
     return mockClient;

@@ -63,7 +63,8 @@ public class ITestAbfsInputStreamStatistics
     try {
 
       outputStream = createAbfsOutputStreamWithFlushEnabled(fs, initValuesPath);
-      inputStream = abfss.openFileForRead(initValuesPath, fs.getFsStatistics());
+      inputStream = abfss.openFileForRead(initValuesPath, fs.getFsStatistics(),
+          new TrackingContext("test-filesystem-id", "NS"));
 
       AbfsInputStreamStatisticsImpl stats =
           (AbfsInputStreamStatisticsImpl) inputStream.getStreamStatistics();
@@ -107,7 +108,8 @@ public class ITestAbfsInputStreamStatistics
       //Writing a default buffer in a file.
       out.write(defBuffer);
       out.hflush();
-      in = abfss.openFileForRead(seekStatPath, fs.getFsStatistics());
+      in = abfss.openFileForRead(seekStatPath, fs.getFsStatistics(),
+          new TrackingContext(fs.getFileSystemID(), "IN"));
 
       /*
        * Writing 1MB buffer to the file, this would make the fCursor(Current
@@ -198,7 +200,8 @@ public class ITestAbfsInputStreamStatistics
        */
       out.write(defBuffer);
       out.hflush();
-      in = abfss.openFileForRead(readStatPath, fs.getFsStatistics());
+      in = abfss.openFileForRead(readStatPath, fs.getFsStatistics(),
+          new TrackingContext("test-filesystem-id", "NS"));
 
       /*
        * Doing file read 10 times.
@@ -320,7 +323,8 @@ public class ITestAbfsInputStreamStatistics
       out.write(defBuffer);
       out.close();
 
-      in = abfss.openFileForRead(readAheadCountersPath, fs.getFsStatistics());
+      in = abfss.openFileForRead(readAheadCountersPath, fs.getFsStatistics(),
+          new TrackingContext("test-filesystem-id", "NS"));
 
       /*
        * Reading 1KB after each i * KB positions. Hence the reads are from 0

@@ -326,7 +326,8 @@ public class ITestAzureBlobFileSystemRename extends
     Assertions.assertThat(testClient.renameIdempotencyCheckOp(
         renameRequestStartTime,
         op,
-        destinationPath.toUri().getPath())
+        destinationPath.toUri().getPath(),
+        new TrackingContext("test-fs-id", "RN"))
         .getResult()
         .getStatusCode())
         .describedAs(assertMessage)

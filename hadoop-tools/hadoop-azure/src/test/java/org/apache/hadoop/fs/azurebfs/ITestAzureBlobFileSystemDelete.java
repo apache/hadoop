@@ -220,8 +220,8 @@ public class ITestAzureBlobFileSystemDelete extends
         () -> client.deletePath(
         "/NonExistingPath",
         false,
-        null),
-            trackingContext);
+        null,
+            trackingContext));
 
     // mock idempotency check to mimic retried case
     AbfsClient mockClient = TestAbfsClient.getMockAbfsClient(

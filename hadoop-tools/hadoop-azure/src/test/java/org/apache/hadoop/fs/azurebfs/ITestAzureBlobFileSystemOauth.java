@@ -124,7 +124,7 @@ public class ITestAzureBlobFileSystemOauth extends AbstractAbfsIntegrationTest{
     Assume.assumeTrue("Reader client id not provided", clientId != null);
     String secret = this.getConfiguration().get(TestConfigurationKeys.FS_AZURE_BLOB_DATA_READER_CLIENT_SECRET);
     Assume.assumeTrue("Reader client secret not provided", secret != null);
-    TrackingContext trackingContext = new TrackingContext(getFileSystem().getFileSystemID(), "AU")
+    TrackingContext trackingContext = new TrackingContext(getFileSystem().getFileSystemID(), "AU");
 
     prepareFiles();
     final AzureBlobFileSystem fs = getBlobReader();

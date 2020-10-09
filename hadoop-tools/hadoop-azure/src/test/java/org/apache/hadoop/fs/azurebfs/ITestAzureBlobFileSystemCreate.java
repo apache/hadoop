@@ -344,7 +344,7 @@ public class ITestAzureBlobFileSystemCreate extends
         = TestAbfsClient.getMockAbfsClient(
         fs.getAbfsStore().getClient(),
         fs.getAbfsStore().getAbfsConfiguration());
-    TrackingContext trackingContext = new TrackingContext(fs.getFileSystemID(), "CR")
+    TrackingContext trackingContext = new TrackingContext(fs.getFileSystemID(), "CR");
 
     AzureBlobFileSystemStore abfsStore = fs.getAbfsStore();
     abfsStore = setAzureBlobSystemStoreField(abfsStore, "client", mockClient);

@@ -107,7 +107,7 @@ public class TestAbfsInputStream extends
     verify(client, times(count)).read(any(String.class), any(Long.class),
         any(byte[].class), any(Integer.class), any(Integer.class),
         any(String.class), any(String.class),
-            new TrackingContext(getFileSystem().getFileSystemID(), "RD"));
+            new TrackingContext("test-fileSystem-id", "RD"));
   }
 
   private void checkEvictedStatus(AbfsInputStream inputStream, int position, boolean expectedToThrowException)
@@ -211,7 +211,7 @@ public class TestAbfsInputStream extends
         .read(any(String.class), any(Long.class), any(byte[].class),
             any(Integer.class), any(Integer.class), any(String.class),
             any(String.class),
-                new TrackingContext(getFileSystem().getFileSystemID(), "RD"));
+                new TrackingContext("test-fileSystemID", "RD"));
 
     AbfsInputStream inputStream = getAbfsInputStream(client, "testOlderReadAheadFailure.txt");
 
@@ -312,7 +312,7 @@ public class TestAbfsInputStream extends
         .read(any(String.class), any(Long.class), any(byte[].class),
             any(Integer.class), any(Integer.class), any(String.class),
             any(String.class),
-                new TrackingContext(getFileSystem().getFileSystemID(), "RD"));
+                new TrackingContext("test-FileSystemID", "RD"));
 
     AbfsInputStream inputStream = getAbfsInputStream(client, "testReadAheadManagerForFailedReadAhead.txt");
 
@@ -366,7 +366,7 @@ public class TestAbfsInputStream extends
         .read(any(String.class), any(Long.class), any(byte[].class),
             any(Integer.class), any(Integer.class), any(String.class),
             any(String.class),
-                new TrackingContext(getFileSystem().getFileSystemID(), "RD"));
+                new TrackingContext("test-fileSystemID", "RD"));
 
     AbfsInputStream inputStream = getAbfsInputStream(client, "testReadAheadManagerForOlderReadAheadFailure.txt");
 
@@ -421,7 +421,7 @@ public class TestAbfsInputStream extends
         .read(any(String.class), any(Long.class), any(byte[].class),
             any(Integer.class), any(Integer.class), any(String.class),
             any(String.class),
-                new TrackingContext(getFileSystem().getFileSystemID(), "RD"));
+                new TrackingContext("test-FileSystemID", "RD"));
 
     AbfsInputStream inputStream = getAbfsInputStream(client, "testSuccessfulReadAhead.txt");
 
