@@ -1421,19 +1421,19 @@ public class TestBlockStoragePolicy {
     final EnumMap<StorageType, Integer> map = new EnumMap<>(StorageType.class);
 
     //put storage type is reversed order
+    map.put(StorageType.NVDIMM, 1);
     map.put(StorageType.ARCHIVE, 1);
     map.put(StorageType.DISK, 1);
     map.put(StorageType.SSD, 1);
     map.put(StorageType.RAM_DISK, 1);
-    map.put(StorageType.NVDIMM, 1);
 
     {
       final Iterator<StorageType> i = map.keySet().iterator();
       Assert.assertEquals(StorageType.RAM_DISK, i.next());
-      Assert.assertEquals(StorageType.NVDIMM, i.next());
       Assert.assertEquals(StorageType.SSD, i.next());
       Assert.assertEquals(StorageType.DISK, i.next());
       Assert.assertEquals(StorageType.ARCHIVE, i.next());
+      Assert.assertEquals(StorageType.NVDIMM, i.next());
     }
 
     {
