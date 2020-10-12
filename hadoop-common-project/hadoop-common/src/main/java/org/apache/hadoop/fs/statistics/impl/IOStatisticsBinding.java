@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.statistics.impl;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.Iterator;
@@ -40,6 +41,7 @@ import org.apache.hadoop.util.functional.CallableRaisingIOE;
 import org.apache.hadoop.util.functional.FunctionRaisingIOE;
 
 import static org.apache.hadoop.fs.statistics.IOStatistics.MIN_UNSET_VALUE;
+import static org.apache.hadoop.fs.statistics.impl.StubDurationTracker.STUB_DURATION_TRACKER;
 
 /**
  * Support for implementing IOStatistics interfaces.
@@ -353,13 +355,13 @@ public final class IOStatisticsBinding {
    * @return a new function which tracks duration and failure.
    */
   public static <A, B> FunctionRaisingIOE<A, B> trackFunctionDuration(
-      DurationTrackerFactory factory,
+      @Nullable DurationTrackerFactory factory,
       String statistic,
       FunctionRaisingIOE<A, B> inputFn) {
     return (x) -> {
       // create the tracker outside try-with-resources so
       // that failures can be set in the catcher.
-      DurationTracker tracker = factory.trackDuration(statistic);
+      DurationTracker tracker = createTracker(factory, statistic);
       try {
         // exec the input function and return its value
         return inputFn.apply(x);
@@ -390,13 +392,13 @@ public final class IOStatisticsBinding {
    * @return a new function which tracks duration and failure.
    */
   public static <A, B> Function<A, B> trackJavaFunctionDuration(
-      DurationTrackerFactory factory,
+      @Nullable DurationTrackerFactory factory,
       String statistic,
       Function<A, B> inputFn) {
     return (x) -> {
       // create the tracker outside try-with-resources so
       // that failures can be set in the catcher.
-      DurationTracker tracker = factory.trackDuration(statistic);
+      DurationTracker tracker = createTracker(factory, statistic);
       try {
         // exec the input function and return its value
         return inputFn.apply(x);
@@ -442,13 +444,13 @@ public final class IOStatisticsBinding {
    * @return a new callable which tracks duration and failure.
    */
   public static <B> CallableRaisingIOE<B> trackDurationOfOperation(
-      DurationTrackerFactory factory,
+      @Nullable DurationTrackerFactory factory,
       String statistic,
       CallableRaisingIOE<B> input) {
     return () -> {
       // create the tracker outside try-with-resources so
       // that failures can be set in the catcher.
-      DurationTracker tracker = factory.trackDuration(statistic);
+      DurationTracker tracker = createTracker(factory, statistic);
       try {
         // exec the input function and return its value
         return input.apply();
@@ -478,13 +480,13 @@ public final class IOStatisticsBinding {
    * @return a new callable which tracks duration and failure.
    */
   public static <B> Callable<B> trackDurationOfCallable(
-      DurationTrackerFactory factory,
+      @Nullable DurationTrackerFactory factory,
       String statistic,
       Callable<B> input) {
     return () -> {
       // create the tracker outside try-with-resources so
       // that failures can be set in the catcher.
-      DurationTracker tracker = factory.trackDuration(statistic);
+      DurationTracker tracker = createTracker(factory, statistic);
       try {
         // exec the input function and return its value
         return input.call();
@@ -502,4 +504,18 @@ public final class IOStatisticsBinding {
     };
   }
 
+  /**
+   * Create the tracker. If the factory is null, a stub
+   * tracker is returned.
+   * @param factory tracker factory
+   * @param statistic statistic to track
+   * @return a duration tracker.
+   */
+  private static DurationTracker createTracker(
+      @Nullable final DurationTrackerFactory factory,
+      final String statistic) {
+    return factory != null
+        ? factory.trackDuration(statistic)
+        : STUB_DURATION_TRACKER;
+  }
 }

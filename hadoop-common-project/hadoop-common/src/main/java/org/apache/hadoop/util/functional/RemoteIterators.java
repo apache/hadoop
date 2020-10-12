@@ -427,12 +427,17 @@ public final class RemoteIterators {
 
     /**
      * Get the next source value.
+     * This calls {@link #sourceHasNext()} first to verify
+     * that there is data.
      * @return the next value
      * @throws IOException failure
      * @throws NoSuchElementException no more data
      */
     protected S sourceNext() throws IOException {
       try {
+        if (!sourceHasNext()) {
+          throw new NoSuchElementException();
+        }
         return getSource().next();
       } catch (NoSuchElementException | IOException e) {
         IOUtils.cleanupWithLogger(LOG, this);
@@ -630,6 +635,7 @@ public final class RemoteIterators {
 
     @Override
     public S next() throws IOException {
+
       return sourceNext();
     }
 
