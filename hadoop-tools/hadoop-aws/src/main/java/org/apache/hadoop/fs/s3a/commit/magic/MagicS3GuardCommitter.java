@@ -43,6 +43,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.TASK_ATTEMPT_ID;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.MagicCommitPaths.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtilsWithMR.*;
@@ -213,7 +214,7 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
       commit.setJobId(jobId);
       commit.setTaskId(taskId);
     }
-
+    pendingSet.putExtraData(TASK_ATTEMPT_ID, taskId);
     Path jobAttemptPath = getJobAttemptPath(context);
     TaskAttemptID taskAttemptID = context.getTaskAttemptID();
     Path taskOutcomePath = new Path(jobAttemptPath,
@@ -221,7 +222,8 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
         CommitConstants.PENDINGSET_SUFFIX);
     LOG.info("Saving work of {} to {}", taskAttemptID, taskOutcomePath);
     try {
-      pendingSet.save(getDestFS(), taskOutcomePath, false);
+      // We will overwrite if there exists a pendingSet file already
+      pendingSet.save(getDestFS(), taskOutcomePath, true);
     } catch (IOException e) {
       LOG.warn("Failed to save task commit data to {} ",
           taskOutcomePath, e);
