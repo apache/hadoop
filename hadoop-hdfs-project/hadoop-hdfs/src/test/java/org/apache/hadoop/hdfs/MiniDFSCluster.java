@@ -2192,12 +2192,12 @@ public class MiniDFSCluster implements AutoCloseable {
   /**
    * Update an existing NameNode's configuration.
    */
-  public void setNameNodeConf(int nnIndex, Configuration conf) {
+  public void setNameNodeConf(int nnIndex, Configuration nnConf) {
     NameNodeInfo info = getNN(nnIndex);
     if (info == null) {
       throw new RuntimeException("Invalid nnIndex!");
     }
-    info.setConf(conf);
+    info.setConf(nnConf);
   }
 
   /**
