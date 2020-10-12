@@ -55,7 +55,7 @@ public class ITestSharedKeyAuth extends AbstractAbfsIntegrationTest {
             + "Authorization header is formed correctly including the "
             + "signature.\", 403",
         () -> {
-          abfsClient.getAclStatus("/", new TrackingContext(this.getFileSystem().getFileSystemID(),
+          abfsClient.getAclStatus("/", new TrackingContext("test-fileSystemID",
                   "AC"));
         });
   }

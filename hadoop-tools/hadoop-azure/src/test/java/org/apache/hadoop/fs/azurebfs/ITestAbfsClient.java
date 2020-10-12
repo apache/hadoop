@@ -124,6 +124,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem
         .newInstance(this.getFileSystem().getUri(), config);
     AbfsClient client = fs.getAbfsClient();
+//    TrackingContext
     String path = getRelativePath(new Path("/testDir"));
     boolean isNamespaceEnabled = fs.getIsNamespaceEnabled();
     String permission = isNamespaceEnabled ? getOctalNotation(FsPermission.getDirDefault()) : null;
@@ -134,16 +135,21 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
     int responseCode = op.getResult().getStatusCode();
     assertEquals("Status code", HTTP_CREATED, responseCode);
-    String responseHeader = op.getResult()
-        .getResponseHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
+    String requestHeader = op.getResult().getRequestHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
+    List<String> clientRequestIds = java.util.Arrays.asList(
+        requestHeader.replace("[","")
+            .replace("]", "")
+            .split(":"));
     if (includeInHeader) {
-      Assertions.assertThat(responseHeader)
-          .describedAs("Should contain request IDs")
-          .startsWith(clientCorrelationId);
+      assertEquals("There should be 7 items in the header when valid clientCorrelationId is set",
+          7, clientRequestIds.size());
+      assertTrue("clientCorrelation should be included in the header",
+          clientRequestIds.contains(clientCorrelationId));
     } else if (clientCorrelationId.length() > 0){
-      assertFalse(
-          "Invalid or empty correlationId value should not be included in header",
-          responseHeader.contains(clientCorrelationId));
+      assertEquals("There should be only 6 item in the header when invalid clientCorrelationId is set",
+          6, clientRequestIds.size());
+      assertFalse("Invalid or empty correlationId value should not be included in header",
+          clientRequestIds.contains(clientCorrelationId));
     }
   }
 
@@ -196,7 +202,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
       throws IOException {
     return getFileSystem().getAbfsClient()
         .listPath(directory, false, getListMaxResults(), null,
-                new TrackingContext(getFileSystem().getFileSystemID(), "PA")).getResult()
+                new TrackingContext("test-fileSystemID", "PA")).getResult()
         .getListResultSchema().paths();
   }
 

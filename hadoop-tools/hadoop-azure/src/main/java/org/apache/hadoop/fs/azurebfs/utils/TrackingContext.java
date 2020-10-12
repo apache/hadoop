@@ -55,6 +55,14 @@ public class TrackingContext {
     this.streamID = streamID;
   }
 
+  public TrackingContext(TrackingContext originalTrackingContext) {
+    this.fileSystemID = originalTrackingContext.fileSystemID;
+    this.streamID = originalTrackingContext.streamID;
+    this.clientCorrelationID = originalTrackingContext.clientCorrelationID;
+    this.primaryRequestID = originalTrackingContext.clientRequestID;
+    this.clientRequestID = UUID.randomUUID().toString();
+  }
+
   public void setClientCorrelationID(String clientCorrelationID) {
     //validation
     if ((clientCorrelationID.length() > MAX_CLIENT_CORRELATION_ID_LENGTH)
@@ -91,7 +99,7 @@ public class TrackingContext {
 //  }
   public void updateIteration() {
     iteration++;
-    primaryRequestID = clientRequestID + ":";
+//    primaryRequestID = clientRequestID + ":";
   }
 
   public void setPrimaryRequestID() {
@@ -100,9 +108,9 @@ public class TrackingContext {
 
   public String toString() {
 //    if (iteration)
-    String operation = hadoopOpName + (hadoopOpName == "LS" || hadoopOpName == "ReadAhead"? Integer.toString(iteration).toString() : "");
+    String operation = hadoopOpName + (hadoopOpName == "LS"? Integer.toString(iteration).toString() : "");
     return clientCorrelationID + clientRequestID + ":" + fileSystemID + ":" + primaryRequestID
-        + streamID + ":" + operation + ":" + retryCount;
+        + ":" + streamID + ":" + operation + ":" + retryCount;
   }
 
 }

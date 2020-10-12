@@ -873,6 +873,7 @@ public class AzureBlobFileSystemStore implements Closeable {
    * */
   public FileStatus[] listStatus(final Path path, TrackingContext trackingContext) throws IOException {
     trackingContext.setClientCorrelationID(abfsConfiguration.getClientCorrelationID());
+    trackingContext.setPrimaryRequestID();
     return listStatus(path, null, trackingContext);
   }
 

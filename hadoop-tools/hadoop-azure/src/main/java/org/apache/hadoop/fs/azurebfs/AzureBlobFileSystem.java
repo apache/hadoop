@@ -108,6 +108,8 @@ public class AzureBlobFileSystem extends FileSystem {
     uri = ensureAuthority(uri, configuration);
     super.initialize(uri, configuration);
     setConf(configuration);
+    fileSystemID = UUID.randomUUID().toString();
+    System.out.println("init fs id" + fileSystemID);
 
     LOG.debug("Initializing AzureBlobFileSystem for {}", uri);
 
@@ -145,8 +147,6 @@ public class AzureBlobFileSystem extends FileSystem {
     AbfsClientThrottlingIntercept.initializeSingleton(abfsConfiguration.isAutoThrottlingEnabled());
 
     LOG.debug("Initializing AzureBlobFileSystem for {} complete", uri);
-
-    fileSystemID = UUID.randomUUID().toString();
   }
 
   @Override
@@ -964,6 +964,7 @@ public class AzureBlobFileSystem extends FileSystem {
           "getAclStatus is only supported by storage account with the "
           + "hierarchical namespace enabled.");
     }
+    System.out.println("fs id is " + fileSystemID);
     TrackingContext trackingContext = new TrackingContext(fileSystemID, "AC");
 
     Path qualifiedPath = makeQualified(path);

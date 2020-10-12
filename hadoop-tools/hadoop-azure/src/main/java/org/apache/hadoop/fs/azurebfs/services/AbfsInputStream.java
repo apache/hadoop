@@ -71,7 +71,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   //                                                      of valid bytes in buffer)
   private boolean closed = false;
   private String inputStreamID;
-  private TrackingContext trackingContext;
+  public TrackingContext trackingContext;
 
   /** Stream statistics. */
   private final AbfsInputStreamStatistics streamStatistics;
