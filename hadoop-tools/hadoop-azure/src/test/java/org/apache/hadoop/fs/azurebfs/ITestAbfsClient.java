@@ -134,17 +134,17 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     assertEquals("Status code", HTTP_CREATED, responseCode);
     String requestHeader = op.getResult().getRequestHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
     List<String> clientRequestIds = java.util.Arrays.asList(
-        requestHeader.replace("[","")
+        requestHeader.replace("[", "")
             .replace("]", "")
             .split(":"));
     if (includeInHeader) {
       assertEquals("There should be 2 items in the header when valid clientCorrelationId is set",
-          clientRequestIds.size(), 2);
+          2, clientRequestIds.size());
       assertTrue("clientCorrelation should be included in the header",
           clientRequestIds.contains(clientCorrelationId));
     } else if (clientCorrelationId.length() > 0){
       assertEquals("There should be only 1 item in the header when invalid clientCorrelationId is set",
-          clientRequestIds.size(), 1);
+          1, clientRequestIds.size());
       assertFalse("Invalid or empty correlationId value should not be included in header",
           clientRequestIds.contains(clientCorrelationId));
     }
