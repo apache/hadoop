@@ -189,4 +189,13 @@ public class PendingSet extends PersistentCommitData {
   public void setCommits(List<SinglePendingCommit> commits) {
     this.commits = commits;
   }
+
+  /**
+   * Set/Update an extra data entry.
+   * @param key key
+   * @param value value
+   */
+  public void putExtraData(String key, String value) {
+    extraData.put(key, value);
+  }
 }
