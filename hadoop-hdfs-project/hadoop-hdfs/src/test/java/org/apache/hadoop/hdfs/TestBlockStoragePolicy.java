@@ -1440,10 +1440,10 @@ public class TestBlockStoragePolicy {
       final Iterator<Map.Entry<StorageType, Integer>> i
           = map.entrySet().iterator();
       Assert.assertEquals(StorageType.RAM_DISK, i.next().getKey());
-      Assert.assertEquals(StorageType.NVDIMM, i.next().getKey());
       Assert.assertEquals(StorageType.SSD, i.next().getKey());
       Assert.assertEquals(StorageType.DISK, i.next().getKey());
       Assert.assertEquals(StorageType.ARCHIVE, i.next().getKey());
+      Assert.assertEquals(StorageType.NVDIMM, i.next().getKey());
     }
   }
 
