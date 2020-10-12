@@ -146,7 +146,7 @@ public final class IOStatisticsLogging {
    * the wrong type/doesn't provide statistics.
    * @param log log to log to
    * @param message message for log -this must contain "{}" for the
-   * statistics report
+   * statistics report to actually get logged.
    * @param source source object
    */
   public static void logIOStatisticsAtDebug(
@@ -160,6 +160,22 @@ public final class IOStatisticsLogging {
         log.debug(message, stats);
       }
     }
+  }
+
+  /**
+   * Extract any statistics from the source and log to
+   * this class's log at debug, if
+   * the log is set to log at debug.
+   * No-op if logging is not at debug or the source is null/of
+   * the wrong type/doesn't provide statistics.
+   * @param message message for log -this must contain "{}" for the
+   * statistics report to actually get logged.
+   * @param source source object
+   */
+  public static void logIOStatisticsAtDebug(
+      String message,
+      Object source) {
+    logIOStatisticsAtDebug(LOG, message, source);
   }
 
   /**
