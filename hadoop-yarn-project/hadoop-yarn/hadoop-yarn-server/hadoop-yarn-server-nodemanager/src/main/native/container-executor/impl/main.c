@@ -102,10 +102,20 @@ static void display_usage(FILE *stream) {
 static void open_log_files() {
   if (LOGFILE == NULL) {
     LOGFILE = stdout;
+    if (setvbuf(LOGFILE, NULL, _IOLBF, BUFSIZ)) {
+      fprintf(LOGFILE, "Failed to invoke setvbuf() for LOGFILE: %s\n", strerror(errno));
+      fflush(LOGFILE);
+      exit(ERROR_CALLING_SETVBUF);
+    }
   }
 
   if (ERRORFILE == NULL) {
     ERRORFILE = stderr;
+    if (setvbuf(ERRORFILE, NULL, _IOLBF, BUFSIZ)) {
+      fprintf(ERRORFILE, "Failed to invoke setvbuf() for ERRORFILE: %s\n", strerror(errno));
+      fflush(ERRORFILE);
+      exit(ERROR_CALLING_SETVBUF);
+    }
   }
 
   // There may be a process reading from stdout/stderr, and if it
@@ -360,7 +370,6 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
   fprintf(LOGFILE, "main : command provided %d\n", command);
   fprintf(LOGFILE, "main : run as user is %s\n", cmd_input.run_as_user_name);
   fprintf(LOGFILE, "main : requested yarn user is %s\n", cmd_input.yarn_user_name);
-  fflush(LOGFILE);
   char * resources = NULL;// key,value pair describing resources
   char * resources_key = NULL;
   char * resources_value = NULL;
@@ -369,7 +378,6 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
     if (argc < 10) {
       fprintf(ERRORFILE, "Too few arguments (%d vs 10) for initialize container\n",
        argc);
-      fflush(ERRORFILE);
       return INVALID_ARGUMENT_NUMBER;
     }
     cmd_input.app_id = argv[optind++];
@@ -390,7 +398,6 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
       if (!(argc == 14 || argc == 15)) {
         fprintf(ERRORFILE, "Wrong number of arguments (%d vs 14 or 15) for"
           " launch docker container\n", argc);
-        fflush(ERRORFILE);
         return INVALID_ARGUMENT_NUMBER;
       }
 
@@ -413,7 +420,6 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
         get_kv_value(resources, resources_value, strlen(resources)) < 0) {
         fprintf(ERRORFILE, "Invalid arguments for cgroups resources: %s",
                            resources);
-        fflush(ERRORFILE);
         free(resources_key);
         free(resources_value);
         return INVALID_ARGUMENT_NUMBER;
@@ -443,7 +449,6 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
     if (!(argc == 13 || argc == 14)) {
       fprintf(ERRORFILE, "Wrong number of arguments (%d vs 13 or 14)"
         " for launch container\n", argc);
-      fflush(ERRORFILE);
       return INVALID_ARGUMENT_NUMBER;
     }
 
@@ -461,9 +466,8 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
 
     if (get_kv_key(resources, resources_key, strlen(resources)) < 0 ||
         get_kv_value(resources, resources_value, strlen(resources)) < 0) {
-        fprintf(ERRORFILE, "Invalid arguments for cgroups resources: %s",
+        fprintf(ERRORFILE, "Invalid arguments for cgroups resources: %s\n",
                            resources);
-        fflush(ERRORFILE);
         free(resources_key);
         free(resources_value);
         return INVALID_ARGUMENT_NUMBER;
@@ -489,7 +493,6 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
     if (argc != 6) {
       fprintf(ERRORFILE, "Wrong number of arguments (%d vs 6) for " \
           "signal container\n", argc);
-      fflush(ERRORFILE);
       return INVALID_ARGUMENT_NUMBER;
     }
 
@@ -498,14 +501,12 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
     cmd_input.container_pid = strtol(option, &end_ptr, 10);
     if (option == end_ptr || *end_ptr != '\0') {
       fprintf(ERRORFILE, "Illegal argument for container pid %s\n", option);
-      fflush(ERRORFILE);
       return INVALID_ARGUMENT_NUMBER;
     }
     option = argv[optind++];
     cmd_input.signal = strtol(option, &end_ptr, 10);
     if (option == end_ptr || *end_ptr != '\0') {
       fprintf(ERRORFILE, "Illegal argument for signal %s\n", option);
-      fflush(ERRORFILE);
       return INVALID_ARGUMENT_NUMBER;
     }
 
@@ -521,8 +522,7 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
     *operation = RUN_AS_USER_LIST;
     return 0;
   default:
-    fprintf(ERRORFILE, "Invalid command %d not supported.",command);
-    fflush(ERRORFILE);
+    fprintf(ERRORFILE, "Invalid command %d not supported.\n",command);
     return INVALID_COMMAND_PROVIDED;
   }
 }
