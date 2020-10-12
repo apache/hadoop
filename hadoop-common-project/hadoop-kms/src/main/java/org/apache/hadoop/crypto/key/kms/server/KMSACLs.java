@@ -29,6 +29,7 @@ import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -269,6 +270,27 @@ public class KMSACLs implements Runnable, KeyACLs {
       throw new AuthorizationException(String.format(
           (key != null) ? UNAUTHORIZED_MSG_WITH_KEY
                         : UNAUTHORIZED_MSG_WITHOUT_KEY,
+          ugi.getShortUserName(), operation, key));
+    }
+  }
+
+  public void assertAccess(EnumSet<Type> aclTypes,
+      UserGroupInformation ugi, KMSOp operation, String key)
+      throws AccessControlException {
+    boolean accessAllowed = false;
+    for (KMSACLs.Type type : aclTypes) {
+      if (KMSWebApp.getACLs().hasAccess(type, ugi)){
+        accessAllowed = true;
+        break;
+      }
+    }
+
+    if (!accessAllowed) {
+      KMSWebApp.getUnauthorizedCallsMeter().mark();
+      KMSWebApp.getKMSAudit().unauthorized(ugi, operation, key);
+      throw new AuthorizationException(String.format(
+          (key != null) ? UNAUTHORIZED_MSG_WITH_KEY
+              : UNAUTHORIZED_MSG_WITHOUT_KEY,
           ugi.getShortUserName(), operation, key));
     }
   }

@@ -52,6 +52,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -79,6 +80,9 @@ public class KMS {
   static final Logger LOG = LoggerFactory.getLogger(KMS.class);
 
   private static final int MAX_NUM_PER_BATCH = 10000;
+  // Allow both ROLLOVER and DELETE to invalidate cache.
+  private static final EnumSet<KMSACLs.Type> INVALIDATE_CACHE_TYPES =
+      EnumSet.of(KMSACLs.Type.ROLLOVER, KMSACLs.Type.DELETE);
 
   public KMS() throws Exception {
     provider = KMSWebApp.getKeyProvider();
@@ -93,6 +97,12 @@ public class KMS {
   private void assertAccess(KMSACLs.Type aclType, UserGroupInformation ugi,
       KMSOp operation, String key) throws AccessControlException {
     KMSWebApp.getACLs().assertAccess(aclType, ugi, operation, key);
+  }
+
+  private void assertAccess(EnumSet<KMSACLs.Type> aclTypes,
+      UserGroupInformation ugi, KMSOp operation, String key)
+      throws AccessControlException {
+    KMSWebApp.getACLs().assertAccess(aclTypes, ugi, operation, key);
   }
 
   private static KeyProvider.KeyVersion removeKeyMaterial(
@@ -270,7 +280,7 @@ public class KMS {
       KMSWebApp.getAdminCallsMeter().mark();
       checkNotEmpty(name, "name");
       UserGroupInformation user = HttpUserGroupInformation.get();
-      assertAccess(KMSACLs.Type.ROLLOVER, user, KMSOp.INVALIDATE_CACHE, name);
+      assertAccess(INVALIDATE_CACHE_TYPES, user, KMSOp.INVALIDATE_CACHE, name);
       LOG.debug("Invalidating cache with key name {}.", name);
 
       user.doAs(new PrivilegedExceptionAction<Void>() {
