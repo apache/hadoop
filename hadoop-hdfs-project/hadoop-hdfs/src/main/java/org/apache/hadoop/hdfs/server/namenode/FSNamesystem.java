@@ -2033,10 +2033,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return sw.toString();
   }
 
-  public boolean getIsSnapshotTrashRootEnabled() {
-    return isSnapshotTrashRootEnabled;
-  }
-
   @VisibleForTesting
   public FsServerDefaults getServerDefaults() throws StandbyException {
     checkOperation(OperationCategory.READ);
@@ -8535,13 +8531,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * directories. Create them if not.
    */
   void checkAndProvisionSnapshotTrashRoots() throws IOException {
-    if (haEnabled) {
-      if (!inActiveState()) {
-        LOG.warn("HA is enabled. But the current NameNode is not active. "
-            + "Skipping the check.");
-        return;
-      }
-    }
     SnapshottableDirectoryStatus[] dirStatusList = getSnapshottableDirListing();
     if (dirStatusList == null) {
       return;
