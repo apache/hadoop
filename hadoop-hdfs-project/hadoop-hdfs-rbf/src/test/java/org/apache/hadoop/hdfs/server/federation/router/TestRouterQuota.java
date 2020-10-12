@@ -414,8 +414,8 @@ public class TestRouterQuota {
     QuotaUsage usage = client.getQuotaUsage("/type0");
     assertEquals(HdfsConstants.QUOTA_RESET, usage.getQuota());
     assertEquals(HdfsConstants.QUOTA_RESET, usage.getSpaceQuota());
-    verifyTypeQuotaAndConsume(new long[] {-1, -1, ssQuota * 2, -1, -1, -1}, null,
-        usage);
+    verifyTypeQuotaAndConsume(new long[] {-1, -1, ssQuota * 2, -1, -1, -1},
+        null, usage);
     // Verify /type1 quota on NN1.
     usage = client.getQuotaUsage("/type1");
     assertEquals(HdfsConstants.QUOTA_RESET, usage.getQuota());

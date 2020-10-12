@@ -287,7 +287,7 @@ public class TestCount {
         // <----13---> <-------17------>
         "ARCHIVE_QUOTA REM_ARCHIVE_QUOTA PROVIDED_QUOTA REM_PROVIDED_QUOTA " +
         " NVDIMM_QUOTA  REM_NVDIMM_QUOTA " +
-	"PATHNAME";
+        "PATHNAME";
     verify(out).println(withStorageTypeHeader);
     verifyNoMoreInteractions(out);
   }
@@ -342,7 +342,7 @@ public class TestCount {
         "   DISK_QUOTA    REM_DISK_QUOTA " +
         "ARCHIVE_QUOTA REM_ARCHIVE_QUOTA " +
         "PROVIDED_QUOTA REM_PROVIDED_QUOTA " +
-	" NVDIMM_QUOTA  REM_NVDIMM_QUOTA " +
+        " NVDIMM_QUOTA  REM_NVDIMM_QUOTA " +
         "PATHNAME";
     verify(out).println(withStorageTypeHeader);
     verifyNoMoreInteractions(out);
