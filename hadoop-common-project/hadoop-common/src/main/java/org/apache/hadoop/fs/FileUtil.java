@@ -399,8 +399,7 @@ public class FileUtil {
     Path src = srcStatus.getPath();
     dst = checkDest(src.getName(), dstFS, dst, overwrite);
 
-    if (dst != null && src != null &&
-        src.toUri().equals(dst.toUri())) {
+    if (srcFS.makeQualified(src).equals(dstFS.makeQualified(dst))) {
       throw new PathOperationException("Source (" + src + ") and destination " +
           "(" + dst + ") are equal in the copy command.");
     }
