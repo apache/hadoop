@@ -135,6 +135,8 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
     int responseCode = op.getResult().getStatusCode();
     assertEquals("Status code", HTTP_CREATED, responseCode);
+
+    op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
     String requestHeader = op.getResult().getRequestHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
     List<String> clientRequestIds = java.util.Arrays.asList(
         requestHeader.replace("[","")

@@ -92,11 +92,11 @@ public class TestAbfsInputStream extends
   private void queueReadAheads(AbfsInputStream inputStream) {
     // Mimic AbfsInputStream readAhead queue requests
     ReadBufferManager.getBufferManager()
-        .queueReadAhead(inputStream, 0, ONE_KB);
+        .queueReadAhead(inputStream, 0, ONE_KB, inputStream.trackingContext);
     ReadBufferManager.getBufferManager()
-        .queueReadAhead(inputStream, ONE_KB, ONE_KB);
+        .queueReadAhead(inputStream, ONE_KB, ONE_KB, inputStream.trackingContext);
     ReadBufferManager.getBufferManager()
-        .queueReadAhead(inputStream, TWO_KB, TWO_KB);
+        .queueReadAhead(inputStream, TWO_KB, TWO_KB, inputStream.trackingContext);
   }
 
   private void verifyReadCallCount(AbfsClient client, int count) throws

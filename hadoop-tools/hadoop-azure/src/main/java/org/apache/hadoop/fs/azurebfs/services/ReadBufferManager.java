@@ -18,6 +18,8 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
+import org.apache.hadoop.fs.azurebfs.utils.TrackingContext;
+import org.graalvm.compiler.core.common.alloc.Trace;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -95,7 +97,8 @@ final class ReadBufferManager {
    * @param requestedOffset The offset in the file which shoukd be read
    * @param requestedLength The length to read
    */
-  void queueReadAhead(final AbfsInputStream stream, final long requestedOffset, final int requestedLength) {
+  void queueReadAhead(final AbfsInputStream stream, final long requestedOffset, final int requestedLength,
+                      TrackingContext trackingContext) {
     if (LOGGER.isTraceEnabled()) {
       LOGGER.trace("Start Queueing readAhead for {} offset {} length {}",
           stream.getPath(), requestedOffset, requestedLength);
@@ -116,6 +119,7 @@ final class ReadBufferManager {
       buffer.setRequestedLength(requestedLength);
       buffer.setStatus(ReadBufferStatus.NOT_AVAILABLE);
       buffer.setLatch(new CountDownLatch(1));
+      buffer.setTrackingContext(trackingContext);
 
       Integer bufferIndex = freeList.pop();  // will return a value, since we have checked size > 0 already
 

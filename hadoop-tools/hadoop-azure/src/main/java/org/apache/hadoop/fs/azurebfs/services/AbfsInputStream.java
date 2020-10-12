@@ -27,6 +27,7 @@ import java.util.UUID;
 import com.google.common.base.Preconditions;
 import com.google.common.annotations.VisibleForTesting;
 
+import org.apache.commons.codec.binary.StringUtils;
 import org.apache.hadoop.fs.azurebfs.utils.TrackingContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -247,15 +248,16 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       long nextSize;
       long nextOffset = position;
       LOG.debug("read ahead enabled issuing readheads num = {}", numReadAheads);
+      trackingContext.setPrimaryRequestID();
       while (numReadAheads > 0 && nextOffset < contentLength) {
         nextSize = Math.min((long) bufferSize, contentLength - nextOffset);
         LOG.debug("issuing read ahead requestedOffset = {} requested size {}",
             nextOffset, nextSize);
-        ReadBufferManager.getBufferManager().queueReadAhead(this, nextOffset, (int) nextSize);
+        ReadBufferManager.getBufferManager().queueReadAhead(this, nextOffset, (int) nextSize,
+                trackingContext);
         nextOffset = nextOffset + nextSize;
         numReadAheads--;
         System.out.println("in the readahead loop " + Integer.toString(numReadAheads));
-        trackingContext.setPrimaryRequestID();
       }
 
       // try reading from buffers first
@@ -271,15 +273,15 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       }
 
       // got nothing from read-ahead, do our own read now
-      receivedBytes = readRemote(position, b, offset, length);
+      receivedBytes = readRemote(position, b, offset, length, new TrackingContext(trackingContext));
       return receivedBytes;
     } else {
       LOG.debug("read ahead disabled, reading remote");
-      return readRemote(position, b, offset, length);
+      return readRemote(position, b, offset, length, new TrackingContext(trackingContext));
     }
   }
 
-  int readRemote(long position, byte[] b, int offset, int length) throws IOException {
+  int readRemote(long position, byte[] b, int offset, int length, TrackingContext trackingContext) throws IOException {
     if (position < 0) {
       throw new IllegalArgumentException("attempting to read from negative offset");
     }
@@ -303,7 +305,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker, "readRemote", "read")) {
       LOG.trace("Trigger client.read for path={} position={} offset={} length={}", path, position, offset, length);
       op = client.read(path, position, b, offset, length, tolerateOobAppends ? "*" : eTag, cachedSasToken.get(),
-          new TrackingContext("test-filesystem-id", inputStreamID, "RD"));
+              trackingContext);
       cachedSasToken.update(op.getSasToken());
       if (streamStatistics != null) {
         streamStatistics.remoteReadOperation();

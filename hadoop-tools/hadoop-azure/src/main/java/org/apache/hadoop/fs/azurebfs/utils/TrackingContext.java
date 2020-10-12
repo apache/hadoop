@@ -34,7 +34,6 @@ public class TrackingContext {
   private String streamID = "";
   private int retryCount;
   private String hadoopOpName = "";
-  private int iteration;
 
   private static final Logger LOG = LoggerFactory.getLogger(
       org.apache.hadoop.fs.azurebfs.services.AbfsClient.class);
@@ -46,7 +45,6 @@ public class TrackingContext {
     this.hadoopOpName = hadoopOpName;
     streamID = EMPTY_STRING;
     retryCount = 0;
-    iteration = 0;
     primaryRequestID = "";
   }
 
@@ -59,8 +57,10 @@ public class TrackingContext {
     this.fileSystemID = originalTrackingContext.fileSystemID;
     this.streamID = originalTrackingContext.streamID;
     this.clientCorrelationID = originalTrackingContext.clientCorrelationID;
-    this.primaryRequestID = originalTrackingContext.clientRequestID;
+    this.primaryRequestID = originalTrackingContext.primaryRequestID;
     this.clientRequestID = UUID.randomUUID().toString();
+    this.hadoopOpName = originalTrackingContext.hadoopOpName;
+    this.retryCount = 0;
   }
 
   public void setClientCorrelationID(String clientCorrelationID) {
@@ -97,18 +97,19 @@ public class TrackingContext {
 //  public void setOperation(org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType op) {
 //    opName = op.name();//convert
 //  }
-  public void updateIteration() {
-    iteration++;
+//  public void updateIteration() {
+//    iteration++;
 //    primaryRequestID = clientRequestID + ":";
-  }
+//  }
 
   public void setPrimaryRequestID() {
-    this.primaryRequestID = clientRequestID;
+//    this.primaryRequestID = clientRequestID;
+    primaryRequestID = StringUtils.right(UUID.randomUUID().toString(), 12);
   }
 
   public String toString() {
 //    if (iteration)
-    String operation = hadoopOpName + (hadoopOpName == "LS"? Integer.toString(iteration).toString() : "");
+    String operation = hadoopOpName; // + (hadoopOpName == "LS"? Integer.toString(iteration).toString() : "");
     return clientCorrelationID + clientRequestID + ":" + fileSystemID + ":" + primaryRequestID
         + ":" + streamID + ":" + operation + ":" + retryCount;
   }
