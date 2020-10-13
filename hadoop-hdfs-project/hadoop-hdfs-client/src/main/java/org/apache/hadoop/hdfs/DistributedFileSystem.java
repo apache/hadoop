@@ -1611,6 +1611,17 @@ public class DistributedFileSystem extends FileSystem
     }.resolve(this, absF);
   }
 
+  /**
+   * Synchronize client metadata state with Active NameNode.
+   * <p/>In HA the client synchronizes its state with the Active NameNode
+   * in order to guarantee subsequent read consistency from Observer Nodes.
+   * @throws IOException
+   */
+  @Override
+  public void msync() throws IOException {
+    dfs.msync();
+  }
+
   @SuppressWarnings("deprecation")
   @Override
   public void createSymlink(final Path target, final Path link,

@@ -674,6 +674,11 @@ public class HarFileSystem extends FileSystem {
     return hstatus;
   }
 
+  @Override
+  public void msync() throws IOException, UnsupportedOperationException {
+    fs.msync();
+  }
+
   /**
    * @return null since no checksum algorithm is implemented.
    */
