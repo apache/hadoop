@@ -866,6 +866,19 @@ public abstract class AbstractFileSystem implements PathCapabilities {
       UnresolvedLinkException, IOException;
 
   /**
+   * Synchronize client metadata state.
+   * <p/>In some FileSystem implementations such as HDFS metadata
+   * synchronization is essential to guarantee consistency of read requests
+   * particularly in HA setting.
+   * @throws IOException
+   * @throws UnsupportedOperationException
+   */
+  public void msync() throws IOException, UnsupportedOperationException {
+    throw new UnsupportedOperationException(getClass().getCanonicalName() +
+        " does not support method msync");
+  }
+
+  /**
    * The specification of this method matches that of
    * {@link FileContext#access(Path, FsAction)}
    * except that an UnresolvedLinkException may be thrown if a symlink is
