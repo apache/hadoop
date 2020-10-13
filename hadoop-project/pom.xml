@@ -78,8 +78,8 @@
     <jackson2.databind.version>2.9.10.7</jackson2.databind.version>
 
     <!-- httpcomponents versions -->
-    <httpclient.version>4.5.2</httpclient.version>
-    <httpcore.version>4.4.4</httpcore.version>
+    <httpclient.version>4.5.13</httpclient.version>
+    <httpcore.version>4.4.13</httpcore.version>
 
     <!-- SLF4J version -->
     <slf4j.version>1.7.25</slf4j.version>
