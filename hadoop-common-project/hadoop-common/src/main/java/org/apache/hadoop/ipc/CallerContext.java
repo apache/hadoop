@@ -129,7 +129,7 @@ public final class CallerContext {
     private byte[] signature;
 
     public Builder(String context) {
-      this(context, new Configuration());
+      this(context, HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT);
     }
 
     public Builder(String context, Configuration conf) {
@@ -138,6 +138,14 @@ public final class CallerContext {
       }
       fieldSeparator = conf.get(HADOOP_CALLER_CONTEXT_SEPARATOR_KEY,
           HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT);
+      checkFieldSeparator(fieldSeparator);
+    }
+
+    public Builder(String context, String separator) {
+      if (isValid(context)) {
+        sb.append(context);
+      }
+      fieldSeparator = separator;
       checkFieldSeparator(fieldSeparator);
     }
 

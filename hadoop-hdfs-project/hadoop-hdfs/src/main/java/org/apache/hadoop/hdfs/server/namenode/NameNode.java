@@ -41,6 +41,7 @@ import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
@@ -927,7 +928,9 @@ public class NameNode extends ReconfigurableBase implements
         new PrivilegedExceptionAction<FileSystem>() {
           @Override
           public FileSystem run() throws IOException {
-            return FileSystem.get(conf);
+            FileSystem dfs = new DistributedFileSystem();
+            dfs.initialize(FileSystem.getDefaultUri(conf), conf);
+            return dfs;
           }
         });
     this.emptier = new Thread(new Trash(fs, conf).getEmptier(), "Trash Emptier");
