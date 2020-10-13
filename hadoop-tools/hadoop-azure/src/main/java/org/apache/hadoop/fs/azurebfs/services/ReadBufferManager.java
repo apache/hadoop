@@ -22,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -218,6 +219,8 @@ final class ReadBufferManager {
       return false;  // there are no evict-able buffers
     }
 
+    long currentTimeInMs = currentTimeMillis();
+
     // first, try buffers where all bytes have been consumed (approximated as first and last bytes consumed)
     for (ReadBuffer buf : completedReadList) {
       if (buf.isFirstByteConsumed() && buf.isLastByteConsumed()) {
@@ -242,14 +245,30 @@ final class ReadBufferManager {
     }
 
     // next, try any old nodes that have not been consumed
+    // Failed read buffers (with buffer index=-1) that are older than
+    // thresholdAge should be cleaned up, but at the same time should not
+    // report successful eviction.
+    // Queue logic expects that a buffer is freed up for read ahead when
+    // eviction is successful, whereas a failed ReadBuffer would have released
+    // its buffer when its status was set to READ_FAILED.
     long earliestBirthday = Long.MAX_VALUE;
+    ArrayList<ReadBuffer> oldFailedBuffers = new ArrayList<>();
     for (ReadBuffer buf : completedReadList) {
-      if (buf.getTimeStamp() < earliestBirthday) {
+      if ((buf.getBufferindex() != -1)
+          && (buf.getTimeStamp() < earliestBirthday)) {
         nodeToEvict = buf;
         earliestBirthday = buf.getTimeStamp();
+      } else if ((buf.getBufferindex() == -1)
+          && (currentTimeInMs - buf.getTimeStamp()) > thresholdAgeMilliseconds) {
+        oldFailedBuffers.add(buf);
       }
     }
-    if ((currentTimeMillis() - earliestBirthday > thresholdAgeMilliseconds) && (nodeToEvict != null)) {
+
+    for (ReadBuffer buf : oldFailedBuffers) {
+      evict(buf);
+    }
+
+    if ((currentTimeInMs - earliestBirthday > thresholdAgeMilliseconds) && (nodeToEvict != null)) {
       return evict(nodeToEvict);
     }
 
@@ -417,7 +436,6 @@ final class ReadBufferManager {
       if (result == ReadBufferStatus.AVAILABLE && bytesActuallyRead > 0) {
         buffer.setStatus(ReadBufferStatus.AVAILABLE);
         buffer.setLength(bytesActuallyRead);
-        completedReadList.add(buffer);
       } else {
         freeList.push(buffer.getBufferindex());
         // buffer will be deleted as per the eviction policy.
@@ -463,5 +481,17 @@ final class ReadBufferManager {
   @VisibleForTesting
   void callTryEvict() {
     tryEvict();
+  }
+
+  /**
+   * Test method that can mimic no free buffers scenario and also add a ReadBuffer
+   * into completedReadList. This readBuffer will get picked up by TryEvict()
+   * next time a new queue request comes in.
+   * @param buf that needs to be added to completedReadlist
+   */
+  @VisibleForTesting
+  void testMimicFullUseAndAddFailedBuffer(ReadBuffer buf) {
+    freeList.clear();
+    completedReadList.add(buf);
   }
 }
