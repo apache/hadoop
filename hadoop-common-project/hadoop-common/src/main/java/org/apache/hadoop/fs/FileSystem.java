@@ -2676,6 +2676,19 @@ public abstract class FileSystem extends Configured
   public abstract FileStatus getFileStatus(Path f) throws IOException;
 
   /**
+   * Synchronize client metadata state.
+   * <p/>In some FileSystem implementations such as HDFS metadata
+   * synchronization is essential to guarantee consistency of read requests
+   * particularly in HA setting.
+   * @throws IOException
+   * @throws UnsupportedOperationException
+   */
+  public void msync() throws IOException, UnsupportedOperationException {
+    throw new UnsupportedOperationException(getClass().getCanonicalName() +
+        " does not support method msync");
+  }
+
+  /**
    * Checks if the user can access a path.  The mode specifies which access
    * checks to perform.  If the requested permissions are granted, then the
    * method returns normally.  If access is denied, then the method throws an
