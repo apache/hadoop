@@ -70,6 +70,10 @@ public class KMSACLs implements Runnable, KeyACLs {
 
   public static final int RELOADER_SLEEP_MILLIS = 1000;
 
+  // Allow both ROLLOVER and DELETE to invalidate cache.
+  public static final EnumSet<KMSACLs.Type> INVALIDATE_CACHE_TYPES =
+      EnumSet.of(KMSACLs.Type.ROLLOVER, KMSACLs.Type.DELETE);
+
   private volatile Map<Type, AccessControlList> acls;
   private volatile Map<Type, AccessControlList> blacklistedAcls;
   @VisibleForTesting

@@ -57,6 +57,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import static org.apache.hadoop.crypto.key.kms.server.KMSACLs.INVALIDATE_CACHE_TYPES;
 import static org.apache.hadoop.util.KMSUtil.checkNotEmpty;
 import static org.apache.hadoop.util.KMSUtil.checkNotNull;
 
@@ -80,9 +81,6 @@ public class KMS {
   static final Logger LOG = LoggerFactory.getLogger(KMS.class);
 
   private static final int MAX_NUM_PER_BATCH = 10000;
-  // Allow both ROLLOVER and DELETE to invalidate cache.
-  private static final EnumSet<KMSACLs.Type> INVALIDATE_CACHE_TYPES =
-      EnumSet.of(KMSACLs.Type.ROLLOVER, KMSACLs.Type.DELETE);
 
   public KMS() throws Exception {
     provider = KMSWebApp.getKeyProvider();
