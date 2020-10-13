@@ -55,6 +55,7 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Random;
 
 import com.google.common.collect.ImmutableList;
@@ -404,7 +405,7 @@ public class TestWebHDFS {
             try {
               it.next();
               fail("Iterator should error if out of elements.");
-            } catch (IllegalStateException e) {
+            } catch (NoSuchElementException e) {
               // pass
             }
             return null;
