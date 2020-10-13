@@ -29,9 +29,12 @@ import java.net.URISyntaxException;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -59,6 +62,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
@@ -70,6 +74,8 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderExcept
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
+import org.apache.hadoop.fs.impl.AbstractFSBuilderImpl;
+import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -78,6 +84,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Progressable;
 
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
@@ -172,16 +179,43 @@ public class AzureBlobFileSystem extends FileSystem {
   @Override
   public FSDataInputStream open(final Path path, final int bufferSize) throws IOException {
     LOG.debug("AzureBlobFileSystem.open path: {} bufferSize: {}", path, bufferSize);
+    return open(path, Optional.empty());
+  }
+
+  private FSDataInputStream open(final Path path,
+      final Optional<Configuration> options) throws IOException {
     statIncrement(CALL_OPEN);
     Path qualifiedPath = makeQualified(path);
-
     try {
-      InputStream inputStream = abfsStore.openFileForRead(qualifiedPath, statistics);
+      InputStream inputStream = abfsStore.openFileForRead(qualifiedPath,
+          options, statistics);
       return new FSDataInputStream(inputStream);
     } catch(AzureBlobFileSystemException ex) {
       checkException(path, ex);
       return null;
     }
+  }
+
+  /**
+   * Supported optional Configurations
+   * <ul>
+   * <li>{@link ConfigurationKeys#FS_AZURE_BUFFERED_PREAD_DISABLE} - To disable
+   * usage of buffer and only read specified bytes with positional reads.</li>
+   * </ul>
+   * <p>
+   * Use {@link #openFile(Path)} and set optional Configurations as needed.
+   */
+  @Override
+  protected CompletableFuture<FSDataInputStream> openFileWithOptions(
+      final Path path, final OpenFileParameters parameters) throws IOException {
+    LOG.debug("AzureBlobFileSystem.openFileWithOptions path: {}", path);
+    AbstractFSBuilderImpl.rejectUnknownMandatoryKeys(
+        parameters.getMandatoryKeys(),
+        Collections.emptySet(),
+        "for " + path);
+    return LambdaUtils.eval(
+        new CompletableFuture<>(), () ->
+            open(path, Optional.of(parameters.getOptions())));
   }
 
   @Override

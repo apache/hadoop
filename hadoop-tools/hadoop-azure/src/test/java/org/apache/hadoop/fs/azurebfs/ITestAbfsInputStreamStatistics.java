@@ -19,13 +19,15 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
+import java.util.Optional;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamContext;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamStatisticsImpl;
@@ -62,7 +64,8 @@ public class ITestAbfsInputStreamStatistics
     try {
 
       outputStream = createAbfsOutputStreamWithFlushEnabled(fs, initValuesPath);
-      inputStream = abfss.openFileForRead(initValuesPath, fs.getFsStatistics());
+      inputStream = abfss.openFileForRead(initValuesPath, Optional.empty(),
+          fs.getFsStatistics());
 
       AbfsInputStreamStatisticsImpl stats =
           (AbfsInputStreamStatisticsImpl) inputStream.getStreamStatistics();
@@ -106,7 +109,8 @@ public class ITestAbfsInputStreamStatistics
       //Writing a default buffer in a file.
       out.write(defBuffer);
       out.hflush();
-      in = abfss.openFileForRead(seekStatPath, fs.getFsStatistics());
+      in = abfss.openFileForRead(seekStatPath, Optional.empty(),
+          fs.getFsStatistics());
 
       /*
        * Writing 1MB buffer to the file, this would make the fCursor(Current
@@ -197,7 +201,8 @@ public class ITestAbfsInputStreamStatistics
        */
       out.write(defBuffer);
       out.hflush();
-      in = abfss.openFileForRead(readStatPath, fs.getFsStatistics());
+      in = abfss.openFileForRead(readStatPath, Optional.empty(),
+          fs.getFsStatistics());
 
       /*
        * Doing file read 10 times.
@@ -318,7 +323,8 @@ public class ITestAbfsInputStreamStatistics
       out.write(defBuffer);
       out.close();
 
-      in = abfss.openFileForRead(readAheadCountersPath, fs.getFsStatistics());
+      in = abfss.openFileForRead(readAheadCountersPath, Optional.empty(),
+          fs.getFsStatistics());
 
       /*
        * Reading 1KB after each i * KB positions. Hence the reads are from 0
@@ -361,6 +367,89 @@ public class ITestAbfsInputStreamStatistics
           "Mismatch in remoteBytesRead counter value")
           .isGreaterThanOrEqualTo(in.getBytesFromRemoteRead());
 
+    } finally {
+      IOUtils.cleanupWithLogger(LOG, out, in);
+    }
+  }
+
+  @Test
+  public void testPread() throws IOException {
+    describe("Testing preads in AbfsInputStream");
+
+    AzureBlobFileSystem fs = getFileSystem();
+    AzureBlobFileSystemStore abfss = fs.getAbfsStore();
+    Path readStatPath = path(getMethodName());
+
+    AbfsOutputStream out = null;
+    AbfsInputStream in = null;
+    try {
+      out = createAbfsOutputStreamWithFlushEnabled(fs, readStatPath);
+      /*
+       * Writing 1MB buffer to the file.
+       */
+      out.write(defBuffer);
+      out.hflush();
+
+      in = abfss.openFileForRead(readStatPath, Optional.empty(),
+          fs.getFsStatistics());
+      /*
+       * Doing 10 bytes pread 10 times.
+       */
+      int bytesPerRead = 10;
+      int pos = 0;
+      for (int i = 0; i < OPERATIONS; i++) {
+        in.read(pos, defBuffer, pos, bytesPerRead);
+        pos += bytesPerRead;
+      }
+      AbfsInputStreamStatisticsImpl stats = (AbfsInputStreamStatisticsImpl) in
+          .getStreamStatistics();
+      LOG.info("STATISTICS: {}", stats.toString());
+      /*
+       * bytesRead - Since each time 10 bytes are read, total bytes read would
+       * be equal to OPERATIONS * 10.
+       *
+       * readOps - Since each time read operation is performed OPERATIONS times,
+       * total number of read operations would be equal to OPERATIONS.
+       *
+       * remoteReadOps - Only a single remote read operation is done. Hence,
+       * total remote read ops is 1.
+       */
+      assertEquals("Mismatch in bytesRead value", OPERATIONS * bytesPerRead,
+          stats.getBytesRead());
+      assertEquals("Mismatch in readOps value", OPERATIONS,
+          stats.getReadOperations());
+      assertEquals("Mismatch in remoteReadOps value", 1,
+          stats.getRemoteReadOperations());
+      in.close();
+      // Verifying if stats are still readable after stream is closed.
+      LOG.info("STATISTICS after closing: {}", stats.toString());
+
+      // Now test with buffered pread disabled.
+      Configuration options = new Configuration(false);
+      options.setBoolean(ConfigurationKeys.FS_AZURE_BUFFERED_PREAD_DISABLE,
+          true);
+      in = abfss.openFileForRead(readStatPath, Optional.of(options),
+          fs.getFsStatistics());
+      pos = 0;
+      for (int i = 0; i < OPERATIONS; i++) {
+        in.read(pos, defBuffer, pos, bytesPerRead);
+        pos += bytesPerRead;
+      }
+      stats = (AbfsInputStreamStatisticsImpl) in.getStreamStatistics();
+      LOG.info("STATISTICS: {}", stats.toString());
+      /*
+       * remoteReadOps - Pread will do exactly those many bytes being asked for
+       * and no buffering. So there will be 10 remote reads.
+       */
+      assertEquals("Mismatch in bytesRead value", OPERATIONS * bytesPerRead,
+          stats.getBytesRead());
+      assertEquals("Mismatch in readOps value", OPERATIONS,
+          stats.getReadOperations());
+      assertEquals("Mismatch in remoteReadOps value", OPERATIONS,
+          stats.getRemoteReadOperations());
+      assertEquals("Mismatch in bytesReadFromBuffer value", 0,
+          stats.getBytesReadFromBuffer());
+      in.close();
     } finally {
       IOUtils.cleanupWithLogger(LOG, out, in);
     }

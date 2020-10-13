@@ -167,5 +167,7 @@ public final class ConfigurationKeys {
   /** Key for Local Group to Service Group file location. */
   public static final String FS_AZURE_LOCAL_GROUP_SG_MAPPING_FILE_PATH = "fs.azure.identity.transformer.local.service.group.mapping.file.path";
 
+  /** Key to disable usage of buffer and only read specified bytes with positional reads.*/
+  public static final String FS_AZURE_BUFFERED_PREAD_DISABLE = "fs.azure.buffered.pread.disable";
   private ConfigurationKeys() {}
 }
