@@ -543,18 +543,24 @@ public class AzureBlobFileSystemStore implements Closeable {
       final boolean isAppendBlob, TrackingContext trackingContext) throws AzureBlobFileSystemException {
     AbfsRestOperation op;
 
+    trackingContext.setPrimaryRequestID();
+    trackingContext.firstRequest = true;
+
     try {
       // Trigger a create with overwrite=false first so that eTag fetch can be
       // avoided for cases when no pre-existing file is present (major portion
       // of create file traffic falls into the case of no pre-existing file).
+
+
       op = client.createPath(relativePath, true,
-          false, permission, umask, isAppendBlob, null, trackingContext);
+          false, permission, umask, isAppendBlob, null, new TrackingContext(trackingContext));
     } catch (AbfsRestOperationException e) {
+      trackingContext.firstRequest = false;
       if (e.getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
         // File pre-exists, fetch eTag
         try {
-          op = client.getPathStatus(relativePath, false, trackingContext);
-          trackingContext.setPrimaryRequestID();
+          op = client.getPathStatus(relativePath, false, new TrackingContext(trackingContext));
+//          trackingContext.setPrimaryRequestID();
         } catch (AbfsRestOperationException ex) {
           if (ex.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
             // Is a parallel access case, as file which was found to be
@@ -573,7 +579,7 @@ public class AzureBlobFileSystemStore implements Closeable {
         try {
           // overwrite only if eTag matches with the file properties fetched befpre
           op = client.createPath(relativePath, true,
-              true, permission, umask, isAppendBlob, eTag, trackingContext);
+              true, permission, umask, isAppendBlob, eTag, new TrackingContext(trackingContext));
         } catch (AbfsRestOperationException ex) {
           if (ex.getStatusCode() == HttpURLConnection.HTTP_PRECON_FAILED) {
             // Is a parallel access case, as file with eTag was just queried
