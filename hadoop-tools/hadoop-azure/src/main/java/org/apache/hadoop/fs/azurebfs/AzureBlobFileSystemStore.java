@@ -873,7 +873,6 @@ public class AzureBlobFileSystemStore implements Closeable {
    * */
   public FileStatus[] listStatus(final Path path, TrackingContext trackingContext) throws IOException {
     trackingContext.setClientCorrelationID(abfsConfiguration.getClientCorrelationID());
-    trackingContext.setPrimaryRequestID();
     return listStatus(path, null, trackingContext);
   }
 
@@ -890,7 +889,7 @@ public class AzureBlobFileSystemStore implements Closeable {
    * */
   @InterfaceStability.Unstable
   public FileStatus[] listStatus(final Path path, final String startFrom,
-                                 TrackingContext trackingContext) throws IOException {
+                                 TrackingContext originalTrackingContext) throws IOException {
     final Instant startAggregate = abfsPerfTracker.getLatencyInstant();
     long countAggregate = 0;
     boolean shouldContinue = true;
@@ -904,6 +903,8 @@ public class AzureBlobFileSystemStore implements Closeable {
     final String relativePath = getRelativePath(path);
     String continuation = null;
 
+    TrackingContext trackingContext = new TrackingContext(originalTrackingContext);
+
     // generate continuation token if a valid startFrom is provided.
     if (startFrom != null && !startFrom.isEmpty()) {
       continuation = getIsNamespaceEnabled(trackingContext)
@@ -911,11 +912,14 @@ public class AzureBlobFileSystemStore implements Closeable {
               : generateContinuationTokenForNonXns(relativePath, startFrom);
     }
 
+    trackingContext.setPrimaryRequestID();
+    trackingContext.firstRequest = true;
+
     ArrayList<FileStatus> fileStatuses = new ArrayList<>();
     do {
       try (AbfsPerfInfo perfInfo = startTracking("listStatus", "listPath")) {
         AbfsRestOperation op = client.listPath(relativePath, false,
-            abfsConfiguration.getListMaxResults(), continuation, trackingContext);
+            abfsConfiguration.getListMaxResults(), continuation, new TrackingContext(trackingContext));
         perfInfo.registerResult(op.getResult());
         continuation = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
         ListResultSchema retrievedSchema = op.getResult().getListResultSchema();
@@ -971,6 +975,7 @@ public class AzureBlobFileSystemStore implements Closeable {
           perfInfo.registerAggregates(startAggregate, countAggregate);
         }
       }
+      trackingContext.firstRequest = false;
     } while (shouldContinue);
 
     return fileStatuses.toArray(new FileStatus[fileStatuses.size()]);

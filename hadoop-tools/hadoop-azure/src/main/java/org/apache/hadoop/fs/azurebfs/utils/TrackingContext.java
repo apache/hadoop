@@ -116,6 +116,7 @@ public class TrackingContext {
   public void reset() {
     primaryRequestID = EMPTY_STRING;
     retryCount = 0;
+    firstRequest = false;
   }
 
   public void setStreamID(String stream) {
