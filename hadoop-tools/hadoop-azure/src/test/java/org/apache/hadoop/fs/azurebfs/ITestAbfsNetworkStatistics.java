@@ -256,7 +256,6 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
       long createRequestCalls = 1;
       if (this.getConfiguration().isConditionalCreateOverwriteEnabled()) {
         createRequestCalls += 2;
-        // createOverwriteTriggeredGetForeTag.
       }
 
       for (int i = 0; i < LARGE_OPERATIONS; i++) {
