@@ -37,12 +37,14 @@ import com.google.common.annotations.VisibleForTesting;
  */
 final class ReadBufferManager {
   private static final Logger LOGGER = LoggerFactory.getLogger(ReadBufferManager.class);
+  private static final int ONE_KB = 1024;
+  private static final int ONE_MB = ONE_KB * ONE_KB;
 
   private static final int NUM_BUFFERS = 16;
   private static final int NUM_THREADS = 8;
   private static final int DEFAULT_THRESHOLD_AGE_MILLISECONDS = 3000; // have to see if 3 seconds is a good threshold
 
-  private static int blockSize = 4 * 1024 * 1024;
+  private static int blockSize = 4 * ONE_MB;
   private static int thresholdAgeMilliseconds = DEFAULT_THRESHOLD_AGE_MILLISECONDS;
   private Thread[] threads = new Thread[NUM_THREADS];
   private byte[][] buffers;    // array of byte[] buffers, to hold the data that is read
@@ -484,6 +486,10 @@ final class ReadBufferManager {
     tryEvict();
   }
 
+  /**
+   * Test method that can clean up the current state of readAhead buffers and
+   * the lists. Will also trigger a fresh init.
+   */
   @VisibleForTesting
   void testResetReadBufferManager() {
     synchronized (this) {
@@ -511,11 +517,20 @@ final class ReadBufferManager {
     }
   }
 
+  /**
+   * Reset buffer manager to null.
+   */
   @VisibleForTesting
   static void resetBufferManager() {
     bufferManager = null;
   }
 
+  /**
+   * Reset readAhead buffer to needed readAhead block size and
+   * thresholdAgeMilliseconds.
+   * @param readAheadBlockSize
+   * @param thresholdAgeMilliseconds
+   */
   @VisibleForTesting
   void testResetReadBufferManager(int readAheadBlockSize, int thresholdAgeMilliseconds) {
     setBlockSize(readAheadBlockSize);

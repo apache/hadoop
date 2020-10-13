@@ -18,10 +18,15 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Class to hold extra input stream configs.
  */
 public class AbfsInputStreamContext extends AbfsStreamContext {
+  // Retaining logger of AbfsInputStream
+  private static final Logger LOG = LoggerFactory.getLogger(AbfsInputStream.class);
 
   private int readBufferSize;
 
@@ -77,6 +82,14 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
   }
 
   public AbfsInputStreamContext build() {
+    if (readBufferSize > readAheadBlockSize) {
+      LOG.debug(
+          "fs.azure.read.request.size[={}] is configured for higher size than "
+              + "fs.azure.read.readahead.blocksize[={}]. Auto-align "
+              + "readAhead block size to be same as readRequestSize.",
+          readBufferSize, readAheadBlockSize);
+      readAheadBlockSize = readBufferSize;
+    }
     // Validation of parameters to be done here.
     return this;
   }

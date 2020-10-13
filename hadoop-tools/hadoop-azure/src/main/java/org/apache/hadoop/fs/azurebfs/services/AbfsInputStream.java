@@ -97,17 +97,9 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         abfsInputStreamContext.getSasTokenRenewPeriodForStreamsInSeconds());
     this.streamStatistics = abfsInputStreamContext.getStreamStatistics();
     readAheadBlockSize = abfsInputStreamContext.getReadAheadBlockSize();
-    if (this.bufferSize > readAheadBlockSize) {
-      LOG.debug(
-          "fs.azure.read.request.size[={}] is configured for higher size than "
-              + "fs.azure.read.readahead.blocksize[={}]. Auto-align "
-              + "readAhead block size to be same as readRequestSize.",
-          bufferSize, readAheadBlockSize);
-      readAheadBlockSize = this.bufferSize;
-    }
 
     // Propagate the config values to ReadBufferManager so that the first instance
-    // to initialize it get can set the readAheadBlockSize
+    // to initialize can set the readAheadBlockSize
     ReadBufferManager.setReadBufferManagerConfigs(readAheadBlockSize);
   }
 
