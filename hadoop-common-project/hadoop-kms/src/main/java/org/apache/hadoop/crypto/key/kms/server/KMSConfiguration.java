@@ -102,6 +102,10 @@ public class KMSConfiguration {
   public static final String KEY_AUTHORIZATION_ENABLE = CONFIG_PREFIX +
       "key.authorization.enable"; 
 
+  // Property to specify KeyManagementACLs implementation
+  public static final String KEY_MANAGEMENT_ACL_CLASS = CONFIG_PREFIX +
+      "key.management.acl.class";
+
   public static final boolean KEY_AUTHORIZATION_ENABLE_DEFAULT = true;
 
   private static final String LOG4J_PROPERTIES = "kms-log4j.properties";

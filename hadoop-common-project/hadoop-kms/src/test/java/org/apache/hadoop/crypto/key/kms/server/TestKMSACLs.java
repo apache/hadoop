@@ -39,7 +39,7 @@ public class TestKMSACLs {
 
   @Test
   public void testDefaults() {
-    final KMSACLs acls = new KMSACLs(new Configuration(false));
+    final KMSACLs acls = new FileBasedKMSACLs(new Configuration(false));
     for (KMSACLs.Type type : KMSACLs.Type.values()) {
       Assert.assertTrue(acls.hasAccess(type,
           UserGroupInformation.createRemoteUser("foo")));
@@ -52,7 +52,7 @@ public class TestKMSACLs {
     for (KMSACLs.Type type : KMSACLs.Type.values()) {
       conf.set(type.getAclConfigKey(), type.toString() + " ");
     }
-    final KMSACLs acls = new KMSACLs(conf);
+    final KMSACLs acls = new FileBasedKMSACLs(conf);
     for (KMSACLs.Type type : KMSACLs.Type.values()) {
       Assert.assertTrue(acls.hasAccess(type,
           UserGroupInformation.createRemoteUser(type.toString())));
@@ -71,7 +71,7 @@ public class TestKMSACLs {
     conf.set(WHITELIST_KEY_ACL_PREFIX + "MANAGEMENT", "DECRYPT_EEK");
     conf.set(DEFAULT_KEY_ACL_PREFIX + "ALL", "invalid");
     conf.set(WHITELIST_KEY_ACL_PREFIX + "ALL", "invalid");
-    final KMSACLs acls = new KMSACLs(conf);
+    final FileBasedKMSACLs acls = new FileBasedKMSACLs(conf);
     Assert.assertTrue("expected key ACL size is 2 but got "
         + acls.keyAcls.size(), acls.keyAcls.size() == 2);
     Assert.assertTrue("expected whitelist ACL size is 1 but got "
@@ -97,7 +97,7 @@ public class TestKMSACLs {
     conf.set(DEFAULT_KEY_ACL_PREFIX + "DECRYPT_EEK", "");
     conf.set(WHITELIST_KEY_ACL_PREFIX + "DECRYPT_EEK", "whitelist1");
     conf.set(WHITELIST_KEY_ACL_PREFIX + "DECRYPT_EEK", "*");
-    final KMSACLs acls = new KMSACLs(conf);
+    final FileBasedKMSACLs acls = new FileBasedKMSACLs(conf);
     Assert.assertTrue("expected key ACL size is 2 but got "
         + acls.keyAcls.size(), acls.keyAcls.size() == 2);
     assertKeyAcl("test_key_1", acls, KeyOpType.DECRYPT_EEK, "decrypt2");
@@ -121,7 +121,7 @@ public class TestKMSACLs {
     conf.set(WHITELIST_KEY_ACL_PREFIX + "MANAGEMENT", "");
     conf.set(WHITELIST_KEY_ACL_PREFIX + "GENERATE_EEK", "*");
     conf.set(WHITELIST_KEY_ACL_PREFIX + "DECRYPT_EEK", "admin_decrypt1");
-    final KMSACLs acls = new KMSACLs(conf);
+    final FileBasedKMSACLs acls = new FileBasedKMSACLs(conf);
 
     // update config and hot-reload.
     conf.set(DEFAULT_KEY_ACL_PREFIX + "READ", "read2");
@@ -187,19 +187,19 @@ public class TestKMSACLs {
         + acls.defaultKeyAcls, 1, acls.defaultKeyAcls.size());
   }
 
-  private void assertDefaultKeyAcl(final KMSACLs acls, final KeyOpType op,
-      final String... names) {
+  private void assertDefaultKeyAcl(final FileBasedKMSACLs acls,
+      final KeyOpType op, final String... names) {
     final AccessControlList acl = acls.defaultKeyAcls.get(op);
     assertAcl(acl, op, names);
   }
 
-  private void assertWhitelistKeyAcl(final KMSACLs acls, final KeyOpType op,
-      final String... names) {
+  private void assertWhitelistKeyAcl(final FileBasedKMSACLs acls,
+      final KeyOpType op, final String... names) {
     final AccessControlList acl = acls.whitelistKeyAcls.get(op);
     assertAcl(acl, op, names);
   }
 
-  private void assertKeyAcl(final String keyName, final KMSACLs acls,
+  private void assertKeyAcl(final String keyName, final FileBasedKMSACLs acls,
       final KeyOpType op, final String... names) {
     Assert.assertTrue(acls.keyAcls.containsKey(keyName));
     final HashMap<KeyOpType, AccessControlList> keyacl =
