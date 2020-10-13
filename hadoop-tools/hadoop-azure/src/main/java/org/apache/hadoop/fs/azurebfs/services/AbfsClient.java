@@ -555,6 +555,7 @@ public class AbfsClient implements Closeable {
   public AbfsRestOperation read(final String path, final long position, final byte[] buffer, final int bufferOffset,
                                 final int bufferLength, final String eTag, String cachedSasToken,
       TrackingContext trackingContext) throws AzureBlobFileSystemException {
+    System.out.println("in read");
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     requestHeaders.add(new AbfsHttpHeader(RANGE,
             String.format("bytes=%d-%d", position, position + bufferLength - 1)));
@@ -566,7 +567,7 @@ public class AbfsClient implements Closeable {
         abfsUriQueryBuilder, cachedSasToken);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
-
+    System.out.println("in the read method of client");
     final AbfsRestOperation op = new AbfsRestOperation(
             AbfsRestOperationType.ReadFile,
             this,
@@ -576,7 +577,9 @@ public class AbfsClient implements Closeable {
             buffer,
             bufferOffset,
             bufferLength, sasTokenForReuse);
+    System.out.println("op for read");
     op.execute(trackingContext);
+    System.out.println("executed read");
 
     return op;
   }

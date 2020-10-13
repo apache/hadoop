@@ -29,11 +29,12 @@ import org.apache.commons.lang3.StringUtils;
 public class TrackingContext {
   private String clientCorrelationID;
   private String fileSystemID;
-  private String clientRequestID;
+  private String clientRequestID = ""; //UUID.fromString("00000000-0000-0000-0000-000000000000");
   private String primaryRequestID;
   private String streamID = "";
   private int retryCount;
   private String hadoopOpName = "";
+  public boolean firstRequest = false;
 
   private static final Logger LOG = LoggerFactory.getLogger(
       org.apache.hadoop.fs.azurebfs.services.AbfsClient.class);
@@ -46,6 +47,7 @@ public class TrackingContext {
     streamID = EMPTY_STRING;
     retryCount = 0;
     primaryRequestID = "";
+    firstRequest = false;
   }
 
   public TrackingContext(String fileSystemID, String streamID, String hadoopOpName) {
@@ -57,10 +59,18 @@ public class TrackingContext {
     this.fileSystemID = originalTrackingContext.fileSystemID;
     this.streamID = originalTrackingContext.streamID;
     this.clientCorrelationID = originalTrackingContext.clientCorrelationID;
-    this.primaryRequestID = originalTrackingContext.primaryRequestID;
-    this.clientRequestID = UUID.randomUUID().toString();
     this.hadoopOpName = originalTrackingContext.hadoopOpName;
     this.retryCount = 0;
+    this.firstRequest = originalTrackingContext.firstRequest;
+
+    if (originalTrackingContext.firstRequest) {
+      this.clientRequestID = originalTrackingContext.primaryRequestID;
+      this.primaryRequestID = EMPTY_STRING;
+    }
+    else {
+      this.primaryRequestID = originalTrackingContext.primaryRequestID;
+      this.clientRequestID = UUID.randomUUID().toString();
+    }
   }
 
   public void setClientCorrelationID(String clientCorrelationID) {
@@ -86,8 +96,26 @@ public class TrackingContext {
     retryCount++;
   }
 
+//  public void setClientRequestID(boolean forceUpdate) {
+//    if(forceUpdate || clientRequestID.isEmpty()) {
+//      clientRequestID = UUID.randomUUID().toString();
+//    }
+//  }
+
   public void setClientRequestID() {
+    if(firstRequest) {
+      return;
+    }
     clientRequestID = UUID.randomUUID().toString();
+  }
+
+  public String getPrimaryRequestID() {
+    return primaryRequestID;
+  }
+
+  public void reset() {
+    primaryRequestID = EMPTY_STRING;
+    retryCount = 0;
   }
 
   public void setStreamID(String stream) {

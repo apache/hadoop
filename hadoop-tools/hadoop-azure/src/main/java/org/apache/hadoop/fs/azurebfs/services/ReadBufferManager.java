@@ -19,7 +19,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
 import org.apache.hadoop.fs.azurebfs.utils.TrackingContext;
-import org.graalvm.compiler.core.common.alloc.Trace;
+//import org.graalvm.compiler.core.common.alloc.Trace;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

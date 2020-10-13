@@ -62,13 +62,31 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     testReadWriteAndSeek(size);
   }
 
+  @Test
+  public void testReadAheadRequestID() throws java.io.IOException {
+    final AzureBlobFileSystem fs = getFileSystem();
+    final AbfsConfiguration abfsConfiguration = fs.getAbfsStore().getAbfsConfiguration();
+    int bufferSize = 32;
+    abfsConfiguration.setReadBufferSize(bufferSize);
+
+    final byte[] b = new byte[bufferSize * 10];
+    new Random().nextBytes(b);
+    try (FSDataOutputStream stream = fs.create(TEST_PATH)) {
+      stream.write(b);
+    }
+
+    final byte[] readBuffer = new byte[4 * bufferSize];
+    int result;
+    try (FSDataInputStream inputStream = fs.open(TEST_PATH)) {
+      result = inputStream.read(readBuffer, 0, bufferSize*4);
+    }
+  }
+
   private void testReadWriteAndSeek(int bufferSize) throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
     final AbfsConfiguration abfsConfiguration = fs.getAbfsStore().getAbfsConfiguration();
-
     abfsConfiguration.setWriteBufferSize(bufferSize);
     abfsConfiguration.setReadBufferSize(bufferSize);
-
 
     final byte[] b = new byte[2 * bufferSize];
     new Random().nextBytes(b);

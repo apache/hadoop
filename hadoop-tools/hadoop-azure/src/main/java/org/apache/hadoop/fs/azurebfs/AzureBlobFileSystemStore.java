@@ -894,7 +894,7 @@ public class AzureBlobFileSystemStore implements Closeable {
     final Instant startAggregate = abfsPerfTracker.getLatencyInstant();
     long countAggregate = 0;
     boolean shouldContinue = true;
-    trackingContext.updateIteration();
+//    trackingContext.updateIteration();
 
     LOG.debug("listStatus filesystem: {} path: {}, startFrom: {}",
             client.getFileSystem(),
