@@ -623,6 +623,10 @@ public class MiniDFSCluster implements AutoCloseable {
       this.startOpt = startOpt;
       this.conf = conf;
     }
+
+    public void setConf(Configuration conf) {
+      this.conf = conf;
+    }
     
     public void setStartOpt(StartupOption startOpt) {
       this.startOpt = startOpt;
@@ -2183,6 +2187,17 @@ public class MiniDFSCluster implements AutoCloseable {
    */
   public synchronized void restartNameNode(int nnIndex) throws IOException {
     restartNameNode(nnIndex, true);
+  }
+
+  /**
+   * Update an existing NameNode's configuration.
+   */
+  public void setNameNodeConf(int nnIndex, Configuration nnConf) {
+    NameNodeInfo info = getNN(nnIndex);
+    if (info == null) {
+      throw new RuntimeException("Invalid nnIndex!");
+    }
+    info.setConf(nnConf);
   }
 
   /**

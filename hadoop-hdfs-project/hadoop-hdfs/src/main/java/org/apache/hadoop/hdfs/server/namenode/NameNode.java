@@ -2018,6 +2018,9 @@ public class NameNode extends ReconfigurableBase implements
     public void startActiveServices() throws IOException {
       try {
         namesystem.startActiveServices();
+        if (namesystem.isSnapshotTrashRootEnabled()) {
+          namesystem.checkAndProvisionSnapshotTrashRoots();
+        }
         startTrashEmptier(getConf());
       } catch (Throwable t) {
         doImmediateShutdown(t);
