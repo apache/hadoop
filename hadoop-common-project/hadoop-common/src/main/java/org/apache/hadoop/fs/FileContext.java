@@ -1248,6 +1248,16 @@ public class FileContext implements PathCapabilities {
   }
 
   /**
+   * Synchronize client metadata state.
+   *
+   * @throws IOException
+   * @throws UnsupportedOperationException
+   */
+  public void msync() throws IOException, UnsupportedOperationException {
+    defaultFS.msync();
+  }
+
+  /**
    * Checks if the user can access a path.  The mode specifies which access
    * checks to perform.  If the requested permissions are granted, then the
    * method returns normally.  If access is denied, then the method throws an
