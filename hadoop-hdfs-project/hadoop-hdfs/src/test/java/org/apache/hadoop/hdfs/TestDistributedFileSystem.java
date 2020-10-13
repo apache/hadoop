@@ -65,6 +65,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystem.Statistics.StatisticsData;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
@@ -75,6 +76,7 @@ import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
+import org.apache.hadoop.fs.PathOperationException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StorageStatistics.LongStatistic;
 import org.apache.hadoop.fs.StorageType;
@@ -2088,6 +2090,20 @@ public class TestDistributedFileSystem {
       dfs.enableErasureCodingPolicy("RS-10-4-1024k");
       result = dfs.getECTopologyResultForPolicies();
       assertFalse(result.isSupported());
+    }
+  }
+
+  @Test
+  public void testCopyBetweenFsEqualPath() throws Exception {
+    Configuration conf = getTestConfiguration();
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build()) {
+      cluster.waitActive();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      Path filePath = new Path("/dir/file");
+      dfs.create(filePath).close();
+      FileStatus fstatus = dfs.getFileStatus(filePath);
+      LambdaTestUtils.intercept(PathOperationException.class,
+          () -> FileUtil.copy(dfs, fstatus, dfs, filePath, false, true, conf));
     }
   }
 }
