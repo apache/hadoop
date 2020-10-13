@@ -219,6 +219,8 @@ final class ReadBufferManager {
       return false;  // there are no evict-able buffers
     }
 
+    long currentTimeInMs = currentTimeMillis();
+
     // first, try buffers where all bytes have been consumed (approximated as first and last bytes consumed)
     for (ReadBuffer buf : completedReadList) {
       if (buf.isFirstByteConsumed() && buf.isLastByteConsumed()) {
@@ -257,7 +259,7 @@ final class ReadBufferManager {
         nodeToEvict = buf;
         earliestBirthday = buf.getTimeStamp();
       } else if ((buf.getBufferindex() == -1)
-          && (currentTimeMillis() - buf.getTimeStamp()) > thresholdAgeMilliseconds) {
+          && (currentTimeInMs - buf.getTimeStamp()) > thresholdAgeMilliseconds) {
         oldFailedBuffers.add(buf);
       }
     }
@@ -266,7 +268,7 @@ final class ReadBufferManager {
       evict(buf);
     }
 
-    if ((currentTimeMillis() - earliestBirthday > thresholdAgeMilliseconds) && (nodeToEvict != null)) {
+    if ((currentTimeInMs - earliestBirthday > thresholdAgeMilliseconds) && (nodeToEvict != null)) {
       return evict(nodeToEvict);
     }
 
@@ -481,6 +483,12 @@ final class ReadBufferManager {
     tryEvict();
   }
 
+  /**
+   * Test method that can mimic no free buffers scenario and also add a ReadBuffer
+   * into completedReadList. This readBuffer will get picked up by TryEvict()
+   * next time a new queue request comes in.
+   * @param buf that needs to be added to completedReadlist
+   */
   @VisibleForTesting
   void testMimicFullUseAndAddFailedBuffer(ReadBuffer buf) {
     freeList.clear();
