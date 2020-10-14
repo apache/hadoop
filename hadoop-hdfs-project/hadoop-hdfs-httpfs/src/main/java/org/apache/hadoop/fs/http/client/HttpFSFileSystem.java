@@ -197,6 +197,7 @@ public class HttpFSFileSystem extends FileSystem
   public static final String XATTR_VALUE_JSON = "value";
   public static final String XATTRNAMES_JSON = "XAttrNames";
   public static final String ECPOLICY_JSON = "ecPolicyObj";
+  public static final String SYMLINK_JSON = "symlink";
 
   public static final String FILE_CHECKSUM_JSON = "FileChecksum";
   public static final String CHECKSUM_ALGORITHM_JSON = "algorithm";
@@ -1093,6 +1094,9 @@ public class HttpFSFileSystem extends FileSystem
     String pathSuffix = (String) json.get(PATH_SUFFIX_JSON);
     Path path = (pathSuffix.equals("")) ? parent : new Path(parent, pathSuffix);
     FILE_TYPE type = FILE_TYPE.valueOf((String) json.get(TYPE_JSON));
+    String symLinkValue =
+        type == FILE_TYPE.SYMLINK ? (String) json.get(SYMLINK_JSON) : null;
+    Path symLink = symLinkValue == null ? null : new Path(symLinkValue);
     long len = (Long) json.get(LENGTH_JSON);
     String owner = (String) json.get(OWNER_JSON);
     String group = (String) json.get(GROUP_JSON);
@@ -1117,11 +1121,12 @@ public class HttpFSFileSystem extends FileSystem
           new FsPermissionExtension(permission, aBit, eBit, ecBit);
       FileStatus fileStatus = new FileStatus(len, FILE_TYPE.DIRECTORY == type,
           replication, blockSize, mTime, aTime, deprecatedPerm, owner, group,
-          null, path, FileStatus.attributes(aBit, eBit, ecBit, seBit));
+          symLink, path, FileStatus.attributes(aBit, eBit, ecBit, seBit));
       return fileStatus;
     } else {
       return new FileStatus(len, FILE_TYPE.DIRECTORY == type,
-          replication, blockSize, mTime, aTime, permission, owner, group, path);
+          replication, blockSize, mTime, aTime, permission, owner, group,
+          symLink, path);
     }
   }
 
