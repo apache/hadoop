@@ -27,6 +27,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 
 @XmlRootElement(name = "clusterMetrics")
 @XmlAccessorType(XmlAccessType.FIELD)
@@ -133,6 +134,11 @@ public class ClusterMetricsInfo {
     } else {
       this.totalMB = availableMB + allocatedMB;
       this.totalVirtualCores = availableVirtualCores + allocatedVirtualCores;
+    }
+    if (rs instanceof FairScheduler) {
+      FairScheduler fs = (FairScheduler) rs;
+      totalUsedResourcesAcrossPartition = new ResourceInfo(fs.getQueueManager().getRootQueue().getResourceUsage());
+      totalClusterResourcesAcrossPartition = new ResourceInfo(fs.getClusterResource());
     }
     this.activeNodes = clusterMetrics.getNumActiveNMs();
     this.lostNodes = clusterMetrics.getNumLostNMs();
