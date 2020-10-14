@@ -492,14 +492,6 @@ public class ITestAzureBlobFileSystemRandomRead extends
     testAlwaysReadBufferSizeConfig(true);
   }
 
-  private void assertStatistics(AzureBlobFileSystem fs,
-      AbfsStatistic metric, long expected) {
-    assertAbfsStatistics(
-        metric,
-        expected,
-        fs.getInstrumentationMap());
-  }
-
   public void testAlwaysReadBufferSizeConfig(boolean alwaysReadBufferSizeConfigValue)
       throws Throwable {
     final AzureBlobFileSystem currentFs = getFileSystem();
@@ -545,9 +537,10 @@ public class ITestAzureBlobFileSystemRandomRead extends
     newReqCount++;
     newDataSizeRead += FOUR_MB;
 
-    assertStatistics(fs, GET_RESPONSES, connectionsAtStart + newReqCount);
-    assertStatistics(fs, BYTES_RECEIVED,
-        dateSizeReadStatAtStart + newDataSizeRead);
+    assertAbfsStatistics(GET_RESPONSES, connectionsAtStart + newReqCount,
+        fs.getInstrumentationMap());
+    assertAbfsStatistics(BYTES_RECEIVED,
+        dateSizeReadStatAtStart + newDataSizeRead, fs.getInstrumentationMap());
 
     // second read beyond that the buffer holds
     // if alwaysReadBufferSize is off, this is a random read. Reads only
@@ -562,9 +555,9 @@ public class ITestAzureBlobFileSystemRandomRead extends
       newDataSizeRead += TWENTY_BYTES;
     }
 
-    assertStatistics(fs, GET_RESPONSES, connectionsAtStart + newReqCount);
-    assertStatistics(fs, BYTES_RECEIVED,
-        dateSizeReadStatAtStart + newDataSizeRead);
+    assertAbfsStatistics(GET_RESPONSES, connectionsAtStart + newReqCount, fs.getInstrumentationMap());
+    assertAbfsStatistics(BYTES_RECEIVED,
+        dateSizeReadStatAtStart + newDataSizeRead, fs.getInstrumentationMap());
 
     // third read adjacent to second but not exactly sequential.
     // if alwaysReadBufferSize is off, this is another random read
@@ -576,8 +569,8 @@ public class ITestAzureBlobFileSystemRandomRead extends
         newDataSizeRead += THIRTY_BYTES;
       }
 
-      assertStatistics(fs, GET_RESPONSES, connectionsAtStart + newReqCount);
-      assertStatistics(fs, BYTES_RECEIVED, dateSizeReadStatAtStart + newDataSizeRead);
+    assertAbfsStatistics(GET_RESPONSES, connectionsAtStart + newReqCount, fs.getInstrumentationMap());
+    assertAbfsStatistics(BYTES_RECEIVED, dateSizeReadStatAtStart + newDataSizeRead, fs.getInstrumentationMap());
   }
 
   private long sequentialRead(String version,
