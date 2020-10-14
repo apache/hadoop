@@ -67,10 +67,10 @@ public class TestIOStatisticsSnapshot extends AbstractHadoopTestBase {
 
   @Test
   public void testTrackedValues() throws Throwable {
-    verifyCounterStatisticValue(snapshot, "c1", 0L);
-    verifyGaugeStatisticValue(snapshot, "g1", 1L);
-    verifyMinimumStatisticValue(snapshot, "m1", -1L);
-    verifyMeanStatisticValue(snapshot, "mean0",
+    verifyStatisticCounterValue(snapshot, "c1", 0L);
+    verifyStatisticGaugeValue(snapshot, "g1", 1L);
+    verifyStatisticMinimumValue(snapshot, "m1", -1L);
+    verifyStatisticMeanValue(snapshot, "mean0",
         new MeanStatistic(0, 1));
   }
 
@@ -79,7 +79,7 @@ public class TestIOStatisticsSnapshot extends AbstractHadoopTestBase {
     // expect an exception to be raised when
     // an assertion is made about the value of an unknown statistics
     assertThatThrownBy(() ->
-        verifyCounterStatisticValue(snapshot, "anything", 0))
+        verifyStatisticCounterValue(snapshot, "anything", 0))
         .isInstanceOf(AssertionError.class);
   }
 
@@ -126,19 +126,19 @@ public class TestIOStatisticsSnapshot extends AbstractHadoopTestBase {
   public void verifyDeserializedInstance(
       final IOStatistics deser) {
     LOG.info("deserialized {}", deser);
-    verifyCounterStatisticValue(deser, "c1", 0L);
-    verifyGaugeStatisticValue(deser, "g1", 1L);
-    verifyMinimumStatisticValue(deser, "m1", -1L);
-    verifyMeanStatisticValue(deser, "mean0",
+    verifyStatisticCounterValue(deser, "c1", 0L);
+    verifyStatisticGaugeValue(deser, "g1", 1L);
+    verifyStatisticMinimumValue(deser, "m1", -1L);
+    verifyStatisticMeanValue(deser, "mean0",
         new MeanStatistic(0, 1));
-    verifyMeanStatisticValue(deser, "mean1",
+    verifyStatisticMeanValue(deser, "mean1",
         snapshot.meanStatistics().get("mean1"));
   }
 
   @Test
   public void testJavaRoundTrip() throws Throwable {
     verifyDeserializedInstance(
-        IOStatisticAssertions.javaRoundTrip(
+        IOStatisticAssertions.statisticsJavaRoundTrip(
             snapshot));
 
 

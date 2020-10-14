@@ -163,7 +163,7 @@ public final class IOStatisticAssertions {
    * @param value expected value.
    * @return the value (which always equals the expected value)
    */
-  public static long verifyCounterStatisticValue(
+  public static long verifyStatisticCounterValue(
       final IOStatistics stats,
       final String key,
       final long value) {
@@ -178,7 +178,7 @@ public final class IOStatisticAssertions {
    * @param value expected value.
    * @return the value (which always equals the expected value)
    */
-  public static long verifyGaugeStatisticValue(
+  public static long verifyStatisticGaugeValue(
       final IOStatistics stats,
       final String key,
       final long value) {
@@ -193,7 +193,7 @@ public final class IOStatisticAssertions {
    * @param value expected value.
    * @return the value (which always equals the expected value)
    */
-  public static long verifyMaximumStatisticValue(
+  public static long verifyStatisticMaximumValue(
       final IOStatistics stats,
       final String key,
       final long value) {
@@ -208,7 +208,7 @@ public final class IOStatisticAssertions {
    * @param value expected value.
    * @return the value (which always equals the expected value)
    */
-  public static long verifyMinimumStatisticValue(
+  public static long verifyStatisticMinimumValue(
       final IOStatistics stats,
       final String key,
       final long value) {
@@ -223,7 +223,7 @@ public final class IOStatisticAssertions {
    * @param value expected value.
    * @return the value (which always equals the expected value)
    */
-  public static MeanStatistic verifyMeanStatisticValue(
+  public static MeanStatistic verifyStatisticMeanValue(
       final IOStatistics stats,
       final String key,
       final MeanStatistic value) {
@@ -279,7 +279,7 @@ public final class IOStatisticAssertions {
    * @param map map to look up
    * @return an ongoing assertion
    */
-  private static AbstractLongAssert<?> assertThatLongStatistic(
+  private static AbstractLongAssert<?> assertThatStatisticLong(
       final String type,
       final String key,
       final Map<String, Long> map) {
@@ -295,10 +295,10 @@ public final class IOStatisticAssertions {
    * @param key statistic key
    * @return an ongoing assertion
    */
-  public static AbstractLongAssert<?> assertThatCounterStatistic(
+  public static AbstractLongAssert<?> assertThatStatisticCounter(
       final IOStatistics stats,
       final String key) {
-    return assertThatLongStatistic(COUNTER, key,
+    return assertThatStatisticLong(COUNTER, key,
         verifyStatisticsNotNull(stats).counters());
   }
 
@@ -309,10 +309,10 @@ public final class IOStatisticAssertions {
    * @param key statistic key
    * @return an ongoing assertion
    */
-  public static AbstractLongAssert<?> assertThatGaugeStatistic(
+  public static AbstractLongAssert<?> assertThatStatisticGauge(
       final IOStatistics stats,
       final String key) {
-    return assertThatLongStatistic(GAUGE, key,
+    return assertThatStatisticLong(GAUGE, key,
         verifyStatisticsNotNull(stats).gauges());
   }
 
@@ -323,10 +323,10 @@ public final class IOStatisticAssertions {
    * @param key statistic key
    * @return an ongoing assertion
    */
-  public static AbstractLongAssert<?> assertThatMinimumStatistic(
+  public static AbstractLongAssert<?> assertThatStatisticMinimum(
       final IOStatistics stats,
       final String key) {
-    return assertThatLongStatistic(MINIMUM, key,
+    return assertThatStatisticLong(MINIMUM, key,
         verifyStatisticsNotNull(stats).minimums());
   }
 
@@ -337,10 +337,10 @@ public final class IOStatisticAssertions {
    * @param key statistic key
    * @return an ongoing assertion
    */
-  public static AbstractLongAssert<?> assertThatMaximumStatistic(
+  public static AbstractLongAssert<?> assertThatStatisticMaximum(
       final IOStatistics stats,
       final String key) {
-    return assertThatLongStatistic(MAXIMUM, key,
+    return assertThatStatisticLong(MAXIMUM, key,
         verifyStatisticsNotNull(stats).maximums());
   }
 
@@ -351,7 +351,7 @@ public final class IOStatisticAssertions {
    * @param key statistic key
    * @return an ongoing assertion
    */
-  public static ObjectAssert<MeanStatistic> assertThatMeanStatistic(
+  public static ObjectAssert<MeanStatistic> assertThatStatisticMean(
       final IOStatistics stats,
       final String key) {
     return assertThatStatistic(MEAN, key,
@@ -366,12 +366,12 @@ public final class IOStatisticAssertions {
    * @param key statistic key
    * @return an ongoing assertion
    */
-  public static ObjectAssert<MeanStatistic> assertThatMeanStatisticMatches(
+  public static ObjectAssert<MeanStatistic> assertThatStatisticMeanMatches(
       final IOStatistics stats,
       final String key,
       final long samples,
       final long sum) {
-    return assertThatMeanStatistic(stats, key)
+    return assertThatStatisticMean(stats, key)
         .matches(p -> (p.getSamples() == samples),
             "samples == " + samples)
         .matches(p -> (p.getSum() == sum),
@@ -415,7 +415,7 @@ public final class IOStatisticAssertions {
    * @param stats statistics source
    * @param key statistic key
    */
-  public static void assertCounterStatisticIsTracked(
+  public static void assertStatisticCounterIsTracked(
       final IOStatistics stats,
       final String key) {
     assertTracked(stats, COUNTER, key,
@@ -427,7 +427,7 @@ public final class IOStatisticAssertions {
    * @param stats statistics source
    * @param key statistic key
    */
-  public static void assertCounterStatisticIsUntracked(
+  public static void assertStatisticCounterIsUntracked(
       final IOStatistics stats,
       final String key) {
     assertUntracked(stats, COUNTER, key,
@@ -480,7 +480,7 @@ public final class IOStatisticAssertions {
    * @param stat statistic
    * @return the deserialized version.
    */
-  public static IOStatistics javaRoundTrip(final IOStatistics stat)
+  public static IOStatistics statisticsJavaRoundTrip(final IOStatistics stat)
       throws IOException, ClassNotFoundException {
     assertThat(stat).isInstanceOf(Serializable.class);
     ByteArrayOutputStream baos = new ByteArrayOutputStream(1024);

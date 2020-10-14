@@ -34,9 +34,9 @@ import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertCounterStatisticIsTracked;
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertCounterStatisticIsUntracked;
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyCounterStatisticValue;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticCounterIsTracked;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticCounterIsUntracked;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringifyIOStatistics;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringifyIOStatisticsSource;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToString;
@@ -101,9 +101,9 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
    */
   @Test
   public void testEval() throws Throwable {
-    verifyCounterStatisticValue(statistics, EVAL, 0);
+    verifyStatisticCounterValue(statistics, EVAL, 0);
     evalLong = 10;
-    verifyCounterStatisticValue(statistics, EVAL, 10);
+    verifyStatisticCounterValue(statistics, EVAL, 10);
   }
 
   /**
@@ -111,9 +111,9 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
    */
   @Test
   public void testAlong() throws Throwable {
-    verifyCounterStatisticValue(statistics, ALONG, 0);
+    verifyStatisticCounterValue(statistics, ALONG, 0);
     aLong.addAndGet(1);
-    verifyCounterStatisticValue(statistics, ALONG, 1);
+    verifyStatisticCounterValue(statistics, ALONG, 1);
   }
 
   /**
@@ -121,9 +121,9 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
    */
   @Test
   public void testAint() throws Throwable {
-    verifyCounterStatisticValue(statistics, AINT, 0);
+    verifyStatisticCounterValue(statistics, AINT, 0);
     aInt.addAndGet(1);
-    verifyCounterStatisticValue(statistics, AINT, 1);
+    verifyStatisticCounterValue(statistics, AINT, 1);
   }
 
   /**
@@ -131,9 +131,9 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
    */
   @Test
   public void testCounter() throws Throwable {
-    verifyCounterStatisticValue(statistics, COUNT, 0);
+    verifyStatisticCounterValue(statistics, COUNT, 0);
     counter.incr();
-    verifyCounterStatisticValue(statistics, COUNT, 1);
+    verifyStatisticCounterValue(statistics, COUNT, 1);
   }
 
   /**
@@ -178,7 +178,7 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
 
   @Test
   public void testUnknownStatistic() throws Throwable {
-    assertCounterStatisticIsUntracked(statistics, "anything");
+    assertStatisticCounterIsUntracked(statistics, "anything");
   }
 
   @Test
@@ -186,7 +186,7 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
     // expect an exception to be raised when an assertion
     // is made that an unknown statistic is tracked,.
     assertThatThrownBy(() ->
-        assertCounterStatisticIsTracked(statistics, "anything"))
+        assertStatisticCounterIsTracked(statistics, "anything"))
         .isInstanceOf(AssertionError.class);
   }
 
@@ -195,7 +195,7 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
     // expect an exception to be raised when
     // an assertion is made about the value of an unknown statistics
     assertThatThrownBy(() ->
-        verifyCounterStatisticValue(statistics, "anything", 0))
+        verifyStatisticCounterValue(statistics, "anything", 0))
         .isInstanceOf(AssertionError.class);
   }
 
@@ -207,7 +207,7 @@ public class TestDynamicIOStatistics extends AbstractHadoopTestBase {
     incrementAllCounters();
     IOStatistics stat = IOStatisticsSupport.snapshotIOStatistics(statistics);
     incrementAllCounters();
-    IOStatistics deser = IOStatisticAssertions.javaRoundTrip(stat);
+    IOStatistics deser = IOStatisticAssertions.statisticsJavaRoundTrip(stat);
     assertThat(deser.counters().keySet())
         .containsExactlyInAnyOrder(KEYS);
     for (Map.Entry<String, Long> e : deser.counters().entrySet()) {

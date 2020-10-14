@@ -518,4 +518,17 @@ public final class IOStatisticsBinding {
         ? factory.trackDuration(statistic)
         : STUB_DURATION_TRACKER;
   }
+
+  /**
+   * Create a DurationTrackerFactory which aggregates the tracking
+   * of two other factories.
+   * @param local local tracker factory
+   * @param global global tracker factory
+   * @return a factory
+   */
+  public static DurationTrackerFactory pairedTrackerFactory(
+      final DurationTrackerFactory local,
+      final DurationTrackerFactory global) {
+    return new PairedDurationTrackerFactory(local, global);
+}
 }

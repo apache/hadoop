@@ -76,7 +76,7 @@ public class TestDurationTracking extends AbstractHadoopTestBase {
   public void testDurationTryWithResources() throws Throwable {
     DurationTracker tracker =
         stats.trackDuration(REQUESTS);
-    verifyCounterStatisticValue(stats, REQUESTS, 1L);
+    verifyStatisticCounterValue(stats, REQUESTS, 1L);
     sleep();
     tracker.close();
     try (DurationTracker ignored =
