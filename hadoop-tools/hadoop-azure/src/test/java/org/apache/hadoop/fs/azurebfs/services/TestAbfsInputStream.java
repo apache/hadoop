@@ -24,6 +24,8 @@ import org.junit.Assert;
 import org.junit.Test;
 import java.util.Arrays;
 
+import org.assertj.core.api.Assertions;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -544,15 +546,18 @@ public class TestAbfsInputStream extends
     getExpectedBufferData(readRequestSize, readAheadRequestSize,
         expectedSecondReadAheadBufferContents);
 
-    assertTrue("Read should be of exact requested size",
-              inputStream.read(firstReadBuffer, 0, readRequestSize) == readRequestSize);
+    Assertions.assertThat(inputStream.read(firstReadBuffer, 0, readRequestSize))
+        .describedAs("Read should be of exact requested size")
+        .isEqualTo(readRequestSize);
+
     assertTrue("Data mismatch found in RAH1",
         Arrays.equals(firstReadBuffer,
             expectedFirstReadAheadBufferContents));
 
+    Assertions.assertThat(inputStream.read(secondReadBuffer, 0, readAheadRequestSize))
+        .describedAs("Read should be of exact requested size")
+        .isEqualTo(readAheadRequestSize);
 
-    assertTrue("Read should be of exact requested size",
-        inputStream.read(secondReadBuffer, 0, readAheadRequestSize) == readAheadRequestSize);
     assertTrue("Data mismatch found in RAH2",
         Arrays.equals(secondReadBuffer,
             expectedSecondReadAheadBufferContents));
@@ -584,15 +589,21 @@ public class TestAbfsInputStream extends
     AbfsInputStream inputStream = this.getAbfsStore(fs)
         .openFileForRead(testPath, null);
 
-    assertEquals("Unexpected AbfsInputStream buffer size", readRequestSize,
-        inputStream.getBufferSize());
-    assertEquals("Unexpected ReadAhead queue depth", readAheadQueueDepth,
-        inputStream.getReadAheadQueueDepth());
-    assertEquals("Unexpected AlwaysReadBufferSize settings",
-        alwaysReadBufferSizeEnabled,
-        inputStream.shouldAlwaysReadBufferSize());
-    assertEquals("Unexpected readAhead block size", readAheadBlockSize,
-        ReadBufferManager.getBufferManager().getReadAheadBlockSize());
+    Assertions.assertThat(inputStream.getBufferSize())
+        .describedAs("Unexpected AbfsInputStream buffer size")
+        .isEqualTo(readRequestSize);
+
+    Assertions.assertThat(inputStream.getReadAheadQueueDepth())
+        .describedAs("Unexpected ReadAhead queue depth")
+        .isEqualTo(readAheadQueueDepth);
+
+    Assertions.assertThat(inputStream.shouldAlwaysReadBufferSize())
+        .describedAs("Unexpected AlwaysReadBufferSize settings")
+        .isEqualTo(alwaysReadBufferSizeEnabled);
+
+    Assertions.assertThat(ReadBufferManager.getBufferManager().getReadAheadBlockSize())
+        .describedAs("Unexpected readAhead block size")
+        .isEqualTo(readAheadBlockSize);
 
     return inputStream;
   }
@@ -650,8 +661,10 @@ public class TestAbfsInputStream extends
       }
     }
 
-    assertEquals("File not created of expected size", testFileSize,
-        fs.getFileStatus(testFilePath).getLen());
+    Assertions.assertThat(fs.getFileStatus(testFilePath).getLen())
+        .describedAs("File not created of expected size")
+        .isEqualTo(testFileSize);
+
     return fs;
   }
 }
