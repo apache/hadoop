@@ -143,6 +143,8 @@ public class SLSRunner extends Configured implements Tool {
 
   private static boolean exitAtTheFinish = false;
 
+  private static final String DEFAULT_USER = "default";
+
   /**
    * The type of trace in input.
    */
@@ -732,7 +734,8 @@ public class SLSRunner extends Configured implements Tool {
     // creation
     while ((job = (SynthJob) stjp.getNextJob()) != null) {
       // only support MapReduce currently
-      String user = job.getUser();
+      String user = job.getUser() == null ? DEFAULT_USER :
+              job.getUser();
       String jobQueue = job.getQueueName();
       String oldJobId = job.getJobID().toString();
       long jobStartTimeMS = job.getSubmissionTime();

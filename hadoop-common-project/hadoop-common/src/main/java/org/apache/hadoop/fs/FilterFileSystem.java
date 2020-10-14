@@ -463,6 +463,11 @@ public class FilterFileSystem extends FileSystem {
   }
 
   @Override
+  public void msync() throws IOException, UnsupportedOperationException {
+    fs.msync();
+  }
+
+  @Override
   public void access(Path path, FsAction mode) throws AccessControlException,
       FileNotFoundException, IOException {
     fs.access(path, mode);

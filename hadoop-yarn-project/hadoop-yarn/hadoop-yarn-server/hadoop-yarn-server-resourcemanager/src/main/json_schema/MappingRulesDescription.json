@@ -40,6 +40,7 @@
                               "secondaryGroup",
                               "primaryGroupUser",
                               "secondaryGroupUser",
+                              "applicationName",
                               "setDefaultQueue",
                               "custom" ] },
                      "parentQueue": { "type": "string" },

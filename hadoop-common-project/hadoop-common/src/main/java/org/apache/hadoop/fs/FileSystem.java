@@ -2229,7 +2229,9 @@ public abstract class FileSystem extends Configured
     @Override
     @SuppressWarnings("unchecked")
     public T next() throws IOException {
-      Preconditions.checkState(hasNext(), "No more items in iterator");
+      if (!hasNext()) {
+        throw new NoSuchElementException("No more items in iterator");
+      }
       if (i == entries.getEntries().length) {
         fetchMore();
       }
@@ -2672,6 +2674,19 @@ public abstract class FileSystem extends Configured
    * @throws IOException see specific implementation
    */
   public abstract FileStatus getFileStatus(Path f) throws IOException;
+
+  /**
+   * Synchronize client metadata state.
+   * <p/>In some FileSystem implementations such as HDFS metadata
+   * synchronization is essential to guarantee consistency of read requests
+   * particularly in HA setting.
+   * @throws IOException
+   * @throws UnsupportedOperationException
+   */
+  public void msync() throws IOException, UnsupportedOperationException {
+    throw new UnsupportedOperationException(getClass().getCanonicalName() +
+        " does not support method msync");
+  }
 
   /**
    * Checks if the user can access a path.  The mode specifies which access

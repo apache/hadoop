@@ -306,7 +306,7 @@ public class RouterClientProtocol implements ClientProtocol {
    * @return If caused by an unavailable subcluster. False if the should not be
    *         retried (e.g., NSQuotaExceededException).
    */
-  private static boolean isUnavailableSubclusterException(
+  protected static boolean isUnavailableSubclusterException(
       final IOException ioe) {
     if (ioe instanceof ConnectException ||
         ioe instanceof ConnectTimeoutException ||
@@ -1799,10 +1799,11 @@ public class RouterClientProtocol implements ClientProtocol {
   }
 
   @Override
-  public HAServiceProtocol.HAServiceState getHAServiceState()
-      throws IOException {
-    rpcServer.checkOperation(NameNode.OperationCategory.READ, false);
-    return null;
+  public HAServiceProtocol.HAServiceState getHAServiceState() {
+    if (rpcServer.isSafeMode()) {
+      return HAServiceProtocol.HAServiceState.STANDBY;
+    }
+    return HAServiceProtocol.HAServiceState.ACTIVE;
   }
 
   /**

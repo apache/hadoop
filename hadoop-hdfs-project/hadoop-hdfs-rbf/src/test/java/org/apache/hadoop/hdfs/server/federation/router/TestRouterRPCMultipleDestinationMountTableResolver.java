@@ -38,6 +38,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -45,6 +46,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
@@ -60,6 +62,7 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDestinationRes
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.tools.federation.RouterAdmin;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
@@ -638,6 +641,42 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
     ContentSummary cs = routerFs.getContentSummary(path);
     assertEquals(nsQuota, cs.getQuota());
     assertEquals(ssQuota, cs.getSpaceQuota());
+  }
+
+  /**
+   * Test write on mount point with multiple destinations
+   * and making a one of the destination's subcluster unavailable.
+   */
+  @Test
+  public void testWriteWithUnavailableSubCluster() throws IOException {
+    //create a mount point with multiple destinations
+    Path path = new Path("/testWriteWithUnavailableSubCluster");
+    Map<String, String> destMap = new HashMap<>();
+    destMap.put("ns0", "/testWriteWithUnavailableSubCluster");
+    destMap.put("ns1", "/testWriteWithUnavailableSubCluster");
+    nnFs0.mkdirs(path);
+    nnFs1.mkdirs(path);
+    MountTable addEntry =
+        MountTable.newInstance("/testWriteWithUnavailableSubCluster", destMap);
+    addEntry.setQuota(new RouterQuotaUsage.Builder().build());
+    addEntry.setDestOrder(DestinationOrder.RANDOM);
+    addEntry.setFaultTolerant(true);
+    assertTrue(addMountTable(addEntry));
+
+    //make one subcluster unavailable and perform write on mount point
+    MiniDFSCluster dfsCluster = cluster.getCluster();
+    dfsCluster.shutdownNameNode(0);
+    FSDataOutputStream out = null;
+    Path filePath = new Path(path, "aa");
+    try {
+      out = routerFs.create(filePath);
+      out.write("hello".getBytes());
+      out.hflush();
+      assertTrue(routerFs.exists(filePath));
+    } finally {
+      IOUtils.closeStream(out);
+      dfsCluster.restartNameNode(0);
+    }
   }
 
   /**

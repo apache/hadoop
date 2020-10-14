@@ -106,6 +106,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.FileEncryptionInfoProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -1455,6 +1456,19 @@ public class WebHdfsFileSystem extends FileSystem
       @Override
       SnapshottableDirectoryStatus[] decodeResponse(Map<?, ?> json) {
         return JsonUtilClient.toSnapshottableDirectoryList(json);
+      }
+    }.run();
+  }
+
+  public SnapshotStatus[] getSnapshotListing(final Path snapshotDir)
+      throws IOException {
+    storageStatistics
+        .incrementOpCounter(OpType.GET_SNAPSHOT_LIST);
+    final HttpOpParam.Op op = GetOpParam.Op.GETSNAPSHOTLIST;
+    return new FsPathResponseRunner<SnapshotStatus[]>(op, snapshotDir) {
+      @Override
+      SnapshotStatus[] decodeResponse(Map<?, ?> json) {
+        return JsonUtilClient.toSnapshotList(json);
       }
     }.run();
   }

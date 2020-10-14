@@ -623,6 +623,10 @@ public class MiniDFSCluster implements AutoCloseable {
       this.startOpt = startOpt;
       this.conf = conf;
     }
+
+    public void setConf(Configuration conf) {
+      this.conf = conf;
+    }
     
     public void setStartOpt(StartupOption startOpt) {
       this.startOpt = startOpt;
@@ -2186,6 +2190,17 @@ public class MiniDFSCluster implements AutoCloseable {
   }
 
   /**
+   * Update an existing NameNode's configuration.
+   */
+  public void setNameNodeConf(int nnIndex, Configuration nnConf) {
+    NameNodeInfo info = getNN(nnIndex);
+    if (info == null) {
+      throw new RuntimeException("Invalid nnIndex!");
+    }
+    info.setConf(nnConf);
+  }
+
+  /**
    * Restart the namenode at a given index. Optionally wait for the cluster
    * to become active.
    */
@@ -2679,7 +2694,8 @@ public class MiniDFSCluster implements AutoCloseable {
   public void rollEditLogAndTail(int nnIndex) throws Exception {
     getNameNode(nnIndex).getRpcServer().rollEditLog();
     for (int i = 2; i < getNumNameNodes(); i++) {
-      getNameNode(i).getNamesystem().getEditLogTailer().doTailEdits();
+      long el = getNameNode(i).getNamesystem().getEditLogTailer().doTailEdits();
+      LOG.info("editsLoaded {}", el);
     }
   }
 

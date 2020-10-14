@@ -166,6 +166,11 @@ public class MappingRuleCreator {
           getTargetQueue(rule.getParentQueue(),
               "%user"), create);
       break;
+    case APPLICATION_NAME:
+      action = MappingRuleActions.createPlaceToQueueAction(
+          getTargetQueue(rule.getParentQueue(),
+              "%application"), create);
+      break;
     case SET_DEFAULT_QUEUE:
       String defaultQueue = rule.getValue();
       checkArgument(defaultQueue != null, "default queue is undefined");
