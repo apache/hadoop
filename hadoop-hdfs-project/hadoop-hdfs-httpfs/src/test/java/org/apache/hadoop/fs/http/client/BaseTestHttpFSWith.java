@@ -349,6 +349,42 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     fs.close();
   }
 
+  private void testListSymLinkStatus() throws Exception {
+    if (isLocalFS()) {
+      // do not test the the symlink for local FS.
+      return;
+    }
+    FileSystem fs = FileSystem.get(getProxiedFSConf());
+    boolean isWebhdfs = fs instanceof WebHdfsFileSystem;
+    Path path =
+        new Path(getProxiedFSTestDir() + "-symlink", "targetFoo.txt");
+    OutputStream os = fs.create(path);
+    os.write(1);
+    os.close();
+    Path linkPath =
+        new Path(getProxiedFSTestDir()+ "-symlink", "symlinkFoo.txt");
+    fs.createSymlink(path, linkPath, false);
+    fs = getHttpFSFileSystem();
+    FileStatus linkStatus = fs.getFileStatus(linkPath);
+    FileStatus status1 = fs.getFileStatus(path);
+
+    FileStatus[] stati = fs.listStatus(path.getParent());
+    assertEquals(2, stati.length);
+
+    int countSymlink = 0;
+    for (int i = 0; i < stati.length; i++) {
+      FileStatus fStatus = stati[i];
+      countSymlink += fStatus.isSymlink() ? 1 : 0;
+    }
+    assertEquals(1, countSymlink);
+
+    assertFalse(status1.isSymlink());
+    if (isWebhdfs) {
+      assertTrue(linkStatus.isSymlink());
+    }
+    fs.close();
+  }
+
   private void testListStatus() throws Exception {
     FileSystem fs = FileSystem.get(getProxiedFSConf());
     boolean isDFS = fs instanceof DistributedFileSystem;
@@ -1162,6 +1198,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       break;
     case LIST_STATUS:
       testListStatus();
+      testListSymLinkStatus();
       break;
     case WORKING_DIRECTORY:
       testWorkingdirectory();
