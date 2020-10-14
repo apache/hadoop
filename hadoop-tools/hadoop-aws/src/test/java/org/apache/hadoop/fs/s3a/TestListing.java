@@ -36,7 +36,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.extractStatistics;
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyCounterStatisticValue;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -115,7 +115,7 @@ public class TestListing extends AbstractS3AMockTest {
 
     // now verify the stats went all the way through.
     IOStatistics iostats = extractStatistics(reconcilingIterator);
-    verifyCounterStatisticValue(iostats, OBJECT_LIST_REQUEST, 1);
+    verifyStatisticCounterValue(iostats, OBJECT_LIST_REQUEST, 1);
   }
 
   @Test

@@ -31,8 +31,6 @@ import org.apache.hadoop.fs.s3a.S3ListResult;
 import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 
-import static java.util.Objects.requireNonNull;
-
 /**
  * These are all the callbacks which
  * {@link org.apache.hadoop.fs.s3a.Listing} operations
@@ -47,14 +45,14 @@ public interface ListingOperationCallbacks {
    *
    * Retry policy: retry untranslated.
    * @param request request to initiate
-   * @param listingContext context with statistics to update
+   * @param trackerFactory tracker with statistics to update
    * @return the results
    * @throws IOException if the retry invocation raises one (it shouldn't).
    */
   @Retries.RetryRaw
   CompletableFuture<S3ListResult> listObjectsAsync(
           S3ListRequest request,
-          ListingContext listingContext)
+          DurationTrackerFactory trackerFactory)
           throws IOException;
 
   /**
@@ -62,7 +60,7 @@ public interface ListingOperationCallbacks {
    * Retry policy: retry untranslated.
    * @param request last list objects request to continue
    * @param prevResult last paged result to continue from
-   * @param listingContext context with statistics to update
+   * @param trackerFactory tracker with statistics to update
    * @return the next result object
    * @throws IOException none, just there for retryUntranslated.
    */
@@ -70,7 +68,7 @@ public interface ListingOperationCallbacks {
   CompletableFuture<S3ListResult> continueListObjectsAsync(
           S3ListRequest request,
           S3ListResult prevResult,
-          ListingContext listingContext)
+          DurationTrackerFactory trackerFactory)
           throws IOException;
 
   /**
@@ -125,26 +123,4 @@ public interface ListingOperationCallbacks {
    */
   boolean allowAuthoritative(Path p);
 
-  /**
-   * This is a context to pass down to the asynchronous
-   * statistic calls; it initially contains a reference
-   * to the IOStatisticsStore to update with statistics
-   * on the list requests.
-   * <p></p>
-   * If/when a telemetry context reference is to be
-   * passed across threads, this is where it can be
-   * passed around.
-   */
-  final class ListingContext {
-
-    private final DurationTrackerFactory durationTrackerFactory;
-
-    public ListingContext(final DurationTrackerFactory durationTrackerFactory) {
-      this.durationTrackerFactory = requireNonNull(durationTrackerFactory);
-    }
-
-    public DurationTrackerFactory getDurationTrackerFactory() {
-      return durationTrackerFactory;
-    }
-  }
 }

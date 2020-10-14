@@ -55,6 +55,7 @@ import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
 import org.apache.hadoop.fs.s3a.select.SelectBinding;
 import org.apache.hadoop.util.DurationInfo;
+import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
 import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
@@ -146,19 +147,19 @@ public class WriteOperationHelper implements WriteOperations {
 
   /**
    * Execute a function with retry processing.
+   * @param <T> type of return value
    * @param action action to execute (used in error messages)
    * @param path path of work (used in error messages)
    * @param idempotent does the operation have semantics
    * which mean that it can be retried even if was already executed?
    * @param operation operation to execute
-   * @param <T> type of return value
    * @return the result of the call
    * @throws IOException any IOE raised, or translated exception
    */
   public <T> T retry(String action,
       String path,
       boolean idempotent,
-      Invoker.Operation<T> operation)
+      CallableRaisingIOE<T> operation)
       throws IOException {
 
     return invoker.retry(action, path, idempotent, operation);

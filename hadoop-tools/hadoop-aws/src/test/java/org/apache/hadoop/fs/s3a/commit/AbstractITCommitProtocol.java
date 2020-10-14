@@ -72,7 +72,7 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_TASKS_SUCCEEDED;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatCounterStatistic;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsSourceToString;
 import static org.apache.hadoop.test.LambdaTestUtils.*;
 
@@ -1333,7 +1333,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     IOStatisticsSnapshot snapshot = new IOStatisticsSnapshot(
         committer.getIOStatistics());
     String commitsCompleted = COMMITTER_TASKS_SUCCEEDED.getSymbol();
-    assertThatCounterStatistic(snapshot, commitsCompleted)
+    assertThatStatisticCounter(snapshot, commitsCompleted)
         .describedAs("task commit count")
         .isEqualTo(1L);
 
@@ -1348,7 +1348,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     // the task commit count should get through the job commit
     IOStatisticsSnapshot successStats = successData.getIOStatistics();
     LOG.info("loaded statistics {}", successStats);
-    assertThatCounterStatistic(successStats, commitsCompleted)
+    assertThatStatisticCounter(successStats, commitsCompleted)
         .describedAs("task commit count")
         .isEqualTo(1L);
   }

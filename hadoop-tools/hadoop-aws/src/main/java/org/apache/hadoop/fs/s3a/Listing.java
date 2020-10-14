@@ -769,11 +769,6 @@ public class Listing extends AbstractStoreOperation {
     private S3ListResult objectsPrev;
 
     /**
-     * Context to pass into list calls.
-     */
-    private final ListingOperationCallbacks.ListingContext listingContext;
-
-    /**
      * Constructor -calls `listObjects()` on the request to populate the
      * initial set of results/fail if there was a problem talking to the bucket.
      * @param listPath path of the listing
@@ -792,12 +787,8 @@ public class Listing extends AbstractStoreOperation {
           .withDurationTracking(OBJECT_LIST_REQUEST)
           .withDurationTracking(OBJECT_CONTINUE_LIST_REQUEST)
           .build();
-      // the context contains only the duration tracker factory, at
-      // least for now
-      this.listingContext = new ListingOperationCallbacks.ListingContext(
-          iostats);
       this.s3ListResultFuture = listingOperationCallbacks
-          .listObjectsAsync(request, listingContext);
+          .listObjectsAsync(request, iostats);
     }
 
     /**
@@ -861,7 +852,7 @@ public class Listing extends AbstractStoreOperation {
         LOG.debug("[{}], Requesting next {} objects under {}",
                 listingCount, maxKeys, listPath);
         s3ListResultFuture = listingOperationCallbacks
-                .continueListObjectsAsync(request, objects, listingContext);
+                .continueListObjectsAsync(request, objects, iostats);
       }
     }
 

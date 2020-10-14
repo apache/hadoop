@@ -52,7 +52,7 @@ import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupCounterStatistic;
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyCounterStatisticValue;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToString;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_CONTINUE_LIST_REQUEST;
@@ -267,7 +267,7 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
       IOStatistics lsStats = retrieveIOStatistics(lsItr);
       String statsReport = ioStatisticsToString(lsStats);
       LOG.info("Listing Statistics: {}", statsReport);
-      verifyCounterStatisticValue(lsStats, OBJECT_LIST_REQUEST, 1);
+      verifyStatisticCounterValue(lsStats, OBJECT_LIST_REQUEST, 1);
       long continuations = lookupCounterStatistic(lsStats,
           OBJECT_CONTINUE_LIST_REQUEST);
       // calculate expected #of continuations

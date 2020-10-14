@@ -53,10 +53,10 @@ import java.io.IOException;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatMinimumStatistic;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticMinimum;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupMaximumStatistic;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupMeanStatistic;
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyCounterStatisticValue;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsSourceToString;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToString;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
@@ -132,7 +132,12 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
           ioStatisticsSourceToString(in));
       IOSTATS.aggregate(in.getIOStatistics());
     }
-    IOUtils.closeStream(s3aFS);
+    if (s3aFS != null) {
+      LOG.info("FileSystem statistics {}",
+          ioStatisticsSourceToString(s3aFS));
+      FILESYSTEM_IOSTATS.aggregate(s3aFS.getIOStatistics());
+      IOUtils.closeStream(s3aFS);
+    }
   }
 
   @AfterClass
@@ -470,11 +475,11 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
         S3AInputPolicy.Random.ordinal(),
         streamStatistics.getInputPolicy());
     IOStatistics ioStatistics = streamStatistics.getIOStatistics();
-    verifyCounterStatisticValue(
+    verifyStatisticCounterValue(
         ioStatistics,
         StreamStatisticNames.STREAM_READ_ABORTED,
         1);
-    verifyCounterStatisticValue(
+    verifyStatisticCounterValue(
         ioStatistics,
         StreamStatisticNames.STREAM_READ_SEEK_POLICY_CHANGED,
         2);
@@ -518,7 +523,7 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
     IOStatistics iostats = in.getIOStatistics();
     long maxHttpGet = lookupMaximumStatistic(iostats,
         ACTION_HTTP_GET_REQUEST + SUFFIX_MAX);
-    assertThatMinimumStatistic(iostats,
+    assertThatStatisticMinimum(iostats,
         ACTION_HTTP_GET_REQUEST + SUFFIX_MIN)
         .isGreaterThan(0)
         .isLessThan(maxHttpGet);
