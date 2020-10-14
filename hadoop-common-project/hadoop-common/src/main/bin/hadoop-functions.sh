@@ -1126,6 +1126,8 @@ function hadoop_validate_classname
 ## @param        envvar
 ## @param        checkstring
 ## @param        appendstring
+
+
 function hadoop_add_param
 {
   #
@@ -1136,19 +1138,29 @@ function hadoop_add_param
   #
   # doing it this way allows us to support all sorts of
   # different syntaxes, just so long as they are space
-  # delimited
+  # delimited.
   #
-  if [[ ! ${!1} =~ $2 ]] ; then
-    #shellcheck disable=SC2140
+  # testing with string regexp fails (see HADOOP-16649) : we' ll test equality on each string instead.
+
+  accepted=true
+  for s in $(echo "${!1}" | tr ' ' '\n'); do
+    if [  $2 = $s ] ; then
+      accepted=false
+      hadoop_debug " $s already contains $2"
+    fi
+  done
+
+  if [ $accepted == true ]; then
     eval "$1"="'${!1} $3'"
     if [[ ${!1:0:1} = ' ' ]]; then
       #shellcheck disable=SC2140
       eval "$1"="'${!1# }'"
     fi
-    hadoop_debug "$1 accepted $3"
+    hadoop_debug "$1 accepted $2 - $3"
   else
-    hadoop_debug "$1 declined $3"
+    hadoop_debug "skipped! "
   fi
+
 }
 
 ## @description  Register the given `shellprofile` to the Hadoop
