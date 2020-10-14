@@ -36,11 +36,12 @@ import org.apache.hadoop.fs.s3a.impl.statistics.DelegationTokenStatistics;
 import org.apache.hadoop.fs.s3a.impl.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.s3a.impl.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.fs.s3a.s3guard.MetastoreInstrumentation;
+import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
-import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsStoreBuilder;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricStringBuilder;
 import org.apache.hadoop.metrics2.MetricsCollector;
@@ -61,18 +62,23 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.apache.hadoop.fs.s3a.Constants.STREAM_READ_GAUGE_INPUT_POLICY;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringifyIOStatistics;
-import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.stubDurationTracker;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_EXECUTOR_ACQUIRED;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_HTTP_GET_REQUEST;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_HTTP_HEAD_REQUEST;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_CONTINUE_LIST_REQUEST;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_UNBUFFERED;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 
@@ -154,6 +160,15 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       = new S3GuardInstrumentation();
 
   /**
+   * This is the IOStatistics store for the S3AFileSystem
+   * instance.
+   * It is not kept in sync with the rest of the S3A instrumentation;
+   * instead it collects its data when the inner statistics classes
+   * push back their data.
+   */
+  private final IOStatisticsStore instanceIOStatistics;
+
+  /**
    * Gauges to create.
    * <p></p>
    * All statistics which are not gauges or quantiles
@@ -176,6 +191,14 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       S3GUARD_METADATASTORE_PUT_PATH_LATENCY,
       S3GUARD_METADATASTORE_THROTTLE_RATE,
       STORE_IO_THROTTLE_RATE
+  };
+
+  public static final String[] DURATIONS_TO_TRACK = {
+      ACTION_HTTP_GET_REQUEST,
+      ACTION_HTTP_HEAD_REQUEST,
+      ACTION_EXECUTOR_ACQUIRED,
+      OBJECT_CONTINUE_LIST_REQUEST,
+      OBJECT_LIST_REQUEST
   };
 
   public S3AInstrumentation(URI name) {
@@ -204,6 +227,27 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
         "events", "frequency (Hz)", interval);
 
     registerAsMetricsSource(name);
+
+    // now set up the instance IOStatistics.
+    // create the builder
+    IOStatisticsStoreBuilder builder = iostatisticsStore();
+
+    // register the durations and add to a set of durations
+    // being tracked
+    Set<String> durations = new HashSet<>();
+    for (String d : DURATIONS_TO_TRACK) {
+      builder.withDurationTracking(d);
+      durations.add(d);
+    }
+    // then for all the Statistics excluding the gauges, quantiles
+    // *and* those tracked durations, register as a counter.
+    EnumSet.allOf(Statistic.class).stream()
+        .filter(statistic -> !gauges.contains(statistic))
+        .filter(statistic -> !quantiles.contains(statistic))
+        .map(Statistic::getSymbol)
+        .filter(key -> !durations.contains(key))
+        .forEach(builder::withCounters);
+    instanceIOStatistics = builder.build();
   }
 
   @VisibleForTesting
@@ -394,6 +438,22 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
   }
 
   /**
+   * Get the instance IO Statistics.
+   * @return statistics.
+   */
+  public IOStatisticsStore getInstanceIOStatistics() {
+    return instanceIOStatistics;
+  }
+
+  /**
+   * Get the duration tracker factory.
+   * @return duration tracking for the instrumentation.
+   */
+  public DurationTrackerFactory getDurationTrackerFactory() {
+    return instanceIOStatistics;
+  }
+
+  /**
    * Indicate that S3A created a file.
    */
   public void fileCreated() {
@@ -455,7 +515,9 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
    * @param count increment value
    */
   public void incrementCounter(Statistic op, long count) {
-    incrementNamedCounter(op.getSymbol(), count);
+    String name = op.getSymbol();
+    incrementNamedCounter(name, count);
+    instanceIOStatistics.incrementCounter(name, count);
   }
 
   private void incrementNamedCounter(final String name, final long count) {
@@ -597,11 +659,6 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
     private final FileSystem.Statistics filesystemStatistics;
 
-    /**
-     * The statistics from the last merge.
-     */
-    private IOStatisticsSnapshot mergedStats;
-
     private InputStreamStatistics(
         FileSystem.Statistics filesystemStatistics) {
       this.filesystemStatistics = filesystemStatistics;
@@ -626,13 +683,12 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               StreamStatisticNames.STREAM_READ_SEEK_BYTES_READ,
               StreamStatisticNames.STREAM_READ_SEEK_BYTES_SKIPPED,
               StreamStatisticNames.STREAM_READ_TOTAL_BYTES,
+              StreamStatisticNames.STREAM_READ_UNBUFFERED,
               StreamStatisticNames.STREAM_READ_VERSION_MISMATCHES)
           .withGauges(STREAM_READ_GAUGE_INPUT_POLICY)
           .withDurationTracking(ACTION_HTTP_GET_REQUEST)
           .build();
       setIOStatistics(st);
-      // create initial snapshot of merged statistics
-      mergedStats = snapshotIOStatistics(st);
     }
 
     private long increment(String name) {
@@ -775,24 +831,25 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     @Override
     public void unbuffered() {
       merge(false);
+      increment(STREAM_READ_UNBUFFERED);
     }
 
     /**
      * Merge the statistics into the filesystem's instrumentation instance.
-     * Takes a diff between the current version of the stats and the
-     * version of the stats when merge was last called, and merges the diff
-     * into the instrumentation instance. Used to periodically merge the
-     * stats into the fs-wide stats.
      * <p></p>
-     * <b>Behavior is undefined if called on a closed instance.</b>
+     * Resets the IOStatistics of the stream so that subsequent calls
+     * to getIOStatistics() on the stream only get the later values.
      */
     private void merge(boolean isClosed) {
 
+      IOStatisticsStore ioStatistics = getIOStatistics();
       LOG.debug("Merging statistics into FS statistics in {}: {}",
           (isClosed ? "close()" : "unbuffer()"),
-          demandStringifyIOStatistics(getIOStatistics()));
+          demandStringifyIOStatistics(ioStatistics));
       mergeInputStreamStatistics();
-      mergedStats = snapshotIOStatistics(getIOStatistics());
+      // merge in all the IOStatistics
+      getInstanceIOStatistics().aggregate(ioStatistics);
+      ioStatistics.reset();
 
       if (isClosed) {
         // stream is being closed.
@@ -812,8 +869,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
      */
     void promoteIOCounter(String name) {
       incrementNamedCounter(name,
-          lookupCounterValue(name)
-              - mergedStats.counters().get(name));
+          lookupCounterValue(name));
     }
 
     /**
@@ -908,7 +964,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
     @Override
     public long getReadOperations() {
-      return lookupCounterValue(StreamStatisticNames.STREAM_READ_CLOSED);
+      return lookupCounterValue(StreamStatisticNames.STREAM_READ_OPERATIONS);
     }
 
     @Override
@@ -971,6 +1027,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     incrementCounter(STREAM_WRITE_FAILURES,
         source.lookupCounterValue(
             StreamStatisticNames.STREAM_WRITE_EXCEPTIONS));
+    // merge in all the IOStatistics
+    getInstanceIOStatistics().aggregate(source.getIOStatistics());
   }
 
   /**
@@ -1011,8 +1069,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               STREAM_WRITE_QUEUE_DURATION.getSymbol(),
               STREAM_WRITE_TOTAL_DATA.getSymbol(),
               STREAM_WRITE_FAILURES.getSymbol(),
-              STREAM_WRITE_EXCEPTIONS_COMPLETING_UPLOADS.getSymbol()
-          )
+              STREAM_WRITE_EXCEPTIONS_COMPLETING_UPLOADS.getSymbol())
           .withGauges(
               STREAM_WRITE_BLOCK_UPLOADS_PENDING.getSymbol(),
               STREAM_WRITE_BLOCK_UPLOADS_DATA_PENDING.getSymbol())

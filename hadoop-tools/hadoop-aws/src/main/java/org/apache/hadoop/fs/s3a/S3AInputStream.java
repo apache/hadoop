@@ -221,9 +221,20 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     String text = String.format("%s %s at %d",
         operation, uri, targetPos);
     changeTracker.maybeApplyConstraint(request);
-    try (DurationTracker ignored = streamStatistics.initiateGetRequest()) {
+    DurationTracker tracker = streamStatistics.initiateGetRequest();
+    try {
       object = Invoker.once(text, uri,
           () -> client.getObject(request));
+    } catch(IOException e) {
+      // input function failed: note it
+      tracker.failed();
+      // and rethrow
+      throw e;
+    } finally {
+      // update the tracker.
+      // this is called after any catch() call will have
+      // set the failed flag.
+      tracker.close();
     }
 
     changeTracker.processResponse(object, operation,

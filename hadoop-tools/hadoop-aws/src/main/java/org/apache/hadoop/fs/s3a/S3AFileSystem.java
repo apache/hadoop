@@ -126,9 +126,10 @@ import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.select.InternalSelectConstants;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperations;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperationsImpl;
+import org.apache.hadoop.fs.statistics.DurationTracker;
+import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
-import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.DelegationTokenIssuer;
@@ -193,15 +194,18 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_A
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_STAGING_ABORT_PENDING_UPLOADS;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletionIgnoringExceptions;
+import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isObjectNotFound;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AWS_SDK_METRICS_ENABLED;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.fixBucketRegion;
 import static org.apache.hadoop.fs.s3a.impl.NetworkBinding.logDnsLookup;
 import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.dirMetaToStatuses;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToString;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_CONTINUE_LIST_REQUEST;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
-import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfCallable;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.pairedTrackerFactory;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfOperation;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 import static org.apache.hadoop.util.functional.RemoteIterators.typeCastingRemoteIterator;
 
@@ -1715,13 +1719,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     @Retries.RetryRaw
     public CompletableFuture<S3ListResult> listObjectsAsync(
         S3ListRequest request,
-        ListingContext listingContext)
+        DurationTrackerFactory trackerFactory)
             throws IOException {
-      return submit(unboundedThreadPool,
-          trackDurationOfCallable(
-              listingContext.getDurationTrackerFactory(),
-              OBJECT_LIST_REQUEST,
-              () -> listObjects(request)));
+      return submit(unboundedThreadPool, () ->
+          listObjects(request,
+              pairedTrackerFactory(trackerFactory,
+                  getDurationTrackerFactory())));
     }
 
     @Override
@@ -1729,13 +1732,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     public CompletableFuture<S3ListResult> continueListObjectsAsync(
         S3ListRequest request,
         S3ListResult prevResult,
-        ListingContext listingContext)
+        DurationTrackerFactory trackerFactory)
             throws IOException {
       return submit(unboundedThreadPool,
-          trackDurationOfCallable(
-              listingContext.getDurationTrackerFactory(),
-              OBJECT_CONTINUE_LIST_REQUEST,
-              () -> continueListObjects(request, prevResult)));
+          () -> continueListObjects(request, prevResult,
+              pairedTrackerFactory(trackerFactory,
+                  getDurationTrackerFactory())));
     }
 
     @Override
@@ -1986,13 +1988,22 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Get this filesystem's storage statistics as IO Statistics.
+   * Get the instrumentation's IOStatistics.
    * @return statistics
    */
   @Override
   public IOStatistics getIOStatistics() {
-    return IOStatisticsBinding.fromStorageStatistics(
-        storageStatistics);
+    return instrumentation != null
+        ? instrumentation.getInstanceIOStatistics()
+        : null;
+  }
+
+  /**
+   * Get the factory for duration tracking.
+   * @return a factory from the instrumentation.
+   */
+  protected DurationTrackerFactory getDurationTrackerFactory() {
+    return instrumentation.getDurationTrackerFactory();
   }
 
   /**
@@ -2032,15 +2043,29 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     ObjectMetadata meta = changeInvoker.retryUntranslated("GET " + key, true,
         () -> {
           incrementStatistic(OBJECT_METADATA_REQUESTS);
-          LOG.debug("HEAD {} with change tracker {}", key, changeTracker);
-          if (changeTracker != null) {
-            changeTracker.maybeApplyConstraint(request);
+          DurationTracker dur = getDurationTrackerFactory()
+              .trackDuration(OBJECT_METADATA_REQUESTS.getSymbol());
+          try {
+            LOG.debug("HEAD {} with change tracker {}", key, changeTracker);
+            if (changeTracker != null) {
+              changeTracker.maybeApplyConstraint(request);
+            }
+            ObjectMetadata objectMetadata = s3.getObjectMetadata(request);
+            if (changeTracker != null) {
+              changeTracker.processMetadata(objectMetadata, operation);
+            }
+            return objectMetadata;
+          } catch(AmazonServiceException ase) {
+            if (!isObjectNotFound(ase)) {
+              dur.failed();
+            }
+            throw ase;
+          } finally {
+            // update the tracker.
+            // this is called after any catch() call will have
+            // set the failed flag.
+            dur.close();
           }
-          ObjectMetadata objectMetadata = s3.getObjectMetadata(request);
-          if (changeTracker != null) {
-            changeTracker.processMetadata(objectMetadata, operation);
-          }
-          return objectMetadata;
         });
     incrementReadOperations();
     return meta;
@@ -2052,11 +2077,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    *
    * Retry policy: retry untranslated.
    * @param request request to initiate
+   * @param trackerFactory duration tracking
    * @return the results
    * @throws IOException if the retry invocation raises one (it shouldn't).
    */
   @Retries.RetryRaw
-  protected S3ListResult listObjects(S3ListRequest request) throws IOException {
+  protected S3ListResult listObjects(S3ListRequest request,
+      @Nullable final DurationTrackerFactory trackerFactory)
+      throws IOException {
     incrementReadOperations();
     incrementStatistic(OBJECT_LIST_REQUESTS);
     LOG.debug("LIST {}", request);
@@ -2066,13 +2094,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       return invoker.retryUntranslated(
           request.toString(),
           true,
-          () -> {
-            if (useListV1) {
-              return S3ListResult.v1(s3.listObjects(request.getV1()));
-            } else {
-              return S3ListResult.v2(s3.listObjectsV2(request.getV2()));
-            }
-          });
+          trackDurationOfOperation(trackerFactory,
+              OBJECT_LIST_REQUEST,
+              () -> {
+                if (useListV1) {
+                  return S3ListResult.v1(s3.listObjects(request.getV1()));
+                } else {
+                  return S3ListResult.v2(s3.listObjectsV2(request.getV2()));
+                }
+              })
+      );
     }
   }
 
@@ -2093,12 +2124,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Retry policy: retry untranslated.
    * @param request last list objects request to continue
    * @param prevResult last paged result to continue from
+   * @param trackerFactory
    * @return the next result object
    * @throws IOException none, just there for retryUntranslated.
    */
   @Retries.RetryRaw
   protected S3ListResult continueListObjects(S3ListRequest request,
-      S3ListResult prevResult) throws IOException {
+      S3ListResult prevResult,
+      final DurationTrackerFactory trackerFactory) throws IOException {
     incrementReadOperations();
     validateListArguments(request);
     try(DurationInfo ignored =
@@ -2106,17 +2139,20 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       return invoker.retryUntranslated(
           request.toString(),
           true,
-          () -> {
-            incrementStatistic(OBJECT_CONTINUE_LIST_REQUESTS);
-            if (useListV1) {
-              return S3ListResult.v1(
-                  s3.listNextBatchOfObjects(prevResult.getV1()));
-            } else {
-              request.getV2().setContinuationToken(prevResult.getV2()
-                  .getNextContinuationToken());
-              return S3ListResult.v2(s3.listObjectsV2(request.getV2()));
-            }
-          });
+          trackDurationOfOperation(
+              trackerFactory,
+              OBJECT_CONTINUE_LIST_REQUEST,
+              () -> {
+                incrementStatistic(OBJECT_CONTINUE_LIST_REQUESTS);
+                if (useListV1) {
+                  return S3ListResult.v1(
+                      s3.listNextBatchOfObjects(prevResult.getV1()));
+                } else {
+                  request.getV2().setContinuationToken(prevResult.getV2()
+                      .getNextContinuationToken());
+                  return S3ListResult.v2(s3.listObjectsV2(request.getV2()));
+                }
+              }));
     }
   }
 
@@ -3269,7 +3305,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         S3ListRequest request = createListObjectsRequest(dirKey, "/",
             listSize);
         // execute the request
-        S3ListResult listResult = listObjects(request);
+        S3ListResult listResult = listObjects(request, null);
 
 
         if (listResult.hasPrefixesOrObjects(contextAccessors, tombstones)) {
@@ -4171,12 +4207,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     sb.append(", delegation tokens=")
         .append(delegationTokens.map(Objects::toString).orElse("disabled"));
     sb.append(", ").append(directoryPolicy);
-    sb.append(", statistics {")
-        .append(statistics)
-        .append("}");
-    if (instrumentation != null) {
-      sb.append(", metrics {")
-          .append(instrumentation.dump("{", "=", "} ", true))
+    if (getIOStatistics() != null) {
+      sb.append(", statistics {")
+          .append(ioStatisticsToString(getIOStatistics()))
           .append("}");
     }
     sb.append('}');

@@ -22,6 +22,10 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.impl.statistics.S3AInputStreamStatistics;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
+import org.apache.hadoop.fs.statistics.StoreStatisticNames;
+import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 import org.apache.hadoop.io.IOUtils;
 
 import org.assertj.core.api.Assertions;
@@ -32,6 +36,7 @@ import java.io.IOException;
 import static org.apache.hadoop.fs.s3a.Statistic.STREAM_READ_BYTES;
 import static org.apache.hadoop.fs.s3a.Statistic.STREAM_READ_CLOSE_BYTES_READ;
 import static org.apache.hadoop.fs.s3a.Statistic.STREAM_READ_TOTAL_BYTES;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringifyIOStatisticsSource;
 
 /**
@@ -64,12 +69,33 @@ public class ITestS3AUnbuffer extends AbstractS3ATestBase {
   public void testUnbuffer() throws IOException {
     describe("testUnbuffer");
 
+    IOStatisticsSnapshot iostats = new IOStatisticsSnapshot();
     // Open file, read half the data, and then call unbuffer
     try (FSDataInputStream inputStream = getFileSystem().open(dest)) {
       assertTrue(inputStream.getWrappedStream() instanceof S3AInputStream);
-      readAndAssertBytesRead(inputStream, 8);
+      int bytesToRead = 8;
+      readAndAssertBytesRead(inputStream, bytesToRead);
       assertTrue(isObjectStreamOpen(inputStream));
+      assertTrue("No IOstatistics from " + inputStream,
+          iostats.aggregate(inputStream.getIOStatistics()));
+      verifyStatisticCounterValue(iostats,
+          StreamStatisticNames.STREAM_READ_BYTES,
+          bytesToRead);
+      verifyStatisticCounterValue(iostats,
+          StoreStatisticNames.ACTION_HTTP_GET_REQUEST,
+          1);
+
+      // do the unbuffering
       inputStream.unbuffer();
+
+      // verify that the updated statistics were propagated
+      IOStatistics st2 = inputStream.getIOStatistics();
+      verifyStatisticCounterValue(st2,
+          StreamStatisticNames.STREAM_READ_BYTES,
+          0);
+      verifyStatisticCounterValue(st2,
+          StreamStatisticNames.STREAM_READ_UNBUFFERED,
+          1);
 
       // Check the the wrapped stream is closed
       assertFalse(isObjectStreamOpen(inputStream));

@@ -50,6 +50,7 @@ import org.apache.hadoop.fs.s3a.s3guard.MetadataStoreCapabilities;
 import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
 import org.apache.hadoop.fs.s3a.test.OperationTrackingStore;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
+import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Writable;
@@ -59,6 +60,7 @@ import org.apache.hadoop.service.Service;
 import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
 import org.hamcrest.core.Is;
@@ -841,9 +843,9 @@ public final class S3ATestUtils {
    * @param <T> type of operation.
    */
   public static <T> void callQuietly(final Logger log,
-      final Invoker.Operation<T> operation) {
+      final CallableRaisingIOE<T> operation) {
     try {
-      operation.execute();
+      operation.apply();
     } catch (Exception e) {
       log.info(e.toString(), e);
     }
@@ -1783,7 +1785,7 @@ public final class S3ATestUtils {
     @Override
     public CompletableFuture<S3ListResult> listObjectsAsync(
         final S3ListRequest request,
-        final ListingContext listingContext) throws IOException {
+        final DurationTrackerFactory trackerFactory) throws IOException {
       return null;
     }
 
@@ -1791,7 +1793,7 @@ public final class S3ATestUtils {
     public CompletableFuture<S3ListResult> continueListObjectsAsync(
         final S3ListRequest request,
         final S3ListResult prevResult,
-        final ListingContext listingContext) throws IOException {
+        final DurationTrackerFactory trackerFactory) throws IOException {
       return null;
     }
 
