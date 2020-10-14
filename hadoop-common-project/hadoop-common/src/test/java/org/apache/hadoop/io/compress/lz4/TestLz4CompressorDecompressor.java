@@ -331,6 +331,9 @@ public class TestLz4CompressorDecompressor {
 
   @Test
   public void testLz4Compatibility() throws Exception {
+    // The sequence file was created using native Lz4 codec before HADOOP-17292.
+    // After we use lz4-java for lz4 compression, this test makes sure we can
+    // decompress the sequence file correctly.
     Path filePath = new Path(TestLz4CompressorDecompressor.class
         .getResource("/lz4/sequencefile").toURI());
 

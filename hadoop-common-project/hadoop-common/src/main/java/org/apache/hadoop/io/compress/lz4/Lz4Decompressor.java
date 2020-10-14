@@ -61,7 +61,7 @@ public class Lz4Decompressor implements Decompressor {
     } catch (Throwable t) {
       throw new RuntimeException("lz4-java library is not available: " +
               "Lz4Decompressor has not been loaded. You need to add " +
-              "lz4-java.jar to your CLASSPATH", t);
+              "lz4-java.jar to your CLASSPATH. " + t, t);
     }
 
     compressedDirectBuf = ByteBuffer.allocateDirect(directBufferSize);
@@ -273,12 +273,11 @@ public class Lz4Decompressor implements Decompressor {
     if (compressedDirectBufLen == 0) {
       return 0;
     } else {
-      // Set the position and limit of `compressedDirectBuf` for reading
       compressedDirectBuf.limit(compressedDirectBufLen).position(0);
       lz4Decompressor.decompress((ByteBuffer) compressedDirectBuf,
               (ByteBuffer) uncompressedDirectBuf);
       compressedDirectBufLen = 0;
-      compressedDirectBuf.limit(compressedDirectBuf.capacity()).position(0);
+      compressedDirectBuf.clear();
       int size = uncompressedDirectBuf.position();
       uncompressedDirectBuf.position(0);
       return size;

@@ -50,9 +50,7 @@ public class Lz4Compressor implements Compressor {
   private long bytesRead = 0L;
   private long bytesWritten = 0L;
 
-  private final boolean useLz4HC;
-
-  private LZ4Compressor lz4Compressor;
+  private final LZ4Compressor lz4Compressor;
 
   /**
    * Creates a new compressor.
@@ -62,7 +60,6 @@ public class Lz4Compressor implements Compressor {
    *                 which trades CPU for compression ratio.
    */
   public Lz4Compressor(int directBufferSize, boolean useLz4HC) {
-    this.useLz4HC = useLz4HC;
     this.directBufferSize = directBufferSize;
 
     try {
@@ -75,7 +72,7 @@ public class Lz4Compressor implements Compressor {
     } catch (Throwable t) {
       throw new RuntimeException("lz4-java library is not available: " +
               "Lz4Compressor has not been loaded. You need to add " +
-              "lz4-java.jar to your CLASSPATH", t);
+              "lz4-java.jar to your CLASSPATH. " + t, t);
     }
 
     uncompressedDirectBuf = ByteBuffer.allocateDirect(directBufferSize);
