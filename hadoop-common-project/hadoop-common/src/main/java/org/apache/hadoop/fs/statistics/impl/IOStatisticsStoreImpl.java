@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.MeanStatistic;
 
 import static java.util.Objects.requireNonNull;
+import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.stubDurationTracker;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MAX;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MEAN;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MIN;
@@ -430,8 +431,21 @@ final class IOStatisticsStoreImpl extends WrappedIOStatistics
     addTimedOperation(prefix, duration.toMillis());
   }
 
+  /**
+   * If the store is tracking the given key, return the
+   * duration tracker for it. If not tracked, return the
+   * stub tracker.
+   * @param key statistic key prefix
+   * @param count  #of times to increment the matching counter in this
+   * operation.
+   * @return a tracker.
+   */
   @Override
   public DurationTracker trackDuration(final String key, final int count) {
-    return new StatisticDurationTracker(this, key, count);
+    if (counterMap.containsKey(key)) {
+      return new StatisticDurationTracker(this, key, count);
+    } else {
+      return stubDurationTracker();
+    }
   }
 }

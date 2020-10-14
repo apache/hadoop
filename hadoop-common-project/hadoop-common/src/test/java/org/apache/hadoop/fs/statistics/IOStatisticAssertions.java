@@ -66,7 +66,23 @@ public final class IOStatisticAssertions {
   public static long lookupCounterStatistic(
       final IOStatistics stats,
       final String key) {
-    return lookupStatistic(COUNTER, key, stats.counters());
+    return lookupStatistic(COUNTER, key,
+        verifyStatisticsNotNull(stats).counters());
+  }
+
+  /**
+   * Given an IOStatistics instance, verify it is not null,
+   * and return the value for continued use in a test.
+   * @param stats statistics source.
+   * @param <T> type of statistics
+   * @return the value passed in.
+   */
+  public static <T extends IOStatistics> T
+      verifyStatisticsNotNull(final T stats) {
+    assertThat(stats)
+        .describedAs("IO Statistics reference")
+        .isNotNull();
+    return stats;
   }
 
   /**
@@ -78,7 +94,8 @@ public final class IOStatisticAssertions {
   public static long lookupGaugeStatistic(
       final IOStatistics stats,
       final String key) {
-    return lookupStatistic(GAUGE, key, stats.gauges());
+    return lookupStatistic(GAUGE, key,
+        verifyStatisticsNotNull(stats).gauges());
   }
 
   /**
@@ -90,7 +107,8 @@ public final class IOStatisticAssertions {
   public static long lookupMaximumStatistic(
       final IOStatistics stats,
       final String key) {
-    return lookupStatistic(MAXIMUM, key, stats.maximums());
+    return lookupStatistic(MAXIMUM, key,
+        verifyStatisticsNotNull(stats).maximums());
   }
 
   /**
@@ -102,7 +120,8 @@ public final class IOStatisticAssertions {
   public static long lookupMinimumStatistic(
       final IOStatistics stats,
       final String key) {
-    return lookupStatistic(MINIMUM, key, stats.minimums());
+    return lookupStatistic(MINIMUM, key,
+        verifyStatisticsNotNull(stats).minimums());
   }
 
   /**
@@ -114,7 +133,8 @@ public final class IOStatisticAssertions {
   public static MeanStatistic lookupMeanStatistic(
       final IOStatistics stats,
       final String key) {
-    return lookupStatistic(MEAN, key, stats.meanStatistics());
+    return lookupStatistic(MEAN, key,
+        verifyStatisticsNotNull(stats).meanStatistics());
   }
 
   /**
@@ -143,11 +163,12 @@ public final class IOStatisticAssertions {
    * @param value expected value.
    * @return the value (which always equals the expected value)
    */
-  public static long verifyCounterStatisticValue(
+  public static long verifyStatisticCounterValue(
       final IOStatistics stats,
       final String key,
       final long value) {
-    return verifyStatisticValue(COUNTER, key, stats.counters(), value);
+    return verifyStatisticValue(COUNTER, key,
+        verifyStatisticsNotNull(stats).counters(), value);
   }
 
   /**
@@ -157,11 +178,12 @@ public final class IOStatisticAssertions {
    * @param value expected value.
    * @return the value (which always equals the expected value)
    */
-  public static long verifyGaugeStatisticValue(
+  public static long verifyStatisticGaugeValue(
       final IOStatistics stats,
       final String key,
       final long value) {
-    return verifyStatisticValue(GAUGE, key, stats.gauges(), value);
+    return verifyStatisticValue(GAUGE, key,
+        verifyStatisticsNotNull(stats).gauges(), value);
   }
 
   /**
@@ -171,11 +193,12 @@ public final class IOStatisticAssertions {
    * @param value expected value.
    * @return the value (which always equals the expected value)
    */
-  public static long verifyMaximumStatisticValue(
+  public static long verifyStatisticMaximumValue(
       final IOStatistics stats,
       final String key,
       final long value) {
-    return verifyStatisticValue(MAXIMUM, key, stats.maximums(), value);
+    return verifyStatisticValue(MAXIMUM, key,
+        verifyStatisticsNotNull(stats).maximums(), value);
   }
 
   /**
@@ -185,11 +208,12 @@ public final class IOStatisticAssertions {
    * @param value expected value.
    * @return the value (which always equals the expected value)
    */
-  public static long verifyMinimumStatisticValue(
+  public static long verifyStatisticMinimumValue(
       final IOStatistics stats,
       final String key,
       final long value) {
-    return verifyStatisticValue(MINIMUM, key, stats.minimums(), value);
+    return verifyStatisticValue(MINIMUM, key,
+        verifyStatisticsNotNull(stats).minimums(), value);
   }
 
   /**
@@ -199,11 +223,12 @@ public final class IOStatisticAssertions {
    * @param value expected value.
    * @return the value (which always equals the expected value)
    */
-  public static MeanStatistic verifyMeanStatisticValue(
+  public static MeanStatistic verifyStatisticMeanValue(
       final IOStatistics stats,
       final String key,
       final MeanStatistic value) {
-    return verifyStatisticValue(MEAN, key, stats.meanStatistics(), value);
+    return verifyStatisticValue(MEAN, key,
+        verifyStatisticsNotNull(stats).meanStatistics(), value);
   }
 
   /**
@@ -254,7 +279,7 @@ public final class IOStatisticAssertions {
    * @param map map to look up
    * @return an ongoing assertion
    */
-  private static AbstractLongAssert<?> assertThatLongStatistic(
+  private static AbstractLongAssert<?> assertThatStatisticLong(
       final String type,
       final String key,
       final Map<String, Long> map) {
@@ -270,10 +295,11 @@ public final class IOStatisticAssertions {
    * @param key statistic key
    * @return an ongoing assertion
    */
-  public static AbstractLongAssert<?> assertThatCounterStatistic(
+  public static AbstractLongAssert<?> assertThatStatisticCounter(
       final IOStatistics stats,
       final String key) {
-    return assertThatLongStatistic(COUNTER, key, stats.counters());
+    return assertThatStatisticLong(COUNTER, key,
+        verifyStatisticsNotNull(stats).counters());
   }
 
   /**
@@ -283,10 +309,11 @@ public final class IOStatisticAssertions {
    * @param key statistic key
    * @return an ongoing assertion
    */
-  public static AbstractLongAssert<?> assertThatGaugeStatistic(
+  public static AbstractLongAssert<?> assertThatStatisticGauge(
       final IOStatistics stats,
       final String key) {
-    return assertThatLongStatistic(GAUGE, key, stats.gauges());
+    return assertThatStatisticLong(GAUGE, key,
+        verifyStatisticsNotNull(stats).gauges());
   }
 
   /**
@@ -296,10 +323,11 @@ public final class IOStatisticAssertions {
    * @param key statistic key
    * @return an ongoing assertion
    */
-  public static AbstractLongAssert<?> assertThatMinimumStatistic(
+  public static AbstractLongAssert<?> assertThatStatisticMinimum(
       final IOStatistics stats,
       final String key) {
-    return assertThatLongStatistic(MINIMUM, key, stats.minimums());
+    return assertThatStatisticLong(MINIMUM, key,
+        verifyStatisticsNotNull(stats).minimums());
   }
 
   /**
@@ -309,10 +337,11 @@ public final class IOStatisticAssertions {
    * @param key statistic key
    * @return an ongoing assertion
    */
-  public static AbstractLongAssert<?> assertThatMaximumStatistic(
+  public static AbstractLongAssert<?> assertThatStatisticMaximum(
       final IOStatistics stats,
       final String key) {
-    return assertThatLongStatistic(MAXIMUM, key, stats.maximums());
+    return assertThatStatisticLong(MAXIMUM, key,
+        verifyStatisticsNotNull(stats).maximums());
   }
 
   /**
@@ -322,10 +351,11 @@ public final class IOStatisticAssertions {
    * @param key statistic key
    * @return an ongoing assertion
    */
-  public static ObjectAssert<MeanStatistic> assertThatMeanStatistic(
+  public static ObjectAssert<MeanStatistic> assertThatStatisticMean(
       final IOStatistics stats,
       final String key) {
-    return assertThatStatistic(MEAN, key, stats.meanStatistics());
+    return assertThatStatistic(MEAN, key,
+        verifyStatisticsNotNull(stats).meanStatistics());
   }
 
   /**
@@ -336,12 +366,12 @@ public final class IOStatisticAssertions {
    * @param key statistic key
    * @return an ongoing assertion
    */
-  public static ObjectAssert<MeanStatistic> assertThatMeanStatisticMatches(
+  public static ObjectAssert<MeanStatistic> assertThatStatisticMeanMatches(
       final IOStatistics stats,
       final String key,
       final long samples,
       final long sum) {
-    return assertThatMeanStatistic(stats, key)
+    return assertThatStatisticMean(stats, key)
         .matches(p -> (p.getSamples() == samples),
             "samples == " + samples)
         .matches(p -> (p.getSum() == sum),
@@ -385,10 +415,11 @@ public final class IOStatisticAssertions {
    * @param stats statistics source
    * @param key statistic key
    */
-  public static void assertCounterStatisticIsTracked(
+  public static void assertStatisticCounterIsTracked(
       final IOStatistics stats,
       final String key) {
-    assertTracked(stats, COUNTER, key, stats.counters());
+    assertTracked(stats, COUNTER, key,
+        verifyStatisticsNotNull(stats).counters());
   }
 
   /**
@@ -396,10 +427,11 @@ public final class IOStatisticAssertions {
    * @param stats statistics source
    * @param key statistic key
    */
-  public static void assertCounterStatisticIsUntracked(
+  public static void assertStatisticCounterIsUntracked(
       final IOStatistics stats,
       final String key) {
-    assertUntracked(stats, COUNTER, key, stats.counters());
+    assertUntracked(stats, COUNTER, key,
+        verifyStatisticsNotNull(stats).counters());
   }
 
   /**
@@ -448,7 +480,7 @@ public final class IOStatisticAssertions {
    * @param stat statistic
    * @return the deserialized version.
    */
-  public static IOStatistics javaRoundTrip(final IOStatistics stat)
+  public static IOStatistics statisticsJavaRoundTrip(final IOStatistics stat)
       throws IOException, ClassNotFoundException {
     assertThat(stat).isInstanceOf(Serializable.class);
     ByteArrayOutputStream baos = new ByteArrayOutputStream(1024);
