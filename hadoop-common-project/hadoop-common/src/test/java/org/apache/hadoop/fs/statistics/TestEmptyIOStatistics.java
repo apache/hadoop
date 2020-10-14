@@ -23,9 +23,9 @@ import org.junit.Test;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertCounterStatisticIsTracked;
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertCounterStatisticIsUntracked;
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyCounterStatisticValue;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticCounterIsTracked;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertStatisticCounterIsUntracked;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToString;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.emptyStatistics;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -40,7 +40,7 @@ public class TestEmptyIOStatistics extends AbstractHadoopTestBase {
 
   @Test
   public void testUnknownStatistic() throws Throwable {
-    assertCounterStatisticIsUntracked(empty, "anything");
+    assertStatisticCounterIsUntracked(empty, "anything");
   }
 
   @Test
@@ -48,7 +48,7 @@ public class TestEmptyIOStatistics extends AbstractHadoopTestBase {
     // expect an exception to be raised when an assertion
     // is made that an unknown statistic is tracked,.
     assertThatThrownBy(() ->
-        assertCounterStatisticIsTracked(empty, "anything"))
+        assertStatisticCounterIsTracked(empty, "anything"))
         .isInstanceOf(AssertionError.class);
   }
 
@@ -57,7 +57,7 @@ public class TestEmptyIOStatistics extends AbstractHadoopTestBase {
     // expect an exception to be raised when
     // an assertion is made about the value of an unknown statistics
     assertThatThrownBy(() ->
-        verifyCounterStatisticValue(empty, "anything", 0))
+        verifyStatisticCounterValue(empty, "anything", 0))
         .isInstanceOf(AssertionError.class);
   }
 
@@ -67,7 +67,7 @@ public class TestEmptyIOStatistics extends AbstractHadoopTestBase {
     assertThat(stat.counters().keySet())
         .describedAs("keys of snapshot")
         .isEmpty();
-    IOStatistics deser = IOStatisticAssertions.javaRoundTrip(stat);
+    IOStatistics deser = IOStatisticAssertions.statisticsJavaRoundTrip(stat);
     assertThat(deser.counters().keySet())
         .describedAs("keys of deserialized snapshot")
         .isEmpty();
