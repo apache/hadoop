@@ -55,6 +55,8 @@ public class ClusterMetricsInfo {
 
   private long totalMB;
   private long totalVirtualCores;
+  private int utilizedMBPercent;
+  private int utilizedVirtualCoresPercent;
   private int totalNodes;
   private int lostNodes;
   private int unhealthyNodes;
@@ -134,6 +136,14 @@ public class ClusterMetricsInfo {
       this.totalMB = availableMB + allocatedMB;
       this.totalVirtualCores = availableVirtualCores + allocatedVirtualCores;
     }
+    long baseMem = this.totalMB;
+    this.utilizedMBPercent = baseMem <= 0 ? 0 :
+        (int) (clusterMetrics.getUtilizedMB() * 100 / baseMem);
+    long baseCores = this.totalVirtualCores;
+    this.utilizedVirtualCoresPercent = baseCores <= 0 ? 0 :
+        (int) (clusterMetrics.getUtilizedVirtualCores() * 100 /
+            baseCores);
+
     this.activeNodes = clusterMetrics.getNumActiveNMs();
     this.lostNodes = clusterMetrics.getNumLostNMs();
     this.unhealthyNodes = clusterMetrics.getUnhealthyNMs();
@@ -253,6 +263,14 @@ public class ClusterMetricsInfo {
     return this.shutdownNodes;
   }
 
+  public int getUtilizedMBPercent() {
+    return utilizedMBPercent;
+  }
+
+  public int getUtilizedVirtualCoresPercent() {
+    return utilizedVirtualCoresPercent;
+  }
+
   public void setContainersReserved(int containersReserved) {
     this.containersReserved = containersReserved;
   }
@@ -355,6 +373,14 @@ public class ClusterMetricsInfo {
 
   public ResourceInfo getTotalUsedResourcesAcrossPartition() {
     return totalUsedResourcesAcrossPartition;
+  }
+
+  public void setUtilizedMBPercent(int utilizedMBPercent) {
+    this.utilizedMBPercent = utilizedMBPercent;
+  }
+
+  public void setUtilizedVirtualCoresPercent(int utilizedVirtualCoresPercent) {
+    this.utilizedVirtualCoresPercent = utilizedVirtualCoresPercent;
   }
 
   public ResourceInfo getTotalClusterResourcesAcrossPartition() {
