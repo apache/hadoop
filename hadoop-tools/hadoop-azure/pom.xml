@@ -46,23 +46,7 @@
     <fs.azure.scale.test.list.performance.threads>10</fs.azure.scale.test.list.performance.threads>
     <fs.azure.scale.test.list.performance.files>1000</fs.azure.scale.test.list.performance.files>
     
-    <powermock.version>2.0.2</powermock.version>
   </properties>
-  
-  <dependencies>
-   <dependency>
-      <groupId>org.powermock</groupId>
-      <artifactId>powermock-module-junit4</artifactId>
-      <version>${powermock.version}</version>
-      <scope>test</scope>
-   </dependency>
-   <dependency>
-      <groupId>org.powermock</groupId>
-      <artifactId>powermock-api-mockito</artifactId>
-      <version>${powermock.version}</version>
-      <scope>test</scope>
-   </dependency>
-</dependencies>
 
   <build>
     <plugins>

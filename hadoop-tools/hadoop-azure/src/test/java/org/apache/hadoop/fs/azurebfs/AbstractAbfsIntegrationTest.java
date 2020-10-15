@@ -25,7 +25,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
-import org.apache.hadoop.fs.azurebfs.utils.TrackingContext;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -145,11 +145,13 @@ public abstract class AbstractAbfsIntegrationTest extends
   public void setup() throws Exception {
     //Create filesystem first to make sure getWasbFileSystem() can return an existing filesystem.
     createFileSystem();
+    TracingContext tracingContext = new TracingContext(abfsConfig.getClientCorrelationID(),
+            getFileSystem().getFileSystemID(), "TS");
 
     // Only live account without namespace support can run ABFS&WASB compatibility tests
     if (!isIPAddress
         && (abfsConfig.getAuthType(accountName) != AuthType.SAS)
-        && !abfs.getIsNamespaceEnabled()) {
+        && !abfs.getIsNamespaceEnabled(tracingContext)) {
       final URI wasbUri = new URI(abfsUrlToWasbUrl(getTestUrl()));
       final AzureNativeFileSystemStore azureNativeFileSystemStore =
           new AzureNativeFileSystemStore();
@@ -181,23 +183,23 @@ public abstract class AbstractAbfsIntegrationTest extends
       if (abfs == null) {
         return;
       }
-      TrackingContext trackingContext = new TrackingContext(abfs.getFileSystemID(), "DL");
+      TracingContext tracingContext = new TracingContext(abfs.getFileSystemID(), "DL");
 
       if (usingFilesystemForSASTests) {
         abfsConfig.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey.name());
         AzureBlobFileSystem tempFs = (AzureBlobFileSystem) FileSystem.newInstance(rawConfig);
-        tempFs.getAbfsStore().deleteFilesystem(trackingContext);
+        tempFs.getAbfsStore().deleteFilesystem(tracingContext);
       }
       else if (!useConfiguredFileSystem) {
         // Delete all uniquely created filesystem from the account
         final AzureBlobFileSystemStore abfsStore = abfs.getAbfsStore();
-        abfsStore.deleteFilesystem(trackingContext);
+        abfsStore.deleteFilesystem(tracingContext);
 
         AbfsRestOperationException ex = intercept(AbfsRestOperationException.class,
             new Callable<Hashtable<String, String>>() {
               @Override
               public Hashtable<String, String> call() throws Exception {
-                return abfsStore.getFilesystemProperties(trackingContext);
+                return abfsStore.getFilesystemProperties(tracingContext);
               }
             });
         if (FILE_SYSTEM_NOT_FOUND.getStatusCode() != ex.getStatusCode()) {
@@ -432,7 +434,7 @@ public abstract class AbstractAbfsIntegrationTest extends
 
     return (AbfsOutputStream) abfss.createFile(path, fs.getFsStatistics(),
         true, FsPermission.getDefault(), FsPermission.getUMask(fs.getConf()),
-        new TrackingContext(fs.getFileSystemID(), "OP"));
+        new TracingContext(fs.getFileSystemID(), "OP"));
   }
 
   /**

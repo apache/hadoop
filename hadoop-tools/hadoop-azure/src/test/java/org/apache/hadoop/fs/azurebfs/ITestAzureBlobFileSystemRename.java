@@ -26,7 +26,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import org.apache.hadoop.fs.azurebfs.utils.TrackingContext;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.junit.Assert;
@@ -238,13 +238,13 @@ public class ITestAzureBlobFileSystemRename extends
         fs.getAbfsStore().getClient(),
         this.getConfiguration());
 
-    TrackingContext trackingContext = new TrackingContext(fs.getFileSystemID(), "RN");
+    TracingContext tracingContext = new TracingContext(fs.getFileSystemID(), "RN");
 
     AbfsRestOperation idempotencyRetOp = mock(AbfsRestOperation.class);
     when(idempotencyRetOp.getResult()).thenReturn(idempotencyRetHttpOp);
     doReturn(idempotencyRetOp).when(client).renameIdempotencyCheckOp(any(),
-        any(), any(), trackingContext);
-    when(client.renamePath(any(), any(), any(), trackingContext)).thenCallRealMethod();
+        any(), any(), tracingContext);
+    when(client.renamePath(any(), any(), any(), tracingContext)).thenCallRealMethod();
 
     // rename on non-existing source file will trigger idempotency check
     if (idempotencyRetHttpOp.getStatusCode() == HTTP_OK) {
@@ -253,7 +253,7 @@ public class ITestAzureBlobFileSystemRename extends
           "/NonExistingsourcepath",
           "/destpath",
           null,
-              trackingContext)
+              tracingContext)
           .getResult()
           .getStatusCode())
           .describedAs("Idempotency check reports recent successful "
@@ -266,7 +266,7 @@ public class ITestAzureBlobFileSystemRename extends
               "/NonExistingsourcepath",
               "/destpath",
               "",
-                  trackingContext));
+                  tracingContext));
     }
   }
 
@@ -327,7 +327,7 @@ public class ITestAzureBlobFileSystemRename extends
         renameRequestStartTime,
         op,
         destinationPath.toUri().getPath(),
-        new TrackingContext("test-fs-id", "RN"))
+        new TracingContext("test-fs-id", "RN"))
         .getResult()
         .getStatusCode())
         .describedAs(assertMessage)

@@ -77,27 +77,10 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     <name>Apache Software Foundation</name>
     <url>https://www.apache.org</url>
   </organization>
-  
- 
-<dependencies>
-   <dependency>
-      <groupId>org.powermock</groupId>
-      <artifactId>powermock-module-junit4</artifactId>
-      <version>${powermock.version}</version>
-      <scope>test</scope>
-   </dependency>
-   <dependency>
-      <groupId>org.powermock</groupId>
-      <artifactId>powermock-api-mockito</artifactId>
-      <version>${powermock.version}</version>
-      <scope>test</scope>
-   </dependency>
-</dependencies>
 
   <properties>
     <!-- required as child projects with different version can't use ${project.version} -->
     <hadoop.version>3.4.0-SNAPSHOT</hadoop.version>
-    <powermock.version>2.0.2</powermock.version>
 
     <distMgmtSnapshotsId>apache.snapshots.https</distMgmtSnapshotsId>
     <distMgmtSnapshotsName>Apache Development Snapshot Repository</distMgmtSnapshotsName>

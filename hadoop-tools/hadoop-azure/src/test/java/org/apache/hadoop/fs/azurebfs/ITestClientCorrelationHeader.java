@@ -6,7 +6,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationExcep
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
-import org.apache.hadoop.fs.azurebfs.utils.TrackingContext;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.http.HttpException;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
@@ -59,7 +59,7 @@ public final class ITestClientCorrelationHeader extends AbstractAbfsIntegrationT
 //        AbfsRestOperation op = PowerMock.spy(AbfsRestOperation.class, "executeHttpOperation");
 //        PowerMockito.doThrow(new AbfsRestOperationException(new HttpException()))
 //                .when(op, "executeHttpOperation", any(int),
-//        any(TrackingContext.class));
+//        any(TracingContext.class));
 
     AbfsClient client = mock(AbfsClient.class);
 
@@ -73,11 +73,11 @@ public final class ITestClientCorrelationHeader extends AbstractAbfsIntegrationT
 
 
 //    AbfsRestOperation op = spy(restop);
-    when(op.executeHttpOperation(any(int.class), any(TrackingContext.class)))
-        .thenReturn(false);
+//    when(op.executeHttpOperation(any(int.class), any(TracingContext.class)))
+//        .thenReturn(false);
 //        .thenThrow(AzureBlobFileSystemException.class);
 
-    op.execute(new org.apache.hadoop.fs.azurebfs.utils.TrackingContext("fsid","op"));
+    op.execute(new TracingContext("test-corr-id", "fsid","op"));
 
     String path = getRelativePath(new Path("/testDir"));
     boolean isNamespaceEnabled = true;//fs.getIsNamespaceEnabled();
@@ -87,10 +87,10 @@ public final class ITestClientCorrelationHeader extends AbstractAbfsIntegrationT
 //    AbfsClient client = mock(AbfsClient.class);
     when(client.createPath(any(String.class), eq(true), eq(false),
         eq(null), eq(null),
-        any(boolean.class), eq(null), any(TrackingContext.class))).thenReturn(op);
+        any(boolean.class), eq(null), any(TracingContext.class))).thenReturn(op);
     AbfsRestOperation op1 = client.createPath(path, false, true,
         permission, umask, false, null,
-        new TrackingContext("fsid", "CR"));
+        new TracingContext("test-corr-id", "fsid", "CR"));
 
   }
 

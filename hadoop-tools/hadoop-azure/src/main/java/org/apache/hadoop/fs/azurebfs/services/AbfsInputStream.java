@@ -28,7 +28,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.annotations.VisibleForTesting;
 
 //import org.apache.commons.codec.binary.StringUtils;
-import org.apache.hadoop.fs.azurebfs.utils.TrackingContext;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,6 +61,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private final String eTag;                  // eTag of the path when InputStream are created
   private final boolean tolerateOobAppends; // whether tolerate Oob Appends
   private final boolean readAheadEnabled; // whether enable readAhead;
+  private final String inputStreamID;
 
   // SAS tokens can be re-used until they expire
   private CachedSASToken cachedSasToken;
@@ -71,8 +73,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private int limit = 0;     // offset of next byte to be read into buffer from service (i.e., upper marker+1
   //                                                      of valid bytes in buffer)
   private boolean closed = false;
-  private String inputStreamID;
-  public TrackingContext trackingContext;
+  public TracingContext tracingContext;
 
   /** Stream statistics. */
   private final AbfsInputStreamStatistics streamStatistics;
@@ -85,20 +86,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
           final String path,
           final long contentLength,
           final AbfsInputStreamContext abfsInputStreamContext,
-          final String eTag) {
-    this(client, statistics, path, contentLength, abfsInputStreamContext, eTag,
-            new TrackingContext("test-filesystem-id", "IP"));
-
-  }
-
-  public AbfsInputStream(
-          final AbfsClient client,
-          final Statistics statistics,
-          final String path,
-          final long contentLength,
-          final AbfsInputStreamContext abfsInputStreamContext,
           final String eTag,
-          TrackingContext trackingContext) {
+          TracingContext tracingContext) {
     this.client = client;
     this.statistics = statistics;
     this.path = path;
@@ -111,9 +100,9 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.cachedSasToken = new CachedSASToken(
         abfsInputStreamContext.getSasTokenRenewPeriodForStreamsInSeconds());
     this.streamStatistics = abfsInputStreamContext.getStreamStatistics();
-    this.inputStreamID = org.apache.commons.lang3.StringUtils.right(UUID.randomUUID().toString(), 12);
-    this.trackingContext = new TrackingContext(trackingContext);
-    this.trackingContext.setStreamID(inputStreamID);
+    this.inputStreamID = StringUtils.right(UUID.randomUUID().toString(), 12);
+    this.tracingContext = new TracingContext(tracingContext);
+    this.tracingContext.setStreamID(inputStreamID);
   }
   public String getPath() {
     return path;
@@ -247,18 +236,16 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       long nextSize;
       long nextOffset = position;
       LOG.debug("read ahead enabled issuing readheads num = {}", numReadAheads);
-      trackingContext.setPrimaryRequestID();
-      System.out.println("set preq id");
+      TracingContext readAheadTracingContext = new TracingContext(tracingContext);
+      readAheadTracingContext.setPrimaryRequestID();
       while (numReadAheads > 0 && nextOffset < contentLength) {
         nextSize = Math.min((long) bufferSize, contentLength - nextOffset);
         LOG.debug("issuing read ahead requestedOffset = {} requested size {}",
             nextOffset, nextSize);
-        trackingContext.firstRequest = numReadAheads == readAheadQueueDepth;
         ReadBufferManager.getBufferManager().queueReadAhead(this, nextOffset, (int) nextSize,
-                trackingContext);
+                readAheadTracingContext);
         nextOffset = nextOffset + nextSize;
         numReadAheads--;
-        System.out.println("in the readahead loop " + Integer.toString(numReadAheads));
       }
 
       // try reading from buffers first
@@ -272,18 +259,17 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         }
         return receivedBytes;
       }
-      trackingContext.reset(); //remove to enable remote read to have same preq id
 
       // got nothing from read-ahead, do our own read now
-      receivedBytes = readRemote(position, b, offset, length, new TrackingContext(trackingContext));
+      receivedBytes = readRemote(position, b, offset, length, new TracingContext(tracingContext));
       return receivedBytes;
     } else {
       LOG.debug("read ahead disabled, reading remote");
-      return readRemote(position, b, offset, length, new TrackingContext(trackingContext));
+      return readRemote(position, b, offset, length, new TracingContext(tracingContext));
     }
   }
 
-  int readRemote(long position, byte[] b, int offset, int length, TrackingContext trackingContext) throws IOException {
+  int readRemote(long position, byte[] b, int offset, int length, TracingContext tracingContext) throws IOException {
     if (position < 0) {
       throw new IllegalArgumentException("attempting to read from negative offset");
     }
@@ -306,9 +292,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     AbfsPerfTracker tracker = client.getAbfsPerfTracker();
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker, "readRemote", "read")) {
       LOG.trace("Trigger client.read for path={} position={} offset={} length={}", path, position, offset, length);
-      System.out.println("going to client read");
       op = client.read(path, position, b, offset, length, tolerateOobAppends ? "*" : eTag, cachedSasToken.get(),
-              trackingContext);
+              tracingContext);
       cachedSasToken.update(op.getSasToken());
       if (streamStatistics != null) {
         streamStatistics.remoteReadOperation();

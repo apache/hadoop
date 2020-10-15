@@ -35,7 +35,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemExc
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.oauth2.AzureADAuthenticator.HttpException;
-import org.apache.hadoop.fs.azurebfs.utils.TrackingContext;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 /**
  * The AbfsRestOperation for Rest AbfsClient.
@@ -104,7 +104,7 @@ public class AbfsRestOperation {
    * @param url The full URL including query string parameters.
    * @param requestHeaders The HTTP request headers.
    */
-  public AbfsRestOperation(final AbfsRestOperationType operationType,
+  AbfsRestOperation(final AbfsRestOperationType operationType,
                     final AbfsClient client,
                     final String method,
                     final URL url,
@@ -173,7 +173,7 @@ public class AbfsRestOperation {
    * HTTP operations.
    */
    @VisibleForTesting
-   public void execute(TrackingContext trackingContext) throws AzureBlobFileSystemException {
+   public void execute(TracingContext tracingContext) throws AzureBlobFileSystemException {
     // see if we have latency reports from the previous requests
     String latencyHeader = this.client.getAbfsPerfTracker().getClientLatency();
     if (latencyHeader != null && !latencyHeader.isEmpty()) {
@@ -184,10 +184,10 @@ public class AbfsRestOperation {
 
     retryCount = 0;
     LOG.debug("First execution of REST operation - {}", operationType);
-    while (!executeHttpOperation(retryCount, trackingContext)) {
+    while (!executeHttpOperation(retryCount, tracingContext)) {
       try {
         ++retryCount;
-        trackingContext.updateRetryCount();
+        tracingContext.updateRetryCount();
         LOG.debug("Retrying REST operation {}. RetryCount = {}",
             operationType, retryCount);
         Thread.sleep(client.getRetryPolicy().getRetryInterval(retryCount));
@@ -209,17 +209,17 @@ public class AbfsRestOperation {
    * fails, there may be a retry.  The retryCount is incremented with each
    * attempt.
    */
-  public boolean executeHttpOperation(final int retryCount, TrackingContext trackingContext)
+  private boolean executeHttpOperation(final int retryCount, TracingContext tracingContext)
           throws AzureBlobFileSystemException {
     AbfsHttpOperation httpOperation = null;
     try {
       // initialize the HTTP request and open the connection
-      trackingContext.setClientRequestID();
+      tracingContext.generateClientRequestID();
       httpOperation = new AbfsHttpOperation(url, method, requestHeaders);
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
       httpOperation.getConnection()
               .setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID,
-                      trackingContext.toString());
+                      tracingContext.toString());
 
       switch(client.getAuthType()) {
         case Custom:

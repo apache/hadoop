@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 
-import org.apache.hadoop.fs.azurebfs.utils.TrackingContext;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -72,7 +72,7 @@ public class TestAbfsInputStream extends
     return client;
   }
 
-  private AbfsInputStream getAbfsInputStream(AbfsClient mockAbfsClient, String fileName) {
+  private AbfsInputStream getAbfsInputStream(AbfsClient mockAbfsClient, String fileName) throws IOException {
     AbfsInputStreamContext inputStreamContext = new AbfsInputStreamContext(-1);
     // Create AbfsInputStream with the client instance
     AbfsInputStream inputStream = new AbfsInputStream(
@@ -81,7 +81,9 @@ public class TestAbfsInputStream extends
         FORWARD_SLASH + fileName,
         THREE_KB,
         inputStreamContext.withReadBufferSize(ONE_KB).withReadAheadQueueDepth(10),
-        "eTag");
+        "eTag",
+        new TracingContext("testCorrId",
+                getFileSystem().getFileSystemID(), "IP"));
 
     inputStream.setCachedSasToken(
         TestCachedSASToken.getTestCachedSASTokenInstance());
@@ -92,11 +94,11 @@ public class TestAbfsInputStream extends
   private void queueReadAheads(AbfsInputStream inputStream) {
     // Mimic AbfsInputStream readAhead queue requests
     ReadBufferManager.getBufferManager()
-        .queueReadAhead(inputStream, 0, ONE_KB, inputStream.trackingContext);
+        .queueReadAhead(inputStream, 0, ONE_KB, inputStream.tracingContext);
     ReadBufferManager.getBufferManager()
-        .queueReadAhead(inputStream, ONE_KB, ONE_KB, inputStream.trackingContext);
+        .queueReadAhead(inputStream, ONE_KB, ONE_KB, inputStream.tracingContext);
     ReadBufferManager.getBufferManager()
-        .queueReadAhead(inputStream, TWO_KB, TWO_KB, inputStream.trackingContext);
+        .queueReadAhead(inputStream, TWO_KB, TWO_KB, inputStream.tracingContext);
   }
 
   private void verifyReadCallCount(AbfsClient client, int count) throws
@@ -107,7 +109,7 @@ public class TestAbfsInputStream extends
     verify(client, times(count)).read(any(String.class), any(Long.class),
         any(byte[].class), any(Integer.class), any(Integer.class),
         any(String.class), any(String.class),
-            any(TrackingContext.class));
+            any(TracingContext.class));
   }
 
   private void checkEvictedStatus(AbfsInputStream inputStream, int position, boolean expectedToThrowException)
@@ -163,7 +165,7 @@ public class TestAbfsInputStream extends
         .read(any(String.class), any(Long.class), any(byte[].class),
             any(Integer.class), any(Integer.class), any(String.class),
             any(String.class),
-                any(TrackingContext.class));
+                any(TracingContext.class));
 
     AbfsInputStream inputStream = getAbfsInputStream(client, "testFailedReadAhead.txt");
 
@@ -211,7 +213,7 @@ public class TestAbfsInputStream extends
         .read(any(String.class), any(Long.class), any(byte[].class),
             any(Integer.class), any(Integer.class), any(String.class),
             any(String.class),
-                any(TrackingContext.class));
+                any(TracingContext.class));
 
     AbfsInputStream inputStream = getAbfsInputStream(client, "testOlderReadAheadFailure.txt");
 
@@ -266,7 +268,7 @@ public class TestAbfsInputStream extends
         .read(any(String.class), any(Long.class), any(byte[].class),
             any(Integer.class), any(Integer.class), any(String.class),
             any(String.class),
-                any(TrackingContext.class));
+                any(TracingContext.class));
 
     AbfsInputStream inputStream = getAbfsInputStream(client, "testSuccessfulReadAhead.txt");
 
@@ -312,7 +314,7 @@ public class TestAbfsInputStream extends
         .read(any(String.class), any(Long.class), any(byte[].class),
             any(Integer.class), any(Integer.class), any(String.class),
             any(String.class),
-                any(TrackingContext.class));
+                any(TracingContext.class));
 
     AbfsInputStream inputStream = getAbfsInputStream(client, "testReadAheadManagerForFailedReadAhead.txt");
 
@@ -366,7 +368,7 @@ public class TestAbfsInputStream extends
         .read(any(String.class), any(Long.class), any(byte[].class),
             any(Integer.class), any(Integer.class), any(String.class),
             any(String.class),
-                any(TrackingContext.class));
+                any(TracingContext.class));
 
     AbfsInputStream inputStream = getAbfsInputStream(client, "testReadAheadManagerForOlderReadAheadFailure.txt");
 
@@ -421,7 +423,7 @@ public class TestAbfsInputStream extends
         .read(any(String.class), any(Long.class), any(byte[].class),
             any(Integer.class), any(Integer.class), any(String.class),
             any(String.class),
-                any(TrackingContext.class));
+                any(TracingContext.class));
 
     AbfsInputStream inputStream = getAbfsInputStream(client, "testSuccessfulReadAhead.txt");
 

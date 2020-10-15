@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 
-import org.apache.hadoop.fs.azurebfs.utils.TrackingContext;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -64,7 +64,7 @@ public class ITestAbfsInputStreamStatistics
 
       outputStream = createAbfsOutputStreamWithFlushEnabled(fs, initValuesPath);
       inputStream = abfss.openFileForRead(initValuesPath, fs.getFsStatistics(),
-          new TrackingContext("test-filesystem-id", "NS"));
+          new TracingContext("test-filesystem-id", "NS"));
 
       AbfsInputStreamStatisticsImpl stats =
           (AbfsInputStreamStatisticsImpl) inputStream.getStreamStatistics();
@@ -109,7 +109,7 @@ public class ITestAbfsInputStreamStatistics
       out.write(defBuffer);
       out.hflush();
       in = abfss.openFileForRead(seekStatPath, fs.getFsStatistics(),
-          new TrackingContext(fs.getFileSystemID(), "IN"));
+          new TracingContext(fs.getFileSystemID(), "IN"));
 
       /*
        * Writing 1MB buffer to the file, this would make the fCursor(Current
@@ -201,7 +201,7 @@ public class ITestAbfsInputStreamStatistics
       out.write(defBuffer);
       out.hflush();
       in = abfss.openFileForRead(readStatPath, fs.getFsStatistics(),
-          new TrackingContext("test-filesystem-id", "NS"));
+          new TracingContext("test-filesystem-id", "NS"));
 
       /*
        * Doing file read 10 times.
@@ -271,16 +271,20 @@ public class ITestAbfsInputStreamStatistics
       out.write(oneKbBuff);
       out.hflush();
 
+      TracingContext tracingContext = new TracingContext("testCorrId",
+              fs.getFileSystemID(), "PA");
+
       // AbfsRestOperation Instance required for eTag.
       AbfsRestOperation abfsRestOperation =
           fs.getAbfsClient().getPathStatus(nullStatFilePath.toUri().getPath(), false,
-                  new TrackingContext(fs.getFileSystemID(), "PA"));
+                  tracingContext);
 
       // AbfsInputStream with no StreamStatistics.
       in = new AbfsInputStream(fs.getAbfsClient(), null,
           nullStatFilePath.toUri().getPath(), ONE_KB,
           abfsInputStreamContext,
-          abfsRestOperation.getResult().getResponseHeader("ETag"));
+          abfsRestOperation.getResult().getResponseHeader("ETag"),
+              tracingContext);
 
       // Verifying that AbfsInputStream Operations works with null statistics.
       assertNotEquals("AbfsInputStream read() with null statistics should "
@@ -324,7 +328,7 @@ public class ITestAbfsInputStreamStatistics
       out.close();
 
       in = abfss.openFileForRead(readAheadCountersPath, fs.getFsStatistics(),
-          new TrackingContext("test-filesystem-id", "NS"));
+          new TracingContext("test-filesystem-id", "NS"));
 
       /*
        * Reading 1KB after each i * KB positions. Hence the reads are from 0

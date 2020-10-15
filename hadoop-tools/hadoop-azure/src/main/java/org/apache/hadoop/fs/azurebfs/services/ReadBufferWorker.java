@@ -62,7 +62,6 @@ class ReadBufferWorker implements Runnable {
       if (buffer != null) {
         try {
           // do the actual read, from the file.
-          System.out.println(buffer.getTrackingContext().toString());
           int bytesRead = buffer.getStream().readRemote(
               buffer.getOffset(),
               buffer.getBuffer(),
@@ -71,7 +70,7 @@ class ReadBufferWorker implements Runnable {
               // read-ahead buffer size, make sure a valid length is passed
               // for remote read
               Math.min(buffer.getRequestedLength(), buffer.getBuffer().length),
-                  buffer.getTrackingContext());
+                  buffer.getTracingContext());
 
           bufferManager.doneReading(buffer, ReadBufferStatus.AVAILABLE, bytesRead);  // post result back to ReadBufferManager
         } catch (Exception ex) {

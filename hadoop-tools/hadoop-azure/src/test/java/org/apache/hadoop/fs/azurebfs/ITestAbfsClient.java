@@ -27,7 +27,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import org.apache.hadoop.fs.azurebfs.utils.TrackingContext;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -74,7 +74,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
     try {
       AbfsRestOperation op = abfsClient.listPath("/", true, LIST_MAX_RESULTS, "===========",
-              new TrackingContext(fs.getFileSystemID(), "PA"));
+              new TracingContext("test-corr-id", fs.getFileSystemID(), "PA"));
       Assert.assertTrue(false);
     } catch (AbfsRestOperationException ex) {
       Assert.assertEquals("InvalidQueryParameterValue", ex.getErrorCode().getErrorCode());
@@ -124,34 +124,41 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem
         .newInstance(this.getFileSystem().getUri(), config);
     AbfsClient client = fs.getAbfsClient();
-//    TrackingContext
+//    TracingContext
     String path = getRelativePath(new Path("/testDir"));
     boolean isNamespaceEnabled = fs.getIsNamespaceEnabled();
     String permission = isNamespaceEnabled ? getOctalNotation(FsPermission.getDirDefault()) : null;
     String umask = isNamespaceEnabled ? getOctalNotation(FsPermission.getUMask(fs.getConf())) : null;
     AbfsRestOperation op = client.createPath(path, false, true,
         permission, umask, false, null,
-            new TrackingContext(fs.getFileSystemID(), "CR"));
+            new TracingContext(clientCorrelationId,
+                    fs.getFileSystemID(), "CR"));
 
     int responseCode = op.getResult().getStatusCode();
-    assertEquals("Status code", HTTP_CREATED, responseCode);
+    Assertions.assertThat(responseCode).describedAs("Status code").isEqualTo(HTTP_CREATED);
 
-    op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
+//    op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
+    Assertions.assertThat(responseCode).describedAs("Status code").isEqualTo(HTTP_CREATED);
+
     String requestHeader = op.getResult().getRequestHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
     List<String> clientRequestIds = java.util.Arrays.asList(
         requestHeader.replace("[","")
             .replace("]", "")
             .split(":"));
     if (includeInHeader) {
-      assertEquals("There should be 7 items in the header when valid clientCorrelationId is set",
-          7, clientRequestIds.size());
-      assertTrue("clientCorrelation should be included in the header",
-          clientRequestIds.contains(clientCorrelationId));
+      Assertions.assertThat(clientRequestIds)
+              .describedAs("There should be 7 items in the header when valid clientCorrelationId is set")
+              .hasSize(7);
+      Assertions.assertThat(clientRequestIds)
+              .describedAs("clientCorrelation should be included in the header")
+              .contains(clientCorrelationId);
     } else if (clientCorrelationId.length() > 0){
-      assertEquals("There should be only 6 item in the header when invalid clientCorrelationId is set",
-          6, clientRequestIds.size());
-      assertFalse("Invalid or empty correlationId value should not be included in header",
-          clientRequestIds.contains(clientCorrelationId));
+      Assertions.assertThat(clientRequestIds)
+              .describedAs("There should be only 6 item in the header when invalid clientCorrelationId is set")
+              .hasSize(6);
+      Assertions.assertThat(clientRequestIds)
+              .describedAs("Invalid or empty correlationId value should not be included in header")
+              .doesNotContain(clientCorrelationId);
     }
   }
 
@@ -204,8 +211,8 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
       throws IOException {
     return getFileSystem().getAbfsClient()
         .listPath(directory, false, getListMaxResults(), null,
-                new TrackingContext(getFileSystem().getFileSystemID(), "PA")).getResult()
-        .getListResultSchema().paths();
+                new TracingContext("test-corr-id", getFileSystem().getFileSystemID(),
+                        "PA")).getResult().getListResultSchema().paths();
   }
 
   private int getListMaxResults() throws IOException {

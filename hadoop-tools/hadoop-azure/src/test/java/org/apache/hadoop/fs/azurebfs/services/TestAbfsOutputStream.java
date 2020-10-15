@@ -23,7 +23,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Random;
 
-import org.apache.hadoop.fs.azurebfs.utils.TrackingContext;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.junit.Test;
 
 import org.mockito.ArgumentCaptor;
@@ -81,14 +81,18 @@ public final class TestAbfsOutputStream {
     AbfsConfiguration abfsConf;
     final Configuration conf = new Configuration();
     conf.set(accountKey1, accountValue1);
+    TracingContext tracingContext = new TracingContext("test-corr-id",
+            "test-fs-id", "WR");
     abfsConf = new AbfsConfiguration(conf, accountName1);
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), any(), anyBoolean())).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), anyString(),
-            new TrackingContext("test-filesystem-id", "OP"))).thenReturn(op);
+            any(TracingContext.class))).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0, populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, false));
+    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0,
+            populateAbfsOutputStreamContext(BUFFER_SIZE, true, false,
+                    false), tracingContext);
     final byte[] b = new byte[WRITE_SIZE];
     new Random().nextBytes(b);
     out.write(b);
@@ -132,13 +136,17 @@ public final class TestAbfsOutputStream {
     conf.set(accountKey1, accountValue1);
     abfsConf = new AbfsConfiguration(conf, accountName1);
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
+    TracingContext tracingContext = new TracingContext("test-corr-id",
+            "test-fs-id", "OP")
 
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), any(), anyBoolean())).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), anyString(),
-            new TrackingContext("test-filesystem-id", "OP"))).thenReturn(op);
+            any(TracingContext.class))).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0, populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, false));
+    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0,
+            populateAbfsOutputStreamContext(BUFFER_SIZE, true, false,
+                    false), tracingContext);
     final byte[] b = new byte[WRITE_SIZE];
     new Random().nextBytes(b);
 
@@ -171,8 +179,7 @@ public final class TestAbfsOutputStream {
     ArgumentCaptor<String> acFlushSASToken = ArgumentCaptor.forClass(String.class);
 
     verify(client, times(1)).flush(acFlushString.capture(), acFlushLong.capture(), acFlushRetainUnCommittedData.capture(), acFlushClose.capture(),
-                                   acFlushSASToken.capture(),
-            new TrackingContext("test-filesystem-id", "OP"));
+                                   acFlushSASToken.capture(), tracingContext);
     assertThat(Arrays.asList(PATH)).describedAs("path").isEqualTo(acFlushString.getAllValues());
     assertThat(Arrays.asList(Long.valueOf(5*WRITE_SIZE))).describedAs("position").isEqualTo(acFlushLong.getAllValues());
     assertThat(Arrays.asList(false)).describedAs("RetainUnCommittedData flag").isEqualTo(acFlushRetainUnCommittedData.getAllValues());
@@ -193,15 +200,19 @@ public final class TestAbfsOutputStream {
     conf.set(accountKey1, accountValue1);
     abfsConf = new AbfsConfiguration(conf, accountName1);
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
+    TracingContext tracingContext = new TracingContext(abfsConf.getClientCorrelationID(),
+            "test-fs-id", "OP");
 
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), any(), anyBoolean())).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), anyString(),
-            new TrackingContext("test-filesystem-id", "OP"))).thenReturn(op);
+            any(TracingContext.class))).thenReturn(op);
     when(op.getSasToken()).thenReturn("testToken");
     when(op.getResult()).thenReturn(httpOp);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0, populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, false));
+    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0,
+            populateAbfsOutputStreamContext(BUFFER_SIZE, true, false,
+                    false), tracingContext);
     final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
 
@@ -233,8 +244,7 @@ public final class TestAbfsOutputStream {
     ArgumentCaptor<String> acFlushSASToken = ArgumentCaptor.forClass(String.class);
 
     verify(client, times(1)).flush(acFlushString.capture(), acFlushLong.capture(), acFlushRetainUnCommittedData.capture(), acFlushClose.capture(),
-                                   acFlushSASToken.capture(),
-            new TrackingContext("test-filesystem-id", "OP"));
+                                   acFlushSASToken.capture(), tracingContext);
     assertThat(Arrays.asList(PATH)).describedAs("path").isEqualTo(acFlushString.getAllValues());
     assertThat(Arrays.asList(Long.valueOf(2*BUFFER_SIZE))).describedAs("position").isEqualTo(acFlushLong.getAllValues());
     assertThat(Arrays.asList(false)).describedAs("RetainUnCommittedData flag").isEqualTo(acFlushRetainUnCommittedData.getAllValues());
@@ -260,11 +270,13 @@ public final class TestAbfsOutputStream {
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), any(), anyBoolean())).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), anyString(),
-            new TrackingContext("test-filesystem-id", "OP"))).thenReturn(op);
+            any(TracingContext.class))).thenReturn(op);
     when(op.getSasToken()).thenReturn("testToken");
     when(op.getResult()).thenReturn(httpOp);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0, populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, false));
+    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0,
+            populateAbfsOutputStreamContext(BUFFER_SIZE, true, false,
+                    false), new TracingContext("corr-id", "fs-id", "WR"));
     final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
 
@@ -308,9 +320,11 @@ public final class TestAbfsOutputStream {
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), any(), anyBoolean())).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), anyString(),
-            new TrackingContext("test-filesystem-id", "OP"))).thenReturn(op);
+            any(TracingContext.class))).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0, populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, true));
+    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0,
+            populateAbfsOutputStreamContext(BUFFER_SIZE, true, false,
+                    true), new TracingContext("fs-id"));
     final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
 
@@ -350,13 +364,17 @@ public final class TestAbfsOutputStream {
     conf.set(accountKey1, accountValue1);
     abfsConf = new AbfsConfiguration(conf, accountName1);
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
+    TracingContext tracingContext = new TracingContext("test-corr-id",
+            "test-fs-id", "PA");
 
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), any(), anyBoolean())).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), anyString(),
-            new TrackingContext("test-filesystem-id", "OP"))).thenReturn(op);
+            any(TracingContext.class))).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0, populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, false));
+    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0, populateAbfsOutputStreamContext(
+            BUFFER_SIZE, true, false, false),
+            tracingContext);
     final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
 
@@ -388,7 +406,7 @@ public final class TestAbfsOutputStream {
     ArgumentCaptor<String> acFlushSASToken = ArgumentCaptor.forClass(String.class);
 
     verify(client, times(1)).flush(acFlushString.capture(), acFlushLong.capture(), acFlushRetainUnCommittedData.capture(), acFlushClose.capture(),
-                                   acFlushSASToken.capture(), new TrackingContext("test-filesystem-id", "OP"));
+                                   acFlushSASToken.capture(), new TracingContext("test-filesystem-id", "OP"));
     assertThat(Arrays.asList(PATH)).describedAs("path").isEqualTo(acFlushString.getAllValues());
     assertThat(Arrays.asList(Long.valueOf(2*BUFFER_SIZE))).describedAs("position").isEqualTo(acFlushLong.getAllValues());
     assertThat(Arrays.asList(false)).describedAs("RetainUnCommittedData flag").isEqualTo(acFlushRetainUnCommittedData.getAllValues());
@@ -408,13 +426,17 @@ public final class TestAbfsOutputStream {
     final Configuration conf = new Configuration();
     conf.set(accountKey1, accountValue1);
     abfsConf = new AbfsConfiguration(conf, accountName1);
+    TracingContext tracingContext = new TracingContext("test-corr-id",
+            "test-fs-id", "WR");
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), any(), anyBoolean())).thenReturn(op);
     when(client.flush(anyString(), anyLong(), anyBoolean(), anyBoolean(), anyString(),
-            new TrackingContext("test-filesystem-id", "OP"))).thenReturn(op);
+            any(TracingContext.class))).thenReturn(op);
 
-    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0, populateAbfsOutputStreamContext(BUFFER_SIZE, true, false, false));
+    AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0,
+            populateAbfsOutputStreamContext(BUFFER_SIZE, true, false,
+                    false), tracingContext);
     final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
 

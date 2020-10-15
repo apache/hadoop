@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemExc
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
-import org.apache.hadoop.fs.azurebfs.utils.TrackingContext;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -336,10 +336,10 @@ public final class TestAbfsClient {
     client = TestAbfsClient.setAbfsClientField(client, "userAgent", userAgent);
 
     // set tracking context
-//    TrackingContext trackingContext = new TrackingContext("clientCorrID", "TS");
-//    client = TestAbfsClient.setAbfsClientField(client, "trackingContext",
-//        trackingContext);
-//    when(client.getTrackingContext()).thenReturn(trackingContext);
+//    TracingContext tracingContext = new TracingContext("clientCorrID", "TS");
+//    client = TestAbfsClient.setAbfsClientField(client, "tracingContext",
+//        tracingContext);
+//    when(client.getTracingContext()).thenReturn(tracingContext);
 
     return client;
   }
