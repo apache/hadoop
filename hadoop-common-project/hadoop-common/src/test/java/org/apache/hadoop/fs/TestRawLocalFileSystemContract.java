@@ -217,7 +217,10 @@ public class TestRawLocalFileSystemContract extends FileSystemContractBaseTest {
       long atime = (now % 1000 == 0) ? now + 2 : now;
       fs.setTimes(file, mtime, atime);
       FileStatus fileStatus = fs.getFileStatus(file);
-      assertEquals(mtime, fileStatus.getModificationTime());
+      if (!Shell.MAC) {
+        //HADOOP-17306 ; JDK-8177809 not fixed in MacOs
+        assertEquals(mtime, fileStatus.getModificationTime());
+      }
       assertEquals(atime, fileStatus.getAccessTime());
     } finally {
       RawLocalFileSystem.useStatIfAvailable();
