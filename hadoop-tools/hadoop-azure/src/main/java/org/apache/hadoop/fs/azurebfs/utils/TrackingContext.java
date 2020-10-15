@@ -94,6 +94,7 @@ public class TrackingContext {
   public void updateRetryCount() {
 //    retryCount = count;
     retryCount++;
+    firstRequest = false; //this is necessary for retry in case of first request of continuation ops
   }
 
 //  public void setClientRequestID(boolean forceUpdate) {
@@ -103,10 +104,9 @@ public class TrackingContext {
 //  }
 
   public void setClientRequestID() {
-    if(firstRequest) {
-      return;
+    if (clientRequestID.isEmpty() || !firstRequest) {
+      clientRequestID = UUID.randomUUID().toString();
     }
-    clientRequestID = UUID.randomUUID().toString();
   }
 
   public String getPrimaryRequestID() {
@@ -133,7 +133,7 @@ public class TrackingContext {
 
   public void setPrimaryRequestID() {
 //    this.primaryRequestID = clientRequestID;
-    primaryRequestID = StringUtils.right(UUID.randomUUID().toString(), 12);
+    primaryRequestID = UUID.randomUUID().toString();
   }
 
   public String toString() {

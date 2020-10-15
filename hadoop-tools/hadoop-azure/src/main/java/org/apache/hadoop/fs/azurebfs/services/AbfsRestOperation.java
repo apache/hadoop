@@ -104,7 +104,7 @@ public class AbfsRestOperation {
    * @param url The full URL including query string parameters.
    * @param requestHeaders The HTTP request headers.
    */
-  AbfsRestOperation(final AbfsRestOperationType operationType,
+  public AbfsRestOperation(final AbfsRestOperationType operationType,
                     final AbfsClient client,
                     final String method,
                     final URL url,
@@ -209,7 +209,7 @@ public class AbfsRestOperation {
    * fails, there may be a retry.  The retryCount is incremented with each
    * attempt.
    */
-  private boolean executeHttpOperation(final int retryCount, TrackingContext trackingContext)
+  public boolean executeHttpOperation(final int retryCount, TrackingContext trackingContext)
           throws AzureBlobFileSystemException {
     AbfsHttpOperation httpOperation = null;
     try {

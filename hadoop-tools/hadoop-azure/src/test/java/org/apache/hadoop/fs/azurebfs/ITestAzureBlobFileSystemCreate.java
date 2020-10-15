@@ -379,14 +379,14 @@ public class ITestAzureBlobFileSystemCreate extends
         .createPath(any(String.class), eq(true), eq(false),
             isNamespaceEnabled ? any(String.class) : eq(null),
             isNamespaceEnabled ? any(String.class) : eq(null),
-            any(boolean.class), eq(null), trackingContext);
+            any(boolean.class), eq(null), any(TrackingContext.class));
 
     doThrow(fileNotFoundResponseEx) // Scn1: GFS fails with Http404
         .doThrow(serverErrorResponseEx) // Scn2: GFS fails with Http500
         .doReturn(successOp) // Scn3: create overwrite=true fails with Http412
         .doReturn(successOp) // Scn4: create overwrite=true fails with Http500
         .when(mockClient)
-        .getPathStatus(any(String.class), eq(false), trackingContext);
+        .getPathStatus(any(String.class), eq(false), any(TrackingContext.class));
 
     // mock for overwrite=true
     doThrow(
@@ -397,7 +397,7 @@ public class ITestAzureBlobFileSystemCreate extends
         .createPath(any(String.class), eq(true), eq(true),
             isNamespaceEnabled ? any(String.class) : eq(null),
             isNamespaceEnabled ? any(String.class) : eq(null),
-            any(boolean.class), eq(null), trackingContext);
+            any(boolean.class), eq(null), any(TrackingContext.class));
 
     // Scn1: GFS fails with Http404
     // Sequence of events expected:

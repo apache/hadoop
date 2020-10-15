@@ -751,11 +751,13 @@ public class AzureBlobFileSystemStore implements Closeable {
 
     String sourceRelativePath = getRelativePath(source);
     String destinationRelativePath = getRelativePath(destination);
+    trackingContext.setPrimaryRequestID();
+    trackingContext.firstRequest = true;
 
     do {
       try (AbfsPerfInfo perfInfo = startTracking("rename", "renamePath")) {
         AbfsRestOperation op = client.renamePath(sourceRelativePath,
-                destinationRelativePath, continuation, trackingContext);
+                destinationRelativePath, continuation, new TrackingContext(trackingContext));
         perfInfo.registerResult(op.getResult());
         continuation = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
         perfInfo.registerSuccess(true);
@@ -766,6 +768,7 @@ public class AzureBlobFileSystemStore implements Closeable {
           perfInfo.registerAggregates(startAggregate, countAggregate);
         }
       }
+      trackingContext.firstRequest = false;
     } while (shouldContinue);
   }
 

@@ -112,10 +112,9 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         abfsInputStreamContext.getSasTokenRenewPeriodForStreamsInSeconds());
     this.streamStatistics = abfsInputStreamContext.getStreamStatistics();
     this.inputStreamID = org.apache.commons.lang3.StringUtils.right(UUID.randomUUID().toString(), 12);
-    trackingContext.setStreamID(inputStreamID);
-    this.trackingContext = trackingContext;
+    this.trackingContext = new TrackingContext(trackingContext);
+    this.trackingContext.setStreamID(inputStreamID);
   }
-
   public String getPath() {
     return path;
   }
@@ -273,7 +272,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         }
         return receivedBytes;
       }
-      trackingContext.reset();
+      trackingContext.reset(); //remove to enable remote read to have same preq id
 
       // got nothing from read-ahead, do our own read now
       receivedBytes = readRemote(position, b, offset, length, new TrackingContext(trackingContext));

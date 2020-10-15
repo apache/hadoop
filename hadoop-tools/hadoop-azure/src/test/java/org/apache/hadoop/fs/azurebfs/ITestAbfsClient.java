@@ -204,7 +204,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
       throws IOException {
     return getFileSystem().getAbfsClient()
         .listPath(directory, false, getListMaxResults(), null,
-                new TrackingContext("test-fileSystemID", "PA")).getResult()
+                new TrackingContext(getFileSystem().getFileSystemID(), "PA")).getResult()
         .getListResultSchema().paths();
   }
 
