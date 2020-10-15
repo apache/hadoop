@@ -131,22 +131,27 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         permission, umask, false, null);
 
     int responseCode = op.getResult().getStatusCode();
-    assertEquals("Status code", HTTP_CREATED, responseCode);
+    Assertions.assertThat(responseCode).describedAs("Status code").isEqualTo(HTTP_CREATED);
+
     String requestHeader = op.getResult().getRequestHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
     List<String> clientRequestIds = java.util.Arrays.asList(
         requestHeader.replace("[", "")
             .replace("]", "")
             .split(":"));
     if (includeInHeader) {
-      assertEquals("There should be 2 items in the header when valid clientCorrelationId is set",
-          2, clientRequestIds.size());
-      assertTrue("clientCorrelation should be included in the header",
-          clientRequestIds.contains(clientCorrelationId));
+      Assertions.assertThat(clientRequestIds)
+          .describedAs("There should be 2 items in the header when valid clientCorrelationId is set")
+          .hasSize(2);
+      Assertions.assertThat(clientRequestIds)
+          .describedAs("clientCorrelation should be included in the header")
+          .contains(clientCorrelationId);
     } else if (clientCorrelationId.length() > 0){
-      assertEquals("There should be only 1 item in the header when invalid clientCorrelationId is set",
-          1, clientRequestIds.size());
-      assertFalse("Invalid or empty correlationId value should not be included in header",
-          clientRequestIds.contains(clientCorrelationId));
+      Assertions.assertThat(clientRequestIds)
+          .describedAs("There should be only 1 item in the header when invalid clientCorrelationId is set")
+          .hasSize(1);
+      Assertions.assertThat(clientRequestIds)
+          .describedAs("Invalid or empty correlationId value should not be included in header")
+          .doesNotContain(clientCorrelationId);
     }
   }
 
