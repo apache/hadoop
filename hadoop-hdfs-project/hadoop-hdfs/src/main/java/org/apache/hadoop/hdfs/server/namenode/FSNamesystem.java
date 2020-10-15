@@ -3569,7 +3569,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   void setQuota(String src, long nsQuota, long ssQuota, StorageType type)
       throws IOException {
     if (type != null) {
-      requireEffectiveLayoutVersionForFeature(Feature.QUOTA_BY_STORAGE_TYPE_INCLUDING_NVDIMM);
+      requireEffectiveLayoutVersionForFeature(
+          Feature.QUOTA_BY_STORAGE_TYPE_INCLUDING_NVDIMM);
     }
     checkOperation(OperationCategory.WRITE);
     final String operationName = getQuotaCommand(nsQuota, ssQuota);

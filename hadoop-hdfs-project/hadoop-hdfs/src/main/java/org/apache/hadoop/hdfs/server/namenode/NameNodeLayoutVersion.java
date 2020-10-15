@@ -90,10 +90,10 @@ public class NameNodeLayoutVersion {
     QUOTA_BY_STORAGE_TYPE(-63, -61, "Support quota for specific storage types"),
     ERASURE_CODING(-64, -61, "Support erasure coding"),
     EXPANDED_STRING_TABLE(-65, -61, "Support expanded string table in fsimage"),
-    BLOCK_STORAGE_POLICY_INCLUDING_ALL_NVDIMM(-66, -60, -66, "Support block " +
-      "Storage policy including ALL_NVDIMM", false),
-    QUOTA_BY_STORAGE_TYPE_INCLUDING_NVDIMM(-67, -63, -66, "Support quota " +
-      "for specific storage types including NVDIMM", false);
+    BLOCK_STORAGE_POLICY_INCLUDING_ALL_NVDIMM(-66, -66, "Support block " +
+        "Storage policy including ALL_NVDIMM"),
+    QUOTA_BY_STORAGE_TYPE_INCLUDING_NVDIMM(-67, -66, "Support quota for " +
+        "specific storage types including NVDIMM");
 
     private final FeatureInfo info;
 
