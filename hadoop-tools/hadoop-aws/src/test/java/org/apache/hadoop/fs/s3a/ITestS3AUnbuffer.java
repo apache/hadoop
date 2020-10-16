@@ -88,13 +88,20 @@ public class ITestS3AUnbuffer extends AbstractS3ATestBase {
       // do the unbuffering
       inputStream.unbuffer();
 
-      // verify that the updated statistics were propagated
+      // audit the updated statistics
       IOStatistics st2 = inputStream.getIOStatistics();
-      verifyStatisticCounterValue(st2,
-          StreamStatisticNames.STREAM_READ_BYTES,
-          0);
+
+      // the unbuffered operation must be tracked
       verifyStatisticCounterValue(st2,
           StreamStatisticNames.STREAM_READ_UNBUFFERED,
+          1);
+
+      // all other counter values consistent.
+      verifyStatisticCounterValue(st2,
+          StreamStatisticNames.STREAM_READ_BYTES,
+          bytesToRead);
+      verifyStatisticCounterValue(st2,
+          StoreStatisticNames.ACTION_HTTP_GET_REQUEST,
           1);
 
       // Check the the wrapped stream is closed
