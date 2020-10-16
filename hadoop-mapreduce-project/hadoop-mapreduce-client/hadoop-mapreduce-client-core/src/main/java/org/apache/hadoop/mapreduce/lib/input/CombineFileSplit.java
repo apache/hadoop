@@ -21,6 +21,9 @@ package org.apache.hadoop.mapreduce.lib.input;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -54,34 +57,31 @@ public class CombineFileSplit extends InputSplit implements Writable {
   private long totLength;
 
   /**
-   * default constructor
+   * Default constructor.
    */
-  public CombineFileSplit() {}
-  public CombineFileSplit(Path[] files, long[] start, 
-                          long[] lengths, String[] locations) {
+  public CombineFileSplit() {
+  }
+
+  public CombineFileSplit(Path[] files, long[] start, long[] lengths,
+      String[] locations) {
     initSplit(files, start, lengths, locations);
   }
 
   public CombineFileSplit(Path[] files, long[] lengths) {
     long[] startoffset = new long[files.length];
-    for (int i = 0; i < startoffset.length; i++) {
-      startoffset[i] = 0;
-    }
     String[] locations = new String[files.length];
-    for (int i = 0; i < locations.length; i++) {
-      locations[i] = "";
-    }
+    Arrays.fill(locations, "");
     initSplit(files, startoffset, lengths, locations);
   }
-  
-  private void initSplit(Path[] files, long[] start, 
-                         long[] lengths, String[] locations) {
+
+  private void initSplit(Path[] files, long[] start, long[] lengths,
+      String[] locations) {
     this.startoffset = start;
     this.lengths = lengths;
     this.paths = files;
-    this.totLength = 0;
+    this.totLength = 0L;
     this.locations = locations;
-    for(long length : lengths) {
+    for (long length : lengths) {
       totLength += length;
     }
   }
@@ -90,8 +90,8 @@ public class CombineFileSplit extends InputSplit implements Writable {
    * Copy constructor
    */
   public CombineFileSplit(CombineFileSplit old) throws IOException {
-    this(old.getPaths(), old.getStartOffsets(),
-         old.getLengths(), old.getLocations());
+    this(old.getPaths(), old.getStartOffsets(), old.getLengths(),
+        old.getLocations());
   }
 
   public long getLength() {
@@ -142,17 +142,17 @@ public class CombineFileSplit extends InputSplit implements Writable {
     totLength = in.readLong();
     int arrLength = in.readInt();
     lengths = new long[arrLength];
-    for(int i=0; i<arrLength;i++) {
+    for (int i = 0; i < arrLength; i++) {
       lengths[i] = in.readLong();
     }
     int filesLength = in.readInt();
     paths = new Path[filesLength];
-    for(int i=0; i<filesLength;i++) {
+    for (int i = 0; i < filesLength; i++) {
       paths[i] = new Path(Text.readString(in));
     }
     arrLength = in.readInt();
     startoffset = new long[arrLength];
-    for(int i=0; i<arrLength;i++) {
+    for (int i = 0; i < arrLength; i++) {
       startoffset[i] = in.readLong();
     }
   }
@@ -160,41 +160,35 @@ public class CombineFileSplit extends InputSplit implements Writable {
   public void write(DataOutput out) throws IOException {
     out.writeLong(totLength);
     out.writeInt(lengths.length);
-    for(long length : lengths) {
+    for (long length : lengths) {
       out.writeLong(length);
     }
     out.writeInt(paths.length);
-    for(Path p : paths) {
+    for (Path p : paths) {
       Text.writeString(out, p.toString());
     }
     out.writeInt(startoffset.length);
-    for(long length : startoffset) {
+    for (long length : startoffset) {
       out.writeLong(length);
     }
   }
-  
+
   @Override
- public String toString() {
-    StringBuffer sb = new StringBuffer();
+  public String toString() {
+    final StringBuilder sb = new StringBuilder(256);
+
+    List<String> pathStrList = new ArrayList<>(paths.length);
     for (int i = 0; i < paths.length; i++) {
-      if (i == 0 ) {
-        sb.append("Paths:");
-      }
-      sb.append(paths[i].toUri().getPath() + ":" + startoffset[i] +
-                "+" + lengths[i]);
-      if (i < paths.length -1) {
-        sb.append(",");
-      }
+      pathStrList.add(
+          paths[i].toUri().getPath() + ':' + startoffset[i] + '+' + lengths[i]);
     }
+
+    sb.append("Paths: [").append(String.join(",", pathStrList)).append(']');
+
     if (locations != null) {
-      String locs = "";
-      StringBuffer locsb = new StringBuffer();
-      for (int i = 0; i < locations.length; i++) {
-        locsb.append(locations[i] + ":");
-      }
-      locs = locsb.toString();
-      sb.append(" Locations:" + locs + "; ");
+      sb.append(" Locations: [").append(String.join(":", locations));
     }
+
     return sb.toString();
   }
 }

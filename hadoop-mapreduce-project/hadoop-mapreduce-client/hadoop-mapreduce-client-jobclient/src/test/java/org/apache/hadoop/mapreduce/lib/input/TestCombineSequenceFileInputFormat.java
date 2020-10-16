@@ -50,6 +50,7 @@ public class TestCombineSequenceFileInputFormat {
       LoggerFactory.getLogger(TestCombineSequenceFileInputFormat.class);
   private static Configuration conf = new Configuration();
   private static FileSystem localFs = null;
+  private static final Random RANDOM = new Random(13L);
 
   static {
     try {
@@ -68,10 +69,6 @@ public class TestCombineSequenceFileInputFormat {
   public void testFormat() throws IOException, InterruptedException {
     Job job = Job.getInstance(conf);
 
-    Random random = new Random();
-    long seed = random.nextLong();
-    random.setSeed(seed);
-
     localFs.delete(workDir, true);
     FileInputFormat.setInputPaths(job, workDir);
 
@@ -79,7 +76,7 @@ public class TestCombineSequenceFileInputFormat {
     final int numFiles = 10;
 
     // create files with a variety of lengths
-    createFiles(length, numFiles, random, job);
+    createFiles(length, numFiles, RANDOM, job);
 
     TaskAttemptContext context = MapReduceTestUtil.
       createDummyMapTaskAttemptContext(job.getConfiguration());
@@ -87,11 +84,11 @@ public class TestCombineSequenceFileInputFormat {
     InputFormat<IntWritable,BytesWritable> format =
       new CombineSequenceFileInputFormat<IntWritable,BytesWritable>();
     for (int i = 0; i < 3; i++) {
-      int numSplits =
-        random.nextInt(length/(SequenceFile.SYNC_INTERVAL/20)) + 1;
-      LOG.info("splitting: requesting = " + numSplits);
+      final int numSplits =
+          RANDOM.nextInt(length/(SequenceFile.SYNC_INTERVAL/20)) + 1;
       List<InputSplit> splits = format.getSplits(job);
-      LOG.info("splitting: got =        " + splits.size());
+      LOG.info("Splitting: requesting = {}; got = {}", numSplits,
+          splits.size());
 
       // we should have a single split as the length is comfortably smaller than
       // the block size
