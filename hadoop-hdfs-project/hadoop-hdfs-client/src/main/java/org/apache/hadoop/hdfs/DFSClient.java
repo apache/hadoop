@@ -1944,8 +1944,17 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @see ClientProtocol#getStats()
    */
   public FsStatus getDiskStatus() throws IOException {
-    return new FsStatus(getStateByIndex(0),
-        getStateByIndex(1), getStateByIndex(2));
+    try (TraceScope ignored = tracer.newScope("getStats")) {
+      long[] states = namenode.getStats();
+      return new FsStatus(getStateAtIndex(states, 0),
+          getStateAtIndex(states, 1), getStateAtIndex(states, 2));
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException();
+    }
+  }
+
+  private long getStateAtIndex(long[] states, int index) {
+    return states.length > index ? states[index] : -1;
   }
 
   /**
