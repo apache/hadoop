@@ -29,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.common.Abortable;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -71,7 +72,7 @@ public class MapFile {
   protected MapFile() {}                          // no public ctor
 
   /** Writes a new map. */
-  public static class Writer implements java.io.Closeable {
+  public static class Writer implements java.io.Closeable, Abortable {
     private SequenceFile.Writer data;
     private SequenceFile.Writer index;
 
@@ -283,6 +284,15 @@ public class MapFile {
             SequenceFile.Writer.valueClass(LongWritable.class),
             SequenceFile.Writer.compression(CompressionType.BLOCK));
       this.index = SequenceFile.createWriter(conf, indexOptions);      
+    }
+
+    @Override
+    public void abort() throws IOException {
+      try {
+        data.abort();
+      } finally {
+        index.abort();
+      }
     }
 
     /** The number of entries that are added before an index entry is added.*/

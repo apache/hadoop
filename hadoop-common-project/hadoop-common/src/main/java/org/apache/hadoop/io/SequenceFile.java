@@ -25,6 +25,7 @@ import java.rmi.server.UID;
 import java.security.MessageDigest;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.fs.common.Abortable;
 import org.apache.hadoop.util.Options;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.Options.CreateOpts;
@@ -834,7 +835,7 @@ public class SequenceFile {
   }
   
   /** Write key/value pairs to a sequence-format file. */
-  public static class Writer implements java.io.Closeable, Syncable {
+  public static class Writer implements java.io.Closeable, Syncable, Abortable {
     private Configuration conf;
     FSDataOutputStream out;
     boolean ownOutputStream = true;
@@ -872,6 +873,15 @@ public class SequenceFile {
         sync = digester.digest();
       } catch (Exception e) {
         throw new RuntimeException(e);
+      }
+    }
+
+    @Override
+    public void abort() throws IOException {
+      if (out instanceof Abortable) {
+        ((Abortable) out).abort();
+      } else {
+        out.close();
       }
     }
 

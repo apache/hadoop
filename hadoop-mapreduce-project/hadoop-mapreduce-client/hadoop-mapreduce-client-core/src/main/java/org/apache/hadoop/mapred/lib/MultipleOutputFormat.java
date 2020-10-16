@@ -26,6 +26,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.common.Abortable;
+import org.apache.hadoop.mapred.AbortableRecordWriter;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.RecordWriter;
@@ -79,7 +81,7 @@ extends FileOutputFormat<K, V> {
     final JobConf myJob = job;
     final Progressable myProgressable = arg3;
 
-    return new RecordWriter<K, V>() {
+    return new AbortableRecordWriter<K, V>() {
 
       // a cache storing the record writers for different output files.
       TreeMap<String, RecordWriter<K, V>> recordWriters = new TreeMap<String, RecordWriter<K, V>>();
@@ -115,6 +117,17 @@ extends FileOutputFormat<K, V> {
         }
         this.recordWriters.clear();
       };
+
+      @Override
+      public void abort() throws IOException {
+        Iterator<String> keys = this.recordWriters.keySet().iterator();
+        while (keys.hasNext()) {
+          RecordWriter<K, V> rw = this.recordWriters.get(keys.next());
+          if (rw instanceof Abortable) {
+            ((Abortable) rw).abort();
+          }
+        }
+      }
     };
   }
 
