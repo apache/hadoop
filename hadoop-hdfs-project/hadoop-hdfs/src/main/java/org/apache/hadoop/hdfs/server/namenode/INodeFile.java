@@ -25,7 +25,6 @@ import static org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.NO_SNAPSH
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -1086,30 +1085,6 @@ public class INodeFile extends INodeWithAdditionalFields
   @Override
   public int numBlocks() {
     return blocks.length;
-  }
-
-  @VisibleForTesting
-  @Override
-  public void dumpTreeRecursively(PrintWriter out, StringBuilder prefix,
-      final int snapshotId) {
-    super.dumpTreeRecursively(out, prefix, snapshotId);
-    out.print(", fileSize=" + computeFileSize(snapshotId));
-    // only compare the first block
-    out.print(", blocks=");
-    out.print(blocks.length == 0 ? null: blocks[0]);
-    out.println();
-
-    final FileWithSnapshotFeature snapshotFeature =
-        getFileWithSnapshotFeature();
-    if (snapshotFeature != null) {
-      if (prefix.length() >= 2) {
-        prefix.setLength(prefix.length() - 2);
-        prefix.append("  ");
-      }
-      out.print(prefix);
-      out.print(snapshotFeature);
-    }
-    out.println();
   }
 
   @Override

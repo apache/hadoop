@@ -17,10 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
@@ -36,7 +34,6 @@ import org.apache.hadoop.hdfs.server.namenode.Content;
 import org.apache.hadoop.hdfs.server.namenode.ContentCounts;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
-import org.apache.hadoop.hdfs.server.namenode.INodeDirectory.SnapshotAndINode;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
@@ -47,7 +44,6 @@ import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Time;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
@@ -575,71 +571,5 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
   @Override
   public String toString() {
     return "snapshotsByNames=" + snapshotsByNames;
-  }
-
-  @VisibleForTesting
-  public void dumpTreeRecursively(INodeDirectory snapshotRoot, PrintWriter out,
-      StringBuilder prefix, int snapshot) {
-    if (snapshot == Snapshot.CURRENT_STATE_ID) {
-      out.println();
-      out.print(prefix);
-
-      out.print("Snapshot of ");
-      final String name = snapshotRoot.getLocalName();
-      out.print(name.isEmpty()? "/": name);
-      out.print(": quota=");
-      out.print(getSnapshotQuota());
-
-      int n = 0;
-      for(DirectoryDiff diff : getDiffs()) {
-        if (diff.isSnapshotRoot()) {
-          n++;
-        }
-      }
-      Preconditions.checkState(n == snapshotsByNames.size(), "#n=" + n
-          + ", snapshotsByNames.size()=" + snapshotsByNames.size());
-      out.print(", #snapshot=");
-      out.println(n);
-
-      INodeDirectory.dumpTreeRecursively(out, prefix,
-          new Iterable<SnapshotAndINode>() {
-        @Override
-        public Iterator<SnapshotAndINode> iterator() {
-          return new Iterator<SnapshotAndINode>() {
-            final Iterator<DirectoryDiff> i = getDiffs().iterator();
-            private DirectoryDiff next = findNext();
-
-            private DirectoryDiff findNext() {
-              for(; i.hasNext(); ) {
-                final DirectoryDiff diff = i.next();
-                if (diff.isSnapshotRoot()) {
-                  return diff;
-                }
-              }
-              return null;
-            }
-
-            @Override
-            public boolean hasNext() {
-              return next != null;
-            }
-
-            @Override
-            public SnapshotAndINode next() {
-              final SnapshotAndINode pair = new SnapshotAndINode(next
-                  .getSnapshotId(), getSnapshotById(next.getSnapshotId())
-                  .getRoot());
-              next = findNext();
-              return pair;
-            }
-
-            @Override
-            public void remove() {
-              throw new UnsupportedOperationException();
-            }
-          };
-        }
-      });
-    }
   }
 }

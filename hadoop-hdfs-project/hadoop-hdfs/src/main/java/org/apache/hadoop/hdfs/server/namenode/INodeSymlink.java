@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.io.PrintWriter;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -99,14 +97,6 @@ public class INodeSymlink extends INodeWithAdditionalFields {
       final ContentSummaryComputationContext summary) {
     summary.getCounts().addContent(Content.SYMLINK, 1);
     return summary;
-  }
-
-  @Override
-  public void dumpTreeRecursively(PrintWriter out, StringBuilder prefix,
-      final int snapshot) {
-    super.dumpTreeRecursively(out, prefix, snapshot);
-    out.print(" ~> ");
-    out.println(getSymlinkString());
   }
 
   @Override

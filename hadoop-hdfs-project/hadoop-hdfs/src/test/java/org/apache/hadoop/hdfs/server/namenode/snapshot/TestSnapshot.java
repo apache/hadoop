@@ -56,6 +56,7 @@ import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper.TestDirectoryTree;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper.TestDirectoryTree.Node;
+import org.apache.hadoop.hdfs.server.namenode.visitor.NamespacePrintVisitor;
 import org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -238,7 +239,7 @@ public class TestSnapshot {
       runTestSnapshot(SNAPSHOT_ITERATION_NUMBER);
     } catch(Throwable t) {
       SnapshotTestHelper.LOG.info("FAILED", t);
-      SnapshotTestHelper.dumpTree("FAILED", cluster);
+      cluster.printTree("FAILED");
       throw t;
     }
   }
@@ -747,7 +748,7 @@ public class TestSnapshot {
                 + "\n\nfile        : " + fsdir.getINode(file.toString()).toDetailString()
                 + "\n\nsnapshotFile: " + fsdir.getINode(snapshotFile.toString()).toDetailString();
             
-            SnapshotTestHelper.dumpTree(s, cluster);
+            cluster.printTree(s);
           }
           assertEquals(s, currentStatus.toString(), originalStatus.toString());
         }
@@ -858,7 +859,7 @@ public class TestSnapshot {
               +   "\noriginalSnapshotFileLen = " + originalSnapshotFileLen
               + "\n\nfile        : " + fsdir.getINode(file.toString()).toDetailString()
               + "\n\nsnapshotFile: " + fsdir.getINode(snapshotFile.toString()).toDetailString();
-          SnapshotTestHelper.dumpTree(s, cluster);
+          cluster.printTree(s);
         }
         assertEquals(s, originalSnapshotFileLen, currentSnapshotFileLen);
         // Read the snapshot file out of the boundary
@@ -873,7 +874,7 @@ public class TestSnapshot {
                 +   "\n                readLen = " + readLen
                 + "\n\nfile        : " + fsdir.getINode(file.toString()).toDetailString()
                 + "\n\nsnapshotFile: " + fsdir.getINode(snapshotFile.toString()).toDetailString();
-            SnapshotTestHelper.dumpTree(s, cluster);
+            cluster.printTree(s);
           }
           assertEquals(s, -1, readLen);
           input.close();

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
+import org.apache.hadoop.hdfs.server.namenode.visitor.NamespacePrintVisitor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -2506,12 +2507,11 @@ public class TestRenameWithSnapshots {
   private final PrintWriter output = new PrintWriter(System.out, true);
   private int printTreeCount = 0;
 
-  String printTree(String label) throws Exception {
+  String printTree(String label) {
     output.println();
     output.println();
     output.println("***** " + printTreeCount++ + ": " + label);
-    final String b =
-        fsn.getFSDirectory().getINode("/").dumpTreeRecursively().toString();
+    final String b = NamespacePrintVisitor.print2Sting(fsn);
     output.println(b);
     return b;
   }

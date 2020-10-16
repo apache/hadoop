@@ -44,9 +44,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.PrintStream;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.util.List;
 import java.util.Map;
 
@@ -862,41 +859,6 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     return (int)(id^(id>>>32));  
   }
   
-  /**
-   * Dump the subtree starting from this inode.
-   * @return a text representation of the tree.
-   */
-  @VisibleForTesting
-  public final StringBuffer dumpTreeRecursively() {
-    final StringWriter out = new StringWriter(); 
-    dumpTreeRecursively(new PrintWriter(out, true), new StringBuilder(),
-        Snapshot.CURRENT_STATE_ID);
-    return out.getBuffer();
-  }
-
-  @VisibleForTesting
-  public final void dumpTreeRecursively(PrintStream out) {
-    out.println(dumpTreeRecursively().toString());
-  }
-
-  /**
-   * Dump tree recursively.
-   * @param prefix The prefix string that each line should print.
-   */
-  @VisibleForTesting
-  public void dumpTreeRecursively(PrintWriter out, StringBuilder prefix,
-      int snapshotId) {
-    out.print(prefix);
-    out.print(" ");
-    final String name = getLocalName();
-    out.print(name.isEmpty()? "/": name);
-    out.print("   (");
-    out.print(getObjectString());
-    out.print("), ");
-    out.print(getParentString());
-    out.print(", " + getPermissionStatus(snapshotId));
-  }
-
   /**
    * Information used to record quota usage delta. This data structure is
    * usually passed along with an operation like {@link #cleanSubtree}. Note
