@@ -38,10 +38,10 @@ public interface S3AInputStreamStatistics extends AutoCloseable,
    * Record a forward seek, adding a seek operation, a forward
    * seek operation, and any bytes skipped.
    * @param skipped bytes moved forward in stream
-   * @param bytesRead number of bytes skipped by reading from the stream.
+   * @param bytesReadInSeek number of bytes skipped by reading from the stream.
  * If the seek was implemented by a close + reopen, set this to zero.
    */
-  void seekForwards(long skipped, long bytesRead);
+  void seekForwards(long skipped, long bytesReadInSeek);
 
   /**
    * The inner stream was opened.
