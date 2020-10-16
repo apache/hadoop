@@ -105,6 +105,8 @@ public class MetricsOverviewTable extends HtmlBlock {
         th().$class("ui-state-default")._("Used Resources")._().
         th().$class("ui-state-default")._("Total Resources")._().
         th().$class("ui-state-default")._("Reserved Resources")._().
+        th().$class("ui-state-default")._("Physical Mem Used %")._().
+        th().$class("ui-state-default")._("Physical VCores Used %")._().
       _().
     _().
     tbody().$class("ui-widget-content").
@@ -122,6 +124,8 @@ public class MetricsOverviewTable extends HtmlBlock {
         td(usedResources.toString()).
         td(totalResources.toString()).
         td(reservedResources.toString()).
+        td(String.valueOf(clusterMetrics.getUtilizedMBPercent())).
+        td(String.valueOf(clusterMetrics.getUtilizedVirtualCoresPercent())).
       _().
     _()._();
 

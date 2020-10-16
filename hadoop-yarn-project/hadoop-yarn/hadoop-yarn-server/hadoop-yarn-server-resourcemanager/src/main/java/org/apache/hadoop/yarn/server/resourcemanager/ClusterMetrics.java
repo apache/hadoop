@@ -30,6 +30,7 @@ import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
+import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 import com.google.common.annotations.VisibleForTesting;
 
@@ -48,6 +49,8 @@ public class ClusterMetrics {
   @Metric("# of Shutdown NMs") MutableGaugeInt numShutdownNMs;
   @Metric("AM container launch delay") MutableRate aMLaunchDelay;
   @Metric("AM register delay") MutableRate aMRegisterDelay;
+  @Metric("Memory Utilization") MutableGaugeLong utilizedMB;
+  @Metric("Vcore Utilization") MutableGaugeLong utilizedVirtualCores;
 
   private static final MetricsInfo RECORD_INFO = info("ClusterMetrics",
   "Metrics for the Yarn Cluster");
@@ -190,4 +193,27 @@ public class ClusterMetrics {
     aMRegisterDelay.add(delay);
   }
 
+  public long getUtilizedMB() {
+    return utilizedMB.value();
+  }
+
+  public void incrUtilizedMB(long delta) {
+    utilizedMB.incr(delta);
+  }
+
+  public void decrUtilizedMB(long delta) {
+    utilizedMB.decr(delta);
+  }
+
+  public void decrUtilizedVirtualCores(long delta) {
+    utilizedVirtualCores.decr(delta);
+  }
+
+  public long getUtilizedVirtualCores() {
+    return utilizedVirtualCores.value();
+  }
+
+  public void incrUtilizedVirtualCores(long delta) {
+    utilizedVirtualCores.incr(delta);
+  }
 }
