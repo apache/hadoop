@@ -3777,6 +3777,13 @@
   </property>
 
   <property>
+    <description>The replication factor for the node label's
+     file (10 by default)</description>
+    <name>yarn.node-labels.file.replication</name>
+    <value>10</value>
+  </property>
+
+  <property>
     <description>
       Enable the CSRF filter for the RM web app
     </description>

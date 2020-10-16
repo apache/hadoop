@@ -167,7 +167,7 @@ public abstract class AbstractFSNodeStore<M> {
       StoreOp op = FSStoreOpHandler.getMirrorOp(storeType);
       op.write(os, manager);
     }
-    checkAvailabilty(writingMirrorPath);
+    checkAvailability(writingMirrorPath);
     // Move mirror to mirror.old
     if (fs.exists(mirrorPath)) {
       fs.delete(oldMirrorPath, false);
@@ -184,7 +184,7 @@ public abstract class AbstractFSNodeStore<M> {
     // create a new editlog file
     editlogOs = fs.create(editLogPath, true);
     editlogOs.close();
-    checkAvailabilty(editLogPath);
+    checkAvailability(editLogPath);
     LOG.info("Finished write mirror at:" + mirrorPath.toString());
     LOG.info("Finished create editlog file at:" + editLogPath.toString());
   }
@@ -193,7 +193,7 @@ public abstract class AbstractFSNodeStore<M> {
    * Make sure replica is highly available.
    * @throws IOException
    */
-  private void checkAvailabilty(Path file) throws IOException {
+  private void checkAvailability(Path file) throws IOException {
     try {
       if (fs.getFileStatus(file).getReplication() < replication) {
         fs.setReplication(file, (short) replication);
