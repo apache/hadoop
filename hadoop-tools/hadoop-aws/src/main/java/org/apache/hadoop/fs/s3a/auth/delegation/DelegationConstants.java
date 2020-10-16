@@ -129,11 +129,31 @@ public final class DelegationConstants {
   /** Kind of the session token; value is {@link #SESSION_TOKEN_NAME}. */
   public static final Text SESSION_TOKEN_KIND = new Text(SESSION_TOKEN_NAME);
 
+  /**
+   * Service name to use for a secondary token name
+   * for the session token binding: {@value}.
+   * <p></p>
+   * Default value, null/empty means work it out automatically
+   * based on the URI and token kind.
+   */
+  public static final String SESSION_SECONDARY_TOKEN_NAME =
+      "fs.s3a.delegation.session.secondary.token.name";
+
   /** Name of full token: {@value}. */
   public static final String FULL_TOKEN_NAME = TOKEN_NAME_PREFIX + "Full";
 
   /** Kind of the full token; value is {@link #FULL_TOKEN_NAME}. */
   public static final Text FULL_TOKEN_KIND = new Text(FULL_TOKEN_NAME);
+
+  /**
+   * Service name to use for a secondary token name
+   * for the full token binding: {@value}.
+   * <p></p>
+   * Default value, null/empty means work it out automatically
+   * based on the URI and token kind.
+   */
+  public static final String FULL_SECONDARY_TOKEN_NAME =
+      "fs.s3a.delegation.full.secondary.token.name";
 
   /** Name of role token: {@value}. */
   public static final String ROLE_TOKEN_NAME = TOKEN_NAME_PREFIX + "Role";
@@ -159,6 +179,90 @@ public final class DelegationConstants {
    * The standard STS server.
    */
   public static final String STS_STANDARD = "sts.amazonaws.com";
+
+  /**
+   * A list of secondary token bindings: {@value}.
+   */
+  public static final String DELEGATION_SECONDARY_BINDINGS =
+      "fs.s3a.delegation.token.secondary.bindings";
+
+  /**
+   * Encrypting Token binding classname: {@value}.
+   * <p></p>
+   * This only marshalls encryption secrets, and not any AWS credentials.
+   */
+  public static final String DELEGATION_TOKEN_ENCRYPTING_BINDING =
+      "org.apache.hadoop.fs.s3a.auth.delegation.providers.EncryptingTokenBinding";
+
+  /** Name of encrypting token: {@value}. */
+  public static final String ENCRYPTING_TOKEN_NAME =
+      TOKEN_NAME_PREFIX + "Encrypting";
+
+  /**
+   *  Kind of the encrypting token;
+   *  value is {@link #ENCRYPTING_TOKEN_NAME}.
+   */
+  public static final Text ENCRYPTING_TOKEN_KIND =
+      new Text(ENCRYPTING_TOKEN_NAME);
+
+  /**
+   * Service name to use for a secondary token name
+   * for the encrypting token binding: {@value}.
+   * <p></p>
+   * Default value, null/empty means work it out automatically
+   * based on the URI and token kind.
+   */
+  public static final String ENCRYPTING_SECONDARY_TOKEN_NAME =
+      "fs.s3a.delegation.encrypting.secondary.token.name";
+
+  /**
+   * Injecting Token binding classname: {@value}.
+   * This is purely for testing.
+   */
+  public static final String DELEGATION_TOKEN_INJECTING_BINDING =
+      "org.apache.hadoop.fs.s3a.auth.delegation.providers.InjectingTokenBinding";
+
+  /** Name of injecting token: {@value}. */
+  public static final String INJECTING_TOKEN_NAME =
+      TOKEN_NAME_PREFIX + "Injecting";
+
+  /**
+   *  Kind of the injecting token;
+   *  value is {@link #INJECTING_TOKEN_NAME}.
+   */
+  public static final Text INJECTING_TOKEN_KIND =
+      new Text(INJECTING_TOKEN_NAME);
+
+  /**
+   * Providers the injecting credential provider
+   * returns when deployed bonded/unbonded: {@value}.
+   */
+  public static final String INJECTING_CREDENTIALS_PROVIDER =
+      "fs.s3a.delegation.injecting.credentials.provider";
+
+  /**
+   * Should the injecting credential provider
+   * issue tokens: {@value}.
+   */
+  public static final String INJECTING_ISSUE_TOKENS =
+      "fs.s3a.delegation.injecting.issue.tokens";
+
+  /**
+   * Should the injecting credential provider
+   * issue tokens: {@value}.
+   */
+  public static final boolean INJECTING_ISSUE_TOKENS_DEFAULT =
+      true;
+
+  /**
+   * Service name to use for a secondary token name
+   * for the injecting token binding: {@value}.
+   * <p></p>
+   * Default value, null/empty means work it out automatically
+   * based on the URI and token kind.
+   */
+  public static final String INJECTING_SECONDARY_TOKEN_NAME =
+      "fs.s3a.delegation.injecting.secondary.token.name";
 
   private DelegationConstants() {
   }

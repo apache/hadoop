@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -49,6 +50,7 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.mockito.invocation.InvocationOnMock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,23 +70,46 @@ public class TestDelegationTokenFetcher {
   @Test(expected = IOException.class)
   public void testTokenFetchFail() throws Exception {
     WebHdfsFileSystem fs = mock(WebHdfsFileSystem.class);
-    doThrow(new IOException()).when(fs).getDelegationToken(any());
+    doThrow(new IOException()).when(fs).addDelegationTokens(any(), any());
     Path p = new Path(f.getRoot().getAbsolutePath(), tokenFile);
     DelegationTokenFetcher.saveDelegationToken(conf, fs, null, p);
   }
 
   /**
-   * Call fetch token using http server
+   * InvocationOnMock.getArgumentAt comes and goes with Mockito versions; this
+   * helper method is designed to be resilient to change.
+   * @param invocation invocation to query
+   * @param index argument index
+   * @param clazz class of return type
+   * @param <T> type of return
+   * @return the argument of the invocation, cast to the given type.
+   */
+  @SuppressWarnings("unchecked")
+  private static <T> T getArgumentAt(InvocationOnMock invocation, int index,
+      Class<T> clazz) {
+    return (T) invocation.getArguments()[index];
+  }
+
+  /**
+   * Call fetch token using http server.
    */
   @Test
   public void expectedTokenIsRetrievedFromHttp() throws Exception {
     final Token<DelegationTokenIdentifier> testToken = new Token<DelegationTokenIdentifier>(
         "id".getBytes(), "pwd".getBytes(), FakeRenewer.KIND, new Text(
             "127.0.0.1:1234"));
+    Token[] tokens = new Token[]{testToken};
 
     WebHdfsFileSystem fs = mock(WebHdfsFileSystem.class);
 
-    doReturn(testToken).when(fs).getDelegationToken(any());
+    // the mock fs needs to add the tokens to the supplied credentials
+    doAnswer(invocation -> {
+      Credentials creds = getArgumentAt(invocation,
+            1, Credentials.class);
+      creds.addToken(testToken.getService(), testToken);
+      return tokens;
+    })
+        .when(fs).addDelegationTokens(any(), any());
     Path p = new Path(f.getRoot().getAbsolutePath(), tokenFile);
     DelegationTokenFetcher.saveDelegationToken(conf, fs, null, p);
 

@@ -40,7 +40,6 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Rerun the session token tests with a role binding.
- * Some tests will fail as role bindings prevent certain operations.
  */
 public class ITestRoleDelegationTokens extends ITestSessionDelegationTokens {
 
@@ -93,9 +92,11 @@ public class ITestRoleDelegationTokens extends ITestSessionDelegationTokens {
     conf.unset(DelegationConstants.DELEGATION_TOKEN_ROLE_ARN);
     try (S3ADelegationTokens delegationTokens2 = new S3ADelegationTokens()) {
       final S3AFileSystem fs = getFileSystem();
-      delegationTokens2.bindToFileSystem(fs.getUri(),
-          fs.createStoreContext(),
-          fs.createDelegationOperations());
+      delegationTokens2.initializeTokenBinding(
+          ExtensionBindingData.builder()
+              .withStoreContext(fs.createStoreContext())
+              .withDelegationOperations(fs.createDelegationOperations())
+              .build());
       delegationTokens2.init(conf);
       delegationTokens2.start();
 

@@ -24,7 +24,13 @@ obtain credentials to access S3 buckets and pass them pass these credentials to
 jobs/queries, so granting them access to the service with the same access
 permissions as the user.
 
-Three different token types are offered.
+Multiple token types are included in the `hadoop-aws` JAR.
+
+*Encrypting Tokens:* include only the encryption settings (including
+secret keys) needed to encrypt and decrypt data on a bucket.
+These permit encryption options, especially those secrets, to be passed from
+a client to a VM/Container whose IAM role has access permissions to the data
+-but needs to knows those encryption details.
 
 *Full Delegation Tokens:* include the full login values of `fs.s3a.access.key`
 and `fs.s3a.secret.key` in the token, so the recipient has access to
@@ -47,8 +53,8 @@ of the granted STS token, no process receiving the token may perform
 any operations in the AWS infrastructure other than those for the S3 bucket,
 and that restricted by the rights of the requested role ARN.
 
-All three tokens also marshall the encryption settings: The encryption mechanism
-to use and the KMS key ID or SSE-C client secret. This allows encryption
+All tokens marshall the encryption settings: The encryption mechanism
+to use and the KMS key ID or client secret. This allows encryption
 policy and secrets to be uploaded from the client to the services.
 
 This document covers how to use these tokens. For details on the implementation
@@ -56,12 +62,22 @@ see [S3A Delegation Token Architecture](delegation_token_architecture.html).
 
 ## <a name="background"></a> Background: Hadoop Delegation Tokens.
 
-A Hadoop Delegation Token are is a byte array of data which is submitted to
+Hadoop Delegation Tokens allow applications executed within a Kerberos-secured
+Hadoop cluster to access data to which a user has permissions, _without_
+the user needing to pass their full Kerberos token to the application.
+
+Instead the (authenticated) user requests delegation tokens from the services
+which it wishes the to-be-launched application to access, and includes
+these with the other information used to launch the application. These
+tokens are then normally presented to the service as evidence they are
+performing work on behalf of the specific user.
+
+Implementation-wise, a Delegation Token is a byte array of data which is submitted to
 a Hadoop services as proof that the caller has the permissions to perform
 the operation which it is requesting —
 and which can be passed between applications to *delegate* those permission.
 
-Tokens are opaque to clients, clients who simply get a byte array
+Tokens are opaque to clients, clients simply get a byte array
 of data which they must to provide to a service when required.
 This normally contains encrypted data for use by the service.
 
@@ -140,7 +156,7 @@ for specifics details on the (current) token lifespan.
 
 ### <a name="role-tokens"></a> S3A Role Delegation Tokens
 
-A Role Delegation Tokens is created by asking the AWS
+A Role Delegation Token is created by asking the AWS
 [Security Token Service](http://docs.aws.amazon.com/STS/latest/APIReference/Welcome.html)
 for set of "Assumed Role" credentials, with a AWS account specific role for a limited duration..
 This role is restricted to only grant access the S3 bucket, the S3Guard table
@@ -184,14 +200,13 @@ running in secure mode; somewhere where the `core-site.xml` configuration
 sets `hadoop.security.authentication` to to `kerberos` or another valid
 authentication mechanism.
 
-* Without enabling security at this level, delegation tokens will not
+*Without enabling security at this level, delegation tokens will not
 be collected.*
 
-Once Kerberos enabled, the process for acquiring tokens is as follows:
+Once Kerberos is enabled, the process for acquiring tokens is as follows:
 
 1. Enable Delegation token support by setting `fs.s3a.delegation.token.binding`
 to the classname of the token binding to use.
-to use.
 1. Add any other binding-specific settings (STS endpoint, IAM role, etc.)
 1. Make sure the settings are the same in the service as well as the client.
 1. In the client, switch to using a [Hadoop Credential Provider](hadoop-project-dist/hadoop-common/CredentialProviderAPI.html)
@@ -231,10 +246,10 @@ during job submission will be the sole AWS secrets passed in.
 
 ##### Token Life
 
-* S3A Delegation tokens cannot be renewed.
+* The S3A Delegation tokens included in the `hadoop-aws` module cannot be renewed.
 
-* S3A Delegation tokens cannot be revoked. It is possible for an administrator
-to terminate *all AWS sessions using a specific role*
+* The S3A Delegation tokens included in the `hadoop-aws` module cannot be revoked.
+It is possible for an administrator to terminate *all AWS sessions using a specific role*
 [from the AWS IAM console](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_control-access_disable-perms.html),
 if desired.
 
@@ -244,6 +259,8 @@ maximum of 36 hours.
 * The lifespan of a Role Delegation Token is limited to 1 hour by default;
 a longer duration of up to 12 hours can be enabled in the AWS console for
 the specific role being used.
+
+* The lifespan of Encryption Tokens is unlimited.
 
 * The lifespan of Full Delegation tokens is unlimited: the secret needs
 to be reset in the AWS Admin console to revoke it.
@@ -283,6 +300,7 @@ There some further configuration options.
 | `fs.s3a.assumed.role.session.duration` | Duration of delegation tokens |  `1h` |
 | `fs.s3a.assumed.role.sts.endpoint` | URL to service issuing tokens |  (undefined) |
 | `fs.s3a.assumed.role.sts.endpoint.region` | region for issued tokens |  (undefined) |
+| `fs.s3a.delegation.session.secondary.token.name` | canonical name for secondary token |  (undefined) |
 
 The XML settings needed to enable session tokens are:
 
@@ -377,7 +395,7 @@ to `org.apache.hadoop.fs.s3a.auth.delegation.RoleTokenBinding`
 
 |  **Key** | **Value** |
 | --- | --- |
-| `fs.s3a.delegation.token.binding` | `org.apache.hadoop.fs.s3a.auth.delegation.SessionToRoleTokenBinding` |
+| `fs.s3a.delegation.token.binding` | `org.apache.hadoop.fs.s3a.auth.delegation.RoleTokenBinding` |
 
 
 There are some further configuration options:
@@ -424,10 +442,18 @@ is the encryption policy.
 If the client doesn't have S3Guard enabled, but the remote application does,
 the issued role tokens will not have permission to access the S3Guard table.
 
+Role tokens may be used as secondary tokens, but they do not provide
+an option to change the token's "canonical name" to something other
+than that of the filesystem URI + token kind.
+
+The reason for this is straightforward: because the role access is
+restricted to the specific S3 bucket and DynamoDB of the filesystem,
+there is no value in naming the token so that it can be shared
+across S3A filesystem instances. 
+
 ### <a name="enabling-full-tokens"></a> Enabling Full Delegation Tokens
 
-This passes the full credentials in, falling back to any session credentials
-which were used to configure the S3A FileSystem instance.
+This marshalls the full AWS credentials in.
 
 For Full Credential Delegation tokens, set `fs.s3a.delegation.token.binding`
 to `org.apache.hadoop.fs.s3a.auth.delegation.FullCredentialsTokenBinding`
@@ -436,7 +462,12 @@ to `org.apache.hadoop.fs.s3a.auth.delegation.FullCredentialsTokenBinding`
 | --- | --- |
 | `fs.s3a.delegation.token.binding` | `org.apache.hadoop.fs.s3a.auth.delegation.FullCredentialsTokenBinding` |
 
-There are no other configuration options.
+
+Other configuration options:
+
+| **Key** | **Meaning** | **Default** |
+| --- | --- | --- |
+| `fs.s3a.delegation.full.secondary.token.name` | canonical name for secondary token |  (undefined) |
 
 ```xml
 <property>
@@ -455,7 +486,38 @@ The life of the token will not be extended.
 1. If the application requesting a token does not have either of these,
 the the tokens cannot be issued: the operation will fail with an error.
 
-## <a name="managing_token_duration"></a> Managing the Delegation Tokens Duration
+### <a name="enabling-encryption-tokens"></a> Enabling Encryption Delegation Tokens
+
+These tokens only contains the encryption secrets for a bucket.
+The remote hosts are required to acquire AWS credentials by some other means,
+such as IAM credentials provided to an EC2 VM, or from a secondary
+token containing full or session tokens..
+
+For EncryptionCan Credential Delegation tokens, set `fs.s3a.delegation.token.binding`
+to `org.apache.hadoop.fs.s3a.auth.delegation.providers.EncryptingTokenBinding`
+
+|  **Key** | **Value** |
+| --- | --- |
+| `fs.s3a.delegation.token.binding` | `org.apache.hadoop.fs.s3a.auth.delegation.providers.EncryptingTokenBinding` |
+
+
+Other configuration options:
+
+| **Key** | **Meaning** | **Default** |
+| --- | --- | --- |
+| `fs.s3a.delegation.encrypting.secondary.token.name` | canonical name for secondary token |  (undefined) |
+
+As encryption secrets are not extracted from secondary tokens, deployment as a secondary token
+if of limited use outside of testing.
+
+```xml
+<property>
+  <name>fs.s3a.delegation.token.binding</name>
+  <value>org.apache.hadoop.fs.s3a.auth.delegation.providers.EncryptingTokenBinding</value>
+</property>
+```
+
+## <a name="managing_token_duration"></a> Managing the Duration of Delegation Tokens
 
 Full Credentials have an unlimited lifespan.
 
@@ -474,6 +536,71 @@ the error message `The requested DurationSeconds exceeds the MaxSessionDuration 
 is returned if the requested duration of a Role Delegation Token is greater
 than that available for the role.
 
+
+## <a name="secondary"></a> Secondary Delegation Tokens
+
+The S3A connector also supports "secondary delegation tokens".
+That is: more than one delegation token binding is supported.
+When tokens for a filesystem are collected during application launch,
+the tokens of all bindings are collected. The entire set of delegation
+tokens are included in the job, for retrieval and use by
+in the deployed application.
+
+
+| **Key** | **Meaning** | **Default** |
+| --- | --- | --- |
+| `fs.s3a.delegation.token.secondary.bindings` | list of classnames of secondary token
+ providers | "" | 
+
+Each _Secondary Delegation Token Provider_ is simply an S3A Delegation Token Provider, with
+the following restrictions:
+
+* Secondary token bindings are only loaded if there is a primary token binding declared in
+  `fs.s3a.delegation.token.binding`.
+* If the primary token binding issues a token, so MUST the secondary.
+* No duplicate bindings are permitted in the set of token bindings.
+  (i.e. no duplicate token "kind").
+* All secondary tokens are loaded and instantiated in order.
+* The AWS credential providers offered by a secondary token binding are all appended
+to the list provided by the primary token binding.
+* Only the encryption secrets of the primary delegation token are used to configure
+  encryption in delegate filesystem instances.
+* The 'canonical name' of a token is automatically derived from the filesystem URI
+  and the token kind. Most token bindings offer an option to define a new one.
+  If this is done, the same token may be shared across multiple filesystem instances.
+
+Declaring secondary token bindings is a very esoteric deployment.
+
+1. Define a primary token for the filesystem itself.
+1. List one or more secondary tokens
+1. Optionally configure the secondary token with a specific canonical name.
+
+
+Example:
+
+```xml
+<property>
+  <name>fs.s3a.delegation.token.binding</name>
+  <value>org.apache.hadoop.fs.s3a.auth.delegation.providers.EncryptingTokenBinding</value>
+</property>
+<property>
+  <name>fs.s3a.delegation.token.secondary.bindings</name>
+  <value>org.apache.hadoop.fs.s3a.auth.delegation.SessionTokenBinding</value>
+</property
+<property>
+  <name>fs.s3a.delegation.session.secondary.token.name</name>
+  <value>arbitrary-unique-name-for-secondary-session-token</value>
+</property>
+```
+
+This configuration uses the encryption token binding as the primary token, which 
+so as to propagate the secrets from client to cluster. 
+
+The secondary binding is a session token -which has been given a canonical name
+of `arbitrary-unique-name-for-secondary-session-token`. This token will be shared
+across all S3A filesystem instances created in the deployed application,
+_even those for S3A URIs which were not declared application launch_.
+This can be useful, most notably in Apache Spark.
 
 ## <a name="testing"></a> Testing Delegation Token Support
 

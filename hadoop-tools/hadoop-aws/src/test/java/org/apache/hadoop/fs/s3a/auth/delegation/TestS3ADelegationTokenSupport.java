@@ -22,27 +22,37 @@ import java.net.URI;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.S3ATestConstants;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
+import org.apache.hadoop.fs.s3a.auth.delegation.providers.InjectingTokenIdentifier;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.test.HadoopTestBase;
 
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.FULL_TOKEN_KIND;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.SESSION_TOKEN_KIND;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADtFetcher.FETCH_FAILED;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Unit tests related to S3A DT support.
  */
-public class TestS3ADelegationTokenSupport {
+public class TestS3ADelegationTokenSupport extends HadoopTestBase {
+
+  private static final Logger LOG = LoggerFactory.getLogger(
+      TestS3ADelegationTokenSupport.class);
 
   private static URI landsatUri;
 
@@ -51,6 +61,11 @@ public class TestS3ADelegationTokenSupport {
     landsatUri = new URI(S3ATestConstants.DEFAULT_CSVTEST_FILE);
   }
 
+  @Test
+  public void testToStringWhenNotInited() throws Throwable {
+    LOG.info("tokens " +
+        new S3ADelegationTokens().toString());
+  }
   @Test
   public void testSessionTokenKind() throws Throwable {
     AbstractS3ATokenIdentifier identifier
@@ -174,12 +189,38 @@ public class TestS3ADelegationTokenSupport {
         result.getMarshalledCredentials());
     assertEquals("renewer in " + ids, renewer, result.getRenewer());
   }
+  @Test
+  public void testInjectingTokenIdentifierRoundTrip() throws Throwable {
+    Text renewer = new Text("bob");
+    int issueNumber = 6502;
+    InjectingTokenIdentifier id = new InjectingTokenIdentifier(
+        landsatUri,
+        new Text(),
+        renewer,
+        new EncryptionSecrets(),
+        issueNumber);
+
+    InjectingTokenIdentifier result = S3ATestUtils.roundTrip(id, null);
+    String ids = id.toString();
+    assertEquals("URI in " + ids, id.getUri(), result.getUri());
+    assertEquals("issue number in " + ids,
+        issueNumber,
+        result.getIssueNumber());
+    assertEquals("renewer in " + ids, renewer, result.getRenewer());
+  }
+
+  @Test
+  public void testS3ADtFetcher() throws Throwable {
+    LocalFileSystem lfs = FileSystem.getLocal(new Configuration());
+    intercept(DelegationTokenIOException.class, FETCH_FAILED, () ->
+        S3ADtFetcher.addFSDelegationTokens(lfs, null, new Credentials()));
+  }
 
   /**
    * The secret manager always uses the same secret; the
    * factory for new identifiers is that of the token manager.
    */
-  private  class SessionSecretManager
+  private static final class SessionSecretManager
       extends SecretManager<AbstractS3ATokenIdentifier> {
 
     @Override

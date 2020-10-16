@@ -20,14 +20,13 @@ package org.apache.hadoop.fs.s3a.auth.delegation;
 
 import java.io.IOException;
 import java.net.URI;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.auth.RoleModel;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.SecretManager;
@@ -73,15 +72,16 @@ import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DURAT
  *  All methods which talk to AWS services are expected to do translation,
  *  with retries as they see fit.
  */
-public abstract class AbstractDelegationTokenBinding extends AbstractDTService {
+public abstract class AbstractDelegationTokenBinding extends AbstractDTService
+    implements DelegationTokenBinding {
+
+  private static final Logger LOG = LoggerFactory.getLogger(
+      AbstractDelegationTokenBinding.class);
 
   /** Token kind: must match that of the token identifiers issued. */
   private final Text kind;
 
   private SecretManager<AbstractS3ATokenIdentifier> secretManager;
-
-  private static final Logger LOG = LoggerFactory.getLogger(
-      AbstractDelegationTokenBinding.class);
 
   /**
    * Constructor.
@@ -95,44 +95,22 @@ public abstract class AbstractDelegationTokenBinding extends AbstractDTService {
     this.kind = requireNonNull(kind);
   }
 
-  /**
-   * Get the kind of the tokens managed here.
-   * @return the token kind.
-   */
+  @Override
   public Text getKind() {
     return kind;
   }
 
-  /**
-   * Return the name of the owner to be used in tokens.
-   * This may be that of the UGI owner, or it could be related to
-   * the AWS login.
-   * @return a text name of the owner.
-   */
+  @Override
   public Text getOwnerText() {
     return new Text(getOwner().getUserName());
   }
 
-  /**
-   * Predicate: will this binding issue a DT?
-   * That is: should the filesystem declare that it is issuing
-   * delegation tokens? If true
-   * @return a declaration of what will happen when asked for a token.
-   */
+  @Override
   public S3ADelegationTokens.TokenIssuingPolicy getTokenIssuingPolicy() {
     return S3ADelegationTokens.TokenIssuingPolicy.RequestNewToken;
   }
 
-  /**
-   * Create a delegation token for the user.
-   * This will only be called if a new DT is needed, that is: the
-   * filesystem has been deployed unbonded.
-   * @param policy minimum policy to use, if known.
-   * @param encryptionSecrets encryption secrets for the token.
-   * @param renewer the principal permitted to renew the token.
-   * @return the token or null if the back end does not want to issue one.
-   * @throws IOException if one cannot be created
-   */
+  @Override
   public Token<AbstractS3ATokenIdentifier> createDelegationToken(
       final Optional<RoleModel.Policy> policy,
       final EncryptionSecrets encryptionSecrets,
@@ -151,27 +129,6 @@ public abstract class AbstractDelegationTokenBinding extends AbstractDTService {
       return null;
     }
   }
-
-  /**
-   * Create a token identifier with all the information needed
-   * to be included in a delegation token.
-   * This is where session credentials need to be extracted, etc.
-   * This will only be called if a new DT is needed, that is: the
-   * filesystem has been deployed unbonded.
-   *
-   * If {@link #createDelegationToken(Optional, EncryptionSecrets, Text)}
-   * is overridden, this method can be replaced with a stub.
-   *
-   * @param policy minimum policy to use, if known.
-   * @param encryptionSecrets encryption secrets for the token.
-   * @param renewer the principal permitted to renew the token.
-   * @return the token data to include in the token identifier.
-   * @throws IOException failure creating the token data.
-   */
-  public abstract AbstractS3ATokenIdentifier createTokenIdentifier(
-      Optional<RoleModel.Policy> policy,
-      EncryptionSecrets encryptionSecrets,
-      Text renewer) throws IOException;
 
   /**
    * Verify that a token identifier is of a specific class.
@@ -198,35 +155,6 @@ public abstract class AbstractDelegationTokenBinding extends AbstractDTService {
     return (T) identifier;
   }
 
-  /**
-   * Perform any actions when deploying unbonded, and return a list
-   * of credential providers.
-   * @return non-empty list of AWS credential providers to use for
-   * authenticating this client with AWS services.
-   * @throws IOException any failure.
-   */
-  public abstract AWSCredentialProviderList deployUnbonded()
-      throws IOException;
-
-  /**
-   * Bind to the token identifier, returning the credential providers to use
-   * for the owner to talk to S3, DDB and related AWS Services.
-   * @param retrievedIdentifier the unmarshalled data
-   * @return non-empty list of AWS credential providers to use for
-   * authenticating this client with AWS services.
-   * @throws IOException any failure.
-   */
-  public abstract AWSCredentialProviderList bindToTokenIdentifier(
-      AbstractS3ATokenIdentifier retrievedIdentifier)
-      throws IOException;
-
-  /**
-   * Create a new subclass of {@link AbstractS3ATokenIdentifier}.
-   * This is used in the secret manager.
-   * @return an empty identifier.
-   */
-  public abstract AbstractS3ATokenIdentifier createEmptyIdentifier();
-
   @Override
   public String toString() {
     return super.toString()
@@ -243,12 +171,7 @@ public abstract class AbstractDelegationTokenBinding extends AbstractDTService {
     secretManager = createSecretMananger();
   }
 
-  /**
-   * Return a description.
-   * This is logged during after service start and binding:
-   * it should be as informative as possible.
-   * @return a description to log.
-   */
+  @Override
   public String getDescription() {
     return "Token binding " + getKind().toString();
   }
@@ -263,13 +186,17 @@ public abstract class AbstractDelegationTokenBinding extends AbstractDTService {
     return new TokenSecretManager();
   }
 
-  /**
-   * Return a string for use in building up the User-Agent field, so
-   * get into the S3 access logs. Useful for diagnostics.
-   * @return a string for the S3 logs or "" for "nothing to add"
-   */
+  @Override
   public String getUserAgentField() {
     return "";
+  }
+
+  /**
+   * Was this DT binding deployed as a secondary instance.
+   * @return true if it is.
+   */
+  protected boolean isSecondaryBinding() {
+    return getBindingData().isSecondaryBinding();
   }
 
   /**
@@ -279,7 +206,7 @@ public abstract class AbstractDelegationTokenBinding extends AbstractDTService {
    * @return a password.
    */
   protected static byte[] getSecretManagerPasssword() {
-    return "non-password".getBytes(Charset.forName("UTF-8"));
+    return "non-password".getBytes(StandardCharsets.UTF_8);
   }
 
   /**

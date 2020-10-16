@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a.auth.delegation;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.Objects;
 
 import com.google.common.base.Preconditions;
 
@@ -49,7 +50,7 @@ import static java.util.Objects.requireNonNull;
  * initalize() operation, it is not ready for use through all the start process.
  */
 public abstract class AbstractDTService
-    extends AbstractService {
+    extends AbstractService implements DTService {
 
   /**
    * URI of the filesystem.
@@ -75,6 +76,11 @@ public abstract class AbstractDTService
   private DelegationOperations policyProvider;
 
   /**
+   * Extension binding information.
+   */
+  private ExtensionBindingData bindingData;
+
+  /**
    * Protected constructor.
    * @param name service name.
    */
@@ -84,18 +90,35 @@ public abstract class AbstractDTService
 
   /**
    * Bind to the filesystem.
+   * <p></p>
    * Subclasses can use this to perform their own binding operations -
    * but they must always call their superclass implementation.
    * This <i>Must</i> be called before calling {@code init()}.
-   *
+   * <p></p>
    * <b>Important:</b>
    * This binding will happen during FileSystem.initialize(); the FS
    * is not live for actual use and will not yet have interacted with
    * AWS services.
+   * @param binding binding data
+   * @throws IOException failure.
+   */
+  public void initializeTokenBinding(ExtensionBindingData binding)
+      throws IOException {
+    this.bindingData = Objects.requireNonNull(binding, "unbound");
+    StoreContext context = Objects.requireNonNull(
+        binding.getStoreContext());
+    bindToFileSystem(context.getFsURI(),
+        context,
+        binding.getDelegationOperations());
+  }
+
+  /**
+   * This was the original binding method call; it is retained for
+   * compatibility with external implementations.
    * @param uri the canonical URI of the FS.
    * @param context store context
    * @param delegationOperations delegation operations
-   * @throws IOException failure.
+   * @throws IOException
    */
   public void bindToFileSystem(
       final URI uri,
@@ -110,19 +133,17 @@ public abstract class AbstractDTService
     this.policyProvider = delegationOperations;
   }
 
-  /**
-   * Get the canonical URI of the filesystem, which is what is
-   * used to identify the tokens.
-   * @return the URI.
-   */
+
+  protected ExtensionBindingData getBindingData() {
+    return bindingData;
+  }
+
+  @Override
   public URI getCanonicalUri() {
     return canonicalUri;
   }
 
-  /**
-   * Get the owner of this Service.
-   * @return owner; non-null after binding to an FS.
-   */
+  @Override
   public UserGroupInformation getOwner() {
     return owner;
   }

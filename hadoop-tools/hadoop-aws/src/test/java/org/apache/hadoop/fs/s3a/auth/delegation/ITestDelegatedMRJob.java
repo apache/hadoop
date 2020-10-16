@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.auth.delegation.providers.InjectingTokenBinding;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
@@ -62,25 +63,28 @@ import static org.apache.hadoop.fs.s3a.auth.delegation.MiniKerberizedHadoopClust
 
 /**
  * Submit a job with S3 delegation tokens.
- *
+ * <p></p>
  * YARN will not collect DTs unless it is running secure, and turning
  * security on complicates test setup "significantly".
  * Specifically: buts of MR refuse to work on a local FS unless the
  * native libraries are loaded and it can use lower level POSIX APIs
  * for creating files and directories with specific permissions.
  * In production, this is a good thing. In tests, this is not.
- *
+ * <p></p>
  * To address this, Job to YARN communications are mocked.
  * The client-side job submission is as normal, but the implementation
  * of org.apache.hadoop.mapreduce.protocol.ClientProtocol is mock.
- *
- * It's still an ITest though, as it does use S3A as the source and
+ * <p></p>
+j * It's still an ITest though, as it does use S3A as the source and
  * dest so as to collect delegation tokens.
- *
+ * <p></p>
  * It also uses the open street map open bucket, so that there's an extra
  * S3 URL in job submission which can be added as a job resource.
  * This is needed to verify that job resources have their tokens extracted
  * too.
+ * <p></p>
+ * A secondary token is also issued to verify that these are also
+ * picked up MR launch.
  */
 @RunWith(Parameterized.class)
 public class ITestDelegatedMRJob extends AbstractDelegationIT {
@@ -116,7 +120,7 @@ public class ITestDelegatedMRJob extends AbstractDelegationIT {
    * Test array for parameterized test runs.
    * @return a list of parameter tuples.
    */
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {"session", DELEGATION_TOKEN_SESSION_BINDING, SESSION_TOKEN_KIND},
@@ -173,6 +177,8 @@ public class ITestDelegatedMRJob extends AbstractDelegationIT {
 
     // set up DTs
     enableDelegationTokens(conf, tokenBinding);
+    // secondary
+    InjectingTokenBinding.addAsSecondaryToken(conf, true, null);
     return conf;
   }
 
@@ -302,12 +308,20 @@ public class ITestDelegatedMRJob extends AbstractDelegationIT {
       LOG.info("{}", token);
     }
 
+    Text secondaryTokenKind = INJECTING_TOKEN_KIND;
     // verify the source token exists
     lookupToken(submittedCredentials, sourceFS.getUri(), tokenKind);
+    lookupSecondaryToken(submittedCredentials, sourceFS.getUri(),
+        secondaryTokenKind);
     // look up the destination token
     lookupToken(submittedCredentials, fs.getUri(), tokenKind);
+    lookupSecondaryToken(submittedCredentials, fs.getUri(),
+        secondaryTokenKind);
+    URI extraURI = EXTRA_JOB_RESOURCE_PATH.getFileSystem(conf).getUri();
     lookupToken(submittedCredentials,
-        EXTRA_JOB_RESOURCE_PATH.getFileSystem(conf).getUri(), tokenKind);
+        extraURI, tokenKind);
+    lookupSecondaryToken(submittedCredentials, extraURI,
+        secondaryTokenKind);
   }
 
 }

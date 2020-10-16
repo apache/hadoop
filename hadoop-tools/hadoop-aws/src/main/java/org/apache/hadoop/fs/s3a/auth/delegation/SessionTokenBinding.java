@@ -59,6 +59,12 @@ import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.*;
 /**
  * The session token DT binding: creates an AWS session token
  * for the DT, extracts and serves it up afterwards.
+ * <p></p>
+ * When used as a secondary token, the canonical name of the
+ * token can be set in the option
+ * {@link DelegationConstants#SESSION_SECONDARY_TOKEN_NAME};
+ * this allows credentials to be shared across all filesystems
+ * used in an application.
  */
 public class SessionTokenBinding extends AbstractDelegationTokenBinding {
 
@@ -424,5 +430,13 @@ public class SessionTokenBinding extends AbstractDelegationTokenBinding {
   protected void setTokenIdentifier(Optional<SessionTokenIdentifier>
       tokenIdentifier) {
     this.tokenIdentifier = tokenIdentifier;
+  }
+
+  @Override
+  public Text buildCanonicalNameForSecondaryBinding(final String fsURI) {
+    String name = getConfig().getTrimmed(SESSION_SECONDARY_TOKEN_NAME, null);
+    return name != null
+        ? new Text(name)
+        : null;
   }
 }

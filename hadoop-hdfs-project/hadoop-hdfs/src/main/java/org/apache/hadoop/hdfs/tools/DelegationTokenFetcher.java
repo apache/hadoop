@@ -46,8 +46,8 @@ import org.apache.hadoop.util.GenericOptionsParser;
 import com.google.common.annotations.VisibleForTesting;
 
 /**
- * Fetch a DelegationToken from the current Namenode and store it in the
- * specified file.
+ * Fetch all Delegation Tokens from the current or specified filesystem
+ * and store them in the specified file.
  */
 @InterfaceAudience.Private
 public class DelegationTokenFetcher {
@@ -196,18 +196,15 @@ public class DelegationTokenFetcher {
   static void saveDelegationToken(Configuration conf, FileSystem fs,
                                   final String renewer, final Path tokenFile)
           throws IOException {
-    Token<?> token = fs.getDelegationToken(renewer);
-    if (null != token) {
-      Credentials cred = new Credentials();
-      cred.addToken(token.getService(), token);
+    Credentials cred = new Credentials();
+    Token<?>[] tokens = fs.addDelegationTokens(renewer, cred);
+    if (tokens != null && tokens.length != 0) {
       // dtutil is replacing this tool; preserve legacy functionality
       cred.writeTokenStorageFile(tokenFile, conf,
           Credentials.SerializedFormat.WRITABLE);
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Fetched token " + fs.getUri() + " for " +
-            token.getService() + " into " + tokenFile);
-      }
+      LOG.debug("Fetched {} token(s) for {} for into {}",
+          tokens.length, fs.getUri(), tokenFile);
     } else {
       System.err.println("ERROR: Failed to fetch token from " + fs.getUri());
     }

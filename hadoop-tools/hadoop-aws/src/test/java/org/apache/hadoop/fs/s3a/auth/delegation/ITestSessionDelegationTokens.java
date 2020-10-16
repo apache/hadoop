@@ -219,7 +219,6 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
     describe("Create a Delegation Token, round trip then reuse");
 
     final S3AFileSystem fs = getFileSystem();
-    final Configuration conf = fs.getConf();
     final Text renewer = new Text("yarn");
 
     assertNull("Current User has delegation token",
@@ -263,10 +262,11 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
         TemporaryAWSCredentialsProvider.NAME);
     session.setSecretsInConfiguration(conf);
     try(S3ADelegationTokens delegationTokens2 = new S3ADelegationTokens()) {
-      delegationTokens2.bindToFileSystem(
-          fs.getCanonicalUri(),
-          fs.createStoreContext(),
-          fs.createDelegationOperations());
+      delegationTokens2.initializeTokenBinding(
+          ExtensionBindingData.builder()
+              .withStoreContext(fs.createStoreContext())
+              .withDelegationOperations(fs.createDelegationOperations())
+              .build());
       delegationTokens2.init(conf);
       delegationTokens2.start();
 

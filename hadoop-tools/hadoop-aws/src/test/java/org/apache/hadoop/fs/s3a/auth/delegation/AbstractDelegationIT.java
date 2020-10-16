@@ -23,23 +23,38 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.hdfs.tools.DelegationTokenFetcher;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.ExitUtil;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_CREDENTIALS_PROVIDER;
+import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_SECONDARY_BINDINGS;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_BINDING;
+import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.ENCRYPTING_SECONDARY_TOKEN_NAME;
+import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.FULL_SECONDARY_TOKEN_NAME;
+import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.INJECTING_ISSUE_TOKENS;
+import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.INJECTING_SECONDARY_TOKEN_NAME;
+import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.SESSION_SECONDARY_TOKEN_NAME;
+import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.getTokenServiceForKind;
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.lookupS3ADelegationToken;
+import static org.apache.hadoop.test.LambdaTestUtils.doAs;
 
 /**
  * superclass class for DT tests.
@@ -50,6 +65,26 @@ public abstract class AbstractDelegationIT extends AbstractS3ATestBase {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(AbstractDelegationIT.class);
+
+  /**
+   * Get the tail of a list.
+   * @param list non-empty source list
+   * @param <T> type of list
+   * @return tail value
+   */
+  public static <T> T tail(final List<T> list) {
+
+    int size = list.size();
+    checkArgument(size > 0);
+    return list.get(size - 1);
+  }
+
+  @Override
+  protected Configuration createConfiguration() {
+    Configuration conf = super.createConfiguration();
+    resetAllDTConfigOptions(conf);
+    return conf;
+  }
 
   /**
    * Look up a token from the submitted credentials.
@@ -73,6 +108,31 @@ public abstract class AbstractDelegationIT extends AbstractS3ATestBase {
     AbstractS3ATokenIdentifier tid
         = token.decodeIdentifier();
     LOG.info("Found for URI {}, token {}", uri, tid);
+    return tid;
+  }
+  /**
+   * Look up a secondary token from the submitted credentials.
+   * @param submittedCredentials credentials
+   * @param uri URI of the FS
+   * @param kind required kind of the token (which is asserted on)
+   * @return the token
+   * @throws IOException IO failure
+   */
+  public static AbstractS3ATokenIdentifier lookupSecondaryToken(
+      Credentials submittedCredentials,
+      URI uri,
+      Text kind) throws IOException {
+    final Token<AbstractS3ATokenIdentifier> token =
+        requireNonNull(
+            S3ADelegationTokens.lookupToken(submittedCredentials,
+                getTokenServiceForKind(uri.toString(), kind.toString())),
+            "No Token for " + uri);
+    assertEquals("Kind of token " + token,
+        kind,
+        token.getKind());
+    AbstractS3ATokenIdentifier tid
+        = token.decodeIdentifier();
+    LOG.info("Found secondary token for URI {}, token {}", uri, tid);
     return tid;
   }
 
@@ -143,6 +203,24 @@ public abstract class AbstractDelegationIT extends AbstractS3ATestBase {
   }
 
   /**
+   * Clear all base and bucket options for delegation
+   * token testing.
+   * @param conf configuration to patch.
+   */
+  protected void resetAllDTConfigOptions(final Configuration conf) {
+    removeBaseAndBucketOverrides(conf,
+        DELEGATION_TOKEN_BINDING,
+        DELEGATION_SECONDARY_BINDINGS,
+        SERVER_SIDE_ENCRYPTION_ALGORITHM,
+        SERVER_SIDE_ENCRYPTION_KEY,
+        INJECTING_SECONDARY_TOKEN_NAME,
+        INJECTING_ISSUE_TOKENS,
+        FULL_SECONDARY_TOKEN_NAME,
+        SESSION_SECONDARY_TOKEN_NAME,
+        ENCRYPTING_SECONDARY_TOKEN_NAME);
+  }
+
+  /**
    * Patch the current config with the DT binding.
    * @param conf configuration to patch
    * @param binding binding to use
@@ -205,11 +283,88 @@ public abstract class AbstractDelegationIT extends AbstractS3ATestBase {
       throws IOException {
     S3AFileSystem fs = getFileSystem();
     S3ADelegationTokens tokens = new S3ADelegationTokens();
-    tokens.bindToFileSystem(
-        fs.getCanonicalUri(),
-        fs.createStoreContext(),
-        fs.createDelegationOperations());
+    tokens.initializeTokenBinding(
+        ExtensionBindingData.builder()
+            .withStoreContext(fs.createStoreContext())
+            .withDelegationOperations(fs.createDelegationOperations())
+            .build());
     tokens.init(conf);
     return tokens;
+  }
+
+  public S3ADelegationTokens getFSDelegationTokenSupport(final S3AFileSystem fs) {
+    return fs.getDelegationTokens().get();
+  }
+
+  /**
+   * Convert a vargs list to an array.
+   * @param args vararg list of arguments
+   * @return the generated array.
+   */
+  String[] args(String... args) {
+    return args;
+  }
+
+  /**
+   * Fetch tokens from the HDFS dtutils command.
+   * @param user ugi user.
+   * @param tokenKind kind of primary token
+   * @param tokenfile file to save to.
+   * @return the credentials.
+   */
+  protected Credentials fetchTokensThroughDtUtils(
+      final UserGroupInformation user,
+      final Text tokenKind,
+      final File tokenfile) throws Exception {
+
+    ExitUtil.disableSystemExit();
+    S3AFileSystem fs = getFileSystem();
+    Configuration conf = fs.getConf();
+
+    URI fsUri = fs.getUri();
+    String fsurl = fsUri.toString();
+
+    // this will create (& leak) a new FS instance as caching is disabled.
+    // but as teardown destroys all filesystems for this user, it
+    // gets cleaned up at the end of the test
+    String tokenFilePath = tokenfile.getAbsolutePath();
+
+
+    // create the tokens as
+    doAs(user,
+        () -> DelegationTokenFetcher.main(conf,
+            args("--webservice", fsurl, tokenFilePath)));
+    assertTrue("token file was not created: " + tokenfile,
+        tokenfile.exists());
+
+    // print to stdout
+    String s = DelegationTokenFetcher.printTokensToString(conf,
+        new Path(tokenfile.toURI()),
+        false);
+    LOG.info("Tokens: {}", s);
+    DelegationTokenFetcher.main(conf,
+        args("--print", tokenFilePath));
+    DelegationTokenFetcher.main(conf,
+        args("--print", "--verbose", tokenFilePath));
+
+    // read in and retrieve token
+    Credentials creds = Credentials.readTokenStorageFile(tokenfile, conf);
+    AbstractS3ATokenIdentifier identifier = requireNonNull(
+        lookupToken(
+            creds,
+            fsUri,
+            tokenKind), "Token lookup");
+    assertEquals("encryption secrets",
+        fs.getEncryptionSecrets(),
+        identifier.getEncryptionSecrets());
+    assertEquals("Username of decoded token",
+        user.getUserName(), identifier.getUser().getUserName());
+
+    // renew
+    DelegationTokenFetcher.main(conf, args("--renew", tokenFilePath));
+
+    // cancel
+    DelegationTokenFetcher.main(conf, args("--cancel", tokenFilePath));
+    return creds;
   }
 }

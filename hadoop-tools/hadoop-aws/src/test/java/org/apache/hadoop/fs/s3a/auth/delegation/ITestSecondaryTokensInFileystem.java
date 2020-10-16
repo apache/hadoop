@@ -23,10 +23,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URI;
-import java.nio.file.AccessDeniedException;
+import java.util.List;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.auth.AWSCredentialsProvider;
+import org.assertj.core.api.Assertions;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -38,19 +38,18 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
-import org.apache.hadoop.fs.s3a.DefaultS3ClientFactory;
-import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.fs.s3a.auth.delegation.providers.InjectingTokenBinding;
+import org.apache.hadoop.fs.s3a.auth.delegation.providers.InjectingTokenIdentifier;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.DtUtilShell;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.service.ServiceStateException;
 import org.apache.hadoop.util.ToolRunner;
@@ -58,35 +57,54 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
-import static org.apache.hadoop.fs.s3a.Constants.*;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeSessionTestsEnabled;
+import static org.apache.hadoop.fs.s3a.Constants.ACCESS_KEY;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_CREDENTIALS_PROVIDER;
+import static org.apache.hadoop.fs.s3a.Constants.SECRET_KEY;
+import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
+import static org.apache.hadoop.fs.s3a.Constants.SESSION_TOKEN;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.unsetHadoopCredentialProviders;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.*;
-import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenIOException.TOKEN_MISMATCH;
-import static org.apache.hadoop.fs.s3a.auth.delegation.MiniKerberizedHadoopCluster.ALICE;
 import static org.apache.hadoop.fs.s3a.auth.delegation.MiniKerberizedHadoopCluster.assertSecurityEnabled;
+import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.ERROR_DUPLICATE_TOKENS;
+import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.extractTokenIdentifier;
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.lookupS3ADelegationToken;
 import static org.apache.hadoop.test.LambdaTestUtils.doAs;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
 
 /**
  * Tests use of Hadoop delegation tokens within the FS itself.
+ * <p></p>
  * This instantiates a MiniKDC as some of the operations tested require
  * UGI to be initialized with security enabled.
+ * <p></p>
+ * Derived from {@link ITestSessionDelegationInFileystem}; uses
+ * the encrypting DT as primary;
+ * the full ad injecting as secondary.
+ * This set up makes it easy to verify that 2ary bindings
+ * are working: if a bound filesystem can talk to S3, it
+ * must be getting secrets from the secondary token list.
  */
 @SuppressWarnings("StaticNonFinalField")
-public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
+public class ITestSecondaryTokensInFileystem extends AbstractDelegationIT {
+
+  /**
+   * How many secondary tokens are expected to be issued.
+   */
+  public static final int EXPECTED_2ARY_TOKEN_COUNT = 2;
+
+  /**
+   * Total count of the tokens expected to be issued.
+   */
+  public static final int EXPECTED_TOTAL_TOKEN_COUNT =
+      1 + EXPECTED_2ARY_TOKEN_COUNT;
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(ITestSessionDelegationInFileystem.class);
+      LoggerFactory.getLogger(ITestSecondaryTokensInFileystem.class);
 
   private static MiniKerberizedHadoopCluster cluster;
-
-  private UserGroupInformation bobUser;
 
   private UserGroupInformation aliceUser;
 
@@ -120,7 +138,7 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
    * @return which DT binding to use.
    */
   protected String getDelegationBinding() {
-    return DELEGATION_TOKEN_SESSION_BINDING;
+    return DELEGATION_TOKEN_ENCRYPTING_BINDING;
   }
 
   /**
@@ -128,19 +146,27 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
    * @return the kind of DT
    */
   public Text getTokenKind() {
-    return SESSION_TOKEN_KIND;
+    return ENCRYPTING_TOKEN_KIND;
   }
 
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-    // disable if assume role opts are off
-    assumeSessionTestsEnabled(conf);
     disableFilesystemCaching(conf);
     resetAllDTConfigOptions(conf);
     conf.set(HADOOP_SECURITY_AUTHENTICATION,
         UserGroupInformation.AuthenticationMethod.KERBEROS.name());
     enableDelegationTokens(conf, getDelegationBinding());
+    // add the full credentials as a secondary token
+    // this can make it independent of the FS.
+    conf.set(DELEGATION_SECONDARY_BINDINGS,
+        DELEGATION_TOKEN_FULL_CREDENTIALS_BINDING);
+    conf.set(FULL_SECONDARY_TOKEN_NAME,
+        "ITestSecondaryTokensInFileystem");
+
+    InjectingTokenBinding.addAsSecondaryToken(conf, true,
+        CountInvocationsProvider.NAME);
+
     conf.set(AWS_CREDENTIALS_PROVIDER, " ");
     // switch to SSE_S3.
     if (conf.getBoolean(KEY_ENCRYPTION_TESTS, true)) {
@@ -152,7 +178,6 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     return conf;
   }
 
-
   @Override
   public void setup() throws Exception {
     // clear any existing tokens from the FS
@@ -160,7 +185,6 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     UserGroupInformation.setConfiguration(createConfiguration());
 
     aliceUser = cluster.createAliceUser();
-    bobUser = cluster.createBobUser();
 
     UserGroupInformation.setLoginUser(aliceUser);
     assertSecurityEnabled();
@@ -170,8 +194,8 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     // make sure there aren't any tokens
     assertNull("Unexpectedly found an S3A token",
         lookupS3ADelegationToken(
-        UserGroupInformation.getCurrentUser().getCredentials(),
-        fs.getUri()));
+            UserGroupInformation.getCurrentUser().getCredentials(),
+            fs.getUri()));
 
     // DTs are inited but not started.
     delegationTokens = instantiateDTSupport(getConfiguration());
@@ -184,7 +208,6 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     ServiceOperations.stopQuietly(LOG, delegationTokens);
     FileSystem.closeAllForUGI(UserGroupInformation.getCurrentUser());
     MiniKerberizedHadoopCluster.closeUserFileSystems(aliceUser);
-    MiniKerberizedHadoopCluster.closeUserFileSystems(bobUser);
     cluster.resetUGI();
   }
 
@@ -196,8 +219,11 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     return getConfiguration().getBoolean(KEY_ENCRYPTION_TESTS, true);
   }
 
+  /**
+   * filesystem getDelegationToken only returns the 1ary token.
+   */
   @Test
-  public void testGetDTfromFileSystem() throws Throwable {
+  public void testGetPrimaryTokenfromFileSystem() throws Throwable {
     describe("Enable delegation tokens and request one");
     delegationTokens.start();
     S3AFileSystem fs = getFileSystem();
@@ -228,58 +254,99 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
 
   @Test
   public void testAddTokensFromFileSystem() throws Throwable {
-    describe("verify FileSystem.addDelegationTokens() collects tokens");
+    describe("verify FileSystem.addDelegationTokens() collects all tokens");
     S3AFileSystem fs = getFileSystem();
-    Credentials cred = new Credentials();
-    Token<?>[] tokens = fs.addDelegationTokens(YARN_RM, cred);
-    assertEquals("Number of tokens", 1, tokens.length);
+    Credentials creds = new Credentials();
+    final long initialIssueCount = InjectingTokenBinding.getIssueCount();
+    Token<?>[] tokens = fs.addDelegationTokens(YARN_RM, creds);
+    Assertions.assertThat(tokens)
+        .describedAs("Tokens from fileystem")
+        .hasSize(EXPECTED_TOTAL_TOKEN_COUNT);
+    assertAllTokensIssued(creds);
+    final long secondIssueCount = InjectingTokenBinding.getIssueCount();
+    Assertions.assertThat(secondIssueCount - initialIssueCount)
+        .describedAs("InjectingTokenBinding issue count")
+        .isEqualTo(1);
+
+    // the first token in the list of issued tokens is the
+    // primary.
     Token<?> token = requireNonNull(tokens[0], "token");
     LOG.info("FS token is {}", token);
     Text service = delegationTokens.getService();
-    Token<? extends TokenIdentifier> retrieved = requireNonNull(
-        cred.getToken(service),
+
+    requireNonNull(
+        creds.getToken(service),
         "retrieved token with key " + service + "; expected " + token);
-    delegationTokens.start();
-    // this only sneaks in because there isn't a state check here
-    delegationTokens.resetTokenBindingToDT(
-        (Token<AbstractS3ATokenIdentifier>) retrieved);
-    assertTrue("bind to existing DT failed",
-        delegationTokens.isBoundToDT());
-    AWSCredentialProviderList providerList = requireNonNull(
-        delegationTokens.getCredentialProviders(), "providers");
 
-    providerList.getCredentials();
+    // now the secondary token
+    List<SecondaryDelegationToken> secondaryTokens
+        = delegationTokens.listSecondaryTokens();
+    Assertions.assertThat(secondaryTokens)
+        .describedAs("secondary token list")
+        .hasSize(EXPECTED_2ARY_TOKEN_COUNT);
+    SecondaryDelegationToken binding2 = tail(secondaryTokens);
+    Text b2service = binding2.getServiceName();
+    Token<AbstractS3ATokenIdentifier> b2token = binding2
+        .bindToToken(creds);
+    InjectingTokenIdentifier b2tokenId = (InjectingTokenIdentifier)
+        extractTokenIdentifier(b2service.toString(), b2token, "");
+    Assertions.assertThat(b2tokenId)
+        .describedAs("secondary token %s", b2tokenId)
+        .extracting(InjectingTokenIdentifier::getIssueNumber)
+        .isEqualTo(secondIssueCount);
   }
 
+  /**
+   * The this verifies that when an S3A token service is brought up with
+   * secondary tokens, then they are picked up and the token specific
+   * binding service instantiated.
+   */
   @Test
-  public void testCanRetrieveTokenFromCurrentUserCreds() throws Throwable {
-    describe("Create a DT, add it to the current UGI credentials,"
-        + " then retrieve");
-    delegationTokens.start();
-    Credentials cred = createDelegationTokens();
-    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-    ugi.addCredentials(cred);
-    Token<?>[] tokens = cred.getAllTokens().toArray(new Token<?>[0]);
-    Token<?> token0 = tokens[0];
-    Text service = token0.getService();
-    LOG.info("Token = " + token0);
-    Token<?> token1 = requireNonNull(
-        ugi.getCredentials().getToken(service), "Token from " + service);
-    assertEquals("retrieved token", token0, token1);
-    assertNotNull("token identifier of "  + token1,
-        token1.getIdentifier());
-  }
+  public void testDTCredentialProviderFromCurrentUserCreds()
+      throws Throwable {
 
-  @Test
-  public void testDTCredentialProviderFromCurrentUserCreds() throws Throwable {
     describe("Add credentials to the current user, "
         + "then verify that they can be found when S3ADelegationTokens binds");
     Credentials cred = createDelegationTokens();
-    assertThat("Token size", cred.getAllTokens(), hasSize(1));
+    assertAllTokensIssued(cred);
     UserGroupInformation.getCurrentUser().addCredentials(cred);
     delegationTokens.start();
     assertTrue("bind to existing DT failed",
         delegationTokens.isBoundToDT());
+    SecondaryDelegationToken binding2
+        = tail(delegationTokens.listSecondaryTokens());
+    Assertions.assertThat(binding2.getBoundDT())
+        .describedAs("secondary token")
+        .isNotNull();
+    InjectingTokenIdentifier b2tokenId = (InjectingTokenIdentifier)
+        extractTokenIdentifier(binding2.getCanonicalServiceName(),
+            binding2.getBoundDT(), "");
+
+    Assertions.assertThat(b2tokenId)
+        .describedAs("secondary token %s", b2tokenId)
+        .extracting(InjectingTokenIdentifier::getIssueNumber)
+        .isEqualTo(InjectingTokenBinding.getIssueCount());
+
+    // Get new credential chain
+    AWSCredentialProviderList providerList
+        = delegationTokens.getCredentialProviders();
+    List<AWSCredentialsProvider> awsProviders = providerList.getProviders();
+    Assertions.assertThat(awsProviders)
+        .describedAs("providers from delegation token service")
+        .hasSizeGreaterThan(1)
+        .element(awsProviders.size() - 1)
+        .isInstanceOf(CountInvocationsProvider.class);
+  }
+
+  /**
+   * Assert that the number of tokens issued matches all which the
+   * FS is expected to issue.
+   * @param cred credentials.
+   */
+  public void assertAllTokensIssued(final Credentials cred) {
+    Assertions.assertThat(cred.getAllTokens())
+        .describedAs("Tokens from fileystem")
+        .hasSize(EXPECTED_TOTAL_TOKEN_COUNT);
   }
 
   /**
@@ -297,10 +364,8 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
    */
   @Test
   public void testDelegatedFileSystem() throws Throwable {
-    describe("Delegation tokens can be passed to a new filesystem;"
-        + " if role restricted, permissions are tightened.");
+    describe("Delegation tokens can be passed to a new filesystem");
     S3AFileSystem fs = getFileSystem();
-    readLandsatMetadata(fs);
 
     URI uri = fs.getUri();
     // create delegation tokens from the test suites FS.
@@ -318,9 +383,9 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     currentUser.addCredentials(creds);
     // verify that the tokens went over
     requireNonNull(lookupToken(
-            currentUser.getCredentials(),
-            uri,
-            tokenKind), "user credentials");
+        currentUser.getCredentials(),
+        uri,
+        tokenKind), "user credentials");
     Configuration conf = new Configuration(getConfiguration());
     String bucket = fs.getBucket();
     disableFilesystemCaching(conf);
@@ -328,6 +393,7 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     // remove any secrets we don't want the delegated FS to accidentally
     // pick up.
     // this is to simulate better a remote deployment.
+
     removeBaseAndBucketOverrides(bucket, conf,
         ACCESS_KEY, SECRET_KEY, SESSION_TOKEN,
         SERVER_SIDE_ENCRYPTION_ALGORITHM,
@@ -338,7 +404,6 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     // matter how you pick up credentials.
     conf.set(DELEGATION_TOKEN_ENDPOINT, "http://localhost:8080/");
     bindProviderList(bucket, conf, CountInvocationsProvider.NAME);
-    long originalCount = CountInvocationsProvider.getInvocationCount();
 
     // create a new FS instance, which is expected to pick up the
     // existing token
@@ -353,7 +418,6 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
             fs.getServerSideEncryptionAlgorithm(),
             delegatedFS.getServerSideEncryptionAlgorithm());
       }
-      verifyRestrictedPermissions(delegatedFS);
 
       executeDelegatedFSOperations(delegatedFS, testPath);
       delegatedFS.mkdirs(testPath);
@@ -362,8 +426,13 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
           delegatedFS,
           Statistic.DELEGATION_TOKENS_ISSUED);
 
-      // verify that the FS returns the existing token when asked
+      // verify that the FS returns the existing tokens
       // so that chained deployments will work
+      Credentials creds2 = mkTokens(delegatedFS);
+      assertAllTokensIssued(creds2);
+      Assertions.assertThat(creds2.getAllTokens())
+          .containsAll(creds.getAllTokens());
+
       AbstractS3ATokenIdentifier tokenFromDelegatedFS
           = requireNonNull(delegatedFS.getDelegationToken(""),
           "New token").decodeIdentifier();
@@ -373,24 +442,24 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
       issueDiff.assertDiffEquals("DTs issued in " + delegatedFS,
           0);
     }
-    // the DT auth chain should override the original one.
-    assertEquals("invocation count",
-        originalCount,
-        CountInvocationsProvider.getInvocationCount());
 
-    // create a second instance, which will pick up the same value
-    try (S3AFileSystem secondDelegate = newS3AInstance(uri, conf)) {
-      assertBoundToDT(secondDelegate, tokenKind);
-      if (encryptionTestEnabled()) {
-        assertNotNull("Encryption propagation failed",
-            secondDelegate.getServerSideEncryptionAlgorithm());
-        assertEquals("Encryption propagation failed",
-            fs.getServerSideEncryptionAlgorithm(),
-            secondDelegate.getServerSideEncryptionAlgorithm());
-      }
-      ContractTestUtils.assertDeleted(secondDelegate, testPath, true);
+    // now, this one has a different URI -landsat
+    Path landsatCSVPath = S3ATestUtils.getLandsatCSVPath(conf);
+
+    // create a new FS instance with a different URI
+    // the encrypted token will not be picked up, but
+    // because the full tokens are 2ary, with a service
+    // name independent of the FS URI, they will get picked up.
+    try (S3AFileSystem landsatFS =
+             newS3AInstance(landsatCSVPath.toUri(), conf)) {
+      S3ADelegationTokens dtSupport = getFSDelegationTokenSupport(fs);
+      assertFalse("Expected 1ary dt to be unbound: " + dtSupport,
+          dtSupport.isBoundToDT());
+      landsatFS.getFileStatus(landsatCSVPath);
       assertNotNull("unbounded DT",
-          secondDelegate.getDelegationToken(""));
+          landsatFS.getDelegationToken(""));
+      Credentials creds3 = mkTokens(landsatFS);
+      assertAllTokensIssued(creds3);
     }
   }
 
@@ -417,153 +486,6 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
   }
 
   /**
-   * Session tokens can read the landsat bucket without problems.
-   * @param delegatedFS delegated FS
-   * @throws Exception failure
-   */
-  protected void verifyRestrictedPermissions(final S3AFileSystem delegatedFS)
-      throws Exception {
-    readLandsatMetadata(delegatedFS);
-  }
-
-  @Test
-  public void testDelegationBindingMismatch1() throws Throwable {
-    describe("Verify that when the DT client and remote bindings are different,"
-        + " the failure is meaningful");
-    S3AFileSystem fs = getFileSystem();
-    URI uri = fs.getUri();
-    UserGroupInformation.getCurrentUser().addCredentials(
-        createDelegationTokens());
-
-    // create the remote FS with a full credential binding
-    Configuration conf = new Configuration(getConfiguration());
-    String bucket = fs.getBucket();
-    removeBaseAndBucketOverrides(bucket, conf,
-        ACCESS_KEY, SECRET_KEY, SESSION_TOKEN);
-    conf.set(ACCESS_KEY, "aaaaa");
-    conf.set(SECRET_KEY, "bbbb");
-    bindProviderList(bucket, conf, CountInvocationsProvider.NAME);
-    conf.set(DELEGATION_TOKEN_BINDING,
-        DELEGATION_TOKEN_FULL_CREDENTIALS_BINDING);
-    ServiceStateException e = intercept(
-        ServiceStateException.class,
-        TOKEN_MISMATCH,
-        () -> {
-          S3AFileSystem remote = newS3AInstance(uri, conf);
-          // if we get this far, provide info for the exception which will
-          // be raised.
-          String s = remote.toString();
-          remote.close();
-          return s;
-        });
-    if (!(e.getCause() instanceof DelegationTokenIOException)) {
-      throw e;
-    }
-  }
-
-  @Test
-  public void testDelegationBindingMismatch2() throws Throwable {
-    describe("assert mismatch reported when client DT is a "
-        + "subclass of the remote one");
-    S3AFileSystem fs = getFileSystem();
-    URI uri = fs.getUri();
-
-    // create the remote FS with a full credential binding
-    Configuration conf = new Configuration(getConfiguration());
-    String bucket = fs.getBucket();
-    enableDelegationTokens(conf, DELEGATION_TOKEN_FULL_CREDENTIALS_BINDING);
-
-    // create a new FS with Full tokens
-    Credentials fullTokens;
-    Token<AbstractS3ATokenIdentifier> firstDT;
-    try (S3AFileSystem fullFS = newS3AInstance(uri, conf)) {
-      // add the tokens to the user group
-      fullTokens = mkTokens(fullFS);
-      assertTokenCreationCount(fullFS, 1);
-      firstDT = fullFS.getDelegationToken(
-          "first");
-      assertTokenCreationCount(fullFS, 2);
-      Token<AbstractS3ATokenIdentifier> secondDT = fullFS.getDelegationToken(
-          "second");
-      assertTokenCreationCount(fullFS, 3);
-      assertNotEquals("DT identifiers",
-          firstDT.getIdentifier(), secondDT.getIdentifier());
-    }
-
-    // expect a token
-    AbstractS3ATokenIdentifier origTokenId = requireNonNull(
-        lookupToken(
-            fullTokens,
-            uri,
-            FULL_TOKEN_KIND), "token from credentials");
-    UserGroupInformation.getCurrentUser().addCredentials(
-        fullTokens);
-
-    // a remote FS with those tokens
-    try (S3AFileSystem delegatedFS = newS3AInstance(uri, conf)) {
-      assertBoundToDT(delegatedFS, FULL_TOKEN_KIND);
-      delegatedFS.getFileStatus(new Path("/"));
-      SessionTokenIdentifier tokenFromDelegatedFS
-          = (SessionTokenIdentifier) requireNonNull(
-              delegatedFS.getDelegationToken(""), "New token")
-          .decodeIdentifier();
-      assertTokenCreationCount(delegatedFS, 0);
-      assertEquals("Newly issued token != old one",
-          origTokenId,
-          tokenFromDelegatedFS);
-    }
-
-    // now create a configuration which expects a session token.
-    Configuration conf2 = new Configuration(getConfiguration());
-    removeBaseAndBucketOverrides(bucket, conf2,
-        ACCESS_KEY, SECRET_KEY, SESSION_TOKEN);
-    conf.set(DELEGATION_TOKEN_BINDING,
-        getDelegationBinding());
-    ServiceStateException e = intercept(ServiceStateException.class,
-        TOKEN_MISMATCH,
-        () -> {
-          S3AFileSystem remote = newS3AInstance(uri, conf);
-          // if we get this far, provide info for the exception which will
-          // be raised.
-          String s = remote.toString();
-          remote.close();
-          return s;
-        });
-    if (!(e.getCause() instanceof DelegationTokenIOException)) {
-      throw e;
-    }
-  }
-
-  /**
-   * This verifies that the granted credentials only access the target bucket
-   * by using the credentials in a new S3 client to query the AWS-owned landsat
-   * bucket.
-   * @param delegatedFS delegated FS with role-restricted access.
-   * @throws AccessDeniedException if the delegated FS's credentials can't
-   * access the bucket.
-   * @return result of the HEAD
-   * @throws Exception failure
-   */
-  protected ObjectMetadata readLandsatMetadata(final S3AFileSystem delegatedFS)
-      throws Exception {
-    AWSCredentialProviderList testing
-        = delegatedFS.shareCredentials("testing");
-
-    URI landsat = new URI(DEFAULT_CSVTEST_FILE);
-    DefaultS3ClientFactory factory
-        = new DefaultS3ClientFactory();
-    Configuration conf = new Configuration(delegatedFS.getConf());
-    conf.set(ENDPOINT, "");
-    factory.setConf(conf);
-    String host = landsat.getHost();
-    AmazonS3 s3 = factory.createS3Client(landsat, host, testing,
-        "ITestSessionDelegationInFileystem");
-
-    return Invoker.once("HEAD", host,
-        () -> s3.getObjectMetadata(host, landsat.getPath().substring(1)));
-  }
-
-  /**
    * YARN job submission uses
    * {@link TokenCache#obtainTokensForNamenodes(Credentials, Path[], Configuration)}
    * for token retrieval: call it here to verify it works.
@@ -574,27 +496,49 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
         + " TokenCache.obtainTokensForNamenodes() API Call");
     Credentials cred = new Credentials();
     Path yarnPath = path("testYarnCredentialPickup");
-    Path[] paths = new Path[] {yarnPath};
+    Path[] paths = new Path[]{yarnPath};
     Configuration conf = getConfiguration();
     S3AFileSystem fs = getFileSystem();
     TokenCache.obtainTokensForNamenodes(cred, paths, conf);
-    assertNotNull("No Token in credentials file",
-        lookupToken(
-            cred,
-            fs.getUri(),
-            getTokenKind()));
+    assertAllTokensIssued(cred);
   }
 
-  /**
-   * Test the {@code hdfs fetchdt} command works with S3A tokens.
-   */
   @Test
-  public void testHDFSFetchDTCommand() throws Throwable {
-    describe("Use the HDFS fetchdt CLI to fetch a token");
-    fetchTokensThroughDtUtils(
-        bobUser,
-        getTokenKind(),
-        createTempTokenFile());
+  public void testDuplicateTokenKind() throws Throwable {
+    describe("Verify that duplicate secondary token kinds are rejected");
+
+    Configuration conf = new Configuration(getConfiguration());
+    disableFilesystemCaching(conf);
+    unsetHadoopCredentialProviders(conf);
+
+    InjectingTokenBinding.addAsSecondaryToken(conf, true,
+        CountInvocationsProvider.NAME);
+    InjectingTokenBinding.addAsSecondaryToken(conf, true,
+        null);
+    try (S3AFileSystem delegatedFS = new S3AFileSystem()) {
+      intercept(ServiceStateException.class,
+          ERROR_DUPLICATE_TOKENS, () ->
+              delegatedFS.initialize(getFileSystem().getUri(), conf));
+    }
+  }
+  @Test
+  public void testDuplicateTokenKindOfFS() throws Throwable {
+    describe("Verify thata secondary DT using the token name of the FS URI"
+        + " is rejected");
+
+    Configuration conf = new Configuration(getConfiguration());
+    disableFilesystemCaching(conf);
+    unsetHadoopCredentialProviders(conf);
+    URI fsuri = getFileSystem().getUri();
+    conf.set(INJECTING_SECONDARY_TOKEN_NAME, fsuri.toString());
+
+    InjectingTokenBinding.addAsSecondaryToken(conf, true,
+        CountInvocationsProvider.NAME);
+    try (S3AFileSystem delegatedFS = new S3AFileSystem()) {
+      intercept(ServiceStateException.class,
+          ERROR_DUPLICATE_TOKENS, () ->
+              delegatedFS.initialize(fsuri, conf));
+    }
   }
 
   protected File createTempTokenFile() throws IOException {
@@ -604,44 +548,13 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     return tokenfile;
   }
 
-  /**
-   * This test looks at the identity which goes with a DT.
-   * It assumes that the username of a token == the user who created it.
-   * Some tokens may change that in future (maybe use Role ARN?).
-   */
-  @Test
-  public void testFileSystemBoundToCreator() throws Throwable {
-    describe("Run tests to verify the DT Setup is bound to the creator");
-
-    // quick sanity check to make sure alice and bob are different
-    assertNotEquals("Alice and Bob logins",
-        aliceUser.getUserName(), bobUser.getUserName());
-
-    final S3AFileSystem fs = getFileSystem();
-    assertEquals("FS username in doAs()",
-        ALICE,
-        doAs(bobUser, () -> fs.getUsername()));
-
-    UserGroupInformation fsOwner = doAs(bobUser,
-        () -> getFSDelegationTokenSupport(fs).getOwner());
-    assertEquals("username mismatch",
-        aliceUser.getUserName(), fsOwner.getUserName());
-
-    Token<AbstractS3ATokenIdentifier> dt = fs.getDelegationToken(ALICE);
-    AbstractS3ATokenIdentifier identifier
-        = dt.decodeIdentifier();
-    UserGroupInformation user = identifier.getUser();
-    assertEquals("User in DT",
-        aliceUser.getUserName(), user.getUserName());
-  }
-
-  protected String dtutil(int expected, String...args) throws Exception {
+  protected String dtutil(int expected, String... args) throws Exception {
     final ByteArrayOutputStream dtUtilContent = new ByteArrayOutputStream();
     DtUtilShell dt = new DtUtilShell();
     dt.setOut(new PrintStream(dtUtilContent));
     dtUtilContent.reset();
     int r = doAs(aliceUser,
-        () -> ToolRunner.run(getConfiguration(), dt, super.args(args)));
+        () -> ToolRunner.run(getConfiguration(), dt, args(args)));
     String s = dtUtilContent.toString();
     LOG.info("\n{}", s);
     assertEquals("result of dtutil", expected, r);
@@ -650,7 +563,7 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
 
   @Test
   public void testDTUtilShell() throws Throwable {
-    describe("Verify the dtutil shell command can fetch tokens");
+    describe("Verify the dtutil shell command can fetch all tokens");
     File tokenfile = createTempTokenFile();
 
     String tfs = tokenfile.toString();
@@ -663,12 +576,25 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
         tokenfile.exists());
     assertTrue("File is empty" + tokenfile,
         tokenfile.length() > 0);
-    assertTrue("File only contains header" + tokenfile,
+    assertTrue("File only contains header " + tokenfile,
         tokenfile.length() > 6);
+    Credentials creds = Credentials.readTokenStorageFile(tokenfile,
+        getConfiguration());
+    assertAllTokensIssued(creds);
+  }
 
-    String printed = dtutil(0, "print", tfs);
-    assertThat(printed, containsString(fsURI));
-    assertThat(printed, containsString(getTokenKind().toString()));
+  /**
+   * Test the {@code hdfs fetchdt} command works with S3A tokens.
+   */
+  @Test
+  public void testHDFSFetchDTCommand() throws Throwable {
+    describe("Use the HDFS fetchdt CLI to fetch a token");
+
+    Credentials creds = fetchTokensThroughDtUtils(
+        aliceUser,
+        getTokenKind(),
+        createTempTokenFile());
+    assertAllTokensIssued(creds);
 
   }
 

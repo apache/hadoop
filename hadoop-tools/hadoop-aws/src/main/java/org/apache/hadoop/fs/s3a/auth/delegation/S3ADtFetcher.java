@@ -18,7 +18,10 @@
 
 package org.apache.hadoop.fs.s3a.auth.delegation;
 
+import java.io.IOException;
 import java.net.URI;
+
+import com.google.common.annotations.VisibleForTesting;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -40,7 +43,8 @@ public class S3ADtFetcher implements DtFetcher {
 
   private static final String SERVICE_NAME = Constants.FS_S3A;
 
-  private static final String FETCH_FAILED =
+  @VisibleForTesting
+  static final String FETCH_FAILED =
       "Filesystem not generating Delegation Tokens";
 
   /**
@@ -60,7 +64,7 @@ public class S3ADtFetcher implements DtFetcher {
    *  @param creds - a Credentials object to which token(s) will be added
    *  @param renewer  - the renewer to send with the token request
    *  @param url  - the URL to which the request is sent
-   *  @return a Token, or null if fetch fails.
+   *  @return a Token
    */
   public Token<?> addDelegationTokens(Configuration conf,
       Credentials creds,
@@ -70,11 +74,27 @@ public class S3ADtFetcher implements DtFetcher {
       url = getServiceName().toString() + "://" + url;
     }
     FileSystem fs = FileSystem.get(URI.create(url), conf);
-    Token<?> token = fs.getDelegationToken(renewer);
-    if (token == null) {
-      throw new DelegationTokenIOException(FETCH_FAILED + ": " + url);
+    return addFSDelegationTokens(fs, renewer, creds);
+  }
+
+  /**
+   * Add all DT tokens.
+   * Private for ease of testing.
+   * @param fs filesystem.
+   * @param conf - a Configuration object used with FileSystem.get()
+   * @param creds - a Credentials object to which token(s) will be added
+   * @param renewer  - the renewer to send with the token request
+   * @return a Token
+   * @throws IOException failure
+   */
+  @VisibleForTesting
+  static Token<?> addFSDelegationTokens(final FileSystem fs,
+      final String renewer, final Credentials creds) throws IOException {
+    Token<?>[] tokens = fs.addDelegationTokens(renewer, creds);
+    if (tokens == null || tokens.length == 0) {
+      throw new DelegationTokenIOException(FETCH_FAILED + ": "
+          + fs.getUri());
     }
-    creds.addToken(token.getService(), token);
-    return token;
+    return tokens[0];
   }
 }

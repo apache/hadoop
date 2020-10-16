@@ -18,35 +18,18 @@
 
 package org.apache.hadoop.fs.s3a.auth.delegation;
 
-import java.util.concurrent.atomic.AtomicLong;
-
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSCredentialsProvider;
-
-import org.apache.hadoop.fs.s3a.CredentialInitializationException;
+import org.apache.hadoop.security.token.Token;
 
 /**
- * Simple AWS credential provider which counts how often it is invoked.
+ * Callbacks used by the {@link S3ATokenIssuer} to notify
+ * the {@link S3ADelegationTokens} instance that a token
+ * has been issued.
  */
-public class CountInvocationsProvider
-    implements AWSCredentialsProvider {
+public interface TokenIssueCallbacks {
 
-  public static final String NAME = CountInvocationsProvider.class.getName();
-
-  private static final AtomicLong COUNTER = new AtomicLong(0);
-
-  @Override
-  public AWSCredentials getCredentials() {
-    COUNTER.incrementAndGet();
-    throw new CredentialInitializationException("no credentials");
-  }
-
-  @Override
-  public void refresh() {
-
-  }
-
-  public static long getInvocationCount() {
-    return COUNTER.get();
-  }
+  /**
+   * A token has been created; increment counters and statistics.
+   * @param token token created
+   */
+  void tokenCreated(Token<AbstractS3ATokenIdentifier> token);
 }
