@@ -428,6 +428,16 @@ fs.viewfs.mounttable.${VIEWNAME}.linkRegx.${REGEX_STR}
 fs.viewfs.mounttable.${VIEWNAME}.linkRegx.${interceptorSettings}#.${srcRegex}
 ```
 
+Path Resolving Cache
+--------------------------------
+The resolving result cache could help to reduce the mountpoint parsing time. It wouldn't make much difference when the mountable is simple. However, it will be useful for complex mountpoints. E.g. a regex mount point with a complex regex pattern. Besides, the cache could also help reduce the target file system initialization time. An LRU cache is used to implement it. The cache is disabled by default. Please config the following properties to use it.
+```xml
+<property>
+    <name>fs.viewfs.path.resolution.cache.capacity</name>
+    <value>${cache_cap}</value>
+</property>
+```
+
 
 
 Appendix: A Mount Table Configuration Example

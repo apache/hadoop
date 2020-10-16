@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -29,7 +30,9 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.commons.collections.map.LRUMap;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -79,6 +82,9 @@ abstract class InodeTree<T> {
   private List<MountPoint<T>> mountPoints = new ArrayList<MountPoint<T>>();
   private List<RegexMountPoint<T>> regexMountPointList =
       new ArrayList<RegexMountPoint<T>>();
+  private LRUMap pathResolutionCache;
+  private ReentrantReadWriteLock cacheRWLock;
+  private int pathResolutionCacheCapacity;
 
   static class MountPoint<T> {
     String src;
@@ -639,6 +645,13 @@ abstract class InodeTree<T> {
               theUri);
       getRootDir().addFallbackLink(rootFallbackLink);
     }
+    pathResolutionCacheCapacity = config
+        .getInt(Constants.CONFIG_VIEWFS_PATH_RESOLUTION_CACHE_CAPACITY,
+            Constants.CONFIG_VIEWFS_PATH_RESOLUTION_CACHE_CAPACITY_DEFAULT);
+    if (pathResolutionCacheCapacity > 0) {
+      pathResolutionCache = new LRUMap(pathResolutionCacheCapacity);
+      cacheRWLock = new ReentrantReadWriteLock();
+    }
   }
 
   private void checkMntEntryKeyEqualsTarget(
@@ -739,103 +752,113 @@ abstract class InodeTree<T> {
   ResolveResult<T> resolve(final String p, final boolean resolveLastComponent)
       throws FileNotFoundException {
     ResolveResult<T> resolveResult = null;
-    String[] path = breakIntoPathComponents(p);
-    if (path.length <= 1) { // special case for when path is "/"
-      T targetFs = root.isInternalDir() ?
-          getRootDir().getInternalDirFs()
-          : getRootLink().getTargetFileSystem();
-      resolveResult = new ResolveResult<T>(ResultKind.INTERNAL_DIR,
-          targetFs, root.fullPath, SlashPath, false);
-      return resolveResult;
-    }
-
-    /**
-     * linkMergeSlash has been configured. The root of this mount table has
-     * been linked to the root directory of a file system.
-     * The first non-slash path component should be name of the mount table.
-     */
-    if (root.isLink()) {
-      Path remainingPath;
-      StringBuilder remainingPathStr = new StringBuilder();
-      // ignore first slash
-      for (int i = 1; i < path.length; i++) {
-        remainingPathStr.append("/").append(path[i]);
-      }
-      remainingPath = new Path(remainingPathStr.toString());
-      resolveResult = new ResolveResult<T>(ResultKind.EXTERNAL_DIR,
-          getRootLink().getTargetFileSystem(), root.fullPath, remainingPath,
-          true);
-      return resolveResult;
-    }
-    Preconditions.checkState(root.isInternalDir());
-    INodeDir<T> curInode = getRootDir();
-
-    // Try to resolve path in the regex mount point
-    resolveResult = tryResolveInRegexMountpoint(p, resolveLastComponent);
+    resolveResult = getResolveResultFromCache(p, resolveLastComponent);
     if (resolveResult != null) {
       return resolveResult;
     }
 
-    int i;
-    // ignore first slash
-    for (i = 1; i < path.length - (resolveLastComponent ? 0 : 1); i++) {
-      INode<T> nextInode = curInode.resolveInternal(path[i]);
-      if (nextInode == null) {
-        if (hasFallbackLink()) {
-          resolveResult = new ResolveResult<T>(ResultKind.EXTERNAL_DIR,
-              getRootFallbackLink().getTargetFileSystem(), root.fullPath,
-              new Path(p), false);
-          return resolveResult;
-        } else {
-          StringBuilder failedAt = new StringBuilder(path[0]);
-          for (int j = 1; j <= i; ++j) {
-            failedAt.append('/').append(path[j]);
-          }
-          throw (new FileNotFoundException(
-              "File/Directory does not exist: " + failedAt.toString()));
-        }
+    try {
+      String[] path = breakIntoPathComponents(p);
+      if (path.length <= 1) { // special case for when path is "/"
+        T targetFs = root.isInternalDir() ?
+            getRootDir().getInternalDirFs()
+            : getRootLink().getTargetFileSystem();
+        resolveResult = new ResolveResult<T>(ResultKind.INTERNAL_DIR,
+            targetFs, root.fullPath, SlashPath, false);
+        return resolveResult;
       }
-
-      if (nextInode.isLink()) {
-        final INodeLink<T> link = (INodeLink<T>) nextInode;
-        final Path remainingPath;
-        if (i >= path.length - 1) {
-          remainingPath = SlashPath;
-        } else {
-          StringBuilder remainingPathStr =
-              new StringBuilder("/" + path[i + 1]);
-          for (int j = i + 2; j < path.length; ++j) {
-            remainingPathStr.append('/').append(path[j]);
-          }
-          remainingPath = new Path(remainingPathStr.toString());
+      /**
+       * linkMergeSlash has been configured. The root of this mount table has
+       * been linked to the root directory of a file system.
+       * The first non-slash path component should be name of the mount table.
+       */
+      if (root.isLink()) {
+        Path remainingPath;
+        StringBuilder remainingPathStr = new StringBuilder();
+        // ignore first slash
+        for (int i = 1; i < path.length; i++) {
+          remainingPathStr.append("/").append(path[i]);
         }
+        remainingPath = new Path(remainingPathStr.toString());
         resolveResult = new ResolveResult<T>(ResultKind.EXTERNAL_DIR,
-            link.getTargetFileSystem(), nextInode.fullPath, remainingPath,
+            getRootLink().getTargetFileSystem(), root.fullPath, remainingPath,
             true);
         return resolveResult;
-      } else if (nextInode.isInternalDir()) {
-        curInode = (INodeDir<T>) nextInode;
       }
-    }
+      Preconditions.checkState(root.isInternalDir());
 
-    // We have resolved to an internal dir in mount table.
-    Path remainingPath;
-    if (resolveLastComponent) {
-      remainingPath = SlashPath;
-    } else {
-      // note we have taken care of when path is "/" above
-      // for internal dirs rem-path does not start with / since the lookup
-      // that follows will do a children.get(remaningPath) and will have to
-      // strip-out the initial /
-      StringBuilder remainingPathStr = new StringBuilder("/" + path[i]);
-      for (int j = i + 1; j < path.length; ++j) {
-        remainingPathStr.append('/').append(path[j]);
+      // Try to resolve path in the regex mount point
+      INodeDir<T> curInode = getRootDir();
+      resolveResult = tryResolveInRegexMountpoint(p, resolveLastComponent);
+      if (resolveResult != null) {
+        return resolveResult;
       }
-      remainingPath = new Path(remainingPathStr.toString());
+
+      int i;
+      // ignore first slash
+      for (i = 1; i < path.length - (resolveLastComponent ? 0 : 1); i++) {
+        INode<T> nextInode = curInode.resolveInternal(path[i]);
+        if (nextInode == null) {
+          if (hasFallbackLink()) {
+            resolveResult = new ResolveResult<T>(ResultKind.EXTERNAL_DIR,
+                getRootFallbackLink().getTargetFileSystem(), root.fullPath,
+                new Path(p), false);
+            return resolveResult;
+          } else {
+            StringBuilder failedAt = new StringBuilder(path[0]);
+            for (int j = 1; j <= i; ++j) {
+              failedAt.append('/').append(path[j]);
+            }
+            throw (new FileNotFoundException(
+                "File/Directory does not exist: " + failedAt.toString()));
+          }
+        }
+
+        if (nextInode.isLink()) {
+          final INodeLink<T> link = (INodeLink<T>) nextInode;
+          final Path remainingPath;
+          if (i >= path.length - 1) {
+            remainingPath = SlashPath;
+          } else {
+            StringBuilder remainingPathStr =
+                new StringBuilder("/" + path[i + 1]);
+            for (int j = i + 2; j < path.length; ++j) {
+              remainingPathStr.append('/').append(path[j]);
+            }
+            remainingPath = new Path(remainingPathStr.toString());
+          }
+          resolveResult = new ResolveResult<T>(ResultKind.EXTERNAL_DIR,
+              link.getTargetFileSystem(), nextInode.fullPath, remainingPath,
+              true);
+          return resolveResult;
+        } else if (nextInode.isInternalDir()) {
+          curInode = (INodeDir<T>) nextInode;
+        }
+      }
+
+      // We have resolved to an internal dir in mount table.
+      Path remainingPath;
+      if (resolveLastComponent) {
+        remainingPath = SlashPath;
+      } else {
+        // note we have taken care of when path is "/" above
+        // for internal dirs rem-path does not start with / since the lookup
+        // that follows will do a children.get(remaningPath) and will have to
+        // strip-out the initial /
+        StringBuilder remainingPathStr = new StringBuilder("/" + path[i]);
+        for (int j = i + 1; j < path.length; ++j) {
+          remainingPathStr.append('/').append(path[j]);
+        }
+        remainingPath = new Path(remainingPathStr.toString());
+      }
+      resolveResult = new ResolveResult<T>(ResultKind.INTERNAL_DIR,
+          curInode.getInternalDirFs(), curInode.fullPath, remainingPath, false);
+      return resolveResult;
+    } finally {
+      if (pathResolutionCacheCapacity > 0 && resolveResult != null) {
+        addResolveResultToCache(p, resolveLastComponent, resolveResult);
+      }
     }
-    resolveResult = new ResolveResult<T>(ResultKind.INTERNAL_DIR,
-        curInode.getInternalDirFs(), curInode.fullPath, remainingPath, false);
-    return resolveResult;
   }
 
   /**
@@ -903,6 +926,58 @@ abstract class InodeTree<T> {
           resultKind, resolvedPathStr, targetOfResolvedPathStr, remainingPath),
           uex);
       return null;
+    }
+  }
+
+  int getPathResolutionCacheCapacity() {
+    return pathResolutionCacheCapacity;
+  }
+
+  private void addResolveResultToCache(final String pathStr,
+      final Boolean resolveLastComponent,
+      final ResolveResult<T> resolveResult) {
+    String key = getResolveCacheKeyStr(pathStr, resolveLastComponent);
+    try {
+      cacheRWLock.writeLock().lock();
+      pathResolutionCache.put(key, resolveResult);
+    } finally {
+      cacheRWLock.writeLock().unlock();
+    }
+  }
+
+  private ResolveResult<T> getResolveResultFromCache(final String pathStr,
+      final Boolean resolveLastComponent) {
+    if (pathResolutionCacheCapacity <= 0) {
+      return null;
+    }
+    String key = getResolveCacheKeyStr(pathStr, resolveLastComponent);
+    try {
+      cacheRWLock.readLock().lock();
+      return (ResolveResult<T>) pathResolutionCache.get(key);
+    } finally {
+      cacheRWLock.readLock().unlock();
+    }
+  }
+
+  static String getResolveCacheKeyStr(final String path,
+      Boolean resolveLastComp) {
+    return path + "_resolveLastComp:" + resolveLastComp;
+  }
+
+  @VisibleForTesting
+  LRUMap getPathResolutionCache() {
+    return pathResolutionCache;
+  }
+
+  void clearPathResolutionCache() {
+    if (pathResolutionCache == null) {
+      return;
+    }
+    try {
+      cacheRWLock.writeLock().lock();
+      pathResolutionCache.clear();
+    } finally {
+      cacheRWLock.writeLock().unlock();
     }
   }
 
