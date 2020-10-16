@@ -26,6 +26,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.google.common.collect.Lists;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -250,6 +251,9 @@ public class FairSchedulerConfiguration extends Configuration {
    */
   private static final String RESOURCES_WITH_SPACES_PATTERN =
       "-?\\d+(?:\\.\\d*)?\\s*[a-z]+\\s*";
+
+  public static final String NODE_COMPARATOR_CLASS =
+      CONF_PREFIX + "node.comparator.class";
 
   public FairSchedulerConfiguration() {
     super();
@@ -756,5 +760,15 @@ public class FairSchedulerConfiguration extends Configuration {
       }
     }
     throw new AllocationConfigurationException("Missing resource: " + resource);
+  }
+
+  protected Class<?> getNodeComparatorClass() {
+    try {
+      return getClassByName(get(NODE_COMPARATOR_CLASS,
+          FairScheduler.NodeAvailableResourceComparator.class.getName()));
+    } catch (ClassNotFoundException e) {
+      throw new YarnRuntimeException(
+          "Could not find class for " + NODE_COMPARATOR_CLASS);
+    }
   }
 }
