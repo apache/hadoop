@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.placement;
 
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.apache.commons.compress.utils.Lists;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.*;
 

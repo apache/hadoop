@@ -13,7 +13,7 @@
  */
 package org.apache.hadoop.security.authentication.client;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import java.lang.reflect.Constructor;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.security.authentication.server.HttpConstants;

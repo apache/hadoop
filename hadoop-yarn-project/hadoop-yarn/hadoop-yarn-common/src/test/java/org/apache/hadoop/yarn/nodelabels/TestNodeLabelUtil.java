@@ -19,7 +19,7 @@ package org.apache.hadoop.yarn.nodelabels;
 
 import static org.junit.Assert.fail;
 
-import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeAttributeType;
 import org.junit.Assert;

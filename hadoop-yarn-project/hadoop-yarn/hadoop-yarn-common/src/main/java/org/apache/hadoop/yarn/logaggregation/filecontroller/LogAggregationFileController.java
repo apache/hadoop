@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.logaggregation.filecontroller;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;

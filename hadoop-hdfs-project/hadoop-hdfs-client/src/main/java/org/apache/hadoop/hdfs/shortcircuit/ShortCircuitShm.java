@@ -39,9 +39,9 @@ import org.slf4j.LoggerFactory;
 
 import sun.misc.Unsafe;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ComparisonChain;
-import com.google.common.primitives.Ints;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ComparisonChain;
+import org.apache.hadoop.thirdparty.com.google.common.primitives.Ints;
 
 import javax.annotation.Nonnull;
 

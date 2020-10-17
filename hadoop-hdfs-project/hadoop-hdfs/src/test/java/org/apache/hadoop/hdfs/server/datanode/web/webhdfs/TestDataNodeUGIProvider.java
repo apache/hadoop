@@ -55,7 +55,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.function.Supplier;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 public class TestDataNodeUGIProvider {
   private final URI uri = URI.create(WebHdfsConstants.WEBHDFS_SCHEME + "://"

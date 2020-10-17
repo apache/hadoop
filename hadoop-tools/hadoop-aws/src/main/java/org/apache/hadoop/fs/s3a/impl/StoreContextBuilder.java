@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.s3a.impl;
 
 import java.net.URI;
 
-import com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.Invoker;

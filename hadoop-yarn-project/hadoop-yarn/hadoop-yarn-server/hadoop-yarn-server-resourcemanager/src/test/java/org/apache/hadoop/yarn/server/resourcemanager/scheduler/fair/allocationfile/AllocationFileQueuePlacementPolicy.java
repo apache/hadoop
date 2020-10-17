@@ -17,7 +17,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocationfile;
 
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;

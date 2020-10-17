@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.tools.dynamometer;
 
-import com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;

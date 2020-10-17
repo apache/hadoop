@@ -60,7 +60,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.function.Supplier;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 /**
  * Tests to verify safe mode correctness.

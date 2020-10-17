@@ -21,7 +21,7 @@ package org.apache.hadoop.yarn.util.resource;
 import java.util.Arrays;
 import java.util.Collection;
 
-import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;

@@ -25,8 +25,8 @@ import java.util.Set;
 import java.util.UUID;
 
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.assertj.core.api.Assertions;
 import org.junit.BeforeClass;
 import org.junit.Test;

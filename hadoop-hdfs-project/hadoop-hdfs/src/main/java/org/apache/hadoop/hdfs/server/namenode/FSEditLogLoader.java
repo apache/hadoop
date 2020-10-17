@@ -116,9 +116,9 @@ import org.apache.hadoop.log.LogThrottlingHelper;
 import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.util.Timer;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 import static org.apache.hadoop.log.LogThrottlingHelper.LogAction;
 

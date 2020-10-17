@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.io;
 
-import com.google.common.collect.ComparisonChain;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ComparisonChain;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 import java.nio.ByteBuffer;

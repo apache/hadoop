@@ -35,8 +35,8 @@ import org.apache.hadoop.metrics2.util.Quantile;
 import org.apache.hadoop.metrics2.util.QuantileEstimator;
 import org.apache.hadoop.metrics2.util.SampleQuantiles;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Watches a stream of long values, maintaining online estimates of specific

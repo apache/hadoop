@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.transfer.model.CopyResult;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,7 +46,7 @@ import org.apache.hadoop.fs.s3a.s3guard.RenameTracker;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.OperationDuration;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_BLOCK_SIZE;
 import static org.apache.hadoop.fs.s3a.S3AUtils.objectRepresentsDirectory;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
