@@ -32,7 +32,7 @@ import org.apache.hadoop.hdfs.server.federation.router.Router;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 /**
  * Mount table resolver that supports multiple locations for each mount entry.

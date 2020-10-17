@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.diskbalancer.command;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Throwables;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.HelpFormatter;

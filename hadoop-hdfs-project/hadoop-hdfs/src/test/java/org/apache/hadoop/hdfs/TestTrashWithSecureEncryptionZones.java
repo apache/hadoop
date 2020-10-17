@@ -32,7 +32,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.
     DFS_DATA_TRANSFER_PROTECTION_KEY;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.kms.KMSClientProvider;
 import org.apache.hadoop.crypto.key.kms.server.KMSConfiguration;

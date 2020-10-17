@@ -27,7 +27,7 @@ import org.apache.hadoop.hdfs.AppendTestUtil;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import com.google.common.primitives.Ints;
+import org.apache.hadoop.thirdparty.com.google.common.primitives.Ints;
 
 import static org.junit.Assert.*;
 

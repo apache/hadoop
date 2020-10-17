@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
-import com.google.common.collect.Iterables;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityNode;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;

@@ -17,7 +17,7 @@
 
 package org.apache.hadoop.hdfs.server.diskbalancer.connectors;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;

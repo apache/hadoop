@@ -22,7 +22,7 @@ package org.apache.hadoop.metrics2.util;
 import java.net.InetSocketAddress;
 import java.util.List;
 
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;

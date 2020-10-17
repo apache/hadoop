@@ -30,10 +30,10 @@ import java.util.Timer;
 import java.util.TimerTask;
 import javax.management.ObjectName;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.annotations.VisibleForTesting;
-import static com.google.common.base.Preconditions.*;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.*;
 
 import org.apache.commons.configuration2.PropertiesConfiguration;
 import org.apache.commons.math3.util.ArithmeticUtils;

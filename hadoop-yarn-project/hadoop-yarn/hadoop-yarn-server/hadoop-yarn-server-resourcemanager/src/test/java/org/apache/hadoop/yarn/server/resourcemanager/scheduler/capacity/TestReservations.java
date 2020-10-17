@@ -31,7 +31,7 @@ import static org.mockito.Mockito.when;
 import java.util.Collections;
 import java.util.Map;
 
-import com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

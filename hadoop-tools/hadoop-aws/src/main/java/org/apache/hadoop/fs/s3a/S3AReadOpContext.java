@@ -25,9 +25,9 @@ import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 
 import javax.annotation.Nullable;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Read-specific operation context struct.

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.yarn.api.resource;
 
-import com.google.common.collect.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 
 import java.util.Iterator;
 import java.util.Map;

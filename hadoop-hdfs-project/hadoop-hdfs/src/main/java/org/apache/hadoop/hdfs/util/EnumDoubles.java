@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs.util;
 
 import java.util.Arrays;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * Similar to {@link EnumCounters} except that the value type is double.

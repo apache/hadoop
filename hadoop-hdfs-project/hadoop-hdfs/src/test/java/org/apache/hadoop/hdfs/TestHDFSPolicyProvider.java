@@ -27,7 +27,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import com.google.common.collect.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.hadoop.hdfs.qjournal.server.JournalNodeRpcServer;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeRpcServer;

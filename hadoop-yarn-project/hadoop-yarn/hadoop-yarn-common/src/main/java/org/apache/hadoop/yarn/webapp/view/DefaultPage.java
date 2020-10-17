@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.webapp.view;
 
-import com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import java.util.Enumeration;
 
 import java.util.Map;

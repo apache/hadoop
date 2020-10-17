@@ -40,8 +40,8 @@ import org.apache.hadoop.util.StringUtils;
 import org.junit.After;
 import org.junit.Test;
 
-import com.google.common.base.Charsets;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 
 /**
 * This test ensures the appropriate response (successful or failure) from

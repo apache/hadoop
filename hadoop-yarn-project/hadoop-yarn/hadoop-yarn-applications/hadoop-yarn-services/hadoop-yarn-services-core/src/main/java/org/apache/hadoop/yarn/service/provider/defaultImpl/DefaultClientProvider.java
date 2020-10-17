@@ -26,7 +26,7 @@ import org.apache.hadoop.yarn.service.api.records.ConfigFile;
 import org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages;
 import org.apache.hadoop.yarn.service.provider.AbstractClientProvider;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 
 public class DefaultClientProvider extends AbstractClientProvider {
 

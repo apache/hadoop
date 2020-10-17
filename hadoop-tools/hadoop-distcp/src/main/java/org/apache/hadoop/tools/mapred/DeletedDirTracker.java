@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.tools.mapred;
 
-import com.google.common.base.Preconditions;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.cache.Cache;
+import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.tools.CopyListingFileStatus;
