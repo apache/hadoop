@@ -74,11 +74,8 @@ public interface AbfsInputStreamStatistics {
 
   /**
    * A {@code read(byte[] buf, int off, int len)} operation has started.
-   *
-   * @param pos starting position of the read.
-   * @param len length of bytes to read.
    */
-  void readOperationStarted(long pos, long len);
+  void readOperationStarted();
 
   /**
    * Records a successful remote read operation.

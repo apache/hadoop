@@ -18,12 +18,13 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 import com.google.common.annotations.VisibleForTesting;
 
 import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.IOStatistics;
-import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
@@ -51,6 +52,9 @@ public class AbfsOutputStreamStatisticsImpl
       )
       .build();
 
+  private final AtomicLong bytesUpload =
+      ioStatisticsStore.getCounterReference(getStatName(BYTES_TO_UPLOAD));
+
   /**
    * Records the need to upload bytes and increments the total bytes that
    * needs to be uploaded.
@@ -59,7 +63,7 @@ public class AbfsOutputStreamStatisticsImpl
    */
   @Override
   public void bytesToUpload(long bytes) {
-    ioStatisticsStore.incrementCounter(getStatName(BYTES_TO_UPLOAD), bytes);
+    bytesUpload.addAndGet(bytes);
   }
 
   /**
@@ -166,6 +170,11 @@ public class AbfsOutputStreamStatisticsImpl
     return ioStatisticsStore.counters().get(getStatName(WRITE_CURRENT_BUFFER_OPERATIONS));
   }
 
+  /**
+   * Getter for mean value of time taken to complete a PUT request by
+   * AbfsOutputStream.
+   * @return mean value.
+   */
   @VisibleForTesting
   public double getTimeSpentOnPutRequest() {
     return ioStatisticsStore.meanStatistics().get(getStatName(TIME_SPENT_ON_PUT_REQUEST) + StoreStatisticNames.SUFFIX_MEAN).mean();
@@ -188,7 +197,7 @@ public class AbfsOutputStreamStatisticsImpl
   @Override public String toString() {
     final StringBuilder outputStreamStats = new StringBuilder(
         "OutputStream Statistics{");
-    outputStreamStats.append(IOStatisticsLogging.ioStatisticsSourceToString(ioStatisticsStore));
+    outputStreamStats.append(ioStatisticsStore.toString());
     outputStreamStats.append("}");
     return outputStreamStats.toString();
   }

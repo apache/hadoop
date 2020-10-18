@@ -134,7 +134,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     int lastReadBytes;
     int totalReadBytes = 0;
     if (streamStatistics != null) {
-      streamStatistics.readOperationStarted(off, len);
+      streamStatistics.readOperationStarted();
     }
     incrementReadOps();
     do {
@@ -289,15 +289,12 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     AbfsPerfTracker tracker = client.getAbfsPerfTracker();
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker, "readRemote", "read")) {
       LOG.trace("Trigger client.read for path={} position={} offset={} length={}", path, position, offset, length);
-      if (ioStatistics != null) {
-        op = IOStatisticsBinding.trackDuration((IOStatisticsStore) ioStatistics,
-            StoreStatisticNames.ACTION_HTTP_GET_REQUEST,
-            () -> client.read(path, position, b, offset, length,
-                tolerateOobAppends ? "*" : eTag, cachedSasToken.get()));
-      } else {
-        op = client.read(path, position, b, offset, length,
-            tolerateOobAppends ? "*" : eTag, cachedSasToken.get());
-      }
+
+      op = IOStatisticsBinding.trackDuration((IOStatisticsStore) ioStatistics,
+          StoreStatisticNames.ACTION_HTTP_GET_REQUEST,
+          () -> client.read(path, position, b, offset, length,
+              tolerateOobAppends ? "*" : eTag, cachedSasToken.get()));
+
       cachedSasToken.update(op.getSasToken());
       if (streamStatistics != null) {
         streamStatistics.remoteReadOperation();

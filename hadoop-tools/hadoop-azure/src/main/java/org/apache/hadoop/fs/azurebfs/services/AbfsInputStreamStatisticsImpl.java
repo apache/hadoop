@@ -18,11 +18,12 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 import com.google.common.annotations.VisibleForTesting;
 
 import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
 import org.apache.hadoop.fs.statistics.IOStatistics;
-import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
@@ -55,6 +56,13 @@ public class AbfsInputStreamStatisticsImpl
       .withDurationTracking(StoreStatisticNames.ACTION_HTTP_GET_REQUEST)
       .build();
 
+  private final AtomicLong bytesRead =
+      ioStatisticsStore.getCounterReference(STREAM_READ_BYTES);
+  private final AtomicLong readOps =
+      ioStatisticsStore.getCounterReference(STREAM_READ_OPERATIONS);
+  private final AtomicLong seekOps =
+      ioStatisticsStore.getCounterReference(STREAM_READ_SEEK_OPERATIONS);
+
   /**
    * Seek backwards, incrementing the seek and backward seek counters.
    *
@@ -63,7 +71,7 @@ public class AbfsInputStreamStatisticsImpl
    */
   @Override
   public void seekBackwards(long negativeOffset) {
-    ioStatisticsStore.incrementCounter(STREAM_READ_SEEK_OPERATIONS);
+    seekOps.incrementAndGet();
     ioStatisticsStore.incrementCounter(STREAM_READ_SEEK_BACKWARD_OPERATIONS);
     ioStatisticsStore.incrementCounter(STREAM_READ_SEEK_BYTES_BACKWARDS, negativeOffset);
   }
@@ -77,7 +85,7 @@ public class AbfsInputStreamStatisticsImpl
    */
   @Override
   public void seekForwards(long skipped) {
-    ioStatisticsStore.incrementCounter(STREAM_READ_SEEK_OPERATIONS);
+    seekOps.incrementAndGet();
     ioStatisticsStore.incrementCounter(STREAM_READ_SEEK_FORWARD_OPERATIONS);
     ioStatisticsStore.incrementCounter(STREAM_READ_SEEK_BYTES_SKIPPED, skipped);
   }
@@ -107,7 +115,7 @@ public class AbfsInputStreamStatisticsImpl
    */
   @Override
   public void bytesRead(long bytes) {
-    ioStatisticsStore.incrementCounter(STREAM_READ_BYTES, bytes);
+    bytesRead.addAndGet(bytes);
   }
 
   /**
@@ -134,13 +142,10 @@ public class AbfsInputStreamStatisticsImpl
 
   /**
    * A {@code read(byte[] buf, int off, int len)} operation has started.
-   *
-   * @param pos starting position of the read.
-   * @param len length of bytes to read.
    */
   @Override
-  public void readOperationStarted(long pos, long len) {
-    ioStatisticsStore.incrementCounter(STREAM_READ_OPERATIONS);
+  public void readOperationStarted() {
+    readOps.incrementAndGet();
   }
 
   /**
@@ -243,6 +248,11 @@ public class AbfsInputStreamStatisticsImpl
     return ioStatisticsStore.counters().get(getStatName(REMOTE_BYTES_READ));
   }
 
+  /**
+   * Getter for the mean value of the time taken to complete a HTTP GET
+   * request by AbfsInputStream.
+   * @return mean value.
+   */
   @VisibleForTesting
   public double getActionHttpGetRequest() {
     return ioStatisticsStore.meanStatistics().
@@ -269,7 +279,7 @@ public class AbfsInputStreamStatisticsImpl
   public String toString() {
     final StringBuilder sb = new StringBuilder(
         "StreamStatistics{");
-    sb.append(IOStatisticsLogging.ioStatisticsSourceToString(ioStatisticsStore));
+    sb.append(ioStatisticsStore.toString());
     sb.append('}');
     return sb.toString();
   }
