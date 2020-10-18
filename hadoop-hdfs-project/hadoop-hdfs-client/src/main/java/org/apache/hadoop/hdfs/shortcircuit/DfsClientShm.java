@@ -26,7 +26,7 @@ import org.apache.hadoop.hdfs.shortcircuit.DfsClientShmManager.EndpointShmManage
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.DomainSocketWatcher;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * DfsClientShm is a subclass of ShortCircuitShm which is used by the

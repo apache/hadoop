@@ -1436,13 +1436,13 @@
 
 <property>
   <name>dfs.image.transfer.bandwidthPerSec</name>
-  <value>0</value>
+  <value>52428800</value>
   <description>
         Maximum bandwidth used for regular image transfers (instead of
         bootstrapping the standby namenode), in bytes per second.
         This can help keep normal namenode operations responsive during
         checkpointing.
-        A default value of 0 indicates that throttling is disabled.
+        A default value is 50mb per second.
         The maximum bandwidth used for bootstrapping standby namenode is
         configured with dfs.image.transfer-bootstrap-standby.bandwidthPerSec.
         Support multiple size unit suffix(case insensitive), as described
@@ -3296,7 +3296,7 @@
 
 <property>
   <name>dfs.datanode.block.id.layout.upgrade.threads</name>
-  <value>12</value>
+  <value>6</value>
   <description>The number of threads to use when creating hard links from
     current to previous blocks during upgrade of a DataNode to block ID-based
     block layout (see HDFS-6482 for details on the layout).</description>

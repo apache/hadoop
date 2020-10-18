@@ -33,7 +33,7 @@ import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
-import com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.junit.Assume;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -326,7 +326,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
    * @return a number >= 0.
    */
   private int getFileStatusHeadCount() {
-    return authMode ? 0 : 0;
+    return authMode ? 0 : 1;
   }
 
   /**

@@ -33,13 +33,13 @@ import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.util.Random;
 
+import org.apache.commons.codec.binary.Hex;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.compress.BlockCompressorStream;
 import org.apache.hadoop.io.compress.BlockDecompressorStream;
 import org.apache.hadoop.io.compress.CompressionInputStream;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
-import org.apache.hadoop.io.compress.SnappyCodec;
 import org.apache.hadoop.io.compress.snappy.SnappyDecompressor.SnappyDirectDecompressor;
 import org.apache.hadoop.test.MultithreadedTestUtil;
 import org.junit.Assert;
@@ -48,8 +48,6 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assume.*;
-
 public class TestSnappyCompressorDecompressor {
 
   public static final Logger LOG =
@@ -57,7 +55,6 @@ public class TestSnappyCompressorDecompressor {
 
   @Before
   public void before() {
-    assumeTrue(SnappyCodec.isNativeCodeLoaded());
   }
 
   @Test
@@ -356,8 +353,9 @@ public class TestSnappyCompressorDecompressor {
   
   @Test
   public void testSnappyDirectBlockCompression() {
-    int[] size = { 4 * 1024, 64 * 1024, 128 * 1024, 1024 * 1024 };    
-    assumeTrue(SnappyCodec.isNativeCodeLoaded());
+    int[] size = new int[] {
+        4 * 1024, 64 * 1024, 128 * 1024, 1024 * 1024
+    };
     try {
       for (int i = 0; i < size.length; i++) {
         compressDecompressLoop(size[i]);
@@ -445,5 +443,53 @@ public class TestSnappyCompressorDecompressor {
     ctx.startThreads();
 
     ctx.waitFor(60000);
+  }
+
+  @Test
+  public void testSnappyCompatibility() throws Exception {
+    // HADOOP-17125. Using snappy-java in SnappyCodec. These strings are raw
+    // data and compressed data using previous native Snappy codec. We use
+    // updated Snappy codec to decode it and check if it matches.
+    String rawData = "010a06030a040a0c0109020c0a010204020d02000b010701080605" +
+            "080b090902060a080502060a0d06070908080a0c0105030904090d050908000" +
+            "40c090c0d0d0804000d00040b0b0d010d060907020a030a0c09000409050801" +
+            "07040d0c01060a0b09070a04000b01040b09000e0e00020b06050b060e030e0" +
+            "a07050d06050d";
+    String compressed = "8001f07f010a06030a040a0c0109020c0a010204020d02000b0" +
+            "10701080605080b090902060a080502060a0d06070908080a0c010503090409" +
+            "0d05090800040c090c0d0d0804000d00040b0b0d010d060907020a030a0c090" +
+            "0040905080107040d0c01060a0b09070a04000b01040b09000e0e00020b0605" +
+            "0b060e030e0a07050d06050d";
+
+    byte[] rawDataBytes = Hex.decodeHex(rawData);
+    byte[] compressedBytes = Hex.decodeHex(compressed);
+
+    ByteBuffer inBuf = ByteBuffer.allocateDirect(compressedBytes.length);
+    inBuf.put(compressedBytes, 0, compressedBytes.length);
+    inBuf.flip();
+
+    ByteBuffer outBuf = ByteBuffer.allocateDirect(rawDataBytes.length);
+    ByteBuffer expected = ByteBuffer.wrap(rawDataBytes);
+
+    SnappyDecompressor.SnappyDirectDecompressor decompressor =
+            new SnappyDecompressor.SnappyDirectDecompressor();
+
+    outBuf.clear();
+    while(!decompressor.finished()) {
+      decompressor.decompress(inBuf, outBuf);
+      if (outBuf.remaining() == 0) {
+        outBuf.flip();
+        while (outBuf.remaining() > 0) {
+          assertEquals(expected.get(), outBuf.get());
+        }
+        outBuf.clear();
+      }
+    }
+    outBuf.flip();
+    while (outBuf.remaining() > 0) {
+      assertEquals(expected.get(), outBuf.get());
+    }
+    outBuf.clear();
+    assertEquals(0, expected.remaining());
   }
 }

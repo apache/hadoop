@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.s3a.impl;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * A subclass of {@link AbstractStoreOperation} which

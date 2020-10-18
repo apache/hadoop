@@ -125,6 +125,11 @@ public abstract class FilterFs extends AbstractFileSystem {
   }
 
   @Override
+  public void msync() throws IOException, UnsupportedOperationException {
+    myFs.msync();
+  }
+
+  @Override
   public void access(Path path, FsAction mode) throws AccessControlException,
       FileNotFoundException, UnresolvedLinkException, IOException {
     checkPath(path);

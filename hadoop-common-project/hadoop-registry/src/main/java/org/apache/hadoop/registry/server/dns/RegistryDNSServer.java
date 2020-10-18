@@ -16,7 +16,7 @@
  */
 package org.apache.hadoop.registry.server.dns;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.PathNotFoundException;
 import org.apache.hadoop.registry.client.api.DNSOperationsFactory;

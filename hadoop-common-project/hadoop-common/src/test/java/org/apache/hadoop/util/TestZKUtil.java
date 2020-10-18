@@ -31,8 +31,8 @@ import org.apache.zookeeper.ZooDefs.Perms;
 import org.apache.zookeeper.data.ACL;
 import org.junit.Test;
 
-import com.google.common.base.Charsets;
-import com.google.common.io.Files;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.io.Files;
 
 public class TestZKUtil {
   private static final String TEST_ROOT_DIR = GenericTestUtils.getTempPath(

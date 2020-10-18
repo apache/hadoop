@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.tools.dynamometer.workloadgenerator.audit;
 
-import com.google.common.base.Splitter;
+import org.apache.hadoop.thirdparty.com.google.common.base.Splitter;
 import org.apache.hadoop.tools.dynamometer.workloadgenerator.WorkloadDriver;
 import java.io.IOException;
 import java.net.URI;

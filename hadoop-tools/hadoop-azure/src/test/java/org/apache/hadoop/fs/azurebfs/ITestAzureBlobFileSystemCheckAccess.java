@@ -22,8 +22,8 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.List;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Lists;
 import org.junit.Assume;
 import org.junit.Test;
 import org.mockito.Mockito;

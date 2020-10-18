@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.XAttrCodec;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.http.client.HttpFSFileSystem;
+import org.apache.hadoop.fs.http.client.HttpFSFileSystem.FILE_TYPE;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -44,6 +45,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.lib.service.FileSystemAccess;
@@ -110,8 +112,17 @@ public class FSOperations {
     Map<String, Object> json = new LinkedHashMap<String, Object>();
     json.put(HttpFSFileSystem.PATH_SUFFIX_JSON,
         (emptyPathSuffix) ? "" : fileStatus.getPath().getName());
-    json.put(HttpFSFileSystem.TYPE_JSON,
-        HttpFSFileSystem.FILE_TYPE.getType(fileStatus).toString());
+    FILE_TYPE fileType = HttpFSFileSystem.FILE_TYPE.getType(fileStatus);
+    json.put(HttpFSFileSystem.TYPE_JSON, fileType.toString());
+    if (fileType.equals(FILE_TYPE.SYMLINK)) {
+      // put the symlink into Json
+      try {
+        json.put(HttpFSFileSystem.SYMLINK_JSON,
+            fileStatus.getSymlink().getName());
+      } catch (IOException e) {
+        // Can't happen.
+      }
+    }
     json.put(HttpFSFileSystem.LENGTH_JSON, fileStatus.getLen());
     json.put(HttpFSFileSystem.OWNER_JSON, fileStatus.getOwner());
     json.put(HttpFSFileSystem.GROUP_JSON, fileStatus.getGroup());
@@ -1827,6 +1838,43 @@ public class FSOperations {
         sds = dfs.getSnapshottableDirListing();
       } else {
         throw new UnsupportedOperationException("getSnapshottableDirListing is "
+            + "not supported for HttpFs on " + fs.getClass()
+            + ". Please check your fs.defaultFS configuration");
+      }
+      return JsonUtil.toJsonString(sds);
+    }
+  }
+
+  /**
+   *  Executor that performs a getSnapshotListing operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSGetSnapshotListing implements
+      FileSystemAccess.FileSystemExecutor<String> {
+    private Path path;
+
+    /**
+     * Creates a getSnapshotDiff executor.
+     * @param path directory path of the snapshots to be examined.
+     */
+    public FSGetSnapshotListing(String path) {
+      this.path = new Path(path);
+    }
+
+    /**
+     * Executes the filesystem operation.
+     * @param fs filesystem instance to use.
+     * @return A JSON string of all snapshots for a snapshottable directory.
+     * @throws IOException thrown if an IO error occurred.
+     */
+    @Override
+    public String execute(FileSystem fs) throws IOException {
+      SnapshotStatus[] sds = null;
+      if (fs instanceof DistributedFileSystem) {
+        DistributedFileSystem dfs = (DistributedFileSystem) fs;
+        sds = dfs.getSnapshotListing(path);
+      } else {
+        throw new UnsupportedOperationException("getSnapshotListing is "
             + "not supported for HttpFs on " + fs.getClass()
             + ". Please check your fs.defaultFS configuration");
       }

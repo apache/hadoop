@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.monitor;
 
-import com.google.common.collect.Sets;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;

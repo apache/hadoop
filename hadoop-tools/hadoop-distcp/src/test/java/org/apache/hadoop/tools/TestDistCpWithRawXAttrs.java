@@ -36,7 +36,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.google.common.collect.Maps;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
