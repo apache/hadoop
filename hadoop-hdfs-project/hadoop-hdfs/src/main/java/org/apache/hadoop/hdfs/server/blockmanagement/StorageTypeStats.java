@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.beans.ConstructorProperties;
 
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.StorageType;
@@ -38,6 +39,15 @@ public class StorageTypeStats {
   private long blockPoolUsed = 0L;
   private int nodesInService = 0;
   private StorageType storageType;
+
+  @VisibleForTesting
+  void setDataNodesInServiceXceiverCount(int avgXceiverPerDatanode,
+      int numNodesInService) {
+    this.nodesInService = numNodesInService;
+    this.nodesInServiceXceiverCount = numNodesInService * avgXceiverPerDatanode;
+  }
+
+  private int nodesInServiceXceiverCount;
 
   @ConstructorProperties({"capacityTotal", "capacityUsed", "capacityNonDfsUsed",
       "capacityRemaining", "blockPoolUsed", "nodesInService"})
@@ -101,6 +111,10 @@ public class StorageTypeStats {
     return nodesInService;
   }
 
+  public int getNodesInServiceXceiverCount() {
+    return nodesInServiceXceiverCount;
+  }
+
   StorageTypeStats(StorageType storageType) {
     this.storageType = storageType;
   }
@@ -131,6 +145,7 @@ public class StorageTypeStats {
   void addNode(final DatanodeDescriptor node) {
     if (node.isInService()) {
       nodesInService++;
+      nodesInServiceXceiverCount += node.getXceiverCount();
     }
   }
 
@@ -151,6 +166,7 @@ public class StorageTypeStats {
   void subtractNode(final DatanodeDescriptor node) {
     if (node.isInService()) {
       nodesInService--;
+      nodesInServiceXceiverCount -= node.getXceiverCount();
     }
   }
 }

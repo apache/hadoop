@@ -24,6 +24,7 @@ import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTest
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.net.InetAddresses;
 
+import org.apache.hadoop.fs.StorageType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -1977,6 +1978,11 @@ public class DatanodeManager {
           avgLoad = (double)xceivers/nodes;
         }
         return avgLoad;
+      }
+
+      @Override
+      public Map<StorageType, StorageTypeStats> getStorageTypeStats() {
+        return heartbeatManager.getStorageTypeStats();
       }
     };
   }

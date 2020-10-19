@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOADBYSTORAGETYPE_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -1618,5 +1619,33 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     when(node.getXceiverCount()).thenReturn(10);
     assertTrue(bppd.excludeNodeByLoad(node));
 
+    // Enable load check per storage type.
+    conf.setBoolean(DFS_NAMENODE_REDUNDANCY_CONSIDERLOADBYSTORAGETYPE_KEY,
+        true);
+    bppd.initialize(conf, statistics, null, null);
+    Map<StorageType, StorageTypeStats> storageStats = new HashMap<>();
+    StorageTypeStats diskStorageTypeStats =
+        new StorageTypeStats(StorageType.DISK);
+
+    // Set xceiver count as 500 for DISK.
+    diskStorageTypeStats.setDataNodesInServiceXceiverCount(50, 10);
+    storageStats.put(StorageType.DISK, diskStorageTypeStats);
+
+    //Set xceiver count as 900 for ARCHIVE
+    StorageTypeStats archiveStorageTypeStats =
+        new StorageTypeStats(StorageType.ARCHIVE);
+    archiveStorageTypeStats.setDataNodesInServiceXceiverCount(10, 90);
+    storageStats.put(StorageType.ARCHIVE, diskStorageTypeStats);
+
+    when(statistics.getStorageTypeStats()).thenReturn(storageStats);
+    when(node.getXceiverCount()).thenReturn(29);
+    when(node.getStorageTypes()).thenReturn(EnumSet.of(StorageType.DISK));
+    when(statistics.getInServiceXceiverAverage()).thenReturn(0.0);
+    //Added for sanity, the number of datanodes are 100, the average xceiver
+    // shall be (50*100+90*100)/100 = 14
+    when(statistics.getInServiceXceiverAverage()).thenReturn(14.0);
+    when(node.getXceiverCount()).thenReturn(100);
+
+    assertFalse(bppd.excludeNodeByLoad(node));
   }
 }

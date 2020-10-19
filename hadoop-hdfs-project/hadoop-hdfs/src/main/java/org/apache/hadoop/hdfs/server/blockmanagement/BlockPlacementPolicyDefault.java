@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOADBYSTORAGETYPE_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOADBYSTORAGETYPE_KEY;
 import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.util.*;
@@ -92,7 +94,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     }
   }
 
-  protected boolean considerLoad; 
+  protected boolean considerLoad;
+  private boolean considerLoadByStorageType;
   protected double considerLoadFactor;
   private boolean preferLocalNode;
   protected NetworkTopology clusterMap;
@@ -116,6 +119,9 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     this.considerLoad = conf.getBoolean(
         DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
         DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_DEFAULT);
+    this.considerLoadByStorageType = conf.getBoolean(
+        DFS_NAMENODE_REDUNDANCY_CONSIDERLOADBYSTORAGETYPE_KEY,
+        DFS_NAMENODE_REDUNDANCY_CONSIDERLOADBYSTORAGETYPE_DEFAULT);
     this.considerLoadFactor = conf.getDouble(
         DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_FACTOR,
         DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_FACTOR_DEFAULT);
@@ -976,8 +982,9 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
    * @return Return true if the datanode should be excluded, otherwise false
    */
   boolean excludeNodeByLoad(DatanodeDescriptor node){
-    final double maxLoad = considerLoadFactor *
-        stats.getInServiceXceiverAverage();
+    double inServiceXceiverCount = getInServiceXceiverAverage(node);
+    final double maxLoad = considerLoadFactor * inServiceXceiverCount;
+
     final int nodeLoad = node.getXceiverCount();
     if ((nodeLoad > maxLoad) && (maxLoad > 0)) {
       logNodeIsNotChosen(node, NodeNotChosenReason.NODE_TOO_BUSY,
@@ -985,6 +992,48 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       return true;
     }
     return false;
+  }
+
+  /**
+   * Gets the inServiceXceiver average count for the cluster, if
+   * considerLoadByStorageType is true, then load is calculated only for the
+   * storage types present on the datanode.
+   * @param node the datanode whose storage types are to be taken into account.
+   * @return the InServiceXceiverAverage count.
+   */
+  private double getInServiceXceiverAverage(DatanodeDescriptor node) {
+    double inServiceXceiverCount;
+    if (considerLoadByStorageType) {
+      inServiceXceiverCount =
+          getInServiceXceiverAverageByStorageType(node.getStorageTypes());
+    } else {
+      inServiceXceiverCount = stats.getInServiceXceiverAverage();
+    }
+    return inServiceXceiverCount;
+  }
+
+  /**
+   * Gets the average xceiver count with respect to the storage types.
+   * @param storageTypes the storage types.
+   * @return the average xceiver count wrt the provided storage types.
+   */
+  private double getInServiceXceiverAverageByStorageType(
+      Set<StorageType> storageTypes) {
+    double avgLoad = 0;
+    final Map<StorageType, StorageTypeStats> storageStats =
+        stats.getStorageTypeStats();
+    int numNodes = 0;
+    int numXceiver = 0;
+    for (StorageType s : storageTypes) {
+      StorageTypeStats storageTypeStats = storageStats.get(s);
+      numNodes += storageTypeStats.getNodesInService();
+      numXceiver += storageTypeStats.getNodesInServiceXceiverCount();
+    }
+    if (numNodes != 0) {
+      avgLoad = (double) numXceiver / numNodes;
+    }
+
+    return avgLoad;
   }
 
   /**
