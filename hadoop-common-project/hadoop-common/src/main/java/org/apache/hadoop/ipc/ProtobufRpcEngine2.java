@@ -352,6 +352,11 @@ public class ProtobufRpcEngine2 implements RpcEngine {
         portRangeConfig, alignmentContext);
   }
 
+  @VisibleForTesting
+  public static void clearClientCache() {
+    CLIENTS.clearCache();
+  }
+
   public static class Server extends RPC.Server {
 
     static final ThreadLocal<ProtobufRpcEngineCallback2> CURRENT_CALLBACK =

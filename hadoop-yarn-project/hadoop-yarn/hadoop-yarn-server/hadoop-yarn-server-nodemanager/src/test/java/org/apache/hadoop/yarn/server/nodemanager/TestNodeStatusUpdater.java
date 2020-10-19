@@ -54,6 +54,7 @@ import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
+import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.ServerSocketUtil;
@@ -136,6 +137,12 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
   private boolean triggered = false;
   private NodeManager nm;
   private AtomicBoolean assertionFailedInThread = new AtomicBoolean(false);
+
+  @Before
+  public void before() {
+    // to avoid threading issues with JUnit 4.13+
+    ProtobufRpcEngine2.clearClientCache();
+  }
 
   @After
   public void tearDown() {
