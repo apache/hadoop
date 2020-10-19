@@ -85,6 +85,6 @@ public final class AdlFsOutputStream extends OutputStream
 
   @Override
   public boolean hasCapability(String capability) {
-    return StoreImplementationUtils.supportsSyncable(capability);
+    return StoreImplementationUtils.isProbeForSyncable(capability);
   }
 }

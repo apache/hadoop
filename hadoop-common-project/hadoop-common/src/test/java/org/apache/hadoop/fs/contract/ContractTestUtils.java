@@ -1557,6 +1557,34 @@ public class ContractTestUtils extends Assert {
     }
   }
 
+
+  /**
+   * Custom assert to verify capabilities supported by
+   * an object through {@link StreamCapabilities}.
+   *
+   * @param source The object to test for StreamCapabilities
+   * @param capabilities The list of expected capabilities
+   */
+  public static void assertHasStreamCapabilities(
+      final Object source,
+      final String... capabilities) {
+    assertCapabilities(source, capabilities, null);
+  }
+
+  /**
+   * Custom assert to verify capabilities NOT supported by
+   * an object through {@link StreamCapabilities}.
+   *
+   * @param source The object to test for StreamCapabilities
+   * @param capabilities The list of capabilities which must not be
+   * supported.
+   */
+  public static void assertLacksStreamCapabilities(
+      final Object source,
+      final String... capabilities) {
+    assertCapabilities(source, null, capabilities);
+  }
+
   /**
    * Custom assert to test {@link PathCapabilities}.
    *

@@ -39,12 +39,13 @@ public final class StoreImplementationUtils {
   }
 
   /**
-   * Check the supplied capabilities for being those required for full
+   * Check the probe capability being for {@link StreamCapabilities#HSYNC}
+   * or {@link StreamCapabilities#HFLUSH}
    * {@code Syncable.hsync()} and {@code Syncable.hflush()} functionality.
    * @param capability capability string.
    * @return true if either refers to one of the Syncable operations.
    */
-  public static boolean supportsSyncable(String capability) {
+  public static boolean isProbeForSyncable(String capability) {
     return capability.equalsIgnoreCase(HSYNC) ||
         capability.equalsIgnoreCase(HFLUSH);
   }

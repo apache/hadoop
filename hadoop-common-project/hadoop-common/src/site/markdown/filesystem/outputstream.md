@@ -522,14 +522,14 @@ FS' = FS where data(path) == buffer
 ```
 
 The reference implementation, `DFSOutputStream` will block
-until an acknowledgement is received from the datanodes: That is, all hosts
+until an acknowledgement is received from the datanodes: that is, all hosts
 in the replica write chain have successfully written the file.
 
 That means that the expectation callers may have is that the return of
 the method call contains visibility and durability guarantees which other
 implementations must maintain.
 
-Note, however, that the reference `DFSOutputStream.hsync()` call only actually syncs/
+Note, however, that the reference `DFSOutputStream.hsync()` call only actually syncs
 *the current block*. If there have been a series of writes since the last sync,
 such that a block boundary has been crossed. The `hsync()` call claims only
 to write the most recent.
@@ -553,33 +553,56 @@ another software abstraction: there are few guarantees.
 @InterfaceStability.Evolving
 ```
 
-The `StreamCapabilities` interface exists to allow callers to dynamically
+The `org.apache.hadoop.fs.StreamCapabilities` interface exists to allow callers to dynamically
 determine the behavior of a stream.
-
-The reference implementation of this interface is
- `org.apache.hadoop.hdfs.DFSOutputStream`
 
 ```java
   public boolean hasCapability(String capability) {
-    switch (StringUtils.toLowerCase(capability)) {
-    case StreamCapabilities.HSYNC:
-    case StreamCapabilities.HFLUSH:
-      return true;
-    default:
-      return false;
+    switch (capability.toLowerCase(Locale.ENGLISH)) {
+      case StreamCapabilities.HSYNC:
+      case StreamCapabilities.HFLUSH:
+        return supportFlush;
+      default:
+        return false;
     }
   }
 ```
 
-Where `HSYNC` and `HFLUSH` are items in the enumeration
-`org.apache.hadoop.fs.StreamCapabilities.StreamCapability`.
-
-Once a stream has been closed, th `hasCapability()` call MUST do one of
+Once a stream has been closed, a `hasCapability()` call MUST do one of
 
 * return the capabilities of the open stream.
 * return false.
 
 That is: it MUST NOT raise an exception about the file being closed;
+
+See [pathcapabilities](pathcapabilities.html) for specifics on the `PathCapabilities` API;
+the requirements are similar: a stream MUST NOT return true for a capability
+for which it lacks support, be it because
+
+* The capability is unknown.
+* The capability is known and known to be unsupported.
+
+Standard stream capabilities are defined in `StreamCapabilities`;
+consult the javadocs for the complete set of options.
+
+| Name  | Probes for support of |
+|-------|---------|
+| `hsync` | `Syncable.hsync()` |
+| `hflush` | `Syncable.hflush()`. Deprecated: probe for `HSYNC` only. |
+| `in:readahead` | `CanSetReadahead.setReadahead()` |
+| `dropbehind` | `CanSetDropBehind.setDropBehind()` |
+| `in:unbuffer"` | `CanUnbuffer.unbuffer()` |
+| `in:readbytebuffer` | `ByteBufferReadable#read(ByteBuffer)` |
+| `in:preadbytebuffer` | `yteBufferPositionedReadable#read(long, ByteBuffer)` |
+
+Stream implementations MAY add their own custom options.
+These MUST be prefixed with `fs.SCHEMA.`, where `SCHEMA` is the schema of the filesystem.
+
+In particular, S3A output streams add the following capability
+
+| Name  | Probes for support of |
+|-------|---------|
+| `fs.s3a.capability.magic.output.stream` | Is the output stream a delayed-visibility stream? |
 
 ## <a name="cansetdropbehind"></a> interface `CanSetDropBehind`
 
@@ -603,8 +626,12 @@ public interface CanSetDropBehind {
 ```
 
 This interface allows callers to change policies used inside HDFS.
-They are currently unimplemented by any stream other than those in HDFS.
 
+Implementations MUST return `true` for the call
+
+```java
+StreamCapabilities.hasCapability("dropbehind");
+```
 
 
 ## <a name="durability-of-output"></a>Durability, Concurrency, Consistency and Visibility of stream output.

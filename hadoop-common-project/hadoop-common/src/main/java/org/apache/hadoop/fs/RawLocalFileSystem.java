@@ -304,7 +304,7 @@ public class RawLocalFileSystem extends FileSystem {
 
     @Override
     public boolean hasCapability(String capability) {
-      return StoreImplementationUtils.supportsSyncable(capability);
+      return StoreImplementationUtils.isProbeForSyncable(capability);
     }
   }
 

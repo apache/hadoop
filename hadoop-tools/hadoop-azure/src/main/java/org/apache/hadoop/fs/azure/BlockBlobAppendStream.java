@@ -42,6 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.hadoop.fs.impl.StoreImplementationUtils;
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.apache.commons.lang3.StringUtils;
@@ -551,13 +552,7 @@ public class BlockBlobAppendStream extends OutputStream implements Syncable,
     if (!compactionEnabled) {
       return false;
     }
-    switch (capability.toLowerCase(Locale.ENGLISH)) {
-    case StreamCapabilities.HSYNC:
-    case StreamCapabilities.HFLUSH:
-      return true;
-    default:
-      return false;
-    }
+    return StoreImplementationUtils.isProbeForSyncable(capability);
   }
 
   /**
