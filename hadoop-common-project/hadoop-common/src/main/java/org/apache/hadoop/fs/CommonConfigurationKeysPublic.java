@@ -166,6 +166,27 @@ public class CommonConfigurationKeysPublic {
   public static final String  FS_AUTOMATIC_CLOSE_KEY = "fs.automatic.close";
   /** Default value for FS_AUTOMATIC_CLOSE_KEY */
   public static final boolean FS_AUTOMATIC_CLOSE_DEFAULT = true;
+
+  /**
+   * Number of filesystems instances can be created in parallel.
+   * <p></p>
+   * A higher number here does not necessarily improve performance, especially
+   * for object stores, where multiple threads may be attempting to create an FS
+   * instance for the same URI.
+   * <p></p>
+   * Default value: {@value}.
+   */
+  public static final String FS_CREATION_PARALLEL_COUNT =
+      "fs.creation.parallel.count";
+
+  /**
+   * Default value for {@link #FS_CREATION_PARALLEL_COUNT}.
+   * <p></p>
+   * Default value: {@value}.
+   */
+  public static final int FS_CREATION_PARALLEL_COUNT_DEFAULT =
+      64;
+
   /**
    * @see
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
