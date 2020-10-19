@@ -218,7 +218,8 @@ public class TestRawLocalFileSystemContract extends FileSystemContractBaseTest {
       fs.setTimes(file, mtime, atime);
       FileStatus fileStatus = fs.getFileStatus(file);
       if (!Shell.MAC) {
-        //HADOOP-17306 ; JDK-8177809 not fixed in MacOs
+        // HADOOP-17306 ; Skip MacOS because HFS+ does not support
+        // milliseconds for mtime.
         assertEquals(mtime, fileStatus.getModificationTime());
       }
       assertEquals(atime, fileStatus.getAccessTime());
