@@ -727,7 +727,7 @@ public class TestDistributedFileSystem {
         Whitebox.getInternalState(
         FileSystem.getStatistics(HdfsConstants.HDFS_URI_SCHEME,
         DistributedFileSystem.class), "threadData");
-    data.set(null);
+    data.remove();
 
     int lsLimit = 2;
     final Configuration conf = getTestConfiguration();
