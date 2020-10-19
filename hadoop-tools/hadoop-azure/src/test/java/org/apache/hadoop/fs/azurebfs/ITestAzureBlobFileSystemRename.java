@@ -238,7 +238,9 @@ public class ITestAzureBlobFileSystemRename extends
         fs.getAbfsStore().getClient(),
         this.getConfiguration());
 
-    TracingContext tracingContext = new TracingContext(fs.getFileSystemID(), "RN");
+    TracingContext tracingContext = new TracingContext(fs.getAbfsStore()
+        .getAbfsConfiguration().getClientCorrelationID(),
+        fs.getFileSystemID(), "RN");
 
     AbfsRestOperation idempotencyRetOp = mock(AbfsRestOperation.class);
     when(idempotencyRetOp.getResult()).thenReturn(idempotencyRetHttpOp);
@@ -327,7 +329,7 @@ public class ITestAzureBlobFileSystemRename extends
         renameRequestStartTime,
         op,
         destinationPath.toUri().getPath(),
-        new TracingContext("test-fs-id", "RN"))
+        new TracingContext("test-corr-id", "test-fs-id", "RN"))
         .getResult()
         .getStatusCode())
         .describedAs(assertMessage)

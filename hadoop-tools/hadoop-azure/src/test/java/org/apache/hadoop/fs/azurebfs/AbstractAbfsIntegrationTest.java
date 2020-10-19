@@ -183,7 +183,8 @@ public abstract class AbstractAbfsIntegrationTest extends
       if (abfs == null) {
         return;
       }
-      TracingContext tracingContext = new TracingContext(abfs.getFileSystemID(), "DL");
+      TracingContext tracingContext = new TracingContext(abfs.getAbfsStore()
+          .getAbfsConfiguration().getClientCorrelationID(), abfs.getFileSystemID(), "DL");
 
       if (usingFilesystemForSASTests) {
         abfsConfig.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey.name());
@@ -434,7 +435,8 @@ public abstract class AbstractAbfsIntegrationTest extends
 
     return (AbfsOutputStream) abfss.createFile(path, fs.getFsStatistics(),
         true, FsPermission.getDefault(), FsPermission.getUMask(fs.getConf()),
-        new TracingContext(fs.getFileSystemID(), "OP"));
+        new TracingContext(fs.getAbfsStore().getAbfsConfiguration()
+            .getClientCorrelationID(), fs.getFileSystemID(), "OP"));
   }
 
   /**

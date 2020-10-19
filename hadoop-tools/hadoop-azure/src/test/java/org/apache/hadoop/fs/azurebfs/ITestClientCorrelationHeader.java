@@ -52,7 +52,7 @@ public final class ITestClientCorrelationHeader extends AbstractAbfsIntegrationT
     // all requests using a given filesystem instance should have same fs id
     // in slot 0
   }
-
+/*
   @Test
 //  @PrepareForTest(AbfsRestOperation.class)
   public void testRetryCount() throws IOException {
@@ -102,6 +102,6 @@ public final class ITestClientCorrelationHeader extends AbstractAbfsIntegrationT
   private String getRelativePath(final Path path) {
     Preconditions.checkNotNull(path, "path");
     return path.toUri().getPath();
-  }
+  }*/
 
 }

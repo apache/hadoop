@@ -403,7 +403,7 @@ public class AbfsClient implements Closeable {
   public AbfsRestOperation append(final String path, final long position, final byte[] buffer, final int offset,
       final int length, final String cachedSasToken, final boolean isAppendBlob) throws AzureBlobFileSystemException {
     return append(path, position, buffer, offset, length, cachedSasToken,
-        isAppendBlob, new TracingContext("test-filesystem-id", "AP"));
+        isAppendBlob, new TracingContext("test-corr-id", "test-filesystem-id", "AP"));
   }
 
   public AbfsRestOperation append(final String path, final long position, final byte[] buffer, final int offset,

@@ -213,7 +213,8 @@ public class ITestAzureBlobFileSystemDelete extends
         fs.getAbfsStore().getClient(),
         this.getConfiguration());
 
-    TracingContext tracingContext = new TracingContext(fs.getFileSystemID(), "DL");
+    TracingContext tracingContext = new TracingContext(fs.getAbfsStore()
+        .getAbfsConfiguration().getClientCorrelationID(), fs.getFileSystemID(), "DL");
 
     // Case 1: Not a retried case should throw error back
     intercept(AbfsRestOperationException.class,

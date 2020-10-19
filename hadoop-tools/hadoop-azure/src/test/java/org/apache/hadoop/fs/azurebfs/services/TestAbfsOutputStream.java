@@ -137,7 +137,7 @@ public final class TestAbfsOutputStream {
     abfsConf = new AbfsConfiguration(conf, accountName1);
     AbfsPerfTracker tracker = new AbfsPerfTracker("test", accountName1, abfsConf);
     TracingContext tracingContext = new TracingContext("test-corr-id",
-            "test-fs-id", "OP")
+            "test-fs-id", "OP");
 
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.append(anyString(), anyLong(), any(byte[].class), anyInt(), anyInt(), any(), anyBoolean())).thenReturn(op);
@@ -324,7 +324,8 @@ public final class TestAbfsOutputStream {
 
     AbfsOutputStream out = new AbfsOutputStream(client, null, PATH, 0,
             populateAbfsOutputStreamContext(BUFFER_SIZE, true, false,
-                    true), new TracingContext("fs-id"));
+                    true), new TracingContext(abfsConf.getClientCorrelationID(),
+        "fs-id", "OP"));
     final byte[] b = new byte[BUFFER_SIZE];
     new Random().nextBytes(b);
 
@@ -404,9 +405,10 @@ public final class TestAbfsOutputStream {
     ArgumentCaptor<Boolean> acFlushRetainUnCommittedData = ArgumentCaptor.forClass(Boolean.class);
     ArgumentCaptor<Boolean> acFlushClose = ArgumentCaptor.forClass(Boolean.class);
     ArgumentCaptor<String> acFlushSASToken = ArgumentCaptor.forClass(String.class);
+    ArgumentCaptor<TracingContext> acTracingContext = ArgumentCaptor.forClass(TracingContext.class);
 
     verify(client, times(1)).flush(acFlushString.capture(), acFlushLong.capture(), acFlushRetainUnCommittedData.capture(), acFlushClose.capture(),
-                                   acFlushSASToken.capture(), new TracingContext("test-filesystem-id", "OP"));
+                                   acFlushSASToken.capture(), acTracingContext.capture());
     assertThat(Arrays.asList(PATH)).describedAs("path").isEqualTo(acFlushString.getAllValues());
     assertThat(Arrays.asList(Long.valueOf(2*BUFFER_SIZE))).describedAs("position").isEqualTo(acFlushLong.getAllValues());
     assertThat(Arrays.asList(false)).describedAs("RetainUnCommittedData flag").isEqualTo(acFlushRetainUnCommittedData.getAllValues());

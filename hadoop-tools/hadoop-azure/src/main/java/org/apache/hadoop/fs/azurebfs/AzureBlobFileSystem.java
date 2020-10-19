@@ -110,7 +110,6 @@ public class AzureBlobFileSystem extends FileSystem {
     super.initialize(uri, configuration);
     setConf(configuration);
     fileSystemID = UUID.randomUUID().toString();
-    clientCorrelationID = abfsStore.getAbfsConfiguration().getClientCorrelationID();
 
     LOG.debug("Initializing AzureBlobFileSystem for {}", uri);
 
@@ -121,6 +120,7 @@ public class AzureBlobFileSystem extends FileSystem {
     LOG.trace("AzureBlobFileSystemStore init complete");
 
     final AbfsConfiguration abfsConfiguration = abfsStore.getAbfsConfiguration();
+    clientCorrelationID = abfsConfiguration.getClientCorrelationID();
     this.setWorkingDirectory(this.getHomeDirectory());
 
     if (abfsConfiguration.getCreateRemoteFileSystemDuringInitialization()) {

@@ -344,7 +344,9 @@ public class ITestAzureBlobFileSystemCreate extends
         = TestAbfsClient.getMockAbfsClient(
         fs.getAbfsStore().getClient(),
         fs.getAbfsStore().getAbfsConfiguration());
-    TracingContext tracingContext = new TracingContext(fs.getFileSystemID(), "CR");
+    TracingContext tracingContext = new TracingContext(
+        fs.getAbfsStore().getAbfsConfiguration().getClientCorrelationID(),
+        fs.getFileSystemID(), "CR");
 
     AzureBlobFileSystemStore abfsStore = fs.getAbfsStore();
     abfsStore = setAzureBlobSystemStoreField(abfsStore, "client", mockClient);
@@ -464,7 +466,7 @@ public class ITestAzureBlobFileSystemCreate extends
     intercept(
         exceptionClass,
         () -> abfsStore.createFile(testPath, null, true, permission, umask,
-                new TracingContext("test-filesystem-id", "CR")));
+                new TracingContext("test-corr-id", "test-filesystem-id", "CR")));
   }
 
   private AbfsRestOperationException getMockAbfsRestOperationException(int status) {
