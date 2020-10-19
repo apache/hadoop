@@ -705,8 +705,8 @@ public class RawLocalFileSystem extends FileSystem {
     DeprecatedRawLocalFileStatus(File f, long defaultBlockSize, FileSystem fs)
       throws IOException {
       super(f.length(), f.isDirectory(), 1, defaultBlockSize,
-          Files.getLastModifiedTime(f.toPath()).toMillis(), getLastAccessTime(f),
-          null, null, null,
+          Files.getLastModifiedTime(f.toPath()).toMillis(),
+          getLastAccessTime(f),null, null, null,
           new Path(f.getPath()).makeQualified(fs.getUri(),
             fs.getWorkingDirectory()));
     }
