@@ -1769,7 +1769,8 @@ public class DistributedFileSystem extends FileSystem
 
   /**
    * Synchronize client metadata state with Active NameNode.
-   * <p/>In HA the client synchronizes its state with the Active NameNode
+   * <p>
+   * In HA the client synchronizes its state with the Active NameNode
    * in order to guarantee subsequent read consistency from Observer Nodes.
    * @throws IOException
    */
