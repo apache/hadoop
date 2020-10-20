@@ -50,8 +50,8 @@ public final class ProxyCombiner {
    * all of the methods of the combined proxy interface, delegating calls
    * to which proxy implements that method. If multiple proxies implement the
    * same method, the first in the list will be used for delegation.
-   *
-   * <p/>This will check that every method on the combined interface is
+   * <p>
+   * This will check that every method on the combined interface is
    * implemented by at least one of the supplied proxy objects.
    *
    * @param combinedProxyInterface The interface of the combined proxy.
