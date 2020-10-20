@@ -63,9 +63,9 @@ public final class ITestClientCorrelationHeader extends AbstractAbfsIntegrationT
   public void testHeader(String responseHeader, String operation) {
     boolean isContinuationOp = false;
     switch (operation) {
-      case 'LS':
-      case 'CR':
-      case 'RD': isContinuationOp = true;
+      case "LS":
+      case "CR":
+      case "RD": isContinuationOp = true;
     }
     String[] headerList = responseHeader.split(":");
     // check if all IDs included

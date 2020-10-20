@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs.utils;
 
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -37,7 +37,7 @@ public class TracingContext {
   private String streamID = "";
   private int retryCount;
   private String hadoopOpName = "";
-  private final List<String> headers = null;
+  private final java.util.ArrayList<String> headers = new java.util.ArrayList<String>();
 
   private static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
   public static final int MAX_CLIENT_CORRELATION_ID_LENGTH = 72;

@@ -45,7 +45,6 @@
     <fs.azure.scale.test.timeout>7200</fs.azure.scale.test.timeout>
     <fs.azure.scale.test.list.performance.threads>10</fs.azure.scale.test.list.performance.threads>
     <fs.azure.scale.test.list.performance.files>1000</fs.azure.scale.test.list.performance.files>
-    
   </properties>
 
   <build>
