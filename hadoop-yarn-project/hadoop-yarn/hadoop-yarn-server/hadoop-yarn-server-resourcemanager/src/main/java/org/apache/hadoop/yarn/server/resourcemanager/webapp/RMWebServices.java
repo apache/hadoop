@@ -184,6 +184,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntr
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntryList;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.PartitionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.RMQueueAclInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDefinitionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteRequestInfo;
@@ -209,6 +210,7 @@ import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.AdHocLogDumper;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Times;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
@@ -1296,8 +1298,10 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       for (NodeId nodeId : entry.getValue()) {
         nodeIdStrList.add(nodeId.toString());
       }
+      Resource resource = rm.getRMContext().getNodeLabelManager()
+          .getResourceByLabel(entry.getKey().getName(), Resources.none());
       ltsMap.put(new NodeLabelInfo(entry.getKey()),
-          new NodeIDsInfo(nodeIdStrList));
+          new NodeIDsInfo(nodeIdStrList, resource));
     }
     return lts;
   }
@@ -1386,9 +1390,17 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
 
     List<NodeLabel> nodeLabels =
         rm.getRMContext().getNodeLabelManager().getClusterNodeLabels();
-    NodeLabelsInfo ret = new NodeLabelsInfo(nodeLabels);
 
-    return ret;
+    ArrayList<NodeLabelInfo> nodeLabelsInfo = new ArrayList<NodeLabelInfo>();
+    for (NodeLabel label: nodeLabels) {
+      Resource resource = rm.getRMContext().getNodeLabelManager()
+          .getResourceByLabel(label.getName(), Resources.none());
+      PartitionInfo partitionInfo =
+          new PartitionInfo(new ResourceInfo(resource));
+      nodeLabelsInfo.add(new NodeLabelInfo(label, partitionInfo));
+    }
+
+    return new NodeLabelsInfo(nodeLabelsInfo);
   }
 
   @POST
