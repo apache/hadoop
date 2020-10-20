@@ -846,7 +846,8 @@ public abstract class AbstractFileSystem {
 
   /**
    * Synchronize client metadata state.
-   * <p/>In some FileSystem implementations such as HDFS metadata
+   * <p>
+   * In some FileSystem implementations such as HDFS metadata
    * synchronization is essential to guarantee consistency of read requests
    * particularly in HA setting.
    * @throws IOException
