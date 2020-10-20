@@ -219,9 +219,10 @@ public class Groups {
   /**
    * Get the group memberships of a given user.
    * If the user's group is not cached, this method may block.
-   * This provide better performance when user has large group membership via<br>
+   * This provide better performance when user has large group membership via
+   * <br>
    * 1) avoid {@literal set->list->set} conversion for the caller
-   * UGI/PermissionCheck<br>
+   * UGI/PermissionCheck <br>
    * 2) fast lookup using contains() via Set instead of List
    * @param user User's name
    * @return the group memberships of the user as set

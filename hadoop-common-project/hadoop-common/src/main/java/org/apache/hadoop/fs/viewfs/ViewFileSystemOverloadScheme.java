@@ -69,7 +69,8 @@ import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_IGNORE_PORT_IN
  * </p>
  *
  * <p>
- * Op1: Create file hdfs://Cluster/user/fileA will go to hdfs://NN1/user/fileA <br>
+ * Op1: Create file hdfs://Cluster/user/fileA will go to hdfs://NN1/user/fileA
+ * <br>
  * Op2: Create file hdfs://Cluster/data/datafile will go to
  *      o3fs://bucket1.volume1/data/datafile<br>
  * Op3: Create file hdfs://Cluster/backup/data.zip will go to
@@ -89,7 +90,8 @@ import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_IGNORE_PORT_IN
  * </p>
  *
  * <p>
- * Op1: Create file s3a://bucketA/user/fileA will go to hdfs://NN1/user/fileA<br>
+ * Op1: Create file s3a://bucketA/user/fileA will go to hdfs://NN1/user/fileA
+ * <br>
  * Op2: Create file s3a://bucketA/data/datafile will go to
  *      o3fs://bucket1.volume1/data/datafile<br>
  * Op3: Create file s3a://bucketA/salesDB/dbfile will go to
