@@ -1166,7 +1166,7 @@ function hadoop_add_param
   fi
   if [ $accepted == true ]; then
     hadoop_debug "'${!1}' accepted new key '$2', value '$3'"
-    eval "$1"="'${!1} $3'"
+    eval "$1"="$(echo \"${!1} $3\")"
     if [[ ${!1:0:1} = ' ' ]]; then
       #shellcheck disable=SC2140
       eval "$1"="'${!1# }'"
