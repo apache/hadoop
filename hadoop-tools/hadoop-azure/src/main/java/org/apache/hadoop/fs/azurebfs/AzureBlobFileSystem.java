@@ -102,6 +102,8 @@ public class AzureBlobFileSystem extends FileSystem {
   private AbfsDelegationTokenManager delegationTokenManager;
   private AbfsCounters abfsCounters;
   private String clientCorrelationID;
+  public boolean testTracing = false;
+  public List<String> headers;
 
   @Override
   public void initialize(URI uri, Configuration configuration)
@@ -183,11 +185,14 @@ public class AzureBlobFileSystem extends FileSystem {
   public FSDataInputStream open(final Path path, final int bufferSize) throws IOException {
     LOG.debug("AzureBlobFileSystem.open path: {} bufferSize: {}", path, bufferSize);
     statIncrement(CALL_OPEN);
-    TracingContext tracingContext = new TracingContext(clientCorrelationID, fileSystemID, "FS");
+    TracingContext tracingContext = new TracingContext(clientCorrelationID, fileSystemID, "OF");
     Path qualifiedPath = makeQualified(path);
 
     try {
       InputStream inputStream = abfsStore.openFileForRead(qualifiedPath, statistics, tracingContext);
+      if(testTracing) {
+        headers = tracingContext.getRequestHeaders();
+      }
       return new FSDataInputStream(inputStream);
     } catch(AzureBlobFileSystemException ex) {
       checkException(path, ex);
@@ -203,7 +208,7 @@ public class AzureBlobFileSystem extends FileSystem {
         permission,
         overwrite,
         blockSize);
-    TracingContext tracingContext = new TracingContext(clientCorrelationID, fileSystemID, "LS");
+    TracingContext tracingContext = new TracingContext(clientCorrelationID, fileSystemID, "CR");
 
     statIncrement(CALL_CREATE);
     trailingPeriodCheck(f);

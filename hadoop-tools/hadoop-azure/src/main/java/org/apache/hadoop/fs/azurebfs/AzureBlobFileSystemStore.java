@@ -501,6 +501,7 @@ public class AzureBlobFileSystemStore implements Closeable {
             isNamespaceEnabled ? getOctalNotation(umask) : null,
             isAppendBlob,
             null, tracingContext);
+
       }
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
 
@@ -541,6 +542,7 @@ public class AzureBlobFileSystemStore implements Closeable {
 
       op = client.createPath(relativePath, true,
           false, permission, umask, isAppendBlob, null, new TracingContext(tracingContext));
+
     } catch (AbfsRestOperationException e) {
       if (e.getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
         // File pre-exists, fetch eTag
@@ -637,6 +639,8 @@ public class AzureBlobFileSystemStore implements Closeable {
       final String resourceType = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
       final long contentLength = Long.parseLong(op.getResult().getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
       final String eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
+      tracingContext.updateRequestHeader(op.getResult()
+              .getRequestHeader(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID));
 
       if (parseIsDirectory(resourceType)) {
         throw new AbfsRestOperationException(

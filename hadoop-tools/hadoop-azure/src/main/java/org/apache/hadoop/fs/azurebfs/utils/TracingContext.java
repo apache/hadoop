@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.fs.azurebfs.utils;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
@@ -34,6 +37,7 @@ public class TracingContext {
   private String streamID = "";
   private int retryCount;
   private String hadoopOpName = "";
+  private final List<String> headers = null;
 
   private static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
   public static final int MAX_CLIENT_CORRELATION_ID_LENGTH = 72;
@@ -102,6 +106,14 @@ public class TracingContext {
   public String toString() {
     return clientCorrelationID + clientRequestID + ":" + fileSystemID + ":" + primaryRequestID
         + ":" + streamID + ":" + hadoopOpName + ":" + retryCount;
+  }
+
+  public void updateRequestHeader(String requestHeader) {
+    headers.add(requestHeader);
+  }
+
+  public List<String> getRequestHeaders() {
+    return headers;
   }
 
 }
