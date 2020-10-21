@@ -297,7 +297,7 @@ was added, issues related to S3Guard integration surfaced:
    deleted markers, irrespective of the directory status.
 
 Issue #1 is unique to Hadoop branch 3.3; however issue #2 is s critical
-part of the S3Guard consistency handling. 
+part of the S3Guard consistency handling.
 
 Both issues have been fixed in Hadoop 3.3.x,
 in [HADOOP-17244](https://issues.apache.org/jira/browse/HADOOP-17244)

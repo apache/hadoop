@@ -199,7 +199,9 @@ public class TestPartialDeleteFailures {
         = new MultiObjectDeleteSupport(storeContext, null);
     List<Path> retainedMarkers = new ArrayList<>();
     Triple<List<Path>, List<Path>, List<Pair<Path, IOException>>>
-        triple = deleteSupport.processDeleteFailure(ex, keyList, retainedMarkers);
+        triple = deleteSupport.processDeleteFailure(ex,
+        keyList,
+        retainedMarkers);
     Assertions.assertThat(triple.getRight())
         .as("failure list")
         .isEmpty();
@@ -213,7 +215,8 @@ public class TestPartialDeleteFailures {
         as("undeleted store entries")
         .containsAll(deleteForbidden)
         .doesNotContainAnyElementsOf(deleteAllowed);
-    // because dir marker retention is on, we expect at least one retained marker
+    // because dir marker retention is on, we expect at least one retained
+    // marker
     Assertions.assertThat(retainedMarkers).
         as("Retained Markers")
         .containsExactly(pathA);

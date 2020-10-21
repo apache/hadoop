@@ -691,8 +691,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
       deleteVerbCount.assertDiffEquals("Wrong delete count", 1);
       MultiObjectDeleteException mde = extractCause(
           MultiObjectDeleteException.class, ex);
-      List<MultiObjectDeleteSupport.KeyPath> undeletedKeyPaths = removeUndeletedPaths(
-          mde, keyPaths, storeContext::keyToPath);
+      List<MultiObjectDeleteSupport.KeyPath> undeletedKeyPaths =
+          removeUndeletedPaths(mde, keyPaths, storeContext::keyToPath);
       final List<Path> undeleted = toPathList(
           undeletedKeyPaths);
       deleteObjectCount.assertDiffEquals(
@@ -870,7 +870,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
       final List<Path> paths,
       final List<Path> dirs) throws IOException {
     buildPaths(paths, dirs, destDir, depth, fileCount, dirCount);
-    List<CompletableFuture<Path>> futures = new ArrayList<>(paths.size() + dirs.size());
+    List<CompletableFuture<Path>> futures = new ArrayList<>(paths.size()
+        + dirs.size());
 
     // create directories. With dir marker retention, that adds more entries
     // to cause deletion issues

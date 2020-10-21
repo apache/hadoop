@@ -351,9 +351,10 @@ public final class MultiObjectDeleteSupport extends AbstractStoreOperation {
   /**
    * Representation of a (key, path) which couldn't be deleted;
    * the dir marker flag is inferred from the key suffix.
-   * <p></p>
+   * <p>
    * Added because Pairs of Lists of Triples was just too complex
    * for Java code.
+   * </p>
    */
   public static final class KeyPath {
     public final String key;
