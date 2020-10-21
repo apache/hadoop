@@ -3490,6 +3490,13 @@ public abstract class FileSystem extends Configured
     /** Semaphore used to serialize creation of new FS instances. */
     private final Semaphore creatorPermits;
 
+    /**
+     * Counter of the number of discarded filesystem instances
+     * in this cache. Primarily for testing, but it could possibly
+     * be made visible as some kind of metric.
+     */
+    private final AtomicLong discardedInstances = new AtomicLong(0);
+
     /** A variable that makes all objects in the cache unique. */
     private static AtomicLong unique = new AtomicLong(1);
 
@@ -3551,6 +3558,7 @@ public abstract class FileSystem extends Configured
         throw (IOException)new InterruptedIOException(e.toString())
             .initCause(e);
       }
+      FileSystem fsToClose = null;
       try {
         // See if FS was instantiated by another thread while waiting
         // for the permit.
@@ -3566,6 +3574,7 @@ public abstract class FileSystem extends Configured
         final long timeout = conf.getTimeDuration(SERVICE_SHUTDOWN_TIMEOUT,
             SERVICE_SHUTDOWN_TIMEOUT_DEFAULT,
             ShutdownHookManager.TIME_UNIT_DEFAULT);
+        // any FS to close outside of the synchronized section
         synchronized (this) { // lock on the Cache object
 
           // see if there is now an entry for the FS, which happens
@@ -3573,36 +3582,51 @@ public abstract class FileSystem extends Configured
           FileSystem oldfs = map.get(key);
           if (oldfs != null) {
             // a file system was created in a separate thread.
-            LOGGER.debug("Duplicate FS created for {}; discarding {}",
-                uri, fs);
-            // close the new file system
-            // note this will briefly remove and reinstate "oldfs" from
-            // the map.
-            fs.close();
-            return oldfs;  // return the old file system
+            // save the FS reference to close outside all locks,
+            // and switch to returning the oldFS
+            fsToClose = fs;
+            fs = oldfs;
+          } else {
+            // register the clientFinalizer if needed and shutdown isn't
+            // already active
+            if (map.isEmpty()
+                && !ShutdownHookManager.get().isShutdownInProgress()) {
+              ShutdownHookManager.get().addShutdownHook(clientFinalizer,
+                  SHUTDOWN_HOOK_PRIORITY, timeout,
+                  ShutdownHookManager.TIME_UNIT_DEFAULT);
+            }
+            // insert the new file system into the map
+            fs.key = key;
+            map.put(key, fs);
+            if (conf.getBoolean(
+                FS_AUTOMATIC_CLOSE_KEY, FS_AUTOMATIC_CLOSE_DEFAULT)) {
+              toAutoClose.add(key);
+            }
           }
-
-          // register the clientFinalizer if needed and shutdown isn't
-          // already active
-          if (map.isEmpty()
-                  && !ShutdownHookManager.get().isShutdownInProgress()) {
-            ShutdownHookManager.get().addShutdownHook(clientFinalizer,
-                SHUTDOWN_HOOK_PRIORITY, timeout,
-                ShutdownHookManager.TIME_UNIT_DEFAULT);
-          }
-          // insert the new file system into the map
-          fs.key = key;
-          map.put(key, fs);
-          if (conf.getBoolean(
-              FS_AUTOMATIC_CLOSE_KEY, FS_AUTOMATIC_CLOSE_DEFAULT)) {
-            toAutoClose.add(key);
-          }
-          return fs;
-        }
+        } // end of synchronized block
       } finally {
         // release the creator permit.
         creatorPermits.release();
       }
+      if (fsToClose != null) {
+        LOGGER.debug("Duplicate FS created for {}; discarding {}",
+            uri, fs);
+        discardedInstances.incrementAndGet();
+        // close the new file system
+        // note this will briefly remove and reinstate "fsToClose" from
+        // the map. It is done in a synchronized block so will not be
+        // visible to others.
+        fsToClose.close();
+      }
+      return fs;
+    }
+
+    /**
+     * Get the count of discarded instances.
+     * @return the new instance.
+     */
+    long getDiscardedInstances() {
+      return discardedInstances.get();
     }
 
     synchronized void remove(Key key, FileSystem fs) {
