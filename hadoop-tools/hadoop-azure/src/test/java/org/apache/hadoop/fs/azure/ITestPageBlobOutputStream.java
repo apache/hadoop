@@ -44,17 +44,40 @@ public class ITestPageBlobOutputStream extends AbstractWasbTestBase {
   }
 
   @Test
-  public void testHFlush() throws Exception {
-    Path path = this.fs.makeQualified(TEST_FILE_PATH);
-    FSDataOutputStream os = this.fs.create(path);
+  public void testHflush() throws Exception {
+    Path path = fs.makeQualified(TEST_FILE_PATH);
+    FSDataOutputStream os = fs.create(path);
     os.write(1);
     os.hflush();
     // Delete the blob so that Azure call will fail.
-    this.fs.delete(path, false);
+    fs.delete(path, false);
     os.write(2);
     LambdaTestUtils.intercept(IOException.class,
         "The specified blob does not exist", () -> {
           os.hflush();
+        });
+    LambdaTestUtils.intercept(IOException.class,
+        "The specified blob does not exist", () -> {
+          os.close();
+        });
+  }
+
+  @Test
+  public void testHsync() throws Exception {
+    Path path = fs.makeQualified(TEST_FILE_PATH);
+    FSDataOutputStream os = fs.create(path);
+    os.write(1);
+    os.hsync();
+    // Delete the blob so that Azure call will fail.
+    fs.delete(path, false);
+    os.write(2);
+    LambdaTestUtils.intercept(IOException.class,
+        "The specified blob does not exist", () -> {
+          os.hsync();
+        });
+    LambdaTestUtils.intercept(IOException.class,
+        "The specified blob does not exist", () -> {
+          os.close();
         });
   }
 }
