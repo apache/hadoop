@@ -133,11 +133,7 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
   }
 
   private String determineRegion(String bucketName) throws IOException {
-    AmazonS3 s3 = AmazonS3ClientBuilder.standard().withCredentials(
-        new SimpleAWSCredentialsProvider(null, createConfiguration()))
-        .withForceGlobalBucketAccessEnabled(true).withRegion("us-east-1")
-        .build();
-    String region = s3.getBucketLocation(bucketName);
+    String region = getFileSystem().getBucketLocation(bucketName);
     return fixBucketRegion(region);
   }
 
