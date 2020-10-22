@@ -112,28 +112,41 @@ public class TestLayoutVersion {
 
   /**
    * Tests expected values for minimum compatible layout version in NameNode
-   * features.  TRUNCATE, APPEND_NEW_BLOCK and QUOTA_BY_STORAGE_TYPE are all
-   * features that launched in the same release.  TRUNCATE was added first, so
-   * we expect all 3 features to have a minimum compatible layout version equal
-   * to TRUNCATE's layout version.  All features older than that existed prior
-   * to the concept of a minimum compatible layout version, so for each one, the
-   * minimum compatible layout version must be equal to itself.
+   * features.  BLOCK_STORAGE_POLICY_INCLUDING_ALL_NVDIMM and
+   * QUOTA_BY_STORAGE_TYPE_INCLUDING_NVDIMM are features that launched in the
+   * same release.  BLOCK_STORAGE_POLICY_INCLUDING_ALL_NVDIMM was added first,
+   * so we expect they have a minimum compatible layout version equal to
+   * BLOCK_STORAGE_POLICY_INCLUDING_ALL_NVDIMM's layout version.  In addition,
+   * TRUNCATE, APPEND_NEW_BLOCK, QUOTA_BY_STORAGE_TYPE, ERASURE_CODING and
+   * EXPANDED_STRING_TABLE are also launched in another same version, they
+   * have a minimum compatible layout version equal to TRUNCATE's layout
+   * version.  All features older than that existed prior to the concept of a
+   * minimum compatible layout version, so for each one, the minimum compatible
+   * layout version must be equal to itself.
    */
   @Test
   public void testNameNodeFeatureMinimumCompatibleLayoutVersions() {
-    int baseLV = NameNodeLayoutVersion.Feature.TRUNCATE.getInfo()
-        .getLayoutVersion();
+    int baseLV = NameNodeLayoutVersion.Feature
+        .BLOCK_STORAGE_POLICY_INCLUDING_ALL_NVDIMM.getInfo().getLayoutVersion();
     EnumSet<NameNodeLayoutVersion.Feature> compatibleFeatures = EnumSet.of(
-        NameNodeLayoutVersion.Feature.TRUNCATE,
-        NameNodeLayoutVersion.Feature.APPEND_NEW_BLOCK,
-        NameNodeLayoutVersion.Feature.QUOTA_BY_STORAGE_TYPE,
-        NameNodeLayoutVersion.Feature.ERASURE_CODING,
-        NameNodeLayoutVersion.Feature.EXPANDED_STRING_TABLE);
+        NameNodeLayoutVersion.Feature
+            .BLOCK_STORAGE_POLICY_INCLUDING_ALL_NVDIMM,
+        NameNodeLayoutVersion.Feature.QUOTA_BY_STORAGE_TYPE_INCLUDING_NVDIMM);
     for (LayoutFeature f : compatibleFeatures) {
       assertEquals(String.format("Expected minimum compatible layout version " +
           "%d for feature %s.", baseLV, f), baseLV,
           f.getInfo().getMinimumCompatibleLayoutVersion());
     }
+
+    EnumSet<NameNodeLayoutVersion.Feature> compatibleFeaturesOfTruncate
+        = EnumSet.of(
+          NameNodeLayoutVersion.Feature.TRUNCATE,
+          NameNodeLayoutVersion.Feature.APPEND_NEW_BLOCK,
+          NameNodeLayoutVersion.Feature.QUOTA_BY_STORAGE_TYPE,
+          NameNodeLayoutVersion.Feature.ERASURE_CODING,
+          NameNodeLayoutVersion.Feature.EXPANDED_STRING_TABLE);
+    compatibleFeatures.addAll(compatibleFeaturesOfTruncate);
+ 
     List<LayoutFeature> features = new ArrayList<>();
     features.addAll(EnumSet.allOf(LayoutVersion.Feature.class));
     features.addAll(EnumSet.allOf(NameNodeLayoutVersion.Feature.class));
@@ -195,7 +208,8 @@ public class TestLayoutVersion {
    */
   @Test
   public void testCurrentMinimumCompatibleLayoutVersion() {
-    int expectedMinCompatLV = NameNodeLayoutVersion.Feature.TRUNCATE.getInfo()
+    int expectedMinCompatLV = NameNodeLayoutVersion.Feature
+        .BLOCK_STORAGE_POLICY_INCLUDING_ALL_NVDIMM.getInfo()
         .getLayoutVersion();
     int actualMinCompatLV = LayoutVersion.getMinimumCompatibleLayoutVersion(
         NameNodeLayoutVersion.Feature.values());

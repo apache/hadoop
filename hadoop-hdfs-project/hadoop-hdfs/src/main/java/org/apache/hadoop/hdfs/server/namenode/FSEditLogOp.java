@@ -650,8 +650,9 @@ public abstract class FSEditLogOp {
         } else {
           this.overwrite = false;
         }
-        if (NameNodeLayoutVersion.supports(
-            NameNodeLayoutVersion.Feature.BLOCK_STORAGE_POLICY, logVersion)) {
+        if (NameNodeLayoutVersion.supports(NameNodeLayoutVersion.Feature
+           // .BLOCK_STORAGE_POLICY_INCLUDING_ALL_NVDIMM, logVersion)) {
+	   .BLOCK_STORAGE_POLICY, logVersion)) {
           this.storagePolicyId = FSImageSerialization.readByte(in);
         } else {
           this.storagePolicyId =
