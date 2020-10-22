@@ -387,6 +387,52 @@ public class TestEditLogTailer {
   }
 
   @Test
+  public void testRollEditLogForObserverNN() throws IOException {
+    Configuration conf = getConf();
+
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = createMiniDFSCluster(conf, 3);
+      cluster.transitionToActive(0);
+      cluster.transitionToObserver(2);
+      EditLogTailer observerTailer = Mockito.spy(
+          cluster.getNamesystem(2).getEditLogTailer());
+      EditLogTailer standbyTailer = Mockito.spy(
+          cluster.getNamesystem(1).getEditLogTailer());
+
+      final AtomicInteger invokedTimes = new AtomicInteger(0);
+
+      when(observerTailer.getNameNodeProxy()).thenReturn(
+          observerTailer.new MultipleNameNodeProxy<Void>() {
+            @Override
+            protected Void doWork() throws IOException {
+              invokedTimes.getAndIncrement();
+              return null;
+            }
+          }
+      );
+      standbyTailer.triggerActiveLogRoll();
+      assertEquals(0, invokedTimes.get());
+
+      when(standbyTailer.getNameNodeProxy()).thenReturn(
+          standbyTailer.new MultipleNameNodeProxy<Void>() {
+            @Override
+            protected Void doWork() throws IOException {
+              invokedTimes.getAndIncrement();
+              return null;
+            }
+          }
+      );
+      standbyTailer.triggerActiveLogRoll();
+      assertEquals(1, invokedTimes.get());
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test
   public void testStandbyTriggersLogRollsWhenTailInProgressEdits()
       throws Exception {
     // Time in seconds to wait for standby to catch up to edits from active

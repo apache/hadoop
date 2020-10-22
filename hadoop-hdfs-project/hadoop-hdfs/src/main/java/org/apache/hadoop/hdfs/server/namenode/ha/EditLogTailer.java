@@ -91,6 +91,7 @@ public class EditLogTailer {
   private final FSNamesystem namesystem;
   private final Iterator<RemoteNameNodeInfo> nnLookup;
   private FSEditLog editLog;
+  private boolean isObserver;
 
   private RemoteNameNodeInfo currentNN;
 
@@ -173,10 +174,16 @@ public class EditLogTailer {
   private final long maxTxnsPerLock;
 
   public EditLogTailer(FSNamesystem namesystem, Configuration conf) {
+    this(namesystem, conf, false);
+  }
+
+  public EditLogTailer(FSNamesystem namesystem, Configuration conf,
+      boolean isObserver) {
     this.tailerThread = new EditLogTailerThread();
     this.conf = conf;
     this.namesystem = namesystem;
     this.editLog = namesystem.getEditLog();
+    this.isObserver = isObserver;
     
     lastLoadTimeMs = monotonicNow();
     lastRollTimeMs = monotonicNow();
@@ -418,6 +425,10 @@ public class EditLogTailer {
    */
   @VisibleForTesting
   void triggerActiveLogRoll() {
+    if (isObserver) {
+      LOG.info("Not triggering log roll on remote NameNode");
+      return;
+    }
     LOG.info("Triggering log roll on remote NameNode");
     Future<Void> future = null;
     try {
@@ -482,7 +493,9 @@ public class EditLogTailer {
           if (tooLongSinceLastLoad() &&
               lastRollTriggerTxId < lastLoadedTxnId) {
             triggerActiveLogRoll();
-            triggeredLogRoll = true;
+            if (!isObserver) {
+              triggeredLogRoll = true;
+            }
           }
           /**
            * Check again in case someone calls {@link EditLogTailer#stop} while
