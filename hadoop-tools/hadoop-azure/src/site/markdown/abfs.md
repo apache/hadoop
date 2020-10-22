@@ -789,12 +789,28 @@ to 100 MB). The default value will be 8388608 (8 MB).
 bytes. The value should be between 16384 to 104857600 both inclusive (16 KB to
 100 MB). The default value will be 4194304 (4 MB).
 
+`fs.azure.read.alwaysReadBufferSize`: Read request size configured by
+`fs.azure.read.request.size` will be honoured only when the reads done are in
+sequential pattern. When the read pattern is detected to be random, read size
+will be same as the buffer length provided by the calling process.
+This config when set to true will force random reads to also read in same
+request sizes as sequential reads. This is a means to have same read patterns
+as of ADLS Gen1, as it does not differentiate read patterns and always reads by
+the configured read request size. The default value for this config will be
+false, where reads for the provided buffer length is done when random read
+pattern is detected.
+
 `fs.azure.readaheadqueue.depth`: Sets the readahead queue depth in
 AbfsInputStream. In case the set value is negative the read ahead queue depth
 will be set as Runtime.getRuntime().availableProcessors(). By default the value
 will be -1. To disable readaheads, set this value to 0. If your workload is
  doing only random reads (non-sequential) or you are seeing throttling, you
   may try setting this value to 0.
+
+`fs.azure.read.readahead.blocksize`: To set the read buffer size for the read
+aheads. Specify the value in bytes. The value should be between 16384 to
+104857600 both inclusive (16 KB to 100 MB). The default value will be
+4194304 (4 MB).
 
 To run under limited memory situations configure the following. Especially
 when there are too many writes from the same process. 
