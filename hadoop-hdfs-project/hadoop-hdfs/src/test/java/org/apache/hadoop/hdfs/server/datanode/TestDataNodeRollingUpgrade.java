@@ -481,6 +481,6 @@ public class TestDataNodeRollingUpgrade {
 
     // Update the FEATURES map with the new layout version.
     LayoutVersion.updateMap(DataNodeLayoutVersion.FEATURES,
-        new LayoutVersion.LayoutFeature[] { () -> featureInfo });
+        new LayoutVersion.LayoutFeature[]{() -> featureInfo});
   }
 }

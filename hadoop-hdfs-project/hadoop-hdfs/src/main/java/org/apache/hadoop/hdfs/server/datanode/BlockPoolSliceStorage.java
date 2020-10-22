@@ -615,13 +615,15 @@ public class BlockPoolSliceStorage extends Storage {
     // the namespace state or can be further upgraded to it.
     // In another word, we can only roll back when ( storedLV >= software LV)
     // && ( DN.previousCTime <= NN.ctime)
-    if (!(prevInfo.getLayoutVersion() >= DataNodeLayoutVersion.getCurrentLayoutVersion() &&
+    if (!(prevInfo.getLayoutVersion() >=
+        DataNodeLayoutVersion.getCurrentLayoutVersion() &&
         prevInfo.getCTime() <= nsInfo.getCTime())) { // cannot rollback
       throw new InconsistentFSStateException(bpSd.getRoot(),
           "Cannot rollback to a newer state.\nDatanode previous state: LV = "
               + prevInfo.getLayoutVersion() + " CTime = " + prevInfo.getCTime()
               + " is newer than the namespace state: LV = "
-              + DataNodeLayoutVersion.getCurrentLayoutVersion() + " CTime = " + nsInfo.getCTime());
+              + DataNodeLayoutVersion.getCurrentLayoutVersion() + " CTime = "
+              + nsInfo.getCTime());
     }
 
     LOG.info("Rolling back storage directory {}.\n   target LV = {}; target "

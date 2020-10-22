@@ -935,14 +935,16 @@ public class DataStorage extends Storage {
 
     // We allow rollback to a state, which is either consistent with
     // the namespace state or can be further upgraded to it.
-    if (!(prevInfo.getLayoutVersion() >= DataNodeLayoutVersion.getCurrentLayoutVersion()
-          && prevInfo.getCTime() <= nsInfo.getCTime()))  // cannot rollback
+    if (!(prevInfo.getLayoutVersion() >=
+        DataNodeLayoutVersion.getCurrentLayoutVersion()
+        && prevInfo.getCTime() <= nsInfo.getCTime())) {  // cannot rollback
       throw new InconsistentFSStateException(sd.getRoot(),
           "Cannot rollback to a newer state.\nDatanode previous state: LV = "
               + prevInfo.getLayoutVersion() + " CTime = " + prevInfo.getCTime()
               + " is newer than the namespace state: LV = "
               + DataNodeLayoutVersion.getCurrentLayoutVersion() + " CTime = "
               + nsInfo.getCTime());
+    }
     LOG.info("Rolling back storage directory {}.\n   target LV = {}; target "
             + "CTime = {}", sd.getRoot(),
         DataNodeLayoutVersion.getCurrentLayoutVersion(), nsInfo.getCTime());

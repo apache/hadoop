@@ -224,7 +224,8 @@ public class StorageInfo {
   }
 
   public int getServiceLayoutVersion() {
-    return storageType == NodeType.DATA_NODE ? DataNodeLayoutVersion.getCurrentLayoutVersion()
+    return storageType == NodeType.DATA_NODE
+        ? DataNodeLayoutVersion.getCurrentLayoutVersion()
         : HdfsServerConstants.NAMENODE_LAYOUT_VERSION;
   }
 
