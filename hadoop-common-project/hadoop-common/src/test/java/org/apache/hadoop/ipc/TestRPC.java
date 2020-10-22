@@ -1518,6 +1518,18 @@ public class TestRPC extends TestRpcBase {
     }
   }
 
+  @Test
+  public void testSetProtocolEngine() {
+    Configuration conf = new Configuration();
+    RPC.setProtocolEngine(conf, StoppedProtocol.class, StoppedRpcEngine.class);
+    RpcEngine rpcEngine = RPC.getProtocolEngine(StoppedProtocol.class, conf);
+    assertTrue(rpcEngine instanceof StoppedRpcEngine);
+
+    RPC.setProtocolEngine(conf, StoppedProtocol.class, ProtobufRpcEngine.class);
+    rpcEngine = RPC.getProtocolEngine(StoppedProtocol.class, conf);
+    assertTrue(rpcEngine instanceof StoppedRpcEngine);
+  }
+
   public static void main(String[] args) throws Exception {
     new TestRPC().testCallsInternal(conf);
   }
