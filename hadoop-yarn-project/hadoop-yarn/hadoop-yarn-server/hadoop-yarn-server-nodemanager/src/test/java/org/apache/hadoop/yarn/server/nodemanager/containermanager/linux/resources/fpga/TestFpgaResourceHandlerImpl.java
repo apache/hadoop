@@ -73,8 +73,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import com.google.common.io.FileWriteMode;
-import com.google.common.io.Files;
+import org.apache.hadoop.thirdparty.com.google.common.io.FileWriteMode;
+import org.apache.hadoop.thirdparty.com.google.common.io.Files;
 
 public class TestFpgaResourceHandlerImpl {
   @Rule

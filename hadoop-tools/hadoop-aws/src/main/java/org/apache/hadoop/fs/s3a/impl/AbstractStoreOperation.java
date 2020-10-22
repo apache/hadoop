@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Base class of operations in the store.

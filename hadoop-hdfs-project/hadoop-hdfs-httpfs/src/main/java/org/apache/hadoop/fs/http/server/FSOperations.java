@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.XAttrCodec;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.http.client.HttpFSFileSystem;
+import org.apache.hadoop.fs.http.client.HttpFSFileSystem.FILE_TYPE;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -111,8 +112,17 @@ public class FSOperations {
     Map<String, Object> json = new LinkedHashMap<String, Object>();
     json.put(HttpFSFileSystem.PATH_SUFFIX_JSON,
         (emptyPathSuffix) ? "" : fileStatus.getPath().getName());
-    json.put(HttpFSFileSystem.TYPE_JSON,
-        HttpFSFileSystem.FILE_TYPE.getType(fileStatus).toString());
+    FILE_TYPE fileType = HttpFSFileSystem.FILE_TYPE.getType(fileStatus);
+    json.put(HttpFSFileSystem.TYPE_JSON, fileType.toString());
+    if (fileType.equals(FILE_TYPE.SYMLINK)) {
+      // put the symlink into Json
+      try {
+        json.put(HttpFSFileSystem.SYMLINK_JSON,
+            fileStatus.getSymlink().getName());
+      } catch (IOException e) {
+        // Can't happen.
+      }
+    }
     json.put(HttpFSFileSystem.LENGTH_JSON, fileStatus.getLen());
     json.put(HttpFSFileSystem.OWNER_JSON, fileStatus.getOwner());
     json.put(HttpFSFileSystem.GROUP_JSON, fileStatus.getGroup());

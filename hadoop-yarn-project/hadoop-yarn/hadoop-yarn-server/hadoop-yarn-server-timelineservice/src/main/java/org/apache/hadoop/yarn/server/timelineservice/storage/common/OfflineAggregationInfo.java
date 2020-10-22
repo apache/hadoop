@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.storage.common;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollectorContext;
 
 import java.sql.PreparedStatement;

@@ -22,7 +22,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.PrintWriter;
 
-import com.google.common.base.Preconditions;
+import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;

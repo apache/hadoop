@@ -39,10 +39,10 @@ import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 
-import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import static org.junit.Assert.*;
 
 public class CompressDecompressTester<T extends Compressor, E extends Decompressor> {

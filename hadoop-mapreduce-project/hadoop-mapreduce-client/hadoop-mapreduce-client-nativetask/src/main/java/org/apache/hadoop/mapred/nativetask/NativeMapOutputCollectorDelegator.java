@@ -19,7 +19,7 @@ package org.apache.hadoop.mapred.nativetask;
 
 import java.io.IOException;
 
-import com.google.common.base.Charsets;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.RawComparator;

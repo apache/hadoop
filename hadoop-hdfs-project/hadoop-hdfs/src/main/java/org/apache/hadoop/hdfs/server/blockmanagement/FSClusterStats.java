@@ -18,6 +18,9 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.StorageType;
+
+import java.util.Map;
 
 /**
  * This interface is used for retrieving the load related statistics of
@@ -57,4 +60,10 @@ public interface FSClusterStats {
    *         writes that are currently occurring on the cluster.
    */
   public double getInServiceXceiverAverage();
+
+  /**
+   * Indicates the storage statistics per storage type.
+   * @return storage statistics per storage type.
+   */
+  Map<StorageType, StorageTypeStats> getStorageTypeStats();
 }

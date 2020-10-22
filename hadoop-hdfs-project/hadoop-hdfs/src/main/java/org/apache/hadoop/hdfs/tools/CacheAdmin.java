@@ -44,7 +44,7 @@ import org.apache.hadoop.tools.TableListing.Justification;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 
-import com.google.common.base.Joiner;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.util.ToolRunner;
 
 /**
